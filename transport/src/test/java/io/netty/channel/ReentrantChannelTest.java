@@ -17,12 +17,16 @@ package io.netty.channel;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.LoggingHandler.Event;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalEventLoopGroup;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 
+import java.nio.channels.ClosedChannelException;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -110,8 +114,6 @@ public class ReentrantChannelTest extends BaseChannelTest {
         setInterest(Event.WRITE, Event.FLUSH, Event.WRITABILITY);
 
         Channel clientChannel = cb.connect(addr).sync().channel();
-        clientChannel.config().setWriteBufferLowWaterMark(512);
-        clientChannel.config().setWriteBufferHighWaterMark(1024);
 
         final Set<String> executors = Collections.synchronizedSet(new HashSet<String>());
 
@@ -119,12 +121,13 @@ public class ReentrantChannelTest extends BaseChannelTest {
             @Override
             public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
                 executors.add(ctx.executor().toString());
+                ctx.write(msg, promise);
             }
         });
 
         ChannelFuture last = null;
-        for (int i = 0; i < 100; i++) {
-            last = clientChannel.write(createTestBuf("testReregisterWhileWritingFromEventLoop" + i));
+        for (int i = 0; i < 1000; i++) {
+            last = clientChannel.writeAndFlush(createTestBuf("testReregisterWhileWritingFromEventLoop" + i));
         }
 
         EventLoopGroup group = new LocalEventLoopGroup();
@@ -134,6 +137,143 @@ public class ReentrantChannelTest extends BaseChannelTest {
         last.sync();
 
         assertEquals(2, executors.size());
+    }
+
+    @Test
+    public void testWriteFlushPingPong() throws Exception {
+
+        LocalAddress addr = new LocalAddress("testWriteFlushPingPong");
+
+        ServerBootstrap sb = getLocalServerBootstrap();
+        sb.bind(addr).sync().channel();
+
+        Bootstrap cb = getLocalClientBootstrap();
+
+        setInterest(Event.WRITE, Event.FLUSH, Event.CLOSE, Event.EXCEPTION);
+
+        Channel clientChannel = cb.connect(addr).sync().channel();
+
+        clientChannel.pipeline().addLast(new ChannelOutboundHandlerAdapter() {
+
+            int writeCount;
+            int flushCount;
+
+            @Override
+            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+                if (writeCount < 5) {
+                    writeCount++;
+                    ctx.channel().flush();
+                }
+                super.write(ctx, msg,  promise);
+            }
+
+            @Override
+            public void flush(ChannelHandlerContext ctx) throws Exception {
+                if (flushCount < 5) {
+                    flushCount++;
+                    ctx.channel().write(createTestBuf(2000));
+                }
+                super.flush(ctx);
+            }
+        });
+
+        clientChannel.writeAndFlush(createTestBuf(2000));
+        clientChannel.close().sync();
+
+        assertLog(
+            "WRITE\n" +
+            "FLUSH\n" +
+            "WRITE\n" +
+            "FLUSH\n" +
+            "WRITE\n" +
+            "FLUSH\n" +
+            "WRITE\n" +
+            "FLUSH\n" +
+            "WRITE\n" +
+            "FLUSH\n" +
+            "WRITE\n" +
+            "FLUSH\n" +
+            "CLOSE\n");
+    }
+
+    @Test
+    public void testCloseInFlush() throws Exception {
+
+        LocalAddress addr = new LocalAddress("testCloseInFlush");
+
+        ServerBootstrap sb = getLocalServerBootstrap();
+        sb.bind(addr).sync().channel();
+
+        Bootstrap cb = getLocalClientBootstrap();
+
+        setInterest(Event.WRITE, Event.FLUSH, Event.CLOSE, Event.EXCEPTION);
+
+        Channel clientChannel = cb.connect(addr).sync().channel();
+
+        clientChannel.pipeline().addLast(new ChannelOutboundHandlerAdapter() {
+
+            @Override
+            public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+                promise.addListener(new GenericFutureListener<Future<? super Void>>() {
+                    @Override
+                    public void operationComplete(Future<? super Void> future) throws Exception {
+                        ctx.channel().close();
+                    }
+                });
+                super.write(ctx, msg, promise);
+                ctx.channel().flush();
+            }
+        });
+
+        clientChannel.write(createTestBuf(2000)).sync();
+        clientChannel.closeFuture().sync();
+
+        assertLog(
+            "WRITE\n" +
+            "FLUSH\n" +
+            "CLOSE\n");
+    }
+
+    @Test
+    public void testFlushFailure() throws Exception {
+
+        LocalAddress addr = new LocalAddress("testFlushFailure");
+
+        ServerBootstrap sb = getLocalServerBootstrap();
+        sb.bind(addr).sync().channel();
+
+        Bootstrap cb = getLocalClientBootstrap();
+
+        setInterest(Event.WRITE, Event.FLUSH, Event.CLOSE, Event.EXCEPTION);
+
+        Channel clientChannel = cb.connect(addr).sync().channel();
+
+        clientChannel.pipeline().addLast(new ChannelOutboundHandlerAdapter() {
+
+            @Override
+            public void flush(ChannelHandlerContext ctx) throws Exception {
+                throw new Exception("intentional failure");
+            }
+
+            @Override
+            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                ctx.close();
+            }
+        });
+
+        try {
+            clientChannel.writeAndFlush(createTestBuf(2000)).sync();
+            fail();
+        } catch (Throwable cce) {
+            // FIXME:  shouldn't this contain the "intentional failure" exception?
+            assertEquals(ClosedChannelException.class, cce.getClass());
+        }
+
+        clientChannel.closeFuture().sync();
+
+        assertLog(
+            "WRITE\n" +
+            "CLOSE\n");
     }
 
 }
