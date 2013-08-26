@@ -37,6 +37,7 @@ interface ChannelInboundInvoker {
      * called of the next  {@link ChannelInboundHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
+    @Deprecated
     ChannelInboundInvoker fireChannelUnregistered();
 
     /**
