@@ -598,6 +598,7 @@ public interface ChannelPipeline
     ChannelPipeline fireChannelRegistered();
 
     @Override
+    @Deprecated
     ChannelPipeline fireChannelUnregistered();
 
     @Override

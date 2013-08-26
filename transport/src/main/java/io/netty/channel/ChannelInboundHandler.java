@@ -28,7 +28,10 @@ public interface ChannelInboundHandler extends ChannelHandler {
 
     /**
      * The {@link Channel} of the {@link ChannelHandlerContext} was unregistered from its {@link EventLoop}
+     *
+     * @deprecated use {@link #channelInactive(ChannelHandlerContext)}
      */
+    @Deprecated
     void channelUnregistered(ChannelHandlerContext ctx) throws Exception;
 
     /**

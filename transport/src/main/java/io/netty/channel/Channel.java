@@ -226,6 +226,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
          * Deregister the {@link Channel} of the {@link ChannelPromise} from {@link EventLoop} and notify the
          * {@link ChannelPromise} once the operation was complete.
          */
+        @Deprecated
         void deregister(ChannelPromise promise);
 
         /**
