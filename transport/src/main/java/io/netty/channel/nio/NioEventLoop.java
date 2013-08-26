@@ -472,9 +472,8 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             return;
         }
 
-        int readyOps = -1;
         try {
-            readyOps = k.readyOps();
+            int readyOps = k.readyOps();
             if ((readyOps & (SelectionKey.OP_READ | SelectionKey.OP_ACCEPT)) != 0 || readyOps == 0) {
                 unsafe.read();
                 if (!ch.isOpen()) {

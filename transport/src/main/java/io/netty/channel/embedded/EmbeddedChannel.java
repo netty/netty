@@ -197,7 +197,8 @@ public class EmbeddedChannel extends AbstractChannel {
 
             flush();
 
-            for (int i = 0; i < futures.size(); i++) {
+            int size = futures.size();
+            for (int i = 0; i < size; i++) {
                 ChannelFuture future = (ChannelFuture) futures.get(i);
                 assert future.isDone();
                 if (future.cause() != null) {
