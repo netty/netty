@@ -36,7 +36,7 @@ public enum SocksAuthStatus {
     }
 
     public byte byteValue() {
-        return b;
+        return b ;
     }
 }
 
