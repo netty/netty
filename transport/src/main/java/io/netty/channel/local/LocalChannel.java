@@ -198,9 +198,21 @@ public class LocalChannel extends AbstractChannel {
             state = 3;
         }
 
-        LocalChannel peer = this.peer;
+        final LocalChannel peer = this.peer;
         if (peer != null && peer.isActive()) {
-            peer.unsafe().close(unsafe().voidPromise());
+            // Need to execute the close in the correct EventLoop
+            // See https://github.com/netty/netty/issues/1777
+            EventLoop eventLoop = peer.eventLoop();
+            if (eventLoop.inEventLoop()) {
+                peer.unsafe().close(unsafe().voidPromise());
+            } else {
+                peer.eventLoop().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        peer.unsafe().close(unsafe().voidPromise());
+                    }
+                });
+            }
             this.peer = null;
         }
     }
@@ -281,8 +293,8 @@ public class LocalChannel extends AbstractChannel {
             peerLoop.execute(new Runnable() {
                 @Override
                 public void run() {
-                    for (Object o: msgsCopy) {
-                        peer.inboundBuffer.add(o);
+                    for (int i = 0;  i < msgsCopy.length; i++) {
+                        peer.inboundBuffer.add(msgsCopy[i]);
                     }
                     finishPeerRead(peer, peerPipeline);
                 }

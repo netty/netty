@@ -189,6 +189,26 @@ public class DefaultChannelPipelineTest {
     }
 
     @Test
+    public void testFireChannelRegistered() throws Exception {
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        group.register(pipeline.channel());
+        final CountDownLatch latch = new CountDownLatch(1);
+        pipeline.addLast(new ChannelInitializer<Channel>() {
+            @Override
+            protected void initChannel(Channel ch) throws Exception {
+                ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+                        latch.countDown();
+                    }
+                });
+            }
+        });
+        pipeline.fireChannelRegistered();
+        assertTrue(latch.await(2, TimeUnit.SECONDS));
+    }
+
+    @Test
     public void testPipelineOperation() {
         ChannelPipeline pipeline = new LocalChannel().pipeline();
 

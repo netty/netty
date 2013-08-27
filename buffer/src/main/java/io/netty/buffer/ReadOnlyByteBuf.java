@@ -292,7 +292,7 @@ public class ReadOnlyByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     public ByteBuffer internalNioBuffer(int index, int length) {
-        return buffer.internalNioBuffer(index, length);
+        return buffer.internalNioBuffer(index, length).duplicate();
     }
 
     @Override

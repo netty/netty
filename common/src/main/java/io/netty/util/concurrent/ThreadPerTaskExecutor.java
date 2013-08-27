@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,11 +13,23 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.example.socksproxy;
+package io.netty.util.concurrent;
 
-import io.netty.channel.ChannelHandlerContext;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ThreadFactory;
 
-public interface CallbackNotifier {
-    void onSuccess(ChannelHandlerContext outboundCtx);
-    void onFailure(ChannelHandlerContext outboundCtx, Throwable cause);
+public final class ThreadPerTaskExecutor implements Executor {
+    private final ThreadFactory threadFactory;
+
+    public ThreadPerTaskExecutor(ThreadFactory threadFactory) {
+        if (threadFactory == null) {
+            throw new NullPointerException("threadFactory");
+        }
+        this.threadFactory = threadFactory;
+    }
+
+    @Override
+    public void execute(Runnable command) {
+        threadFactory.newThread(command).start();
+    }
 }
