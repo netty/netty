@@ -15,22 +15,14 @@
  */
 package io.netty.channel;
 
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertSame;
-import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.socket.ServerSocketChannel;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.util.concurrent.DefaultEventExecutorGroup;
-import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.concurrent.EventExecutorGroup;
-
-import org.junit.Test;
 
 public abstract class AbstractEventLoopTest {
 
     /**
      * Test for https://github.com/netty/netty/issues/803
      */
+    /*
     @Test
     public void testReregister() {
         EventLoopGroup group = newEventLoopGroup();
@@ -66,7 +58,7 @@ public abstract class AbstractEventLoopTest {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception { }
     }
-
+*/
     protected abstract EventLoopGroup newEventLoopGroup();
     protected abstract Class<? extends ServerSocketChannel> newChannel();
 }

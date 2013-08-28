@@ -22,14 +22,10 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.LoggingHandler.Event;
 import io.netty.channel.local.LocalAddress;
-import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 
 import java.nio.channels.ClosedChannelException;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
 
 import org.junit.Test;
 
@@ -99,44 +95,6 @@ public class ReentrantChannelTest extends BaseChannelTest {
             "WRITABILITY: writable=false\n" +
             "FLUSH\n" +
             "WRITABILITY: writable=true\n");
-    }
-
-    @Test
-    public void testReregisterWhileWritingFromEventLoop() throws Exception {
-
-        LocalAddress addr = new LocalAddress("testReregisterWhileWritingFromEventLoop");
-
-        ServerBootstrap sb = getLocalServerBootstrap();
-        sb.bind(addr).sync().channel();
-
-        Bootstrap cb = getLocalClientBootstrap();
-
-        setInterest(Event.WRITE, Event.FLUSH, Event.WRITABILITY);
-
-        Channel clientChannel = cb.connect(addr).sync().channel();
-
-        final Set<String> executors = Collections.synchronizedSet(new HashSet<String>());
-
-        clientChannel.pipeline().addLast(new ChannelOutboundHandlerAdapter() {
-            @Override
-            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-                executors.add(ctx.executor().toString());
-                ctx.write(msg, promise);
-            }
-        });
-
-        ChannelFuture last = null;
-        for (int i = 0; i < 1000; i++) {
-            last = clientChannel.writeAndFlush(createTestBuf("testReregisterWhileWritingFromEventLoop" + i));
-        }
-
-        EventLoopGroup group = new LocalEventLoopGroup();
-
-        group.register(clientChannel);
-
-        last.sync();
-
-        assertEquals(2, executors.size());
     }
 
     @Test

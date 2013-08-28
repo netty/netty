@@ -381,32 +381,22 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public final void register(EventLoop newEventLoop, final ChannelPromise promise) {
-            if (newEventLoop == null) {
+        public final void register(EventLoop eventLoop, final ChannelPromise promise) {
+            if (eventLoop == null) {
                 throw new NullPointerException("eventLoop");
             }
-
-            if (!isCompatible(newEventLoop)) {
-                promise.setFailure(new IllegalStateException("incompatible event loop type: " +
-                        newEventLoop.getClass().getName()));
+            if (isRegistered()) {
+                promise.setFailure(new IllegalStateException("registered to an event loop already"));
                 return;
             }
 
-            // If this is a re-registration, first deregister the old eventLoop
-            if (eventLoop != null) {
-                if (eventLoop.inEventLoop()) {
-                    deregister();
-                } else {
-                    eventLoop.execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            deregister();
-                        }
-                    });
-                }
+            if (!isCompatible(eventLoop)) {
+                promise.setFailure(new IllegalStateException("incompatible event loop type: " +
+                        eventLoop.getClass().getName()));
+                return;
             }
 
-            eventLoop = newEventLoop;
+            AbstractChannel.this.eventLoop = eventLoop;
 
             if (eventLoop.inEventLoop()) {
                 register0(promise);
