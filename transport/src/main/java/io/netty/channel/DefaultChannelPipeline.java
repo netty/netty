@@ -754,12 +754,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     @Override
     public ChannelPipeline fireChannelInactive() {
         head.fireChannelInactive();
-
-        // Remove all handlers sequentially if channel is closed and unregistered.
-        if (!channel.isOpen()) {
-            teardownAll();
-        }
-
+        teardownAll();
         return this;
     }
 
