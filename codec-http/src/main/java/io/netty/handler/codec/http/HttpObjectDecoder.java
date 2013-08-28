@@ -98,6 +98,10 @@ import java.util.List;
  */
 public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
+    public static final int DEFAULT_MAX_INITIAL_LINE_LENGTH = 4096;
+    public static final int DEFAULT_MAX_HEADER_SIZE = 8192;
+    public static final int DEFAULT_MAX_CHUNK_SIZE = 8192;
+
     private static final ThreadLocal<StringBuilder> BUILDERS = new ThreadLocal<StringBuilder>() {
         @Override
         protected StringBuilder initialValue() {
@@ -109,6 +113,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     private final int maxHeaderSize;
     private final int maxChunkSize;
     private final boolean chunkedSupported;
+    private final boolean verifyHeader;
 
     private HttpMessage message;
     private long chunkSize;
@@ -143,14 +148,15 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
      * {@code maxChunkSize (8192)}.
      */
     protected HttpObjectDecoder() {
-        this(4096, 8192, 8192, true);
+        this(DEFAULT_MAX_INITIAL_LINE_LENGTH, DEFAULT_MAX_HEADER_SIZE, DEFAULT_MAX_INITIAL_LINE_LENGTH, true, true);
     }
 
     /**
      * Creates a new instance with the specified parameters.
      */
     protected HttpObjectDecoder(
-            int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean chunkedSupported) {
+            int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
+            boolean chunkedSupported, boolean verifyHeader) {
 
         if (maxInitialLineLength <= 0) {
             throw new IllegalArgumentException(
@@ -171,6 +177,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         this.maxHeaderSize = maxHeaderSize;
         this.maxChunkSize = maxChunkSize;
         this.chunkedSupported = chunkedSupported;
+        this.verifyHeader = verifyHeader;
     }
 
     @Override
@@ -617,7 +624,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
     private boolean parseHeaders(HttpHeaders headers, ByteBuf buffer, StringBuilder sb) {
         final DefaultHttpHeaders defaultHeaders;
-        if (headers instanceof DefaultHttpHeaders) {
+        if (!verifyHeader && headers instanceof DefaultHttpHeaders) {
             defaultHeaders = (DefaultHttpHeaders) headers;
         } else {
             defaultHeaders = null;
@@ -774,7 +781,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             LastHttpContent trailer = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER);
             final HttpHeaders headers = trailer.trailingHeaders();
             final DefaultHttpHeaders defaultHeaders;
-            if (headers instanceof DefaultHttpHeaders) {
+            if (!verifyHeader && headers instanceof DefaultHttpHeaders) {
                 defaultHeaders = (DefaultHttpHeaders) headers;
             } else {
                 defaultHeaders = null;
