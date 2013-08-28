@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.util.zip.GZIPOutputStream;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 public abstract class ZlibTest {
@@ -41,64 +42,68 @@ public abstract class ZlibTest {
         EmbeddedChannel chDecoderGZip = new EmbeddedChannel(createDecoder(ZlibWrapper.GZIP));
         chDecoderGZip.writeInbound(deflatedData.copy());
         assertTrue(chDecoderGZip.finish());
-        assertEquals(chDecoderGZip.readInbound(), data);
+        ByteBuf buf = (ByteBuf) chDecoderGZip.readInbound();
+        assertEquals(buf, data);
+        assertNull(chDecoderGZip.readInbound());
+        data.release();
+        deflatedData.release();
+        buf.release();
+    }
+
+    protected void testCompress(ZlibWrapper encoderWrapper, ZlibWrapper decoderWrapper) throws Exception {
+        ByteBuf data = Unpooled.copiedBuffer("test", CharsetUtil.UTF_8);
+        EmbeddedChannel chEncoder = new EmbeddedChannel(createEncoder(encoderWrapper));
+
+        chEncoder.writeOutbound(data.copy());
+        assertTrue(chEncoder.finish());
+
+        EmbeddedChannel chDecoderZlib = new EmbeddedChannel(createDecoder(decoderWrapper));
+        for (;;) {
+            ByteBuf deflatedData = (ByteBuf) chEncoder.readOutbound();
+            if (deflatedData == null) {
+                break;
+            }
+            chDecoderZlib.writeInbound(deflatedData);
+        }
+
+        assertTrue(chDecoderZlib.finish());
+
+        ByteBuf buf = (ByteBuf) chDecoderZlib.readInbound();
+        assertEquals(data, buf);
+        assertNull(chDecoderZlib.readInbound());
+
+        data.release();
+        buf.release();
     }
 
     @Test
     public void testZLIB() throws Exception {
-        ByteBuf data = Unpooled.copiedBuffer("test", CharsetUtil.UTF_8);
-
-        EmbeddedChannel chEncoder = new EmbeddedChannel(createEncoder(ZlibWrapper.ZLIB));
-
-        chEncoder.writeOutbound(data.copy());
-        assertTrue(chEncoder.finish());
-
-        ByteBuf deflatedData = (ByteBuf) chEncoder.readOutbound();
-
-        EmbeddedChannel chDecoderZlib = new EmbeddedChannel(createDecoder(ZlibWrapper.ZLIB));
-
-        chDecoderZlib.writeInbound(deflatedData.copy());
-        assertTrue(chDecoderZlib.finish());
-
-        assertEquals(data, chDecoderZlib.readInbound());
+        testCompress(ZlibWrapper.ZLIB, ZlibWrapper.ZLIB);
     }
 
     @Test
     public void testNONE() throws Exception {
-        ByteBuf data = Unpooled.copiedBuffer("test", CharsetUtil.UTF_8);
-
-        EmbeddedChannel chEncoder = new EmbeddedChannel(createEncoder(ZlibWrapper.NONE));
-
-        chEncoder.writeOutbound(data.copy());
-        assertTrue(chEncoder.finish());
-
-        ByteBuf deflatedData = (ByteBuf) chEncoder.readOutbound();
-
-        EmbeddedChannel chDecoderZlibNone = new EmbeddedChannel(createDecoder(ZlibWrapper.NONE));
-
-        chDecoderZlibNone.writeInbound(deflatedData.copy());
-        assertTrue(chDecoderZlibNone.finish());
-
-        assertEquals(data, chDecoderZlibNone.readInbound());
+        testCompress(ZlibWrapper.NONE, ZlibWrapper.NONE);
     }
 
     @Test
     public void testGZIP() throws Exception {
-        ByteBuf data = Unpooled.copiedBuffer("test", CharsetUtil.UTF_8);
+        testCompress(ZlibWrapper.GZIP, ZlibWrapper.GZIP);
+    }
 
-        EmbeddedChannel chEncoder = new EmbeddedChannel(createEncoder(ZlibWrapper.GZIP));
+    @Test
+    public void testZLIB_OR_NONE() throws Exception {
+        testCompress(ZlibWrapper.NONE, ZlibWrapper.ZLIB_OR_NONE);
+    }
 
-        chEncoder.writeOutbound(data.copy());
-        assertTrue(chEncoder.finish());
+    @Test
+    public void testZLIB_OR_NONE2() throws Exception {
+        testCompress(ZlibWrapper.ZLIB, ZlibWrapper.ZLIB_OR_NONE);
+    }
 
-        ByteBuf deflatedData = (ByteBuf) chEncoder.readOutbound();
-
-        EmbeddedChannel chDecoderGZip = new EmbeddedChannel(createDecoder(ZlibWrapper.GZIP));
-
-        chDecoderGZip.writeInbound(deflatedData.copy());
-        assertTrue(chDecoderGZip.finish());
-
-        assertEquals(data, chDecoderGZip.readInbound());
+    @Test
+    public void testZLIB_OR_NONE3() throws Exception {
+        testCompress(ZlibWrapper.GZIP, ZlibWrapper.ZLIB_OR_NONE);
     }
 
     private static byte[] gzip(String message) throws IOException {
