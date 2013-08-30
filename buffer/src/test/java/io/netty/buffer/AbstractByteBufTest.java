@@ -1720,4 +1720,32 @@ public abstract class AbstractByteBufTest {
 
         assertThat(lastIndex.get(), is(CAPACITY / 4));
     }
+
+    @Test
+    public void testInternalNioBuffer() {
+        testInternalNioBuffer(128);
+        testInternalNioBuffer(1024);
+        testInternalNioBuffer(4 * 1024);
+        testInternalNioBuffer(64 * 1024);
+        testInternalNioBuffer(32 * 1024 * 1024);
+        testInternalNioBuffer(64 * 1024 * 1024);
+    }
+
+    private void testInternalNioBuffer(int a) {
+        ByteBuf buffer = freeLater(newBuffer(2));
+        ByteBuffer buf = buffer.internalNioBuffer(0, 1);
+        assertEquals(1, buf.remaining());
+
+        for (int i = 0; i < a; i++) {
+            buffer.writeByte(i);
+        }
+
+        buf = buffer.internalNioBuffer(0, a);
+        assertEquals(a, buf.remaining());
+
+        for (int i = 0; i < a; i++) {
+            assertEquals((byte) i, buf.get());
+        }
+        assertFalse(buf.hasRemaining());
+    }
 }
