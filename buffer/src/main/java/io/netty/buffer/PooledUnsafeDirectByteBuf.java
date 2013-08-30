@@ -300,6 +300,13 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     }
 
     @Override
+    public ByteBuffer nioBuffer(int index, int length) {
+        checkIndex(index, length);
+        index = idx(index);
+        return (ByteBuffer) memory.duplicate().position(index).limit(index + length);
+    }
+
+    @Override
     public ByteBuffer internalNioBuffer(int index, int length) {
         checkIndex(index, length);
         index = idx(index);

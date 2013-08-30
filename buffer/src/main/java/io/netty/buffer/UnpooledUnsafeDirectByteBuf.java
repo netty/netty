@@ -439,6 +439,11 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
     }
 
     @Override
+    public ByteBuffer nioBuffer(int index, int length) {
+        return (ByteBuffer) buffer.duplicate().position(index).limit(index + length);
+    }
+
+    @Override
     protected void deallocate() {
         ByteBuffer buffer = this.buffer;
         if (buffer == null) {

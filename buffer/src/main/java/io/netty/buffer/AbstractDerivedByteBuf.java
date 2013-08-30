@@ -16,6 +16,8 @@
 
 package io.netty.buffer;
 
+import java.nio.ByteBuffer;
+
 /**
  * Abstract base class for {@link ByteBuf} implementations that wrap another
  * {@link ByteBuf}.
@@ -51,5 +53,15 @@ public abstract class AbstractDerivedByteBuf extends AbstractByteBuf {
     @Override
     public final boolean release(int decrement) {
         return unwrap().release(decrement);
+    }
+
+    @Override
+    public ByteBuffer internalNioBuffer(int index, int length) {
+        return nioBuffer(index, length);
+    }
+
+    @Override
+    public ByteBuffer nioBuffer(int index, int length) {
+        return unwrap().nioBuffer(index, length);
     }
 }
