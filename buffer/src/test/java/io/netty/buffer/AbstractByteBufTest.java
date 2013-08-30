@@ -1734,7 +1734,6 @@ public abstract class AbstractByteBufTest {
         assertThat(lastIndex.get(), is(CAPACITY / 4));
     }
 
-    @Ignore
     @Test
     public void testInternalNioBuffer() {
         testInternalNioBuffer(128);
