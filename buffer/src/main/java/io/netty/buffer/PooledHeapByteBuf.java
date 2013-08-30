@@ -238,6 +238,13 @@ final class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
     }
 
     @Override
+    public ByteBuffer nioBuffer(int index, int length) {
+        checkIndex(index, length);
+        index = idx(index);
+        return (ByteBuffer) ByteBuffer.wrap(memory).position(index).limit(index + length);
+    }
+
+    @Override
     public ByteBuffer internalNioBuffer(int index, int length) {
         checkIndex(index, length);
         index = idx(index);
