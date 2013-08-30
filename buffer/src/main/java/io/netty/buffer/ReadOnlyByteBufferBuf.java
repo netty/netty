@@ -304,6 +304,11 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    public ByteBuffer nioBuffer(int index, int length) {
+        return (ByteBuffer) buffer.duplicate().position(index).limit(length);
+    }
+
+    @Override
     public ByteBuffer internalNioBuffer(int index, int length) {
         ensureAccessible();
         return (ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length);

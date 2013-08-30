@@ -1109,6 +1109,26 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    public ByteBuffer nioBuffer(int index, int length) {
+        if (components.size() == 1) {
+            ByteBuf buf = components.get(0).buf;
+            if (buf.nioBufferCount() == 1) {
+                return components.get(0).buf.nioBuffer(index, length);
+            }
+        }
+        ByteBuffer merged = ByteBuffer.allocate(length).order(order());
+        ByteBuffer[] buffers = nioBuffers(index, length);
+
+        //noinspection ForLoopReplaceableByForEach
+        for (int i = 0; i < buffers.length; i++) {
+            merged.put(buffers[0]);
+        }
+
+        merged.flip();
+        return merged;
+    }
+
+    @Override
     public ByteBuffer[] nioBuffers(int index, int length) {
         checkIndex(index, length);
         if (length == 0) {
