@@ -30,6 +30,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     volatile DefaultChannelHandlerContext next;
     volatile DefaultChannelHandlerContext prev;
 
+    private final boolean inbound;
+    private final boolean outbound;
     private final AbstractChannel channel;
     private final DefaultChannelPipeline pipeline;
     private final String name;
@@ -74,6 +76,9 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         } else {
             executor = null;
         }
+
+        inbound = handler instanceof ChannelInboundHandler;
+        outbound = handler instanceof ChannelOutboundHandler;
     }
 
     /** Invocation initiated by {@link DefaultChannelPipeline#teardownAll()}}. */
@@ -816,7 +821,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         DefaultChannelHandlerContext ctx = this;
         do {
             ctx = ctx.next;
-        } while (!(ctx.handler instanceof ChannelInboundHandler));
+        } while (!ctx.inbound);
         return ctx;
     }
 
@@ -824,7 +829,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         DefaultChannelHandlerContext ctx = this;
         do {
             ctx = ctx.prev;
-        } while (!(ctx.handler instanceof ChannelOutboundHandler));
+        } while (!ctx.outbound);
         return ctx;
     }
 
