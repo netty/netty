@@ -741,7 +741,7 @@ public final class SwappedByteBuf extends ByteBuf {
 
     @Override
     public ByteBuffer internalNioBuffer(int index, int length) {
-        return buf.internalNioBuffer(index, length).duplicate().order(order);
+        return nioBuffer(index, length);
     }
 
     @Override

@@ -567,9 +567,9 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         assertEquals(0, freeLater(buf.duplicate()).readableBytes());
     }
 
-    @Test(expected = UnsupportedOperationException.class)
     @Override
+    @Test
     public void testInternalNioBuffer() {
-        super.testInternalNioBuffer();
+        // ignore
     }
 }
