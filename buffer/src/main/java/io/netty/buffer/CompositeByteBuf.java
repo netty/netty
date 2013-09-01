@@ -17,7 +17,6 @@ package io.netty.buffer;
 
 import io.netty.util.ResourceLeak;
 import io.netty.util.internal.EmptyArrays;
-import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -721,17 +720,11 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public int getBytes(int index, GatheringByteChannel out, int length)
             throws IOException {
-        if (PlatformDependent.javaVersion() < 7) {
-            // XXX Gathering write is not supported because of a known issue.
-            //     See http://bugs.sun.com/view_bug.do?bug_id=6210541
-            return out.write(copiedNioBuffer(index, length));
+        long writtenBytes = out.write(nioBuffers(index, length));
+        if (writtenBytes > Integer.MAX_VALUE) {
+            return Integer.MAX_VALUE;
         } else {
-            long writtenBytes = out.write(nioBuffers(index, length));
-            if (writtenBytes > Integer.MAX_VALUE) {
-                return Integer.MAX_VALUE;
-            } else {
-                return (int) writtenBytes;
-            }
+            return (int) writtenBytes;
         }
     }
 
@@ -1115,21 +1108,6 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
         throw new UnsupportedOperationException();
     }
 
-    private ByteBuffer copiedNioBuffer(int index, int length) {
-        assert !freed;
-        if (components.size() == 1) {
-            return toNioBuffer(components.get(0).buf, index, length);
-        }
-
-        ByteBuffer[] buffers = nioBuffers(index, length);
-        ByteBuffer merged = ByteBuffer.allocate(length).order(order());
-        for (ByteBuffer b: buffers) {
-            merged.put(b);
-        }
-        merged.flip();
-        return merged;
-    }
-
     @Override
     public ByteBuffer[] nioBuffers(int index, int length) {
         checkIndex(index, length);
@@ -1160,14 +1138,6 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
         }
 
         return buffers.toArray(new ByteBuffer[buffers.size()]);
-    }
-
-    private static ByteBuffer toNioBuffer(ByteBuf buf, int index, int length) {
-        if (buf.nioBufferCount() == 1) {
-            return buf.nioBuffer(index, length);
-        } else {
-            return buf.copy(index, length).nioBuffer(0, length);
-        }
     }
 
     /**
