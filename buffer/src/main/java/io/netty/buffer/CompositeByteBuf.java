@@ -1109,6 +1109,11 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    public ByteBuffer nioBuffer(int index, int length) {
+        return copiedNioBuffer(index, length);
+    }
+
+    @Override
     public ByteBuffer[] nioBuffers(int index, int length) {
         checkIndex(index, length);
         if (length == 0) {

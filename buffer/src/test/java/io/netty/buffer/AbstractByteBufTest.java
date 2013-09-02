@@ -19,6 +19,7 @@ import io.netty.util.CharsetUtil;
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
@@ -1569,7 +1570,7 @@ public abstract class AbstractByteBufTest {
         buffer.clear();
         buffer.writeBytes(value);
 
-        assertEquals(ByteBuffer.wrap(value), buffer.nioBuffer());
+        assertRemainingEquals(ByteBuffer.wrap(value), buffer.nioBuffer());
     }
 
     @Test
@@ -1582,8 +1583,20 @@ public abstract class AbstractByteBufTest {
         buffer.writeBytes(value);
 
         for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
-            assertEquals(ByteBuffer.wrap(value, i, BLOCK_SIZE), buffer.nioBuffer(i, BLOCK_SIZE));
+            assertRemainingEquals(ByteBuffer.wrap(value, i, BLOCK_SIZE), buffer.nioBuffer(i, BLOCK_SIZE));
         }
+    }
+
+    private static void assertRemainingEquals(ByteBuffer expected, ByteBuffer actual) {
+        int remaining = expected.remaining();
+        int remaining2 = actual.remaining();
+
+        assertEquals(remaining, remaining2);
+        byte[] array1 = new byte[remaining];
+        byte[] array2 = new byte[remaining2];
+        expected.get(array1);
+        actual.get(array2);
+        assertArrayEquals(array1, array2);
     }
 
     @Test
@@ -1719,5 +1732,33 @@ public abstract class AbstractByteBufTest {
         }), is(-1));
 
         assertThat(lastIndex.get(), is(CAPACITY / 4));
+    }
+
+    @Test
+    public void testInternalNioBuffer() {
+        testInternalNioBuffer(128);
+        testInternalNioBuffer(1024);
+        testInternalNioBuffer(4 * 1024);
+        testInternalNioBuffer(64 * 1024);
+        testInternalNioBuffer(32 * 1024 * 1024);
+        testInternalNioBuffer(64 * 1024 * 1024);
+    }
+
+    private void testInternalNioBuffer(int a) {
+        ByteBuf buffer = freeLater(newBuffer(2));
+        ByteBuffer buf = buffer.internalNioBuffer(0, 1);
+        assertEquals(1, buf.remaining());
+
+        for (int i = 0; i < a; i++) {
+            buffer.writeByte(i);
+        }
+
+        buf = buffer.internalNioBuffer(0, a);
+        assertEquals(a, buf.remaining());
+
+        for (int i = 0; i < a; i++) {
+            assertEquals((byte) i, buf.get());
+        }
+        assertFalse(buf.hasRemaining());
     }
 }
