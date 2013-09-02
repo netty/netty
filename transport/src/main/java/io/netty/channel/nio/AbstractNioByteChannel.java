@@ -154,11 +154,20 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
             if (msg instanceof ByteBuf) {
                 ByteBuf buf = (ByteBuf) msg;
-                if (!buf.isReadable()) {
+                int readableBytes = buf.readableBytes();
+                if (readableBytes == 0) {
                     in.remove();
                     continue;
                 }
-
+                if (!buf.isDirect()) {
+                    ByteBufAllocator alloc = alloc();
+                    if (alloc.isDirectBufferPooled()) {
+                        // no direct buffer so replace it as otherwise the jdk will do the copy with it's own
+                        // pool
+                        buf = alloc().directBuffer(readableBytes).writeBytes(buf);
+                        in.current(buf);
+                    }
+                }
                 boolean done = false;
                 long flushedAmount = 0;
                 if (writeSpinCount == -1) {

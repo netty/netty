@@ -127,7 +127,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
 
             boolean done = false;
             for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
-                if (doWriteMessage(msg)) {
+                if (doWriteMessage(msg, in)) {
                     done = true;
                     break;
                 }
@@ -155,5 +155,5 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
      *
      * @return {@code true} if and only if the message has been written
      */
-    protected abstract boolean doWriteMessage(Object msg) throws Exception;
+    protected abstract boolean doWriteMessage(Object msg, ChannelOutboundBuffer in) throws Exception;
 }

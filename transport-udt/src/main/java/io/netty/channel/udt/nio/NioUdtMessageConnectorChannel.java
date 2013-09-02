@@ -21,6 +21,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.udt.DefaultUdtChannelConfig;
 import io.netty.channel.udt.UdtChannel;
@@ -166,7 +167,7 @@ public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel imp
     }
 
     @Override
-    protected boolean doWriteMessage(Object msg) throws Exception {
+    protected boolean doWriteMessage(Object msg, ChannelOutboundBuffer in) throws Exception {
         // expects a message
         final UdtMessage message = (UdtMessage) msg;
 
