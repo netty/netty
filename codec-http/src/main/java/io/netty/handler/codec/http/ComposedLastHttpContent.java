@@ -50,7 +50,7 @@ final class ComposedLastHttpContent implements LastHttpContent {
     }
 
     @Override
-    public HttpContent duplicate() {
+    public LastHttpContent duplicate() {
         return copy();
     }
 
