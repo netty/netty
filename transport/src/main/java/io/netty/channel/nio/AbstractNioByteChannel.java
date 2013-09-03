@@ -145,7 +145,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
         int writeSpinCount = -1;
 
         for (;;) {
-            Object msg = in.current();
+            Object msg = in.current(true);
             if (msg == null) {
                 // Wrote all messages.
                 clearOpWrite();
@@ -159,16 +159,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                     in.remove();
                     continue;
                 }
-                if (!buf.isDirect()) {
-                    ByteBufAllocator alloc = alloc();
-                    if (alloc.isDirectBufferPooled()) {
-                        // Non-direct buffers are copied into JDK's own internal direct buffer on every I/O.
-                        // We can do a better job by using our pooled allocator. If the current allocator does not
-                        // pool a direct buffer, we rely on JDK's direct buffer pool.
-                        buf = alloc.directBuffer(readableBytes).writeBytes(buf);
-                        in.current(buf);
-                    }
-                }
+
                 boolean done = false;
                 long flushedAmount = 0;
                 if (writeSpinCount == -1) {
