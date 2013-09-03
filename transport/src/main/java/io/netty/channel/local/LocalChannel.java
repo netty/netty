@@ -283,7 +283,7 @@ public class LocalChannel extends AbstractChannel {
             // Use a copy because the original msgs will be recycled by AbstractChannel.
             final Object[] msgsCopy = new Object[in.size()];
             for (int i = 0; i < msgsCopy.length; i ++) {
-                msgsCopy[i] = ReferenceCountUtil.retain(in.current());
+                msgsCopy[i] = ReferenceCountUtil.retain(in.current(false));
                 in.remove();
             }
 
