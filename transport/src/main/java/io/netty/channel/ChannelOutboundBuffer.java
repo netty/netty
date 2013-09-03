@@ -48,15 +48,11 @@ public final class ChannelOutboundBuffer {
 
     private static final int INITIAL_CAPACITY = 32;
 
-    private static final boolean noThreadLocalDirectBuffer;
     private static final int threadLocalDirectBufferSize;
 
     static {
-        noThreadLocalDirectBuffer = SystemPropertyUtil.getBoolean("io.netty.noThreadLocalDirectBuffer", false);
-        logger.debug("-Dio.netty.noThreadLocalDirectBuffer: {}", noThreadLocalDirectBuffer);
-
         threadLocalDirectBufferSize = SystemPropertyUtil.getInt("io.netty.threadLocalDirectBufferSize", 64 * 1024);
-        logger.debug("-Dio.netty.threadLocalDirectBuffersSize: {}", threadLocalDirectBufferSize);
+        logger.debug("-Dio.netty.threadLocalDirectBufferSize: {}", threadLocalDirectBufferSize);
     }
 
     private static final Recycler<ChannelOutboundBuffer> RECYCLER = new Recycler<ChannelOutboundBuffer>() {
@@ -238,7 +234,7 @@ public final class ChannelOutboundBuffer {
     }
 
     public Object current() {
-        return current(false);
+        return current(true);
     }
 
     public Object current(boolean preferDirect) {
@@ -247,7 +243,7 @@ public final class ChannelOutboundBuffer {
         } else {
             // TODO: Think of a smart way to handle ByteBufHolder messages
             Object msg = buffer[flushed].msg;
-            if (noThreadLocalDirectBuffer || !preferDirect) {
+            if (threadLocalDirectBufferSize <= 0 || !preferDirect) {
                 return msg;
             }
             if (msg instanceof ByteBuf) {
@@ -386,7 +382,7 @@ public final class ChannelOutboundBuffer {
             if (readableBytes > 0) {
                 nioBufferSize += readableBytes;
 
-                if (noThreadLocalDirectBuffer || buf.isDirect()) {
+                if (threadLocalDirectBufferSize <= 0 || buf.isDirect()) {
                     int count = buf.nioBufferCount();
                     if (count == 1) {
                         if (nioBufferCount == nioBuffers.length) {
@@ -615,7 +611,7 @@ public final class ChannelOutboundBuffer {
 
         @Override
         protected void deallocate() {
-            if (threadLocalDirectBufferSize < capacity()) {
+            if (capacity() > threadLocalDirectBufferSize) {
                 super.deallocate();
             } else {
                 clear();
