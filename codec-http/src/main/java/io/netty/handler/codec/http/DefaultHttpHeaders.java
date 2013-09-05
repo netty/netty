@@ -108,9 +108,15 @@ public class DefaultHttpHeaders extends HttpHeaders {
 
     private final HeaderEntry[] entries = new HeaderEntry[BUCKET_SIZE];
     private final HeaderEntry head = new HeaderEntry(-1, null, null);
+    private final boolean validate;
 
     public DefaultHttpHeaders() {
+        this(true);
+    }
+
+    public DefaultHttpHeaders(boolean validate) {
         head.before = head.after = head;
+        this.validate = validate;
     }
 
     void validateHeaderValue0(String headerValue) {
@@ -123,15 +129,13 @@ public class DefaultHttpHeaders extends HttpHeaders {
     @Override
     public HttpHeaders add(final String name, final Object value) {
         String strVal = toString(value);
-        validateHeaderValue0(strVal);
-        int h = hash(name, !KNOWN_NAMES.contains(name));
-        int i = index(h);
-        add0(h, i, name, strVal);
-        return this;
-    }
+        boolean validateName = false;
+        if (validate) {
+            validateHeaderValue0(strVal);
+            validateName = !KNOWN_NAMES.contains(name);
+        }
 
-    HttpHeaders addWithoutValidate(final String name, final String strVal) {
-        int h = hash(name, false);
+        int h = hash(name, validateName);
         int i = index(h);
         add0(h, i, name, strVal);
         return this;
@@ -139,11 +143,18 @@ public class DefaultHttpHeaders extends HttpHeaders {
 
     @Override
     public HttpHeaders add(String name, Iterable<?> values) {
-        int h = hash(name, !KNOWN_NAMES.contains(name));
+        boolean validateName = false;
+        if (validate) {
+            validateName = !KNOWN_NAMES.contains(name);
+        }
+
+        int h = hash(name, validateName);
         int i = index(h);
         for (Object v: values) {
             String vstr = toString(v);
-            validateHeaderValue0(vstr);
+            if (validate) {
+                validateHeaderValue0(vstr);
+            }
             add0(h, i, name, vstr);
         }
         return this;
@@ -210,8 +221,13 @@ public class DefaultHttpHeaders extends HttpHeaders {
     @Override
     public HttpHeaders set(final String name, final Object value) {
         String strVal = toString(value);
-        validateHeaderValue0(strVal);
-        int h = hash(name, !KNOWN_NAMES.contains(name));
+        boolean validateName = false;
+        if (validate) {
+            validateHeaderValue0(strVal);
+            validateName = !KNOWN_NAMES.contains(name);
+        }
+
+        int h = hash(name, validateName);
         int i = index(h);
         remove0(h, i, name);
         add0(h, i, name, strVal);
@@ -224,7 +240,12 @@ public class DefaultHttpHeaders extends HttpHeaders {
             throw new NullPointerException("values");
         }
 
-        int h = hash(name, false);
+        boolean validateName = false;
+        if (validate) {
+            validateName = !KNOWN_NAMES.contains(name);
+        }
+
+        int h = hash(name, validateName);
         int i = index(h);
 
         remove0(h, i, name);
@@ -233,7 +254,9 @@ public class DefaultHttpHeaders extends HttpHeaders {
                 break;
             }
             String strVal = toString(v);
-            validateHeaderValue0(strVal);
+            if (validate) {
+                validateHeaderValue0(strVal);
+            }
             add0(h, i, name, strVal);
         }
 
@@ -395,7 +418,9 @@ public class DefaultHttpHeaders extends HttpHeaders {
             if (value == null) {
                 throw new NullPointerException("value");
             }
-            validateHeaderValue0(value);
+            if (validate) {
+                validateHeaderValue0(value);
+            }
             String oldValue = this.value;
             this.value = value;
             return oldValue;

@@ -51,6 +51,10 @@ import io.netty.handler.codec.TooLongFrameException;
  *     {@link HttpContent}s in your handler, insert {@link HttpObjectAggregator}
  *     after this decoder in the {@link ChannelPipeline}.</td>
  * </tr>
+ * <tr>
+ * <td>{@code verifyHeader}</td>
+ * <td>Specify if the headers should be verified during adding them for invalid chars.</td>
+ * </tr>
  * </table>
  *
  * <h3>Decoding a response for a <tt>HEAD</tt> request</h3>
@@ -113,7 +117,7 @@ public class HttpResponseDecoder extends HttpObjectDecoder {
     protected HttpMessage createMessage(String first, String second, String third) throws Exception {
         return new DefaultHttpResponse(
                 HttpVersion.valueOf(first),
-                new HttpResponseStatus(Integer.valueOf(second), third));
+                new HttpResponseStatus(Integer.valueOf(second), third), verifyHeader);
     }
 
     @Override

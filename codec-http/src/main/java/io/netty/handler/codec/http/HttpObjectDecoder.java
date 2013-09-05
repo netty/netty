@@ -98,9 +98,9 @@ import java.util.List;
  */
 public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
-    public static final int DEFAULT_MAX_INITIAL_LINE_LENGTH = 4096;
-    public static final int DEFAULT_MAX_HEADER_SIZE = 8192;
-    public static final int DEFAULT_MAX_CHUNK_SIZE = 8192;
+    static final int DEFAULT_MAX_INITIAL_LINE_LENGTH = 4096;
+    static final int DEFAULT_MAX_HEADER_SIZE = 8192;
+    static final int DEFAULT_MAX_CHUNK_SIZE = 8192;
 
     private static final ThreadLocal<StringBuilder> BUILDERS = new ThreadLocal<StringBuilder>() {
         @Override
@@ -113,7 +113,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     private final int maxHeaderSize;
     private final int maxChunkSize;
     private final boolean chunkedSupported;
-    private final boolean verifyHeader;
+    protected final boolean verifyHeader;
 
     private HttpMessage message;
     private long chunkSize;
@@ -623,13 +623,6 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     }
 
     private boolean parseHeaders(HttpHeaders headers, ByteBuf buffer, StringBuilder sb) {
-        final DefaultHttpHeaders defaultHeaders;
-        if (!verifyHeader && headers instanceof DefaultHttpHeaders) {
-            defaultHeaders = (DefaultHttpHeaders) headers;
-        } else {
-            defaultHeaders = null;
-        }
-
         // mark the index before try to start parsing and reset the StringBuilder
         buffer.markReaderIndex();
 
@@ -740,12 +733,8 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                         sb.setLength(end);
                     }
 
-                    if (defaultHeaders != null) {
-                        // we can do this as we know it only contains ascii
-                        defaultHeaders.addWithoutValidate(name, sb.toString());
-                    } else {
-                        headers.add(name, sb.toString());
-                    }
+                    headers.add(name, sb.toString());
+
                     parseState = HeaderParseState.LINE_START;
                     // unread one byte to process it in LINE_START
                     buffer.readerIndex(buffer.readerIndex() - 1);
@@ -805,11 +794,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                     if (!name.equalsIgnoreCase(HttpHeaders.Names.CONTENT_LENGTH) &&
                         !name.equalsIgnoreCase(HttpHeaders.Names.TRANSFER_ENCODING) &&
                         !name.equalsIgnoreCase(HttpHeaders.Names.TRAILER)) {
-                        if (defaultHeaders != null) {
-                            defaultHeaders.addWithoutValidate(name, header[1]);
-                        } else {
-                            headers.add(name, header[1]);
-                        }
+                        headers.add(name, sb.toString());
                     }
                     lastHeader = name;
                 }

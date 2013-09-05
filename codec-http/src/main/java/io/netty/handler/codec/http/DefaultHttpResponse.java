@@ -31,7 +31,18 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
      * @param status  the getStatus of this response
      */
     public DefaultHttpResponse(HttpVersion version, HttpResponseStatus status) {
-        super(version);
+        this(version, status, true);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param version           the HTTP version of this response
+     * @param status            the getStatus of this response
+     * @param validateHeader    validate the header names and values when adding them to the {@link HttpHeaders}.
+     */
+    public DefaultHttpResponse(HttpVersion version, HttpResponseStatus status, boolean validateHeader) {
+        super(version, validateHeader);
         if (status == null) {
             throw new NullPointerException("status");
         }
