@@ -103,8 +103,7 @@ public class SpdySessionHandlerTest {
         SpdyPingFrame localPingFrame = new DefaultSpdyPingFrame(localStreamId);
         SpdyPingFrame remotePingFrame = new DefaultSpdyPingFrame(remoteStreamId);
 
-        SpdySynStreamFrame spdySynStreamFrame =
-            new DefaultSpdySynStreamFrame(localStreamId, 0, (byte) 0);
+        SpdySynStreamFrame spdySynStreamFrame = new DefaultSpdySynStreamFrame(localStreamId, 0, (byte) 0);
         spdySynStreamFrame.setHeader("Compression", "test");
 
         SpdyDataFrame spdyDataFrame = new DefaultSpdyDataFrame(localStreamId);
@@ -123,10 +122,23 @@ public class SpdySessionHandlerTest {
         assertNull(sessionHandler.peek());
         remoteStreamId += 2;
 
-        // Check if session handler returns PROTOCOL_ERROR if it receives
-        // multiple SYN_REPLY frames for the same active Stream-ID
+        // Check if session handler correctly limits the number of
+        // concurrent streams in the SETTINGS frame
+        SpdySettingsFrame spdySettingsFrame = new DefaultSpdySettingsFrame();
+        spdySettingsFrame.setValue(SpdySettingsFrame.SETTINGS_MAX_CONCURRENT_STREAMS, 0);
+        sessionHandler.offer(spdySettingsFrame);
+        assertNull(sessionHandler.peek());
+        sessionHandler.offer(spdySynStreamFrame);
+        assertRstStream(sessionHandler.poll(), localStreamId, SpdyStreamStatus.REFUSED_STREAM);
+        assertNull(sessionHandler.peek());
+        spdySettingsFrame.setValue(SpdySettingsFrame.SETTINGS_MAX_CONCURRENT_STREAMS, 100);
+        sessionHandler.offer(spdySettingsFrame);
+        assertNull(sessionHandler.peek());
         sessionHandler.offer(new DefaultSpdySynReplyFrame(remoteStreamId));
         assertNull(sessionHandler.peek());
+
+        // Check if session handler returns PROTOCOL_ERROR if it receives
+        // multiple SYN_REPLY frames for the same active Stream-ID
         sessionHandler.offer(new DefaultSpdySynReplyFrame(remoteStreamId));
         assertRstStream(sessionHandler.poll(), remoteStreamId, SpdyStreamStatus.STREAM_IN_USE);
         assertNull(sessionHandler.peek());
@@ -181,9 +193,8 @@ public class SpdySessionHandlerTest {
         assertNull(sessionHandler.peek());
         spdySynStreamFrame.setStreamId(localStreamId);
 
-        // Check if session handler correctly limits the number of
+        // Check if session handler correctly handles updates to the max
         // concurrent streams in the SETTINGS frame
-        SpdySettingsFrame spdySettingsFrame = new DefaultSpdySettingsFrame();
         spdySettingsFrame.setValue(SpdySettingsFrame.SETTINGS_MAX_CONCURRENT_STREAMS, 2);
         sessionHandler.offer(spdySettingsFrame);
         assertNull(sessionHandler.peek());
@@ -272,13 +283,11 @@ public class SpdySessionHandlerTest {
         }
 
         @Override
-        public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e)
-                throws Exception {
+        public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
 
             // Initiate 4 new streams
             int streamId = server ? 2 : 1;
-            SpdySynStreamFrame spdySynStreamFrame =
-                new DefaultSpdySynStreamFrame(streamId, 0, (byte) 0);
+            SpdySynStreamFrame spdySynStreamFrame = new DefaultSpdySynStreamFrame(streamId, 0, (byte) 0);
             spdySynStreamFrame.setLast(true);
             Channels.write(e.getChannel(), spdySynStreamFrame);
             spdySynStreamFrame.setStreamId(spdySynStreamFrame.getStreamId() + 2);
