@@ -769,12 +769,6 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
             LastHttpContent trailer = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER);
             final HttpHeaders headers = trailer.trailingHeaders();
-            final DefaultHttpHeaders defaultHeaders;
-            if (!verifyHeader && headers instanceof DefaultHttpHeaders) {
-                defaultHeaders = (DefaultHttpHeaders) headers;
-            } else {
-                defaultHeaders = null;
-            }
             headers.clear();
 
             do {
@@ -794,7 +788,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                     if (!name.equalsIgnoreCase(HttpHeaders.Names.CONTENT_LENGTH) &&
                         !name.equalsIgnoreCase(HttpHeaders.Names.TRANSFER_ENCODING) &&
                         !name.equalsIgnoreCase(HttpHeaders.Names.TRAILER)) {
-                        headers.add(name, sb.toString());
+                        headers.add(name, header[1]);
                     }
                     lastHeader = name;
                 }
