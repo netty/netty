@@ -177,7 +177,7 @@ public class ChunkedWriteHandler
                         }
                         currentWrite.fail(cause);
                     } else {
-                        currentWrite.promise.setSuccess();
+                        currentWrite.success();
                     }
                     closeInput(in);
                 } catch (Exception e) {
@@ -278,7 +278,8 @@ public class ChunkedWriteHandler
                         @Override
                         public void operationComplete(ChannelFuture future) throws Exception {
                             pendingWrites.decrementAndGet();
-                            currentWrite.promise.setSuccess();
+                            currentWrite.progress();
+                            currentWrite.success();
                             closeInput(chunks);
                         }
                     });
@@ -352,6 +353,14 @@ public class ChunkedWriteHandler
             if (promise != null) {
                 promise.setFailure(cause);
             }
+        }
+
+        void success() {
+            if (promise instanceof ChannelProgressivePromise) {
+                // Now we know what the total is.
+                ((ChannelProgressivePromise) promise).tryProgress(progress, progress);
+            }
+            promise.setSuccess();
         }
 
         void progress() {
