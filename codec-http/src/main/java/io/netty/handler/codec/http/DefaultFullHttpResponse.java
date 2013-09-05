@@ -32,7 +32,12 @@ public class DefaultFullHttpResponse extends DefaultHttpResponse implements Full
     }
 
     public DefaultFullHttpResponse(HttpVersion version, HttpResponseStatus status, ByteBuf content) {
-        super(version, status);
+        this(version, status, content, true);
+    }
+
+    public DefaultFullHttpResponse(HttpVersion version, HttpResponseStatus status,
+                                   ByteBuf content, boolean validateHeaders) {
+        super(version, status, validateHeaders);
         if (content == null) {
             throw new NullPointerException("content");
         }
