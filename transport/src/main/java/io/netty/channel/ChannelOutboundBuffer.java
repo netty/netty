@@ -315,12 +315,11 @@ public final class ChannelOutboundBuffer {
      * </p>
      */
     public ByteBuffer[] nioBuffers() {
-        ByteBuffer[] nioBuffers = this.nioBuffers;
         long nioBufferSize = 0;
         int nioBufferCount = 0;
-
         final int mask = buffer.length - 1;
         final ByteBufAllocator alloc = channel.alloc();
+        ByteBuffer[] nioBuffers = this.nioBuffers;
         Object m;
         int i = flushed;
         while (i != unflushed && (m = buffer[i].msg) != null) {
@@ -331,51 +330,56 @@ public final class ChannelOutboundBuffer {
             }
 
             ByteBuf buf = (ByteBuf) m;
-
             final int readerIndex = buf.readerIndex();
             final int readableBytes = buf.writerIndex() - readerIndex;
 
             if (readableBytes > 0) {
                 nioBufferSize += readableBytes;
-
+                int count = buf.nioBufferCount();
+                if (nioBufferCount + count > nioBuffers.length) {
+                    this.nioBuffers = nioBuffers = doubleNioBufferArray(nioBuffers, nioBufferCount);
+                }
                 if (buf.isDirect() || !alloc.isDirectBufferPooled()) {
-                    int count = buf.nioBufferCount();
-                    if (count == 1) {
-                        if (nioBufferCount == nioBuffers.length) {
-                            this.nioBuffers = nioBuffers = doubleNioBufferArray(nioBuffers, nioBufferCount);
-                        }
+                    if (buf.nioBufferCount() == 1) {
                         nioBuffers[nioBufferCount ++] = buf.internalNioBuffer(readerIndex, readableBytes);
                     } else {
-                        ByteBuffer[] nioBufs = buf.nioBuffers();
-                        if (nioBufferCount + nioBufs.length > nioBuffers.length) {
-                            this.nioBuffers = nioBuffers = doubleNioBufferArray(nioBuffers, nioBufferCount);
-                        }
-                        for (ByteBuffer nioBuf: nioBufs) {
-                            if (nioBuf == null) {
-                                break;
-                            }
-                            nioBuffers[nioBufferCount ++] = nioBuf;
-                        }
+                        nioBufferCount = fillBufferArray(buf, nioBuffers, nioBufferCount);
                     }
                 } else {
-                    ByteBuf directBuf = alloc.directBuffer(readableBytes);
-                    directBuf.writeBytes(buf, readerIndex, readableBytes);
-                    buf.release();
-                    buffer[i].msg = directBuf;
-                    if (nioBufferCount == nioBuffers.length) {
-                        nioBuffers = doubleNioBufferArray(nioBuffers, nioBufferCount);
-                    }
-                    nioBuffers[nioBufferCount ++] = directBuf.internalNioBuffer(0, readableBytes);
+                    nioBufferCount = fillBufferArrayNonDirect(buffer[i], buf, readerIndex,
+                            readableBytes, alloc, nioBuffers, nioBufferCount);
                 }
             }
-
             i = i + 1 & mask;
         }
-
         this.nioBufferCount = nioBufferCount;
         this.nioBufferSize = nioBufferSize;
 
         return nioBuffers;
+    }
+
+    private static int fillBufferArray(ByteBuf buf, ByteBuffer[] nioBuffers, int nioBufferCount) {
+        ByteBuffer[] nioBufs = buf.nioBuffers();
+        for (ByteBuffer nioBuf: nioBufs) {
+            if (nioBuf == null) {
+                break;
+            }
+            nioBuffers[nioBufferCount ++] = nioBuf;
+        }
+        return nioBufferCount;
+    }
+
+    private static int fillBufferArrayNonDirect(Entry entry, ByteBuf buf, int readerIndex, int readableBytes,
+                                      ByteBufAllocator alloc, ByteBuffer[] nioBuffers, int nioBufferCount) {
+        ByteBuf directBuf = alloc.directBuffer(readableBytes);
+        directBuf.writeBytes(buf, readerIndex, readableBytes);
+        buf.release();
+        entry.msg = directBuf;
+        if (nioBufferCount == nioBuffers.length) {
+            nioBuffers = doubleNioBufferArray(nioBuffers, nioBufferCount);
+        }
+        nioBuffers[nioBufferCount ++] = directBuf.internalNioBuffer(0, readableBytes);
+        return nioBufferCount;
     }
 
     private static ByteBuffer[] doubleNioBufferArray(ByteBuffer[] array, int size) {
