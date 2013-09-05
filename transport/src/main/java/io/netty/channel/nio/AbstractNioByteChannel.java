@@ -187,11 +187,12 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                     }
                 }
 
+                in.progress(flushedAmount);
+
                 if (done) {
                     in.remove();
                 } else {
                     // Did not write completely.
-                    in.progress(flushedAmount);
                     setOpWrite();
                     break;
                 }
@@ -215,11 +216,12 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                     }
                 }
 
+                in.progress(flushedAmount);
+
                 if (done) {
                     in.remove();
                 } else {
                     // Did not write completely.
-                    in.progress(flushedAmount);
                     setOpWrite();
                     break;
                 }
