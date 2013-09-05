@@ -41,7 +41,7 @@ public class DefaultHttpHeaders extends HttpHeaders {
 
         for (Field f: fields) {
             int m = f.getModifiers();
-            if (Modifier.isPublic(m) && Modifier.isFinal(m) && Modifier.isFinal(m)
+            if (Modifier.isPublic(m) && Modifier.isStatic(m) && Modifier.isFinal(m)
                     && f.getType().isAssignableFrom(String.class)) {
                 try {
                     set.add((String) f.get(null));
