@@ -68,4 +68,10 @@ public interface ChannelInboundHandler extends ChannelHandler {
      * {@link Channel#isWritable()}.
      */
     void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception;
+
+    /**
+     * Gets called if a {@link Throwable} was thrown.
+     */
+    @Override
+    void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception;
 }
