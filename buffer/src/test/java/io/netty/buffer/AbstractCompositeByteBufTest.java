@@ -567,6 +567,16 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         assertEquals(0, freeLater(buf.duplicate()).readableBytes());
     }
 
+    @Test
+    public void testRemoveLastComponentWithOthersLeft() {
+        CompositeByteBuf buf = freeLater(compositeBuffer());
+        buf.addComponent(wrappedBuffer(new byte[]{1, 2}));
+        buf.addComponent(wrappedBuffer(new byte[]{1, 2}));
+        assertEquals(2, buf.numComponents());
+        buf.removeComponent(1);
+        assertEquals(1, buf.numComponents());
+    }
+
     @Override
     @Test
     public void testInternalNioBuffer() {
