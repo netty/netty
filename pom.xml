@@ -88,8 +88,10 @@
     <module>common</module>
     <module>buffer</module>
     <module>codec</module>
+    <module>codec-dns</module>
     <module>codec-http</module>
     <module>codec-socks</module>
+    <module>netty-dns</module>
     <module>transport</module>
     <module>transport-rxtx</module>
     <module>transport-sctp</module>

@@ -24,23 +24,36 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
+import io.netty.dns.DnsAsynchronousResolver;
 import io.netty.util.AttributeKey;
+import io.netty.util.concurrent.Future;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 /**
  * {@link AbstractBootstrap} is a helper class that makes it easy to bootstrap a {@link Channel}. It support
  * method-chaining to provide an easy way to configure the {@link AbstractBootstrap}.
  *
- * <p>When not used in a {@link ServerBootstrap} context, the {@link #bind()} methods are useful for connectionless
- * transports such as datagram (UDP).</p>
+ * <p>
+ * When not used in a {@link ServerBootstrap} context, the {@link #bind()} methods are useful for connectionless
+ * transports such as datagram (UDP).
+ * </p>
  */
 public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C extends Channel> implements Cloneable {
 
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractBootstrap.class);
+
+    final Map<SocketAddress, Future<InetAddress>> pendingQueries = new HashMap<SocketAddress, Future<InetAddress>>();
+
+    private volatile DnsAsynchronousResolver resolver;
     private volatile EventLoopGroup group;
     private volatile ChannelFactory<? extends C> channelFactory;
     private volatile SocketAddress localAddress;
@@ -53,6 +66,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     }
 
     AbstractBootstrap(AbstractBootstrap<B, C> bootstrap) {
+        resolver = bootstrap.resolver;
         group = bootstrap.group;
         channelFactory = bootstrap.channelFactory;
         handler = bootstrap.handler;
@@ -65,9 +79,41 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         }
     }
 
+    Future<InetAddress> queryDns(SocketAddress address_, boolean add) {
+        if (resolver != null && address_ != null) {
+            if (address_ instanceof InetSocketAddress) {
+                if (pendingQueries.containsKey(address_)) {
+                    return pendingQueries.get(address_);
+                }
+                InetSocketAddress address = (InetSocketAddress) address_;
+                // TODO: check if host is valid
+                if (!address.isUnresolved()) {
+                    logger.warn("Bootstrap is using asynchronous resolver, but a resolved"
+                            + "SocketAddress was passed.");
+                    return null;
+                }
+                Future<InetAddress> future = resolver.lookup(address.getHostName());
+                if (add) {
+                    pendingQueries.put(address_, future);
+                }
+                return future;
+            }
+        }
+        return null;
+    }
+
     /**
-     * The {@link EventLoopGroup} which is used to handle all the events for the to-be-creates
-     * {@link Channel}
+     * The {@link DnsAsynchronousResolver} that is used to resolve domains (setting this to {@code null} uses JDK's
+     * default resolver). This must be set before any {@link SocketAddress}es are passed to the {@link Bootstrap}.
+     */
+    @SuppressWarnings("unchecked")
+    public B resolver(DnsAsynchronousResolver resolver) {
+        this.resolver = resolver;
+        return (B) this;
+    }
+
+    /**
+     * The {@link EventLoopGroup} which is used to handle all the events for the to-be-creates {@link Channel}
      */
     @SuppressWarnings("unchecked")
     public B group(EventLoopGroup group) {
@@ -82,9 +128,8 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     }
 
     /**
-     * The {@link Class} which is used to create {@link Channel} instances from.
-     * You either use this or {@link #channelFactory(ChannelFactory)} if your
-     * {@link Channel} implementation has no no-args constructor.
+     * The {@link Class} which is used to create {@link Channel} instances from. You either use this or
+     * {@link #channelFactory(ChannelFactory)} if your {@link Channel} implementation has no no-args constructor.
      */
     public B channel(Class<? extends C> channelClass) {
         if (channelClass == null) {
@@ -94,11 +139,10 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     }
 
     /**
-     * {@link ChannelFactory} which is used to create {@link Channel} instances from
-     * when calling {@link #bind()}. This method is usually only used if {@link #channel(Class)}
-     * is not working for you because of some more complex needs. If your {@link Channel} implementation
-     * has a no-args constructor, its highly recommend to just use {@link #channel(Class)} for
-     * simplify your code.
+     * {@link ChannelFactory} which is used to create {@link Channel} instances from when calling {@link #bind()}. This
+     * method is usually only used if {@link #channel(Class)} is not working for you because of some more complex needs.
+     * If your {@link Channel} implementation has a no-args constructor, its highly recommend to just use
+     * {@link #channel(Class)} for simplify your code.
      */
     @SuppressWarnings("unchecked")
     public B channelFactory(ChannelFactory<? extends C> channelFactory) {
@@ -119,7 +163,9 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      */
     @SuppressWarnings("unchecked")
     public B localAddress(SocketAddress localAddress) {
+        pendingQueries.remove(this.localAddress);
         this.localAddress = localAddress;
+        queryDns(localAddress, true);
         return (B) this;
     }
 
@@ -134,7 +180,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      * @see {@link #localAddress(SocketAddress)}
      */
     public B localAddress(String inetHost, int inetPort) {
-        return localAddress(new InetSocketAddress(inetHost, inetPort));
+        return localAddress(InetSocketAddress.createUnresolved(inetHost, inetPort));
     }
 
     /**
@@ -145,8 +191,8 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     }
 
     /**
-     * Allow to specify a {@link ChannelOption} which is used for the {@link Channel} instances once they got
-     * created. Use a value of {@code null} to remove a previous set {@link ChannelOption}.
+     * Allow to specify a {@link ChannelOption} which is used for the {@link Channel} instances once they got created.
+     * Use a value of {@code null} to remove a previous set {@link ChannelOption}.
      */
     @SuppressWarnings("unchecked")
     public <T> B option(ChannelOption<T> option, T value) {
@@ -166,8 +212,8 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     }
 
     /**
-     * Allow to specify an initial attribute of the newly created {@link Channel}.  If the {@code value} is
-     * {@code null}, the attribute of the specified {@code key} is removed.
+     * Allow to specify an initial attribute of the newly created {@link Channel}. If the {@code value} is {@code null},
+     * the attribute of the specified {@code key} is removed.
      */
     public <T> B attr(AttributeKey<T> key, T value) {
         if (key == null) {
@@ -189,8 +235,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     }
 
     /**
-     * Validate all the parameters. Sub-classes may override this, but should
-     * call the super method in that case.
+     * Validate all the parameters. Sub-classes may override this, but should call the super method in that case.
      */
     @SuppressWarnings("unchecked")
     public B validate() {
@@ -204,8 +249,8 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     }
 
     /**
-     * Returns a deep clone of this bootstrap which has the identical configuration.  This method is useful when making
-     * multiple {@link Channel}s with similar settings.  Please note that this method does not clone the
+     * Returns a deep clone of this bootstrap which has the identical configuration. This method is useful when making
+     * multiple {@link Channel}s with similar settings. Please note that this method does not clone the
      * {@link EventLoopGroup} deeply but shallowly, making the group a shared resource.
      */
     @Override
@@ -235,7 +280,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      * Create a new {@link Channel} and bind it.
      */
     public ChannelFuture bind(String inetHost, int inetPort) {
-        return bind(new InetSocketAddress(inetHost, inetPort));
+        return bind(InetSocketAddress.createUnresolved(inetHost, inetPort));
     }
 
     /**
@@ -257,16 +302,25 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     }
 
     private ChannelFuture doBind(final SocketAddress localAddress) {
+        final Future<InetAddress> async = queryDns(localAddress, false);
+        pendingQueries.remove(localAddress);
+        final int port;
+        if (async != null && localAddress instanceof InetSocketAddress) {
+            InetSocketAddress address = (InetSocketAddress) localAddress;
+            port = address.getPort();
+        } else {
+            port = -1;
+        }
         final ChannelFuture regPromise = initAndRegister();
         final Channel channel = regPromise.channel();
         final ChannelPromise promise = channel.newPromise();
         if (regPromise.isDone()) {
-            doBind0(regPromise, channel, localAddress, promise);
+            doBind0(regPromise, channel, async == null ? localAddress : async, port, promise);
         } else {
             regPromise.addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(ChannelFuture future) throws Exception {
-                    doBind0(future, channel, localAddress, promise);
+                    doBind0(future, channel, async == null ? localAddress : async, port, promise);
                 }
             });
         }
@@ -295,30 +349,41 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
 
         // If we are here and the promise is not failed, it's one of the following cases:
         // 1) If we attempted registration from the event loop, the registration has been completed at this point.
-        //    i.e. It's safe to attempt bind() or connect() now beause the channel has been registered.
+        // i.e. It's safe to attempt bind() or connect() now beause the channel has been registered.
         // 2) If we attempted registration from the other thread, the registration request has been successfully
-        //    added to the event loop's task queue for later execution.
-        //    i.e. It's safe to attempt bind() or connect() now:
-        //         because bind() or connect() will be executed *after* the scheduled registration task is executed
-        //         because register(), bind(), and connect() are all bound to the same thread.
+        // added to the event loop's task queue for later execution.
+        // i.e. It's safe to attempt bind() or connect() now:
+        // because bind() or connect() will be executed *after* the scheduled registration task is executed
+        // because register(), bind(), and connect() are all bound to the same thread.
 
         return regPromise;
     }
 
     abstract void init(Channel channel) throws Exception;
 
-    private static void doBind0(
-            final ChannelFuture regFuture, final Channel channel,
-            final SocketAddress localAddress, final ChannelPromise promise) {
+    private static void doBind0(final ChannelFuture regFuture, final Channel channel, final Object localAddress,
+            final int port, final ChannelPromise promise) {
 
-        // This method is invoked before channelRegistered() is triggered.  Give user handlers a chance to set up
+        // This method is invoked before channelRegistered() is triggered. Give user handlers a chance to set up
         // the pipeline in its channelRegistered() implementation.
 
         channel.eventLoop().execute(new Runnable() {
+            @SuppressWarnings("unchecked")
             @Override
             public void run() {
                 if (regFuture.isSuccess()) {
-                    channel.bind(localAddress, promise).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+                    SocketAddress address;
+                    if (localAddress instanceof Future) {
+                        try {
+                            address = new InetSocketAddress(((Future<InetAddress>) localAddress).get(), port);
+                        } catch (Exception e) {
+                            address = null;
+                            e.printStackTrace();
+                        }
+                    } else {
+                        address = (SocketAddress) localAddress;
+                    }
+                    channel.bind(address, promise).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
                 } else {
                     promise.setFailure(regFuture.cause());
                 }
