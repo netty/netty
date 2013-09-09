@@ -109,9 +109,6 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                 if (isFull) {
                     // Pass through the full response with empty content and continue waiting for the the next resp.
                     if (!((ByteBufHolder) res).content().isReadable()) {
-                        // Set the content length to 0.
-                        res.headers().remove(Names.TRANSFER_ENCODING);
-                        res.headers().set(Names.CONTENT_LENGTH, "0");
                         out.add(ReferenceCountUtil.retain(res));
                         break;
                     }
@@ -123,9 +120,6 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                 // If unable to encode, pass through.
                 if (result == null) {
                     if (isFull) {
-                        // Set the content length.
-                        res.headers().remove(Names.TRANSFER_ENCODING);
-                        res.headers().set(Names.CONTENT_LENGTH, ((ByteBufHolder) res).content().readableBytes());
                         out.add(ReferenceCountUtil.retain(res));
                     } else {
                         out.add(res);
