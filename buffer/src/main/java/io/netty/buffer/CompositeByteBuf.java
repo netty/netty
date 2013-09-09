@@ -323,7 +323,8 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     private void updateComponentOffsets(int cIndex) {
-        if (components.isEmpty()) {
+        int size = components.size();
+        if (size <= cIndex) {
             return;
         }
 
@@ -334,7 +335,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
             cIndex ++;
         }
 
-        for (int i = cIndex; i < components.size(); i ++) {
+        for (int i = cIndex; i < size; i ++) {
             Component prev = components.get(i - 1);
             Component cur = components.get(i);
             cur.offset = prev.endOffset;
