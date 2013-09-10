@@ -306,6 +306,8 @@
             <Xlint:deprecation />
           </compilerArguments>
           -->
+          <meminitial>256m</meminitial>
+          <maxmem>1024m</maxmem>
         </configuration>
       </plugin>
       <plugin>
