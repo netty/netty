@@ -125,7 +125,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
 
     @Override
     public boolean isActive() {
-        return isOpen() && socket.isBound();
+        return isOpen();
     }
 
     @Override

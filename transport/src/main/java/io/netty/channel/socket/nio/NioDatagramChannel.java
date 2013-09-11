@@ -128,7 +128,7 @@ public final class NioDatagramChannel
     @Override
     public boolean isActive() {
         DatagramChannel ch = javaChannel();
-        return ch.isOpen() && ch.socket().isBound();
+        return ch.isOpen();
     }
 
     @Override
