@@ -23,6 +23,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.AttributeKey;
 
@@ -211,6 +212,14 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     @Override
     @SuppressWarnings("CloneDoesntDeclareCloneNotSupportedException")
     public abstract B clone();
+
+    /**
+     * Create a new {@link Channel} and register it with an {@link EventLoop}.
+     */
+    public ChannelFuture register() {
+        validate();
+        return initAndRegister();
+    }
 
     /**
      * Create a new {@link Channel} and bind it.
