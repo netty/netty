@@ -62,4 +62,37 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
         sc.close().sync();
         cc.close().sync();
     }
+
+    @Test
+    public void testSimpleSendWithoutBind() throws Throwable {
+        //run();
+    }
+
+    public void testSimpleSendWithoutBind(Bootstrap sb, Bootstrap cb) throws Throwable {
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        sb.handler(new SimpleChannelInboundHandler<DatagramPacket>() {
+            @Override
+            public void channelRead0(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
+                assertEquals(1, msg.content().readInt());
+                latch.countDown();
+            }
+        });
+
+        cb.handler(new SimpleChannelInboundHandler<Object>() {
+            @Override
+            public void channelRead0(ChannelHandlerContext ctx, Object msgs) throws Exception {
+                // Nothing will be sent.
+            }
+        });
+
+        Channel sc = sb.bind().sync().channel();
+        Channel cc = cb.register().sync().channel();
+
+        cc.writeAndFlush(new DatagramPacket(Unpooled.copyInt(1), addr)).sync();
+        assertTrue(latch.await(10, TimeUnit.SECONDS));
+
+        sc.close().sync();
+        cc.close().sync();
+    }
 }
