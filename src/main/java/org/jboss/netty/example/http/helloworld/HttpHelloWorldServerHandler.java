@@ -27,7 +27,6 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.util.CharsetUtil;
 
 import static org.jboss.netty.handler.codec.http.HttpHeaders.Names.*;
 import static org.jboss.netty.handler.codec.http.HttpHeaders.*;
@@ -36,7 +35,7 @@ import static org.jboss.netty.handler.codec.http.HttpVersion.*;
 
 public class HttpHelloWorldServerHandler extends SimpleChannelUpstreamHandler {
 
-    private static final byte[] CONTENT = "Hello World".getBytes(CharsetUtil.US_ASCII);
+    private static final byte[] CONTENT = { 'H', 'e', 'l', 'l', 'o', ' ', 'W', 'o', 'r', 'l', 'd' };
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
