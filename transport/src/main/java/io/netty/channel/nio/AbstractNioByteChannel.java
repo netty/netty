@@ -35,6 +35,7 @@ import java.nio.channels.SelectionKey;
  * {@link AbstractNioChannel} base class for {@link Channel}s that operate on bytes.
  */
 public abstract class AbstractNioByteChannel extends AbstractNioChannel {
+    private Runnable flushTask;
 
     /**
      * Create a new instance
@@ -160,6 +161,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                     continue;
                 }
 
+                boolean setOpWrite = false;
                 boolean done = false;
                 long flushedAmount = 0;
                 if (writeSpinCount == -1) {
@@ -168,6 +170,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 for (int i = writeSpinCount - 1; i >= 0; i --) {
                     int localFlushedAmount = doWriteBytes(buf);
                     if (localFlushedAmount == 0) {
+                        setOpWrite = true;
                         break;
                     }
 
@@ -183,12 +186,12 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 if (done) {
                     in.remove();
                 } else {
-                    // Did not write completely.
-                    setOpWrite();
+                    incompleteWrite(setOpWrite);
                     break;
                 }
             } else if (msg instanceof FileRegion) {
                 FileRegion region = (FileRegion) msg;
+                boolean setOpWrite = false;
                 boolean done = false;
                 long flushedAmount = 0;
                 if (writeSpinCount == -1) {
@@ -197,6 +200,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 for (int i = writeSpinCount - 1; i >= 0; i --) {
                     long localFlushedAmount = doWriteFileRegion(region);
                     if (localFlushedAmount == 0) {
+                        setOpWrite = true;
                         break;
                     }
 
@@ -212,13 +216,31 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 if (done) {
                     in.remove();
                 } else {
-                    // Did not write completely.
-                    setOpWrite();
+                    incompleteWrite(setOpWrite);
                     break;
                 }
             } else {
                 throw new UnsupportedOperationException("unsupported message type: " + StringUtil.simpleClassName(msg));
             }
+        }
+    }
+
+    protected final void incompleteWrite(boolean setOpWrite) {
+        // Did not write completely.
+        if (setOpWrite) {
+            setOpWrite();
+        } else {
+            // Schedule flush again later so other tasks can be picked up in the meantime
+            Runnable flushTask = this.flushTask;
+            if (flushTask == null) {
+                flushTask = this.flushTask = new Runnable() {
+                    @Override
+                    public void run() {
+                        flush();
+                    }
+                };
+            }
+            eventLoop().execute(flushTask);
         }
     }
 
