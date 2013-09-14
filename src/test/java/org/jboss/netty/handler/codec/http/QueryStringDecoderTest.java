@@ -254,4 +254,27 @@ public class QueryStringDecoderTest {
 
         Assert.assertFalse(entries.hasNext());
     }
+
+    // See https://github.com/netty/netty/issues/1833
+    @Test
+    public void testURI2() {
+        URI uri = URI.create("http://foo.com/images;num=10?query=name;value=123");
+        QueryStringDecoder decoder = new QueryStringDecoder(uri);
+        Assert.assertEquals("/images;num=10", decoder.getPath());
+        Map<String, List<String>> params =  decoder.getParameters();
+        Assert.assertEquals(2, params.size());
+        Iterator<Entry<String, List<String>>> entries = params.entrySet().iterator();
+
+        Entry<String, List<String>> entry = entries.next();
+        Assert.assertEquals("query", entry.getKey());
+        Assert.assertEquals(1, entry.getValue().size());
+        Assert.assertEquals("name", entry.getValue().get(0));
+
+        entry = entries.next();
+        Assert.assertEquals("value", entry.getKey());
+        Assert.assertEquals(1, entry.getValue().size());
+        Assert.assertEquals("123", entry.getValue().get(0));
+
+        Assert.assertFalse(entries.hasNext());
+    }
 }
