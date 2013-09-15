@@ -177,6 +177,27 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
     }
 
     @Test
+    public void testCompositeToSingleBuffer() {
+        CompositeByteBuf buf = compositeBuffer(3);
+
+        buf.addComponent(wrappedBuffer(new byte[] {1, 2, 3}));
+        assertEquals(1, buf.numComponents());
+
+        buf.addComponent(wrappedBuffer(new byte[] {4}));
+        assertEquals(2, buf.numComponents());
+
+        buf.addComponent(wrappedBuffer(new byte[] {5, 6}));
+        assertEquals(3, buf.numComponents());
+
+        // NOTE: hard-coding 6 here, since it seems like addComponent doesn't bump the writer index.
+        // I'm unsure as to whether or not this is correct behavior
+        ByteBuffer nioBuffer = buf.nioBuffer(0, 6);
+        byte[] bytes = nioBuffer.array();
+        assertEquals(6, bytes.length);
+        assertArrayEquals(new byte[] {1, 2, 3, 4, 5, 6}, bytes);
+    }
+
+    @Test
     public void testFullConsolidation() {
         CompositeByteBuf buf = freeLater(compositeBuffer(Integer.MAX_VALUE));
         buf.addComponent(wrappedBuffer(new byte[] { 1 }));
