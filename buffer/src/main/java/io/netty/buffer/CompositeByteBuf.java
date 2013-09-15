@@ -1122,7 +1122,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
 
         //noinspection ForLoopReplaceableByForEach
         for (int i = 0; i < buffers.length; i++) {
-            merged.put(buffers[0]);
+            merged.put(buffers[i]);
         }
 
         merged.flip();
