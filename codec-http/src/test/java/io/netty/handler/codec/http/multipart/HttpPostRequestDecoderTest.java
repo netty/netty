@@ -181,7 +181,7 @@ public class HttpPostRequestDecoderTest {
 
         assertEquals(InterfaceHttpData.HttpDataType.Attribute, aDecodedData.getHttpDataType());
 
-        Attribute aAttr = (Attribute)aDecodedData;
+        Attribute aAttr = (Attribute) aDecodedData;
 
         assertEquals(aData, aAttr.getValue());
     }
