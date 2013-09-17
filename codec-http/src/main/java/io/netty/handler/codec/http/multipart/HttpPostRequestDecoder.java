@@ -538,7 +538,7 @@ public class HttpPostRequestDecoder {
                     if (read == '&') {
                         currentStatus = MultiPartStatus.DISPOSITION;
                         ampersandpos = currentpos - 1;
-                        setFinalBuffer(undecodedChunk.slice(firstpos, ampersandpos - firstpos).retain());
+                        setFinalBuffer(undecodedChunk.slice(firstpos, ampersandpos - firstpos).copy());
                         firstpos = currentpos;
                         contRead = true;
                     } else if (read == HttpConstants.CR) {
@@ -548,7 +548,7 @@ public class HttpPostRequestDecoder {
                             if (read == HttpConstants.LF) {
                                 currentStatus = MultiPartStatus.PREEPILOGUE;
                                 ampersandpos = currentpos - 2;
-                                setFinalBuffer(undecodedChunk.slice(firstpos, ampersandpos - firstpos).retain());
+                                setFinalBuffer(undecodedChunk.slice(firstpos, ampersandpos - firstpos).copy());
                                 firstpos = currentpos;
                                 contRead = false;
                             } else {
@@ -561,7 +561,7 @@ public class HttpPostRequestDecoder {
                     } else if (read == HttpConstants.LF) {
                         currentStatus = MultiPartStatus.PREEPILOGUE;
                         ampersandpos = currentpos - 1;
-                        setFinalBuffer(undecodedChunk.slice(firstpos, ampersandpos - firstpos).retain());
+                        setFinalBuffer(undecodedChunk.slice(firstpos, ampersandpos - firstpos).copy());
                         firstpos = currentpos;
                         contRead = false;
                     }
@@ -575,7 +575,7 @@ public class HttpPostRequestDecoder {
                 // special case
                 ampersandpos = currentpos;
                 if (ampersandpos > firstpos) {
-                    setFinalBuffer(undecodedChunk.slice(firstpos, ampersandpos - firstpos).retain());
+                    setFinalBuffer(undecodedChunk.slice(firstpos, ampersandpos - firstpos).copy());
                 } else if (!currentAttribute.isCompleted()) {
                     setFinalBuffer(EMPTY_BUFFER);
                 }
@@ -586,7 +586,8 @@ public class HttpPostRequestDecoder {
             if (contRead && currentAttribute != null) {
                 // reset index except if to continue in case of FIELD getStatus
                 if (currentStatus == MultiPartStatus.FIELD) {
-                    currentAttribute.addContent(undecodedChunk.slice(firstpos, currentpos - firstpos).retain(), false);
+                    currentAttribute.addContent(undecodedChunk.slice(firstpos, currentpos - firstpos).copy(),
+                                                false);
                     firstpos = currentpos;
                 }
                 undecodedChunk.readerIndex(firstpos);
@@ -658,7 +659,7 @@ public class HttpPostRequestDecoder {
                     if (read == '&') {
                         currentStatus = MultiPartStatus.DISPOSITION;
                         ampersandpos = currentpos - 1;
-                        setFinalBuffer(undecodedChunk.slice(firstpos, ampersandpos - firstpos).retain());
+                        setFinalBuffer(undecodedChunk.slice(firstpos, ampersandpos - firstpos).copy());
                         firstpos = currentpos;
                         contRead = true;
                     } else if (read == HttpConstants.CR) {
@@ -669,7 +670,7 @@ public class HttpPostRequestDecoder {
                                 currentStatus = MultiPartStatus.PREEPILOGUE;
                                 ampersandpos = currentpos - 2;
                                 sao.setReadPosition(0);
-                                setFinalBuffer(undecodedChunk.slice(firstpos, ampersandpos - firstpos).retain());
+                                setFinalBuffer(undecodedChunk.slice(firstpos, ampersandpos - firstpos).copy());
                                 firstpos = currentpos;
                                 contRead = false;
                                 break loop;
@@ -687,7 +688,7 @@ public class HttpPostRequestDecoder {
                         currentStatus = MultiPartStatus.PREEPILOGUE;
                         ampersandpos = currentpos - 1;
                         sao.setReadPosition(0);
-                        setFinalBuffer(undecodedChunk.slice(firstpos, ampersandpos - firstpos).retain());
+                        setFinalBuffer(undecodedChunk.slice(firstpos, ampersandpos - firstpos).copy());
                         firstpos = currentpos;
                         contRead = false;
                         break loop;
@@ -704,7 +705,7 @@ public class HttpPostRequestDecoder {
                 // special case
                 ampersandpos = currentpos;
                 if (ampersandpos > firstpos) {
-                    setFinalBuffer(undecodedChunk.slice(firstpos, ampersandpos - firstpos).retain());
+                    setFinalBuffer(undecodedChunk.slice(firstpos, ampersandpos - firstpos).copy());
                 } else if (!currentAttribute.isCompleted()) {
                     setFinalBuffer(EMPTY_BUFFER);
                 }
@@ -715,7 +716,8 @@ public class HttpPostRequestDecoder {
             if (contRead && currentAttribute != null) {
                 // reset index except if to continue in case of FIELD getStatus
                 if (currentStatus == MultiPartStatus.FIELD) {
-                    currentAttribute.addContent(undecodedChunk.slice(firstpos, currentpos - firstpos).retain(), false);
+                    currentAttribute.addContent(undecodedChunk.slice(firstpos, currentpos - firstpos).copy(),
+                                                false);
                     firstpos = currentpos;
                 }
                 undecodedChunk.readerIndex(firstpos);
@@ -1646,7 +1648,7 @@ public class HttpPostRequestDecoder {
                 }
             }
         }
-        ByteBuf buffer = undecodedChunk.slice(readerIndex, lastPosition - readerIndex).retain();
+        ByteBuf buffer = undecodedChunk.slice(readerIndex, lastPosition - readerIndex).copy();
         if (found) {
             // found so lastPosition is correct and final
             try {
@@ -1764,7 +1766,7 @@ public class HttpPostRequestDecoder {
             }
         }
         lastPosition = sao.getReadPosition(lastrealpos);
-        ByteBuf buffer = undecodedChunk.slice(readerIndex, lastPosition - readerIndex).retain();
+        ByteBuf buffer = undecodedChunk.slice(readerIndex, lastPosition - readerIndex).copy();
         if (found) {
             // found so lastPosition is correct and final
             try {
@@ -1863,7 +1865,7 @@ public class HttpPostRequestDecoder {
                 // so go back of delimiter size
                 try {
                     currentAttribute.addContent(
-                            undecodedChunk.slice(readerIndex, lastPosition - readerIndex).retain(), true);
+                            undecodedChunk.slice(readerIndex, lastPosition - readerIndex).copy(), true);
                 } catch (IOException e) {
                     throw new ErrorDataDecoderException(e);
                 }
@@ -1871,7 +1873,7 @@ public class HttpPostRequestDecoder {
             } else {
                 try {
                     currentAttribute.addContent(
-                            undecodedChunk.slice(readerIndex, lastPosition - readerIndex).retain(), false);
+                            undecodedChunk.slice(readerIndex, lastPosition - readerIndex).copy(), false);
                 } catch (IOException e) {
                     throw new ErrorDataDecoderException(e);
                 }
@@ -1968,7 +1970,7 @@ public class HttpPostRequestDecoder {
                 // so go back of delimiter size
                 try {
                     currentAttribute.addContent(
-                            undecodedChunk.slice(readerIndex, lastPosition - readerIndex).retain(), true);
+                            undecodedChunk.slice(readerIndex, lastPosition - readerIndex).copy(), true);
                 } catch (IOException e) {
                     throw new ErrorDataDecoderException(e);
                 }
@@ -1976,7 +1978,7 @@ public class HttpPostRequestDecoder {
             } else {
                 try {
                     currentAttribute.addContent(
-                            undecodedChunk.slice(readerIndex, lastPosition - readerIndex).retain(), false);
+                            undecodedChunk.slice(readerIndex, lastPosition - readerIndex).copy(), false);
                 } catch (IOException e) {
                     throw new ErrorDataDecoderException(e);
                 }
