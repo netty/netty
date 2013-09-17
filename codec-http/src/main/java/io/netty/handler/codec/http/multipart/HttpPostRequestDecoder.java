@@ -586,7 +586,7 @@ public class HttpPostRequestDecoder {
             if (contRead && currentAttribute != null) {
                 // reset index except if to continue in case of FIELD getStatus
                 if (currentStatus == MultiPartStatus.FIELD) {
-                    currentAttribute.addContent(undecodedChunk.slice(firstpos, currentpos - firstpos).copy().retain(), 
+                    currentAttribute.addContent(undecodedChunk.slice(firstpos, currentpos - firstpos).copy().retain(),
                                                 false);
                     firstpos = currentpos;
                 }
@@ -716,7 +716,7 @@ public class HttpPostRequestDecoder {
             if (contRead && currentAttribute != null) {
                 // reset index except if to continue in case of FIELD getStatus
                 if (currentStatus == MultiPartStatus.FIELD) {
-                    currentAttribute.addContent(undecodedChunk.slice(firstpos, currentpos - firstpos).copy().retain(), 
+                    currentAttribute.addContent(undecodedChunk.slice(firstpos, currentpos - firstpos).copy().retain(),
                                                 false);
                     firstpos = currentpos;
                 }
