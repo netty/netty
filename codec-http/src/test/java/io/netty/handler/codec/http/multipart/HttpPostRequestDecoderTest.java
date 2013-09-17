@@ -23,6 +23,14 @@ import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.handler.codec.http.multipart.Attribute;
+import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
+import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder;
+import io.netty.handler.codec.http.multipart.InterfaceHttpData;
 import io.netty.util.CharsetUtil;
 import org.junit.Test;
 
@@ -119,4 +127,57 @@ public class HttpPostRequestDecoderTest {
         final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
         assertFalse(decoder.getBodyHttpDatas().isEmpty());
     }
+    
+    // See https://github.com/netty/netty/issues/1848
+    @Test
+	public void testNoZeroOut() throws Exception {
+		final String boundary = "E832jQp_Rq2ErFmAduHSR8YlMSm0FCY";
+
+		final DefaultHttpDataFactory aMemFactory = new DefaultHttpDataFactory(false);
+
+		DefaultHttpRequest aRequest = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "http://localhost");
+		aRequest.headers().set(HttpHeaders.Names.CONTENT_TYPE,  "multipart/form-data; boundary=" + boundary);
+		aRequest.headers().set(HttpHeaders.Names.TRANSFER_ENCODING, HttpHeaders.Values.CHUNKED);
+
+		HttpPostRequestDecoder aDecoder = new HttpPostRequestDecoder(aMemFactory, aRequest);
+
+		final String aData = "some data would be here. the data should be long enough that it will be longer than the original " +
+		                     "buffer length of 256 bytes in the HttpPostRequestDecoder in order to trigger the issue. Some more " +
+		                     "data just to be on the safe side.";
+
+		final String body =
+			"--" + boundary + "\r\n" +
+			"Content-Disposition: form-data; name=\"root\"\r\n" +
+			"Content-Type: text/plain\r\n" +
+			"\r\n" +
+			aData +
+			"\r\n" +
+			"--" + boundary + "--\r\n";
+
+		byte[] aBytes = body.getBytes();
+
+		int split = 125;
+
+		ByteBufAllocator aAlloc = new UnpooledByteBufAllocator(true);
+		ByteBuf aSmallBuf = aAlloc.heapBuffer(split, split);
+		ByteBuf aLargeBuf = aAlloc.heapBuffer(aBytes.length-split, aBytes.length-split);
+
+		aSmallBuf.writeBytes(aBytes, 0, split);
+		aLargeBuf.writeBytes(aBytes, split, aBytes.length-split);
+
+		aDecoder.offer(new DefaultHttpContent(aSmallBuf));
+		aDecoder.offer(new DefaultHttpContent(aLargeBuf));
+
+		aDecoder.offer(LastHttpContent.EMPTY_LAST_CONTENT);
+
+		assertTrue("Should have a piece of data", aDecoder.hasNext());
+
+		InterfaceHttpData aDecodedData = aDecoder.next();
+
+		assertEquals(InterfaceHttpData.HttpDataType.Attribute, aDecodedData.getHttpDataType());
+
+		Attribute aAttr = (Attribute)aDecodedData;
+
+		assertEquals(aData, aAttr.getValue());
+	}
 }
