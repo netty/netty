@@ -130,54 +130,59 @@ public class HttpPostRequestDecoderTest {
     
     // See https://github.com/netty/netty/issues/1848
     @Test
-	public void testNoZeroOut() throws Exception {
-		final String boundary = "E832jQp_Rq2ErFmAduHSR8YlMSm0FCY";
+    public void testNoZeroOut() throws Exception {
+        final String boundary = "E832jQp_Rq2ErFmAduHSR8YlMSm0FCY";
 
-		final DefaultHttpDataFactory aMemFactory = new DefaultHttpDataFactory(false);
+        final DefaultHttpDataFactory aMemFactory = new DefaultHttpDataFactory(false);
 
-		DefaultHttpRequest aRequest = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "http://localhost");
-		aRequest.headers().set(HttpHeaders.Names.CONTENT_TYPE,  "multipart/form-data; boundary=" + boundary);
-		aRequest.headers().set(HttpHeaders.Names.TRANSFER_ENCODING, HttpHeaders.Values.CHUNKED);
+        DefaultHttpRequest aRequest = new DefaultHttpRequest(HttpVersion.HTTP_1_1, 
+                                                             HttpMethod.POST, 
+                                                             "http://localhost");
+        aRequest.headers().set(HttpHeaders.Names.CONTENT_TYPE,
+                               "multipart/form-data; boundary=" + boundary);
+        aRequest.headers().set(HttpHeaders.Names.TRANSFER_ENCODING, 
+                               HttpHeaders.Values.CHUNKED);
 
-		HttpPostRequestDecoder aDecoder = new HttpPostRequestDecoder(aMemFactory, aRequest);
+        HttpPostRequestDecoder aDecoder = new HttpPostRequestDecoder(aMemFactory, aRequest);
 
-		final String aData = "some data would be here. the data should be long enough that it will be longer than the original " +
-		                     "buffer length of 256 bytes in the HttpPostRequestDecoder in order to trigger the issue. Some more " +
-		                     "data just to be on the safe side.";
+        final String aData = "some data would be here. the data should be long enough that it " +
+                             "will be longer than the original buffer length of 256 bytes in "+
+                             "the HttpPostRequestDecoder in order to trigger the issue. Some more " +
+                             "data just to be on the safe side.";
 
-		final String body =
-			"--" + boundary + "\r\n" +
-			"Content-Disposition: form-data; name=\"root\"\r\n" +
-			"Content-Type: text/plain\r\n" +
-			"\r\n" +
-			aData +
-			"\r\n" +
-			"--" + boundary + "--\r\n";
+        final String body =
+                "--" + boundary + "\r\n" +
+                "Content-Disposition: form-data; name=\"root\"\r\n" +
+                "Content-Type: text/plain\r\n" +
+                "\r\n" +
+                aData +
+                "\r\n" +
+                "--" + boundary + "--\r\n";
+                
+        byte[] aBytes = body.getBytes();
+                
+        int split = 125;
 
-		byte[] aBytes = body.getBytes();
+        ByteBufAllocator aAlloc = new UnpooledByteBufAllocator(true);
+        ByteBuf aSmallBuf = aAlloc.heapBuffer(split, split);
+        ByteBuf aLargeBuf = aAlloc.heapBuffer(aBytes.length - split, aBytes.length - split);
 
-		int split = 125;
+        aSmallBuf.writeBytes(aBytes, 0, split);
+        aLargeBuf.writeBytes(aBytes, split, aBytes.length - split);
 
-		ByteBufAllocator aAlloc = new UnpooledByteBufAllocator(true);
-		ByteBuf aSmallBuf = aAlloc.heapBuffer(split, split);
-		ByteBuf aLargeBuf = aAlloc.heapBuffer(aBytes.length-split, aBytes.length-split);
+        aDecoder.offer(new DefaultHttpContent(aSmallBuf));
+        aDecoder.offer(new DefaultHttpContent(aLargeBuf));
 
-		aSmallBuf.writeBytes(aBytes, 0, split);
-		aLargeBuf.writeBytes(aBytes, split, aBytes.length-split);
+        aDecoder.offer(LastHttpContent.EMPTY_LAST_CONTENT);
 
-		aDecoder.offer(new DefaultHttpContent(aSmallBuf));
-		aDecoder.offer(new DefaultHttpContent(aLargeBuf));
+        assertTrue("Should have a piece of data", aDecoder.hasNext());
 
-		aDecoder.offer(LastHttpContent.EMPTY_LAST_CONTENT);
+	InterfaceHttpData aDecodedData = aDecoder.next();
 
-		assertTrue("Should have a piece of data", aDecoder.hasNext());
+        assertEquals(InterfaceHttpData.HttpDataType.Attribute, aDecodedData.getHttpDataType());
 
-		InterfaceHttpData aDecodedData = aDecoder.next();
+        Attribute aAttr = (Attribute)aDecodedData;
 
-		assertEquals(InterfaceHttpData.HttpDataType.Attribute, aDecodedData.getHttpDataType());
-
-		Attribute aAttr = (Attribute)aDecodedData;
-
-		assertEquals(aData, aAttr.getValue());
-	}
+        assertEquals(aData, aAttr.getValue());
+    }
 }
