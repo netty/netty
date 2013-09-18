@@ -506,7 +506,7 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public ByteBuffer nioBuffer(int index, int length) {
-        return (ByteBuffer) buffer.duplicate().position(index).position(index + length);
+        return (ByteBuffer) buffer.duplicate().position(index).limit(index + length);
     }
 
     @Override
