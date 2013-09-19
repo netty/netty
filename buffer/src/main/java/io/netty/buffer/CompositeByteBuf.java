@@ -721,11 +721,16 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public int getBytes(int index, GatheringByteChannel out, int length)
             throws IOException {
-        long writtenBytes = out.write(nioBuffers(index, length));
-        if (writtenBytes > Integer.MAX_VALUE) {
-            return Integer.MAX_VALUE;
+        int count = nioBufferCount();
+        if (count == 1) {
+            return out.write(internalNioBuffer(index, length));
         } else {
-            return (int) writtenBytes;
+            long writtenBytes = out.write(nioBuffers(index, length));
+            if (writtenBytes > Integer.MAX_VALUE) {
+                return Integer.MAX_VALUE;
+            } else {
+                return (int) writtenBytes;
+            }
         }
     }
 
