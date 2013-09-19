@@ -16,10 +16,11 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.TooLongFrameException;
+
+import java.util.List;
 
 /**
  * Decodes {@link ByteBuf}s into {@link WebSocketFrame}s.
@@ -27,7 +28,7 @@ import io.netty.handler.codec.TooLongFrameException;
  * For the detailed instruction on adding add Web Socket support to your HTTP server, take a look into the
  * <tt>WebSocketServer</tt> example located in the {@code io.netty.example.http.websocket} package.
  */
-public class WebSocket00FrameDecoder extends ReplayingDecoder<Void> {
+public class WebSocket00FrameDecoder extends ReplayingDecoder<Void> implements WebSocketFrameDecoder {
 
     static final int DEFAULT_MAX_FRAME_SIZE = 16384;
 
@@ -50,7 +51,7 @@ public class WebSocket00FrameDecoder extends ReplayingDecoder<Void> {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, MessageBuf<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         // Discard all data received if closing handshake was received before.
         if (receivedClosingHandshake) {
             in.skipBytes(actualReadableBytes());

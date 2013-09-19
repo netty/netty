@@ -18,6 +18,8 @@ package io.netty.handler.codec.http;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.List;
+
 public class HttpHeadersTest {
 
     @Test
@@ -26,5 +28,20 @@ public class HttpHeadersTest {
         message.headers().set(HttpHeaders.Names.TRANSFER_ENCODING, "Chunked");
         HttpHeaders.removeTransferEncodingChunked(message);
         Assert.assertTrue(message.headers().isEmpty());
+    }
+
+    // Test for https://github.com/netty/netty/issues/1690
+    @Test
+    public void testGetOperations() {
+        HttpHeaders headers = new DefaultHttpHeaders();
+        headers.add("Foo", "1");
+        headers.add("Foo", "2");
+
+        Assert.assertEquals("1", headers.get("Foo"));
+
+        List<String> values = headers.getAll("Foo");
+        Assert.assertEquals(2, values.size());
+        Assert.assertEquals("1", values.get(0));
+        Assert.assertEquals("2", values.get(1));
     }
 }

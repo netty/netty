@@ -46,4 +46,10 @@ public class SlicedByteBufTest extends AbstractByteBufTest {
     public void shouldNotAllowNullInConstructor() {
         new SlicedByteBuf(null, 0, 0);
     }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    @Override
+    public void testInternalNioBuffer() {
+        super.testInternalNioBuffer();
+    }
 }

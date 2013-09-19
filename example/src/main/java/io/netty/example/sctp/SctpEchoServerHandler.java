@@ -15,11 +15,9 @@
  */
 package io.netty.example.sctp;
 
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
-import io.netty.channel.sctp.SctpMessage;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -28,7 +26,7 @@ import java.util.logging.Logger;
  * Handler implementation for the SCTP echo server.
  */
 @Sharable
-public class SctpEchoServerHandler extends ChannelInboundMessageHandlerAdapter<SctpMessage> {
+public class SctpEchoServerHandler extends ChannelInboundHandlerAdapter {
 
     private static final Logger logger = Logger.getLogger(
             SctpEchoServerHandler.class.getName());
@@ -41,9 +39,12 @@ public class SctpEchoServerHandler extends ChannelInboundMessageHandlerAdapter<S
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, SctpMessage msg) throws Exception {
-        MessageBuf<Object> out = ctx.nextOutboundMessageBuffer();
-        out.add(msg);
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        ctx.write(msg);
+    }
+
+    @Override
+    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
         ctx.flush();
     }
 }

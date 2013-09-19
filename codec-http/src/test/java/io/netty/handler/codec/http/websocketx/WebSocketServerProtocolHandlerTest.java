@@ -15,24 +15,24 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.buffer.MessageBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
-import io.netty.channel.ChannelOperationHandlerAdapter;
-import io.netty.channel.ChannelOutboundMessageHandler;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.embedded.EmbeddedMessageChannel;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpRequestDecoder;
-import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseEncoder;
+import org.junit.Before;
 import org.junit.Test;
+
+import java.util.ArrayDeque;
+import java.util.Queue;
 
 import static io.netty.handler.codec.http.HttpHeaders.Values.*;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
@@ -41,29 +41,36 @@ import static org.junit.Assert.*;
 
 public class WebSocketServerProtocolHandlerTest {
 
+    private final Queue<FullHttpResponse> responses = new ArrayDeque<FullHttpResponse>();
+
+    @Before
+    public void setUp() {
+        responses.clear();
+    }
+
     @Test
     public void testHttpUpgradeRequest() throws Exception {
-        EmbeddedMessageChannel ch = createChannel(new MockOutboundHandler());
+        EmbeddedChannel ch = createChannel(new MockOutboundHandler());
         ChannelHandlerContext handshakerCtx = ch.pipeline().context(WebSocketServerProtocolHandshakeHandler.class);
         writeUpgradeRequest(ch);
-        assertEquals(SWITCHING_PROTOCOLS, ((HttpResponse) ch.outboundMessageBuffer().poll()).getStatus());
+        assertEquals(SWITCHING_PROTOCOLS, responses.remove().getStatus());
         assertNotNull(WebSocketServerProtocolHandler.getHandshaker(handshakerCtx));
     }
 
     @Test
     public void testSubsequentHttpRequestsAfterUpgradeShouldReturn403() throws Exception {
-        EmbeddedMessageChannel ch = createChannel(new MockOutboundHandler());
+        EmbeddedChannel ch = createChannel();
 
         writeUpgradeRequest(ch);
-        assertEquals(SWITCHING_PROTOCOLS, ((HttpResponse) ch.outboundMessageBuffer().poll()).getStatus());
+        assertEquals(SWITCHING_PROTOCOLS, responses.remove().getStatus());
 
         ch.writeInbound(new DefaultFullHttpRequest(HTTP_1_1, HttpMethod.GET, "/test"));
-        assertEquals(FORBIDDEN, ((HttpResponse) ch.outboundMessageBuffer().poll()).getStatus());
+        assertEquals(FORBIDDEN, responses.remove().getStatus());
     }
 
     @Test
     public void testHttpUpgradeRequestInvalidUpgradeHeader() {
-        EmbeddedMessageChannel ch = createChannel();
+        EmbeddedChannel ch = createChannel();
         FullHttpRequest httpRequestWithEntity = new WebSocketRequestBuilder().httpVersion(HTTP_1_1)
                 .method(HttpMethod.GET)
                 .uri("/test")
@@ -74,14 +81,14 @@ public class WebSocketServerProtocolHandlerTest {
 
         ch.writeInbound(httpRequestWithEntity);
 
-        FullHttpResponse response = getHttpResponse(ch);
+        FullHttpResponse response = responses.remove();
         assertEquals(BAD_REQUEST, response.getStatus());
         assertEquals("not a WebSocket handshake request: missing upgrade", getResponseMessage(response));
     }
 
     @Test
     public void testHttpUpgradeRequestMissingWSKeyHeader() {
-        EmbeddedMessageChannel ch = createChannel();
+        EmbeddedChannel ch = createChannel();
         HttpRequest httpRequest = new WebSocketRequestBuilder().httpVersion(HTTP_1_1)
                 .method(HttpMethod.GET)
                 .uri("/test")
@@ -93,7 +100,7 @@ public class WebSocketServerProtocolHandlerTest {
 
         ch.writeInbound(httpRequest);
 
-        FullHttpResponse response = getHttpResponse(ch);
+        FullHttpResponse response = responses.remove();
         assertEquals(BAD_REQUEST, response.getStatus());
         assertEquals("not a WebSocket request: missing key", getResponseMessage(response));
     }
@@ -101,22 +108,26 @@ public class WebSocketServerProtocolHandlerTest {
     @Test
     public void testHandleTextFrame() {
         CustomTextFrameHandler customTextFrameHandler = new CustomTextFrameHandler();
-        EmbeddedMessageChannel ch = createChannel(customTextFrameHandler);
+        EmbeddedChannel ch = createChannel(customTextFrameHandler);
         writeUpgradeRequest(ch);
-        // Removing the HttpRequestDecoder as we are writing a TextWebSocketFrame so decoding is not neccessary.
-        ch.pipeline().remove(HttpRequestDecoder.class);
+
+        if (ch.pipeline().context(HttpRequestDecoder.class) != null) {
+            // Removing the HttpRequestDecoder because we are writing a TextWebSocketFrame and thus
+            // decoding is not neccessary.
+            ch.pipeline().remove(HttpRequestDecoder.class);
+        }
 
         ch.writeInbound(new TextWebSocketFrame("payload"));
 
         assertEquals("processed: payload", customTextFrameHandler.getContent());
     }
 
-    private static EmbeddedMessageChannel createChannel() {
+    private EmbeddedChannel createChannel() {
         return createChannel(null);
     }
 
-    private static EmbeddedMessageChannel createChannel(ChannelHandler handler) {
-        return new EmbeddedMessageChannel(
+    private EmbeddedChannel createChannel(ChannelHandler handler) {
+        return new EmbeddedChannel(
                 new WebSocketServerProtocolHandler("/test", null, false),
                 new HttpRequestDecoder(),
                 new HttpResponseEncoder(),
@@ -124,7 +135,7 @@ public class WebSocketServerProtocolHandlerTest {
                 handler);
     }
 
-    private static void writeUpgradeRequest(EmbeddedMessageChannel ch) {
+    private static void writeUpgradeRequest(EmbeddedChannel ch) {
         ch.writeInbound(WebSocketRequestBuilder.sucessful());
     }
 
@@ -132,31 +143,26 @@ public class WebSocketServerProtocolHandlerTest {
         return new String(response.content().array());
     }
 
-    private static FullHttpResponse getHttpResponse(EmbeddedMessageChannel ch) {
-        MessageBuf<Object> outbound = ch.pipeline().context(MockOutboundHandler.class).outboundMessageBuffer();
-        return (FullHttpResponse) outbound.poll();
-    }
-
-    private static class MockOutboundHandler
-        extends ChannelOperationHandlerAdapter implements ChannelOutboundMessageHandler<Object> {
+    private class MockOutboundHandler extends ChannelOutboundHandlerAdapter {
 
         @Override
-        public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            return Unpooled.messageBuffer();
+        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+            responses.add((FullHttpResponse) msg);
+            promise.setSuccess();
         }
 
         @Override
-        public void flush(ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
-            //NoOp
+        public void flush(ChannelHandlerContext ctx) throws Exception {
         }
     }
 
-    private static class CustomTextFrameHandler extends ChannelInboundMessageHandlerAdapter<TextWebSocketFrame> {
+    private static class CustomTextFrameHandler extends ChannelInboundHandlerAdapter {
         private String content;
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, TextWebSocketFrame msg) throws Exception {
-            content = "processed: " + msg.text();
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            assertNull(content);
+            content = "processed: " + ((TextWebSocketFrame) msg).text();
         }
 
         String getContent() {

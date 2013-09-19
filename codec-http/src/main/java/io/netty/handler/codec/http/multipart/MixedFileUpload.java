@@ -57,10 +57,14 @@ public class MixedFileUpload implements FileUpload {
                         .getContentType(), fileUpload
                         .getContentTransferEncoding(), fileUpload.getCharset(),
                         definedSize);
-                if (((MemoryFileUpload) fileUpload).getByteBuf() != null) {
-                    diskFileUpload.addContent(((MemoryFileUpload) fileUpload)
-                        .getByteBuf(), false);
+
+                ByteBuf data = fileUpload.getByteBuf();
+                if (data != null && data.isReadable()) {
+                    diskFileUpload.addContent(data.retain(), false);
                 }
+                // release old upload
+                fileUpload.release();
+
                 fileUpload = diskFileUpload;
             }
         }
@@ -141,12 +145,16 @@ public class MixedFileUpload implements FileUpload {
     public void setContent(ByteBuf buffer) throws IOException {
         if (buffer.readableBytes() > limitSize) {
             if (fileUpload instanceof MemoryFileUpload) {
+                FileUpload memoryUpload = fileUpload;
                 // change to Disk
-                fileUpload = new DiskFileUpload(fileUpload
-                        .getName(), fileUpload.getFilename(), fileUpload
-                        .getContentType(), fileUpload
-                        .getContentTransferEncoding(), fileUpload.getCharset(),
+                fileUpload = new DiskFileUpload(memoryUpload
+                        .getName(), memoryUpload.getFilename(), memoryUpload
+                        .getContentType(), memoryUpload
+                        .getContentTransferEncoding(), memoryUpload.getCharset(),
                         definedSize);
+
+                // release old upload
+                memoryUpload.release();
             }
         }
         fileUpload.setContent(buffer);
@@ -156,12 +164,17 @@ public class MixedFileUpload implements FileUpload {
     public void setContent(File file) throws IOException {
         if (file.length() > limitSize) {
             if (fileUpload instanceof MemoryFileUpload) {
+                FileUpload memoryUpload = fileUpload;
+
                 // change to Disk
-                fileUpload = new DiskFileUpload(fileUpload
-                        .getName(), fileUpload.getFilename(), fileUpload
-                        .getContentType(), fileUpload
-                        .getContentTransferEncoding(), fileUpload.getCharset(),
+                fileUpload = new DiskFileUpload(memoryUpload
+                        .getName(), memoryUpload.getFilename(), memoryUpload
+                        .getContentType(), memoryUpload
+                        .getContentTransferEncoding(), memoryUpload.getCharset(),
                         definedSize);
+
+                // release old upload
+                memoryUpload.release();
             }
         }
         fileUpload.setContent(file);
@@ -170,12 +183,17 @@ public class MixedFileUpload implements FileUpload {
     @Override
     public void setContent(InputStream inputStream) throws IOException {
         if (fileUpload instanceof MemoryFileUpload) {
+            FileUpload memoryUpload = fileUpload;
+
             // change to Disk
             fileUpload = new DiskFileUpload(fileUpload
                     .getName(), fileUpload.getFilename(), fileUpload
                     .getContentType(), fileUpload
                     .getContentTransferEncoding(), fileUpload.getCharset(),
                     definedSize);
+
+            // release old upload
+            memoryUpload.release();
         }
         fileUpload.setContent(inputStream);
     }
@@ -228,6 +246,11 @@ public class MixedFileUpload implements FileUpload {
     @Override
     public FileUpload copy() {
         return fileUpload.copy();
+    }
+
+    @Override
+    public FileUpload duplicate() {
+        return fileUpload.duplicate();
     }
 
     @Override

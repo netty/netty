@@ -21,6 +21,7 @@ import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 
 /**
@@ -31,19 +32,29 @@ public abstract class MultithreadEventLoopGroup extends MultithreadEventExecutor
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(MultithreadEventLoopGroup.class);
 
-    public static final int DEFAULT_EVENT_LOOP_THREADS;
+    private static final int DEFAULT_EVENT_LOOP_THREADS;
 
     static {
         DEFAULT_EVENT_LOOP_THREADS = Math.max(1, SystemPropertyUtil.getInt(
                 "io.netty.eventLoopThreads", Runtime.getRuntime().availableProcessors() * 2));
 
         if (logger.isDebugEnabled()) {
-            logger.debug("io.netty.eventLoopThreads: {}", DEFAULT_EVENT_LOOP_THREADS);
+            logger.debug("-Dio.netty.eventLoopThreads: {}", DEFAULT_EVENT_LOOP_THREADS);
         }
     }
 
+    /**
+     * @see {@link MultithreadEventExecutorGroup#MultithreadEventExecutorGroup(int, Executor, Object...)}
+     */
+    protected MultithreadEventLoopGroup(int nThreads, Executor executor, Object... args) {
+        super(nThreads == 0 ? DEFAULT_EVENT_LOOP_THREADS : nThreads, executor, args);
+    }
+
+    /**
+     * @see {@link MultithreadEventExecutorGroup#MultithreadEventExecutorGroup(int, ThreadFactory, Object...)}
+     */
     protected MultithreadEventLoopGroup(int nThreads, ThreadFactory threadFactory, Object... args) {
-        super(nThreads, threadFactory, args);
+        super(nThreads == 0 ? DEFAULT_EVENT_LOOP_THREADS : nThreads, threadFactory, args);
     }
 
     @Override

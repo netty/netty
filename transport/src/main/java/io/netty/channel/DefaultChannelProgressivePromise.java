@@ -97,25 +97,26 @@ public class DefaultChannelProgressivePromise
     }
 
     @Override
-    public ChannelProgressivePromise addListener(GenericFutureListener<? extends Future<Void>> listener) {
+    public ChannelProgressivePromise addListener(GenericFutureListener<? extends Future<? super Void>> listener) {
         super.addListener(listener);
         return this;
     }
 
     @Override
-    public ChannelProgressivePromise addListeners(GenericFutureListener<? extends Future<Void>>... listeners) {
+    public ChannelProgressivePromise addListeners(GenericFutureListener<? extends Future<? super Void>>... listeners) {
         super.addListeners(listeners);
         return this;
     }
 
     @Override
-    public ChannelProgressivePromise removeListener(GenericFutureListener<? extends Future<Void>> listener) {
+    public ChannelProgressivePromise removeListener(GenericFutureListener<? extends Future<? super Void>> listener) {
         super.removeListener(listener);
         return this;
     }
 
     @Override
-    public ChannelProgressivePromise removeListeners(GenericFutureListener<? extends Future<Void>>... listeners) {
+    public ChannelProgressivePromise removeListeners(
+            GenericFutureListener<? extends Future<? super Void>>... listeners) {
         super.removeListeners(listeners);
         return this;
     }

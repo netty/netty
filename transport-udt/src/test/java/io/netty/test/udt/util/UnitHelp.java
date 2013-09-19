@@ -18,6 +18,7 @@ package io.netty.test.udt.util;
 
 import com.barchart.udt.SocketUDT;
 import com.barchart.udt.StatusUDT;
+import io.netty.util.internal.ThreadLocalRandom;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -222,7 +223,7 @@ public final class UnitHelp {
 
     public static int[] randomIntArray(final int length, final int range) {
         final int[] array = new int[length];
-        final Random generator = new Random(0);
+        final Random generator = ThreadLocalRandom.current();
         for (int i = 0; i < array.length; i++) {
             array[i] = generator.nextInt(range);
         }

@@ -21,15 +21,18 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.socks.SocksCmdRequest;
 import io.netty.handler.codec.socks.SocksCmdResponse;
 import io.netty.handler.codec.socks.SocksCmdStatus;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
+import io.netty.util.concurrent.Promise;
 
 @ChannelHandler.Sharable
-public final class SocksServerConnectHandler extends ChannelInboundMessageHandlerAdapter<SocksCmdRequest> {
+public final class SocksServerConnectHandler extends SimpleChannelInboundHandler<SocksCmdRequest> {
     private static final String name = "SOCKS_SERVER_CONNECT_HANDLER";
 
     public static String getName() {
@@ -39,36 +42,50 @@ public final class SocksServerConnectHandler extends ChannelInboundMessageHandle
     private final Bootstrap b = new Bootstrap();
 
     @Override
-    public void messageReceived(final ChannelHandlerContext ctx, final SocksCmdRequest request) throws Exception {
-        CallbackNotifier cb = new CallbackNotifier() {
+    public void channelRead0(final ChannelHandlerContext ctx, final SocksCmdRequest request) throws Exception {
+        Promise promise = ctx.executor().newPromise();
+        promise.addListener(
+            new GenericFutureListener<Future<Channel>>() {
             @Override
-            public void onSuccess(final ChannelHandlerContext outboundCtx) {
-                ctx.channel().write(new SocksCmdResponse(SocksCmdStatus.SUCCESS, request.addressType()))
-                             .addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture channelFuture) throws Exception {
-                        ctx.pipeline().remove(getName());
-                        outboundCtx.channel().pipeline().addLast(new RelayHandler(ctx.channel()));
-                        ctx.channel().pipeline().addLast(new RelayHandler(outboundCtx.channel()));
-                    }
-                });
+            public void operationComplete(final Future<Channel> future) throws Exception {
+                final Channel outboundChannel = future.getNow();
+                if (future.isSuccess()) {
+                    ctx.channel().writeAndFlush(new SocksCmdResponse(SocksCmdStatus.SUCCESS, request.addressType()))
+                            .addListener(new ChannelFutureListener() {
+                                @Override
+                                public void operationComplete(ChannelFuture channelFuture) throws Exception {
+                                    ctx.pipeline().remove(getName());
+                                    outboundChannel.pipeline().addLast(new RelayHandler(ctx.channel()));
+                                    ctx.channel().pipeline().addLast(new RelayHandler(outboundChannel));
+                                }
+                            });
+                } else {
+                    ctx.channel().writeAndFlush(new SocksCmdResponse(SocksCmdStatus.FAILURE, request.addressType()));
+                    SocksServerUtils.closeOnFlush(ctx.channel());
+                }
             }
-
-            @Override
-            public void onFailure(ChannelHandlerContext outboundCtx, Throwable cause) {
-                ctx.channel().write(new SocksCmdResponse(SocksCmdStatus.FAILURE, request.addressType()));
-                SocksServerUtils.closeOnFlush(ctx.channel());
-            }
-        };
+        });
 
         final Channel inboundChannel = ctx.channel();
         b.group(inboundChannel.eventLoop())
                 .channel(NioSocketChannel.class)
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000)
                 .option(ChannelOption.SO_KEEPALIVE, true)
-                .handler(new DirectClientInitializer(cb));
-
-        b.connect(request.host(), request.port());
+                .handler(new DirectClientInitializer(promise));
+        b.connect(request.host(), request.port())
+          .addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    if (future.isSuccess()) {
+                        // Connection established use handler provided results
+                    } else {
+                        // Close the connection if the connection attempt has failed.
+                        ctx.channel().writeAndFlush(
+                                new SocksCmdResponse(SocksCmdStatus.FAILURE, request.addressType()));
+                        SocksServerUtils.closeOnFlush(ctx.channel());
+                    }
+                }
+           });
     }
 
     @Override

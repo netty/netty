@@ -24,14 +24,17 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.nio.ByteBuffer;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 
@@ -47,6 +50,9 @@ public final class PlatformDependent {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PlatformDependent.class);
 
+    private static final Pattern MAX_DIRECT_MEMORY_SIZE_ARG_PATTERN = Pattern.compile(
+            "\\s*-XX:MaxDirectMemorySize\\s*=\\s*([0-9]+)\\s*([kKmMgG]?)\\s*$");
+
     private static final boolean IS_ANDROID = isAndroid0();
     private static final boolean IS_WINDOWS = isWindows0();
     private static final boolean IS_ROOT = isRoot0();
@@ -58,7 +64,8 @@ public final class PlatformDependent {
     private static final boolean HAS_UNSAFE = hasUnsafe0();
     private static final boolean CAN_USE_CHM_V8 = HAS_UNSAFE && JAVA_VERSION < 8;
     private static final boolean DIRECT_BUFFER_PREFERRED =
-            HAS_UNSAFE && SystemPropertyUtil.getBoolean("io.netty.preferDirect", false);
+            HAS_UNSAFE && !SystemPropertyUtil.getBoolean("io.netty.noPreferDirect", false);
+    private static final long MAX_DIRECT_MEMORY = maxDirectMemory0();
 
     private static final long ARRAY_BASE_OFFSET = arrayBaseOffset0();
 
@@ -66,7 +73,7 @@ public final class PlatformDependent {
 
     static {
         if (logger.isDebugEnabled()) {
-            logger.debug("io.netty.preferDirect: {}", DIRECT_BUFFER_PREFERRED);
+            logger.debug("-Dio.netty.noPreferDirect: {}", !DIRECT_BUFFER_PREFERRED);
         }
 
         if (!hasUnsafe()) {
@@ -127,6 +134,13 @@ public final class PlatformDependent {
      */
     public static boolean directBufferPreferred() {
         return DIRECT_BUFFER_PREFERRED;
+    }
+
+    /**
+     * Returns the maximum memory reserved for direct buffer allocation.
+     */
+    public static long maxDirectMemory() {
+        return MAX_DIRECT_MEMORY;
     }
 
     /**
@@ -214,7 +228,11 @@ public final class PlatformDependent {
      */
     public static void freeDirectBuffer(ByteBuffer buffer) {
         if (buffer.isDirect()) {
-            PlatformDependent0.freeDirectBuffer(buffer);
+            if (hasUnsafe()) {
+                PlatformDependent0.freeDirectBufferUnsafe(buffer);
+            } else {
+                PlatformDependent0.freeDirectBuffer(buffer);
+            }
         }
     }
 
@@ -340,7 +358,11 @@ public final class PlatformDependent {
                     }
                 }
                 if (p != null) {
-                    p.destroy();
+                    try {
+                        p.destroy();
+                    } catch (Exception e) {
+                        // Android sometimes triggers an ErrnoException.
+                    }
                 }
             }
 
@@ -428,12 +450,14 @@ public final class PlatformDependent {
     }
 
     private static boolean hasUnsafe0() {
+        boolean noUnsafe = SystemPropertyUtil.getBoolean("io.netty.noUnsafe", false);
+        logger.debug("-Dio.netty.noUnsafe: {}", noUnsafe);
+
         if (isAndroid()) {
             logger.debug("sun.misc.Unsafe: unavailable (Android)");
             return false;
         }
 
-        boolean noUnsafe = SystemPropertyUtil.getBoolean("io.netty.noUnsafe", false);
         if (noUnsafe) {
             logger.debug("sun.misc.Unsafe: unavailable (io.netty.noUnsafe)");
             return false;
@@ -469,8 +493,71 @@ public final class PlatformDependent {
         return PlatformDependent0.arrayBaseOffset();
     }
 
+    private static long maxDirectMemory0() {
+        long maxDirectMemory = 0;
+        try {
+            // Try to get from sun.misc.VM.maxDirectMemory() which should be most accurate.
+            Class<?> vmClass = Class.forName("sun.misc.VM", true, ClassLoader.getSystemClassLoader());
+            Method m = vmClass.getDeclaredMethod("maxDirectMemory");
+            maxDirectMemory = ((Number) m.invoke(null)).longValue();
+        } catch (Throwable t) {
+            // Ignore
+        }
+
+        if (maxDirectMemory > 0) {
+            return maxDirectMemory;
+        }
+
+        try {
+            // Now try to get the JVM option (-XX:MaxDirectMemorySize) and parse it.
+            // Note that we are using reflection because Android doesn't have these classes.
+            Class<?> mgmtFactoryClass = Class.forName(
+                    "java.lang.management.ManagementFactory", true, ClassLoader.getSystemClassLoader());
+            Class<?> runtimeClass = Class.forName(
+                    "java.lang.management.RuntimeMXBean", true, ClassLoader.getSystemClassLoader());
+
+            Object runtime = mgmtFactoryClass.getDeclaredMethod("getRuntimeMXBean").invoke(null);
+
+            @SuppressWarnings("unchecked")
+            List<String> vmArgs = (List<String>) runtimeClass.getDeclaredMethod("getInputArguments").invoke(runtime);
+            for (int i = vmArgs.size() - 1; i >= 0; i --) {
+                Matcher m = MAX_DIRECT_MEMORY_SIZE_ARG_PATTERN.matcher(vmArgs.get(i));
+                if (!m.matches()) {
+                    continue;
+                }
+
+                maxDirectMemory = Long.parseLong(m.group(1));
+                switch (m.group(2).charAt(0)) {
+                    case 'k': case 'K':
+                        maxDirectMemory *= 1024;
+                        break;
+                    case 'm': case 'M':
+                        maxDirectMemory *= 1024 * 1024;
+                        break;
+                    case 'g': case 'G':
+                        maxDirectMemory *= 1024 * 1024 * 1024;
+                        break;
+                }
+                break;
+            }
+        } catch (Throwable t) {
+            // Ignore
+        }
+
+        if (maxDirectMemory <= 0) {
+            maxDirectMemory = Runtime.getRuntime().maxMemory();
+            logger.debug("maxDirectMemory: {} bytes (maybe)", maxDirectMemory);
+        } else {
+            logger.debug("maxDirectMemory: {} bytes", maxDirectMemory);
+        }
+
+        return maxDirectMemory;
+    }
+
     private static boolean hasJavassist0() {
         boolean noJavassist = SystemPropertyUtil.getBoolean("io.netty.noJavassist", false);
+        logger.debug("-Dio.netty.noJavassist: {}", noJavassist);
+
         if (noJavassist) {
             logger.debug("Javassist: unavailable (io.netty.noJavassist)");
             return false;
@@ -482,7 +569,7 @@ public final class PlatformDependent {
             return true;
         } catch (Throwable t) {
             logger.debug("Javassist: unavailable");
-            logger.info(
+            logger.debug(
                     "You don't have Javassist in your class path or you don't have enough permission " +
                     "to load dynamically generated classes.  Please check the configuration for better performance.");
             return false;

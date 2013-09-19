@@ -16,7 +16,7 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.embedded.EmbeddedByteChannel;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaders.Names;
@@ -36,7 +36,7 @@ public class WebSocketServerHandshaker13Test {
 
     @Test
     public void testPerformOpeningHandshake() {
-        EmbeddedByteChannel ch = new EmbeddedByteChannel(
+        EmbeddedChannel ch = new EmbeddedChannel(
                 new HttpObjectAggregator(42), new HttpRequestDecoder(), new HttpResponseEncoder());
 
         FullHttpRequest req = new DefaultFullHttpRequest(HTTP_1_1, HttpMethod.GET, "/chat");
@@ -51,9 +51,9 @@ public class WebSocketServerHandshaker13Test {
         new WebSocketServerHandshaker13(
                 "ws://example.com/chat", "chat", false, Integer.MAX_VALUE).handshake(ch, req);
 
-        ByteBuf resBuf = ch.readOutbound();
+        ByteBuf resBuf = (ByteBuf) ch.readOutbound();
 
-        EmbeddedByteChannel ch2 = new EmbeddedByteChannel(new HttpResponseDecoder());
+        EmbeddedChannel ch2 = new EmbeddedChannel(new HttpResponseDecoder());
         ch2.writeInbound(resBuf);
         HttpResponse res = (HttpResponse) ch2.readInbound();
 

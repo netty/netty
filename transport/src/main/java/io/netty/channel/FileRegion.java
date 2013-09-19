@@ -15,7 +15,7 @@
  */
 package io.netty.channel;
 
-import io.netty.buffer.ReferenceCounted;
+import io.netty.util.ReferenceCounted;
 
 import java.io.IOException;
 import java.nio.channels.FileChannel;
@@ -58,6 +58,11 @@ public interface FileRegion extends ReferenceCounted {
      * Returns the offset in the file where the transfer began.
      */
     long position();
+
+    /**
+     * Return the bytes which was transfered already
+     */
+    long transfered();
 
     /**
      * Returns the number of bytes to transfer.

@@ -65,8 +65,8 @@ public abstract class AbstractEventExecutorGroup implements EventExecutorGroup {
     }
 
     @Override
-    public void shutdownGracefully() {
-        shutdownGracefully(2, 15, TimeUnit.SECONDS);
+    public Future<?> shutdownGracefully() {
+        return shutdownGracefully(2, 15, TimeUnit.SECONDS);
     }
 
     /**

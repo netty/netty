@@ -16,15 +16,16 @@
 package io.netty.handler.codec.marshalling;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.TooLongFrameException;
-import org.jboss.marshalling.ByteInput;
-import org.jboss.marshalling.Unmarshaller;
 
 import java.io.ObjectStreamConstants;
+import java.util.List;
+
+import org.jboss.marshalling.ByteInput;
+import org.jboss.marshalling.Unmarshaller;
 
 /**
  * {@link ReplayingDecoder} which use an {@link Unmarshaller} to read the Object out of the {@link ByteBuf}.
@@ -55,7 +56,7 @@ public class CompatibleMarshallingDecoder extends ReplayingDecoder<Void> {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf buffer, MessageBuf<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf buffer, List<Object> out) throws Exception {
         if (discardingTooLongFrame) {
             buffer.skipBytes(actualReadableBytes());
             checkpoint();
@@ -83,7 +84,7 @@ public class CompatibleMarshallingDecoder extends ReplayingDecoder<Void> {
     }
 
     @Override
-    protected void decodeLast(ChannelHandlerContext ctx, ByteBuf buffer, MessageBuf<Object> out) throws Exception {
+    protected void decodeLast(ChannelHandlerContext ctx, ByteBuf buffer, List<Object> out) throws Exception {
         switch (buffer.readableBytes()) {
         case 0:
             return;

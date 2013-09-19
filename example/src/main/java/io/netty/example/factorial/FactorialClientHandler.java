@@ -15,11 +15,10 @@
  */
 package io.netty.example.factorial;
 
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.SimpleChannelInboundHandler;
 
 import java.math.BigInteger;
 import java.util.concurrent.BlockingQueue;
@@ -34,14 +33,14 @@ import java.util.logging.Logger;
  * to create a new handler instance whenever you create a new channel and insert
  * this handler to avoid a race condition.
  */
-public class FactorialClientHandler extends ChannelInboundMessageHandlerAdapter<BigInteger> {
+public class FactorialClientHandler extends SimpleChannelInboundHandler<BigInteger> {
 
     private static final Logger logger = Logger.getLogger(
             FactorialClientHandler.class.getName());
 
     private ChannelHandlerContext ctx;
-    private int i = 1;
     private int receivedMessages;
+    private int next = 1;
     private final int count;
     final BlockingQueue<BigInteger> answer = new LinkedBlockingQueue<BigInteger>();
 
@@ -71,8 +70,7 @@ public class FactorialClientHandler extends ChannelInboundMessageHandlerAdapter<
     }
 
     @Override
-    public void messageReceived(
-            ChannelHandlerContext ctx, final BigInteger msg) {
+    public void channelRead0(ChannelHandlerContext ctx, final BigInteger msg) {
         receivedMessages ++;
         if (receivedMessages == count) {
             // Offer the answer after closing the connection.
@@ -97,22 +95,16 @@ public class FactorialClientHandler extends ChannelInboundMessageHandlerAdapter<
 
     private void sendNumbers() {
         // Do not send more than 4096 numbers.
-        boolean finished = false;
-        MessageBuf<Object> out = ctx.nextOutboundMessageBuffer();
-        while (out.size() < 4096) {
-            if (i <= count) {
-                out.add(Integer.valueOf(i));
-                i ++;
-            } else {
-                finished = true;
-                break;
-            }
+        ChannelFuture future = null;
+        for (int i = 0; i < 4096 && next <= count; i++) {
+            future = ctx.write(Integer.valueOf(next));
+            next++;
         }
-
-        ChannelFuture f = ctx.flush();
-        if (!finished) {
-            f.addListener(numberSender);
+        if (next <= count) {
+            assert future != null;
+            future.addListener(numberSender);
         }
+        ctx.flush();
     }
 
     private final ChannelFutureListener numberSender = new ChannelFutureListener() {

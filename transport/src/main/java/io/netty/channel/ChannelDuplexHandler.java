@@ -18,17 +18,17 @@ package io.netty.channel;
 import java.net.SocketAddress;
 
 /**
- * {@link ChannelHandler} implementation which represents a combination out of a {@link ChannelStateHandler} and
- * the {@link ChannelOperationHandler}.
+ * {@link ChannelHandler} implementation which represents a combination out of a {@link ChannelInboundHandler} and
+ * the {@link ChannelOutboundHandler}.
  *
  * It is a good starting point if your {@link ChannelHandler} implementation needs to intercept operations and also
  * state updates.
  */
-public abstract class ChannelDuplexHandler extends ChannelStateHandlerAdapter implements ChannelOperationHandler {
+public class ChannelDuplexHandler extends ChannelInboundHandlerAdapter implements ChannelOutboundHandler {
 
     /**
      * Calls {@link ChannelHandlerContext#bind(SocketAddress, ChannelPromise)} to forward
-     * to the next {@link ChannelOperationHandler} in the {@link ChannelPipeline}.
+     * to the next {@link ChannelOutboundHandler} in the {@link ChannelPipeline}.
      *
      * Sub-classes may override this method to change behavior.
      */
@@ -40,7 +40,7 @@ public abstract class ChannelDuplexHandler extends ChannelStateHandlerAdapter im
 
     /**
      * Calls {@link ChannelHandlerContext#connect(SocketAddress, SocketAddress, ChannelPromise)} to forward
-     * to the next {@link ChannelOperationHandler} in the {@link ChannelPipeline}.
+     * to the next {@link ChannelOutboundHandler} in the {@link ChannelPipeline}.
      *
      * Sub-classes may override this method to change behavior.
      */
@@ -52,7 +52,7 @@ public abstract class ChannelDuplexHandler extends ChannelStateHandlerAdapter im
 
     /**
      * Calls {@link ChannelHandlerContext#disconnect(ChannelPromise)} to forward
-     * to the next {@link ChannelOperationHandler} in the {@link ChannelPipeline}.
+     * to the next {@link ChannelOutboundHandler} in the {@link ChannelPipeline}.
      *
      * Sub-classes may override this method to change behavior.
      */
@@ -64,41 +64,45 @@ public abstract class ChannelDuplexHandler extends ChannelStateHandlerAdapter im
 
     /**
      * Calls {@link ChannelHandlerContext#close(ChannelPromise)} to forward
-     * to the next {@link ChannelOperationHandler} in the {@link ChannelPipeline}.
+     * to the next {@link ChannelOutboundHandler} in the {@link ChannelPipeline}.
      *
      * Sub-classes may override this method to change behavior.
      */
     @Override
-    public void close(ChannelHandlerContext ctx, ChannelPromise future)
-            throws Exception {
+    public void close(ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
         ctx.close(future);
     }
 
     /**
-     * Calls {@link ChannelHandlerContext#close(ChannelPromise)} to forward
-     * to the next {@link ChannelOperationHandler} in the {@link ChannelPipeline}.
+     * Calls {@link ChannelHandlerContext#read()} to forward
+     * to the next {@link ChannelOutboundHandler} in the {@link ChannelPipeline}.
      *
      * Sub-classes may override this method to change behavior.
      */
     @Override
-    public void deregister(ChannelHandlerContext ctx, ChannelPromise future)
-            throws Exception {
-        ctx.deregister(future);
-    }
-
-    @Override
-    public void read(ChannelHandlerContext ctx) {
+    public void read(ChannelHandlerContext ctx) throws Exception {
         ctx.read();
     }
 
     /**
-     * Calls {@link ChannelHandlerContext#sendFile(FileRegion, ChannelPromise)} to forward
-     * to the next {@link ChannelOperationHandler} in the {@link ChannelPipeline}.
+     * Calls {@link ChannelHandlerContext#write(Object, ChannelPromise)} to forward
+     * to the next {@link ChannelOutboundHandler} in the {@link ChannelPipeline}.
      *
      * Sub-classes may override this method to change behavior.
      */
     @Override
-    public void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelPromise future) throws Exception {
-        ctx.sendFile(region, future);
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        ctx.write(msg, promise);
+    }
+
+    /**
+     * Calls {@link ChannelHandlerContext#flush()} to forward
+     * to the next {@link ChannelOutboundHandler} in the {@link ChannelPipeline}.
+     *
+     * Sub-classes may override this method to change behavior.
+     */
+    @Override
+    public void flush(ChannelHandlerContext ctx) throws Exception {
+        ctx.flush();
     }
 }

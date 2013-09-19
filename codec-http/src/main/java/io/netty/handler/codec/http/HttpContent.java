@@ -31,6 +31,9 @@ public interface HttpContent extends HttpObject, ByteBufHolder {
     HttpContent copy();
 
     @Override
+    HttpContent duplicate();
+
+    @Override
     HttpContent retain();
 
     @Override

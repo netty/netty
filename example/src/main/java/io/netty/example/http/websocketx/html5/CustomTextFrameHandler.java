@@ -16,15 +16,13 @@
 package io.netty.example.http.websocketx.html5;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 
-public class CustomTextFrameHandler extends ChannelInboundMessageHandlerAdapter<TextWebSocketFrame> {
-
+public class CustomTextFrameHandler extends SimpleChannelInboundHandler<TextWebSocketFrame> {
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, TextWebSocketFrame frame) throws Exception {
+    protected void channelRead0(ChannelHandlerContext ctx, TextWebSocketFrame frame) throws Exception {
         String request = frame.text();
-        ctx.channel().write(new TextWebSocketFrame(request.toUpperCase()));
+        ctx.channel().writeAndFlush(new TextWebSocketFrame(request.toUpperCase()));
     }
-
 }

@@ -20,9 +20,10 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundByteHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.FileRegion;
+import io.netty.channel.SimpleChannelInboundHandler;
 import org.junit.Test;
 
 import java.io.File;
@@ -61,7 +62,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         testFileRegion0(sb, cb, true);
     }
 
-    private void testFileRegion0(ServerBootstrap sb, Bootstrap cb, boolean voidPromise) throws Throwable {
+    private static void testFileRegion0(ServerBootstrap sb, Bootstrap cb, boolean voidPromise) throws Throwable {
         File file = File.createTempFile("netty-", ".tmp");
         file.deleteOnExit();
 
@@ -69,10 +70,9 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         out.write(data);
         out.close();
 
-        ChannelInboundByteHandlerAdapter ch = new ChannelInboundByteHandlerAdapter() {
+        ChannelInboundHandler ch = new SimpleChannelInboundHandler<Object>() {
             @Override
-            public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
-                in.clear();
+            public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
             }
 
             @Override
@@ -88,12 +88,11 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         Channel sc = sb.bind().sync().channel();
 
         Channel cc = cb.connect().sync().channel();
-        FileRegion region = new DefaultFileRegion(new FileInputStream(file).getChannel(),
-                0L, file.length());
+        FileRegion region = new DefaultFileRegion(new FileInputStream(file).getChannel(), 0L, file.length());
         if (voidPromise) {
-            assertEquals(cc.voidPromise(), cc.sendFile(region, cc.voidPromise()));
+            assertEquals(cc.voidPromise(), cc.writeAndFlush(region, cc.voidPromise()));
         } else {
-            assertNotEquals(cc.voidPromise(), cc.sendFile(region));
+            assertNotEquals(cc.voidPromise(), cc.writeAndFlush(region));
         }
         while (sh.counter < data.length) {
             if (sh.exception.get() != null) {
@@ -120,7 +119,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         }
     }
 
-    private static class TestHandler extends ChannelInboundByteHandlerAdapter {
+    private static class TestHandler extends SimpleChannelInboundHandler<ByteBuf> {
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;
@@ -132,9 +131,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         }
 
         @Override
-        public void inboundBufferUpdated(
-                ChannelHandlerContext ctx, ByteBuf in)
-                throws Exception {
+        public void channelRead0(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
             byte[] actual = new byte[in.readableBytes()];
             in.readBytes(actual);
 

@@ -17,8 +17,11 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import com.jcraft.jzlib.JZlib;
+
+import java.util.List;
+
 import com.jcraft.jzlib.Inflater;
+import com.jcraft.jzlib.JZlib;
 
 public class JZlibDecoder extends ZlibDecoder {
 
@@ -81,9 +84,7 @@ public class JZlibDecoder extends ZlibDecoder {
     }
 
     @Override
-    protected void decode(
-            ChannelHandlerContext ctx,
-            ByteBuf in, ByteBuf out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
 
         if (!in.isReadable()) {
             return;
@@ -92,14 +93,13 @@ public class JZlibDecoder extends ZlibDecoder {
         try {
             // Configure input.
             int inputLength = in.readableBytes();
-            boolean inHasArray = in.hasArray();
             z.avail_in = inputLength;
-            if (inHasArray) {
+            if (in.hasArray()) {
                 z.next_in = in.array();
                 z.next_in_index = in.arrayOffset() + in.readerIndex();
             } else {
                 byte[] array = new byte[inputLength];
-                in.readBytes(array);
+                in.getBytes(in.readerIndex(), array);
                 z.next_in = array;
                 z.next_in_index = 0;
             }
@@ -107,32 +107,21 @@ public class JZlibDecoder extends ZlibDecoder {
 
             // Configure output.
             int maxOutputLength = inputLength << 1;
-            boolean outHasArray = out.hasArray();
-            if (!outHasArray) {
-                z.next_out = new byte[maxOutputLength];
-            }
+            ByteBuf decompressed = ctx.alloc().heapBuffer(maxOutputLength);
 
             try {
                 loop: for (;;) {
                     z.avail_out = maxOutputLength;
-                    if (outHasArray) {
-                        out.ensureWritable(maxOutputLength);
-                        z.next_out = out.array();
-                        z.next_out_index = out.arrayOffset() + out.writerIndex();
-                    } else {
-                        z.next_out_index = 0;
-                    }
+                    decompressed.ensureWritable(maxOutputLength);
+                    z.next_out = decompressed.array();
+                    z.next_out_index = decompressed.arrayOffset() + decompressed.writerIndex();
                     int oldNextOutIndex = z.next_out_index;
 
                     // Decompress 'in' into 'out'
                     int resultCode = z.inflate(JZlib.Z_SYNC_FLUSH);
                     int outputLength = z.next_out_index - oldNextOutIndex;
                     if (outputLength > 0) {
-                        if (outHasArray) {
-                            out.writerIndex(out.writerIndex() + outputLength);
-                        } else {
-                            out.writeBytes(z.next_out, 0, outputLength);
-                        }
+                        decompressed.writerIndex(decompressed.writerIndex() + outputLength);
                     }
 
                     switch (resultCode) {
@@ -162,8 +151,11 @@ public class JZlibDecoder extends ZlibDecoder {
                     }
                 }
             } finally {
-                if (inHasArray) {
-                    in.skipBytes(z.next_in_index - oldNextInIndex);
+                in.skipBytes(z.next_in_index - oldNextInIndex);
+                if (decompressed.isReadable()) {
+                    out.add(decompressed);
+                } else {
+                    decompressed.release();
                 }
             }
         } finally {

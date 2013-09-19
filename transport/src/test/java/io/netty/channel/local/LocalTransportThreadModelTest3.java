@@ -20,18 +20,14 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.EventExecutorGroup;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Ignore;
-import org.junit.Test;
 
 import java.util.Deque;
 import java.util.LinkedList;
@@ -40,18 +36,23 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Ignore;
+import org.junit.Test;
+
 public class LocalTransportThreadModelTest3 {
 
     enum EventType {
         EXCEPTION_CAUGHT,
         USER_EVENT,
-        READ_SUSPEND,
+        MESSAGE_RECEIVED_LAST,
         INACTIVE,
         ACTIVE,
-        UNREGISTERED,
         REGISTERED,
-        INBOUND_BUFFER_UPDATED,
-        FLUSH,
+        MESSAGE_RECEIVED,
+        WRITE,
         READ
     }
 
@@ -68,10 +69,11 @@ public class LocalTransportThreadModelTest3 {
                 .childHandler(new ChannelInitializer<LocalChannel>() {
                     @Override
                     public void initChannel(LocalChannel ch) throws Exception {
-                        ch.pipeline().addLast(new ChannelInboundMessageHandlerAdapter<Object>() {
+                        ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                             @Override
-                            public void messageReceived(ChannelHandlerContext ctx, Object msg) {
+                            public void channelRead(ChannelHandlerContext ctx, Object msg) {
                                 // Discard
+                                ReferenceCountUtil.release(msg);
                             }
                         });
                     }
@@ -81,8 +83,8 @@ public class LocalTransportThreadModelTest3 {
     }
 
     @AfterClass
-    public static void destroy() {
-        group.shutdownGracefully();
+    public static void destroy() throws Exception {
+        group.shutdownGracefully().sync();
     }
 
     @Test(timeout = 60000)
@@ -176,17 +178,17 @@ public class LocalTransportThreadModelTest3 {
                     case EXCEPTION_CAUGHT:
                         ch.pipeline().fireExceptionCaught(cause);
                         break;
-                    case INBOUND_BUFFER_UPDATED:
-                        ch.pipeline().fireInboundBufferUpdated();
+                    case MESSAGE_RECEIVED:
+                        ch.pipeline().fireChannelRead("");
                         break;
-                    case READ_SUSPEND:
-                        ch.pipeline().fireChannelReadSuspended();
+                    case MESSAGE_RECEIVED_LAST:
+                        ch.pipeline().fireChannelReadComplete();
                         break;
                     case USER_EVENT:
                         ch.pipeline().fireUserEventTriggered("");
                         break;
-                    case FLUSH:
-                        ch.pipeline().flush();
+                    case WRITE:
+                        ch.pipeline().write("");
                         break;
                     case READ:
                         ch.pipeline().read();
@@ -196,14 +198,9 @@ public class LocalTransportThreadModelTest3 {
 
             ch.close().sync();
 
-            while (events.peekLast() != EventType.UNREGISTERED) {
-                Thread.sleep(10);
-            }
-
             expectedEvents.addFirst(EventType.ACTIVE);
             expectedEvents.addFirst(EventType.REGISTERED);
             expectedEvents.addLast(EventType.INACTIVE);
-            expectedEvents.addLast(EventType.UNREGISTERED);
 
             for (;;) {
                 EventType event = events.poll();
@@ -220,6 +217,13 @@ public class LocalTransportThreadModelTest3 {
             e3.shutdownGracefully();
             e4.shutdownGracefully();
             e5.shutdownGracefully();
+
+            l.terminationFuture().sync();
+            e1.terminationFuture().sync();
+            e2.terminationFuture().sync();
+            e3.terminationFuture().sync();
+            e4.terminationFuture().sync();
+            e5.terminationFuture().sync();
         }
     }
 
@@ -227,11 +231,11 @@ public class LocalTransportThreadModelTest3 {
         EventType[] events;
         if (inbound) {
             events = new EventType[] {
-                    EventType.USER_EVENT, EventType.INBOUND_BUFFER_UPDATED, EventType.READ_SUSPEND,
+                    EventType.USER_EVENT, EventType.MESSAGE_RECEIVED, EventType.MESSAGE_RECEIVED_LAST,
                     EventType.EXCEPTION_CAUGHT};
         } else {
             events = new EventType[] {
-                    EventType.READ, EventType.FLUSH, EventType.EXCEPTION_CAUGHT };
+                    EventType.READ, EventType.WRITE, EventType.EXCEPTION_CAUGHT };
         }
 
         Random random = new Random();
@@ -243,17 +247,7 @@ public class LocalTransportThreadModelTest3 {
     }
 
     @ChannelHandler.Sharable
-    private static final class EventForwarder extends ChannelDuplexHandler {
-        @Override
-        public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-            ctx.flush(promise);
-        }
-
-        @Override
-        public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
-            ctx.fireInboundBufferUpdated();
-        }
-    }
+    private static final class EventForwarder extends ChannelDuplexHandler { }
 
     private static final class EventRecorder extends ChannelDuplexHandler {
         private final Queue<EventType> events;
@@ -277,9 +271,9 @@ public class LocalTransportThreadModelTest3 {
         }
 
         @Override
-        public void channelReadSuspended(ChannelHandlerContext ctx) throws Exception {
+        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
             if (inbound) {
-                events.add(EventType.READ_SUSPEND);
+                events.add(EventType.MESSAGE_RECEIVED_LAST);
             }
         }
 
@@ -294,27 +288,23 @@ public class LocalTransportThreadModelTest3 {
         }
 
         @Override
-        public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
-            events.add(EventType.UNREGISTERED);
-        }
-
-        @Override
         public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
             events.add(EventType.REGISTERED);
         }
 
         @Override
-        public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             if (inbound) {
-                events.add(EventType.INBOUND_BUFFER_UPDATED);
+                events.add(EventType.MESSAGE_RECEIVED);
             }
         }
 
         @Override
-        public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
             if (!inbound) {
-                events.add(EventType.FLUSH);
+                events.add(EventType.WRITE);
             }
+            promise.setSuccess();
         }
 
         @Override

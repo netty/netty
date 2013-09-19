@@ -45,13 +45,15 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
 
         this.allocator = allocator;
         this.buffer = buffer.slice().order(ByteOrder.BIG_ENDIAN);
-        writerIndex(buffer.limit());
+        writerIndex(this.buffer.limit());
         leak = leakDetector.open(this);
     }
 
     @Override
     protected void deallocate() {
-        leak.close();
+        if (leak != null) {
+            leak.close();
+        }
     }
 
     @Override
@@ -129,9 +131,7 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public ByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
         checkDstIndex(index, length, dstIndex, dst.length);
-        if (dst == null) {
-            throw new NullPointerException("dst");
-        }
+
         if (dstIndex < 0 || dstIndex > dst.length - length) {
             throw new IndexOutOfBoundsException(String.format(
                     "dstIndex: %d, length: %d (expected: range(0, %d))", dstIndex, length, dst.length));
@@ -214,12 +214,33 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public ByteBuf getBytes(int index, OutputStream out, int length) throws IOException {
-        throw new ReadOnlyBufferException();
+        ensureAccessible();
+        if (length == 0) {
+            return this;
+        }
+
+        if (buffer.hasArray()) {
+            out.write(buffer.array(), index + buffer.arrayOffset(), length);
+        } else {
+            byte[] tmp = new byte[length];
+            ByteBuffer tmpBuf = internalNioBuffer();
+            tmpBuf.clear().position(index);
+            tmpBuf.get(tmp);
+            out.write(tmp);
+        }
+        return this;
     }
 
     @Override
     public int getBytes(int index, GatheringByteChannel out, int length) throws IOException {
-        throw new ReadOnlyBufferException();
+        ensureAccessible();
+        if (length == 0) {
+            return 0;
+        }
+
+        ByteBuffer tmpBuf = internalNioBuffer();
+        tmpBuf.clear().position(index).limit(index + length);
+        return out.write(tmpBuf);
     }
 
     @Override
@@ -278,18 +299,19 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
-    public ByteBuffer nioBuffer(int index, int length) {
-        ensureAccessible();
-        if (index == 0 && length == capacity()) {
-            return buffer.duplicate();
-        } else {
-            return ((ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length)).slice();
-        }
+    public ByteBuffer[] nioBuffers(int index, int length) {
+        return new ByteBuffer[] { nioBuffer(index, length) };
     }
 
     @Override
-    public ByteBuffer[] nioBuffers(int index, int length) {
-        return new ByteBuffer[] { nioBuffer(index, length) };
+    public ByteBuffer nioBuffer(int index, int length) {
+        return (ByteBuffer) buffer.duplicate().position(index).limit(length);
+    }
+
+    @Override
+    public ByteBuffer internalNioBuffer(int index, int length) {
+        ensureAccessible();
+        return (ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length);
     }
 
     @Override
@@ -315,15 +337,5 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public long memoryAddress() {
         throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ByteBuf suspendIntermediaryDeallocations() {
-        return this;
-    }
-
-    @Override
-    public ByteBuf resumeIntermediaryDeallocations() {
-        return this;
     }
 }

@@ -15,19 +15,49 @@
  */
 package io.netty.channel;
 
-import io.netty.buffer.Buf;
-
 /**
- * {@link ChannelStateHandler} which handles inbound data.
+ * {@link ChannelHandler} which adds callbacks for state changes. This allows the user to hook in to state changes
+ * easily.
  */
-interface ChannelInboundHandler extends ChannelStateHandler {
+public interface ChannelInboundHandler extends ChannelHandler {
+
     /**
-     * Returns a new buffer which will be used to consume inbound data for the given {@link ChannelHandlerContext}.
-     * <p>
-     * Please note that this method can be called from any thread repeatatively, and thus you should neither perform
-     * stateful operation nor keep the reference of the created buffer as a member variable.  Get it always using
-     * {@link ChannelHandlerContext#inboundByteBuffer()} or {@link ChannelHandlerContext#inboundMessageBuffer()}.
-     * </p>
+     * The {@link Channel} of the {@link ChannelHandlerContext} was registered with its {@link EventLoop}
      */
-    Buf newInboundBuffer(ChannelHandlerContext ctx) throws Exception;
+    void channelRegistered(ChannelHandlerContext ctx) throws Exception;
+
+    /**
+     * The {@link Channel} of the {@link ChannelHandlerContext} is now active
+     */
+    void channelActive(ChannelHandlerContext ctx) throws Exception;
+
+    /**
+     * The {@link Channel} of the {@link ChannelHandlerContext} was registered is now inactive and reached its
+     * end of lifetime.
+     */
+    void channelInactive(ChannelHandlerContext ctx) throws Exception;
+
+    /**
+     * Invoked when the current {@link Channel} has read a message from the peer.
+     */
+    void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception;
+
+    /**
+     * Invoked when the last message read by the current read operation has been consumed by
+     * {@link #channelRead(ChannelHandlerContext, Object)}.  If {@link ChannelOption#AUTO_READ} is off, no further
+     * attempt to read an inbound data from the current {@link Channel} will be made until
+     * {@link ChannelHandlerContext#read()} is called.
+     */
+    void channelReadComplete(ChannelHandlerContext ctx) throws Exception;
+
+    /**
+     * Gets called if an user event was triggered.
+     */
+    void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception;
+
+    /**
+     * Gets called once the writable state of a {@link Channel} changed. You can check the state with
+     * {@link Channel#isWritable()}.
+     */
+    void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception;
 }

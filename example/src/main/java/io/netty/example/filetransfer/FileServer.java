@@ -18,15 +18,12 @@ package io.netty.example.filetransfer;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelProgressiveFuture;
-import io.netty.channel.ChannelProgressiveFutureListener;
-import io.netty.channel.ChannelProgressivePromise;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.FileRegion;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -94,34 +91,23 @@ public class FileServer {
         new FileServer(port).run();
     }
 
-    private static final class FileHandler extends ChannelInboundMessageHandlerAdapter<String> {
+    private static final class FileHandler extends SimpleChannelInboundHandler<String> {
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, String msg) throws Exception {
+        public void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
             File file = new File(msg);
             if (file.exists()) {
                 if (!file.isFile()) {
-                    ctx.write("Not a file: " + file + '\n');
+                    ctx.writeAndFlush("Not a file: " + file + '\n');
                     return;
                 }
                 ctx.write(file + " " + file.length() + '\n');
-                FileRegion region = new DefaultFileRegion(new FileInputStream(file).getChannel(), 0, file.length());
-                ChannelProgressivePromise promise = ctx.newProgressivePromise();
-                promise.addListener(new ChannelProgressiveFutureListener() {
-                    @Override
-                    public void operationProgressed(ChannelProgressiveFuture f, long progress, long total) {
-                        System.err.println("progress: " + progress + " / " + total);
-                    }
-
-                    @Override
-                    public void operationComplete(ChannelProgressiveFuture future) {
-                        System.err.println("file transfer complete");
-                    }
-                });
-
-                ctx.sendFile(region, promise);
-                ctx.write("\n");
+                FileInputStream fis = new FileInputStream(file);
+                FileRegion region = new DefaultFileRegion(fis.getChannel(), 0, file.length());
+                ctx.write(region);
+                ctx.writeAndFlush("\n");
+                fis.close();
             } else {
-                ctx.write("File not found: " + file + '\n');
+                ctx.writeAndFlush("File not found: " + file + '\n');
             }
         }
 

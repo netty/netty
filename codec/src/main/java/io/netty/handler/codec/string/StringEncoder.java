@@ -19,11 +19,12 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.LineBasedFrameDecoder;
+import io.netty.handler.codec.MessageToMessageEncoder;
 
 import java.nio.charset.Charset;
+import java.util.List;
 
 /**
  * Encodes the requested {@link String} into a {@link ByteBuf}.
@@ -41,13 +42,13 @@ import java.nio.charset.Charset;
  * and then you can use a {@link String} instead of a {@link ByteBuf}
  * as a message:
  * <pre>
- * void messageReceived({@link ChannelHandlerContext} ctx, {@link String} msg) {
+ * void channelRead({@link ChannelHandlerContext} ctx, {@link String} msg) {
  *     ch.write("Did you say '" + msg + "'?\n");
  * }
  * </pre>
  */
 @Sharable
-public class StringEncoder extends ChannelOutboundMessageHandlerAdapter<CharSequence> {
+public class StringEncoder extends MessageToMessageEncoder<CharSequence> {
 
     // TODO Use CharsetEncoder instead.
     private final Charset charset;
@@ -70,20 +71,11 @@ public class StringEncoder extends ChannelOutboundMessageHandlerAdapter<CharSequ
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx, CharSequence msg) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, CharSequence msg, List<Object> out) throws Exception {
         if (msg.length() == 0) {
             return;
         }
-        ByteBuf encoded = Unpooled.copiedBuffer(msg, charset);
-        switch (ctx.nextOutboundBufferType()) {
-            case BYTE:
-                ctx.nextOutboundByteBuffer().writeBytes(encoded);
-                break;
-            case MESSAGE:
-                ctx.nextOutboundMessageBuffer().add(Unpooled.wrappedBuffer(encoded));
-                break;
-            default:
-                throw new Error();
-        }
+
+        out.add(Unpooled.copiedBuffer(msg, charset));
     }
 }

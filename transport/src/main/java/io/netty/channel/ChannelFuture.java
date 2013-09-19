@@ -95,7 +95,7 @@ import java.util.concurrent.TimeUnit;
  * <pre>
  * // BAD - NEVER DO THIS
  * {@code @Override}
- * public void messageReceived({@link ChannelHandlerContext} ctx, GoodByeMessage msg) {
+ * public void channelRead({@link ChannelHandlerContext} ctx, GoodByeMessage msg) {
  *     {@link ChannelFuture} future = ctx.channel().close();
  *     future.awaitUninterruptibly();
  *     // Perform post-closure operation
@@ -104,7 +104,7 @@ import java.util.concurrent.TimeUnit;
  *
  * // GOOD
  * {@code @Override}
- * public void messageReceived({@link ChannelHandlerContext} ctx,  GoodByeMessage msg) {
+ * public void channelRead({@link ChannelHandlerContext} ctx,  GoodByeMessage msg) {
  *     {@link ChannelFuture} future = ctx.channel().close();
  *     future.addListener(new {@link ChannelFutureListener}() {
  *         public void operationComplete({@link ChannelFuture} future) {
@@ -146,7 +146,7 @@ import java.util.concurrent.TimeUnit;
  * // GOOD
  * {@link Bootstrap} b = ...;
  * // Configure the connect timeout option.
- * <b>b.setOption({@link ChannelOption}.CONNECT_TIMEOUT_MILLIS, 10000);</b>
+ * <b>b.option({@link ChannelOption}.CONNECT_TIMEOUT_MILLIS, 10000);</b>
  * {@link ChannelFuture} f = b.connect(...);
  * f.awaitUninterruptibly();
  *
@@ -171,16 +171,16 @@ public interface ChannelFuture extends Future<Void> {
     Channel channel();
 
     @Override
-    ChannelFuture addListener(GenericFutureListener<? extends Future<Void>> listener);
+    ChannelFuture addListener(GenericFutureListener<? extends Future<? super Void>> listener);
 
     @Override
-    ChannelFuture addListeners(GenericFutureListener<? extends Future<Void>>... listeners);
+    ChannelFuture addListeners(GenericFutureListener<? extends Future<? super Void>>... listeners);
 
     @Override
-    ChannelFuture removeListener(GenericFutureListener<? extends Future<Void>> listener);
+    ChannelFuture removeListener(GenericFutureListener<? extends Future<? super Void>> listener);
 
     @Override
-    ChannelFuture removeListeners(GenericFutureListener<? extends Future<Void>>... listeners);
+    ChannelFuture removeListeners(GenericFutureListener<? extends Future<? super Void>>... listeners);
 
     @Override
     ChannelFuture sync() throws InterruptedException;

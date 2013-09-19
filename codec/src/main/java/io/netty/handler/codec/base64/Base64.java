@@ -217,7 +217,7 @@ public final class Base64 {
         byte[] DECODABET = decodabet(dialect);
 
         int len34 = len * 3 / 4;
-        ByteBuf dest = Unpooled.buffer(len34).order(src.order()); // Upper limit on size of output
+        ByteBuf dest = src.alloc().buffer(len34).order(src.order()); // Upper limit on size of output
         int outBuffPosn = 0;
 
         byte[] b4 = new byte[4];

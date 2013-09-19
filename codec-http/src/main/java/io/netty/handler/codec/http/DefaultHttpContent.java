@@ -45,6 +45,11 @@ public class DefaultHttpContent extends DefaultHttpObject implements HttpContent
     }
 
     @Override
+    public HttpContent duplicate() {
+        return new DefaultHttpContent(content.duplicate());
+    }
+
+    @Override
     public int refCnt() {
         return content.refCnt();
     }

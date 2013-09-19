@@ -37,8 +37,10 @@ public interface EventExecutorGroup extends ScheduledExecutorService, Iterable<E
 
     /**
      * Shortcut method for {@link #shutdownGracefully(long, long, TimeUnit)} with sensible default values.
+     *
+     * @return the {@link #terminationFuture()}
      */
-    void shutdownGracefully();
+    Future<?> shutdownGracefully();
 
     /**
      * Signals this executor that the caller wants the executor to be shut down.  Once this method is called,
@@ -51,8 +53,15 @@ public interface EventExecutorGroup extends ScheduledExecutorService, Iterable<E
      * @param timeout     the maximum amount of time to wait until the executor is {@linkplain #shutdown()}
      *                    regardless if a task was submitted during the quiet period
      * @param unit        the unit of {@code quietPeriod} and {@code timeout}
+     *
+     * @return the {@link #terminationFuture()}
      */
-    void shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit);
+    Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit);
+
+    /**
+     * Returns the {@link Future} which is notified when this executor has been terminated.
+     */
+    Future<?> terminationFuture();
 
     /**
      * @deprecated {@link #shutdownGracefully(long, long, TimeUnit)} or {@link #shutdownGracefully()} instead.

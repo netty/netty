@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -20,9 +20,9 @@ import io.netty.util.internal.StringUtil;
 /**
  * The default {@link SpdyRstStreamFrame} implementation.
  */
-public class DefaultSpdyRstStreamFrame implements SpdyRstStreamFrame {
+public class DefaultSpdyRstStreamFrame extends DefaultSpdyStreamFrame
+        implements SpdyRstStreamFrame {
 
-    private int streamId;
     private SpdyStreamStatus status;
 
     /**
@@ -39,25 +39,22 @@ public class DefaultSpdyRstStreamFrame implements SpdyRstStreamFrame {
      * Creates a new instance.
      *
      * @param streamId the Stream-ID of this frame
-     * @param status   the getStatus of this frame
+     * @param status   the status of this frame
      */
     public DefaultSpdyRstStreamFrame(int streamId, SpdyStreamStatus status) {
-        setStreamId(streamId);
+        super(streamId);
         setStatus(status);
     }
 
     @Override
-    public int getStreamId() {
-        return streamId;
+    public SpdyRstStreamFrame setStreamId(int streamId) {
+        super.setStreamId(streamId);
+        return this;
     }
 
     @Override
-    public SpdyRstStreamFrame setStreamId(int streamId) {
-        if (streamId <= 0) {
-            throw new IllegalArgumentException(
-                    "Stream-ID must be positive: " + streamId);
-        }
-        this.streamId = streamId;
+    public SpdyRstStreamFrame setLast(boolean last) {
+        super.setLast(last);
         return this;
     }
 
@@ -78,10 +75,10 @@ public class DefaultSpdyRstStreamFrame implements SpdyRstStreamFrame {
         buf.append(getClass().getSimpleName());
         buf.append(StringUtil.NEWLINE);
         buf.append("--> Stream-ID = ");
-        buf.append(streamId);
+        buf.append(getStreamId());
         buf.append(StringUtil.NEWLINE);
         buf.append("--> Status: ");
-        buf.append(status.toString());
+        buf.append(getStatus().toString());
         return buf.toString();
     }
 }

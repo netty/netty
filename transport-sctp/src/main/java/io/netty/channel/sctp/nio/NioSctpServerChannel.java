@@ -17,11 +17,10 @@ package io.netty.channel.sctp.nio;
 
 import com.sun.nio.sctp.SctpChannel;
 import com.sun.nio.sctp.SctpServerChannel;
-import io.netty.buffer.BufType;
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.sctp.DefaultSctpServerChannelConfig;
@@ -35,6 +34,7 @@ import java.nio.channels.SelectionKey;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -46,7 +46,7 @@ import java.util.Set;
  */
 public class NioSctpServerChannel extends AbstractNioMessageChannel
         implements io.netty.channel.sctp.SctpServerChannel {
-    private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.MESSAGE, false);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
     private static SctpServerChannel newSocket() {
         try {
@@ -63,7 +63,7 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
      * Create a new instance
      */
     public NioSctpServerChannel() {
-        super(null, null, newSocket(), SelectionKey.OP_ACCEPT);
+        super(null, newSocket(), SelectionKey.OP_ACCEPT);
         config = new DefaultSctpServerChannelConfig(this, javaChannel());
     }
 
@@ -135,12 +135,12 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
     }
 
     @Override
-    protected int doReadMessages(MessageBuf<Object> buf) throws Exception {
+    protected int doReadMessages(List<Object> buf) throws Exception {
         SctpChannel ch = javaChannel().accept();
         if (ch == null) {
             return 0;
         }
-        buf.add(new NioSctpChannel(this, null, ch));
+        buf.add(new NioSctpChannel(this, ch));
         return 1;
     }
 
@@ -217,7 +217,7 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
     }
 
     @Override
-    protected int doWriteMessages(MessageBuf<Object> buf, boolean lastSpin) throws Exception {
+    protected boolean doWriteMessage(Object msg, ChannelOutboundBuffer in) throws Exception {
         throw new UnsupportedOperationException();
     }
 }

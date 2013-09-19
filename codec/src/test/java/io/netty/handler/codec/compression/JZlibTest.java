@@ -15,100 +15,15 @@
  */
 package io.netty.handler.codec.compression;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import org.junit.After;
-import org.junit.Test;
-import io.netty.channel.embedded.EmbeddedByteChannel;
+public class JZlibTest extends ZlibTest {
 
-import static org.junit.Assert.*;
-
-public class JZlibTest {
-
-    @Test
-    public void testZLIB() throws Exception {
-        ByteBuf data = Unpooled.wrappedBuffer("test".getBytes());
-
-        EmbeddedByteChannel chEncoder =
-          new EmbeddedByteChannel(new JZlibEncoder(ZlibWrapper.ZLIB));
-
-        chEncoder.writeOutbound(data.copy());
-        assertTrue(chEncoder.finish());
-
-        byte[] deflatedData = chEncoder.readOutbound().array();
-
-        EmbeddedByteChannel chDecoderZlib =
-            new EmbeddedByteChannel(new JZlibDecoder(ZlibWrapper.ZLIB));
-
-        chDecoderZlib.writeInbound(Unpooled.wrappedBuffer(deflatedData));
-        assertTrue(chDecoderZlib.finish());
-
-        assertEquals(data, chDecoderZlib.readInbound());
-
-        EmbeddedByteChannel chDecoderZlibOrNone =
-            new EmbeddedByteChannel(new JZlibDecoder(ZlibWrapper.ZLIB_OR_NONE));
-
-        chDecoderZlibOrNone.writeInbound(Unpooled.wrappedBuffer(deflatedData));
-        assertTrue(chDecoderZlibOrNone.finish());
-
-        assertEquals(data, chDecoderZlibOrNone.readInbound());
+    @Override
+    protected ZlibEncoder createEncoder(ZlibWrapper wrapper) {
+        return new JZlibEncoder(wrapper);
     }
 
-    @Test
-    public void testNONE() throws Exception {
-        ByteBuf data = Unpooled.wrappedBuffer("test".getBytes());
-
-        EmbeddedByteChannel chEncoder =
-          new EmbeddedByteChannel(new JZlibEncoder(ZlibWrapper.NONE));
-
-        chEncoder.writeOutbound(data.copy());
-        assertTrue(chEncoder.finish());
-
-        byte[] deflatedData = chEncoder.readOutbound().array();
-
-        EmbeddedByteChannel chDecoderZlibNone =
-            new EmbeddedByteChannel(new JZlibDecoder(ZlibWrapper.NONE));
-
-        chDecoderZlibNone.writeInbound(Unpooled.wrappedBuffer(deflatedData));
-        assertTrue(chDecoderZlibNone.finish());
-
-        assertEquals(data, chDecoderZlibNone.readInbound());
-
-        EmbeddedByteChannel chDecoderZlibOrNone =
-            new EmbeddedByteChannel(new JZlibDecoder(ZlibWrapper.ZLIB_OR_NONE));
-
-        chDecoderZlibOrNone.writeInbound(Unpooled.wrappedBuffer(deflatedData));
-        assertTrue(chDecoderZlibOrNone.finish());
-
-        assertEquals(data, chDecoderZlibOrNone.readInbound());
-    }
-
-    @Test
-    public void testGZIP() throws Exception {
-        ByteBuf data = Unpooled.wrappedBuffer("test".getBytes());
-
-        EmbeddedByteChannel chEncoder =
-          new EmbeddedByteChannel(new JZlibEncoder(ZlibWrapper.GZIP));
-
-        chEncoder.writeOutbound(data.copy());
-        assertTrue(chEncoder.finish());
-
-        byte[] deflatedData = chEncoder.readOutbound().array();
-
-        EmbeddedByteChannel chDecoderGZip =
-            new EmbeddedByteChannel(new JZlibDecoder(ZlibWrapper.GZIP));
-
-        chDecoderGZip.writeInbound(Unpooled.wrappedBuffer(deflatedData));
-        assertTrue(chDecoderGZip.finish());
-
-        assertEquals(data, chDecoderGZip.readInbound());
-
-        EmbeddedByteChannel chDecoderZlibOrNone =
-            new EmbeddedByteChannel(new JZlibDecoder(ZlibWrapper.ZLIB_OR_NONE));
-
-        chDecoderZlibOrNone.writeInbound(Unpooled.wrappedBuffer(deflatedData));
-        assertTrue(chDecoderZlibOrNone.finish());
-
-        assertEquals(data, chDecoderZlibOrNone.readInbound());
+    @Override
+    protected ZlibDecoder createDecoder(ZlibWrapper wrapper) {
+        return new JZlibDecoder(wrapper);
     }
 }

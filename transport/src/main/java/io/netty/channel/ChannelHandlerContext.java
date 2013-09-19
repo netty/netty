@@ -16,9 +16,6 @@
 package io.netty.channel;
 
 
-import io.netty.buffer.BufType;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.MessageBuf;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import io.netty.util.AttributeMap;
@@ -83,7 +80,7 @@ import java.nio.channels.Channels;
  * as how many times it is added to pipelines, regardless if it is added to the
  * same pipeline multiple times or added to different pipelines multiple times:
  * <pre>
- * public class FactorialHandler extends {@link ChannelInboundMessageHandlerAdapter}&lt{@link Integer}&gt {
+ * public class FactorialHandler extends {@link ChannelInboundHandlerAdapter}&lt{@link Integer}&gt {
  *
  *   private final {@link AttributeKey}&lt{@link Integer}&gt counter =
  *           new {@link AttributeKey}&lt{@link Integer}&gt("counter");
@@ -91,7 +88,7 @@ import java.nio.channels.Channels;
  *   // This handler will receive a sequence of increasing integers starting
  *   // from 1.
  *   {@code @Override}
- *   public void messageReceived({@link ChannelHandlerContext} ctx, {@link Integer} integer) {
+ *   public void channelRead({@link ChannelHandlerContext} ctx, {@link Integer} integer) {
  *     {@link Attribute}&lt{@link Integer}&gt attr = ctx.getAttr(counter);
  *     Integer a = ctx.getAttr(counter).get();
  *
@@ -136,8 +133,8 @@ public interface ChannelHandlerContext
 
     /**
      * The {@link EventExecutor} that is used to dispatch the events. This can also be used to directly
-     * submit tasks that get executed in the event loop. For more informations please refer to the
-     * {@link EventExecutor} javadocs.
+     * submit tasks that get executed in the event loop. For more information please refer to the
+     * {@link EventExecutor} javadoc.
      */
     EventExecutor executor();
 
@@ -154,105 +151,14 @@ public interface ChannelHandlerContext
     ChannelHandler handler();
 
     /**
-     * Return {@code true} if the {@link ChannelHandlerContext} has an {@link ByteBuf} bound for inbound
-     * which can be used.
+     * Return {@code true} if the {@link ChannelHandler} which belongs to this {@link ChannelHandler} was removed
+     * from the {@link ChannelPipeline}. Note that this method is only meant to be called from with in the
+     * {@link EventLoop}.
      */
-    boolean hasInboundByteBuffer();
-
-    /**
-     * Return {@code true} if the {@link ChannelHandlerContext} has a {@link MessageBuf} bound for inbound
-     * which can be used.
-     */
-    boolean hasInboundMessageBuffer();
-
-    /**
-     * Return the bound {@link ByteBuf} for inbound data if {@link #hasInboundByteBuffer()} returned
-     * {@code true}. If {@link #hasInboundByteBuffer()} returned {@code false} it will throw a
-     * {@link UnsupportedOperationException}.
-     * <p/>
-     * This method can only be called from within the event-loop, otherwise it will throw an
-     * {@link IllegalStateException}.
-     */
-    ByteBuf inboundByteBuffer();
-
-    /**
-     * Return the bound {@link MessageBuf} for inbound data if {@link #hasInboundMessageBuffer()} returned
-     * {@code true}. If {@link #hasInboundMessageBuffer()} returned {@code false} it will throw a
-     * {@link UnsupportedOperationException}.
-     * <p/>
-     * This method can only be called from within the event-loop, otherwise it will throw an
-     * {@link IllegalStateException}.
-     */
-    <T> MessageBuf<T> inboundMessageBuffer();
-
-    /**
-     * Return {@code true} if the {@link ChannelHandlerContext} has an {@link ByteBuf} bound for outbound
-     * data which can be used.
-     *
-     */
-    boolean hasOutboundByteBuffer();
-
-    /**
-     * Return {@code true} if the {@link ChannelHandlerContext} has a {@link MessageBuf} bound for outbound
-     * which can be used.
-     */
-    boolean hasOutboundMessageBuffer();
-
-    /**
-     * Return the bound {@link ByteBuf} for outbound data if {@link #hasOutboundByteBuffer()} returned
-     * {@code true}. If {@link #hasOutboundByteBuffer()} returned {@code false} it will throw
-     * a {@link UnsupportedOperationException}.
-     * <p/>
-     * This method can only be called from within the event-loop, otherwise it will throw an
-     * {@link IllegalStateException}.
-     */
-    ByteBuf outboundByteBuffer();
-
-    /**
-     * Return the bound {@link MessageBuf} for outbound data if {@link #hasOutboundMessageBuffer()} returned
-     * {@code true}. If {@link #hasOutboundMessageBuffer()} returned {@code false} it will throw a
-     * {@link UnsupportedOperationException}.
-     * <p/>
-     * This method can only be called from within the event-loop, otherwise it will throw an
-     * {@link IllegalStateException}.
-     */
-    <T> MessageBuf<T> outboundMessageBuffer();
-
-    /**
-     * Return the {@link ByteBuf} of the next {@link ChannelInboundByteHandler} in the pipeline.
-     */
-    ByteBuf nextInboundByteBuffer();
-
-    /**
-     * Return the {@link MessageBuf} of the next {@link ChannelInboundMessageHandler} in the pipeline.
-     */
-    MessageBuf<Object> nextInboundMessageBuffer();
-
-    /**
-     * Return the {@link ByteBuf} of the next {@link ChannelOutboundByteHandler} in the pipeline.
-     */
-    ByteBuf nextOutboundByteBuffer();
-
-    /**
-     * Return the {@link MessageBuf} of the next {@link ChannelOutboundMessageHandler} in the pipeline.
-     */
-    MessageBuf<Object> nextOutboundMessageBuffer();
-
-    /**
-     * Return the {@link BufType} of the next {@link ChannelInboundHandler} in the pipeline.
-     */
-    BufType nextInboundBufferType();
-
-    /**
-     * Return the {@link BufType} of the next {@link ChannelOutboundHandler} in the pipeline.
-     */
-    BufType nextOutboundBufferType();
+    boolean isRemoved();
 
     @Override
     ChannelHandlerContext fireChannelRegistered();
-
-    @Override
-    ChannelHandlerContext fireChannelUnregistered();
 
     @Override
     ChannelHandlerContext fireChannelActive();
@@ -267,8 +173,14 @@ public interface ChannelHandlerContext
     ChannelHandlerContext fireUserEventTriggered(Object event);
 
     @Override
-    ChannelHandlerContext fireInboundBufferUpdated();
+    ChannelHandlerContext fireChannelRead(Object msg);
 
     @Override
-    ChannelHandlerContext fireChannelReadSuspended();
+    ChannelHandlerContext fireChannelReadComplete();
+
+    @Override
+    ChannelHandlerContext fireChannelWritabilityChanged();
+
+    @Override
+    ChannelHandlerContext flush();
 }

@@ -17,11 +17,11 @@ package io.netty.channel.udt.nio;
 
 import com.barchart.udt.TypeUDT;
 import com.barchart.udt.nio.SocketChannelUDT;
-import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.FileRegion;
 import io.netty.channel.nio.AbstractNioByteChannel;
 import io.netty.channel.udt.DefaultUdtChannelConfig;
 import io.netty.channel.udt.UdtChannel;
@@ -31,21 +31,18 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.nio.channels.SelectionKey;
 
 import static java.nio.channels.SelectionKey.*;
 
 /**
  * Byte Channel Connector for UDT Streams.
  */
-public class NioUdtByteConnectorChannel extends AbstractNioByteChannel
-        implements UdtChannel {
+public class NioUdtByteConnectorChannel extends AbstractNioByteChannel implements UdtChannel {
 
-    private static final InternalLogger logger = InternalLoggerFactory
-            .getInstance(NioUdtByteConnectorChannel.class);
+    private static final InternalLogger logger =
+            InternalLoggerFactory.getInstance(NioUdtByteConnectorChannel.class);
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(
-            BufType.BYTE, false);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
     private final UdtChannelConfig config;
 
@@ -53,9 +50,8 @@ public class NioUdtByteConnectorChannel extends AbstractNioByteChannel
         this(TypeUDT.STREAM);
     }
 
-    public NioUdtByteConnectorChannel(final Channel parent, final Integer id,
-            final SocketChannelUDT channelUDT) {
-        super(parent, id, channelUDT);
+    public NioUdtByteConnectorChannel(final Channel parent, final SocketChannelUDT channelUDT) {
+        super(parent, channelUDT);
         try {
             channelUDT.configureBlocking(false);
             switch (channelUDT.socketUDT().status()) {
@@ -80,7 +76,7 @@ public class NioUdtByteConnectorChannel extends AbstractNioByteChannel
     }
 
     public NioUdtByteConnectorChannel(final SocketChannelUDT channelUDT) {
-        this(null, channelUDT.socketUDT().id(), channelUDT);
+        this(null, channelUDT);
     }
 
     public NioUdtByteConnectorChannel(final TypeUDT type) {
@@ -144,26 +140,15 @@ public class NioUdtByteConnectorChannel extends AbstractNioByteChannel
     }
 
     @Override
-    protected int doWriteBytes(final ByteBuf byteBuf, final boolean lastSpin)
-            throws Exception {
-        final int pendingBytes = byteBuf.readableBytes();
-        final int writtenBytes = byteBuf.readBytes(javaChannel(), pendingBytes);
-        final SelectionKey key = selectionKey();
-        final int interestOps = key.interestOps();
-        if (writtenBytes >= pendingBytes) {
-            // wrote the buffer completely - clear OP_WRITE.
-            if ((interestOps & OP_WRITE) != 0) {
-                key.interestOps(interestOps & ~OP_WRITE);
-            }
-        } else {
-            // wrote partial or nothing - ensure OP_WRITE
-            if (writtenBytes > 0 || lastSpin) {
-                if ((interestOps & OP_WRITE) == 0) {
-                    key.interestOps(interestOps | OP_WRITE);
-                }
-            }
-        }
+    protected int doWriteBytes(final ByteBuf byteBuf) throws Exception {
+        final int expectedWrittenBytes = byteBuf.readableBytes();
+        final int writtenBytes = byteBuf.readBytes(javaChannel(), expectedWrittenBytes);
         return writtenBytes;
+    }
+
+    @Override
+    protected long doWriteFileRegion(FileRegion region) throws Exception {
+        throw new UnsupportedOperationException();
     }
 
     @Override

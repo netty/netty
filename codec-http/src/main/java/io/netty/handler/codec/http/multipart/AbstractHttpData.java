@@ -15,10 +15,10 @@
  */
 package io.netty.handler.codec.http.multipart;
 
-import io.netty.buffer.AbstractReferenceCounted;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelException;
 import io.netty.handler.codec.http.HttpConstants;
+import io.netty.util.AbstractReferenceCounted;
 
 import java.io.IOException;
 import java.nio.charset.Charset;

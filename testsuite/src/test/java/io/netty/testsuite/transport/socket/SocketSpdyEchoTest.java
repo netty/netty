@@ -17,14 +17,13 @@ package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.BufUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundByteHandlerAdapter;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.spdy.SpdyConstants;
 import io.netty.handler.codec.spdy.SpdyFrameDecoder;
@@ -199,7 +198,7 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         int port = ((InetSocketAddress) sc.localAddress()).getPort();
 
         Channel cc = cb.remoteAddress(NetUtil.LOCALHOST, port).connect().sync().channel();
-        cc.write(frames);
+        cc.writeAndFlush(frames);
 
         while (ch.counter < frames.writerIndex() - ignoredBytes) {
             if (sh.exception.get() != null) {
@@ -230,13 +229,17 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         }
     }
 
-    private static class SpdyEchoTestServerHandler extends ChannelInboundMessageHandlerAdapter<Object> {
+    private static class SpdyEchoTestServerHandler extends ChannelInboundHandlerAdapter {
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
-            BufUtil.retain(msg);
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             ctx.write(msg);
+        }
+
+        @Override
+        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+            ctx.flush();
         }
 
         @Override
@@ -247,7 +250,7 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         }
     }
 
-    private static class SpdyEchoTestClientHandler extends ChannelInboundByteHandlerAdapter {
+    private static class SpdyEchoTestClientHandler extends SimpleChannelInboundHandler<ByteBuf> {
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         final ByteBuf frames;
         volatile int counter;
@@ -257,7 +260,7 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        public void channelRead0(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
             byte[] actual = new byte[in.readableBytes()];
             in.readBytes(actual);
 

@@ -15,19 +15,19 @@
  */
 package io.netty.example.http.upload;
 
-import io.netty.buffer.BufUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.Cookie;
 import io.netty.handler.codec.http.CookieDecoder;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
@@ -44,7 +44,6 @@ import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.EndOfDataDecoderException;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.ErrorDataDecoderException;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.IncompatibleDataDecoderException;
-import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.NotEnoughDataDecoderException;
 import io.netty.handler.codec.http.multipart.InterfaceHttpData;
 import io.netty.handler.codec.http.multipart.InterfaceHttpData.HttpDataType;
 import io.netty.util.CharsetUtil;
@@ -62,7 +61,7 @@ import java.util.logging.Logger;
 import static io.netty.buffer.Unpooled.*;
 import static io.netty.handler.codec.http.HttpHeaders.Names.*;
 
-public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter<Object> {
+public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObject> {
 
     private static final Logger logger = Logger.getLogger(HttpUploadServerHandler.class.getName());
 
@@ -89,14 +88,14 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
     }
 
     @Override
-    public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         if (decoder != null) {
             decoder.cleanFiles();
         }
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void channelRead0(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
         if (msg instanceof HttpRequest) {
             HttpRequest request = this.request = (HttpRequest) msg;
             URI uri = new URI(request.getUri());
@@ -192,7 +191,6 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
                 readHttpDataChunkByChunk();
                 // example of reading only if at the end
                 if (chunk instanceof LastHttpContent) {
-                    readHttpDataAllReceive(ctx.channel());
                     writeResponse(ctx.channel());
                     readingChunks = false;
 
@@ -205,30 +203,9 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
     private void reset() {
         request = null;
 
-        // clean previous FileUpload if Any
-        decoder.cleanFiles();
+        // destroy the decoder to release all resources
+        decoder.destroy();
         decoder = null;
-    }
-
-    /**
-     * Example of reading all InterfaceHttpData from finished transfer
-     */
-    private void readHttpDataAllReceive(Channel channel) {
-        List<InterfaceHttpData> datas;
-        try {
-            datas = decoder.getBodyHttpDatas();
-        } catch (NotEnoughDataDecoderException e1) {
-            // Should not be!
-            e1.printStackTrace();
-            responseContent.append(e1.getMessage());
-            writeResponse(channel);
-            channel.close();
-            return;
-        }
-        for (InterfaceHttpData data : datas) {
-            writeHttpData(data);
-        }
-        responseContent.append("\r\n\r\nEND OF CONTENT AT FINAL END\r\n");
     }
 
     /**
@@ -239,8 +216,12 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
             while (decoder.hasNext()) {
                 InterfaceHttpData data = decoder.next();
                 if (data != null) {
-                    // new value
-                    writeHttpData(data);
+                    try {
+                        // new value
+                        writeHttpData(data);
+                    } finally {
+                        data.release();
+                    }
                 }
             }
         } catch (EndOfDataDecoderException e1) {
@@ -298,7 +279,6 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
                 }
             }
         }
-        //BufUtil.release(data);
     }
 
     private void writeResponse(Channel channel) {
@@ -319,7 +299,7 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
         if (!close) {
             // There's no need to add 'Content-Length' header
             // if this is the last response.
-            response.headers().set(CONTENT_LENGTH, String.valueOf(buf.readableBytes()));
+            response.headers().set(CONTENT_LENGTH, buf.readableBytes());
         }
 
         Set<Cookie> cookies;
@@ -336,7 +316,7 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
             }
         }
         // Write the response.
-        ChannelFuture future = channel.write(response);
+        ChannelFuture future = channel.writeAndFlush(response);
         // Close the connection after the write operation is done if necessary.
         if (close) {
             future.addListener(ChannelFutureListener.CLOSE);
@@ -421,10 +401,10 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
                 HttpVersion.HTTP_1_1, HttpResponseStatus.OK, buf);
 
         response.headers().set(CONTENT_TYPE, "text/html; charset=UTF-8");
-        response.headers().set(CONTENT_LENGTH, String.valueOf(buf.readableBytes()));
+        response.headers().set(CONTENT_LENGTH, buf.readableBytes());
 
         // Write the response.
-        ctx.channel().write(response);
+        ctx.channel().writeAndFlush(response);
     }
 
     @Override

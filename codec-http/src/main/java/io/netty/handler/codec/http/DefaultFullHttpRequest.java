@@ -30,7 +30,12 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
     }
 
     public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri, ByteBuf content) {
-        super(httpVersion, method, uri);
+        this(httpVersion, method, uri, content, true);
+    }
+
+    public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri,
+                                  ByteBuf content, boolean validateHeaders) {
+        super(httpVersion, method, uri, validateHeaders);
         if (content == null) {
             throw new NullPointerException("content");
         }
@@ -99,5 +104,14 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
         copy.headers().set(headers());
         copy.trailingHeaders().set(trailingHeaders());
         return copy;
+    }
+
+    @Override
+    public FullHttpRequest duplicate() {
+        DefaultFullHttpRequest duplicate = new DefaultFullHttpRequest(
+                getProtocolVersion(), getMethod(), getUri(), content().duplicate());
+        duplicate.headers().set(headers());
+        duplicate.trailingHeaders().set(trailingHeaders());
+        return duplicate;
     }
 }

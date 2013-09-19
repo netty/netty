@@ -15,22 +15,21 @@
  */
 package io.netty.handler.codec;
 
-import static org.junit.Assert.*;
-
-import java.nio.charset.Charset;
-
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import org.junit.Test;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.channel.embedded.EmbeddedByteChannel;
+import java.nio.charset.Charset;
+
+import static org.junit.Assert.*;
 
 public class DelimiterBasedFrameDecoderTest {
 
     @Test
     public void testMultipleLinesStrippedDelimiters() {
-        EmbeddedByteChannel ch = new EmbeddedByteChannel(new DelimiterBasedFrameDecoder(8192, true,
+        EmbeddedChannel ch = new EmbeddedChannel(new DelimiterBasedFrameDecoder(8192, true,
                 Delimiters.lineDelimiter()));
         ch.writeInbound(Unpooled.copiedBuffer("TestLine\r\ng\r\n", Charset.defaultCharset()));
         assertEquals("TestLine", ((ByteBuf) ch.readInbound()).toString(Charset.defaultCharset()));
@@ -40,7 +39,7 @@ public class DelimiterBasedFrameDecoderTest {
 
     @Test
     public void testIncompleteLinesStrippedDelimiters() {
-        EmbeddedByteChannel ch = new EmbeddedByteChannel(new DelimiterBasedFrameDecoder(8192, true,
+        EmbeddedChannel ch = new EmbeddedChannel(new DelimiterBasedFrameDecoder(8192, true,
                 Delimiters.lineDelimiter()));
         ch.writeInbound(Unpooled.copiedBuffer("Test", Charset.defaultCharset()));
         assertNull(ch.readInbound());
@@ -52,7 +51,7 @@ public class DelimiterBasedFrameDecoderTest {
 
     @Test
     public void testMultipleLines() {
-        EmbeddedByteChannel ch = new EmbeddedByteChannel(new DelimiterBasedFrameDecoder(8192, false,
+        EmbeddedChannel ch = new EmbeddedChannel(new DelimiterBasedFrameDecoder(8192, false,
                 Delimiters.lineDelimiter()));
         ch.writeInbound(Unpooled.copiedBuffer("TestLine\r\ng\r\n", Charset.defaultCharset()));
         assertEquals("TestLine\r\n", ((ByteBuf) ch.readInbound()).toString(Charset.defaultCharset()));
@@ -62,7 +61,7 @@ public class DelimiterBasedFrameDecoderTest {
 
     @Test
     public void testIncompleteLines() {
-        EmbeddedByteChannel ch = new EmbeddedByteChannel(new DelimiterBasedFrameDecoder(8192, false,
+        EmbeddedChannel ch = new EmbeddedChannel(new DelimiterBasedFrameDecoder(8192, false,
                 Delimiters.lineDelimiter()));
         ch.writeInbound(Unpooled.copiedBuffer("Test", Charset.defaultCharset()));
         assertNull(ch.readInbound());
@@ -74,7 +73,7 @@ public class DelimiterBasedFrameDecoderTest {
 
     @Test
     public void testDecode() throws Exception {
-        EmbeddedByteChannel ch = new EmbeddedByteChannel(
+        EmbeddedChannel ch = new EmbeddedChannel(
                 new DelimiterBasedFrameDecoder(8192, true, Delimiters.lineDelimiter()));
 
         ch.writeInbound(Unpooled.copiedBuffer("first\r\nsecond\nthird", CharsetUtil.US_ASCII));

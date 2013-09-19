@@ -15,9 +15,8 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.embedded.EmbeddedByteChannel;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaders.Names;
@@ -39,7 +38,7 @@ public class WebSocketServerHandshaker00Test {
 
     @Test
     public void testPerformOpeningHandshake() {
-        EmbeddedByteChannel ch = new EmbeddedByteChannel(
+        EmbeddedChannel ch = new EmbeddedChannel(
                 new HttpObjectAggregator(42), new HttpRequestDecoder(), new HttpResponseEncoder());
 
         FullHttpRequest req = new DefaultFullHttpRequest(
@@ -56,10 +55,9 @@ public class WebSocketServerHandshaker00Test {
         new WebSocketServerHandshaker00(
                 "ws://example.com/chat", "chat", Integer.MAX_VALUE).handshake(ch, req);
 
-        ByteBuf resBuf = ch.readOutbound();
-
-        EmbeddedByteChannel ch2 = new EmbeddedByteChannel(new HttpResponseDecoder());
-        ch2.writeInbound(resBuf);
+        EmbeddedChannel ch2 = new EmbeddedChannel(new HttpResponseDecoder());
+        ch2.writeInbound(ch.readOutbound());
+        ch2.writeInbound(ch.readOutbound());
         HttpResponse res = (HttpResponse) ch2.readInbound();
 
         Assert.assertEquals("ws://example.com/chat", res.headers().get(Names.SEC_WEBSOCKET_LOCATION));

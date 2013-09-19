@@ -17,30 +17,28 @@ package io.netty.channel.udt.nio;
 
 import com.barchart.udt.TypeUDT;
 import com.barchart.udt.nio.SocketChannelUDT;
-import io.netty.buffer.BufType;
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelMetadata;
+
+import java.util.List;
 
 /**
  * Message Channel Acceptor for UDT Datagrams.
  */
 public class NioUdtMessageAcceptorChannel extends NioUdtAcceptorChannel {
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(
-            BufType.MESSAGE, false);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
     public NioUdtMessageAcceptorChannel() {
         super(TypeUDT.DATAGRAM);
     }
 
     @Override
-    protected int doReadMessages(final MessageBuf<Object> buf) throws Exception {
+    protected int doReadMessages(List<Object> buf) throws Exception {
         final SocketChannelUDT channelUDT = javaChannel().accept();
         if (channelUDT == null) {
             return 0;
         } else {
-            buf.add(new NioUdtMessageConnectorChannel(this, channelUDT
-                    .socketUDT().id(), channelUDT));
+            buf.add(new NioUdtMessageConnectorChannel(this, channelUDT));
             return 1;
         }
     }

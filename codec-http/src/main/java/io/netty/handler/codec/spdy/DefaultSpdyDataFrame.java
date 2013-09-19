@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,17 +16,16 @@
 package io.netty.handler.codec.spdy;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.DefaultByteBufHolder;
 import io.netty.buffer.Unpooled;
+import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.internal.StringUtil;
 
 /**
  * The default {@link SpdyDataFrame} implementation.
  */
-public class DefaultSpdyDataFrame extends DefaultByteBufHolder implements SpdyDataFrame {
+public class DefaultSpdyDataFrame extends DefaultSpdyStreamFrame implements SpdyDataFrame {
 
-    private int streamId;
-    private boolean last;
+    private final ByteBuf data;
 
     /**
      * Creates a new instance.
@@ -44,8 +43,11 @@ public class DefaultSpdyDataFrame extends DefaultByteBufHolder implements SpdyDa
      * @param data      the payload of the frame. Can not exceed {@link SpdyCodecUtil#SPDY_MAX_LENGTH}
      */
     public DefaultSpdyDataFrame(int streamId, ByteBuf data) {
-        super(validate(data));
-        setStreamId(streamId);
+        super(streamId);
+        if (data == null) {
+            throw new NullPointerException("data");
+        }
+        this.data = validate(data);
     }
 
     private static ByteBuf validate(ByteBuf data) {
@@ -57,48 +59,64 @@ public class DefaultSpdyDataFrame extends DefaultByteBufHolder implements SpdyDa
     }
 
     @Override
-    public int getStreamId() {
-        return streamId;
-    }
-
-    @Override
     public SpdyDataFrame setStreamId(int streamId) {
-        if (streamId <= 0) {
-            throw new IllegalArgumentException(
-                    "Stream-ID must be positive: " + streamId);
-        }
-        this.streamId = streamId;
+        super.setStreamId(streamId);
         return this;
-    }
-
-    @Override
-    public boolean isLast() {
-        return last;
     }
 
     @Override
     public SpdyDataFrame setLast(boolean last) {
-        this.last = last;
+        super.setLast(last);
         return this;
     }
 
     @Override
-    public DefaultSpdyDataFrame copy() {
-        DefaultSpdyDataFrame frame = new DefaultSpdyDataFrame(getStreamId(), content().copy());
+    public ByteBuf content() {
+        if (data.refCnt() <= 0) {
+            throw new IllegalReferenceCountException(data.refCnt());
+        }
+        return data;
+    }
+
+    @Override
+    public SpdyDataFrame copy() {
+        SpdyDataFrame frame = new DefaultSpdyDataFrame(getStreamId(), content().copy());
         frame.setLast(isLast());
         return frame;
     }
 
     @Override
+    public SpdyDataFrame duplicate() {
+        SpdyDataFrame frame = new DefaultSpdyDataFrame(getStreamId(), content().duplicate());
+        frame.setLast(isLast());
+        return frame;
+    }
+
+    @Override
+    public int refCnt() {
+        return data.refCnt();
+    }
+
+    @Override
     public SpdyDataFrame retain() {
-        super.retain();
+        data.retain();
         return this;
     }
 
     @Override
     public SpdyDataFrame retain(int increment) {
-        super.retain(increment);
+        data.retain(increment);
         return this;
+    }
+
+    @Override
+    public boolean release() {
+        return data.release();
+    }
+
+    @Override
+    public boolean release(int decrement) {
+        return data.release(decrement);
     }
 
     @Override
@@ -110,7 +128,7 @@ public class DefaultSpdyDataFrame extends DefaultByteBufHolder implements SpdyDa
         buf.append(')');
         buf.append(StringUtil.NEWLINE);
         buf.append("--> Stream-ID = ");
-        buf.append(streamId);
+        buf.append(getStreamId());
         buf.append(StringUtil.NEWLINE);
         buf.append("--> Size = ");
         if (refCnt() == 0) {

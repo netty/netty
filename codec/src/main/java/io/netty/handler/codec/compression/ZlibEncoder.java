@@ -18,12 +18,16 @@ package io.netty.handler.codec.compression;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.ByteToByteEncoder;
+import io.netty.handler.codec.MessageToByteEncoder;
 
 /**
  * Compresses a {@link ByteBuf} using the deflate algorithm.
  */
-public abstract class ZlibEncoder extends ByteToByteEncoder {
+public abstract class ZlibEncoder extends MessageToByteEncoder<ByteBuf> {
+
+    protected ZlibEncoder() {
+        super(false);
+    }
 
     /**
      * Returns {@code true} if and only if the end of the compressed stream

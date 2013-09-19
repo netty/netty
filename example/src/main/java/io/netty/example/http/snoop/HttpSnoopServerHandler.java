@@ -17,9 +17,8 @@ package io.netty.example.http.snoop;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.http.Cookie;
 import io.netty.handler.codec.http.CookieDecoder;
@@ -44,14 +43,19 @@ import static io.netty.handler.codec.http.HttpHeaders.*;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
 
-public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<Object> {
+public class HttpSnoopServerHandler extends SimpleChannelInboundHandler<Object> {
 
     private HttpRequest request;
     /** Buffer that stores the response content */
     private final StringBuilder buf = new StringBuilder();
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        ctx.flush();
+    }
+
+    @Override
+    protected void channelRead0(ChannelHandlerContext ctx, Object msg) {
         if (msg instanceof HttpRequest) {
             HttpRequest request = this.request = (HttpRequest) msg;
 
@@ -119,7 +123,7 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
                     buf.append("\r\n");
                 }
 
-                writeResponse(ctx, trailer);
+                writeResponse(trailer, ctx);
             }
         }
     }
@@ -135,7 +139,7 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
         buf.append("\r\n");
     }
 
-    private void writeResponse(ChannelHandlerContext ctx, HttpObject currentObj) {
+    private boolean writeResponse(HttpObject currentObj, ChannelHandlerContext ctx) {
         // Decide whether to close the connection or not.
         boolean keepAlive = isKeepAlive(request);
         // Build the response object.
@@ -170,27 +174,18 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
         }
 
         // Write the response.
-        ctx.nextOutboundMessageBuffer().add(response);
+        ctx.write(response);
 
-        // Close the non-keep-alive connection after the write operation is done.
-        if (!keepAlive) {
-            ctx.flush().addListener(ChannelFutureListener.CLOSE);
-        }
+        return keepAlive;
     }
 
     private static void send100Continue(ChannelHandlerContext ctx) {
         FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, CONTINUE);
-        ctx.nextOutboundMessageBuffer().add(response);
+        ctx.write(response);
     }
 
     @Override
-    public void endMessageReceived(ChannelHandlerContext ctx) throws Exception {
-        ctx.flush();
-    }
-
-    @Override
-    public void exceptionCaught(
-            ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         cause.printStackTrace();
         ctx.close();
     }

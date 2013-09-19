@@ -23,6 +23,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.AttributeKey;
 
@@ -39,7 +40,7 @@ import java.util.Map;
  * <p>When not used in a {@link ServerBootstrap} context, the {@link #bind()} methods are useful for connectionless
  * transports such as datagram (UDP).</p>
  */
-abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C extends Channel> implements Cloneable {
+public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C extends Channel> implements Cloneable {
 
     private volatile EventLoopGroup group;
     private volatile ChannelFactory<? extends C> channelFactory;
@@ -189,20 +190,6 @@ abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C extends Ch
     }
 
     /**
-     * @deprecated Use {@link EventLoopGroup#shutdown()} instead.
-     *
-     * Shutdown the {@link AbstractBootstrap} and the {@link EventLoopGroup} which is
-     * used by it. Only call this if you don't share the {@link EventLoopGroup}
-     * between different {@link AbstractBootstrap}'s.
-     */
-    @Deprecated
-    public void shutdown() {
-        if (group != null) {
-            group.shutdown();
-        }
-    }
-
-    /**
      * Validate all the parameters. Sub-classes may override this, but should
      * call the super method in that case.
      */
@@ -225,6 +212,14 @@ abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C extends Ch
     @Override
     @SuppressWarnings("CloneDoesntDeclareCloneNotSupportedException")
     public abstract B clone();
+
+    /**
+     * Create a new {@link Channel} and register it with an {@link EventLoop}.
+     */
+    public ChannelFuture register() {
+        validate();
+        return initAndRegister();
+    }
 
     /**
      * Create a new {@link Channel} and bind it.
@@ -364,7 +359,10 @@ abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C extends Ch
         return handler;
     }
 
-    final EventLoopGroup group() {
+    /**
+     * Return the configured {@link EventLoopGroup} or {@code null} if non is configured yet.
+     */
+    public final EventLoopGroup group() {
         return group;
     }
 

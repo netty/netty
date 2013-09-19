@@ -16,9 +16,10 @@
 package io.netty.handler.codec.socks;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
+
+import java.util.List;
 
 /**
  * Decodes {@link ByteBuf}s into {@link SocksAuthResponse}.
@@ -40,7 +41,7 @@ public class SocksAuthResponseDecoder extends ReplayingDecoder<SocksAuthResponse
     }
 
     @Override
-    protected void decode(ChannelHandlerContext channelHandlerContext, ByteBuf byteBuf, MessageBuf<Object> out)
+    protected void decode(ChannelHandlerContext channelHandlerContext, ByteBuf byteBuf, List<Object> out)
             throws Exception {
         switch (state()) {
             case CHECK_PROTOCOL_VERSION: {

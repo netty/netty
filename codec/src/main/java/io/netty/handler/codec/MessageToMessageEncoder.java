@@ -15,12 +15,21 @@
  */
 package io.netty.handler.codec;
 
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
+import io.netty.channel.ChannelOutboundHandler;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
+import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ReferenceCounted;
+import io.netty.util.internal.RecyclableArrayList;
+import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.TypeParameterMatcher;
+
+import java.util.List;
 
 /**
- * {@link ChannelOutboundMessageHandlerAdapter} which encodes from one message to an other message
+ * {@link ChannelOutboundHandlerAdapter} which encodes from one message to an other message
  *
  * For example here is an implementation which decodes an {@link Integer} to an {@link String}.
  *
@@ -29,45 +38,96 @@ import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
  *             {@link MessageToMessageEncoder}&lt;{@link Integer}&gt; {
  *
  *         {@code @Override}
- *         public void encode({@link ChannelHandlerContext} ctx, {@link Integer} message, {@link MessageBuf} out)
+ *         public void encode({@link ChannelHandlerContext} ctx, {@link Integer} message, List&lt;Object&gt; out)
  *                 throws {@link Exception} {
  *             out.add(message.toString());
  *         }
  *     }
  * </pre>
  *
+ * Be aware that you need to call {@link ReferenceCounted#retain()} on messages that are just passed through if they
+ * are of type {@link ReferenceCounted}. This is needed as the {@link MessageToMessageEncoder} will call
+ * {@link ReferenceCounted#release()} on encoded messages.
  */
-public abstract class MessageToMessageEncoder<I> extends ChannelOutboundMessageHandlerAdapter<I> {
+public abstract class MessageToMessageEncoder<I> extends ChannelOutboundHandlerAdapter {
 
-    protected MessageToMessageEncoder() { }
+    private final TypeParameterMatcher matcher;
 
+    /**
+     * Create a new instance which will try to detect the types to match out of the type parameter of the class.
+     */
+    protected MessageToMessageEncoder() {
+        matcher = TypeParameterMatcher.find(this, MessageToMessageEncoder.class, "I");
+    }
+
+    /**
+     * Create a new instance
+     *
+     * @param outboundMessageType   The type of messages to match and so encode
+     */
     protected MessageToMessageEncoder(Class<? extends I> outboundMessageType) {
-        super(outboundMessageType);
+        matcher = TypeParameterMatcher.get(outboundMessageType);
+    }
+
+    /**
+     * Returns {@code true} if the given message should be handled. If {@code false} it will be passed to the next
+     * {@link ChannelOutboundHandler} in the {@link ChannelPipeline}.
+     */
+    public boolean acceptOutboundMessage(Object msg) throws Exception {
+        return matcher.match(msg);
     }
 
     @Override
-    public final void flush(ChannelHandlerContext ctx, I msg) throws Exception {
-        OutputMessageBuf out = OutputMessageBuf.get();
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        RecyclableArrayList out = null;
         try {
-            encode(ctx, msg, out);
-        } catch (CodecException e) {
+            if (acceptOutboundMessage(msg)) {
+                out = RecyclableArrayList.newInstance();
+                @SuppressWarnings("unchecked")
+                I cast = (I) msg;
+                try {
+                    encode(ctx, cast, out);
+                } finally {
+                    ReferenceCountUtil.release(cast);
+                }
+
+                if (out.isEmpty()) {
+                    out.recycle();
+                    out = null;
+
+                    throw new EncoderException(
+                            StringUtil.simpleClassName(this) + " must produce at least one message.");
+                }
+            } else {
+                ctx.write(msg, promise);
+            }
+        } catch (EncoderException e) {
             throw e;
-        } catch (Throwable cause) {
-            throw new EncoderException(cause);
+        } catch (Throwable t) {
+            throw new EncoderException(t);
         } finally {
-            out.drainToNextOutbound(ctx);
+            if (out != null) {
+                final int sizeMinusOne = out.size() - 1;
+                if (sizeMinusOne >= 0) {
+                    for (int i = 0; i < sizeMinusOne; i ++) {
+                        ctx.write(out.get(i));
+                    }
+                    ctx.write(out.get(sizeMinusOne), promise);
+                }
+                out.recycle();
+            }
         }
     }
 
     /**
-     * Encode from one message to an other. This method will be called till either the {@link MessageBuf} has nothing
-     * left or till this method returns {@code null}.
+     * Encode from one message to an other. This method will be called for each written message that can be handled
+     * by this encoder.
      *
      * @param ctx           the {@link ChannelHandlerContext} which this {@link MessageToMessageEncoder} belongs to
      * @param msg           the message to encode to an other one
-     * @param out           the {@link MessageBuf} into which the encoded msg should be added
+     * @param out           the {@link List} into which the encoded msg should be added
      *                      needs to do some kind of aggragation
      * @throws Exception    is thrown if an error accour
      */
-    protected abstract void encode(ChannelHandlerContext ctx, I msg, MessageBuf<Object> out) throws Exception;
+    protected abstract void encode(ChannelHandlerContext ctx, I msg, List<Object> out) throws Exception;
 }

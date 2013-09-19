@@ -56,17 +56,25 @@ public interface Promise<V> extends Future<V> {
      */
     boolean tryFailure(Throwable cause);
 
-    @Override
-    Promise<V> addListener(GenericFutureListener<? extends Future<V>> listener);
+    /**
+     * Make this future impossible to cancel.
+     *
+     * @return {@code true} if and only if successfully marked this future as uncancellable or it is already done
+     *         without being cancelled.  {@code false} if this future has been cancelled already.
+     */
+    boolean setUncancellable();
 
     @Override
-    Promise<V> addListeners(GenericFutureListener<? extends Future<V>>... listeners);
+    Promise<V> addListener(GenericFutureListener<? extends Future<? super V>> listener);
 
     @Override
-    Promise<V> removeListener(GenericFutureListener<? extends Future<V>> listener);
+    Promise<V> addListeners(GenericFutureListener<? extends Future<? super V>>... listeners);
 
     @Override
-    Promise<V> removeListeners(GenericFutureListener<? extends Future<V>>... listeners);
+    Promise<V> removeListener(GenericFutureListener<? extends Future<? super V>> listener);
+
+    @Override
+    Promise<V> removeListeners(GenericFutureListener<? extends Future<? super V>>... listeners);
 
     @Override
     Promise<V> await() throws InterruptedException;

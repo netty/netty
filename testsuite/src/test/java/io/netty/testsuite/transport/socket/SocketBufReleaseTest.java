@@ -22,7 +22,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.DefaultThreadFactory;
@@ -66,7 +66,7 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
         clientHandler.check();
     }
 
-    private static class BufWriterHandler extends ChannelInboundMessageHandlerAdapter<Object> {
+    private static class BufWriterHandler extends SimpleChannelInboundHandler<Object> {
 
         private final Random random = new Random();
         private final CountDownLatch latch = new CountDownLatch(1);
@@ -86,7 +86,7 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
             buf = ctx.alloc().buffer();
             buf.writeBytes(data);
 
-            ctx.channel().write(buf).addListener(new ChannelFutureListener() {
+            ctx.channel().writeAndFlush(buf).addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(ChannelFuture future) throws Exception {
                     latch.countDown();
@@ -95,8 +95,8 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
-            // Discard
+        public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+            // discard
         }
 
         public void check() throws InterruptedException {

@@ -19,7 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.DatagramPacket;
 import org.junit.Test;
 
@@ -38,21 +38,17 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
     public void testSimpleSend(Bootstrap sb, Bootstrap cb) throws Throwable {
         final CountDownLatch latch = new CountDownLatch(1);
 
-        sb.handler(new ChannelInboundMessageHandlerAdapter<DatagramPacket>() {
+        sb.handler(new SimpleChannelInboundHandler<DatagramPacket>() {
             @Override
-            public void messageReceived(
-                    ChannelHandlerContext ctx,
-                    DatagramPacket msg) throws Exception {
+            public void channelRead0(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
                 assertEquals(1, msg.content().readInt());
                 latch.countDown();
             }
         });
 
-        cb.handler(new ChannelInboundMessageHandlerAdapter<DatagramPacket>() {
+        cb.handler(new SimpleChannelInboundHandler<Object>() {
             @Override
-            public void messageReceived(
-                    ChannelHandlerContext ctx,
-                    DatagramPacket msg) throws Exception {
+            public void channelRead0(ChannelHandlerContext ctx, Object msgs) throws Exception {
                 // Nothing will be sent.
             }
         });
@@ -60,7 +56,40 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
         Channel sc = sb.bind().sync().channel();
         Channel cc = cb.bind().sync().channel();
 
-        cc.write(new DatagramPacket(Unpooled.copyInt(1), addr)).sync();
+        cc.writeAndFlush(new DatagramPacket(Unpooled.copyInt(1), addr)).sync();
+        assertTrue(latch.await(10, TimeUnit.SECONDS));
+
+        sc.close().sync();
+        cc.close().sync();
+    }
+
+    @Test
+    public void testSimpleSendWithoutBind() throws Throwable {
+        //run();
+    }
+
+    public void testSimpleSendWithoutBind(Bootstrap sb, Bootstrap cb) throws Throwable {
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        sb.handler(new SimpleChannelInboundHandler<DatagramPacket>() {
+            @Override
+            public void channelRead0(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
+                assertEquals(1, msg.content().readInt());
+                latch.countDown();
+            }
+        });
+
+        cb.handler(new SimpleChannelInboundHandler<Object>() {
+            @Override
+            public void channelRead0(ChannelHandlerContext ctx, Object msgs) throws Exception {
+                // Nothing will be sent.
+            }
+        });
+
+        Channel sc = sb.bind().sync().channel();
+        Channel cc = cb.register().sync().channel();
+
+        cc.writeAndFlush(new DatagramPacket(Unpooled.copyInt(1), addr)).sync();
         assertTrue(latch.await(10, TimeUnit.SECONDS));
 
         sc.close().sync();

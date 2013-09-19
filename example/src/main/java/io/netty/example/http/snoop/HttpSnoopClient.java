@@ -87,7 +87,7 @@ public class HttpSnoopClient {
                             new DefaultCookie("another-cookie", "bar")));
 
             // Send the HTTP request.
-            ch.write(request);
+            ch.writeAndFlush(request);
 
             // Wait for the server to close the connection.
             ch.closeFuture().sync();

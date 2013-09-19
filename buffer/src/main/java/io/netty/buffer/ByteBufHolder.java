@@ -15,6 +15,8 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.ReferenceCounted;
+
 /**
  * A packet which is send or receive.
  */
@@ -29,6 +31,11 @@ public interface ByteBufHolder extends ReferenceCounted {
      * Create a deep copy of this {@link ByteBufHolder}.
      */
     ByteBufHolder copy();
+
+    /**
+     * Duplicate the {@link ByteBufHolder}. Be aware that this will not automatically call {@link #retain()}.
+     */
+    ByteBufHolder duplicate();
 
     @Override
     ByteBufHolder retain();

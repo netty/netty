@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.0.0.Final-SNAPSHOT</version>
+    <version>4.1.0.Alpha1-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-all</artifactId>
@@ -307,7 +307,7 @@
           <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>netty-build</artifactId>
-            <version>10</version>
+            <version>19</version>
           </dependency>
         </dependencies>
       </plugin>
@@ -345,6 +345,24 @@
             -group "Miscellaneous" io.netty.util*
           </additionalparam>
           <locale>en_US</locale>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>clean-source-directory</id>
+            <phase>package</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <target>
+            <delete dir="${project.build.directory}/src" quiet="true" />
+            <delete dir="${project.build.directory}/classes" quiet="true" />
+          </target>
         </configuration>
       </plugin>
     </plugins>

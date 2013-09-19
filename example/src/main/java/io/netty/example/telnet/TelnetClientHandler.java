@@ -17,7 +17,7 @@ package io.netty.example.telnet;
 
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.SimpleChannelInboundHandler;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -26,14 +26,12 @@ import java.util.logging.Logger;
  * Handles a client-side channel.
  */
 @Sharable
-public class TelnetClientHandler extends ChannelInboundMessageHandlerAdapter<String> {
+public class TelnetClientHandler extends SimpleChannelInboundHandler<String> {
 
-    private static final Logger logger = Logger.getLogger(
-            TelnetClientHandler.class.getName());
+    private static final Logger logger = Logger.getLogger(TelnetClientHandler.class.getName());
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, String msg) throws Exception {
-        // Print out the line received from the server.
+    protected void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
         System.err.println(msg);
     }
 

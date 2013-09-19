@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.0.0.Final-SNAPSHOT</version>
+  <version>4.1.0.Alpha1-SNAPSHOT</version>
 
   <name>Netty</name>
   <url>http://netty.io/</url>
@@ -70,10 +70,9 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    <jboss.marshalling.version>1.3.17.GA</jboss.marshalling.version>
+    <jboss.marshalling.version>1.3.18.GA</jboss.marshalling.version>
     <test.jvm.argLine>
       -server 
-      -Dio.netty.resourceLeakDetection
       -dsa -da -ea:io.netty...
       -XX:+AggressiveOpts
       -XX:+TieredCompilation
@@ -110,7 +109,7 @@
       <dependency>
         <groupId>org.javassist</groupId>
         <artifactId>javassist</artifactId>
-        <version>3.17.1-GA</version>
+        <version>3.18.0-GA</version>
         <scope>compile</scope>
         <optional>true</optional>
       </dependency>
@@ -156,12 +155,12 @@
       <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-api</artifactId>
-        <version>1.7.4</version>
+        <version>1.7.5</version>
       </dependency>
       <dependency>
         <groupId>commons-logging</groupId>
         <artifactId>commons-logging</artifactId>
-        <version>1.1.1</version>
+        <version>1.1.3</version>
       </dependency>
       <dependency>
         <groupId>log4j</groupId>
@@ -237,13 +236,13 @@
     <dependency>
       <groupId>org.easymock</groupId>
       <artifactId>easymock</artifactId>
-      <version>3.1</version>
+      <version>3.2</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.easymock</groupId>
       <artifactId>easymockclassextension</artifactId>
-      <version>3.1</version>
+      <version>3.2</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -255,7 +254,7 @@
     <dependency>
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
-      <version>1.0.10</version>
+      <version>1.0.13</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -264,7 +263,7 @@
     <plugins>
       <plugin>
         <artifactId>maven-enforcer-plugin</artifactId>
-        <version>1.2</version>
+        <version>1.3</version>
         <executions>
           <execution>
             <id>enforce-tools</id>
@@ -279,7 +278,7 @@
                   <version>[1.7.0,)</version>
                 </requireJavaVersion>
                 <requireMavenVersion>
-                  <version>[3.0.5,)</version>
+                  <version>[3.0.5,3.1)</version>
                 </requireMavenVersion>
               </rules>
             </configuration>
@@ -307,6 +306,8 @@
             <Xlint:deprecation />
           </compilerArguments>
           -->
+          <meminitial>256m</meminitial>
+          <maxmem>1024m</maxmem>
         </configuration>
       </plugin>
       <plugin>
@@ -429,7 +430,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-javadoc-plugin</artifactId>
-        <version>2.9</version>
+        <version>2.9.1</version>
         <configuration>
           <detectOfflineLinks>false</detectOfflineLinks>
           <breakiterator>true</breakiterator>
@@ -447,7 +448,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-release-plugin</artifactId>
-        <version>2.4</version>
+        <version>2.4.1</version>
         <configuration>
           <useReleaseProfile>false</useReleaseProfile>
           <arguments>-P release,sonatype-oss-release,full,no-osgi</arguments>
@@ -464,12 +465,12 @@
         <!-- keep surefire and failsafe in sync -->
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>
-          <version>2.14</version>
+          <version>2.15</version>
         </plugin>
         <!-- keep surefire and failsafe in sync -->
         <plugin>
           <artifactId>maven-failsafe-plugin</artifactId>
-          <version>2.14</version>
+          <version>2.15</version>
         </plugin>
         <plugin>
           <artifactId>maven-clean-plugin</artifactId>
@@ -485,13 +486,14 @@
         </plugin>
         <plugin>
           <artifactId>maven-dependency-plugin</artifactId>
-          <version>2.7</version>
+          <version>2.8</version>
         </plugin>
         <plugin>
           <artifactId>maven-assembly-plugin</artifactId>
           <version>2.4</version>
         </plugin>
         <plugin>
+          <!-- Do NOT upgrade -->
           <artifactId>maven-jxr-plugin</artifactId>
           <version>2.2</version>
         </plugin>
@@ -515,7 +517,7 @@
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>build-helper-maven-plugin</artifactId>
-          <version>1.7</version>
+          <version>1.8</version>
         </plugin>               
 
         <!-- Workaround for the 'M2E plugin execution not covered' problem.
@@ -580,3 +582,4 @@
     </pluginManagement>
   </build>
 </project>
+

@@ -290,7 +290,9 @@ public class HashedWheelTimer implements Timer {
             Thread.currentThread().interrupt();
         }
 
-        leak.close();
+        if (leak != null) {
+            leak.close();
+        }
 
         Set<Timeout> unprocessedTimeouts = new HashSet<Timeout>();
         for (Set<HashedWheelTimeout> bucket: wheel) {

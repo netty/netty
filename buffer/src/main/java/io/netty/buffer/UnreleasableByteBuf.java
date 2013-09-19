@@ -30,7 +30,7 @@ import java.nio.charset.Charset;
  * A {@link ByteBuf} implementation that wraps another buffer to prevent a user from increasing or decreasing the
  * wrapped buffer's reference count.
  */
-final class UnreleasableByteBuf implements ByteBuf {
+final class UnreleasableByteBuf extends ByteBuf {
 
     private final ByteBuf buf;
     private SwappedByteBuf swappedBuf;
@@ -153,20 +153,8 @@ final class UnreleasableByteBuf implements ByteBuf {
     }
 
     @Override
-    @Deprecated
-    public boolean readable() {
-        return buf.readable();
-    }
-
-    @Override
     public boolean isWritable() {
         return buf.isWritable();
-    }
-
-    @Override
-    @Deprecated
-    public boolean writable() {
-        return buf.writable();
     }
 
     @Override
@@ -214,13 +202,6 @@ final class UnreleasableByteBuf implements ByteBuf {
     @Override
     public ByteBuf ensureWritable(int minWritableBytes) {
         buf.ensureWritable(minWritableBytes);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public ByteBuf ensureWritableBytes(int minWritableBytes) {
-        buf.ensureWritableBytes(minWritableBytes);
         return this;
     }
 
@@ -687,18 +668,8 @@ final class UnreleasableByteBuf implements ByteBuf {
     }
 
     @Override
-    public int indexOf(int fromIndex, int toIndex, ByteBufIndexFinder indexFinder) {
-        return buf.indexOf(fromIndex, toIndex, indexFinder);
-    }
-
-    @Override
     public int bytesBefore(byte value) {
         return buf.bytesBefore(value);
-    }
-
-    @Override
-    public int bytesBefore(ByteBufIndexFinder indexFinder) {
-        return buf.bytesBefore(indexFinder);
     }
 
     @Override
@@ -707,18 +678,28 @@ final class UnreleasableByteBuf implements ByteBuf {
     }
 
     @Override
-    public int bytesBefore(int length, ByteBufIndexFinder indexFinder) {
-        return buf.bytesBefore(length, indexFinder);
-    }
-
-    @Override
     public int bytesBefore(int index, int length, byte value) {
         return buf.bytesBefore(index, length, value);
     }
 
     @Override
-    public int bytesBefore(int index, int length, ByteBufIndexFinder indexFinder) {
-        return buf.bytesBefore(index, length, indexFinder);
+    public int forEachByte(ByteBufProcessor processor) {
+        return buf.forEachByte(processor);
+    }
+
+    @Override
+    public int forEachByte(int index, int length, ByteBufProcessor processor) {
+        return buf.forEachByte(index, length, processor);
+    }
+
+    @Override
+    public int forEachByteDesc(ByteBufProcessor processor) {
+        return buf.forEachByteDesc(processor);
+    }
+
+    @Override
+    public int forEachByteDesc(int index, int length, ByteBufProcessor processor) {
+        return buf.forEachByteDesc(index, length, processor);
     }
 
     @Override
@@ -772,6 +753,11 @@ final class UnreleasableByteBuf implements ByteBuf {
     }
 
     @Override
+    public ByteBuffer internalNioBuffer(int index, int length) {
+        return buf.internalNioBuffer(index, length);
+    }
+
+    @Override
     public boolean hasArray() {
         return buf.hasArray();
     }
@@ -794,18 +780,6 @@ final class UnreleasableByteBuf implements ByteBuf {
     @Override
     public String toString(int index, int length, Charset charset) {
         return buf.toString(index, length, charset);
-    }
-
-    @Override
-    public ByteBuf suspendIntermediaryDeallocations() {
-        buf.suspendIntermediaryDeallocations();
-        return this;
-    }
-
-    @Override
-    public ByteBuf resumeIntermediaryDeallocations() {
-        buf.resumeIntermediaryDeallocations();
-        return this;
     }
 
     @Override
@@ -836,11 +810,6 @@ final class UnreleasableByteBuf implements ByteBuf {
     @Override
     public ByteBuf retain() {
         return this;
-    }
-
-    @Override
-    public BufType type() {
-        return buf.type();
     }
 
     @Override

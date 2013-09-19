@@ -28,9 +28,13 @@ import java.util.Set;
 public final class ChannelPromiseAggregator implements ChannelFutureListener {
 
     private final ChannelPromise aggregatePromise;
-
     private Set<ChannelPromise> pendingPromises;
 
+    /**
+     * Instance an new {@link ChannelPromiseAggregator}
+     *
+     * @param aggregatePromise  the {@link ChannelPromise} to notify
+     */
     public ChannelPromiseAggregator(ChannelPromise aggregatePromise) {
         if (aggregatePromise == null) {
             throw new NullPointerException("aggregatePromise");

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,17 +15,19 @@
  */
 package io.netty.handler.codec.spdy;
 
-
 import io.netty.util.internal.StringUtil;
+
+import java.util.Map;
 
 /**
  * The default {@link SpdyHeadersFrame} implementation.
  */
-public class DefaultSpdyHeadersFrame extends DefaultSpdyHeaderBlock
+public class DefaultSpdyHeadersFrame extends DefaultSpdyStreamFrame
         implements SpdyHeadersFrame {
 
-    private int streamId;
-    private boolean last;
+    private boolean invalid;
+    private boolean truncated;
+    private final SpdyHeaders headers = new DefaultSpdyHeaders();
 
     /**
      * Creates a new instance.
@@ -33,39 +35,46 @@ public class DefaultSpdyHeadersFrame extends DefaultSpdyHeaderBlock
      * @param streamId the Stream-ID of this frame
      */
     public DefaultSpdyHeadersFrame(int streamId) {
-        setStreamId(streamId);
-    }
-
-    @Override
-    public int getStreamId() {
-        return streamId;
+        super(streamId);
     }
 
     @Override
     public SpdyHeadersFrame setStreamId(int streamId) {
-        if (streamId <= 0) {
-            throw new IllegalArgumentException(
-                    "Stream-ID must be positive: " + streamId);
-        }
-        this.streamId = streamId;
+        super.setStreamId(streamId);
         return this;
-    }
-
-    @Override
-    public boolean isLast() {
-        return last;
     }
 
     @Override
     public SpdyHeadersFrame setLast(boolean last) {
-        this.last = last;
+        super.setLast(last);
         return this;
     }
 
     @Override
+    public boolean isInvalid() {
+        return invalid;
+    }
+
+    @Override
     public SpdyHeadersFrame setInvalid() {
-        super.setInvalid();
+        invalid = true;
         return this;
+    }
+
+    @Override
+    public boolean isTruncated() {
+        return truncated;
+    }
+
+    @Override
+    public SpdyHeadersFrame setTruncated() {
+        truncated = true;
+        return this;
+    }
+
+    @Override
+    public SpdyHeaders headers() {
+        return headers;
     }
 
     @Override
@@ -77,7 +86,7 @@ public class DefaultSpdyHeadersFrame extends DefaultSpdyHeaderBlock
         buf.append(')');
         buf.append(StringUtil.NEWLINE);
         buf.append("--> Stream-ID = ");
-        buf.append(streamId);
+        buf.append(getStreamId());
         buf.append(StringUtil.NEWLINE);
         buf.append("--> Headers:");
         buf.append(StringUtil.NEWLINE);
@@ -86,5 +95,15 @@ public class DefaultSpdyHeadersFrame extends DefaultSpdyHeaderBlock
         // Remove the last newline.
         buf.setLength(buf.length() - StringUtil.NEWLINE.length());
         return buf.toString();
+    }
+
+    protected void appendHeaders(StringBuilder buf) {
+        for (Map.Entry<String, String> e: headers().entries()) {
+            buf.append("    ");
+            buf.append(e.getKey());
+            buf.append(": ");
+            buf.append(e.getValue());
+            buf.append(StringUtil.NEWLINE);
+        }
     }
 }

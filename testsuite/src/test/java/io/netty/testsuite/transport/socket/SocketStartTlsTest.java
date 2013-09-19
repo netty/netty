@@ -19,15 +19,15 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
-import io.netty.handler.logging.ByteLoggingHandler;
 import io.netty.handler.logging.LogLevel;
+import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.testsuite.util.BogusSslContextFactory;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
@@ -54,8 +54,8 @@ public class SocketStartTlsTest extends AbstractSocketTest {
     }
 
     @AfterClass
-    public static void shutdownExecutor() {
-        executor.shutdownGracefully();
+    public static void shutdownExecutor() throws Exception {
+        executor.shutdownGracefully().sync();
     }
 
     @Test(timeout = 30000)
@@ -75,7 +75,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
             @Override
             public void initChannel(SocketChannel sch) throws Exception {
                 ChannelPipeline p = sch.pipeline();
-                p.addLast("logger", new ByteLoggingHandler(LOG_LEVEL));
+                p.addLast("logger", new LoggingHandler(LOG_LEVEL));
                 p.addLast(new LineBasedFrameDecoder(64), new StringDecoder(), new StringEncoder());
                 p.addLast(executor, sh);
             }
@@ -85,7 +85,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
             @Override
             public void initChannel(SocketChannel sch) throws Exception {
                 ChannelPipeline p = sch.pipeline();
-                p.addLast("logger", new ByteLoggingHandler(LOG_LEVEL));
+                p.addLast("logger", new LoggingHandler(LOG_LEVEL));
                 p.addLast(new LineBasedFrameDecoder(64), new StringDecoder(), new StringEncoder());
                 p.addLast(executor, ch);
             }
@@ -142,7 +142,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         }
     }
 
-    private class StartTlsClientHandler extends ChannelInboundMessageHandlerAdapter<String> {
+    private class StartTlsClientHandler extends SimpleChannelInboundHandler<String> {
         private final SslHandler sslHandler;
         private Future<Channel> handshakeFuture;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
@@ -155,15 +155,15 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         @Override
         public void channelActive(ChannelHandlerContext ctx)
                 throws Exception {
-            ctx.write("StartTlsRequest\n");
+            ctx.writeAndFlush("StartTlsRequest\n");
         }
 
         @Override
-        public void messageReceived(final ChannelHandlerContext ctx, String msg) throws Exception {
+        public void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
             if ("StartTlsResponse".equals(msg)) {
                 ctx.pipeline().addAfter("logger", "ssl", sslHandler);
                 handshakeFuture = sslHandler.handshakeFuture();
-                ctx.write("EncryptedRequest\n");
+                ctx.writeAndFlush("EncryptedRequest\n");
                 return;
             }
 
@@ -185,7 +185,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         }
     }
 
-    private class StartTlsServerHandler extends ChannelInboundMessageHandlerAdapter<String> {
+    private class StartTlsServerHandler extends SimpleChannelInboundHandler<String> {
         private final SslHandler sslHandler;
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
@@ -201,15 +201,15 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived(final ChannelHandlerContext ctx, String msg) throws Exception {
+        public void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
             if ("StartTlsRequest".equals(msg)) {
                 ctx.pipeline().addAfter("logger", "ssl", sslHandler);
-                ctx.write("StartTlsResponse\n");
+                ctx.writeAndFlush("StartTlsResponse\n");
                 return;
             }
 
             assertEquals("EncryptedRequest", msg);
-            ctx.write("EncryptedResponse\n");
+            ctx.writeAndFlush("EncryptedResponse\n");
         }
 
         @Override

@@ -16,16 +16,13 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.FilteredMessageBuf;
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundByteHandler;
-import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.channel.CombinedChannelDuplexHandler;
 import io.netty.handler.codec.PrematureChannelClosureException;
 
 import java.util.ArrayDeque;
+import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -44,14 +41,13 @@ import java.util.concurrent.atomic.AtomicLong;
  * @see HttpServerCodec
  */
 public final class HttpClientCodec
-        extends CombinedChannelDuplexHandler
-        implements ChannelInboundByteHandler, ChannelOutboundMessageHandler<HttpObject> {
+        extends CombinedChannelDuplexHandler<HttpResponseDecoder, HttpRequestEncoder> {
 
     /** A queue that is used for correlating a request and a response. */
     private final Queue<HttpMethod> queue = new ArrayDeque<HttpMethod>();
 
     /** If true, decoding stops (i.e. pass-through) */
-    private volatile boolean done;
+    private boolean done;
 
     private final AtomicLong requestResponseCounter = new AtomicLong();
     private final boolean failOnMissingResponse;
@@ -66,11 +62,11 @@ public final class HttpClientCodec
     }
 
     public void setSingleDecode(boolean singleDecode) {
-        decoder().setSingleDecode(singleDecode);
+        inboundHandler().setSingleDecode(singleDecode);
     }
 
     public boolean isSingleDecode() {
-        return decoder().isSingleDecode();
+        return inboundHandler().isSingleDecode();
     }
 
     /**
@@ -86,34 +82,11 @@ public final class HttpClientCodec
         this.failOnMissingResponse = failOnMissingResponse;
     }
 
-    private Decoder decoder() {
-        return (Decoder) stateHandler();
-    }
-
-    private Encoder encoder() {
-        return (Encoder) operationHandler();
-    }
-
-    @Override
-    public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return decoder().newInboundBuffer(ctx);
-    }
-
-    @Override
-    public void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
-        decoder().discardInboundReadBytes(ctx);
-    }
-
-    @Override
-    public MessageBuf<HttpObject> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return encoder().newOutboundBuffer(ctx);
-    }
-
     private final class Encoder extends HttpRequestEncoder {
 
         @Override
         protected void encode(
-                ChannelHandlerContext ctx, HttpObject msg, ByteBuf out) throws Exception {
+                ChannelHandlerContext ctx, Object msg, List<Object> out) throws Exception {
             if (msg instanceof HttpRequest && !done) {
                 queue.offer(((HttpRequest) msg).getMethod());
             }
@@ -137,7 +110,7 @@ public final class HttpClientCodec
 
         @Override
         protected void decode(
-                ChannelHandlerContext ctx, ByteBuf buffer, MessageBuf<Object> out) throws Exception {
+                ChannelHandlerContext ctx, ByteBuf buffer, List<Object> out) throws Exception {
             if (done) {
                 int readable = actualReadableBytes();
                 if (readable == 0) {
@@ -147,16 +120,14 @@ public final class HttpClientCodec
                 }
                 out.add(buffer.readBytes(readable));
             } else {
-                if (failOnMissingResponse) {
-                    out = new FilteredMessageBuf(out) {
-                        @Override
-                        protected Object filter(Object msg) {
-                            decrement(msg);
-                            return msg;
-                        }
-                    };
-                }
+                int oldSize = out.size();
                 super.decode(ctx, buffer, out);
+                if (failOnMissingResponse) {
+                    int size = out.size();
+                    for (int i = oldSize; i < size; i++) {
+                        decrement(out.get(i));
+                    }
+                }
             }
         }
 

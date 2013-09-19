@@ -15,18 +15,18 @@
  */
 package io.netty.channel.local;
 
-import io.netty.buffer.BufType;
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.SingleThreadEventLoop;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
 
 import java.net.SocketAddress;
@@ -34,14 +34,15 @@ import java.nio.channels.AlreadyConnectedException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ConnectionPendingException;
 import java.nio.channels.NotYetConnectedException;
-import java.util.Collections;
+import java.util.ArrayDeque;
+import java.util.Queue;
 
 /**
  * A {@link Channel} for the local transport.
  */
 public class LocalChannel extends AbstractChannel {
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.MESSAGE, false);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
     private static final int MAX_READER_STACK_DEPTH = 8;
     private static final ThreadLocal<Integer> READER_STACK_DEPTH = new ThreadLocal<Integer>() {
@@ -52,12 +53,19 @@ public class LocalChannel extends AbstractChannel {
     };
 
     private final ChannelConfig config = new DefaultChannelConfig(this);
+    private final Queue<Object> inboundBuffer = new ArrayDeque<Object>();
     private final Runnable readTask = new Runnable() {
         @Override
         public void run() {
             ChannelPipeline pipeline = pipeline();
-            pipeline.fireInboundBufferUpdated();
-            pipeline.fireChannelReadSuspended();
+            for (;;) {
+                Object m = inboundBuffer.poll();
+                if (m == null) {
+                    break;
+                }
+                pipeline.fireChannelRead(m);
+            }
+            pipeline.fireChannelReadComplete();
         }
     };
 
@@ -76,15 +84,11 @@ public class LocalChannel extends AbstractChannel {
     private volatile boolean readInProgress;
 
     public LocalChannel() {
-        this(null);
-    }
-
-    public LocalChannel(Integer id) {
-        super(null, id);
+        super(null);
     }
 
     LocalChannel(LocalServerChannel parent, LocalChannel peer) {
-        super(parent, null);
+        super(parent);
         this.peer = peer;
         localAddress = parent.localAddress();
         remoteAddress = peer.localAddress();
@@ -146,39 +150,26 @@ public class LocalChannel extends AbstractChannel {
     }
 
     @Override
-    protected Runnable doRegister() throws Exception {
-        final LocalChannel peer = this.peer;
-        Runnable postRegisterTask;
-
+    protected void doRegister() throws Exception {
         if (peer != null) {
             state = 2;
 
-            peer.remoteAddress = parent().localAddress();
+            peer.remoteAddress = parent() == null ? null : parent().localAddress();
             peer.state = 2;
 
-            // Ensure the peer's channelActive event is triggered *after* this channel's
-            // channelRegistered event is triggered, so that this channel's pipeline is fully
-            // initialized by ChannelInitializer.
-            final EventLoop peerEventLoop = peer.eventLoop();
-            postRegisterTask = new Runnable() {
+            // Always call peer.eventLoop().execute() even if peer.eventLoop().inEventLoop() is true.
+            // This ensures that if both channels are on the same event loop, the peer's channelActive
+            // event is triggered *after* this channel's channelRegistered event, so that this channel's
+            // pipeline is fully initialized by ChannelInitializer before any channelRead events.
+            peer.eventLoop().execute(new Runnable() {
                 @Override
                 public void run() {
-                    peerEventLoop.execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            peer.connectPromise.setSuccess();
-                            peer.pipeline().fireChannelActive();
-                        }
-                    });
+                    peer.pipeline().fireChannelActive();
+                    peer.connectPromise.setSuccess();
                 }
-            };
-        } else {
-            postRegisterTask = null;
+            });
         }
-
         ((SingleThreadEventExecutor) eventLoop()).addShutdownHook(shutdownHook);
-
-        return postRegisterTask;
     }
 
     @Override
@@ -195,38 +186,40 @@ public class LocalChannel extends AbstractChannel {
     }
 
     @Override
-    protected void doPreClose() throws Exception {
-        if (state > 2) {
-            // Closed already
-            return;
-        }
-
-        // Update all internal state before the closeFuture is notified.
-        if (localAddress != null) {
-            if (parent() == null) {
-                LocalChannelRegistry.unregister(localAddress);
-            }
-            localAddress = null;
-        }
-        state = 3;
-    }
-
-    @Override
     protected void doClose() throws Exception {
-        LocalChannel peer = this.peer;
+        if (state <= 2) {
+            // Update all internal state before the closeFuture is notified.
+            if (localAddress != null) {
+                if (parent() == null) {
+                    LocalChannelRegistry.unregister(localAddress);
+                }
+                localAddress = null;
+            }
+            state = 3;
+        }
+
+        final LocalChannel peer = this.peer;
         if (peer != null && peer.isActive()) {
-            peer.unsafe().close(unsafe().voidPromise());
+            // Need to execute the close in the correct EventLoop
+            // See https://github.com/netty/netty/issues/1777
+            EventLoop eventLoop = peer.eventLoop();
+            if (eventLoop.inEventLoop()) {
+                peer.unsafe().close(unsafe().voidPromise());
+            } else {
+                peer.eventLoop().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        peer.unsafe().close(unsafe().voidPromise());
+                    }
+                });
+            }
             this.peer = null;
         }
     }
 
     @Override
-    protected Runnable doDeregister() throws Exception {
-        if (isOpen()) {
-            unsafe().close(unsafe().voidPromise());
-        }
+    protected void doDeregister() throws Exception {
         ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
-        return null;
     }
 
     @Override
@@ -236,8 +229,8 @@ public class LocalChannel extends AbstractChannel {
         }
 
         ChannelPipeline pipeline = pipeline();
-        MessageBuf<Object> buf = pipeline.inboundMessageBuffer();
-        if (buf.isEmpty()) {
+        Queue<Object> inboundBuffer = this.inboundBuffer;
+        if (inboundBuffer.isEmpty()) {
             readInProgress = true;
             return;
         }
@@ -246,8 +239,14 @@ public class LocalChannel extends AbstractChannel {
         if (stackDepth < MAX_READER_STACK_DEPTH) {
             READER_STACK_DEPTH.set(stackDepth + 1);
             try {
-                pipeline.fireInboundBufferUpdated();
-                pipeline.fireChannelReadSuspended();
+                for (;;) {
+                    Object received = inboundBuffer.poll();
+                    if (received == null) {
+                        break;
+                    }
+                    pipeline.fireChannelRead(received);
+                }
+                pipeline.fireChannelReadComplete();
             } finally {
                 READER_STACK_DEPTH.set(stackDepth);
             }
@@ -257,7 +256,7 @@ public class LocalChannel extends AbstractChannel {
     }
 
     @Override
-    protected void doFlushMessageBuffer(MessageBuf<Object> buf) throws Exception {
+    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
         if (state < 2) {
             throw new NotYetConnectedException();
         }
@@ -270,16 +269,30 @@ public class LocalChannel extends AbstractChannel {
         final EventLoop peerLoop = peer.eventLoop();
 
         if (peerLoop == eventLoop()) {
-            buf.drainTo(peerPipeline.inboundMessageBuffer());
+            for (;;) {
+                Object msg = in.current();
+                if (msg == null) {
+                    break;
+                }
+                peer.inboundBuffer.add(msg);
+                ReferenceCountUtil.retain(msg);
+                in.remove();
+            }
             finishPeerRead(peer, peerPipeline);
         } else {
-            final Object[] msgs = buf.toArray();
-            buf.clear();
+            // Use a copy because the original msgs will be recycled by AbstractChannel.
+            final Object[] msgsCopy = new Object[in.size()];
+            for (int i = 0; i < msgsCopy.length; i ++) {
+                msgsCopy[i] = ReferenceCountUtil.retain(in.current(false));
+                in.remove();
+            }
+
             peerLoop.execute(new Runnable() {
                 @Override
                 public void run() {
-                    MessageBuf<Object> buf = peerPipeline.inboundMessageBuffer();
-                    Collections.addAll(buf, msgs);
+                    for (int i = 0;  i < msgsCopy.length; i++) {
+                        peer.inboundBuffer.add(msgsCopy[i]);
+                    }
                     finishPeerRead(peer, peerPipeline);
                 }
             });
@@ -289,14 +302,15 @@ public class LocalChannel extends AbstractChannel {
     private static void finishPeerRead(LocalChannel peer, ChannelPipeline peerPipeline) {
         if (peer.readInProgress) {
             peer.readInProgress = false;
-            peerPipeline.fireInboundBufferUpdated();
-            peerPipeline.fireChannelReadSuspended();
+            for (;;) {
+                Object received = peer.inboundBuffer.poll();
+                if (received == null) {
+                    break;
+                }
+                peerPipeline.fireChannelRead(received);
+            }
+            peerPipeline.fireChannelReadComplete();
         }
-    }
-
-    @Override
-    protected boolean isFlushPending() {
-        return false;
     }
 
     private class LocalUnsafe extends AbstractUnsafe {

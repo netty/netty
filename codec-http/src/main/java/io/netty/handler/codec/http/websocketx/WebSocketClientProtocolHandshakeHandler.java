@@ -18,10 +18,10 @@ package io.netty.handler.codec.http.websocketx;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.FullHttpResponse;
 
-class WebSocketClientProtocolHandshakeHandler extends ChannelInboundMessageHandlerAdapter<FullHttpResponse> {
+class WebSocketClientProtocolHandshakeHandler extends ChannelInboundHandlerAdapter {
     private final WebSocketClientHandshaker handshaker;
 
     public WebSocketClientProtocolHandshakeHandler(WebSocketClientHandshaker handshaker) {
@@ -45,9 +45,14 @@ class WebSocketClientProtocolHandshakeHandler extends ChannelInboundMessageHandl
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, FullHttpResponse msg) throws Exception {
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        if (!(msg instanceof FullHttpResponse)) {
+            ctx.fireChannelRead(msg);
+            return;
+        }
+
         if (!handshaker.isHandshakeComplete()) {
-            handshaker.finishHandshake(ctx.channel(), msg);
+            handshaker.finishHandshake(ctx.channel(), (FullHttpResponse) msg);
             ctx.fireUserEventTriggered(
                     WebSocketClientProtocolHandler.ClientHandshakeStateEvent.HANDSHAKE_COMPLETE);
             ctx.pipeline().remove(this);

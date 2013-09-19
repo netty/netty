@@ -28,22 +28,31 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class ResourceLeakDetector<T> {
 
-    private static final boolean ENABLED = SystemPropertyUtil.getBoolean("io.netty.resourceLeakDetection", false);
+    private static boolean disabled;
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ResourceLeakDetector.class);
 
     static {
-        logger.debug("io.netty.resourceLeakDetection: {}", ENABLED);
+        final boolean DISABLED = SystemPropertyUtil.getBoolean("io.netty.noResourceLeakDetection", false);
+        logger.debug("-Dio.netty.noResourceLeakDetection: {}", DISABLED);
+        disabled = DISABLED;
     }
 
     private static final int DEFAULT_SAMPLING_INTERVAL = 113;
 
-    private static final ResourceLeak NOOP = new ResourceLeak() {
-        @Override
-        public boolean close() {
-            return false;
-        }
-    };
+    /**
+     * Enables or disabled the resource leak detection.
+     */
+    public static void setEnabled(boolean enabled) {
+        disabled = !enabled;
+    }
+
+    /**
+     * Returns {@code true} if resource leak detection is enabled.
+     */
+    public static boolean isEnabled() {
+        return !disabled;
+    }
 
     /** the linked list of active resources */
     private final DefaultResourceLeak head = new DefaultResourceLeak(null);
@@ -91,9 +100,15 @@ public final class ResourceLeakDetector<T> {
         tail.prev = head;
     }
 
+    /**
+     * Creates a new {@link ResourceLeak} which is expected to be closed via {@link ResourceLeak#close()} when the
+     * related resource is deallocated.
+     *
+     * @return the {@link ResourceLeak} or {@code null}
+     */
     public ResourceLeak open(T obj) {
-        if (!ENABLED || leakCheckCnt ++ % samplingInterval != 0) {
-            return NOOP;
+        if (disabled || leakCheckCnt ++ % samplingInterval != 0) {
+            return null;
         }
 
         reportLeak();
@@ -137,7 +152,10 @@ public final class ResourceLeakDetector<T> {
             }
 
             if (reportedLeaks.putIfAbsent(ref.exception, Boolean.TRUE) == null) {
-                logger.warn("LEAK: " + resourceType + " was GC'd before being released correctly.", ref.exception);
+                logger.warn(
+                        "LEAK: " + resourceType + " was GC'd before being released correctly.  " +
+                        "The following stack trace shows where the leaked object was created, " +
+                        "rather than where you failed to release it.", ref.exception);
             }
         }
     }

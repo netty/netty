@@ -15,17 +15,14 @@
  */
 package io.netty.bootstrap;
 
-import io.netty.buffer.MessageBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandler;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelStateHandlerAdapter;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.SocketChannel;
@@ -138,6 +135,14 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
         return this;
     }
 
+    /**
+     * Return the configured {@link EventLoopGroup} which will be used for the child channels or {@code null}
+     * if non is configured yet.
+     */
+    public EventLoopGroup childGroup() {
+        return childGroup;
+    }
+
     @Override
     void init(Channel channel) throws Exception {
         final Map<ChannelOption<?>, Object> options = options();
@@ -180,16 +185,6 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
     }
 
     @Override
-    @Deprecated
-    @SuppressWarnings("deprecation")
-    public void shutdown() {
-        super.shutdown();
-        if (childGroup != null) {
-            childGroup.shutdown();
-        }
-    }
-
-    @Override
     public ServerBootstrap validate() {
         super.validate();
         if (childHandler == null) {
@@ -212,8 +207,7 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
         return new Entry[size];
     }
 
-    private static class ServerBootstrapAcceptor
-            extends ChannelStateHandlerAdapter implements ChannelInboundMessageHandler<Channel> {
+    private static class ServerBootstrapAcceptor extends ChannelInboundHandlerAdapter {
 
         private final EventLoopGroup childGroup;
         private final ChannelHandler childHandler;
@@ -231,42 +225,31 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
         }
 
         @Override
-        public MessageBuf<Channel> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            return Unpooled.messageBuffer();
-        }
-
-        @Override
         @SuppressWarnings("unchecked")
-        public void inboundBufferUpdated(ChannelHandlerContext ctx) {
-            MessageBuf<Channel> in = ctx.inboundMessageBuffer();
-            for (;;) {
-                Channel child = in.poll();
-                if (child == null) {
-                    break;
-                }
+        public void channelRead(ChannelHandlerContext ctx, Object msg) {
+            Channel child = (Channel) msg;
 
-                child.pipeline().addLast(childHandler);
+            child.pipeline().addLast(childHandler);
 
-                for (Entry<ChannelOption<?>, Object> e: childOptions) {
-                    try {
-                        if (!child.config().setOption((ChannelOption<Object>) e.getKey(), e.getValue())) {
-                            logger.warn("Unknown channel option: " + e);
-                        }
-                    } catch (Throwable t) {
-                        logger.warn("Failed to set a channel option: " + child, t);
-                    }
-                }
-
-                for (Entry<AttributeKey<?>, Object> e: childAttrs) {
-                    child.attr((AttributeKey<Object>) e.getKey()).set(e.getValue());
-                }
-
+            for (Entry<ChannelOption<?>, Object> e: childOptions) {
                 try {
-                    childGroup.register(child);
+                    if (!child.config().setOption((ChannelOption<Object>) e.getKey(), e.getValue())) {
+                        logger.warn("Unknown channel option: " + e);
+                    }
                 } catch (Throwable t) {
-                    child.unsafe().closeForcibly();
-                    logger.warn("Failed to register an accepted channel: " + child, t);
+                    logger.warn("Failed to set a channel option: " + child, t);
                 }
+            }
+
+            for (Entry<AttributeKey<?>, Object> e: childAttrs) {
+                child.attr((AttributeKey<Object>) e.getKey()).set(e.getValue());
+            }
+
+            try {
+                childGroup.register(child);
+            } catch (Throwable t) {
+                child.unsafe().closeForcibly();
+                logger.warn("Failed to register an accepted channel: " + child, t);
             }
         }
 

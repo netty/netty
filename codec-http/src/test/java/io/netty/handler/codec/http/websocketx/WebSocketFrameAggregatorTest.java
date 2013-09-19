@@ -17,7 +17,7 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.embedded.EmbeddedMessageChannel;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.CharsetUtil;
 import org.junit.Assert;
@@ -32,7 +32,7 @@ public class WebSocketFrameAggregatorTest {
             .writeBytes(content2.duplicate()).writeBytes(content3.duplicate());
     @Test
     public void testAggregationBinary() {
-        EmbeddedMessageChannel channel = new EmbeddedMessageChannel(new WebSocketFrameAggregator(Integer.MAX_VALUE));
+        EmbeddedChannel channel = new EmbeddedChannel(new WebSocketFrameAggregator(Integer.MAX_VALUE));
         channel.writeInbound(new BinaryWebSocketFrame(true, 1, content1.copy()));
         channel.writeInbound(new BinaryWebSocketFrame(false, 0, content1.copy()));
         channel.writeInbound(new ContinuationWebSocketFrame(false, 0, content2.copy()));
@@ -42,7 +42,6 @@ public class WebSocketFrameAggregatorTest {
 
         Assert.assertTrue(channel.finish());
 
-        System.out.println(channel.lastInboundMessageBuffer().size());
         BinaryWebSocketFrame frame = (BinaryWebSocketFrame) channel.readInbound();
         Assert.assertTrue(frame.isFinalFragment());
         Assert.assertEquals(1, frame.rsv());
@@ -68,7 +67,7 @@ public class WebSocketFrameAggregatorTest {
 
     @Test
     public void testAggregationText() {
-        EmbeddedMessageChannel channel = new EmbeddedMessageChannel(new WebSocketFrameAggregator(Integer.MAX_VALUE));
+        EmbeddedChannel channel = new EmbeddedChannel(new WebSocketFrameAggregator(Integer.MAX_VALUE));
         channel.writeInbound(new TextWebSocketFrame(true, 1, content1.copy()));
         channel.writeInbound(new TextWebSocketFrame(false, 0, content1.copy()));
         channel.writeInbound(new ContinuationWebSocketFrame(false, 0, content2.copy()));
@@ -103,7 +102,7 @@ public class WebSocketFrameAggregatorTest {
 
     @Test
     public void textFrameTooBig() {
-        EmbeddedMessageChannel channel = new EmbeddedMessageChannel(new WebSocketFrameAggregator(8));
+        EmbeddedChannel channel = new EmbeddedChannel(new WebSocketFrameAggregator(8));
         channel.writeInbound(new BinaryWebSocketFrame(true, 1, content1.copy()));
         channel.writeInbound(new BinaryWebSocketFrame(false, 0, content1.copy()));
         try {

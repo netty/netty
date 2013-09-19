@@ -22,7 +22,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 /**
- * A special {@link ChannelStateHandler} which offers an easy way to initialize a {@link Channel} once it was
+ * A special {@link ChannelInboundHandler} which offers an easy way to initialize a {@link Channel} once it was
  * registered to its {@link EventLoop}.
  *
  * Implementations are most often used in the context of {@link Bootstrap#handler(ChannelHandler)} ,
@@ -47,7 +47,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
  * @param <C>   A sub-type of {@link Channel}
  */
 @Sharable
-public abstract class ChannelInitializer<C extends Channel> extends ChannelStateHandlerAdapter {
+public abstract class ChannelInitializer<C extends Channel> extends ChannelInboundHandlerAdapter {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ChannelInitializer.class);
 
@@ -56,7 +56,7 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelState
      * will be removed from the {@link ChannelPipeline} of the {@link Channel}.
      *
      * @param ch            the {@link Channel} which was registered.
-     * @throws Exception    is thrown if an error occours. In that case the {@link Channel} will be closed.
+     * @throws Exception    is thrown if an error occurs. In that case the {@link Channel} will be closed.
      */
     protected abstract void initChannel(C ch) throws Exception;
 
@@ -82,10 +82,5 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelState
                 ctx.close();
             }
         }
-    }
-
-    @Override
-    public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
-        ctx.fireInboundBufferUpdated();
     }
 }

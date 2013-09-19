@@ -15,8 +15,9 @@
  */
 package io.netty.handler.codec.http.multipart;
 
+import static io.netty.buffer.Unpooled.wrappedBuffer;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.MessageBuf;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpContent;
@@ -28,7 +29,8 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
-import io.netty.handler.stream.ChunkedMessageInput;
+import io.netty.handler.stream.ChunkedInput;
+import io.netty.util.internal.ThreadLocalRandom;
 
 import java.io.File;
 import java.io.IOException;
@@ -40,15 +42,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
-import java.util.Random;
 import java.util.regex.Pattern;
-
-import static io.netty.buffer.Unpooled.*;
 
 /**
  * This encoder will help to encode Request for a FORM as POST.
  */
-public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> {
+public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
 
     /**
      * Different modes to use to encode form data.
@@ -265,8 +264,7 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> 
      */
     private static String getNewMultipartDelimiter() {
         // construct a generated delimiter
-        Random random = new Random();
-        return Long.toHexString(random.nextLong()).toLowerCase();
+        return Long.toHexString(ThreadLocalRandom.current().nextLong()).toLowerCase();
     }
 
     /**
@@ -710,8 +708,10 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> 
             HttpContent chunk = nextChunk();
             if (request instanceof FullHttpRequest) {
                 FullHttpRequest fullRequest = (FullHttpRequest) request;
-                if (!fullRequest.content().equals(chunk.content())) {
-                    fullRequest.content().clear().writeBytes(chunk.content());
+                ByteBuf chunkContent = chunk.content();
+                if (fullRequest.content() != chunkContent) {
+                    fullRequest.content().clear().writeBytes(chunkContent);
+                    chunkContent.release();
                 }
                 return fullRequest;
             } else {
@@ -943,12 +943,11 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> 
      *             if the encoding is in error
      */
     @Override
-    public boolean readChunk(MessageBuf<HttpContent> buffer) throws ErrorDataEncoderException {
+    public HttpContent readChunk(ChannelHandlerContext ctx) throws Exception {
         if (isLastChunkSent) {
-            return false;
+            return null;
         } else {
-            buffer.add(nextChunk());
-            return true;
+            return nextChunk();
         }
     }
 
@@ -1143,6 +1142,15 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> 
             copy.headers().set(headers());
             copy.trailingHeaders().set(trailingHeaders());
             return copy;
+        }
+
+        @Override
+        public FullHttpRequest duplicate() {
+            DefaultFullHttpRequest duplicate = new DefaultFullHttpRequest(
+                    getProtocolVersion(), getMethod(), getUri(), content().duplicate());
+            duplicate.headers().set(headers());
+            duplicate.trailingHeaders().set(trailingHeaders());
+            return duplicate;
         }
 
         @Override

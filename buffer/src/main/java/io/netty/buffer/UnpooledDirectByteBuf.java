@@ -26,8 +26,6 @@ import java.nio.ByteOrder;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
-import java.util.ArrayDeque;
-import java.util.Queue;
 
 /**
  * A NIO {@link ByteBuffer} based buffer.  It is recommended to use {@link Unpooled#directBuffer(int)}
@@ -43,7 +41,6 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     private ByteBuffer tmpNioBuf;
     private int capacity;
     private boolean doNotFree;
-    private Queue<ByteBuffer> suspendedDeallocations;
 
     /**
      * Creates a new direct buffer.
@@ -111,11 +108,7 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
             if (doNotFree) {
                 doNotFree = false;
             } else {
-                if (suspendedDeallocations == null) {
-                    PlatformDependent.freeDirectBuffer(oldBuffer);
-                } else {
-                    suspendedDeallocations.add(oldBuffer);
-                }
+                PlatformDependent.freeDirectBuffer(oldBuffer);
             }
         }
 
@@ -282,9 +275,7 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public ByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
         checkDstIndex(index, length, dstIndex, dst.length);
-        if (dst == null) {
-            throw new NullPointerException("dst");
-        }
+
         if (dstIndex < 0 || dstIndex > dst.length - length) {
             throw new IndexOutOfBoundsException(String.format(
                     "dstIndex: %d, length: %d (expected: range(0, %d))", dstIndex, length, dst.length));
@@ -478,16 +469,6 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
-    public ByteBuffer nioBuffer(int index, int length) {
-        ensureAccessible();
-        if (index == 0 && length == capacity()) {
-            return buffer.duplicate();
-        } else {
-            return ((ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length)).slice();
-        }
-    }
-
-    @Override
     public ByteBuffer[] nioBuffers(int index, int length) {
         return new ByteBuffer[] { nioBuffer(index, length) };
     }
@@ -510,12 +491,22 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
         return new UnpooledDirectByteBuf(alloc(), dst, maxCapacity());
     }
 
+    @Override
+    public ByteBuffer internalNioBuffer(int index, int length) {
+        return (ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length);
+    }
+
     private ByteBuffer internalNioBuffer() {
         ByteBuffer tmpNioBuf = this.tmpNioBuf;
         if (tmpNioBuf == null) {
             this.tmpNioBuf = tmpNioBuf = buffer.duplicate();
         }
         return tmpNioBuf;
+    }
+
+    @Override
+    public ByteBuffer nioBuffer(int index, int length) {
+        return (ByteBuffer) buffer.duplicate().position(index).limit(index + length);
     }
 
     @Override
@@ -527,35 +518,13 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
         this.buffer = null;
 
-        resumeIntermediaryDeallocations();
         if (!doNotFree) {
             PlatformDependent.freeDirectBuffer(buffer);
         }
-        leak.close();
-    }
 
-    @Override
-    public ByteBuf suspendIntermediaryDeallocations() {
-        ensureAccessible();
-        if (suspendedDeallocations == null) {
-            suspendedDeallocations = new ArrayDeque<ByteBuffer>(2);
+        if (leak != null) {
+            leak.close();
         }
-        return this;
-    }
-
-    @Override
-    public ByteBuf resumeIntermediaryDeallocations() {
-        if (suspendedDeallocations == null) {
-            return this;
-        }
-
-        Queue<ByteBuffer> suspendedDeallocations = this.suspendedDeallocations;
-        this.suspendedDeallocations = null;
-
-        for (ByteBuffer buf: suspendedDeallocations) {
-            PlatformDependent.freeDirectBuffer(buf);
-        }
-        return this;
     }
 
     @Override

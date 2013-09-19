@@ -21,6 +21,8 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.MessageSizeEstimator;
+import io.netty.channel.RecvByteBufAllocator;
 
 /**
  * A {@link ChannelConfig} for a {@link UdtChannel}.
@@ -114,13 +116,28 @@ public interface UdtChannelConfig extends ChannelConfig {
     UdtChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis);
 
     @Override
+    UdtChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead);
+
+    @Override
     UdtChannelConfig setWriteSpinCount(int writeSpinCount);
 
     @Override
     UdtChannelConfig setAllocator(ByteBufAllocator allocator);
 
     @Override
+    UdtChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator);
+
+    @Override
     UdtChannelConfig setAutoRead(boolean autoRead);
+
+    @Override
+    UdtChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark);
+
+    @Override
+    UdtChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark);
+
+    @Override
+    UdtChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator);
 
     /**
      * Sets {@link OptionUDT#Protocol_Receive_Buffer_Size}
@@ -161,7 +178,4 @@ public interface UdtChannelConfig extends ChannelConfig {
      * Sets {@link OptionUDT#System_Send_Buffer_Size}
      */
     UdtChannelConfig setSystemSendBufferSize(int size);
-
-    @Override
-    UdtChannelConfig setDefaultHandlerByteBufType(ChannelHandlerByteBufType type);
 }

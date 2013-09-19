@@ -283,13 +283,23 @@ public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
     }
 
     @Override
-    public ByteBuffer nioBuffer(int index, int length) {
-        return buffer.nioBuffer(index, length);
+    public ByteBuffer[] nioBuffers(int index, int length) {
+        return buffer.nioBuffers(index, length);
     }
 
     @Override
-    public ByteBuffer[] nioBuffers(int index, int length) {
-        return buffer.nioBuffers(index, length);
+    public ByteBuffer internalNioBuffer(int index, int length) {
+        return nioBuffer(index, length);
+    }
+
+    @Override
+    public int forEachByte(int index, int length, ByteBufProcessor processor) {
+        return buffer.forEachByte(index, length, processor);
+    }
+
+    @Override
+    public int forEachByteDesc(int index, int length, ByteBufProcessor processor) {
+        return buffer.forEachByteDesc(index, length, processor);
     }
 }
 

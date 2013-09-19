@@ -17,11 +17,10 @@ package io.netty.channel.sctp.oio;
 
 import com.sun.nio.sctp.SctpChannel;
 import com.sun.nio.sctp.SctpServerChannel;
-import io.netty.buffer.BufType;
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.oio.AbstractOioMessageChannel;
 import io.netty.channel.sctp.DefaultSctpServerChannelConfig;
@@ -38,6 +37,7 @@ import java.nio.channels.Selector;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -53,7 +53,7 @@ public class OioSctpServerChannel extends AbstractOioMessageChannel
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(OioSctpServerChannel.class);
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.MESSAGE, false);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
     private static SctpServerChannel newServerSocket() {
         try {
@@ -80,17 +80,7 @@ public class OioSctpServerChannel extends AbstractOioMessageChannel
      * @param sch    the {@link SctpServerChannel} which is used by this instance
      */
     public OioSctpServerChannel(SctpServerChannel sch) {
-        this(null, sch);
-    }
-
-    /**
-     * Create a new instance from the given {@link SctpServerChannel}
-     *
-     * @param id        the id which should be used for this instance or {@code null} if a new one should be generated
-     * @param sch       the {@link SctpServerChannel} which is used by this instance
-     */
-    public OioSctpServerChannel(Integer id, SctpServerChannel sch) {
-        super(null, id);
+        super(null);
         if (sch == null) {
             throw new NullPointerException("sctp server channel");
         }
@@ -189,27 +179,32 @@ public class OioSctpServerChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected int doReadMessages(MessageBuf<Object> buf) throws Exception {
+    protected int doReadMessages(List<Object> buf) throws Exception {
         if (!isActive()) {
             return -1;
         }
 
         SctpChannel s = null;
+        int acceptedChannels = 0;
         try {
             final int selectedKeys = selector.select(SO_TIMEOUT);
             if (selectedKeys > 0) {
-                final Set<SelectionKey> selectionKeys = selector.selectedKeys();
-                for (SelectionKey key : selectionKeys) {
-                   if (key.isAcceptable()) {
-                       s = sch.accept();
-                       if (s != null) {
-                           buf.add(new OioSctpChannel(this, null, s));
-                       }
-                   }
+                final Iterator<SelectionKey> selectionKeys = selector.selectedKeys().iterator();
+                for (;;) {
+                    SelectionKey key = selectionKeys.next();
+                    selectionKeys.remove();
+                    if (key.isAcceptable()) {
+                        s = sch.accept();
+                        if (s != null) {
+                            buf.add(new OioSctpChannel(this, s));
+                            acceptedChannels ++;
+                        }
+                    }
+                    if (!selectionKeys.hasNext()) {
+                        return acceptedChannels;
+                    }
                 }
-                return selectedKeys;
             }
-
         } catch (Throwable t) {
             logger.warn("Failed to create a new channel from an accepted sctp channel.", t);
             if (s != null) {
@@ -221,7 +216,7 @@ public class OioSctpServerChannel extends AbstractOioMessageChannel
             }
         }
 
-        return 0;
+        return acceptedChannels;
     }
 
     @Override
@@ -291,7 +286,7 @@ public class OioSctpServerChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected void doWriteMessages(MessageBuf<Object> buf) throws Exception {
+    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
         throw new UnsupportedOperationException();
     }
 }

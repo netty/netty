@@ -32,7 +32,12 @@ public class DefaultFullHttpResponse extends DefaultHttpResponse implements Full
     }
 
     public DefaultFullHttpResponse(HttpVersion version, HttpResponseStatus status, ByteBuf content) {
-        super(version, status);
+        this(version, status, content, true);
+    }
+
+    public DefaultFullHttpResponse(HttpVersion version, HttpResponseStatus status,
+                                   ByteBuf content, boolean validateHeaders) {
+        super(version, status, validateHeaders);
         if (content == null) {
             throw new NullPointerException("content");
         }
@@ -94,5 +99,14 @@ public class DefaultFullHttpResponse extends DefaultHttpResponse implements Full
         copy.headers().set(headers());
         copy.trailingHeaders().set(trailingHeaders());
         return copy;
+    }
+
+    @Override
+    public FullHttpResponse duplicate() {
+        DefaultFullHttpResponse duplicate = new DefaultFullHttpResponse(getProtocolVersion(), getStatus(),
+                content().duplicate());
+        duplicate.headers().set(headers());
+        duplicate.trailingHeaders().set(trailingHeaders());
+        return duplicate;
     }
 }

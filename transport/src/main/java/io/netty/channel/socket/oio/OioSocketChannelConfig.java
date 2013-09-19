@@ -18,6 +18,8 @@ package io.netty.channel.socket.oio;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.MessageSizeEstimator;
+import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.SocketChannelConfig;
 
 /**
@@ -80,14 +82,26 @@ public interface OioSocketChannelConfig extends SocketChannelConfig {
     OioSocketChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis);
 
     @Override
+    OioSocketChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead);
+
+    @Override
     OioSocketChannelConfig setWriteSpinCount(int writeSpinCount);
 
     @Override
     OioSocketChannelConfig setAllocator(ByteBufAllocator allocator);
 
     @Override
+    OioSocketChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator);
+
+    @Override
     OioSocketChannelConfig setAutoRead(boolean autoRead);
 
     @Override
-    OioSocketChannelConfig setDefaultHandlerByteBufType(ChannelHandlerByteBufType type);
+    OioSocketChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark);
+
+    @Override
+    OioSocketChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark);
+
+    @Override
+    OioSocketChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator);
 }

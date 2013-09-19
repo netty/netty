@@ -144,6 +144,11 @@ public class CloseWebSocketFrame extends WebSocketFrame {
     }
 
     @Override
+    public CloseWebSocketFrame duplicate() {
+        return new CloseWebSocketFrame(isFinalFragment(), rsv(), content().duplicate());
+    }
+
+    @Override
     public CloseWebSocketFrame retain() {
         super.retain();
         return this;

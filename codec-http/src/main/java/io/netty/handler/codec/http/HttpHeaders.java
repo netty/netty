@@ -546,12 +546,14 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      */
     public static boolean isKeepAlive(HttpMessage message) {
         String connection = message.headers().get(Names.CONNECTION);
-        if (Values.CLOSE.equalsIgnoreCase(connection)) {
+
+        boolean close = Values.CLOSE.equalsIgnoreCase(connection);
+        if (close) {
             return false;
         }
 
         if (message.getProtocolVersion().isKeepAliveDefault()) {
-            return !Values.CLOSE.equalsIgnoreCase(connection);
+            return !close;
         } else {
             return Values.KEEP_ALIVE.equalsIgnoreCase(connection);
         }
@@ -1024,21 +1026,24 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
         for (int index = 0; index < headerName.length(); index ++) {
             //Actually get the character
             char character = headerName.charAt(index);
+            valideHeaderNameChar(character);
+        }
+    }
 
-            //Check to see if the character is not an ASCII character
-            if (character > 127) {
+    static void valideHeaderNameChar(char c) {
+        //Check to see if the character is not an ASCII character
+        if (c > 127) {
+            throw new IllegalArgumentException(
+                    "Header name cannot contain non-ASCII characters: " + c);
+        }
+
+        //Check for prohibited characters.
+        switch (c) {
+            case '\t': case '\n': case 0x0b: case '\f': case '\r':
+            case ' ':  case ',':  case ':':  case ';':  case '=':
                 throw new IllegalArgumentException(
-                        "Header name cannot contain non-ASCII characters: " + headerName);
-            }
-
-            //Check for prohibited characters.
-            switch (character) {
-                case '\t': case '\n': case 0x0b: case '\f': case '\r':
-                case ' ':  case ',':  case ':':  case ';':  case '=':
-                    throw new IllegalArgumentException(
-                            "Header name cannot contain the following prohibited characters: " +
-                                    "=,;: \\t\\r\\n\\v\\f: " + headerName);
-            }
+                        "Header name cannot contain the following prohibited characters: " +
+                                "=,;: \\t\\r\\n\\v\\f ");
         }
     }
 

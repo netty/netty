@@ -15,10 +15,11 @@
  */
 package io.netty.channel.sctp;
 
+import com.sun.nio.sctp.SctpStandardSocketOptions.InitMaxStreams;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelConfig;
-
-import static com.sun.nio.sctp.SctpStandardSocketOptions.*;
+import io.netty.channel.MessageSizeEstimator;
+import io.netty.channel.RecvByteBufAllocator;
 
 /**
  * A {@link ChannelConfig} for a {@link SctpChannel}.
@@ -100,14 +101,26 @@ public interface SctpChannelConfig extends ChannelConfig {
     SctpChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis);
 
     @Override
+    SctpChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead);
+
+    @Override
     SctpChannelConfig setWriteSpinCount(int writeSpinCount);
 
     @Override
     SctpChannelConfig setAllocator(ByteBufAllocator allocator);
 
     @Override
+    SctpChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator);
+
+    @Override
     SctpChannelConfig setAutoRead(boolean autoRead);
 
     @Override
-    SctpChannelConfig setDefaultHandlerByteBufType(ChannelHandlerByteBufType type);
+    SctpChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark);
+
+    @Override
+    SctpChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark);
+
+    @Override
+    SctpChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator);
 }

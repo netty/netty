@@ -16,20 +16,18 @@
 package io.netty.handler.codec.sctp;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.MessageBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundByteHandlerAdapter;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.sctp.SctpMessage;
-import io.netty.handler.codec.EncoderException;
+import io.netty.handler.codec.MessageToMessageEncoder;
+
+import java.util.List;
 
 /**
  * A ChannelHandler which transform {@link ByteBuf} to {@link SctpMessage}  and send it through a specific stream
  * with given protocol identifier.
  *
  */
-public class SctpOutboundByteStreamHandler extends ChannelOutboundByteHandlerAdapter {
+public class SctpOutboundByteStreamHandler extends MessageToMessageEncoder<ByteBuf> {
     private final int streamIdentifier;
     private final int protocolIdentifier;
 
@@ -43,16 +41,7 @@ public class SctpOutboundByteStreamHandler extends ChannelOutboundByteHandlerAda
     }
 
     @Override
-    protected void flush(ChannelHandlerContext ctx, ByteBuf in, ChannelPromise promise) throws Exception {
-        try {
-            MessageBuf<Object> out = ctx.nextOutboundMessageBuffer();
-            ByteBuf payload = Unpooled.buffer(in.readableBytes());
-            payload.writeBytes(in);
-            out.add(new SctpMessage(streamIdentifier, protocolIdentifier, payload));
-        } catch (Throwable t) {
-            ctx.fireExceptionCaught(new EncoderException(t));
-        }
-
-        ctx.flush(promise);
+    protected void encode(ChannelHandlerContext ctx, ByteBuf msg, List<Object> out) throws Exception {
+        out.add(new SctpMessage(streamIdentifier, protocolIdentifier, msg.retain()));
     }
 }

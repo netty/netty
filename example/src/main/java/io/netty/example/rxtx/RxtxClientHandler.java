@@ -16,17 +16,17 @@
 package io.netty.example.rxtx;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.SimpleChannelInboundHandler;
 
-public class RxtxClientHandler extends ChannelInboundMessageHandlerAdapter<String> {
+public class RxtxClientHandler extends SimpleChannelInboundHandler<String> {
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
-        ctx.write("AT\n");
+        ctx.writeAndFlush("AT\n");
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, String msg) throws Exception {
+    public void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
         if ("OK".equals(msg)) {
             System.out.println("Serial port responded to AT");
         } else {

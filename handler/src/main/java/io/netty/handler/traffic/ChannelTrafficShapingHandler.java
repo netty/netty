@@ -87,8 +87,15 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
         TrafficCounter trafficCounter = new TrafficCounter(this, ctx.executor(), "ChannelTC" +
-                ctx.channel().id(), checkInterval);
+                ctx.channel().hashCode(), checkInterval);
         setTrafficCounter(trafficCounter);
         trafficCounter.start();
+    }
+
+    @Override
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        if (trafficCounter != null) {
+            trafficCounter.stop();
+        }
     }
 }

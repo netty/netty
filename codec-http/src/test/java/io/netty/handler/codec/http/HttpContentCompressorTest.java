@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.channel.embedded.EmbeddedMessageChannel;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.handler.codec.http.HttpHeaders.Names;
 import org.junit.Test;
@@ -63,7 +63,7 @@ public class HttpContentCompressorTest {
 
     @Test
     public void testEmptyContentCompression() throws Exception {
-        EmbeddedMessageChannel ch = new EmbeddedMessageChannel(new HttpContentCompressor());
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
         FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
         req.headers().set(Names.ACCEPT_ENCODING, "deflate");
         ch.writeInbound(req);
@@ -80,8 +80,12 @@ public class HttpContentCompressorTest {
 
         HttpContent chunk;
         chunk = (HttpContent) ch.readOutbound();
-        assertThat(chunk, is(instanceOf(LastHttpContent.class)));
+        assertThat(chunk, is(instanceOf(HttpContent.class)));
         assertThat(chunk.content().isReadable(), is(true));
+
+        chunk = (HttpContent) ch.readOutbound();
+        assertThat(chunk, is(instanceOf(LastHttpContent.class)));
+        assertThat(chunk.content().isReadable(), is(false));
 
         assertThat(ch.readOutbound(), is(nullValue()));
     }

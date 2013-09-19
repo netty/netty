@@ -17,12 +17,13 @@ package io.netty.channel.nio;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.channel.socket.DatagramChannel;
-import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.nio.NioDatagramChannel;
+import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.GlobalEventExecutor;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -35,19 +36,19 @@ public class NioDatagramChannelTest {
      * Test try to reproduce issue #1335
      */
     @Test
-    public void testBindMultiple() {
-        DefaultChannelGroup channelGroup = new DefaultChannelGroup();
+    public void testBindMultiple() throws Exception {
+        DefaultChannelGroup channelGroup = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
         NioEventLoopGroup group = new NioEventLoopGroup();
         try {
             for (int i = 0; i < 100; i++) {
                 Bootstrap udpBootstrap = new Bootstrap();
                 udpBootstrap.group(group).channel(NioDatagramChannel.class)
                         .option(ChannelOption.SO_BROADCAST, true)
-                        .handler(new ChannelInboundMessageHandlerAdapter<DatagramPacket>() {
+                        .handler(new ChannelInboundHandlerAdapter() {
                             @Override
-                            public void messageReceived(ChannelHandlerContext ctx, DatagramPacket msg)
-                                    throws Exception {
-                                // noop
+                            public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                                // Discard
+                                ReferenceCountUtil.release(msg);
                             }
                         });
                 DatagramChannel datagramChannel = (DatagramChannel) udpBootstrap
@@ -56,8 +57,8 @@ public class NioDatagramChannelTest {
             }
             Assert.assertEquals(100, channelGroup.size());
         } finally {
-            channelGroup.close().syncUninterruptibly();
-            group.shutdownGracefully();
+            channelGroup.close().sync();
+            group.shutdownGracefully().sync();
         }
     }
 }

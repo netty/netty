@@ -15,10 +15,10 @@
  */
 package io.netty.channel.sctp;
 
+import com.sun.nio.sctp.SctpStandardSocketOptions;
 import io.netty.channel.ChannelOption;
 
 import java.net.SocketAddress;
-import java.util.List;
 
 /**
  * Option for configuring the SCTP transport
@@ -30,22 +30,8 @@ public class SctpChannelOption<T> extends ChannelOption<T> {
             new SctpChannelOption<Boolean>("SCTP_EXPLICIT_COMPLETE");
     public static final SctpChannelOption<Integer> SCTP_FRAGMENT_INTERLEAVE =
             new SctpChannelOption<Integer>("SCTP_FRAGMENT_INTERLEAVE");
-    public static final SctpChannelOption<List<Integer>> SCTP_INIT_MAXSTREAMS =
-            new SctpChannelOption<List<Integer>>("SCTP_INIT_MAXSTREAMS") {
-                @Override
-                public void validate(List<Integer> value) {
-                    super.validate(value);
-                    if (value.size() != 2) {
-                        throw new IllegalArgumentException("value must be a List of 2 Integers: " + value);
-                    }
-                    if (value.get(0) == null) {
-                        throw new NullPointerException("value[0]");
-                    }
-                    if (value.get(1) == null) {
-                        throw new NullPointerException("value[1]");
-                    }
-                }
-            };
+    public static final SctpChannelOption<SctpStandardSocketOptions.InitMaxStreams> SCTP_INIT_MAXSTREAMS =
+            new SctpChannelOption<SctpStandardSocketOptions.InitMaxStreams>("SCTP_INIT_MAXSTREAMS");
 
     public static final SctpChannelOption<Boolean> SCTP_NODELAY =
             new SctpChannelOption<Boolean>("SCTP_NODELAY");

@@ -15,14 +15,13 @@
  */
 package io.netty.testsuite.transport.udt;
 
-import static org.junit.Assert.*;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -33,12 +32,15 @@ import io.netty.handler.codec.Delimiters;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
 import io.netty.util.CharsetUtil;
-
-import java.util.concurrent.atomic.AtomicInteger;
-
+import io.netty.util.concurrent.DefaultThreadFactory;
+import io.netty.util.concurrent.GlobalEventExecutor;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.concurrent.ThreadFactory;
+
+import static org.junit.Assert.*;
 
 /**
  * Verify UDT connect/disconnect life cycle.
@@ -64,7 +66,7 @@ public class UDTClientServerConnectionTest {
         @Override
         public void run() {
             final Bootstrap boot = new Bootstrap();
-            final ThreadFactory clientFactory = new ThreadFactory("client");
+            final ThreadFactory clientFactory = new DefaultThreadFactory("client");
             final NioEventLoopGroup connectGroup = new NioEventLoopGroup(1,
                     clientFactory, NioUdtProvider.BYTE_PROVIDER);
             try {
@@ -97,7 +99,7 @@ public class UDTClientServerConnectionTest {
             } catch (final Throwable e) {
                 log.error("Client failed.", e);
             } finally {
-                connectGroup.shutdownGracefully();
+                connectGroup.shutdownGracefully().syncUninterruptibly();
             }
         }
 
@@ -135,15 +137,11 @@ public class UDTClientServerConnectionTest {
         }
     }
 
-    static class ClientHandler extends
-            ChannelInboundMessageHandlerAdapter<String> {
+    static class ClientHandler extends SimpleChannelInboundHandler<Object> {
 
         static final Logger log = LoggerFactory.getLogger(ClientHandler.class);
 
         volatile boolean isActive;
-
-        ClientHandler() {
-        }
 
         @Override
         public void channelActive(final ChannelHandlerContext ctx)
@@ -169,8 +167,7 @@ public class UDTClientServerConnectionTest {
         }
 
         @Override
-        public void messageReceived(final ChannelHandlerContext ctx,
-                final String msg) throws Exception {
+        public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
             log.info("Client received: " + msg);
         }
     }
@@ -179,7 +176,7 @@ public class UDTClientServerConnectionTest {
 
         static final Logger log = LoggerFactory.getLogger(Server.class);
 
-        final ChannelGroup group = new DefaultChannelGroup("server group");
+        final ChannelGroup group = new DefaultChannelGroup("server group", GlobalEventExecutor.INSTANCE);
 
         final String host;
         final int port;
@@ -196,8 +193,8 @@ public class UDTClientServerConnectionTest {
         @Override
         public void run() {
             final ServerBootstrap boot = new ServerBootstrap();
-            final ThreadFactory acceptFactory = new ThreadFactory("accept");
-            final ThreadFactory serverFactory = new ThreadFactory("server");
+            final ThreadFactory acceptFactory = new DefaultThreadFactory("accept");
+            final ThreadFactory serverFactory = new DefaultThreadFactory("server");
             final NioEventLoopGroup acceptGroup = new NioEventLoopGroup(1,
                     acceptFactory, NioUdtProvider.BYTE_PROVIDER);
             final NioEventLoopGroup connectGroup = new NioEventLoopGroup(1,
@@ -236,6 +233,9 @@ public class UDTClientServerConnectionTest {
             } finally {
                 acceptGroup.shutdownGracefully();
                 connectGroup.shutdownGracefully();
+
+                acceptGroup.terminationFuture().syncUninterruptibly();
+                connectGroup.terminationFuture().syncUninterruptibly();
             }
         }
 
@@ -255,7 +255,7 @@ public class UDTClientServerConnectionTest {
                         }
                     }
                 } else {
-                    if (group.size() == 0) {
+                    if (group.isEmpty()) {
                         return;
                     }
                 }
@@ -282,7 +282,7 @@ public class UDTClientServerConnectionTest {
     }
 
     static class ServerHandler extends
-            ChannelInboundMessageHandlerAdapter<String> {
+            SimpleChannelInboundHandler<Object> {
 
         static final Logger log = LoggerFactory.getLogger(ServerHandler.class);
 
@@ -320,35 +320,17 @@ public class UDTClientServerConnectionTest {
         }
 
         @Override
-        public void messageReceived(final ChannelHandlerContext ctx,
-                final String message) throws Exception {
-            log.info("Server received: " + message);
+        public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+            log.info("Server received: " + msg);
         }
     }
-
-    static class ThreadFactory implements java.util.concurrent.ThreadFactory {
-
-        static final AtomicInteger counter = new AtomicInteger();
-
-        final String name;
-
-        ThreadFactory(final String name) {
-            this.name = name;
-        }
-
-        @Override
-        public Thread newThread(final Runnable runnable) {
-            return new Thread(runnable, name + '-' + counter.getAndIncrement());
-        }
-    }
-
     static final Logger log = LoggerFactory
             .getLogger(UDTClientServerConnectionTest.class);
 
     /**
      * Maximum wait time is 5 seconds.
      * <p>
-     * wait-time = {@link #WAIT_COUNT} * {@value #WAIT_SLEEP}
+     * wait-time = {@code WAIT_COUNT} * {@value #WAIT_SLEEP}
      */
     static final int WAIT_COUNT = 50;
     static final int WAIT_SLEEP = 100;

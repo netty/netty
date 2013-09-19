@@ -24,26 +24,17 @@ interface ChannelInboundInvoker {
     /**
      * A {@link Channel} was registered to its {@link EventLoop}.
      *
-     * This will result in having the  {@link ChannelStateHandler#channelRegistered(ChannelHandlerContext)} method
-     * called of the next  {@link ChannelStateHandler} contained in the  {@link ChannelPipeline} of the
+     * This will result in having the  {@link ChannelInboundHandler#channelRegistered(ChannelHandlerContext)} method
+     * called of the next  {@link ChannelInboundHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelInboundInvoker fireChannelRegistered();
 
     /**
-     * A {@link Channel} was unregistered from its {@link EventLoop}.
-     *
-     * This will result in having the  {@link ChannelStateHandler#channelUnregistered(ChannelHandlerContext)} method
-     * called of the next  {@link ChannelStateHandler} contained in the  {@link ChannelPipeline} of the
-     * {@link Channel}.
-     */
-    ChannelInboundInvoker fireChannelUnregistered();
-
-    /**
      * A {@link Channel} is active now, which means it is connected.
      *
-     * This will result in having the  {@link ChannelStateHandler#channelActive(ChannelHandlerContext)} method
-     * called of the next  {@link ChannelStateHandler} contained in the  {@link ChannelPipeline} of the
+     * This will result in having the  {@link ChannelInboundHandler#channelActive(ChannelHandlerContext)} method
+     * called of the next  {@link ChannelInboundHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelInboundInvoker fireChannelActive();
@@ -51,8 +42,8 @@ interface ChannelInboundInvoker {
     /**
      * A {@link Channel} is inactive now, which means it is closed.
      *
-     * This will result in having the  {@link ChannelStateHandler#channelInactive(ChannelHandlerContext)} method
-     * called of the next  {@link ChannelStateHandler} contained in the  {@link ChannelPipeline} of the
+     * This will result in having the  {@link ChannelInboundHandler#channelInactive(ChannelHandlerContext)} method
+     * called of the next  {@link ChannelInboundHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelInboundInvoker fireChannelInactive();
@@ -60,8 +51,8 @@ interface ChannelInboundInvoker {
     /**
      * A {@link Channel} received an {@link Throwable} in one of its inbound operations.
      *
-     * This will result in having the  {@link ChannelStateHandler#exceptionCaught(ChannelHandlerContext, Throwable)}
-     * method  called of the next  {@link ChannelStateHandler} contained in the  {@link ChannelPipeline} of the
+     * This will result in having the  {@link ChannelInboundHandler#exceptionCaught(ChannelHandlerContext, Throwable)}
+     * method  called of the next  {@link ChannelInboundHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelInboundInvoker fireExceptionCaught(Throwable cause);
@@ -69,24 +60,26 @@ interface ChannelInboundInvoker {
     /**
      * A {@link Channel} received an user defined event.
      *
-     * This will result in having the  {@link ChannelStateHandler#userEventTriggered(ChannelHandlerContext, Object)}
-     * method  called of the next  {@link ChannelStateHandler} contained in the  {@link ChannelPipeline} of the
+     * This will result in having the  {@link ChannelInboundHandler#userEventTriggered(ChannelHandlerContext, Object)}
+     * method  called of the next  {@link ChannelInboundHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelInboundInvoker fireUserEventTriggered(Object event);
 
     /**
-     * A {@link Channel} received bytes which are now ready to read from its inbound buffer.
+     * A {@link Channel} received a message.
      *
-     * This will result in having the  {@link ChannelStateHandler#inboundBufferUpdated(ChannelHandlerContext)}
-     * method  called of the next  {@link ChannelStateHandler} contained in the  {@link ChannelPipeline} of the
+     * This will result in having the {@link ChannelInboundHandler#channelRead(ChannelHandlerContext, Object)}
+     * method  called of the next {@link ChannelInboundHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    ChannelInboundInvoker fireInboundBufferUpdated();
+    ChannelInboundInvoker fireChannelRead(Object msg);
+
+    ChannelInboundInvoker fireChannelReadComplete();
 
     /**
-     * Triggers an {@link ChannelStateHandler#channelReadSuspended(ChannelHandlerContext) channelReadSuspended}
-     * event to the next {@link ChannelStateHandler} in the {@link ChannelPipeline}.
+     * Triggers an {@link ChannelInboundHandler#channelWritabilityChanged(ChannelHandlerContext)}
+     * event to the next {@link ChannelInboundHandler} in the {@link ChannelPipeline}.
      */
-    ChannelInboundInvoker fireChannelReadSuspended();
+    ChannelInboundInvoker fireChannelWritabilityChanged();
 }

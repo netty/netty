@@ -40,7 +40,7 @@ import java.util.Map;
 final class DefaultChannelGroupFuture extends DefaultPromise<Void> implements ChannelGroupFuture {
 
     private final ChannelGroup group;
-    private final Map<Integer, ChannelFuture> futures;
+    private final Map<Channel, ChannelFuture> futures;
     private int successCount;
     private int failureCount;
 
@@ -62,11 +62,11 @@ final class DefaultChannelGroupFuture extends DefaultPromise<Void> implements Ch
 
             if (callSetDone) {
                 if (failureCount > 0) {
-                    List<Map.Entry<Integer, Throwable>> failed =
-                            new ArrayList<Map.Entry<Integer, Throwable>>(failureCount);
+                    List<Map.Entry<Channel, Throwable>> failed =
+                            new ArrayList<Map.Entry<Channel, Throwable>>(failureCount);
                     for (ChannelFuture f: futures.values()) {
                         if (!f.isSuccess()) {
-                            failed.add(new DefaultEntry<Integer, Throwable>(f.channel().id(), f.cause()));
+                            failed.add(new DefaultEntry<Channel, Throwable>(f.channel(), f.cause()));
                         }
                     }
                     setFailure0(new ChannelGroupException(failed));
@@ -91,9 +91,9 @@ final class DefaultChannelGroupFuture extends DefaultPromise<Void> implements Ch
 
         this.group = group;
 
-        Map<Integer, ChannelFuture> futureMap = new LinkedHashMap<Integer, ChannelFuture>();
+        Map<Channel, ChannelFuture> futureMap = new LinkedHashMap<Channel, ChannelFuture>();
         for (ChannelFuture f: futures) {
-            futureMap.put(f.channel().id(), f);
+            futureMap.put(f.channel(), f);
         }
 
         this.futures = Collections.unmodifiableMap(futureMap);
@@ -108,7 +108,7 @@ final class DefaultChannelGroupFuture extends DefaultPromise<Void> implements Ch
         }
     }
 
-    DefaultChannelGroupFuture(ChannelGroup group, Map<Integer, ChannelFuture> futures, EventExecutor executor) {
+    DefaultChannelGroupFuture(ChannelGroup group, Map<Channel, ChannelFuture> futures, EventExecutor executor) {
         super(executor);
         this.group = group;
         this.futures = Collections.unmodifiableMap(futures);
@@ -128,13 +128,8 @@ final class DefaultChannelGroupFuture extends DefaultPromise<Void> implements Ch
     }
 
     @Override
-    public ChannelFuture find(Integer channelId) {
-        return futures.get(channelId);
-    }
-
-    @Override
     public ChannelFuture find(Channel channel) {
-        return futures.get(channel.id());
+        return futures.get(channel);
     }
 
     @Override
@@ -153,25 +148,26 @@ final class DefaultChannelGroupFuture extends DefaultPromise<Void> implements Ch
     }
 
     @Override
-    public DefaultChannelGroupFuture addListener(GenericFutureListener<? extends Future<Void>> listener) {
+    public DefaultChannelGroupFuture addListener(GenericFutureListener<? extends Future<? super Void>> listener) {
         super.addListener(listener);
         return this;
     }
 
     @Override
-    public DefaultChannelGroupFuture addListeners(GenericFutureListener<? extends Future<Void>>... listeners) {
+    public DefaultChannelGroupFuture addListeners(GenericFutureListener<? extends Future<? super Void>>... listeners) {
         super.addListeners(listeners);
         return this;
     }
 
     @Override
-    public DefaultChannelGroupFuture removeListener(GenericFutureListener<? extends Future<Void>> listener) {
+    public DefaultChannelGroupFuture removeListener(GenericFutureListener<? extends Future<? super Void>> listener) {
         super.removeListener(listener);
         return this;
     }
 
     @Override
-    public DefaultChannelGroupFuture removeListeners(GenericFutureListener<? extends Future<Void>>... listeners) {
+    public DefaultChannelGroupFuture removeListeners(
+            GenericFutureListener<? extends Future<? super Void>>... listeners) {
         super.removeListeners(listeners);
         return this;
     }
@@ -236,7 +232,7 @@ final class DefaultChannelGroupFuture extends DefaultPromise<Void> implements Ch
     @Override
     protected void checkDeadLock() {
         EventExecutor e = executor();
-        if (e != null && !(e instanceof ImmediateEventExecutor) && e.inEventLoop()) {
+        if (e != null && e != ImmediateEventExecutor.INSTANCE && e.inEventLoop()) {
             throw new BlockingOperationException();
         }
     }

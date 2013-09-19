@@ -18,10 +18,9 @@ package io.netty.example.udt.echo.rendezvous;
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Meter;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.udt.UdtMessage;
 import io.netty.channel.udt.nio.NioUdtProvider;
 
@@ -35,13 +34,14 @@ import java.util.logging.Logger;
  * activation.
  */
 public class MsgEchoPeerHandler extends
-        ChannelInboundMessageHandlerAdapter<UdtMessage> {
+        SimpleChannelInboundHandler<UdtMessage> {
 
     private static final Logger log = Logger.getLogger(MsgEchoPeerHandler.class.getName());
 
     private final UdtMessage message;
 
     public MsgEchoPeerHandler(final int messageSize) {
+        super(false);
         final ByteBuf byteBuf = Unpooled.buffer(messageSize);
         for (int i = 0; i < byteBuf.capacity(); i++) {
             byteBuf.writeByte((byte) i);
@@ -55,9 +55,7 @@ public class MsgEchoPeerHandler extends
     @Override
     public void channelActive(final ChannelHandlerContext ctx) throws Exception {
         log.info("ECHO active " + NioUdtProvider.socketUDT(ctx.channel()).toStringOptions());
-        final MessageBuf<Object> out = ctx.nextOutboundMessageBuffer();
-        out.add(message);
-        ctx.flush();
+        ctx.writeAndFlush(message);
     }
 
     @Override
@@ -68,13 +66,14 @@ public class MsgEchoPeerHandler extends
     }
 
     @Override
-    public void messageReceived(final ChannelHandlerContext ctx,
-            final UdtMessage message) throws Exception {
-        final ByteBuf byteBuf = message.content();
-        meter.mark(byteBuf.readableBytes());
-        final MessageBuf<Object> out = ctx.nextOutboundMessageBuffer();
-        out.add(message.retain());
-        ctx.flush();
+    public void channelRead0(ChannelHandlerContext ctx, UdtMessage message) throws Exception {
+        meter.mark(message.content().readableBytes());
+
+        ctx.write(message);
     }
 
+    @Override
+    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        ctx.flush();
+    }
 }

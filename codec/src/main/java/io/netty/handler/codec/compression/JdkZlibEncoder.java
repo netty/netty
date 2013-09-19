@@ -16,14 +16,14 @@
 package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelPromiseNotifier;
+import io.netty.util.concurrent.EventExecutor;
 
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.zip.CRC32;
 import java.util.zip.Deflater;
 
@@ -35,7 +35,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
 
     private final byte[] encodeBuf = new byte[8192];
     private final Deflater deflater;
-    private final AtomicBoolean finished = new AtomicBoolean();
+    private volatile boolean finished;
     private volatile ChannelHandlerContext ctx;
 
     /*
@@ -158,8 +158,22 @@ public class JdkZlibEncoder extends ZlibEncoder {
     }
 
     @Override
-    public ChannelFuture close(ChannelPromise future) {
-        return finishEncode(ctx(), future);
+    public ChannelFuture close(final ChannelPromise promise) {
+        ChannelHandlerContext ctx = ctx();
+        EventExecutor executor = ctx.executor();
+        if (executor.inEventLoop()) {
+            return finishEncode(ctx, promise);
+        } else {
+            final ChannelPromise p = ctx.newPromise();
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    ChannelFuture f = finishEncode(ctx(), p);
+                    f.addListener(new ChannelPromiseNotifier(promise));
+                }
+            });
+            return p;
+        }
     }
 
     private ChannelHandlerContext ctx() {
@@ -172,37 +186,34 @@ public class JdkZlibEncoder extends ZlibEncoder {
 
     @Override
     public boolean isClosed() {
-        return finished.get();
+        return finished;
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
-        if (finished.get()) {
-            out.writeBytes(in);
+    protected void encode(ChannelHandlerContext ctx, ByteBuf uncompressed, ByteBuf out) throws Exception {
+        if (finished) {
+            out.writeBytes(uncompressed);
             return;
         }
 
-        ByteBuf uncompressed = in;
         byte[] inAry = new byte[uncompressed.readableBytes()];
         uncompressed.readBytes(inAry);
 
         int sizeEstimate = (int) Math.ceil(inAry.length * 1.001) + 12;
         out.ensureWritable(sizeEstimate);
 
-        synchronized (deflater) {
-            if (gzip) {
-                crc.update(inAry);
-                if (writeHeader) {
-                    out.writeBytes(gzipHeader);
-                    writeHeader = false;
-                }
+        if (gzip) {
+            crc.update(inAry);
+            if (writeHeader) {
+                out.writeBytes(gzipHeader);
+                writeHeader = false;
             }
+        }
 
-            deflater.setInput(inAry);
-            while (!deflater.needsInput()) {
-                int numBytes = deflater.deflate(encodeBuf, 0, encodeBuf.length, Deflater.SYNC_FLUSH);
-                out.writeBytes(encodeBuf, 0, numBytes);
-            }
+        deflater.setInput(inAry);
+        while (!deflater.needsInput()) {
+            int numBytes = deflater.deflate(encodeBuf, 0, encodeBuf.length, Deflater.SYNC_FLUSH);
+            out.writeBytes(encodeBuf, 0, numBytes);
         }
     }
 
@@ -228,37 +239,32 @@ public class JdkZlibEncoder extends ZlibEncoder {
     }
 
     private ChannelFuture finishEncode(final ChannelHandlerContext ctx, ChannelPromise promise) {
-        if (!finished.compareAndSet(false, true)) {
+        if (finished) {
             promise.setSuccess();
             return promise;
         }
 
-        ByteBuf footer = Unpooled.buffer();
-        synchronized (deflater) {
-            deflater.finish();
-            while (!deflater.finished()) {
-                int numBytes = deflater.deflate(encodeBuf, 0, encodeBuf.length);
-                footer.writeBytes(encodeBuf, 0, numBytes);
-            }
-            if (gzip) {
-                int crcValue = (int) crc.getValue();
-                int uncBytes = deflater.getTotalIn();
-                footer.writeByte(crcValue);
-                footer.writeByte(crcValue >>> 8);
-                footer.writeByte(crcValue >>> 16);
-                footer.writeByte(crcValue >>> 24);
-                footer.writeByte(uncBytes);
-                footer.writeByte(uncBytes >>> 8);
-                footer.writeByte(uncBytes >>> 16);
-                footer.writeByte(uncBytes >>> 24);
-            }
-            deflater.end();
+        finished = true;
+        ByteBuf footer = ctx.alloc().buffer();
+        deflater.finish();
+        while (!deflater.finished()) {
+            int numBytes = deflater.deflate(encodeBuf, 0, encodeBuf.length);
+            footer.writeBytes(encodeBuf, 0, numBytes);
         }
-
-        ctx.nextOutboundByteBuffer().writeBytes(footer);
-        ctx.flush(promise);
-
-        return promise;
+        if (gzip) {
+            int crcValue = (int) crc.getValue();
+            int uncBytes = deflater.getTotalIn();
+            footer.writeByte(crcValue);
+            footer.writeByte(crcValue >>> 8);
+            footer.writeByte(crcValue >>> 16);
+            footer.writeByte(crcValue >>> 24);
+            footer.writeByte(uncBytes);
+            footer.writeByte(uncBytes >>> 8);
+            footer.writeByte(uncBytes >>> 16);
+            footer.writeByte(uncBytes >>> 24);
+        }
+        deflater.end();
+        return ctx.writeAndFlush(footer, promise);
     }
 
     @Override

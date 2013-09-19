@@ -16,12 +16,12 @@
 package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.ByteToByteDecoder;
+import io.netty.handler.codec.ByteToMessageDecoder;
 
 /**
  * Decompresses a {@link ByteBuf} using the deflate algorithm.
  */
-public abstract class ZlibDecoder extends ByteToByteDecoder {
+public abstract class ZlibDecoder extends ByteToMessageDecoder {
 
     /**
      * Returns {@code true} if and only if the end of the compressed stream

@@ -28,7 +28,7 @@ import io.netty.channel.ChannelPipeline;
 
 /**
  * {@link AbstractNotificationHandler} implementation which will handle all {@link Notification}s by trigger a
- * {@link SctpNotificationEvent} in the {@link ChannelPipeline} of a {@link SctpChannel}.
+ * {@link Notification} user event in the {@link ChannelPipeline} of a {@link SctpChannel}.
  */
 public final class SctpNotificationHandler extends AbstractNotificationHandler<Object> {
 
@@ -43,31 +43,31 @@ public final class SctpNotificationHandler extends AbstractNotificationHandler<O
 
     @Override
     public HandlerResult handleNotification(AssociationChangeNotification notification, Object o) {
-        fireEvent(notification, o);
+        fireEvent(notification);
         return HandlerResult.CONTINUE;
     }
 
     @Override
     public HandlerResult handleNotification(PeerAddressChangeNotification notification, Object o) {
-        fireEvent(notification, o);
+        fireEvent(notification);
         return HandlerResult.CONTINUE;
     }
 
     @Override
     public HandlerResult handleNotification(SendFailedNotification notification, Object o) {
-        fireEvent(notification, o);
+        fireEvent(notification);
         return HandlerResult.CONTINUE;
     }
 
     @Override
     public HandlerResult handleNotification(ShutdownNotification notification, Object o) {
-        fireEvent(notification, o);
+        fireEvent(notification);
         sctpChannel.close();
         return HandlerResult.RETURN;
     }
 
-    private void fireEvent(Notification notification, Object o) {
-        sctpChannel.pipeline().fireUserEventTriggered(new SctpNotificationEvent(notification, o));
+    private void fireEvent(Notification notification) {
+        sctpChannel.pipeline().fireUserEventTriggered(notification);
     }
 }
 

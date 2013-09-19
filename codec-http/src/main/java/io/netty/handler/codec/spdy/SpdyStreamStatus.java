@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,7 +16,7 @@
 package io.netty.handler.codec.spdy;
 
 /**
- * The SPDY stream getStatus code and its description.
+ * The SPDY stream status code and its description.
  */
 public class SpdyStreamStatus implements Comparable<SpdyStreamStatus> {
 
@@ -88,13 +88,13 @@ public class SpdyStreamStatus implements Comparable<SpdyStreamStatus> {
 
     /**
      * Returns the {@link SpdyStreamStatus} represented by the specified code.
-     * If the specified code is a defined SPDY getStatus code, a cached instance
+     * If the specified code is a defined SPDY status code, a cached instance
      * will be returned.  Otherwise, a new instance will be returned.
      */
     public static SpdyStreamStatus valueOf(int code) {
         if (code == 0) {
             throw new IllegalArgumentException(
-                    "0 is not a valid getStatus code for a RST_STREAM");
+                    "0 is not a valid status code for a RST_STREAM");
         }
 
         switch (code) {
@@ -136,7 +136,7 @@ public class SpdyStreamStatus implements Comparable<SpdyStreamStatus> {
     public SpdyStreamStatus(int code, String statusPhrase) {
         if (code == 0) {
             throw new IllegalArgumentException(
-                    "0 is not a valid getStatus code for a RST_STREAM");
+                    "0 is not a valid status code for a RST_STREAM");
         }
 
         if (statusPhrase == null) {
@@ -148,14 +148,14 @@ public class SpdyStreamStatus implements Comparable<SpdyStreamStatus> {
     }
 
     /**
-     * Returns the code of this getStatus.
+     * Returns the code of this status.
      */
     public int getCode() {
         return code;
     }
 
     /**
-     * Returns the getStatus phrase of this getStatus.
+     * Returns the status phrase of this status.
      */
     public String getStatusPhrase() {
         return statusPhrase;

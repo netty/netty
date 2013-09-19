@@ -40,6 +40,11 @@ public interface LastHttpContent extends HttpContent {
         }
 
         @Override
+        public LastHttpContent duplicate() {
+            return this;
+        }
+
+        @Override
         public HttpHeaders trailingHeaders() {
             return HttpHeaders.EMPTY_HEADERS;
         }
@@ -90,4 +95,7 @@ public interface LastHttpContent extends HttpContent {
 
     @Override
     LastHttpContent retain();
+
+    @Override
+    LastHttpContent duplicate();
 }

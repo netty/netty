@@ -16,12 +16,12 @@
 package io.netty.example.factorial;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.CorruptedFrameException;
 
 import java.math.BigInteger;
+import java.util.List;
 
 /**
  * Decodes the binary representation of a {@link BigInteger} prepended
@@ -32,7 +32,7 @@ import java.math.BigInteger;
 public class BigIntegerDecoder extends ByteToMessageDecoder {
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, MessageBuf<Object> out) {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
         // Wait until the length prefix is available.
         if (in.readableBytes() < 5) {
             return;

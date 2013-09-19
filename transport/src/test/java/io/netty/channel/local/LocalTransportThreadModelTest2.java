@@ -17,15 +17,14 @@ package io.netty.channel.local;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.Test;
 
-import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.*;
@@ -73,28 +72,9 @@ public class LocalTransportThreadModelTest2 {
     public void close(final Channel localChannel, final LocalHander localRegistrationHandler) {
         // we want to make sure we actually shutdown IN the event loop
         if (localChannel.eventLoop().inEventLoop()) {
-            MessageBuf<Object> outboundMessageBuffer =
-                    localChannel.pipeline().outboundMessageBuffer();
-            if (!outboundMessageBuffer.isEmpty()) {
-                System.err.println("NOT EMPTY TO SEND!");
-            }
-
             // Wait until all messages are flushed before closing the channel.
             if (localRegistrationHandler.lastWriteFuture != null) {
                 localRegistrationHandler.lastWriteFuture.awaitUninterruptibly();
-            }
-
-            MessageBuf<Object> inboundMessageBuffer =
-                    localChannel.pipeline().inboundMessageBuffer();
-            if (!inboundMessageBuffer.isEmpty()) {
-                // sometimes we close the pipeline before everything on it has been notified/received.
-                // we want these messages, since they are in our queue.
-                Iterator<Object> iterator = inboundMessageBuffer.iterator();
-                while (iterator.hasNext()) {
-                    Object next = iterator.next();
-                    System.err.println("DEFERRED on close: " + next);
-                    iterator.remove();
-                }
             }
 
             localChannel.close();
@@ -113,7 +93,7 @@ public class LocalTransportThreadModelTest2 {
     }
 
     @Sharable
-    static class LocalHander extends ChannelInboundMessageHandlerAdapter<Object> {
+    static class LocalHander extends ChannelInboundHandlerAdapter {
         private final String name;
 
         public volatile ChannelFuture lastWriteFuture;
@@ -129,11 +109,13 @@ public class LocalTransportThreadModelTest2 {
             for (int i = 0; i < messageCountPerRun; i ++) {
                 lastWriteFuture = ctx.channel().write(name + ' ' + i);
             }
+            ctx.channel().flush();
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             count.incrementAndGet();
+            ReferenceCountUtil.release(msg);
         }
     }
 }

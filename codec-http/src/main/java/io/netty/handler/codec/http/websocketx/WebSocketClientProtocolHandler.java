@@ -16,11 +16,12 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelStateHandler;
 import io.netty.handler.codec.http.HttpHeaders;
 
 import java.net.URI;
+import java.util.List;
 
 /**
  * This handler does all the heavy lifting for you to run a websocket client.
@@ -33,7 +34,7 @@ import java.net.URI;
  * This implementation will establish the websocket connection once the connection to the remote server was complete.
  *
  * To know once a handshake was done you can intercept the
- * {@link ChannelStateHandler#userEventTriggered(ChannelHandlerContext, Object)} and check if the event was of type
+ * {@link ChannelInboundHandler#userEventTriggered(ChannelHandlerContext, Object)} and check if the event was of type
  * {@link ClientHandshakeStateEvent#HANDSHAKE_ISSUED} or {@link ClientHandshakeStateEvent#HANDSHAKE_COMPLETE}.
  */
 public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
@@ -128,12 +129,12 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, WebSocketFrame frame) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, WebSocketFrame frame, List<Object> out) throws Exception {
         if (handleCloseFrames && frame instanceof CloseWebSocketFrame) {
             ctx.close();
             return;
         }
-        super.messageReceived(ctx, frame);
+        super.decode(ctx, frame, out);
     }
 
     @Override

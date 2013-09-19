@@ -17,9 +17,8 @@
 package io.netty.bootstrap;
 
 import io.netty.channel.ChannelHandler.Sharable;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandler;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
@@ -38,7 +37,7 @@ public class BootstrapTest {
         EventLoopGroup groupB = new LocalEventLoopGroup(1);
 
         try {
-            ChannelInboundMessageHandler<Object> dummyHandler = new DummyHandler();
+            ChannelInboundHandler dummyHandler = new DummyHandler();
 
             final Bootstrap bootstrapA = new Bootstrap();
             bootstrapA.group(groupA);
@@ -75,6 +74,8 @@ public class BootstrapTest {
         } finally {
             groupA.shutdownGracefully();
             groupB.shutdownGracefully();
+            groupA.terminationFuture().sync();
+            groupB.terminationFuture().sync();
         }
     }
 
@@ -84,7 +85,7 @@ public class BootstrapTest {
         EventLoopGroup groupB = new LocalEventLoopGroup(1);
 
         try {
-            ChannelInboundMessageHandler<Object> dummyHandler = new DummyHandler();
+            ChannelInboundHandler dummyHandler = new DummyHandler();
 
             final Bootstrap bootstrapA = new Bootstrap();
             bootstrapA.group(groupA);
@@ -121,14 +122,11 @@ public class BootstrapTest {
         } finally {
             groupA.shutdownGracefully();
             groupB.shutdownGracefully();
+            groupA.terminationFuture().sync();
+            groupB.terminationFuture().sync();
         }
     }
 
     @Sharable
-    private static final class DummyHandler extends ChannelInboundMessageHandlerAdapter<Object> {
-        @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
-            // NOOP
-        }
-    }
+    private static final class DummyHandler extends ChannelInboundHandlerAdapter { }
 }

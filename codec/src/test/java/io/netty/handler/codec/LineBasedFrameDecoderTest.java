@@ -16,7 +16,7 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.embedded.EmbeddedByteChannel;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import org.junit.Test;
 
@@ -27,7 +27,7 @@ import static org.junit.Assert.*;
 public class LineBasedFrameDecoderTest {
     @Test
     public void testDecodeWithStrip() throws Exception {
-        EmbeddedByteChannel ch = new EmbeddedByteChannel(new LineBasedFrameDecoder(8192, true, false));
+        EmbeddedChannel ch = new EmbeddedChannel(new LineBasedFrameDecoder(8192, true, false));
 
         ch.writeInbound(copiedBuffer("first\r\nsecond\nthird", CharsetUtil.US_ASCII));
         assertEquals("first", ((ByteBuf) ch.readInbound()).toString(CharsetUtil.US_ASCII));
@@ -37,7 +37,7 @@ public class LineBasedFrameDecoderTest {
 
     @Test
     public void testDecodeWithoutStrip() throws Exception {
-        EmbeddedByteChannel ch = new EmbeddedByteChannel(new LineBasedFrameDecoder(8192, false, false));
+        EmbeddedChannel ch = new EmbeddedChannel(new LineBasedFrameDecoder(8192, false, false));
 
         ch.writeInbound(copiedBuffer("first\r\nsecond\nthird", CharsetUtil.US_ASCII));
         assertEquals("first\r\n", ((ByteBuf) ch.readInbound()).toString(CharsetUtil.US_ASCII));
@@ -47,7 +47,7 @@ public class LineBasedFrameDecoderTest {
 
     @Test
     public void testTooLongLine1() throws Exception {
-        EmbeddedByteChannel ch = new EmbeddedByteChannel(new LineBasedFrameDecoder(16, false, false));
+        EmbeddedChannel ch = new EmbeddedChannel(new LineBasedFrameDecoder(16, false, false));
 
         try {
             ch.writeInbound(copiedBuffer("12345678901234567890\r\nfirst\nsecond", CharsetUtil.US_ASCII));
@@ -62,7 +62,7 @@ public class LineBasedFrameDecoderTest {
 
     @Test
     public void testTooLongLine2() throws Exception {
-        EmbeddedByteChannel ch = new EmbeddedByteChannel(new LineBasedFrameDecoder(16, false, false));
+        EmbeddedChannel ch = new EmbeddedChannel(new LineBasedFrameDecoder(16, false, false));
 
         assertFalse(ch.writeInbound(copiedBuffer("12345678901234567", CharsetUtil.US_ASCII)));
         try {
@@ -78,7 +78,7 @@ public class LineBasedFrameDecoderTest {
 
     @Test
     public void testTooLongLineWithFailFast() throws Exception {
-        EmbeddedByteChannel ch = new EmbeddedByteChannel(new LineBasedFrameDecoder(16, false, true));
+        EmbeddedChannel ch = new EmbeddedChannel(new LineBasedFrameDecoder(16, false, true));
 
         try {
             ch.writeInbound(copiedBuffer("12345678901234567", CharsetUtil.US_ASCII));

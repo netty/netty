@@ -38,7 +38,7 @@ public class TelnetServer {
             ServerBootstrap b = new ServerBootstrap();
             b.group(bossGroup, workerGroup)
              .channel(NioServerSocketChannel.class)
-             .childHandler(new TelnetServerPipelineFactory());
+             .childHandler(new TelnetServerInitializer());
 
             b.bind(port).sync().channel().closeFuture().sync();
         } finally {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -20,9 +20,9 @@ import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
 
 /**
- * A SPDY Protocol Data Frame
+ * A SPDY Protocol DATA Frame
  */
-public interface SpdyDataFrame extends ByteBufHolder, SpdyStreamFrame, SpdyDataOrControlFrame {
+public interface SpdyDataFrame extends ByteBufHolder, SpdyStreamFrame {
 
     @Override
     SpdyDataFrame setStreamId(int streamID);
@@ -41,6 +41,9 @@ public interface SpdyDataFrame extends ByteBufHolder, SpdyStreamFrame, SpdyDataO
 
     @Override
     SpdyDataFrame copy();
+
+    @Override
+    SpdyDataFrame duplicate();
 
     @Override
     SpdyDataFrame retain();

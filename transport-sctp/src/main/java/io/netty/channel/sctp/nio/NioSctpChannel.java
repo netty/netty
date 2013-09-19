@@ -19,14 +19,15 @@ import com.sun.nio.sctp.Association;
 import com.sun.nio.sctp.MessageInfo;
 import com.sun.nio.sctp.NotificationHandler;
 import com.sun.nio.sctp.SctpChannel;
-import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.MessageBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.sctp.DefaultSctpChannelConfig;
 import io.netty.channel.sctp.SctpChannelConfig;
@@ -47,6 +48,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -57,14 +59,15 @@ import java.util.Set;
  * to understand what you need to do to use it. Also this feature is only supported on Java 7+.
  */
 public class NioSctpChannel extends AbstractNioMessageChannel implements io.netty.channel.sctp.SctpChannel {
-    private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.MESSAGE, false);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioSctpChannel.class);
 
     private final SctpChannelConfig config;
 
-    @SuppressWarnings("rawtypes")
-    private final NotificationHandler notificationHandler;
+    private final NotificationHandler<?> notificationHandler;
+
+    private RecvByteBufAllocator.Handle allocHandle;
 
     private static SctpChannel newSctpChannel() {
         try {
@@ -85,7 +88,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
      * Create a new instance using {@link SctpChannel}
      */
     public NioSctpChannel(SctpChannel sctpChannel) {
-        this(null, null, sctpChannel);
+        this(null, sctpChannel);
     }
 
     /**
@@ -93,12 +96,10 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
      *
      * @param parent        the {@link Channel} which is the parent of this {@link NioSctpChannel}
      *                      or {@code null}.
-     * @param id            the id to use for this instance or {@code null} if a new once should be
-     *                      generated
      * @param sctpChannel   the underlying {@link SctpChannel}
      */
-    public NioSctpChannel(Channel parent, Integer id, SctpChannel sctpChannel) {
-        super(parent, id, sctpChannel, SelectionKey.OP_READ);
+    public NioSctpChannel(Channel parent, SctpChannel sctpChannel) {
+        super(parent, sctpChannel, SelectionKey.OP_READ);
         try {
             sctpChannel.configureBlocking(false);
             config = new DefaultSctpChannelConfig(this, sctpChannel);
@@ -259,11 +260,15 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
         javaChannel().close();
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    protected int doReadMessages(MessageBuf<Object> buf) throws Exception {
+    protected int doReadMessages(List<Object> buf) throws Exception {
         SctpChannel ch = javaChannel();
-        ByteBuf buffer = alloc().directBuffer(config().getReceiveBufferSize());
+
+        RecvByteBufAllocator.Handle allocHandle = this.allocHandle;
+        if (allocHandle == null) {
+            this.allocHandle = allocHandle = config().getRecvByteBufAllocator().newHandle();
+        }
+        ByteBuf buffer = allocHandle.allocate(config().getAllocator());
         boolean free = true;
         try {
             ByteBuffer data = buffer.nioBuffer(buffer.writerIndex(), buffer.writableBytes());
@@ -280,6 +285,8 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
             PlatformDependent.throwException(cause);
             return -1;
         }  finally {
+            int bytesRead = buffer.readableBytes();
+            allocHandle.record(bytesRead);
             if (free) {
                 buffer.release();
             }
@@ -287,17 +294,27 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     }
 
     @Override
-    protected int doWriteMessages(MessageBuf<Object> buf, boolean lastSpin) throws Exception {
-        SctpMessage packet = (SctpMessage) buf.peek();
+    protected boolean doWriteMessage(Object msg, ChannelOutboundBuffer in) throws Exception {
+        SctpMessage packet = (SctpMessage) msg;
         ByteBuf data = packet.content();
         int dataLen = data.readableBytes();
+        if (dataLen == 0) {
+            return true;
+        }
+
+        ByteBufAllocator alloc = alloc();
+        boolean needsCopy = data.nioBufferCount() != 1;
+        if (!needsCopy) {
+            if (!data.isDirect() && alloc.isDirectBufferPooled()) {
+                needsCopy = true;
+            }
+        }
         ByteBuffer nioData;
-        if (data.nioBufferCount() == 1) {
+        if (!needsCopy) {
             nioData = data.nioBuffer();
         } else {
-            nioData = ByteBuffer.allocate(dataLen);
-            data.getBytes(data.readerIndex(), nioData);
-            nioData.flip();
+            data = alloc.directBuffer(dataLen).writeBytes(data);
+            nioData = data.nioBuffer();
         }
 
         final MessageInfo mi = MessageInfo.createOutgoing(association(), null, packet.streamIdentifier());
@@ -306,35 +323,15 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
 
         final int writtenBytes = javaChannel().send(nioData, mi);
 
-        final SelectionKey key = selectionKey();
-        final int interestOps = key.interestOps();
-        if (writtenBytes <= 0 && dataLen > 0) {
-            // Did not write a packet.
-            // 1) If 'lastSpin' is false, the caller will call this method again real soon.
-            //    - Do not update OP_WRITE.
-            // 2) If 'lastSpin' is true, the caller will not retry.
-            //    - Set OP_WRITE so that the event loop calls flushForcibly() later.
-            if (lastSpin) {
-                if ((interestOps & SelectionKey.OP_WRITE) == 0) {
-                    key.interestOps(interestOps | SelectionKey.OP_WRITE);
-                }
-            }
-            return 0;
-        }
-
-        // Wrote a packet.
-        buf.remove();
-
-        // packet was written free up buffer
-        packet.release();
-
-        if (buf.isEmpty()) {
-            // Wrote the outbound buffer completely - clear OP_WRITE.
-            if ((interestOps & SelectionKey.OP_WRITE) != 0) {
-                key.interestOps(interestOps & ~SelectionKey.OP_WRITE);
+        boolean done = writtenBytes > 0;
+        if (needsCopy) {
+            if (!done) {
+                in.current(new SctpMessage(mi, data));
+            } else {
+                in.current(data);
             }
         }
-        return 1;
+        return done;
     }
 
     @Override

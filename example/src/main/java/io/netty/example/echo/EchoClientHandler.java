@@ -18,7 +18,7 @@ package io.netty.example.echo;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundByteHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -28,7 +28,7 @@ import java.util.logging.Logger;
  * traffic between the echo client and server by sending the first message to
  * the server.
  */
-public class EchoClientHandler extends ChannelInboundByteHandlerAdapter {
+public class EchoClientHandler extends ChannelInboundHandlerAdapter {
 
     private static final Logger logger = Logger.getLogger(
             EchoClientHandler.class.getName());
@@ -50,14 +50,17 @@ public class EchoClientHandler extends ChannelInboundByteHandlerAdapter {
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
-        ctx.write(firstMessage);
+        ctx.writeAndFlush(firstMessage);
     }
 
     @Override
-    public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) {
-        ByteBuf out = ctx.nextOutboundByteBuffer();
-        out.writeBytes(in);
-        ctx.flush();
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        ctx.write(msg);
+    }
+
+    @Override
+    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+       ctx.flush();
     }
 
     @Override

@@ -104,16 +104,16 @@ public class WebSocketClient {
             // Send 10 messages and wait for responses
             System.out.println("WebSocket Client sending message");
             for (int i = 0; i < 10; i++) {
-                ch.write(new TextWebSocketFrame("Message #" + i));
+                ch.writeAndFlush(new TextWebSocketFrame("Message #" + i));
             }
 
             // Ping
             System.out.println("WebSocket Client sending ping");
-            ch.write(new PingWebSocketFrame(Unpooled.copiedBuffer(new byte[]{1, 2, 3, 4, 5, 6})));
+            ch.writeAndFlush(new PingWebSocketFrame(Unpooled.copiedBuffer(new byte[]{1, 2, 3, 4, 5, 6})));
 
             // Close
             System.out.println("WebSocket Client sending close");
-            ch.write(new CloseWebSocketFrame());
+            ch.writeAndFlush(new CloseWebSocketFrame());
 
             // WebSocketClientHandler will close the connection when the server
             // responds to the CloseWebSocketFrame.

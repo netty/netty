@@ -15,8 +15,6 @@
  */
 package io.netty.channel;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.ServerSocketChannel;
@@ -71,11 +69,6 @@ import java.net.SocketAddress;
 public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPropertyAccess, Comparable<Channel> {
 
     /**
-     * Returns the unique integer ID of this channel. The returned value MUST be non {@code null}.
-     */
-    Integer id();
-
-    /**
      * Return the {@link EventLoop} this {@link Channel} was registered too.
      */
     EventLoop eventLoop();
@@ -114,22 +107,6 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
     ChannelMetadata metadata();
 
     /**
-     * Return the last {@link ByteBuf} of the {@link ChannelPipeline} which belongs to this {@link Channel}.
-     *
-     * This method may throw an {@link NoSuchBufferException} if you try to access this buffer and the
-     * {@link ChannelPipeline} does not contain any {@link ByteBuf}.
-     */
-    ByteBuf outboundByteBuffer();
-
-    /**
-     * Return the last {@link MessageBuf} of the {@link ChannelPipeline} which belongs to this {@link Channel}.
-     *
-     * This method may throw an {@link NoSuchBufferException} if you try to access this buffer and the
-     * {@link ChannelPipeline} does not contain any {@link MessageBuf}.
-     */
-    <T> MessageBuf<T> outboundMessageBuffer();
-
-    /**
      * Returns the local address where this channel is bound to.  The returned
      * {@link SocketAddress} is supposed to be down-cast into more concrete
      * type such as {@link InetSocketAddress} to retrieve the detailed
@@ -163,6 +140,20 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
     ChannelFuture closeFuture();
 
     /**
+     * Returns {@code true} if and only if the I/O thread will perform the
+     * requested write operation immediately.  Any write requests made when
+     * this method returns {@code false} are queued until the I/O thread is
+     * ready to process the queued write requests.
+     */
+    boolean isWritable();
+
+    @Override
+    Channel flush();
+
+    @Override
+    Channel read();
+
+    /**
      * Returns an <em>internal-use-only</em> object that provides unsafe operations.
      */
     Unsafe unsafe();
@@ -172,7 +163,6 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
      * are only provided to implement the actual transport, and must be invoked from an I/O thread except for the
      * following methods:
      * <ul>
-     *   <li>{@link #headContext()}</li>
      *   <li>{@link #localAddress()}</li>
      *   <li>{@link #remoteAddress()}</li>
      *   <li>{@link #closeForcibly()}</li>
@@ -181,11 +171,6 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
      * </ul>
      */
     interface Unsafe {
-        /**
-         * Return the internal {@link ChannelHandlerContext} that is placed before all user handlers.
-         */
-        ChannelHandlerContext headContext();
-
         /**
          * Return the {@link SocketAddress} to which is bound local or
          * {@code null} if none.
@@ -238,34 +223,20 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
         void closeForcibly();
 
         /**
-         * Deregister the {@link Channel} of the {@link ChannelPromise} from {@link EventLoop} and notify the
-         * {@link ChannelPromise} once the operation was complete.
-         */
-        void deregister(ChannelPromise promise);
-
-        /**
          * Schedules a read operation that fills the inbound buffer of the first {@link ChannelInboundHandler} in the
          * {@link ChannelPipeline}.  If there's already a pending read operation, this method does nothing.
          */
         void beginRead();
 
         /**
-         * Flush out all data that was buffered in the buffer of the {@link #headContext()} and was not
-         * flushed out yet. After that is done the {@link ChannelFuture} will get notified
+         * Schedules a write operation.
          */
-        void flush(ChannelPromise promise);
+        void write(Object msg, ChannelPromise promise);
 
         /**
-         * Flush out all data now.
+         * Flush out all write operations scheduled via {@link #write(Object, ChannelPromise)}.
          */
-        void flushNow();
-
-        /**
-         * Send a {@link FileRegion} to the remote peer and notify the {@link ChannelPromise} once it completes
-         * or an error was detected. Once the {@link FileRegion} was transfered or an error was thrown it will
-         * automaticly call {@link FileRegion#release()}.
-         */
-        void sendFile(FileRegion region, ChannelPromise promise);
+        void flush();
 
         /**
          * Return a special ChannelPromise which can be reused and passed to the operations in {@link Unsafe}.
@@ -273,5 +244,10 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
          * that take a {@link ChannelPromise} as argument but for which you not want to get notified.
          */
         ChannelPromise voidPromise();
+
+        /**
+         * Returns the {@link ChannelOutboundBuffer} of the {@link Channel} where the pending write requests are stored.
+         */
+        ChannelOutboundBuffer outboundBuffer();
     }
 }

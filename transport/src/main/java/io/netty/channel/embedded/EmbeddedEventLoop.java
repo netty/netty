@@ -21,6 +21,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.concurrent.AbstractEventExecutor;
+import io.netty.util.concurrent.Future;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
@@ -50,11 +51,20 @@ final class EmbeddedEventLoop extends AbstractEventExecutor implements EventLoop
     }
 
     @Override
-    public void shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) { }
+    public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Future<?> terminationFuture() {
+        throw new UnsupportedOperationException();
+    }
 
     @Override
     @Deprecated
-    public void shutdown() { }
+    public void shutdown() {
+        throw new UnsupportedOperationException();
+    }
 
     @Override
     public boolean isShuttingDown() {

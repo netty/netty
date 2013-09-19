@@ -16,11 +16,10 @@
 package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundByteHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -94,7 +93,7 @@ public class ServerSocketSuspendTest extends AbstractServerSocketTest {
     }
 
     @ChannelHandler.Sharable
-    private static final class AcceptedChannelCounter extends ChannelInboundByteHandlerAdapter {
+    private static final class AcceptedChannelCounter extends ChannelInboundHandlerAdapter {
 
         final CountDownLatch latch;
 
@@ -105,11 +104,6 @@ public class ServerSocketSuspendTest extends AbstractServerSocketTest {
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
             latch.countDown();
-        }
-
-        @Override
-        public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
-            // Unused
         }
     }
 }

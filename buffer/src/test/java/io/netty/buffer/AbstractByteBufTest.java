@@ -19,6 +19,7 @@ import io.netty.util.CharsetUtil;
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
@@ -30,6 +31,7 @@ import java.util.HashSet;
 import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static io.netty.buffer.Unpooled.*;
 import static io.netty.util.internal.EmptyArrays.*;
@@ -1253,6 +1255,7 @@ public abstract class AbstractByteBufTest {
             assertEquals(i, buffer.readerIndex());
             assertEquals(CAPACITY, buffer.writerIndex());
             ByteBuf actualValue = buffer.readSlice(BLOCK_SIZE);
+            assertEquals(buffer.order(), actualValue.order());
             assertEquals(wrappedBuffer(expectedValue), actualValue);
 
             // Make sure if it is a sliced buffer.
@@ -1567,7 +1570,7 @@ public abstract class AbstractByteBufTest {
         buffer.clear();
         buffer.writeBytes(value);
 
-        assertEquals(ByteBuffer.wrap(value), buffer.nioBuffer());
+        assertRemainingEquals(ByteBuffer.wrap(value), buffer.nioBuffer());
     }
 
     @Test
@@ -1580,8 +1583,20 @@ public abstract class AbstractByteBufTest {
         buffer.writeBytes(value);
 
         for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
-            assertEquals(ByteBuffer.wrap(value, i, BLOCK_SIZE), buffer.nioBuffer(i, BLOCK_SIZE));
+            assertRemainingEquals(ByteBuffer.wrap(value, i, BLOCK_SIZE), buffer.nioBuffer(i, BLOCK_SIZE));
         }
+    }
+
+    private static void assertRemainingEquals(ByteBuffer expected, ByteBuffer actual) {
+        int remaining = expected.remaining();
+        int remaining2 = actual.remaining();
+
+        assertEquals(remaining, remaining2);
+        byte[] array1 = new byte[remaining];
+        byte[] array2 = new byte[remaining2];
+        expected.get(array1);
+        actual.get(array2);
+        assertArrayEquals(array1, array2);
     }
 
     @Test
@@ -1646,5 +1661,105 @@ public abstract class AbstractByteBufTest {
         buffer.writerIndex(buffer.capacity());
         buffer.readerIndex(buffer.writerIndex());
         buffer.discardReadBytes();
+    }
+
+    @Test
+    public void testForEachByte() {
+        buffer.clear();
+        for (int i = 0; i < CAPACITY; i ++) {
+            buffer.writeByte(i + 1);
+        }
+
+        final AtomicInteger lastIndex = new AtomicInteger();
+        buffer.setIndex(CAPACITY / 4, CAPACITY * 3 / 4);
+        assertThat(buffer.forEachByte(new ByteBufProcessor() {
+            int i = CAPACITY / 4;
+
+            @Override
+            public boolean process(byte value) throws Exception {
+                assertThat(value, is((byte) (i + 1)));
+                lastIndex.set(i);
+                i ++;
+                return true;
+            }
+        }), is(-1));
+
+        assertThat(lastIndex.get(), is(CAPACITY * 3 / 4 - 1));
+    }
+
+    @Test
+    public void testForEachByteAbort() {
+        buffer.clear();
+        for (int i = 0; i < CAPACITY; i ++) {
+            buffer.writeByte(i + 1);
+        }
+
+        final int stop = CAPACITY / 2;
+        assertThat(buffer.forEachByte(CAPACITY / 3, CAPACITY / 3, new ByteBufProcessor() {
+            int i = CAPACITY / 3;
+
+            @Override
+            public boolean process(byte value) throws Exception {
+                assertThat(value, is((byte) (i + 1)));
+                if (i == stop) {
+                    return false;
+                }
+
+                i ++;
+                return true;
+            }
+        }), is(stop));
+    }
+
+    @Test
+    public void testForEachByteDesc() {
+        buffer.clear();
+        for (int i = 0; i < CAPACITY; i ++) {
+            buffer.writeByte(i + 1);
+        }
+
+        final AtomicInteger lastIndex = new AtomicInteger();
+        assertThat(buffer.forEachByteDesc(CAPACITY / 4, CAPACITY * 2 / 4, new ByteBufProcessor() {
+            int i = CAPACITY * 3 / 4 - 1;
+
+            @Override
+            public boolean process(byte value) throws Exception {
+                assertThat(value, is((byte) (i + 1)));
+                lastIndex.set(i);
+                i --;
+                return true;
+            }
+        }), is(-1));
+
+        assertThat(lastIndex.get(), is(CAPACITY / 4));
+    }
+
+    @Ignore
+    @Test
+    public void testInternalNioBuffer() {
+        testInternalNioBuffer(128);
+        testInternalNioBuffer(1024);
+        testInternalNioBuffer(4 * 1024);
+        testInternalNioBuffer(64 * 1024);
+        testInternalNioBuffer(32 * 1024 * 1024);
+        testInternalNioBuffer(64 * 1024 * 1024);
+    }
+
+    private void testInternalNioBuffer(int a) {
+        ByteBuf buffer = freeLater(newBuffer(2));
+        ByteBuffer buf = buffer.internalNioBuffer(0, 1);
+        assertEquals(1, buf.remaining());
+
+        for (int i = 0; i < a; i++) {
+            buffer.writeByte(i);
+        }
+
+        buf = buffer.internalNioBuffer(0, a);
+        assertEquals(a, buf.remaining());
+
+        for (int i = 0; i < a; i++) {
+            assertEquals((byte) i, buf.get());
+        }
+        assertFalse(buf.hasRemaining());
     }
 }

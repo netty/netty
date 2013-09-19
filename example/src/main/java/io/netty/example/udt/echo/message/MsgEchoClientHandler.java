@@ -18,10 +18,9 @@ package io.netty.example.udt.echo.message;
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Meter;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.udt.UdtMessage;
 import io.netty.channel.udt.nio.NioUdtProvider;
 
@@ -34,14 +33,14 @@ import java.util.logging.Logger;
  * traffic between the echo client and server by sending the first message to
  * the server on activation.
  */
-public class MsgEchoClientHandler extends
-        ChannelInboundMessageHandlerAdapter<UdtMessage> {
+public class MsgEchoClientHandler extends SimpleChannelInboundHandler<UdtMessage> {
 
     private static final Logger log = Logger.getLogger(MsgEchoClientHandler.class.getName());
 
     private final UdtMessage message;
 
     public MsgEchoClientHandler(final int messageSize) {
+        super(false);
         final ByteBuf byteBuf = Unpooled.buffer(messageSize);
         for (int i = 0; i < byteBuf.capacity(); i++) {
             byteBuf.writeByte((byte) i);
@@ -55,9 +54,7 @@ public class MsgEchoClientHandler extends
     @Override
     public void channelActive(final ChannelHandlerContext ctx) throws Exception {
         log.info("ECHO active " + NioUdtProvider.socketUDT(ctx.channel()).toStringOptions());
-        final MessageBuf<Object> out = ctx.nextOutboundMessageBuffer();
-        out.add(message);
-        ctx.flush();
+        ctx.writeAndFlush(message);
     }
 
     @Override
@@ -68,13 +65,14 @@ public class MsgEchoClientHandler extends
     }
 
     @Override
-    public void messageReceived(final ChannelHandlerContext ctx,
-            final UdtMessage message) throws Exception {
-        final ByteBuf byteBuf = message.content();
-        meter.mark(byteBuf.readableBytes());
-        final MessageBuf<Object> out = ctx.nextOutboundMessageBuffer();
-        out.add(message.retain());
-        ctx.flush();
+    public void channelRead0(ChannelHandlerContext ctx, UdtMessage msg) throws Exception {
+        meter.mark(msg.content().readableBytes());
+
+        ctx.write(msg);
     }
 
+    @Override
+    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        ctx.flush();
+    }
 }

@@ -16,9 +16,12 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.MessageToByteEncoder;
+import io.netty.handler.codec.MessageToMessageEncoder;
+
+import java.util.List;
 
 /**
  * Encodes a {@link WebSocketFrame} into a {@link ByteBuf}.
@@ -27,56 +30,71 @@ import io.netty.handler.codec.MessageToByteEncoder;
  * <tt>WebSocketServer</tt> example located in the {@code io.netty.example.http.websocket} package.
  */
 @Sharable
-public class WebSocket00FrameEncoder extends MessageToByteEncoder<WebSocketFrame> {
+public class WebSocket00FrameEncoder extends MessageToMessageEncoder<WebSocketFrame> implements WebSocketFrameEncoder {
+    private static final ByteBuf _0X00 = Unpooled.unreleasableBuffer(
+            Unpooled.directBuffer(1, 1).writeByte((byte) 0x00));
+    private static final ByteBuf _0XFF = Unpooled.unreleasableBuffer(
+            Unpooled.directBuffer(1, 1).writeByte((byte) 0xFF));
+    private static final ByteBuf _0XFF_0X00 = Unpooled.unreleasableBuffer(
+            Unpooled.directBuffer(2, 2).writeByte((byte) 0xFF).writeByte((byte) 0x00));
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, WebSocketFrame msg, ByteBuf out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, WebSocketFrame msg, List<Object> out) throws Exception {
         if (msg instanceof TextWebSocketFrame) {
             // Text frame
             ByteBuf data = msg.content();
-            out.writeByte((byte) 0x00);
-            out.writeBytes(data, data.readerIndex(), data.readableBytes());
-            out.writeByte((byte) 0xFF);
+
+            out.add(_0X00.duplicate());
+            out.add(data.retain());
+            out.add(_0XFF.duplicate());
         } else if (msg instanceof CloseWebSocketFrame) {
             // Close frame
-            out.writeByte((byte) 0xFF);
-            out.writeByte((byte) 0x00);
+            out.add(_0XFF_0X00);
         } else {
             // Binary frame
             ByteBuf data = msg.content();
             int dataLen = data.readableBytes();
-            out.ensureWritable(dataLen + 5);
 
-            // Encode type.
-            out.writeByte((byte) 0x80);
+            ByteBuf buf = ctx.alloc().buffer(5);
+            boolean release = true;
+            try {
+                // Encode type.
+                buf.writeByte((byte) 0x80);
 
-            // Encode length.
-            int b1 = dataLen >>> 28 & 0x7F;
-            int b2 = dataLen >>> 14 & 0x7F;
-            int b3 = dataLen >>> 7 & 0x7F;
-            int b4 = dataLen & 0x7F;
-            if (b1 == 0) {
-                if (b2 == 0) {
-                    if (b3 == 0) {
-                        out.writeByte(b4);
+                // Encode length.
+                int b1 = dataLen >>> 28 & 0x7F;
+                int b2 = dataLen >>> 14 & 0x7F;
+                int b3 = dataLen >>> 7 & 0x7F;
+                int b4 = dataLen & 0x7F;
+                if (b1 == 0) {
+                    if (b2 == 0) {
+                        if (b3 == 0) {
+                            buf.writeByte(b4);
+                        } else {
+                            buf.writeByte(b3 | 0x80);
+                            buf.writeByte(b4);
+                        }
                     } else {
-                        out.writeByte(b3 | 0x80);
-                        out.writeByte(b4);
+                        buf.writeByte(b2 | 0x80);
+                        buf.writeByte(b3 | 0x80);
+                        buf.writeByte(b4);
                     }
                 } else {
-                    out.writeByte(b2 | 0x80);
-                    out.writeByte(b3 | 0x80);
-                    out.writeByte(b4);
+                    buf.writeByte(b1 | 0x80);
+                    buf.writeByte(b2 | 0x80);
+                    buf.writeByte(b3 | 0x80);
+                    buf.writeByte(b4);
                 }
-            } else {
-                out.writeByte(b1 | 0x80);
-                out.writeByte(b2 | 0x80);
-                out.writeByte(b3 | 0x80);
-                out.writeByte(b4);
-            }
 
-            // Encode binary data.
-            out.writeBytes(data, data.readerIndex(), dataLen);
+                // Encode binary data.
+                out.add(buf);
+                out.add(data.retain());
+                release = false;
+            } finally {
+                if (release) {
+                    buf.release();
+                }
+            }
         }
     }
 }

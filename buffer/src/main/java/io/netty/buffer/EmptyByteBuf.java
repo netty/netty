@@ -31,7 +31,7 @@ import java.nio.charset.Charset;
 /**
  * An empty {@link ByteBuf} whose capacity and maximum capacity are all {@code 0}.
  */
-public final class EmptyByteBuf implements ByteBuf {
+public final class EmptyByteBuf extends ByteBuf {
 
     private static final ByteBuffer EMPTY_BYTE_BUFFER = ByteBuffer.allocateDirect(0);
     private static final long EMPTY_BYTE_BUFFER_ADDRESS;
@@ -168,19 +168,7 @@ public final class EmptyByteBuf implements ByteBuf {
     }
 
     @Override
-    @Deprecated
-    public boolean readable() {
-        return false;
-    }
-
-    @Override
     public boolean isWritable() {
-        return false;
-    }
-
-    @Override
-    @Deprecated
-    public boolean writable() {
         return false;
     }
 
@@ -228,12 +216,6 @@ public final class EmptyByteBuf implements ByteBuf {
             throw new IndexOutOfBoundsException();
         }
         return this;
-    }
-
-    @Override
-    @Deprecated
-    public ByteBuf ensureWritableBytes(int minWritableBytes) {
-        return ensureWritable(minWritableBytes);
     }
 
     @Override
@@ -668,30 +650,12 @@ public final class EmptyByteBuf implements ByteBuf {
     }
 
     @Override
-    public int indexOf(int fromIndex, int toIndex, ByteBufIndexFinder indexFinder) {
-        checkIndex(fromIndex);
-        checkIndex(toIndex);
-        return -1;
-    }
-
-    @Override
     public int bytesBefore(byte value) {
         return -1;
     }
 
     @Override
-    public int bytesBefore(ByteBufIndexFinder indexFinder) {
-        return -1;
-    }
-
-    @Override
     public int bytesBefore(int length, byte value) {
-        checkLength(length);
-        return -1;
-    }
-
-    @Override
-    public int bytesBefore(int length, ByteBufIndexFinder indexFinder) {
         checkLength(length);
         return -1;
     }
@@ -703,7 +667,23 @@ public final class EmptyByteBuf implements ByteBuf {
     }
 
     @Override
-    public int bytesBefore(int index, int length, ByteBufIndexFinder indexFinder) {
+    public int forEachByte(ByteBufProcessor processor) {
+        return -1;
+    }
+
+    @Override
+    public int forEachByte(int index, int length, ByteBufProcessor processor) {
+        checkIndex(index, length);
+        return -1;
+    }
+
+    @Override
+    public int forEachByteDesc(ByteBufProcessor processor) {
+        return -1;
+    }
+
+    @Override
+    public int forEachByteDesc(int index, int length, ByteBufProcessor processor) {
         checkIndex(index, length);
         return -1;
     }
@@ -761,6 +741,11 @@ public final class EmptyByteBuf implements ByteBuf {
     }
 
     @Override
+    public ByteBuffer internalNioBuffer(int index, int length) {
+        return EMPTY_BYTE_BUFFER;
+    }
+
+    @Override
     public boolean hasArray() {
         return true;
     }
@@ -801,16 +786,6 @@ public final class EmptyByteBuf implements ByteBuf {
     }
 
     @Override
-    public ByteBuf suspendIntermediaryDeallocations() {
-        return this;
-    }
-
-    @Override
-    public ByteBuf resumeIntermediaryDeallocations() {
-        return this;
-    }
-
-    @Override
     public int hashCode() {
         return 0;
     }
@@ -828,11 +803,6 @@ public final class EmptyByteBuf implements ByteBuf {
     @Override
     public String toString() {
         return str;
-    }
-
-    @Override
-    public BufType type() {
-        return BufType.BYTE;
     }
 
     @Override

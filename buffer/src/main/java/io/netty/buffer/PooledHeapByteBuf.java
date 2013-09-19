@@ -14,6 +14,7 @@
 
 package io.netty.buffer;
 
+import io.netty.util.Recycler;
 import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
@@ -26,8 +27,22 @@ import java.nio.channels.ScatteringByteChannel;
 
 final class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
 
-    PooledHeapByteBuf(int maxCapacity) {
-        super(maxCapacity);
+    private static final Recycler<PooledHeapByteBuf> RECYCLER = new Recycler<PooledHeapByteBuf>() {
+        @Override
+        protected PooledHeapByteBuf newObject(Handle handle) {
+            return new PooledHeapByteBuf(handle, 0);
+        }
+    };
+
+    static PooledHeapByteBuf newInstance(int maxCapacity) {
+        PooledHeapByteBuf buf = RECYCLER.get();
+        buf.setRefCnt(1);
+        buf.maxCapacity(maxCapacity);
+        return buf;
+    }
+
+    private PooledHeapByteBuf(Recycler.Handle recyclerHandle, int maxCapacity) {
+        super(recyclerHandle, maxCapacity);
     }
 
     @Override
@@ -218,15 +233,22 @@ final class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
     }
 
     @Override
-    public ByteBuffer nioBuffer(int index, int length) {
-        checkIndex(index, length);
-        index = idx(index);
-        return ((ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length)).slice();
+    public ByteBuffer[] nioBuffers(int index, int length) {
+        return new ByteBuffer[] { nioBuffer(index, length) };
     }
 
     @Override
-    public ByteBuffer[] nioBuffers(int index, int length) {
-        return new ByteBuffer[] { nioBuffer(index, length) };
+    public ByteBuffer nioBuffer(int index, int length) {
+        checkIndex(index, length);
+        index = idx(index);
+        return (ByteBuffer) ByteBuffer.wrap(memory).position(index).limit(index + length);
+    }
+
+    @Override
+    public ByteBuffer internalNioBuffer(int index, int length) {
+        checkIndex(index, length);
+        index = idx(index);
+        return (ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length);
     }
 
     @Override
@@ -257,5 +279,10 @@ final class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
     @Override
     protected ByteBuffer newInternalNioBuffer(byte[] memory) {
         return ByteBuffer.wrap(memory);
+    }
+
+    @Override
+    protected Recycler<?> recycler() {
+        return RECYCLER;
     }
 }

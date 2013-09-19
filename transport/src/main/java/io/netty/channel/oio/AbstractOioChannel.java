@@ -42,10 +42,10 @@ public abstract class AbstractOioChannel extends AbstractChannel {
     };
 
     /**
-     * @see AbstractChannel#AbstractChannel(Channel, Integer)
+     * @see AbstractChannel#AbstractChannel(Channel)
      */
-    protected AbstractOioChannel(Channel parent, Integer id) {
-        super(parent, id);
+    protected AbstractOioChannel(Channel parent) {
+        super(parent);
     }
 
     @Override
@@ -62,6 +62,11 @@ public abstract class AbstractOioChannel extends AbstractChannel {
                 return;
             }
 
+            if (!promise.setUncancellable()) {
+                close(voidPromise());
+                return;
+            }
+
             try {
                 boolean wasActive = isActive();
                 doConnect(remoteAddress, localAddress);
@@ -75,8 +80,8 @@ public abstract class AbstractOioChannel extends AbstractChannel {
                     newT.setStackTrace(t.getStackTrace());
                     t = newT;
                 }
-                promise.setFailure(t);
                 closeIfClosed();
+                promise.setFailure(t);
             }
         }
     }
@@ -84,11 +89,6 @@ public abstract class AbstractOioChannel extends AbstractChannel {
     @Override
     protected boolean isCompatible(EventLoop loop) {
         return loop instanceof ThreadPerChannelEventLoop;
-    }
-
-    @Override
-    protected boolean isFlushPending() {
-        return false;
     }
 
     /**

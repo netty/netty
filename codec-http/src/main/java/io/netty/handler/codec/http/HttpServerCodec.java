@@ -15,11 +15,6 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.MessageBuf;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundByteHandler;
-import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.channel.CombinedChannelDuplexHandler;
 
 
@@ -30,8 +25,7 @@ import io.netty.channel.CombinedChannelDuplexHandler;
  * @see HttpClientCodec
  */
 public final class HttpServerCodec
-        extends CombinedChannelDuplexHandler
-        implements ChannelInboundByteHandler, ChannelOutboundMessageHandler<HttpObject> {
+        extends CombinedChannelDuplexHandler<HttpRequestDecoder, HttpResponseEncoder> {
 
     /**
      * Creates a new instance with the default decoder options
@@ -47,28 +41,5 @@ public final class HttpServerCodec
      */
     public HttpServerCodec(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize) {
         super(new HttpRequestDecoder(maxInitialLineLength, maxHeaderSize, maxChunkSize), new HttpResponseEncoder());
-    }
-
-    private HttpRequestDecoder decoder() {
-        return (HttpRequestDecoder) stateHandler();
-    }
-
-    private HttpResponseEncoder encoder() {
-        return (HttpResponseEncoder) operationHandler();
-    }
-
-    @Override
-    public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return decoder().newInboundBuffer(ctx);
-    }
-
-    @Override
-    public void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
-        decoder().discardInboundReadBytes(ctx);
-    }
-
-    @Override
-    public MessageBuf<HttpObject> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return encoder().newOutboundBuffer(ctx);
     }
 }
