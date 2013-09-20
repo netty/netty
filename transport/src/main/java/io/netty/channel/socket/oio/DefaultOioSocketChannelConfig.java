@@ -134,7 +134,7 @@ public class DefaultOioSocketChannelConfig extends DefaultSocketChannelConfig im
 
     @Override
     public OioSocketChannelConfig setAllowHalfClosure(boolean allowHalfClosure) {
-        super.setAllowHalfClosure(true);
+        super.setAllowHalfClosure(allowHalfClosure);
         return this;
     }
 
