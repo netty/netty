@@ -52,7 +52,9 @@ final class WebSocketUtil {
         try {
             MessageDigest md = MessageDigest.getInstance("MD5");
             if (buffer.hasArray()) {
-                md.update(buffer.array(), buffer.readerIndex(), buffer.readableBytes());
+                int offset = buffer.arrayOffset() + buffer.readerIndex();
+                int length = buffer.readableBytes();
+                md.update(buffer.array(), offset, length);
             } else {
                 md.update(buffer.toByteBuffer());
             }
@@ -86,7 +88,9 @@ final class WebSocketUtil {
         try {
             MessageDigest md = MessageDigest.getInstance("SHA1");
             if (buffer.hasArray()) {
-                md.update(buffer.array(), buffer.readerIndex(), buffer.readableBytes());
+                int offset = buffer.arrayOffset() + buffer.readerIndex();
+                int length = buffer.readableBytes();
+                md.update(buffer.array(), offset, length);
             } else {
                 md.update(buffer.toByteBuffer());
             }
