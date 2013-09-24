@@ -34,7 +34,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayDeque;
 import java.util.Queue;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A {@link ChannelHandler} that adds support for writing a large data stream
@@ -74,29 +73,26 @@ public class ChunkedWriteHandler
         InternalLoggerFactory.getInstance(ChunkedWriteHandler.class);
 
     private final Queue<PendingWrite> queue = new ArrayDeque<PendingWrite>();
-    private final int maxPendingWrites;
     private volatile ChannelHandlerContext ctx;
-    private final AtomicInteger pendingWrites = new AtomicInteger();
     private PendingWrite currentWrite;
+
     public ChunkedWriteHandler() {
-        this(4);
     }
 
+    /**
+     * @deprecated use {@link #ChunkedWriteHandler()}
+     */
+    @Deprecated
     public ChunkedWriteHandler(int maxPendingWrites) {
         if (maxPendingWrites <= 0) {
             throw new IllegalArgumentException(
                     "maxPendingWrites: " + maxPendingWrites + " (expected: > 0)");
         }
-        this.maxPendingWrites = maxPendingWrites;
     }
 
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
         this.ctx = ctx;
-    }
-
-    private boolean isWritable() {
-        return pendingWrites.get() < maxPendingWrites;
     }
 
     /**
@@ -145,7 +141,8 @@ public class ChunkedWriteHandler
 
     @Override
     public void flush(ChannelHandlerContext ctx) throws Exception {
-        if (isWritable() || !ctx.channel().isActive()) {
+        Channel channel = ctx.channel();
+        if (channel.isWritable() || !channel.isActive()) {
             doFlush(ctx);
         }
     }
@@ -154,6 +151,14 @@ public class ChunkedWriteHandler
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         doFlush(ctx);
         super.channelInactive(ctx);
+    }
+
+    @Override
+    public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
+        if (ctx.channel().isWritable()) {
+            // channel is writable again try to continue flushing
+            doFlush(ctx);
+        }
     }
 
     private void discard(Throwable cause) {
@@ -197,13 +202,13 @@ public class ChunkedWriteHandler
     }
 
     private void doFlush(final ChannelHandlerContext ctx) throws Exception {
-        Channel channel = ctx.channel();
+        final Channel channel = ctx.channel();
         if (!channel.isActive()) {
             discard(null);
             return;
         }
         boolean needsFlush;
-        while (isWritable()) {
+        while (channel.isWritable()) {
             if (currentWrite == null) {
                 currentWrite = queue.poll();
             }
@@ -267,7 +272,6 @@ public class ChunkedWriteHandler
                 }
 
                 final int amount = amount(message);
-                pendingWrites.incrementAndGet();
                 ChannelFuture f = ctx.write(message);
                 if (endOfInput) {
                     this.currentWrite = null;
@@ -280,17 +284,15 @@ public class ChunkedWriteHandler
                     f.addListener(new ChannelFutureListener() {
                         @Override
                         public void operationComplete(ChannelFuture future) throws Exception {
-                            pendingWrites.decrementAndGet();
                             currentWrite.progress(amount);
                             currentWrite.success();
                             closeInput(chunks);
                         }
                     });
-                } else if (isWritable()) {
+                } else if (channel.isWritable()) {
                     f.addListener(new ChannelFutureListener() {
                         @Override
                         public void operationComplete(ChannelFuture future) throws Exception {
-                            pendingWrites.decrementAndGet();
                             if (!future.isSuccess()) {
                                 closeInput((ChunkedInput<?>) pendingMessage);
                                 currentWrite.fail(future.cause());
@@ -303,13 +305,12 @@ public class ChunkedWriteHandler
                     f.addListener(new ChannelFutureListener() {
                         @Override
                         public void operationComplete(ChannelFuture future) throws Exception {
-                            pendingWrites.decrementAndGet();
                             if (!future.isSuccess()) {
                                 closeInput((ChunkedInput<?>) pendingMessage);
                                 currentWrite.fail(future.cause());
                             } else {
                                 currentWrite.progress(amount);
-                                if (isWritable()) {
+                                if (channel.isWritable()) {
                                     resumeTransfer();
                                 }
                             }
