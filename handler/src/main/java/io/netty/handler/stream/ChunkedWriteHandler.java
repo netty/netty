@@ -130,11 +130,6 @@ public class ChunkedWriteHandler
     }
 
     @Override
-    public void read(ChannelHandlerContext ctx) {
-        ctx.read();
-    }
-
-    @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         queue.add(new PendingWrite(msg, promise));
     }
@@ -159,6 +154,7 @@ public class ChunkedWriteHandler
             // channel is writable again try to continue flushing
             doFlush(ctx);
         }
+        ctx.fireChannelWritabilityChanged();
     }
 
     private void discard(Throwable cause) {
