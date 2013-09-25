@@ -47,7 +47,6 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
     private static final int DEFAULT_MAX_CONCURRENT_STREAMS = Integer.MAX_VALUE;
     private volatile int remoteConcurrentStreams = DEFAULT_MAX_CONCURRENT_STREAMS;
     private volatile int localConcurrentStreams  = DEFAULT_MAX_CONCURRENT_STREAMS;
-    private volatile int maxConcurrentStreams    = DEFAULT_MAX_CONCURRENT_STREAMS;
 
     private static final int DEFAULT_WINDOW_SIZE = 64 * 1024; // 64 KB default initial window size
     private volatile int initialSendWindowSize    = DEFAULT_WINDOW_SIZE;
@@ -133,7 +132,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
             }
 
             // Check if we received a data frame before receiving a SYN_REPLY
-            if (!isRemoteInitiatedID(streamId) && !spdySession.hasReceivedReply(streamId)) {
+            if (!isRemoteInitiatedId(streamId) && !spdySession.hasReceivedReply(streamId)) {
                 issueStreamError(ctx, e.getRemoteAddress(), streamId, SpdyStreamStatus.PROTOCOL_ERROR);
                 return;
             }
@@ -206,7 +205,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
 
             // Check if we received a valid SYN_STREAM frame
             if (spdySynStreamFrame.isInvalid() ||
-                !isRemoteInitiatedID(streamId) ||
+                !isRemoteInitiatedId(streamId) ||
                 spdySession.isActiveStream(streamId)) {
                 issueStreamError(ctx, e.getRemoteAddress(), streamId, SpdyStreamStatus.PROTOCOL_ERROR);
                 return;
@@ -241,7 +240,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
 
             // Check if we received a valid SYN_REPLY frame
             if (spdySynReplyFrame.isInvalid() ||
-                isRemoteInitiatedID(streamId) ||
+                isRemoteInitiatedId(streamId) ||
                 spdySession.isRemoteSideClosed(streamId)) {
                 issueStreamError(ctx, e.getRemoteAddress(), streamId, SpdyStreamStatus.INVALID_STREAM);
                 return;
@@ -281,7 +280,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
             int newConcurrentStreams =
                 spdySettingsFrame.getValue(SpdySettingsFrame.SETTINGS_MAX_CONCURRENT_STREAMS);
             if (newConcurrentStreams >= 0) {
-                updateConcurrentStreams(newConcurrentStreams, true);
+                remoteConcurrentStreams = newConcurrentStreams;
             }
 
             // Persistence flag are inconsistent with the use of SETTINGS to communicate
@@ -313,7 +312,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
 
             SpdyPingFrame spdyPingFrame = (SpdyPingFrame) msg;
 
-            if (isRemoteInitiatedID(spdyPingFrame.getId())) {
+            if (isRemoteInitiatedId(spdyPingFrame.getId())) {
                 Channels.write(ctx, Channels.future(e.getChannel()), spdyPingFrame, e.getRemoteAddress());
                 return;
             }
@@ -517,7 +516,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
             SpdySynStreamFrame spdySynStreamFrame = (SpdySynStreamFrame) msg;
             int streamId = spdySynStreamFrame.getStreamId();
 
-            if (isRemoteInitiatedID(streamId)) {
+            if (isRemoteInitiatedId(streamId)) {
                 e.getFuture().setFailure(PROTOCOL_EXCEPTION);
                 return;
             }
@@ -536,7 +535,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
             int streamId = spdySynReplyFrame.getStreamId();
 
             // Frames must not be sent on half-closed streams
-            if (!isRemoteInitiatedID(streamId) || spdySession.isLocalSideClosed(streamId)) {
+            if (!isRemoteInitiatedId(streamId) || spdySession.isLocalSideClosed(streamId)) {
                 e.getFuture().setFailure(PROTOCOL_EXCEPTION);
                 return;
             }
@@ -558,7 +557,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
             int newConcurrentStreams =
                     spdySettingsFrame.getValue(SpdySettingsFrame.SETTINGS_MAX_CONCURRENT_STREAMS);
             if (newConcurrentStreams >= 0) {
-                updateConcurrentStreams(newConcurrentStreams, false);
+                localConcurrentStreams = newConcurrentStreams;
             }
 
             // Persistence flag are inconsistent with the use of SETTINGS to communicate
@@ -580,7 +579,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
         } else if (msg instanceof SpdyPingFrame) {
 
             SpdyPingFrame spdyPingFrame = (SpdyPingFrame) msg;
-            if (isRemoteInitiatedID(spdyPingFrame.getId())) {
+            if (isRemoteInitiatedId(spdyPingFrame.getId())) {
                 e.getFuture().setFailure(new IllegalArgumentException(
                             "invalid PING ID: " + spdyPingFrame.getId()));
                 return;
@@ -665,18 +664,9 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
      * Helper functions
      */
 
-    private boolean isRemoteInitiatedID(int id) {
-        boolean serverID = isServerId(id);
-        return server && !serverID || !server && serverID;
-    }
-
-    private void updateConcurrentStreams(int newConcurrentStreams, boolean remote) {
-        if (remote) {
-            remoteConcurrentStreams = newConcurrentStreams;
-        } else {
-            localConcurrentStreams = newConcurrentStreams;
-        }
-        maxConcurrentStreams = Math.min(localConcurrentStreams, remoteConcurrentStreams);
+    private boolean isRemoteInitiatedId(int id) {
+        boolean serverId = isServerId(id);
+        return server && !serverId || !server && serverId;
     }
 
     // need to synchronize to prevent new streams from being created while updating active streams
@@ -703,14 +693,15 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
             return false;
         }
 
-        int maxConcurrentStreams = this.maxConcurrentStreams; // read volatile once
-        if (spdySession.numActiveStreams() >= maxConcurrentStreams) {
+        boolean remote = isRemoteInitiatedId(streamId);
+        int maxConcurrentStreams = remote ? localConcurrentStreams : remoteConcurrentStreams;
+        if (spdySession.numActiveStreams(remote) >= maxConcurrentStreams) {
             return false;
         }
         spdySession.acceptStream(
                 streamId, priority, remoteSideClosed, localSideClosed,
-                initialSendWindowSize, initialReceiveWindowSize);
-        if (isRemoteInitiatedID(streamId)) {
+                initialSendWindowSize, initialReceiveWindowSize, remote);
+        if (remote) {
             lastGoodStreamId = streamId;
         }
         return true;
@@ -718,9 +709,9 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
 
     private void halfCloseStream(int streamId, boolean remote, ChannelFuture future) {
         if (remote) {
-            spdySession.closeRemoteSide(streamId);
+            spdySession.closeRemoteSide(streamId, isRemoteInitiatedId(streamId));
         } else {
-            spdySession.closeLocalSide(streamId);
+            spdySession.closeLocalSide(streamId, isRemoteInitiatedId(streamId));
         }
         if (closeSessionFutureListener != null && spdySession.noActiveStreams()) {
             future.addListener(closeSessionFutureListener);
@@ -728,7 +719,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
     }
 
     private void removeStream(int streamId, ChannelFuture future) {
-        spdySession.removeStream(streamId);
+        spdySession.removeStream(streamId, isRemoteInitiatedId(streamId));
         if (closeSessionFutureListener != null && spdySession.noActiveStreams()) {
             future.addListener(closeSessionFutureListener);
         }
