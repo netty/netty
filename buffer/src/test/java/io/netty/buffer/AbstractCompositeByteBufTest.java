@@ -776,4 +776,20 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
     public void testInternalNioBuffer() {
         // ignore
     }
+
+    @Test
+    public void testisDirectMultipleBufs() {
+        CompositeByteBuf buf = freeLater(compositeBuffer());
+        assertFalse(buf.isDirect());
+
+        buf.addComponent(directBuffer().writeByte(1));
+
+        assertTrue(buf.isDirect());
+        buf.addComponent(directBuffer().writeByte(1));
+        assertTrue(buf.isDirect());
+
+        buf.addComponent(buffer().writeByte(1));
+        assertFalse(buf.isDirect());
+
+    }
 }
