@@ -25,6 +25,7 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.oio.AbstractOioMessageChannel;
 import io.netty.channel.socket.DatagramChannel;
@@ -55,8 +56,7 @@ import java.util.Locale;
  * @see AddressedEnvelope
  * @see DatagramPacket
  */
-public class OioDatagramChannel extends AbstractOioMessageChannel
-                                implements DatagramChannel {
+public final class OioDatagramChannel extends AbstractOioMessageChannel implements DatagramChannel {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(OioDatagramChannel.class);
 
@@ -79,8 +79,8 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     /**
      * Create a new instance with an new {@link MulticastSocket}.
      */
-    public OioDatagramChannel() {
-        this(newSocket());
+    public OioDatagramChannel(EventLoop eventLoop) {
+        this(eventLoop, newSocket());
     }
 
     /**
@@ -88,8 +88,8 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
      *
      * @param socket    the {@link MulticastSocket} which is used by this instance
      */
-    public OioDatagramChannel(MulticastSocket socket) {
-        super(null);
+    public OioDatagramChannel(EventLoop eventLoop, MulticastSocket socket) {
+        super(null, eventLoop);
 
         boolean success = false;
         try {

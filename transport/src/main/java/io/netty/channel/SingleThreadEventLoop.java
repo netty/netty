@@ -50,22 +50,4 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
     public EventLoop next() {
         return (EventLoop) super.next();
     }
-
-    @Override
-    public ChannelFuture register(Channel channel) {
-        return register(channel, channel.newPromise());
-    }
-
-    @Override
-    public ChannelFuture register(final Channel channel, final ChannelPromise promise) {
-        if (channel == null) {
-            throw new NullPointerException("channel");
-        }
-        if (promise == null) {
-            throw new NullPointerException("promise");
-        }
-
-        channel.unsafe().register(this, promise);
-        return promise;
-    }
 }

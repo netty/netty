@@ -17,12 +17,16 @@ package io.netty.channel.sctp.oio;
 
 import com.sun.nio.sctp.SctpChannel;
 import com.sun.nio.sctp.SctpServerChannel;
+
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.oio.AbstractOioMessageChannel;
+import io.netty.channel.oio.AbstractOioMessageServerChannel;
 import io.netty.channel.sctp.DefaultSctpServerChannelConfig;
 import io.netty.channel.sctp.SctpServerChannelConfig;
 import io.netty.util.internal.logging.InternalLogger;
@@ -47,7 +51,7 @@ import java.util.Set;
  * Be aware that not all operations systems support SCTP. Please refer to the documentation of your operation system,
  * to understand what you need to do to use it. Also this feature is only supported on Java 7+.
  */
-public class OioSctpServerChannel extends AbstractOioMessageChannel
+public class OioSctpServerChannel extends AbstractOioMessageServerChannel
         implements io.netty.channel.sctp.SctpServerChannel {
 
     private static final InternalLogger logger =
@@ -70,8 +74,8 @@ public class OioSctpServerChannel extends AbstractOioMessageChannel
     /**
      * Create a new instance with an new {@link SctpServerChannel}
      */
-    public OioSctpServerChannel() {
-        this(newServerSocket());
+    public OioSctpServerChannel(EventLoop eventLoop, EventLoopGroup childGroup) {
+        this(eventLoop, childGroup, newServerSocket());
     }
 
     /**
@@ -79,8 +83,8 @@ public class OioSctpServerChannel extends AbstractOioMessageChannel
      *
      * @param sch    the {@link SctpServerChannel} which is used by this instance
      */
-    public OioSctpServerChannel(SctpServerChannel sch) {
-        super(null);
+    public OioSctpServerChannel(EventLoop eventLoop, EventLoopGroup childGroup, SctpServerChannel sch) {
+        super(null, eventLoop, childGroup);
         if (sch == null) {
             throw new NullPointerException("sctp server channel");
         }
@@ -196,7 +200,7 @@ public class OioSctpServerChannel extends AbstractOioMessageChannel
                     if (key.isAcceptable()) {
                         s = sch.accept();
                         if (s != null) {
-                            buf.add(new OioSctpChannel(this, s));
+                            buf.add(new OioSctpChannel(this, getChildGroup().next(), s));
                             acceptedChannels ++;
                         }
                     }

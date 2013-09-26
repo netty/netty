@@ -1,11 +1,11 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -13,24 +13,21 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+package io.netty.bootstrap;
 
-package io.netty.test.udt.nio;
-
+import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.udt.nio.NioUdtByteConnectorChannel;
-import org.junit.Test;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.ServerChannel;
 
-import static org.junit.Assert.assertEquals;
-
-public class NioUdtByteConnectorChannelTest extends AbstractUdtTest {
+/**
+ * Factory that creates a new {@link Channel} on {@link Bootstrap#bind()}, {@link Bootstrap#connect()}, and
+ * {@link ServerBootstrap#bind()}.
+ */
+public interface ServerChannelFactory<T extends ServerChannel> {
 
     /**
-     * verify channel meta data
+     * Creates a new channel.
      */
-    @Test
-    public void metadata() throws Exception {
-        EventLoop loop = new NioEventLoopGroup().next();
-        assertEquals(false, new NioUdtByteConnectorChannel(loop).metadata().hasDisconnect());
-    }
+    T newChannel(EventLoop eventLoop, EventLoopGroup childGroup);
 }

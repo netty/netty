@@ -18,7 +18,10 @@ package io.netty.channel.socket.nio;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
+import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.AbstractNioMessageChannel;
+import io.netty.channel.nio.AbstractNioMessageServerChannel;
 import io.netty.channel.socket.DefaultServerSocketChannelConfig;
 import io.netty.channel.socket.ServerSocketChannelConfig;
 import io.netty.util.internal.logging.InternalLogger;
@@ -36,7 +39,7 @@ import java.util.List;
  * A {@link io.netty.channel.socket.ServerSocketChannel} implementation which uses
  * NIO selector based implementation to accept new connections.
  */
-public class NioServerSocketChannel extends AbstractNioMessageChannel
+public class NioServerSocketChannel extends AbstractNioMessageServerChannel
                              implements io.netty.channel.socket.ServerSocketChannel {
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
@@ -57,8 +60,8 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     /**
      * Create a new instance
      */
-    public NioServerSocketChannel() {
-        super(null, newSocket(), SelectionKey.OP_ACCEPT);
+    public NioServerSocketChannel(EventLoop eventLoop, EventLoopGroup childGroup) {
+        super(null, eventLoop, childGroup, newSocket(), SelectionKey.OP_ACCEPT);
         config = new DefaultServerSocketChannelConfig(this, javaChannel().socket());
     }
 
@@ -113,7 +116,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
 
         try {
             if (ch != null) {
-                buf.add(new NioSocketChannel(this, ch));
+                buf.add(new NioSocketChannel(this, getChildGroup().next(), ch));
                 return 1;
             }
         } catch (Throwable t) {

@@ -16,6 +16,8 @@
 
 package io.netty.test.udt.nio;
 
+import io.netty.channel.EventLoop;
+import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.udt.nio.NioUdtByteAcceptorChannel;
 import org.junit.Test;
 
@@ -28,6 +30,7 @@ public class NioUdtByteAcceptorChannelTest extends AbstractUdtTest {
      */
     @Test
     public void metadata() throws Exception {
-        assertEquals(false, new NioUdtByteAcceptorChannel().metadata().hasDisconnect());
+        EventLoop loop = new NioEventLoopGroup().next();
+        assertEquals(false, new NioUdtByteAcceptorChannel(loop, new NioEventLoopGroup()).metadata().hasDisconnect());
     }
 }

@@ -137,8 +137,7 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
     /**
      * Creates a new {@link EventLoop}.  The default implementation creates a new {@link ThreadPerChannelEventLoop}.
      */
-    protected ThreadPerChannelEventLoop newChild(
-            @SuppressWarnings("UnusedParameters") Object... args) throws Exception {
+    protected ThreadPerChannelEventLoop newChild(@SuppressWarnings("UnusedParameters") Object... args) {
         return new ThreadPerChannelEventLoop(this);
     }
 
@@ -149,7 +148,20 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
 
     @Override
     public EventLoop next() {
-        throw new UnsupportedOperationException();
+        if (shuttingDown) {
+            throw new RejectedExecutionException("shutting down");
+        }
+
+        ThreadPerChannelEventLoop loop = idleChildren.poll();
+        if (loop == null) {
+            if (maxChannels > 0 && activeChildren.size() >= maxChannels) {
+                throw tooManyChannels;
+            }
+            loop = newChild(childArgs);
+            loop.terminationFuture().addListener(childTerminationListener);
+        }
+        activeChildren.add(loop);
+        return loop;
     }
 
     @Override
@@ -266,47 +278,5 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
             }
         }
         return isTerminated();
-    }
-
-    @Override
-    public ChannelFuture register(Channel channel) {
-        if (channel == null) {
-            throw new NullPointerException("channel");
-        }
-        try {
-            return nextChild().register(channel);
-        } catch (Throwable t) {
-            return channel.newFailedFuture(t);
-        }
-    }
-
-    @Override
-    public ChannelFuture register(Channel channel, ChannelPromise promise) {
-        if (channel == null) {
-            throw new NullPointerException("channel");
-        }
-        try {
-            return nextChild().register(channel, promise);
-        } catch (Throwable t) {
-            promise.setFailure(t);
-            return promise;
-        }
-    }
-
-    private EventLoop nextChild() throws Exception {
-        if (shuttingDown) {
-            throw new RejectedExecutionException("shutting down");
-        }
-
-        ThreadPerChannelEventLoop loop = idleChildren.poll();
-        if (loop == null) {
-            if (maxChannels > 0 && activeChildren.size() >= maxChannels) {
-                throw tooManyChannels;
-            }
-            loop = newChild(childArgs);
-            loop.terminationFuture().addListener(childTerminationListener);
-        }
-        activeChildren.add(loop);
-        return loop;
     }
 }

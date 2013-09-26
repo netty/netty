@@ -16,6 +16,8 @@
 package io.netty.channel.udt.nio;
 
 import com.barchart.udt.TypeUDT;
+
+import io.netty.channel.EventLoop;
 import io.netty.channel.udt.UdtMessage;
 
 /**
@@ -23,11 +25,10 @@ import io.netty.channel.udt.UdtMessage;
  * <p>
  * Note: send/receive must use {@link UdtMessage} in the pipeline
  */
-public class NioUdtMessageRendezvousChannel extends
-        NioUdtMessageConnectorChannel {
+public class NioUdtMessageRendezvousChannel extends NioUdtMessageConnectorChannel {
 
-    public NioUdtMessageRendezvousChannel() {
-        super(NioUdtProvider.newRendezvousChannelUDT(TypeUDT.DATAGRAM));
+    public NioUdtMessageRendezvousChannel(EventLoop eventLoop) {
+        super(eventLoop, NioUdtProvider.newRendezvousChannelUDT(TypeUDT.DATAGRAM));
     }
 
 }

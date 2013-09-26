@@ -17,6 +17,8 @@ package io.netty.channel.oio;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -29,8 +31,8 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
 
     private final List<Object> readBuf = new ArrayList<Object>();
 
-    protected AbstractOioMessageChannel(Channel parent) {
-        super(parent);
+    protected AbstractOioMessageChannel(Channel parent, EventLoop eventLoop) {
+        super(parent, eventLoop);
     }
 
     @Override
