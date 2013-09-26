@@ -63,7 +63,7 @@ public abstract class RtspObjectDecoder extends HttpObjectDecoder {
      * Creates a new instance with the specified parameters.
      */
     protected RtspObjectDecoder(int maxInitialLineLength, int maxHeaderSize, int maxContentLength) {
-        super(maxInitialLineLength, maxHeaderSize, maxContentLength * 2, false);
+        super(maxInitialLineLength, maxHeaderSize, maxContentLength * 2, false, true);
     }
 
     @Override

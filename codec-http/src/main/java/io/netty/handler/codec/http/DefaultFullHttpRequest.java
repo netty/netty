@@ -30,7 +30,12 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
     }
 
     public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri, ByteBuf content) {
-        super(httpVersion, method, uri);
+        this(httpVersion, method, uri, content, true);
+    }
+
+    public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri,
+                                  ByteBuf content, boolean validateHeaders) {
+        super(httpVersion, method, uri, validateHeaders);
         if (content == null) {
             throw new NullPointerException("content");
         }

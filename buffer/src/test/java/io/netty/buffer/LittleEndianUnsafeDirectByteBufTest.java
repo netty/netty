@@ -13,28 +13,21 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.http;
+package io.netty.buffer;
 
-/**
- * Combination of a {@link HttpResponse} and {@link FullHttpMessage}.
- * So it represent a <i>complete</i> http response.
- */
-public interface FullHttpResponse extends HttpResponse, FullHttpMessage {
-    @Override
-    FullHttpResponse copy();
+import io.netty.util.internal.PlatformDependent;
+import org.junit.Assume;
+import org.junit.Before;
 
-    @Override
-    FullHttpResponse retain(int increment);
+public class LittleEndianUnsafeDirectByteBufTest extends LittleEndianDirectByteBufTest {
 
-    @Override
-    FullHttpResponse retain();
+    @Before
+    public void checkHasUnsafe() {
+        Assume.assumeTrue("sun.misc.Unsafe not found, skip tests", PlatformDependent.hasUnsafe());
+    }
 
     @Override
-    FullHttpResponse duplicate();
-
-    @Override
-    FullHttpResponse setProtocolVersion(HttpVersion version);
-
-    @Override
-    FullHttpResponse setStatus(HttpResponseStatus status);
+    protected ByteBuf newBuffer(int length) {
+        return new UnpooledUnsafeDirectByteBuf(UnpooledByteBufAllocator.DEFAULT, length, Integer.MAX_VALUE);
+    }
 }

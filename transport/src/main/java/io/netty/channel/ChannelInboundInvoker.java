@@ -31,16 +31,6 @@ interface ChannelInboundInvoker {
     ChannelInboundInvoker fireChannelRegistered();
 
     /**
-     * A {@link Channel} was unregistered from its {@link EventLoop}.
-     *
-     * This will result in having the  {@link ChannelInboundHandler#channelUnregistered(ChannelHandlerContext)} method
-     * called of the next  {@link ChannelInboundHandler} contained in the  {@link ChannelPipeline} of the
-     * {@link Channel}.
-     */
-    @Deprecated
-    ChannelInboundInvoker fireChannelUnregistered();
-
-    /**
      * A {@link Channel} is active now, which means it is connected.
      *
      * This will result in having the  {@link ChannelInboundHandler#channelActive(ChannelHandlerContext)} method

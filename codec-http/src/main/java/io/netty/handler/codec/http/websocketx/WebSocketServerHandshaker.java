@@ -23,6 +23,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpContentCompressor;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
@@ -165,6 +166,9 @@ public abstract class WebSocketServerHandshaker {
                     ChannelPipeline p = future.channel().pipeline();
                     if (p.get(HttpObjectAggregator.class) != null) {
                         p.remove(HttpObjectAggregator.class);
+                    }
+                    if (p.get(HttpContentCompressor.class) != null) {
+                        p.remove(HttpContentCompressor.class);
                     }
                     ChannelHandlerContext ctx = p.context(HttpRequestDecoder.class);
                     if (ctx == null) {

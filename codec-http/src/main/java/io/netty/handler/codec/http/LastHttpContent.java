@@ -95,4 +95,7 @@ public interface LastHttpContent extends HttpContent {
 
     @Override
     LastHttpContent retain();
+
+    @Override
+    LastHttpContent duplicate();
 }

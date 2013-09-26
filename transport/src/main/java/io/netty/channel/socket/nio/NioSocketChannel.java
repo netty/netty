@@ -245,9 +245,11 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
             final SocketChannel ch = javaChannel();
             long writtenBytes = 0;
             boolean done = false;
+            boolean setOpWrite = false;
             for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
                 final long localWrittenBytes = ch.write(nioBuffers, 0, nioBufferCnt);
                 if (localWrittenBytes == 0) {
+                    setOpWrite = true;
                     break;
                 }
                 expectedWrittenBytes -= localWrittenBytes;
@@ -279,19 +281,21 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
                     final int readableBytes = buf.writerIndex() - readerIndex;
 
                     if (readableBytes < writtenBytes) {
+                        in.progress(readableBytes);
                         in.remove();
                         writtenBytes -= readableBytes;
                     } else if (readableBytes > writtenBytes) {
                         buf.readerIndex(readerIndex + (int) writtenBytes);
                         in.progress(writtenBytes);
                         break;
-                    } else { // readable == writtenBytes
+                    } else { // readableBytes == writtenBytes
+                        in.progress(readableBytes);
                         in.remove();
                         break;
                     }
                 }
 
-                setOpWrite();
+                incompleteWrite(setOpWrite);
                 break;
             }
         }

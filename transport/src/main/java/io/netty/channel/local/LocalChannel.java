@@ -154,7 +154,7 @@ public class LocalChannel extends AbstractChannel {
         if (peer != null) {
             state = 2;
 
-            peer.remoteAddress = parent().localAddress();
+            peer.remoteAddress = parent() == null ? null : parent().localAddress();
             peer.state = 2;
 
             // Always call peer.eventLoop().execute() even if peer.eventLoop().inEventLoop() is true.
@@ -219,9 +219,6 @@ public class LocalChannel extends AbstractChannel {
 
     @Override
     protected void doDeregister() throws Exception {
-        if (isOpen()) {
-            unsafe().close(unsafe().voidPromise());
-        }
         ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
     }
 
@@ -286,7 +283,7 @@ public class LocalChannel extends AbstractChannel {
             // Use a copy because the original msgs will be recycled by AbstractChannel.
             final Object[] msgsCopy = new Object[in.size()];
             for (int i = 0; i < msgsCopy.length; i ++) {
-                msgsCopy[i] = ReferenceCountUtil.retain(in.current());
+                msgsCopy[i] = ReferenceCountUtil.retain(in.current(false));
                 in.remove();
             }
 

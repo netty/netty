@@ -28,7 +28,7 @@ import io.netty.util.internal.TypeParameterMatcher;
  *             {@link SimpleChannelInboundHandler}&lt;{@link String}&gt; {
  *
  *         {@code @Override}
- *         public void messageReceived({@link ChannelHandlerContext} ctx, {@link String} message)
+ *         protected void channelRead0({@link ChannelHandlerContext} ctx, {@link String} message)
  *                 throws {@link Exception} {
  *             System.out.println(message);
  *         }

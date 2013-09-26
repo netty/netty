@@ -17,20 +17,30 @@ package io.netty.buffer;
 
 import io.netty.util.CharsetUtil;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.Channels;
+import java.nio.channels.GatheringByteChannel;
+import java.nio.channels.WritableByteChannel;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.buffer.Unpooled.*;
 import static io.netty.util.internal.EmptyArrays.*;
@@ -1569,7 +1579,7 @@ public abstract class AbstractByteBufTest {
         buffer.clear();
         buffer.writeBytes(value);
 
-        assertEquals(ByteBuffer.wrap(value), buffer.nioBuffer());
+        assertRemainingEquals(ByteBuffer.wrap(value), buffer.nioBuffer());
     }
 
     @Test
@@ -1582,8 +1592,20 @@ public abstract class AbstractByteBufTest {
         buffer.writeBytes(value);
 
         for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
-            assertEquals(ByteBuffer.wrap(value, i, BLOCK_SIZE), buffer.nioBuffer(i, BLOCK_SIZE));
+            assertRemainingEquals(ByteBuffer.wrap(value, i, BLOCK_SIZE), buffer.nioBuffer(i, BLOCK_SIZE));
         }
+    }
+
+    private static void assertRemainingEquals(ByteBuffer expected, ByteBuffer actual) {
+        int remaining = expected.remaining();
+        int remaining2 = actual.remaining();
+
+        assertEquals(remaining, remaining2);
+        byte[] array1 = new byte[remaining];
+        byte[] array2 = new byte[remaining2];
+        expected.get(array1);
+        actual.get(array2);
+        assertArrayEquals(array1, array2);
     }
 
     @Test
@@ -1719,5 +1741,252 @@ public abstract class AbstractByteBufTest {
         }), is(-1));
 
         assertThat(lastIndex.get(), is(CAPACITY / 4));
+    }
+
+    @Ignore
+    @Test
+    public void testInternalNioBuffer() {
+        testInternalNioBuffer(128);
+        testInternalNioBuffer(1024);
+        testInternalNioBuffer(4 * 1024);
+        testInternalNioBuffer(64 * 1024);
+        testInternalNioBuffer(32 * 1024 * 1024);
+        testInternalNioBuffer(64 * 1024 * 1024);
+    }
+
+    private void testInternalNioBuffer(int a) {
+        ByteBuf buffer = freeLater(newBuffer(2));
+        ByteBuffer buf = buffer.internalNioBuffer(0, 1);
+        assertEquals(1, buf.remaining());
+
+        for (int i = 0; i < a; i++) {
+            buffer.writeByte(i);
+        }
+
+        buf = buffer.internalNioBuffer(0, a);
+        assertEquals(a, buf.remaining());
+
+        for (int i = 0; i < a; i++) {
+            assertEquals((byte) i, buf.get());
+        }
+        assertFalse(buf.hasRemaining());
+    }
+
+    @Test
+    public void testDuplicateReadGatheringByteChannelMultipleThreads() throws Exception {
+        testReadGatheringByteChannelMultipleThreads(false);
+    }
+
+    @Test
+    public void testSliceReadGatheringByteChannelMultipleThreads() throws Exception {
+        testReadGatheringByteChannelMultipleThreads(true);
+    }
+
+    private void testReadGatheringByteChannelMultipleThreads(final boolean slice) throws Exception {
+        final byte[] bytes = new byte[8];
+        random.nextBytes(bytes);
+
+        final ByteBuf buffer = freeLater(newBuffer(8));
+        buffer.writeBytes(bytes);
+        final CountDownLatch latch = new CountDownLatch(60000);
+        final CyclicBarrier barrier = new CyclicBarrier(11);
+        for (int i = 0; i < 10; i++) {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    while (latch.getCount() > 0) {
+                        ByteBuf buf;
+                        if (slice) {
+                           buf = buffer.slice();
+                        } else {
+                           buf = buffer.duplicate();
+                        }
+                        TestGatheringByteChannel channel = new TestGatheringByteChannel();
+
+                        while (buf.isReadable()) {
+                            try {
+                                buf.readBytes(channel, buf.readableBytes());
+                            } catch (IOException e) {
+                                // Never happens
+                                return;
+                            }
+                        }
+                        Assert.assertArrayEquals(bytes, channel.writtenBytes());
+                        latch.countDown();
+                    }
+                    try {
+                        barrier.await();
+                    } catch (Exception e) {
+                        // ignore
+                    }
+                }
+            }).start();
+        }
+        latch.await(10, TimeUnit.SECONDS);
+        barrier.await(5, TimeUnit.SECONDS);
+    }
+
+    @Test
+    public void testDuplicateReadOutputStreamMultipleThreads() throws Exception {
+        testReadOutputStreamMultipleThreads(false);
+    }
+
+    @Test
+    public void testSliceReadOutputStreamMultipleThreads() throws Exception {
+        testReadOutputStreamMultipleThreads(true);
+    }
+
+    private void testReadOutputStreamMultipleThreads(final boolean slice) throws Exception {
+        final byte[] bytes = new byte[8];
+        random.nextBytes(bytes);
+
+        final ByteBuf buffer = freeLater(newBuffer(8));
+        buffer.writeBytes(bytes);
+        final CountDownLatch latch = new CountDownLatch(60000);
+        final CyclicBarrier barrier = new CyclicBarrier(11);
+        for (int i = 0; i < 10; i++) {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    while (latch.getCount() > 0) {
+                        ByteBuf buf;
+                        if (slice) {
+                            buf = buffer.slice();
+                        } else {
+                            buf = buffer.duplicate();
+                        }
+                        ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+                        while (buf.isReadable()) {
+                            try {
+                                buf.readBytes(out, buf.readableBytes());
+                            } catch (IOException e) {
+                                // Never happens
+                                return;
+                            }
+                        }
+                        Assert.assertArrayEquals(bytes, out.toByteArray());
+                        latch.countDown();
+                    }
+                    try {
+                        barrier.await();
+                    } catch (Exception e) {
+                        // ignore
+                    }
+                }
+            }).start();
+        }
+        latch.await(10, TimeUnit.SECONDS);
+        barrier.await(5, TimeUnit.SECONDS);
+    }
+
+    @Test
+    public void testDuplicateBytesInArrayMultipleThreads() throws Exception {
+        testBytesInArrayMultipleThreads(false);
+    }
+
+    @Test
+    public void testSliceBytesInArrayMultipleThreads() throws Exception {
+        testBytesInArrayMultipleThreads(true);
+    }
+
+    private void testBytesInArrayMultipleThreads(final boolean slice) throws Exception {
+        final byte[] bytes = new byte[8];
+        random.nextBytes(bytes);
+
+        final ByteBuf buffer = freeLater(newBuffer(8));
+        buffer.writeBytes(bytes);
+        final AtomicReference<Throwable> cause = new AtomicReference<Throwable>();
+        final CountDownLatch latch = new CountDownLatch(60000);
+        final CyclicBarrier barrier = new CyclicBarrier(11);
+        for (int i = 0; i < 10; i++) {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    while (cause.get() == null && latch.getCount() > 0) {
+                        ByteBuf buf;
+                        if (slice) {
+                            buf = buffer.slice();
+                        } else {
+                            buf = buffer.duplicate();
+                        }
+
+                        byte[] array = new byte[8];
+                        buf.readBytes(array);
+
+                        Assert.assertArrayEquals(bytes, array);
+
+                        Arrays.fill(array, (byte) 0);
+                        buf.getBytes(0, array);
+                        Assert.assertArrayEquals(bytes, array);
+
+                        latch.countDown();
+                    }
+                    try {
+                        barrier.await();
+                    } catch (Exception e) {
+                        // ignore
+                    }
+                }
+            }).start();
+        }
+        latch.await(10, TimeUnit.SECONDS);
+        barrier.await(5, TimeUnit.SECONDS);
+        assertNull(cause.get());
+    }
+
+    static final class TestGatheringByteChannel implements GatheringByteChannel {
+        private final ByteArrayOutputStream out = new ByteArrayOutputStream();
+        private final WritableByteChannel channel = Channels.newChannel(out);
+        private final int limit;
+        TestGatheringByteChannel(int limit) {
+            this.limit = limit;
+        }
+
+        TestGatheringByteChannel() {
+            this(Integer.MAX_VALUE);
+        }
+
+        @Override
+        public long write(ByteBuffer[] srcs, int offset, int length) throws IOException {
+            long written = 0;
+            for (; offset < length; offset++) {
+                written += write(srcs[offset]);
+                if (written >= limit) {
+                    break;
+                }
+            }
+            return written;
+        }
+
+        @Override
+        public long write(ByteBuffer[] srcs) throws IOException {
+            return write(srcs, 0, srcs.length);
+        }
+
+        @Override
+        public int write(ByteBuffer src) throws IOException {
+            int oldLimit = src.limit();
+            if (limit < src.remaining()) {
+                src.limit(src.position() + limit);
+            }
+            int w = channel.write(src);
+            src.limit(oldLimit);
+            return w;
+        }
+
+        @Override
+        public boolean isOpen() {
+            return channel.isOpen();
+        }
+
+        @Override
+        public void close() throws IOException {
+            channel.close();
+        }
+
+        public byte[] writtenBytes() {
+            return out.toByteArray();
+        }
     }
 }

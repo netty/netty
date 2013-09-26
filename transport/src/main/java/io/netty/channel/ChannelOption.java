@@ -90,12 +90,8 @@ public class ChannelOption<T> extends UniqueName {
             new ChannelOption<Boolean>("TCP_NODELAY");
 
     @Deprecated
-    public static final ChannelOption<Long> AIO_READ_TIMEOUT =
-            new ChannelOption<Long>("AIO_READ_TIMEOUT");
-    @Deprecated
-    public static final ChannelOption<Long> AIO_WRITE_TIMEOUT =
-            new ChannelOption<Long>("AIO_WRITE_TIMEOUT");
-
+    public static final ChannelOption<Boolean> DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION =
+            new ChannelOption<Boolean>("DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION");
     /**
      * Create a new {@link ChannelOption} with the given name. The name needs to be
      * unique.

@@ -586,4 +586,10 @@ public class UnpooledTest {
         }
         wrapped.release();
     }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void skipBytesNegativeLength() {
+        ByteBuf buf = freeLater(buffer(8));
+        buf.skipBytes(-1);
+    }
 }

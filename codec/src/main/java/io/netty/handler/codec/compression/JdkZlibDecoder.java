@@ -18,6 +18,7 @@ package io.netty.handler.codec.compression;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 
+import java.nio.ByteOrder;
 import java.util.List;
 import java.util.zip.CRC32;
 import java.util.zip.DataFormatException;
@@ -156,7 +157,7 @@ public class JdkZlibDecoder extends ZlibDecoder {
                 if (outputLength > 0) {
                     decompressed.writerIndex(decompressed.writerIndex() + outputLength);
                     if (crc != null) {
-                        crc.update(outArray, outIndex, length);
+                        crc.update(outArray, outIndex, outputLength);
                     }
                 } else {
                     if (inflater.needsDictionary()) {
@@ -298,15 +299,10 @@ public class JdkZlibDecoder extends ZlibDecoder {
                 gzipState = GzipState.PROCESS_FHCRC;
             case PROCESS_FHCRC:
                 if ((flags & FHCRC) != 0) {
-                    if (!in.isReadable()) {
+                    if (in.readableBytes() < 4) {
                         return false;
                     }
-                    int headerCrc = in.readShort();
-                    int readCrc = (int) crc.getValue() & 0xffff;
-                    if (headerCrc != readCrc) {
-                        throw new CompressionException(
-                                "Header CRC value missmatch. Expected: " + headerCrc + ", Got: " + readCrc);
-                    }
+                    verifyCrc(in);
                 }
                 crc.reset();
                 gzipState = GzipState.HEADER_END;
@@ -321,19 +317,31 @@ public class JdkZlibDecoder extends ZlibDecoder {
         if (buf.readableBytes() < 8) {
             return false;
         }
-        int dataCrc = buf.readInt();
-        int readCrc = (int) crc.getValue() & 0xffff;
-        if (dataCrc != readCrc) {
-            throw new CompressionException(
-                    "Data CRC value missmatch. Expected: " + dataCrc + ", Got: " + readCrc);
-        }
 
-        int dataLength = buf.readInt();
+        verifyCrc(buf);
+
+        // read ISIZE and verify
+        int dataLength = 0;
+        for (int i = 0; i < 4; ++i) {
+            dataLength |= buf.readUnsignedByte() << (i * 8);
+        }
         int readLength = inflater.getTotalOut();
         if (dataLength != readLength) {
             throw new CompressionException(
                     "Number of bytes missmatch. Expected: " + dataLength + ", Got: " + readLength);
         }
         return true;
+    }
+
+    private void verifyCrc(ByteBuf in) {
+        long crcValue = 0;
+        for (int i = 0; i < 4; ++i) {
+            crcValue |= (long) in.readUnsignedByte() << (i * 8);
+        }
+        long readCrc = crc.getValue();
+        if (crcValue != readCrc) {
+            throw new CompressionException(
+                    "CRC value missmatch. Expected: " + crcValue + ", Got: " + readCrc);
+        }
     }
 }

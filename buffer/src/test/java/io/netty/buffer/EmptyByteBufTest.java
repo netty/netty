@@ -12,29 +12,24 @@
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
  * License for the specific language governing permissions and limitations
  * under the License.
- */
-package io.netty.handler.codec.http;
+ */package io.netty.buffer;
 
-/**
- * Combination of a {@link HttpResponse} and {@link FullHttpMessage}.
- * So it represent a <i>complete</i> http response.
- */
-public interface FullHttpResponse extends HttpResponse, FullHttpMessage {
-    @Override
-    FullHttpResponse copy();
+import org.junit.Assert;
+import org.junit.Test;
 
-    @Override
-    FullHttpResponse retain(int increment);
+public class EmptyByteBufTest {
 
-    @Override
-    FullHttpResponse retain();
+    @Test
+    public void testIsWritable() {
+        EmptyByteBuf empty = new EmptyByteBuf(UnpooledByteBufAllocator.DEFAULT);
+        Assert.assertFalse(empty.isWritable());
+        Assert.assertFalse(empty.isWritable(1));
+    }
 
-    @Override
-    FullHttpResponse duplicate();
-
-    @Override
-    FullHttpResponse setProtocolVersion(HttpVersion version);
-
-    @Override
-    FullHttpResponse setStatus(HttpResponseStatus status);
+    @Test
+    public void testIsReadable() {
+        EmptyByteBuf empty = new EmptyByteBuf(UnpooledByteBufAllocator.DEFAULT);
+        Assert.assertFalse(empty.isReadable());
+        Assert.assertFalse(empty.isReadable(1));
+    }
 }

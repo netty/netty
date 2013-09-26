@@ -22,6 +22,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.RecvByteBufAllocator;
@@ -125,7 +126,8 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
 
     @Override
     public boolean isActive() {
-        return isOpen() && socket.isBound();
+        return isOpen() && (config.getOption(ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION) && isRegistered())
+                || socket.isBound();
     }
 
     @Override
@@ -235,7 +237,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
         for (;;) {
-            final Object o = in.current();
+            final Object o = in.current(false);
             if (o == null) {
                 break;
             }
