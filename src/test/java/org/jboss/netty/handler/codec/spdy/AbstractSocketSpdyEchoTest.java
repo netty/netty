@@ -15,7 +15,6 @@
  */
 package org.jboss.netty.handler.codec.spdy;
 
-import static org.jboss.netty.handler.codec.spdy.SpdyCodecUtil.*;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
@@ -174,16 +173,16 @@ public abstract class AbstractSocketSpdyEchoTest {
 
     @Test
     public void testSpdyEcho() throws Throwable {
-        for (int version = SPDY_MIN_VERSION; version <= SPDY_MAX_VERSION; version ++) {
-            testSpdyEcho(version);
-        }
+        testSpdyEcho(SpdyVersion.SPDY_2);
+        testSpdyEcho(SpdyVersion.SPDY_3);
+        testSpdyEcho(SpdyVersion.SPDY_3_1);
     }
 
-    private void testSpdyEcho(int version) throws Throwable {
+    private void testSpdyEcho(SpdyVersion version) throws Throwable {
         ServerBootstrap sb = new ServerBootstrap(newServerSocketChannelFactory(Executors.newCachedThreadPool()));
         ClientBootstrap cb = new ClientBootstrap(newClientSocketChannelFactory(Executors.newCachedThreadPool()));
 
-        ChannelBuffer frames = createFrames(version);
+        ChannelBuffer frames = createFrames(version.getVersion());
 
         EchoHandler sh = new EchoHandler(frames, true);
         EchoHandler ch = new EchoHandler(frames, false);

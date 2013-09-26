@@ -35,57 +35,60 @@ import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
-import static org.jboss.netty.handler.codec.spdy.SpdyCodecUtil.*;
 import static org.junit.Assert.*;
 
 public class SpdyFrameDecoderTest {
 
     @Test
     public void testTooLargeHeaderNameOnSynStreamRequest() throws Exception {
-        for (int version = SPDY_MIN_VERSION; version <= SPDY_MAX_VERSION; version++) {
-            List<Integer> headerSizes = Arrays.asList(90, 900);
-            for (int maxHeaderSize : headerSizes) { // 90 catches the header name, 900 the value
-                SpdyHeadersFrame frame = new DefaultSpdySynStreamFrame(1, 0, (byte) 0);
-                addHeader(frame, 100, 1000);
-                CaptureHandler captureHandler = new CaptureHandler();
-                ServerBootstrap sb = new ServerBootstrap(
-                        newServerSocketChannelFactory(Executors.newCachedThreadPool()));
-                ClientBootstrap cb = new ClientBootstrap(
-                        newClientSocketChannelFactory(Executors.newCachedThreadPool()));
+        testTooLargeHeaderNameOnSynStreamRequest(SpdyVersion.SPDY_2);
+        testTooLargeHeaderNameOnSynStreamRequest(SpdyVersion.SPDY_3);
+        testTooLargeHeaderNameOnSynStreamRequest(SpdyVersion.SPDY_3_1);
+    }
 
-                sb.getPipeline().addLast("decoder", new SpdyFrameDecoder(version, 10000, maxHeaderSize));
-                sb.getPipeline().addLast("sessionHandler", new SpdySessionHandler(version, true));
-                sb.getPipeline().addLast("handler", captureHandler);
+    private void testTooLargeHeaderNameOnSynStreamRequest(SpdyVersion spdyVersion) throws Exception {
+        List<Integer> headerSizes = Arrays.asList(90, 900);
+        for (int maxHeaderSize : headerSizes) { // 90 catches the header name, 900 the value
+            SpdyHeadersFrame frame = new DefaultSpdySynStreamFrame(1, 0, (byte) 0);
+            addHeader(frame, 100, 1000);
+            CaptureHandler captureHandler = new CaptureHandler();
+            ServerBootstrap sb = new ServerBootstrap(
+                    newServerSocketChannelFactory(Executors.newCachedThreadPool()));
+            ClientBootstrap cb = new ClientBootstrap(
+                    newClientSocketChannelFactory(Executors.newCachedThreadPool()));
 
-                cb.getPipeline().addLast("encoder", new SpdyFrameEncoder(version));
+            sb.getPipeline().addLast("decoder", new SpdyFrameDecoder(spdyVersion, 10000, maxHeaderSize));
+            sb.getPipeline().addLast("sessionHandler", new SpdySessionHandler(spdyVersion, true));
+            sb.getPipeline().addLast("handler", captureHandler);
 
-                Channel sc = sb.bind(new InetSocketAddress(0));
-                int port = ((InetSocketAddress) sc.getLocalAddress()).getPort();
+            cb.getPipeline().addLast("encoder", new SpdyFrameEncoder(spdyVersion));
 
-                ChannelFuture ccf = cb.connect(new InetSocketAddress(TestUtil.getLocalHost(), port));
-                assertTrue(ccf.awaitUninterruptibly().isSuccess());
-                Channel cc = ccf.getChannel();
+            Channel sc = sb.bind(new InetSocketAddress(0));
+            int port = ((InetSocketAddress) sc.getLocalAddress()).getPort();
 
-                sendAndWaitForFrame(cc, frame, captureHandler);
+            ChannelFuture ccf = cb.connect(new InetSocketAddress(TestUtil.getLocalHost(), port));
+            assertTrue(ccf.awaitUninterruptibly().isSuccess());
+            Channel cc = ccf.getChannel();
 
-                assertNotNull("version " + version + ", not null message",
-                        captureHandler.message);
-                String message = "version " + version + ", should be SpdyHeadersFrame, was " +
-                        captureHandler.message.getClass();
-                assertTrue(
-                        message,
-                        captureHandler.message instanceof SpdyHeadersFrame);
-                SpdyHeadersFrame writtenFrame = (SpdyHeadersFrame) captureHandler.message;
+            sendAndWaitForFrame(cc, frame, captureHandler);
 
-                assertTrue("should be truncated", writtenFrame.isTruncated());
-                assertFalse("should not be invalid", writtenFrame.isInvalid());
+            assertNotNull("version " + spdyVersion.getVersion() + ", not null message",
+                    captureHandler.message);
+            String message = "version " + spdyVersion.getVersion() + ", should be SpdyHeadersFrame, was " +
+                    captureHandler.message.getClass();
+            assertTrue(
+                    message,
+                    captureHandler.message instanceof SpdyHeadersFrame);
+            SpdyHeadersFrame writtenFrame = (SpdyHeadersFrame) captureHandler.message;
 
-                sc.close().awaitUninterruptibly();
-                cb.shutdown();
-                sb.shutdown();
-                cb.releaseExternalResources();
-                sb.releaseExternalResources();
-            }
+            assertTrue("should be truncated", writtenFrame.isTruncated());
+            assertFalse("should not be invalid", writtenFrame.isInvalid());
+
+            sc.close().awaitUninterruptibly();
+            cb.shutdown();
+            sb.shutdown();
+            cb.releaseExternalResources();
+            sb.releaseExternalResources();
         }
     }
 

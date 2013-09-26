@@ -55,29 +55,42 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
      *        If the length of the message content exceeds this value,
      *        a {@link TooLongFrameException} will be raised.
      */
+    @Deprecated
     public SpdyHttpDecoder(int version, int maxContentLength) {
-        this(version, maxContentLength, new HashMap<Integer, HttpMessage>());
+        this(SpdyVersion.valueOf(version), maxContentLength, new HashMap<Integer, HttpMessage>());
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param spdyVersion the protocol version
+     * @param maxContentLength the maximum length of the message content.
+     *        If the length of the message content exceeds this value,
+     *        a {@link TooLongFrameException} will be raised.
+     */
+    @Deprecated
+    public SpdyHttpDecoder(SpdyVersion spdyVersion, int maxContentLength) {
+        this(spdyVersion, maxContentLength, new HashMap<Integer, HttpMessage>());
     }
 
     /**
      * Creates a new instance with the specified parameters.
      *
-     * @param version the protocol version
+     * @param spdyVersion the protocol version
      * @param maxContentLength the maximum length of the message content.
      *        If the length of the message content exceeds this value,
      *        a {@link TooLongFrameException} will be raised.
      * @param messageMap the {@link Map} used to hold partially received messages.
      */
-    protected SpdyHttpDecoder(int version, int maxContentLength, Map<Integer, HttpMessage> messageMap) {
-        if (version < SPDY_MIN_VERSION || version > SPDY_MAX_VERSION) {
-            throw new IllegalArgumentException(
-                    "unsupported version: " + version);
+    protected SpdyHttpDecoder(SpdyVersion spdyVersion, int maxContentLength, Map<Integer, HttpMessage> messageMap) {
+        if (spdyVersion == null) {
+            throw new NullPointerException("spdyVersion");
         }
         if (maxContentLength <= 0) {
             throw new IllegalArgumentException(
                     "maxContentLength must be a positive integer: " + maxContentLength);
         }
-        spdyVersion = version;
+        this.spdyVersion = spdyVersion.getVersion();
         this.maxContentLength = maxContentLength;
         this.messageMap = messageMap;
     }

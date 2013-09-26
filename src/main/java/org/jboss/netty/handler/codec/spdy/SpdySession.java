@@ -15,6 +15,8 @@
  */
 package org.jboss.netty.handler.codec.spdy;
 
+import org.jboss.netty.channel.MessageEvent;
+
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
@@ -23,7 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.jboss.netty.channel.MessageEvent;
+import static org.jboss.netty.handler.codec.spdy.SpdyCodecUtil.*;
 
 final class SpdySession {
 
@@ -33,6 +35,14 @@ final class SpdySession {
     private final AtomicInteger activeRemoteStreams = new AtomicInteger();
     private final Map<Integer, StreamState> activeStreams =
         new ConcurrentHashMap<Integer, StreamState>();
+
+    private final AtomicInteger sendWindowSize;
+    private final AtomicInteger receiveWindowSize;
+
+    public SpdySession(int sendWindowSize, int receiveWindowSize) {
+        this.sendWindowSize = new AtomicInteger(sendWindowSize);
+        this.receiveWindowSize = new AtomicInteger(receiveWindowSize);
+    }
 
     int numActiveStreams(boolean remote) {
         if (remote) {
@@ -145,16 +155,28 @@ final class SpdySession {
     }
 
     int getSendWindowSize(int streamId) {
+        if (streamId == SPDY_SESSION_STREAM_ID) {
+            return sendWindowSize.get();
+        }
+
         StreamState state = activeStreams.get(streamId);
         return state != null ? state.getSendWindowSize() : -1;
     }
 
     int updateSendWindowSize(int streamId, int deltaWindowSize) {
+        if (streamId == SPDY_SESSION_STREAM_ID) {
+            return sendWindowSize.addAndGet(deltaWindowSize);
+        }
+
         StreamState state = activeStreams.get(streamId);
         return state != null ? state.updateSendWindowSize(deltaWindowSize) : -1;
     }
 
     int updateReceiveWindowSize(int streamId, int deltaWindowSize) {
+        if (streamId == SPDY_SESSION_STREAM_ID) {
+            return receiveWindowSize.addAndGet(deltaWindowSize);
+        }
+
         StreamState state = activeStreams.get(streamId);
         if (deltaWindowSize > 0) {
             state.setReceiveWindowSizeLowerBound(0);
@@ -163,8 +185,18 @@ final class SpdySession {
     }
 
     int getReceiveWindowSizeLowerBound(int streamId) {
+        if (streamId == SPDY_SESSION_STREAM_ID) {
+            return 0;
+        }
+
         StreamState state = activeStreams.get(streamId);
         return state != null ? state.getReceiveWindowSizeLowerBound() : 0;
+    }
+
+    void updateAllSendWindowSizes(int deltaWindowSize) {
+        for (StreamState state: activeStreams.values()) {
+            state.updateSendWindowSize(deltaWindowSize);
+        }
     }
 
     void updateAllReceiveWindowSizes(int deltaWindowSize) {
@@ -182,6 +214,19 @@ final class SpdySession {
     }
 
     MessageEvent getPendingWrite(int streamId) {
+        if (streamId == SPDY_SESSION_STREAM_ID) {
+            for (Integer id : getActiveStreams()) {
+                StreamState state = activeStreams.get(id);
+                if (state.getSendWindowSize() > 0) {
+                    MessageEvent e = state.getPendingWrite();
+                    if (e != null) {
+                        return e;
+                    }
+                }
+            }
+            return null;
+        }
+
         StreamState state = activeStreams.get(streamId);
         return state != null ? state.getPendingWrite() : null;
     }
