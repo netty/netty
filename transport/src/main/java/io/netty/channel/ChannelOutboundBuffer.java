@@ -329,24 +329,39 @@ public final class ChannelOutboundBuffer {
                 return null;
             }
 
+            Entry entry = buffer[i];
             ByteBuf buf = (ByteBuf) m;
             final int readerIndex = buf.readerIndex();
             final int readableBytes = buf.writerIndex() - readerIndex;
 
             if (readableBytes > 0) {
                 nioBufferSize += readableBytes;
-                int count = buf.nioBufferCount();
+                int count = entry.count;
+                if (count == -1) {
+                    entry.count = count =  buf.nioBufferCount();
+                }
                 if (nioBufferCount + count > nioBuffers.length) {
                     this.nioBuffers = nioBuffers = doubleNioBufferArray(nioBuffers, nioBufferCount);
                 }
                 if (buf.isDirect() || !alloc.isDirectBufferPooled()) {
-                    if (buf.nioBufferCount() == 1) {
-                        nioBuffers[nioBufferCount ++] = buf.internalNioBuffer(readerIndex, readableBytes);
+                    if (count == 1) {
+                        ByteBuffer nioBuf = entry.buf;
+                        if (nioBuf == null) {
+                            // cache ByteBuffer as it may need to create a new ByteBuffer instance if its a
+                            // derived buffer
+                            entry.buf = nioBuf = buf.internalNioBuffer(readerIndex, readableBytes);
+                        }
+                        nioBuffers[nioBufferCount ++] = nioBuf;
                     } else {
-                        nioBufferCount = fillBufferArray(buf, nioBuffers, nioBufferCount);
+                        ByteBuffer[] nioBufs = entry.buffers;
+                        if (nioBufs == null) {
+                            // cached ByteBuffers as they may be expensive to create in terms of Object allocation
+                            entry.buffers = nioBufs = buf.nioBuffers();
+                        }
+                        nioBufferCount = fillBufferArray(nioBufs, nioBuffers, nioBufferCount);
                     }
                 } else {
-                    nioBufferCount = fillBufferArrayNonDirect(buffer[i], buf, readerIndex,
+                    nioBufferCount = fillBufferArrayNonDirect(entry, buf, readerIndex,
                             readableBytes, alloc, nioBuffers, nioBufferCount);
                 }
             }
@@ -358,8 +373,7 @@ public final class ChannelOutboundBuffer {
         return nioBuffers;
     }
 
-    private static int fillBufferArray(ByteBuf buf, ByteBuffer[] nioBuffers, int nioBufferCount) {
-        ByteBuffer[] nioBufs = buf.nioBuffers();
+    private static int fillBufferArray(ByteBuffer[] nioBufs, ByteBuffer[] nioBuffers, int nioBufferCount) {
         for (ByteBuffer nioBuf: nioBufs) {
             if (nioBuf == null) {
                 break;
@@ -375,10 +389,10 @@ public final class ChannelOutboundBuffer {
         directBuf.writeBytes(buf, readerIndex, readableBytes);
         buf.release();
         entry.msg = directBuf;
-        if (nioBufferCount == nioBuffers.length) {
-            nioBuffers = doubleNioBufferArray(nioBuffers, nioBufferCount);
-        }
-        nioBuffers[nioBufferCount ++] = directBuf.internalNioBuffer(0, readableBytes);
+        // cache ByteBuffer
+        ByteBuffer nioBuf = entry.buf = directBuf.internalNioBuffer(0, readableBytes);
+        entry.count = 1;
+        nioBuffers[nioBufferCount ++] = nioBuf;
         return nioBufferCount;
     }
 
@@ -529,17 +543,23 @@ public final class ChannelOutboundBuffer {
 
     private static final class Entry {
         Object msg;
+        ByteBuffer[] buffers;
+        ByteBuffer buf;
         ChannelPromise promise;
         long progress;
         long total;
         int pendingSize;
+        int count = -1;
 
         public void clear() {
+            buffers = null;
+            buf = null;
             msg = null;
             promise = null;
             progress = 0;
             total = 0;
             pendingSize = 0;
+            count = -1;
         }
     }
 
