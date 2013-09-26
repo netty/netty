@@ -790,6 +790,5 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
 
         buf.addComponent(buffer().writeByte(1));
         assertFalse(buf.isDirect());
-
     }
 }
