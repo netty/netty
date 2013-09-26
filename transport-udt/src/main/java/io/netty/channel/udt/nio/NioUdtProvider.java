@@ -26,6 +26,7 @@ import com.barchart.udt.nio.SocketChannelUDT;
 import io.netty.bootstrap.ChannelFactory;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
+import io.netty.channel.EventLoop;
 import io.netty.channel.udt.UdtServerChannel;
 import io.netty.channel.udt.UdtChannel;
 
@@ -199,32 +200,32 @@ public final class NioUdtProvider<T extends UdtChannel> implements ChannelFactor
      */
     @SuppressWarnings("unchecked")
     @Override
-    public T newChannel() {
+    public T newChannel(EventLoop eventLoop) {
         switch (kind) {
         case ACCEPTOR:
             switch (type) {
             case DATAGRAM:
-                return (T) new NioUdtMessageAcceptorChannel();
+                return (T) new NioUdtMessageAcceptorChannel(eventLoop);
             case STREAM:
-                return (T) new NioUdtByteAcceptorChannel();
+                return (T) new NioUdtByteAcceptorChannel(eventLoop);
             default:
                 throw new IllegalStateException("wrong type=" + type);
             }
         case CONNECTOR:
             switch (type) {
             case DATAGRAM:
-                return (T) new NioUdtMessageConnectorChannel();
+                return (T) new NioUdtMessageConnectorChannel(eventLoop);
             case STREAM:
-                return (T) new NioUdtByteConnectorChannel();
+                return (T) new NioUdtByteConnectorChannel(eventLoop);
             default:
                 throw new IllegalStateException("wrong type=" + type);
             }
         case RENDEZVOUS:
             switch (type) {
             case DATAGRAM:
-                return (T) new NioUdtMessageRendezvousChannel();
+                return (T) new NioUdtMessageRendezvousChannel(eventLoop);
             case STREAM:
-                return (T) new NioUdtByteRendezvousChannel();
+                return (T) new NioUdtByteRendezvousChannel(eventLoop);
             default:
                 throw new IllegalStateException("wrong type=" + type);
             }

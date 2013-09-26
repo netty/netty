@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,18 +13,29 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.bootstrap;
+package io.netty.channel.oio;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.ServerChannel;
 
-/**
- * Factory that creates a new {@link Channel} on {@link Bootstrap#bind()}, {@link Bootstrap#connect()}, and
- * {@link ServerBootstrap#bind()}.
- */
-public interface ChannelFactory<T extends Channel> {
-    /**
-     * Creates a new channel.
-     */
-    T newChannel(EventLoop eventLoop);
+public abstract class AbstractOioMessageServerChannel extends AbstractOioMessageChannel implements ServerChannel {
+
+    private EventLoopGroup childGroup;
+
+    protected AbstractOioMessageServerChannel(Channel parent, EventLoop eventLoop) {
+        super(parent, eventLoop);
+    }
+
+    @Override
+    public void setChildGroup(EventLoopGroup eventGroup) {
+        this.childGroup = eventGroup;
+    }
+
+    @Override
+    public EventLoopGroup getChildGroup() {
+        return childGroup;
+    }
+
 }

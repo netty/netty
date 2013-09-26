@@ -25,6 +25,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
+import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.AttributeKey;
 import io.netty.util.internal.logging.InternalLogger;
@@ -164,7 +165,10 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
             p.addLast(handler());
         }
 
-        final EventLoopGroup currentChildGroup = childGroup;
+        if (channel instanceof ServerChannel) {
+            ((ServerChannel) channel).setChildGroup(childGroup);
+        }
+
         final ChannelHandler currentChildHandler = childHandler;
         final Entry<ChannelOption<?>, Object>[] currentChildOptions;
         final Entry<AttributeKey<?>, Object>[] currentChildAttrs;
@@ -178,8 +182,8 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
         p.addLast(new ChannelInitializer<Channel>() {
             @Override
             public void initChannel(Channel ch) throws Exception {
-                ch.pipeline().addLast(new ServerBootstrapAcceptor(
-                        currentChildGroup, currentChildHandler, currentChildOptions, currentChildAttrs));
+                ch.pipeline().addLast(new ServerBootstrapAcceptor(currentChildHandler, currentChildOptions,
+                        currentChildAttrs));
             }
         });
     }
@@ -209,16 +213,12 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
 
     private static class ServerBootstrapAcceptor extends ChannelInboundHandlerAdapter {
 
-        private final EventLoopGroup childGroup;
         private final ChannelHandler childHandler;
         private final Entry<ChannelOption<?>, Object>[] childOptions;
         private final Entry<AttributeKey<?>, Object>[] childAttrs;
 
-        @SuppressWarnings("unchecked")
-        ServerBootstrapAcceptor(
-                EventLoopGroup childGroup, ChannelHandler childHandler,
-                Entry<ChannelOption<?>, Object>[] childOptions, Entry<AttributeKey<?>, Object>[] childAttrs) {
-            this.childGroup = childGroup;
+        ServerBootstrapAcceptor(ChannelHandler childHandler, Entry<ChannelOption<?>, Object>[] childOptions,
+                Entry<AttributeKey<?>, Object>[] childAttrs) {
             this.childHandler = childHandler;
             this.childOptions = childOptions;
             this.childAttrs = childAttrs;
@@ -245,12 +245,7 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
                 child.attr((AttributeKey<Object>) e.getKey()).set(e.getValue());
             }
 
-            try {
-                childGroup.register(child);
-            } catch (Throwable t) {
-                child.unsafe().closeForcibly();
-                logger.warn("Failed to register an accepted channel: " + child, t);
-            }
+            child.unsafe().register(child.newPromise());
         }
 
         @Override

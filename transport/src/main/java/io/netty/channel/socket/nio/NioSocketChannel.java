@@ -56,15 +56,15 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     /**
      * Create a new instance
      */
-    public NioSocketChannel() {
-        this(newSocket());
+    public NioSocketChannel(EventLoop eventLoop) {
+        this(eventLoop, newSocket());
     }
 
     /**
      * Create a new instance using the given {@link SocketChannel}.
      */
-    public NioSocketChannel(SocketChannel socket) {
-        this(null, socket);
+    public NioSocketChannel(EventLoop eventLoop, SocketChannel socket) {
+        this(null, eventLoop, socket);
     }
 
     /**
@@ -73,8 +73,8 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
      * @param parent    the {@link Channel} which created this instance or {@code null} if it was created by the user
      * @param socket    the {@link SocketChannel} which will be used
      */
-    public NioSocketChannel(Channel parent, SocketChannel socket) {
-        super(parent, socket);
+    public NioSocketChannel(Channel parent, EventLoop eventLoop, SocketChannel socket) {
+        super(parent, eventLoop, socket);
         config = new DefaultSocketChannelConfig(this, socket.socket());
     }
 

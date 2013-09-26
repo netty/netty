@@ -30,7 +30,6 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.NotYetConnectedException;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 /**
  * A skeletal {@link Channel} implementation.
@@ -60,15 +59,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     private volatile SocketAddress localAddress;
     private volatile SocketAddress remoteAddress;
-    private volatile EventLoop eventLoop;
+    private final EventLoop eventLoop;
     private volatile boolean registered;
 
     /** Cache for the string representation of this channel */
     private boolean strValActive;
     private String strVal;
-
-    private static final AtomicReferenceFieldUpdater<AbstractChannel, EventLoop> EVENT_LOOP_UPDATER =
-            AtomicReferenceFieldUpdater.newUpdater(AbstractChannel.class, EventLoop.class, "eventLoop");
 
     /**
      * Creates a new instance.
@@ -76,10 +72,14 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      * @param parent
      *        the parent of this channel. {@code null} if there's no parent.
      */
-    protected AbstractChannel(Channel parent) {
+    protected AbstractChannel(Channel parent, EventLoop eventLoop) {
         this.parent = parent;
-        unsafe = newUnsafe();
-        pipeline = new DefaultChannelPipeline(this);
+        this.eventLoop = eventLoop;
+        if (eventLoop == null) {
+            throw new IllegalStateException("null event loop");
+        }
+        this.unsafe = newUnsafe();
+        this.pipeline = new DefaultChannelPipeline(this);
     }
 
     @Override
@@ -385,18 +385,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public final void register(EventLoop eventLoop, final ChannelPromise promise) {
-            if (eventLoop == null) {
-                throw new NullPointerException("eventLoop");
-            }
-
+        public final void register(final ChannelPromise promise) {
             if (!isCompatible(eventLoop)) {
                 promise.setFailure(new IllegalStateException("incompatible event loop type: " +
                         eventLoop.getClass().getName()));
-                return;
-            }
-
-            if (!AbstractChannel.EVENT_LOOP_UPDATER.compareAndSet(AbstractChannel.this, null, eventLoop)) {
                 return;
             }
 

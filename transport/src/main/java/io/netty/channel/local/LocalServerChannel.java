@@ -46,6 +46,10 @@ public class LocalServerChannel extends AbstractServerChannel {
     private volatile LocalAddress localAddress;
     private volatile boolean acceptInProgress;
 
+    public LocalServerChannel(EventLoop eventLoop) {
+        super(eventLoop);
+    }
+
     @Override
     public ChannelConfig config() {
         return config;
@@ -131,7 +135,7 @@ public class LocalServerChannel extends AbstractServerChannel {
     }
 
     LocalChannel serve(final LocalChannel peer) {
-        final LocalChannel child = new LocalChannel(this, peer);
+        final LocalChannel child = new LocalChannel(this, getChildGroup().next(), peer);
         if (eventLoop().inEventLoop()) {
             serve0(child);
         } else {

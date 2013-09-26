@@ -19,6 +19,8 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 
 import java.io.IOException;
@@ -35,8 +37,8 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
     /**
      * @see {@link AbstractNioChannel#AbstractNioChannel(Channel, SelectableChannel, int)}
      */
-    protected AbstractNioMessageChannel(Channel parent, SelectableChannel ch, int readInterestOp) {
-        super(parent, ch, readInterestOp);
+    protected AbstractNioMessageChannel(Channel parent, EventLoop eventLoop, SelectableChannel ch, int readInterestOp) {
+        super(parent, eventLoop, ch, readInterestOp);
     }
 
     @Override
@@ -156,4 +158,5 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
      * @return {@code true} if and only if the message has been written
      */
     protected abstract boolean doWriteMessage(Object msg, ChannelOutboundBuffer in) throws Exception;
+
 }

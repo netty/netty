@@ -22,7 +22,9 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.EventLoop;
 import io.netty.channel.nio.AbstractNioMessageChannel;
+import io.netty.channel.nio.AbstractNioMessageServerChannel;
 import io.netty.channel.sctp.DefaultSctpServerChannelConfig;
 import io.netty.channel.sctp.SctpServerChannelConfig;
 
@@ -44,8 +46,9 @@ import java.util.Set;
  * Be aware that not all operations systems support SCTP. Please refer to the documentation of your operation system,
  * to understand what you need to do to use it. Also this feature is only supported on Java 7+.
  */
-public class NioSctpServerChannel extends AbstractNioMessageChannel
+public class NioSctpServerChannel extends AbstractNioMessageServerChannel
         implements io.netty.channel.sctp.SctpServerChannel {
+
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
     private static SctpServerChannel newSocket() {
@@ -62,8 +65,8 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
     /**
      * Create a new instance
      */
-    public NioSctpServerChannel() {
-        super(null, newSocket(), SelectionKey.OP_ACCEPT);
+    public NioSctpServerChannel(EventLoop eventLoop) {
+        super(null, eventLoop, newSocket(), SelectionKey.OP_ACCEPT);
         config = new DefaultSctpServerChannelConfig(this, javaChannel());
     }
 
@@ -140,7 +143,7 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
         if (ch == null) {
             return 0;
         }
-        buf.add(new NioSctpChannel(this, ch));
+        buf.add(new NioSctpChannel(this, getChildGroup().next(), ch));
         return 1;
     }
 

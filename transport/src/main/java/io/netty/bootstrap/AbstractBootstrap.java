@@ -27,6 +27,7 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.AttributeKey;
 
+import java.lang.reflect.Constructor;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -67,8 +68,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     }
 
     /**
-     * The {@link EventLoopGroup} which is used to handle all the events for the to-be-creates
-     * {@link Channel}
+     * The {@link EventLoopGroup} which is used to handle all the events for the to-be-created {@link Channel}
      */
     @SuppressWarnings("unchecked")
     public B group(EventLoopGroup group) {
@@ -284,7 +284,8 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     }
 
     final ChannelFuture initAndRegister() {
-        final Channel channel = channelFactory().newChannel();
+        EventLoop eventLoop = group().next();
+        Channel channel = channelFactory().newChannel(eventLoop);
         try {
             init(channel);
         } catch (Throwable t) {
@@ -293,7 +294,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         }
 
         ChannelPromise regPromise = channel.newPromise();
-        group().register(channel, regPromise);
+        channel.unsafe().register(regPromise);
         if (regPromise.cause() != null) {
             if (channel.isRegistered()) {
                 channel.close();
@@ -430,9 +431,10 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         }
 
         @Override
-        public T newChannel() {
+        public T newChannel(EventLoop eventLoop) {
             try {
-                return clazz.newInstance();
+                Constructor<? extends T> constructor = clazz.getConstructor(EventLoop.class);
+                return constructor.newInstance(eventLoop);
             } catch (Throwable t) {
                 throw new ChannelException("Unable to create Channel from class " + clazz, t);
             }

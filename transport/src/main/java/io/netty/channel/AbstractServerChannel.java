@@ -34,11 +34,13 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
+    private EventLoopGroup childGroup;
+
     /**
      * Creates a new instance.
      */
-    protected AbstractServerChannel() {
-        super(null);
+    protected AbstractServerChannel(EventLoop eventLoop) {
+        super(null, eventLoop);
     }
 
     @Override
@@ -69,6 +71,14 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
         throw new UnsupportedOperationException();
+    }
+
+    public void setChildGroup(EventLoopGroup childGroup) {
+        this.childGroup = childGroup;
+    }
+
+    public EventLoopGroup getChildGroup() {
+        return childGroup;
     }
 
     private final class DefaultServerUnsafe extends AbstractUnsafe {
