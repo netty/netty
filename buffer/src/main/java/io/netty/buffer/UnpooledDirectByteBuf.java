@@ -274,6 +274,11 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public ByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
+        getBytes(index, dst, dstIndex, length, false);
+        return this;
+    }
+
+    private void getBytes(int index, byte[] dst, int dstIndex, int length, boolean internal) {
         checkDstIndex(index, length, dstIndex, dst.length);
 
         if (dstIndex < 0 || dstIndex > dst.length - length) {
@@ -281,23 +286,53 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
                     "dstIndex: %d, length: %d (expected: range(0, %d))", dstIndex, length, dst.length));
         }
 
-        ByteBuffer tmpBuf = internalNioBuffer();
+        ByteBuffer tmpBuf;
+        if (internal) {
+            tmpBuf = internalNioBuffer();
+        } else {
+            tmpBuf = buffer.duplicate();
+        }
         tmpBuf.clear().position(index).limit(index + length);
         tmpBuf.get(dst, dstIndex, length);
+    }
+
+    @Override
+    public ByteBuf readBytes(byte[] dst, int dstIndex, int length) {
+        checkReadableBytes(length);
+        getBytes(readerIndex, dst, dstIndex, length, true);
+        readerIndex += length;
         return this;
     }
 
     @Override
     public ByteBuf getBytes(int index, ByteBuffer dst) {
+        getBytes(index, dst, false);
+        return this;
+    }
+
+    private void getBytes(int index, ByteBuffer dst, boolean internal) {
         checkIndex(index);
         if (dst == null) {
             throw new NullPointerException("dst");
         }
 
         int bytesToCopy = Math.min(capacity() - index, dst.remaining());
-        ByteBuffer tmpBuf = internalNioBuffer();
+        ByteBuffer tmpBuf;
+        if (internal) {
+            tmpBuf = internalNioBuffer();
+        } else {
+            tmpBuf = buffer.duplicate();
+        }
         tmpBuf.clear().position(index).limit(index + bytesToCopy);
         dst.put(tmpBuf);
+    }
+
+    @Override
+    public ByteBuf readBytes(ByteBuffer dst) {
+        int length = dst.remaining();
+        checkReadableBytes(length);
+        getBytes(readerIndex, dst, true);
+        readerIndex += length;
         return this;
     }
 
@@ -404,33 +439,67 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public ByteBuf getBytes(int index, OutputStream out, int length) throws IOException {
+        getBytes(index, out, length, false);
+        return this;
+    }
+
+    private void getBytes(int index, OutputStream out, int length, boolean internal) throws IOException {
         ensureAccessible();
         if (length == 0) {
-            return this;
+            return;
         }
 
         if (buffer.hasArray()) {
             out.write(buffer.array(), index + buffer.arrayOffset(), length);
         } else {
             byte[] tmp = new byte[length];
-            ByteBuffer tmpBuf = internalNioBuffer();
+            ByteBuffer tmpBuf;
+            if (internal) {
+                tmpBuf = internalNioBuffer();
+            } else {
+                tmpBuf = buffer.duplicate();
+            }
             tmpBuf.clear().position(index);
             tmpBuf.get(tmp);
             out.write(tmp);
         }
+    }
+
+    @Override
+    public ByteBuf readBytes(OutputStream out, int length) throws IOException {
+        checkReadableBytes(length);
+        getBytes(readerIndex, out, length, true);
+        readerIndex += length;
         return this;
     }
 
     @Override
     public int getBytes(int index, GatheringByteChannel out, int length) throws IOException {
+        return getBytes(index, out, length, false);
+    }
+
+    private int getBytes(int index, GatheringByteChannel out, int length, boolean internal) throws IOException {
         ensureAccessible();
         if (length == 0) {
             return 0;
         }
 
-        ByteBuffer tmpBuf = internalNioBuffer();
+        ByteBuffer tmpBuf;
+        if (internal) {
+            tmpBuf = internalNioBuffer();
+        } else {
+            tmpBuf = buffer.duplicate();
+        }
         tmpBuf.clear().position(index).limit(index + length);
         return out.write(tmpBuf);
+    }
+
+    @Override
+    public int readBytes(GatheringByteChannel out, int length) throws IOException {
+        checkReadableBytes(length);
+        int readBytes = getBytes(readerIndex, out, length, true);
+        readerIndex += readBytes;
+        return readBytes;
     }
 
     @Override
@@ -444,9 +513,9 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
             if (readBytes <= 0) {
                 return readBytes;
             }
-            ByteBuffer tmpNioBuf = internalNioBuffer();
-            tmpNioBuf.clear().position(index);
-            tmpNioBuf.put(tmp, 0, readBytes);
+            ByteBuffer tmpBuf = internalNioBuffer();
+            tmpBuf.clear().position(index);
+            tmpBuf.put(tmp, 0, readBytes);
             return readBytes;
         }
     }
@@ -454,8 +523,8 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public int setBytes(int index, ScatteringByteChannel in, int length) throws IOException {
         ensureAccessible();
-        ByteBuffer tmpNioBuf = internalNioBuffer();
-        tmpNioBuf.clear().position(index).limit(index + length);
+        ByteBuffer tmpBuf = internalNioBuffer();
+        tmpBuf.clear().position(index).limit(index + length);
         try {
             return in.read(tmpNioBuf);
         } catch (ClosedChannelException e) {
@@ -478,7 +547,7 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
         ensureAccessible();
         ByteBuffer src;
         try {
-            src = (ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length);
+            src = (ByteBuffer) buffer.duplicate().clear().position(index).limit(index + length);
         } catch (IllegalArgumentException e) {
             throw new IndexOutOfBoundsException("Too many bytes to read - Need " + (index + length));
         }

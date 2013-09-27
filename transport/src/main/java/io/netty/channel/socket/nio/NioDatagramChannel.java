@@ -23,6 +23,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultAddressedEnvelope;
@@ -128,7 +129,9 @@ public final class NioDatagramChannel
     @Override
     public boolean isActive() {
         DatagramChannel ch = javaChannel();
-        return ch.isOpen();
+        return ch.isOpen() && (
+                (config.getOption(ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION) && isRegistered())
+                || ch.socket().isBound());
     }
 
     @Override

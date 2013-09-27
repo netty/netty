@@ -17,13 +17,8 @@ package io.netty.buffer;
 
 import org.junit.Test;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.channels.Channels;
-import java.nio.channels.GatheringByteChannel;
-import java.nio.channels.WritableByteChannel;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -782,58 +777,18 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         // ignore
     }
 
-    private static final class TestGatheringByteChannel implements GatheringByteChannel {
-        private final ByteArrayOutputStream out = new ByteArrayOutputStream();
-        private final WritableByteChannel channel = Channels.newChannel(out);
-        private final int limit;
-        TestGatheringByteChannel(int limit) {
-            this.limit = limit;
-        }
+    @Test
+    public void testisDirectMultipleBufs() {
+        CompositeByteBuf buf = freeLater(compositeBuffer());
+        assertFalse(buf.isDirect());
 
-        TestGatheringByteChannel() {
-            this(Integer.MAX_VALUE);
-        }
+        buf.addComponent(directBuffer().writeByte(1));
 
-        @Override
-        public long write(ByteBuffer[] srcs, int offset, int length) throws IOException {
-            long written = 0;
-            for (; offset < length; offset++) {
-                written += write(srcs[offset]);
-                if (written >= limit) {
-                    break;
-                }
-            }
-            return written;
-        }
+        assertTrue(buf.isDirect());
+        buf.addComponent(directBuffer().writeByte(1));
+        assertTrue(buf.isDirect());
 
-        @Override
-        public long write(ByteBuffer[] srcs) throws IOException {
-            return write(srcs, 0, srcs.length);
-        }
-
-        @Override
-        public int write(ByteBuffer src) throws IOException {
-            int oldLimit = src.limit();
-            if (limit < src.remaining()) {
-                src.limit(src.position() + limit);
-            }
-            int w = channel.write(src);
-            src.limit(oldLimit);
-            return w;
-        }
-
-        @Override
-        public boolean isOpen() {
-            return channel.isOpen();
-        }
-
-        @Override
-        public void close() throws IOException {
-            channel.close();
-        }
-
-        public byte[] writtenBytes() {
-            return out.toByteArray();
-        }
+        buf.addComponent(buffer().writeByte(1));
+        assertFalse(buf.isDirect());
     }
 }
