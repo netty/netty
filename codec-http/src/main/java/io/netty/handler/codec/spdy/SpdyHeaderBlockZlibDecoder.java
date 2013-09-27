@@ -31,9 +31,9 @@ class SpdyHeaderBlockZlibDecoder extends SpdyHeaderBlockRawDecoder {
 
     private ByteBuf decompressed;
 
-    public SpdyHeaderBlockZlibDecoder(int version, int maxHeaderSize) {
+    public SpdyHeaderBlockZlibDecoder(SpdyVersion version, int maxHeaderSize) {
         super(version, maxHeaderSize);
-        this.version = version;
+        this.version = version.getVersion();
     }
 
     @Override

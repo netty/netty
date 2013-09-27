@@ -19,7 +19,7 @@ import io.netty.buffer.ByteBuf;
 
 abstract class SpdyHeaderBlockDecoder {
 
-    static SpdyHeaderBlockDecoder newInstance(int version, int maxHeaderSize) {
+    static SpdyHeaderBlockDecoder newInstance(SpdyVersion version, int maxHeaderSize) {
         return new SpdyHeaderBlockZlibDecoder(version, maxHeaderSize);
     }
 
