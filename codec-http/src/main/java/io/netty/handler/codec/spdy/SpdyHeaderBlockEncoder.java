@@ -22,7 +22,7 @@ import io.netty.util.internal.PlatformDependent;
 abstract class SpdyHeaderBlockEncoder {
 
     static SpdyHeaderBlockEncoder newInstance(
-            int version, int compressionLevel, int windowBits, int memLevel) {
+            SpdyVersion version, int compressionLevel, int windowBits, int memLevel) {
 
         if (PlatformDependent.javaVersion() >= 7) {
             return new SpdyHeaderBlockZlibEncoder(
