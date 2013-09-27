@@ -62,29 +62,45 @@ public class SpdyFrameDecoder extends FrameDecoder {
      * Creates a new instance with the specified {@code version} and the default
      * {@code maxChunkSize (8192)} and {@code maxHeaderSize (16384)}.
      */
+    @Deprecated
     public SpdyFrameDecoder(int version) {
-        this(version, 8192, 16384);
+        this(SpdyVersion.valueOf(version), 8192, 16384);
+    }
+
+    /**
+     * Creates a new instance with the specified {@code version} and the default
+     * {@code maxChunkSize (8192)} and {@code maxHeaderSize (16384)}.
+     */
+    public SpdyFrameDecoder(SpdyVersion spdyVersion) {
+        this(spdyVersion, 8192, 16384);
     }
 
     /**
      * Creates a new instance with the specified parameters.
      */
+    @Deprecated
     public SpdyFrameDecoder(int version, int maxChunkSize, int maxHeaderSize) {
-        this(version, maxChunkSize, SpdyHeaderBlockDecoder.newInstance(version, maxHeaderSize));
+        this(SpdyVersion.valueOf(version), maxChunkSize, maxHeaderSize);
+    }
+
+    /**
+     * Creates a new instance with the specified parameters.
+     */
+    public SpdyFrameDecoder(SpdyVersion spdyVersion, int maxChunkSize, int maxHeaderSize) {
+        this(spdyVersion, maxChunkSize, SpdyHeaderBlockDecoder.newInstance(spdyVersion, maxHeaderSize));
     }
 
     protected SpdyFrameDecoder(
-            int version, int maxChunkSize, SpdyHeaderBlockDecoder headerBlockDecoder) {
+            SpdyVersion spdyVersion, int maxChunkSize, SpdyHeaderBlockDecoder headerBlockDecoder) {
         super(false);
-        if (version < SPDY_MIN_VERSION || version > SPDY_MAX_VERSION) {
-            throw new IllegalArgumentException(
-                    "unsupported version: " + version);
+        if (spdyVersion == null) {
+            throw new NullPointerException("spdyVersion");
         }
         if (maxChunkSize <= 0) {
             throw new IllegalArgumentException(
                     "maxChunkSize must be a positive integer: " + maxChunkSize);
         }
-        spdyVersion = version;
+        this.spdyVersion = spdyVersion.getVersion();
         this.maxChunkSize = maxChunkSize;
         this.headerBlockDecoder = headerBlockDecoder;
         state = State.READ_COMMON_HEADER;

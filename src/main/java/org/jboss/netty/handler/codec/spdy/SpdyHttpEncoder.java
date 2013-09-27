@@ -136,12 +136,21 @@ public class SpdyHttpEncoder implements ChannelDownstreamHandler {
      *
      * @param version the protocol version
      */
+    @Deprecated
     public SpdyHttpEncoder(int version) {
-        if (version < SPDY_MIN_VERSION || version > SPDY_MAX_VERSION) {
-            throw new IllegalArgumentException(
-                    "unsupported version: " + version);
+        this(SpdyVersion.valueOf(version));
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param spdyVersion the protocol version
+     */
+    public SpdyHttpEncoder(SpdyVersion spdyVersion) {
+        if (spdyVersion == null) {
+            throw new NullPointerException("spdyVersion");
         }
-        spdyVersion = version;
+        this.spdyVersion = spdyVersion.getVersion();
     }
 
     public void handleDownstream(ChannelHandlerContext ctx, ChannelEvent evt)

@@ -19,8 +19,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
 
 final class SpdyCodecUtil {
 
-    static final int SPDY_MIN_VERSION = 2;
-    static final int SPDY_MAX_VERSION = 3;
+    static final int SPDY_SESSION_STREAM_ID = 0;
 
     static final int SPDY_HEADER_TYPE_OFFSET   = 2;
     static final int SPDY_HEADER_FLAGS_OFFSET  = 4;

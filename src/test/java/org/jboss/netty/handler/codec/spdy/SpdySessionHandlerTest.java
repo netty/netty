@@ -91,10 +91,10 @@ public class SpdySessionHandlerTest {
         assertTrue(spdyHeadersFrame.getHeaders().isEmpty());
     }
 
-    private static void testSpdySessionHandler(int version, boolean server) {
+    private static void testSpdySessionHandler(SpdyVersion spdyVersion, boolean server) {
         DecoderEmbedder<Object> sessionHandler =
             new DecoderEmbedder<Object>(
-                    new SpdySessionHandler(version, server), new EchoHandler(closeSignal, server));
+                    new SpdySessionHandler(spdyVersion, server), new EchoHandler(closeSignal, server));
         sessionHandler.pollAll();
 
         int localStreamId = server ? 1 : 2;
@@ -200,50 +200,50 @@ public class SpdySessionHandlerTest {
 
     @Test
     public void testSpdyClientSessionHandler() {
-        for (int version = SPDY_MIN_VERSION; version <= SPDY_MAX_VERSION; version ++) {
-            testSpdySessionHandler(version, false);
-        }
+        testSpdySessionHandler(SpdyVersion.SPDY_2, false);
+        testSpdySessionHandler(SpdyVersion.SPDY_3, false);
+        testSpdySessionHandler(SpdyVersion.SPDY_3_1, false);
     }
 
     @Test
     public void testSpdyClientSessionHandlerPing() {
-        for (int version = SPDY_MIN_VERSION; version <= SPDY_MAX_VERSION; version ++) {
-            testSpdySessionHandlerPing(version, false);
-        }
+        testSpdySessionHandlerPing(SpdyVersion.SPDY_2, false);
+        testSpdySessionHandlerPing(SpdyVersion.SPDY_3, false);
+        testSpdySessionHandlerPing(SpdyVersion.SPDY_3_1, false);
     }
 
     @Test
     public void testSpdyClientSessionHandlerGoAway() {
-        for (int version = SPDY_MIN_VERSION; version <= SPDY_MAX_VERSION; version ++) {
-            testSpdySessionHandlerGoAway(version, false);
-        }
+        testSpdySessionHandlerGoAway(SpdyVersion.SPDY_2, false);
+        testSpdySessionHandlerGoAway(SpdyVersion.SPDY_3, false);
+        testSpdySessionHandlerGoAway(SpdyVersion.SPDY_3_1, false);
     }
 
     @Test
     public void testSpdyServerSessionHandler() {
-        for (int version = SPDY_MIN_VERSION; version <= SPDY_MAX_VERSION; version ++) {
-            testSpdySessionHandler(version, true);
-        }
+        testSpdySessionHandler(SpdyVersion.SPDY_2, true);
+        testSpdySessionHandler(SpdyVersion.SPDY_3, true);
+        testSpdySessionHandler(SpdyVersion.SPDY_3_1, true);
     }
 
     @Test
     public void testSpdyServerSessionHandlerPing() {
-        for (int version = SPDY_MIN_VERSION; version <= SPDY_MAX_VERSION; version ++) {
-            testSpdySessionHandlerPing(version, true);
-        }
+        testSpdySessionHandlerPing(SpdyVersion.SPDY_2, true);
+        testSpdySessionHandlerPing(SpdyVersion.SPDY_3, true);
+        testSpdySessionHandlerPing(SpdyVersion.SPDY_3_1, true);
     }
 
     @Test
     public void testSpdyServerSessionHandlerGoAway() {
-        for (int version = SPDY_MIN_VERSION; version <= SPDY_MAX_VERSION; version ++) {
-            testSpdySessionHandlerGoAway(version, true);
-        }
+        testSpdySessionHandlerGoAway(SpdyVersion.SPDY_2, true);
+        testSpdySessionHandlerGoAway(SpdyVersion.SPDY_3, true);
+        testSpdySessionHandlerGoAway(SpdyVersion.SPDY_3_1, true);
     }
 
-    private static void testSpdySessionHandlerPing(int version, boolean server) {
+    private static void testSpdySessionHandlerPing(SpdyVersion spdyVersion, boolean server) {
         DecoderEmbedder<Object> sessionHandler =
             new DecoderEmbedder<Object>(
-                    new SpdySessionHandler(version, server), new EchoHandler(closeSignal, server));
+                    new SpdySessionHandler(spdyVersion, server), new EchoHandler(closeSignal, server));
         sessionHandler.pollAll();
 
         int localStreamId = server ? 1 : 2;
@@ -264,10 +264,10 @@ public class SpdySessionHandlerTest {
         sessionHandler.finish();
     }
 
-    private static void testSpdySessionHandlerGoAway(int version, boolean server) {
+    private static void testSpdySessionHandlerGoAway(SpdyVersion spdyVersion, boolean server) {
         DecoderEmbedder<Object> sessionHandler =
             new DecoderEmbedder<Object>(
-                    new SpdySessionHandler(version, server), new EchoHandler(closeSignal, server));
+                    new SpdySessionHandler(spdyVersion, server), new EchoHandler(closeSignal, server));
         sessionHandler.pollAll();
 
         int localStreamId = server ? 1 : 2;

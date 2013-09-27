@@ -21,14 +21,14 @@ import org.jboss.netty.util.internal.DetectionUtil;
 abstract class SpdyHeaderBlockEncoder {
 
     static SpdyHeaderBlockEncoder newInstance(
-            int version, int compressionLevel, int windowBits, int memLevel) {
+            SpdyVersion spdyVersion, int compressionLevel, int windowBits, int memLevel) {
 
         if (DetectionUtil.javaVersion() >= 7) {
             return new SpdyHeaderBlockZlibEncoder(
-                    version, compressionLevel);
+                    spdyVersion, compressionLevel);
         } else {
             return new SpdyHeaderBlockJZlibEncoder(
-                    version, compressionLevel, windowBits, memLevel);
+                    spdyVersion, compressionLevel, windowBits, memLevel);
         }
     }
 
