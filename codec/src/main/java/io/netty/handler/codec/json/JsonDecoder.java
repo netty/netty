@@ -17,15 +17,17 @@ package io.netty.handler.codec.json;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageDecoder;
 
 import java.util.List;
 
 /**
- * Decodes a received {@link ByteBuf} into a
- * <a href="http://www.json.org/">JSON</a>
+ * Decodes a received {@link ByteBuf} which has
+ * <a href="http://www.json.org/">JSON</a> format data to a java value.
  * */
+@Sharable
 public class JsonDecoder<T> extends MessageToMessageDecoder<ByteBuf> {
     private static volatile ObjectMapper objectMapper;
     private static final ObjectMapper defaultObjectMapper = new ObjectMapper();

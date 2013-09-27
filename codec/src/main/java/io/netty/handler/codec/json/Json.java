@@ -15,29 +15,41 @@
  */
 package io.netty.handler.codec.json;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelHandler.Sharable;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.MessageToMessageEncoder;
 
-import java.util.List;
-
-/**
- * Encodes the requested java value
- * into a {@link io.netty.buffer.ByteBuf} with <a href="http://www.json.org/">JSON</a>
- * format.
- * */
-
-@Sharable
-public class JsonEncoder extends MessageToMessageEncoder<Object> {
+public final class Json {
     private static volatile ObjectMapper objectMapper;
     private static final ObjectMapper defaultObjectMapper = new ObjectMapper();
 
-    @Override
-    protected void encode(ChannelHandlerContext ctx, Object msg, List<Object> out) throws Exception {
-        byte[] jsonBytes = getObjectMapper().writeValueAsBytes(msg);
-        out.add(Unpooled.wrappedBuffer(jsonBytes));
+    private Json() {
+    }
+
+    /**
+     * Convert a JsonNode to a Java value
+     *
+     * @param jsonNode JsonNode to convert.
+     * @param clazz Expected Java value type.
+     */
+    public static <T> T fromJsonNode(final JsonNode jsonNode, final Class<T> clazz) {
+        try {
+            return getObjectMapper().treeToValue(jsonNode, clazz);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Convert an object to JsonNode.
+     *
+     * @param object Value to convert.
+     */
+    public static JsonNode toJsonNode(final Object object) {
+        try {
+            return getObjectMapper().valueToTree(object);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public static ObjectMapper getObjectMapper() {
@@ -45,6 +57,6 @@ public class JsonEncoder extends MessageToMessageEncoder<Object> {
     }
 
     public static void setObjectMapper(ObjectMapper objectMapper) {
-        JsonEncoder.objectMapper = objectMapper;
+        Json.objectMapper = objectMapper;
     }
 }

@@ -17,11 +17,18 @@ package io.netty.handler.codec.json;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageEncoder;
 
 import java.util.List;
 
+/**
+ * Encodes the requested {@link com.fasterxml.jackson.databind.JsonNode}
+ * into a
+ * {@link io.netty.buffer.ByteBuf}.
+ * */
+@Sharable
 public class JsonNodeEncoder extends MessageToMessageEncoder<Object> {
     private static volatile ObjectMapper objectMapper;
     private static final ObjectMapper defaultObjectMapper = new ObjectMapper();

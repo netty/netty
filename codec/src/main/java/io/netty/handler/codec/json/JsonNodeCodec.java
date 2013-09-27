@@ -19,11 +19,16 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageCodec;
 
 import java.util.List;
 
+/**
+ * A Codec for on-the-fly encoding/decoding of {@link JsonNode} to ByteBuf and vise-versa.
+ * */
+@Sharable
 public class JsonNodeCodec extends MessageToMessageCodec<ByteBuf, Object> {
     private static volatile ObjectMapper objectMapper;
     private static final ObjectMapper defaultObjectMapper = new ObjectMapper();
