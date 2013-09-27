@@ -41,6 +41,7 @@ public abstract class SpdyOrHttpChooser extends ByteToMessageDecoder {
     public enum SelectedProtocol {
         SPDY_2,
         SPDY_3,
+        SPDY_3_1,
         HTTP_1_1,
         HTTP_1_0,
         UNKNOWN
@@ -84,10 +85,13 @@ public abstract class SpdyOrHttpChooser extends ByteToMessageDecoder {
             // Not done with choosing the protocol, so just return here for now,
             return false;
         case SPDY_2:
-            addSpdyHandlers(ctx, 2);
+            addSpdyHandlers(ctx, SpdyVersion.SPDY_2);
             break;
         case SPDY_3:
-            addSpdyHandlers(ctx, 3);
+            addSpdyHandlers(ctx, SpdyVersion.SPDY_3);
+            break;
+        case SPDY_3_1:
+            addSpdyHandlers(ctx, SpdyVersion.SPDY_3_1);
             break;
         case HTTP_1_0:
         case HTTP_1_1:
@@ -102,7 +106,7 @@ public abstract class SpdyOrHttpChooser extends ByteToMessageDecoder {
     /**
      * Add all {@link ChannelHandler}'s that are needed for SPDY with the given version.
      */
-    protected void addSpdyHandlers(ChannelHandlerContext ctx, int version) {
+    protected void addSpdyHandlers(ChannelHandlerContext ctx, SpdyVersion version) {
         ChannelPipeline pipeline = ctx.pipeline();
         pipeline.addLast("spdyDecoder", new SpdyFrameDecoder(version));
         pipeline.addLast("spdyEncoder", new SpdyFrameEncoder(version));
