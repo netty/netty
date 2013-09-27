@@ -30,8 +30,8 @@ class SpdyHeaderBlockJZlibEncoder extends SpdyHeaderBlockRawEncoder {
     private boolean finished;
 
     public SpdyHeaderBlockJZlibEncoder(
-            int version, int compressionLevel, int windowBits, int memLevel) {
-        super(version);
+            SpdyVersion spdyVersion, int compressionLevel, int windowBits, int memLevel) {
+        super(spdyVersion);
         if (compressionLevel < 0 || compressionLevel > 9) {
             throw new IllegalArgumentException(
                     "compressionLevel: " + compressionLevel + " (expected: 0-9)");
@@ -51,6 +51,7 @@ class SpdyHeaderBlockJZlibEncoder extends SpdyHeaderBlockRawEncoder {
             throw new CompressionException(
                     "failed to initialize an SPDY header block deflater: " + resultCode);
         } else {
+            int version = spdyVersion.getVersion();
             if (version < 3) {
                 resultCode = z.deflateSetDictionary(SPDY2_DICT, SPDY2_DICT.length);
             } else {

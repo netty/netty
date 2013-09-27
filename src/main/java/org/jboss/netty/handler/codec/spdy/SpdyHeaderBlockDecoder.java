@@ -19,8 +19,8 @@ import org.jboss.netty.buffer.ChannelBuffer;
 
 abstract class SpdyHeaderBlockDecoder {
 
-    static SpdyHeaderBlockDecoder newInstance(int version, int maxHeaderSize) {
-        return new SpdyHeaderBlockZlibDecoder(version, maxHeaderSize);
+    static SpdyHeaderBlockDecoder newInstance(SpdyVersion spdyVersion, int maxHeaderSize) {
+        return new SpdyHeaderBlockZlibDecoder(spdyVersion, maxHeaderSize);
     }
 
     abstract void decode(ChannelBuffer encoded, SpdyHeadersFrame frame) throws Exception;

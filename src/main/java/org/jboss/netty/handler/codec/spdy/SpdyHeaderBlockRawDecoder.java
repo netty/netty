@@ -30,13 +30,12 @@ public class SpdyHeaderBlockRawDecoder extends SpdyHeaderBlockDecoder {
     private int headerSize;
     private int numHeaders;
 
-    public SpdyHeaderBlockRawDecoder(int version, int maxHeaderSize) {
-        if (version < SPDY_MIN_VERSION || version > SPDY_MAX_VERSION) {
-            throw new IllegalArgumentException(
-                    "unsupported version: " + version);
+    public SpdyHeaderBlockRawDecoder(SpdyVersion spdyVersion, int maxHeaderSize) {
+        if (spdyVersion == null) {
+            throw new NullPointerException("spdyVersion");
         }
 
-        this.version = version;
+        this.version = spdyVersion.getVersion();
         this.maxHeaderSize = maxHeaderSize;
         lengthFieldSize = version < 3 ? 2 : 4;
         reset();

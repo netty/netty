@@ -42,24 +42,41 @@ public class SpdyFrameEncoder implements ChannelDownstreamHandler {
      * default {@code compressionLevel (6)}, {@code windowBits (15)},
      * and {@code memLevel (8)}.
      */
+    @Deprecated
     public SpdyFrameEncoder(int version) {
-        this(version, 6, 15, 8);
+        this(SpdyVersion.valueOf(version), 6, 15, 8);
+    }
+
+    /**
+     * Creates a new instance with the specified {@code version} and the
+     * default {@code compressionLevel (6)}, {@code windowBits (15)},
+     * and {@code memLevel (8)}.
+     */
+    public SpdyFrameEncoder(SpdyVersion spdyVersion) {
+        this(spdyVersion, 6, 15, 8);
     }
 
     /**
      * Creates a new instance with the specified parameters.
      */
+    @Deprecated
     public SpdyFrameEncoder(int version, int compressionLevel, int windowBits, int memLevel) {
-        this(version, SpdyHeaderBlockEncoder.newInstance(
-                version, compressionLevel, windowBits, memLevel));
+        this(SpdyVersion.valueOf(version), compressionLevel, windowBits, memLevel);
     }
 
-    protected SpdyFrameEncoder(int version, SpdyHeaderBlockEncoder headerBlockEncoder) {
-        if (version < SPDY_MIN_VERSION || version > SPDY_MAX_VERSION) {
-            throw new IllegalArgumentException(
-                    "unknown version: " + version);
+    /**
+     * Creates a new instance with the specified parameters.
+     */
+    public SpdyFrameEncoder(SpdyVersion spdyVersion, int compressionLevel, int windowBits, int memLevel) {
+        this(spdyVersion, SpdyHeaderBlockEncoder.newInstance(
+                spdyVersion, compressionLevel, windowBits, memLevel));
+    }
+
+    protected SpdyFrameEncoder(SpdyVersion spdyVersion, SpdyHeaderBlockEncoder headerBlockEncoder) {
+        if (spdyVersion == null) {
+            throw new NullPointerException("spdyVersion");
         }
-        this.version = version;
+        version = spdyVersion.getVersion();
         this.headerBlockEncoder = headerBlockEncoder;
     }
 

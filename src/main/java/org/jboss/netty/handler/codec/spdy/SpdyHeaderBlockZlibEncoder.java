@@ -29,13 +29,14 @@ class SpdyHeaderBlockZlibEncoder extends SpdyHeaderBlockRawEncoder {
 
     private boolean finished;
 
-    public SpdyHeaderBlockZlibEncoder(int version, int compressionLevel) {
-        super(version);
+    public SpdyHeaderBlockZlibEncoder(SpdyVersion spdyVersion, int compressionLevel) {
+        super(spdyVersion);
         if (compressionLevel < 0 || compressionLevel > 9) {
             throw new IllegalArgumentException(
                     "compressionLevel: " + compressionLevel + " (expected: 0-9)");
         }
         compressor = new Deflater(compressionLevel);
+        int version = spdyVersion.getVersion();
         if (version < 3) {
             compressor.setDictionary(SPDY2_DICT);
         } else {
