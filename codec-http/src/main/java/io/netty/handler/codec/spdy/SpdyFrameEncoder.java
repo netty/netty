@@ -39,24 +39,23 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<SpdyFrame> {
      * default {@code compressionLevel (6)}, {@code windowBits (15)},
      * and {@code memLevel (8)}.
      */
-    public SpdyFrameEncoder(int version) {
+    public SpdyFrameEncoder(SpdyVersion version) {
         this(version, 6, 15, 8);
     }
 
     /**
      * Creates a new instance with the specified parameters.
      */
-    public SpdyFrameEncoder(int version, int compressionLevel, int windowBits, int memLevel) {
+    public SpdyFrameEncoder(SpdyVersion version, int compressionLevel, int windowBits, int memLevel) {
         this(version, SpdyHeaderBlockEncoder.newInstance(
                     version, compressionLevel, windowBits, memLevel));
     }
 
-    protected SpdyFrameEncoder(int version, SpdyHeaderBlockEncoder headerBlockEncoder) {
-        if (version < SpdyConstants.SPDY_MIN_VERSION || version > SpdyConstants.SPDY_MAX_VERSION) {
-            throw new IllegalArgumentException(
-                    "unknown version: " + version);
+    protected SpdyFrameEncoder(SpdyVersion version, SpdyHeaderBlockEncoder headerBlockEncoder) {
+        if (version == null) {
+            throw new NullPointerException("version");
         }
-        this.version = version;
+        this.version = version.getVersion();
         this.headerBlockEncoder = headerBlockEncoder;
     }
 
