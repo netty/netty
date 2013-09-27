@@ -777,7 +777,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
         }
     }
 
-    private void updateSendWindowSize(ChannelHandlerContext ctx, final int streamId, int deltaWindowSize) {
+    private void updateSendWindowSize(ChannelHandlerContext ctx, int streamId, int deltaWindowSize) {
         synchronized (flowControlLock) {
             int newWindowSize = spdySession.updateSendWindowSize(streamId, deltaWindowSize);
             if (sessionFlowControl && streamId != SPDY_SESSION_STREAM_ID) {
@@ -794,7 +794,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
 
                 SpdyDataFrame spdyDataFrame = (SpdyDataFrame) e.getMessage();
                 int dataFrameSize = spdyDataFrame.getData().readableBytes();
-                final int writeStreamId = spdyDataFrame.getStreamId();
+                int writeStreamId = spdyDataFrame.getStreamId();
                 if (sessionFlowControl && streamId == SPDY_SESSION_STREAM_ID) {
                     newWindowSize = Math.min(newWindowSize, spdySession.getSendWindowSize(writeStreamId));
                 }
@@ -836,7 +836,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
                     }
 
                     // Create a partial data frame whose length is the current window size
-                    SpdyDataFrame partialDataFrame = new DefaultSpdyDataFrame(streamId);
+                    SpdyDataFrame partialDataFrame = new DefaultSpdyDataFrame(writeStreamId);
                     partialDataFrame.setData(spdyDataFrame.getData().readSlice(newWindowSize));
 
                     ChannelFuture writeFuture = Channels.future(e.getChannel());
