@@ -17,12 +17,14 @@ package io.netty.channel.sctp.oio;
 
 import com.sun.nio.sctp.SctpChannel;
 import com.sun.nio.sctp.SctpServerChannel;
+
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.oio.AbstractOioMessageChannel;
 import io.netty.channel.oio.AbstractOioMessageServerChannel;
 import io.netty.channel.sctp.DefaultSctpServerChannelConfig;
@@ -72,8 +74,8 @@ public class OioSctpServerChannel extends AbstractOioMessageServerChannel
     /**
      * Create a new instance with an new {@link SctpServerChannel}
      */
-    public OioSctpServerChannel(EventLoop eventLoop) {
-        this(eventLoop, newServerSocket());
+    public OioSctpServerChannel(EventLoop eventLoop, EventLoopGroup childGroup) {
+        this(eventLoop, childGroup, newServerSocket());
     }
 
     /**
@@ -81,8 +83,8 @@ public class OioSctpServerChannel extends AbstractOioMessageServerChannel
      *
      * @param sch    the {@link SctpServerChannel} which is used by this instance
      */
-    public OioSctpServerChannel(EventLoop eventLoop, SctpServerChannel sch) {
-        super(null, eventLoop);
+    public OioSctpServerChannel(EventLoop eventLoop, EventLoopGroup childGroup, SctpServerChannel sch) {
+        super(null, eventLoop, childGroup);
         if (sch == null) {
             throw new NullPointerException("sctp server channel");
         }

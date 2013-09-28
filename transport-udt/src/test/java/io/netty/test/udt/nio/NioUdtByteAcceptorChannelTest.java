@@ -31,6 +31,6 @@ public class NioUdtByteAcceptorChannelTest extends AbstractUdtTest {
     @Test
     public void metadata() throws Exception {
         EventLoop loop = new NioEventLoopGroup().next();
-        assertEquals(false, new NioUdtByteAcceptorChannel(loop).metadata().hasDisconnect());
+        assertEquals(false, new NioUdtByteAcceptorChannel(loop, new NioEventLoopGroup()).metadata().hasDisconnect());
     }
 }

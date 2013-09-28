@@ -17,12 +17,14 @@ package io.netty.channel.sctp.nio;
 
 import com.sun.nio.sctp.SctpChannel;
 import com.sun.nio.sctp.SctpServerChannel;
+
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.nio.AbstractNioMessageServerChannel;
 import io.netty.channel.sctp.DefaultSctpServerChannelConfig;
@@ -65,8 +67,8 @@ public class NioSctpServerChannel extends AbstractNioMessageServerChannel
     /**
      * Create a new instance
      */
-    public NioSctpServerChannel(EventLoop eventLoop) {
-        super(null, eventLoop, newSocket(), SelectionKey.OP_ACCEPT);
+    public NioSctpServerChannel(EventLoop eventLoop, EventLoopGroup childGroup) {
+        super(null, eventLoop, childGroup, newSocket(), SelectionKey.OP_ACCEPT);
         config = new DefaultSctpServerChannelConfig(this, javaChannel());
     }
 

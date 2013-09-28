@@ -22,15 +22,11 @@ import io.netty.channel.ServerChannel;
 
 public abstract class AbstractOioMessageServerChannel extends AbstractOioMessageChannel implements ServerChannel {
 
-    private EventLoopGroup childGroup;
+    private final EventLoopGroup childGroup;
 
-    protected AbstractOioMessageServerChannel(Channel parent, EventLoop eventLoop) {
+    protected AbstractOioMessageServerChannel(Channel parent, EventLoop eventLoop, EventLoopGroup childGroup) {
         super(parent, eventLoop);
-    }
-
-    @Override
-    public void setChildGroup(EventLoopGroup eventGroup) {
-        this.childGroup = eventGroup;
+        this.childGroup = childGroup;
     }
 
     @Override

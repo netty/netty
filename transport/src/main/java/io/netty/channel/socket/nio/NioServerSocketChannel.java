@@ -19,6 +19,7 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.nio.AbstractNioMessageServerChannel;
 import io.netty.channel.socket.DefaultServerSocketChannelConfig;
@@ -59,8 +60,8 @@ public class NioServerSocketChannel extends AbstractNioMessageServerChannel
     /**
      * Create a new instance
      */
-    public NioServerSocketChannel(EventLoop eventLoop) {
-        super(null, eventLoop, newSocket(), SelectionKey.OP_ACCEPT);
+    public NioServerSocketChannel(EventLoop eventLoop, EventLoopGroup childGroup) {
+        super(null, eventLoop, childGroup, newSocket(), SelectionKey.OP_ACCEPT);
         config = new DefaultServerSocketChannelConfig(this, javaChannel().socket());
     }
 

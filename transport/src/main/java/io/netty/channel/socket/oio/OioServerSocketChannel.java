@@ -19,6 +19,7 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.oio.AbstractOioMessageServerChannel;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.util.internal.logging.InternalLogger;
@@ -61,8 +62,8 @@ public class OioServerSocketChannel extends AbstractOioMessageServerChannel impl
     /**
      * Create a new instance with an new {@link Socket}
      */
-    public OioServerSocketChannel(EventLoop eventLoop) {
-        this(eventLoop, newServerSocket());
+    public OioServerSocketChannel(EventLoop eventLoop, EventLoopGroup childGroup) {
+        this(eventLoop, childGroup, newServerSocket());
     }
 
     /**
@@ -70,8 +71,8 @@ public class OioServerSocketChannel extends AbstractOioMessageServerChannel impl
      *
      * @param socket    the {@link ServerSocket} which is used by this instance
      */
-    public OioServerSocketChannel(EventLoop eventLoop, ServerSocket socket) {
-        super(null, eventLoop);
+    public OioServerSocketChannel(EventLoop eventLoop, EventLoopGroup childGroup, ServerSocket socket) {
+        super(null, eventLoop, childGroup);
         if (socket == null) {
             throw new NullPointerException("socket");
         }

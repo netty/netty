@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,28 +13,21 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.nio;
-
-import java.nio.channels.SelectableChannel;
+package io.netty.bootstrap;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 
-public abstract class AbstractNioMessageServerChannel extends AbstractNioMessageChannel implements ServerChannel {
+/**
+ * Factory that creates a new {@link Channel} on {@link Bootstrap#bind()}, {@link Bootstrap#connect()}, and
+ * {@link ServerBootstrap#bind()}.
+ */
+public interface ServerChannelFactory<T extends ServerChannel> {
 
-    private final EventLoopGroup childGroup;
-
-    protected AbstractNioMessageServerChannel(Channel parent, EventLoop eventLoop, EventLoopGroup childGroup,
-            SelectableChannel ch, int readInterestOp) {
-        super(parent, eventLoop, ch, readInterestOp);
-        this.childGroup = childGroup;
-    }
-
-    @Override
-    public EventLoopGroup getChildGroup() {
-        return this.childGroup;
-    }
-
+    /**
+     * Creates a new channel.
+     */
+    T newChannel(EventLoop eventLoop, EventLoopGroup childGroup);
 }

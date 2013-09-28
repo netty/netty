@@ -17,9 +17,11 @@ package io.netty.channel.udt.nio;
 
 import com.barchart.udt.TypeUDT;
 import com.barchart.udt.nio.ServerSocketChannelUDT;
+
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.AbstractNioMessageServerChannel;
 import io.netty.channel.udt.DefaultUdtServerChannelConfig;
 import io.netty.channel.udt.UdtServerChannel;
@@ -42,8 +44,9 @@ public abstract class NioUdtAcceptorChannel extends AbstractNioMessageServerChan
 
     private final UdtServerChannelConfig config;
 
-    protected NioUdtAcceptorChannel(EventLoop eventLoop, final ServerSocketChannelUDT channelUDT) {
-        super(null, eventLoop, channelUDT, OP_ACCEPT);
+    protected NioUdtAcceptorChannel(EventLoop eventLoop, EventLoopGroup childGroup,
+            ServerSocketChannelUDT channelUDT) {
+        super(null, eventLoop, childGroup, channelUDT, OP_ACCEPT);
         try {
             channelUDT.configureBlocking(false);
             config = new DefaultUdtServerChannelConfig(this, channelUDT, true);
@@ -59,8 +62,8 @@ public abstract class NioUdtAcceptorChannel extends AbstractNioMessageServerChan
         }
     }
 
-    protected NioUdtAcceptorChannel(EventLoop eventLoop, final TypeUDT type) {
-        this(eventLoop, NioUdtProvider.newAcceptorChannelUDT(type));
+    protected NioUdtAcceptorChannel(EventLoop eventLoop, EventLoopGroup childGroup, final TypeUDT type) {
+        this(eventLoop, childGroup, NioUdtProvider.newAcceptorChannelUDT(type));
     }
 
     @Override

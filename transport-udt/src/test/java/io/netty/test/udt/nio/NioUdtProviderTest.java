@@ -17,9 +17,11 @@
 package io.netty.test.udt.nio;
 
 import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.udt.UdtServerChannel;
 import io.netty.channel.udt.nio.NioUdtProvider;
+
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -33,19 +35,20 @@ public class NioUdtProviderTest extends AbstractUdtTest {
     public void provideFactory() {
 
         EventLoop loop = new NioEventLoopGroup().next();
+        EventLoopGroup childGroup = new NioEventLoopGroup();
 
         // bytes
-        assertNotNull(NioUdtProvider.BYTE_ACCEPTOR.newChannel(loop));
-        assertNotNull(NioUdtProvider.BYTE_CONNECTOR.newChannel(loop));
-        assertNotNull(NioUdtProvider.BYTE_RENDEZVOUS.newChannel(loop));
+        assertNotNull(NioUdtProvider.BYTE_ACCEPTOR.newChannel(loop, childGroup));
+        assertNotNull(NioUdtProvider.BYTE_CONNECTOR.newChannel(loop, childGroup));
+        assertNotNull(NioUdtProvider.BYTE_RENDEZVOUS.newChannel(loop, childGroup));
 
         // message
-        assertNotNull(NioUdtProvider.MESSAGE_ACCEPTOR.newChannel(loop));
-        assertNotNull(NioUdtProvider.MESSAGE_CONNECTOR.newChannel(loop));
-        assertNotNull(NioUdtProvider.MESSAGE_RENDEZVOUS.newChannel(loop));
+        assertNotNull(NioUdtProvider.MESSAGE_ACCEPTOR.newChannel(loop, childGroup));
+        assertNotNull(NioUdtProvider.MESSAGE_CONNECTOR.newChannel(loop, childGroup));
+        assertNotNull(NioUdtProvider.MESSAGE_RENDEZVOUS.newChannel(loop, childGroup));
 
         // acceptor types
-        assertTrue(NioUdtProvider.BYTE_ACCEPTOR.newChannel(loop) instanceof UdtServerChannel);
-        assertTrue(NioUdtProvider.MESSAGE_ACCEPTOR.newChannel(loop) instanceof UdtServerChannel);
+        assertTrue(NioUdtProvider.BYTE_ACCEPTOR.newChannel(loop, childGroup) instanceof UdtServerChannel);
+        assertTrue(NioUdtProvider.MESSAGE_ACCEPTOR.newChannel(loop, childGroup) instanceof UdtServerChannel);
     }
 }

@@ -39,8 +39,9 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
     /**
      * Creates a new instance.
      */
-    protected AbstractServerChannel(EventLoop eventLoop) {
+    protected AbstractServerChannel(EventLoop eventLoop, EventLoopGroup childGroup) {
         super(null, eventLoop);
+        this.childGroup = childGroup;
     }
 
     @Override
@@ -71,10 +72,6 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
         throw new UnsupportedOperationException();
-    }
-
-    public void setChildGroup(EventLoopGroup childGroup) {
-        this.childGroup = childGroup;
     }
 
     public EventLoopGroup getChildGroup() {

@@ -99,7 +99,7 @@ final class SocketTestPermutation {
             public Bootstrap newInstance() {
                 return new Bootstrap().group(nioWorkerGroup).channelFactory(new ChannelFactory<Channel>() {
                     @Override
-                    public Channel newChannel(EventLoop eventLoop) {
+                    public Channel newChannel(EventLoop eventLoop, EventLoopGroup childGroup) {
                        return new NioDatagramChannel(eventLoop, InternetProtocolFamily.IPv4);
                     }
 
