@@ -288,9 +288,11 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
                     // Take the data that we have in this packet
                     if (framePayload == null) {
                         framePayload = payloadBuffer;
+                        payloadBuffer = null;
                     } else if (payloadBuffer != null) {
                         framePayload.writeBytes(payloadBuffer);
                         payloadBuffer.release();
+                        payloadBuffer = null;
                     }
 
                     // Unmask data if needed
@@ -302,16 +304,19 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
                     // fragmented
                     if (frameOpcode == OPCODE_PING) {
                         out.add(new PingWebSocketFrame(frameFinalFlag, frameRsv, framePayload));
+                        framePayload = null;
                         return;
                     }
                     if (frameOpcode == OPCODE_PONG) {
                         out.add(new PongWebSocketFrame(frameFinalFlag, frameRsv, framePayload));
+                        framePayload = null;
                         return;
                     }
                     if (frameOpcode == OPCODE_CLOSE) {
                         checkCloseFrameBody(ctx, framePayload);
                         receivedClosingHandshake = true;
                         out.add(new CloseWebSocketFrame(frameFinalFlag, frameRsv, framePayload));
+                        framePayload = null;
                         return;
                     }
 
@@ -359,12 +364,15 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
                     // Return the frame
                     if (frameOpcode == OPCODE_TEXT) {
                         out.add(new TextWebSocketFrame(frameFinalFlag, frameRsv, framePayload));
+                        framePayload = null;
                         return;
                     } else if (frameOpcode == OPCODE_BINARY) {
                         out.add(new BinaryWebSocketFrame(frameFinalFlag, frameRsv, framePayload));
+                        framePayload = null;
                         return;
                     } else if (frameOpcode == OPCODE_CONT) {
                         out.add(new ContinuationWebSocketFrame(frameFinalFlag, frameRsv, framePayload, aggregatedText));
+                        framePayload = null;
                         return;
                     } else {
                         throw new UnsupportedOperationException("Cannot decode web socket frame with opcode: "
@@ -462,5 +470,19 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
 
         // Restore reader index
         buffer.readerIndex(idx);
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        super.channelInactive(ctx);
+
+        // release all not complete frames data to prevent leaks.
+        // https://github.com/netty/netty/issues/1874
+        if (framePayload != null) {
+            framePayload.release();
+        }
+        if (payloadBuffer != null) {
+            payloadBuffer.release();
+        }
     }
 }
