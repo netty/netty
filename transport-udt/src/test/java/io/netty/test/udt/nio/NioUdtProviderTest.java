@@ -39,13 +39,13 @@ public class NioUdtProviderTest extends AbstractUdtTest {
 
         // bytes
         assertNotNull(NioUdtProvider.BYTE_ACCEPTOR.newChannel(loop, childGroup));
-        assertNotNull(NioUdtProvider.BYTE_CONNECTOR.newChannel(loop, childGroup));
-        assertNotNull(NioUdtProvider.BYTE_RENDEZVOUS.newChannel(loop, childGroup));
+        assertNotNull(NioUdtProvider.BYTE_CONNECTOR.newChannel(loop));
+        assertNotNull(NioUdtProvider.BYTE_RENDEZVOUS.newChannel(loop));
 
         // message
         assertNotNull(NioUdtProvider.MESSAGE_ACCEPTOR.newChannel(loop, childGroup));
-        assertNotNull(NioUdtProvider.MESSAGE_CONNECTOR.newChannel(loop, childGroup));
-        assertNotNull(NioUdtProvider.MESSAGE_RENDEZVOUS.newChannel(loop, childGroup));
+        assertNotNull(NioUdtProvider.MESSAGE_CONNECTOR.newChannel(loop));
+        assertNotNull(NioUdtProvider.MESSAGE_RENDEZVOUS.newChannel(loop));
 
         // acceptor types
         assertTrue(NioUdtProvider.BYTE_ACCEPTOR.newChannel(loop, childGroup) instanceof UdtServerChannel);

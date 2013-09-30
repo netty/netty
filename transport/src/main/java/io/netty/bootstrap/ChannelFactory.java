@@ -17,7 +17,6 @@ package io.netty.bootstrap;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
-import io.netty.channel.EventLoopGroup;
 
 /**
  * Factory that creates a new {@link Channel} on {@link Bootstrap#bind()}, {@link Bootstrap#connect()}, and
@@ -28,5 +27,5 @@ public interface ChannelFactory<T extends Channel> {
     /**
      * Creates a new channel.
      */
-    T newChannel(EventLoop eventLoop, EventLoopGroup childGroup);
+    T newChannel(EventLoop eventLoop);
 }

@@ -206,7 +206,7 @@ public abstract class NioUdtProvider<T extends UdtChannel> {
 
         @SuppressWarnings("unchecked")
         @Override
-        public T newChannel(EventLoop eventLoop, EventLoopGroup childGroup) {
+        public T newChannel(EventLoop eventLoop) {
             switch (kind()) {
             case ACCEPTOR:
                 throw new IllegalStateException("wrong kind=" + kind());
