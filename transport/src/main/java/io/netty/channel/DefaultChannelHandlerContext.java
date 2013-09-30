@@ -705,7 +705,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 ChannelOutboundBuffer buffer = channel.unsafe().outboundBuffer();
                 // Check for null as it may be set to null if the channel is closed already
                 if (buffer != null) {
-                    buffer.incrementPendingOutboundBytes(size, false);
+                    buffer.incrementPendingOutboundBytes(size);
                 }
             }
             executor.execute(WriteTask.newInstance(next, msg, size, flush, promise));
@@ -885,7 +885,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                     ChannelOutboundBuffer buffer = ctx.channel.unsafe().outboundBuffer();
                     // Check for null as it may be set to null if the channel is closed already
                     if (buffer != null) {
-                        buffer.decrementPendingOutboundBytes(size, false);
+                        buffer.decrementPendingOutboundBytes(size);
                     }
                 }
                 ctx.invokeWrite(msg, promise);
