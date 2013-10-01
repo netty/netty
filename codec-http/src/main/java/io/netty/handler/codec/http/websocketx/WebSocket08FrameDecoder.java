@@ -91,7 +91,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
     private long framePayloadLength;
     private ByteBuf framePayload;
     private int framePayloadBytesRead;
-    private ByteBuf maskingKey;
+    private byte[] maskingKey;
     private ByteBuf payloadBuffer;
 
     private final boolean allowExtensions;
@@ -244,7 +244,10 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
                     checkpoint(State.MASKING_KEY);
                 case MASKING_KEY:
                     if (maskedPayload) {
-                        maskingKey = in.readBytes(4);
+                        if (maskingKey == null) {
+                            maskingKey = new byte[4];
+                        }
+                        in.readBytes(maskingKey);
                     }
                     checkpoint(State.PAYLOAD);
                 case PAYLOAD:
@@ -405,7 +408,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
 
     private void unmask(ByteBuf frame) {
         for (int i = frame.readerIndex(); i < frame.writerIndex(); i++) {
-            frame.setByte(i, frame.getByte(i) ^ maskingKey.getByte(i % 4));
+            frame.setByte(i, frame.getByte(i) ^ maskingKey[i % 4]);
         }
     }
 
