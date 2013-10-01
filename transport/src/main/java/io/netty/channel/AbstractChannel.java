@@ -74,10 +74,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      */
     protected AbstractChannel(Channel parent, EventLoop eventLoop) {
         this.parent = parent;
-        this.eventLoop = eventLoop;
-        if (eventLoop == null) {
-            throw new IllegalStateException("null event loop");
-        }
+        this.eventLoop = validate(eventLoop);
         this.unsafe = newUnsafe();
         this.pipeline = new DefaultChannelPipeline(this);
     }
@@ -105,10 +102,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     @Override
     public EventLoop eventLoop() {
-        EventLoop eventLoop = this.eventLoop;
-        if (eventLoop == null) {
-            throw new IllegalStateException("channel not registered to an event loop");
-        }
         return eventLoop;
     }
 
@@ -386,12 +379,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public final void register(final ChannelPromise promise) {
-            if (!isCompatible(eventLoop)) {
-                promise.setFailure(new IllegalStateException("incompatible event loop type: " +
-                        eventLoop.getClass().getName()));
-                return;
-            }
-
             if (eventLoop.inEventLoop()) {
                 register0(promise);
             } else {
@@ -694,6 +681,16 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             // which means the execution of two inbound handler methods of the same handler overlap undesirably.
             eventLoop().execute(task);
         }
+    }
+
+    private EventLoop validate(EventLoop eventLoop) {
+        if (eventLoop == null) {
+            throw new IllegalStateException("null event loop");
+        }
+        if (!isCompatible(eventLoop)) {
+            throw new IllegalStateException("incompatible event loop type: " + eventLoop.getClass().getName());
+        }
+        return eventLoop;
     }
 
     /**
