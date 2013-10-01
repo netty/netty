@@ -42,6 +42,8 @@ import java.util.Queue;
  */
 public class LocalChannel extends AbstractChannel {
 
+    private enum State { OPEN, BOUND, CONNECTED, CLOSED }
+
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
     private static final int MAX_READER_STACK_DEPTH = 8;
@@ -76,7 +78,8 @@ public class LocalChannel extends AbstractChannel {
         }
     };
 
-    private volatile int state; // 0 - open, 1 - bound, 2 - connected, 3 - closed
+
+    private volatile State state;
     private volatile LocalChannel peer;
     private volatile LocalAddress localAddress;
     private volatile LocalAddress remoteAddress;
@@ -121,12 +124,12 @@ public class LocalChannel extends AbstractChannel {
 
     @Override
     public boolean isOpen() {
-        return state < 3;
+        return state != State.CLOSED;
     }
 
     @Override
     public boolean isActive() {
-        return state == 2;
+        return state == State.CONNECTED;
     }
 
     @Override
@@ -152,10 +155,10 @@ public class LocalChannel extends AbstractChannel {
     @Override
     protected void doRegister() throws Exception {
         if (peer != null) {
-            state = 2;
+            state = State.CONNECTED;
 
             peer.remoteAddress = parent() == null ? null : parent().localAddress();
-            peer.state = 2;
+            peer.state = State.CONNECTED;
 
             // Always call peer.eventLoop().execute() even if peer.eventLoop().inEventLoop() is true.
             // This ensures that if both channels are on the same event loop, the peer's channelActive
@@ -177,7 +180,7 @@ public class LocalChannel extends AbstractChannel {
         this.localAddress =
                 LocalChannelRegistry.register(this, this.localAddress,
                         localAddress);
-        state = 1;
+        state = State.BOUND;
     }
 
     @Override
@@ -187,7 +190,7 @@ public class LocalChannel extends AbstractChannel {
 
     @Override
     protected void doClose() throws Exception {
-        if (state <= 2) {
+        if (state != State.CLOSED) {
             // Update all internal state before the closeFuture is notified.
             if (localAddress != null) {
                 if (parent() == null) {
@@ -195,7 +198,7 @@ public class LocalChannel extends AbstractChannel {
                 }
                 localAddress = null;
             }
-            state = 3;
+            state = State.CLOSED;
         }
 
         final LocalChannel peer = this.peer;
@@ -257,10 +260,11 @@ public class LocalChannel extends AbstractChannel {
 
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
-        if (state < 2) {
+        switch (state) {
+        case OPEN:
+        case BOUND:
             throw new NotYetConnectedException();
-        }
-        if (state > 2) {
+        case CLOSED:
             throw new ClosedChannelException();
         }
 
@@ -322,7 +326,7 @@ public class LocalChannel extends AbstractChannel {
                 return;
             }
 
-            if (state == 2) {
+            if (state == State.CONNECTED) {
                 Exception cause = new AlreadyConnectedException();
                 promise.setFailure(cause);
                 pipeline().fireExceptionCaught(cause);
@@ -335,7 +339,7 @@ public class LocalChannel extends AbstractChannel {
 
             connectPromise = promise;
 
-            if (state != 1) {
+            if (state != State.BOUND) {
                 // Not bound yet and no localAddress specified - get one.
                 if (localAddress == null) {
                     localAddress = new LocalAddress(LocalChannel.this);
