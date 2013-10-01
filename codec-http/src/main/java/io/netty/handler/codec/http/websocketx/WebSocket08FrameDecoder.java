@@ -443,10 +443,10 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
     /** */
     protected void checkCloseFrameBody(
             ChannelHandlerContext ctx, ByteBuf buffer) {
-        if (buffer == null || buffer.capacity() == 0) {
+        if (buffer == null || !buffer.isReadable()) {
             return;
         }
-        if (buffer.capacity() == 1) {
+        if (buffer.readableBytes() == 1) {
             protocolViolation(ctx, "Invalid close frame body");
         }
 
@@ -463,7 +463,6 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
 
         // May have UTF-8 message
         if (buffer.isReadable()) {
-
             try {
                 new UTF8Output(buffer);
             } catch (UTF8Exception ex) {
