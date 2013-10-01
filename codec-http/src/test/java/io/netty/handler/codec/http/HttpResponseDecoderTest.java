@@ -38,6 +38,7 @@ public class HttpResponseDecoderTest {
 
         LastHttpContent content = (LastHttpContent) ch.readInbound();
         assertThat(content.content().isReadable(), is(false));
+        content.release();
 
         assertThat(ch.readInbound(), is(nullValue()));
     }
@@ -55,11 +56,13 @@ public class HttpResponseDecoderTest {
         ch.writeInbound(Unpooled.wrappedBuffer(new byte[1024]));
         HttpContent content = (HttpContent) ch.readInbound();
         assertThat(content.content().readableBytes(), is(1024));
+        content.release();
 
         assertThat(ch.finish(), is(true));
 
         LastHttpContent lastContent = (LastHttpContent) ch.readInbound();
         assertThat(lastContent.content().isReadable(), is(false));
+        lastContent.release();
 
         assertThat(ch.readInbound(), is(nullValue()));
     }
