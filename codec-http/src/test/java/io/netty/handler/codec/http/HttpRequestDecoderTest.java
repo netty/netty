@@ -75,6 +75,8 @@ public class HttpRequestDecoderTest {
         LastHttpContent c = (LastHttpContent) channel.readInbound();
         Assert.assertEquals(8, c.content().readableBytes());
         Assert.assertEquals(Unpooled.wrappedBuffer(content, content.length - 8, 8), c.content().readBytes(8));
+        c.release();
+
         Assert.assertFalse(channel.finish());
         Assert.assertNull(channel.readInbound());
     }
@@ -147,10 +149,13 @@ public class HttpRequestDecoderTest {
             HttpContent c = (HttpContent) channel.readInbound();
             Assert.assertEquals(1, c.content().readableBytes());
             Assert.assertEquals(content[content.length - i], c.content().readByte());
+            c.release();
         }
         LastHttpContent c = (LastHttpContent) channel.readInbound();
         Assert.assertEquals(1, c.content().readableBytes());
         Assert.assertEquals(content[content.length - 1], c.content().readByte());
+        c.release();
+
         Assert.assertFalse(channel.finish());
         Assert.assertNull(channel.readInbound());
     }

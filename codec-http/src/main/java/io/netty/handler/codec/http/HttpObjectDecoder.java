@@ -25,6 +25,8 @@ import io.netty.handler.codec.TooLongFrameException;
 
 import java.util.List;
 
+import static io.netty.buffer.ByteBufUtil.readBytes;
+
 /**
  * Decodes {@link ByteBuf}s into {@link HttpMessage}s and
  * {@link HttpContent}s.
@@ -278,7 +280,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                     toRead = maxChunkSize;
                 }
                 // TODO: Slice
-                out.add(new DefaultHttpContent(buffer.readBytes(toRead)));
+                out.add(new DefaultHttpContent(readBytes(ctx.alloc(), buffer, toRead)));
                 return;
             }
             case READ_VARIABLE_LENGTH_CONTENT_AS_CHUNKS: {
@@ -292,7 +294,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                     toRead = maxChunkSize;
                 }
                 // TODO: Slice
-                ByteBuf content = buffer.readBytes(toRead);
+                ByteBuf content = readBytes(ctx.alloc(), buffer, toRead);
                 if (!buffer.isReadable()) {
                     out.add(new DefaultLastHttpContent(content));
                     reset();
@@ -302,7 +304,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 return;
             }
             case READ_FIXED_LENGTH_CONTENT: {
-                readFixedLengthContent(buffer, contentLength(), out);
+                readFixedLengthContent(ctx, buffer, contentLength(), out);
                 return;
             }
             case READ_FIXED_LENGTH_CONTENT_AS_CHUNKS: {
@@ -326,7 +328,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                     toRead = (int) chunkSize;
                 }
                 // TODO: Slice
-                ByteBuf content = buffer.readBytes(toRead);
+                ByteBuf content = readBytes(ctx.alloc(), buffer, toRead);
                 if (chunkSize > toRead) {
                     chunkSize -= toRead;
                 } else {
@@ -377,7 +379,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                     return;
                 }
                 // TODO: Slice
-                HttpContent chunk = new DefaultHttpContent(buffer.readBytes((int) chunkSize));
+                HttpContent chunk = new DefaultHttpContent(readBytes(ctx.alloc(), buffer, (int) chunkSize));
                 state = State.READ_CHUNK_DELIMITER;
                 out.add(chunk);
                 return;
@@ -405,7 +407,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                     toRead = chunkSize;
                 }
 
-                HttpContent chunk = new DefaultHttpContent(buffer.readBytes(toRead));
+                HttpContent chunk = new DefaultHttpContent(readBytes(ctx.alloc(), buffer, toRead));
                 if (chunkSize > toRead) {
                     chunkSize -= toRead;
                 } else {
@@ -500,7 +502,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 if (readable == 0) {
                     out.add(LastHttpContent.EMPTY_LAST_CONTENT);
                 } else {
-                    out.add(new DefaultLastHttpContent(in.readBytes(readable)));
+                    out.add(new DefaultLastHttpContent(readBytes(ctx.alloc(), in, readable)));
                 }
             }
         }
@@ -569,7 +571,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         return false;
     }
 
-    private void readFixedLengthContent(ByteBuf buffer, long length, List<Object> out) {
+    private void readFixedLengthContent(ChannelHandlerContext ctx, ByteBuf buffer, long length, List<Object> out) {
         assert length <= Integer.MAX_VALUE;
 
         //we have a content-length so we just read the correct number of bytes
@@ -582,7 +584,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
         contentRead += toRead;
         // TODO: Slice
-        ByteBuf buf = buffer.readBytes(toRead);
+        ByteBuf buf = readBytes(ctx.alloc(), buffer, toRead);
         if (contentRead < length) {
             out.add(new DefaultHttpContent(buf));
             return;
