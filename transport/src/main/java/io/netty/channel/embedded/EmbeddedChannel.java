@@ -44,6 +44,8 @@ import java.util.Queue;
  */
 public class EmbeddedChannel extends AbstractChannel {
 
+    private enum State { OPEN, ACTIVE, CLOSED };
+
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(EmbeddedChannel.class);
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
@@ -55,7 +57,7 @@ public class EmbeddedChannel extends AbstractChannel {
     private final Queue<Object> inboundMessages = new ArrayDeque<Object>();
     private final Queue<Object> outboundMessages = new ArrayDeque<Object>();
     private Throwable lastException;
-    private int state; // 0 = OPEN, 1 = ACTIVE, 2 = CLOSED
+    private State state;
 
     /**
      * Create a new instance
@@ -99,12 +101,12 @@ public class EmbeddedChannel extends AbstractChannel {
 
     @Override
     public boolean isOpen() {
-        return state < 2;
+        return state != State.CLOSED;
     }
 
     @Override
     public boolean isActive() {
-        return state == 1;
+        return state == State.ACTIVE;
     }
 
     /**
@@ -289,7 +291,7 @@ public class EmbeddedChannel extends AbstractChannel {
 
     @Override
     protected void doRegister() throws Exception {
-        state = 1;
+        state = State.ACTIVE;
     }
 
     @Override
@@ -304,7 +306,7 @@ public class EmbeddedChannel extends AbstractChannel {
 
     @Override
     protected void doClose() throws Exception {
-        state = 2;
+        state = State.CLOSED;
     }
 
     @Override
