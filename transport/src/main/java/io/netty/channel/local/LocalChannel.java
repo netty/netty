@@ -78,7 +78,6 @@ public class LocalChannel extends AbstractChannel {
         }
     };
 
-
     private volatile State state;
     private volatile LocalChannel peer;
     private volatile LocalAddress localAddress;
