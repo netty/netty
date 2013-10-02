@@ -273,6 +273,11 @@ public class HashedWheelTimer implements Timer {
         if (!workerState.compareAndSet(WORKER_STATE_STARTED, WORKER_STATE_SHUTDOWN)) {
             // workerState can be 0 or 2 at this moment - let it always be 2.
             workerState.set(WORKER_STATE_SHUTDOWN);
+
+            if (leak != null) {
+                leak.close();
+            }
+
             return Collections.emptySet();
         }
 
