@@ -733,7 +733,6 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         TestGatheringByteChannel channel = new TestGatheringByteChannel(1);
 
         while (buf.isReadable()) {
-            System.out.println(buf.nioBuffers().length);
             buf.readBytes(channel, buf.readableBytes());
         }
 
