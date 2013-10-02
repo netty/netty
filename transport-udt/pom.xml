@@ -21,7 +21,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.0.10.Final</version>
+    <version>4.0.11.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-transport-udt</artifactId>
