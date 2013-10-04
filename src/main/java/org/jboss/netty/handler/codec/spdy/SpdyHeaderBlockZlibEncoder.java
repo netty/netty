@@ -24,7 +24,6 @@ import org.jboss.netty.buffer.ChannelBuffers;
 
 class SpdyHeaderBlockZlibEncoder extends SpdyHeaderBlockRawEncoder {
 
-    private final byte[] out = new byte[8192];
     private final Deflater compressor;
 
     private boolean finished;
@@ -44,18 +43,34 @@ class SpdyHeaderBlockZlibEncoder extends SpdyHeaderBlockRawEncoder {
         }
     }
 
-    private void setInput(ChannelBuffer decompressed) {
-        byte[] in = new byte[decompressed.readableBytes()];
-        decompressed.readBytes(in);
-        compressor.setInput(in);
+    private int setInput(ChannelBuffer decompressed) {
+        int len = decompressed.readableBytes();
+
+        if (decompressed.hasArray()) {
+            compressor.setInput(decompressed.array(), decompressed.arrayOffset() + decompressed.readerIndex(), len);
+        } else {
+            byte[] in = new byte[len];
+            decompressed.getBytes(decompressed.readerIndex(), in);
+            compressor.setInput(in, 0, in.length);
+        }
+
+        return len;
     }
 
     private void encode(ChannelBuffer compressed) {
-        int numBytes = out.length;
-        while (numBytes == out.length) {
-            numBytes = compressor.deflate(out, 0, out.length, Deflater.SYNC_FLUSH);
-            compressed.writeBytes(out, 0, numBytes);
+        while (compressInto(compressed)) {
+            // Although unlikely, it's possible that the compressed size is larger than the decompressed size
+            compressed.ensureWritableBytes(compressed.capacity() << 1);
         }
+    }
+
+    private boolean compressInto(ChannelBuffer compressed) {
+        byte[] out = compressed.array();
+        int off = compressed.arrayOffset() + compressed.writerIndex();
+        int toWrite = compressed.writableBytes();
+        int numBytes = compressor.deflate(out, off, toWrite, Deflater.SYNC_FLUSH);
+        compressed.writerIndex(compressed.writerIndex() + numBytes);
+        return numBytes == toWrite;
     }
 
     @Override
@@ -73,9 +88,11 @@ class SpdyHeaderBlockZlibEncoder extends SpdyHeaderBlockRawEncoder {
             return ChannelBuffers.EMPTY_BUFFER;
         }
 
-        ChannelBuffer compressed = ChannelBuffers.dynamicBuffer();
-        setInput(decompressed);
+        ChannelBuffer compressed = ChannelBuffers.dynamicBuffer(decompressed.readableBytes());
+        int len = setInput(decompressed);
         encode(compressed);
+        decompressed.skipBytes(len);
+
         return compressed;
     }
 

@@ -20,6 +20,7 @@ import static org.jboss.netty.handler.codec.spdy.SpdyCodecUtil.*;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.handler.codec.frame.FrameDecoder;
 
@@ -87,17 +88,6 @@ public class SpdyFrameDecoder extends FrameDecoder {
         this.maxChunkSize = maxChunkSize;
         this.headerBlockDecoder = headerBlockDecoder;
         state = State.READ_COMMON_HEADER;
-    }
-
-    @Override
-    protected Object decodeLast(
-            ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer)
-            throws Exception {
-        try {
-            return decode(ctx, channel, buffer);
-        } finally {
-            headerBlockDecoder.end();
-        }
     }
 
     @Override
@@ -518,6 +508,15 @@ public class SpdyFrameDecoder extends FrameDecoder {
 
         default:
             return false;
+        }
+    }
+
+    @Override
+    protected void cleanup(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+        try {
+            super.cleanup(ctx, e);
+        } finally {
+            headerBlockDecoder.end();
         }
     }
 
