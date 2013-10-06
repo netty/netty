@@ -12,18 +12,24 @@
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
  * License for the specific language governing permissions and limitations
  * under the License.
- */
-package io.netty.handler.codec.spdy;
+ */package io.netty.buffer;
 
-import io.netty.buffer.ByteBuf;
+import org.junit.Assert;
+import org.junit.Test;
 
-abstract class SpdyHeaderBlockDecoder {
+public class EmptyByteBufTest {
 
-    static SpdyHeaderBlockDecoder newInstance(SpdyVersion version, int maxHeaderSize) {
-        return new SpdyHeaderBlockZlibDecoder(version, maxHeaderSize);
+    @Test
+    public void testIsWritable() {
+        EmptyByteBuf empty = new EmptyByteBuf(UnpooledByteBufAllocator.DEFAULT);
+        Assert.assertFalse(empty.isWritable());
+        Assert.assertFalse(empty.isWritable(1));
     }
 
-    abstract void decode(ByteBuf encoded, SpdyHeadersFrame frame) throws Exception;
-    abstract void reset();
-    abstract void end();
+    @Test
+    public void testIsReadable() {
+        EmptyByteBuf empty = new EmptyByteBuf(UnpooledByteBufAllocator.DEFAULT);
+        Assert.assertFalse(empty.isReadable());
+        Assert.assertFalse(empty.isReadable(1));
+    }
 }

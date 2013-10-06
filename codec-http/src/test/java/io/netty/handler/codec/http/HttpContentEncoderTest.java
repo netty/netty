@@ -67,6 +67,8 @@ public class HttpContentEncoderTest {
         chunk = (HttpContent) ch.readOutbound();
         assertThat(chunk.content().isReadable(), is(false));
         assertThat(chunk, is(instanceOf(LastHttpContent.class)));
+        chunk.release();
+
         assertThat(ch.readOutbound(), is(nullValue()));
     }
 
@@ -88,8 +90,12 @@ public class HttpContentEncoderTest {
         HttpContent chunk;
         chunk = (HttpContent) ch.readOutbound();
         assertThat(chunk.content().toString(CharsetUtil.US_ASCII), is("3"));
+        chunk.release();
+
         chunk = (HttpContent) ch.readOutbound();
         assertThat(chunk.content().toString(CharsetUtil.US_ASCII), is("2"));
+        chunk.release();
+
         chunk = (HttpContent) ch.readOutbound();
         assertThat(chunk.content().toString(CharsetUtil.US_ASCII), is("1"));
 
@@ -97,6 +103,7 @@ public class HttpContentEncoderTest {
         chunk = (HttpContent) ch.readOutbound();
         assertThat(chunk.content().isReadable(), is(false));
         assertThat(chunk, is(instanceOf(LastHttpContent.class)));
+        chunk.release();
 
         assertThat(ch.readOutbound(), is(nullValue()));
     }
@@ -121,16 +128,23 @@ public class HttpContentEncoderTest {
         HttpContent chunk;
         chunk = (HttpContent) ch.readOutbound();
         assertThat(chunk.content().toString(CharsetUtil.US_ASCII), is("3"));
+        chunk.release();
+
         chunk = (HttpContent) ch.readOutbound();
         assertThat(chunk.content().toString(CharsetUtil.US_ASCII), is("2"));
+        chunk.release();
+
         chunk = (HttpContent) ch.readOutbound();
         assertThat(chunk.content().toString(CharsetUtil.US_ASCII), is("1"));
-
         assertThat(chunk, is(instanceOf(HttpContent.class)));
+        chunk.release();
+
         chunk = (HttpContent) ch.readOutbound();
         assertThat(chunk.content().isReadable(), is(false));
         assertThat(chunk, is(instanceOf(LastHttpContent.class)));
         assertEquals("Netty", ((LastHttpContent) chunk).trailingHeaders().get("X-Test"));
+        chunk.release();
+
         assertThat(ch.readOutbound(), is(nullValue()));
     }
 
@@ -148,8 +162,12 @@ public class HttpContentEncoderTest {
         HttpContent c = (HttpContent) ch.readOutbound();
         assertThat(c.content().readableBytes(), is(2));
         assertThat(c.content().toString(CharsetUtil.US_ASCII), is("42"));
+        c.release();
+
         LastHttpContent last = (LastHttpContent) ch.readOutbound();
         assertThat(last.content().readableBytes(), is(0));
+        last.release();
+
         assertThat(ch.readOutbound(), is(nullValue()));
     }
 
@@ -169,10 +187,13 @@ public class HttpContentEncoderTest {
         HttpContent chunk = (HttpContent) ch.readOutbound();
         assertThat(chunk.content().toString(CharsetUtil.US_ASCII), is("0"));
         assertThat(chunk, is(instanceOf(HttpContent.class)));
+        chunk.release();
 
         chunk = (HttpContent) ch.readOutbound();
         assertThat(chunk.content().isReadable(), is(false));
         assertThat(chunk, is(instanceOf(LastHttpContent.class)));
+        chunk.release();
+
         assertThat(ch.readOutbound(), is(nullValue()));
     }
 
@@ -198,6 +219,7 @@ public class HttpContentEncoderTest {
         assertThat(res.headers().get(Names.CONTENT_ENCODING), is(nullValue()));
         assertThat(res.content().readableBytes(), is(0));
         assertThat(res.content().toString(CharsetUtil.US_ASCII), is(""));
+        res.release();
 
         assertThat(ch.readOutbound(), is(nullValue()));
     }

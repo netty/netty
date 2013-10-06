@@ -430,10 +430,16 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public boolean isDirect() {
-        if (components.size() == 1) {
-            return components.get(0).buf.isDirect();
+        int size = components.size();
+        if (size == 0) {
+            return false;
         }
-        return false;
+        for (int i = 0; i < size; i++) {
+           if (!components.get(i).buf.isDirect()) {
+               return false;
+           }
+        }
+        return true;
     }
 
     @Override
@@ -721,11 +727,16 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public int getBytes(int index, GatheringByteChannel out, int length)
             throws IOException {
-        long writtenBytes = out.write(nioBuffers(index, length));
-        if (writtenBytes > Integer.MAX_VALUE) {
-            return Integer.MAX_VALUE;
+        int count = nioBufferCount();
+        if (count == 1) {
+            return out.write(internalNioBuffer(index, length));
         } else {
-            return (int) writtenBytes;
+            long writtenBytes = out.write(nioBuffers(index, length));
+            if (writtenBytes > Integer.MAX_VALUE) {
+                return Integer.MAX_VALUE;
+            } else {
+                return (int) writtenBytes;
+            }
         }
     }
 

@@ -36,7 +36,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     static final ResourceLeakDetector<ByteBuf> leakDetector = new ResourceLeakDetector<ByteBuf>(ByteBuf.class);
 
-    private int readerIndex;
+    int readerIndex;
     private int writerIndex;
     private int markedReaderIndex;
     private int markedWriterIndex;
@@ -559,6 +559,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public byte readByte() {
+        checkReadableBytes(1);
         int i = readerIndex;
         byte b = getByte(i);
         readerIndex = i + 1;

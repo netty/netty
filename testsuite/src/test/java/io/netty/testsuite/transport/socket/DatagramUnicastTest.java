@@ -19,6 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.DatagramPacket;
 import org.junit.Test;
@@ -65,7 +66,7 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
 
     @Test
     public void testSimpleSendWithoutBind() throws Throwable {
-        //run();
+        run();
     }
 
     public void testSimpleSendWithoutBind(Bootstrap sb, Bootstrap cb) throws Throwable {
@@ -85,6 +86,7 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
                 // Nothing will be sent.
             }
         });
+        cb.option(ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION, true);
 
         Channel sc = sb.bind().sync().channel();
         Channel cc = cb.register().sync().channel();

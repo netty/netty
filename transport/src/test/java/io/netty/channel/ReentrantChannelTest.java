@@ -54,6 +54,8 @@ public class ReentrantChannelTest extends BaseChannelTest {
         clientChannel.close().sync();
 
         assertLog(
+            "WRITABILITY: writable=false\n" +
+            "WRITABILITY: writable=true\n" +
             "WRITE\n" +
             "WRITABILITY: writable=false\n" +
             "FLUSH\n" +
@@ -91,6 +93,9 @@ public class ReentrantChannelTest extends BaseChannelTest {
         clientChannel.close().sync();
 
         assertLog(
+            "WRITABILITY: writable=false\n" +
+            "FLUSH\n" +
+            "WRITABILITY: writable=true\n" +
             "WRITE\n" +
             "WRITABILITY: writable=false\n" +
             "FLUSH\n" +
