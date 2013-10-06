@@ -54,6 +54,10 @@ public class HttpVersion implements Comparable<HttpVersion> {
             throw new NullPointerException("text");
         }
 
+        if (text.length() == 0) {
+            throw new IllegalArgumentException("text is empty");
+        }
+
         text = text.trim();
         // Try to match without convert to uppercase first as this is what 99% of all clients
         // will send anyway. Also there is a change to the RFC to make it clear that it is
