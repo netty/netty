@@ -380,8 +380,9 @@ public final class ChannelOutboundBuffer {
                 if (count == -1) {
                     entry.count = count = buf.nioBufferCount();
                 }
-                if (nioBufferCount + count > nioBuffers.length) {
-                    this.nioBuffers = nioBuffers = doubleNioBufferArray(nioBuffers, nioBufferCount);
+                int neededSpace = nioBufferCount + count;
+                if (neededSpace > nioBuffers.length) {
+                    this.nioBuffers = nioBuffers = expandNioBufferArray(nioBuffers, neededSpace, nioBufferCount);
                 }
 
                 if (buf.isDirect() || threadLocalDirectBufferSize <= 0) {
@@ -442,11 +443,18 @@ public final class ChannelOutboundBuffer {
         return nioBufferCount;
     }
 
-    private static ByteBuffer[] doubleNioBufferArray(ByteBuffer[] array, int size) {
-        int newCapacity = array.length << 1;
-        if (newCapacity < 0) {
-            throw new IllegalStateException();
-        }
+    private static ByteBuffer[] expandNioBufferArray(ByteBuffer[] array, int neededSpace, int size) {
+        int newCapacity = array.length;
+        do {
+            // double capacity until it is big enough
+            // See https://github.com/netty/netty/issues/1890
+            newCapacity <<= 1;
+
+            if (newCapacity < 0) {
+                throw new IllegalStateException();
+            }
+
+        } while (neededSpace > newCapacity);
 
         ByteBuffer[] newArray = new ByteBuffer[newCapacity];
         System.arraycopy(array, 0, newArray, 0, size);
