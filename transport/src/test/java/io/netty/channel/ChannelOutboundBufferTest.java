@@ -39,6 +39,11 @@ public class ChannelOutboundBufferTest {
             assertNull(b);
         }
         assertEquals(0, buffer.nioBufferCount());
+        for (;;) {
+            if (!buffer.remove()) {
+                break;
+            }
+        }
     }
 
     @Test
@@ -55,6 +60,7 @@ public class ChannelOutboundBufferTest {
         assertEquals(0, buffer.nioBufferCount());
 
         ByteBuf buf = copiedBuffer("buf1", CharsetUtil.US_ASCII);
+        ByteBuffer nioBuf = buf.internalNioBuffer(0, buf.readableBytes());
         buffer.addMessage(buf, channel.voidPromise());
         buffers = buffer.nioBuffers();
         assertEquals("Should still be 0 as not flushed yet", 0, buffer.nioBufferCount());
@@ -67,9 +73,14 @@ public class ChannelOutboundBufferTest {
         assertEquals("Should still be 0 as not flushed yet", 1, buffer.nioBufferCount());
         for (int i = 0;  i < buffers.length; i++) {
             if (i == 0) {
-                assertEquals(buffers[i], buf.internalNioBuffer(0, buf.readableBytes()));
+                assertEquals(buffers[i], nioBuf);
             } else {
                 assertNull(buffers[i]);
+            }
+        }
+        for (;;) {
+            if (!buffer.remove()) {
+                break;
             }
         }
     }
@@ -80,7 +91,7 @@ public class ChannelOutboundBufferTest {
 
         ChannelOutboundBuffer buffer = ChannelOutboundBuffer.newInstance(channel);
 
-        ByteBuf buf = copiedBuffer("buf1", CharsetUtil.US_ASCII);
+        ByteBuf buf = directBuffer().writeBytes("buf1".getBytes(CharsetUtil.US_ASCII));
         for (int i = 0; i < 64; i++) {
             buffer.addMessage(buf.copy(), channel.voidPromise());
         }
@@ -96,6 +107,11 @@ public class ChannelOutboundBufferTest {
         for (int i = 0;  i < buffers.length; i++) {
             assertEquals(buffers[i], buf.internalNioBuffer(0, buf.readableBytes()));
         }
+        for (;;) {
+            if (!buffer.remove()) {
+                break;
+            }
+        }
     }
 
     @Test
@@ -105,11 +121,10 @@ public class ChannelOutboundBufferTest {
         ChannelOutboundBuffer buffer = ChannelOutboundBuffer.newInstance(channel);
 
         CompositeByteBuf comp = compositeBuffer(256);
-        ByteBuf buf = copiedBuffer("buf1", CharsetUtil.US_ASCII);
+        ByteBuf buf = directBuffer().writeBytes("buf1".getBytes(CharsetUtil.US_ASCII));
         for (int i = 0; i < 65; i++) {
             comp.addComponent(buf.copy()).writerIndex(comp.writerIndex() + buf.readableBytes());
         }
-        System.out.println(comp.nioBufferCount());
         buffer.addMessage(comp, channel.voidPromise());
 
         ByteBuffer[] buffers = buffer.nioBuffers();
@@ -126,6 +141,11 @@ public class ChannelOutboundBufferTest {
                 assertEquals(buffers[i], buf.internalNioBuffer(0, buf.readableBytes()));
             } else {
                 assertNull(buffers[i]);
+            }
+        }
+        for (;;) {
+            if (!buffer.remove()) {
+                break;
             }
         }
     }
