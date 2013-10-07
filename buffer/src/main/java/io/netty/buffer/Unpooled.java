@@ -857,6 +857,14 @@ public final class Unpooled {
         return new UnreleasableByteBuf(buf);
     }
 
+    /**
+     * Wrap the given {@link ByteBuf}s in an unmodifiable {@link ByteBuf}. Be aware the returned {@link ByteBuf} will
+     * not try to slice the given {@link ByteBuf}s to reduce GC-Pressure.
+     */
+    public static ByteBuf unmodifiableBuffer(ByteBuf... buffers) {
+        return new FixedCompositeByteBuf(ALLOC, buffers);
+    }
+
     private Unpooled() {
         // Unused
     }
