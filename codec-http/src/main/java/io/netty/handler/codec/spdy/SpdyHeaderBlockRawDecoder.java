@@ -29,15 +29,14 @@ public class SpdyHeaderBlockRawDecoder extends SpdyHeaderBlockDecoder {
     private int headerSize;
     private int numHeaders;
 
-    public SpdyHeaderBlockRawDecoder(int version, int maxHeaderSize) {
-        if (version < SpdyConstants.SPDY_MIN_VERSION || version > SpdyConstants.SPDY_MAX_VERSION) {
-            throw new IllegalArgumentException(
-                    "unsupported version: " + version);
+    public SpdyHeaderBlockRawDecoder(SpdyVersion version, int maxHeaderSize) {
+        if (version == null) {
+            throw new NullPointerException("version");
         }
 
-        this.version = version;
+        this.version = version.getVersion();
         this.maxHeaderSize = maxHeaderSize;
-        lengthFieldSize = version < 3 ? 2 : 4;
+        lengthFieldSize = this.version < 3 ? 2 : 4;
         reset();
     }
 

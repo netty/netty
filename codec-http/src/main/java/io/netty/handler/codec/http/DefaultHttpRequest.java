@@ -47,10 +47,10 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
     public DefaultHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri, boolean validateHeaders) {
         super(httpVersion, validateHeaders);
         if (method == null) {
-            throw new NullPointerException("getMethod");
+            throw new NullPointerException("method");
         }
         if (uri == null) {
-            throw new NullPointerException("getUri");
+            throw new NullPointerException("uri");
         }
         this.method = method;
         this.uri = uri;
@@ -78,7 +78,7 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
     @Override
     public HttpRequest setUri(String uri) {
         if (uri == null) {
-            throw new NullPointerException("method");
+            throw new NullPointerException("uri");
         }
         this.uri = uri;
         return this;

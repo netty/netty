@@ -129,7 +129,7 @@ public final class ChannelOutboundBuffer {
 
         // increment pending bytes after adding message to the unflushed arrays.
         // See https://github.com/netty/netty/issues/1619
-        incrementPendingOutboundBytes(size, true);
+        incrementPendingOutboundBytes(size);
     }
 
     private void addCapacity() {
@@ -164,7 +164,7 @@ public final class ChannelOutboundBuffer {
      * Increment the pending bytes which will be written at some point.
      * This method is thread-safe!
      */
-    void incrementPendingOutboundBytes(int size, boolean fireEvent) {
+    void incrementPendingOutboundBytes(int size) {
         // Cache the channel and check for null to make sure we not produce a NPE in case of the Channel gets
         // recycled while process this method.
         Channel channel = this.channel;
@@ -183,9 +183,7 @@ public final class ChannelOutboundBuffer {
 
         if (newWriteBufferSize > highWaterMark) {
             if (WRITABLE_UPDATER.compareAndSet(this, 1, 0)) {
-                if (fireEvent) {
-                    channel.pipeline().fireChannelWritabilityChanged();
-                }
+                channel.pipeline().fireChannelWritabilityChanged();
             }
         }
     }
@@ -194,7 +192,7 @@ public final class ChannelOutboundBuffer {
      * Decrement the pending bytes which will be written at some point.
      * This method is thread-safe!
      */
-    void decrementPendingOutboundBytes(int size, boolean fireEvent) {
+    void decrementPendingOutboundBytes(int size) {
         // Cache the channel and check for null to make sure we not produce a NPE in case of the Channel gets
         // recycled while process this method.
         Channel channel = this.channel;
@@ -213,9 +211,7 @@ public final class ChannelOutboundBuffer {
 
         if (newWriteBufferSize == 0 || newWriteBufferSize < lowWaterMark) {
             if (WRITABLE_UPDATER.compareAndSet(this, 0, 1)) {
-                if (fireEvent) {
-                    channel.pipeline().fireChannelWritabilityChanged();
-                }
+                channel.pipeline().fireChannelWritabilityChanged();
             }
         }
     }
@@ -316,7 +312,7 @@ public final class ChannelOutboundBuffer {
         safeRelease(msg);
 
         promise.trySuccess();
-        decrementPendingOutboundBytes(size, true);
+        decrementPendingOutboundBytes(size);
 
         return true;
     }
@@ -342,7 +338,7 @@ public final class ChannelOutboundBuffer {
         safeRelease(msg);
 
         safeFail(promise, cause);
-        decrementPendingOutboundBytes(size, true);
+        decrementPendingOutboundBytes(size);
 
         return true;
     }
@@ -373,24 +369,41 @@ public final class ChannelOutboundBuffer {
                 return null;
             }
 
+            Entry entry = buffer[i];
             ByteBuf buf = (ByteBuf) m;
             final int readerIndex = buf.readerIndex();
             final int readableBytes = buf.writerIndex() - readerIndex;
 
             if (readableBytes > 0) {
                 nioBufferSize += readableBytes;
-                int count = buf.nioBufferCount();
-                if (nioBufferCount + count > nioBuffers.length) {
-                    this.nioBuffers = nioBuffers = doubleNioBufferArray(nioBuffers, nioBufferCount);
+                int count = entry.count;
+                if (count == -1) {
+                    entry.count = count = buf.nioBufferCount();
                 }
+                int neededSpace = nioBufferCount + count;
+                if (neededSpace > nioBuffers.length) {
+                    this.nioBuffers = nioBuffers = expandNioBufferArray(nioBuffers, neededSpace, nioBufferCount);
+                }
+
                 if (buf.isDirect() || threadLocalDirectBufferSize <= 0) {
-                    if (buf.nioBufferCount() == 1) {
-                        nioBuffers[nioBufferCount ++] = buf.internalNioBuffer(readerIndex, readableBytes);
+                    if (count == 1) {
+                        ByteBuffer nioBuf = entry.buf;
+                        if (nioBuf == null) {
+                            // cache ByteBuffer as it may need to create a new ByteBuffer instance if its a
+                            // derived buffer
+                            entry.buf = nioBuf = buf.internalNioBuffer(readerIndex, readableBytes);
+                        }
+                        nioBuffers[nioBufferCount ++] = nioBuf;
                     } else {
-                        nioBufferCount = fillBufferArray(buf, nioBuffers, nioBufferCount);
+                        ByteBuffer[] nioBufs = entry.buffers;
+                        if (nioBufs == null) {
+                            // cached ByteBuffers as they may be expensive to create in terms of Object allocation
+                            entry.buffers = nioBufs = buf.nioBuffers();
+                        }
+                        nioBufferCount = fillBufferArray(nioBufs, nioBuffers, nioBufferCount);
                     }
                 } else {
-                    nioBufferCount = fillBufferArrayNonDirect(buffer[i], buf, readerIndex,
+                    nioBufferCount = fillBufferArrayNonDirect(entry, buf, readerIndex,
                             readableBytes, alloc, nioBuffers, nioBufferCount);
                 }
             }
@@ -402,8 +415,7 @@ public final class ChannelOutboundBuffer {
         return nioBuffers;
     }
 
-    private static int fillBufferArray(ByteBuf buf, ByteBuffer[] nioBuffers, int nioBufferCount) {
-        ByteBuffer[] nioBufs = buf.nioBuffers();
+    private static int fillBufferArray(ByteBuffer[] nioBufs, ByteBuffer[] nioBuffers, int nioBufferCount) {
         for (ByteBuffer nioBuf: nioBufs) {
             if (nioBuf == null) {
                 break;
@@ -424,18 +436,25 @@ public final class ChannelOutboundBuffer {
         directBuf.writeBytes(buf, readerIndex, readableBytes);
         buf.release();
         entry.msg = directBuf;
-        if (nioBufferCount == nioBuffers.length) {
-            nioBuffers = doubleNioBufferArray(nioBuffers, nioBufferCount);
-        }
-        nioBuffers[nioBufferCount ++] = directBuf.internalNioBuffer(0, readableBytes);
+        // cache ByteBuffer
+        ByteBuffer nioBuf = entry.buf = directBuf.internalNioBuffer(0, readableBytes);
+        entry.count = 1;
+        nioBuffers[nioBufferCount ++] = nioBuf;
         return nioBufferCount;
     }
 
-    private static ByteBuffer[] doubleNioBufferArray(ByteBuffer[] array, int size) {
-        int newCapacity = array.length << 1;
-        if (newCapacity < 0) {
-            throw new IllegalStateException();
-        }
+    private static ByteBuffer[] expandNioBufferArray(ByteBuffer[] array, int neededSpace, int size) {
+        int newCapacity = array.length;
+        do {
+            // double capacity until it is big enough
+            // See https://github.com/netty/netty/issues/1890
+            newCapacity <<= 1;
+
+            if (newCapacity < 0) {
+                throw new IllegalStateException();
+            }
+
+        } while (neededSpace > newCapacity);
 
         ByteBuffer[] newArray = new ByteBuffer[newCapacity];
         System.arraycopy(array, 0, newArray, 0, size);
@@ -578,17 +597,23 @@ public final class ChannelOutboundBuffer {
 
     private static final class Entry {
         Object msg;
+        ByteBuffer[] buffers;
+        ByteBuffer buf;
         ChannelPromise promise;
         long progress;
         long total;
         int pendingSize;
+        int count = -1;
 
         public void clear() {
+            buffers = null;
+            buf = null;
             msg = null;
             promise = null;
             progress = 0;
             total = 0;
             pendingSize = 0;
+            count = -1;
         }
     }
 

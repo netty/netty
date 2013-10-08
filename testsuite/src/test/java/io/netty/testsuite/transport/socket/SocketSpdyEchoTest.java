@@ -25,9 +25,9 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.handler.codec.spdy.SpdyConstants;
 import io.netty.handler.codec.spdy.SpdyFrameDecoder;
 import io.netty.handler.codec.spdy.SpdyFrameEncoder;
+import io.netty.handler.codec.spdy.SpdyVersion;
 import io.netty.util.NetUtil;
 import org.junit.Test;
 
@@ -165,19 +165,37 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         return frames;
     }
 
-    private int version;
+    private SpdyVersion version;
 
     @Test(timeout = 15000)
     public void testSpdyEcho() throws Throwable {
-        for (version = SpdyConstants.SPDY_MIN_VERSION; version <= SpdyConstants.SPDY_MAX_VERSION; version ++) {
-            logger.info("Testing against SPDY v" + version);
-            run();
-        }
+        version = SpdyVersion.SPDY_2;
+        logger.info("Testing against SPDY v2");
+        run();
+
+        version = SpdyVersion.SPDY_3;
+        logger.info("Testing against SPDY v3");
+        run();
+
+        version = SpdyVersion.SPDY_3_1;
+        logger.info("Testing against SPDY v3.1");
+        run();
     }
 
     public void testSpdyEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {
 
-        ByteBuf frames = createFrames(version);
+        ByteBuf frames;
+        switch (version) {
+        case SPDY_2:
+            frames = createFrames(2);
+            break;
+        case SPDY_3:
+        case SPDY_3_1:
+            frames = createFrames(3);
+            break;
+        default:
+            throw new IllegalArgumentException("unknown version");
+        }
 
         final SpdyEchoTestServerHandler sh = new SpdyEchoTestServerHandler();
         final SpdyEchoTestClientHandler ch = new SpdyEchoTestClientHandler(frames.copy());

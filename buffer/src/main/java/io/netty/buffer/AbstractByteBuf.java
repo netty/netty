@@ -559,6 +559,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public byte readByte() {
+        checkReadableBytes(1);
         int i = readerIndex;
         byte b = getByte(i);
         readerIndex = i + 1;

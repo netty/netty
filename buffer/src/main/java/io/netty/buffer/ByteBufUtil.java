@@ -257,6 +257,23 @@ public final class ByteBufUtil {
         return Long.reverseBytes(value);
     }
 
+    /**
+     * Read the given amount of bytes into a new {@link ByteBuf} that is allocated from the {@link ByteBufAllocator}.
+     */
+    public static ByteBuf readBytes(ByteBufAllocator alloc, ByteBuf buffer, int length) {
+        boolean release = true;
+        ByteBuf dst = alloc.buffer(length);
+        try {
+            buffer.readBytes(dst);
+            release = false;
+            return dst;
+        } finally {
+            if (release) {
+                dst.release();
+            }
+        }
+    }
+
     private static int firstIndexOf(ByteBuf buffer, int fromIndex, int toIndex, byte value) {
         fromIndex = Math.max(fromIndex, 0);
         if (fromIndex >= toIndex || buffer.capacity() == 0) {

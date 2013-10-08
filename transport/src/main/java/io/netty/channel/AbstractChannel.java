@@ -470,8 +470,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             try {
                 doBind(localAddress);
             } catch (Throwable t) {
-                closeIfClosed();
                 promise.setFailure(t);
+                closeIfClosed();
                 return;
             }
             if (!wasActive && isActive()) {
@@ -491,8 +491,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             try {
                 doDisconnect();
             } catch (Throwable t) {
-                closeIfClosed();
                 promise.setFailure(t);
+                closeIfClosed();
                 return;
             }
             if (wasActive && !isActive()) {
@@ -503,8 +503,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     }
                 });
             }
-            closeIfClosed(); // doDisconnect() might have closed the channel
             promise.setSuccess();
+            closeIfClosed(); // doDisconnect() might have closed the channel
         }
 
         @Override

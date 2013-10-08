@@ -147,13 +147,20 @@ public class JdkZlibDecoder extends ZlibDecoder {
         ByteBuf decompressed = ctx.alloc().heapBuffer(maxOutputLength);
         try {
             boolean readFooter = false;
+            byte[] outArray = decompressed.array();
             while (!inflater.needsInput()) {
-                byte[] outArray = decompressed.array();
                 int outIndex = decompressed.arrayOffset() + decompressed.writerIndex();
                 int length = outArray.length - outIndex;
 
-                int outputLength =  inflater.inflate(outArray, outIndex, length);
+                if (length == 0) {
+                    // completely filled the buffer allocate a new one and start to fill it
+                    out.add(decompressed);
+                    decompressed = ctx.alloc().heapBuffer(maxOutputLength);
+                    outArray = decompressed.array();
+                    continue;
+                }
 
+                int outputLength = inflater.inflate(outArray, outIndex, length);
                 if (outputLength > 0) {
                     decompressed.writerIndex(decompressed.writerIndex() + outputLength);
                     if (crc != null) {

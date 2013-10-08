@@ -733,7 +733,6 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         TestGatheringByteChannel channel = new TestGatheringByteChannel(1);
 
         while (buf.isReadable()) {
-            System.out.println(buf.nioBuffers().length);
             buf.readBytes(channel, buf.readableBytes());
         }
 
@@ -775,5 +774,20 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
     @Test
     public void testInternalNioBuffer() {
         // ignore
+    }
+
+    @Test
+    public void testisDirectMultipleBufs() {
+        CompositeByteBuf buf = freeLater(compositeBuffer());
+        assertFalse(buf.isDirect());
+
+        buf.addComponent(directBuffer().writeByte(1));
+
+        assertTrue(buf.isDirect());
+        buf.addComponent(directBuffer().writeByte(1));
+        assertTrue(buf.isDirect());
+
+        buf.addComponent(buffer().writeByte(1));
+        assertFalse(buf.isDirect());
     }
 }

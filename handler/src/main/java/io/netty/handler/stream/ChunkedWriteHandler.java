@@ -239,17 +239,6 @@ public class ChunkedWriteHandler
                     }
 
                     currentWrite.fail(t);
-                    if (ctx.executor().inEventLoop()) {
-                        ctx.fireExceptionCaught(t);
-                    } else {
-                        ctx.executor().execute(new Runnable() {
-                            @Override
-                            public void run() {
-                                ctx.fireExceptionCaught(t);
-                            }
-                        });
-                    }
-
                     closeInput(chunks);
                     break;
                 }
@@ -351,7 +340,7 @@ public class ChunkedWriteHandler
         void fail(Throwable cause) {
             ReferenceCountUtil.release(msg);
             if (promise != null) {
-                promise.setFailure(cause);
+                promise.tryFailure(cause);
             }
         }
 

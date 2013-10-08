@@ -1935,6 +1935,13 @@ public abstract class AbstractByteBufTest {
         assertNull(cause.get());
     }
 
+    @Test(expected = IndexOutOfBoundsException.class)
+    public void readByteThrowsIndexOutOfBoundsException() {
+        final ByteBuf buffer = freeLater(newBuffer(8));
+        buffer.writeByte(0);
+        assertEquals((byte) 0 , buffer.readByte());
+        buffer.readByte();
+    }
     static final class TestGatheringByteChannel implements GatheringByteChannel {
         private final ByteArrayOutputStream out = new ByteArrayOutputStream();
         private final WritableByteChannel channel = Channels.newChannel(out);

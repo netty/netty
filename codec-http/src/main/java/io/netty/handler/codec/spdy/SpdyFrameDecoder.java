@@ -83,28 +83,27 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
      * Creates a new instance with the specified {@code version} and the default
      * {@code maxChunkSize (8192)} and {@code maxHeaderSize (16384)}.
      */
-    public SpdyFrameDecoder(int version) {
+    public SpdyFrameDecoder(SpdyVersion version) {
         this(version, 8192, 16384);
     }
 
     /**
      * Creates a new instance with the specified parameters.
      */
-    public SpdyFrameDecoder(int version, int maxChunkSize, int maxHeaderSize) {
+    public SpdyFrameDecoder(SpdyVersion version, int maxChunkSize, int maxHeaderSize) {
         this(version, maxChunkSize, SpdyHeaderBlockDecoder.newInstance(version, maxHeaderSize));
     }
 
     protected SpdyFrameDecoder(
-            int version, int maxChunkSize, SpdyHeaderBlockDecoder headerBlockDecoder) {
-        if (version < SpdyConstants.SPDY_MIN_VERSION || version > SpdyConstants.SPDY_MAX_VERSION) {
-            throw new IllegalArgumentException(
-                    "unsupported version: " + version);
+            SpdyVersion version, int maxChunkSize, SpdyHeaderBlockDecoder headerBlockDecoder) {
+        if (version == null) {
+            throw new NullPointerException("version");
         }
         if (maxChunkSize <= 0) {
             throw new IllegalArgumentException(
                     "maxChunkSize must be a positive integer: " + maxChunkSize);
         }
-        spdyVersion = version;
+        spdyVersion = version.getVersion();
         this.maxChunkSize = maxChunkSize;
         this.headerBlockDecoder = headerBlockDecoder;
         state = State.READ_COMMON_HEADER;
