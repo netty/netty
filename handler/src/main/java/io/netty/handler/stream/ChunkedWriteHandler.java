@@ -351,7 +351,7 @@ public class ChunkedWriteHandler
         void fail(Throwable cause) {
             ReferenceCountUtil.release(msg);
             if (promise != null) {
-                promise.setFailure(cause);
+                promise.tryFailure(cause);
             }
         }
 
