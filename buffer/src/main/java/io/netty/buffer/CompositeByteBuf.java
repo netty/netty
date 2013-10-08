@@ -1078,9 +1078,6 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
         assert !freed;
         checkIndex(offset);
 
-        assert !freed;
-        checkIndex(offset);
-
         for (int low = 0, high = components.size(); low <= high;) {
             int mid = low + high >>> 1;
             Component c = components.get(mid);
