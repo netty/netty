@@ -80,8 +80,8 @@ public abstract class AbstractOioChannel extends AbstractChannel {
                     newT.setStackTrace(t.getStackTrace());
                     t = newT;
                 }
-                closeIfClosed();
                 promise.setFailure(t);
+                closeIfClosed();
             }
         }
     }

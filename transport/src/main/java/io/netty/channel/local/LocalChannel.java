@@ -35,6 +35,7 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ConnectionPendingException;
 import java.nio.channels.NotYetConnectedException;
 import java.util.ArrayDeque;
+import java.util.Collections;
 import java.util.Queue;
 
 /**
@@ -293,9 +294,7 @@ public class LocalChannel extends AbstractChannel {
             peerLoop.execute(new Runnable() {
                 @Override
                 public void run() {
-                    for (int i = 0;  i < msgsCopy.length; i++) {
-                        peer.inboundBuffer.add(msgsCopy[i]);
-                    }
+                    Collections.addAll(peer.inboundBuffer, msgsCopy);
                     finishPeerRead(peer, peerPipeline);
                 }
             });
@@ -350,7 +349,6 @@ public class LocalChannel extends AbstractChannel {
                     doBind(localAddress);
                 } catch (Throwable t) {
                     promise.setFailure(t);
-                    pipeline().fireExceptionCaught(t);
                     close(voidPromise());
                     return;
                 }
