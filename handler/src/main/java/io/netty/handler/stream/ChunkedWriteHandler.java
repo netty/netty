@@ -239,17 +239,6 @@ public class ChunkedWriteHandler
                     }
 
                     currentWrite.fail(t);
-                    if (ctx.executor().inEventLoop()) {
-                        ctx.fireExceptionCaught(t);
-                    } else {
-                        ctx.executor().execute(new Runnable() {
-                            @Override
-                            public void run() {
-                                ctx.fireExceptionCaught(t);
-                            }
-                        });
-                    }
-
                     closeInput(chunks);
                     break;
                 }
