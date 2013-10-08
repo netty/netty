@@ -210,8 +210,8 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                     newT.setStackTrace(t.getStackTrace());
                     t = newT;
                 }
-                closeIfClosed();
                 promise.tryFailure(t);
+                closeIfClosed();
             }
         }
 
