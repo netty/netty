@@ -20,7 +20,6 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.nio.AbstractNioMessageServerChannel;
 import io.netty.channel.socket.DefaultServerSocketChannelConfig;
 import io.netty.channel.socket.ServerSocketChannelConfig;
@@ -116,7 +115,7 @@ public class NioServerSocketChannel extends AbstractNioMessageServerChannel
 
         try {
             if (ch != null) {
-                buf.add(new NioSocketChannel(this, getChildGroup().next(), ch));
+                buf.add(new NioSocketChannel(this, childEventLoopGroup().next(), ch));
                 return 1;
             }
         } catch (Throwable t) {

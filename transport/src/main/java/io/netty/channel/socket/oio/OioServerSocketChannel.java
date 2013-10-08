@@ -155,7 +155,7 @@ public class OioServerSocketChannel extends AbstractOioMessageServerChannel impl
             Socket s = socket.accept();
             try {
                 if (s != null) {
-                    buf.add(new OioSocketChannel(this, getChildGroup().next(), s));
+                    buf.add(new OioSocketChannel(this, childEventLoopGroup().next(), s));
                     return 1;
                 }
             } catch (Throwable t) {

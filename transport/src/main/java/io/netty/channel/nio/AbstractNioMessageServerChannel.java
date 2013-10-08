@@ -15,12 +15,12 @@
  */
 package io.netty.channel.nio;
 
-import java.nio.channels.SelectableChannel;
-
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
+
+import java.nio.channels.SelectableChannel;
 
 public abstract class AbstractNioMessageServerChannel extends AbstractNioMessageChannel implements ServerChannel {
 
@@ -33,8 +33,8 @@ public abstract class AbstractNioMessageServerChannel extends AbstractNioMessage
     }
 
     @Override
-    public EventLoopGroup getChildGroup() {
-        return this.childGroup;
+    public EventLoopGroup childEventLoopGroup() {
+        return childGroup;
     }
 
 }

@@ -23,5 +23,5 @@ import io.netty.channel.socket.ServerSocketChannel;
  */
 public interface ServerChannel extends Channel {
 
-    EventLoopGroup getChildGroup();
+    EventLoopGroup childEventLoopGroup();
 }

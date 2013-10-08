@@ -30,7 +30,7 @@ public abstract class AbstractOioMessageServerChannel extends AbstractOioMessage
     }
 
     @Override
-    public EventLoopGroup getChildGroup() {
+    public EventLoopGroup childEventLoopGroup() {
         return childGroup;
     }
 

@@ -17,7 +17,6 @@ package io.netty.channel.udt.nio;
 
 import com.barchart.udt.TypeUDT;
 import com.barchart.udt.nio.SocketChannelUDT;
-
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
@@ -41,7 +40,7 @@ public class NioUdtMessageAcceptorChannel extends NioUdtAcceptorChannel {
         if (channelUDT == null) {
             return 0;
         } else {
-            buf.add(new NioUdtMessageConnectorChannel(this, getChildGroup().next(), channelUDT));
+            buf.add(new NioUdtMessageConnectorChannel(this, childEventLoopGroup().next(), channelUDT));
             return 1;
         }
     }

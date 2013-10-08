@@ -74,7 +74,8 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
         throw new UnsupportedOperationException();
     }
 
-    public EventLoopGroup getChildGroup() {
+    @Override
+    public EventLoopGroup childEventLoopGroup() {
         return childGroup;
     }
 

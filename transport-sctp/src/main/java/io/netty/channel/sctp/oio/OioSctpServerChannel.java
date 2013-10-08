@@ -17,7 +17,6 @@ package io.netty.channel.sctp.oio;
 
 import com.sun.nio.sctp.SctpChannel;
 import com.sun.nio.sctp.SctpServerChannel;
-
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
@@ -25,7 +24,6 @@ import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.oio.AbstractOioMessageChannel;
 import io.netty.channel.oio.AbstractOioMessageServerChannel;
 import io.netty.channel.sctp.DefaultSctpServerChannelConfig;
 import io.netty.channel.sctp.SctpServerChannelConfig;
@@ -200,7 +198,7 @@ public class OioSctpServerChannel extends AbstractOioMessageServerChannel
                     if (key.isAcceptable()) {
                         s = sch.accept();
                         if (s != null) {
-                            buf.add(new OioSctpChannel(this, getChildGroup().next(), s));
+                            buf.add(new OioSctpChannel(this, childEventLoopGroup().next(), s));
                             acceptedChannels ++;
                         }
                     }

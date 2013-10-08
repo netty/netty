@@ -23,15 +23,14 @@ import com.barchart.udt.nio.RendezvousChannelUDT;
 import com.barchart.udt.nio.SelectorProviderUDT;
 import com.barchart.udt.nio.ServerSocketChannelUDT;
 import com.barchart.udt.nio.SocketChannelUDT;
-
 import io.netty.bootstrap.ChannelFactory;
 import io.netty.bootstrap.ServerChannelFactory;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.udt.UdtServerChannel;
 import io.netty.channel.udt.UdtChannel;
+import io.netty.channel.udt.UdtServerChannel;
 
 import java.io.IOException;
 import java.nio.channels.spi.SelectorProvider;
@@ -43,7 +42,7 @@ import java.nio.channels.spi.SelectorProvider;
  * <p>
  * Provides {@link SelectorProvider} for UDT channels.
  */
-public abstract class NioUdtProvider<T extends UdtChannel> {
+public abstract class NioUdtProvider {
 
     /**
      * {@link ChannelFactory} for UDT Byte Acceptor. See {@link TypeUDT#STREAM}
@@ -132,8 +131,7 @@ public abstract class NioUdtProvider<T extends UdtChannel> {
     /**
      * Convenience factory for {@link KindUDT#ACCEPTOR} channels.
      */
-    protected static ServerSocketChannelUDT newAcceptorChannelUDT(
-            final TypeUDT type) {
+    protected static ServerSocketChannelUDT newAcceptorChannelUDT(final TypeUDT type) {
         try {
             return SelectorProviderUDT.from(type).openServerSocketChannel();
         } catch (final IOException e) {
@@ -155,8 +153,7 @@ public abstract class NioUdtProvider<T extends UdtChannel> {
     /**
      * Convenience factory for {@link KindUDT#RENDEZVOUS} channels.
      */
-    protected static RendezvousChannelUDT newRendezvousChannelUDT(
-            final TypeUDT type) {
+    protected static RendezvousChannelUDT newRendezvousChannelUDT(final TypeUDT type) {
         try {
             return SelectorProviderUDT.from(type).openRendezvousChannel();
         } catch (final IOException e) {
@@ -197,8 +194,11 @@ public abstract class NioUdtProvider<T extends UdtChannel> {
         return kind;
     }
 
-    private static final class NioUdtChannelFactory<T extends UdtChannel> extends NioUdtProvider<T>
-            implements ChannelFactory<T> {
+    /**
+     * Produce new {@link UdtChannel} based on factory {@link #kind()} and {@link #type()}
+     */
+    private static final class NioUdtChannelFactory<T extends UdtChannel>
+            extends NioUdtProvider implements ChannelFactory<T> {
 
         private NioUdtChannelFactory(final TypeUDT type, final KindUDT kind) {
             super(type, kind);
@@ -209,7 +209,7 @@ public abstract class NioUdtProvider<T extends UdtChannel> {
         public T newChannel(EventLoop eventLoop) {
             switch (kind()) {
             case ACCEPTOR:
-                throw new IllegalStateException("wrong kind=" + kind());
+                throw new IllegalStateException("wrong kind: " + kind());
             case CONNECTOR:
                 switch (type()) {
                 case DATAGRAM:
@@ -217,7 +217,7 @@ public abstract class NioUdtProvider<T extends UdtChannel> {
                 case STREAM:
                     return (T) new NioUdtByteConnectorChannel(eventLoop);
                 default:
-                    throw new IllegalStateException("wrong type=" + type());
+                    throw new IllegalStateException("wrong type: " + type());
                 }
             case RENDEZVOUS:
                 switch (type()) {
@@ -226,15 +226,15 @@ public abstract class NioUdtProvider<T extends UdtChannel> {
                 case STREAM:
                     return (T) new NioUdtByteRendezvousChannel(eventLoop);
                 default:
-                    throw new IllegalStateException("wrong type=" + type());
+                    throw new IllegalStateException("wrong type: " + type());
                 }
             default:
-                throw new IllegalStateException("wrong kind=" + kind());
+                throw new IllegalStateException("wrong kind: " + kind());
             }
         }
     }
 
-    private static final class NioUdtServerChannelFactory<T extends UdtServerChannel> extends NioUdtProvider<T>
+    private static final class NioUdtServerChannelFactory<T extends UdtServerChannel> extends NioUdtProvider
             implements ServerChannelFactory<T> {
 
         private NioUdtServerChannelFactory(final TypeUDT type, final KindUDT kind) {
@@ -252,21 +252,15 @@ public abstract class NioUdtProvider<T extends UdtChannel> {
                 case STREAM:
                     return (T) new NioUdtByteAcceptorChannel(eventLoop, childGroup);
                 default:
-                    throw new IllegalStateException("wrong type=" + type());
+                    throw new IllegalStateException("wrong type: " + type());
                 }
             case CONNECTOR:
             case RENDEZVOUS:
             default:
-                throw new IllegalStateException("wrong kind=" + kind());
+                throw new IllegalStateException("wrong kind: " + kind());
             }
         }
     }
-
-    /**
-     * Produce new {@link UdtChannel} based on factory {@link #kind()} and {@link #type()}
-     */
-    /*
-    */
 
     /**
      * UDT Socket Type. See {@link TypeUDT}
@@ -274,5 +268,4 @@ public abstract class NioUdtProvider<T extends UdtChannel> {
     public TypeUDT type() {
         return type;
     }
-
 }
