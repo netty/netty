@@ -44,7 +44,8 @@ import java.util.Queue;
  */
 public class EmbeddedChannel extends AbstractChannel {
 
-    private enum State { OPEN, ACTIVE, CLOSED };
+    private static final ChannelHandler[] EMPTY_HANDLERS = new ChannelHandler[0];
+    private enum State { OPEN, ACTIVE, CLOSED }
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(EmbeddedChannel.class);
 
@@ -60,7 +61,14 @@ public class EmbeddedChannel extends AbstractChannel {
     private State state;
 
     /**
-     * Create a new instance
+     * Create a new instance with an empty pipeline.
+     */
+    public EmbeddedChannel() {
+        this(EMPTY_HANDLERS);
+    }
+
+    /**
+     * Create a new instance with the pipeline initialized with the specified handlers.
      *
      * @param handlers the @link ChannelHandler}s which will be add in the {@link ChannelPipeline}
      */
@@ -71,18 +79,12 @@ public class EmbeddedChannel extends AbstractChannel {
             throw new NullPointerException("handlers");
         }
 
-        int nHandlers = 0;
         ChannelPipeline p = pipeline();
         for (ChannelHandler h: handlers) {
             if (h == null) {
                 break;
             }
-            nHandlers ++;
             p.addLast(h);
-        }
-
-        if (nHandlers == 0) {
-            throw new IllegalArgumentException("handlers is empty.");
         }
 
         p.addLast(new LastInboundHandler());
