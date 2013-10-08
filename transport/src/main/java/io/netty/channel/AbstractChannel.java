@@ -75,8 +75,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     protected AbstractChannel(Channel parent, EventLoop eventLoop) {
         this.parent = parent;
         this.eventLoop = validate(eventLoop);
-        this.unsafe = newUnsafe();
-        this.pipeline = new DefaultChannelPipeline(this);
+        unsafe = newUnsafe();
+        pipeline = new DefaultChannelPipeline(this);
     }
 
     @Override
