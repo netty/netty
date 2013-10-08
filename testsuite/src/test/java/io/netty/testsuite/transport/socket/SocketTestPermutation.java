@@ -19,6 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ChannelFactory;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
+import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.oio.OioEventLoopGroup;
@@ -92,15 +93,14 @@ final class SocketTestPermutation {
                 new ArrayList<Entry<Factory<Bootstrap>, Factory<Bootstrap>>>();
 
         // Make the list of Bootstrap factories.
-        List<Factory<Bootstrap>> bfs =
-                new ArrayList<Factory<Bootstrap>>();
+        List<Factory<Bootstrap>> bfs = new ArrayList<Factory<Bootstrap>>();
         bfs.add(new Factory<Bootstrap>() {
             @Override
             public Bootstrap newInstance() {
                 return new Bootstrap().group(nioWorkerGroup).channelFactory(new ChannelFactory<Channel>() {
                     @Override
-                    public Channel newChannel() {
-                       return new NioDatagramChannel(InternetProtocolFamily.IPv4);
+                    public Channel newChannel(EventLoop eventLoop) {
+                       return new NioDatagramChannel(eventLoop, InternetProtocolFamily.IPv4);
                     }
 
                     @Override

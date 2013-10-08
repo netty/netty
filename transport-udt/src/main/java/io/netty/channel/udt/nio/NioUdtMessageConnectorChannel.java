@@ -22,6 +22,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
+import io.netty.channel.EventLoop;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.udt.DefaultUdtChannelConfig;
 import io.netty.channel.udt.UdtChannel;
@@ -50,12 +51,12 @@ public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel imp
 
     private final UdtChannelConfig config;
 
-    public NioUdtMessageConnectorChannel() {
-        this(TypeUDT.DATAGRAM);
+    public NioUdtMessageConnectorChannel(EventLoop eventLoop) {
+        this(eventLoop, TypeUDT.DATAGRAM);
     }
 
-    public NioUdtMessageConnectorChannel(final Channel parent, final SocketChannelUDT channelUDT) {
-        super(parent, channelUDT, OP_READ);
+    public NioUdtMessageConnectorChannel(final Channel parent, EventLoop eventLoop, final SocketChannelUDT channelUDT) {
+        super(parent, eventLoop, channelUDT, OP_READ);
         try {
             channelUDT.configureBlocking(false);
             switch (channelUDT.socketUDT().status()) {
@@ -79,12 +80,12 @@ public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel imp
         }
     }
 
-    public NioUdtMessageConnectorChannel(final SocketChannelUDT channelUDT) {
-        this(null, channelUDT);
+    public NioUdtMessageConnectorChannel(EventLoop eventLoop, final SocketChannelUDT channelUDT) {
+        this(null, eventLoop, channelUDT);
     }
 
-    public NioUdtMessageConnectorChannel(final TypeUDT type) {
-        this(NioUdtProvider.newConnectorChannelUDT(type));
+    public NioUdtMessageConnectorChannel(EventLoop eventLoop, final TypeUDT type) {
+        this(eventLoop, NioUdtProvider.newConnectorChannelUDT(type));
     }
 
     @Override

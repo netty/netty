@@ -20,6 +20,7 @@ import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Meter;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.EventLoop;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.udt.nio.NioUdtByteRendezvousChannel;
 import io.netty.channel.udt.nio.NioUdtProvider;
@@ -44,7 +45,8 @@ public class NioUdtByteRendezvousChannelTest extends AbstractUdtTest {
      */
     @Test
     public void metadata() throws Exception {
-        assertFalse(new NioUdtByteRendezvousChannel().metadata().hasDisconnect());
+        EventLoop loop = new NioEventLoopGroup().next();
+        assertFalse(new NioUdtByteRendezvousChannel(loop).metadata().hasDisconnect());
     }
 
     /**

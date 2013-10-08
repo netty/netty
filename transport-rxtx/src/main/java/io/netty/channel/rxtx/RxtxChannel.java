@@ -19,6 +19,7 @@ import gnu.io.CommPort;
 import gnu.io.CommPortIdentifier;
 import gnu.io.SerialPort;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.EventLoop;
 import io.netty.channel.oio.OioByteStreamChannel;
 
 import java.net.SocketAddress;
@@ -39,8 +40,8 @@ public class RxtxChannel extends OioByteStreamChannel {
     private RxtxDeviceAddress deviceAddress;
     private SerialPort serialPort;
 
-    public RxtxChannel() {
-        super(null);
+    public RxtxChannel(EventLoop eventLoop) {
+        super(null, eventLoop);
 
         config = new DefaultRxtxChannelConfig(this);
     }
