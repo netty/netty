@@ -16,13 +16,14 @@
 package io.netty.handler.codec.string;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.MessageToMessageEncoder;
 
+import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.util.List;
 
@@ -76,6 +77,6 @@ public class StringEncoder extends MessageToMessageEncoder<CharSequence> {
             return;
         }
 
-        out.add(Unpooled.copiedBuffer(msg, charset));
+        out.add(ByteBufUtil.encodeString(ctx.alloc(), CharBuffer.wrap(msg), charset));
     }
 }

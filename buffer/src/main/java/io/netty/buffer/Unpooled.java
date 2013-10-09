@@ -647,10 +647,7 @@ public final class Unpooled {
     }
 
     private static ByteBuf copiedBuffer(CharBuffer buffer, Charset charset) {
-        ByteBuffer dst = ByteBufUtil.encodeString(buffer, charset);
-        ByteBuf result = wrappedBuffer(dst.array());
-        result.writerIndex(dst.remaining());
-        return result;
+        return ByteBufUtil.encodeString(ALLOC, buffer, charset);
     }
 
     /**
