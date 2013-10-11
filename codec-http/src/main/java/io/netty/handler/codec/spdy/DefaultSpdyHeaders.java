@@ -240,6 +240,19 @@ public class DefaultSpdyHeaders extends SpdyHeaders {
     }
 
     @Override
+    public List<Map.Entry<String, String>> entries() {
+        List<Map.Entry<String, String>> all =
+                new LinkedList<Map.Entry<String, String>>();
+
+        HeaderEntry e = head.after;
+        while (e != head) {
+            all.add(e);
+            e = e.after;
+        }
+        return all;
+    }
+
+    @Override
     public Iterator<Map.Entry<String, String>> iterator() {
         return new HeaderIterator();
     }
