@@ -349,6 +349,32 @@ public class DefaultHttpHeaders extends HttpHeaders {
     }
 
     @Override
+    public boolean contains(String name, String value, boolean ignoreCaseValue) {
+        if (name == null) {
+            throw new NullPointerException("name");
+        }
+
+        int h = hash(name);
+        int i = index(h);
+        HeaderEntry e = entries[i];
+        while (e != null) {
+            if (e.hash == h && eq(name, e.key)) {
+                if (ignoreCaseValue) {
+                    if (e.value.equalsIgnoreCase(value)) {
+                        return true;
+                    }
+                } else {
+                    if (e.value.equals(value)) {
+                        return true;
+                    }
+                }
+            }
+            e = e.next;
+        }
+        return false;
+    }
+
+    @Override
     public Set<String> names() {
 
         Set<String> names = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
