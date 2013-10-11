@@ -25,6 +25,8 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -333,7 +335,7 @@ public class DefaultHttpHeaders extends HttpHeaders {
 
     @Override
     public Iterator<Map.Entry<String, String>> iterator() {
-        return entries().iterator();
+        return new HeaderIterator();
     }
 
     @Override
@@ -376,6 +378,32 @@ public class DefaultHttpHeaders extends HttpHeaders {
             return HttpHeaderDateFormat.get().format(((Calendar) value).getTime());
         }
         return value.toString();
+    }
+
+    private final class HeaderIterator implements Iterator<Map.Entry<String, String>> {
+
+        private HeaderEntry current = head;
+
+        @Override
+        public boolean hasNext() {
+            return current.after != head;
+        }
+
+        @Override
+        public Entry<String, String> next() {
+            current = current.after;
+
+            if (current == head) {
+                throw new NoSuchElementException();
+            }
+
+            return current;
+        }
+
+        @Override
+        public void remove() {
+            throw new UnsupportedOperationException();
+        }
     }
 
     private final class HeaderEntry implements Map.Entry<String, String> {
