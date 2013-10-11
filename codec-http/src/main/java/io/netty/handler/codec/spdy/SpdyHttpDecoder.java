@@ -241,7 +241,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
 
             // Ignore trailers in a truncated HEADERS frame.
             if (!spdyHeadersFrame.isTruncated()) {
-                for (Map.Entry<String, String> e: spdyHeadersFrame.headers().entries()) {
+                for (Map.Entry<String, String> e: spdyHeadersFrame.headers()) {
                     fullHttpMessage.headers().add(e.getKey(), e.getValue());
                 }
             }
@@ -310,7 +310,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
             HttpHeaders.setHost(req, host);
         }
 
-        for (Map.Entry<String, String> e: requestFrame.headers().entries()) {
+        for (Map.Entry<String, String> e: requestFrame.headers()) {
             req.headers().add(e.getKey(), e.getValue());
         }
 
@@ -332,7 +332,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
         SpdyHeaders.removeVersion(spdyVersion, responseFrame);
 
         FullHttpResponse res = new DefaultFullHttpResponse(version, status);
-        for (Map.Entry<String, String> e: responseFrame.headers().entries()) {
+        for (Map.Entry<String, String> e: responseFrame.headers()) {
             res.headers().add(e.getKey(), e.getValue());
         }
 

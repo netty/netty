@@ -98,7 +98,7 @@ public class DefaultSpdyHeadersFrame extends DefaultSpdyStreamFrame
     }
 
     protected void appendHeaders(StringBuilder buf) {
-        for (Map.Entry<String, String> e: headers().entries()) {
+        for (Map.Entry<String, String> e: headers()) {
             buf.append("    ");
             buf.append(e.getKey());
             buf.append(": ");
