@@ -39,6 +39,11 @@ public abstract class SpdyHeaders implements Iterable<Map.Entry<String, String>>
         }
 
         @Override
+        public List<Map.Entry<String, String>> entries() {
+            return Collections.emptyList();
+        }
+
+        @Override
         public boolean contains(String name) {
             return false;
         }
@@ -85,7 +90,7 @@ public abstract class SpdyHeaders implements Iterable<Map.Entry<String, String>>
 
         @Override
         public Iterator<Map.Entry<String, String>> iterator() {
-            return Collections.<Map.Entry<String, String>>emptyList().iterator();
+            return entries().iterator();
         }
 
         @Override
@@ -415,6 +420,10 @@ public abstract class SpdyHeaders implements Iterable<Map.Entry<String, String>>
             frame.headers().set(HttpNames.VERSION, httpVersion.text());
         }
     }
+    @Override
+    public Iterator<Map.Entry<String, String>> iterator() {
+        return entries().iterator();
+    }
 
     /**
      * Returns the header value with the specified header name.  If there is
@@ -432,6 +441,14 @@ public abstract class SpdyHeaders implements Iterable<Map.Entry<String, String>>
      *         such header.
      */
     public abstract  List<String> getAll(String name);
+
+    /**
+     * Returns all header names and values that this frame contains.
+     *
+     * @return the {@link List} of the header name-value pairs.  An empty list
+     *         if there is no header in this message.
+     */
+    public abstract  List<Map.Entry<String, String>> entries();
 
     /**
      * Returns {@code true} if and only if there is a header with the specified
