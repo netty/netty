@@ -89,7 +89,7 @@ public class SpdySessionHandlerTest {
             assertTrue(receivedValues.isEmpty());
             spdyHeadersFrame.headers().remove(name);
         }
-        assertTrue(spdyHeadersFrame.headers().entries().isEmpty());
+        assertTrue(spdyHeadersFrame.headers().isEmpty());
     }
 
     private static void testSpdySessionHandler(SpdyVersion version, boolean server) {
