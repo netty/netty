@@ -354,7 +354,7 @@ public class DefaultHttpHeaders extends HttpHeaders {
             throw new NullPointerException("name");
         }
 
-        int h = hash(name);
+        int h = hash(name, false);
         int i = index(h);
         HeaderEntry e = entries[i];
         while (e != null) {
