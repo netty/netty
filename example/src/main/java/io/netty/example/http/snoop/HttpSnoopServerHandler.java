@@ -71,9 +71,9 @@ public class HttpSnoopServerHandler extends SimpleChannelInboundHandler<Object> 
             buf.append("HOSTNAME: ").append(getHost(request, "unknown")).append("\r\n");
             buf.append("REQUEST_URI: ").append(request.getUri()).append("\r\n\r\n");
 
-            List<Map.Entry<String, String>> headers = request.headers().entries();
+            HttpHeaders headers = request.headers();
             if (!headers.isEmpty()) {
-                for (Map.Entry<String, String> h: request.headers().entries()) {
+                for (Map.Entry<String, String> h: headers) {
                     String key = h.getKey();
                     String value = h.getValue();
                     buf.append("HEADER: ").append(key).append(" = ").append(value).append("\r\n");
