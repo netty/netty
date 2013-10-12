@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -130,16 +130,6 @@ public class SpdyHttpEncoder implements ChannelDownstreamHandler {
 
     private final int spdyVersion;
     private volatile int currentStreamId;
-
-    /**
-     * Creates a new instance.
-     *
-     * @param version the protocol version
-     */
-    @Deprecated
-    public SpdyHttpEncoder(int version) {
-        this(SpdyVersion.valueOf(version));
-    }
 
     /**
      * Creates a new instance.

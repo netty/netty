@@ -50,25 +50,11 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
     /**
      * Creates a new instance.
      *
-     * @param version the protocol version
-     * @param maxContentLength the maximum length of the message content.
-     *        If the length of the message content exceeds this value,
-     *        a {@link TooLongFrameException} will be raised.
-     */
-    @Deprecated
-    public SpdyHttpDecoder(int version, int maxContentLength) {
-        this(SpdyVersion.valueOf(version), maxContentLength, new HashMap<Integer, HttpMessage>());
-    }
-
-    /**
-     * Creates a new instance.
-     *
      * @param spdyVersion the protocol version
      * @param maxContentLength the maximum length of the message content.
      *        If the length of the message content exceeds this value,
      *        a {@link TooLongFrameException} will be raised.
      */
-    @Deprecated
     public SpdyHttpDecoder(SpdyVersion spdyVersion, int maxContentLength) {
         this(spdyVersion, maxContentLength, new HashMap<Integer, HttpMessage>());
     }

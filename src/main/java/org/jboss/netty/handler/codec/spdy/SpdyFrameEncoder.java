@@ -42,26 +42,8 @@ public class SpdyFrameEncoder implements ChannelDownstreamHandler {
      * default {@code compressionLevel (6)}, {@code windowBits (15)},
      * and {@code memLevel (8)}.
      */
-    @Deprecated
-    public SpdyFrameEncoder(int version) {
-        this(SpdyVersion.valueOf(version), 6, 15, 8);
-    }
-
-    /**
-     * Creates a new instance with the specified {@code version} and the
-     * default {@code compressionLevel (6)}, {@code windowBits (15)},
-     * and {@code memLevel (8)}.
-     */
     public SpdyFrameEncoder(SpdyVersion spdyVersion) {
         this(spdyVersion, 6, 15, 8);
-    }
-
-    /**
-     * Creates a new instance with the specified parameters.
-     */
-    @Deprecated
-    public SpdyFrameEncoder(int version, int compressionLevel, int windowBits, int memLevel) {
-        this(SpdyVersion.valueOf(version), compressionLevel, windowBits, memLevel);
     }
 
     /**
@@ -129,33 +111,16 @@ public class SpdyFrameEncoder implements ChannelDownstreamHandler {
                     flags |= SPDY_FLAG_UNIDIRECTIONAL;
                 }
                 int headerBlockLength = data.readableBytes();
-                int length;
-                if (version < 3) {
-                    length = headerBlockLength == 0 ? 12 : 10 + headerBlockLength;
-                } else {
-                    length = 10 + headerBlockLength;
-                }
+                int length = 10 + headerBlockLength;
                 ChannelBuffer frame = ChannelBuffers.buffer(
-                        ByteOrder.BIG_ENDIAN, SPDY_HEADER_SIZE + 12);
+                        ByteOrder.BIG_ENDIAN, SPDY_HEADER_SIZE + 10);
                 frame.writeShort(version | 0x8000);
                 frame.writeShort(SPDY_SYN_STREAM_FRAME);
                 frame.writeByte(flags);
                 frame.writeMedium(length);
                 frame.writeInt(spdySynStreamFrame.getStreamId());
                 frame.writeInt(spdySynStreamFrame.getAssociatedToStreamId());
-                if (version < 3) {
-                    // Restrict priorities for SPDY/2 to between 0 and 3
-                    byte priority = spdySynStreamFrame.getPriority();
-                    if (priority > 3) {
-                        priority = 3;
-                    }
-                    frame.writeShort((priority & 0xFF) << 14);
-                } else {
-                    frame.writeShort((spdySynStreamFrame.getPriority() & 0xFF) << 13);
-                }
-                if (version < 3 && data.readableBytes() == 0) {
-                    frame.writeShort(0);
-                }
+                frame.writeShort((spdySynStreamFrame.getPriority() & 0xFF) << 13);
                 // Writes of compressed data must occur in order
                 final ChannelBuffer buffer = ChannelBuffers.wrappedBuffer(frame, data);
                 Channels.write(ctx, e.getFuture(), buffer, e.getRemoteAddress());
@@ -170,26 +135,14 @@ public class SpdyFrameEncoder implements ChannelDownstreamHandler {
                 ChannelBuffer data = headerBlockEncoder.encode(spdySynReplyFrame);
                 byte flags = spdySynReplyFrame.isLast() ? SPDY_FLAG_FIN : 0;
                 int headerBlockLength = data.readableBytes();
-                int length;
-                if (version < 3) {
-                    length = headerBlockLength == 0 ? 8 : 6 + headerBlockLength;
-                } else {
-                    length = 4 + headerBlockLength;
-                }
+                int length = 4 + headerBlockLength;
                 ChannelBuffer frame = ChannelBuffers.buffer(
-                        ByteOrder.BIG_ENDIAN, SPDY_HEADER_SIZE + 8);
+                        ByteOrder.BIG_ENDIAN, SPDY_HEADER_SIZE + 4);
                 frame.writeShort(version | 0x8000);
                 frame.writeShort(SPDY_SYN_REPLY_FRAME);
                 frame.writeByte(flags);
                 frame.writeMedium(length);
                 frame.writeInt(spdySynReplyFrame.getStreamId());
-                if (version < 3) {
-                    if (data.readableBytes() == 0) {
-                        frame.writeInt(0);
-                    } else {
-                        frame.writeShort(0);
-                    }
-                }
                 // Writes of compressed data must occur in order
                 final ChannelBuffer buffer = ChannelBuffers.wrappedBuffer(frame, data);
                 Channels.write(ctx, e.getFuture(), buffer, e.getRemoteAddress());
@@ -226,8 +179,7 @@ public class SpdyFrameEncoder implements ChannelDownstreamHandler {
             frame.writeByte(flags);
             frame.writeMedium(length);
             frame.writeInt(numEntries);
-            for (Integer ID: IDs) {
-                int id = ID.intValue();
+            for (Integer id: IDs) {
                 byte ID_flags = 0;
                 if (spdySettingsFrame.isPersistValue(id)) {
                     ID_flags |= SPDY_SETTINGS_PERSIST_VALUE;
@@ -235,18 +187,8 @@ public class SpdyFrameEncoder implements ChannelDownstreamHandler {
                 if (spdySettingsFrame.isPersisted(id)) {
                     ID_flags |= SPDY_SETTINGS_PERSISTED;
                 }
-                if (version < 3) {
-                    // Chromium Issue 79156
-                    // SPDY setting ids are not written in network byte order
-                    // Write id assuming the architecture is little endian
-                    frame.writeByte(id & 0xFF);
-                    frame.writeByte(id >>  8 & 0xFF);
-                    frame.writeByte(id >> 16 & 0xFF);
-                    frame.writeByte(ID_flags);
-                } else {
-                    frame.writeByte(ID_flags);
-                    frame.writeMedium(id);
-                }
+                frame.writeByte(ID_flags);
+                frame.writeMedium(id);
                 frame.writeInt(spdySettingsFrame.getValue(id));
             }
             Channels.write(ctx, e.getFuture(), frame, e.getRemoteAddress());
@@ -269,16 +211,13 @@ public class SpdyFrameEncoder implements ChannelDownstreamHandler {
         if (msg instanceof SpdyGoAwayFrame) {
 
             SpdyGoAwayFrame spdyGoAwayFrame = (SpdyGoAwayFrame) msg;
-            int length = version < 3 ? 4 : 8;
             ChannelBuffer frame = ChannelBuffers.buffer(
-                    ByteOrder.BIG_ENDIAN, SPDY_HEADER_SIZE + length);
+                    ByteOrder.BIG_ENDIAN, SPDY_HEADER_SIZE + 8);
             frame.writeShort(version | 0x8000);
             frame.writeShort(SPDY_GOAWAY_FRAME);
-            frame.writeInt(length);
+            frame.writeInt(8);
             frame.writeInt(spdyGoAwayFrame.getLastGoodStreamId());
-            if (version >= 3) {
-                frame.writeInt(spdyGoAwayFrame.getStatus().getCode());
-            }
+            frame.writeInt(spdyGoAwayFrame.getStatus().getCode());
             Channels.write(ctx, e.getFuture(), frame, e.getRemoteAddress());
             return;
         }
@@ -290,22 +229,14 @@ public class SpdyFrameEncoder implements ChannelDownstreamHandler {
                 ChannelBuffer data = headerBlockEncoder.encode(spdyHeadersFrame);
                 byte flags = spdyHeadersFrame.isLast() ? SPDY_FLAG_FIN : 0;
                 int headerBlockLength = data.readableBytes();
-                int length;
-                if (version < 3) {
-                    length = headerBlockLength == 0 ? 4 : 6 + headerBlockLength;
-                } else {
-                    length = 4 + headerBlockLength;
-                }
+                int length = 4 + headerBlockLength;
                 ChannelBuffer frame = ChannelBuffers.buffer(
-                        ByteOrder.BIG_ENDIAN, SPDY_HEADER_SIZE + length);
+                        ByteOrder.BIG_ENDIAN, SPDY_HEADER_SIZE + 4);
                 frame.writeShort(version | 0x8000);
                 frame.writeShort(SPDY_HEADERS_FRAME);
                 frame.writeByte(flags);
                 frame.writeMedium(length);
                 frame.writeInt(spdyHeadersFrame.getStreamId());
-                if (version < 3 && data.readableBytes() != 0) {
-                    frame.writeShort(0);
-                }
                 // Writes of compressed data must occur in order
                 final ChannelBuffer buffer = ChannelBuffers.wrappedBuffer(frame, data);
                 Channels.write(ctx, e.getFuture(), buffer, e.getRemoteAddress());
