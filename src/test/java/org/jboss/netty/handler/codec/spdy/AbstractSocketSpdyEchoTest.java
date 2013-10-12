@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -46,8 +46,7 @@ public abstract class AbstractSocketSpdyEchoTest {
     static final int ignoredBytes = 20;
 
     private static ChannelBuffer createFrames(int version) {
-        int length = version < 3 ? 1176 : 1174;
-        ChannelBuffer frames = ChannelBuffers.buffer(length);
+        ChannelBuffer frames = ChannelBuffers.buffer(1174);
 
         // SPDY UNKNOWN Frame
         frames.writeByte(0x80);
@@ -76,32 +75,18 @@ public abstract class AbstractSocketSpdyEchoTest {
         frames.writeByte(version);
         frames.writeShort(1);
         frames.writeByte(0x03);
-        if (version < 3) {
-            frames.writeMedium(12);
-        } else {
-            frames.writeMedium(10);
-        }
+        frames.writeMedium(10);
         frames.writeInt(random.nextInt() & 0x7FFFFFFF | 0x01);
         frames.writeInt(random.nextInt() & 0x7FFFFFFF);
         frames.writeShort(0x8000);
-        if (version < 3) {
-            frames.writeShort(0);
-        }
 
         // SPDY SYN_REPLY Frame
         frames.writeByte(0x80);
         frames.writeByte(version);
         frames.writeShort(2);
         frames.writeByte(0x01);
-        if (version < 3) {
-            frames.writeMedium(8);
-        } else {
-            frames.writeMedium(4);
-        }
+        frames.writeMedium(4);
         frames.writeInt(random.nextInt() & 0x7FFFFFFF | 0x01);
-        if (version < 3) {
-            frames.writeInt(0);
-        }
 
         // SPDY RST_STREAM Frame
         frames.writeByte(0x80);
@@ -118,13 +103,8 @@ public abstract class AbstractSocketSpdyEchoTest {
         frames.writeByte(0x01);
         frames.writeMedium(12);
         frames.writeInt(1);
-        if (version < 3) {
-            frames.writeMedium(random.nextInt());
-            frames.writeByte(0x03);
-        } else {
-            frames.writeByte(0x03);
-            frames.writeMedium(random.nextInt());
-        }
+        frames.writeByte(0x03);
+        frames.writeMedium(random.nextInt());
         frames.writeInt(random.nextInt());
 
         // SPDY PING Frame
@@ -138,15 +118,9 @@ public abstract class AbstractSocketSpdyEchoTest {
         frames.writeByte(0x80);
         frames.writeByte(version);
         frames.writeShort(7);
-        if (version < 3) {
-            frames.writeInt(4);
-        } else {
-            frames.writeInt(8);
-        }
+        frames.writeInt(8);
         frames.writeInt(random.nextInt() & 0x7FFFFFFF);
-        if (version >= 3) {
-            frames.writeInt(random.nextInt() | 0x01);
-        }
+        frames.writeInt(random.nextInt() | 0x01);
 
         // SPDY HEADERS Frame
         frames.writeByte(0x80);
@@ -173,7 +147,6 @@ public abstract class AbstractSocketSpdyEchoTest {
 
     @Test
     public void testSpdyEcho() throws Throwable {
-        testSpdyEcho(SpdyVersion.SPDY_2);
         testSpdyEcho(SpdyVersion.SPDY_3);
         testSpdyEcho(SpdyVersion.SPDY_3_1);
     }

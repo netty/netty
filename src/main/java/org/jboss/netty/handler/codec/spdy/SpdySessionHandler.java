@@ -62,22 +62,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
     private volatile ChannelFutureListener closeSessionFutureListener;
 
     private final boolean server;
-    private final boolean flowControl;
     private final boolean sessionFlowControl;
-
-    /**
-     * Creates a new session handler.
-     *
-     * @param version the protocol version
-     * @param server  {@code true} if and only if this session handler should
-     *                handle the server endpoint of the connection.
-     *                {@code false} if and only if this session handler should
-     *                handle the client endpoint of the connection.
-     */
-    @Deprecated
-    public SpdySessionHandler(int version, boolean server) {
-        this(SpdyVersion.valueOf(version), server);
-    }
 
     /**
      * Creates a new session handler.
@@ -93,7 +78,6 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
             throw new NullPointerException("spdyVersion");
         }
         this.server = server;
-        flowControl = spdyVersion.useFlowControl();
         sessionFlowControl = spdyVersion.useSessionFlowControl();
     }
 
@@ -180,40 +164,38 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
              * Recipient should not send a WINDOW_UPDATE frame as it consumes the last data frame.
              */
 
-            if (flowControl) {
-                // Update receive window size
-                int deltaWindowSize = -1 * spdyDataFrame.getData().readableBytes();
-                int newWindowSize = spdySession.updateReceiveWindowSize(streamId, deltaWindowSize);
+            // Update receive window size
+            int deltaWindowSize = -1 * spdyDataFrame.getData().readableBytes();
+            int newWindowSize = spdySession.updateReceiveWindowSize(streamId, deltaWindowSize);
 
-                // Window size can become negative if we sent a SETTINGS frame that reduces the
-                // size of the transfer window after the peer has written data frames.
-                // The value is bounded by the length that SETTINGS frame decrease the window.
-                // This difference is stored for the session when writing the SETTINGS frame
-                // and is cleared once we send a WINDOW_UPDATE frame.
-                if (newWindowSize < spdySession.getReceiveWindowSizeLowerBound(streamId)) {
-                    issueStreamError(ctx, e.getRemoteAddress(), streamId, SpdyStreamStatus.FLOW_CONTROL_ERROR);
-                    return;
-                }
+            // Window size can become negative if we sent a SETTINGS frame that reduces the
+            // size of the transfer window after the peer has written data frames.
+            // The value is bounded by the length that SETTINGS frame decrease the window.
+            // This difference is stored for the session when writing the SETTINGS frame
+            // and is cleared once we send a WINDOW_UPDATE frame.
+            if (newWindowSize < spdySession.getReceiveWindowSizeLowerBound(streamId)) {
+                issueStreamError(ctx, e.getRemoteAddress(), streamId, SpdyStreamStatus.FLOW_CONTROL_ERROR);
+                return;
+            }
 
-                // Window size became negative due to sender writing frame before receiving SETTINGS
-                // Send data frames upstream in initialReceiveWindowSize chunks
-                if (newWindowSize < 0) {
-                    while (spdyDataFrame.getData().readableBytes() > initialReceiveWindowSize) {
-                        SpdyDataFrame partialDataFrame = new DefaultSpdyDataFrame(streamId);
-                        partialDataFrame.setData(spdyDataFrame.getData().readSlice(initialReceiveWindowSize));
-                        Channels.fireMessageReceived(ctx, partialDataFrame, e.getRemoteAddress());
-                    }
+            // Window size became negative due to sender writing frame before receiving SETTINGS
+            // Send data frames upstream in initialReceiveWindowSize chunks
+            if (newWindowSize < 0) {
+                while (spdyDataFrame.getData().readableBytes() > initialReceiveWindowSize) {
+                    SpdyDataFrame partialDataFrame = new DefaultSpdyDataFrame(streamId);
+                    partialDataFrame.setData(spdyDataFrame.getData().readSlice(initialReceiveWindowSize));
+                    Channels.fireMessageReceived(ctx, partialDataFrame, e.getRemoteAddress());
                 }
+            }
 
-                // Send a WINDOW_UPDATE frame if less than half the stream window size remains
-                if (newWindowSize <= initialReceiveWindowSize / 2 && !spdyDataFrame.isLast()) {
-                    deltaWindowSize = initialReceiveWindowSize - newWindowSize;
-                    spdySession.updateReceiveWindowSize(streamId, deltaWindowSize);
-                    SpdyWindowUpdateFrame spdyWindowUpdateFrame =
-                            new DefaultSpdyWindowUpdateFrame(streamId, deltaWindowSize);
-                    Channels.write(
-                            ctx, Channels.future(e.getChannel()), spdyWindowUpdateFrame, e.getRemoteAddress());
-                }
+            // Send a WINDOW_UPDATE frame if less than half the stream window size remains
+            if (newWindowSize <= initialReceiveWindowSize / 2 && !spdyDataFrame.isLast()) {
+                deltaWindowSize = initialReceiveWindowSize - newWindowSize;
+                spdySession.updateReceiveWindowSize(streamId, deltaWindowSize);
+                SpdyWindowUpdateFrame spdyWindowUpdateFrame =
+                        new DefaultSpdyWindowUpdateFrame(streamId, deltaWindowSize);
+                Channels.write(
+                        ctx, Channels.future(e.getChannel()), spdyWindowUpdateFrame, e.getRemoteAddress());
             }
 
             // Close the remote side of the stream if this is the last frame
@@ -328,12 +310,10 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
             }
             spdySettingsFrame.setPersistValue(SpdySettingsFrame.SETTINGS_INITIAL_WINDOW_SIZE, false);
 
-            if (flowControl) {
-                int newInitialWindowSize =
-                    spdySettingsFrame.getValue(SpdySettingsFrame.SETTINGS_INITIAL_WINDOW_SIZE);
-                if (newInitialWindowSize >= 0) {
-                    updateInitialSendWindowSize(newInitialWindowSize);
-                }
+            int newInitialWindowSize =
+                spdySettingsFrame.getValue(SpdySettingsFrame.SETTINGS_INITIAL_WINDOW_SIZE);
+            if (newInitialWindowSize >= 0) {
+                updateInitialSendWindowSize(newInitialWindowSize);
             }
 
         } else if (msg instanceof SpdyPingFrame) {
@@ -397,28 +377,26 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
              * after sending the last frame for the stream.
              */
 
-            if (flowControl) {
-                SpdyWindowUpdateFrame spdyWindowUpdateFrame = (SpdyWindowUpdateFrame) msg;
-                int streamId = spdyWindowUpdateFrame.getStreamId();
-                int deltaWindowSize = spdyWindowUpdateFrame.getDeltaWindowSize();
+            SpdyWindowUpdateFrame spdyWindowUpdateFrame = (SpdyWindowUpdateFrame) msg;
+            int streamId = spdyWindowUpdateFrame.getStreamId();
+            int deltaWindowSize = spdyWindowUpdateFrame.getDeltaWindowSize();
 
-                // Ignore frames for half-closed streams
-                if (streamId != SPDY_SESSION_STREAM_ID && spdySession.isLocalSideClosed(streamId)) {
-                    return;
-                }
-
-                // Check for numerical overflow
-                if (spdySession.getSendWindowSize(streamId) > Integer.MAX_VALUE - deltaWindowSize) {
-                    if (streamId == SPDY_SESSION_STREAM_ID) {
-                        issueSessionError(ctx, e.getChannel(), e.getRemoteAddress(), SpdySessionStatus.PROTOCOL_ERROR);
-                    } else {
-                        issueStreamError(ctx, e.getRemoteAddress(), streamId, SpdyStreamStatus.FLOW_CONTROL_ERROR);
-                    }
-                    return;
-                }
-
-                updateSendWindowSize(ctx, streamId, deltaWindowSize);
+            // Ignore frames for half-closed streams
+            if (streamId != SPDY_SESSION_STREAM_ID && spdySession.isLocalSideClosed(streamId)) {
+                return;
             }
+
+            // Check for numerical overflow
+            if (spdySession.getSendWindowSize(streamId) > Integer.MAX_VALUE - deltaWindowSize) {
+                if (streamId == SPDY_SESSION_STREAM_ID) {
+                    issueSessionError(ctx, e.getChannel(), e.getRemoteAddress(), SpdySessionStatus.PROTOCOL_ERROR);
+                } else {
+                    issueStreamError(ctx, e.getRemoteAddress(), streamId, SpdyStreamStatus.FLOW_CONTROL_ERROR);
+                }
+                return;
+            }
+
+            updateSendWindowSize(ctx, streamId, deltaWindowSize);
             return;
         }
 
@@ -490,73 +468,71 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
              * sender must pause transmitting data frames.
              */
 
-            if (flowControl) {
-                synchronized (flowControlLock) {
-                    int dataLength = spdyDataFrame.getData().readableBytes();
-                    int sendWindowSize = spdySession.getSendWindowSize(streamId);
+            synchronized (flowControlLock) {
+                int dataLength = spdyDataFrame.getData().readableBytes();
+                int sendWindowSize = spdySession.getSendWindowSize(streamId);
 
+                if (sessionFlowControl) {
+                    int sessionSendWindowSize = spdySession.getSendWindowSize(SPDY_SESSION_STREAM_ID);
+                    sendWindowSize = Math.min(sendWindowSize, sessionSendWindowSize);
+                }
+
+                if (sendWindowSize <= 0) {
+                    // Stream is stalled -- enqueue Data frame and return
+                    spdySession.putPendingWrite(streamId, e);
+                    return;
+                } else if (sendWindowSize < dataLength) {
+                    // Stream is not stalled but we cannot send the entire frame
+                    spdySession.updateSendWindowSize(streamId, -1 * sendWindowSize);
                     if (sessionFlowControl) {
-                        int sessionSendWindowSize = spdySession.getSendWindowSize(SPDY_SESSION_STREAM_ID);
-                        sendWindowSize = Math.min(sendWindowSize, sessionSendWindowSize);
+                        spdySession.updateSendWindowSize(SPDY_SESSION_STREAM_ID, -1 * sendWindowSize);
                     }
 
-                    if (sendWindowSize <= 0) {
-                        // Stream is stalled -- enqueue Data frame and return
-                        spdySession.putPendingWrite(streamId, e);
-                        return;
-                    } else if (sendWindowSize < dataLength) {
-                        // Stream is not stalled but we cannot send the entire frame
-                        spdySession.updateSendWindowSize(streamId, -1 * sendWindowSize);
-                        if (sessionFlowControl) {
-                            spdySession.updateSendWindowSize(SPDY_SESSION_STREAM_ID, -1 * sendWindowSize);
-                        }
+                    // Create a partial data frame whose length is the current window size
+                    SpdyDataFrame partialDataFrame = new DefaultSpdyDataFrame(streamId);
+                    partialDataFrame.setData(spdyDataFrame.getData().readSlice(sendWindowSize));
 
-                        // Create a partial data frame whose length is the current window size
-                        SpdyDataFrame partialDataFrame = new DefaultSpdyDataFrame(streamId);
-                        partialDataFrame.setData(spdyDataFrame.getData().readSlice(sendWindowSize));
+                    // Enqueue the remaining data (will be the first frame queued)
+                    spdySession.putPendingWrite(streamId, e);
 
-                        // Enqueue the remaining data (will be the first frame queued)
-                        spdySession.putPendingWrite(streamId, e);
+                    ChannelFuture writeFuture = Channels.future(e.getChannel());
 
-                        ChannelFuture writeFuture = Channels.future(e.getChannel());
-
-                        // The transfer window size is pre-decremented when sending a data frame downstream.
-                        // Close the session on write failures that leaves the transfer window in a corrupt state.
-                        final SocketAddress remoteAddress = e.getRemoteAddress();
-                        final ChannelHandlerContext context = ctx;
-                        e.getFuture().addListener(new ChannelFutureListener() {
-                            public void operationComplete(ChannelFuture future) throws Exception {
-                                if (!future.isSuccess()) {
-                                    Channel channel = future.getChannel();
-                                    issueSessionError(
-                                            context, channel, remoteAddress, SpdySessionStatus.INTERNAL_ERROR);
-                                }
+                    // The transfer window size is pre-decremented when sending a data frame downstream.
+                    // Close the session on write failures that leaves the transfer window in a corrupt state.
+                    final SocketAddress remoteAddress = e.getRemoteAddress();
+                    final ChannelHandlerContext context = ctx;
+                    e.getFuture().addListener(new ChannelFutureListener() {
+                        public void operationComplete(ChannelFuture future) throws Exception {
+                            if (!future.isSuccess()) {
+                                Channel channel = future.getChannel();
+                                issueSessionError(
+                                        context, channel, remoteAddress, SpdySessionStatus.INTERNAL_ERROR);
                             }
-                        });
-
-                        Channels.write(ctx, writeFuture, partialDataFrame, remoteAddress);
-                        return;
-                    } else {
-                        // Window size is large enough to send entire data frame
-                        spdySession.updateSendWindowSize(streamId, -1 * dataLength);
-                        if (sessionFlowControl) {
-                            spdySession.updateSendWindowSize(SPDY_SESSION_STREAM_ID, -1 * dataLength);
                         }
+                    });
 
-                        // The transfer window size is pre-decremented when sending a data frame downstream.
-                        // Close the session on write failures that leaves the transfer window in a corrupt state.
-                        final SocketAddress remoteAddress = e.getRemoteAddress();
-                        final ChannelHandlerContext context = ctx;
-                        e.getFuture().addListener(new ChannelFutureListener() {
-                            public void operationComplete(ChannelFuture future) throws Exception {
-                                if (!future.isSuccess()) {
-                                    Channel channel = future.getChannel();
-                                    issueSessionError(
-                                            context, channel, remoteAddress, SpdySessionStatus.INTERNAL_ERROR);
-                                }
-                            }
-                        });
+                    Channels.write(ctx, writeFuture, partialDataFrame, remoteAddress);
+                    return;
+                } else {
+                    // Window size is large enough to send entire data frame
+                    spdySession.updateSendWindowSize(streamId, -1 * dataLength);
+                    if (sessionFlowControl) {
+                        spdySession.updateSendWindowSize(SPDY_SESSION_STREAM_ID, -1 * dataLength);
                     }
+
+                    // The transfer window size is pre-decremented when sending a data frame downstream.
+                    // Close the session on write failures that leaves the transfer window in a corrupt state.
+                    final SocketAddress remoteAddress = e.getRemoteAddress();
+                    final ChannelHandlerContext context = ctx;
+                    e.getFuture().addListener(new ChannelFutureListener() {
+                        public void operationComplete(ChannelFuture future) throws Exception {
+                            if (!future.isSuccess()) {
+                                Channel channel = future.getChannel();
+                                issueSessionError(
+                                        context, channel, remoteAddress, SpdySessionStatus.INTERNAL_ERROR);
+                            }
+                        }
+                    });
                 }
             }
 
@@ -622,12 +598,10 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
             }
             spdySettingsFrame.setPersistValue(SpdySettingsFrame.SETTINGS_INITIAL_WINDOW_SIZE, false);
 
-            if (flowControl) {
-                int newInitialWindowSize =
-                        spdySettingsFrame.getValue(SpdySettingsFrame.SETTINGS_INITIAL_WINDOW_SIZE);
-                if (newInitialWindowSize >= 0) {
-                    updateInitialReceiveWindowSize(newInitialWindowSize);
-                }
+            int newInitialWindowSize =
+                    spdySettingsFrame.getValue(SpdySettingsFrame.SETTINGS_INITIAL_WINDOW_SIZE);
+            if (newInitialWindowSize >= 0) {
+                updateInitialReceiveWindowSize(newInitialWindowSize);
             }
 
         } else if (msg instanceof SpdyPingFrame) {

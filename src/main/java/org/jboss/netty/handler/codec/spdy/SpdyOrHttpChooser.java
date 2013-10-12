@@ -37,7 +37,7 @@ import org.jboss.netty.handler.ssl.SslHandler;
 public abstract class SpdyOrHttpChooser implements ChannelUpstreamHandler {
 
     public enum SelectedProtocol {
-        SpdyVersion2,
+        SpdyVersion3_1,
         SpdyVersion3,
         HttpVersion1_1,
         HttpVersion1_0,
@@ -73,11 +73,11 @@ public abstract class SpdyOrHttpChooser implements ChannelUpstreamHandler {
         case None:
             // Not done with choosing the protocol, so just return here for now,
             return;
-        case SpdyVersion2:
-            addSpdyHandlers(ctx, 2);
-            break;
         case SpdyVersion3:
-            addSpdyHandlers(ctx, 3);
+            addSpdyHandlers(ctx, SpdyVersion.SPDY_3);
+            break;
+        case SpdyVersion3_1:
+            addSpdyHandlers(ctx, SpdyVersion.SPDY_3_1);
             break;
         case HttpVersion1_0:
         case HttpVersion1_1:
@@ -95,7 +95,7 @@ public abstract class SpdyOrHttpChooser implements ChannelUpstreamHandler {
     /**
      * Add all {@link ChannelHandler}'s that are needed for SPDY with the given version.
      */
-    protected void addSpdyHandlers(ChannelHandlerContext ctx, int version) {
+    protected void addSpdyHandlers(ChannelHandlerContext ctx, SpdyVersion version) {
         ChannelPipeline pipeline = ctx.getPipeline();
         pipeline.addLast("spdyDecoder", new SpdyFrameDecoder(version));
         pipeline.addLast("spdyEncoder", new SpdyFrameEncoder(version));
@@ -126,8 +126,8 @@ public abstract class SpdyOrHttpChooser implements ChannelUpstreamHandler {
 
     /**
      * Create the {@link ChannelUpstreamHandler} that is responsible for handling the {@link HttpRequest}'s
-     * when the {@link SelectedProtocol} was {@link SelectedProtocol#SpdyVersion2} or
-     * {@link SelectedProtocol#SpdyVersion3}.
+     * when the {@link SelectedProtocol} was {@link SelectedProtocol#SpdyVersion3} or
+     * {@link SelectedProtocol#SpdyVersion3_1}.
      *
      * Bye default this method will just delecate to {@link #createHttpRequestHandlerForHttp()}, but
      * sub-classes may override this to change the behaviour.

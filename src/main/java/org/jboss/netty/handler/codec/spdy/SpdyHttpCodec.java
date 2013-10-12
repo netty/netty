@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -33,7 +33,7 @@ public class SpdyHttpCodec implements ChannelUpstreamHandler, ChannelDownstreamH
     /**
      * Creates a new instance with the specified decoder options.
      */
-    public SpdyHttpCodec(int version, int maxContentLength) {
+    public SpdyHttpCodec(SpdyVersion version, int maxContentLength) {
         decoder = new SpdyHttpDecoder(version, maxContentLength);
         encoder = new SpdyHttpEncoder(version);
     }
