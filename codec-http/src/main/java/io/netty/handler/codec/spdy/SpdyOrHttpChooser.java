@@ -39,7 +39,6 @@ public abstract class SpdyOrHttpChooser extends ByteToMessageDecoder {
     // TODO: Replace with generic NPN handler
 
     public enum SelectedProtocol {
-        SPDY_2,
         SPDY_3,
         SPDY_3_1,
         HTTP_1_1,
@@ -84,9 +83,6 @@ public abstract class SpdyOrHttpChooser extends ByteToMessageDecoder {
         case UNKNOWN:
             // Not done with choosing the protocol, so just return here for now,
             return false;
-        case SPDY_2:
-            addSpdyHandlers(ctx, SpdyVersion.SPDY_2);
-            break;
         case SPDY_3:
             addSpdyHandlers(ctx, SpdyVersion.SPDY_3);
             break;
@@ -137,8 +133,8 @@ public abstract class SpdyOrHttpChooser extends ByteToMessageDecoder {
 
     /**
      * Create the {@link ChannelInboundHandler} that is responsible for handling the http responses
-     * when the {@link SelectedProtocol} was {@link SelectedProtocol#SPDY_2} or
-     * {@link SelectedProtocol#SPDY_3}.
+     * when the {@link SelectedProtocol} was {@link SelectedProtocol#SPDY_3} or
+     * {@link SelectedProtocol#SPDY_3_1}.
      *
      * By default this getMethod will just delecate to {@link #createHttpRequestHandlerForHttp()}, but
      * sub-classes may override this to change the behaviour.

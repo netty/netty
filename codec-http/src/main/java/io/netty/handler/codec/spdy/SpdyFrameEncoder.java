@@ -92,12 +92,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<SpdyFrame> {
                     flags |= SPDY_FLAG_UNIDIRECTIONAL;
                 }
                 int headerBlockLength = data.readableBytes();
-                int length;
-                if (version < 3) {
-                    length = headerBlockLength == 0 ? 12 : 10 + headerBlockLength;
-                } else {
-                    length = 10 + headerBlockLength;
-                }
+                int length = 10 + headerBlockLength;
                 out.ensureWritable(SPDY_HEADER_SIZE + length);
                 out.writeShort(version | 0x8000);
                 out.writeShort(SPDY_SYN_STREAM_FRAME);
@@ -105,19 +100,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<SpdyFrame> {
                 out.writeMedium(length);
                 out.writeInt(spdySynStreamFrame.getStreamId());
                 out.writeInt(spdySynStreamFrame.getAssociatedToStreamId());
-                if (version < 3) {
-                    // Restrict priorities for SPDY/2 to between 0 and 3
-                    byte priority = spdySynStreamFrame.getPriority();
-                    if (priority > 3) {
-                        priority = 3;
-                    }
-                    out.writeShort((priority & 0xFF) << 14);
-                } else {
-                    out.writeShort((spdySynStreamFrame.getPriority() & 0xFF) << 13);
-                }
-                if (version < 3 && data.readableBytes() == 0) {
-                    out.writeShort(0);
-                }
+                out.writeShort((spdySynStreamFrame.getPriority() & 0xFF) << 13);
                 out.writeBytes(data, data.readerIndex(), headerBlockLength);
             } finally {
                 data.release();
@@ -130,25 +113,13 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<SpdyFrame> {
             try {
                 byte flags = spdySynReplyFrame.isLast() ? SPDY_FLAG_FIN : 0;
                 int headerBlockLength = data.readableBytes();
-                int length;
-                if (version < 3) {
-                    length = headerBlockLength == 0 ? 8 : 6 + headerBlockLength;
-                } else {
-                    length = 4 + headerBlockLength;
-                }
+                int length = 4 + headerBlockLength;
                 out.ensureWritable(SPDY_HEADER_SIZE + length);
                 out.writeShort(version | 0x8000);
                 out.writeShort(SPDY_SYN_REPLY_FRAME);
                 out.writeByte(flags);
                 out.writeMedium(length);
                 out.writeInt(spdySynReplyFrame.getStreamId());
-                if (version < 3) {
-                    if (headerBlockLength == 0) {
-                        out.writeInt(0);
-                    } else {
-                        out.writeShort(0);
-                    }
-                }
                 out.writeBytes(data, data.readerIndex(), headerBlockLength);
             } finally {
                 data.release();
@@ -178,8 +149,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<SpdyFrame> {
             out.writeByte(flags);
             out.writeMedium(length);
             out.writeInt(numEntries);
-            for (Integer ID: IDs) {
-                int id = ID.intValue();
+            for (Integer id: IDs) {
                 byte ID_flags = 0;
                 if (spdySettingsFrame.isPersistValue(id)) {
                     ID_flags |= SPDY_SETTINGS_PERSIST_VALUE;
@@ -187,18 +157,8 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<SpdyFrame> {
                 if (spdySettingsFrame.isPersisted(id)) {
                     ID_flags |= SPDY_SETTINGS_PERSISTED;
                 }
-                if (version < 3) {
-                    // Chromium Issue 79156
-                    // SPDY setting ids are not written in network byte order
-                    // Write id assuming the architecture is little endian
-                    out.writeByte(id       & 0xFF);
-                    out.writeByte(id >>  8 & 0xFF);
-                    out.writeByte(id >> 16 & 0xFF);
-                    out.writeByte(ID_flags);
-                } else {
-                    out.writeByte(ID_flags);
-                    out.writeMedium(id);
-                }
+                out.writeByte(ID_flags);
+                out.writeMedium(id);
                 out.writeInt(spdySettingsFrame.getValue(id));
             }
 
@@ -214,15 +174,12 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<SpdyFrame> {
         } else if (msg instanceof SpdyGoAwayFrame) {
 
             SpdyGoAwayFrame spdyGoAwayFrame = (SpdyGoAwayFrame) msg;
-            int length = version < 3 ? 4 : 8;
-            out.ensureWritable(SPDY_HEADER_SIZE + length);
+            out.ensureWritable(SPDY_HEADER_SIZE + 8);
             out.writeShort(version | 0x8000);
             out.writeShort(SPDY_GOAWAY_FRAME);
-            out.writeInt(length);
+            out.writeInt(8);
             out.writeInt(spdyGoAwayFrame.getLastGoodStreamId());
-            if (version >= 3) {
-                out.writeInt(spdyGoAwayFrame.getStatus().getCode());
-            }
+            out.writeInt(spdyGoAwayFrame.getStatus().getCode());
 
         } else if (msg instanceof SpdyHeadersFrame) {
 
@@ -231,21 +188,13 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<SpdyFrame> {
             try {
                 byte flags = spdyHeadersFrame.isLast() ? SPDY_FLAG_FIN : 0;
                 int headerBlockLength = data.readableBytes();
-                int length;
-                if (version < 3) {
-                    length = headerBlockLength == 0 ? 4 : 6 + headerBlockLength;
-                } else {
-                    length = 4 + headerBlockLength;
-                }
+                int length = 4 + headerBlockLength;
                 out.ensureWritable(SPDY_HEADER_SIZE + length);
                 out.writeShort(version | 0x8000);
                 out.writeShort(SPDY_HEADERS_FRAME);
                 out.writeByte(flags);
                 out.writeMedium(length);
                 out.writeInt(spdyHeadersFrame.getStreamId());
-                if (version < 3 && headerBlockLength != 0) {
-                    out.writeShort(0);
-                }
                 out.writeBytes(data, data.readerIndex(), headerBlockLength);
             } finally {
                 data.release();
