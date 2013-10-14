@@ -16,37 +16,19 @@
 package io.netty.handler.codec.spdy;
 
 public enum SpdyVersion {
-    SPDY_2   (2, false, false),
-    SPDY_3   (3, true,  false),
-    SPDY_3_1 (3, true,  true);
-
-    static SpdyVersion valueOf(int version) {
-        if (version == 2) {
-            return SPDY_2;
-        }
-        if (version == 3) {
-            return SPDY_3;
-        }
-        throw new IllegalArgumentException(
-                "unsupported version: " + version);
-    }
+    SPDY_3   (3, false),
+    SPDY_3_1 (3, true);
 
     private final int version;
-    private final boolean flowControl;
     private final boolean sessionFlowControl;
 
-    private SpdyVersion(int version, boolean flowControl, boolean sessionFlowControl) {
+    private SpdyVersion(int version, boolean sessionFlowControl) {
         this.version = version;
-        this.flowControl = flowControl;
         this.sessionFlowControl = sessionFlowControl;
     }
 
     int getVersion() {
         return version;
-    }
-
-    boolean useFlowControl() {
-        return flowControl;
     }
 
     boolean useSessionFlowControl() {
