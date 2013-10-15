@@ -282,8 +282,6 @@ public class SpdySessionHandlerTest {
 
     @Test
     public void testSpdyClientSessionHandler() {
-        logger.info("Running: testSpdyClientSessionHandler v2");
-        testSpdySessionHandler(SpdyVersion.SPDY_2, false);
         logger.info("Running: testSpdyClientSessionHandler v3");
         testSpdySessionHandler(SpdyVersion.SPDY_3, false);
         logger.info("Running: testSpdyClientSessionHandler v3.1");
@@ -292,8 +290,6 @@ public class SpdySessionHandlerTest {
 
     @Test
     public void testSpdyClientSessionHandlerPing() {
-        logger.info("Running: testSpdyClientSessionHandlerPing v2");
-        testSpdySessionHandlerPing(SpdyVersion.SPDY_2, false);
         logger.info("Running: testSpdyClientSessionHandlerPing v3");
         testSpdySessionHandlerPing(SpdyVersion.SPDY_3, false);
         logger.info("Running: testSpdyClientSessionHandlerPing v3.1");
@@ -302,8 +298,6 @@ public class SpdySessionHandlerTest {
 
     @Test
     public void testSpdyClientSessionHandlerGoAway() {
-        logger.info("Running: testSpdyClientSessionHandlerGoAway v2");
-        testSpdySessionHandlerGoAway(SpdyVersion.SPDY_2, false);
         logger.info("Running: testSpdyClientSessionHandlerGoAway v3");
         testSpdySessionHandlerGoAway(SpdyVersion.SPDY_3, false);
         logger.info("Running: testSpdyClientSessionHandlerGoAway v3.1");
@@ -312,8 +306,6 @@ public class SpdySessionHandlerTest {
 
     @Test
     public void testSpdyServerSessionHandler() {
-        logger.info("Running: testSpdyServerSessionHandler v2");
-        testSpdySessionHandler(SpdyVersion.SPDY_2, true);
         logger.info("Running: testSpdyServerSessionHandler v3");
         testSpdySessionHandler(SpdyVersion.SPDY_3, true);
         logger.info("Running: testSpdyServerSessionHandler v3.1");
@@ -322,8 +314,6 @@ public class SpdySessionHandlerTest {
 
     @Test
     public void testSpdyServerSessionHandlerPing() {
-        logger.info("Running: testSpdyServerSessionHandlerPing v2");
-        testSpdySessionHandlerPing(SpdyVersion.SPDY_2, true);
         logger.info("Running: testSpdyServerSessionHandlerPing v3");
         testSpdySessionHandlerPing(SpdyVersion.SPDY_3, true);
         logger.info("Running: testSpdyServerSessionHandlerPing v3.1");
@@ -332,8 +322,6 @@ public class SpdySessionHandlerTest {
 
     @Test
     public void testSpdyServerSessionHandlerGoAway() {
-        logger.info("Running: testSpdyServerSessionHandlerGoAway v2");
-        testSpdySessionHandlerGoAway(SpdyVersion.SPDY_2, true);
         logger.info("Running: testSpdyServerSessionHandlerGoAway v3");
         testSpdySessionHandlerGoAway(SpdyVersion.SPDY_3, true);
         logger.info("Running: testSpdyServerSessionHandlerGoAway v3.1");
