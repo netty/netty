@@ -587,13 +587,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             } finally {
                 if (registered) {
                     registered = false;
-                    promise.setSuccess();
                     invokeLater(new Runnable() {
                         @Override
                         public void run() {
                             pipeline.fireChannelUnregistered();
                         }
                     });
+                    promise.setSuccess();
                 } else {
                     // Some transports like local and AIO does not allow the deregistration of
                     // an open channel.  Their doDeregister() calls close().  Consequently,
