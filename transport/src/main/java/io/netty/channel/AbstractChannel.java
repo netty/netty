@@ -30,6 +30,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.NotYetConnectedException;
+import java.util.concurrent.RejectedExecutionException;
 
 /**
  * A skeletal {@link Channel} implementation.
@@ -481,6 +482,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 closeIfClosed();
                 return;
             }
+            promise.setSuccess();
+
             if (!wasActive && isActive()) {
                 invokeLater(new Runnable() {
                     @Override
@@ -489,7 +492,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     }
                 });
             }
-            promise.setSuccess();
         }
 
         @Override
@@ -502,6 +504,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 closeIfClosed();
                 return;
             }
+            promise.setSuccess();
             if (wasActive && !isActive()) {
                 invokeLater(new Runnable() {
                     @Override
@@ -510,7 +513,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     }
                 });
             }
-            promise.setSuccess();
             closeIfClosed(); // doDisconnect() might have closed the channel
         }
 
@@ -587,13 +589,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             } finally {
                 if (registered) {
                     registered = false;
+                    promise.setSuccess();
                     invokeLater(new Runnable() {
                         @Override
                         public void run() {
                             pipeline.fireChannelUnregistered();
                         }
                     });
-                    promise.setSuccess();
                 } else {
                     // Some transports like local and AIO does not allow the deregistration of
                     // an open channel.  Their doDeregister() calls close().  Consequently,
@@ -710,18 +712,22 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         private void invokeLater(Runnable task) {
-            // This method is used by outbound operation implementations to trigger an inbound event later.
-            // They do not trigger an inbound event immediately because an outbound operation might have been
-            // triggered by another inbound event handler method.  If fired immediately, the call stack
-            // will look like this for example:
-            //
-            //   handlerA.inboundBufferUpdated() - (1) an inbound handler method closes a connection.
-            //   -> handlerA.ctx.close()
-            //      -> channel.unsafe.close()
-            //         -> handlerA.channelInactive() - (2) another inbound handler method called while in (1) yet
-            //
-            // which means the execution of two inbound handler methods of the same handler overlap undesirably.
-            eventLoop().execute(task);
+            try {
+                // This method is used by outbound operation implementations to trigger an inbound event later.
+                // They do not trigger an inbound event immediately because an outbound operation might have been
+                // triggered by another inbound event handler method.  If fired immediately, the call stack
+                // will look like this for example:
+                //
+                //   handlerA.inboundBufferUpdated() - (1) an inbound handler method closes a connection.
+                //   -> handlerA.ctx.close()
+                //      -> channel.unsafe.close()
+                //         -> handlerA.channelInactive() - (2) another inbound handler method called while in (1) yet
+                //
+                // which means the execution of two inbound handler methods of the same handler overlap undesirably.
+                eventLoop().execute(task);
+            } catch (RejectedExecutionException e) {
+                logger.warn("Can't invoke task later as EventLoop rejected it", e);
+            }
         }
     }
 
