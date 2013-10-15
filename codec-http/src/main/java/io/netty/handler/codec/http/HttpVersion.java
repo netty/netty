@@ -15,6 +15,10 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.util.CharsetUtil;
+
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -34,12 +38,12 @@ public class HttpVersion implements Comparable<HttpVersion> {
     /**
      * HTTP/1.0
      */
-    public static final HttpVersion HTTP_1_0 = new HttpVersion("HTTP", 1, 0, false);
+    public static final HttpVersion HTTP_1_0 = new HttpVersion("HTTP", 1, 0, false, true);
 
     /**
      * HTTP/1.1
      */
-    public static final HttpVersion HTTP_1_1 = new HttpVersion("HTTP", 1, 1, true);
+    public static final HttpVersion HTTP_1_1 = new HttpVersion("HTTP", 1, 1, true, true);
 
     /**
      * Returns an existing or new {@link HttpVersion} instance which matches to
@@ -94,6 +98,7 @@ public class HttpVersion implements Comparable<HttpVersion> {
     private final int minorVersion;
     private final String text;
     private final boolean keepAliveDefault;
+    private final byte[] encoded;
 
     /**
      * Creates a new HTTP version with the specified version string.  You will
@@ -126,6 +131,7 @@ public class HttpVersion implements Comparable<HttpVersion> {
         minorVersion = Integer.parseInt(m.group(3));
         this.text = protocolName + '/' + majorVersion + '.' + minorVersion;
         this.keepAliveDefault = keepAliveDefault;
+        this.encoded = null;
     }
 
     /**
@@ -142,6 +148,12 @@ public class HttpVersion implements Comparable<HttpVersion> {
     public HttpVersion(
             String protocolName, int majorVersion, int minorVersion,
             boolean keepAliveDefault) {
+        this(protocolName, majorVersion, minorVersion, keepAliveDefault, false);
+    }
+
+    private HttpVersion(
+            String protocolName, int majorVersion, int minorVersion,
+            boolean keepAliveDefault, boolean encode) {
         if (protocolName == null) {
             throw new NullPointerException("protocolName");
         }
@@ -168,9 +180,16 @@ public class HttpVersion implements Comparable<HttpVersion> {
         this.protocolName = protocolName;
         this.majorVersion = majorVersion;
         this.minorVersion = minorVersion;
-        text = protocolName + '/' + majorVersion + '.' + minorVersion;
         this.keepAliveDefault = keepAliveDefault;
+        text = protocolName + '/' + majorVersion + '.' + minorVersion;
+
+        if (encode) {
+            encoded = text.getBytes(CharsetUtil.UTF_8);
+        } else {
+            encoded = null;
+        }
     }
+
 
     /**
      * Returns the name of the protocol such as {@code "HTTP"} in {@code "HTTP/1.0"}.
@@ -247,5 +266,13 @@ public class HttpVersion implements Comparable<HttpVersion> {
         }
 
         return minorVersion() - o.minorVersion();
+    }
+
+    void encode(ByteBuf buf) {
+        if (encoded != null) {
+            buf.writeBytes(encoded);
+        } else {
+            ByteBufUtil.writeAscii(buf, text);
+        }
     }
 }

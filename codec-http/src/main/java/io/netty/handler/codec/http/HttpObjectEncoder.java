@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.FileRegion;
 import io.netty.handler.codec.MessageToMessageEncoder;
@@ -178,9 +179,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
     }
 
     protected static void encodeAscii(String s, ByteBuf buf) {
-        for (int i = 0; i < s.length(); i++) {
-            buf.writeByte(s.charAt(i));
-        }
+        ByteBufUtil.writeAscii(buf, s);
     }
 
     protected abstract void encodeInitialLine(ByteBuf buf, H message) throws Exception;

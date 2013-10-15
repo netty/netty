@@ -355,5 +355,11 @@ public final class ByteBufUtil {
         return dst.flip().toString();
     }
 
+    public static void writeAscii(ByteBuf buf, CharSequence s) {
+        for (int i = 0; i < s.length(); i++) {
+            buf.writeByte(s.charAt(i));
+        }
+    }
+
     private ByteBufUtil() { }
 }
