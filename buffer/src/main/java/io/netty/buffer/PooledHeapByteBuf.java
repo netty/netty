@@ -259,7 +259,8 @@ final class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
     public ByteBuffer nioBuffer(int index, int length) {
         checkIndex(index, length);
         index = idx(index);
-        return (ByteBuffer) ByteBuffer.wrap(memory).position(index).limit(index + length);
+        ByteBuffer buf =  ByteBuffer.wrap(memory, index, length);
+        return buf.slice();
     }
 
     @Override

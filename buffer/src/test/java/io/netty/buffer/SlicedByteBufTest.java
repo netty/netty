@@ -88,4 +88,10 @@ public class SlicedByteBufTest extends AbstractByteBufTest {
     public void testSliceBytesInArrayMultipleThreads() throws Exception {
         super.testSliceBytesInArrayMultipleThreads();
     }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    @Override
+    public void testNioBufferExposeOnlyRegion() {
+        super.testNioBufferExposeOnlyRegion();
+    }
 }
