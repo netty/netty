@@ -204,14 +204,14 @@ public final class NioDatagramChannel
         ByteBuf data = allocHandle.allocate(config.getAllocator());
         boolean free = true;
         try {
-            ByteBuffer nioData = data.nioBuffer(data.writerIndex(), data.writableBytes());
-
+            ByteBuffer nioData = data.internalNioBuffer(data.writerIndex(), data.writableBytes());
+            int pos = nioData.position();
             InetSocketAddress remoteAddress = (InetSocketAddress) ch.receive(nioData);
             if (remoteAddress == null) {
                 return 0;
             }
 
-            int readBytes = nioData.position();
+            int readBytes = nioData.position() - pos;
             data.writerIndex(data.writerIndex() + readBytes);
             allocHandle.record(readBytes);
 
