@@ -1942,6 +1942,23 @@ public abstract class AbstractByteBufTest {
         assertEquals((byte) 0 , buffer.readByte());
         buffer.readByte();
     }
+
+    @Test
+    public void testNioBufferExposeOnlyRegion() {
+        final ByteBuf buffer = freeLater(newBuffer(8));
+        byte[] data = new byte[8];
+        random.nextBytes(data);
+        buffer.writeBytes(data);
+
+        ByteBuffer nioBuf = buffer.nioBuffer(1, data.length - 2);
+        assertEquals(0, nioBuf.position());
+        assertEquals(6, nioBuf.remaining());
+
+        for (int i = 1; nioBuf.hasRemaining(); i++) {
+            assertEquals(data[i], nioBuf.get());
+        }
+    }
+
     static final class TestGatheringByteChannel implements GatheringByteChannel {
         private final ByteArrayOutputStream out = new ByteArrayOutputStream();
         private final WritableByteChannel channel = Channels.newChannel(out);

@@ -330,7 +330,7 @@ final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     public ByteBuffer nioBuffer(int index, int length) {
         checkIndex(index, length);
         index = idx(index);
-        return (ByteBuffer) memory.duplicate().position(index).limit(index + length);
+        return ((ByteBuffer) memory.duplicate().position(index).limit(index + length)).slice();
     }
 
     @Override
