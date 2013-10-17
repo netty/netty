@@ -54,7 +54,7 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.regex.Pattern;
 
 import static org.jboss.netty.channel.Channels.*;
@@ -214,8 +214,20 @@ public class SslHandler extends FrameDecoder
     private volatile boolean handshaken;
     private volatile ChannelFuture handshakeFuture;
 
-    private final AtomicBoolean sentFirstMessage = new AtomicBoolean();
-    private final AtomicBoolean sentCloseNotify = new AtomicBoolean();
+    @SuppressWarnings("UnusedDeclaration")
+    private volatile int sentFirstMessage;
+    @SuppressWarnings("UnusedDeclaration")
+    private volatile int sentCloseNotify;
+    @SuppressWarnings("UnusedDeclaration")
+    private volatile int closedOutboundAndChannel;
+
+    private static final AtomicIntegerFieldUpdater<SslHandler> SENT_FIRST_MESSAGE_UPDATER =
+            AtomicIntegerFieldUpdater.newUpdater(SslHandler.class, "sentFirstMessage");
+    private static final AtomicIntegerFieldUpdater<SslHandler> SENT_CLOSE_NOTIFY_UPDATER =
+            AtomicIntegerFieldUpdater.newUpdater(SslHandler.class, "sentCloseNotify");
+    private static final AtomicIntegerFieldUpdater<SslHandler> CLOSED_OUTBOUND_AND_CHANNEL_UPDATER =
+            AtomicIntegerFieldUpdater.newUpdater(SslHandler.class, "closedOutboundAndChannel");
+
     int ignoreClosedChannelException;
     final Object ignoreClosedChannelExceptionLock = new Object();
     private final Queue<PendingWrite> pendingUnencryptedWrites = new LinkedList<PendingWrite>();
@@ -605,7 +617,7 @@ public class SslHandler extends FrameDecoder
 
         // Do not encrypt the first write request if this handler is
         // created with startTLS flag turned on.
-        if (startTls && sentFirstMessage.compareAndSet(false, true)) {
+        if (startTls && SENT_FIRST_MESSAGE_UPDATER.compareAndSet(this, 0, 1)) {
             context.sendDownstream(evt);
             return;
         }
@@ -655,7 +667,7 @@ public class SslHandler extends FrameDecoder
         } finally {
             unwrap(ctx, e.getChannel(), ChannelBuffers.EMPTY_BUFFER, 0, 0);
             engine.closeOutbound();
-            if (!sentCloseNotify.get() && handshaken) {
+            if (sentCloseNotify == 0 && handshaken) {
                 try {
                     engine.closeInbound();
                 } catch (SSLException ex) {
@@ -1427,6 +1439,12 @@ public class SslHandler extends FrameDecoder
             return;
         }
 
+        // Ensure that the tear-down logic beyond this point is never invoked concurrently nor multiple times.
+        if (!CLOSED_OUTBOUND_AND_CHANNEL_UPDATER.compareAndSet(this, 0, 1)) {
+            context.sendDownstream(e);
+            return;
+        }
+
         boolean passthrough = true;
         try {
             try {
@@ -1438,7 +1456,7 @@ public class SslHandler extends FrameDecoder
             }
 
             if (!engine.isOutboundDone()) {
-                if (sentCloseNotify.compareAndSet(false, true)) {
+                if (SENT_CLOSE_NOTIFY_UPDATER.compareAndSet(this, 0, 1)) {
                     engine.closeOutbound();
                     try {
                         ChannelFuture closeNotifyFuture = wrapNonAppData(context, e.getChannel());
