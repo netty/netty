@@ -51,44 +51,58 @@ public interface HttpChunk {
             return true;
         }
 
+        @Deprecated
         public void addHeader(String name, Object value) {
             throw new IllegalStateException("read-only");
         }
 
+        @Deprecated
         public void clearHeaders() {
             // NOOP
         }
 
+        @Deprecated
         public boolean containsHeader(String name) {
             return false;
         }
 
+        @Deprecated
         public String getHeader(String name) {
             return null;
         }
 
+        @Deprecated
         public Set<String> getHeaderNames() {
             return Collections.emptySet();
         }
 
+        @Deprecated
         public List<String> getHeaders(String name) {
             return Collections.emptyList();
         }
 
+        @Deprecated
         public List<Map.Entry<String, String>> getHeaders() {
             return Collections.emptyList();
         }
 
+        @Deprecated
         public void removeHeader(String name) {
             // NOOP
         }
 
+        @Deprecated
         public void setHeader(String name, Object value) {
             throw new IllegalStateException("read-only");
         }
 
+        @Deprecated
         public void setHeader(String name, Iterable<?> values) {
             throw new IllegalStateException("read-only");
+        }
+
+        public HttpHeaders trailingHeaders() {
+            return HttpHeaders.EMPTY_HEADERS;
         }
     };
 

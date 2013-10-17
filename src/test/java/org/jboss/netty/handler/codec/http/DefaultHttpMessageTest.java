@@ -27,20 +27,20 @@ public class DefaultHttpMessageTest {
 
         // Insert sample keys.
         for (int i = 0; i < 1000; i ++) {
-            m.setHeader(String.valueOf(i), "");
+            m.headers().set(String.valueOf(i), "");
         }
 
         // Remove in reversed order.
         for (int i = 999; i >= 0; i --) {
-            m.removeHeader(String.valueOf(i));
+            m.headers().remove(String.valueOf(i));
         }
 
         // Check if random access returns nothing.
         for (int i = 0; i < 1000; i ++) {
-            Assert.assertNull(m.getHeader(String.valueOf(i)));
+            Assert.assertNull(m.headers().get(String.valueOf(i)));
         }
 
         // Check if sequential access returns nothing.
-        Assert.assertTrue(m.getHeaders().isEmpty());
+        Assert.assertTrue(m.headers().entries().isEmpty());
     }
 }

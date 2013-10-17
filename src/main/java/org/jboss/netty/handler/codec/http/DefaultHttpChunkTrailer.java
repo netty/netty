@@ -15,73 +15,73 @@
  */
 package org.jboss.netty.handler.codec.http;
 
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.util.internal.StringUtil;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
 
 /**
  * The default {@link HttpChunkTrailer} implementation.
  */
 public class DefaultHttpChunkTrailer implements HttpChunkTrailer {
 
-    private final HttpHeaders headers = new HttpHeaders() {
-        @Override
-        void validateHeaderName(String name) {
-            super.validateHeaderName(name);
-            if (name.equalsIgnoreCase(HttpHeaders.Names.CONTENT_LENGTH) ||
-                name.equalsIgnoreCase(HttpHeaders.Names.TRANSFER_ENCODING) ||
-                name.equalsIgnoreCase(HttpHeaders.Names.TRAILER)) {
-                throw new IllegalArgumentException(
-                        "prohibited trailing header: " + name);
-            }
-        }
-    };
+    private final HttpHeaders trailingHeaders = new TrailingHeaders(true);
 
     public boolean isLast() {
         return true;
     }
 
+    @Deprecated
     public void addHeader(final String name, final Object value) {
-        headers.addHeader(name, value);
+        trailingHeaders.add(name, value);
     }
 
+    @Deprecated
     public void setHeader(final String name, final Object value) {
-        headers.setHeader(name, value);
+        trailingHeaders.set(name, value);
     }
 
+    @Deprecated
     public void setHeader(final String name, final Iterable<?> values) {
-        headers.setHeader(name, values);
+        trailingHeaders.set(name, values);
     }
 
+    @Deprecated
     public void removeHeader(final String name) {
-        headers.removeHeader(name);
+        trailingHeaders.remove(name);
     }
 
+    @Deprecated
     public void clearHeaders() {
-        headers.clearHeaders();
+        trailingHeaders.clear();
     }
 
+    @Deprecated
     public String getHeader(final String name) {
-        return headers.getHeader(name);
+        return trailingHeaders.get(name);
     }
 
+    @Deprecated
     public List<String> getHeaders(final String name) {
-        return headers.getHeaders(name);
+        return trailingHeaders.getAll(name);
     }
 
+    @Deprecated
     public List<Map.Entry<String, String>> getHeaders() {
-        return headers.getHeaders();
+        return trailingHeaders.entries();
     }
 
+    @Deprecated
     public boolean containsHeader(final String name) {
-        return headers.containsHeader(name);
+        return trailingHeaders.contains(name);
     }
 
+    @Deprecated
     public Set<String> getHeaderNames() {
-        return headers.getHeaderNames();
+        return trailingHeaders.names();
     }
 
     public ChannelBuffer getContent() {
@@ -90,5 +90,77 @@ public class DefaultHttpChunkTrailer implements HttpChunkTrailer {
 
     public void setContent(ChannelBuffer content) {
         throw new IllegalStateException("read-only");
+    }
+
+    public HttpHeaders trailingHeaders() {
+        return trailingHeaders;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder buf = new StringBuilder(super.toString());
+        buf.append(StringUtil.NEWLINE);
+        appendHeaders(buf);
+
+        // Remove the last newline.
+        buf.setLength(buf.length() - StringUtil.NEWLINE.length());
+        return buf.toString();
+    }
+
+    private void appendHeaders(StringBuilder buf) {
+        for (Map.Entry<String, String> e: trailingHeaders()) {
+            buf.append(e.getKey());
+            buf.append(": ");
+            buf.append(e.getValue());
+            buf.append(StringUtil.NEWLINE);
+        }
+    }
+
+    private static final class TrailingHeaders extends DefaultHttpHeaders {
+
+        TrailingHeaders(boolean validateHeaders) {
+            super(validateHeaders);
+        }
+
+        @Override
+        public HttpHeaders add(String name, Object value) {
+            if (validate) {
+                validateName(name);
+            }
+            return super.add(name, value);
+        }
+
+        @Override
+        public HttpHeaders add(String name, Iterable<?> values) {
+            if (validate) {
+                validateName(name);
+            }
+            return super.add(name, values);
+        }
+
+        @Override
+        public HttpHeaders set(String name, Iterable<?> values) {
+            if (validate) {
+                validateName(name);
+            }
+            return super.set(name, values);
+        }
+
+        @Override
+        public HttpHeaders set(String name, Object value) {
+            if (validate) {
+                validateName(name);
+            }
+            return super.set(name, value);
+        }
+
+        private static void validateName(String name) {
+            if (name.equalsIgnoreCase(HttpHeaders.Names.CONTENT_LENGTH) ||
+                    name.equalsIgnoreCase(HttpHeaders.Names.TRANSFER_ENCODING) ||
+                    name.equalsIgnoreCase(HttpHeaders.Names.TRAILER)) {
+                throw new IllegalArgumentException(
+                        "prohibited trailing header: " + name);
+            }
+        }
     }
 }

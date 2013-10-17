@@ -106,7 +106,7 @@ final class HttpCodecUtil {
     }
 
     static boolean isTransferEncodingChunked(HttpMessage m) {
-        List<String> chunked = m.getHeaders(HttpHeaders.Names.TRANSFER_ENCODING);
+        List<String> chunked = m.headers().getAll(HttpHeaders.Names.TRANSFER_ENCODING);
         if (chunked.isEmpty()) {
             return false;
         }
@@ -120,7 +120,7 @@ final class HttpCodecUtil {
     }
 
     static void removeTransferEncodingChunked(HttpMessage m) {
-        List<String> values = m.getHeaders(HttpHeaders.Names.TRANSFER_ENCODING);
+        List<String> values = m.headers().getAll(HttpHeaders.Names.TRANSFER_ENCODING);
         if (values.isEmpty()) {
             return;
         }
@@ -132,14 +132,14 @@ final class HttpCodecUtil {
             }
         }
         if (values.isEmpty()) {
-            m.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING);
+            m.headers().remove(HttpHeaders.Names.TRANSFER_ENCODING);
         } else {
-            m.setHeader(HttpHeaders.Names.TRANSFER_ENCODING, values);
+            m.headers().set(HttpHeaders.Names.TRANSFER_ENCODING, values);
         }
     }
 
     static boolean isContentLengthSet(HttpMessage m) {
-        List<String> contentLength = m.getHeaders(HttpHeaders.Names.CONTENT_LENGTH);
+        List<String> contentLength = m.headers().getAll(HttpHeaders.Names.CONTENT_LENGTH);
         return !contentLength.isEmpty();
     }
 

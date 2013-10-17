@@ -69,7 +69,7 @@ public class HttpSnoopServerHandler extends SimpleChannelUpstreamHandler {
             buf.append("HOSTNAME: " + getHost(request, "unknown") + "\r\n");
             buf.append("REQUEST_URI: " + request.getUri() + "\r\n\r\n");
 
-            for (Map.Entry<String, String> h: request.getHeaders()) {
+            for (Map.Entry<String, String> h: request.headers()) {
                 buf.append("HEADER: " + h.getKey() + " = " + h.getValue() + "\r\n");
             }
             buf.append("\r\n");
@@ -103,10 +103,10 @@ public class HttpSnoopServerHandler extends SimpleChannelUpstreamHandler {
                 buf.append("END OF CONTENT\r\n");
 
                 HttpChunkTrailer trailer = (HttpChunkTrailer) chunk;
-                if (!trailer.getHeaderNames().isEmpty()) {
+                if (!trailer.trailingHeaders().names().isEmpty()) {
                     buf.append("\r\n");
-                    for (String name: trailer.getHeaderNames()) {
-                        for (String value: trailer.getHeaders(name)) {
+                    for (String name: trailer.trailingHeaders().names()) {
+                        for (String value: trailer.trailingHeaders().getAll(name)) {
                             buf.append("TRAILING HEADER: " + name + " = " + value + "\r\n");
                         }
                     }
@@ -127,18 +127,18 @@ public class HttpSnoopServerHandler extends SimpleChannelUpstreamHandler {
         // Build the response object.
         HttpResponse response = new DefaultHttpResponse(HTTP_1_1, OK);
         response.setContent(ChannelBuffers.copiedBuffer(buf.toString(), CharsetUtil.UTF_8));
-        response.setHeader(CONTENT_TYPE, "text/plain; charset=UTF-8");
+        response.headers().set(CONTENT_TYPE, "text/plain; charset=UTF-8");
 
         if (keepAlive) {
             // Add 'Content-Length' header only for a keep-alive connection.
-            response.setHeader(CONTENT_LENGTH, response.getContent().readableBytes());
+            response.headers().set(CONTENT_LENGTH, response.getContent().readableBytes());
             // Add keep alive header as per:
             // - http://www.w3.org/Protocols/HTTP/1.1/draft-ietf-http-v11-spec-01.html#Connection
-            response.setHeader(CONNECTION, HttpHeaders.Values.KEEP_ALIVE);
+            response.headers().set(CONNECTION, HttpHeaders.Values.KEEP_ALIVE);
         }
 
         // Encode the cookie.
-        String cookieString = request.getHeader(COOKIE);
+        String cookieString = request.headers().get(COOKIE);
         if (cookieString != null) {
             CookieDecoder cookieDecoder = new CookieDecoder();
             Set<Cookie> cookies = cookieDecoder.decode(cookieString);
@@ -147,16 +147,16 @@ public class HttpSnoopServerHandler extends SimpleChannelUpstreamHandler {
                 CookieEncoder cookieEncoder = new CookieEncoder(true);
                 for (Cookie cookie : cookies) {
                     cookieEncoder.addCookie(cookie);
-                    response.addHeader(SET_COOKIE, cookieEncoder.encode());
+                    response.headers().add(SET_COOKIE, cookieEncoder.encode());
                 }
             }
         } else {
             // Browser sent no cookie.  Add some.
             CookieEncoder cookieEncoder = new CookieEncoder(true);
             cookieEncoder.addCookie("key1", "value1");
-            response.addHeader(SET_COOKIE, cookieEncoder.encode());
+            response.headers().add(SET_COOKIE, cookieEncoder.encode());
             cookieEncoder.addCookie("key2", "value2");
-            response.addHeader(SET_COOKIE, cookieEncoder.encode());
+            response.headers().add(SET_COOKIE, cookieEncoder.encode());
         }
 
         // Write the response.

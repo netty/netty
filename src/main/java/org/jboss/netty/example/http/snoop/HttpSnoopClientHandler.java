@@ -36,9 +36,9 @@ public class HttpSnoopClientHandler extends SimpleChannelUpstreamHandler {
             System.out.println("VERSION: " + response.getProtocolVersion());
             System.out.println();
 
-            if (!response.getHeaderNames().isEmpty()) {
-                for (String name: response.getHeaderNames()) {
-                    for (String value: response.getHeaders(name)) {
+            if (!response.headers().names().isEmpty()) {
+                for (String name: response.headers().names()) {
+                    for (String value: response.headers().getAll(name)) {
                         System.out.println("HEADER: " + name + " = " + value);
                     }
                 }

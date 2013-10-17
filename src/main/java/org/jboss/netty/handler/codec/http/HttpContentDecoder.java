@@ -68,7 +68,7 @@ public abstract class HttpContentDecoder extends SimpleChannelUpstreamHandler
             finishDecode();
 
             // Determine the content encoding.
-            String contentEncoding = m.getHeader(HttpHeaders.Names.CONTENT_ENCODING);
+            String contentEncoding = m.headers().get(HttpHeaders.Names.CONTENT_ENCODING);
             if (contentEncoding != null) {
                 contentEncoding = contentEncoding.trim();
             } else {
@@ -83,9 +83,9 @@ public abstract class HttpContentDecoder extends SimpleChannelUpstreamHandler
                 if (HttpHeaders.Values.IDENTITY.equals(targetContentEncoding)) {
                     // Do NOT set the 'Content-Encoding' header if the target encoding is 'identity'
                     // as per: http://tools.ietf.org/html/rfc2616#section-14.11
-                    m.removeHeader(HttpHeaders.Names.CONTENT_ENCODING);
+                    m.headers().remove(HttpHeaders.Names.CONTENT_ENCODING);
                 } else {
-                    m.setHeader(HttpHeaders.Names.CONTENT_ENCODING, targetContentEncoding);
+                    m.headers().set(HttpHeaders.Names.CONTENT_ENCODING, targetContentEncoding);
                 }
 
                 if (!m.isChunked()) {
@@ -96,8 +96,8 @@ public abstract class HttpContentDecoder extends SimpleChannelUpstreamHandler
 
                     // Replace the content.
                     m.setContent(content);
-                    if (m.containsHeader(HttpHeaders.Names.CONTENT_LENGTH)) {
-                        m.setHeader(
+                    if (m.headers().contains(HttpHeaders.Names.CONTENT_LENGTH)) {
+                        m.headers().set(
                                 HttpHeaders.Names.CONTENT_LENGTH,
                                 Integer.toString(content.readableBytes()));
                     }

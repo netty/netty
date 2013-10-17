@@ -134,7 +134,7 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
 
         HttpResponse res = new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS);
 
-        String key = req.getHeader(Names.SEC_WEBSOCKET_KEY);
+        String key = req.headers().get(Names.SEC_WEBSOCKET_KEY);
         if (key == null) {
             throw new WebSocketHandshakeException("not a WebSocket request: missing key");
         }
@@ -148,16 +148,16 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
         }
 
         res.setStatus(HttpResponseStatus.SWITCHING_PROTOCOLS);
-        res.addHeader(Names.UPGRADE, WEBSOCKET.toLowerCase());
-        res.addHeader(Names.CONNECTION, Names.UPGRADE);
-        res.addHeader(Names.SEC_WEBSOCKET_ACCEPT, accept);
-        String subprotocols = req.getHeader(Names.SEC_WEBSOCKET_PROTOCOL);
+        res.headers().add(Names.UPGRADE, WEBSOCKET.toLowerCase());
+        res.headers().add(Names.CONNECTION, Names.UPGRADE);
+        res.headers().add(Names.SEC_WEBSOCKET_ACCEPT, accept);
+        String subprotocols = req.headers().get(Names.SEC_WEBSOCKET_PROTOCOL);
         if (subprotocols != null) {
             String selectedSubprotocol = selectSubprotocol(subprotocols);
             if (selectedSubprotocol == null) {
                 throw new WebSocketHandshakeException("Requested subprotocol(s) not supported: " + subprotocols);
             } else {
-                res.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, selectedSubprotocol);
+                res.headers().add(Names.SEC_WEBSOCKET_PROTOCOL, selectedSubprotocol);
                 setSelectedSubprotocol(selectedSubprotocol);
             }
         }

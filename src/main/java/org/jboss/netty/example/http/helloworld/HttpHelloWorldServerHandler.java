@@ -51,15 +51,15 @@ public class HttpHelloWorldServerHandler extends SimpleChannelUpstreamHandler {
             boolean keepAlive = isKeepAlive(req);
             HttpResponse response = new DefaultHttpResponse(HTTP_1_1, OK);
             response.setContent(ChannelBuffers.wrappedBuffer(CONTENT));
-            response.setHeader(CONTENT_TYPE, "text/plain");
-            response.setHeader(CONTENT_LENGTH, response.getContent().readableBytes());
+            response.headers().set(CONTENT_TYPE, "text/plain");
+            response.headers().set(CONTENT_LENGTH, response.getContent().readableBytes());
 
             if (!keepAlive) {
                 ChannelFuture f = Channels.future(ch);
                 f.addListener(ChannelFutureListener.CLOSE);
                 Channels.write(ctx, f, response);
             } else {
-                response.setHeader(CONNECTION, Values.KEEP_ALIVE);
+                response.headers().set(CONNECTION, Values.KEEP_ALIVE);
                 Channels.write(ctx, Channels.future(ch), response);
             }
         }

@@ -93,7 +93,7 @@ public abstract class RtspMessageDecoder extends HttpMessageDecoder {
         if (empty) {
             return true;
         }
-        if (!msg.containsHeader(RtspHeaders.Names.CONTENT_LENGTH)) {
+        if (!msg.headers().contains(RtspHeaders.Names.CONTENT_LENGTH)) {
             return true;
         }
         return empty;

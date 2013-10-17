@@ -28,7 +28,7 @@ import java.util.Set;
  */
 public class DefaultHttpMessage implements HttpMessage {
 
-    private final HttpHeaders headers = new HttpHeaders();
+    private final HttpHeaders headers = new DefaultHttpHeaders(true);
     private HttpVersion version;
     private ChannelBuffer content = ChannelBuffers.EMPTY_BUFFER;
     private boolean chunked;
@@ -40,30 +40,28 @@ public class DefaultHttpMessage implements HttpMessage {
         setProtocolVersion(version);
     }
 
+    public HttpHeaders headers() {
+        return headers;
+    }
+
+    @Deprecated
     public void addHeader(final String name, final Object value) {
-        headers.addHeader(name, value);
+        headers.add(name, value);
     }
 
+    @Deprecated
     public void setHeader(final String name, final Object value) {
-        headers.setHeader(name, value);
+        headers.set(name, value);
     }
 
+    @Deprecated
     public void setHeader(final String name, final Iterable<?> values) {
-        headers.setHeader(name, values);
+        headers.set(name, values);
     }
 
+    @Deprecated
     public void removeHeader(final String name) {
-        headers.removeHeader(name);
-    }
-
-    @Deprecated
-    public long getContentLength() {
-        return HttpHeaders.getContentLength(this);
-    }
-
-    @Deprecated
-    public long getContentLength(long defaultValue) {
-        return HttpHeaders.getContentLength(this, defaultValue);
+        headers.remove(name);
     }
 
     public boolean isChunked() {
@@ -82,12 +80,8 @@ public class DefaultHttpMessage implements HttpMessage {
     }
 
     @Deprecated
-    public boolean isKeepAlive() {
-        return HttpHeaders.isKeepAlive(this);
-    }
-
     public void clearHeaders() {
-        headers.clearHeaders();
+        headers.clear();
     }
 
     public void setContent(ChannelBuffer content) {
@@ -101,24 +95,29 @@ public class DefaultHttpMessage implements HttpMessage {
         this.content = content;
     }
 
+    @Deprecated
     public String getHeader(final String name) {
-        return headers.getHeader(name);
+        return headers.get(name);
     }
 
+    @Deprecated
     public List<String> getHeaders(final String name) {
-        return headers.getHeaders(name);
+        return headers.getAll(name);
     }
 
+    @Deprecated
     public List<Map.Entry<String, String>> getHeaders() {
-        return headers.getHeaders();
+        return headers.entries();
     }
 
+    @Deprecated
     public boolean containsHeader(final String name) {
-        return headers.containsHeader(name);
+        return headers.contains(name);
     }
 
+    @Deprecated
     public Set<String> getHeaderNames() {
-        return headers.getHeaderNames();
+        return headers.names();
     }
 
     public HttpVersion getProtocolVersion() {
@@ -156,7 +155,7 @@ public class DefaultHttpMessage implements HttpMessage {
     }
 
     void appendHeaders(StringBuilder buf) {
-        for (Map.Entry<String, String> e: getHeaders()) {
+        for (Map.Entry<String, String> e: headers()) {
             buf.append(e.getKey());
             buf.append(": ");
             buf.append(e.getValue());

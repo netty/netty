@@ -133,39 +133,39 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
         }
 
         // Serve the WebSocket handshake request.
-        if (!Values.UPGRADE.equalsIgnoreCase(req.getHeader(CONNECTION))
-                || !WEBSOCKET.equalsIgnoreCase(req.getHeader(Names.UPGRADE))) {
+        if (!Values.UPGRADE.equalsIgnoreCase(req.headers().get(CONNECTION))
+                || !WEBSOCKET.equalsIgnoreCase(req.headers().get(Names.UPGRADE))) {
             throw new WebSocketHandshakeException("not a WebSocket handshake request: missing upgrade");
         }
 
         // Hixie 75 does not contain these headers while Hixie 76 does
-        boolean isHixie76 = req.containsHeader(SEC_WEBSOCKET_KEY1) && req.containsHeader(SEC_WEBSOCKET_KEY2);
+        boolean isHixie76 = req.headers().contains(SEC_WEBSOCKET_KEY1) && req.headers().contains(SEC_WEBSOCKET_KEY2);
 
         // Create the WebSocket handshake response.
         HttpResponse res = new DefaultHttpResponse(HTTP_1_1, new HttpResponseStatus(101,
                 isHixie76 ? "WebSocket Protocol Handshake" : "Web Socket Protocol Handshake"));
-        res.addHeader(Names.UPGRADE, WEBSOCKET);
-        res.addHeader(CONNECTION, Values.UPGRADE);
+        res.headers().add(Names.UPGRADE, WEBSOCKET);
+        res.headers().add(CONNECTION, Values.UPGRADE);
 
         // Fill in the headers and contents depending on handshake method.
         if (isHixie76) {
             // New handshake method with a challenge:
-            res.addHeader(SEC_WEBSOCKET_ORIGIN, req.getHeader(ORIGIN));
-            res.addHeader(SEC_WEBSOCKET_LOCATION, getWebSocketUrl());
-            String subprotocols = req.getHeader(SEC_WEBSOCKET_PROTOCOL);
+            res.headers().add(SEC_WEBSOCKET_ORIGIN, req.headers().get(ORIGIN));
+            res.headers().add(SEC_WEBSOCKET_LOCATION, getWebSocketUrl());
+            String subprotocols = req.headers().get(SEC_WEBSOCKET_PROTOCOL);
             if (subprotocols != null) {
                 String selectedSubprotocol = selectSubprotocol(subprotocols);
                 if (selectedSubprotocol == null) {
                     throw new WebSocketHandshakeException("Requested subprotocol(s) not supported: " + subprotocols);
                 } else {
-                    res.addHeader(SEC_WEBSOCKET_PROTOCOL, selectedSubprotocol);
+                    res.headers().add(SEC_WEBSOCKET_PROTOCOL, selectedSubprotocol);
                     setSelectedSubprotocol(selectedSubprotocol);
                 }
             }
 
             // Calculate the answer of the challenge.
-            String key1 = req.getHeader(SEC_WEBSOCKET_KEY1);
-            String key2 = req.getHeader(SEC_WEBSOCKET_KEY2);
+            String key1 = req.headers().get(SEC_WEBSOCKET_KEY1);
+            String key2 = req.headers().get(SEC_WEBSOCKET_KEY2);
             int a = (int) (Long.parseLong(key1.replaceAll("[^0-9]", "")) / key1.replaceAll("[^ ]", "").length());
             int b = (int) (Long.parseLong(key2.replaceAll("[^0-9]", "")) / key2.replaceAll("[^ ]", "").length());
             long c = req.getContent().readLong();
@@ -176,11 +176,11 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
             res.setContent(WebSocketUtil.md5(input));
         } else {
             // Old Hixie 75 handshake method with no challenge:
-            res.addHeader(WEBSOCKET_ORIGIN, req.getHeader(ORIGIN));
-            res.addHeader(WEBSOCKET_LOCATION, getWebSocketUrl());
-            String protocol = req.getHeader(WEBSOCKET_PROTOCOL);
+            res.headers().add(WEBSOCKET_ORIGIN, req.headers().get(ORIGIN));
+            res.headers().add(WEBSOCKET_LOCATION, getWebSocketUrl());
+            String protocol = req.headers().get(WEBSOCKET_PROTOCOL);
             if (protocol != null) {
-                res.addHeader(WEBSOCKET_PROTOCOL, selectSubprotocol(protocol));
+                res.headers().add(WEBSOCKET_PROTOCOL, selectSubprotocol(protocol));
             }
         }
 

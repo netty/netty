@@ -104,7 +104,7 @@ public class SpdyFrameDecoderTest {
     }
 
     private static void addHeader(SpdyHeadersFrame frame, int headerNameSize, int headerValueSize) {
-        frame.addHeader("k", "v");
+        frame.headers().add("k", "v");
         StringBuilder headerName = new StringBuilder();
         for (int i = 0; i < headerNameSize; i++) {
             headerName.append('h');
@@ -113,7 +113,7 @@ public class SpdyFrameDecoderTest {
         for (int i = 0; i < headerValueSize; i++) {
             headerValue.append('a');
         }
-        frame.addHeader(headerName.toString(), headerValue.toString());
+        frame.headers().add(headerName.toString(), headerValue.toString());
     }
 
     protected ChannelFactory newClientSocketChannelFactory(Executor executor) {

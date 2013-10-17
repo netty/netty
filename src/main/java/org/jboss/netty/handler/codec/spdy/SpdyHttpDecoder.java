@@ -240,8 +240,8 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
 
             // Ignore trailers in a truncated HEADERS frame.
             if (!spdyHeadersFrame.isTruncated()) {
-                for (Map.Entry<String, String> e : spdyHeadersFrame.getHeaders()) {
-                    httpMessage.addHeader(e.getKey(), e.getValue());
+                for (Map.Entry<String, String> e : spdyHeadersFrame.headers()) {
+                    httpMessage.headers().add(e.getKey(), e.getValue());
                 }
             }
 
@@ -315,15 +315,15 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
             HttpHeaders.setHost(httpRequest, host);
         }
 
-        for (Map.Entry<String, String> e: requestFrame.getHeaders()) {
-            httpRequest.addHeader(e.getKey(), e.getValue());
+        for (Map.Entry<String, String> e: requestFrame.headers()) {
+            httpRequest.headers().add(e.getKey(), e.getValue());
         }
 
         // The Connection and Keep-Alive headers are no longer valid
         HttpHeaders.setKeepAlive(httpRequest, true);
 
         // Transfer-Encoding header is not valid
-        httpRequest.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING);
+        httpRequest.headers().remove(HttpHeaders.Names.TRANSFER_ENCODING);
 
         return httpRequest;
     }
@@ -337,16 +337,16 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
         SpdyHeaders.removeVersion(spdyVersion, responseFrame);
 
         HttpResponse httpResponse = new DefaultHttpResponse(version, status);
-        for (Map.Entry<String, String> e: responseFrame.getHeaders()) {
-            httpResponse.addHeader(e.getKey(), e.getValue());
+        for (Map.Entry<String, String> e: responseFrame.headers()) {
+            httpResponse.headers().add(e.getKey(), e.getValue());
         }
 
         // The Connection and Keep-Alive headers are no longer valid
         HttpHeaders.setKeepAlive(httpResponse, true);
 
         // Transfer-Encoding header is not valid
-        httpResponse.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING);
-        httpResponse.removeHeader(HttpHeaders.Names.TRAILER);
+        httpResponse.headers().remove(HttpHeaders.Names.TRANSFER_ENCODING);
+        httpResponse.headers().remove(HttpHeaders.Names.TRAILER);
 
         return httpResponse;
     }

@@ -97,7 +97,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
     @Override
     protected EncoderEmbedder<ChannelBuffer> newContentEncoder(
             HttpMessage msg, String acceptEncoding) throws Exception {
-        String contentEncoding = msg.getHeader(HttpHeaders.Names.CONTENT_ENCODING);
+        String contentEncoding = msg.headers().get(HttpHeaders.Names.CONTENT_ENCODING);
         if (contentEncoding != null &&
             !HttpHeaders.Values.IDENTITY.equalsIgnoreCase(contentEncoding)) {
             // Encoded already.

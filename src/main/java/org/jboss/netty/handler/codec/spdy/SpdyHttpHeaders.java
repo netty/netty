@@ -62,7 +62,7 @@ public final class SpdyHttpHeaders {
      * Removes the {@code "X-SPDY-Stream-ID"} header.
      */
     public static void removeStreamId(HttpMessage message) {
-        message.removeHeader(Names.STREAM_ID);
+        message.headers().remove(Names.STREAM_ID);
     }
 
     /**
@@ -83,7 +83,7 @@ public final class SpdyHttpHeaders {
      * Removes the {@code "X-SPDY-Associated-To-Stream-ID"} header.
      */
     public static void removeAssociatedToStreamId(HttpMessage message) {
-        message.removeHeader(Names.ASSOCIATED_TO_STREAM_ID);
+        message.headers().remove(Names.ASSOCIATED_TO_STREAM_ID);
     }
 
     /**
@@ -107,7 +107,7 @@ public final class SpdyHttpHeaders {
      * Removes the {@code "X-SPDY-Priority"} header.
      */
     public static void removePriority(HttpMessage message) {
-        message.removeHeader(Names.PRIORITY);
+        message.headers().remove(Names.PRIORITY);
     }
 
     /**
@@ -131,41 +131,41 @@ public final class SpdyHttpHeaders {
      * Removes the {@code "X-SPDY-URL"} header.
      */
     public static void removeUrl(HttpMessage message) {
-        message.removeHeader(Names.URL);
+        message.headers().remove(Names.URL);
     }
 
     /**
      * Returns the value of the {@code "X-SPDY-URL"} header.
      */
     public static String getUrl(HttpMessage message) {
-        return message.getHeader(Names.URL);
+        return message.headers().get(Names.URL);
     }
 
     /**
      * Sets the {@code "X-SPDY-URL"} header.
      */
     public static void setUrl(HttpMessage message, String url) {
-        message.setHeader(Names.URL, url);
+        message.headers().set(Names.URL, url);
     }
 
     /**
      * Removes the {@code "X-SPDY-Scheme"} header.
      */
     public static void removeScheme(HttpMessage message) {
-        message.removeHeader(Names.SCHEME);
+        message.headers().remove(Names.SCHEME);
     }
 
     /**
      * Returns the value of the {@code "X-SPDY-Scheme"} header.
      */
     public static String getScheme(HttpMessage message) {
-        return message.getHeader(Names.SCHEME);
+        return message.headers().get(Names.SCHEME);
     }
 
     /**
      * Sets the {@code "X-SPDY-Scheme"} header.
      */
     public static void setScheme(HttpMessage message, String scheme) {
-        message.setHeader(Names.SCHEME, scheme);
+        message.headers().set(Names.SCHEME, scheme);
     }
 }

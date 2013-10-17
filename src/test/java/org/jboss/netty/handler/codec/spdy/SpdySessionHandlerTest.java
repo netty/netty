@@ -46,7 +46,7 @@ public class SpdySessionHandlerTest {
         assertEquals(spdyDataFrame.isLast(), last);
     }
 
-    private static void assertSynReply(Object msg, int streamId, boolean last, SpdyHeadersFrame headers) {
+    private static void assertSynReply(Object msg, int streamId, boolean last, SpdyHeaders headers) {
         assertNotNull(msg);
         assertTrue(msg instanceof SpdySynReplyFrame);
         assertHeaders(msg, streamId, last, headers);
@@ -74,21 +74,21 @@ public class SpdySessionHandlerTest {
         assertEquals(spdyGoAwayFrame.getLastGoodStreamId(), lastGoodStreamId);
     }
 
-    private static void assertHeaders(Object msg, int streamId, boolean last, SpdyHeadersFrame headers) {
+    private static void assertHeaders(Object msg, int streamId, boolean last, SpdyHeaders headers) {
         assertNotNull(msg);
         assertTrue(msg instanceof SpdyHeadersFrame);
         SpdyHeadersFrame spdyHeadersFrame = (SpdyHeadersFrame) msg;
         assertEquals(spdyHeadersFrame.getStreamId(), streamId);
         assertEquals(spdyHeadersFrame.isLast(), last);
-        for (String name: headers.getHeaderNames()) {
-            List<String> expectedValues = headers.getHeaders(name);
-            List<String> receivedValues = spdyHeadersFrame.getHeaders(name);
+        for (String name: headers.names()) {
+            List<String> expectedValues = headers.getAll(name);
+            List<String> receivedValues = spdyHeadersFrame.headers().getAll(name);
             assertTrue(receivedValues.containsAll(expectedValues));
             receivedValues.removeAll(expectedValues);
             assertTrue(receivedValues.isEmpty());
-            spdyHeadersFrame.removeHeader(name);
+            spdyHeadersFrame.headers().remove(name);
         }
-        assertTrue(spdyHeadersFrame.getHeaders().isEmpty());
+        assertTrue(spdyHeadersFrame.headers().isEmpty());
     }
 
     private static void testSpdySessionHandler(SpdyVersion spdyVersion, boolean server) {
@@ -101,7 +101,7 @@ public class SpdySessionHandlerTest {
         int remoteStreamId = server ? 2 : 1;
 
         SpdySynStreamFrame spdySynStreamFrame = new DefaultSpdySynStreamFrame(localStreamId, 0, (byte) 0);
-        spdySynStreamFrame.setHeader("Compression", "test");
+        spdySynStreamFrame.headers().set("Compression", "test");
 
         SpdyDataFrame spdyDataFrame = new DefaultSpdyDataFrame(localStreamId);
         spdyDataFrame.setLast(true);
@@ -130,13 +130,13 @@ public class SpdySessionHandlerTest {
 
         // Check if frame codec correctly compresses/uncompresses headers
         sessionHandler.offer(spdySynStreamFrame);
-        assertSynReply(sessionHandler.poll(), localStreamId, false, spdySynStreamFrame);
+        assertSynReply(sessionHandler.poll(), localStreamId, false, spdySynStreamFrame.headers());
         assertNull(sessionHandler.peek());
         SpdyHeadersFrame spdyHeadersFrame = new DefaultSpdyHeadersFrame(localStreamId);
-        spdyHeadersFrame.addHeader("HEADER","test1");
-        spdyHeadersFrame.addHeader("HEADER","test2");
+        spdyHeadersFrame.headers().add("HEADER","test1");
+        spdyHeadersFrame.headers().add("HEADER","test2");
         sessionHandler.offer(spdyHeadersFrame);
-        assertHeaders(sessionHandler.poll(), localStreamId, false, spdyHeadersFrame);
+        assertHeaders(sessionHandler.poll(), localStreamId, false, spdyHeadersFrame.headers());
         assertNull(sessionHandler.peek());
         localStreamId += 2;
 
@@ -268,14 +268,14 @@ public class SpdySessionHandlerTest {
         int remoteStreamId = server ? 2 : 1;
 
         SpdySynStreamFrame spdySynStreamFrame = new DefaultSpdySynStreamFrame(localStreamId, 0, (byte) 0);
-        spdySynStreamFrame.setHeader("Compression", "test");
+        spdySynStreamFrame.headers().set("Compression", "test");
 
         SpdyDataFrame spdyDataFrame = new DefaultSpdyDataFrame(localStreamId);
         spdyDataFrame.setLast(true);
 
         // Send an initial request
         sessionHandler.offer(spdySynStreamFrame);
-        assertSynReply(sessionHandler.poll(), localStreamId, false, spdySynStreamFrame);
+        assertSynReply(sessionHandler.poll(), localStreamId, false, spdySynStreamFrame.headers());
         assertNull(sessionHandler.peek());
         sessionHandler.offer(spdyDataFrame);
         assertDataFrame(sessionHandler.poll(), localStreamId, true);
@@ -346,8 +346,8 @@ public class SpdySessionHandlerTest {
                 int streamId = spdySynStreamFrame.getStreamId();
                 SpdySynReplyFrame spdySynReplyFrame = new DefaultSpdySynReplyFrame(streamId);
                 spdySynReplyFrame.setLast(spdySynStreamFrame.isLast());
-                for (Map.Entry<String, String> entry: spdySynStreamFrame.getHeaders()) {
-                    spdySynReplyFrame.addHeader(entry.getKey(), entry.getValue());
+                for (Map.Entry<String, String> entry: spdySynStreamFrame.headers()) {
+                    spdySynReplyFrame.headers().add(entry.getKey(), entry.getValue());
                 }
 
                 Channels.write(e.getChannel(), spdySynReplyFrame, e.getRemoteAddress());

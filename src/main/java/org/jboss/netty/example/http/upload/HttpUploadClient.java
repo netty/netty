@@ -187,27 +187,27 @@ public class HttpUploadClient {
 
         HttpRequest request = new DefaultHttpRequest(
                 HttpVersion.HTTP_1_1, HttpMethod.GET, uriGet.toASCIIString());
-        request.setHeader(HttpHeaders.Names.HOST, host);
-        request.setHeader(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
-        request.setHeader(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP + ',' +
+        request.headers().set(HttpHeaders.Names.HOST, host);
+        request.headers().set(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
+        request.headers().set(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP + ',' +
                 HttpHeaders.Values.DEFLATE);
 
-        request.setHeader(HttpHeaders.Names.ACCEPT_CHARSET, "ISO-8859-1,utf-8;q=0.7,*;q=0.7");
-        request.setHeader(HttpHeaders.Names.ACCEPT_LANGUAGE, "fr");
-        request.setHeader(HttpHeaders.Names.REFERER, uriSimple.toString());
-        request.setHeader(HttpHeaders.Names.USER_AGENT, "Netty Simple Http Client side");
-        request.setHeader(HttpHeaders.Names.ACCEPT,
+        request.headers().set(HttpHeaders.Names.ACCEPT_CHARSET, "ISO-8859-1,utf-8;q=0.7,*;q=0.7");
+        request.headers().set(HttpHeaders.Names.ACCEPT_LANGUAGE, "fr");
+        request.headers().set(HttpHeaders.Names.REFERER, uriSimple.toString());
+        request.headers().set(HttpHeaders.Names.USER_AGENT, "Netty Simple Http Client side");
+        request.headers().set(HttpHeaders.Names.ACCEPT,
                 "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
         //connection will not close but needed
-        // request.setHeader("Connection","keep-alive");
-        // request.setHeader("Keep-Alive","300");
+        // request.headers().set("Connection","keep-alive");
+        // request.headers().set("Keep-Alive","300");
 
         CookieEncoder httpCookieEncoder = new CookieEncoder(false);
         httpCookieEncoder.addCookie("my-cookie", "foo");
         httpCookieEncoder.addCookie("another-cookie", "bar");
-        request.setHeader(HttpHeaders.Names.COOKIE, httpCookieEncoder.encode());
+        request.headers().set(HttpHeaders.Names.COOKIE, httpCookieEncoder.encode());
 
-        List<Entry<String, String>> headers = request.getHeaders();
+        List<Entry<String, String>> headers = request.headers().entries();
         // send request
         channel.write(request);
 
@@ -256,7 +256,7 @@ public class HttpUploadClient {
 
         // it is legal to add directly header or cookie into the request until finalize
         for (Entry<String, String> entry : headers) {
-            request.setHeader(entry.getKey(), entry.getValue());
+            request.headers().set(entry.getKey(), entry.getValue());
         }
 
         // add Form attribute
@@ -342,7 +342,7 @@ public class HttpUploadClient {
 
         // it is legal to add directly header or cookie into the request until finalize
         for (Entry<String, String> entry : headers) {
-            request.setHeader(entry.getKey(), entry.getValue());
+            request.headers().set(entry.getKey(), entry.getValue());
         }
 
         // add Form attribute from previous request in formpost()
