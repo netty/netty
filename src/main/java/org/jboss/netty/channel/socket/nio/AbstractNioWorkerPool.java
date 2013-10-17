@@ -106,7 +106,7 @@ public abstract class AbstractNioWorkerPool<E extends AbstractNioWorker>
             }
         }
 
-        if (!warn) {
+        if (warn) {
             logger.warn(
                     "Failed to get all worker threads ready within " + INITIALIZATION_TIMEOUT + " second(s). " +
                     "Make sure to specify the executor which has more threads than the requested workerCount. " +

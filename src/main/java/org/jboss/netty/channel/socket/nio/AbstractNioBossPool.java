@@ -105,7 +105,7 @@ public abstract class AbstractNioBossPool<E extends Boss>
             }
         }
 
-        if (!warn) {
+        if (warn) {
             logger.warn(
                     "Failed to get all boss threads ready within " + INITIALIZATION_TIMEOUT + " second(s). " +
                     "Make sure to specify the executor which has more threads than the requested bossCount. " +
