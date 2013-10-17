@@ -52,11 +52,7 @@ class SpdyHeaderBlockJZlibEncoder extends SpdyHeaderBlockRawEncoder {
             throw new CompressionException(
                     "failed to initialize an SPDY header block deflater: " + resultCode);
         } else {
-            if (version.getVersion() < 3) {
-                resultCode = z.deflateSetDictionary(SPDY2_DICT, SPDY2_DICT.length);
-            } else {
-                resultCode = z.deflateSetDictionary(SPDY_DICT, SPDY_DICT.length);
-            }
+            resultCode = z.deflateSetDictionary(SPDY_DICT, SPDY_DICT.length);
             if (resultCode != JZlib.Z_OK) {
                 throw new CompressionException(
                         "failed to set the SPDY dictionary: " + resultCode);
