@@ -54,6 +54,10 @@ public class HttpVersion implements Comparable<HttpVersion> {
             throw new NullPointerException("text");
         }
 
+        if (text.length() == 0) {
+            throw new IllegalArgumentException("text is empty");
+        }
+
         text = text.trim();
 
         if (text.isEmpty()) {
