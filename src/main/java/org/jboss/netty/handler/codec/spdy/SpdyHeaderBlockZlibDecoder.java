@@ -23,12 +23,11 @@ import java.util.zip.Inflater;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 
-class SpdyHeaderBlockZlibDecoder extends SpdyHeaderBlockRawDecoder {
+final class SpdyHeaderBlockZlibDecoder extends SpdyHeaderBlockRawDecoder {
 
-    private final byte[] out = new byte[8192];
     private final Inflater decompressor = new Inflater();
 
-    private ChannelBuffer decompressed;
+    private final ChannelBuffer decompressed = ChannelBuffers.buffer(4096);
 
     public SpdyHeaderBlockZlibDecoder(SpdyVersion spdyVersion, int maxHeaderSize) {
         super(spdyVersion, maxHeaderSize);
@@ -36,52 +35,64 @@ class SpdyHeaderBlockZlibDecoder extends SpdyHeaderBlockRawDecoder {
 
     @Override
     void decode(ChannelBuffer encoded, SpdyHeadersFrame frame) throws Exception {
-        setInput(encoded);
+        int len = setInput(encoded);
 
         int numBytes;
         do {
             numBytes = decompress(frame);
         } while (!decompressed.readable() && numBytes > 0);
+
+        if (decompressor.getRemaining() != 0) {
+            throw new SpdyProtocolException("client sent extra data beyond headers");
+        }
+
+        encoded.skipBytes(len);
     }
 
-    private void setInput(ChannelBuffer compressed) {
-        byte[] in = new byte[compressed.readableBytes()];
-        compressed.readBytes(in);
-        decompressor.setInput(in);
+    private int setInput(ChannelBuffer compressed) {
+        int len = compressed.readableBytes();
+
+        if (compressed.hasArray()) {
+            decompressor.setInput(compressed.array(), compressed.arrayOffset() + compressed.readerIndex(), len);
+        } else {
+            byte[] in = new byte[len];
+            compressed.getBytes(compressed.readerIndex(), in);
+            decompressor.setInput(in, 0, in.length);
+        }
+
+        return len;
     }
 
     private int decompress(SpdyHeadersFrame frame) throws Exception {
-        if (decompressed == null) {
-            decompressed = ChannelBuffers.dynamicBuffer(8192);
-        }
-
+        byte[] out = decompressed.array();
+        int off = decompressed.arrayOffset() + decompressed.writerIndex();
         try {
-            int numBytes = decompressor.inflate(out);
+            int numBytes = decompressor.inflate(out, off, decompressed.writableBytes());
             if (numBytes == 0 && decompressor.needsDictionary()) {
                 decompressor.setDictionary(SPDY_DICT);
-                numBytes = decompressor.inflate(out);
+                numBytes = decompressor.inflate(out, off, decompressed.writableBytes());
             }
             if (frame != null) {
-                decompressed.writeBytes(out, 0, numBytes);
+                decompressed.writerIndex(decompressed.writerIndex() + numBytes);
                 super.decode(decompressed, frame);
                 decompressed.discardReadBytes();
             }
+
             return numBytes;
         } catch (DataFormatException e) {
-            throw new SpdyProtocolException(
-                    "Received invalid header block", e);
+            throw new SpdyProtocolException("Received invalid header block", e);
         }
     }
 
     @Override
     void reset() {
-        decompressed = null;
+        decompressed.clear();
         super.reset();
     }
 
     @Override
     public void end() {
-        decompressed = null;
+        decompressed.clear();
         decompressor.end();
         super.end();
     }
