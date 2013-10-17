@@ -1441,7 +1441,14 @@ public class SslHandler extends FrameDecoder
 
         // Ensure that the tear-down logic beyond this point is never invoked concurrently nor multiple times.
         if (!CLOSED_OUTBOUND_AND_CHANNEL_UPDATER.compareAndSet(this, 0, 1)) {
-            context.sendDownstream(e);
+            // The other thread called this method already, and thus the connection will be closed eventually.
+            // So, just wait until the connection is closed, and then forward the event so that the sink handles
+            // the duplicate close attempt.
+            e.getChannel().getCloseFuture().addListener(new ChannelFutureListener() {
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    context.sendDownstream(e);
+                }
+            });
             return;
         }
 
