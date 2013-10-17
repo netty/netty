@@ -55,6 +55,11 @@ public class HttpVersion implements Comparable<HttpVersion> {
         }
 
         text = text.trim();
+
+        if (text.isEmpty()) {
+            throw new IllegalArgumentException("text is empty");
+        }
+
         // Try to match without convert to uppercase first as this is what 99% of all clients
         // will send anyway. Also there is a change to the RFC to make it clear that it is
         // expected to be case-sensitive
@@ -65,7 +70,7 @@ public class HttpVersion implements Comparable<HttpVersion> {
         //
         // TODO: Remove the uppercase conversion in 4.1.0 as the RFC state it must be HTTP (uppercase)
         //       See https://github.com/netty/netty/issues/1682
-        //
+
         HttpVersion version = version0(text);
         if (version == null) {
             text = text.toUpperCase();
