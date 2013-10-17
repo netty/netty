@@ -16,19 +16,19 @@
 package org.jboss.netty.handler.codec.spdy;
 
 import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.handler.codec.frame.TooLongFrameException;
 
 import static org.jboss.netty.handler.codec.spdy.SpdyCodecUtil.*;
 
 public class SpdyHeaderBlockRawDecoder extends SpdyHeaderBlockDecoder {
 
+    private static final int LENGTH_FIELD_SIZE = 4;
+
     private final int version;
     private final int maxHeaderSize;
-    private final int lengthFieldSize;
 
     // Header block decoding fields
     private int headerSize;
-    private int numHeaders;
+    private int numHeaders = -1;
 
     public SpdyHeaderBlockRawDecoder(SpdyVersion spdyVersion, int maxHeaderSize) {
         if (spdyVersion == null) {
@@ -37,19 +37,11 @@ public class SpdyHeaderBlockRawDecoder extends SpdyHeaderBlockDecoder {
 
         this.version = spdyVersion.getVersion();
         this.maxHeaderSize = maxHeaderSize;
-        lengthFieldSize = version < 3 ? 2 : 4;
-        reset();
     }
 
     private int readLengthField(ChannelBuffer buffer) {
-        int length;
-        if (version < 3) {
-            length = getUnsignedShort(buffer, buffer.readerIndex());
-            buffer.skipBytes(2);
-        } else {
-            length = getSignedInt(buffer, buffer.readerIndex());
-            buffer.skipBytes(4);
-        }
+        int length = getSignedInt(buffer, buffer.readerIndex());
+        buffer.skipBytes(LENGTH_FIELD_SIZE);
         return length;
     }
 
@@ -64,7 +56,7 @@ public class SpdyHeaderBlockRawDecoder extends SpdyHeaderBlockDecoder {
 
         if (numHeaders == -1) {
             // Read number of Name/Value pairs
-            if (encoded.readableBytes() < lengthFieldSize) {
+            if (encoded.readableBytes() < LENGTH_FIELD_SIZE) {
                 return;
             }
             numHeaders = readLengthField(encoded);
@@ -79,7 +71,7 @@ public class SpdyHeaderBlockRawDecoder extends SpdyHeaderBlockDecoder {
             encoded.markReaderIndex();
 
             // Try to read length of name
-            if (encoded.readableBytes() < lengthFieldSize) {
+            if (encoded.readableBytes() < LENGTH_FIELD_SIZE) {
                 encoded.resetReaderIndex();
                 return;
             }
@@ -112,7 +104,7 @@ public class SpdyHeaderBlockRawDecoder extends SpdyHeaderBlockDecoder {
             }
 
             // Try to read length of value
-            if (encoded.readableBytes() < lengthFieldSize) {
+            if (encoded.readableBytes() < LENGTH_FIELD_SIZE) {
                 encoded.resetReaderIndex();
                 return;
             }
@@ -126,15 +118,10 @@ public class SpdyHeaderBlockRawDecoder extends SpdyHeaderBlockDecoder {
 
             // SPDY/3 allows zero-length (empty) header values
             if (valueLength == 0) {
-                if (version < 3) {
-                    frame.setInvalid();
-                    return;
-                } else {
-                    frame.addHeader(name, "");
-                    numHeaders --;
-                    this.headerSize = headerSize;
-                    continue;
-                }
+                frame.addHeader(name, "");
+                numHeaders --;
+                this.headerSize = headerSize;
+                continue;
             }
 
             headerSize += valueLength;
