@@ -132,34 +132,6 @@ public abstract class SpdyHeaders implements Iterable<Map.Entry<String, String>>
     }
 
     /**
-     * SPDY/2 HTTP header names
-     */
-    public static final class Spdy2HttpNames {
-        /**
-         * {@code "method"}
-         */
-        public static final String METHOD = "method";
-        /**
-         * {@code "scheme"}
-         */
-        public static final String SCHEME = "scheme";
-        /**
-         * {@code "status"}
-         */
-        public static final String STATUS = "status";
-        /**
-         * {@code "url"}
-         */
-        public static final String URL = "url";
-        /**
-         * {@code "version"}
-         */
-        public static final String VERSION = "version";
-
-        private Spdy2HttpNames() { }
-    }
-
-    /**
      * Returns the header value with the specified header name.  If there are
      * more than one header value for the specified header name, the first
      * value is returned.
@@ -234,11 +206,7 @@ public abstract class SpdyHeaders implements Iterable<Map.Entry<String, String>>
      * Removes the HTTP method header.
      */
     public static void removeMethod(int spdyVersion, SpdyHeadersFrame frame) {
-        if (spdyVersion < 3) {
-            frame.headers().remove(Spdy2HttpNames.METHOD);
-        } else {
-            frame.headers().remove(HttpNames.METHOD);
-        }
+        frame.headers().remove(HttpNames.METHOD);
     }
 
     /**
@@ -246,11 +214,7 @@ public abstract class SpdyHeaders implements Iterable<Map.Entry<String, String>>
      */
     public static HttpMethod getMethod(int spdyVersion, SpdyHeadersFrame frame) {
         try {
-            if (spdyVersion < 3) {
-                return HttpMethod.valueOf(frame.headers().get(Spdy2HttpNames.METHOD));
-            } else {
-                return HttpMethod.valueOf(frame.headers().get(HttpNames.METHOD));
-            }
+            return HttpMethod.valueOf(frame.headers().get(HttpNames.METHOD));
         } catch (Exception e) {
             return null;
         }
@@ -260,55 +224,35 @@ public abstract class SpdyHeaders implements Iterable<Map.Entry<String, String>>
      * Sets the HTTP method header.
      */
     public static void setMethod(int spdyVersion, SpdyHeadersFrame frame, HttpMethod method) {
-        if (spdyVersion < 3) {
-            frame.headers().set(Spdy2HttpNames.METHOD, method.name());
-        } else {
-            frame.headers().set(HttpNames.METHOD, method.name());
-        }
+        frame.headers().set(HttpNames.METHOD, method.name());
     }
 
     /**
      * Removes the URL scheme header.
      */
     public static void removeScheme(int spdyVersion, SpdyHeadersFrame frame) {
-        if (spdyVersion < 2) {
-            frame.headers().remove(Spdy2HttpNames.SCHEME);
-        } else {
-            frame.headers().remove(HttpNames.SCHEME);
-        }
+        frame.headers().remove(HttpNames.SCHEME);
     }
 
     /**
      * Returns the value of the URL scheme header.
      */
     public static String getScheme(int spdyVersion, SpdyHeadersFrame frame) {
-        if (spdyVersion < 3) {
-            return frame.headers().get(Spdy2HttpNames.SCHEME);
-        } else {
-            return frame.headers().get(HttpNames.SCHEME);
-        }
+        return frame.headers().get(HttpNames.SCHEME);
     }
 
     /**
      * Sets the URL scheme header.
      */
     public static void setScheme(int spdyVersion, SpdyHeadersFrame frame, String scheme) {
-        if (spdyVersion < 3) {
-            frame.headers().set(Spdy2HttpNames.SCHEME, scheme);
-        } else {
-            frame.headers().set(HttpNames.SCHEME, scheme);
-        }
+        frame.headers().set(HttpNames.SCHEME, scheme);
     }
 
     /**
      * Removes the HTTP response status header.
      */
     public static void removeStatus(int spdyVersion, SpdyHeadersFrame frame) {
-        if (spdyVersion < 3) {
-            frame.headers().remove(Spdy2HttpNames.STATUS);
-        } else {
-            frame.headers().remove(HttpNames.STATUS);
-        }
+        frame.headers().remove(HttpNames.STATUS);
     }
 
     /**
@@ -316,12 +260,7 @@ public abstract class SpdyHeaders implements Iterable<Map.Entry<String, String>>
      */
     public static HttpResponseStatus getStatus(int spdyVersion, SpdyHeadersFrame frame) {
         try {
-            String status;
-            if (spdyVersion < 3) {
-                status = frame.headers().get(Spdy2HttpNames.STATUS);
-            } else {
-                status = frame.headers().get(HttpNames.STATUS);
-            }
+            String status = frame.headers().get(HttpNames.STATUS);
             int space = status.indexOf(' ');
             if (space == -1) {
                 return HttpResponseStatus.valueOf(Integer.parseInt(status));
@@ -344,55 +283,35 @@ public abstract class SpdyHeaders implements Iterable<Map.Entry<String, String>>
      * Sets the HTTP response status header.
      */
     public static void setStatus(int spdyVersion, SpdyHeadersFrame frame, HttpResponseStatus status) {
-        if (spdyVersion < 3) {
-            frame.headers().set(Spdy2HttpNames.STATUS, status.toString());
-        } else {
-            frame.headers().set(HttpNames.STATUS, status.toString());
-        }
+        frame.headers().set(HttpNames.STATUS, status.toString());
     }
 
     /**
      * Removes the URL path header.
      */
     public static void removeUrl(int spdyVersion, SpdyHeadersFrame frame) {
-        if (spdyVersion < 3) {
-            frame.headers().remove(Spdy2HttpNames.URL);
-        } else {
-            frame.headers().remove(HttpNames.PATH);
-        }
+        frame.headers().remove(HttpNames.PATH);
     }
 
     /**
      * Returns the value of the URL path header.
      */
     public static String getUrl(int spdyVersion, SpdyHeadersFrame frame) {
-        if (spdyVersion < 3) {
-            return frame.headers().get(Spdy2HttpNames.URL);
-        } else {
-            return frame.headers().get(HttpNames.PATH);
-        }
+        return frame.headers().get(HttpNames.PATH);
     }
 
     /**
      * Sets the URL path header.
      */
     public static void setUrl(int spdyVersion, SpdyHeadersFrame frame, String path) {
-        if (spdyVersion < 3) {
-            frame.headers().set(Spdy2HttpNames.URL, path);
-        } else {
-            frame.headers().set(HttpNames.PATH, path);
-        }
+        frame.headers().set(HttpNames.PATH, path);
     }
 
     /**
      * Removes the HTTP version header.
      */
     public static void removeVersion(int spdyVersion, SpdyHeadersFrame frame) {
-        if (spdyVersion < 3) {
-            frame.headers().remove(Spdy2HttpNames.VERSION);
-        } else {
-            frame.headers().remove(HttpNames.VERSION);
-        }
+        frame.headers().remove(HttpNames.VERSION);
     }
 
     /**
@@ -400,11 +319,7 @@ public abstract class SpdyHeaders implements Iterable<Map.Entry<String, String>>
      */
     public static HttpVersion getVersion(int spdyVersion, SpdyHeadersFrame frame) {
         try {
-            if (spdyVersion < 3) {
-                return HttpVersion.valueOf(frame.headers().get(Spdy2HttpNames.VERSION));
-            } else {
-                return HttpVersion.valueOf(frame.headers().get(HttpNames.VERSION));
-            }
+            return HttpVersion.valueOf(frame.headers().get(HttpNames.VERSION));
         } catch (Exception e) {
             return null;
         }
@@ -414,12 +329,9 @@ public abstract class SpdyHeaders implements Iterable<Map.Entry<String, String>>
      * Sets the HTTP version header.
      */
     public static void setVersion(int spdyVersion, SpdyHeadersFrame frame, HttpVersion httpVersion) {
-        if (spdyVersion < 3) {
-            frame.headers().set(Spdy2HttpNames.VERSION, httpVersion.text());
-        } else {
-            frame.headers().set(HttpNames.VERSION, httpVersion.text());
-        }
+        frame.headers().set(HttpNames.VERSION, httpVersion.text());
     }
+
     @Override
     public Iterator<Map.Entry<String, String>> iterator() {
         return entries().iterator();
@@ -440,7 +352,7 @@ public abstract class SpdyHeaders implements Iterable<Map.Entry<String, String>>
      * @return the {@link List} of header values.  An empty list if there is no
      *         such header.
      */
-    public abstract  List<String> getAll(String name);
+    public abstract List<String> getAll(String name);
 
     /**
      * Returns all header names and values that this frame contains.
@@ -448,13 +360,13 @@ public abstract class SpdyHeaders implements Iterable<Map.Entry<String, String>>
      * @return the {@link List} of the header name-value pairs.  An empty list
      *         if there is no header in this message.
      */
-    public abstract  List<Map.Entry<String, String>> entries();
+    public abstract List<Map.Entry<String, String>> entries();
 
     /**
      * Returns {@code true} if and only if there is a header with the specified
      * header name.
      */
-    public abstract  boolean contains(String name);
+    public abstract boolean contains(String name);
 
     /**
      * Returns the {@link Set} of all header names that this frame contains.
