@@ -36,12 +36,7 @@ class SpdyHeaderBlockZlibEncoder extends SpdyHeaderBlockRawEncoder {
                     "compressionLevel: " + compressionLevel + " (expected: 0-9)");
         }
         compressor = new Deflater(compressionLevel);
-        int version = spdyVersion.getVersion();
-        if (version < 3) {
-            compressor.setDictionary(SPDY2_DICT);
-        } else {
-            compressor.setDictionary(SPDY_DICT);
-        }
+        compressor.setDictionary(SPDY_DICT);
     }
 
     private void setInput(ChannelBuffer decompressed) {
