@@ -17,10 +17,13 @@
 package org.jboss.netty.channel.socket.nio;
 
 import org.jboss.netty.channel.socket.Worker;
+import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.ExternalResourceReleasable;
 import org.jboss.netty.util.internal.ExecutorUtil;
 
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -30,10 +33,17 @@ import java.util.concurrent.atomic.AtomicInteger;
 public abstract class AbstractNioWorkerPool<E extends AbstractNioWorker>
         implements WorkerPool<E>, ExternalResourceReleasable {
 
+    /**
+     * The worker pool raises an exception unless all worker threads start and run within this timeout (in seconds.)
+     */
+    private static final int INITIALIZATION_TIMEOUT = 10;
+
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractNioWorkerPool.class);
+
     private final AbstractNioWorker[] workers;
     private final AtomicInteger workerIndex = new AtomicInteger();
     private final Executor workerExecutor;
-    private volatile boolean initDone;
+    private volatile boolean initialized;
 
     /**
      * Create a new instance
@@ -59,14 +69,48 @@ public abstract class AbstractNioWorkerPool<E extends AbstractNioWorker>
             init();
         }
     }
+
     protected void init() {
-        if (initDone) {
-            throw new IllegalStateException("Init was done before");
+        if (initialized) {
+            throw new IllegalStateException("initialized already");
         }
-        initDone = true;
+
+        initialized = true;
 
         for (int i = 0; i < workers.length; i++) {
             workers[i] = newWorker(workerExecutor);
+        }
+
+        waitForWorkerThreads();
+    }
+
+    private void waitForWorkerThreads() {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(INITIALIZATION_TIMEOUT);
+        boolean warn = false;
+        for (AbstractNioSelector worker: workers) {
+            long waitTime = deadline - System.nanoTime();
+            try {
+                if (waitTime <= 0) {
+                    if (worker.thread == null) {
+                        warn = true;
+                        break;
+                    }
+                } else if (!worker.startupLatch.await(waitTime, TimeUnit.NANOSECONDS)) {
+                    warn = true;
+                    break;
+                }
+            } catch (InterruptedException ignore) {
+                // Stop waiting for the worker threads and let someone else take care of the interruption.
+                Thread.currentThread().interrupt();
+                break;
+            }
+        }
+
+        if (!warn) {
+            logger.warn(
+                    "Failed to get all worker threads ready within " + INITIALIZATION_TIMEOUT + " second(s). " +
+                    "Make sure to specify the executor which has more threads than the requested workerCount. " +
+                    "If unsure, use Executors.newCachedThreadPool().");
         }
     }
 

@@ -67,6 +67,11 @@ abstract class AbstractNioSelector implements NioSelector {
     protected volatile Thread thread;
 
     /**
+     * Count down to 0 when the I/O thread starts and {@link #thread} is set to non-null.
+     */
+    final CountDownLatch startupLatch = new CountDownLatch(1);
+
+    /**
      * The NIO {@link Selector}.
      */
     protected volatile Selector selector;
@@ -188,6 +193,7 @@ abstract class AbstractNioSelector implements NioSelector {
 
     public void run() {
         thread = Thread.currentThread();
+        startupLatch.countDown();
 
         int selectReturnsImmediately = 0;
         Selector selector = this.selector;
