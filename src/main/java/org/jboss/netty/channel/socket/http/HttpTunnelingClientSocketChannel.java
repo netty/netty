@@ -184,12 +184,12 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
                     final HttpRequest req = new DefaultHttpRequest(
                             HttpVersion.HTTP_1_1, HttpMethod.POST, serverPath);
                     if (serverName != null) {
-                        req.setHeader(HttpHeaders.Names.HOST, serverName);
+                        req.headers().set(HttpHeaders.Names.HOST, serverName);
                     }
-                    req.setHeader(HttpHeaders.Names.CONTENT_TYPE, "application/octet-stream");
-                    req.setHeader(HttpHeaders.Names.TRANSFER_ENCODING, HttpHeaders.Values.CHUNKED);
-                    req.setHeader(HttpHeaders.Names.CONTENT_TRANSFER_ENCODING, HttpHeaders.Values.BINARY);
-                    req.setHeader(HttpHeaders.Names.USER_AGENT, HttpTunnelingClientSocketChannel.class.getName());
+                    req.headers().set(HttpHeaders.Names.CONTENT_TYPE, "application/octet-stream");
+                    req.headers().set(HttpHeaders.Names.TRANSFER_ENCODING, HttpHeaders.Values.CHUNKED);
+                    req.headers().set(HttpHeaders.Names.CONTENT_TRANSFER_ENCODING, HttpHeaders.Values.BINARY);
+                    req.headers().set(HttpHeaders.Names.USER_AGENT, HttpTunnelingClientSocketChannel.class.getName());
 
                     if (sslHandshakeFuture == null) {
                         realChannel.write(req);

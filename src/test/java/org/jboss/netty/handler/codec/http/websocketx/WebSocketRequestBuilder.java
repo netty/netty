@@ -98,22 +98,22 @@ public class WebSocketRequestBuilder {
     public HttpRequest build() {
         HttpRequest req = new DefaultHttpRequest(httpVersion, method, uri);
         if (host != null) {
-            req.setHeader(Names.HOST, host);
+            req.headers().set(Names.HOST, host);
         }
         if (upgrade != null) {
-            req.setHeader(Names.UPGRADE, upgrade);
+            req.headers().set(Names.UPGRADE, upgrade);
         }
         if (connection != null) {
-            req.setHeader(Names.CONNECTION, connection);
+            req.headers().set(Names.CONNECTION, connection);
         }
         if (key != null) {
-            req.setHeader(Names.SEC_WEBSOCKET_KEY, key);
+            req.headers().set(Names.SEC_WEBSOCKET_KEY, key);
         }
         if (origin != null) {
-            req.setHeader(Names.SEC_WEBSOCKET_ORIGIN, origin);
+            req.headers().set(Names.SEC_WEBSOCKET_ORIGIN, origin);
         }
         if (version != null) {
-            req.setHeader(Names.SEC_WEBSOCKET_VERSION, version.toHttpHeaderValue());
+            req.headers().set(Names.SEC_WEBSOCKET_VERSION, version.toHttpHeaderValue());
         }
         return req;
     }

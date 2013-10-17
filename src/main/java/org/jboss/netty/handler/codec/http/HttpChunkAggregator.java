@@ -180,13 +180,13 @@ public class HttpChunkAggregator extends SimpleChannelUpstreamHandler implements
                 // Merge trailing headers into the message.
                 if (chunk instanceof HttpChunkTrailer) {
                     HttpChunkTrailer trailer = (HttpChunkTrailer) chunk;
-                    for (Entry<String, String> header: trailer.getHeaders()) {
-                        currentMessage.setHeader(header.getKey(), header.getValue());
+                    for (Entry<String, String> header: trailer.trailingHeaders()) {
+                        currentMessage.headers().set(header.getKey(), header.getValue());
                     }
                 }
 
                 // Set the 'Content-Length' header.
-                currentMessage.setHeader(
+                currentMessage.headers().set(
                         HttpHeaders.Names.CONTENT_LENGTH,
                         String.valueOf(content.readableBytes()));
 

@@ -35,24 +35,16 @@ public class SpdyHeaderBlockRawEncoder extends SpdyHeaderBlockEncoder {
     }
 
     private void setLengthField(ChannelBuffer buffer, int writerIndex, int length) {
-        if (version < 3) {
-            buffer.setShort(writerIndex, length);
-        } else {
-            buffer.setInt(writerIndex, length);
-        }
+        buffer.setInt(writerIndex, length);
     }
 
     private void writeLengthField(ChannelBuffer buffer, int length) {
-        if (version < 3) {
-            buffer.writeShort(length);
-        } else {
-            buffer.writeInt(length);
-        }
+        buffer.writeInt(length);
     }
 
     @Override
     public ChannelBuffer encode(SpdyHeadersFrame headerFrame) throws Exception {
-        Set<String> names = headerFrame.getHeaderNames();
+        Set<String> names = headerFrame.headers().names();
         int numHeaders = names.size();
         if (numHeaders == 0) {
             return ChannelBuffers.EMPTY_BUFFER;
@@ -71,7 +63,7 @@ public class SpdyHeaderBlockRawEncoder extends SpdyHeaderBlockEncoder {
             int savedIndex = headerBlock.writerIndex();
             int valueLength = 0;
             writeLengthField(headerBlock, valueLength);
-            for (String value: headerFrame.getHeaders(name)) {
+            for (String value: headerFrame.headers().getAll(name)) {
                 byte[] valueBytes = value.getBytes("UTF-8");
                 if (valueBytes.length > 0) {
                     headerBlock.writeBytes(valueBytes);
@@ -79,12 +71,7 @@ public class SpdyHeaderBlockRawEncoder extends SpdyHeaderBlockEncoder {
                     valueLength += valueBytes.length + 1;
                 }
             }
-            if (valueLength == 0) {
-                if (version < 3) {
-                    throw new IllegalArgumentException(
-                            "header value cannot be empty: " + name);
-                }
-            } else {
+            if (valueLength != 0) {
                 valueLength --;
             }
             if (valueLength > SPDY_MAX_NV_LENGTH) {

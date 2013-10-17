@@ -36,7 +36,7 @@ public class SpdyHttpResponseStreamIdHandler extends SimpleChannelHandler {
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
         if (e.getMessage() instanceof HttpMessage) {
-            boolean contains = ((HttpMessage) e.getMessage()).containsHeader(SpdyHttpHeaders.Names.STREAM_ID);
+            boolean contains = ((HttpMessage) e.getMessage()).headers().contains(SpdyHttpHeaders.Names.STREAM_ID);
             if (!contains) {
                 ids.add(NO_ID);
             } else {
@@ -54,7 +54,7 @@ public class SpdyHttpResponseStreamIdHandler extends SimpleChannelHandler {
         if (e.getMessage() instanceof HttpResponse) {
             HttpResponse response = (HttpResponse) e.getMessage();
             Integer id = ids.poll();
-            if (id != null && id.intValue() != NO_ID && !response.containsHeader(SpdyHttpHeaders.Names.STREAM_ID)) {
+            if (id != null && id.intValue() != NO_ID && !response.headers().contains(SpdyHttpHeaders.Names.STREAM_ID)) {
                 SpdyHttpHeaders.setStreamId(response, id);
             }
         }

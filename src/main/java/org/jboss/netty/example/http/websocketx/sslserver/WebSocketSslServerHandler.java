@@ -77,7 +77,7 @@ public class WebSocketSslServerHandler extends SimpleChannelUpstreamHandler {
 
             ChannelBuffer content = WebSocketServerIndexPage.getContent(getWebSocketLocation(req));
 
-            res.setHeader(CONTENT_TYPE, "text/html; charset=UTF-8");
+            res.headers().set(CONTENT_TYPE, "text/html; charset=UTF-8");
             setContentLength(res, content.readableBytes());
 
             res.setContent(content);
@@ -147,6 +147,6 @@ public class WebSocketSslServerHandler extends SimpleChannelUpstreamHandler {
     }
 
     private static String getWebSocketLocation(HttpRequest req) {
-        return "wss://" + req.getHeader(HOST) + WEBSOCKET_PATH;
+        return "wss://" + req.headers().get(HOST) + WEBSOCKET_PATH;
     }
 }

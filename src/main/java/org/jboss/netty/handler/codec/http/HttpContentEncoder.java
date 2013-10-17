@@ -71,7 +71,7 @@ public abstract class HttpContentEncoder extends SimpleChannelHandler
         }
 
         HttpMessage m = (HttpMessage) msg;
-        String acceptedEncoding = m.getHeader(HttpHeaders.Names.ACCEPT_ENCODING);
+        String acceptedEncoding = m.headers().get(HttpHeaders.Names.ACCEPT_ENCODING);
         if (acceptedEncoding == null) {
             acceptedEncoding = HttpHeaders.Values.IDENTITY;
         }
@@ -100,7 +100,7 @@ public abstract class HttpContentEncoder extends SimpleChannelHandler
                 throw new IllegalStateException("cannot send more responses than requests");
             }
 
-            String contentEncoding = m.getHeader(HttpHeaders.Names.CONTENT_ENCODING);
+            String contentEncoding = m.headers().get(HttpHeaders.Names.CONTENT_ENCODING);
             if (contentEncoding != null &&
                 !HttpHeaders.Values.IDENTITY.equalsIgnoreCase(contentEncoding)) {
                 // Content-Encoding is set already and it is not 'identity'.
@@ -111,7 +111,7 @@ public abstract class HttpContentEncoder extends SimpleChannelHandler
                 if (hasContent && (encoder = newContentEncoder(m, acceptEncoding)) != null) {
                     // Encode the content and remove or replace the existing headers
                     // so that the message looks like a decoded message.
-                    m.setHeader(
+                    m.headers().set(
                             HttpHeaders.Names.CONTENT_ENCODING,
                             getTargetContentEncoding(acceptEncoding));
 
@@ -123,8 +123,8 @@ public abstract class HttpContentEncoder extends SimpleChannelHandler
 
                         // Replace the content.
                         m.setContent(content);
-                        if (m.containsHeader(HttpHeaders.Names.CONTENT_LENGTH)) {
-                            m.setHeader(
+                        if (m.headers().contains(HttpHeaders.Names.CONTENT_LENGTH)) {
+                            m.headers().set(
                                     HttpHeaders.Names.CONTENT_LENGTH,
                                     Integer.toString(content.readableBytes()));
                         }

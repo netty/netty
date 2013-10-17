@@ -37,7 +37,7 @@ public class HttpChunkAggregatorTest {
         HttpChunkAggregator aggr = new HttpChunkAggregator(1024 * 1024);
         DecoderEmbedder<HttpMessage> embedder = new DecoderEmbedder<HttpMessage>(aggr);
         HttpMessage message = new DefaultHttpMessage(HttpVersion.HTTP_1_1);
-        HttpHeaders.setHeader(message, "X-Test", true);
+        message.headers().set("X-Test", true);
         message.setChunked(true);
         HttpChunk chunk1 = new DefaultHttpChunk(ChannelBuffers.copiedBuffer("test", CharsetUtil.US_ASCII));
         HttpChunk chunk2 = new DefaultHttpChunk(ChannelBuffers.copiedBuffer("test2", CharsetUtil.US_ASCII));
@@ -53,7 +53,7 @@ public class HttpChunkAggregatorTest {
         assertNotNull(aggratedMessage);
         
         assertEquals(chunk1.getContent().readableBytes() + chunk2.getContent().readableBytes(), HttpHeaders.getContentLength(aggratedMessage));
-        assertEquals(aggratedMessage.getHeader("X-Test"), Boolean.TRUE.toString());
+        assertEquals(aggratedMessage.headers().get("X-Test"), Boolean.TRUE.toString());
         checkContentBuffer(aggratedMessage);
         assertNull(embedder.poll());
 
@@ -75,12 +75,12 @@ public class HttpChunkAggregatorTest {
         HttpChunkAggregator aggr = new HttpChunkAggregator(1024 * 1024);
         DecoderEmbedder<HttpMessage> embedder = new DecoderEmbedder<HttpMessage>(aggr);
         HttpMessage message = new DefaultHttpMessage(HttpVersion.HTTP_1_1);
-        HttpHeaders.setHeader(message, "X-Test", true);
+        message.headers().set("X-Test", true);
         message.setChunked(true);
         HttpChunk chunk1 = new DefaultHttpChunk(ChannelBuffers.copiedBuffer("test", CharsetUtil.US_ASCII));
         HttpChunk chunk2 = new DefaultHttpChunk(ChannelBuffers.copiedBuffer("test2", CharsetUtil.US_ASCII));
         HttpChunkTrailer trailer = new DefaultHttpChunkTrailer();
-        trailer.setHeader("X-Trailer", true);
+        trailer.trailingHeaders().set("X-Trailer", true);
         
         assertFalse(embedder.offer(message));
         assertFalse(embedder.offer(chunk1));
@@ -93,8 +93,8 @@ public class HttpChunkAggregatorTest {
         assertNotNull(aggratedMessage);
         
         assertEquals(chunk1.getContent().readableBytes() + chunk2.getContent().readableBytes(), HttpHeaders.getContentLength(aggratedMessage));
-        assertEquals(aggratedMessage.getHeader("X-Test"), Boolean.TRUE.toString());
-        assertEquals(aggratedMessage.getHeader("X-Trailer"), Boolean.TRUE.toString());
+        assertEquals(aggratedMessage.headers().get("X-Test"), Boolean.TRUE.toString());
+        assertEquals(aggratedMessage.headers().get("X-Trailer"), Boolean.TRUE.toString());
         checkContentBuffer(aggratedMessage);
 
         assertNull(embedder.poll());
@@ -167,8 +167,8 @@ public class HttpChunkAggregatorTest {
         HttpChunkAggregator aggr = new HttpChunkAggregator(1024 * 1024);
         DecoderEmbedder<HttpMessage> embedder = new DecoderEmbedder<HttpMessage>(aggr);
         HttpMessage message = new DefaultHttpMessage(HttpVersion.HTTP_1_1);
-        HttpHeaders.setHeader(message, "X-Test", true);
-        HttpHeaders.setHeader(message, "Transfer-Encoding", "Chunked");
+        message.headers().set("X-Test", true);
+        message.headers().set("Transfer-Encoding", "Chunked");
         message.setChunked(true);
         HttpChunk chunk1 = new DefaultHttpChunk(ChannelBuffers.copiedBuffer("test", CharsetUtil.US_ASCII));
         HttpChunk chunk2 = new DefaultHttpChunk(ChannelBuffers.copiedBuffer("test2", CharsetUtil.US_ASCII));
@@ -184,7 +184,7 @@ public class HttpChunkAggregatorTest {
         assertNotNull(aggratedMessage);
 
         assertEquals(chunk1.getContent().readableBytes() + chunk2.getContent().readableBytes(), HttpHeaders.getContentLength(aggratedMessage));
-        assertEquals(aggratedMessage.getHeader("X-Test"), Boolean.TRUE.toString());
+        assertEquals(aggratedMessage.headers().get("X-Test"), Boolean.TRUE.toString());
         checkContentBuffer(aggratedMessage);
         assertNull(embedder.poll());
     }

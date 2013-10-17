@@ -123,8 +123,7 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
             responseContent.append("\r\n\r\n");
 
             // new method
-            List<Entry<String, String>> headers = request.getHeaders();
-            for (Entry<String, String> entry: headers) {
+            for (Entry<String, String> entry: request.headers()) {
                 responseContent.append("HEADER: " + entry.getKey() + '=' +
                         entry.getValue() + "\r\n");
             }
@@ -132,7 +131,7 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
 
             // new method
             Set<Cookie> cookies;
-            String value = request.getHeader(HttpHeaders.Names.COOKIE);
+            String value = request.headers().get(HttpHeaders.Names.COOKIE);
             if (value == null) {
                 cookies = Collections.emptySet();
             } else {
@@ -320,27 +319,27 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
 
         // Decide whether to close the connection or not.
         boolean close = HttpHeaders.Values.CLOSE.equalsIgnoreCase(request
-                .getHeader(HttpHeaders.Names.CONNECTION)) ||
+                .headers().get(HttpHeaders.Names.CONNECTION)) ||
                 request.getProtocolVersion().equals(HttpVersion.HTTP_1_0) &&
                 !HttpHeaders.Values.KEEP_ALIVE.equalsIgnoreCase(request
-                        .getHeader(HttpHeaders.Names.CONNECTION));
+                        .headers().get(HttpHeaders.Names.CONNECTION));
 
         // Build the response object.
         HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1,
                 HttpResponseStatus.OK);
         response.setContent(buf);
-        response.setHeader(HttpHeaders.Names.CONTENT_TYPE,
+        response.headers().set(HttpHeaders.Names.CONTENT_TYPE,
                 "text/plain; charset=UTF-8");
 
         if (!close) {
             // There's no need to add 'Content-Length' header
             // if this is the last response.
-            response.setHeader(HttpHeaders.Names.CONTENT_LENGTH, String
+            response.headers().set(HttpHeaders.Names.CONTENT_LENGTH, String
                     .valueOf(buf.readableBytes()));
         }
 
         Set<Cookie> cookies;
-        String value = request.getHeader(HttpHeaders.Names.COOKIE);
+        String value = request.headers().get(HttpHeaders.Names.COOKIE);
         if (value == null) {
             cookies = Collections.emptySet();
         } else {
@@ -352,7 +351,7 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
             CookieEncoder cookieEncoder = new CookieEncoder(true);
             for (Cookie cookie: cookies) {
                 cookieEncoder.addCookie(cookie);
-                response.addHeader(HttpHeaders.Names.SET_COOKIE, cookieEncoder
+                response.headers().add(HttpHeaders.Names.SET_COOKIE, cookieEncoder
                         .encode());
                 cookieEncoder = new CookieEncoder(true);
             }
@@ -468,9 +467,9 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
         HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1,
                 HttpResponseStatus.OK);
         response.setContent(buf);
-        response.setHeader(HttpHeaders.Names.CONTENT_TYPE,
+        response.headers().set(HttpHeaders.Names.CONTENT_TYPE,
                 "text/html; charset=UTF-8");
-        response.setHeader(HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(buf
+        response.headers().set(HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(buf
                 .readableBytes()));
         // Write the response.
         e.getChannel().write(response);

@@ -79,7 +79,7 @@ public class WebSocketServerHandshakerFactory {
      */
     public WebSocketServerHandshaker newHandshaker(HttpRequest req) {
 
-        String version = req.getHeader(Names.SEC_WEBSOCKET_VERSION);
+        String version = req.headers().get(Names.SEC_WEBSOCKET_VERSION);
 
         if (version != null) {
             if (version.equals(WebSocketVersion.V13.toHttpHeaderValue())) {
@@ -115,7 +115,7 @@ public class WebSocketServerHandshakerFactory {
                 HttpVersion.HTTP_1_1,
                 HttpResponseStatus.SWITCHING_PROTOCOLS);
         res.setStatus(HttpResponseStatus.UPGRADE_REQUIRED);
-        res.setHeader(Names.SEC_WEBSOCKET_VERSION, WebSocketVersion.V13.toHttpHeaderValue());
+        res.headers().set(Names.SEC_WEBSOCKET_VERSION, WebSocketVersion.V13.toHttpHeaderValue());
         return channel.write(res);
     }
 

@@ -72,7 +72,7 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
                     // check if the Transfer-Encoding is set to chunked already.
                     // if not add the header to the message
                     if (!HttpCodecUtil.isTransferEncodingChunked(m)) {
-                        m.addHeader(Names.TRANSFER_ENCODING, Values.CHUNKED);
+                        m.headers().add(Names.TRANSFER_ENCODING, Values.CHUNKED);
                     }
                     contentMustBeEmpty = true;
                     transferEncodingChunked = true;
@@ -141,7 +141,7 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
 
     private static void encodeHeaders(ChannelBuffer buf, HttpMessage message) {
         try {
-            for (Map.Entry<String, String> h: message.getHeaders()) {
+            for (Map.Entry<String, String> h: message.headers()) {
                 encodeHeader(buf, h.getKey(), h.getValue());
             }
         } catch (UnsupportedEncodingException e) {
@@ -151,7 +151,7 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
 
     private static void encodeTrailingHeaders(ChannelBuffer buf, HttpChunkTrailer trailer) {
         try {
-            for (Map.Entry<String, String> h: trailer.getHeaders()) {
+            for (Map.Entry<String, String> h: trailer.trailingHeaders()) {
                 encodeHeader(buf, h.getKey(), h.getValue());
             }
         } catch (UnsupportedEncodingException e) {

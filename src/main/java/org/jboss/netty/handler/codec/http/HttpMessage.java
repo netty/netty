@@ -33,39 +33,33 @@ import org.jboss.netty.buffer.ChannelBuffers;
 public interface HttpMessage {
 
     /**
-     * Returns the header value with the specified header name.  If there are
-     * more than one header value for the specified header name, the first
-     * value is returned.
-     *
-     * @return the header value or {@code null} if there is no such header
+     * @deprecated Use {@link HttpMessage#headers()} instead.
      */
+    @Deprecated
     String getHeader(String name);
 
     /**
-     * Returns the header values with the specified header name.
-     *
-     * @return the {@link List} of header values.  An empty list if there is no
-     *         such header.
+     * @deprecated Use {@link HttpMessage#headers()} instead.
      */
+    @Deprecated
     List<String> getHeaders(String name);
 
     /**
-     * Returns the all header names and values that this message contains.
-     *
-     * @return the {@link List} of the header name-value pairs.  An empty list
-     *         if there is no header in this message.
+     * @deprecated Use {@link HttpMessage#headers()} instead.
      */
+    @Deprecated
     List<Map.Entry<String, String>> getHeaders();
 
     /**
-     * Returns {@code true} if and only if there is a header with the specified
-     * header name.
+     * @deprecated Use {@link HttpMessage#headers()} instead.
      */
+    @Deprecated
     boolean containsHeader(String name);
 
     /**
      * Returns the {@link Set} of all header names that this message contains.
      */
+    @Deprecated
     Set<String> getHeaderNames();
 
     /**
@@ -77,6 +71,11 @@ public interface HttpMessage {
      * Sets the protocol version of this message.
      */
     void setProtocolVersion(HttpVersion version);
+
+    /**
+     * Returns the headers of this message.
+     */
+    HttpHeaders headers();
 
     /**
      * Returns the content of this message.  If there is no content or
@@ -92,43 +91,34 @@ public interface HttpMessage {
     void setContent(ChannelBuffer content);
 
     /**
-     * Adds a new header with the specified name and value.
+     * @deprecated Use {@link HttpMessage#headers()} instead.
      */
+    @Deprecated
     void addHeader(String name, Object value);
 
     /**
-     * Sets a new header with the specified name and value.  If there is an
-     * existing header with the same name, the existing header is removed.
+     * @deprecated Use {@link HttpMessage#headers()} instead.
      */
+    @Deprecated
     void setHeader(String name, Object value);
 
     /**
-     * Sets a new header with the specified name and values.  If there is an
-     * existing header with the same name, the existing header is removed.
+     * @deprecated Use {@link HttpMessage#headers()} instead.
      */
+    @Deprecated
     void setHeader(String name, Iterable<?> values);
 
     /**
-     * Removes the header with the specified name.
+     * @deprecated Use {@link HttpMessage#headers()} instead.
      */
+    @Deprecated
     void removeHeader(String name);
 
     /**
-     * Removes all headers from this message.
+     * @deprecated Use {@link HttpMessage#headers()} instead.
      */
+    @Deprecated
     void clearHeaders();
-
-    /**
-     * @deprecated Use {@link HttpHeaders#getContentLength(HttpMessage)} instead.
-     */
-    @Deprecated
-    long getContentLength();
-
-    /**
-     * @deprecated Use {@link HttpHeaders#getContentLength(HttpMessage, long)} instead.
-     */
-    @Deprecated
-    long getContentLength(long defaultValue);
 
     /**
      * Returns {@code true} if and only if this message does not have any
@@ -155,10 +145,4 @@ public interface HttpMessage {
      * this message is {@code "chunked"}.
      */
     void setChunked(boolean chunked);
-
-    /**
-     * @deprecated Use {@link HttpHeaders#isKeepAlive(HttpMessage)} instead.
-     */
-    @Deprecated
-    boolean isKeepAlive();
 }

@@ -130,6 +130,6 @@ public class AutobahnServerHandler extends SimpleChannelUpstreamHandler {
     }
 
     private static String getWebSocketLocation(HttpRequest req) {
-        return "ws://" + req.getHeader(HttpHeaders.Names.HOST);
+        return "ws://" + req.headers().get(HttpHeaders.Names.HOST);
     }
 }

@@ -84,15 +84,15 @@ public class HttpSnoopClient {
         // Prepare the HTTP request.
         HttpRequest request = new DefaultHttpRequest(
                 HttpVersion.HTTP_1_1, HttpMethod.GET, uri.getRawPath());
-        request.setHeader(HttpHeaders.Names.HOST, host);
-        request.setHeader(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
-        request.setHeader(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP);
+        request.headers().set(HttpHeaders.Names.HOST, host);
+        request.headers().set(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
+        request.headers().set(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP);
 
         // Set some example cookies.
         CookieEncoder httpCookieEncoder = new CookieEncoder(false);
         httpCookieEncoder.addCookie("my-cookie", "foo");
         httpCookieEncoder.addCookie("another-cookie", "bar");
-        request.setHeader(HttpHeaders.Names.COOKIE, httpCookieEncoder.encode());
+        request.headers().set(HttpHeaders.Names.COOKIE, httpCookieEncoder.encode());
 
         // Send the HTTP request.
         channel.write(request);

@@ -98,7 +98,7 @@ public class SpdyHeaderBlockRawDecoder extends SpdyHeaderBlockDecoder {
             String name = new String(nameBytes, "UTF-8");
 
             // Check for identically named headers
-            if (frame.containsHeader(name)) {
+            if (frame.headers().contains(name)) {
                 frame.setInvalid();
                 return;
             }
@@ -118,7 +118,7 @@ public class SpdyHeaderBlockRawDecoder extends SpdyHeaderBlockDecoder {
 
             // SPDY/3 allows zero-length (empty) header values
             if (valueLength == 0) {
-                frame.addHeader(name, "");
+                frame.headers().add(name, "");
                 numHeaders --;
                 this.headerSize = headerSize;
                 continue;
@@ -154,7 +154,7 @@ public class SpdyHeaderBlockRawDecoder extends SpdyHeaderBlockDecoder {
                 String value = new String(valueBytes, offset, index - offset, "UTF-8");
 
                 try {
-                    frame.addHeader(name, value);
+                    frame.headers().add(name, value);
                 } catch (IllegalArgumentException e) {
                     // Name contains NULL or non-ascii characters
                     frame.setInvalid();

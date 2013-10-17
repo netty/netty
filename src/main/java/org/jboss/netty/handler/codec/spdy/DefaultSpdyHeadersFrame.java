@@ -29,7 +29,7 @@ public class DefaultSpdyHeadersFrame extends DefaultSpdyStreamFrame
 
     private boolean invalid;
     private boolean truncated;
-    private final SpdyHeaders headers = new SpdyHeaders();
+    private final SpdyHeaders headers = new DefaultSpdyHeaders();
 
     /**
      * Creates a new instance.
@@ -56,44 +56,58 @@ public class DefaultSpdyHeadersFrame extends DefaultSpdyStreamFrame
         truncated = true;
     }
 
+    public SpdyHeaders headers() {
+        return headers;
+    }
+
+    @Deprecated
     public void addHeader(final String name, final Object value) {
-        headers.addHeader(name, value);
+        headers.add(name, value);
     }
 
+    @Deprecated
     public void setHeader(final String name, final Object value) {
-        headers.setHeader(name, value);
+        headers.set(name, value);
     }
 
+    @Deprecated
     public void setHeader(final String name, final Iterable<?> values) {
-        headers.setHeader(name, values);
+        headers.set(name, values);
     }
 
+    @Deprecated
     public void removeHeader(final String name) {
-        headers.removeHeader(name);
+        headers.remove(name);
     }
 
+    @Deprecated
     public void clearHeaders() {
-        headers.clearHeaders();
+        headers.clear();
     }
 
+    @Deprecated
     public String getHeader(final String name) {
-        return headers.getHeader(name);
+        return headers.get(name);
     }
 
+    @Deprecated
     public List<String> getHeaders(final String name) {
-        return headers.getHeaders(name);
+        return headers.getAll(name);
     }
 
+    @Deprecated
     public List<Map.Entry<String, String>> getHeaders() {
-        return headers.getHeaders();
+        return headers.entries();
     }
 
+    @Deprecated
     public boolean containsHeader(final String name) {
-        return headers.containsHeader(name);
+        return headers.contains(name);
     }
 
+    @Deprecated
     public Set<String> getHeaderNames() {
-        return headers.getHeaderNames();
+        return headers.names();
     }
 
     @Override
@@ -117,7 +131,7 @@ public class DefaultSpdyHeadersFrame extends DefaultSpdyStreamFrame
     }
 
     protected void appendHeaders(StringBuilder buf) {
-        for (Map.Entry<String, String> e: getHeaders()) {
+        for (Map.Entry<String, String> e: headers()) {
             buf.append("    ");
             buf.append(e.getKey());
             buf.append(": ");

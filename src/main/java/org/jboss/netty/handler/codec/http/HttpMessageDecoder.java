@@ -202,7 +202,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
                 // No content is expected.
                 // Remove the headers which are not supposed to be present not
                 // to confuse subsequent handlers.
-                message.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING);
+                message.headers().remove(HttpHeaders.Names.TRANSFER_ENCODING);
                 return message;
             }
             long contentLength = HttpHeaders.getContentLength(message, -1);
@@ -414,7 +414,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             //     - http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html Section 4.4
             //     - https://github.com/netty/netty/issues/222
             if (code >= 100 && code < 200) {
-                if (code == 101 && !res.containsHeader(HttpHeaders.Names.SEC_WEBSOCKET_ACCEPT)) {
+                if (code == 101 && !res.headers().contains(HttpHeaders.Names.SEC_WEBSOCKET_ACCEPT)) {
                     // It's Hixie 76 websocket handshake response
                     return false;
                 }
@@ -486,14 +486,14 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         String name = null;
         String value = null;
         if (line.length() != 0) {
-            message.clearHeaders();
+            message.headers().clear();
             do {
                 char firstChar = line.charAt(0);
                 if (name != null && (firstChar == ' ' || firstChar == '\t')) {
                     value = value + ' ' + line.trim();
                 } else {
                     if (name != null) {
-                        message.addHeader(name, value);
+                        message.headers().add(name, value);
                     }
                     String[] header = splitHeader(line);
                     name = header[0];
@@ -505,7 +505,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
 
             // Add the last header.
             if (name != null) {
-                message.addHeader(name, value);
+                message.headers().add(name, value);
             }
         }
 
@@ -538,7 +538,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             do {
                 char firstChar = line.charAt(0);
                 if (lastHeader != null && (firstChar == ' ' || firstChar == '\t')) {
-                    List<String> current = trailer.getHeaders(lastHeader);
+                    List<String> current = trailer.trailingHeaders().getAll(lastHeader);
                     if (!current.isEmpty()) {
                         int lastPos = current.size() - 1;
                         String newString = current.get(lastPos) + line.trim();
@@ -552,7 +552,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
                     if (!name.equalsIgnoreCase(HttpHeaders.Names.CONTENT_LENGTH) &&
                         !name.equalsIgnoreCase(HttpHeaders.Names.TRANSFER_ENCODING) &&
                         !name.equalsIgnoreCase(HttpHeaders.Names.TRAILER)) {
-                        trailer.addHeader(name, header[1]);
+                        trailer.trailingHeaders().add(name, header[1]);
                     }
                     lastHeader = name;
                 }

@@ -37,8 +37,8 @@ public class HttpPostRequestDecoderTest {
         final DefaultHttpRequest req = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "http://localhost");
 
         req.setContent(ChannelBuffers.EMPTY_BUFFER);
-        req.setHeader(HttpHeaders.Names.CONTENT_TYPE, "multipart/form-data; boundary=" + boundary);
-        req.setHeader(HttpHeaders.Names.TRANSFER_ENCODING, HttpHeaders.Values.CHUNKED);
+        req.headers().set(HttpHeaders.Names.CONTENT_TYPE, "multipart/form-data; boundary=" + boundary);
+        req.headers().set(HttpHeaders.Names.TRANSFER_ENCODING, HttpHeaders.Values.CHUNKED);
         req.setChunked(true);
 
         // Force to use memory-based data.

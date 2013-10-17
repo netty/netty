@@ -164,7 +164,7 @@ public class SpdyHttpEncoder implements ChannelDownstreamHandler {
         } else if (msg instanceof HttpResponse) {
 
             HttpResponse httpResponse = (HttpResponse) msg;
-            if (httpResponse.containsHeader(SpdyHttpHeaders.Names.ASSOCIATED_TO_STREAM_ID)) {
+            if (httpResponse.headers().contains(SpdyHttpHeaders.Names.ASSOCIATED_TO_STREAM_ID)) {
                 SpdySynStreamFrame spdySynStreamFrame = createSynStreamFrame(httpResponse);
                 currentStreamId = spdySynStreamFrame.getStreamId();
                 ChannelFuture future = getMessageFuture(ctx, e, currentStreamId, httpResponse);
@@ -196,7 +196,7 @@ public class SpdyHttpEncoder implements ChannelDownstreamHandler {
         if (chunk.isLast()) {
             if (chunk instanceof HttpChunkTrailer) {
                 HttpChunkTrailer trailer = (HttpChunkTrailer) chunk;
-                List<Map.Entry<String, String>> trailers = trailer.getHeaders();
+                HttpHeaders trailers = trailer.trailingHeaders();
                 if (trailers.isEmpty()) {
                     SpdyDataFrame spdyDataFrame = new DefaultSpdyDataFrame(streamId);
                     spdyDataFrame.setLast(true);
@@ -206,7 +206,7 @@ public class SpdyHttpEncoder implements ChannelDownstreamHandler {
                     SpdyHeadersFrame spdyHeadersFrame = new DefaultSpdyHeadersFrame(streamId);
                     spdyHeadersFrame.setLast(true);
                     for (Map.Entry<String, String> entry: trailers) {
-                        spdyHeadersFrame.addHeader(entry.getKey(), entry.getValue());
+                        spdyHeadersFrame.headers().add(entry.getKey(), entry.getValue());
                     }
                     Channels.write(ctx, future, spdyHeadersFrame, remoteAddress);
                 }
@@ -292,10 +292,10 @@ public class SpdyHttpEncoder implements ChannelDownstreamHandler {
 
         // The Connection, Keep-Alive, Proxy-Connection, and Transfer-Encoding
         // headers are not valid and MUST not be sent.
-        httpMessage.removeHeader(HttpHeaders.Names.CONNECTION);
-        httpMessage.removeHeader("Keep-Alive");
-        httpMessage.removeHeader("Proxy-Connection");
-        httpMessage.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING);
+        httpMessage.headers().remove(HttpHeaders.Names.CONNECTION);
+        httpMessage.headers().remove("Keep-Alive");
+        httpMessage.headers().remove("Proxy-Connection");
+        httpMessage.headers().remove(HttpHeaders.Names.TRANSFER_ENCODING);
 
         SpdySynStreamFrame spdySynStreamFrame =
                 new DefaultSpdySynStreamFrame(streamId, associatedToStreamId, priority);
@@ -317,11 +317,9 @@ public class SpdyHttpEncoder implements ChannelDownstreamHandler {
         }
 
         // Replace the HTTP host header with the SPDY host header
-        if (spdyVersion >= 3) {
-            String host = HttpHeaders.getHost(httpMessage);
-            httpMessage.removeHeader(HttpHeaders.Names.HOST);
-            SpdyHeaders.setHost(spdySynStreamFrame, host);
-        }
+        String host = HttpHeaders.getHost(httpMessage);
+        httpMessage.headers().remove(HttpHeaders.Names.HOST);
+        SpdyHeaders.setHost(spdySynStreamFrame, host);
 
         // Set the SPDY scheme header
         if (scheme == null) {
@@ -330,8 +328,8 @@ public class SpdyHttpEncoder implements ChannelDownstreamHandler {
         SpdyHeaders.setScheme(spdyVersion, spdySynStreamFrame, scheme);
 
         // Transfer the remaining HTTP headers
-        for (Map.Entry<String, String> entry: httpMessage.getHeaders()) {
-            spdySynStreamFrame.addHeader(entry.getKey(), entry.getValue());
+        for (Map.Entry<String, String> entry: httpMessage.headers()) {
+            spdySynStreamFrame.headers().add(entry.getKey(), entry.getValue());
         }
 
         return spdySynStreamFrame;
@@ -347,10 +345,10 @@ public class SpdyHttpEncoder implements ChannelDownstreamHandler {
 
         // The Connection, Keep-Alive, Proxy-Connection, and Transfer-Encoding
         // headers are not valid and MUST not be sent.
-        httpResponse.removeHeader(HttpHeaders.Names.CONNECTION);
-        httpResponse.removeHeader("Keep-Alive");
-        httpResponse.removeHeader("Proxy-Connection");
-        httpResponse.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING);
+        httpResponse.headers().remove(HttpHeaders.Names.CONNECTION);
+        httpResponse.headers().remove("Keep-Alive");
+        httpResponse.headers().remove("Proxy-Connection");
+        httpResponse.headers().remove(HttpHeaders.Names.TRANSFER_ENCODING);
 
         SpdySynReplyFrame spdySynReplyFrame = new DefaultSpdySynReplyFrame(streamId);
         spdySynReplyFrame.setLast(!chunked && !httpResponse.getContent().readable());
@@ -360,8 +358,8 @@ public class SpdyHttpEncoder implements ChannelDownstreamHandler {
         SpdyHeaders.setVersion(spdyVersion, spdySynReplyFrame, httpResponse.getProtocolVersion());
 
         // Transfer the remaining HTTP headers
-        for (Map.Entry<String, String> entry: httpResponse.getHeaders()) {
-            spdySynReplyFrame.addHeader(entry.getKey(), entry.getValue());
+        for (Map.Entry<String, String> entry: httpResponse.headers()) {
+            spdySynReplyFrame.headers().add(entry.getKey(), entry.getValue());
         }
 
         return spdySynReplyFrame;
