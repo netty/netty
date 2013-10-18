@@ -1022,7 +1022,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 @Override
                 public void operationComplete(Future<Channel> future) throws Exception {
                     if (!future.isSuccess()) {
-                        future.cause().printStackTrace();
+                        logger.debug("Failed to complete handshake", future.cause());
                         ctx.close();
                     }
                 }
