@@ -42,7 +42,9 @@ public abstract class MemcacheObjectEncoder<M extends MemcacheMessage> extends M
             }
 
             out.add(encodeMessage(ctx, (M) msg));
-        } else if (msg instanceof MemcacheContent || msg instanceof ByteBuf || msg instanceof FileRegion) {
+        }
+
+        if (msg instanceof MemcacheContent || msg instanceof ByteBuf || msg instanceof FileRegion) {
             int contentLength = contentLength(msg);
             if (contentLength > 0) {
                 out.add(encodeAndRetain(msg));
@@ -51,8 +53,6 @@ public abstract class MemcacheObjectEncoder<M extends MemcacheMessage> extends M
             }
 
             expectingMoreContent = !(msg instanceof LastMemcacheContent);
-        } else {
-            throw new Error("Unexpected message type: " + msg.getClass().getSimpleName());
         }
     }
 
