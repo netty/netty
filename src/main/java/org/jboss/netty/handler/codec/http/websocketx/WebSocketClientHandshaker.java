@@ -15,12 +15,12 @@
  */
 package org.jboss.netty.handler.codec.http.websocketx;
 
-import java.net.URI;
-import java.util.Map;
-
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.handler.codec.http.HttpResponse;
+
+import java.net.URI;
+import java.util.Map;
 
 /**
  * Base class for web socket client handshake implementations
@@ -31,7 +31,7 @@ public abstract class WebSocketClientHandshaker {
 
     private final WebSocketVersion version;
 
-    private boolean handshakeComplete;
+    private volatile boolean handshakeComplete;
 
     private final String expectedSubprotocol;
 

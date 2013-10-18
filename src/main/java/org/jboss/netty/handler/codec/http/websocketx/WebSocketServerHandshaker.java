@@ -18,9 +18,15 @@ package org.jboss.netty.handler.codec.http.websocketx;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
+import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.Channels;
+import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
 import org.jboss.netty.handler.codec.http.HttpRequest;
+import org.jboss.netty.handler.codec.http.HttpRequestDecoder;
+import org.jboss.netty.handler.codec.http.HttpResponse;
+import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
 import org.jboss.netty.util.internal.StringUtil;
 
 import java.util.Collections;
@@ -147,6 +153,30 @@ public abstract class WebSocketServerHandshaker {
      *            HTTP Request
      */
     public abstract ChannelFuture handshake(Channel channel, HttpRequest req);
+
+    /**
+     * Upgrades the connection and send the handshake response.
+     */
+    protected ChannelFuture writeHandshakeResponse(
+            Channel channel, HttpResponse res, ChannelHandler encoder, ChannelHandler decoder) {
+        final ChannelPipeline p = channel.getPipeline();
+        if (p.get(HttpChunkAggregator.class) != null) {
+            p.remove(HttpChunkAggregator.class);
+        }
+
+        final String httpEncoderName = p.getContext(HttpResponseEncoder.class).getName();
+        p.addAfter(httpEncoderName, "wsencoder", encoder);
+        p.get(HttpRequestDecoder.class).replace("wsdecoder", decoder);
+
+        final ChannelFuture future = channel.write(res);
+        future.addListener(new ChannelFutureListener() {
+            public void operationComplete(ChannelFuture future) {
+                p.remove(httpEncoderName);
+            }
+        });
+
+        return future;
+    }
 
     /**
      * Performs the closing handshake

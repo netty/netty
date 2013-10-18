@@ -20,14 +20,10 @@ import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
-import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
 import org.jboss.netty.handler.codec.http.HttpHeaders.Names;
 import org.jboss.netty.handler.codec.http.HttpRequest;
-import org.jboss.netty.handler.codec.http.HttpRequestDecoder;
 import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
@@ -144,23 +140,9 @@ public class WebSocketServerHandshaker07 extends WebSocketServerHandshaker {
             }
         }
 
-        ChannelFuture future = channel.write(res);
-
-        // Upgrade the connection and send the handshake response.
-        future.addListener(new ChannelFutureListener() {
-            public void operationComplete(ChannelFuture future) {
-                ChannelPipeline p = future.getChannel().getPipeline();
-                if (p.get(HttpChunkAggregator.class) != null) {
-                    p.remove(HttpChunkAggregator.class);
-                }
-
-                p.get(HttpRequestDecoder.class).replace("wsdecoder",
-                        new WebSocket07FrameDecoder(true, allowExtensions, getMaxFramePayloadLength()));
-                p.replace(HttpResponseEncoder.class, "wsencoder", new WebSocket07FrameEncoder(false));
-            }
-        });
-
-        return future;
+        return writeHandshakeResponse(
+                channel, res, new WebSocket07FrameEncoder(false),
+                              new WebSocket07FrameDecoder(true, allowExtensions, getMaxFramePayloadLength()));
     }
 
     /**
