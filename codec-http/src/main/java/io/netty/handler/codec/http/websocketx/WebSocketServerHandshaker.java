@@ -183,7 +183,7 @@ public abstract class WebSocketServerHandshaker {
             p.replace(ctx.name(), "wsdecoder", newWebsocketDecoder());
 
             encoderName = p.context(HttpResponseEncoder.class).name();
-            p.addAfter(encoderName, "wsencoder", newWebSocketEncoder());
+            p.addBefore(encoderName, "wsencoder", newWebSocketEncoder());
         }
         channel.writeAndFlush(response).addListener(new ChannelFutureListener() {
             @Override
