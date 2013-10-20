@@ -1877,4 +1877,25 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
 
     @Override
     public abstract ByteBuf retain();
+
+    /**
+     * Write the given {@link CharSequence} into this {@link ByteBuf} by using the specified {@link Charset}.
+     * This method will increase the {@link #writerIndex()} by the number of written bytes.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code this.writableBytes} is less than the amount needed to write the given {@link CharSequence}.
+     */
+    public abstract ByteBuf writeCharSequence(CharSequence seq, Charset charset);
+
+    /**
+     * Set the given {@link CharSequence} into this {@link ByteBuf} by using the specified {@link Charset} on the
+     * specified index.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code this.writableBytes} is less than the amount needed to write the given {@link CharSequence}.
+     */
+    public abstract ByteBuf setCharSequence(int index, CharSequence seq, Charset charset);
+
 }

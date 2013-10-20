@@ -368,7 +368,6 @@ abstract class PoolArena<T> {
     }
 
     static final class DirectArena extends PoolArena<ByteBuffer> {
-
         private static final boolean HAS_UNSAFE = PlatformDependent.hasUnsafe();
 
         DirectArena(PooledByteBufAllocator parent, int pageSize, int maxOrder, int pageShifts, int chunkSize) {

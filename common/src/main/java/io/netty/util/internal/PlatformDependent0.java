@@ -259,6 +259,10 @@ final class PlatformDependent0 {
         UNSAFE.putByte(address, value);
     }
 
+    static void putByte(long address, int position, byte b) {
+        UNSAFE.putByte(address + (position << 0), b);
+    }
+
     static void putShort(long address, short value) {
         if (UNALIGNED) {
             UNSAFE.putShort(address, value);

@@ -272,6 +272,10 @@ public final class PlatformDependent {
         PlatformDependent0.putByte(address, value);
     }
 
+    public static void putByte(long address, int position, byte value) {
+        PlatformDependent0.putByte(address, position, value);
+    }
+
     public static void putShort(long address, short value) {
         PlatformDependent0.putShort(address, value);
     }

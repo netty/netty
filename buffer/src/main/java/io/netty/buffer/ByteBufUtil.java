@@ -304,17 +304,19 @@ public final class ByteBufUtil {
         return -1;
     }
 
-    /**
-     * Encode the given {@link CharBuffer} using the given {@link Charset} into a new {@link ByteBuf} which
-     * is allocated via the {@link ByteBufAllocator}.
-     */
-    public static ByteBuf encodeString(ByteBufAllocator alloc, CharBuffer src, Charset charset) {
+    static int encodeCharBuffer(ByteBuf dst, int index, CharBuffer src, Charset charset) {
         final CharsetEncoder encoder = CharsetUtil.getEncoder(charset);
         int length = (int) ((double) src.remaining() * encoder.maxBytesPerChar());
-        boolean release = true;
-        final ByteBuf dst = alloc.buffer(length);
+        if (length > (dst.capacity() - index)) {
+            throw new IndexOutOfBoundsException(String.format(
+                    "index: %d, length: %d (expected: range(0, %d))", index, length, dst.capacity()));
+        }
+        return encodeCharBuffer0(dst, index, src, encoder);
+    }
+
+    private static int encodeCharBuffer0(ByteBuf dst, int index, CharBuffer src, CharsetEncoder encoder) {
         try {
-            final ByteBuffer dstBuf = dst.internalNioBuffer(0, length);
+            final ByteBuffer dstBuf = dst.internalNioBuffer(index, dst.capacity() - index);
             final int pos = dstBuf.position();
             CoderResult cr = encoder.encode(src, dstBuf, true);
             if (!cr.isUnderflow()) {
@@ -324,11 +326,41 @@ public final class ByteBufUtil {
             if (!cr.isUnderflow()) {
                 cr.throwException();
             }
-            dst.writerIndex(dst.writerIndex() + (dstBuf.position() - pos));
-            release = false;
-            return dst;
+            int written = dstBuf.position() - pos;
+            return written;
         } catch (CharacterCodingException x) {
             throw new IllegalStateException(x);
+        }
+    }
+
+    /**
+     * Encode the given {@link CharSequence} using the given {@link Charset} into a new {@link ByteBuf} which
+     * is allocated via the {@link ByteBufAllocator}.
+     */
+    public static ByteBuf encodeCharSequence(ByteBufAllocator alloc, CharSequence seq, Charset charset) {
+        return encodeCharBuffer(alloc, CharBuffer.wrap(seq), charset);
+    }
+
+    @Deprecated
+    public static ByteBuf encodeString(ByteBufAllocator alloc, CharBuffer src, Charset charset) {
+        return encodeCharBuffer(alloc, src, charset);
+    }
+
+    /**
+     * Encode the given {@link CharBuffer} using the given {@link Charset} into a new {@link ByteBuf} which
+     * is allocated via the {@link ByteBufAllocator}.
+     */
+    public static ByteBuf encodeCharBuffer(ByteBufAllocator alloc, CharBuffer src, Charset charset) {
+        final CharsetEncoder encoder = CharsetUtil.getEncoder(charset);
+        int length = (int) ((double) src.remaining() * encoder.maxBytesPerChar());
+        boolean release = true;
+        final ByteBuf dst = alloc.buffer(length);
+        try {
+            int wIndex = dst.writerIndex();
+            int written = encodeCharBuffer0(dst, wIndex, src, encoder);
+            dst.writerIndex(wIndex + written);
+            release = false;
+            return dst;
         } finally {
             if (release) {
                 dst.release();

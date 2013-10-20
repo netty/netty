@@ -34,6 +34,14 @@ been derived from the works by JSR-166 EG, Doug Lea, and Jason T. Greene:
     * http://gee.cs.oswego.edu/cgi-bin/viewcvs.cgi/jsr166/
     * http://viewvc.jboss.org/cgi-bin/viewvc.cgi/jbosscache/experimental/jsr166/
 
+This product contains an Utf8 encoder based on the algorithm of Bjoern Hoehrmann's as
+outlined at his homepage as Flexible and Economical UTF-8 Decoder:
+
+  * LICENSE:
+    * license/LICENSE.utf8-dfa.txt (MIT)
+  * HOMEPAGE:
+    * http://bjoern.hoehrmann.de/utf-8/decoder/dfa/
+
 This product contains a modified version of Robert Harder's Public Domain
 Base64 Encoder and Decoder, which can be obtained at:
 

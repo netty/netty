@@ -849,4 +849,16 @@ public final class SwappedByteBuf extends ByteBuf {
     public String toString() {
         return "Swapped(" + buf.toString() + ')';
     }
+
+    @Override
+    public ByteBuf writeCharSequence(CharSequence seq, Charset charset) {
+        buf.writeCharSequence(seq, charset);
+        return this;
+    }
+
+    @Override
+    public ByteBuf setCharSequence(int index, CharSequence seq, Charset charset) {
+        buf.setCharSequence(index, seq, charset);
+        return this;
+    }
 }

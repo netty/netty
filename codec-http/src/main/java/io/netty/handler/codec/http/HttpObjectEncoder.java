@@ -178,9 +178,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
     }
 
     protected static void encodeAscii(String s, ByteBuf buf) {
-        for (int i = 0; i < s.length(); i++) {
-            buf.writeByte(s.charAt(i));
-        }
+        buf.writeCharSequence(s, CharsetUtil.US_ASCII);
     }
 
     protected abstract void encodeInitialLine(ByteBuf buf, H message) throws Exception;

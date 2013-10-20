@@ -989,6 +989,18 @@ final class ReplayingDecoderBuffer extends ByteBuf {
         return this;
     }
 
+    @Override
+    public ByteBuf writeCharSequence(CharSequence seq, Charset charset) {
+        reject();
+        return this;
+    }
+
+    @Override
+    public ByteBuf setCharSequence(int index, CharSequence seq, Charset charset) {
+        reject();
+        return this;
+    }
+
     private static void reject() {
         throw new UnsupportedOperationException("not a replayable operation");
     }

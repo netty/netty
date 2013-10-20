@@ -94,4 +94,14 @@ public class SlicedByteBufTest extends AbstractByteBufTest {
     public void testNioBufferExposeOnlyRegion() {
         super.testNioBufferExposeOnlyRegion();
     }
+
+    public void testWriteCharsequenceUS_ASCII() {
+        super.testWriteCharsequenceUS_ASCII();
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    @Override
+    public void testWriteCharsequenceUTF_8() {
+        super.testWriteCharsequenceUTF_8();
+    }
 }
