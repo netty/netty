@@ -60,9 +60,9 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     private static final int UTF8_ACCEPT = 0;
     private static final int UTF8_REJECT = 12;
-    private static final char REPLACEMENT = '\ufffd';
+    private static final char UTF8_REPLACEMENT = '\ufffd';
 
-    private static final byte[] TYPES = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    private static final byte[] UTF8_TYPES = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -73,7 +73,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
             2, 2, 10, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 3, 3, 11, 6, 6, 6, 5, 8, 8, 8, 8, 8,
             8, 8, 8, 8, 8, 8 };
 
-    private static final byte[] STATES = { 0, 12, 24, 36, 60, 96, 84, 12, 12, 12, 48, 72, 12, 12,
+    private static final byte[] UTF8_STATES = { 0, 12, 24, 36, 60, 96, 84, 12, 12, 12, 48, 72, 12, 12,
             12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 0, 12, 12, 12, 12, 12, 0, 12, 0, 12, 12,
             12, 24, 12, 12, 12, 12, 12, 24, 12, 24, 12, 12, 12, 12, 12, 12, 12, 12, 12, 24, 12, 12,
             12, 12, 12, 24, 12, 12, 12, 12, 12, 12, 12, 24, 12, 12, 12, 12, 12, 12, 12, 12, 12, 36,
@@ -1230,7 +1230,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf writeCharSequence(CharSequence seq, Charset charset) {
-        writerIndex +=  setCharSequence0(writerIndex, seq, charset);
+        writerIndex += setCharSequence0(writerIndex, seq, charset);
         return this;
     }
 
@@ -1294,17 +1294,17 @@ public abstract class AbstractByteBuf extends ByteBuf {
         int prevState = state;
         while (index < end) {
             byte b = _getByte(index++);
-            byte type = TYPES[b & 0xFF];
+            byte type = UTF8_TYPES[b & 0xFF];
 
             codep = state != UTF8_ACCEPT ? b & 0x3f | codep << 6 : 0xff >> type & b;
 
-            state = STATES[state + type];
+            state = UTF8_STATES[state + type];
 
             if (state == UTF8_ACCEPT) {
                 chars[out++] = (char) codep;
             } else if (state == UTF8_REJECT) {
                 // Try to replace invalid sequences
-                chars[out++] = REPLACEMENT;
+                chars[out++] = UTF8_REPLACEMENT;
                 state = UTF8_ACCEPT;
                 if (prevState != UTF8_ACCEPT) {
                     index--;
@@ -1384,11 +1384,11 @@ public abstract class AbstractByteBuf extends ByteBuf {
                 return Character.toCodePoint(c, c2);
             }
             // replace char
-            return REPLACEMENT;
+            return UTF8_REPLACEMENT;
         }
         if (Character.isLowSurrogate(c)) {
             // replace char
-            return REPLACEMENT;
+            return UTF8_REPLACEMENT;
         }
         return c;
     }
