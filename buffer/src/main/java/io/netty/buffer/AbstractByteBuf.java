@@ -990,12 +990,13 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public String toString(int index, int length, Charset charset) {
-        // TODO: Optimize index / length check
-        checkIndex(index);
-        checkReadableBytes(length);
         if (length == 0) {
             return "";
         }
+        // TODO: Optimize index / length check
+        checkIndex(index);
+        checkReadableBytes(length);
+
         if (charset.equals(CharsetUtil.US_ASCII)) {
             return decodeUsAscii(index, length);
         }
