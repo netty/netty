@@ -1255,7 +1255,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
         if (nioBufferCount() == 1) {
             return ByteBufUtil.encodeCharBuffer(this, index, CharBuffer.wrap(seq), charset);
         } else {
-            byte[] bytes = seq.toString().getBytes(CharsetUtil.UTF_8);
+            byte[] bytes = seq.toString().getBytes(charset);
             setBytes(index, bytes);
             return bytes.length;
         }
