@@ -461,12 +461,13 @@ public final class ByteBufUtil {
     //  * http://psy-lob-saw.blogspot.co.uk/2012/12/encode-utf-8-string-to-bytebuffer-faster.html
     static int encodeUtf8(CharSequence seq, long memoryAddress, long index, long length)
             throws CharacterCodingException {
+        index = memoryAddress + index;
+        length = memoryAddress + length;
         long startIndex = index;
         long dstLimit = index + length;
         int sourceOffset = 0;
         int sourceLength = seq.length();
-        index = memoryAddress + index;
-        length = memoryAddress + length;
+
         long dlASCII = index + Math.min(sourceLength, dstLimit - index);
         // handle ascii encoded strings in an optimised loop
         int c;
