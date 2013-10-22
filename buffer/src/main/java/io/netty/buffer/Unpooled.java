@@ -408,8 +408,16 @@ public final class Unpooled {
      * respectively.
      */
     public static ByteBuf copiedBuffer(ByteBuf buffer) {
-        if (buffer.isReadable()) {
-            return buffer.copy();
+        int readable = buffer.readableBytes();
+        if (readable > 0) {
+            ByteBuf copy;
+            if (buffer.isDirect()) {
+                copy = directBuffer(readable);
+            } else {
+                copy = buffer(readable);
+            }
+            copy.writeBytes(buffer, buffer.readerIndex(), readable);
+            return copy;
         } else {
             return EMPTY_BUFFER;
         }
