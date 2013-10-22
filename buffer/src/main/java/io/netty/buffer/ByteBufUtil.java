@@ -16,6 +16,7 @@
 package io.netty.buffer;
 
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.PlatformDependent;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -385,6 +386,154 @@ public final class ByteBufUtil {
             throw new IllegalStateException(x);
         }
         return dst.flip().toString();
+    }
+
+    private static final int UTF8_ACCEPT = 0;
+    private static final int UTF8_REJECT = 12;
+    private static final char UTF8_REPLACEMENT = '\ufffd';
+
+    private static final byte[] UTF8_TYPES = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 7, 7, 7, 7,
+            7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 8,
+            8, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+            2, 2, 10, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 3, 3, 11, 6, 6, 6, 5, 8, 8, 8, 8, 8,
+            8, 8, 8, 8, 8, 8 };
+
+    private static final byte[] UTF8_STATES = { 0, 12, 24, 36, 60, 96, 84, 12, 12, 12, 48, 72, 12, 12,
+            12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 0, 12, 12, 12, 12, 12, 0, 12, 0, 12, 12,
+            12, 24, 12, 12, 12, 12, 12, 24, 12, 24, 12, 12, 12, 12, 12, 12, 12, 12, 12, 24, 12, 12,
+            12, 12, 12, 24, 12, 12, 12, 12, 12, 12, 12, 24, 12, 12, 12, 12, 12, 12, 12, 12, 12, 36,
+            12, 36, 12, 12, 12, 36, 12, 12, 12, 12, 12, 36, 12, 36, 12, 12, 12, 36, 12, 12, 12, 12,
+            12, 12, 12, 12, 12, 12 };
+
+    // Based on:
+    //  * https://github.com/nitsanw/javanetperf/blob/psylobsaw/src/psy/lob/saw/CustomUtf8Encoder.java
+    //  * http://psy-lob-saw.blogspot.co.uk/2012/12/encode-utf-8-string-to-bytebuffer-faster.html
+    static int encodeUtf8(CharSequence seq, byte[] dst, int index, int length) throws CharacterCodingException {
+        int startIndex = index;
+        int dstLimit = index + length;
+        int sourceOffset = 0;
+        int sourceLength = seq.length();
+        int dlASCII = index + Math.min(sourceLength, dstLimit - index);
+        // handle ascii encoded strings in an optimised loop
+        int c;
+        while (index < dlASCII && (c = seq.charAt(sourceOffset)) < 128) {
+            dst[index++] = (byte) c;
+            sourceOffset++;
+        }
+
+        try {
+            while (sourceOffset < sourceLength) {
+                c = seq.charAt(sourceOffset++);
+                if (c < 128) {
+                    dst[index++] = (byte) c;
+                } else if (c < 2048) {
+                    dst[index++] = (byte) (0xC0 | (c >> 6));
+                    dst[index++] = (byte) (0x80 | (c & 0x3F));
+                } else if (isSurrogate(c)) {
+                    int uc = parseUtf8((char) c, seq, sourceOffset, sourceLength);
+                    if (uc == -1) {
+                        return index - startIndex;
+                    }
+                    dst[index++] = (byte) (0xF0 | uc >> 18);
+                    dst[index++] = (byte) (0x80 | uc >> 12 & 0x3F);
+                    dst[index++] = (byte) (0x80 | uc >> 6 & 0x3F);
+                    dst[index++] = (byte) (0x80 | uc & 0x3F);
+                    sourceOffset++;
+                } else {
+                    dst[index++] = (byte) (0xE0 | c >> 12);
+                    dst[index++] = (byte) (0x80 | c >> 6 & 0x3F);
+                    dst[index++] = (byte) (0x80 | c & 0x3F);
+                }
+            }
+        } catch (IndexOutOfBoundsException e) {
+            CoderResult.OVERFLOW.throwException();
+        }
+        return index - startIndex;
+    }
+
+    // Based on:
+    //  * https://github.com/nitsanw/javanetperf/blob/psylobsaw/src/psy/lob/saw/CustomUtf8Encoder.java
+    //  * http://psy-lob-saw.blogspot.co.uk/2012/12/encode-utf-8-string-to-bytebuffer-faster.html
+    static int encodeUtf8(CharSequence seq, long memoryAddress, long index, long length)
+            throws CharacterCodingException {
+        long startIndex = index;
+        long dstLimit = index + length;
+        int sourceOffset = 0;
+        int sourceLength = seq.length();
+        index = memoryAddress + index;
+        length = memoryAddress + length;
+        long dlASCII = index + Math.min(sourceLength, dstLimit - index);
+        // handle ascii encoded strings in an optimised loop
+        int c;
+        while (index < dlASCII && (c = seq.charAt(sourceOffset)) < 128) {
+            PlatformDependent.putByte(index++, (byte) c);
+            sourceOffset++;
+        }
+
+        while (sourceOffset < sourceLength) {
+            c = seq.charAt(sourceOffset++);
+            if (c < 128) {
+                if (index >= length) {
+                    CoderResult.OVERFLOW.throwException();
+                }
+                PlatformDependent.putByte(index++, (byte) c);
+            } else if (c < 2048) {
+                if (length - index < 2) {
+                    CoderResult.OVERFLOW.throwException();
+                }
+                PlatformDependent.putByte(index++, (byte) (0xC0 | (c >> 6)));
+                PlatformDependent.putByte(index++, (byte) (0x80 | (c & 0x3F)));
+            } else if (isSurrogate(c)) {
+                int uc = parseUtf8((char) c, seq, sourceOffset, sourceLength);
+                if (uc == -1) {
+                    return (int) (index - startIndex);
+                }
+                if (length - index < 4) {
+                    CoderResult.OVERFLOW.throwException();
+                }
+                PlatformDependent.putByte(index++, (byte) (0xF0 | uc >> 18));
+                PlatformDependent.putByte(index++, (byte) (0x80 | uc >> 12 & 0x3F));
+                PlatformDependent.putByte(index++, (byte) (0x80 | uc >> 6 & 0x3F));
+                PlatformDependent.putByte(index++, (byte) (0x80 | uc & 0x3F));
+                sourceOffset++;
+            } else {
+                if (length - index < 3) {
+                    CoderResult.OVERFLOW.throwException();
+                }
+                PlatformDependent.putByte(index++, (byte) (0xE0 | c >> 12));
+                PlatformDependent.putByte(index++, (byte) (0x80 | c >> 6 & 0x3F));
+                PlatformDependent.putByte(index++, (byte) (0x80 | c & 0x3F));
+            }
+        }
+        return (int) (index - startIndex);
+    }
+
+    static int parseUtf8(char c, CharSequence seq, int offset, int length) {
+        if (Character.isHighSurrogate(c)) {
+            if (length - offset < 2) {
+                return -1;
+            }
+            char c2 = seq.charAt(offset + 1);
+            if (Character.isLowSurrogate(c2)) {
+                return Character.toCodePoint(c, c2);
+            }
+            // replace char
+            return UTF8_REPLACEMENT;
+        }
+        if (Character.isLowSurrogate(c)) {
+            // replace char
+            return UTF8_REPLACEMENT;
+        }
+        return c;
+    }
+
+    static boolean isSurrogate(int c) {
+        return Character.MIN_SURROGATE <= c && c <= Character.MAX_SURROGATE;
     }
 
     private ByteBufUtil() { }

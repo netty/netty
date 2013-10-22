@@ -1250,7 +1250,11 @@ public abstract class AbstractByteBuf extends ByteBuf {
         if (charset.equals(CharsetUtil.UTF_8)) {
             int length = seq.length() * 4;
             checkIndex(index, length);
-            return encodeUtf8(seq, index, length);
+            try {
+                return encodeUtf8(seq, index, length);
+            } catch (CharacterCodingException e) {
+                throw new IllegalStateException(e);
+            }
         }
         if (nioBufferCount() == 1) {
             return ByteBufUtil.encodeCharBuffer(this, index, CharBuffer.wrap(seq), charset);
@@ -1318,7 +1322,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
     // Based on:
     //  * https://github.com/nitsanw/javanetperf/blob/psylobsaw/src/psy/lob/saw/CustomUtf8Encoder.java
     //  * http://psy-lob-saw.blogspot.co.uk/2012/12/encode-utf-8-string-to-bytebuffer-faster.html
-    private int encodeUtf8(CharSequence seq, int index, int length) {
+    protected int encodeUtf8(CharSequence seq, int index, int length)  throws CharacterCodingException {
         int startIndex = index;
         int dstLimit = index + length;
         int sourceOffset = 0;
@@ -1345,8 +1349,8 @@ public abstract class AbstractByteBuf extends ByteBuf {
                     }
                     _setByte(index++, (byte) (0xC0 | (c >> 6)));
                     _setByte(index++, (byte) (0x80 | (c & 0x3F)));
-                } else if (isSurrogate(c)) {
-                    int uc = parseUtf8((char) c, seq, sourceOffset, sourceLength);
+                } else if (ByteBufUtil.isSurrogate(c)) {
+                    int uc = ByteBufUtil.parseUtf8((char) c, seq, sourceOffset, sourceLength);
                     if (uc == -1) {
                         return index - startIndex;
                     }
@@ -1372,28 +1376,5 @@ public abstract class AbstractByteBuf extends ByteBuf {
         } catch (CharacterCodingException e) {
             throw new IllegalStateException(e);
         }
-    }
-
-    private static int parseUtf8(char c, CharSequence seq, int offset, int length) {
-        if (Character.isHighSurrogate(c)) {
-            if (length - offset < 2) {
-                return -1;
-            }
-            char c2 = seq.charAt(offset + 1);
-            if (Character.isLowSurrogate(c2)) {
-                return Character.toCodePoint(c, c2);
-            }
-            // replace char
-            return UTF8_REPLACEMENT;
-        }
-        if (Character.isLowSurrogate(c)) {
-            // replace char
-            return UTF8_REPLACEMENT;
-        }
-        return c;
-    }
-
-    private static boolean isSurrogate(int c) {
-        return Character.MIN_SURROGATE <= c && c <= Character.MAX_SURROGATE;
     }
 }
