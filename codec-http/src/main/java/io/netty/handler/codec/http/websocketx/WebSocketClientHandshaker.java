@@ -40,11 +40,11 @@ public abstract class WebSocketClientHandshaker {
 
     private final WebSocketVersion version;
 
-    private boolean handshakeComplete;
+    private volatile boolean handshakeComplete;
 
     private final String expectedSubprotocol;
 
-    private String actualSubprotocol;
+    private volatile String actualSubprotocol;
 
     protected final HttpHeaders customHeaders;
 
