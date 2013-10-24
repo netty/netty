@@ -440,12 +440,12 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         if (executor.inEventLoop()) {
             next.invokeBind(localAddress, promise);
         } else {
-            executor.execute(new Runnable() {
+            safeExecute(executor, new Runnable() {
                 @Override
                 public void run() {
                     next.invokeBind(localAddress, promise);
                 }
-            });
+            }, promise);
         }
 
         return promise;
@@ -478,12 +478,12 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         if (executor.inEventLoop()) {
             next.invokeConnect(remoteAddress, localAddress, promise);
         } else {
-            executor.execute(new Runnable() {
+            safeExecute(executor, new Runnable() {
                 @Override
                 public void run() {
                     next.invokeConnect(remoteAddress, localAddress, promise);
                 }
-            });
+            }, promise);
         }
 
         return promise;
@@ -512,7 +512,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 next.invokeDisconnect(promise);
             }
         } else {
-            executor.execute(new Runnable() {
+            safeExecute(executor, new Runnable() {
                 @Override
                 public void run() {
                     if (!channel().metadata().hasDisconnect()) {
@@ -521,7 +521,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                         next.invokeDisconnect(promise);
                     }
                 }
-            });
+            }, promise);
         }
 
         return promise;
@@ -544,12 +544,12 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         if (executor.inEventLoop()) {
             next.invokeClose(promise);
         } else {
-            executor.execute(new Runnable() {
+            safeExecute(executor, new Runnable() {
                 @Override
                 public void run() {
                     next.invokeClose(promise);
                 }
-            });
+            }, promise);
         }
 
         return promise;
@@ -572,12 +572,12 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         if (executor.inEventLoop()) {
             next.invokeDeregister(promise);
         } else {
-            executor.execute(new Runnable() {
+            safeExecute(executor, new Runnable() {
                 @Override
                 public void run() {
                     next.invokeDeregister(promise);
                 }
-            });
+            }, promise);
         }
 
         return promise;
@@ -663,7 +663,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                     }
                 };
             }
-            executor.execute(task);
+            safeExecute(executor, task, channel.voidPromise());
         }
 
         return this;
@@ -708,7 +708,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                     buffer.incrementPendingOutboundBytes(size);
                 }
             }
-            executor.execute(WriteTask.newInstance(next, msg, size, flush, promise));
+            safeExecute(executor, WriteTask.newInstance(next, msg, size, flush, promise), promise);
         }
     }
 
@@ -845,6 +845,14 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     @Override
     public boolean isRemoved() {
         return removed;
+    }
+
+    private static void safeExecute(EventExecutor executor, Runnable runnable, ChannelPromise promise) {
+        try {
+            executor.execute(runnable);
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
+        }
     }
 
     static final class WriteTask implements Runnable {
