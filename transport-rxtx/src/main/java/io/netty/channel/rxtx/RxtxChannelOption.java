@@ -48,6 +48,7 @@ public final class RxtxChannelOption<T> extends ChannelOption<T> {
     public static final RxtxChannelOption<Integer> READ_TIMEOUT =
             new RxtxChannelOption<Integer>("READ_TIMEOUT");
 
+    @SuppressWarnings("deprecation")
     private RxtxChannelOption(String name) {
         super(name);
     }
