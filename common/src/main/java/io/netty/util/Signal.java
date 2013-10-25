@@ -30,13 +30,21 @@ public final class Signal extends Error {
 
     private static final ConcurrentMap<String, Boolean> map = PlatformDependent.newConcurrentHashMap();
 
+    @SuppressWarnings("deprecation")
     private final UniqueName uname;
 
     /**
-     * Create a new instance
-     *
-     * @param name      the name under which it is registered
+     * Creates a new {@link Signal} with the specified {@code name}.
      */
+    @SuppressWarnings("deprecation")
+    public static Signal valueOf(String name) {
+        return new Signal(name);
+    }
+
+    /**
+     * @deprecated Use {@link #valueOf(String)} instead.
+     */
+    @Deprecated
     public Signal(String name) {
         super(name);
         uname = new UniqueName(map, name);

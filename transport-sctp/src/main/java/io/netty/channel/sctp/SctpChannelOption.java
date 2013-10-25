@@ -23,6 +23,7 @@ import java.net.SocketAddress;
 /**
  * Option for configuring the SCTP transport
  */
+@SuppressWarnings("deprecation")
 public class SctpChannelOption<T> extends ChannelOption<T> {
     public static final SctpChannelOption<Boolean> SCTP_DISABLE_FRAGMENTS =
             new SctpChannelOption<Boolean>("SCTP_DISABLE_FRAGMENTS");
@@ -40,6 +41,10 @@ public class SctpChannelOption<T> extends ChannelOption<T> {
     public static final SctpChannelOption<SocketAddress> SCTP_SET_PEER_PRIMARY_ADDR =
             new SctpChannelOption<SocketAddress>("SCTP_SET_PEER_PRIMARY_ADDR");
 
+    /**
+     * @deprecated Will be removed in the future release.
+     */
+    @Deprecated
     protected SctpChannelOption(String name) {
         super(name);
     }

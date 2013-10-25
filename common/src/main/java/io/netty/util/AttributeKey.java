@@ -26,16 +26,23 @@ import java.util.concurrent.ConcurrentMap;
  *
  * @param <T>   the type of the {@link Attribute} which can be accessed via this {@link AttributeKey}.
  */
-@SuppressWarnings("UnusedDeclaration") // 'T' is used only at compile time
+@SuppressWarnings({"UnusedDeclaration", "deprecation"}) // 'T' is used only at compile time
 public final class AttributeKey<T> extends UniqueName {
 
     private static final ConcurrentMap<String, Boolean> names = PlatformDependent.newConcurrentHashMap();
 
     /**
-     * Create a new instance
-     *
-     * @param name  the name under which the {@link AttributeKey} will be registered
+     * Creates a new {@link AttributeKey} with the specified {@code name}.
      */
+    @SuppressWarnings("deprecation")
+    public static <T> AttributeKey<T> valueOf(String name) {
+        return new AttributeKey<T>(name);
+    }
+
+    /**
+     * @deprecated Use {@link #valueOf(String)} instead.
+     */
+    @Deprecated
     public AttributeKey(String name) {
         super(names, name);
     }
