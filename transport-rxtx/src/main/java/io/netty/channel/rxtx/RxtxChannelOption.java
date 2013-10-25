@@ -28,14 +28,16 @@ import static io.netty.channel.ChannelOption.*;
 
 public final class RxtxChannelOption {
 
-    public static final ChannelOption<Integer> BAUD_RATE = valueOf("BAUD_RATE");
-    public static final ChannelOption<Boolean> DTR = valueOf("DTR");
-    public static final ChannelOption<Boolean> RTS = valueOf("RTS");
-    public static final ChannelOption<Stopbits> STOP_BITS = valueOf("STOP_BITS");
-    public static final ChannelOption<Databits> DATA_BITS = valueOf("DATA_BITS");
-    public static final ChannelOption<Paritybit> PARITY_BIT = valueOf("PARITY_BIT");
-    public static final ChannelOption<Integer> WAIT_TIME = valueOf("WAIT_TIME");
-    public static final ChannelOption<Integer> READ_TIMEOUT = valueOf("READ_TIMEOUT");
+    private static final Class<RxtxChannelOption> T = RxtxChannelOption.class;
+
+    public static final ChannelOption<Integer> BAUD_RATE = valueOf(T, "BAUD_RATE");
+    public static final ChannelOption<Boolean> DTR = valueOf(T, "DTR");
+    public static final ChannelOption<Boolean> RTS = valueOf(T, "RTS");
+    public static final ChannelOption<Stopbits> STOP_BITS = valueOf(T, "STOP_BITS");
+    public static final ChannelOption<Databits> DATA_BITS = valueOf(T, "DATA_BITS");
+    public static final ChannelOption<Paritybit> PARITY_BIT = valueOf(T, "PARITY_BIT");
+    public static final ChannelOption<Integer> WAIT_TIME = valueOf(T, "WAIT_TIME");
+    public static final ChannelOption<Integer> READ_TIMEOUT = valueOf(T, "READ_TIMEOUT");
 
     private RxtxChannelOption() { }
 }

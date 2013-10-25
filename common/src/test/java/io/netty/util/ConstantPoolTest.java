@@ -81,4 +81,10 @@ public class ConstantPoolTest {
         assertThat(array[3], is(sameInstance(d)));
         assertThat(array[4], is(sameInstance(e)));
     }
+
+    @Test
+    public void testComposedName() {
+        TestConstant a = pool.valueOf(Object.class, "A");
+        assertThat(a.name(), is("java.lang.Object#A"));
+    }
 }
