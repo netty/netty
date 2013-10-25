@@ -15,28 +15,31 @@
  */
 package io.netty.util;
 
-import io.netty.util.internal.PlatformDependent;
-
-import java.util.concurrent.ConcurrentMap;
-
 /**
  * Key which can be used to access {@link Attribute} out of the {@link AttributeMap}. Be aware that it is not be
  * possible to have multiple keys with the same name.
  *
- *
  * @param <T>   the type of the {@link Attribute} which can be accessed via this {@link AttributeKey}.
  */
 @SuppressWarnings("UnusedDeclaration") // 'T' is used only at compile time
-public final class AttributeKey<T> extends UniqueName {
+public final class AttributeKey<T> extends AbstractConstant<AttributeKey<T>> {
 
-    private static final ConcurrentMap<String, Boolean> names = PlatformDependent.newConcurrentHashMap();
+    private static final ConstantPool<AttributeKey<Object>> pool = new ConstantPool<AttributeKey<Object>>() {
+        @Override
+        protected AttributeKey<Object> newConstant(int id, String name) {
+            return new AttributeKey<Object>(id, name);
+        }
+    };
 
     /**
-     * Create a new instance
-     *
-     * @param name  the name under which the {@link AttributeKey} will be registered
+     * Returns the singleton instance of the {@link AttributeKey} which has the specified {@code name}.
      */
-    public AttributeKey(String name) {
-        super(names, name);
+    @SuppressWarnings("unchecked")
+    public static <T> AttributeKey<T> valueOf(String name) {
+        return (AttributeKey<T>) pool.valueOf(name);
+    }
+
+    private AttributeKey(int id, String name) {
+        super(id, name);
     }
 }

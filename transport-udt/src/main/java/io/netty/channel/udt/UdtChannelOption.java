@@ -18,36 +18,36 @@ package io.netty.channel.udt;
 import com.barchart.udt.OptionUDT;
 import io.netty.channel.ChannelOption;
 
+import static io.netty.channel.ChannelOption.*;
+
 /**
  * Options for the UDT transport
  */
-public final class UdtChannelOption<T> extends ChannelOption<T> {
+public final class UdtChannelOption {
 
     /**
      * See {@link OptionUDT#Protocol_Receive_Buffer_Size}.
      */
-    public static final UdtChannelOption<Integer> PROTOCOL_RECEIVE_BUFFER_SIZE = new UdtChannelOption<Integer>(
+    public static final ChannelOption<Integer> PROTOCOL_RECEIVE_BUFFER_SIZE = valueOf(
             "PROTOCOL_RECEIVE_BUFFER_SIZE");
 
     /**
      * See {@link OptionUDT#Protocol_Send_Buffer_Size}.
      */
-    public static final UdtChannelOption<Integer> PROTOCOL_SEND_BUFFER_SIZE = new UdtChannelOption<Integer>(
+    public static final ChannelOption<Integer> PROTOCOL_SEND_BUFFER_SIZE = valueOf(
             "PROTOCOL_SEND_BUFFER_SIZE");
 
     /**
      * See {@link OptionUDT#System_Receive_Buffer_Size}.
      */
-    public static final UdtChannelOption<Integer> SYSTEM_RECEIVE_BUFFER_SIZE = new UdtChannelOption<Integer>(
+    public static final ChannelOption<Integer> SYSTEM_RECEIVE_BUFFER_SIZE = valueOf(
             "SYSTEM_RECEIVE_BUFFER_SIZE");
 
     /**
      * See {@link OptionUDT#System_Send_Buffer_Size}.
      */
-    public static final UdtChannelOption<Integer> SYSTEM_SEND_BUFFER_SIZE = new UdtChannelOption<Integer>(
+    public static final ChannelOption<Integer> SYSTEM_SEND_BUFFER_SIZE = valueOf(
             "SYSTEM_SEND_BUFFER_SIZE");
 
-    private UdtChannelOption(String name) {
-        super(name);
-    }
+    private UdtChannelOption() { }
 }

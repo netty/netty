@@ -19,8 +19,8 @@ import io.netty.util.Signal;
 
 public class DecoderResult {
 
-    protected static final Signal SIGNAL_UNFINISHED = new Signal(DecoderResult.class.getName() + ".UNFINISHED");
-    protected static final Signal SIGNAL_SUCCESS = new Signal(DecoderResult.class.getName() + ".SUCCESS");
+    protected static final Signal SIGNAL_UNFINISHED = Signal.valueOf(DecoderResult.class.getName() + ".UNFINISHED");
+    protected static final Signal SIGNAL_SUCCESS = Signal.valueOf(DecoderResult.class.getName() + ".SUCCESS");
 
     public static final DecoderResult UNFINISHED = new DecoderResult(SIGNAL_UNFINISHED);
     public static final DecoderResult SUCCESS = new DecoderResult(SIGNAL_SUCCESS);
