@@ -266,7 +266,7 @@ import java.util.List;
  */
 public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
 
-    static final Signal REPLAY = new Signal(ReplayingDecoder.class.getName() + ".REPLAY");
+    static final Signal REPLAY = Signal.valueOf(ReplayingDecoder.class.getName() + ".REPLAY");
 
     private final ReplayingDecoderBuffer replayable = new ReplayingDecoderBuffer();
     private S state;
