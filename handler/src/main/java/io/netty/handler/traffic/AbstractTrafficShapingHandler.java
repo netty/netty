@@ -73,8 +73,10 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
      */
     protected long checkInterval = DEFAULT_CHECK_INTERVAL; // default 1 s
 
-    private static final AttributeKey<Boolean> READ_SUSPENDED = AttributeKey.valueOf("readSuspended");
-    private static final AttributeKey<Runnable> REOPEN_TASK = AttributeKey.valueOf("reopenTask");
+    private static final AttributeKey<Boolean> READ_SUSPENDED =
+            AttributeKey.valueOf(AbstractTrafficShapingHandler.class, "READ_SUSPENDED");
+    private static final AttributeKey<Runnable> REOPEN_TASK =
+            AttributeKey.valueOf(AbstractTrafficShapingHandler.class, "REOPEN_TASK");
 
     /**
      *

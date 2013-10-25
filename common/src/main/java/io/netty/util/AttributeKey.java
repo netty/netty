@@ -39,6 +39,14 @@ public final class AttributeKey<T> extends AbstractConstant<AttributeKey<T>> {
         return (AttributeKey<T>) pool.valueOf(name);
     }
 
+    /**
+     * Shortcut of {@link #valueOf(String) valueOf(firstNameComponent.getName() + "#" + secondNameComponent)}.
+     */
+    @SuppressWarnings("unchecked")
+    public static <T> AttributeKey<T> valueOf(Class<?> firstNameComponent, String secondNameComponent) {
+        return (AttributeKey<T>) pool.valueOf(firstNameComponent, secondNameComponent);
+    }
+
     private AttributeKey(int id, String name) {
         super(id, name);
     }

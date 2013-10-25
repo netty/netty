@@ -38,6 +38,13 @@ public final class Signal extends Error implements Constant<Signal> {
         return pool.valueOf(name);
     }
 
+    /**
+     * Shortcut of {@link #valueOf(String) valueOf(firstNameComponent.getName() + "#" + secondNameComponent)}.
+     */
+    public static Signal valueOf(Class<?> firstNameComponent, String secondNameComponent) {
+        return pool.valueOf(firstNameComponent, secondNameComponent);
+    }
+
     private final int id;
     private final String name;
 

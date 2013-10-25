@@ -27,14 +27,17 @@ import static io.netty.channel.ChannelOption.*;
  */
 public final class SctpChannelOption {
 
-    public static final ChannelOption<Boolean> SCTP_DISABLE_FRAGMENTS = valueOf("SCTP_DISABLE_FRAGMENTS");
-    public static final ChannelOption<Boolean> SCTP_EXPLICIT_COMPLETE = valueOf("SCTP_EXPLICIT_COMPLETE");
-    public static final ChannelOption<Integer> SCTP_FRAGMENT_INTERLEAVE = valueOf("SCTP_FRAGMENT_INTERLEAVE");
-    public static final ChannelOption<InitMaxStreams> SCTP_INIT_MAXSTREAMS = valueOf("SCTP_INIT_MAXSTREAMS");
+    private static final Class<SctpChannelOption> T = SctpChannelOption.class;
 
-    public static final ChannelOption<Boolean> SCTP_NODELAY = valueOf("SCTP_NODELAY");
-    public static final ChannelOption<SocketAddress> SCTP_PRIMARY_ADDR = valueOf("SCTP_PRIMARY_ADDR");
-    public static final ChannelOption<SocketAddress> SCTP_SET_PEER_PRIMARY_ADDR = valueOf("SCTP_SET_PEER_PRIMARY_ADDR");
+    public static final ChannelOption<Boolean> SCTP_DISABLE_FRAGMENTS = valueOf(T, "SCTP_DISABLE_FRAGMENTS");
+    public static final ChannelOption<Boolean> SCTP_EXPLICIT_COMPLETE = valueOf(T, "SCTP_EXPLICIT_COMPLETE");
+    public static final ChannelOption<Integer> SCTP_FRAGMENT_INTERLEAVE = valueOf(T, "SCTP_FRAGMENT_INTERLEAVE");
+    public static final ChannelOption<InitMaxStreams> SCTP_INIT_MAXSTREAMS = valueOf(T, "SCTP_INIT_MAXSTREAMS");
+
+    public static final ChannelOption<Boolean> SCTP_NODELAY = valueOf(T, "SCTP_NODELAY");
+    public static final ChannelOption<SocketAddress> SCTP_PRIMARY_ADDR = valueOf(T, "SCTP_PRIMARY_ADDR");
+    public static final ChannelOption<SocketAddress> SCTP_SET_PEER_PRIMARY_ADDR =
+            valueOf(T, "SCTP_SET_PEER_PRIMARY_ADDR");
 
     private SctpChannelOption() { }
 }
