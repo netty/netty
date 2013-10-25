@@ -16,38 +16,37 @@
 package io.netty.util;
 
 
-import io.netty.util.internal.PlatformDependent;
-
-import java.util.concurrent.ConcurrentMap;
-
 /**
  * A special {@link Error} which is used to signal some state or request by throwing it.
  * {@link Signal} has an empty stack trace and has no cause to save the instantiation overhead.
  */
-public final class Signal extends Error {
+public final class Signal extends Error implements Constant<Signal> {
 
     private static final long serialVersionUID = -221145131122459977L;
 
-    private static final ConcurrentMap<String, Boolean> map = PlatformDependent.newConcurrentHashMap();
+    private static final ConstantPool<Signal> pool = new ConstantPool<Signal>() {
+        @Override
+        protected Signal newConstant(int id, String name) {
+            return new Signal(id, name);
+        }
+    };
 
-    @SuppressWarnings("deprecation")
-    private final UniqueName uname;
+    /**
+     * Returns the {@link Signal} of the specified name.
+     */
+    public static Signal valueOf(String name) {
+        return pool.valueOf(name);
+    }
+
+    private final int id;
+    private final String name;
 
     /**
      * Creates a new {@link Signal} with the specified {@code name}.
      */
-    @SuppressWarnings("deprecation")
-    public static Signal valueOf(String name) {
-        return new Signal(name);
-    }
-
-    /**
-     * @deprecated Use {@link #valueOf(String)} instead.
-     */
-    @Deprecated
-    public Signal(String name) {
-        super(name);
-        uname = new UniqueName(map, name);
+    private Signal(int id, String name) {
+        this.id = id;
+        this.name = name;
     }
 
     /**
@@ -71,7 +70,41 @@ public final class Signal extends Error {
     }
 
     @Override
+    public int id() {
+        return id;
+    }
+
+    @Override
+    public String name() {
+        return name;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return this == obj;
+    }
+
+    @Override
+    public int hashCode() {
+        return System.identityHashCode(this);
+    }
+
+    @Override
+    public int compareTo(Signal other) {
+        if (this == other) {
+            return 0;
+        }
+
+        int returnCode = name.compareTo(other.name());
+        if (returnCode != 0) {
+            return returnCode;
+        }
+
+        return ((Integer) id).compareTo(other.id());
+    }
+
+    @Override
     public String toString() {
-        return uname.name();
+        return name();
     }
 }

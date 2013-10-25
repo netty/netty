@@ -16,12 +16,11 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.util.UniqueName;
-import io.netty.util.internal.PlatformDependent;
+import io.netty.util.AbstractConstant;
+import io.netty.util.ConstantPool;
 
 import java.net.InetAddress;
 import java.net.NetworkInterface;
-import java.util.concurrent.ConcurrentMap;
 
 /**
  * A {@link ChannelOption} allows to configure a {@link ChannelConfig} in a type-safe
@@ -31,10 +30,19 @@ import java.util.concurrent.ConcurrentMap;
  *
  * @param <T>   the type of the value which is valid for the {@link ChannelOption}
  */
-@SuppressWarnings("deprecation")
-public class ChannelOption<T> extends UniqueName {
+public final class ChannelOption<T> extends AbstractConstant<ChannelOption<T>> {
 
-    private static final ConcurrentMap<String, Boolean> names = PlatformDependent.newConcurrentHashMap();
+    private static final ConstantPool<ChannelOption<Object>> pool = new ConstantPool<ChannelOption<Object>>() {
+        @Override
+        protected ChannelOption<Object> newConstant(int id, String name) {
+            return new ChannelOption<Object>(id, name);
+        }
+    };
+
+    @SuppressWarnings("unchecked")
+    public static <T> ChannelOption<T> valueOf(String name) {
+        return (ChannelOption<T>) pool.valueOf(name);
+    }
 
     public static final ChannelOption<ByteBufAllocator> ALLOCATOR = valueOf("ALLOCATOR");
     public static final ChannelOption<RecvByteBufAllocator> RCVBUF_ALLOCATOR = valueOf("RCVBUF_ALLOCATOR");
@@ -82,16 +90,8 @@ public class ChannelOption<T> extends UniqueName {
     /**
      * Creates a new {@link ChannelOption} with the specified {@code name}.
      */
-    public static <T> ChannelOption<T> valueOf(String name) {
-        return new ChannelOption<T>(name);
-    }
-
-    /**
-     * @deprecated Use {@link #valueOf(String)} instead.
-     */
-    @Deprecated
-    protected ChannelOption(String name) {
-        super(names, name);
+    private ChannelOption(int id, String name) {
+        super(id, name);
     }
 
     /**
