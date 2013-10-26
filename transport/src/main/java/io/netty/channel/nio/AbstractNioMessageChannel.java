@@ -50,16 +50,19 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
 
         private final List<Object> readBuf = new ArrayList<Object>();
 
+        private void removeReadOp() {
+            SelectionKey key = selectionKey();
+            int interestOps = key.interestOps();
+            if ((interestOps & readInterestOp) != 0) {
+                // only remove readInterestOp if needed
+                key.interestOps(interestOps & ~readInterestOp);
+            }
+        }
         @Override
         public void read() {
             assert eventLoop().inEventLoop();
-            final SelectionKey key = selectionKey();
             if (!config().isAutoRead()) {
-                int interestOps = key.interestOps();
-                if ((interestOps & readInterestOp) != 0) {
-                    // only remove readInterestOp if needed
-                    key.interestOps(interestOps & ~readInterestOp);
-                }
+                removeReadOp();
             }
 
             final ChannelConfig config = config();
