@@ -27,6 +27,22 @@ import java.nio.charset.Charset;
  */
 public interface HttpData extends InterfaceHttpData {
     /**
+     * Set the maxSize for this HttpData. When limit will be reached, and exception will be raised.
+     * Setting it to (-1) means no limitation.
+     * 
+     * By default, to be set from the HttpDataFactory.
+     * @param maxSize
+     */
+    public void setMaxSize(long maxSize);
+
+    /**
+     * Check if the new size is not reaching the limit allowed
+     * @param newSize
+     * @throws IOException
+     */
+    public void checkSize(long newSize) throws IOException;
+
+    /**
      * Set the content from the ChannelBuffer (erase any previous data)
      *
      * @param buffer
