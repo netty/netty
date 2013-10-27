@@ -16,11 +16,22 @@
 package io.netty.handler.codec.compression;
 
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 /**
  * Creates a new {@link ZlibEncoder} and a new {@link ZlibDecoder}.
  */
 public final class ZlibCodecFactory {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(ZlibCodecFactory.class);
+
+    private static final boolean noJdkZlibDecoder;
+
+    static {
+        noJdkZlibDecoder = SystemPropertyUtil.getBoolean("io.netty.noJdkZlibDecoder", true);
+        logger.debug("-Dio.netty.noJdkZlibDecoder: {}", noJdkZlibDecoder);
+    }
 
     public static ZlibEncoder newZlibEncoder(int compressionLevel) {
         if (PlatformDependent.javaVersion() < 7) {
@@ -79,7 +90,7 @@ public final class ZlibCodecFactory {
     }
 
     public static ZlibDecoder newZlibDecoder() {
-        if (PlatformDependent.javaVersion() < 7) {
+        if (PlatformDependent.javaVersion() < 7 || noJdkZlibDecoder) {
             return new JZlibDecoder();
         } else {
             return new JdkZlibDecoder();
@@ -91,7 +102,7 @@ public final class ZlibCodecFactory {
             case ZLIB_OR_NONE:
                 return new JZlibDecoder(wrapper);
             default:
-                if (PlatformDependent.javaVersion() < 7) {
+                if (PlatformDependent.javaVersion() < 7 || noJdkZlibDecoder) {
                     return new JZlibDecoder(wrapper);
                 } else {
                     return new JdkZlibDecoder(wrapper);
@@ -100,7 +111,7 @@ public final class ZlibCodecFactory {
     }
 
     public static ZlibDecoder newZlibDecoder(byte[] dictionary) {
-        if (PlatformDependent.javaVersion() < 7) {
+        if (PlatformDependent.javaVersion() < 7 || noJdkZlibDecoder) {
             return new JZlibDecoder(dictionary);
         } else {
             return new JdkZlibDecoder(dictionary);

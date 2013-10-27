@@ -56,15 +56,15 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     /**
      * Create a new instance
      */
-    public NioSocketChannel() {
-        this(newSocket());
+    public NioSocketChannel(EventLoop eventLoop) {
+        this(eventLoop, newSocket());
     }
 
     /**
      * Create a new instance using the given {@link SocketChannel}.
      */
-    public NioSocketChannel(SocketChannel socket) {
-        this(null, socket);
+    public NioSocketChannel(EventLoop eventLoop, SocketChannel socket) {
+        this(null, eventLoop, socket);
     }
 
     /**
@@ -73,8 +73,8 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
      * @param parent    the {@link Channel} which created this instance or {@code null} if it was created by the user
      * @param socket    the {@link SocketChannel} which will be used
      */
-    public NioSocketChannel(Channel parent, SocketChannel socket) {
-        super(parent, socket);
+    public NioSocketChannel(Channel parent, EventLoop eventLoop, SocketChannel socket) {
+        super(parent, eventLoop, socket);
         config = new DefaultSocketChannelConfig(this, socket.socket());
     }
 
@@ -245,9 +245,11 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
             final SocketChannel ch = javaChannel();
             long writtenBytes = 0;
             boolean done = false;
+            boolean setOpWrite = false;
             for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
                 final long localWrittenBytes = ch.write(nioBuffers, 0, nioBufferCnt);
                 if (localWrittenBytes == 0) {
+                    setOpWrite = true;
                     break;
                 }
                 expectedWrittenBytes -= localWrittenBytes;
@@ -279,19 +281,21 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
                     final int readableBytes = buf.writerIndex() - readerIndex;
 
                     if (readableBytes < writtenBytes) {
+                        in.progress(readableBytes);
                         in.remove();
                         writtenBytes -= readableBytes;
                     } else if (readableBytes > writtenBytes) {
                         buf.readerIndex(readerIndex + (int) writtenBytes);
                         in.progress(writtenBytes);
                         break;
-                    } else { // readable == writtenBytes
+                    } else { // readableBytes == writtenBytes
+                        in.progress(readableBytes);
                         in.remove();
                         break;
                     }
                 }
 
-                setOpWrite();
+                incompleteWrite(setOpWrite);
                 break;
             }
         }

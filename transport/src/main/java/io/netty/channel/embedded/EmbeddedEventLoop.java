@@ -89,17 +89,6 @@ final class EmbeddedEventLoop extends AbstractEventExecutor implements EventLoop
     }
 
     @Override
-    public ChannelFuture register(Channel channel) {
-        return register(channel, channel.newPromise());
-    }
-
-    @Override
-    public ChannelFuture register(Channel channel, ChannelPromise promise) {
-        channel.unsafe().register(this, promise);
-        return promise;
-    }
-
-    @Override
     public boolean inEventLoop() {
         return true;
     }

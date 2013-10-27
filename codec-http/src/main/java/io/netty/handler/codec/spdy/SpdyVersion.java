@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,10 +15,23 @@
  */
 package io.netty.handler.codec.spdy;
 
-public final class SpdyConstants {
+public enum SpdyVersion {
+    SPDY_3   (3, false),
+    SPDY_3_1 (3, true);
 
-    public static final int SPDY_MIN_VERSION = 2;
-    public static final int SPDY_MAX_VERSION = 3;
+    private final int version;
+    private final boolean sessionFlowControl;
 
-    private SpdyConstants() { }
+    private SpdyVersion(int version, boolean sessionFlowControl) {
+        this.version = version;
+        this.sessionFlowControl = sessionFlowControl;
+    }
+
+    int getVersion() {
+        return version;
+    }
+
+    boolean useSessionFlowControl() {
+        return sessionFlowControl;
+    }
 }

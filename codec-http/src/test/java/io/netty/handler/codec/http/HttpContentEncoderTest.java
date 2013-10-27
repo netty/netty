@@ -67,6 +67,8 @@ public class HttpContentEncoderTest {
         chunk = (HttpContent) ch.readOutbound();
         assertThat(chunk.content().isReadable(), is(false));
         assertThat(chunk, is(instanceOf(LastHttpContent.class)));
+        chunk.release();
+
         assertThat(ch.readOutbound(), is(nullValue()));
     }
 
@@ -88,8 +90,12 @@ public class HttpContentEncoderTest {
         HttpContent chunk;
         chunk = (HttpContent) ch.readOutbound();
         assertThat(chunk.content().toString(CharsetUtil.US_ASCII), is("3"));
+        chunk.release();
+
         chunk = (HttpContent) ch.readOutbound();
         assertThat(chunk.content().toString(CharsetUtil.US_ASCII), is("2"));
+        chunk.release();
+
         chunk = (HttpContent) ch.readOutbound();
         assertThat(chunk.content().toString(CharsetUtil.US_ASCII), is("1"));
 
@@ -97,6 +103,47 @@ public class HttpContentEncoderTest {
         chunk = (HttpContent) ch.readOutbound();
         assertThat(chunk.content().isReadable(), is(false));
         assertThat(chunk, is(instanceOf(LastHttpContent.class)));
+        chunk.release();
+
+        assertThat(ch.readOutbound(), is(nullValue()));
+    }
+
+    @Test
+    public void testChunkedContentWithTrailingHeader() throws Exception {
+        EmbeddedChannel ch = new EmbeddedChannel(new TestEncoder());
+        ch.writeInbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
+
+        HttpResponse res = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        res.headers().set(Names.TRANSFER_ENCODING, Values.CHUNKED);
+        ch.writeOutbound(res);
+
+        assertEncodedResponse(ch);
+
+        ch.writeOutbound(new DefaultHttpContent(Unpooled.wrappedBuffer(new byte[3])));
+        ch.writeOutbound(new DefaultHttpContent(Unpooled.wrappedBuffer(new byte[2])));
+        LastHttpContent content = new DefaultLastHttpContent(Unpooled.wrappedBuffer(new byte[1]));
+        content.trailingHeaders().set("X-Test", "Netty");
+        ch.writeOutbound(content);
+
+        HttpContent chunk;
+        chunk = (HttpContent) ch.readOutbound();
+        assertThat(chunk.content().toString(CharsetUtil.US_ASCII), is("3"));
+        chunk.release();
+
+        chunk = (HttpContent) ch.readOutbound();
+        assertThat(chunk.content().toString(CharsetUtil.US_ASCII), is("2"));
+        chunk.release();
+
+        chunk = (HttpContent) ch.readOutbound();
+        assertThat(chunk.content().toString(CharsetUtil.US_ASCII), is("1"));
+        assertThat(chunk, is(instanceOf(HttpContent.class)));
+        chunk.release();
+
+        chunk = (HttpContent) ch.readOutbound();
+        assertThat(chunk.content().isReadable(), is(false));
+        assertThat(chunk, is(instanceOf(LastHttpContent.class)));
+        assertEquals("Netty", ((LastHttpContent) chunk).trailingHeaders().get("X-Test"));
+        chunk.release();
 
         assertThat(ch.readOutbound(), is(nullValue()));
     }
@@ -115,8 +162,12 @@ public class HttpContentEncoderTest {
         HttpContent c = (HttpContent) ch.readOutbound();
         assertThat(c.content().readableBytes(), is(2));
         assertThat(c.content().toString(CharsetUtil.US_ASCII), is("42"));
+        c.release();
+
         LastHttpContent last = (LastHttpContent) ch.readOutbound();
         assertThat(last.content().readableBytes(), is(0));
+        last.release();
+
         assertThat(ch.readOutbound(), is(nullValue()));
     }
 
@@ -136,10 +187,13 @@ public class HttpContentEncoderTest {
         HttpContent chunk = (HttpContent) ch.readOutbound();
         assertThat(chunk.content().toString(CharsetUtil.US_ASCII), is("0"));
         assertThat(chunk, is(instanceOf(HttpContent.class)));
+        chunk.release();
 
         chunk = (HttpContent) ch.readOutbound();
         assertThat(chunk.content().isReadable(), is(false));
         assertThat(chunk, is(instanceOf(LastHttpContent.class)));
+        chunk.release();
+
         assertThat(ch.readOutbound(), is(nullValue()));
     }
 
@@ -161,13 +215,36 @@ public class HttpContentEncoderTest {
         res = (FullHttpResponse) o;
         assertThat(res.headers().get(Names.TRANSFER_ENCODING), is(nullValue()));
 
-        // Length must be set to 0.
-        assertThat(res.headers().get(Names.CONTENT_LENGTH), is("0"));
         // Content encoding shouldn't be modified.
         assertThat(res.headers().get(Names.CONTENT_ENCODING), is(nullValue()));
         assertThat(res.content().readableBytes(), is(0));
         assertThat(res.content().toString(CharsetUtil.US_ASCII), is(""));
+        res.release();
 
+        assertThat(ch.readOutbound(), is(nullValue()));
+    }
+
+    @Test
+    public void testEmptyFullContentWithTrailer() throws Exception {
+        EmbeddedChannel ch = new EmbeddedChannel(new TestEncoder());
+        ch.writeInbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
+
+        FullHttpResponse res = new DefaultFullHttpResponse(
+                HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.EMPTY_BUFFER);
+        res.trailingHeaders().set("X-Test", "Netty");
+        ch.writeOutbound(res);
+
+        Object o = ch.readOutbound();
+        assertThat(o, is(instanceOf(FullHttpResponse.class)));
+
+        res = (FullHttpResponse) o;
+        assertThat(res.headers().get(Names.TRANSFER_ENCODING), is(nullValue()));
+
+        // Content encoding shouldn't be modified.
+        assertThat(res.headers().get(Names.CONTENT_ENCODING), is(nullValue()));
+        assertThat(res.content().readableBytes(), is(0));
+        assertThat(res.content().toString(CharsetUtil.US_ASCII), is(""));
+        assertEquals("Netty", res.trailingHeaders().get("X-Test"));
         assertThat(ch.readOutbound(), is(nullValue()));
     }
 

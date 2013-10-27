@@ -88,7 +88,7 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
     }
 
     @Override
-    public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         if (decoder != null) {
             decoder.cleanFiles();
         }
@@ -114,8 +114,7 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
             responseContent.append("\r\n\r\n");
 
             // new getMethod
-            List<Entry<String, String>> headers = request.headers().entries();
-            for (Entry<String, String> entry : headers) {
+            for (Entry<String, String> entry : request.headers()) {
                 responseContent.append("HEADER: " + entry.getKey() + '=' + entry.getValue() + "\r\n");
             }
             responseContent.append("\r\n\r\n");

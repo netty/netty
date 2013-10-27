@@ -63,8 +63,8 @@ public abstract class AbstractNioChannel extends AbstractChannel {
      * @param ch                the underlying {@link SelectableChannel} on which it operates
      * @param readInterestOp    the ops to set to receive data from the {@link SelectableChannel}
      */
-    protected AbstractNioChannel(Channel parent, SelectableChannel ch, int readInterestOp) {
-        super(parent);
+    protected AbstractNioChannel(Channel parent, EventLoop eventLoop, SelectableChannel ch, int readInterestOp) {
+        super(parent, eventLoop);
         this.ch = ch;
         this.readInterestOp = readInterestOp;
         try {
@@ -210,8 +210,8 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                     newT.setStackTrace(t.getStackTrace());
                     t = newT;
                 }
-                closeIfClosed();
                 promise.tryFailure(t);
+                closeIfClosed();
             }
         }
 
@@ -240,7 +240,11 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                 connectPromise.setFailure(t);
                 closeIfClosed();
             } finally {
-                connectTimeoutFuture.cancel(false);
+                // Check for null as the connectTimeoutFuture is only created if a connectTimeoutMillis > 0 is used
+                // See https://github.com/netty/netty/issues/1770
+                if (connectTimeoutFuture != null) {
+                    connectTimeoutFuture.cancel(false);
+                }
                 connectPromise = null;
             }
         }

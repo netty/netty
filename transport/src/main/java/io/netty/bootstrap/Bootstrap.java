@@ -16,15 +16,19 @@
 package io.netty.bootstrap;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.EventLoop;
+import io.netty.channel.ServerChannel;
 import io.netty.util.AttributeKey;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.lang.reflect.Constructor;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -42,13 +46,55 @@ public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Bootstrap.class);
 
+    private volatile ChannelFactory<? extends Channel> channelFactory;
+
     private volatile SocketAddress remoteAddress;
 
     public Bootstrap() { }
 
     private Bootstrap(Bootstrap bootstrap) {
         super(bootstrap);
+        channelFactory = bootstrap.channelFactory;
         remoteAddress = bootstrap.remoteAddress;
+    }
+
+    /**
+     * The {@link Class} which is used to create {@link Channel} instances from.
+     * You either use this or {@link #channelFactory(ChannelFactory)} if your
+     * {@link Channel} implementation has no no-args constructor.
+     */
+    public Bootstrap channel(Class<? extends Channel> channelClass) {
+        if (channelClass == null) {
+            throw new NullPointerException("channelClass");
+        }
+        return channelFactory(new BootstrapChannelFactory<Channel>(channelClass));
+    }
+
+    /**
+     * {@link ServerChannelFactory} which is used to create {@link ServerChannel} instances when calling
+     * {@link #bind()}. This method is usually only used if {@link #channel(Class)} is not working for you because of
+     * some more complex needs. If your {@link Channel} implementation has a no-args constructor, its highly recommend
+     * to just use {@link #channel(Class)} for simplify your code.
+     */
+    public Bootstrap channelFactory(ChannelFactory<? extends Channel> channelFactory) {
+        if (channelFactory == null) {
+            throw new NullPointerException("channelFactory");
+        }
+        if (this.channelFactory != null) {
+            throw new IllegalStateException("channelFactory set already");
+        }
+
+        this.channelFactory = channelFactory;
+        return this;
+    }
+
+    ChannelFactory<? extends Channel> channelFactory() {
+        return channelFactory;
+    }
+
+    Channel createChannel() {
+        EventLoop eventLoop = group().next();
+        return channelFactory().newChannel(eventLoop);
     }
 
     /**
@@ -207,6 +253,9 @@ public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
         if (handler() == null) {
             throw new IllegalStateException("handler not set");
         }
+        if (channelFactory == null) {
+            throw new IllegalStateException("factory not set");
+        }
         return this;
     }
 
@@ -229,5 +278,29 @@ public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
         buf.append(')');
 
         return buf.toString();
+    }
+
+    private static final class BootstrapChannelFactory<T extends Channel> implements ChannelFactory<T> {
+
+        private final Class<? extends T> clazz;
+
+        BootstrapChannelFactory(Class<? extends T> clazz) {
+            this.clazz = clazz;
+        }
+
+        @Override
+        public T newChannel(EventLoop eventLoop) {
+            try {
+                Constructor<? extends T> constructor = clazz.getConstructor(EventLoop.class);
+                return constructor.newInstance(eventLoop);
+            } catch (Throwable t) {
+                throw new ChannelException("Unable to create Channel from class " + clazz, t);
+            }
+        }
+
+        @Override
+        public String toString() {
+            return clazz.getSimpleName() + ".class";
+        }
     }
 }

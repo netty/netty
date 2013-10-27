@@ -68,6 +68,7 @@ public class HttpObjectAggregatorTest {
             // This should be false as we decompose the buffer before to not have deep hierarchy
             assertFalse(buf instanceof CompositeByteBuf);
         }
+        aggregatedMessage.release();
     }
 
     @Test

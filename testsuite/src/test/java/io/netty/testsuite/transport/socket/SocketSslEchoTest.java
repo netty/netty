@@ -55,7 +55,16 @@ public class SocketSslEchoTest extends AbstractSocketTest {
     }
 
     public void testSslEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSslEcho0(sb, cb, false);
+        testSslEcho0(sb, cb, false, false);
+    }
+
+    @Test
+    public void testSslEchoComposite() throws Throwable {
+        run();
+    }
+
+    public void testSslEchoComposite(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        testSslEcho0(sb, cb, false, true);
     }
 
     @Test
@@ -64,12 +73,22 @@ public class SocketSslEchoTest extends AbstractSocketTest {
     }
 
     public void testSslEchoWithChunkHandler(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSslEcho0(sb, cb, true);
+        testSslEcho0(sb, cb, true, false);
     }
 
-    private void testSslEcho0(ServerBootstrap sb, Bootstrap cb, final boolean chunkWriteHandler) throws Throwable {
-        final EchoHandler sh = new EchoHandler(true);
-        final EchoHandler ch = new EchoHandler(false);
+    @Test
+    public void testSslEchoWithChunkHandlerComposite() throws Throwable {
+        run();
+    }
+
+    public void testSslEchoWithChunkHandlerComposite(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        testSslEcho0(sb, cb, true, true);
+    }
+
+    private void testSslEcho0(ServerBootstrap sb, Bootstrap cb,
+                              final boolean chunkWriteHandler, final boolean composite) throws Throwable {
+        final EchoHandler sh = new EchoHandler(true, composite);
+        final EchoHandler ch = new EchoHandler(false, composite);
 
         final SSLEngine sse = BogusSslContextFactory.getServerContext().createSSLEngine();
         final SSLEngine cse = BogusSslContextFactory.getClientContext().createSSLEngine();
@@ -110,7 +129,11 @@ public class SocketSslEchoTest extends AbstractSocketTest {
 
         for (int i = FIRST_MESSAGE_SIZE; i < data.length;) {
             int length = Math.min(random.nextInt(1024 * 64), data.length - i);
-            ChannelFuture future = cc.writeAndFlush(Unpooled.wrappedBuffer(data, i, length));
+            ByteBuf buf = Unpooled.wrappedBuffer(data, i, length);
+            if (composite) {
+                buf = Unpooled.compositeBuffer().addComponent(buf).writerIndex(buf.writerIndex());
+            }
+            ChannelFuture future = cc.writeAndFlush(buf);
             future.sync();
             i += length;
         }
@@ -168,9 +191,11 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;
         private final boolean server;
+        private final boolean composite;
 
-        EchoHandler(boolean server) {
+        EchoHandler(boolean server, boolean composite) {
             this.server = server;
+            this.composite = composite;
         }
 
         @Override
@@ -190,7 +215,11 @@ public class SocketSslEchoTest extends AbstractSocketTest {
             }
 
             if (channel.parent() != null) {
-                channel.write(Unpooled.wrappedBuffer(actual));
+                ByteBuf buf = Unpooled.wrappedBuffer(actual);
+                if (composite) {
+                    buf = Unpooled.compositeBuffer().addComponent(buf).writerIndex(buf.writerIndex());
+                }
+                channel.write(buf);
             }
 
             counter += actual.length;

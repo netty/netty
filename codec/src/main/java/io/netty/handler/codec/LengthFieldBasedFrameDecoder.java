@@ -369,8 +369,8 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
             in.skipBytes(localBytesToDiscard);
             bytesToDiscard -= localBytesToDiscard;
             this.bytesToDiscard = bytesToDiscard;
+
             failIfNecessary(false);
-            return null;
         }
 
         if (in.readableBytes() < lengthFieldEndOffset) {
@@ -396,11 +396,18 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
         }
 
         if (frameLength > maxFrameLength) {
-            // Enter the discard mode and discard everything received so far.
-            discardingTooLongFrame = true;
+            long discard = frameLength - in.readableBytes();
             tooLongFrameLength = frameLength;
-            bytesToDiscard = frameLength - in.readableBytes();
-            in.skipBytes(in.readableBytes());
+
+            if (discard < 0) {
+                // buffer contains more bytes then the frameLength so we can discard all now
+                in.skipBytes((int) frameLength);
+            } else {
+                // Enter the discard mode and discard everything received so far.
+                discardingTooLongFrame = true;
+                bytesToDiscard = discard;
+                in.skipBytes(in.readableBytes());
+            }
             failIfNecessary(true);
             return null;
         }

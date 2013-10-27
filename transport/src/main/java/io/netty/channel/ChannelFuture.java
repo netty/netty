@@ -146,7 +146,7 @@ import java.util.concurrent.TimeUnit;
  * // GOOD
  * {@link Bootstrap} b = ...;
  * // Configure the connect timeout option.
- * <b>b.setOption({@link ChannelOption}.CONNECT_TIMEOUT_MILLIS, 10000);</b>
+ * <b>b.option({@link ChannelOption}.CONNECT_TIMEOUT_MILLIS, 10000);</b>
  * {@link ChannelFuture} f = b.connect(...);
  * f.awaitUninterruptibly();
  *

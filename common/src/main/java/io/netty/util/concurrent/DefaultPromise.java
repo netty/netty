@@ -39,8 +39,8 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             return 0;
         }
     };
-    private static final Signal SUCCESS = new Signal(DefaultPromise.class.getName() + ".SUCCESS");
-    private static final Signal UNCANCELLABLE = new Signal(DefaultPromise.class.getName() + ".UNCANCELLABLE");
+    private static final Signal SUCCESS = Signal.valueOf(DefaultPromise.class, "SUCCESS");
+    private static final Signal UNCANCELLABLE = Signal.valueOf(DefaultPromise.class, "UNCANCELLABLE");
     private final EventExecutor executor;
 
     private volatile Object result;

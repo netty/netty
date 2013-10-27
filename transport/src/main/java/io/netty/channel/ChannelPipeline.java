@@ -138,7 +138,6 @@ import java.util.NoSuchElementException;
  *     <li>{@link ChannelHandlerContext#fireUserEventTriggered(Object)}</li>
  *     <li>{@link ChannelHandlerContext#fireChannelWritabilityChanged()}</li>
  *     <li>{@link ChannelHandlerContext#fireChannelInactive()}</li>
- *     <li>{@link ChannelHandlerContext#fireChannelUnregistered()}</li>
  *     </ul>
  * </li>
  * <li>Outbound event propagation methods:
@@ -150,7 +149,6 @@ import java.util.NoSuchElementException;
  *     <li>{@link ChannelHandlerContext#read()}</li>
  *     <li>{@link ChannelHandlerContext#disconnect(ChannelPromise)}</li>
  *     <li>{@link ChannelHandlerContext#close(ChannelPromise)}</li>
- *     <li>{@link ChannelHandlerContext#deregister(ChannelPromise)}</li>
  *     </ul>
  * </li>
  * </ul>
@@ -596,9 +594,6 @@ public interface ChannelPipeline
 
     @Override
     ChannelPipeline fireChannelRegistered();
-
-    @Override
-    ChannelPipeline fireChannelUnregistered();
 
     @Override
     ChannelPipeline fireChannelActive();

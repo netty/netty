@@ -34,7 +34,6 @@ import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.List;
 
-import static io.netty.handler.codec.spdy.SpdyConstants.*;
 import static org.junit.Assert.*;
 
 public class SpdyFrameDecoderTest {
@@ -48,57 +47,59 @@ public class SpdyFrameDecoderTest {
 
     @Test
     public void testTooLargeHeaderNameOnSynStreamRequest() throws Exception {
-        for (int version = SPDY_MIN_VERSION; version <= SPDY_MAX_VERSION; version++) {
-            final int finalVersion = version;
-            List<Integer> headerSizes = Arrays.asList(90, 900);
-            for (final int maxHeaderSize : headerSizes) { // 90 catches the header name, 900 the value
-                SpdyHeadersFrame frame = new DefaultSpdySynStreamFrame(1, 0, (byte) 0);
-                addHeader(frame, 100, 1000);
-                final CaptureHandler captureHandler = new CaptureHandler();
-                ServerBootstrap sb = new ServerBootstrap();
-                sb.group(group);
-                sb.channel(NioServerSocketChannel.class);
-                sb.childHandler(new ChannelInitializer<SocketChannel>() {
-                    @Override
-                    protected void initChannel(SocketChannel ch) throws Exception {
-                        ch.pipeline().addLast(
-                                new SpdyFrameDecoder(finalVersion, 10000, maxHeaderSize),
-                                new SpdySessionHandler(finalVersion, true),
-                                captureHandler);
-                    }
-                });
+        testTooLargeHeaderNameOnSynStreamRequest(SpdyVersion.SPDY_3);
+        testTooLargeHeaderNameOnSynStreamRequest(SpdyVersion.SPDY_3_1);
+    }
 
-                Bootstrap cb = new Bootstrap();
-                cb.group(group);
-                cb.channel(NioSocketChannel.class);
-                cb.handler(new ChannelInitializer<SocketChannel>() {
-                    @Override
-                    protected void initChannel(SocketChannel ch) throws Exception {
-                        ch.pipeline().addLast(new SpdyFrameEncoder(finalVersion));
-                    }
-                });
-                Channel sc = sb.bind(0).sync().channel();
-                int port = ((InetSocketAddress) sc.localAddress()).getPort();
+    private void testTooLargeHeaderNameOnSynStreamRequest(final SpdyVersion version) throws Exception {
+        List<Integer> headerSizes = Arrays.asList(90, 900);
+        for (final int maxHeaderSize : headerSizes) { // 90 catches the header name, 900 the value
+            SpdyHeadersFrame frame = new DefaultSpdySynStreamFrame(1, 0, (byte) 0);
+            addHeader(frame, 100, 1000);
+            final CaptureHandler captureHandler = new CaptureHandler();
+            ServerBootstrap sb = new ServerBootstrap();
+            sb.group(group);
+            sb.channel(NioServerSocketChannel.class);
+            sb.childHandler(new ChannelInitializer<SocketChannel>() {
+                @Override
+                protected void initChannel(SocketChannel ch) throws Exception {
+                    ch.pipeline().addLast(
+                            new SpdyFrameDecoder(version, 10000, maxHeaderSize),
+                            new SpdySessionHandler(version, true),
+                            captureHandler);
+                }
+            });
 
-                Channel cc = cb.connect(NetUtil.LOCALHOST, port).sync().channel();
+            Bootstrap cb = new Bootstrap();
+            cb.group(group);
+            cb.channel(NioSocketChannel.class);
+            cb.handler(new ChannelInitializer<SocketChannel>() {
+                @Override
+                protected void initChannel(SocketChannel ch) throws Exception {
+                    ch.pipeline().addLast(new SpdyFrameEncoder(version));
+                }
+            });
+            Channel sc = sb.bind(0).sync().channel();
+            int port = ((InetSocketAddress) sc.localAddress()).getPort();
 
-                sendAndWaitForFrame(cc, frame, captureHandler);
+            Channel cc = cb.connect(NetUtil.LOCALHOST, port).sync().channel();
 
-                assertNotNull("version " + version + ", not null message",
-                        captureHandler.message);
-                String message = "version " + version + ", should be SpdyHeadersFrame, was " +
-                        captureHandler.message.getClass();
-                assertTrue(
-                        message,
-                        captureHandler.message instanceof SpdyHeadersFrame);
-                SpdyHeadersFrame writtenFrame = (SpdyHeadersFrame) captureHandler.message;
+            sendAndWaitForFrame(cc, frame, captureHandler);
 
-                assertTrue("should be truncated", writtenFrame.isTruncated());
-                assertFalse("should not be invalid", writtenFrame.isInvalid());
+            assertNotNull("version " + version + ", not null message",
+                    captureHandler.message);
+            String message = "version " + version + ", should be SpdyHeadersFrame, was " +
+                    captureHandler.message.getClass();
+            assertTrue(
+                    message,
+                    captureHandler.message instanceof SpdyHeadersFrame);
+            SpdyHeadersFrame writtenFrame = (SpdyHeadersFrame) captureHandler.message;
 
-                sc.close().sync();
-                cc.close().sync();
-            }
+            assertTrue("should be truncated", writtenFrame.isTruncated());
+            assertFalse("should not be invalid", writtenFrame.isInvalid());
+
+            sc.close().sync();
+            cc.close().sync();
         }
     }
 

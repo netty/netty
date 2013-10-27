@@ -187,7 +187,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
          * Register the {@link Channel} of the {@link ChannelPromise} with the {@link EventLoop} and notify
          * the {@link ChannelFuture} once the registration was complete.
          */
-        void register(EventLoop eventLoop, ChannelPromise promise);
+        void register(ChannelPromise promise);
 
         /**
          * Bind the {@link SocketAddress} to the {@link Channel} of the {@link ChannelPromise} and notify
@@ -221,12 +221,6 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
          * when registration attempt failed.
          */
         void closeForcibly();
-
-        /**
-         * Deregister the {@link Channel} of the {@link ChannelPromise} from {@link EventLoop} and notify the
-         * {@link ChannelPromise} once the operation was complete.
-         */
-        void deregister(ChannelPromise promise);
 
         /**
          * Schedules a read operation that fills the inbound buffer of the first {@link ChannelInboundHandler} in the

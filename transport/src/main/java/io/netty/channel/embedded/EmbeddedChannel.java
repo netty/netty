@@ -44,47 +44,53 @@ import java.util.Queue;
  */
 public class EmbeddedChannel extends AbstractChannel {
 
+    private static final ChannelHandler[] EMPTY_HANDLERS = new ChannelHandler[0];
+    private enum State { OPEN, ACTIVE, CLOSED }
+
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(EmbeddedChannel.class);
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
-    private final EmbeddedEventLoop loop = new EmbeddedEventLoop();
+    private final EmbeddedEventLoop loop;
     private final ChannelConfig config = new DefaultChannelConfig(this);
     private final SocketAddress localAddress = new EmbeddedSocketAddress();
     private final SocketAddress remoteAddress = new EmbeddedSocketAddress();
     private final Queue<Object> inboundMessages = new ArrayDeque<Object>();
     private final Queue<Object> outboundMessages = new ArrayDeque<Object>();
     private Throwable lastException;
-    private int state; // 0 = OPEN, 1 = ACTIVE, 2 = CLOSED
+    private State state;
 
     /**
-     * Create a new instance
+     * Create a new instance with an empty pipeline.
+     */
+    public EmbeddedChannel() {
+        this(EMPTY_HANDLERS);
+    }
+
+    /**
+     * Create a new instance with the pipeline initialized with the specified handlers.
      *
      * @param handlers the @link ChannelHandler}s which will be add in the {@link ChannelPipeline}
      */
     public EmbeddedChannel(ChannelHandler... handlers) {
-        super(null);
+        super(null, new EmbeddedEventLoop());
+
+        loop = (EmbeddedEventLoop) eventLoop();
 
         if (handlers == null) {
             throw new NullPointerException("handlers");
         }
 
-        int nHandlers = 0;
         ChannelPipeline p = pipeline();
         for (ChannelHandler h: handlers) {
             if (h == null) {
                 break;
             }
-            nHandlers ++;
             p.addLast(h);
         }
 
-        if (nHandlers == 0) {
-            throw new IllegalArgumentException("handlers is empty.");
-        }
-
         p.addLast(new LastInboundHandler());
-        loop.register(this);
+        unsafe().register(newPromise());
     }
 
     @Override
@@ -99,12 +105,12 @@ public class EmbeddedChannel extends AbstractChannel {
 
     @Override
     public boolean isOpen() {
-        return state < 2;
+        return state != State.CLOSED;
     }
 
     @Override
     public boolean isActive() {
-        return state == 1;
+        return state == State.ACTIVE;
     }
 
     /**
@@ -197,7 +203,8 @@ public class EmbeddedChannel extends AbstractChannel {
 
             flush();
 
-            for (int i = 0; i < futures.size(); i++) {
+            int size = futures.size();
+            for (int i = 0; i < size; i++) {
                 ChannelFuture future = (ChannelFuture) futures.get(i);
                 assert future.isDone();
                 if (future.cause() != null) {
@@ -288,7 +295,7 @@ public class EmbeddedChannel extends AbstractChannel {
 
     @Override
     protected void doRegister() throws Exception {
-        state = 1;
+        state = State.ACTIVE;
     }
 
     @Override
@@ -303,7 +310,7 @@ public class EmbeddedChannel extends AbstractChannel {
 
     @Override
     protected void doClose() throws Exception {
-        state = 2;
+        state = State.CLOSED;
     }
 
     @Override
@@ -319,7 +326,7 @@ public class EmbeddedChannel extends AbstractChannel {
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
         for (;;) {
-            Object msg = in.current();
+            Object msg = in.current(false);
             if (msg == null) {
                 break;
             }

@@ -21,6 +21,7 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.EventLoop;
 import io.netty.channel.FileRegion;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.util.internal.StringUtil;
@@ -38,8 +39,8 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
     /**
      * @see AbstractOioByteChannel#AbstractOioByteChannel(Channel)
      */
-    protected AbstractOioByteChannel(Channel parent) {
-        super(parent);
+    protected AbstractOioByteChannel(Channel parent, EventLoop eventLoop) {
+        super(parent, eventLoop);
     }
 
     protected boolean isInputShutdown() {
@@ -155,7 +156,7 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
         for (;;) {
-            Object msg = in.current();
+            Object msg = in.current(false);
 
             if (msg instanceof ByteBuf) {
                 ByteBuf buf = (ByteBuf) msg;

@@ -29,6 +29,7 @@ import io.netty.util.internal.PlatformDependent;
 import java.io.IOException;
 import java.util.Map;
 
+import static io.netty.channel.ChannelOption.*;
 import static io.netty.channel.sctp.SctpChannelOption.*;
 
 /**

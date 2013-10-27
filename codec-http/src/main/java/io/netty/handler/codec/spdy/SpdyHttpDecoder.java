@@ -51,7 +51,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
      *        If the length of the message content exceeds this value,
      *        a {@link TooLongFrameException} will be raised.
      */
-    public SpdyHttpDecoder(int version, int maxContentLength) {
+    public SpdyHttpDecoder(SpdyVersion version, int maxContentLength) {
         this(version, maxContentLength, new HashMap<Integer, FullHttpMessage>());
     }
 
@@ -64,16 +64,15 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
      *        a {@link TooLongFrameException} will be raised.
      * @param messageMap the {@link Map} used to hold partially received messages.
      */
-    protected SpdyHttpDecoder(int version, int maxContentLength, Map<Integer, FullHttpMessage> messageMap) {
-        if (version < SpdyConstants.SPDY_MIN_VERSION || version > SpdyConstants.SPDY_MAX_VERSION) {
-            throw new IllegalArgumentException(
-                    "unsupported version: " + version);
+    protected SpdyHttpDecoder(SpdyVersion version, int maxContentLength, Map<Integer, FullHttpMessage> messageMap) {
+        if (version == null) {
+            throw new NullPointerException("version");
         }
         if (maxContentLength <= 0) {
             throw new IllegalArgumentException(
                     "maxContentLength must be a positive integer: " + maxContentLength);
         }
-        spdyVersion = version;
+        spdyVersion = version.getVersion();
         this.maxContentLength = maxContentLength;
         this.messageMap = messageMap;
     }
@@ -242,7 +241,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
 
             // Ignore trailers in a truncated HEADERS frame.
             if (!spdyHeadersFrame.isTruncated()) {
-                for (Map.Entry<String, String> e: spdyHeadersFrame.headers().entries()) {
+                for (Map.Entry<String, String> e: spdyHeadersFrame.headers()) {
                     fullHttpMessage.headers().add(e.getKey(), e.getValue());
                 }
             }
@@ -311,7 +310,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
             HttpHeaders.setHost(req, host);
         }
 
-        for (Map.Entry<String, String> e: requestFrame.headers().entries()) {
+        for (Map.Entry<String, String> e: requestFrame.headers()) {
             req.headers().add(e.getKey(), e.getValue());
         }
 
@@ -333,7 +332,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
         SpdyHeaders.removeVersion(spdyVersion, responseFrame);
 
         FullHttpResponse res = new DefaultFullHttpResponse(version, status);
-        for (Map.Entry<String, String> e: responseFrame.headers().entries()) {
+        for (Map.Entry<String, String> e: responseFrame.headers()) {
             res.headers().add(e.getKey(), e.getValue());
         }
 

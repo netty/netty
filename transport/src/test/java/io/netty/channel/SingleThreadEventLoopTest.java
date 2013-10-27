@@ -32,7 +32,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.*;
 
 public class SingleThreadEventLoopTest {
@@ -321,7 +322,9 @@ public class SingleThreadEventLoopTest {
     @SuppressWarnings("deprecation")
     public void testRegistrationAfterShutdown() throws Exception {
         loopA.shutdown();
-        ChannelFuture f = loopA.register(new LocalChannel());
+        Channel channel = new LocalChannel(loopA);
+        ChannelPromise f = channel.newPromise();
+        channel.unsafe().register(f);
         f.awaitUninterruptibly();
         assertFalse(f.isSuccess());
         assertThat(f.cause(), is(instanceOf(RejectedExecutionException.class)));
@@ -332,7 +335,7 @@ public class SingleThreadEventLoopTest {
     public void testRegistrationAfterShutdown2() throws Exception {
         loopA.shutdown();
         final CountDownLatch latch = new CountDownLatch(1);
-        Channel ch = new LocalChannel();
+        Channel ch = new LocalChannel(loopA);
         ChannelPromise promise = ch.newPromise();
         promise.addListener(new ChannelFutureListener() {
             @Override
@@ -341,10 +344,10 @@ public class SingleThreadEventLoopTest {
             }
         });
 
-        ChannelFuture f = loopA.register(ch, promise);
-        f.awaitUninterruptibly();
-        assertFalse(f.isSuccess());
-        assertThat(f.cause(), is(instanceOf(RejectedExecutionException.class)));
+        ch.unsafe().register(promise);
+        promise.awaitUninterruptibly();
+        assertFalse(promise.isSuccess());
+        assertThat(promise.cause(), is(instanceOf(RejectedExecutionException.class)));
 
         // Ensure the listener was notified.
         assertFalse(latch.await(1, TimeUnit.SECONDS));

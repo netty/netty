@@ -130,12 +130,11 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
      *
      * @param version the protocol version
      */
-    public SpdyHttpEncoder(int version) {
-        if (version < SpdyConstants.SPDY_MIN_VERSION || version > SpdyConstants.SPDY_MAX_VERSION) {
-            throw new IllegalArgumentException(
-                    "unsupported version: " + version);
+    public SpdyHttpEncoder(SpdyVersion version) {
+        if (version == null) {
+            throw new NullPointerException("version");
         }
-        spdyVersion = version;
+        spdyVersion = version.getVersion();
     }
 
     @Override
@@ -177,7 +176,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
             spdyDataFrame.setLast(chunk instanceof LastHttpContent);
             if (chunk instanceof LastHttpContent) {
                 LastHttpContent trailer = (LastHttpContent) chunk;
-                List<Map.Entry<String, String>> trailers = trailer.trailingHeaders().entries();
+                HttpHeaders trailers = trailer.trailingHeaders();
                 if (trailers.isEmpty()) {
                     out.add(spdyDataFrame);
                 } else {

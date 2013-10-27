@@ -201,15 +201,6 @@ public class LoggingHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void channelUnregistered(ChannelHandlerContext ctx)
-            throws Exception {
-        if (logger.isEnabled(internalLevel)) {
-            logger.log(internalLevel, format(ctx, "UNREGISTERED"));
-        }
-        super.channelUnregistered(ctx);
-    }
-
-    @Override
     public void channelActive(ChannelHandlerContext ctx)
             throws Exception {
         if (logger.isEnabled(internalLevel)) {
@@ -280,15 +271,6 @@ public class LoggingHandler extends ChannelDuplexHandler {
             logger.log(internalLevel, format(ctx, "CLOSE()"));
         }
         super.close(ctx, promise);
-    }
-
-    @Override
-    public void deregister(ChannelHandlerContext ctx,
-             ChannelPromise promise) throws Exception {
-        if (logger.isEnabled(internalLevel)) {
-            logger.log(internalLevel, format(ctx, "DEREGISTER()"));
-        }
-        super.deregister(ctx, promise);
     }
 
     @Override

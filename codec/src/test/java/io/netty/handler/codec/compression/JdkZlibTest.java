@@ -15,76 +15,36 @@
  */
 package io.netty.handler.codec.compression;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.util.CharsetUtil;
 import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
-public class JdkZlibTest {
+public class JdkZlibTest extends ZlibTest {
 
-    @Test
-    public void testZLIB() throws Exception {
-        ByteBuf data = Unpooled.copiedBuffer("test", CharsetUtil.UTF_8);
-
-        EmbeddedChannel chEncoder = new EmbeddedChannel(new JdkZlibEncoder(ZlibWrapper.ZLIB));
-
-        chEncoder.writeOutbound(data.copy());
-        assertTrue(chEncoder.finish());
-
-        ByteBuf deflatedData = (ByteBuf) chEncoder.readOutbound();
-
-        EmbeddedChannel chDecoderZlib = new EmbeddedChannel(new JdkZlibDecoder(ZlibWrapper.ZLIB));
-
-        chDecoderZlib.writeInbound(deflatedData.copy());
-        assertTrue(chDecoderZlib.finish());
-
-        assertEquals(data, chDecoderZlib.readInbound());
+    @Override
+    protected ZlibEncoder createEncoder(ZlibWrapper wrapper) {
+        return new JdkZlibEncoder(wrapper);
     }
 
-    @Test
-    public void testNONE() throws Exception {
-        ByteBuf data = Unpooled.copiedBuffer("test", CharsetUtil.UTF_8);
-
-        EmbeddedChannel chEncoder = new EmbeddedChannel(new JdkZlibEncoder(ZlibWrapper.NONE));
-
-        chEncoder.writeOutbound(data.copy());
-        assertTrue(chEncoder.finish());
-
-        ByteBuf deflatedData = (ByteBuf) chEncoder.readOutbound();
-
-        EmbeddedChannel chDecoderZlibNone = new EmbeddedChannel(new JdkZlibDecoder(ZlibWrapper.NONE));
-
-        chDecoderZlibNone.writeInbound(deflatedData.copy());
-        assertTrue(chDecoderZlibNone.finish());
-
-        assertEquals(data, chDecoderZlibNone.readInbound());
+    @Override
+    protected ZlibDecoder createDecoder(ZlibWrapper wrapper) {
+        return new JdkZlibDecoder(wrapper);
     }
 
+    @Override
     @Test(expected = IllegalArgumentException.class)
     public void testZLIB_OR_NONE() throws Exception {
         new JdkZlibDecoder(ZlibWrapper.ZLIB_OR_NONE);
     }
 
-    @Test
-    public void testGZIP() throws Exception {
-        ByteBuf data = Unpooled.copiedBuffer("test", CharsetUtil.UTF_8);
+    @Override
+    @Test(expected = IllegalArgumentException.class)
+    public void testZLIB_OR_NONE2() throws Exception {
+        new JdkZlibDecoder(ZlibWrapper.ZLIB_OR_NONE);
+    }
 
-        EmbeddedChannel chEncoder = new EmbeddedChannel(new JdkZlibEncoder(ZlibWrapper.GZIP));
-
-        chEncoder.writeOutbound(data.copy());
-        assertTrue(chEncoder.finish());
-
-        ByteBuf deflatedData = (ByteBuf) chEncoder.readOutbound();
-
-        EmbeddedChannel chDecoderGZip = new EmbeddedChannel(new JdkZlibDecoder(ZlibWrapper.GZIP));
-
-        chDecoderGZip.writeInbound(deflatedData.copy());
-        assertTrue(chDecoderGZip.finish());
-
-        assertEquals(data, chDecoderGZip.readInbound());
+    @Override
+    @Test(expected = IllegalArgumentException.class)
+    public void testZLIB_OR_NONE3() throws Exception {
+        new JdkZlibDecoder(ZlibWrapper.ZLIB_OR_NONE);
     }
 }

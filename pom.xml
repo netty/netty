@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.0.8.Final-SNAPSHOT</version>
+  <version>4.1.0.Alpha1-SNAPSHOT</version>
 
   <name>Netty</name>
   <url>http://netty.io/</url>
@@ -306,6 +306,8 @@
             <Xlint:deprecation />
           </compilerArguments>
           -->
+          <meminitial>256m</meminitial>
+          <maxmem>1024m</maxmem>
         </configuration>
       </plugin>
       <plugin>

@@ -20,6 +20,8 @@ import io.netty.util.CharsetUtil;
 
 final class SpdyCodecUtil {
 
+    static final int SPDY_SESSION_STREAM_ID = 0;
+
     static final int SPDY_HEADER_TYPE_OFFSET   = 2;
     static final int SPDY_HEADER_FLAGS_OFFSET  = 4;
     static final int SPDY_HEADER_LENGTH_OFFSET = 5;
@@ -232,35 +234,6 @@ final class SpdyCodecUtil {
         0x31, 0x2c, 0x75, 0x74, 0x66, 0x2d, 0x2c, 0x2a,   // 1 - u t f - - -
         0x2c, 0x65, 0x6e, 0x71, 0x3d, 0x30, 0x2e          // - e n q - 0 -
     };
-
-    private static final String SPDY2_DICT_S =
-        "optionsgetheadpostputdeletetraceacceptaccept-charsetaccept-encodingaccept-" +
-        "languageauthorizationexpectfromhostif-modified-sinceif-matchif-none-matchi" +
-        "f-rangeif-unmodifiedsincemax-forwardsproxy-authorizationrangerefererteuser" +
-        "-agent10010120020120220320420520630030130230330430530630740040140240340440" +
-        "5406407408409410411412413414415416417500501502503504505accept-rangesageeta" +
-        "glocationproxy-authenticatepublicretry-afterservervarywarningwww-authentic" +
-        "ateallowcontent-basecontent-encodingcache-controlconnectiondatetrailertran" +
-        "sfer-encodingupgradeviawarningcontent-languagecontent-lengthcontent-locati" +
-        "oncontent-md5content-rangecontent-typeetagexpireslast-modifiedset-cookieMo" +
-        "ndayTuesdayWednesdayThursdayFridaySaturdaySundayJanFebMarAprMayJunJulAugSe" +
-        "pOctNovDecchunkedtext/htmlimage/pngimage/jpgimage/gifapplication/xmlapplic" +
-        "ation/xhtmltext/plainpublicmax-agecharset=iso-8859-1utf-8gzipdeflateHTTP/1" +
-        ".1statusversionurl ";
-    static final byte[] SPDY2_DICT;
-    static {
-        byte[] SPDY2_DICT_;
-
-        try {
-            SPDY2_DICT_ = SPDY2_DICT_S.getBytes(CharsetUtil.US_ASCII);
-            // dictionary is null terminated
-            SPDY2_DICT_[SPDY2_DICT_.length - 1] = 0;
-        } catch (Exception e) {
-            SPDY2_DICT_ = new byte[1];
-        }
-
-        SPDY2_DICT = SPDY2_DICT_;
-    }
 
     private SpdyCodecUtil() {
     }

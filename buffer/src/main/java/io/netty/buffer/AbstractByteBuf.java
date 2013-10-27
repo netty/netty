@@ -36,7 +36,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     static final ResourceLeakDetector<ByteBuf> leakDetector = new ResourceLeakDetector<ByteBuf>(ByteBuf.class);
 
-    private int readerIndex;
+    int readerIndex;
     private int writerIndex;
     private int markedReaderIndex;
     private int markedWriterIndex;
@@ -559,6 +559,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public byte readByte() {
+        checkReadableBytes(1);
         int i = readerIndex;
         byte b = getByte(i);
         readerIndex = i + 1;
@@ -729,6 +730,8 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf skipBytes(int length) {
+        checkReadableBytes(length);
+
         int newReaderIndex = readerIndex + length;
         if (newReaderIndex > writerIndex) {
             throw new IndexOutOfBoundsException(String.format(
@@ -932,11 +935,6 @@ public abstract class AbstractByteBuf extends ByteBuf {
     @Override
     public ByteBuffer[] nioBuffers() {
         return nioBuffers(readerIndex, readableBytes());
-    }
-
-    @Override
-    public ByteBuffer nioBuffer(int index, int length) {
-        return internalNioBuffer(index, length).slice();
     }
 
     @Override
@@ -1155,6 +1153,9 @@ public abstract class AbstractByteBuf extends ByteBuf {
      */
     protected final void checkReadableBytes(int minimumReadableBytes) {
         ensureAccessible();
+        if (minimumReadableBytes < 0) {
+            throw new IllegalArgumentException("minimumReadableBytes: " + minimumReadableBytes + " (expected: >= 0)");
+        }
         if (readerIndex > writerIndex - minimumReadableBytes) {
             throw new IndexOutOfBoundsException(String.format(
                     "readerIndex(%d) + length(%d) exceeds writerIndex(%d): %s",

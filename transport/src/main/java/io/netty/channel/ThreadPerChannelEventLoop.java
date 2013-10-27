@@ -26,23 +26,8 @@ public class ThreadPerChannelEventLoop extends SingleThreadEventLoop {
     private Channel ch;
 
     public ThreadPerChannelEventLoop(ThreadPerChannelEventLoopGroup parent) {
-        super(parent, parent.threadFactory, true);
+        super(parent, parent.executor, true);
         this.parent = parent;
-    }
-
-    @Override
-    public ChannelFuture register(Channel channel, ChannelPromise promise) {
-        return super.register(channel, promise).addListener(new ChannelFutureListener() {
-            @Override
-            @SuppressWarnings("unchecked")
-            public void operationComplete(ChannelFuture future) throws Exception {
-                if (future.isSuccess()) {
-                    ch = future.channel();
-                } else {
-                    deregister();
-                }
-            }
-        });
     }
 
     @Override

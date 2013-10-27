@@ -17,6 +17,9 @@ package io.netty.testsuite.transport.sctp;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.oio.OioEventLoopGroup;
@@ -128,6 +131,13 @@ public final class SctpTestPermutation {
         }
 
         return list;
+    }
+
+    static List<ByteBufAllocator> allocator() {
+        List<ByteBufAllocator> allocators = new ArrayList<ByteBufAllocator>();
+        allocators.add(UnpooledByteBufAllocator.DEFAULT);
+        allocators.add(PooledByteBufAllocator.DEFAULT);
+        return allocators;
     }
 
     private SctpTestPermutation() { }

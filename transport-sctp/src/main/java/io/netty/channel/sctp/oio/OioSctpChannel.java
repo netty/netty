@@ -26,6 +26,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.oio.AbstractOioMessageChannel;
 import io.netty.channel.sctp.DefaultSctpChannelConfig;
@@ -87,8 +88,8 @@ public class OioSctpChannel extends AbstractOioMessageChannel
     /**
      * Create a new instance with an new {@link SctpChannel}.
      */
-    public OioSctpChannel() {
-        this(openChannel());
+    public OioSctpChannel(EventLoop eventLoop) {
+        this(eventLoop, openChannel());
     }
 
     /**
@@ -96,8 +97,8 @@ public class OioSctpChannel extends AbstractOioMessageChannel
      *
      * @param ch    the {@link SctpChannel} which is used by this instance
      */
-    public OioSctpChannel(SctpChannel ch) {
-        this(null, ch);
+    public OioSctpChannel(EventLoop eventLoop, SctpChannel ch) {
+        this(null, eventLoop, ch);
     }
 
     /**
@@ -107,8 +108,8 @@ public class OioSctpChannel extends AbstractOioMessageChannel
      *                  {@link} has no parent as it was created by your self.
      * @param ch        the {@link SctpChannel} which is used by this instance
      */
-    public OioSctpChannel(Channel parent, SctpChannel ch) {
-        super(parent);
+    public OioSctpChannel(Channel parent, EventLoop eventLoop, SctpChannel ch) {
+        super(parent, eventLoop);
         this.ch = ch;
         boolean success = false;
         try {

@@ -161,9 +161,6 @@ public interface ChannelHandlerContext
     ChannelHandlerContext fireChannelRegistered();
 
     @Override
-    ChannelHandlerContext fireChannelUnregistered();
-
-    @Override
     ChannelHandlerContext fireChannelActive();
 
     @Override

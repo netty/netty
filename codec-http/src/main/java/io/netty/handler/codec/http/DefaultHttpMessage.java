@@ -25,16 +25,24 @@ import java.util.Map;
 public abstract class DefaultHttpMessage extends DefaultHttpObject implements HttpMessage {
 
     private HttpVersion version;
-    private final HttpHeaders headers = new DefaultHttpHeaders();
+    private final HttpHeaders headers;
 
     /**
      * Creates a new instance.
      */
     protected DefaultHttpMessage(final HttpVersion version) {
+        this(version, true);
+    }
+
+    /**
+     * Creates a new instance.
+     */
+    protected DefaultHttpMessage(final HttpVersion version, boolean validateHeaders) {
         if (version == null) {
             throw new NullPointerException("version");
         }
         this.version = version;
+        headers = new DefaultHttpHeaders(validateHeaders);
     }
 
     @Override

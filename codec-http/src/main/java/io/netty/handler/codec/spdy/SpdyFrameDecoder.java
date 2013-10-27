@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -83,28 +83,27 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
      * Creates a new instance with the specified {@code version} and the default
      * {@code maxChunkSize (8192)} and {@code maxHeaderSize (16384)}.
      */
-    public SpdyFrameDecoder(int version) {
+    public SpdyFrameDecoder(SpdyVersion version) {
         this(version, 8192, 16384);
     }
 
     /**
      * Creates a new instance with the specified parameters.
      */
-    public SpdyFrameDecoder(int version, int maxChunkSize, int maxHeaderSize) {
+    public SpdyFrameDecoder(SpdyVersion version, int maxChunkSize, int maxHeaderSize) {
         this(version, maxChunkSize, SpdyHeaderBlockDecoder.newInstance(version, maxHeaderSize));
     }
 
     protected SpdyFrameDecoder(
-            int version, int maxChunkSize, SpdyHeaderBlockDecoder headerBlockDecoder) {
-        if (version < SpdyConstants.SPDY_MIN_VERSION || version > SpdyConstants.SPDY_MAX_VERSION) {
-            throw new IllegalArgumentException(
-                    "unsupported version: " + version);
+            SpdyVersion version, int maxChunkSize, SpdyHeaderBlockDecoder headerBlockDecoder) {
+        if (version == null) {
+            throw new NullPointerException("version");
         }
         if (maxChunkSize <= 0) {
             throw new IllegalArgumentException(
                     "maxChunkSize must be a positive integer: " + maxChunkSize);
         }
-        spdyVersion = version;
+        spdyVersion = version.getVersion();
         this.maxChunkSize = maxChunkSize;
         this.headerBlockDecoder = headerBlockDecoder;
         state = State.READ_COMMON_HEADER;
@@ -187,23 +186,10 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
 
             int readableEntries = Math.min(buffer.readableBytes() >> 3, length >> 3);
             for (int i = 0; i < readableEntries; i ++) {
-                int ID;
-                byte ID_flags;
-                if (version < 3) {
-                    // Chromium Issue 79156
-                    // SPDY setting ids are not written in network byte order
-                    // Read id assuming the architecture is little endian
-                    ID = buffer.readByte() & 0xFF |
-                        (buffer.readByte() & 0xFF) << 8 |
-                        (buffer.readByte() & 0xFF) << 16;
-                    ID_flags = buffer.readByte();
-                } else {
-                    ID_flags = buffer.readByte();
-                    ID = getUnsignedMedium(buffer, buffer.readerIndex());
-                    buffer.skipBytes(3);
-                }
-                int value = getSignedInt(buffer, buffer.readerIndex());
-                buffer.skipBytes(4);
+                byte ID_flags = buffer.getByte(buffer.readerIndex());
+                int ID = getUnsignedMedium(buffer, buffer.readerIndex() + 1);
+                int value = getSignedInt(buffer, buffer.readerIndex() + 4);
+                buffer.skipBytes(8);
 
                 // Check for invalid ID -- avoid IllegalArgumentException in setValue
                 if (ID == 0) {
@@ -428,20 +414,13 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
             return new DefaultSpdyPingFrame(ID);
 
         case SPDY_GOAWAY_FRAME:
-            int minLength = version < 3 ? 4 : 8;
-            if (buffer.readableBytes() < minLength) {
+            if (buffer.readableBytes() < 8) {
                 return null;
             }
 
             int lastGoodStreamId = getUnsignedInt(buffer, buffer.readerIndex());
-            buffer.skipBytes(4);
-
-            if (version < 3) {
-                return new DefaultSpdyGoAwayFrame(lastGoodStreamId);
-            }
-
-            statusCode = getSignedInt(buffer, buffer.readerIndex());
-            buffer.skipBytes(4);
+            statusCode = getSignedInt(buffer, buffer.readerIndex() + 4);
+            buffer.skipBytes(8);
 
             return new DefaultSpdyGoAwayFrame(lastGoodStreamId, statusCode);
 
@@ -462,12 +441,10 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
     }
 
     private SpdyHeadersFrame readHeaderBlockFrame(ByteBuf buffer) {
-        int minLength;
         int streamId;
         switch (type) {
         case SPDY_SYN_STREAM_FRAME:
-            minLength = version < 3 ? 12 : 10;
-            if (buffer.readableBytes() < minLength) {
+            if (buffer.readableBytes() < 10) {
                 return null;
             }
 
@@ -475,17 +452,8 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
             streamId = getUnsignedInt(buffer, offset);
             int associatedToStreamId = getUnsignedInt(buffer, offset + 4);
             byte priority = (byte) (buffer.getByte(offset + 8) >> 5 & 0x07);
-            if (version < 3) {
-                priority >>= 1;
-            }
             buffer.skipBytes(10);
             length -= 10;
-
-            // SPDY/2 requires 16-bits of padding for empty header blocks
-            if (version < 3 && length == 2 && buffer.getShort(buffer.readerIndex()) == 0) {
-                buffer.skipBytes(2);
-                length = 0;
-            }
 
             SpdySynStreamFrame spdySynStreamFrame =
                     new DefaultSpdySynStreamFrame(streamId, associatedToStreamId, priority);
@@ -495,26 +463,13 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
             return spdySynStreamFrame;
 
         case SPDY_SYN_REPLY_FRAME:
-            minLength = version < 3 ? 8 : 4;
-            if (buffer.readableBytes() < minLength) {
+            if (buffer.readableBytes() < 4) {
                 return null;
             }
 
             streamId = getUnsignedInt(buffer, buffer.readerIndex());
             buffer.skipBytes(4);
             length -= 4;
-
-            // SPDY/2 has 16-bits of unused space
-            if (version < 3) {
-                buffer.skipBytes(2);
-                length -= 2;
-            }
-
-            // SPDY/2 requires 16-bits of padding for empty header blocks
-            if (version < 3 && length == 2 && buffer.getShort(buffer.readerIndex()) == 0) {
-                buffer.skipBytes(2);
-                length = 0;
-            }
 
             SpdySynReplyFrame spdySynReplyFrame = new DefaultSpdySynReplyFrame(streamId);
             spdySynReplyFrame.setLast((flags & SPDY_FLAG_FIN) != 0);
@@ -526,26 +481,9 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
                 return null;
             }
 
-            // SPDY/2 allows length 4 frame when there are no name/value pairs
-            if (version < 3 && length > 4 && buffer.readableBytes() < 8) {
-                return null;
-            }
-
             streamId = getUnsignedInt(buffer, buffer.readerIndex());
             buffer.skipBytes(4);
             length -= 4;
-
-            // SPDY/2 has 16-bits of unused space
-            if (version < 3 && length != 0) {
-                buffer.skipBytes(2);
-                length -= 2;
-            }
-
-            // SPDY/2 requires 16-bits of padding for empty header blocks
-            if (version < 3 && length == 2 && buffer.getShort(buffer.readerIndex()) == 0) {
-                buffer.skipBytes(2);
-                length = 0;
-            }
 
             SpdyHeadersFrame spdyHeadersFrame = new DefaultSpdyHeadersFrame(streamId);
             spdyHeadersFrame.setLast((flags & SPDY_FLAG_FIN) != 0);
@@ -563,10 +501,10 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
             return streamId != 0;
 
         case SPDY_SYN_STREAM_FRAME:
-            return version < 3 ? length >= 12 : length >= 10;
+            return length >= 10;
 
         case SPDY_SYN_REPLY_FRAME:
-            return version < 3 ? length >= 8 : length >= 4;
+            return length >= 4;
 
         case SPDY_RST_STREAM_FRAME:
             return flags == 0 && length == 8;
@@ -578,14 +516,10 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
             return length == 4;
 
         case SPDY_GOAWAY_FRAME:
-            return version < 3 ? length == 4 : length == 8;
+            return length == 8;
 
         case SPDY_HEADERS_FRAME:
-            if (version < 3) {
-                return length == 4 || length >= 8;
-            } else {
-                return length >= 4;
-            }
+            return length >= 4;
 
         case SPDY_WINDOW_UPDATE_FRAME:
             return length == 8;

@@ -194,7 +194,26 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public int getBytes(int index, GatheringByteChannel out, int length) throws IOException {
         ensureAccessible();
-        return out.write((ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length));
+        return getBytes(index, out, length, false);
+    }
+
+    private int getBytes(int index, GatheringByteChannel out, int length, boolean internal) throws IOException {
+        ensureAccessible();
+        ByteBuffer tmpBuf;
+        if (internal) {
+            tmpBuf = internalNioBuffer();
+        } else {
+            tmpBuf = ByteBuffer.wrap(array);
+        }
+        return out.write((ByteBuffer) tmpBuf.clear().position(index).limit(index + length));
+    }
+
+    @Override
+    public int readBytes(GatheringByteChannel out, int length) throws IOException {
+        checkReadableBytes(length);
+        int readBytes = getBytes(readerIndex, out, length, true);
+        readerIndex += readBytes;
+        return readBytes;
     }
 
     @Override
@@ -248,7 +267,7 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public ByteBuffer nioBuffer(int index, int length) {
         ensureAccessible();
-        return ByteBuffer.wrap(array, index, length);
+        return ByteBuffer.wrap(array, index, length).slice();
     }
 
     @Override

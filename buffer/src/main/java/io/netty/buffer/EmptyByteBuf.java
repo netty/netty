@@ -807,13 +807,11 @@ public final class EmptyByteBuf extends ByteBuf {
 
     @Override
     public boolean isReadable(int size) {
-        checkLength(size);
         return false;
     }
 
     @Override
     public boolean isWritable(int size) {
-        checkLength(size);
         return false;
     }
 

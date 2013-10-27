@@ -45,7 +45,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
     private static final byte[] ZERO_CRLF = { '0', CR, LF };
     private static final byte[] ZERO_CRLF_CRLF = { '0', CR, LF, CR, LF };
     private static final byte[] HEADER_SEPARATOR = { COLON, SP };
-    private static final ByteBuf CRLF_BUF = unreleasableBuffer(directBuffer(ZERO_CRLF.length).writeBytes(ZERO_CRLF));
+    private static final ByteBuf CRLF_BUF = unreleasableBuffer(directBuffer(CRLF.length).writeBytes(CRLF));
     private static final ByteBuf ZERO_CRLF_CRLF_BUF = unreleasableBuffer(directBuffer(ZERO_CRLF_CRLF.length)
             .writeBytes(ZERO_CRLF_CRLF));
 
@@ -93,38 +93,42 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
                     state = ST_INIT;
                 }
             } else if (state == ST_CONTENT_CHUNK) {
-                if (contentLength > 0) {
-                    byte[] length = Integer.toHexString(contentLength).getBytes(CharsetUtil.US_ASCII);
-                    ByteBuf buf = ctx.alloc().buffer(length.length + 2);
-                    buf.writeBytes(length);
-                    buf.writeBytes(CRLF);
-                    out.add(buf);
-                    out.add(encodeAndRetain(msg));
-                    out.add(CRLF_BUF.duplicate());
-                }
-
-                if (msg instanceof LastHttpContent) {
-                    HttpHeaders headers = ((LastHttpContent) msg).trailingHeaders();
-                    if (headers.isEmpty()) {
-                        out.add(ZERO_CRLF_CRLF_BUF.duplicate());
-                    } else {
-                        ByteBuf buf = ctx.alloc().buffer();
-                        buf.writeBytes(ZERO_CRLF);
-                        encodeHeaders(buf, headers);
-                        buf.writeBytes(CRLF);
-                        out.add(buf);
-                    }
-
-                    state = ST_INIT;
-                } else {
-                  if (contentLength == 0) {
-                      // Need to produce some output otherwise an
-                      // IllegalstateException will be thrown
-                      out.add(EMPTY_BUFFER);
-                  }
-                }
+                encodeChunkedContent(ctx, msg, contentLength, out);
             } else {
                 throw new Error();
+            }
+        }
+    }
+
+    private void encodeChunkedContent(ChannelHandlerContext ctx, Object msg, int contentLength, List<Object> out) {
+        if (contentLength > 0) {
+            byte[] length = Integer.toHexString(contentLength).getBytes(CharsetUtil.US_ASCII);
+            ByteBuf buf = ctx.alloc().buffer(length.length + 2);
+            buf.writeBytes(length);
+            buf.writeBytes(CRLF);
+            out.add(buf);
+            out.add(encodeAndRetain(msg));
+            out.add(CRLF_BUF.duplicate());
+        }
+
+        if (msg instanceof LastHttpContent) {
+            HttpHeaders headers = ((LastHttpContent) msg).trailingHeaders();
+            if (headers.isEmpty()) {
+                out.add(ZERO_CRLF_CRLF_BUF.duplicate());
+            } else {
+                ByteBuf buf = ctx.alloc().buffer();
+                buf.writeBytes(ZERO_CRLF);
+                encodeHeaders(buf, headers);
+                buf.writeBytes(CRLF);
+                out.add(buf);
+            }
+
+            state = ST_INIT;
+        } else {
+            if (contentLength == 0) {
+                // Need to produce some output otherwise an
+                // IllegalstateException will be thrown
+                out.add(EMPTY_BUFFER);
             }
         }
     }

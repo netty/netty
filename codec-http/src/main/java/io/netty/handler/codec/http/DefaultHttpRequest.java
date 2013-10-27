@@ -33,12 +33,24 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
      * @param uri         the URI or path of the request
      */
     public DefaultHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri) {
-        super(httpVersion);
+        this(httpVersion, method, uri, true);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param httpVersion       the HTTP version of the request
+     * @param method            the HTTP getMethod of the request
+     * @param uri               the URI or path of the request
+     * @param validateHeaders   validate the header names and values when adding them to the {@link HttpHeaders}.
+     */
+    public DefaultHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri, boolean validateHeaders) {
+        super(httpVersion, validateHeaders);
         if (method == null) {
-            throw new NullPointerException("getMethod");
+            throw new NullPointerException("method");
         }
         if (uri == null) {
-            throw new NullPointerException("getUri");
+            throw new NullPointerException("uri");
         }
         this.method = method;
         this.uri = uri;
@@ -66,7 +78,7 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
     @Override
     public HttpRequest setUri(String uri) {
         if (uri == null) {
-            throw new NullPointerException("method");
+            throw new NullPointerException("uri");
         }
         this.uri = uri;
         return this;

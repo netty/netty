@@ -16,8 +16,8 @@
 package io.netty.channel;
 
 /**
- * {@link ChannelHandler} which adds callbacks for state changes. This allows the user
- * to hook in to state changes easily.
+ * {@link ChannelHandler} which adds callbacks for state changes. This allows the user to hook in to state changes
+ * easily.
  */
 public interface ChannelInboundHandler extends ChannelHandler {
 
@@ -25,11 +25,6 @@ public interface ChannelInboundHandler extends ChannelHandler {
      * The {@link Channel} of the {@link ChannelHandlerContext} was registered with its {@link EventLoop}
      */
     void channelRegistered(ChannelHandlerContext ctx) throws Exception;
-
-    /**
-     * The {@link Channel} of the {@link ChannelHandlerContext} was unregistered from its {@link EventLoop}
-     */
-    void channelUnregistered(ChannelHandlerContext ctx) throws Exception;
 
     /**
      * The {@link Channel} of the {@link ChannelHandlerContext} is now active

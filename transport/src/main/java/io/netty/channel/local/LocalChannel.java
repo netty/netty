@@ -35,12 +35,15 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ConnectionPendingException;
 import java.nio.channels.NotYetConnectedException;
 import java.util.ArrayDeque;
+import java.util.Collections;
 import java.util.Queue;
 
 /**
  * A {@link Channel} for the local transport.
  */
 public class LocalChannel extends AbstractChannel {
+
+    private enum State { OPEN, BOUND, CONNECTED, CLOSED }
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
@@ -76,19 +79,19 @@ public class LocalChannel extends AbstractChannel {
         }
     };
 
-    private volatile int state; // 0 - open, 1 - bound, 2 - connected, 3 - closed
+    private volatile State state;
     private volatile LocalChannel peer;
     private volatile LocalAddress localAddress;
     private volatile LocalAddress remoteAddress;
     private volatile ChannelPromise connectPromise;
     private volatile boolean readInProgress;
 
-    public LocalChannel() {
-        super(null);
+    public LocalChannel(EventLoop eventLoop) {
+        super(null, eventLoop);
     }
 
-    LocalChannel(LocalServerChannel parent, LocalChannel peer) {
-        super(parent);
+    LocalChannel(LocalServerChannel parent, EventLoop eventLoop, LocalChannel peer) {
+        super(parent, eventLoop);
         this.peer = peer;
         localAddress = parent.localAddress();
         remoteAddress = peer.localAddress();
@@ -121,12 +124,12 @@ public class LocalChannel extends AbstractChannel {
 
     @Override
     public boolean isOpen() {
-        return state < 3;
+        return state != State.CLOSED;
     }
 
     @Override
     public boolean isActive() {
-        return state == 2;
+        return state == State.CONNECTED;
     }
 
     @Override
@@ -152,10 +155,10 @@ public class LocalChannel extends AbstractChannel {
     @Override
     protected void doRegister() throws Exception {
         if (peer != null) {
-            state = 2;
+            state = State.CONNECTED;
 
-            peer.remoteAddress = parent().localAddress();
-            peer.state = 2;
+            peer.remoteAddress = parent() == null ? null : parent().localAddress();
+            peer.state = State.CONNECTED;
 
             // Always call peer.eventLoop().execute() even if peer.eventLoop().inEventLoop() is true.
             // This ensures that if both channels are on the same event loop, the peer's channelActive
@@ -177,7 +180,7 @@ public class LocalChannel extends AbstractChannel {
         this.localAddress =
                 LocalChannelRegistry.register(this, this.localAddress,
                         localAddress);
-        state = 1;
+        state = State.BOUND;
     }
 
     @Override
@@ -187,7 +190,7 @@ public class LocalChannel extends AbstractChannel {
 
     @Override
     protected void doClose() throws Exception {
-        if (state <= 2) {
+        if (state != State.CLOSED) {
             // Update all internal state before the closeFuture is notified.
             if (localAddress != null) {
                 if (parent() == null) {
@@ -195,21 +198,30 @@ public class LocalChannel extends AbstractChannel {
                 }
                 localAddress = null;
             }
-            state = 3;
+            state = State.CLOSED;
         }
 
-        LocalChannel peer = this.peer;
+        final LocalChannel peer = this.peer;
         if (peer != null && peer.isActive()) {
-            peer.unsafe().close(unsafe().voidPromise());
+            // Need to execute the close in the correct EventLoop
+            // See https://github.com/netty/netty/issues/1777
+            EventLoop eventLoop = peer.eventLoop();
+            if (eventLoop.inEventLoop()) {
+                peer.unsafe().close(unsafe().voidPromise());
+            } else {
+                peer.eventLoop().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        peer.unsafe().close(unsafe().voidPromise());
+                    }
+                });
+            }
             this.peer = null;
         }
     }
 
     @Override
     protected void doDeregister() throws Exception {
-        if (isOpen()) {
-            unsafe().close(unsafe().voidPromise());
-        }
         ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
     }
 
@@ -248,10 +260,11 @@ public class LocalChannel extends AbstractChannel {
 
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
-        if (state < 2) {
+        switch (state) {
+        case OPEN:
+        case BOUND:
             throw new NotYetConnectedException();
-        }
-        if (state > 2) {
+        case CLOSED:
             throw new ClosedChannelException();
         }
 
@@ -274,16 +287,14 @@ public class LocalChannel extends AbstractChannel {
             // Use a copy because the original msgs will be recycled by AbstractChannel.
             final Object[] msgsCopy = new Object[in.size()];
             for (int i = 0; i < msgsCopy.length; i ++) {
-                msgsCopy[i] = ReferenceCountUtil.retain(in.current());
+                msgsCopy[i] = ReferenceCountUtil.retain(in.current(false));
                 in.remove();
             }
 
             peerLoop.execute(new Runnable() {
                 @Override
                 public void run() {
-                    for (Object o: msgsCopy) {
-                        peer.inboundBuffer.add(o);
-                    }
+                    Collections.addAll(peer.inboundBuffer, msgsCopy);
                     finishPeerRead(peer, peerPipeline);
                 }
             });
@@ -313,7 +324,7 @@ public class LocalChannel extends AbstractChannel {
                 return;
             }
 
-            if (state == 2) {
+            if (state == State.CONNECTED) {
                 Exception cause = new AlreadyConnectedException();
                 promise.setFailure(cause);
                 pipeline().fireExceptionCaught(cause);
@@ -326,7 +337,7 @@ public class LocalChannel extends AbstractChannel {
 
             connectPromise = promise;
 
-            if (state != 1) {
+            if (state != State.BOUND) {
                 // Not bound yet and no localAddress specified - get one.
                 if (localAddress == null) {
                     localAddress = new LocalAddress(LocalChannel.this);
@@ -338,7 +349,6 @@ public class LocalChannel extends AbstractChannel {
                     doBind(localAddress);
                 } catch (Throwable t) {
                     promise.setFailure(t);
-                    pipeline().fireExceptionCaught(t);
                     close(voidPromise());
                     return;
                 }
