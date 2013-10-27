@@ -31,6 +31,7 @@ public class MixedFileUpload implements FileUpload {
     private final long limitSize;
 
     private final long definedSize;
+    protected long maxSize = DefaultHttpDataFactory.MAXSIZE;
 
     public MixedFileUpload(String name, String filename, String contentType,
             String contentTransferEncoding, Charset charset, long size,
@@ -46,15 +47,28 @@ public class MixedFileUpload implements FileUpload {
         definedSize = size;
     }
 
+    public void setMaxSize(long maxSize) {
+        this.maxSize = maxSize;
+        fileUpload.setMaxSize(maxSize);
+    }
+
+    public void checkSize(long newSize) throws IOException {
+        if (maxSize >= 0 && newSize > maxSize) {
+            throw new IOException("Size exceed allowed maximum capacity");
+        }
+    }
+
     public void addContent(ChannelBuffer buffer, boolean last)
             throws IOException {
         if (fileUpload instanceof MemoryFileUpload) {
+            checkSize(fileUpload.length() + buffer.readableBytes());
             if (fileUpload.length() + buffer.readableBytes() > limitSize) {
                 DiskFileUpload diskFileUpload = new DiskFileUpload(fileUpload
                         .getName(), fileUpload.getFilename(), fileUpload
                         .getContentType(), fileUpload
                         .getContentTransferEncoding(), fileUpload.getCharset(),
                         definedSize);
+                diskFileUpload.setMaxSize(maxSize);
                 if (((MemoryFileUpload) fileUpload).getChannelBuffer() != null) {
                     diskFileUpload.addContent(((MemoryFileUpload) fileUpload)
                         .getChannelBuffer(), false);
@@ -122,6 +136,7 @@ public class MixedFileUpload implements FileUpload {
     }
 
     public void setContent(ChannelBuffer buffer) throws IOException {
+        checkSize(buffer.readableBytes());
         if (buffer.readableBytes() > limitSize) {
             if (fileUpload instanceof MemoryFileUpload) {
                 // change to Disk
@@ -130,12 +145,14 @@ public class MixedFileUpload implements FileUpload {
                         .getContentType(), fileUpload
                         .getContentTransferEncoding(), fileUpload.getCharset(),
                         definedSize);
+                fileUpload.setMaxSize(maxSize);
             }
         }
         fileUpload.setContent(buffer);
     }
 
     public void setContent(File file) throws IOException {
+        checkSize(file.length());
         if (file.length() > limitSize) {
             if (fileUpload instanceof MemoryFileUpload) {
                 // change to Disk
@@ -144,6 +161,7 @@ public class MixedFileUpload implements FileUpload {
                         .getContentType(), fileUpload
                         .getContentTransferEncoding(), fileUpload.getCharset(),
                         definedSize);
+                fileUpload.setMaxSize(maxSize);
             }
         }
         fileUpload.setContent(file);
@@ -157,6 +175,7 @@ public class MixedFileUpload implements FileUpload {
                     .getContentType(), fileUpload
                     .getContentTransferEncoding(), fileUpload.getCharset(),
                     definedSize);
+            fileUpload.setMaxSize(maxSize);
         }
         fileUpload.setContent(inputStream);
     }

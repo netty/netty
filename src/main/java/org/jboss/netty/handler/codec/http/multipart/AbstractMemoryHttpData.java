@@ -46,6 +46,7 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
             throw new NullPointerException("buffer");
         }
         long localsize = buffer.readableBytes();
+        checkSize(localsize);
         if (definedSize > 0 && definedSize < localsize) {
             throw new IOException("Out of size: " + localsize + " > " +
                     definedSize);
@@ -66,6 +67,7 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
         while (read > 0) {
             buffer.writeBytes(bytes, 0, read);
             written += read;
+            checkSize(written);
             read = inputStream.read(bytes);
         }
         size = written;
@@ -80,6 +82,7 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
             throws IOException {
         if (buffer != null) {
             long localsize = buffer.readableBytes();
+            checkSize(size + localsize);
             if (definedSize > 0 && definedSize < size + localsize) {
                 throw new IOException("Out of size: " + (size + localsize) +
                         " > " + definedSize);
@@ -110,6 +113,7 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
             throw new IllegalArgumentException(
                     "File too big to be loaded in memory");
         }
+        checkSize(newsize);
         FileInputStream inputStream = new FileInputStream(file);
         FileChannel fileChannel = inputStream.getChannel();
         byte[] array = new byte[(int) newsize];
