@@ -68,6 +68,7 @@ public class MixedFileUpload implements FileUpload {
                         .getContentType(), fileUpload
                         .getContentTransferEncoding(), fileUpload.getCharset(),
                         definedSize);
+                diskFileUpload.setMaxSize(maxSize);
                 if (((MemoryFileUpload) fileUpload).getChannelBuffer() != null) {
                     diskFileUpload.addContent(((MemoryFileUpload) fileUpload)
                         .getChannelBuffer(), false);
@@ -144,6 +145,7 @@ public class MixedFileUpload implements FileUpload {
                         .getContentType(), fileUpload
                         .getContentTransferEncoding(), fileUpload.getCharset(),
                         definedSize);
+                fileUpload.setMaxSize(maxSize);
             }
         }
         fileUpload.setContent(buffer);
@@ -159,6 +161,7 @@ public class MixedFileUpload implements FileUpload {
                         .getContentType(), fileUpload
                         .getContentTransferEncoding(), fileUpload.getCharset(),
                         definedSize);
+                fileUpload.setMaxSize(maxSize);
             }
         }
         fileUpload.setContent(file);
@@ -172,6 +175,7 @@ public class MixedFileUpload implements FileUpload {
                     .getContentType(), fileUpload
                     .getContentTransferEncoding(), fileUpload.getCharset(),
                     definedSize);
+            fileUpload.setMaxSize(maxSize);
         }
         fileUpload.setContent(inputStream);
     }
