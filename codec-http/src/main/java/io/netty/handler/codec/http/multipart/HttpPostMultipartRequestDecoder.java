@@ -19,7 +19,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.multipart.HttpPostBodyUtil.SeekAheadNoBackArrayException;
@@ -62,11 +61,6 @@ public class HttpPostMultipartRequestDecoder implements HttpPostRequestDecoderIn
      * Default charset to use
      */
     private final Charset charset;
-
-    /**
-     * Does request have a body to decode
-     */
-    private boolean bodyToDecode;
 
     /**
      * Does the last chunk already received
@@ -193,19 +187,11 @@ public class HttpPostMultipartRequestDecoder implements HttpPostRequestDecoderIn
             throw new NullPointerException("charset");
         }
         this.request = request;
-        HttpMethod method = request.getMethod();
-        if (method.equals(HttpMethod.POST) || method.equals(HttpMethod.PUT)
-                || method.equals(HttpMethod.PATCH) || method.equals(HttpMethod.OPTIONS)) {
-            bodyToDecode = true;
-        }
         this.charset = charset;
         this.factory = factory;
         // Fill default values
 
         setMultipart(this.request.headers().get(HttpHeaders.Names.CONTENT_TYPE));
-        if (!bodyToDecode) {
-            throw new IncompatibleDataDecoderException("No Body to decode");
-        }
         if (request instanceof HttpContent) {
             // Offer automatically if the given request is als type of HttpContent
             // See #1089
