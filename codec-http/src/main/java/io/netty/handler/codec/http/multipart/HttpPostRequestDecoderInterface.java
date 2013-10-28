@@ -31,19 +31,19 @@ public interface HttpPostRequestDecoderInterface {
      *
      * @return True if this request is a Multipart request
      */
-    public boolean isMultipart();
+    boolean isMultipart();
 
     /**
      * Set the amount of bytes after which read bytes in the buffer should be discarded.
      * Setting this lower gives lower memory usage but with the overhead of more memory copies.
      * Use {@code 0} to disable it.
      */
-    public void setDiscardThreshold(int discardThreshold);
+    void setDiscardThreshold(int discardThreshold);
 
     /**
      * Return the threshold in bytes after which read data in the buffer should be discarded.
      */
-    public int getDiscardThreshold();
+    int getDiscardThreshold();
 
     /**
      * This getMethod returns a List of all HttpDatas from body.<br>
@@ -55,7 +55,7 @@ public interface HttpPostRequestDecoderInterface {
      * @throws HttpPostRequestDecoder.NotEnoughDataDecoderException
      *             Need more chunks
      */
-    public List<InterfaceHttpData> getBodyHttpDatas() throws HttpPostRequestDecoder.NotEnoughDataDecoderException;
+    List<InterfaceHttpData> getBodyHttpDatas() throws HttpPostRequestDecoder.NotEnoughDataDecoderException;
 
     /**
      * This getMethod returns a List of all HttpDatas with the given name from
@@ -68,7 +68,7 @@ public interface HttpPostRequestDecoderInterface {
      * @throws HttpPostRequestDecoder.NotEnoughDataDecoderException
      *             need more chunks
      */
-    public List<InterfaceHttpData> getBodyHttpDatas(String name) throws HttpPostRequestDecoder.NotEnoughDataDecoderException;
+    List<InterfaceHttpData> getBodyHttpDatas(String name) throws HttpPostRequestDecoder.NotEnoughDataDecoderException;
 
     /**
      * This getMethod returns the first InterfaceHttpData with the given name from
@@ -82,7 +82,7 @@ public interface HttpPostRequestDecoderInterface {
      * @throws HttpPostRequestDecoder.NotEnoughDataDecoderException
      *             need more chunks
      */
-    public InterfaceHttpData getBodyHttpData(String name) throws HttpPostRequestDecoder.NotEnoughDataDecoderException;
+    InterfaceHttpData getBodyHttpData(String name) throws HttpPostRequestDecoder.NotEnoughDataDecoderException;
 
     /**
      * Initialized the internals from a new chunk
@@ -93,7 +93,8 @@ public interface HttpPostRequestDecoderInterface {
      *             if there is a problem with the charset decoding or other
      *             errors
      */
-    public HttpPostRequestDecoderInterface offer(HttpContent content) throws HttpPostRequestDecoder.ErrorDataDecoderException;
+    HttpPostRequestDecoderInterface offer(HttpContent content)
+            throws HttpPostRequestDecoder.ErrorDataDecoderException;
 
     /**
      * True if at current getStatus, there is an available decoded
@@ -105,7 +106,7 @@ public interface HttpPostRequestDecoderInterface {
      * @throws HttpPostRequestDecoder.EndOfDataDecoderException
      *             No more data will be available
      */
-    public boolean hasNext() throws HttpPostRequestDecoder.EndOfDataDecoderException;
+    boolean hasNext() throws HttpPostRequestDecoder.EndOfDataDecoderException;
 
     /**
      * Returns the next available InterfaceHttpData or null if, at the time it
@@ -119,21 +120,21 @@ public interface HttpPostRequestDecoderInterface {
      * @throws HttpPostRequestDecoder.EndOfDataDecoderException
      *             No more data will be available
      */
-    public InterfaceHttpData next() throws HttpPostRequestDecoder.EndOfDataDecoderException;
+    InterfaceHttpData next() throws HttpPostRequestDecoder.EndOfDataDecoderException;
 
     /**
      * Destroy the {@link HttpPostRequestDecoderInterface} and release all it resources. After this method
      * was called it is not possible to operate on it anymore.
      */
-    public void destroy();
+    void destroy();
 
     /**
      * Clean all HttpDatas (on Disk) for the current request.
      */
-    public void cleanFiles();
+    void cleanFiles();
 
     /**
      * Remove the given FileUpload from the list of FileUploads to clean
      */
-    public void removeHttpDataFromClean(InterfaceHttpData data);
+    void removeHttpDataFromClean(InterfaceHttpData data);
 }

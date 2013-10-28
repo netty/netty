@@ -141,7 +141,7 @@ public class HttpPostRequestDecoder implements HttpPostRequestDecoderInterface {
         MIXEDDISPOSITION, MIXEDFILEUPLOAD, MIXEDCLOSEDELIMITER, CLOSEDELIMITER, PREEPILOGUE, EPILOGUE
     }
 
-	/**
+    /**
      * Check if the given request is a multipart request
      * @param request
      * @return True if the request is a Multipart request
@@ -249,76 +249,76 @@ public class HttpPostRequestDecoder implements HttpPostRequestDecoderInterface {
     }
 
     /**
-	 * Exception when try reading data from request in chunked format, and not
-	 * enough data are available (need more chunks)
-	 */
-	public static class NotEnoughDataDecoderException extends DecoderException {
-	    private static final long serialVersionUID = -7846841864603865638L;
-	
-	    public NotEnoughDataDecoderException() {
-	    }
-	
-	    public NotEnoughDataDecoderException(String msg) {
-	        super(msg);
-	    }
-	
-	    public NotEnoughDataDecoderException(Throwable cause) {
-	        super(cause);
-	    }
-	
-	    public NotEnoughDataDecoderException(String msg, Throwable cause) {
-	        super(msg, cause);
-	    }
-	}
+     * Exception when try reading data from request in chunked format, and not
+     * enough data are available (need more chunks)
+     */
+    public static class NotEnoughDataDecoderException extends DecoderException {
+        private static final long serialVersionUID = -7846841864603865638L;
 
-	/**
-	 * Exception when the body is fully decoded, even if there is still data
-	 */
-	public static class EndOfDataDecoderException extends DecoderException {
-	    private static final long serialVersionUID = 1336267941020800769L;
-	}
+        public NotEnoughDataDecoderException() {
+        }
 
-	/**
-	 * Exception when an error occurs while decoding
-	 */
-	public static class ErrorDataDecoderException extends DecoderException {
-	    private static final long serialVersionUID = 5020247425493164465L;
-	
-	    public ErrorDataDecoderException() {
-	    }
-	
-	    public ErrorDataDecoderException(String msg) {
-	        super(msg);
-	    }
-	
-	    public ErrorDataDecoderException(Throwable cause) {
-	        super(cause);
-	    }
-	
-	    public ErrorDataDecoderException(String msg, Throwable cause) {
-	        super(msg, cause);
-	    }
-	}
+        public NotEnoughDataDecoderException(String msg) {
+            super(msg);
+        }
 
-	/**
-	 * Exception when an unappropriated getMethod was called on a request
-	 */
-	public static class IncompatibleDataDecoderException extends DecoderException {
-	    private static final long serialVersionUID = -953268047926250267L;
-	
-	    public IncompatibleDataDecoderException() {
-	    }
-	
-	    public IncompatibleDataDecoderException(String msg) {
-	        super(msg);
-	    }
-	
-	    public IncompatibleDataDecoderException(Throwable cause) {
-	        super(cause);
-	    }
-	
-	    public IncompatibleDataDecoderException(String msg, Throwable cause) {
-	        super(msg, cause);
-	    }
-	}
+        public NotEnoughDataDecoderException(Throwable cause) {
+            super(cause);
+        }
+
+        public NotEnoughDataDecoderException(String msg, Throwable cause) {
+            super(msg, cause);
+        }
+    }
+
+    /**
+     * Exception when the body is fully decoded, even if there is still data
+     */
+    public static class EndOfDataDecoderException extends DecoderException {
+        private static final long serialVersionUID = 1336267941020800769L;
+    }
+
+    /**
+     * Exception when an error occurs while decoding
+     */
+    public static class ErrorDataDecoderException extends DecoderException {
+        private static final long serialVersionUID = 5020247425493164465L;
+
+        public ErrorDataDecoderException() {
+        }
+
+        public ErrorDataDecoderException(String msg) {
+            super(msg);
+        }
+
+        public ErrorDataDecoderException(Throwable cause) {
+            super(cause);
+        }
+
+        public ErrorDataDecoderException(String msg, Throwable cause) {
+            super(msg, cause);
+        }
+    }
+
+    /**
+     * Exception when an unappropriated getMethod was called on a request
+     */
+    public static class IncompatibleDataDecoderException extends DecoderException {
+        private static final long serialVersionUID = -953268047926250267L;
+
+        public IncompatibleDataDecoderException() {
+        }
+
+        public IncompatibleDataDecoderException(String msg) {
+            super(msg);
+        }
+
+        public IncompatibleDataDecoderException(Throwable cause) {
+            super(cause);
+        }
+
+        public IncompatibleDataDecoderException(String msg, Throwable cause) {
+            super(msg, cause);
+        }
+    }
 }

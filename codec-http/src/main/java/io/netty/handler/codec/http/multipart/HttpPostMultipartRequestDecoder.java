@@ -160,8 +160,8 @@ public class HttpPostMultipartRequestDecoder implements HttpPostRequestDecoderIn
      *             if the default charset was wrong when decoding or other
      *             errors
      */
-    public HttpPostMultipartRequestDecoder(HttpDataFactory factory, HttpRequest request) throws ErrorDataDecoderException,
-            IncompatibleDataDecoderException {
+    public HttpPostMultipartRequestDecoder(HttpDataFactory factory, HttpRequest request)
+    throws ErrorDataDecoderException, IncompatibleDataDecoderException {
         this(factory, request, HttpConstants.DEFAULT_CHARSET);
     }
 
@@ -219,8 +219,8 @@ public class HttpPostMultipartRequestDecoder implements HttpPostRequestDecoderIn
     /**
      * Set from the request ContentType the multipartDataBoundary.
      * @param contentType
-     * @throws ErrorDataDecoderException 
-     * @throws org.jboss.netty.handler.codec.http.multipart.HttpPostRequestDecoder.ErrorDataDecoderException 
+     * @throws ErrorDataDecoderException
+     * @throws ErrorDataDecoderException
      */
     private void setMultipart(String contentType) throws ErrorDataDecoderException {
         multipartDataBoundary = HttpPostRequestDecoder.getMultipartDataBoundary(contentType);
@@ -229,7 +229,8 @@ public class HttpPostMultipartRequestDecoder implements HttpPostRequestDecoderIn
 
     private void checkDestroyed() {
         if (destroyed) {
-            throw new IllegalStateException(HttpPostMultipartRequestDecoder.class.getSimpleName() + " was destroyed already");
+            throw new IllegalStateException(HttpPostMultipartRequestDecoder.class.getSimpleName()
+                    + " was destroyed already");
         }
     }
 

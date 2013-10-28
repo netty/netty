@@ -61,7 +61,7 @@ public abstract class AbstractHttpData extends AbstractReferenceCounted implemen
     public void setMaxSize(long maxSize) {
         this.maxSize = maxSize;
     }
-    
+
     public void checkSize(long newSize) throws IOException {
         if (maxSize >= 0 && newSize > maxSize) {
             throw new IOException("Size exceed allowed maximum capacity");
