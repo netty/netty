@@ -82,9 +82,9 @@ public class HttpPostRequestDecoder implements HttpPostRequestDecoderInterface {
         }
         // Fill default values
         if (isMultipart(request)) {
-        	decoder = new HttpPostMultipartRequestDecoder(factory, request, charset);
+            decoder = new HttpPostMultipartRequestDecoder(factory, request, charset);
         } else {
-        	decoder = new HttpPostStandardRequestDecoder(factory, request, charset);
+            decoder = new HttpPostStandardRequestDecoder(factory, request, charset);
         }
     }
 

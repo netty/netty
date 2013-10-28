@@ -176,7 +176,7 @@ public class HttpPostMultipartRequestDecoder implements HttpPostRequestDecoderIn
         this.charset = charset;
         this.factory = factory;
         // Fill default values
-       	setMultipart(this.request.headers().get(HttpHeaders.Names.CONTENT_TYPE));
+        setMultipart(this.request.headers().get(HttpHeaders.Names.CONTENT_TYPE));
         if (!bodyToDecode) {
             throw new IncompatibleDataDecoderException("No Body to decode");
         }
@@ -190,8 +190,8 @@ public class HttpPostMultipartRequestDecoder implements HttpPostRequestDecoderIn
     /**
      * Set from the request ContentType the multipartDataBoundary.
      * @param contentType
-     * @throws ErrorDataDecoderException 
-     * @throws org.jboss.netty.handler.codec.http.multipart.HttpPostRequestDecoder.ErrorDataDecoderException 
+     * @throws ErrorDataDecoderException
+     * @throws org.jboss.netty.handler.codec.http.multipart.HttpPostRequestDecoder.ErrorDataDecoderException
      */
     private void setMultipart(String contentType) throws ErrorDataDecoderException {
         multipartDataBoundary = HttpPostRequestDecoder.getMultipartDataBoundary(contentType);

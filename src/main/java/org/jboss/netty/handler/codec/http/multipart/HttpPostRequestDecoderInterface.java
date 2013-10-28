@@ -27,7 +27,7 @@ public interface HttpPostRequestDecoderInterface {
      * True if this request is a Multipart request
      * @return True if this request is a Multipart request
      */
-    public boolean isMultipart();
+    boolean isMultipart();
 
     /**
      * This method returns a List of all HttpDatas from body.<br>
@@ -38,9 +38,8 @@ public interface HttpPostRequestDecoderInterface {
      * @return the list of HttpDatas from Body part for POST method
      * @throws NotEnoughDataDecoderException Need more chunks
      */
-    public List<InterfaceHttpData> getBodyHttpDatas()
+    List<InterfaceHttpData> getBodyHttpDatas()
             throws NotEnoughDataDecoderException;
-
 
     /**
      * This method returns a List of all HttpDatas with the given name from body.<br>
@@ -51,7 +50,7 @@ public interface HttpPostRequestDecoderInterface {
      * @return All Body HttpDatas with the given name (ignore case)
      * @throws NotEnoughDataDecoderException need more chunks
      */
-    public List<InterfaceHttpData> getBodyHttpDatas(String name)
+    List<InterfaceHttpData> getBodyHttpDatas(String name)
             throws NotEnoughDataDecoderException;
 
     /**
@@ -63,7 +62,7 @@ public interface HttpPostRequestDecoderInterface {
     * @return The first Body InterfaceHttpData with the given name (ignore case)
     * @throws NotEnoughDataDecoderException need more chunks
     */
-    public InterfaceHttpData getBodyHttpData(String name)
+    InterfaceHttpData getBodyHttpData(String name)
             throws NotEnoughDataDecoderException;
 
     /**
@@ -72,7 +71,7 @@ public interface HttpPostRequestDecoderInterface {
      * @throws ErrorDataDecoderException if there is a problem with the charset decoding or
      *          other errors
      */
-    public void offer(HttpChunk chunk) throws ErrorDataDecoderException;
+    void offer(HttpChunk chunk) throws ErrorDataDecoderException;
 
     /**
      * True if at current status, there is an available decoded InterfaceHttpData from the Body.
@@ -82,7 +81,7 @@ public interface HttpPostRequestDecoderInterface {
      * @return True if at current status, there is a decoded InterfaceHttpData
      * @throws EndOfDataDecoderException No more data will be available
      */
-    public boolean hasNext() throws EndOfDataDecoderException;
+    boolean hasNext() throws EndOfDataDecoderException;
 
     /**
      * Returns the next available InterfaceHttpData or null if, at the time it is called, there is no more
@@ -91,16 +90,16 @@ public interface HttpPostRequestDecoderInterface {
      * @return the next available InterfaceHttpData or null if none
      * @throws EndOfDataDecoderException No more data will be available
      */
-    public InterfaceHttpData next() throws EndOfDataDecoderException;
+    InterfaceHttpData next() throws EndOfDataDecoderException;
 
     /**
      * Clean all HttpDatas (on Disk) for the current request.
      */
-    public void cleanFiles();
+    void cleanFiles();
 
     /**
      * Remove the given FileUpload from the list of FileUploads to clean
      */
-    public void removeHttpDataFromClean(InterfaceHttpData data);
+    void removeHttpDataFromClean(InterfaceHttpData data);
 
 }

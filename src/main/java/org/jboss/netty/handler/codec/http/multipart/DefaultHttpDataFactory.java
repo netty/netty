@@ -86,7 +86,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     public void setMaxLimit(long max) {
         this.maxSize = max;
     }
-    
+
     /**
      * @return the associated list of Files for the request
      */

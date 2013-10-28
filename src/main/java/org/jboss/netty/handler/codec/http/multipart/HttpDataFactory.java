@@ -28,7 +28,7 @@ public interface HttpDataFactory {
      * A value of -1 means no limitation (default).
      * @param max
      */
-    public void setMaxLimit(long max);
+    void setMaxLimit(long max);
 
     /**
     *
