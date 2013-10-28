@@ -45,7 +45,7 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
- * This encoder will help to encode Request for a FORM as POST, PUT, PATCH or OPTIONS.
+ * This encoder will help to encode Request for a FORM as POST.
  */
 public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
 
@@ -132,7 +132,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
      * @throws NullPointerException
      *             for request
      * @throws ErrorDataEncoderException
-     *             if the request is not a POST, PUT, PATCH or OPTIONS
+     *             if the request is not a POST
      */
     public HttpPostRequestEncoder(HttpRequest request, boolean multipart) throws ErrorDataEncoderException {
         this(new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE), request, multipart,
@@ -150,7 +150,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
      * @throws NullPointerException
      *             for request and factory
      * @throws ErrorDataEncoderException
-     *             if the request is not a POST, PUT, PATCH or OPTIONS
+     *             if the request is not a POST
      */
     public HttpPostRequestEncoder(HttpDataFactory factory, HttpRequest request, boolean multipart)
             throws ErrorDataEncoderException {
@@ -172,78 +172,11 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
      * @throws NullPointerException
      *             for request or charset or factory
      * @throws ErrorDataEncoderException
-     *             if the request is not a POST, PUT, PATCH or OPTIONS
+     *             if the request is not a POST
      */
     public HttpPostRequestEncoder(
             HttpDataFactory factory, HttpRequest request, boolean multipart, Charset charset,
             EncoderMode encoderMode)
-            throws ErrorDataEncoderException {
-        this(factory, request, multipart, charset, encoderMode, false);
-    }
-
-    /**
-     *
-     * @param request
-     *            the request to encode
-     * @param multipart
-     *            True if the FORM is a ENCTYPE="multipart/form-data"
-     * @param unlimitedMethod
-     *            True to unlimit method, False will limit to POST, PUT, PATCH and OPTIONS
-     * @throws NullPointerException
-     *             for request
-     * @throws ErrorDataEncoderException
-     *             if the request is not a POST, PUT, PATCH or OPTIONS
-     */
-    public HttpPostRequestEncoder(HttpRequest request, boolean multipart, boolean unlimitedMethod)
-            throws ErrorDataEncoderException {
-        this(new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE), request, multipart,
-                HttpConstants.DEFAULT_CHARSET, EncoderMode.RFC1738, unlimitedMethod);
-    }
-
-    /**
-     *
-     * @param factory
-     *            the factory used to create InterfaceHttpData
-     * @param request
-     *            the request to encode
-     * @param multipart
-     *            True if the FORM is a ENCTYPE="multipart/form-data"
-     * @param unlimitedMethod
-     *            True to unlimit method, False will limit to POST, PUT, PATCH and OPTIONS
-     * @throws NullPointerException
-     *             for request and factory
-     * @throws ErrorDataEncoderException
-     *             if the request is not a POST, PUT, PATCH or OPTIONS
-     */
-    public HttpPostRequestEncoder(HttpDataFactory factory, HttpRequest request, boolean multipart,
-            boolean unlimitedMethod)
-            throws ErrorDataEncoderException {
-        this(factory, request, multipart, HttpConstants.DEFAULT_CHARSET, EncoderMode.RFC1738,
-                unlimitedMethod);
-    }
-
-    /**
-     *
-     * @param factory
-     *            the factory used to create InterfaceHttpData
-     * @param request
-     *            the request to encode
-     * @param multipart
-     *            True if the FORM is a ENCTYPE="multipart/form-data"
-     * @param charset
-     *            the charset to use as default
-     * @param encoderMode
-     *            the mode for the encoder to use. See {@link EncoderMode} for the details.
-     * @param unlimitedMethod
-     *            True to unlimit method, False will limit to POST, PUT, PATCH and OPTIONS
-     * @throws NullPointerException
-     *             for request or charset or factory
-     * @throws ErrorDataEncoderException
-     *             if the request is not a POST, PUT, PATCH or OPTIONS
-     */
-    public HttpPostRequestEncoder(
-            HttpDataFactory factory, HttpRequest request, boolean multipart, Charset charset,
-            EncoderMode encoderMode, boolean unlimitedMethod)
             throws ErrorDataEncoderException {
         if (factory == null) {
             throw new NullPointerException("factory");
@@ -254,9 +187,9 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
         if (charset == null) {
             throw new NullPointerException("charset");
         }
-        if (!unlimitedMethod && request.getMethod() != HttpMethod.POST
-                && request.getMethod() != HttpMethod.PUT && request.getMethod() != HttpMethod.PATCH
-                && request.getMethod() != HttpMethod.OPTIONS) {
+        HttpMethod method = request.getMethod();
+        if (method.equals(HttpMethod.POST) || method.equals(HttpMethod.PUT)
+                || method.equals(HttpMethod.PATCH) || method.equals(HttpMethod.OPTIONS)) {
             throw new ErrorDataEncoderException("Cannot create a Encoder if not a POST");
         }
         this.request = request;

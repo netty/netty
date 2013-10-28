@@ -26,7 +26,7 @@ import java.nio.charset.Charset;
 import java.util.List;
 
 /**
- * This decoder will decode Body and can handle POST BODY (or for PUT, PATCH or OPTIONS).
+ * This decoder will decode Body and can handle POST BODY.
  *
  * You <strong>MUST</strong> call {@link #destroy()} after completion to release all resources.
  *
@@ -73,49 +73,6 @@ public class HttpPostRequestDecoder implements HttpPostRequestDecoderInterface {
 
     /**
      *
-     * @param request
-     *            the request to decode
-     * @param unlimitedMethod
-     *            True to unlimit method, False will limit to POST, PUT, PATCH and OPTIONS
-     * @throws NullPointerException
-     *             for request
-     * @throws HttpPostRequestDecoder.IncompatibleDataDecoderException
-     *             if the request has no body to decode
-     * @throws HttpPostRequestDecoder.ErrorDataDecoderException
-     *             if the default charset was wrong when decoding or other
-     *             errors
-     */
-    public HttpPostRequestDecoder(HttpRequest request, boolean unlimitedMethod)
-           throws HttpPostRequestDecoder.ErrorDataDecoderException,
-           HttpPostRequestDecoder.IncompatibleDataDecoderException {
-        this(new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE), request,
-               HttpConstants.DEFAULT_CHARSET, unlimitedMethod);
-    }
-
-    /**
-     *
-     * @param factory
-     *            the factory used to create InterfaceHttpData
-     * @param request
-     *            the request to decode
-     * @param unlimitedMethod
-     *            True to unlimit method, False will limit to POST, PUT, PATCH and OPTIONS
-     * @throws NullPointerException
-     *             for request or factory
-     * @throws HttpPostRequestDecoder.IncompatibleDataDecoderException
-     *             if the request has no body to decode
-     * @throws HttpPostRequestDecoder.ErrorDataDecoderException
-     *             if the default charset was wrong when decoding or other
-     *             errors
-     */
-    public HttpPostRequestDecoder(HttpDataFactory factory, HttpRequest request, boolean unlimitedMethod)
-           throws HttpPostRequestDecoder.ErrorDataDecoderException,
-           HttpPostRequestDecoder.IncompatibleDataDecoderException {
-        this(factory, request, HttpConstants.DEFAULT_CHARSET, unlimitedMethod);
-    }
-
-    /**
-     *
      * @param factory
      *            the factory used to create InterfaceHttpData
      * @param request
@@ -131,30 +88,6 @@ public class HttpPostRequestDecoder implements HttpPostRequestDecoderInterface {
      *             errors
      */
     public HttpPostRequestDecoder(HttpDataFactory factory, HttpRequest request, Charset charset)
-            throws HttpPostRequestDecoder.ErrorDataDecoderException, HttpPostRequestDecoder.IncompatibleDataDecoderException {
-        this(factory, request, charset, false);
-    }
-
-    /**
-     *
-     * @param factory
-     *            the factory used to create InterfaceHttpData
-     * @param request
-     *            the request to decode
-     * @param charset
-     *            the charset to use as default
-     * @param unlimitedMethod
-     *            True to unlimit method, False will limit to POST, PUT, PATCH and OPTIONS
-     * @throws NullPointerException
-     *             for request or charset or factory
-     * @throws HttpPostRequestDecoder.IncompatibleDataDecoderException
-     *             if the request has no body to decode
-     * @throws HttpPostRequestDecoder.ErrorDataDecoderException
-     *             if the default charset was wrong when decoding or other
-     *             errors
-     */
-    public HttpPostRequestDecoder(HttpDataFactory factory, HttpRequest request, Charset charset,
-            boolean unlimitedMethod)
             throws HttpPostRequestDecoder.ErrorDataDecoderException, HttpPostRequestDecoder.IncompatibleDataDecoderException {
         if (factory == null) {
             throw new NullPointerException("factory");
