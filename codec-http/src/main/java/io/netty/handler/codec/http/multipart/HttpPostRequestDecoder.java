@@ -88,11 +88,7 @@ public class HttpPostRequestDecoder implements HttpPostRequestDecoderInterface {
      *             errors
      */
     public HttpPostRequestDecoder(HttpDataFactory factory, HttpRequest request, Charset charset)
-<<<<<<< HEAD
             throws HttpPostRequestDecoder.ErrorDataDecoderException, HttpPostRequestDecoder.IncompatibleDataDecoderException {
-=======
-            throws ErrorDataDecoderException, IncompatibleDataDecoderException {
->>>>>>> parent of 6c1aeb9... Proposal for #1753 to enable by constructor to not test correctness
         if (factory == null) {
             throw new NullPointerException("factory");
         }
@@ -102,16 +98,6 @@ public class HttpPostRequestDecoder implements HttpPostRequestDecoderInterface {
         if (charset == null) {
             throw new NullPointerException("charset");
         }
-<<<<<<< HEAD
-=======
-        this.request = request;
-        HttpMethod method = request.getMethod();
-        if (method.equals(HttpMethod.POST) || method.equals(HttpMethod.PUT) || method.equals(HttpMethod.PATCH)) {
-            bodyToDecode = true;
-        }
-        this.charset = charset;
-        this.factory = factory;
->>>>>>> parent of 6c1aeb9... Proposal for #1753 to enable by constructor to not test correctness
         // Fill default values
         if (isMultipart(request)) {
             decoder = new HttpPostMultipartRequestDecoder(factory, request, charset);
