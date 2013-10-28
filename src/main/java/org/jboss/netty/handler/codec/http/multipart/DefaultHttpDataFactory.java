@@ -119,10 +119,19 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
         return attribute;
     }
 
-    public Attribute createAttribute(HttpRequest request, String name, String value) {
-        if (maxSize >= 0 && value != null && value.length() > maxSize) {
+    /**
+     * Utility method
+     * @param data
+     */
+    private void checkHttpDataSize(HttpData data) {
+        try {
+            data.checkSize(data.length());
+        } catch (IOException e) {
             throw new IllegalArgumentException("Attribute bigger than maxSize allowed");
         }
+    }
+
+    public Attribute createAttribute(HttpRequest request, String name, String value) {
         if (useDisk) {
             Attribute attribute;
             try {
@@ -133,6 +142,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
                 attribute = new MixedAttribute(name, value, minSize);
                 attribute.setMaxSize(maxSize);
             }
+            checkHttpDataSize(attribute);
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.add(attribute);
             return attribute;
@@ -140,6 +150,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
         if (checkSize) {
             Attribute attribute = new MixedAttribute(name, value, minSize);
             attribute.setMaxSize(maxSize);
+            checkHttpDataSize(attribute);
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.add(attribute);
             return attribute;
@@ -147,6 +158,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
         try {
             MemoryAttribute attribute = new MemoryAttribute(name, value);
             attribute.setMaxSize(maxSize);
+            checkHttpDataSize(attribute);
             return attribute;
         } catch (IOException e) {
             throw new IllegalArgumentException(e);
@@ -156,13 +168,11 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     public FileUpload createFileUpload(HttpRequest request, String name, String filename,
             String contentType, String contentTransferEncoding, Charset charset,
             long size) {
-        if (maxSize >= 0 && size > maxSize) {
-            throw new IllegalArgumentException("FileUpload bigger than maxSize allowed");
-        }
         if (useDisk) {
             FileUpload fileUpload = new DiskFileUpload(name, filename, contentType,
                     contentTransferEncoding, charset, size);
             fileUpload.setMaxSize(maxSize);
+            checkHttpDataSize(fileUpload);
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.add(fileUpload);
             return fileUpload;
@@ -171,6 +181,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
             FileUpload fileUpload = new MixedFileUpload(name, filename, contentType,
                     contentTransferEncoding, charset, size, minSize);
             fileUpload.setMaxSize(maxSize);
+            checkHttpDataSize(fileUpload);
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.add(fileUpload);
             return fileUpload;
@@ -178,6 +189,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
         MemoryFileUpload fileUpload = new MemoryFileUpload(name, filename, contentType,
                 contentTransferEncoding, charset, size);
         fileUpload.setMaxSize(maxSize);
+        checkHttpDataSize(fileUpload);
         return fileUpload;
     }
 

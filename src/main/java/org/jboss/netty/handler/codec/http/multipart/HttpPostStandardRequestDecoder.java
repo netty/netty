@@ -19,7 +19,6 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpConstants;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.multipart.HttpPostBodyUtil.SeekAheadNoBackArrayException;
 import org.jboss.netty.handler.codec.http.multipart.HttpPostBodyUtil.SeekAheadOptimize;
@@ -57,11 +56,6 @@ public class HttpPostStandardRequestDecoder implements HttpPostRequestDecoderInt
      * Default charset to use
      */
     private final Charset charset;
-
-    /**
-     * Does request have a body to decode
-     */
-    private boolean bodyToDecode;
 
     /**
      * Does the last chunk already received
@@ -147,15 +141,8 @@ public class HttpPostStandardRequestDecoder implements HttpPostRequestDecoderInt
             throw new NullPointerException("charset");
         }
         this.request = request;
-        HttpMethod method = request.getMethod();
-        if (method.equals(HttpMethod.POST) || method.equals(HttpMethod.PUT) || method.equals(HttpMethod.PATCH)) {
-            bodyToDecode = true;
-        }
         this.charset = charset;
         this.factory = factory;
-        if (!bodyToDecode) {
-            throw new IncompatibleDataDecoderException("No Body to decode");
-        }
         if (!this.request.isChunked()) {
             undecodedChunk = this.request.getContent();
             isLastChunk = true;
