@@ -187,9 +187,13 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
         if (charset == null) {
             throw new NullPointerException("charset");
         }
+<<<<<<< HEAD
         HttpMethod method = request.getMethod();
         if (method.equals(HttpMethod.POST) || method.equals(HttpMethod.PUT)
                 || method.equals(HttpMethod.PATCH) || method.equals(HttpMethod.OPTIONS)) {
+=======
+        if (request.getMethod() != HttpMethod.POST) {
+>>>>>>> parent of 6c1aeb9... Proposal for #1753 to enable by constructor to not test correctness
             throw new ErrorDataEncoderException("Cannot create a Encoder if not a POST");
         }
         this.request = request;

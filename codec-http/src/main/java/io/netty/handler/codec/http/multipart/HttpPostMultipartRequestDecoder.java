@@ -39,7 +39,7 @@ import java.util.TreeMap;
 import static io.netty.buffer.Unpooled.*;
 
 /**
- * This decoder will decode Body and can handle POST BODY (or for PUT, PATCH or OPTIONS).
+ * This decoder will decode Body and can handle POST BODY.
  *
  * You <strong>MUST</strong> call {@link #destroy()} after completion to release all resources.
  *
@@ -164,49 +164,6 @@ public class HttpPostMultipartRequestDecoder implements HttpPostRequestDecoderIn
 
     /**
      *
-     * @param request
-     *            the request to decode
-     * @param unlimitedMethod
-     *            True to unlimit method, False will limit to POST, PUT, PATCH and OPTIONS
-     * @throws NullPointerException
-     *             for request
-     * @throws IncompatibleDataDecoderException
-     *             if the request has no body to decode
-     * @throws ErrorDataDecoderException
-     *             if the default charset was wrong when decoding or other
-     *             errors
-     */
-    public HttpPostMultipartRequestDecoder(HttpRequest request, boolean unlimitedMethod)
-           throws ErrorDataDecoderException,
-           IncompatibleDataDecoderException {
-        this(new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE), request,
-               HttpConstants.DEFAULT_CHARSET, unlimitedMethod);
-    }
-
-    /**
-     *
-     * @param factory
-     *            the factory used to create InterfaceHttpData
-     * @param request
-     *            the request to decode
-     * @param unlimitedMethod
-     *            True to unlimit method, False will limit to POST, PUT, PATCH and OPTIONS
-     * @throws NullPointerException
-     *             for request or factory
-     * @throws IncompatibleDataDecoderException
-     *             if the request has no body to decode
-     * @throws ErrorDataDecoderException
-     *             if the default charset was wrong when decoding or other
-     *             errors
-     */
-    public HttpPostMultipartRequestDecoder(HttpDataFactory factory, HttpRequest request, boolean unlimitedMethod)
-           throws ErrorDataDecoderException,
-           IncompatibleDataDecoderException {
-        this(factory, request, HttpConstants.DEFAULT_CHARSET, unlimitedMethod);
-    }
-
-    /**
-     *
      * @param factory
      *            the factory used to create InterfaceHttpData
      * @param request
@@ -223,30 +180,6 @@ public class HttpPostMultipartRequestDecoder implements HttpPostRequestDecoderIn
      */
     public HttpPostMultipartRequestDecoder(HttpDataFactory factory, HttpRequest request, Charset charset)
             throws ErrorDataDecoderException, IncompatibleDataDecoderException {
-        this(factory, request, charset, false);
-    }
-
-    /**
-     *
-     * @param factory
-     *            the factory used to create InterfaceHttpData
-     * @param request
-     *            the request to decode
-     * @param charset
-     *            the charset to use as default
-     * @param unlimitedMethod
-     *            True to unlimit method, False will limit to POST, PUT, PATCH and OPTIONS
-     * @throws NullPointerException
-     *             for request or charset or factory
-     * @throws IncompatibleDataDecoderException
-     *             if the request has no body to decode
-     * @throws ErrorDataDecoderException
-     *             if the default charset was wrong when decoding or other
-     *             errors
-     */
-    public HttpPostMultipartRequestDecoder(HttpDataFactory factory, HttpRequest request, Charset charset,
-            boolean unlimitedMethod)
-            throws ErrorDataDecoderException, IncompatibleDataDecoderException {
         if (factory == null) {
             throw new NullPointerException("factory");
         }
@@ -257,14 +190,10 @@ public class HttpPostMultipartRequestDecoder implements HttpPostRequestDecoderIn
             throw new NullPointerException("charset");
         }
         this.request = request;
-        if (unlimitedMethod) {
+        HttpMethod method = request.getMethod();
+        if (method.equals(HttpMethod.POST) || method.equals(HttpMethod.PUT)
+                || method.equals(HttpMethod.PATCH) || method.equals(HttpMethod.OPTIONS)) {
             bodyToDecode = true;
-        } else {
-            HttpMethod method = request.getMethod();
-            if (method.equals(HttpMethod.POST) || method.equals(HttpMethod.PUT)
-                    || method.equals(HttpMethod.PATCH) || method.equals(HttpMethod.OPTIONS)) {
-                bodyToDecode = true;
-            }
         }
         this.charset = charset;
         this.factory = factory;
