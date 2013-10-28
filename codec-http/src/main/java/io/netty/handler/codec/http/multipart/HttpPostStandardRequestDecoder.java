@@ -23,7 +23,11 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.multipart.HttpPostBodyUtil.SeekAheadNoBackArrayException;
 import io.netty.handler.codec.http.multipart.HttpPostBodyUtil.SeekAheadOptimize;
+import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.EndOfDataDecoderException;
+import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.ErrorDataDecoderException;
+import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.IncompatibleDataDecoderException;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.MultiPartStatus;
+import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.NotEnoughDataDecoderException;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -109,14 +113,14 @@ public class HttpPostStandardRequestDecoder implements HttpPostRequestDecoderInt
      *            the request to decode
      * @throws NullPointerException
      *             for request
-     * @throws HttpPostRequestDecoder.IncompatibleDataDecoderException
+     * @throws IncompatibleDataDecoderException
      *             if the request has no body to decode
-     * @throws HttpPostRequestDecoder.ErrorDataDecoderException
+     * @throws ErrorDataDecoderException
      *             if the default charset was wrong when decoding or other
      *             errors
      */
-    public HttpPostStandardRequestDecoder(HttpRequest request) throws HttpPostRequestDecoder.ErrorDataDecoderException,
-            HttpPostRequestDecoder.IncompatibleDataDecoderException {
+    public HttpPostStandardRequestDecoder(HttpRequest request)
+    throws ErrorDataDecoderException, IncompatibleDataDecoderException {
         this(new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE), request, HttpConstants.DEFAULT_CHARSET);
     }
 
@@ -128,14 +132,14 @@ public class HttpPostStandardRequestDecoder implements HttpPostRequestDecoderInt
      *            the request to decode
      * @throws NullPointerException
      *             for request or factory
-     * @throws HttpPostRequestDecoder.IncompatibleDataDecoderException
+     * @throws IncompatibleDataDecoderException
      *             if the request has no body to decode
-     * @throws HttpPostRequestDecoder.ErrorDataDecoderException
+     * @throws ErrorDataDecoderException
      *             if the default charset was wrong when decoding or other
      *             errors
      */
-    public HttpPostStandardRequestDecoder(HttpDataFactory factory, HttpRequest request) throws HttpPostRequestDecoder.ErrorDataDecoderException,
-            HttpPostRequestDecoder.IncompatibleDataDecoderException {
+    public HttpPostStandardRequestDecoder(HttpDataFactory factory, HttpRequest request)
+    throws ErrorDataDecoderException, IncompatibleDataDecoderException {
         this(factory, request, HttpConstants.DEFAULT_CHARSET);
     }
 
@@ -149,14 +153,14 @@ public class HttpPostStandardRequestDecoder implements HttpPostRequestDecoderInt
      *            the charset to use as default
      * @throws NullPointerException
      *             for request or charset or factory
-     * @throws HttpPostRequestDecoder.IncompatibleDataDecoderException
+     * @throws IncompatibleDataDecoderException
      *             if the request has no body to decode
-     * @throws HttpPostRequestDecoder.ErrorDataDecoderException
+     * @throws ErrorDataDecoderException
      *             if the default charset was wrong when decoding or other
      *             errors
      */
     public HttpPostStandardRequestDecoder(HttpDataFactory factory, HttpRequest request, Charset charset)
-            throws HttpPostRequestDecoder.ErrorDataDecoderException, HttpPostRequestDecoder.IncompatibleDataDecoderException {
+    throws ErrorDataDecoderException, IncompatibleDataDecoderException {
         if (factory == null) {
             throw new NullPointerException("factory");
         }
@@ -175,7 +179,7 @@ public class HttpPostStandardRequestDecoder implements HttpPostRequestDecoderInt
         this.charset = charset;
         this.factory = factory;
         if (!bodyToDecode) {
-            throw new HttpPostRequestDecoder.IncompatibleDataDecoderException("No Body to decode");
+            throw new IncompatibleDataDecoderException("No Body to decode");
         }
         if (request instanceof HttpContent) {
             // Offer automatically if the given request is als type of HttpContent
@@ -229,14 +233,14 @@ public class HttpPostStandardRequestDecoder implements HttpPostRequestDecoderInt
      * not, NotEnoughDataDecoderException will be raised.
      *
      * @return the list of HttpDatas from Body part for POST getMethod
-     * @throws HttpPostRequestDecoder.NotEnoughDataDecoderException
+     * @throws NotEnoughDataDecoderException
      *             Need more chunks
      */
-    public List<InterfaceHttpData> getBodyHttpDatas() throws HttpPostRequestDecoder.NotEnoughDataDecoderException {
+    public List<InterfaceHttpData> getBodyHttpDatas() throws NotEnoughDataDecoderException {
         checkDestroyed();
 
         if (!isLastChunk) {
-            throw new HttpPostRequestDecoder.NotEnoughDataDecoderException();
+            throw new NotEnoughDataDecoderException();
         }
         return bodyListHttpData;
     }
@@ -249,14 +253,15 @@ public class HttpPostStandardRequestDecoder implements HttpPostRequestDecoderInt
      * not, NotEnoughDataDecoderException will be raised.
      *
      * @return All Body HttpDatas with the given name (ignore case)
-     * @throws HttpPostRequestDecoder.NotEnoughDataDecoderException
+     * @throws NotEnoughDataDecoderException
      *             need more chunks
      */
-    public List<InterfaceHttpData> getBodyHttpDatas(String name) throws HttpPostRequestDecoder.NotEnoughDataDecoderException {
+    public List<InterfaceHttpData> getBodyHttpDatas(String name)
+    throws NotEnoughDataDecoderException {
         checkDestroyed();
 
         if (!isLastChunk) {
-            throw new HttpPostRequestDecoder.NotEnoughDataDecoderException();
+            throw new NotEnoughDataDecoderException();
         }
         return bodyMapHttpData.get(name);
     }
@@ -270,14 +275,14 @@ public class HttpPostStandardRequestDecoder implements HttpPostRequestDecoderInt
      *
      * @return The first Body InterfaceHttpData with the given name (ignore
      *         case)
-     * @throws HttpPostRequestDecoder.NotEnoughDataDecoderException
+     * @throws NotEnoughDataDecoderException
      *             need more chunks
      */
-    public InterfaceHttpData getBodyHttpData(String name) throws HttpPostRequestDecoder.NotEnoughDataDecoderException {
+    public InterfaceHttpData getBodyHttpData(String name) throws NotEnoughDataDecoderException {
         checkDestroyed();
 
         if (!isLastChunk) {
-            throw new HttpPostRequestDecoder.NotEnoughDataDecoderException();
+            throw new NotEnoughDataDecoderException();
         }
         List<InterfaceHttpData> list = bodyMapHttpData.get(name);
         if (list != null) {
@@ -291,11 +296,12 @@ public class HttpPostStandardRequestDecoder implements HttpPostRequestDecoderInt
      *
      * @param content
      *            the new received chunk
-     * @throws HttpPostRequestDecoder.ErrorDataDecoderException
+     * @throws ErrorDataDecoderException
      *             if there is a problem with the charset decoding or other
      *             errors
      */
-    public HttpPostStandardRequestDecoder offer(HttpContent content) throws HttpPostRequestDecoder.ErrorDataDecoderException {
+    public HttpPostStandardRequestDecoder offer(HttpContent content)
+    throws ErrorDataDecoderException {
         checkDestroyed();
 
         // Maybe we should better not copy here for performance reasons but this will need
@@ -324,16 +330,16 @@ public class HttpPostStandardRequestDecoder implements HttpPostRequestDecoderInt
      * This getMethod works for chunked and not chunked request.
      *
      * @return True if at current getStatus, there is a decoded InterfaceHttpData
-     * @throws HttpPostRequestDecoder.EndOfDataDecoderException
+     * @throws EndOfDataDecoderException
      *             No more data will be available
      */
-    public boolean hasNext() throws HttpPostRequestDecoder.EndOfDataDecoderException {
+    public boolean hasNext() throws EndOfDataDecoderException {
         checkDestroyed();
 
         if (currentStatus == MultiPartStatus.EPILOGUE) {
             // OK except if end of list
             if (bodyListHttpDataRank >= bodyListHttpData.size()) {
-                throw new HttpPostRequestDecoder.EndOfDataDecoderException();
+                throw new EndOfDataDecoderException();
             }
         }
         return !bodyListHttpData.isEmpty() && bodyListHttpDataRank < bodyListHttpData.size();
@@ -348,10 +354,10 @@ public class HttpPostStandardRequestDecoder implements HttpPostRequestDecoderInt
      * with processing to make sure to not leak any resources
      *
      * @return the next available InterfaceHttpData or null if none
-     * @throws HttpPostRequestDecoder.EndOfDataDecoderException
+     * @throws EndOfDataDecoderException
      *             No more data will be available
      */
-    public InterfaceHttpData next() throws HttpPostRequestDecoder.EndOfDataDecoderException {
+    public InterfaceHttpData next() throws EndOfDataDecoderException {
         checkDestroyed();
 
         if (hasNext()) {
@@ -363,11 +369,11 @@ public class HttpPostStandardRequestDecoder implements HttpPostRequestDecoderInt
     /**
      * This getMethod will parse as much as possible data and fill the list and map
      *
-     * @throws HttpPostRequestDecoder.ErrorDataDecoderException
+     * @throws ErrorDataDecoderException
      *             if there is a problem with the charset decoding or other
      *             errors
      */
-    private void parseBody() throws HttpPostRequestDecoder.ErrorDataDecoderException {
+    private void parseBody() throws ErrorDataDecoderException {
         if (currentStatus == MultiPartStatus.PREEPILOGUE || currentStatus == MultiPartStatus.EPILOGUE) {
             if (isLastChunk) {
                 currentStatus = MultiPartStatus.EPILOGUE;
@@ -397,11 +403,11 @@ public class HttpPostStandardRequestDecoder implements HttpPostRequestDecoderInt
      * This getMethod fill the map and list with as much Attribute as possible from
      * Body in not Multipart mode.
      *
-     * @throws HttpPostRequestDecoder.ErrorDataDecoderException
+     * @throws ErrorDataDecoderException
      *             if there is a problem with the charset decoding or other
      *             errors
      */
-    private void parseBodyAttributesStandard() throws HttpPostRequestDecoder.ErrorDataDecoderException {
+    private void parseBodyAttributesStandard() throws ErrorDataDecoderException {
         int firstpos = undecodedChunk.readerIndex();
         int currentpos = firstpos;
         int equalpos;
@@ -455,7 +461,7 @@ public class HttpPostStandardRequestDecoder implements HttpPostRequestDecoderInt
                                 contRead = false;
                             } else {
                                 // Error
-                                throw new HttpPostRequestDecoder.ErrorDataDecoderException("Bad end of line");
+                                throw new ErrorDataDecoderException("Bad end of line");
                             }
                         } else {
                             currentpos--;
@@ -496,14 +502,14 @@ public class HttpPostStandardRequestDecoder implements HttpPostRequestDecoderInt
             } else {
                 // end of line so keep index
             }
-        } catch (HttpPostRequestDecoder.ErrorDataDecoderException e) {
+        } catch (ErrorDataDecoderException e) {
             // error while decoding
             undecodedChunk.readerIndex(firstpos);
             throw e;
         } catch (IOException e) {
             // error while decoding
             undecodedChunk.readerIndex(firstpos);
-            throw new HttpPostRequestDecoder.ErrorDataDecoderException(e);
+            throw new ErrorDataDecoderException(e);
         }
     }
 
@@ -511,11 +517,11 @@ public class HttpPostStandardRequestDecoder implements HttpPostRequestDecoderInt
      * This getMethod fill the map and list with as much Attribute as possible from
      * Body in not Multipart mode.
      *
-     * @throws HttpPostRequestDecoder.ErrorDataDecoderException
+     * @throws ErrorDataDecoderException
      *             if there is a problem with the charset decoding or other
      *             errors
      */
-    private void parseBodyAttributes() throws HttpPostRequestDecoder.ErrorDataDecoderException {
+    private void parseBodyAttributes() throws ErrorDataDecoderException {
         SeekAheadOptimize sao;
         try {
             sao = new SeekAheadOptimize(undecodedChunk);
@@ -579,7 +585,7 @@ public class HttpPostStandardRequestDecoder implements HttpPostRequestDecoderInt
                             } else {
                                 // Error
                                 sao.setReadPosition(0);
-                                throw new HttpPostRequestDecoder.ErrorDataDecoderException("Bad end of line");
+                                throw new ErrorDataDecoderException("Bad end of line");
                             }
                         } else {
                             if (sao.limit > 0) {
@@ -626,18 +632,18 @@ public class HttpPostStandardRequestDecoder implements HttpPostRequestDecoderInt
             } else {
                 // end of line so keep index
             }
-        } catch (HttpPostRequestDecoder.ErrorDataDecoderException e) {
+        } catch (ErrorDataDecoderException e) {
             // error while decoding
             undecodedChunk.readerIndex(firstpos);
             throw e;
         } catch (IOException e) {
             // error while decoding
             undecodedChunk.readerIndex(firstpos);
-            throw new HttpPostRequestDecoder.ErrorDataDecoderException(e);
+            throw new ErrorDataDecoderException(e);
         }
     }
 
-    private void setFinalBuffer(ByteBuf buffer) throws HttpPostRequestDecoder.ErrorDataDecoderException, IOException {
+    private void setFinalBuffer(ByteBuf buffer) throws ErrorDataDecoderException, IOException {
         currentAttribute.addContent(buffer, true);
         String value = decodeAttribute(currentAttribute.getByteBuf().toString(charset), charset);
         currentAttribute.setValue(value);
@@ -650,25 +656,26 @@ public class HttpPostStandardRequestDecoder implements HttpPostRequestDecoderInt
      *
      * @return the decoded component
      */
-    private static String decodeAttribute(String s, Charset charset) throws HttpPostRequestDecoder.ErrorDataDecoderException {
+    private static String decodeAttribute(String s, Charset charset)
+    throws ErrorDataDecoderException {
         if (s == null) {
             return "";
         }
         try {
             return URLDecoder.decode(s, charset.name());
         } catch (UnsupportedEncodingException e) {
-            throw new HttpPostRequestDecoder.ErrorDataDecoderException(charset.toString(), e);
+            throw new ErrorDataDecoderException(charset.toString(), e);
         } catch (IllegalArgumentException e) {
-            throw new HttpPostRequestDecoder.ErrorDataDecoderException("Bad string: '" + s + '\'', e);
+            throw new ErrorDataDecoderException("Bad string: '" + s + '\'', e);
         }
     }
 
     /**
      * Skip control Characters
      *
-     * @throws HttpPostRequestDecoder.NotEnoughDataDecoderException
+     * @throws NotEnoughDataDecoderException
      */
-    void skipControlCharacters() throws HttpPostRequestDecoder.NotEnoughDataDecoderException {
+    void skipControlCharacters() throws NotEnoughDataDecoderException {
         SeekAheadOptimize sao;
         try {
             sao = new SeekAheadOptimize(undecodedChunk);
@@ -676,7 +683,7 @@ public class HttpPostStandardRequestDecoder implements HttpPostRequestDecoderInt
             try {
                 skipControlCharactersStandard();
             } catch (IndexOutOfBoundsException e1) {
-                throw new HttpPostRequestDecoder.NotEnoughDataDecoderException(e1);
+                throw new NotEnoughDataDecoderException(e1);
             }
             return;
         }
@@ -688,7 +695,7 @@ public class HttpPostStandardRequestDecoder implements HttpPostRequestDecoderInt
                 return;
             }
         }
-        throw new HttpPostRequestDecoder.NotEnoughDataDecoderException("Access out of bounds");
+        throw new NotEnoughDataDecoderException("Access out of bounds");
     }
 
     void skipControlCharactersStandard() {

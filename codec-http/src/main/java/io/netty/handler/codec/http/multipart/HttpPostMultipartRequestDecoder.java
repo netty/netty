@@ -16,7 +16,6 @@
 package io.netty.handler.codec.http.multipart;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -26,7 +25,11 @@ import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.multipart.HttpPostBodyUtil.SeekAheadNoBackArrayException;
 import io.netty.handler.codec.http.multipart.HttpPostBodyUtil.SeekAheadOptimize;
 import io.netty.handler.codec.http.multipart.HttpPostBodyUtil.TransferEncodingMechanism;
+import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.EndOfDataDecoderException;
+import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.ErrorDataDecoderException;
+import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.IncompatibleDataDecoderException;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.MultiPartStatus;
+import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.NotEnoughDataDecoderException;
 import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
@@ -1761,79 +1764,5 @@ public class HttpPostMultipartRequestDecoder implements HttpPostRequestDecoderIn
             array[i] = headers.get(i);
         }
         return array;
-    }
-
-    /**
-     * Exception when try reading data from request in chunked format, and not
-     * enough data are available (need more chunks)
-     */
-    public static class NotEnoughDataDecoderException extends DecoderException {
-        private static final long serialVersionUID = -7846841864603865638L;
-
-        public NotEnoughDataDecoderException() {
-        }
-
-        public NotEnoughDataDecoderException(String msg) {
-            super(msg);
-        }
-
-        public NotEnoughDataDecoderException(Throwable cause) {
-            super(cause);
-        }
-
-        public NotEnoughDataDecoderException(String msg, Throwable cause) {
-            super(msg, cause);
-        }
-    }
-
-    /**
-     * Exception when the body is fully decoded, even if there is still data
-     */
-    public static class EndOfDataDecoderException extends DecoderException {
-        private static final long serialVersionUID = 1336267941020800769L;
-    }
-
-    /**
-     * Exception when an error occurs while decoding
-     */
-    public static class ErrorDataDecoderException extends DecoderException {
-        private static final long serialVersionUID = 5020247425493164465L;
-
-        public ErrorDataDecoderException() {
-        }
-
-        public ErrorDataDecoderException(String msg) {
-            super(msg);
-        }
-
-        public ErrorDataDecoderException(Throwable cause) {
-            super(cause);
-        }
-
-        public ErrorDataDecoderException(String msg, Throwable cause) {
-            super(msg, cause);
-        }
-    }
-
-    /**
-     * Exception when an unappropriated getMethod was called on a request
-     */
-    public static class IncompatibleDataDecoderException extends DecoderException {
-        private static final long serialVersionUID = -953268047926250267L;
-
-        public IncompatibleDataDecoderException() {
-        }
-
-        public IncompatibleDataDecoderException(String msg) {
-            super(msg);
-        }
-
-        public IncompatibleDataDecoderException(Throwable cause) {
-            super(cause);
-        }
-
-        public IncompatibleDataDecoderException(String msg, Throwable cause) {
-            super(msg, cause);
-        }
     }
 }

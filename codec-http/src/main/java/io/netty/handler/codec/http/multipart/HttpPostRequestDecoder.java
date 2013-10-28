@@ -41,14 +41,14 @@ public class HttpPostRequestDecoder implements HttpPostRequestDecoderInterface {
      *            the request to decode
      * @throws NullPointerException
      *             for request
-     * @throws HttpPostRequestDecoder.IncompatibleDataDecoderException
+     * @throws IncompatibleDataDecoderException
      *             if the request has no body to decode
-     * @throws HttpPostRequestDecoder.ErrorDataDecoderException
+     * @throws ErrorDataDecoderException
      *             if the default charset was wrong when decoding or other
      *             errors
      */
-    public HttpPostRequestDecoder(HttpRequest request) throws HttpPostRequestDecoder.ErrorDataDecoderException,
-            HttpPostRequestDecoder.IncompatibleDataDecoderException {
+    public HttpPostRequestDecoder(HttpRequest request) throws ErrorDataDecoderException,
+            IncompatibleDataDecoderException {
         this(new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE), request, HttpConstants.DEFAULT_CHARSET);
     }
 
@@ -60,14 +60,14 @@ public class HttpPostRequestDecoder implements HttpPostRequestDecoderInterface {
      *            the request to decode
      * @throws NullPointerException
      *             for request or factory
-     * @throws HttpPostRequestDecoder.IncompatibleDataDecoderException
+     * @throws IncompatibleDataDecoderException
      *             if the request has no body to decode
-     * @throws HttpPostRequestDecoder.ErrorDataDecoderException
+     * @throws ErrorDataDecoderException
      *             if the default charset was wrong when decoding or other
      *             errors
      */
-    public HttpPostRequestDecoder(HttpDataFactory factory, HttpRequest request) throws HttpPostRequestDecoder.ErrorDataDecoderException,
-            HttpPostRequestDecoder.IncompatibleDataDecoderException {
+    public HttpPostRequestDecoder(HttpDataFactory factory, HttpRequest request) throws ErrorDataDecoderException,
+            IncompatibleDataDecoderException {
         this(factory, request, HttpConstants.DEFAULT_CHARSET);
     }
 
@@ -81,14 +81,14 @@ public class HttpPostRequestDecoder implements HttpPostRequestDecoderInterface {
      *            the charset to use as default
      * @throws NullPointerException
      *             for request or charset or factory
-     * @throws HttpPostRequestDecoder.IncompatibleDataDecoderException
+     * @throws IncompatibleDataDecoderException
      *             if the request has no body to decode
-     * @throws HttpPostRequestDecoder.ErrorDataDecoderException
+     * @throws ErrorDataDecoderException
      *             if the default charset was wrong when decoding or other
      *             errors
      */
     public HttpPostRequestDecoder(HttpDataFactory factory, HttpRequest request, Charset charset)
-            throws HttpPostRequestDecoder.ErrorDataDecoderException, HttpPostRequestDecoder.IncompatibleDataDecoderException {
+            throws ErrorDataDecoderException, IncompatibleDataDecoderException {
         if (factory == null) {
             throw new NullPointerException("factory");
         }
@@ -139,6 +139,113 @@ public class HttpPostRequestDecoder implements HttpPostRequestDecoderInterface {
     protected enum MultiPartStatus {
         NOTSTARTED, PREAMBLE, HEADERDELIMITER, DISPOSITION, FIELD, FILEUPLOAD, MIXEDPREAMBLE, MIXEDDELIMITER,
         MIXEDDISPOSITION, MIXEDFILEUPLOAD, MIXEDCLOSEDELIMITER, CLOSEDELIMITER, PREEPILOGUE, EPILOGUE
+    }
+
+	/**
+     * Check if the given request is a multipart request
+     * @param request
+     * @return True if the request is a Multipart request
+     * @throws ErrorDataDecoderException
+     */
+    public static boolean isMultipart(HttpRequest request) throws ErrorDataDecoderException {
+        if (request.headers().contains(HttpHeaders.Names.CONTENT_TYPE)) {
+            return getMultipartDataBoundary(request.headers().get(HttpHeaders.Names.CONTENT_TYPE)) != null;
+        } else {
+            return false;
+        }
+    }
+
+    /**
+     * Check from the request ContentType if this request is a Multipart request.
+     * @return the multipartDataBoundary if it exists, else null
+     */
+    protected static String getMultipartDataBoundary(String contentType)
+            throws ErrorDataDecoderException {
+        // Check if Post using "multipart/form-data; boundary=--89421926422648"
+        String[] headerContentType = splitHeaderContentType(contentType);
+        if (headerContentType[0].toLowerCase().startsWith(
+                HttpHeaders.Values.MULTIPART_FORM_DATA) &&
+                headerContentType[1].toLowerCase().startsWith(
+                        HttpHeaders.Values.BOUNDARY)) {
+            String[] boundary = StringUtil.split(headerContentType[1], '=');
+            if (boundary.length != 2) {
+                throw new ErrorDataDecoderException("Needs a boundary value");
+            }
+            return "--" + boundary[1];
+        } else {
+            return null;
+        }
+    }
+
+    public boolean isMultipart() {
+        return decoder.isMultipart();
+    }
+
+    public void setDiscardThreshold(int discardThreshold) {
+        decoder.setDiscardThreshold(discardThreshold);
+    }
+
+    public int getDiscardThreshold() {
+        return decoder.getDiscardThreshold();
+    }
+
+    public List<InterfaceHttpData> getBodyHttpDatas() throws NotEnoughDataDecoderException {
+        return decoder.getBodyHttpDatas();
+    }
+
+    public List<InterfaceHttpData> getBodyHttpDatas(String name) throws NotEnoughDataDecoderException {
+        return decoder.getBodyHttpDatas(name);
+    }
+
+    public InterfaceHttpData getBodyHttpData(String name) throws NotEnoughDataDecoderException {
+        return decoder.getBodyHttpData(name);
+    }
+
+    public HttpPostRequestDecoderInterface offer(HttpContent content) throws ErrorDataDecoderException {
+        return decoder.offer(content);
+    }
+
+    public boolean hasNext() throws EndOfDataDecoderException {
+        return decoder.hasNext();
+    }
+
+    public InterfaceHttpData next() throws EndOfDataDecoderException {
+        return decoder.next();
+    }
+
+    public void destroy() {
+        decoder.destroy();
+    }
+
+    public void cleanFiles() {
+        decoder.cleanFiles();
+    }
+
+    public void removeHttpDataFromClean(InterfaceHttpData data) {
+        decoder.removeHttpDataFromClean(data);
+    }
+
+    /**
+     * Split the very first line (Content-Type value) in 2 Strings
+     *
+     * @return the array of 2 Strings
+     */
+    private static String[] splitHeaderContentType(String sb) {
+        int aStart;
+        int aEnd;
+        int bStart;
+        int bEnd;
+        aStart = HttpPostBodyUtil.findNonWhitespace(sb, 0);
+        aEnd =  sb.indexOf(';');
+        if (aEnd == -1) {
+            return new String[] { sb, "" };
+        }
+        if (sb.charAt(aEnd - 1) == ' ') {
+            aEnd--;
+        }
+        bStart = HttpPostBodyUtil.findNonWhitespace(sb, aEnd + 1);
+        bEnd = HttpPostBodyUtil.findEndOfString(sb);
+        return new String[] { sb.substring(aStart, aEnd), sb.substring(bStart, bEnd) };
     }
 
     /**
@@ -214,111 +321,4 @@ public class HttpPostRequestDecoder implements HttpPostRequestDecoderInterface {
 	        super(msg, cause);
 	    }
 	}
-
-	/**
-     * Check if the given request is a multipart request
-     * @param request
-     * @return True if the request is a Multipart request
-     * @throws HttpPostRequestDecoder.ErrorDataDecoderException
-     */
-    public static boolean isMultipart(HttpRequest request) throws HttpPostRequestDecoder.ErrorDataDecoderException {
-        if (request.headers().contains(HttpHeaders.Names.CONTENT_TYPE)) {
-            return getMultipartDataBoundary(request.headers().get(HttpHeaders.Names.CONTENT_TYPE)) != null;
-        } else {
-            return false;
-        }
-    }
-
-    /**
-     * Check from the request ContentType if this request is a Multipart request.
-     * @return the multipartDataBoundary if it exists, else null
-     */
-    protected static String getMultipartDataBoundary(String contentType)
-            throws HttpPostRequestDecoder.ErrorDataDecoderException {
-        // Check if Post using "multipart/form-data; boundary=--89421926422648"
-        String[] headerContentType = splitHeaderContentType(contentType);
-        if (headerContentType[0].toLowerCase().startsWith(
-                HttpHeaders.Values.MULTIPART_FORM_DATA) &&
-                headerContentType[1].toLowerCase().startsWith(
-                        HttpHeaders.Values.BOUNDARY)) {
-            String[] boundary = StringUtil.split(headerContentType[1], '=');
-            if (boundary.length != 2) {
-                throw new HttpPostRequestDecoder.ErrorDataDecoderException("Needs a boundary value");
-            }
-            return "--" + boundary[1];
-        } else {
-            return null;
-        }
-    }
-
-    public boolean isMultipart() {
-        return decoder.isMultipart();
-    }
-
-    public void setDiscardThreshold(int discardThreshold) {
-        decoder.setDiscardThreshold(discardThreshold);
-    }
-
-    public int getDiscardThreshold() {
-        return decoder.getDiscardThreshold();
-    }
-
-    public List<InterfaceHttpData> getBodyHttpDatas() throws HttpPostRequestDecoder.NotEnoughDataDecoderException {
-        return decoder.getBodyHttpDatas();
-    }
-
-    public List<InterfaceHttpData> getBodyHttpDatas(String name) throws HttpPostRequestDecoder.NotEnoughDataDecoderException {
-        return decoder.getBodyHttpDatas(name);
-    }
-
-    public InterfaceHttpData getBodyHttpData(String name) throws HttpPostRequestDecoder.NotEnoughDataDecoderException {
-        return decoder.getBodyHttpData(name);
-    }
-
-    public HttpPostRequestDecoderInterface offer(HttpContent content) throws HttpPostRequestDecoder.ErrorDataDecoderException {
-        return decoder.offer(content);
-    }
-
-    public boolean hasNext() throws HttpPostRequestDecoder.EndOfDataDecoderException {
-        return decoder.hasNext();
-    }
-
-    public InterfaceHttpData next() throws HttpPostRequestDecoder.EndOfDataDecoderException {
-        return decoder.next();
-    }
-
-    public void destroy() {
-        decoder.destroy();
-    }
-
-    public void cleanFiles() {
-        decoder.cleanFiles();
-    }
-
-    public void removeHttpDataFromClean(InterfaceHttpData data) {
-        decoder.removeHttpDataFromClean(data);
-    }
-
-    /**
-     * Split the very first line (Content-Type value) in 2 Strings
-     *
-     * @return the array of 2 Strings
-     */
-    private static String[] splitHeaderContentType(String sb) {
-        int aStart;
-        int aEnd;
-        int bStart;
-        int bEnd;
-        aStart = HttpPostBodyUtil.findNonWhitespace(sb, 0);
-        aEnd =  sb.indexOf(';');
-        if (aEnd == -1) {
-            return new String[] { sb, "" };
-        }
-        if (sb.charAt(aEnd - 1) == ' ') {
-            aEnd--;
-        }
-        bStart = HttpPostBodyUtil.findNonWhitespace(sb, aEnd + 1);
-        bEnd = HttpPostBodyUtil.findEndOfString(sb);
-        return new String[] { sb.substring(aStart, aEnd), sb.substring(bStart, bEnd) };
-    }
 }
