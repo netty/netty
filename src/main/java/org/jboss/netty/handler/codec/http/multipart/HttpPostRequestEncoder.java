@@ -179,7 +179,8 @@ public class HttpPostRequestEncoder implements ChunkedInput {
         if (charset == null) {
             throw new NullPointerException("charset");
         }
-        if (request.getMethod() != HttpMethod.POST) {
+        HttpMethod method = request.getMethod();
+        if (method.equals(HttpMethod.POST) || method.equals(HttpMethod.PUT) || method.equals(HttpMethod.PATCH)) {
             throw new ErrorDataEncoderException("Cannot create a Encoder if not a POST");
         }
         this.request = request;

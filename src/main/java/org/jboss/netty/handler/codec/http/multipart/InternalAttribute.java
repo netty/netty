@@ -29,7 +29,6 @@ import java.util.List;
  * (like Multipart Mixed mode)
  */
 public class InternalAttribute implements InterfaceHttpData {
-    @Deprecated
     protected final List<String> value = new ArrayList<String>();
     private final Charset charset;
 
@@ -38,7 +37,6 @@ public class InternalAttribute implements InterfaceHttpData {
        this(CharsetUtil.UTF_8);
     }
 
-    @Deprecated
     public InternalAttribute(Charset charset) {
         this.charset = charset;
     }
