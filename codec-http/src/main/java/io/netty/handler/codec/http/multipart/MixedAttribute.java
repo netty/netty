@@ -29,6 +29,7 @@ public class MixedAttribute implements Attribute {
     private Attribute attribute;
 
     private final long limitSize;
+    protected long maxSize = DefaultHttpDataFactory.MAXSIZE;
 
     public MixedAttribute(String name, long limitSize) {
         this.limitSize = limitSize;
@@ -57,12 +58,25 @@ public class MixedAttribute implements Attribute {
         }
     }
 
+    public void setMaxSize(long maxSize) {
+        this.maxSize = maxSize;
+        attribute.setMaxSize(maxSize);
+    }
+
+    public void checkSize(long newSize) throws IOException {
+        if (maxSize >= 0 && newSize > maxSize) {
+            throw new IOException("Size exceed allowed maximum capacity");
+        }
+    }
+
     @Override
     public void addContent(ByteBuf buffer, boolean last) throws IOException {
         if (attribute instanceof MemoryAttribute) {
+            checkSize(attribute.length() + buffer.readableBytes());
             if (attribute.length() + buffer.readableBytes() > limitSize) {
                 DiskAttribute diskAttribute = new DiskAttribute(attribute
                         .getName());
+                diskAttribute.setMaxSize(maxSize);
                 if (((MemoryAttribute) attribute).getByteBuf() != null) {
                     diskAttribute.addContent(((MemoryAttribute) attribute)
                         .getByteBuf(), false);
@@ -130,10 +144,12 @@ public class MixedAttribute implements Attribute {
 
     @Override
     public void setContent(ByteBuf buffer) throws IOException {
+        checkSize(buffer.readableBytes());
         if (buffer.readableBytes() > limitSize) {
             if (attribute instanceof MemoryAttribute) {
                 // change to Disk
                 attribute = new DiskAttribute(attribute.getName());
+                attribute.setMaxSize(maxSize);
             }
         }
         attribute.setContent(buffer);
@@ -141,10 +157,12 @@ public class MixedAttribute implements Attribute {
 
     @Override
     public void setContent(File file) throws IOException {
+        checkSize(file.length());
         if (file.length() > limitSize) {
             if (attribute instanceof MemoryAttribute) {
                 // change to Disk
                 attribute = new DiskAttribute(attribute.getName());
+                attribute.setMaxSize(maxSize);
             }
         }
         attribute.setContent(file);
@@ -155,6 +173,7 @@ public class MixedAttribute implements Attribute {
         if (attribute instanceof MemoryAttribute) {
             // change to Disk even if we don't know the size
             attribute = new DiskAttribute(attribute.getName());
+            attribute.setMaxSize(maxSize);
         }
         attribute.setContent(inputStream);
     }
@@ -186,6 +205,9 @@ public class MixedAttribute implements Attribute {
 
     @Override
     public void setValue(String value) throws IOException {
+        if (value != null) {
+            checkSize(value.length());
+        }
         attribute.setValue(value);
     }
 

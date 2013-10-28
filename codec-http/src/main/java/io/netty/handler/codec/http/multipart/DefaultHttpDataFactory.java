@@ -37,12 +37,18 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
      * Proposed default MINSIZE as 16 KB.
      */
     public static final long MINSIZE = 0x4000;
+    /**
+     * Proposed default MAXSIZE = -1 as UNLIMITED
+     */
+    public static final long MAXSIZE = -1;
 
     private final boolean useDisk;
 
     private final boolean checkSize;
 
     private long minSize;
+
+    private long maxSize = MAXSIZE;
 
     /**
      * Keep all HttpDatas until cleanAllHttpDatas() is called.
@@ -78,6 +84,10 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
         this.minSize = minSize;
     }
 
+    public void setMaxLimit(long max) {
+        this.maxSize = max;
+    }
+
     /**
      * @return the associated list of Files for the request
      */
@@ -94,28 +104,37 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     public Attribute createAttribute(HttpRequest request, String name) {
         if (useDisk) {
             Attribute attribute = new DiskAttribute(name);
+            attribute.setMaxSize(maxSize);
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.add(attribute);
             return attribute;
         }
         if (checkSize) {
             Attribute attribute = new MixedAttribute(name, minSize);
+            attribute.setMaxSize(maxSize);
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.add(attribute);
             return attribute;
         }
-        return new MemoryAttribute(name);
+        MemoryAttribute attribute = new MemoryAttribute(name);
+        attribute.setMaxSize(maxSize);
+        return attribute;
     }
 
     @Override
     public Attribute createAttribute(HttpRequest request, String name, String value) {
+        if (maxSize >= 0 && value != null && value.length() > maxSize) {
+            throw new IllegalArgumentException("Attribute bigger than maxSize allowed");
+        }
         if (useDisk) {
             Attribute attribute;
             try {
                 attribute = new DiskAttribute(name, value);
+                attribute.setMaxSize(maxSize);
             } catch (IOException e) {
                 // revert to Mixed mode
                 attribute = new MixedAttribute(name, value, minSize);
+                attribute.setMaxSize(maxSize);
             }
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.add(attribute);
@@ -123,12 +142,15 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
         }
         if (checkSize) {
             Attribute attribute = new MixedAttribute(name, value, minSize);
+            attribute.setMaxSize(maxSize);
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.add(attribute);
             return attribute;
         }
         try {
-            return new MemoryAttribute(name, value);
+            MemoryAttribute attribute = new MemoryAttribute(name, value);
+            attribute.setMaxSize(maxSize);
+            return attribute;
         } catch (IOException e) {
             throw new IllegalArgumentException(e);
         }
@@ -138,9 +160,13 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     public FileUpload createFileUpload(HttpRequest request, String name, String filename,
             String contentType, String contentTransferEncoding, Charset charset,
             long size) {
+        if (maxSize >= 0 && size > maxSize) {
+            throw new IllegalArgumentException("FileUpload bigger than maxSize allowed");
+        }
         if (useDisk) {
             FileUpload fileUpload = new DiskFileUpload(name, filename, contentType,
                     contentTransferEncoding, charset, size);
+            fileUpload.setMaxSize(maxSize);
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.add(fileUpload);
             return fileUpload;
@@ -148,12 +174,15 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
         if (checkSize) {
             FileUpload fileUpload = new MixedFileUpload(name, filename, contentType,
                     contentTransferEncoding, charset, size, minSize);
+            fileUpload.setMaxSize(maxSize);
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.add(fileUpload);
             return fileUpload;
         }
-        return new MemoryFileUpload(name, filename, contentType,
+        MemoryFileUpload fileUpload = new MemoryFileUpload(name, filename, contentType,
                 contentTransferEncoding, charset, size);
+        fileUpload.setMaxSize(maxSize);
+        return fileUpload;
     }
 
     @Override
