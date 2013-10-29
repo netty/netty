@@ -65,7 +65,7 @@
         <version>0.1.0</version>
         <configuration>
           <host>127.0.0.1</host>
-          <port>9001</port>
+          <port>9876</port>
           <mainClass>io.netty.testsuite.websockets.autobahn.AutobahnServer</mainClass>
           <cases>
             <case>*</case>
