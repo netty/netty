@@ -267,7 +267,7 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public ByteBuffer nioBuffer(int index, int length) {
         ensureAccessible();
-        return ByteBuffer.wrap(array, index, length);
+        return ByteBuffer.wrap(array, index, length).slice();
     }
 
     @Override

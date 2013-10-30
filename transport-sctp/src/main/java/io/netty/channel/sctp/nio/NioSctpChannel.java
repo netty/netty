@@ -19,6 +19,7 @@ import com.sun.nio.sctp.Association;
 import com.sun.nio.sctp.MessageInfo;
 import com.sun.nio.sctp.NotificationHandler;
 import com.sun.nio.sctp.SctpChannel;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
@@ -27,6 +28,8 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.sctp.DefaultSctpChannelConfig;
@@ -80,15 +83,15 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     /**
      * Create a new instance
      */
-    public NioSctpChannel() {
-        this(newSctpChannel());
+    public NioSctpChannel(EventLoop eventLoop) {
+        this(eventLoop, newSctpChannel());
     }
 
     /**
      * Create a new instance using {@link SctpChannel}
      */
-    public NioSctpChannel(SctpChannel sctpChannel) {
-        this(null, sctpChannel);
+    public NioSctpChannel(EventLoop eventLoop, SctpChannel sctpChannel) {
+        this(null, eventLoop, sctpChannel);
     }
 
     /**
@@ -98,8 +101,8 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
      *                      or {@code null}.
      * @param sctpChannel   the underlying {@link SctpChannel}
      */
-    public NioSctpChannel(Channel parent, SctpChannel sctpChannel) {
-        super(parent, sctpChannel, SelectionKey.OP_READ);
+    public NioSctpChannel(Channel parent, EventLoop eventLoop, SctpChannel sctpChannel) {
+        super(parent, eventLoop, sctpChannel, SelectionKey.OP_READ);
         try {
             sctpChannel.configureBlocking(false);
             config = new DefaultSctpChannelConfig(this, sctpChannel);
@@ -271,14 +274,14 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
         ByteBuf buffer = allocHandle.allocate(config().getAllocator());
         boolean free = true;
         try {
-            ByteBuffer data = buffer.nioBuffer(buffer.writerIndex(), buffer.writableBytes());
+            ByteBuffer data = buffer.internalNioBuffer(buffer.writerIndex(), buffer.writableBytes());
+            int pos = data.position();
+
             MessageInfo messageInfo = ch.receive(data, null, notificationHandler);
             if (messageInfo == null) {
                 return 0;
             }
-
-            data.flip();
-            buf.add(new SctpMessage(messageInfo, buffer.writerIndex(buffer.writerIndex() + data.remaining())));
+            buf.add(new SctpMessage(messageInfo, buffer.writerIndex(buffer.writerIndex() + (data.position() - pos))));
             free = false;
             return 1;
         } catch (Throwable cause) {

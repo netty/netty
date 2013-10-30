@@ -187,7 +187,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
          * Register the {@link Channel} of the {@link ChannelPromise} with the {@link EventLoop} and notify
          * the {@link ChannelFuture} once the registration was complete.
          */
-        void register(EventLoop eventLoop, ChannelPromise promise);
+        void register(ChannelPromise promise);
 
         /**
          * Bind the {@link SocketAddress} to the {@link Channel} of the {@link ChannelPromise} and notify

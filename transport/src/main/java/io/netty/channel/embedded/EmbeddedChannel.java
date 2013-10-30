@@ -44,13 +44,14 @@ import java.util.Queue;
  */
 public class EmbeddedChannel extends AbstractChannel {
 
-    private enum State { OPEN, ACTIVE, CLOSED };
+    private static final ChannelHandler[] EMPTY_HANDLERS = new ChannelHandler[0];
+    private enum State { OPEN, ACTIVE, CLOSED }
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(EmbeddedChannel.class);
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
-    private final EmbeddedEventLoop loop = new EmbeddedEventLoop();
+    private final EmbeddedEventLoop loop;
     private final ChannelConfig config = new DefaultChannelConfig(this);
     private final SocketAddress localAddress = new EmbeddedSocketAddress();
     private final SocketAddress remoteAddress = new EmbeddedSocketAddress();
@@ -60,33 +61,36 @@ public class EmbeddedChannel extends AbstractChannel {
     private State state;
 
     /**
-     * Create a new instance
+     * Create a new instance with an empty pipeline.
+     */
+    public EmbeddedChannel() {
+        this(EMPTY_HANDLERS);
+    }
+
+    /**
+     * Create a new instance with the pipeline initialized with the specified handlers.
      *
      * @param handlers the @link ChannelHandler}s which will be add in the {@link ChannelPipeline}
      */
     public EmbeddedChannel(ChannelHandler... handlers) {
-        super(null);
+        super(null, new EmbeddedEventLoop());
+
+        loop = (EmbeddedEventLoop) eventLoop();
 
         if (handlers == null) {
             throw new NullPointerException("handlers");
         }
 
-        int nHandlers = 0;
         ChannelPipeline p = pipeline();
         for (ChannelHandler h: handlers) {
             if (h == null) {
                 break;
             }
-            nHandlers ++;
             p.addLast(h);
         }
 
-        if (nHandlers == 0) {
-            throw new IllegalArgumentException("handlers is empty.");
-        }
-
         p.addLast(new LastInboundHandler());
-        loop.register(this);
+        unsafe().register(newPromise());
     }
 
     @Override

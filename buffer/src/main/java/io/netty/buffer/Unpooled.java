@@ -408,8 +408,16 @@ public final class Unpooled {
      * respectively.
      */
     public static ByteBuf copiedBuffer(ByteBuf buffer) {
-        if (buffer.isReadable()) {
-            return buffer.copy();
+        int readable = buffer.readableBytes();
+        if (readable > 0) {
+            ByteBuf copy;
+            if (buffer.isDirect()) {
+                copy = directBuffer(readable);
+            } else {
+                copy = buffer(readable);
+            }
+            copy.writeBytes(buffer, buffer.readerIndex(), readable);
+            return copy;
         } else {
             return EMPTY_BUFFER;
         }
@@ -647,10 +655,7 @@ public final class Unpooled {
     }
 
     private static ByteBuf copiedBuffer(CharBuffer buffer, Charset charset) {
-        ByteBuffer dst = ByteBufUtil.encodeString(buffer, charset);
-        ByteBuf result = wrappedBuffer(dst.array());
-        result.writerIndex(dst.remaining());
-        return result;
+        return ByteBufUtil.encodeString(ALLOC, buffer, charset);
     }
 
     /**

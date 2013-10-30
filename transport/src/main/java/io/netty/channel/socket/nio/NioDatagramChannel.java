@@ -27,6 +27,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultAddressedEnvelope;
+import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
@@ -96,23 +97,23 @@ public final class NioDatagramChannel
     /**
      * Create a new instance which will use the Operation Systems default {@link InternetProtocolFamily}.
      */
-    public NioDatagramChannel() {
-        this(newSocket());
+    public NioDatagramChannel(EventLoop eventLoop) {
+        this(eventLoop, newSocket());
     }
 
     /**
      * Create a new instance using the given {@link InternetProtocolFamily}. If {@code null} is used it will depend
      * on the Operation Systems default which will be chosen.
      */
-    public NioDatagramChannel(InternetProtocolFamily ipFamily) {
-        this(newSocket(ipFamily));
+    public NioDatagramChannel(EventLoop eventLoop, InternetProtocolFamily ipFamily) {
+        this(eventLoop, newSocket(ipFamily));
     }
 
     /**
      * Create a new instance from the given {@link DatagramChannel}.
      */
-    public NioDatagramChannel(DatagramChannel socket) {
-        super(null, socket, SelectionKey.OP_READ);
+    public NioDatagramChannel(EventLoop eventLoop, DatagramChannel socket) {
+        super(null, eventLoop, socket, SelectionKey.OP_READ);
         config = new NioDatagramChannelConfig(this, socket);
     }
 
@@ -204,14 +205,14 @@ public final class NioDatagramChannel
         ByteBuf data = allocHandle.allocate(config.getAllocator());
         boolean free = true;
         try {
-            ByteBuffer nioData = data.nioBuffer(data.writerIndex(), data.writableBytes());
-
+            ByteBuffer nioData = data.internalNioBuffer(data.writerIndex(), data.writableBytes());
+            int pos = nioData.position();
             InetSocketAddress remoteAddress = (InetSocketAddress) ch.receive(nioData);
             if (remoteAddress == null) {
                 return 0;
             }
 
-            int readBytes = nioData.position();
+            int readBytes = nioData.position() - pos;
             data.writerIndex(data.writerIndex() + readBytes);
             allocHandle.record(readBytes);
 

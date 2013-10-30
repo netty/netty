@@ -176,7 +176,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
             spdyDataFrame.setLast(chunk instanceof LastHttpContent);
             if (chunk instanceof LastHttpContent) {
                 LastHttpContent trailer = (LastHttpContent) chunk;
-                List<Map.Entry<String, String>> trailers = trailer.trailingHeaders().entries();
+                HttpHeaders trailers = trailer.trailingHeaders();
                 if (trailers.isEmpty()) {
                     out.add(spdyDataFrame);
                 } else {

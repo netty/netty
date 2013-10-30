@@ -82,7 +82,7 @@ public class ThreadPerChannelEventLoopGroupTest {
         ChannelGroup channelGroup = new DefaultChannelGroup(testExecutor);
         while (taskCount-- > 0) {
             Channel channel = new EmbeddedChannel(NOOP_HANDLER);
-            loopGroup.register(channel, new DefaultChannelPromise(channel, testExecutor));
+            channel.unsafe().register(new DefaultChannelPromise(channel, testExecutor));
             channelGroup.add(channel);
         }
         channelGroup.close().sync();

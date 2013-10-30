@@ -133,7 +133,7 @@ public class LocalTransportThreadModelTest3 {
             final EventForwarder h5 = new EventForwarder();
             final EventRecorder h6 = new EventRecorder(events, inbound);
 
-            final Channel ch = new LocalChannel();
+            final Channel ch = new LocalChannel(l.next());
             if (!inbound) {
                 ch.config().setAutoRead(false);
             }
@@ -144,7 +144,9 @@ public class LocalTransportThreadModelTest3 {
                     .addLast(e1, h5)
                     .addLast(e1, "recorder", h6);
 
-            l.register(ch).sync().channel().connect(localAddr).sync();
+            ChannelPromise promise = ch.newPromise();
+            ch.unsafe().register(promise);
+            promise.sync().channel().connect(localAddr).sync();
 
             final LinkedList<EventType> expectedEvents = events(inbound, 8192);
 

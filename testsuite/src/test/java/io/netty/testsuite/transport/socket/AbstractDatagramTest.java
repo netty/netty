@@ -16,6 +16,8 @@
 package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.ChannelOption;
 import io.netty.testsuite.transport.socket.SocketTestPermutation.Factory;
 import io.netty.testsuite.util.TestUtils;
 import io.netty.util.NetUtil;
@@ -33,6 +35,7 @@ import java.util.Map.Entry;
 public abstract class AbstractDatagramTest {
 
     private static final List<Entry<Factory<Bootstrap>, Factory<Bootstrap>>> COMBO = SocketTestPermutation.datagram();
+    private static final List<ByteBufAllocator> ALLOCATORS = SocketTestPermutation.allocator();
 
     @Rule
     public final TestName testName = new TestName();
@@ -44,23 +47,27 @@ public abstract class AbstractDatagramTest {
     protected volatile InetSocketAddress addr;
 
     protected void run() throws Throwable {
-        int i = 0;
-        for (Entry<Factory<Bootstrap>, Factory<Bootstrap>> e: COMBO) {
-            sb = e.getKey().newInstance();
-            cb = e.getValue().newInstance();
-            addr = new InetSocketAddress(
-                    NetUtil.LOCALHOST4, TestUtils.getFreePort());
-            sb.localAddress(addr);
-            cb.localAddress(0).remoteAddress(addr);
-
-            logger.info(String.format(
-                    "Running: %s %d of %d (%s + %s)", testName.getMethodName(), ++ i, COMBO.size(), sb, cb));
-            try {
-                Method m = getClass().getDeclaredMethod(
-                        testName.getMethodName(), Bootstrap.class, Bootstrap.class);
-                m.invoke(this, sb, cb);
-            } catch (InvocationTargetException ex) {
-                throw ex.getCause();
+        for (ByteBufAllocator allocator: ALLOCATORS) {
+            int i = 0;
+            for (Entry<Factory<Bootstrap>, Factory<Bootstrap>> e: COMBO) {
+                sb = e.getKey().newInstance();
+                cb = e.getValue().newInstance();
+                addr = new InetSocketAddress(
+                        NetUtil.LOCALHOST4, TestUtils.getFreePort());
+                sb.localAddress(addr);
+                sb.option(ChannelOption.ALLOCATOR, allocator);
+                cb.localAddress(0).remoteAddress(addr);
+                cb.option(ChannelOption.ALLOCATOR, allocator);
+                logger.info(String.format(
+                        "Running: %s %d of %d (%s + %s) with %s",
+                        testName.getMethodName(), ++ i, COMBO.size(), sb, cb, allocator.getClass().getSimpleName()));
+                try {
+                    Method m = getClass().getDeclaredMethod(
+                            testName.getMethodName(), Bootstrap.class, Bootstrap.class);
+                    m.invoke(this, sb, cb);
+                } catch (InvocationTargetException ex) {
+                    throw ex.getCause();
+                }
             }
         }
     }
