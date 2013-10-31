@@ -17,7 +17,10 @@ package org.jboss.netty.util;
 
 import org.junit.Test;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -101,5 +104,21 @@ public class HashedWheelTimerTest {
                 fail("This should not run");
             }
         }, 1, TimeUnit.SECONDS);
+    }
+
+    @Test
+    public void testTimerOverflowWheelLength() throws InterruptedException {
+        final HashedWheelTimer timer = new HashedWheelTimer(
+                Executors.defaultThreadFactory(), 100, TimeUnit.MILLISECONDS, 32);
+        final AtomicInteger counter = new AtomicInteger();
+
+        timer.newTimeout(new TimerTask() {
+            public void run(final Timeout timeout) throws Exception {
+                counter.incrementAndGet();
+                timer.newTimeout(this, 1, TimeUnit.SECONDS);
+            }
+        }, 1, TimeUnit.SECONDS);
+        Thread.sleep(3500);
+        assertEquals(3, counter.get());
     }
 }
