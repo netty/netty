@@ -506,9 +506,10 @@ public class HashedWheelTimer implements Timer {
             this.task = task;
             this.deadline = deadline;
 
-            final long ticks = Math.max(deadline / tickDuration, tick); // Ensure we don't schedule for past.
+            long calculated = deadline / tickDuration;
+            final long ticks = Math.max(calculated, tick); // Ensure we don't schedule for past.
             stopIndex = (int) (ticks & mask);
-            remainingRounds = ticks / wheel.length;
+            remainingRounds = (calculated - tick) / wheel.length;
         }
 
         public Timer getTimer() {
