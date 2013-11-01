@@ -147,10 +147,10 @@ public class SnappyFramedDecoderTest {
     public void testInvalidChecksumDoesNotThrowException() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new SnappyFramedDecoder(true));
 
-        // checksum here is presented as -1568496083 (little endian)
+        // checksum here is presented as a282986f (little endian)
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
            -0x80, 0x06, 0x00, 0x00, 0x73, 0x4e, 0x61, 0x50, 0x70, 0x59,
-            0x01, 0x09, 0x00, 0x00, 0x2d, -0x5a, -0x7e, -0x5e, 'n', 'e', 't', 't', 'y'
+            0x01, 0x09, 0x00, 0x00, 0x6f, -0x68, -0x7e, -0x5e, 'n', 'e', 't', 't', 'y'
         });
 
         channel.writeInbound(in);
