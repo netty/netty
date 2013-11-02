@@ -25,7 +25,7 @@ import java.util.List;
  * You <strong>MUST</strong> call {@link #destroy()} after completion to release all resources.
  *
  */
-public interface HttpPostRequestDecoderInterface {
+public interface InterfaceHttpPostRequestDecoder {
     /**
      * True if this request is a Multipart request
      *
@@ -93,7 +93,7 @@ public interface HttpPostRequestDecoderInterface {
      *             if there is a problem with the charset decoding or other
      *             errors
      */
-    HttpPostRequestDecoderInterface offer(HttpContent content)
+    InterfaceHttpPostRequestDecoder offer(HttpContent content)
             throws HttpPostRequestDecoder.ErrorDataDecoderException;
 
     /**
@@ -123,7 +123,7 @@ public interface HttpPostRequestDecoderInterface {
     InterfaceHttpData next() throws HttpPostRequestDecoder.EndOfDataDecoderException;
 
     /**
-     * Destroy the {@link HttpPostRequestDecoderInterface} and release all it resources. After this method
+     * Destroy the {@link InterfaceHttpPostRequestDecoder} and release all it resources. After this method
      * was called it is not possible to operate on it anymore.
      */
     void destroy();

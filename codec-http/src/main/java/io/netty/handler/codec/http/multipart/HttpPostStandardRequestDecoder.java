@@ -24,7 +24,6 @@ import io.netty.handler.codec.http.multipart.HttpPostBodyUtil.SeekAheadNoBackArr
 import io.netty.handler.codec.http.multipart.HttpPostBodyUtil.SeekAheadOptimize;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.EndOfDataDecoderException;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.ErrorDataDecoderException;
-import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.IncompatibleDataDecoderException;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.MultiPartStatus;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.NotEnoughDataDecoderException;
 
@@ -45,7 +44,7 @@ import static io.netty.buffer.Unpooled.*;
  * You <strong>MUST</strong> call {@link #destroy()} after completion to release all resources.
  *
  */
-public class HttpPostStandardRequestDecoder implements HttpPostRequestDecoderInterface {
+public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestDecoder {
     /**
      * Factory used to create InterfaceHttpData
      */
@@ -107,14 +106,12 @@ public class HttpPostStandardRequestDecoder implements HttpPostRequestDecoderInt
      *            the request to decode
      * @throws NullPointerException
      *             for request
-     * @throws IncompatibleDataDecoderException
-     *             if the request has no body to decode
      * @throws ErrorDataDecoderException
      *             if the default charset was wrong when decoding or other
      *             errors
      */
     public HttpPostStandardRequestDecoder(HttpRequest request)
-    throws ErrorDataDecoderException, IncompatibleDataDecoderException {
+    throws ErrorDataDecoderException {
         this(new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE), request, HttpConstants.DEFAULT_CHARSET);
     }
 
@@ -126,14 +123,12 @@ public class HttpPostStandardRequestDecoder implements HttpPostRequestDecoderInt
      *            the request to decode
      * @throws NullPointerException
      *             for request or factory
-     * @throws IncompatibleDataDecoderException
-     *             if the request has no body to decode
      * @throws ErrorDataDecoderException
      *             if the default charset was wrong when decoding or other
      *             errors
      */
     public HttpPostStandardRequestDecoder(HttpDataFactory factory, HttpRequest request)
-    throws ErrorDataDecoderException, IncompatibleDataDecoderException {
+    throws ErrorDataDecoderException {
         this(factory, request, HttpConstants.DEFAULT_CHARSET);
     }
 
@@ -147,14 +142,12 @@ public class HttpPostStandardRequestDecoder implements HttpPostRequestDecoderInt
      *            the charset to use as default
      * @throws NullPointerException
      *             for request or charset or factory
-     * @throws IncompatibleDataDecoderException
-     *             if the request has no body to decode
      * @throws ErrorDataDecoderException
      *             if the default charset was wrong when decoding or other
      *             errors
      */
     public HttpPostStandardRequestDecoder(HttpDataFactory factory, HttpRequest request, Charset charset)
-    throws ErrorDataDecoderException, IncompatibleDataDecoderException {
+    throws ErrorDataDecoderException {
         if (factory == null) {
             throw new NullPointerException("factory");
         }
