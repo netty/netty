@@ -38,7 +38,6 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.Executor;
 
-
 import static org.jboss.netty.channel.Channels.*;
 
 abstract class AbstractNioWorker extends AbstractNioSelector implements Worker {
@@ -224,7 +223,7 @@ abstract class AbstractNioWorker extends AbstractNioSelector implements Worker {
                         addOpWrite = true;
                         channel.writeSuspended = true;
 
-                        if (localWrittenBytes > 0) {
+                        if (writtenBytes > 0) {
                             // Notify progress listeners if necessary.
                             future.setProgress(
                                     localWrittenBytes,
