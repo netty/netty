@@ -43,7 +43,7 @@ public final class SocksServerConnectHandler extends SimpleChannelInboundHandler
 
     @Override
     public void channelRead0(final ChannelHandlerContext ctx, final SocksCmdRequest request) throws Exception {
-        Promise promise = ctx.executor().newPromise();
+        Promise<Channel> promise = ctx.executor().newPromise();
         promise.addListener(
             new GenericFutureListener<Future<Channel>>() {
             @Override
