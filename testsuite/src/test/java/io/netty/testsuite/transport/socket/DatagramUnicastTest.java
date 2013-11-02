@@ -69,6 +69,7 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
         run();
     }
 
+    @SuppressWarnings("deprecation")
     public void testSimpleSendWithoutBind(Bootstrap sb, Bootstrap cb) throws Throwable {
         final CountDownLatch latch = new CountDownLatch(1);
 
