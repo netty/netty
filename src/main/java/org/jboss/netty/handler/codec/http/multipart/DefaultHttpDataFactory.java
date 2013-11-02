@@ -36,6 +36,10 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
      * Proposed default MINSIZE as 16 KB.
      */
     public static final long MINSIZE = 0x4000;
+    /**
+     * Proposed default MAXSIZE = -1 as UNLIMITED
+     */
+    public static final long MAXSIZE = -1;
 
     private final boolean useDisk;
 
@@ -43,13 +47,15 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
 
     private long minSize;
 
+    private long maxSize = MAXSIZE;
+
     /**
      * Keep all HttpDatas until cleanAllHttpDatas() is called.
      */
     private final ConcurrentHashMap<HttpRequest, List<HttpData>> requestFileDeleteMap =
         new ConcurrentHashMap<HttpRequest, List<HttpData>>();
     /**
-     * HttpData will be in memory if less than default size (16KB).
+     * HttpData will be in memory if less than default size (16KB). No limit setup.
      * The type will be Mixed.
      */
     public DefaultHttpDataFactory() {
@@ -59,7 +65,8 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     }
 
     /**
-     * HttpData will be always on Disk if useDisk is True, else always in Memory if False
+     * HttpData will be always on Disk if useDisk is True, else always in Memory if False.
+     * No limit setup.
      */
     public DefaultHttpDataFactory(boolean useDisk) {
         this.useDisk = useDisk;
@@ -68,12 +75,16 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
 
     /**
      * HttpData will be on Disk if the size of the file is greater than minSize, else it
-     * will be in memory. The type will be Mixed.
+     * will be in memory. The type will be Mixed. No limit setup.
      */
     public DefaultHttpDataFactory(long minSize) {
         useDisk = false;
         checkSize = true;
         this.minSize = minSize;
+    }
+
+    public void setMaxLimit(long max) {
+        this.maxSize = max;
     }
 
     /**
@@ -91,17 +102,33 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     public Attribute createAttribute(HttpRequest request, String name) {
         if (useDisk) {
             Attribute attribute = new DiskAttribute(name);
+            attribute.setMaxSize(maxSize);
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.add(attribute);
             return attribute;
         }
         if (checkSize) {
             Attribute attribute = new MixedAttribute(name, minSize);
+            attribute.setMaxSize(maxSize);
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.add(attribute);
             return attribute;
         }
-        return new MemoryAttribute(name);
+        MemoryAttribute attribute = new MemoryAttribute(name);
+        attribute.setMaxSize(maxSize);
+        return attribute;
+    }
+
+    /**
+     * Utility method
+     * @param data
+     */
+    private void checkHttpDataSize(HttpData data) {
+        try {
+            data.checkSize(data.length());
+        } catch (IOException e) {
+            throw new IllegalArgumentException("Attribute bigger than maxSize allowed");
+        }
     }
 
     public Attribute createAttribute(HttpRequest request, String name, String value) {
@@ -109,22 +136,30 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
             Attribute attribute;
             try {
                 attribute = new DiskAttribute(name, value);
+                attribute.setMaxSize(maxSize);
             } catch (IOException e) {
                 // revert to Mixed mode
                 attribute = new MixedAttribute(name, value, minSize);
+                attribute.setMaxSize(maxSize);
             }
+            checkHttpDataSize(attribute);
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.add(attribute);
             return attribute;
         }
         if (checkSize) {
             Attribute attribute = new MixedAttribute(name, value, minSize);
+            attribute.setMaxSize(maxSize);
+            checkHttpDataSize(attribute);
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.add(attribute);
             return attribute;
         }
         try {
-            return new MemoryAttribute(name, value);
+            MemoryAttribute attribute = new MemoryAttribute(name, value);
+            attribute.setMaxSize(maxSize);
+            checkHttpDataSize(attribute);
+            return attribute;
         } catch (IOException e) {
             throw new IllegalArgumentException(e);
         }
@@ -136,6 +171,8 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
         if (useDisk) {
             FileUpload fileUpload = new DiskFileUpload(name, filename, contentType,
                     contentTransferEncoding, charset, size);
+            fileUpload.setMaxSize(maxSize);
+            checkHttpDataSize(fileUpload);
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.add(fileUpload);
             return fileUpload;
@@ -143,12 +180,17 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
         if (checkSize) {
             FileUpload fileUpload = new MixedFileUpload(name, filename, contentType,
                     contentTransferEncoding, charset, size, minSize);
+            fileUpload.setMaxSize(maxSize);
+            checkHttpDataSize(fileUpload);
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.add(fileUpload);
             return fileUpload;
         }
-        return new MemoryFileUpload(name, filename, contentType,
+        MemoryFileUpload fileUpload = new MemoryFileUpload(name, filename, contentType,
                 contentTransferEncoding, charset, size);
+        fileUpload.setMaxSize(maxSize);
+        checkHttpDataSize(fileUpload);
+        return fileUpload;
     }
 
     public void removeHttpDataFromClean(HttpRequest request, InterfaceHttpData data) {

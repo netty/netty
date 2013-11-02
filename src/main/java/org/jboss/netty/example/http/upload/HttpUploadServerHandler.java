@@ -78,6 +78,8 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
 
     private HttpPostRequestDecoder decoder;
     static {
+        //To limit to roughly 5MB each attribute, including fileupload
+        //factory.setMaxLimit(5000000);
         DiskFileUpload.deleteOnExitTemporaryFile = true; // should delete file
                                                          // on exit (in normal
                                                          // exit)
