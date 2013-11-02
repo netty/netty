@@ -30,7 +30,7 @@ public class DiscardServerHandler extends SimpleChannelInboundHandler<Object> {
             DiscardServerHandler.class.getName());
 
     @Override
-    public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
         // discard
     }
 

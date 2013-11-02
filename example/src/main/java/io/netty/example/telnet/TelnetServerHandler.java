@@ -44,7 +44,7 @@ public class TelnetServerHandler extends SimpleChannelInboundHandler<String> {
     }
 
     @Override
-    public void channelRead0(ChannelHandlerContext ctx, String request) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, String request) throws Exception {
 
         // Generate and write a response.
         String response;

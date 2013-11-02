@@ -75,7 +75,7 @@ public class AppletDiscardServer extends JApplet {
     private static final class DiscardServerHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
             System.out.println("Received: " + msg.toString(CharsetUtil.UTF_8));
         }
 

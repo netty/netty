@@ -96,7 +96,7 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
             // discard
         }
 

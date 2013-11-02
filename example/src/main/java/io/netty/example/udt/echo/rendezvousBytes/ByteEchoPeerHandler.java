@@ -60,7 +60,7 @@ public class ByteEchoPeerHandler extends SimpleChannelInboundHandler<ByteBuf> {
     }
 
     @Override
-    public void channelRead0(ChannelHandlerContext ctx, ByteBuf buf) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, ByteBuf buf) throws Exception {
         meter.mark(buf.readableBytes());
 
         ctx.write(buf);

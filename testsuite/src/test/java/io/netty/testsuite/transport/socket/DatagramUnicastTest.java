@@ -41,7 +41,7 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
 
         sb.handler(new SimpleChannelInboundHandler<DatagramPacket>() {
             @Override
-            public void channelRead0(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
+            public void messageReceived(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
                 assertEquals(1, msg.content().readInt());
                 latch.countDown();
             }
@@ -49,7 +49,7 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
 
         cb.handler(new SimpleChannelInboundHandler<Object>() {
             @Override
-            public void channelRead0(ChannelHandlerContext ctx, Object msgs) throws Exception {
+            public void messageReceived(ChannelHandlerContext ctx, Object msgs) throws Exception {
                 // Nothing will be sent.
             }
         });
@@ -69,12 +69,13 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
         run();
     }
 
+    @SuppressWarnings("deprecation")
     public void testSimpleSendWithoutBind(Bootstrap sb, Bootstrap cb) throws Throwable {
         final CountDownLatch latch = new CountDownLatch(1);
 
         sb.handler(new SimpleChannelInboundHandler<DatagramPacket>() {
             @Override
-            public void channelRead0(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
+            public void messageReceived(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
                 assertEquals(1, msg.content().readInt());
                 latch.countDown();
             }
@@ -82,7 +83,7 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
 
         cb.handler(new SimpleChannelInboundHandler<Object>() {
             @Override
-            public void channelRead0(ChannelHandlerContext ctx, Object msgs) throws Exception {
+            public void messageReceived(ChannelHandlerContext ctx, Object msgs) throws Exception {
                 // Nothing will be sent.
             }
         });
