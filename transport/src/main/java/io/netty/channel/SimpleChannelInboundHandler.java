@@ -37,6 +37,11 @@ import io.netty.util.internal.TypeParameterMatcher;
  *
  * Be aware that depending of the constructor parameters it will release all handled messages.
  *
+ * <h3>Forward compatibility notice</h3>
+ * <p>
+ * Please keep in mind that {@link #channelRead0(ChannelHandlerContext, Object)} will be renamed to
+ * {@code messageReceived(ChannelHandlerContext, I)} in 5.0.
+ * </p>
  */
 public abstract class SimpleChannelInboundHandler<I> extends ChannelInboundHandlerAdapter {
 
@@ -108,6 +113,9 @@ public abstract class SimpleChannelInboundHandler<I> extends ChannelInboundHandl
     }
 
     /**
+     * <strong>Please keep in mind that {@link #channelRead0(ChannelHandlerContext, Object)} will be renamed to
+     * {@code messageReceived(ChannelHandlerContext, I)} in 5.0.</strong>
+     *
      * Is called for each message of type {@link I}.
      *
      * @param ctx           the {@link ChannelHandlerContext} which this {@link SimpleChannelInboundHandler}
