@@ -27,11 +27,11 @@ import java.util.List;
 /**
  * This decoder will decode Body and can handle POST BODY (both multipart and standard).
  */
-public class HttpPostRequestDecoder implements HttpPostRequestDecoderInterface {
+public class HttpPostRequestDecoder implements InterfaceHttpPostRequestDecoder {
     /**
      * Does this request is a Multipart request
      */
-    private HttpPostRequestDecoderInterface decoder;
+    private InterfaceHttpPostRequestDecoder decoder;
 
     /**
     *
@@ -354,6 +354,7 @@ public class HttpPostRequestDecoder implements HttpPostRequestDecoderInterface {
     /**
      * Exception when an unappropriated method was called on a request
      */
+    @Deprecated
     public static class IncompatibleDataDecoderException extends Exception {
         private static final long serialVersionUID = -953268047926250267L;
 

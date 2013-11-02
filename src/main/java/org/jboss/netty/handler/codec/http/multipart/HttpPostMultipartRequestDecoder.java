@@ -42,7 +42,7 @@ import java.util.TreeMap;
 /**
  * This decoder will decode Body and can handle POST BODY in multipart form.
  */
-public class HttpPostMultipartRequestDecoder implements HttpPostRequestDecoderInterface {
+public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequestDecoder {
     /**
      * Factory used to create InterfaceHttpData
      */

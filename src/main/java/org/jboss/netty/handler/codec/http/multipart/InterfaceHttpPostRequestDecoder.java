@@ -22,7 +22,7 @@ import org.jboss.netty.handler.codec.http.multipart.HttpPostRequestDecoder.EndOf
 import org.jboss.netty.handler.codec.http.multipart.HttpPostRequestDecoder.ErrorDataDecoderException;
 import org.jboss.netty.handler.codec.http.multipart.HttpPostRequestDecoder.NotEnoughDataDecoderException;
 
-public interface HttpPostRequestDecoderInterface {
+public interface InterfaceHttpPostRequestDecoder {
     /**
      * True if this request is a Multipart request
      * @return True if this request is a Multipart request
