@@ -25,6 +25,77 @@ final class CookieEncoderUtil {
         return buf.toString();
     }
 
+    static int estimateClientLength(Cookie c) {
+        int estimate = estimateLength(c.getName(), c.getValue());
+
+        if (c.getPath() != null) {
+            estimate += estimateLength(CookieHeaderNames.PATH, c.getPath());
+        }
+
+        if (c.getDomain() != null) {
+            estimate += estimateLength(CookieHeaderNames.DOMAIN, c.getDomain());
+        }
+
+        if (c.getVersion() > 0) {
+            estimate += 12; // '$Version=N; '
+            int numPorts = c.getPorts().size();
+            if (numPorts > 0) {
+                estimate += 10; // '$Port=""; '
+                estimate += numPorts * 4;
+            }
+        }
+
+        return estimate;
+    }
+
+    static int estimateServerLength(Cookie c) {
+        int estimate = estimateLength(c.getName(), c.getValue());
+
+        if (c.getMaxAge() != Long.MIN_VALUE) {
+            estimate += 41; // 'Expires=Sun, 06 Nov 1994 08:49:37 +0900; '
+        }
+
+        if (c.getPath() != null) {
+            estimate += estimateLength(CookieHeaderNames.PATH, c.getPath());
+        }
+
+        if (c.getDomain() != null) {
+            estimate += estimateLength(CookieHeaderNames.DOMAIN, c.getDomain());
+        }
+        if (c.isSecure()) {
+            estimate += 8; // 'Secure; '
+        }
+        if (c.isHttpOnly()) {
+            estimate += 10; // 'HTTPOnly; '
+        }
+        if (c.getVersion() > 0) {
+            estimate += 11; // 'Version=N; '
+            if (c.getComment() != null) {
+                estimate += estimateLength(CookieHeaderNames.COMMENT, c.getComment());
+            }
+
+            if (c.getCommentUrl() != null) {
+                estimate += estimateLength(CookieHeaderNames.COMMENTURL, c.getCommentUrl());
+            }
+
+            int numPorts = c.getPorts().size();
+            if (numPorts > 0) {
+                estimate += 9; // 'Port=""; '
+                estimate += numPorts * 4;
+            }
+
+            if (c.isDiscard()) {
+                estimate += 9; // 'Discard; '
+            }
+        }
+
+        return estimate;
+    }
+
+    private static int estimateLength(String name, String value) {
+        return name.length() + value.length() + 6;
+    }
+
     static void add(StringBuilder sb, String name, String val) {
         if (val == null) {
             addQuoted(sb, name, "");
