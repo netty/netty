@@ -370,7 +370,7 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
         }
 
         int actualLengthFieldOffset = in.readerIndex() + lengthFieldOffset;
-        long frameLength = getUnadjustedFrameLength(in, actualLengthFieldOffset, lengthFieldLength);
+        long frameLength = getUnadjustedFrameLength(in, actualLengthFieldOffset, lengthFieldLength, byteOrder);
 
         if (frameLength < 0) {
             in.skipBytes(lengthFieldEndOffset);
@@ -434,8 +434,8 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
      *
      * @throws DecoderException if failed to decode the specified region
      */
-    protected long getUnadjustedFrameLength(ByteBuf buf, int offset, int length) {
-        buf = buf.order(byteOrder);
+    protected long getUnadjustedFrameLength(ByteBuf buf, int offset, int length, ByteOrder order) {
+        buf = buf.order(order);
         long frameLength;
         switch (length) {
         case 1:
