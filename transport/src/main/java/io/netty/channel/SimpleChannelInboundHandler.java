@@ -113,7 +113,7 @@ public abstract class SimpleChannelInboundHandler<I> extends ChannelInboundHandl
     }
 
     /**
-     * <strong>Please keep in mind that {@link #channelRead0(ChannelHandlerContext, Object)} will be renamed to
+     * <strong>Please keep in mind that this method will be renamed to
      * {@code messageReceived(ChannelHandlerContext, I)} in 5.0.</strong>
      *
      * Is called for each message of type {@link I}.
