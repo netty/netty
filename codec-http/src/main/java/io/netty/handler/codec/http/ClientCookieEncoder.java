@@ -42,7 +42,7 @@ public final class ClientCookieEncoder {
             throw new NullPointerException("cookie");
         }
 
-        StringBuilder buf = new StringBuilder();
+        StringBuilder buf = new StringBuilder(estimateClientLength(cookie));
         encode(buf, cookie);
         return stripTrailingSeparator(buf);
     }
@@ -52,7 +52,16 @@ public final class ClientCookieEncoder {
             throw new NullPointerException("cookies");
         }
 
-        StringBuilder buf = new StringBuilder();
+        int initialCapacity = 0;
+        for (Cookie c: cookies) {
+            if (c == null) {
+                break;
+            }
+
+            initialCapacity += estimateClientLength(c);
+        }
+
+        StringBuilder buf = new StringBuilder(initialCapacity);
         for (Cookie c: cookies) {
             if (c == null) {
                 break;
@@ -68,7 +77,16 @@ public final class ClientCookieEncoder {
             throw new NullPointerException("cookies");
         }
 
-        StringBuilder buf = new StringBuilder();
+        int initialCapacity = 0;
+        for (Cookie c: cookies) {
+            if (c == null) {
+                break;
+            }
+
+            initialCapacity += estimateClientLength(c);
+        }
+
+        StringBuilder buf = new StringBuilder(initialCapacity);
         for (Cookie c: cookies) {
             if (c == null) {
                 break;
