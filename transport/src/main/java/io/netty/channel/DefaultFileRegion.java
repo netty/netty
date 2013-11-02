@@ -25,6 +25,9 @@ import java.nio.channels.WritableByteChannel;
 
 /**
  * Default {@link FileRegion} implementation which transfer data from a {@link FileChannel}.
+ *
+ * Be aware that the {@link FileChannel} will be automatically closed once {@link #refCnt()} returns
+ * {@code 0}.
  */
 public class DefaultFileRegion extends AbstractReferenceCounted implements FileRegion {
 
