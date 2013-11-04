@@ -46,6 +46,10 @@ public final class JavassistTypeParameterMatcherGenerator {
         classPool.appendClassPath(pathname);
     }
 
+    public static ClassPool classPool() {
+        return classPool;
+    }
+
     public static TypeParameterMatcher generate(Class<?> type) {
         ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
         if (classLoader == null) {
