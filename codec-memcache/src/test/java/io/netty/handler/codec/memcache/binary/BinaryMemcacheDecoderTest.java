@@ -23,9 +23,8 @@ import io.netty.handler.codec.memcache.MemcacheContent;
 import org.junit.Before;
 import org.junit.Test;
 
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.MatcherAssert.*;
 import static org.hamcrest.core.IsNull.notNullValue;
 import static org.hamcrest.core.IsNull.nullValue;
 
@@ -40,7 +39,7 @@ public class BinaryMemcacheDecoderTest {
     /**
      * Represents a GET request header with a key size of three.
      */
-    private static final byte[] GET_REQUEST = new byte[]{
+    private static final byte[] GET_REQUEST = {
         (byte) 0x80, 0x00, 0x00, 0x03,
         0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x03,
@@ -50,7 +49,7 @@ public class BinaryMemcacheDecoderTest {
         0x66, 0x6f, 0x6f
     };
 
-    private static final byte[] SET_REQUEST_WITH_CONTENT = new byte[]{
+    private static final byte[] SET_REQUEST_WITH_CONTENT = {
         (byte) 0x80, 0x01, 0x00, 0x03,
         0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x0B,

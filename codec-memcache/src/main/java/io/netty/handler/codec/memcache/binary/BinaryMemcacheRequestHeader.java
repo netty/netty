@@ -21,7 +21,7 @@ package io.netty.handler.codec.memcache.binary;
  * <p/>
  * <p>Note that while the additional field in the request is called "reserved", it can still be used for a custom
  * memcached implementation. It will not be mirrored back like the
- * {@link io.netty.handler.codec.memcache.binary.BinaryMemcacheRequestHeader#getOpaque()} field, because in the
+ * {@link BinaryMemcacheRequestHeader#getOpaque()} field, because in the
  * {@link BinaryMemcacheResponseHeader}, the status field is set there instead.</p>
  */
 public interface BinaryMemcacheRequestHeader extends BinaryMemcacheMessageHeader {

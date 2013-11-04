@@ -26,14 +26,14 @@ import io.netty.util.CharsetUtil;
 
 import java.util.List;
 
-import static io.netty.buffer.ByteBufUtil.readBytes;
+import static io.netty.buffer.ByteBufUtil.*;
 
 /**
  * Decoder for both {@link BinaryMemcacheRequest} and {@link BinaryMemcacheResponse}.
  * <p/>
  * The difference in the protocols (header) is implemented by the subclasses.
  */
-public abstract class BinaryMemcacheDecoder<M extends BinaryMemcacheMessage, H extends BinaryMemcacheMessageHeader>
+public abstract class BinaryMemcacheDecoder<M extends BinaryMemcacheMessage<H>, H extends BinaryMemcacheMessageHeader>
     extends MemcacheObjectDecoder {
 
     public static final int DEFAULT_MAX_CHUNK_SIZE = 8192;
@@ -50,7 +50,7 @@ public abstract class BinaryMemcacheDecoder<M extends BinaryMemcacheMessage, H e
     /**
      * Create a new {@link BinaryMemcacheDecoder} with default settings.
      */
-    public BinaryMemcacheDecoder() {
+    protected BinaryMemcacheDecoder() {
         this(DEFAULT_MAX_CHUNK_SIZE);
     }
 
@@ -59,7 +59,7 @@ public abstract class BinaryMemcacheDecoder<M extends BinaryMemcacheMessage, H e
      *
      * @param chunkSize the maximum chunk size of the payload.
      */
-    public BinaryMemcacheDecoder(int chunkSize) {
+    protected BinaryMemcacheDecoder(int chunkSize) {
         if (chunkSize < 0) {
             throw new IllegalArgumentException("chunkSize must be a positive integer: " + chunkSize);
         }
@@ -110,7 +110,9 @@ public abstract class BinaryMemcacheDecoder<M extends BinaryMemcacheMessage, H e
                 if (valueLength > 0) {
                     if (toRead == 0) {
                         return;
-                    } else if (toRead > chunkSize) {
+                    }
+
+                    if (toRead > chunkSize) {
                         toRead = chunkSize;
                     }
 
@@ -119,7 +121,7 @@ public abstract class BinaryMemcacheDecoder<M extends BinaryMemcacheMessage, H e
                     }
 
                     ByteBuf chunkBuffer = readBytes(ctx.alloc(), in, toRead);
-                    boolean isLast = (alreadyReadChunkSize + toRead) >= valueLength;
+                    boolean isLast = alreadyReadChunkSize + toRead >= valueLength;
                     MemcacheContent chunk = isLast
                         ? new DefaultLastMemcacheContent(chunkBuffer)
                         : new DefaultMemcacheContent(chunkBuffer);

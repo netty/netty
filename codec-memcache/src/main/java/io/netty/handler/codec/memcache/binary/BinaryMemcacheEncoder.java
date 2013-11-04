@@ -18,20 +18,21 @@ package io.netty.handler.codec.memcache.binary;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.handler.codec.memcache.MemcacheObjectEncoder;
 import io.netty.util.CharsetUtil;
 
 /**
- * A {@link io.netty.handler.codec.MessageToByteEncoder} that encodes binary memache messages into bytes.
+ * A {@link MessageToByteEncoder} that encodes binary memache messages into bytes.
  */
-public abstract class BinaryMemcacheEncoder<M extends BinaryMemcacheMessage, H extends BinaryMemcacheMessageHeader>
+public abstract class BinaryMemcacheEncoder<M extends BinaryMemcacheMessage<H>, H extends BinaryMemcacheMessageHeader>
     extends MemcacheObjectEncoder<M> {
 
     @Override
     protected ByteBuf encodeMessage(ChannelHandlerContext ctx, M msg) {
         ByteBuf buf = ctx.alloc().buffer();
 
-        encodeHeader(buf, (H) msg.getHeader());
+        encodeHeader(buf, msg.getHeader());
         encodeExtras(buf, msg.getExtras());
         encodeKey(buf, msg.getKey());
 
@@ -44,7 +45,7 @@ public abstract class BinaryMemcacheEncoder<M extends BinaryMemcacheMessage, H e
      * @param buf    the {@link ByteBuf} to write into.
      * @param extras the extras to encode.
      */
-    private void encodeExtras(ByteBuf buf, ByteBuf extras) {
+    private static void encodeExtras(ByteBuf buf, ByteBuf extras) {
         if (extras == null) {
             return;
         }
@@ -58,7 +59,7 @@ public abstract class BinaryMemcacheEncoder<M extends BinaryMemcacheMessage, H e
      * @param buf the {@link ByteBuf} to write into.
      * @param key the key to encode.
      */
-    private void encodeKey(ByteBuf buf, String key) {
+    private static void encodeKey(ByteBuf buf, String key) {
         if (key == null || key.isEmpty()) {
             return;
         }

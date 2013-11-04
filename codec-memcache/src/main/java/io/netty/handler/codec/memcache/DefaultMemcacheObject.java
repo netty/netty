@@ -16,7 +16,6 @@
 package io.netty.handler.codec.memcache;
 
 import io.netty.handler.codec.DecoderResult;
-import io.netty.util.AbstractReferenceCounted;
 
 /**
  * The default {@link MemcacheObject} implementation.

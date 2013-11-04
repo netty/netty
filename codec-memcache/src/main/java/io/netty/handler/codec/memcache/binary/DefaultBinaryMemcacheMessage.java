@@ -17,8 +17,6 @@ package io.netty.handler.codec.memcache.binary;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.memcache.DefaultMemcacheObject;
-import io.netty.util.AbstractReferenceCounted;
-import io.netty.util.ReferenceCounted;
 
 /**
  * Default implementation of a {@link BinaryMemcacheMessage}.
@@ -49,7 +47,7 @@ public abstract class DefaultBinaryMemcacheMessage<H extends BinaryMemcacheMessa
      * @param key    the message key.
      * @param extras the message extras.
      */
-    public DefaultBinaryMemcacheMessage(H header, String key, ByteBuf extras) {
+    protected DefaultBinaryMemcacheMessage(H header, String key, ByteBuf extras) {
         this.header = header;
         this.key = key;
         this.extras = extras;
@@ -79,7 +77,7 @@ public abstract class DefaultBinaryMemcacheMessage<H extends BinaryMemcacheMessa
     }
 
     @Override
-    public BinaryMemcacheMessage retain() {
+    public BinaryMemcacheMessage<H> retain() {
         if (extras != null) {
             extras.retain();
         }
@@ -87,7 +85,7 @@ public abstract class DefaultBinaryMemcacheMessage<H extends BinaryMemcacheMessa
     }
 
     @Override
-    public BinaryMemcacheMessage retain(int increment) {
+    public BinaryMemcacheMessage<H> retain(int increment) {
         if (extras != null) {
             extras.retain(increment);
         }

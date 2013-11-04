@@ -25,6 +25,7 @@ public interface BinaryMemcacheRequest extends BinaryMemcacheMessage<BinaryMemca
      *
      * @return the required request header.
      */
+    @Override
     BinaryMemcacheRequestHeader getHeader();
 
 }

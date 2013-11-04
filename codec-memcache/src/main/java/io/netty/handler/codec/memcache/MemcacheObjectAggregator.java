@@ -15,25 +15,29 @@
  */
 package io.netty.handler.codec.memcache;
 
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.MessageToMessageDecoder;
+import io.netty.handler.codec.memcache.binary.BinaryMemcacheRequestDecoder;
+import io.netty.handler.codec.memcache.binary.BinaryMemcacheResponseEncoder;
 
 /**
- * A {@link io.netty.channel.ChannelHandler} that aggregates an {@link MemcacheMessage}
+ * A {@link ChannelHandler} that aggregates an {@link MemcacheMessage}
  * and its following {@link MemcacheContent}s into a single {@link MemcacheMessage} with
  * no following {@link MemcacheContent}s.  It is useful when you don't want to take
  * care of memcache messages where the content comes along in chunks. Insert this
- * handler after a MemcacheObjectDecoder in the {@link io.netty.channel.ChannelPipeline}.
+ * handler after a MemcacheObjectDecoder in the {@link ChannelPipeline}.
  * <p/>
  * For example, here for the binary protocol:
  * <p/>
  * <pre>
- * {@link io.netty.channel.ChannelPipeline} p = ...;
+ * {@link ChannelPipeline} p = ...;
  * ...
- * p.addLast("decoder", new {@link io.netty.handler.codec.memcache.binary.BinaryMemcacheRequestDecoder}());
+ * p.addLast("decoder", new {@link BinaryMemcacheRequestDecoder}());
  * p.addLast("aggregator", <b>new {@link MemcacheObjectAggregator}(1048576)</b>);
  * ...
- * p.addLast("encoder", new {@link io.netty.handler.codec.memcache.binary.BinaryMemcacheResponseEncoder}());
+ * p.addLast("encoder", new {@link BinaryMemcacheResponseEncoder}());
  * p.addLast("handler", new YourMemcacheRequestHandler());
  * </pre>
  */
@@ -55,7 +59,7 @@ public abstract class MemcacheObjectAggregator extends MessageToMessageDecoder<M
 
     private final int maxContentLength;
 
-    public MemcacheObjectAggregator(int maxContentLength) {
+    protected MemcacheObjectAggregator(int maxContentLength) {
         if (maxContentLength <= 0) {
             throw new IllegalArgumentException("maxContentLength must be a positive integer: " + maxContentLength);
         }

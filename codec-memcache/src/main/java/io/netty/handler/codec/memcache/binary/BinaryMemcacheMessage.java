@@ -17,7 +17,6 @@ package io.netty.handler.codec.memcache.binary;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.memcache.MemcacheMessage;
-import io.netty.handler.codec.memcache.MemcacheObject;
 
 /**
  * An interface that defines a binary Memcache message, providing common properties for
@@ -56,11 +55,13 @@ public interface BinaryMemcacheMessage<H extends BinaryMemcacheMessageHeader> ex
     /**
      * Increases the reference count by {@code 1}.
      */
-    BinaryMemcacheMessage retain();
+    @Override
+    BinaryMemcacheMessage<H> retain();
 
     /**
      * Increases the reference count by the specified {@code increment}.
      */
-    BinaryMemcacheMessage retain(int increment);
+    @Override
+    BinaryMemcacheMessage<H> retain(int increment);
 
 }

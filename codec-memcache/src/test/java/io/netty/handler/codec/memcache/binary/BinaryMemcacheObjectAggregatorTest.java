@@ -18,18 +18,10 @@ package io.netty.handler.codec.memcache.binary;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.handler.codec.memcache.LastMemcacheContent;
-import io.netty.handler.codec.memcache.MemcacheContent;
-import io.netty.util.CharsetUtil;
-import org.hamcrest.CoreMatchers;
-import org.junit.Before;
 import org.junit.Test;
 
-import java.nio.charset.Charset;
-
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.MatcherAssert.*;
 import static org.hamcrest.core.IsNull.notNullValue;
 import static org.hamcrest.core.IsNull.nullValue;
 
@@ -38,7 +30,7 @@ import static org.hamcrest.core.IsNull.nullValue;
  */
 public class BinaryMemcacheObjectAggregatorTest {
 
-    private static final byte[] SET_REQUEST_WITH_CONTENT = new byte[]{
+    private static final byte[] SET_REQUEST_WITH_CONTENT = {
         (byte) 0x80, 0x01, 0x00, 0x03,
         0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x0B,

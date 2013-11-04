@@ -45,7 +45,7 @@ public final class BinaryMemcacheClientCodec
      * Create a new {@link BinaryMemcacheClientCodec} with the default settings applied.
      */
     public BinaryMemcacheClientCodec() {
-        this(Decoder.DEFAULT_MAX_CHUNK_SIZE);
+        this(BinaryMemcacheDecoder.DEFAULT_MAX_CHUNK_SIZE);
     }
 
     /**
@@ -92,10 +92,10 @@ public final class BinaryMemcacheClientCodec
             super.decode(ctx, in, out);
 
             if (failOnMissingResponse) {
-                int size = out.size();
-                for (int i = oldSize; i < size; size++) {
+                final int size = out.size();
+                for (int i = oldSize; i < size; i ++) {
                     Object msg = out.get(i);
-                    if (msg != null && msg instanceof LastMemcacheContent) {
+                    if (msg instanceof LastMemcacheContent) {
                         requestResponseCounter.decrementAndGet();
                     }
                 }
