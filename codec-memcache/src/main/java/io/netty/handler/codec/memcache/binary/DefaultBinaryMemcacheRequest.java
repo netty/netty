@@ -21,7 +21,7 @@ import io.netty.buffer.Unpooled;
 /**
  * The default implementation of the {@link BinaryMemcacheRequest}.
  */
-public class DefaultBinaryMemcacheRequest extends DefaultBinaryMemcacheMessage<BinaryMemcacheRequestHeader>
+public class DefaultBinaryMemcacheRequest extends AbstractBinaryMemcacheMessage<BinaryMemcacheRequestHeader>
     implements BinaryMemcacheRequest {
 
     /**
