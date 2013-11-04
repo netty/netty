@@ -98,7 +98,7 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
         buf.append(getDecoderResult());
         buf.append(')');
         buf.append(StringUtil.NEWLINE);
-        buf.append(getMethod().toString());
+        buf.append(getMethod());
         buf.append(' ');
         buf.append(getUri());
         buf.append(' ');
