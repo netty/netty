@@ -112,7 +112,7 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
         int oldCapacity = array.length;
         if (newCapacity > oldCapacity) {
             byte[] newArray = new byte[newCapacity];
-            System.arraycopy(array, readerIndex(), newArray, readerIndex(), readableBytes());
+            System.arraycopy(array, 0, newArray, 0, array.length);
             setArray(newArray);
         } else if (newCapacity < oldCapacity) {
             byte[] newArray = new byte[newCapacity];
