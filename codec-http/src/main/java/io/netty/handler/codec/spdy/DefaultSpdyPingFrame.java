@@ -47,7 +47,7 @@ public class DefaultSpdyPingFrame implements SpdyPingFrame {
     @Override
     public String toString() {
         StringBuilder buf = new StringBuilder();
-        buf.append(getClass().getSimpleName());
+        buf.append(StringUtil.simpleClassName(this));
         buf.append(StringUtil.NEWLINE);
         buf.append("--> ID = ");
         buf.append(getId());

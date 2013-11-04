@@ -35,6 +35,7 @@ import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.StringUtil;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -97,7 +98,7 @@ public class AutobahnServerHandler extends ChannelInboundHandlerAdapter {
     private void handleWebSocketFrame(ChannelHandlerContext ctx, WebSocketFrame frame) {
         if (logger.isLoggable(Level.FINE)) {
             logger.fine(String.format(
-                    "Channel %s received %s", ctx.channel().hashCode(), frame.getClass().getSimpleName()));
+                    "Channel %s received %s", ctx.channel().hashCode(), StringUtil.simpleClassName(frame)));
         }
 
         if (frame instanceof CloseWebSocketFrame) {

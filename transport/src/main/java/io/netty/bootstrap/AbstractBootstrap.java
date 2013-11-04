@@ -26,6 +26,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.AttributeKey;
+import io.netty.util.internal.StringUtil;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -377,11 +378,11 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     @Override
     public String toString() {
         StringBuilder buf = new StringBuilder();
-        buf.append(getClass().getSimpleName());
+        buf.append(StringUtil.simpleClassName(this));
         buf.append('(');
         if (group != null) {
             buf.append("group: ");
-            buf.append(group.getClass().getSimpleName());
+            buf.append(StringUtil.simpleClassName(group));
             buf.append(", ");
         }
         if (channelFactory != null) {
@@ -440,7 +441,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
 
         @Override
         public String toString() {
-            return clazz.getSimpleName() + ".class";
+            return StringUtil.simpleClassName(clazz) + ".class";
         }
     }
 }

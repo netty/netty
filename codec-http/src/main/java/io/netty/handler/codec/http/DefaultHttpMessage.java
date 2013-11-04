@@ -50,7 +50,7 @@ public abstract class DefaultHttpMessage extends DefaultHttpObject implements Ht
     @Override
     public String toString() {
         StringBuilder buf = new StringBuilder();
-        buf.append(getClass().getSimpleName());
+        buf.append(StringUtil.simpleClassName(this));
         buf.append("(version: ");
         buf.append(getProtocolVersion().text());
         buf.append(", keepAlive: ");

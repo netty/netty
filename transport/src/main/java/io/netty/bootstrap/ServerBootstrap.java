@@ -27,6 +27,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.AttributeKey;
+import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -286,7 +287,7 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
         buf.append(", ");
         if (childGroup != null) {
             buf.append("childGroup: ");
-            buf.append(childGroup.getClass().getSimpleName());
+            buf.append(StringUtil.simpleClassName(childGroup));
             buf.append(", ");
         }
         synchronized (childOptions) {

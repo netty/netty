@@ -122,7 +122,7 @@ public class DefaultSpdyDataFrame extends DefaultSpdyStreamFrame implements Spdy
     @Override
     public String toString() {
         StringBuilder buf = new StringBuilder();
-        buf.append(getClass().getSimpleName());
+        buf.append(StringUtil.simpleClassName(this));
         buf.append("(last: ");
         buf.append(isLast());
         buf.append(')');

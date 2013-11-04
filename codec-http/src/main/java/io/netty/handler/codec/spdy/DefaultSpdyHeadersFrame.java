@@ -80,7 +80,7 @@ public class DefaultSpdyHeadersFrame extends DefaultSpdyStreamFrame
     @Override
     public String toString() {
         StringBuilder buf = new StringBuilder();
-        buf.append(getClass().getSimpleName());
+        buf.append(StringUtil.simpleClassName(this));
         buf.append("(last: ");
         buf.append(isLast());
         buf.append(')');
