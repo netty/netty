@@ -40,7 +40,7 @@ public interface BinaryMemcacheMessageHeader {
      * Sets the magic byte.
      *
      * @param magic the magic byte to use.
-     * @see io.netty.handler.codec.memcache.binary.util.BinaryMemcacheOpcodes for typesafe opcodes.
+     * @see BinaryMemcacheOpcodes for typesafe opcodes.
      */
     BinaryMemcacheMessageHeader setMagic(byte magic);
 

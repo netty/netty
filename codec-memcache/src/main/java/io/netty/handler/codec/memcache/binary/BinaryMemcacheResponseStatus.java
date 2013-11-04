@@ -13,11 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.memcache.binary.util;
+package io.netty.handler.codec.memcache.binary;
 
 /**
  * Contains all possible status values a
- * {@link io.netty.handler.codec.memcache.binary.BinaryMemcacheResponseHeader} can return.
+ * {@link BinaryMemcacheResponseHeader} can return.
  */
 public final class BinaryMemcacheResponseStatus {
 
@@ -36,5 +36,4 @@ public final class BinaryMemcacheResponseStatus {
     public static final short AUTH_CONTINUE = 0x21;
     public static final short UNKNOWN_COMMAND = 0x81;
     public static final short ENOMEM = 0x82;
-
 }
