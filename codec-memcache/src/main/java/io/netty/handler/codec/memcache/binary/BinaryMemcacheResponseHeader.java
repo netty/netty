@@ -19,7 +19,7 @@ package io.netty.handler.codec.memcache.binary;
  * Extends the common {@link BinaryMemcacheMessageHeader} header fields with hose who can only show up in
  * {@link BinaryMemcacheResponse} messages.
  *
- * @see io.netty.handler.codec.memcache.binary.util.BinaryMemcacheResponseStatus
+ * @see BinaryMemcacheResponseStatus
  */
 public interface BinaryMemcacheResponseHeader extends BinaryMemcacheMessageHeader {
 

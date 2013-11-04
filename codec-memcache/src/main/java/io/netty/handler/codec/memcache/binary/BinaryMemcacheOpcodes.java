@@ -13,10 +13,10 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.memcache.binary.util;
+package io.netty.handler.codec.memcache.binary;
 
 /**
- * Represents all Opcodes that can occur in a {@link io.netty.handler.codec.memcache.binary.BinaryMemcacheMessage}.
+ * Represents all Opcodes that can occur in a {@link BinaryMemcacheMessage}.
  * <p/>
  * This class can be extended if a custom application needs to implement a superset of the normally supported
  * operations by a vanilla memcached protocol.
@@ -62,5 +62,4 @@ public final class BinaryMemcacheOpcodes {
     public static final byte SASL_LIST_MECHS = 0x20;
     public static final byte SASL_AUTH = 0x21;
     public static final byte SASL_STEP = 0x22;
-
 }

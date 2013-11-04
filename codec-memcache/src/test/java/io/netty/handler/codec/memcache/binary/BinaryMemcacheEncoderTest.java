@@ -21,21 +21,20 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.memcache.DefaultLastMemcacheContent;
 import io.netty.handler.codec.memcache.DefaultMemcacheContent;
-import io.netty.handler.codec.memcache.binary.util.BinaryMemcacheOpcodes;
 import io.netty.util.CharsetUtil;
 import org.junit.Before;
 import org.junit.Test;
 
-import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.core.IsEqual.equalTo;
-import static org.junit.Assert.assertThat;
+import static org.junit.Assert.*;
 
 /**
  * Verifies the correct functionality of the {@link BinaryMemcacheEncoder}.
  */
 public class BinaryMemcacheEncoderTest {
 
-    public static int DEFAULT_HEADER_SIZE = 24;
+    public static final int DEFAULT_HEADER_SIZE = 24;
 
     private EmbeddedChannel channel;
 
