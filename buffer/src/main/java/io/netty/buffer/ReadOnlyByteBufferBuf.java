@@ -16,6 +16,7 @@
 package io.netty.buffer;
 
 import io.netty.util.ResourceLeak;
+import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -40,7 +41,7 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
     public ReadOnlyByteBufferBuf(ByteBufAllocator allocator, ByteBuffer buffer) {
         super(buffer.remaining());
         if (!buffer.isReadOnly()) {
-            throw new IllegalArgumentException("must be a readonly buffer: " + buffer.getClass().getSimpleName());
+            throw new IllegalArgumentException("must be a readonly buffer: " + StringUtil.simpleClassName(buffer));
         }
 
         this.allocator = allocator;

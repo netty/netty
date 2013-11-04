@@ -17,6 +17,7 @@
 package io.netty.util;
 
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -70,7 +71,7 @@ public final class ResourceLeakDetector<T> {
     private long leakCheckCnt;
 
     public ResourceLeakDetector(Class<?> resourceType) {
-        this(resourceType.getSimpleName());
+        this(StringUtil.simpleClassName(resourceType));
     }
 
     public ResourceLeakDetector(String resourceType) {
@@ -78,7 +79,7 @@ public final class ResourceLeakDetector<T> {
     }
 
     public ResourceLeakDetector(Class<?> resourceType, int samplingInterval, long maxActive) {
-        this(resourceType.getSimpleName(), samplingInterval, maxActive);
+        this(StringUtil.simpleClassName(resourceType), samplingInterval, maxActive);
     }
 
     public ResourceLeakDetector(String resourceType, int samplingInterval, long maxActive) {

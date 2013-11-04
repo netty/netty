@@ -20,6 +20,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.FileRegion;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.StringUtil;
 
 import java.util.List;
 import java.util.Map;
@@ -60,7 +61,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
     protected void encode(ChannelHandlerContext ctx, Object msg, List<Object> out) throws Exception {
         if (msg instanceof HttpMessage) {
             if (state != ST_INIT) {
-                throw new IllegalStateException("unexpected message type: " + msg.getClass().getSimpleName());
+                throw new IllegalStateException("unexpected message type: " + StringUtil.simpleClassName(msg));
             }
 
             @SuppressWarnings({ "unchecked", "CastConflictsWithInstanceof" })
@@ -76,7 +77,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
         }
         if (msg instanceof HttpContent || msg instanceof ByteBuf || msg instanceof FileRegion) {
             if (state == ST_INIT) {
-                throw new IllegalStateException("unexpected message type: " + msg.getClass().getSimpleName());
+                throw new IllegalStateException("unexpected message type: " + StringUtil.simpleClassName(msg));
             }
 
             int contentLength = contentLength(msg);
@@ -148,7 +149,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
         if (msg instanceof FileRegion) {
             return ((FileRegion) msg).retain();
         }
-        throw new IllegalStateException("unexpected message type: " + msg.getClass().getSimpleName());
+        throw new IllegalStateException("unexpected message type: " + StringUtil.simpleClassName(msg));
     }
 
     private static int contentLength(Object msg) {
@@ -161,7 +162,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
         if (msg instanceof FileRegion) {
             return (int) ((FileRegion) msg).count();
         }
-        throw new IllegalStateException("unexpected message type: " + msg.getClass().getSimpleName());
+        throw new IllegalStateException("unexpected message type: " + StringUtil.simpleClassName(msg));
     }
 
     private static void encodeHeaders(ByteBuf buf, HttpHeaders headers) {

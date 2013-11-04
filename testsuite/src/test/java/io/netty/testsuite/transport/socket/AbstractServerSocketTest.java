@@ -21,6 +21,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.testsuite.transport.socket.SocketTestPermutation.Factory;
 import io.netty.testsuite.util.TestUtils;
 import io.netty.util.NetUtil;
+import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.Rule;
@@ -57,7 +58,7 @@ public abstract class AbstractServerSocketTest {
 
                 logger.info(String.format(
                         "Running: %s %d of %d (%s) with %s",
-                        testName.getMethodName(), ++ i, COMBO.size(), sb, allocator.getClass().getSimpleName()));
+                        testName.getMethodName(), ++ i, COMBO.size(), sb, StringUtil.simpleClassName(allocator)));
                 try {
                     Method m = getClass().getDeclaredMethod(
                             testName.getMethodName(), ServerBootstrap.class);
