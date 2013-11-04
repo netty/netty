@@ -42,9 +42,9 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
+import javax.net.ssl.SSLEngineResult.HandshakeStatus;
 import javax.net.ssl.SSLEngineResult.Status;
 import javax.net.ssl.SSLException;
-
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
@@ -391,7 +391,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
     @Override
     public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-        pendingUnencryptedWrites.add(PendingWrite.newInstance((ByteBuf) msg, promise));
+        pendingUnencryptedWrites.add(PendingWrite.newInstance(msg, promise));
     }
 
     @Override
@@ -713,7 +713,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             int majorVersion = buffer.getUnsignedByte(first + 1);
             if (majorVersion == 3) {
                 // SSLv3 or TLS
-                packetLength = (buffer.getUnsignedShort(first + 3)) + 5;
+                packetLength = buffer.getUnsignedShort(first + 3) + 5;
                 if (packetLength <= 5) {
                     // Neither SSLv3 or TLSv1 (i.e. SSLv2 or bad data)
                     tls = false;
@@ -814,25 +814,27 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
     private void unwrap(ChannelHandlerContext ctx, ByteBuffer packet, List<Object> out) throws SSLException {
         boolean wrapLater = false;
-        int bytesProduced = 0;
+        int totalProduced = 0;
         try {
-            loop:
             for (;;) {
                 if (decodeOut == null) {
                     decodeOut = ctx.alloc().buffer();
                 }
-                SSLEngineResult result = unwrap(engine, packet, decodeOut);
-                bytesProduced += result.bytesProduced();
-                switch (result.getStatus()) {
-                    case CLOSED:
-                        // notify about the CLOSED state of the SSLEngine. See #137
-                        sslCloseFuture.trySuccess(ctx.channel());
-                        break;
-                    case BUFFER_UNDERFLOW:
-                        break loop;
+
+                final SSLEngineResult result = unwrap(engine, packet, decodeOut);
+                final Status status = result.getStatus();
+                final HandshakeStatus handshakeStatus = result.getHandshakeStatus();
+                final int produced = result.bytesProduced();
+                final int consumed = result.bytesConsumed();
+
+                totalProduced += produced;
+                if (status == Status.CLOSED) {
+                    // notify about the CLOSED state of the SSLEngine. See #137
+                    sslCloseFuture.trySuccess(ctx.channel());
+                    break;
                 }
 
-                switch (result.getHandshakeStatus()) {
+                switch (handshakeStatus) {
                     case NEED_UNWRAP:
                         break;
                     case NEED_WRAP:
@@ -848,11 +850,10 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     case NOT_HANDSHAKING:
                         break;
                     default:
-                        throw new IllegalStateException(
-                                "Unknown handshake status: " + result.getHandshakeStatus());
+                        throw new IllegalStateException("Unknown handshake status: " + handshakeStatus);
                 }
 
-                if (result.bytesConsumed() == 0 && result.bytesProduced() == 0) {
+                if (status == Status.BUFFER_UNDERFLOW || consumed == 0 && produced == 0) {
                     break;
                 }
             }
@@ -864,7 +865,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             setHandshakeFailure(e);
             throw e;
         } finally {
-            if (bytesProduced > 0) {
+            if (totalProduced > 0) {
                 ByteBuf decodeOut = this.decodeOut;
                 this.decodeOut = null;
                 out.add(decodeOut);
