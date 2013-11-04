@@ -45,7 +45,7 @@ public class HttpPostRequestDecoder implements InterfaceHttpPostRequestDecoder {
      *             if the default charset was wrong when decoding or other
      *             errors
      */
-    public HttpPostRequestDecoder(HttpRequest request) throws ErrorDataDecoderException {
+    public HttpPostRequestDecoder(HttpRequest request) {
         this(new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE), request, HttpConstants.DEFAULT_CHARSET);
     }
 
@@ -61,7 +61,7 @@ public class HttpPostRequestDecoder implements InterfaceHttpPostRequestDecoder {
      *             if the default charset was wrong when decoding or other
      *             errors
      */
-    public HttpPostRequestDecoder(HttpDataFactory factory, HttpRequest request) throws ErrorDataDecoderException {
+    public HttpPostRequestDecoder(HttpDataFactory factory, HttpRequest request) {
         this(factory, request, HttpConstants.DEFAULT_CHARSET);
     }
 
@@ -79,8 +79,7 @@ public class HttpPostRequestDecoder implements InterfaceHttpPostRequestDecoder {
      *             if the default charset was wrong when decoding or other
      *             errors
      */
-    public HttpPostRequestDecoder(HttpDataFactory factory, HttpRequest request, Charset charset)
-            throws ErrorDataDecoderException {
+    public HttpPostRequestDecoder(HttpDataFactory factory, HttpRequest request, Charset charset) {
         if (factory == null) {
             throw new NullPointerException("factory");
         }
@@ -135,11 +134,9 @@ public class HttpPostRequestDecoder implements InterfaceHttpPostRequestDecoder {
 
     /**
      * Check if the given request is a multipart request
-     * @param request
      * @return True if the request is a Multipart request
-     * @throws ErrorDataDecoderException
      */
-    public static boolean isMultipart(HttpRequest request) throws ErrorDataDecoderException {
+    public static boolean isMultipart(HttpRequest request) {
         if (request.headers().contains(HttpHeaders.Names.CONTENT_TYPE)) {
             return getMultipartDataBoundary(request.headers().get(HttpHeaders.Names.CONTENT_TYPE)) != null;
         } else {
@@ -151,8 +148,7 @@ public class HttpPostRequestDecoder implements InterfaceHttpPostRequestDecoder {
      * Check from the request ContentType if this request is a Multipart request.
      * @return the multipartDataBoundary if it exists, else null
      */
-    protected static String getMultipartDataBoundary(String contentType)
-            throws ErrorDataDecoderException {
+    protected static String getMultipartDataBoundary(String contentType) {
         // Check if Post using "multipart/form-data; boundary=--89421926422648"
         String[] headerContentType = splitHeaderContentType(contentType);
         if (headerContentType[0].toLowerCase().startsWith(
@@ -169,50 +165,62 @@ public class HttpPostRequestDecoder implements InterfaceHttpPostRequestDecoder {
         }
     }
 
+    @Override
     public boolean isMultipart() {
         return decoder.isMultipart();
     }
 
+    @Override
     public void setDiscardThreshold(int discardThreshold) {
         decoder.setDiscardThreshold(discardThreshold);
     }
 
+    @Override
     public int getDiscardThreshold() {
         return decoder.getDiscardThreshold();
     }
 
-    public List<InterfaceHttpData> getBodyHttpDatas() throws NotEnoughDataDecoderException {
+    @Override
+    public List<InterfaceHttpData> getBodyHttpDatas() {
         return decoder.getBodyHttpDatas();
     }
 
-    public List<InterfaceHttpData> getBodyHttpDatas(String name) throws NotEnoughDataDecoderException {
+    @Override
+    public List<InterfaceHttpData> getBodyHttpDatas(String name) {
         return decoder.getBodyHttpDatas(name);
     }
 
-    public InterfaceHttpData getBodyHttpData(String name) throws NotEnoughDataDecoderException {
+    @Override
+    public InterfaceHttpData getBodyHttpData(String name) {
         return decoder.getBodyHttpData(name);
     }
 
-    public InterfaceHttpPostRequestDecoder offer(HttpContent content) throws ErrorDataDecoderException {
+    @Override
+    public InterfaceHttpPostRequestDecoder offer(HttpContent content) {
         return decoder.offer(content);
     }
 
-    public boolean hasNext() throws EndOfDataDecoderException {
+    @Override
+    public boolean hasNext() {
         return decoder.hasNext();
     }
 
-    public InterfaceHttpData next() throws EndOfDataDecoderException {
+    @Override
+    public InterfaceHttpData next() {
         return decoder.next();
     }
 
+    @Override
     public void destroy() {
         decoder.destroy();
     }
 
+    @Override
     public void cleanFiles() {
         decoder.cleanFiles();
     }
 
+    @Override
     public void removeHttpDataFromClean(InterfaceHttpData data) {
         decoder.removeHttpDataFromClean(data);
     }
