@@ -153,7 +153,7 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
     @Override
     public String toString() {
         StringBuilder buf = new StringBuilder();
-        buf.append(getClass().getSimpleName());
+        buf.append(StringUtil.simpleClassName(this));
         buf.append(StringUtil.NEWLINE);
         appendSettings(buf);
         buf.setLength(buf.length() - StringUtil.NEWLINE.length());

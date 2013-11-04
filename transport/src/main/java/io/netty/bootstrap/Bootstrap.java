@@ -25,6 +25,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.ServerChannel;
 import io.netty.util.AttributeKey;
+import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -92,6 +93,7 @@ public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
         return channelFactory;
     }
 
+    @Override
     Channel createChannel() {
         EventLoop eventLoop = group().next();
         return channelFactory().newChannel(eventLoop);
@@ -300,7 +302,7 @@ public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
 
         @Override
         public String toString() {
-            return clazz.getSimpleName() + ".class";
+            return StringUtil.simpleClassName(clazz) + ".class";
         }
     }
 }

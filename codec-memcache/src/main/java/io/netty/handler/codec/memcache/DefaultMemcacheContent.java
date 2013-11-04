@@ -16,6 +16,7 @@
 package io.netty.handler.codec.memcache;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.util.internal.StringUtil;
 
 /**
  * The default {@link MemcacheContent} implementation.
@@ -78,7 +79,8 @@ public class DefaultMemcacheContent extends DefaultMemcacheObject implements Mem
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + "(data: " + content() + ", getDecoderResult: " + getDecoderResult() + ')';
+        return StringUtil.simpleClassName(this) +
+               "(data: " + content() + ", getDecoderResult: " + getDecoderResult() + ')';
     }
 
 }

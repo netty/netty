@@ -20,6 +20,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.FileRegion;
 import io.netty.handler.codec.MessageToMessageEncoder;
+import io.netty.util.internal.StringUtil;
 
 import java.util.List;
 
@@ -38,10 +39,12 @@ public abstract class MemcacheObjectEncoder<M extends MemcacheMessage> extends M
     protected void encode(ChannelHandlerContext ctx, Object msg, List<Object> out) throws Exception {
         if (msg instanceof MemcacheMessage) {
             if (expectingMoreContent) {
-                throw new IllegalStateException("unexpected message type: " + msg.getClass().getSimpleName());
+                throw new IllegalStateException("unexpected message type: " + StringUtil.simpleClassName(msg));
             }
 
-            out.add(encodeMessage(ctx, (M) msg));
+            @SuppressWarnings({ "unchecked", "CastConflictsWithInstanceof" })
+            final M m = (M) msg;
+            out.add(encodeMessage(ctx, m));
         }
 
         if (msg instanceof MemcacheContent || msg instanceof ByteBuf || msg instanceof FileRegion) {
@@ -86,7 +89,7 @@ public abstract class MemcacheObjectEncoder<M extends MemcacheMessage> extends M
         if (msg instanceof FileRegion) {
             return (int) ((FileRegion) msg).count();
         }
-        throw new IllegalStateException("unexpected message type: " + msg.getClass().getSimpleName());
+        throw new IllegalStateException("unexpected message type: " + StringUtil.simpleClassName(msg));
     }
 
     /**
@@ -105,7 +108,7 @@ public abstract class MemcacheObjectEncoder<M extends MemcacheMessage> extends M
         if (msg instanceof FileRegion) {
             return ((FileRegion) msg).retain();
         }
-        throw new IllegalStateException("unexpected message type: " + msg.getClass().getSimpleName());
+        throw new IllegalStateException("unexpected message type: " + StringUtil.simpleClassName(msg));
     }
 
 }

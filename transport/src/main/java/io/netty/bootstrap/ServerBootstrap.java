@@ -29,6 +29,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.AttributeKey;
+import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -69,7 +70,7 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
 
     /**
      * The {@link Class} which is used to create {@link Channel} instances from.
-     * You either use this or {@link #channelFactory(ChannelFactory)} if your
+     * You either use this or {@link #channelFactory(ServerChannelFactory)} if your
      * {@link Channel} implementation has no no-args constructor.
      */
     public ServerBootstrap channel(Class<? extends ServerChannel> channelClass) {
@@ -98,6 +99,7 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
         return this;
     }
 
+    @Override
     Channel createChannel() {
         EventLoop eventLoop = group().next();
         return channelFactory().newChannel(eventLoop, childGroup);
@@ -321,7 +323,7 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
         buf.append(", ");
         if (childGroup != null) {
             buf.append("childGroup: ");
-            buf.append(childGroup.getClass().getSimpleName());
+            buf.append(StringUtil.simpleClassName(childGroup));
             buf.append(", ");
         }
         synchronized (childOptions) {
@@ -374,7 +376,7 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
 
         @Override
         public String toString() {
-            return clazz.getSimpleName() + ".class";
+            return StringUtil.simpleClassName(clazz) + ".class";
         }
     }
 }
