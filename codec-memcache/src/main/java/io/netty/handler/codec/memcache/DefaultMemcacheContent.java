@@ -21,7 +21,7 @@ import io.netty.util.internal.StringUtil;
 /**
  * The default {@link MemcacheContent} implementation.
  */
-public class DefaultMemcacheContent extends DefaultMemcacheObject implements MemcacheContent {
+public class DefaultMemcacheContent extends AbstractMemcacheObject implements MemcacheContent {
 
     private final ByteBuf content;
 
