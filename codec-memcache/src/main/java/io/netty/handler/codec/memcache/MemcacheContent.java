@@ -16,6 +16,7 @@
 package io.netty.handler.codec.memcache;
 
 import io.netty.buffer.ByteBufHolder;
+import io.netty.channel.ChannelPipeline;
 
 /**
  * An Memcache content chunk.
@@ -23,7 +24,7 @@ import io.netty.buffer.ByteBufHolder;
  * A MemcacheObjectDecoder generates {@link MemcacheContent} after
  * {@link MemcacheMessage} when the content is large. If you prefer not to
  * receive {@link MemcacheContent} in your handler, place a aggregator
- * after MemcacheObjectDecoder in the {@link io.netty.channel.ChannelPipeline}.
+ * after MemcacheObjectDecoder in the {@link ChannelPipeline}.
  */
 public interface MemcacheContent extends MemcacheObject, ByteBufHolder {
 

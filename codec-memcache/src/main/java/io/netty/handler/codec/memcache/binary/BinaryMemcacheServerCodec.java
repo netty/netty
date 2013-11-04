@@ -28,7 +28,7 @@ public class BinaryMemcacheServerCodec
     extends CombinedChannelDuplexHandler<BinaryMemcacheRequestDecoder, BinaryMemcacheResponseEncoder> {
 
     public BinaryMemcacheServerCodec() {
-        this(BinaryMemcacheRequestDecoder.DEFAULT_MAX_CHUNK_SIZE);
+        this(BinaryMemcacheDecoder.DEFAULT_MAX_CHUNK_SIZE);
     }
 
     public BinaryMemcacheServerCodec(int decodeChunkSize) {
