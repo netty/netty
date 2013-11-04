@@ -16,13 +16,13 @@
 package io.netty.handler.codec.memcache.binary;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.memcache.DefaultMemcacheObject;
+import io.netty.handler.codec.memcache.AbstractMemcacheObject;
 
 /**
  * Default implementation of a {@link BinaryMemcacheMessage}.
  */
-public abstract class DefaultBinaryMemcacheMessage<H extends BinaryMemcacheMessageHeader>
-    extends DefaultMemcacheObject
+public abstract class AbstractBinaryMemcacheMessage<H extends BinaryMemcacheMessageHeader>
+    extends AbstractMemcacheObject
     implements BinaryMemcacheMessage<H> {
 
     /**
@@ -47,7 +47,7 @@ public abstract class DefaultBinaryMemcacheMessage<H extends BinaryMemcacheMessa
      * @param key    the message key.
      * @param extras the message extras.
      */
-    protected DefaultBinaryMemcacheMessage(H header, String key, ByteBuf extras) {
+    protected AbstractBinaryMemcacheMessage(H header, String key, ByteBuf extras) {
         this.header = header;
         this.key = key;
         this.extras = extras;

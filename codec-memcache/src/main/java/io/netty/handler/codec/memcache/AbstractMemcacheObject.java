@@ -20,11 +20,11 @@ import io.netty.handler.codec.DecoderResult;
 /**
  * The default {@link MemcacheObject} implementation.
  */
-public abstract class DefaultMemcacheObject implements MemcacheObject {
+public abstract class AbstractMemcacheObject implements MemcacheObject {
 
     private DecoderResult decoderResult = DecoderResult.SUCCESS;
 
-    protected DefaultMemcacheObject() {
+    protected AbstractMemcacheObject() {
         // Disallow direct instantiation
     }
 
