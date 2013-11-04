@@ -132,7 +132,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      *             if the default charset was wrong when decoding or other
      *             errors
      */
-    public HttpPostMultipartRequestDecoder(HttpRequest request) throws ErrorDataDecoderException {
+    public HttpPostMultipartRequestDecoder(HttpRequest request) {
         this(new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE), request, HttpConstants.DEFAULT_CHARSET);
     }
 
@@ -148,8 +148,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      *             if the default charset was wrong when decoding or other
      *             errors
      */
-    public HttpPostMultipartRequestDecoder(HttpDataFactory factory, HttpRequest request)
-    throws ErrorDataDecoderException {
+    public HttpPostMultipartRequestDecoder(HttpDataFactory factory, HttpRequest request) {
         this(factory, request, HttpConstants.DEFAULT_CHARSET);
     }
 
@@ -167,8 +166,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      *             if the default charset was wrong when decoding or other
      *             errors
      */
-    public HttpPostMultipartRequestDecoder(HttpDataFactory factory, HttpRequest request, Charset charset)
-            throws ErrorDataDecoderException {
+    public HttpPostMultipartRequestDecoder(HttpDataFactory factory, HttpRequest request, Charset charset) {
         if (factory == null) {
             throw new NullPointerException("factory");
         }
@@ -196,11 +194,8 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
 
     /**
      * Set from the request ContentType the multipartDataBoundary.
-     * @param contentType
-     * @throws ErrorDataDecoderException
-     * @throws ErrorDataDecoderException
      */
-    private void setMultipart(String contentType) throws ErrorDataDecoderException {
+    private void setMultipart(String contentType) {
         multipartDataBoundary = HttpPostRequestDecoder.getMultipartDataBoundary(contentType);
         currentStatus = MultiPartStatus.HEADERDELIMITER;
     }
@@ -217,6 +212,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      *
      * @return True if this request is a Multipart request
      */
+    @Override
     public boolean isMultipart() {
         checkDestroyed();
         return true;
@@ -227,6 +223,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      * Setting this lower gives lower memory usage but with the overhead of more memory copies.
      * Use {@code 0} to disable it.
      */
+    @Override
     public void setDiscardThreshold(int discardThreshold) {
         if (discardThreshold < 0) {
           throw new IllegalArgumentException("discardThreshold must be >= 0");
@@ -237,6 +234,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
     /**
      * Return the threshold in bytes after which read data in the buffer should be discarded.
      */
+    @Override
     public int getDiscardThreshold() {
         return discardThreshold;
     }
@@ -251,7 +249,8 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      * @throws NotEnoughDataDecoderException
      *             Need more chunks
      */
-    public List<InterfaceHttpData> getBodyHttpDatas() throws NotEnoughDataDecoderException {
+    @Override
+    public List<InterfaceHttpData> getBodyHttpDatas() {
         checkDestroyed();
 
         if (!isLastChunk) {
@@ -271,7 +270,8 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      * @throws NotEnoughDataDecoderException
      *             need more chunks
      */
-    public List<InterfaceHttpData> getBodyHttpDatas(String name) throws NotEnoughDataDecoderException {
+    @Override
+    public List<InterfaceHttpData> getBodyHttpDatas(String name) {
         checkDestroyed();
 
         if (!isLastChunk) {
@@ -292,7 +292,8 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      * @throws NotEnoughDataDecoderException
      *             need more chunks
      */
-    public InterfaceHttpData getBodyHttpData(String name) throws NotEnoughDataDecoderException {
+    @Override
+    public InterfaceHttpData getBodyHttpData(String name) {
         checkDestroyed();
 
         if (!isLastChunk) {
@@ -314,7 +315,8 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      *             if there is a problem with the charset decoding or other
      *             errors
      */
-    public HttpPostMultipartRequestDecoder offer(HttpContent content) throws ErrorDataDecoderException {
+    @Override
+    public HttpPostMultipartRequestDecoder offer(HttpContent content) {
         checkDestroyed();
 
         // Maybe we should better not copy here for performance reasons but this will need
@@ -346,7 +348,8 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      * @throws EndOfDataDecoderException
      *             No more data will be available
      */
-    public boolean hasNext() throws EndOfDataDecoderException {
+    @Override
+    public boolean hasNext() {
         checkDestroyed();
 
         if (currentStatus == MultiPartStatus.EPILOGUE) {
@@ -370,7 +373,8 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      * @throws EndOfDataDecoderException
      *             No more data will be available
      */
-    public InterfaceHttpData next() throws EndOfDataDecoderException {
+    @Override
+    public InterfaceHttpData next() {
         checkDestroyed();
 
         if (hasNext()) {
@@ -386,7 +390,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      *             if there is a problem with the charset decoding or other
      *             errors
      */
-    private void parseBody() throws ErrorDataDecoderException {
+    private void parseBody() {
         if (currentStatus == MultiPartStatus.PREEPILOGUE || currentStatus == MultiPartStatus.EPILOGUE) {
             if (isLastChunk) {
                 currentStatus = MultiPartStatus.EPILOGUE;
@@ -419,7 +423,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      *             if there is a problem with the charset decoding or other
      *             errors
      */
-    private void parseBodyMultipart() throws ErrorDataDecoderException {
+    private void parseBodyMultipart() {
         if (undecodedChunk == null || undecodedChunk.readableBytes() == 0) {
             // nothing to decode
             return;
@@ -450,7 +454,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      * @throws ErrorDataDecoderException
      *             if an error occurs
      */
-    private InterfaceHttpData decodeMultipart(MultiPartStatus state) throws ErrorDataDecoderException {
+    private InterfaceHttpData decodeMultipart(MultiPartStatus state) {
         switch (state) {
         case NOTSTARTED:
             throw new ErrorDataDecoderException("Should not be called with the current getStatus");
@@ -545,7 +549,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      *
      * @throws NotEnoughDataDecoderException
      */
-    void skipControlCharacters() throws NotEnoughDataDecoderException {
+    void skipControlCharacters() {
         SeekAheadOptimize sao;
         try {
             sao = new SeekAheadOptimize(undecodedChunk);
@@ -591,7 +595,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      * @throws ErrorDataDecoderException
      */
     private InterfaceHttpData findMultipartDelimiter(String delimiter, MultiPartStatus dispositionStatus,
-            MultiPartStatus closeDelimiterStatus) throws ErrorDataDecoderException {
+            MultiPartStatus closeDelimiterStatus) {
         // --AaB03x or --AaB03x--
         int readerIndex = undecodedChunk.readerIndex();
         try {
@@ -633,7 +637,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      * @return the next InterfaceHttpData if any
      * @throws ErrorDataDecoderException
      */
-    private InterfaceHttpData findMultipartDisposition() throws ErrorDataDecoderException {
+    private InterfaceHttpData findMultipartDisposition() {
         int readerIndex = undecodedChunk.readerIndex();
         if (currentStatus == MultiPartStatus.DISPOSITION) {
             currentFieldAttributes = new TreeMap<String, Attribute>(CaseIgnoringComparator.INSTANCE);
@@ -783,7 +787,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      * @return the InterfaceHttpData if any
      * @throws ErrorDataDecoderException
      */
-    protected InterfaceHttpData getFileUpload(String delimiter) throws ErrorDataDecoderException {
+    protected InterfaceHttpData getFileUpload(String delimiter) {
         // eventually restart from existing FileUpload
         // Now get value according to Content-Type and Charset
         Attribute encoding = currentFieldAttributes.get(HttpHeaders.Names.CONTENT_TRANSFER_ENCODING);
@@ -878,6 +882,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      * Destroy the {@link HttpPostMultipartRequestDecoder} and release all it resources. After this method
      * was called it is not possible to operate on it anymore.
      */
+    @Override
     public void destroy() {
         checkDestroyed();
         cleanFiles();
@@ -897,6 +902,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
     /**
      * Clean all HttpDatas (on Disk) for the current request.
      */
+    @Override
     public void cleanFiles() {
         checkDestroyed();
 
@@ -906,6 +912,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
     /**
      * Remove the given FileUpload from the list of FileUploads to clean
      */
+    @Override
     public void removeHttpDataFromClean(InterfaceHttpData data) {
         checkDestroyed();
 
@@ -932,7 +939,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      *             Need more chunks and reset the readerInder to the previous
      *             value
      */
-    private String readLineStandard() throws NotEnoughDataDecoderException {
+    private String readLineStandard() {
         int readerIndex = undecodedChunk.readerIndex();
         try {
             ByteBuf line = buffer(64);
@@ -966,7 +973,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      *             Need more chunks and reset the readerInder to the previous
      *             value
      */
-    private String readLine() throws NotEnoughDataDecoderException {
+    private String readLine() {
         SeekAheadOptimize sao;
         try {
             sao = new SeekAheadOptimize(undecodedChunk);
@@ -1019,7 +1026,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      *             Need more chunks and reset the readerInder to the previous
      *             value
      */
-    private String readDelimiterStandard(String delimiter) throws NotEnoughDataDecoderException {
+    private String readDelimiterStandard(String delimiter) {
         int readerIndex = undecodedChunk.readerIndex();
         try {
             StringBuilder sb = new StringBuilder(64);
@@ -1113,7 +1120,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      *             Need more chunks and reset the readerInder to the previous
      *             value
      */
-    private String readDelimiter(String delimiter) throws NotEnoughDataDecoderException {
+    private String readDelimiter(String delimiter) {
         SeekAheadOptimize sao;
         try {
             sao = new SeekAheadOptimize(undecodedChunk);
@@ -1225,8 +1232,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      * @throws ErrorDataDecoderException
      *             write IO error occurs with the FileUpload
      */
-    private void readFileUploadByteMultipartStandard(String delimiter) throws NotEnoughDataDecoderException,
-            ErrorDataDecoderException {
+    private void readFileUploadByteMultipartStandard(String delimiter) {
         int readerIndex = undecodedChunk.readerIndex();
         // found the decoder limit
         boolean newLine = true;
@@ -1333,8 +1339,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      * @throws ErrorDataDecoderException
      *             write IO error occurs with the FileUpload
      */
-    private void readFileUploadByteMultipart(String delimiter) throws NotEnoughDataDecoderException,
-            ErrorDataDecoderException {
+    private void readFileUploadByteMultipart(String delimiter) {
         SeekAheadOptimize sao;
         try {
             sao = new SeekAheadOptimize(undecodedChunk);
@@ -1448,8 +1453,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      *             Need more chunks
      * @throws ErrorDataDecoderException
      */
-    private void loadFieldMultipartStandard(String delimiter) throws NotEnoughDataDecoderException,
-            ErrorDataDecoderException {
+    private void loadFieldMultipartStandard(String delimiter) {
         int readerIndex = undecodedChunk.readerIndex();
         try {
             // found the decoder limit
@@ -1544,7 +1548,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      *             Need more chunks
      * @throws ErrorDataDecoderException
      */
-    private void loadFieldMultipart(String delimiter) throws NotEnoughDataDecoderException, ErrorDataDecoderException {
+    private void loadFieldMultipart(String delimiter) {
         SeekAheadOptimize sao;
         try {
             sao = new SeekAheadOptimize(undecodedChunk);

@@ -110,8 +110,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
      *             if the default charset was wrong when decoding or other
      *             errors
      */
-    public HttpPostStandardRequestDecoder(HttpRequest request)
-    throws ErrorDataDecoderException {
+    public HttpPostStandardRequestDecoder(HttpRequest request) {
         this(new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE), request, HttpConstants.DEFAULT_CHARSET);
     }
 
@@ -127,8 +126,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
      *             if the default charset was wrong when decoding or other
      *             errors
      */
-    public HttpPostStandardRequestDecoder(HttpDataFactory factory, HttpRequest request)
-    throws ErrorDataDecoderException {
+    public HttpPostStandardRequestDecoder(HttpDataFactory factory, HttpRequest request) {
         this(factory, request, HttpConstants.DEFAULT_CHARSET);
     }
 
@@ -146,8 +144,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
      *             if the default charset was wrong when decoding or other
      *             errors
      */
-    public HttpPostStandardRequestDecoder(HttpDataFactory factory, HttpRequest request, Charset charset)
-    throws ErrorDataDecoderException {
+    public HttpPostStandardRequestDecoder(HttpDataFactory factory, HttpRequest request, Charset charset) {
         if (factory == null) {
             throw new NullPointerException("factory");
         }
@@ -182,6 +179,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
      *
      * @return True if this request is a Multipart request
      */
+    @Override
     public boolean isMultipart() {
         checkDestroyed();
         return false;
@@ -192,6 +190,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
      * Setting this lower gives lower memory usage but with the overhead of more memory copies.
      * Use {@code 0} to disable it.
      */
+    @Override
     public void setDiscardThreshold(int discardThreshold) {
         if (discardThreshold < 0) {
           throw new IllegalArgumentException("discardThreshold must be >= 0");
@@ -202,6 +201,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
     /**
      * Return the threshold in bytes after which read data in the buffer should be discarded.
      */
+    @Override
     public int getDiscardThreshold() {
         return discardThreshold;
     }
@@ -216,7 +216,8 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
      * @throws NotEnoughDataDecoderException
      *             Need more chunks
      */
-    public List<InterfaceHttpData> getBodyHttpDatas() throws NotEnoughDataDecoderException {
+    @Override
+    public List<InterfaceHttpData> getBodyHttpDatas() {
         checkDestroyed();
 
         if (!isLastChunk) {
@@ -236,8 +237,8 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
      * @throws NotEnoughDataDecoderException
      *             need more chunks
      */
-    public List<InterfaceHttpData> getBodyHttpDatas(String name)
-    throws NotEnoughDataDecoderException {
+    @Override
+    public List<InterfaceHttpData> getBodyHttpDatas(String name) {
         checkDestroyed();
 
         if (!isLastChunk) {
@@ -258,7 +259,8 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
      * @throws NotEnoughDataDecoderException
      *             need more chunks
      */
-    public InterfaceHttpData getBodyHttpData(String name) throws NotEnoughDataDecoderException {
+    @Override
+    public InterfaceHttpData getBodyHttpData(String name) {
         checkDestroyed();
 
         if (!isLastChunk) {
@@ -280,8 +282,8 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
      *             if there is a problem with the charset decoding or other
      *             errors
      */
-    public HttpPostStandardRequestDecoder offer(HttpContent content)
-    throws ErrorDataDecoderException {
+    @Override
+    public HttpPostStandardRequestDecoder offer(HttpContent content) {
         checkDestroyed();
 
         // Maybe we should better not copy here for performance reasons but this will need
@@ -313,7 +315,8 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
      * @throws EndOfDataDecoderException
      *             No more data will be available
      */
-    public boolean hasNext() throws EndOfDataDecoderException {
+    @Override
+    public boolean hasNext() {
         checkDestroyed();
 
         if (currentStatus == MultiPartStatus.EPILOGUE) {
@@ -337,7 +340,8 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
      * @throws EndOfDataDecoderException
      *             No more data will be available
      */
-    public InterfaceHttpData next() throws EndOfDataDecoderException {
+    @Override
+    public InterfaceHttpData next() {
         checkDestroyed();
 
         if (hasNext()) {
@@ -353,7 +357,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
      *             if there is a problem with the charset decoding or other
      *             errors
      */
-    private void parseBody() throws ErrorDataDecoderException {
+    private void parseBody() {
         if (currentStatus == MultiPartStatus.PREEPILOGUE || currentStatus == MultiPartStatus.EPILOGUE) {
             if (isLastChunk) {
                 currentStatus = MultiPartStatus.EPILOGUE;
@@ -387,7 +391,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
      *             if there is a problem with the charset decoding or other
      *             errors
      */
-    private void parseBodyAttributesStandard() throws ErrorDataDecoderException {
+    private void parseBodyAttributesStandard() {
         int firstpos = undecodedChunk.readerIndex();
         int currentpos = firstpos;
         int equalpos;
@@ -501,7 +505,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
      *             if there is a problem with the charset decoding or other
      *             errors
      */
-    private void parseBodyAttributes() throws ErrorDataDecoderException {
+    private void parseBodyAttributes() {
         SeekAheadOptimize sao;
         try {
             sao = new SeekAheadOptimize(undecodedChunk);
@@ -623,7 +627,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
         }
     }
 
-    private void setFinalBuffer(ByteBuf buffer) throws ErrorDataDecoderException, IOException {
+    private void setFinalBuffer(ByteBuf buffer) throws IOException {
         currentAttribute.addContent(buffer, true);
         String value = decodeAttribute(currentAttribute.getByteBuf().toString(charset), charset);
         currentAttribute.setValue(value);
@@ -636,8 +640,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
      *
      * @return the decoded component
      */
-    private static String decodeAttribute(String s, Charset charset)
-    throws ErrorDataDecoderException {
+    private static String decodeAttribute(String s, Charset charset) {
         if (s == null) {
             return "";
         }
@@ -652,10 +655,8 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
 
     /**
      * Skip control Characters
-     *
-     * @throws NotEnoughDataDecoderException
      */
-    void skipControlCharacters() throws NotEnoughDataDecoderException {
+    void skipControlCharacters() {
         SeekAheadOptimize sao;
         try {
             sao = new SeekAheadOptimize(undecodedChunk);
@@ -692,6 +693,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
      * Destroy the {@link HttpPostStandardRequestDecoder} and release all it resources. After this method
      * was called it is not possible to operate on it anymore.
      */
+    @Override
     public void destroy() {
         checkDestroyed();
         cleanFiles();
@@ -711,6 +713,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
     /**
      * Clean all HttpDatas (on Disk) for the current request.
      */
+    @Override
     public void cleanFiles() {
         checkDestroyed();
 
@@ -720,6 +723,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
     /**
      * Remove the given FileUpload from the list of FileUploads to clean
      */
+    @Override
     public void removeHttpDataFromClean(InterfaceHttpData data) {
         checkDestroyed();
 
