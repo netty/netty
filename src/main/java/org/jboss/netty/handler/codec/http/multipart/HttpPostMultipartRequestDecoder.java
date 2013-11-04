@@ -42,6 +42,7 @@ import java.util.TreeMap;
 /**
  * This decoder will decode Body and can handle POST BODY in multipart form.
  */
+@SuppressWarnings({ "deprecation", "RedundantThrowsDeclaration" })
 public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequestDecoder {
     /**
      * Factory used to create InterfaceHttpData
@@ -176,9 +177,6 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
 
     /**
      * Set from the request ContentType the multipartDataBoundary.
-     * @param contentType
-     * @throws ErrorDataDecoderException
-     * @throws org.jboss.netty.handler.codec.http.multipart.HttpPostRequestDecoder.ErrorDataDecoderException
      */
     private void setMultipart(String contentType) throws ErrorDataDecoderException {
         multipartDataBoundary = HttpPostRequestDecoder.getMultipartDataBoundary(contentType);

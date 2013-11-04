@@ -27,11 +27,12 @@ import java.util.List;
 /**
  * This decoder will decode Body and can handle POST BODY (both multipart and standard).
  */
+@SuppressWarnings("deprecation")
 public class HttpPostRequestDecoder implements InterfaceHttpPostRequestDecoder {
     /**
      * Does this request is a Multipart request
      */
-    private InterfaceHttpPostRequestDecoder decoder;
+    private final InterfaceHttpPostRequestDecoder decoder;
 
     /**
     *
@@ -144,9 +145,8 @@ public class HttpPostRequestDecoder implements InterfaceHttpPostRequestDecoder {
 
     /**
      * Check if the given request is a multipart request
-     * @param request
+     *
      * @return True if the request is a Multipart request
-     * @throws ErrorDataDecoderException
      */
     public static boolean isMultipart(HttpRequest request) throws ErrorDataDecoderException {
         if (request.headers().contains(HttpHeaders.Names.CONTENT_TYPE)) {

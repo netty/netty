@@ -41,6 +41,7 @@ import java.util.TreeMap;
 /**
  * This decoder will decode Body and can handle standard (non multipart) POST BODY.
  */
+@SuppressWarnings({ "deprecation", "RedundantThrowsDeclaration" })
 public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestDecoder {
     /**
      * Factory used to create InterfaceHttpData
