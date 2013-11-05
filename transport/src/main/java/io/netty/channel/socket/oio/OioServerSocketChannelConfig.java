@@ -82,6 +82,9 @@ public interface OioServerSocketChannelConfig extends ServerSocketChannelConfig 
     OioServerSocketChannelConfig setAutoRead(boolean autoRead);
 
     @Override
+    OioServerSocketChannelConfig setAutoClose(boolean autoClose);
+
+    @Override
     OioServerSocketChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark);
 
     @Override

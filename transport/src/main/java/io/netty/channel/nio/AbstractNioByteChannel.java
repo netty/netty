@@ -87,6 +87,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 }
             }
             pipeline.fireChannelReadComplete();
+            pipeline.fireExceptionCaught(cause);
             if (close || cause instanceof IOException) {
                 closeOnRead(pipeline);
             }

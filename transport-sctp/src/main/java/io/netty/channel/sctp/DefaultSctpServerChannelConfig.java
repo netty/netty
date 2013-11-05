@@ -193,6 +193,12 @@ public class DefaultSctpServerChannelConfig extends DefaultChannelConfig impleme
     }
 
     @Override
+    public SctpServerChannelConfig setAutoClose(boolean autoClose) {
+        super.setAutoClose(autoClose);
+        return this;
+    }
+
+    @Override
     public SctpServerChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
         super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
         return this;
