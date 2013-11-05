@@ -682,7 +682,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 doWrite(outboundBuffer);
             } catch (Throwable t) {
                 outboundBuffer.failFlushed(t);
-                if (t instanceof IOException) {
+                if (t instanceof IOException && config().isAutoClose()) {
                     close(voidPromise());
                 }
             } finally {

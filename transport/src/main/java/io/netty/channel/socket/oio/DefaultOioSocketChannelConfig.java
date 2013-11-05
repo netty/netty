@@ -22,7 +22,6 @@ import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.DefaultSocketChannelConfig;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.SocketChannelConfig;
 
 import java.io.IOException;
 import java.net.Socket;
@@ -171,6 +170,12 @@ public class DefaultOioSocketChannelConfig extends DefaultSocketChannelConfig im
     @Override
     public OioSocketChannelConfig setAutoRead(boolean autoRead) {
         super.setAutoRead(autoRead);
+        return this;
+    }
+
+    @Override
+    public OioSocketChannelConfig setAutoClose(boolean autoClose) {
+        super.setAutoClose(autoClose);
         return this;
     }
 

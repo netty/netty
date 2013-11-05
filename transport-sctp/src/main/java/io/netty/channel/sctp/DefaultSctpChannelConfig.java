@@ -209,6 +209,12 @@ public class DefaultSctpChannelConfig extends DefaultChannelConfig implements Sc
     }
 
     @Override
+    public SctpChannelConfig setAutoClose(boolean autoClose) {
+        super.setAutoClose(autoClose);
+        return this;
+    }
+
+    @Override
     public SctpChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
         super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
         return this;

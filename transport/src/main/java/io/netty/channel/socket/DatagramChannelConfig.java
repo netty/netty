@@ -175,5 +175,8 @@ public interface DatagramChannelConfig extends ChannelConfig {
     DatagramChannelConfig setAutoRead(boolean autoRead);
 
     @Override
+    DatagramChannelConfig setAutoClose(boolean autoClose);
+
+    @Override
     DatagramChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator);
 }
