@@ -50,9 +50,12 @@ public class ChannelOption<T> extends UniqueName {
     public static final ChannelOption<Boolean> AUTO_READ = valueOf("AUTO_READ");
 
     /**
+     * @deprecated From version 5.0, {@link Channel} will not be closed on write failure.
+     *
      * {@code true} if and only if the {@link Channel} is closed automatically and immediately on write failure.
      * The default is {@code false}.
      */
+    @Deprecated
     public static final ChannelOption<Boolean> AUTO_CLOSE = valueOf("AUTO_CLOSE");
 
     public static final ChannelOption<Boolean> SO_BROADCAST = valueOf("SO_BROADCAST");

@@ -46,7 +46,7 @@ public class DefaultChannelConfig implements ChannelConfig {
     private volatile int maxMessagesPerRead;
     private volatile int writeSpinCount = 16;
     private volatile boolean autoRead = true;
-    private volatile boolean autoClose;
+    private volatile boolean autoClose = true;
     private volatile int writeBufferHighWaterMark = 64 * 1024;
     private volatile int writeBufferLowWaterMark = 32 * 1024;
 
@@ -65,6 +65,7 @@ public class DefaultChannelConfig implements ChannelConfig {
     }
 
     @Override
+    @SuppressWarnings("deprecation")
     public Map<ChannelOption<?>, Object> getOptions() {
         return getOptions(
                 null,
@@ -102,7 +103,7 @@ public class DefaultChannelConfig implements ChannelConfig {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({ "unchecked", "deprecation" })
     public <T> T getOption(ChannelOption<T> option) {
         if (option == null) {
             throw new NullPointerException("option");
@@ -142,6 +143,7 @@ public class DefaultChannelConfig implements ChannelConfig {
     }
 
     @Override
+    @SuppressWarnings("deprecation")
     public <T> boolean setOption(ChannelOption<T> option, T value) {
         validate(option, value);
 
