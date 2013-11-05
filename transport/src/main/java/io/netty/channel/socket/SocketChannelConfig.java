@@ -176,8 +176,5 @@ public interface SocketChannelConfig extends ChannelConfig {
     SocketChannelConfig setAutoRead(boolean autoRead);
 
     @Override
-    SocketChannelConfig setAutoClose(boolean autoClose);
-
-    @Override
     SocketChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator);
 }

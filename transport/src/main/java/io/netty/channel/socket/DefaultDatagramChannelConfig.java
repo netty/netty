@@ -143,6 +143,7 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
         }
         this.activeOnOpen = activeOnOpen;
     }
+
     @Override
     public boolean isBroadcast() {
         try {
@@ -392,12 +393,6 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
     @Override
     public DatagramChannelConfig setAutoRead(boolean autoRead) {
         super.setAutoRead(autoRead);
-        return this;
-    }
-
-    @Override
-    public DatagramChannelConfig setAutoClose(boolean autoClose) {
-        super.setAutoClose(autoClose);
         return this;
     }
 

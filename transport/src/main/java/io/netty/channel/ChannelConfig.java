@@ -189,18 +189,6 @@ public interface ChannelConfig {
     ChannelConfig setAutoRead(boolean autoRead);
 
     /**
-     * Returns {@code true} if and only if the {@link Channel} will be closed automatically and immediately on
-     * write failure.  The default is {@code false}.
-     */
-    boolean isAutoClose();
-
-    /**
-     * Sets whether the {@link Channel} should be closed automatically and immediately on write faillure.
-     * The default is {@code false}.
-     */
-    ChannelConfig setAutoClose(boolean autoClose);
-
-    /**
      * Returns the high water mark of the write buffer.  If the number of bytes
      * queued in the write buffer exceeds this value, {@link Channel#isWritable()}
      * will start to return {@code false}.

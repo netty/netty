@@ -65,9 +65,6 @@ public interface UdtServerChannelConfig extends UdtChannelConfig {
     UdtServerChannelConfig setAutoRead(boolean autoRead);
 
     @Override
-    UdtServerChannelConfig setAutoClose(boolean autoClose);
-
-    @Override
     UdtServerChannelConfig setProtocolReceiveBufferSize(int size);
 
     @Override

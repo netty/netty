@@ -46,7 +46,6 @@ public class DefaultChannelConfig implements ChannelConfig {
     private volatile int maxMessagesPerRead;
     private volatile int writeSpinCount = 16;
     private volatile boolean autoRead = true;
-    private volatile boolean autoClose;
     private volatile int writeBufferHighWaterMark = 64 * 1024;
     private volatile int writeBufferLowWaterMark = 32 * 1024;
 
@@ -69,7 +68,7 @@ public class DefaultChannelConfig implements ChannelConfig {
         return getOptions(
                 null,
                 CONNECT_TIMEOUT_MILLIS, MAX_MESSAGES_PER_READ, WRITE_SPIN_COUNT,
-                ALLOCATOR, AUTO_READ, AUTO_CLOSE, RCVBUF_ALLOCATOR, WRITE_BUFFER_HIGH_WATER_MARK,
+                ALLOCATOR, AUTO_READ, RCVBUF_ALLOCATOR, WRITE_BUFFER_HIGH_WATER_MARK,
                 WRITE_BUFFER_LOW_WATER_MARK, MESSAGE_SIZE_ESTIMATOR);
     }
 
@@ -126,9 +125,6 @@ public class DefaultChannelConfig implements ChannelConfig {
         if (option == AUTO_READ) {
             return (T) Boolean.valueOf(isAutoRead());
         }
-        if (option == AUTO_CLOSE) {
-            return (T) Boolean.valueOf(isAutoClose());
-        }
         if (option == WRITE_BUFFER_HIGH_WATER_MARK) {
             return (T) Integer.valueOf(getWriteBufferHighWaterMark());
         }
@@ -157,8 +153,6 @@ public class DefaultChannelConfig implements ChannelConfig {
             setRecvByteBufAllocator((RecvByteBufAllocator) value);
         } else if (option == AUTO_READ) {
             setAutoRead((Boolean) value);
-        } else if (option == AUTO_CLOSE) {
-            setAutoClose((Boolean) value);
         } else if (option == WRITE_BUFFER_HIGH_WATER_MARK) {
             setWriteBufferHighWaterMark((Integer) value);
         } else if (option == WRITE_BUFFER_LOW_WATER_MARK) {
@@ -263,17 +257,6 @@ public class DefaultChannelConfig implements ChannelConfig {
         if (autoRead && !oldAutoRead) {
             channel.read();
         }
-        return this;
-    }
-
-    @Override
-    public boolean isAutoClose() {
-        return autoClose;
-    }
-
-    @Override
-    public ChannelConfig setAutoClose(boolean autoClose) {
-        this.autoClose = autoClose;
         return this;
     }
 

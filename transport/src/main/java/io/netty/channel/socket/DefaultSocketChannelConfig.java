@@ -316,12 +316,6 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
     }
 
     @Override
-    public SocketChannelConfig setAutoClose(boolean autoClose) {
-        super.setAutoClose(autoClose);
-        return this;
-    }
-
-    @Override
     public SocketChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
         super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
         return this;

@@ -131,9 +131,6 @@ public interface UdtChannelConfig extends ChannelConfig {
     UdtChannelConfig setAutoRead(boolean autoRead);
 
     @Override
-    UdtChannelConfig setAutoClose(boolean autoClose);
-
-    @Override
     UdtChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark);
 
     @Override

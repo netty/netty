@@ -289,9 +289,6 @@ public interface RxtxChannelConfig extends ChannelConfig {
     RxtxChannelConfig setAutoRead(boolean autoRead);
 
     @Override
-    RxtxChannelConfig setAutoClose(boolean autoClose);
-
-    @Override
     RxtxChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark);
 
     @Override

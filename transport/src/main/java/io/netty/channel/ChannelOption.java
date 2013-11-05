@@ -68,12 +68,6 @@ public final class ChannelOption<T> extends AbstractConstant<ChannelOption<T>> {
     public static final ChannelOption<Boolean> ALLOW_HALF_CLOSURE = valueOf("ALLOW_HALF_CLOSURE");
     public static final ChannelOption<Boolean> AUTO_READ = valueOf("AUTO_READ");
 
-    /**
-     * {@code true} if and only if the {@link Channel} is closed automatically and immediately on write failure.
-     * The default is {@code false}.
-     */
-    public static final ChannelOption<Boolean> AUTO_CLOSE = valueOf("AUTO_CLOSE");
-
     public static final ChannelOption<Boolean> SO_BROADCAST = valueOf("SO_BROADCAST");
     public static final ChannelOption<Boolean> SO_KEEPALIVE = valueOf("SO_KEEPALIVE");
     public static final ChannelOption<Integer> SO_SNDBUF = valueOf("SO_SNDBUF");

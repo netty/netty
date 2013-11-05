@@ -116,9 +116,6 @@ public interface SctpChannelConfig extends ChannelConfig {
     SctpChannelConfig setAutoRead(boolean autoRead);
 
     @Override
-    SctpChannelConfig setAutoClose(boolean autoClose);
-
-    @Override
     SctpChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark);
 
     @Override
