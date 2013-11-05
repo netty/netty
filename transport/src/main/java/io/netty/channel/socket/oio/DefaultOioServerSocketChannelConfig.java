@@ -146,6 +146,12 @@ public class DefaultOioServerSocketChannelConfig extends DefaultServerSocketChan
     }
 
     @Override
+    public OioServerSocketChannelConfig setAutoClose(boolean autoClose) {
+        super.setAutoClose(autoClose);
+        return this;
+    }
+
+    @Override
     public OioServerSocketChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
         super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
         return this;
