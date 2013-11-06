@@ -62,7 +62,7 @@ public class DiscardClientHandler extends SimpleChannelInboundHandler<Object> {
     }
 
     @Override
-    public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
         // Server is supposed to send nothing, but if it sends something, discard it.
     }
 

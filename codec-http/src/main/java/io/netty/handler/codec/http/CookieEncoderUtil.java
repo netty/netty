@@ -18,6 +18,20 @@ package io.netty.handler.codec.http;
 
 final class CookieEncoderUtil {
 
+    static final ThreadLocal<StringBuilder> buffer = new ThreadLocal<StringBuilder>() {
+        @Override
+        public StringBuilder get() {
+            StringBuilder buf = super.get();
+            buf.setLength(0);
+            return buf;
+        }
+
+        @Override
+        protected StringBuilder initialValue() {
+            return new StringBuilder(512);
+        }
+    };
+
     static String stripTrailingSeparator(StringBuilder buf) {
         if (buf.length() > 0) {
             buf.setLength(buf.length() - 2);

@@ -27,6 +27,7 @@ import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -43,7 +44,6 @@ import io.netty.handler.codec.http.multipart.HttpDataFactory;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.EndOfDataDecoderException;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.ErrorDataDecoderException;
-import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.IncompatibleDataDecoderException;
 import io.netty.handler.codec.http.multipart.InterfaceHttpData;
 import io.netty.handler.codec.http.multipart.InterfaceHttpData.HttpDataType;
 import io.netty.util.CharsetUtil;
@@ -95,7 +95,7 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
     }
 
     @Override
-    public void channelRead0(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
         if (msg instanceof HttpRequest) {
             HttpRequest request = this.request = (HttpRequest) msg;
             URI uri = new URI(request.getUri());
@@ -142,6 +142,13 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
             responseContent.append("\r\n\r\n");
 
             // if GET Method: should not try to create a HttpPostRequestDecoder
+            if (request.getMethod().equals(HttpMethod.GET)) {
+                // GET Method: should not try to create a HttpPostRequestDecoder
+                // So stop here
+                responseContent.append("\r\n\r\nEND OF GET CONTENT\r\n");
+                writeResponse(ctx.channel());
+                return;
+            }
             try {
                 decoder = new HttpPostRequestDecoder(factory, request);
             } catch (ErrorDataDecoderException e1) {
@@ -149,13 +156,6 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
                 responseContent.append(e1.getMessage());
                 writeResponse(ctx.channel());
                 ctx.channel().close();
-                return;
-            } catch (IncompatibleDataDecoderException e1) {
-                // GET Method: should not try to create a HttpPostRequestDecoder
-                // So OK but stop here
-                responseContent.append(e1.getMessage());
-                responseContent.append("\r\n\r\nEND OF GET CONTENT\r\n");
-                writeResponse(ctx.channel());
                 return;
             }
 

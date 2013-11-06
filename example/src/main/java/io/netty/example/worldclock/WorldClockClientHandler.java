@@ -99,7 +99,7 @@ public class WorldClockClientHandler extends SimpleChannelInboundHandler<LocalTi
     }
 
     @Override
-    public void channelRead0(ChannelHandlerContext ctx, LocalTimes times) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, LocalTimes times) throws Exception {
         answer.add(times);
     }
 

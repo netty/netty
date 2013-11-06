@@ -47,7 +47,7 @@ public final class ServerCookieEncoder {
             throw new NullPointerException("cookie");
         }
 
-        StringBuilder buf = new StringBuilder();
+        StringBuilder buf = buffer.get();
 
         add(buf, cookie.getName(), cookie.getValue());
 

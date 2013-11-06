@@ -18,8 +18,6 @@ package io.netty.handler.codec.compression;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 
-import java.util.zip.CRC32;
-
 /**
  * Uncompresses an input {@link ByteBuf} encoded with Snappy compression into an
  * output {@link ByteBuf}.
@@ -597,30 +595,30 @@ public class Snappy {
     }
 
     /**
-     * Computes the CRC32 checksum of the supplied data and performs the "mask" operation
+     * Computes the CRC32C checksum of the supplied data and performs the "mask" operation
      * on the computed checksum
      *
-     * @param data The input data to calculate the CRC32 checksum of
+     * @param data The input data to calculate the CRC32C checksum of
      */
     public static int calculateChecksum(ByteBuf data) {
         return calculateChecksum(data, data.readerIndex(), data.readableBytes());
     }
 
     /**
-     * Computes the CRC32 checksum of the supplied data and performs the "mask" operation
+     * Computes the CRC32C checksum of the supplied data and performs the "mask" operation
      * on the computed checksum
      *
-     * @param data The input data to calculate the CRC32 checksum of
+     * @param data The input data to calculate the CRC32C checksum of
      */
     public static int calculateChecksum(ByteBuf data, int offset, int length) {
-        CRC32 crc32 = new CRC32();
+        Crc32c crc32 = new Crc32c();
         try {
             if (data.hasArray()) {
                 crc32.update(data.array(), data.arrayOffset() + offset, length);
             } else {
                 byte[] array = new byte[length];
                 data.getBytes(offset, array);
-                crc32.update(array);
+                crc32.update(array, 0, length);
             }
 
             return maskChecksum((int) crc32.getValue());
@@ -630,12 +628,12 @@ public class Snappy {
     }
 
     /**
-     * Computes the CRC32 checksum of the supplied data, performs the "mask" operation
+     * Computes the CRC32C checksum of the supplied data, performs the "mask" operation
      * on the computed checksum, and then compares the resulting masked checksum to the
      * supplied checksum.
      *
      * @param expectedChecksum The checksum decoded from the stream to compare against
-     * @param data The input data to calculate the CRC32 checksum of
+     * @param data The input data to calculate the CRC32C checksum of
      * @throws DecompressionException If the calculated and supplied checksums do not match
      */
     static void validateChecksum(int expectedChecksum, ByteBuf data) {
@@ -643,12 +641,12 @@ public class Snappy {
     }
 
     /**
-     * Computes the CRC32 checksum of the supplied data, performs the "mask" operation
+     * Computes the CRC32C checksum of the supplied data, performs the "mask" operation
      * on the computed checksum, and then compares the resulting masked checksum to the
      * supplied checksum.
      *
      * @param expectedChecksum The checksum decoded from the stream to compare against
-     * @param data The input data to calculate the CRC32 checksum of
+     * @param data The input data to calculate the CRC32C checksum of
      * @throws DecompressionException If the calculated and supplied checksums do not match
      */
     static void validateChecksum(int expectedChecksum, ByteBuf data, int offset, int length) {

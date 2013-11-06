@@ -141,8 +141,8 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
         if (newCapacity > oldCapacity) {
             ByteBuffer oldBuffer = buffer;
             ByteBuffer newBuffer = ByteBuffer.allocateDirect(newCapacity);
-            oldBuffer.position(readerIndex).limit(writerIndex);
-            newBuffer.position(readerIndex).limit(writerIndex);
+            oldBuffer.position(0).limit(oldBuffer.capacity());
+            newBuffer.position(0).limit(oldBuffer.capacity());
             newBuffer.put(oldBuffer);
             newBuffer.clear();
             setByteBuffer(newBuffer);

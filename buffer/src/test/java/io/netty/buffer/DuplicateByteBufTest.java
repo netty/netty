@@ -52,4 +52,15 @@ public class DuplicateByteBufTest extends AbstractByteBufTest {
         super.testInternalNioBuffer();
     }
 
+    // See https://github.com/netty/netty/issues/1800
+    @Test
+    public void testIncreaseCapacityWrapped() {
+        ByteBuf wrapped = buffer.unwrap();
+        wrapped.writeByte(0);
+        wrapped.readerIndex(wrapped.readerIndex() + 1);
+        buffer.writerIndex(buffer.writerIndex() + 1);
+        wrapped.capacity(wrapped.capacity() * 2);
+
+        assertEquals((byte) 0, buffer.readByte());
+    }
 }

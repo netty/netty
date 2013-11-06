@@ -24,6 +24,7 @@ import io.netty.channel.ServerChannel;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.ConcurrentSet;
+import io.netty.util.internal.StringUtil;
 
 import java.util.AbstractSet;
 import java.util.ArrayList;
@@ -315,7 +316,6 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() +
-               "(name: " + name() + ", size: " + size() + ')';
+        return StringUtil.simpleClassName(this) + "(name: " + name() + ", size: " + size() + ')';
     }
 }

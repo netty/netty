@@ -84,7 +84,7 @@ public class DefaultSpdyGoAwayFrame implements SpdyGoAwayFrame {
     @Override
     public String toString() {
         StringBuilder buf = new StringBuilder();
-        buf.append(getClass().getSimpleName());
+        buf.append(StringUtil.simpleClassName(this));
         buf.append(StringUtil.NEWLINE);
         buf.append("--> Last-good-stream-ID = ");
         buf.append(getLastGoodStreamId());

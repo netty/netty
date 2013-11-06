@@ -16,6 +16,7 @@
 package io.netty.util;
 
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -541,7 +542,7 @@ public class HashedWheelTimer implements Timer {
             long remaining = deadline - currentTime + startTime;
 
             StringBuilder buf = new StringBuilder(192);
-            buf.append(getClass().getSimpleName());
+            buf.append(StringUtil.simpleClassName(this));
             buf.append('(');
 
             buf.append("deadline: ");

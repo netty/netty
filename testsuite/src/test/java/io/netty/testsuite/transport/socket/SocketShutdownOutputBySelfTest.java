@@ -86,7 +86,7 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
         }
 
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
             queue.offer(msg.readByte());
         }
     }

@@ -58,7 +58,7 @@ public class ByteEchoClientHandler extends SimpleChannelInboundHandler<ByteBuf> 
     }
 
     @Override
-    public void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
         meter.mark(msg.readableBytes());
 
         ctx.write(msg);

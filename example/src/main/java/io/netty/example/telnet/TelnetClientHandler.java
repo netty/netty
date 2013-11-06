@@ -31,7 +31,7 @@ public class TelnetClientHandler extends SimpleChannelInboundHandler<String> {
     private static final Logger logger = Logger.getLogger(TelnetClientHandler.class.getName());
 
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
+    protected void messageReceived(ChannelHandlerContext ctx, String msg) throws Exception {
         System.err.println(msg);
     }
 

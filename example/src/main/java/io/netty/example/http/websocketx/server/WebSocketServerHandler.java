@@ -53,7 +53,7 @@ public class WebSocketServerHandler extends SimpleChannelInboundHandler<Object> 
     private WebSocketServerHandshaker handshaker;
 
     @Override
-    public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof FullHttpRequest) {
             handleHttpRequest(ctx, (FullHttpRequest) msg);
         } else if (msg instanceof WebSocketFrame) {

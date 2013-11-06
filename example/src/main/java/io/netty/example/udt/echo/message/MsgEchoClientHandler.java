@@ -65,7 +65,7 @@ public class MsgEchoClientHandler extends SimpleChannelInboundHandler<UdtMessage
     }
 
     @Override
-    public void channelRead0(ChannelHandlerContext ctx, UdtMessage msg) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, UdtMessage msg) throws Exception {
         meter.mark(msg.content().readableBytes());
 
         ctx.write(msg);

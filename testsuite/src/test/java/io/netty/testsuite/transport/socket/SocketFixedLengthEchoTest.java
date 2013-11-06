@@ -134,7 +134,7 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
             assertEquals(1024, msg.readableBytes());
 
             byte[] actual = new byte[msg.readableBytes()];

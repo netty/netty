@@ -55,7 +55,7 @@ public class HttpSnoopServerHandler extends SimpleChannelInboundHandler<Object> 
     }
 
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, Object msg) {
+    protected void messageReceived(ChannelHandlerContext ctx, Object msg) {
         if (msg instanceof HttpRequest) {
             HttpRequest request = this.request = (HttpRequest) msg;
 

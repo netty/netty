@@ -18,6 +18,7 @@ package io.netty.buffer;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -1086,11 +1087,11 @@ public abstract class AbstractByteBuf extends ByteBuf {
     @Override
     public String toString() {
         if (refCnt() == 0) {
-            return getClass().getSimpleName() + "(freed)";
+            return StringUtil.simpleClassName(this) + "(freed)";
         }
 
         StringBuilder buf = new StringBuilder();
-        buf.append(getClass().getSimpleName());
+        buf.append(StringUtil.simpleClassName(this));
         buf.append("(ridx: ");
         buf.append(readerIndex);
         buf.append(", widx: ");

@@ -34,15 +34,15 @@ import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.StringUtil;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static io.netty.handler.codec.http.HttpHeaders.*;
-import static io.netty.handler.codec.http.HttpMethod.GET;
-import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
-import static io.netty.handler.codec.http.HttpResponseStatus.FORBIDDEN;
-import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
+import static io.netty.handler.codec.http.HttpMethod.*;
+import static io.netty.handler.codec.http.HttpResponseStatus.*;
+import static io.netty.handler.codec.http.HttpVersion.*;
 
 /**
  * Handles handshakes and messages
@@ -97,7 +97,7 @@ public class AutobahnServerHandler extends ChannelInboundHandlerAdapter {
     private void handleWebSocketFrame(ChannelHandlerContext ctx, WebSocketFrame frame) {
         if (logger.isLoggable(Level.FINE)) {
             logger.fine(String.format(
-                    "Channel %s received %s", ctx.channel().hashCode(), frame.getClass().getSimpleName()));
+                    "Channel %s received %s", ctx.channel().hashCode(), StringUtil.simpleClassName(frame)));
         }
 
         if (frame instanceof CloseWebSocketFrame) {
