@@ -372,6 +372,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         private boolean inFlush0;
 
         @Override
+        public final ChannelHandlerInvoker invoker() {
+            return eventLoop.asInvoker();
+        }
+
+        @Override
         public final ChannelOutboundBuffer outboundBuffer() {
             return outboundBuffer;
         }
@@ -715,7 +720,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     protected abstract SocketAddress remoteAddress0();
 
     /**
-     * Is called after the {@link Channel} is registered with its {@link EventLoop} as part of the register process.
+     * Is called after the {@link Channel} is registered with its {@link EventLoop} as part of the register
+     * process.
      *
      * Sub-classes may override this method
      */

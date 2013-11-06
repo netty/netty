@@ -21,7 +21,7 @@ import java.net.SocketAddress;
 /**
  * Interface which is shared by others which need to execute outbound logic.
  */
-interface ChannelOutboundInvoker {
+interface ChannelOutboundOps {
 
     /**
      * Request to bind to the given {@link SocketAddress} and notify the {@link ChannelFuture} once the operation
@@ -171,7 +171,7 @@ interface ChannelOutboundInvoker {
      * method called of the next {@link ChannelOutboundHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    ChannelOutboundInvoker read();
+    ChannelOutboundOps read();
 
     /**
      * Request to write a message via this ChannelOutboundInvoker through the {@link ChannelPipeline}.
@@ -190,7 +190,7 @@ interface ChannelOutboundInvoker {
     /**
      * Request to flush all pending messages via this ChannelOutboundInvoker.
      */
-    ChannelOutboundInvoker flush();
+    ChannelOutboundOps flush();
 
     /**
      * Shortcut for call {@link #write(Object, ChannelPromise)} and {@link #flush()}.

@@ -34,7 +34,7 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
-    private EventLoopGroup childGroup;
+    private final EventLoopGroup childGroup;
 
     /**
      * Creates a new instance.

@@ -20,10 +20,10 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
-import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.handler.logging.LogLevel;
@@ -44,7 +44,7 @@ public class LocalEcho {
         // Address to bind on / connect to.
         final LocalAddress addr = new LocalAddress(port);
 
-        EventLoopGroup serverGroup = new LocalEventLoopGroup();
+        EventLoopGroup serverGroup = new DefaultEventLoopGroup();
         EventLoopGroup clientGroup = new NioEventLoopGroup(); // NIO event loops are also OK
         try {
             // Note that we can use any event loop to ensure certain local channels

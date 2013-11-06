@@ -36,9 +36,6 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
     private volatile boolean inputShutdown;
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
-    /**
-     * @see AbstractOioByteChannel#AbstractOioByteChannel(Channel)
-     */
     protected AbstractOioByteChannel(Channel parent, EventLoop eventLoop) {
         super(parent, eventLoop);
     }

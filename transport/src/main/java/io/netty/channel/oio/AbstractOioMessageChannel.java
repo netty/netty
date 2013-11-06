@@ -18,7 +18,6 @@ package io.netty.channel.oio;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
-import io.netty.channel.EventLoopGroup;
 
 import java.io.IOException;
 import java.util.ArrayList;

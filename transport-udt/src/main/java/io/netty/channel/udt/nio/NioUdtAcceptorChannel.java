@@ -17,7 +17,6 @@ package io.netty.channel.udt.nio;
 
 import com.barchart.udt.TypeUDT;
 import com.barchart.udt.nio.ServerSocketChannelUDT;
-
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.EventLoop;

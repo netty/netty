@@ -21,6 +21,8 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.DefaultEventLoopGroup;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.LineBasedFrameDecoder;
@@ -30,8 +32,6 @@ import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.testsuite.util.BogusSslContextFactory;
-import io.netty.util.concurrent.DefaultEventExecutorGroup;
-import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.Future;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -46,11 +46,11 @@ import static org.junit.Assert.*;
 public class SocketStartTlsTest extends AbstractSocketTest {
 
     private static final LogLevel LOG_LEVEL = LogLevel.TRACE;
-    private static EventExecutorGroup executor;
+    private static EventLoopGroup executor;
 
     @BeforeClass
     public static void createExecutor() {
-        executor = new DefaultEventExecutorGroup(2);
+        executor = new DefaultEventLoopGroup(2);
     }
 
     @AfterClass
@@ -64,7 +64,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
     }
 
     public void testStartTls(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        final EventExecutorGroup executor = SocketStartTlsTest.executor;
+        final EventLoopGroup executor = SocketStartTlsTest.executor;
         final SSLEngine sse = BogusSslContextFactory.getServerContext().createSSLEngine();
         final SSLEngine cse = BogusSslContextFactory.getClientContext().createSSLEngine();
 

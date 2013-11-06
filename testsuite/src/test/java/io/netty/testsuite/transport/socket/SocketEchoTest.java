@@ -23,10 +23,10 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.DefaultEventLoopGroup;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.util.concurrent.DefaultEventExecutorGroup;
-import io.netty.util.concurrent.EventExecutorGroup;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -42,7 +42,7 @@ public class SocketEchoTest extends AbstractSocketTest {
     private static final Random random = new Random();
     static final byte[] data = new byte[1048576];
 
-    private static EventExecutorGroup group;
+    private static EventLoopGroup group;
 
     static {
         random.nextBytes(data);
@@ -50,7 +50,7 @@ public class SocketEchoTest extends AbstractSocketTest {
 
     @BeforeClass
     public static void createGroup() {
-        group = new DefaultEventExecutorGroup(2);
+        group = new DefaultEventLoopGroup(2);
     }
 
     @AfterClass

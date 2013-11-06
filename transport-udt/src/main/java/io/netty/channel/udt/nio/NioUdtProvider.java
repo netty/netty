@@ -241,8 +241,8 @@ public abstract class NioUdtProvider {
             super(type, kind);
         }
 
-        @SuppressWarnings("unchecked")
         @Override
+        @SuppressWarnings("unchecked")
         public T newChannel(EventLoop eventLoop, EventLoopGroup childGroup) {
             switch (kind()) {
             case ACCEPTOR:

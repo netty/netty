@@ -51,7 +51,7 @@ public class SpdyFrameDecoderTest {
         testTooLargeHeaderNameOnSynStreamRequest(SpdyVersion.SPDY_3_1);
     }
 
-    private void testTooLargeHeaderNameOnSynStreamRequest(final SpdyVersion version) throws Exception {
+    private static void testTooLargeHeaderNameOnSynStreamRequest(final SpdyVersion version) throws Exception {
         List<Integer> headerSizes = Arrays.asList(90, 900);
         for (final int maxHeaderSize : headerSizes) { // 90 catches the header name, 900 the value
             SpdyHeadersFrame frame = new DefaultSpdySynStreamFrame(1, 0, (byte) 0);

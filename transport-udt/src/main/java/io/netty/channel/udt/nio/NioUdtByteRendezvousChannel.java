@@ -15,9 +15,9 @@
  */
 package io.netty.channel.udt.nio;
 
-import io.netty.channel.EventLoop;
 
 import com.barchart.udt.TypeUDT;
+import io.netty.channel.EventLoop;
 
 /**
  * Byte Channel Rendezvous for UDT Streams.

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,30 +13,27 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.local;
 
-import io.netty.channel.SingleThreadEventLoop;
+package io.netty.channel;
 
-import java.util.concurrent.Executor;
+import io.netty.util.concurrent.AbstractEventExecutor;
 
-final class LocalEventLoop extends SingleThreadEventLoop {
+/**
+ * Skeletal implementation of {@link EventLoop}.
+ */
+public abstract class AbstractEventLoop extends AbstractEventExecutor implements EventLoop {
 
-    LocalEventLoop(LocalEventLoopGroup parent, Executor executor) {
-        super(parent, executor, true);
+    protected AbstractEventLoop(EventLoopGroup parent) {
+        super(parent);
     }
 
     @Override
-    protected void run() {
-        for (;;) {
-            Runnable task = takeTask();
-            if (task != null) {
-                task.run();
-                updateLastExecutionTime();
-            }
+    public EventLoopGroup parent() {
+        return (EventLoopGroup) super.parent();
+    }
 
-            if (confirmShutdown()) {
-                break;
-            }
-        }
+    @Override
+    public EventLoop next() {
+        return (EventLoop) super.next();
     }
 }
