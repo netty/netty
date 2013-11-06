@@ -16,6 +16,7 @@
 package io.netty.handler.codec.sockjs;
 
 import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItems;
@@ -45,6 +46,34 @@ public class ConfigTest {
         final SockJsConfig config = SockJsConfig.withPrefix("/echo").build();
         assertThat(config.webSocketProtocol().size(), is(0));
         assertThat(config.webSocketProtocolCSV(), is(nullValue()));
+    }
+
+    @Test (expected = IllegalStateException.class)
+    public void tlsWithoutKeystoreOrPassword() {
+        SockJsConfig.withPrefix("/echo").tls(true).build();
+    }
+
+    @Test (expected = IllegalStateException.class)
+    public void tlsWithoutKeystore() {
+        SockJsConfig.withPrefix("/echo").tls(true).keyStorePassword("changeme").build();
+    }
+
+    @Test (expected = IllegalStateException.class)
+    public void tlsWithoutKeystorePassword() {
+        SockJsConfig.withPrefix("/echo").tls(true).keyStore("/test.jks").build();
+    }
+
+    @Test
+    public void keystore() {
+        final String keystore = "/somepath/keystore.jks";
+        final String keystorePassword = "changme";
+        final SockJsConfig config = SockJsConfig.withPrefix("/echo")
+                .tls(true)
+                .keyStore(keystore)
+                .keyStorePassword(keystorePassword)
+                .build();
+        assertThat(config.keyStore(), equalTo(keystore));
+        assertThat(config.keyStorePassword(), equalTo(keystorePassword));
     }
 
 }

@@ -37,6 +37,8 @@ public final class SockJsConfig {
     private final long heartbeatInterval;
     private final int maxStreamingBytesSize;
     private final boolean tls;
+    private final String keyStore;
+    private final String keystorePassword;
 
     private SockJsConfig(final Builder builder) {
         prefix = builder.prefix;
@@ -49,6 +51,8 @@ public final class SockJsConfig {
         heartbeatInterval = builder.heartbeatInterval;
         maxStreamingBytesSize = builder.maxStreamingBytesSize;
         tls = builder.tls;
+        keyStore = builder.keyStore;
+        keystorePassword = builder.keyStorePassword;
     }
 
     /**
@@ -178,6 +182,24 @@ public final class SockJsConfig {
         return tls;
     }
 
+    /**
+     * Returns the keystore to be used if transport layer security is enabled.
+     *
+     * @return {@code String} the path to the keystore to be used
+     */
+    public String keyStore() {
+        return keyStore;
+    }
+
+    /**
+     * Returns the keystore password to be used if transport layer security is enabled.
+     *
+     * @return {@code String} the password to the configured keystore
+     */
+    public String keyStorePassword() {
+        return keystorePassword;
+    }
+
     public String toString() {
         return new StringBuilder("Config[prefix=").append(prefix)
             .append(", webSocketEnabled=").append(webSocketEnabled)
@@ -189,6 +211,7 @@ public final class SockJsConfig {
             .append(", heartbeatInterval=").append(heartbeatInterval)
             .append(", maxStreamingBytesSize=").append(maxStreamingBytesSize)
             .append(", tls=").append(tls)
+            .append(", keyStore=").append(keyStore)
             .append("]").toString();
     }
 
@@ -214,6 +237,8 @@ public final class SockJsConfig {
         private long heartbeatInterval = 25000;
         private int maxStreamingBytesSize = 128 * 1024;
         private boolean tls;
+        private String keyStore;
+        private String keyStorePassword;
 
         /**
          * The prefix, or name, of the service.
@@ -319,10 +344,31 @@ public final class SockJsConfig {
 
         /**
          * Determines whether transport layer security (TLS) should be used.
+         *
          * @param tsl if transport layer security should be used.
          */
         public Builder tls(final boolean tls) {
             this.tls = tls;
+            return this;
+        }
+
+        /**
+         * Specifies the keystore to be used if transport layer security (TLS) is enabled.
+         *
+         * @param keyStore the keystore to be used when TLS is enabled.
+         */
+        public Builder keyStore(final String keyStore) {
+            this.keyStore = keyStore;
+            return this;
+        }
+
+        /**
+         * Specifies the keystore password to be used if transport layer security (TLS) is enabled.
+         *
+         * @param password the keystore password to be used when TLS is enabled.
+         */
+        public Builder keyStorePassword(final String password) {
+            keyStorePassword = password;
             return this;
         }
 
@@ -332,6 +378,9 @@ public final class SockJsConfig {
          * @return {@link SockJsConfig} the configuration for the SockJS service.
          */
         public SockJsConfig build() {
+            if (tls && (keyStore == null || keyStorePassword == null)) {
+                throw new IllegalStateException("keyStore and keyStorePassword must be specified if 'tls' is enabled");
+            }
             return new SockJsConfig(this);
         }
     }
