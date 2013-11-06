@@ -13,39 +13,36 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.util.concurrent;
+package io.netty.channel;
+
+import io.netty.util.concurrent.DefaultThreadFactory;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 
-/**
- * Default {@link SingleThreadEventExecutor} implementation which just execute all submitted task in a
- * serial fashion
- *
- */
-public final class DefaultEventExecutor extends SingleThreadEventExecutor {
+public class DefaultEventLoop extends SingleThreadEventLoop {
 
-    public DefaultEventExecutor() {
-        this((EventExecutorGroup) null);
+    public DefaultEventLoop() {
+        this((EventLoopGroup) null);
     }
 
-    public DefaultEventExecutor(ThreadFactory threadFactory) {
+    public DefaultEventLoop(ThreadFactory threadFactory) {
         this(null, threadFactory);
     }
 
-    public DefaultEventExecutor(Executor executor) {
+    public DefaultEventLoop(Executor executor) {
         this(null, executor);
     }
 
-    public DefaultEventExecutor(EventExecutorGroup parent) {
-        this(parent, new DefaultThreadFactory(DefaultEventExecutor.class));
+    public DefaultEventLoop(EventLoopGroup parent) {
+        this(parent, new DefaultThreadFactory(DefaultEventLoop.class));
     }
 
-    public DefaultEventExecutor(EventExecutorGroup parent, ThreadFactory threadFactory) {
+    public DefaultEventLoop(EventLoopGroup parent, ThreadFactory threadFactory) {
         super(parent, threadFactory, true);
     }
 
-    public DefaultEventExecutor(EventExecutorGroup parent, Executor executor) {
+    public DefaultEventLoop(EventLoopGroup parent, Executor executor) {
         super(parent, executor, true);
     }
 

@@ -21,7 +21,6 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.udt.UdtServerChannel;
 import io.netty.channel.udt.nio.NioUdtProvider;
-
 import org.junit.Test;
 
 import static org.junit.Assert.*;

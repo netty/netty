@@ -16,8 +16,7 @@
 package io.netty.util.concurrent;
 
 import java.util.Collections;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
@@ -31,6 +30,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public abstract class MultithreadEventExecutorGroup extends AbstractEventExecutorGroup {
 
     private final EventExecutor[] children;
+    private final Set<EventExecutor> readonlyChildren;
     private final AtomicInteger childIndex = new AtomicInteger();
     private final AtomicInteger terminatedChildren = new AtomicInteger();
     private final Promise<?> terminationFuture = new DefaultPromise(GlobalEventExecutor.INSTANCE);
@@ -62,7 +62,7 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
             executor = new ThreadPerTaskExecutor(newDefaultThreadFactory());
         }
 
-        children = new SingleThreadEventExecutor[nThreads];
+        children = new EventExecutor[nThreads];
         for (int i = 0; i < nThreads; i ++) {
             boolean success = false;
             try {
@@ -104,6 +104,10 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
         for (EventExecutor e: children) {
             e.terminationFuture().addListener(terminationListener);
         }
+
+        Set<EventExecutor> childrenSet = new LinkedHashSet<EventExecutor>(children.length);
+        Collections.addAll(childrenSet, children);
+        readonlyChildren = Collections.unmodifiableSet(childrenSet);
     }
 
     protected ThreadFactory newDefaultThreadFactory() {
@@ -115,11 +119,6 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
         return children[Math.abs(childIndex.getAndIncrement() % children.length)];
     }
 
-    @Override
-    public Iterator<EventExecutor> iterator() {
-        return children().iterator();
-    }
-
     /**
      * Return the number of {@link EventExecutor} this implementation uses. This number is the maps
      * 1:1 to the threads it use.
@@ -128,13 +127,10 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
         return children.length;
     }
 
-    /**
-     * Return a safe-copy of all of the children of this group.
-     */
-    protected Set<EventExecutor> children() {
-        Set<EventExecutor> children = Collections.newSetFromMap(new LinkedHashMap<EventExecutor, Boolean>());
-        Collections.addAll(children, this.children);
-        return children;
+    @Override
+    @SuppressWarnings("unchecked")
+    public final <E extends EventExecutor> Set<E> children() {
+        return (Set<E>) readonlyChildren;
     }
 
     /**

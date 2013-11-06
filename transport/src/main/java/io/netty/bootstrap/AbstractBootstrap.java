@@ -22,9 +22,9 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.AttributeKey;
+import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.internal.StringUtil;
 
 import java.net.InetAddress;
@@ -169,14 +169,14 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     /**
      * Returns a deep clone of this bootstrap which has the identical configuration.  This method is useful when making
      * multiple {@link Channel}s with similar settings.  Please note that this method does not clone the
-     * {@link EventLoopGroup} deeply but shallowly, making the group a shared resource.
+     * {@link EventExecutorGroup} deeply but shallowly, making the group a shared resource.
      */
     @Override
     @SuppressWarnings("CloneDoesntDeclareCloneNotSupportedException")
     public abstract B clone();
 
     /**
-     * Create a new {@link Channel} and register it with an {@link EventLoop}.
+     * Create a new {@link Channel} and register it with an {@link EventExecutorGroup}.
      */
     public ChannelFuture register() {
         validate();

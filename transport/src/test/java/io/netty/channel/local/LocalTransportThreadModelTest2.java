@@ -22,6 +22,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.Test;
 
@@ -40,14 +41,14 @@ public class LocalTransportThreadModelTest2 {
         ServerBootstrap serverBootstrap = new ServerBootstrap();
         LocalHander serverHandler = new LocalHander("SERVER");
         serverBootstrap
-                .group(new LocalEventLoopGroup(), new LocalEventLoopGroup())
+                .group(new DefaultEventLoopGroup(), new DefaultEventLoopGroup())
                 .channel(LocalServerChannel.class)
                 .childHandler(serverHandler);
 
         Bootstrap clientBootstrap = new Bootstrap();
         LocalHander clientHandler = new LocalHander("CLIENT");
         clientBootstrap
-                .group(new LocalEventLoopGroup())
+                .group(new DefaultEventLoopGroup())
                 .channel(LocalChannel.class)
                 .remoteAddress(new LocalAddress(LOCAL_CHANNEL)).handler(clientHandler);
 

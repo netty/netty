@@ -17,7 +17,6 @@ package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 
 /**
@@ -60,11 +59,8 @@ interface ChannelPropertyAccess {
     ChannelFuture newFailedFuture(Throwable cause);
 
     /**
-     * Return a special ChannelPromise which can be reused for different operations.
-     * <p>
-     * It's only supported to use
-     * it for {@link ChannelOutboundInvoker#write(Object, ChannelPromise)}.
-     * </p>
+     * Return a special ChannelPromise which can be reused for {@code write(..)} operations.  Using it for other
+     * outbound operations will fail with undetermined consequences.
      * <p>
      * Be aware that the returned {@link ChannelPromise} will not support most operations and should only be used
      * if you want to save an object allocation for every write operation. You will not be able to detect if the

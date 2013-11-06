@@ -29,6 +29,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.AttributeKey;
+import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -118,8 +119,8 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
     }
 
     /**
-     * Set the {@link EventLoopGroup} for the parent (acceptor) and the child (client). These
-     * {@link EventLoopGroup}'s are used to handle all the events and IO for {@link SocketChannel} and
+     * Set the {@link EventExecutorGroup} for the parent (acceptor) and the child (client). These
+     * {@link EventExecutorGroup}'s are used to handle all the events and IO for {@link SocketChannel} and
      * {@link Channel}'s.
      */
     public ServerBootstrap group(EventLoopGroup parentGroup, EventLoopGroup childGroup) {

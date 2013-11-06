@@ -235,7 +235,7 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     /**
-     * Run all tasks that are pending in the {@link EventLoop} for this {@link Channel}
+     * Run all tasks that are pending in the {@link io.netty.channel.EventLoop} for this {@link Channel}
      */
     public void runPendingTasks() {
         try {

@@ -30,9 +30,8 @@ import java.nio.channels.Channels;
  *
  * <h3>Notify</h3>
  *
- * You can notify the closest handler in the
- * same {@link ChannelPipeline} by calling one of the various methods which are listed in {@link ChannelInboundInvoker}
- * and {@link ChannelOutboundInvoker}.  Please refer to {@link ChannelPipeline} to understand how an event flows.
+ * You can notify the closest handler in the same {@link ChannelPipeline} by calling one of the various method.
+ * Please refer to {@link ChannelPipeline} to understand how an event flows.
  *
  * <h3>Modifying a pipeline</h3>
  *
@@ -123,8 +122,7 @@ import java.nio.channels.Channels;
  * the operation in your application.
  */
 public interface ChannelHandlerContext
-         extends AttributeMap, ChannelPropertyAccess,
-                 ChannelInboundInvoker, ChannelOutboundInvoker {
+         extends AttributeMap, ChannelPropertyAccess, ChannelInboundOps, ChannelOutboundOps {
 
     /**
      * Return the {@link Channel} which is bound to the {@link ChannelHandlerContext}.
@@ -132,9 +130,7 @@ public interface ChannelHandlerContext
     Channel channel();
 
     /**
-     * The {@link EventExecutor} that is used to dispatch the events. This can also be used to directly
-     * submit tasks that get executed in the event loop. For more information please refer to the
-     * {@link EventExecutor} javadoc.
+     * Returns the {@link EventExecutor} which is used to execute an arbitrary task.
      */
     EventExecutor executor();
 
@@ -153,7 +149,7 @@ public interface ChannelHandlerContext
     /**
      * Return {@code true} if the {@link ChannelHandler} which belongs to this {@link ChannelHandler} was removed
      * from the {@link ChannelPipeline}. Note that this method is only meant to be called from with in the
-     * {@link EventLoop}.
+     * {@link EventExecutor}.
      */
     boolean isRemoved();
 

@@ -68,24 +68,24 @@ public final class SocksServerConnectHandler extends SimpleChannelInboundHandler
 
         final Channel inboundChannel = ctx.channel();
         b.group(inboundChannel.eventLoop())
-                .channel(NioSocketChannel.class)
-                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000)
-                .option(ChannelOption.SO_KEEPALIVE, true)
-                .handler(new DirectClientInitializer(promise));
-        b.connect(request.host(), request.port())
-          .addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    if (future.isSuccess()) {
-                        // Connection established use handler provided results
-                    } else {
-                        // Close the connection if the connection attempt has failed.
-                        ctx.channel().writeAndFlush(
-                                new SocksCmdResponse(SocksCmdStatus.FAILURE, request.addressType()));
-                        SocksServerUtils.closeOnFlush(ctx.channel());
-                    }
+         .channel(NioSocketChannel.class)
+         .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000)
+         .option(ChannelOption.SO_KEEPALIVE, true)
+         .handler(new DirectClientInitializer(promise));
+
+        b.connect(request.host(), request.port()).addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) throws Exception {
+                if (future.isSuccess()) {
+                    // Connection established use handler provided results
+                } else {
+                    // Close the connection if the connection attempt has failed.
+                    ctx.channel().writeAndFlush(
+                            new SocksCmdResponse(SocksCmdStatus.FAILURE, request.addressType()));
+                    SocksServerUtils.closeOnFlush(ctx.channel());
                 }
-           });
+            }
+        });
     }
 
     @Override

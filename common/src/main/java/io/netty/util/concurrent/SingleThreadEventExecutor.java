@@ -57,7 +57,6 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
         }
     };
 
-    private final EventExecutorGroup parent;
     private final Queue<Runnable> taskQueue;
     final Queue<ScheduledFutureTask<?>> delayedTaskQueue = new PriorityQueue<ScheduledFutureTask<?>>();
 
@@ -98,14 +97,13 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
      * @param addTaskWakesUp    {@code true} if and only if invocation of {@link #addTask(Runnable)} will wake up the
      *                          executor thread
      */
-    protected SingleThreadEventExecutor(
-            EventExecutorGroup parent, Executor executor, boolean addTaskWakesUp) {
+    protected SingleThreadEventExecutor(EventExecutorGroup parent, Executor executor, boolean addTaskWakesUp) {
+        super(parent);
 
         if (executor == null) {
             throw new NullPointerException("executor");
         }
 
-        this.parent = parent;
         this.addTaskWakesUp = addTaskWakesUp;
         this.executor = executor;
 
@@ -120,11 +118,6 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
      */
     protected Queue<Runnable> newTaskQueue() {
         return new LinkedBlockingQueue<Runnable>();
-    }
-
-    @Override
-    public EventExecutorGroup parent() {
-        return parent;
     }
 
     /**

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,14 +13,15 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package io.netty.channel;
 
-import io.netty.channel.socket.ServerSocketChannel;
+import io.netty.util.concurrent.AbstractEventExecutorGroup;
 
 /**
- * A {@link Channel} that accepts an incoming connection attempt and creates its child {@link Channel}s by accepting
- * them.  {@link ServerSocketChannel} is a good example.
+ * Skeletal implementation of {@link EventLoopGroup}.
  */
-public interface ServerChannel extends Channel {
-    EventLoopGroup childEventLoopGroup();
+public abstract class AbstractEventLoopGroup extends AbstractEventExecutorGroup implements EventLoopGroup {
+    @Override
+    public abstract EventLoop next();
 }

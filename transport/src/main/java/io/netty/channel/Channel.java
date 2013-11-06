@@ -66,7 +66,7 @@ import java.net.SocketAddress;
  * operations.  For example, with the old I/O datagram transport, multicast
  * join / leave operations are provided by {@link DatagramChannel}.
  */
-public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPropertyAccess, Comparable<Channel> {
+public interface Channel extends AttributeMap, ChannelOutboundOps, ChannelPropertyAccess, Comparable<Channel> {
 
     /**
      * Returns the globally unique identifier of this {@link Channel}.
@@ -168,14 +168,21 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
      * are only provided to implement the actual transport, and must be invoked from an I/O thread except for the
      * following methods:
      * <ul>
+     *   <li>{@link #invoker()}</li>
      *   <li>{@link #localAddress()}</li>
      *   <li>{@link #remoteAddress()}</li>
      *   <li>{@link #closeForcibly()}</li>
-     *   <li>{@link #register(EventLoop, ChannelPromise)}</li>
+     *   <li>{@link #register(ChannelPromise)}</li>
      *   <li>{@link #voidPromise()}</li>
      * </ul>
      */
     interface Unsafe {
+
+        /**
+         * Returns the {@link ChannelHandlerInvoker} which is used by default unless specified by a user.
+         */
+        ChannelHandlerInvoker invoker();
+
         /**
          * Return the {@link SocketAddress} to which is bound local or
          * {@code null} if none.
@@ -189,7 +196,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
         SocketAddress remoteAddress();
 
         /**
-         * Register the {@link Channel} of the {@link ChannelPromise} with the {@link EventLoop} and notify
+         * Register the {@link Channel} of the {@link ChannelPromise} and notify
          * the {@link ChannelFuture} once the registration was complete.
          */
         void register(ChannelPromise promise);

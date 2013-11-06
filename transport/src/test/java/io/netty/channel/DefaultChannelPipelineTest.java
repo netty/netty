@@ -21,7 +21,6 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
-import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.ReferenceCountUtil;
@@ -30,7 +29,6 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Test;
 
-import java.net.SocketAddress;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -44,7 +42,7 @@ import static org.junit.Assert.*;
 
 public class DefaultChannelPipelineTest {
 
-    private static final EventLoopGroup group = new LocalEventLoopGroup(1);
+    private static final EventLoopGroup group = new DefaultEventLoopGroup(1);
 
     private Channel self;
     private Channel peer;

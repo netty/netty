@@ -16,6 +16,7 @@
 package io.netty.channel;
 
 import io.netty.util.concurrent.DefaultThreadFactory;
+import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.MultithreadEventExecutorGroup;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -25,7 +26,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 
 /**
- * Abstract base class for {@link EventLoopGroup} implementations that handles their tasks with multiple threads at
+ * Abstract base class for {@link EventExecutorGroup} implementations that handles their tasks with multiple threads at
  * the same time.
  */
 public abstract class MultithreadEventLoopGroup extends MultithreadEventExecutorGroup implements EventLoopGroup {
@@ -66,4 +67,7 @@ public abstract class MultithreadEventLoopGroup extends MultithreadEventExecutor
     public EventLoop next() {
         return (EventLoop) super.next();
     }
+
+    @Override
+    protected abstract EventLoop newChild(Executor executor, Object... args) throws Exception;
 }

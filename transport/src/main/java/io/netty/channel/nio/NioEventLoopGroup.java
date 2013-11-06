@@ -16,6 +16,7 @@
 package io.netty.channel.nio;
 
 import io.netty.channel.Channel;
+import io.netty.channel.EventLoop;
 import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.util.concurrent.EventExecutor;
 
@@ -92,8 +93,7 @@ public class NioEventLoopGroup extends MultithreadEventLoopGroup {
     }
 
     @Override
-    protected EventExecutor newChild(
-            Executor executor, Object... args) throws Exception {
+    protected EventLoop newChild(Executor executor, Object... args) throws Exception {
         return new NioEventLoop(this, executor, (SelectorProvider) args[0]);
     }
 }

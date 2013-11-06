@@ -33,11 +33,8 @@ import java.util.List;
  */
 public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
 
-    /**
-     * @see {@link AbstractNioChannel#AbstractNioChannel(Channel, SelectableChannel, int)}
-     */
-    protected AbstractNioMessageChannel(Channel parent, EventLoop eventLoop, SelectableChannel ch,
-            int readInterestOp) {
+    protected AbstractNioMessageChannel(
+            Channel parent, EventLoop eventLoop, SelectableChannel ch, int readInterestOp) {
         super(parent, eventLoop, ch, readInterestOp);
     }
 

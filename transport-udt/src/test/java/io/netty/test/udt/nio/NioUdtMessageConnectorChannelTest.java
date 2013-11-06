@@ -31,6 +31,6 @@ public class NioUdtMessageConnectorChannelTest extends AbstractUdtTest {
     @Test
     public void metadata() throws Exception {
         EventLoop loop = new NioEventLoopGroup().next();
-        assertEquals(false, new NioUdtMessageConnectorChannel(loop).metadata().hasDisconnect());
+        assertFalse(new NioUdtMessageConnectorChannel(loop).metadata().hasDisconnect());
     }
 }

@@ -26,25 +26,28 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Handles or intercepts a {@link ChannelInboundInvoker} or {@link ChannelOutboundInvoker} operation, and forwards it
- * to the next handler in a {@link ChannelPipeline}.
+ * Handles an I/O event or intercepts an I/O operation, and forwards it to its next handler in
+ * its {@link ChannelPipeline}.
  *
  * <h3>Sub-types</h3>
  * <p>
- * {@link ChannelHandler} itself does not provide many methods.  To handle a
- * a {@link ChannelInboundInvoker} or {@link ChannelOutboundInvoker} operation
- * you need to implement its sub-interfaces.  There are many different sub-interfaces
- * which handles inbound and outbound operations.
- *
- * But the most useful for developers may be:
+ * {@link ChannelHandler} itself does not provide many methods, but you usually have to implement one of its subtypes:
  * <ul>
- * <li>{@link ChannelInboundHandlerAdapter} handles and intercepts inbound operations</li>
- * <li>{@link ChannelOutboundHandlerAdapter} handles and intercepts outbound operations</li>
+ * <li>{@link ChannelInboundHandler} to handle inbound I/O events, and</li>
+ * <li>{@link ChannelOutboundHandler} to handle outbound I/O operations.</li>
  * </ul>
- *
- * You will also find more detailed explanation from the documentation of
- * each sub-interface on how an event is interpreted when it goes upstream and
- * downstream respectively.
+ * </p>
+ * <p>
+ * Alternatively, the following adapter classes are provided for your convenience:
+ * <ul>
+ * <li>{@link ChannelInboundHandlerAdapter} to handle inbound I/O events,</li>
+ * <li>{@link ChannelOutboundHandlerAdapter} to handle outbound I/O operations, and</li>
+ * <li>{@link ChannelHandlerAdapter} to handle both inbound and outbound events</li>
+ * </ul>
+ * </p>
+ * <p>
+ * For more information, please refer to the documentation of each subtype.
+ * </p>
  *
  * <h3>The context object</h3>
  * <p>
