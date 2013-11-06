@@ -99,7 +99,6 @@ public class LoggingHandler extends ChannelDuplexHandler {
 
     protected final InternalLogger logger;
     protected final InternalLogLevel internalLevel;
-
     private final LogLevel level;
 
     /**
@@ -114,7 +113,7 @@ public class LoggingHandler extends ChannelDuplexHandler {
      * Creates a new instance whose logger name is the fully qualified class
      * name of the instance.
      *
-     * @param level   the log level
+     * @param level the log level
      */
     public LoggingHandler(LogLevel level) {
         if (level == null) {
@@ -129,6 +128,8 @@ public class LoggingHandler extends ChannelDuplexHandler {
     /**
      * Creates a new instance with the specified logger name and with hex dump
      * enabled.
+     *
+     * @param clazz the class type to generate the logger for.
      */
     public LoggingHandler(Class<?> clazz) {
         this(clazz, DEFAULT_LEVEL);
@@ -137,7 +138,8 @@ public class LoggingHandler extends ChannelDuplexHandler {
     /**
      * Creates a new instance with the specified logger name.
      *
-     * @param level   the log level
+     * @param clazz the class type to generate the logger for.
+     * @param level the log level.
      */
     public LoggingHandler(Class<?> clazz, LogLevel level) {
         if (clazz == null) {
@@ -146,13 +148,16 @@ public class LoggingHandler extends ChannelDuplexHandler {
         if (level == null) {
             throw new NullPointerException("level");
         }
+
         logger = InternalLoggerFactory.getInstance(clazz);
         this.level = level;
         internalLevel = level.toInternalLevel();
     }
 
     /**
-     * Creates a new instance with the specified logger name.
+     * Creates a new instance with the specified logger name using the default log level.
+     *
+     * @param name the name of the class to use for the logger.
      */
     public LoggingHandler(String name) {
         this(name, DEFAULT_LEVEL);
@@ -161,7 +166,8 @@ public class LoggingHandler extends ChannelDuplexHandler {
     /**
      * Creates a new instance with the specified logger name.
      *
-     * @param level   the log level
+     * @param name the name of the class to use for the logger.
+     * @param level the log level.
      */
     public LoggingHandler(String name, LogLevel level) {
         if (name == null) {
@@ -170,6 +176,7 @@ public class LoggingHandler extends ChannelDuplexHandler {
         if (level == null) {
             throw new NullPointerException("level");
         }
+
         logger = InternalLoggerFactory.getInstance(name);
         this.level = level;
         internalLevel = level.toInternalLevel();
@@ -182,6 +189,13 @@ public class LoggingHandler extends ChannelDuplexHandler {
         return level;
     }
 
+    /**
+     * Formats the given message together with the channel context for output.
+     *
+     * @param ctx the channel context.
+     * @param message the message to format.
+     * @return the formatted message consisting of the channel context and the actual message.
+     */
     protected String format(ChannelHandlerContext ctx, String message) {
         String chStr = ctx.channel().toString();
         StringBuilder buf = new StringBuilder(chStr.length() + message.length() + 1);
@@ -192,53 +206,47 @@ public class LoggingHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void channelRegistered(ChannelHandlerContext ctx)
-            throws Exception {
+    public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
         if (logger.isEnabled(internalLevel)) {
-            logger.log(internalLevel, format(ctx, "REGISTERED"));
+            logger.log(internalLevel, format(ctx, "REGISTERED()"));
         }
         super.channelRegistered(ctx);
     }
 
     @Override
-    public void channelActive(ChannelHandlerContext ctx)
-            throws Exception {
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
         if (logger.isEnabled(internalLevel)) {
-            logger.log(internalLevel, format(ctx, "ACTIVE"));
+            logger.log(internalLevel, format(ctx, "ACTIVE()"));
         }
         super.channelActive(ctx);
     }
 
     @Override
-    public void channelInactive(ChannelHandlerContext ctx)
-            throws Exception {
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         if (logger.isEnabled(internalLevel)) {
-            logger.log(internalLevel, format(ctx, "INACTIVE"));
+            logger.log(internalLevel, format(ctx, "INACTIVE()"));
         }
         super.channelInactive(ctx);
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx,
-            Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         if (logger.isEnabled(internalLevel)) {
-            logger.log(internalLevel, format(ctx, "EXCEPTION: " + cause), cause);
+            logger.log(internalLevel, format(ctx, "EXCEPTION(" + cause + ')'), cause);
         }
         super.exceptionCaught(ctx, cause);
     }
 
     @Override
-    public void userEventTriggered(ChannelHandlerContext ctx,
-            Object evt) throws Exception {
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         if (logger.isEnabled(internalLevel)) {
-            logger.log(internalLevel, format(ctx, "USER_EVENT: " + evt));
+            logger.log(internalLevel, format(ctx, "USER_EVENT(" + evt + ')'));
         }
         super.userEventTriggered(ctx, evt);
     }
 
     @Override
-    public void bind(ChannelHandlerContext ctx,
-            SocketAddress localAddress, ChannelPromise promise) throws Exception {
+    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) throws Exception {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "BIND(" + localAddress + ')'));
         }
@@ -246,9 +254,8 @@ public class LoggingHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void connect(ChannelHandlerContext ctx,
-            SocketAddress remoteAddress, SocketAddress localAddress,
-            ChannelPromise promise) throws Exception {
+    public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
+        ChannelPromise promise) throws Exception {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "CONNECT(" + remoteAddress + ", " + localAddress + ')'));
         }
@@ -256,8 +263,7 @@ public class LoggingHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void disconnect(ChannelHandlerContext ctx,
-            ChannelPromise promise) throws Exception {
+    public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "DISCONNECT()"));
         }
@@ -265,8 +271,7 @@ public class LoggingHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx,
-            ChannelPromise promise) throws Exception {
+    public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "CLOSE()"));
         }
@@ -275,30 +280,44 @@ public class LoggingHandler extends ChannelDuplexHandler {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        logMessage(ctx, "RECEIVED", msg);
+        logMessage(ctx, "RECEIVED()", msg);
         ctx.fireChannelRead(msg);
     }
 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-        logMessage(ctx, "WRITE", msg);
+        logMessage(ctx, "WRITE()", msg);
         ctx.write(msg, promise);
     }
 
     @Override
     public void flush(ChannelHandlerContext ctx) throws Exception {
         if (logger.isEnabled(internalLevel)) {
-            logger.log(internalLevel, format(ctx, "FLUSH"));
+            logger.log(internalLevel, format(ctx, "FLUSH()"));
         }
         ctx.flush();
     }
 
+    /**
+     * Helper method to log the message only if the loger is enabled for the given level.
+     *
+     * @param ctx the channel context.
+     * @param eventName the name of the event to log.
+     * @param msg the actual message to log.
+     */
     private void logMessage(ChannelHandlerContext ctx, String eventName, Object msg) {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, formatMessage(eventName, msg)));
         }
     }
 
+    /**
+     * Helper method to format the message content.
+     *
+     * @param eventName the name of the event to log.
+     * @param msg the actual message to format.
+     * @return the formatted message.
+     */
     protected String formatMessage(String eventName, Object msg) {
         if (msg instanceof ByteBuf) {
             return formatByteBuf(eventName, (ByteBuf) msg);
@@ -310,7 +329,10 @@ public class LoggingHandler extends ChannelDuplexHandler {
     }
 
     /**
-     * Returns a String which contains all details to log the {@link ByteBuf}
+     * Returns a String which contains all details to log the {@link ByteBuf}.
+     *
+     * @param eventName the name of the event to log.
+     * @param buf the buffer to log.
      */
     protected String formatByteBuf(String eventName, ByteBuf buf) {
         int length = buf.readableBytes();
@@ -319,9 +341,9 @@ public class LoggingHandler extends ChannelDuplexHandler {
 
         dump.append(eventName).append('(').append(length).append('B').append(')');
         dump.append(
-                NEWLINE + "         +-------------------------------------------------+" +
-                        NEWLINE + "         |  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f |" +
-                        NEWLINE + "+--------+-------------------------------------------------+----------------+");
+            NEWLINE + "         +-------------------------------------------------+" +
+            NEWLINE + "         |  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f |" +
+            NEWLINE + "+--------+-------------------------------------------------+----------------+");
 
         final int startIndex = buf.readerIndex();
         final int endIndex = buf.writerIndex();
@@ -357,14 +379,13 @@ public class LoggingHandler extends ChannelDuplexHandler {
             dump.append('|');
         }
 
-        dump.append(
-                NEWLINE + "+--------+-------------------------------------------------+----------------+");
+        dump.append(NEWLINE + "+--------+-------------------------------------------------+----------------+");
 
         return dump.toString();
     }
 
     /**
-     * Returns a String which contains all details to log the {@link Object}
+     * Returns a String which contains all details to log the {@link Object}.
      */
     protected String formatNonByteBuf(String eventName, Object msg) {
         return eventName + ": " + msg;
