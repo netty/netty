@@ -19,6 +19,7 @@ import static io.netty.channel.DefaultChannelPipeline.logger;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.Recycler;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.internal.StringUtil;
@@ -445,7 +446,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 public void run() {
                     next.invokeBind(localAddress, promise);
                 }
-            }, promise);
+            }, promise, null);
         }
 
         return promise;
@@ -483,7 +484,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 public void run() {
                     next.invokeConnect(remoteAddress, localAddress, promise);
                 }
-            }, promise);
+            }, promise, null);
         }
 
         return promise;
@@ -521,7 +522,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                         next.invokeDisconnect(promise);
                     }
                 }
-            }, promise);
+            }, promise, null);
         }
 
         return promise;
@@ -549,7 +550,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 public void run() {
                     next.invokeClose(promise);
                 }
-            }, promise);
+            }, promise, null);
         }
 
         return promise;
@@ -577,7 +578,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 public void run() {
                     next.invokeDeregister(promise);
                 }
-            }, promise);
+            }, promise, null);
         }
 
         return promise;
@@ -663,7 +664,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                     }
                 };
             }
-            safeExecute(executor, task, channel.voidPromise());
+            safeExecute(executor, task, channel.voidPromise(), null);
         }
 
         return this;
@@ -708,7 +709,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                     buffer.incrementPendingOutboundBytes(size);
                 }
             }
-            safeExecute(executor, WriteTask.newInstance(next, msg, size, flush, promise), promise);
+            safeExecute(executor, WriteTask.newInstance(next, msg, size, flush, promise), promise, msg);
         }
     }
 
@@ -847,11 +848,17 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         return removed;
     }
 
-    private static void safeExecute(EventExecutor executor, Runnable runnable, ChannelPromise promise) {
+    private static void safeExecute(EventExecutor executor, Runnable runnable, ChannelPromise promise, Object msg) {
         try {
             executor.execute(runnable);
         } catch (Throwable cause) {
-            promise.setFailure(cause);
+            try {
+                promise.setFailure(cause);
+            } finally {
+                if (msg != null) {
+                    ReferenceCountUtil.release(msg);
+                }
+            }
         }
     }
 
