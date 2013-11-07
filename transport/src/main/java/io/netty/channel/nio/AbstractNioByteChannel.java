@@ -115,6 +115,8 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                     byteBuf = allocHandle.allocate(allocator);
                     int localReadAmount = doReadBytes(byteBuf);
                     if (localReadAmount <= 0) {
+                        // not was read release the buffer
+                        byteBuf.release();
                         close = localReadAmount < 0;
                         break;
                     }
