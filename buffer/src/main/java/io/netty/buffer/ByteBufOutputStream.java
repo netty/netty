@@ -88,10 +88,7 @@ public class ByteBufOutputStream extends OutputStream implements DataOutput {
 
     @Override
     public void writeBytes(String s) throws IOException {
-        int len = s.length();
-        for (int i = 0; i < len; i ++) {
-            write((byte) s.charAt(i));
-        }
+        write(s.getBytes());
     }
 
     @Override
