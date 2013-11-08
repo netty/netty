@@ -44,6 +44,9 @@ import java.util.Queue;
  */
 public class EmbeddedChannel extends AbstractChannel {
 
+    private static final SocketAddress LOCAL_ADDRESS = new EmbeddedSocketAddress();
+    private static final SocketAddress REMOTE_ADDRESS = new EmbeddedSocketAddress();
+
     private static final ChannelHandler[] EMPTY_HANDLERS = new ChannelHandler[0];
     private enum State { OPEN, ACTIVE, CLOSED }
 
@@ -53,8 +56,6 @@ public class EmbeddedChannel extends AbstractChannel {
 
     private final EmbeddedEventLoop loop = new EmbeddedEventLoop();
     private final ChannelConfig config = new DefaultChannelConfig(this);
-    private final SocketAddress localAddress = new EmbeddedSocketAddress();
-    private final SocketAddress remoteAddress = new EmbeddedSocketAddress();
     private final Queue<Object> inboundMessages = new ArrayDeque<Object>();
     private final Queue<Object> outboundMessages = new ArrayDeque<Object>();
     private Throwable lastException;
@@ -283,12 +284,12 @@ public class EmbeddedChannel extends AbstractChannel {
 
     @Override
     protected SocketAddress localAddress0() {
-        return isActive()? localAddress : null;
+        return isActive()? LOCAL_ADDRESS : null;
     }
 
     @Override
     protected SocketAddress remoteAddress0() {
-        return isActive()? remoteAddress : null;
+        return isActive()? REMOTE_ADDRESS : null;
     }
 
     @Override
