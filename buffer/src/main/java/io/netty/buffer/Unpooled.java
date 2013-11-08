@@ -129,8 +129,9 @@ public final class Unpooled {
 
     /**
      * Creates a new big-endian Java heap buffer with the specified
-     * {@code capacity}.  The new buffer's {@code readerIndex} and
-     * {@code writerIndex} are {@code 0}.
+     * {@code initialCapacity}, that may grow up to {@code maxCapacity}
+     * The new buffer's {@code readerIndex} and {@code writerIndex} are
+     * {@code 0}.
      */
     public static ByteBuf buffer(int initialCapacity, int maxCapacity) {
         return ALLOC.heapBuffer(initialCapacity, maxCapacity);
@@ -138,8 +139,9 @@ public final class Unpooled {
 
     /**
      * Creates a new big-endian direct buffer with the specified
-     * {@code capacity}.  The new buffer's {@code readerIndex} and
-     * {@code writerIndex} are {@code 0}.
+     * {@code initialCapacity}, that may grow up to {@code maxCapacity}.
+     * The new buffer's {@code readerIndex} and {@code writerIndex} are
+     * {@code 0}.
      */
     public static ByteBuf directBuffer(int initialCapacity, int maxCapacity) {
         return ALLOC.directBuffer(initialCapacity, maxCapacity);
