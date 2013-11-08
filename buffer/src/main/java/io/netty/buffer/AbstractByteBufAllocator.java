@@ -17,6 +17,7 @@
 package io.netty.buffer;
 
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.StringUtil;
 
 /**
  * Skeletal {@link ByteBufAllocator} implementation to extend.
@@ -188,4 +189,9 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
      * Create a direct {@link ByteBuf} with the given initialCapacity and maxCapacity.
      */
     protected abstract ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity);
+
+    @Override
+    public String toString() {
+        return StringUtil.simpleClassName(this) + "(directByDefault: " + directByDefault + ')';
+    }
 }
