@@ -1257,9 +1257,10 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
 
         // Update indexes and markers.
         Component first = components.get(0);
+        int offset = first.offset;
         updateComponentOffsets(0);
-        setIndex(readerIndex - first.offset, writerIndex - first.offset);
-        adjustMarkers(first.offset);
+        setIndex(readerIndex - offset, writerIndex - offset);
+        adjustMarkers(offset);
         return this;
     }
 
