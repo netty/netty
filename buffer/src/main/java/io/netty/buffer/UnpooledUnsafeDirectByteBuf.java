@@ -68,7 +68,7 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
         }
 
         this.alloc = alloc;
-        setByteBuffer(ByteBuffer.allocateDirect(initialCapacity));
+        setByteBuffer(allocateDirect(initialCapacity));
         leak = leakDetector.open(this);
     }
 
@@ -105,13 +105,27 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
         leak = leakDetector.open(this);
     }
 
+    /**
+     * Allocate a new direct {@link ByteBuffer} with the given initialCapacity.
+     */
+    protected ByteBuffer allocateDirect(int initialCapacity) {
+        return ByteBuffer.allocateDirect(initialCapacity);
+    }
+
+    /**
+     * Free a direct {@link ByteBuffer}
+     */
+    protected void freeDirect(ByteBuffer buffer) {
+        PlatformDependent.freeDirectBuffer(buffer);
+    }
+
     private void setByteBuffer(ByteBuffer buffer) {
         ByteBuffer oldBuffer = this.buffer;
         if (oldBuffer != null) {
             if (doNotFree) {
                 doNotFree = false;
             } else {
-                PlatformDependent.freeDirectBuffer(oldBuffer);
+                freeDirect(oldBuffer);
             }
         }
 
@@ -144,7 +158,7 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
         int oldCapacity = capacity;
         if (newCapacity > oldCapacity) {
             ByteBuffer oldBuffer = buffer;
-            ByteBuffer newBuffer = ByteBuffer.allocateDirect(newCapacity);
+            ByteBuffer newBuffer = allocateDirect(newCapacity);
             oldBuffer.position(0).limit(oldBuffer.capacity());
             newBuffer.position(0).limit(oldBuffer.capacity());
             newBuffer.put(oldBuffer);
@@ -152,7 +166,7 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
             setByteBuffer(newBuffer);
         } else if (newCapacity < oldCapacity) {
             ByteBuffer oldBuffer = buffer;
-            ByteBuffer newBuffer = ByteBuffer.allocateDirect(newCapacity);
+            ByteBuffer newBuffer = allocateDirect(newCapacity);
             if (readerIndex < newCapacity) {
                 if (writerIndex > newCapacity) {
                     writerIndex(writerIndex = newCapacity);
@@ -488,7 +502,7 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
         this.buffer = null;
 
         if (!doNotFree) {
-            PlatformDependent.freeDirectBuffer(buffer);
+            freeDirect(buffer);
         }
 
         if (leak != null) {
