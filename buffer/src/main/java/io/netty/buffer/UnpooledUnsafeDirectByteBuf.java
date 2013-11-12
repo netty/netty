@@ -112,13 +112,20 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
         return ByteBuffer.allocateDirect(initialCapacity);
     }
 
+    /**
+     * Free a direct {@link ByteBuffer}
+     */
+    protected void freeDirect(ByteBuffer buffer) {
+        PlatformDependent.freeDirectBuffer(buffer);
+    }
+
     private void setByteBuffer(ByteBuffer buffer) {
         ByteBuffer oldBuffer = this.buffer;
         if (oldBuffer != null) {
             if (doNotFree) {
                 doNotFree = false;
             } else {
-                PlatformDependent.freeDirectBuffer(oldBuffer);
+                freeDirect(oldBuffer);
             }
         }
 
@@ -495,7 +502,7 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
         this.buffer = null;
 
         if (!doNotFree) {
-            PlatformDependent.freeDirectBuffer(buffer);
+            freeDirect(buffer);
         }
 
         if (leak != null) {
