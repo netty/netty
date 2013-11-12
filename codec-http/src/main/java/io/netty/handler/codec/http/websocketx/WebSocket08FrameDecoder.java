@@ -136,6 +136,10 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
         }
             switch (state) {
                 case READING_FIRST:
+                    if (!in.isReadable()) {
+                        return;
+                    }
+
                     framePayloadLength = 0;
 
                     // FIN, RSV, OPCODE
