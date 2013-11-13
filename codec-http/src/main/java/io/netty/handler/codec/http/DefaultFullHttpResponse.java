@@ -25,18 +25,24 @@ import io.netty.buffer.Unpooled;
 public class DefaultFullHttpResponse extends DefaultHttpResponse implements FullHttpResponse {
 
     private final ByteBuf content;
-    private final HttpHeaders trailingHeaders = new DefaultHttpHeaders();
+    private final HttpHeaders trailingHeaders;
 
     public DefaultFullHttpResponse(HttpVersion version, HttpResponseStatus status) {
         this(version, status, Unpooled.buffer(0));
     }
 
     public DefaultFullHttpResponse(HttpVersion version, HttpResponseStatus status, ByteBuf content) {
-        super(version, status);
+        this(version, status, content, true);
+    }
+
+    public DefaultFullHttpResponse(HttpVersion version, HttpResponseStatus status,
+                                   ByteBuf content, boolean validateHeaders) {
+        super(version, status, validateHeaders);
         if (content == null) {
             throw new NullPointerException("content");
         }
         this.content = content;
+        trailingHeaders = new DefaultHttpHeaders(validateHeaders);
     }
 
     @Override

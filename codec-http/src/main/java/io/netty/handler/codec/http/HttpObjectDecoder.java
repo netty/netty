@@ -118,6 +118,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
     private final int maxHeaderSize;
     private final int maxChunkSize;
     private final boolean chunkedSupported;
+    protected final boolean validateHeaders;
 
     private ByteBuf content;
     private HttpMessage message;
@@ -159,13 +160,22 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
      */
     protected HttpObjectDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean chunkedSupported) {
+        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, chunkedSupported, true);
+    }
+
+    /**
+     * Creates a new instance with the specified parameters.
+     */
+    protected HttpObjectDecoder(
+            int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
+            boolean chunkedSupported, boolean validateHeaders) {
 
         super(State.SKIP_CONTROL_CHARS);
 
         if (maxInitialLineLength <= 0) {
             throw new IllegalArgumentException(
                     "maxInitialLineLength must be a positive integer: " +
-                    maxInitialLineLength);
+                     maxInitialLineLength);
         }
         if (maxHeaderSize <= 0) {
             throw new IllegalArgumentException(
@@ -181,6 +191,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         this.maxHeaderSize = maxHeaderSize;
         this.maxChunkSize = maxChunkSize;
         this.chunkedSupported = chunkedSupported;
+        this.validateHeaders = validateHeaders;
     }
 
     @Override
@@ -279,7 +290,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
             ByteBuf content = readBytes(ctx.alloc(), buffer, toRead);
             if (!buffer.isReadable()) {
                 reset();
-                out.add(new DefaultLastHttpContent(content));
+                out.add(new DefaultLastHttpContent(content, validateHeaders));
                 return;
             }
             out.add(new DefaultHttpContent(content));
@@ -321,7 +332,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
             if (chunkSize == 0) {
                 // Read all content.
                 reset();
-                out.add(new DefaultLastHttpContent(content));
+                out.add(new DefaultLastHttpContent(content, validateHeaders));
                 return;
             }
             out.add(new DefaultHttpContent(content));
@@ -468,7 +479,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
                 if (actualContentLength == 0) {
                     out.add(LastHttpContent.EMPTY_LAST_CONTENT);
                 } else {
-                    out.add(new DefaultLastHttpContent(content));
+                    out.add(new DefaultLastHttpContent(content, validateHeaders));
                 }
             }
         }
@@ -513,7 +524,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
             if (content == null || !content.isReadable()) {
                 httpContent = LastHttpContent.EMPTY_LAST_CONTENT;
             } else {
-                httpContent = new DefaultLastHttpContent(content);
+                httpContent = new DefaultLastHttpContent(content, validateHeaders);
             }
 
             out.add(message);
@@ -629,7 +640,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         StringBuilder line = readHeader(buffer);
         String lastHeader = null;
         if (line.length() > 0) {
-            LastHttpContent trailer = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER);
+            LastHttpContent trailer = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER, validateHeaders);
             do {
                 char firstChar = line.charAt(0);
                 if (lastHeader != null && (firstChar == ' ' || firstChar == '\t')) {
