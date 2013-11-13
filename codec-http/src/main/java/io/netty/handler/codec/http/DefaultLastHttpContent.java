@@ -26,25 +26,19 @@ import java.util.Map;
  */
 public class DefaultLastHttpContent extends DefaultHttpContent implements LastHttpContent {
 
-    private final HttpHeaders trailingHeaders = new DefaultHttpHeaders() {
-        @Override
-        void validateHeaderName0(String name) {
-            super.validateHeaderName0(name);
-            if (name.equalsIgnoreCase(HttpHeaders.Names.CONTENT_LENGTH) ||
-                name.equalsIgnoreCase(HttpHeaders.Names.TRANSFER_ENCODING) ||
-                name.equalsIgnoreCase(HttpHeaders.Names.TRAILER)) {
-                throw new IllegalArgumentException(
-                        "prohibited trailing header: " + name);
-            }
-        }
-    };
+    private final HttpHeaders trailingHeaders;
 
     public DefaultLastHttpContent() {
         this(Unpooled.buffer(0));
     }
 
     public DefaultLastHttpContent(ByteBuf content) {
+        this(content, true);
+    }
+
+    public DefaultLastHttpContent(ByteBuf content, boolean validateHeaders) {
         super(content);
+        trailingHeaders = new TrailingHeaders(validateHeaders);
     }
 
     @Override
@@ -95,6 +89,23 @@ public class DefaultLastHttpContent extends DefaultHttpContent implements LastHt
             buf.append(": ");
             buf.append(e.getValue());
             buf.append(StringUtil.NEWLINE);
+        }
+    }
+
+    private static final class TrailingHeaders extends DefaultHttpHeaders {
+        TrailingHeaders(boolean validate) {
+            super(validate);
+        }
+
+        @Override
+        void validateHeaderName0(String name) {
+            super.validateHeaderName0(name);
+            if (name.equalsIgnoreCase(HttpHeaders.Names.CONTENT_LENGTH) ||
+                    name.equalsIgnoreCase(HttpHeaders.Names.TRANSFER_ENCODING) ||
+                    name.equalsIgnoreCase(HttpHeaders.Names.TRAILER)) {
+                throw new IllegalArgumentException(
+                        "prohibited trailing header: " + name);
+            }
         }
     }
 }

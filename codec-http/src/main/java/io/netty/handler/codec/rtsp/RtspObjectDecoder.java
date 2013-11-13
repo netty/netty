@@ -66,6 +66,11 @@ public abstract class RtspObjectDecoder extends HttpObjectDecoder {
         super(maxInitialLineLength, maxHeaderSize, maxContentLength * 2, false);
     }
 
+    protected RtspObjectDecoder(
+            int maxInitialLineLength, int maxHeaderSize, int maxContentLength, boolean validateHeaders) {
+        super(maxInitialLineLength, maxHeaderSize, maxContentLength * 2, false, validateHeaders);
+    }
+
     @Override
     protected boolean isContentAlwaysEmpty(HttpMessage msg) {
         // Unlike HTTP, RTSP always assumes zero-length body if Content-Length
