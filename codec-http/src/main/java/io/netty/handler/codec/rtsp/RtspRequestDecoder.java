@@ -65,15 +65,20 @@ public class RtspRequestDecoder extends RtspObjectDecoder {
         super(maxInitialLineLength, maxHeaderSize, maxContentLength);
     }
 
+    public RtspRequestDecoder(
+            int maxInitialLineLength, int maxHeaderSize, int maxContentLength, boolean validateHeaders) {
+        super(maxInitialLineLength, maxHeaderSize, maxContentLength, validateHeaders);
+    }
+
     @Override
     protected HttpMessage createMessage(String[] initialLine) throws Exception {
         return new DefaultHttpRequest(RtspVersions.valueOf(initialLine[2]),
-                RtspMethods.valueOf(initialLine[0]), initialLine[1]);
+                RtspMethods.valueOf(initialLine[0]), initialLine[1], validateHeaders);
     }
 
     @Override
     protected HttpMessage createInvalidMessage() {
-        return new DefaultHttpRequest(RtspVersions.RTSP_1_0, RtspMethods.OPTIONS, "/bad-request");
+        return new DefaultHttpRequest(RtspVersions.RTSP_1_0, RtspMethods.OPTIONS, "/bad-request", validateHeaders);
     }
 
     @Override

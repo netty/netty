@@ -80,8 +80,14 @@ public class DefaultHttpHeaders extends HttpHeaders {
 
     private final HeaderEntry[] entries = new HeaderEntry[BUCKET_SIZE];
     private final HeaderEntry head = new HeaderEntry(-1, null, null);
+    protected final boolean validate;
 
     public DefaultHttpHeaders() {
+        this(true);
+    }
+
+    public DefaultHttpHeaders(boolean validate) {
+        this.validate = validate;
         head.before = head.after = head;
     }
 
@@ -91,9 +97,14 @@ public class DefaultHttpHeaders extends HttpHeaders {
 
     @Override
     public HttpHeaders add(final String name, final Object value) {
-        validateHeaderName0(name);
-        String strVal = toString(value);
-        validateHeaderValue(strVal);
+        String strVal;
+        if (validate) {
+            validateHeaderName0(name);
+            strVal = toString(value);
+            validateHeaderValue(strVal);
+        } else {
+            strVal = toString(value);
+        }
         int h = hash(name);
         int i = index(h);
         add0(h, i, name, strVal);
@@ -102,12 +113,16 @@ public class DefaultHttpHeaders extends HttpHeaders {
 
     @Override
     public HttpHeaders add(String name, Iterable<?> values) {
-        validateHeaderName0(name);
+        if (validate) {
+            validateHeaderName0(name);
+        }
         int h = hash(name);
         int i = index(h);
         for (Object v: values) {
             String vstr = toString(v);
-            validateHeaderValue(vstr);
+            if (validate) {
+                validateHeaderValue(vstr);
+            }
             add0(h, i, name, vstr);
         }
         return this;
@@ -173,9 +188,14 @@ public class DefaultHttpHeaders extends HttpHeaders {
 
     @Override
     public HttpHeaders set(final String name, final Object value) {
-        validateHeaderName0(name);
-        String strVal = toString(value);
-        validateHeaderValue(strVal);
+        String strVal;
+        if (validate) {
+            validateHeaderName0(name);
+            strVal = toString(value);
+            validateHeaderValue(strVal);
+        } else {
+            strVal = toString(value);
+        }
         int h = hash(name);
         int i = index(h);
         remove0(h, i, name);
@@ -188,8 +208,9 @@ public class DefaultHttpHeaders extends HttpHeaders {
         if (values == null) {
             throw new NullPointerException("values");
         }
-
-        validateHeaderName0(name);
+        if (validate) {
+            validateHeaderName0(name);
+        }
 
         int h = hash(name);
         int i = index(h);
@@ -200,7 +221,9 @@ public class DefaultHttpHeaders extends HttpHeaders {
                 break;
             }
             String strVal = toString(v);
-            validateHeaderValue(strVal);
+            if (validate) {
+                validateHeaderValue(strVal);
+            }
             add0(h, i, name, strVal);
         }
 

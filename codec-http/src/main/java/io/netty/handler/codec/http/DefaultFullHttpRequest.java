@@ -23,18 +23,24 @@ import io.netty.buffer.Unpooled;
  */
 public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHttpRequest {
     private final ByteBuf content;
-    private final HttpHeaders trailingHeader = new DefaultHttpHeaders();
+    private final HttpHeaders trailingHeader;
 
     public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri) {
         this(httpVersion, method, uri, Unpooled.buffer(0));
     }
 
     public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri, ByteBuf content) {
-        super(httpVersion, method, uri);
+        this(httpVersion, method, uri, content, true);
+    }
+
+    public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri,
+                                  ByteBuf content, boolean validateHeaders) {
+        super(httpVersion, method, uri, validateHeaders);
         if (content == null) {
             throw new NullPointerException("content");
         }
         this.content = content;
+        trailingHeader = new DefaultHttpHeaders(validateHeaders);
     }
 
     @Override
