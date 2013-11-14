@@ -42,4 +42,12 @@ public final class HttpServerCodec
     public HttpServerCodec(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize) {
         super(new HttpRequestDecoder(maxInitialLineLength, maxHeaderSize, maxChunkSize), new HttpResponseEncoder());
     }
+
+    /**
+     * Creates a new instance with the specified decoder options.
+     */
+    public HttpServerCodec(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean validateHeaders) {
+        super(new HttpRequestDecoder(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders),
+                new HttpResponseEncoder());
+    }
 }
