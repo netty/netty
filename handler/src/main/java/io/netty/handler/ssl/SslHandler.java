@@ -490,24 +490,21 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     private void finishWrap(ChannelHandlerContext ctx, ByteBuf out, ChannelPromise promise, boolean inUnwrap) {
-        if (out != null) {
-            if (out.isReadable()) {
-                if (promise != null) {
-                    ctx.write(out, promise);
-                } else {
-                    ctx.write(out);
-                }
-                if (inUnwrap) {
-                    needsFlush = true;
-                }
-            } else {
-                out.release();
-            }
-        } else if (promise != null) {
-            ctx.write(Unpooled.EMPTY_BUFFER, promise);
-            if (inUnwrap) {
-                needsFlush = true;
-            }
+        if (out == null) {
+            out = Unpooled.EMPTY_BUFFER;
+        } else if (!out.isReadable()) {
+            out.release();
+            out = Unpooled.EMPTY_BUFFER;
+        }
+
+        if (promise != null) {
+            ctx.write(out, promise);
+        } else {
+            ctx.write(out);
+        }
+
+        if (inUnwrap) {
+            needsFlush = true;
         }
     }
 
