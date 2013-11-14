@@ -105,13 +105,6 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         protected StringBuilder initialValue() {
             return new StringBuilder(512);
         }
-
-        @Override
-        public StringBuilder get() {
-            StringBuilder builder = super.get();
-            builder.setLength(0);
-            return builder;
-        }
     };
 
     private final int maxInitialLineLength;
@@ -125,6 +118,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
     private long chunkSize;
     private int headerSize;
     private int contentRead;
+    private StringBuilder sb;
 
     /**
      * The internal state of {@link HttpObjectDecoder}.
@@ -673,7 +667,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
     }
 
     private StringBuilder readHeader(ByteBuf buffer) {
-        StringBuilder sb = BUILDERS.get();
+        StringBuilder sb = builder();
         int headerSize = this.headerSize;
 
         loop:
@@ -728,8 +722,8 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         return Integer.parseInt(hex, 16);
     }
 
-    private static StringBuilder readLine(ByteBuf buffer, int maxLineLength) {
-        StringBuilder sb = BUILDERS.get();
+    private StringBuilder readLine(ByteBuf buffer, int maxLineLength) {
+        StringBuilder sb = builder();
         int lineLength = 0;
         while (true) {
             byte nextByte = buffer.readByte();
@@ -845,5 +839,15 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
             }
         }
         return result;
+    }
+
+    private StringBuilder builder() {
+        if (sb == null) {
+            // Obtain the StringBuilder from the ThreadLocal and store it for later usage.
+            // This minimize the ThreadLocal.get() operations a lot and so eliminate some overhead
+            sb = BUILDERS.get();
+        }
+        sb.setLength(0);
+        return sb;
     }
 }
