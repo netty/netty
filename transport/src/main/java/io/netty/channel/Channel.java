@@ -74,6 +74,11 @@ import java.net.SocketAddress;
 public interface Channel extends AttributeMap, Comparable<Channel> {
 
     /**
+     * Returns the globally unique identifier of this {@link Channel}.
+     */
+    ChannelId id();
+
+    /**
      * Return the {@link EventLoop} this {@link Channel} was registered too.
      */
     EventLoop eventLoop();
