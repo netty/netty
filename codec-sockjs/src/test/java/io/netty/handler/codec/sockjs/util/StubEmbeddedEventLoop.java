@@ -13,13 +13,10 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-package io.netty.handler.codec.sockjs.protocol;
+package io.netty.handler.codec.sockjs.util;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.concurrent.AbstractEventExecutor;
@@ -94,16 +91,6 @@ public class StubEmbeddedEventLoop extends AbstractEventExecutor implements Even
     @Override
     public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
         return delegate.awaitTermination(timeout, unit);
-    }
-
-    @Override
-    public ChannelFuture register(Channel channel) {
-        return delegate.register(channel);
-    }
-
-    @Override
-    public ChannelFuture register(Channel channel, ChannelPromise promise) {
-        return delegate.register(channel, promise);
     }
 
     @Override

@@ -87,7 +87,7 @@ public class SockJsHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
     }
 
     @Override
-    public void channelRead0(final ChannelHandlerContext ctx, final FullHttpRequest request) throws Exception {
+    public void messageReceived(final ChannelHandlerContext ctx, final FullHttpRequest request) throws Exception {
         final String path = new QueryStringDecoder(request.getUri()).path();
         for (SockJsServiceFactory factory : factories.values()) {
             if (path.startsWith(factory.config().prefix())) {

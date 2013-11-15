@@ -50,7 +50,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
  */
 public class RawWebSocketTransport extends SimpleChannelInboundHandler<Object> {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(RawWebSocketTransport.class);
-    private static final AttributeKey<HttpRequest> REQUEST_KEY = new AttributeKey<HttpRequest>("raw.ws.request.key");
+    private static final AttributeKey<HttpRequest> REQUEST_KEY = AttributeKey.valueOf("raw.ws.request.key");
     private final SockJsConfig config;
     private final SockJsService service;
     private WebSocketServerHandshaker handshaker;
@@ -61,7 +61,7 @@ public class RawWebSocketTransport extends SimpleChannelInboundHandler<Object> {
     }
 
     @Override
-    protected void channelRead0(final ChannelHandlerContext ctx, final Object msg) throws Exception {
+    protected void messageReceived(final ChannelHandlerContext ctx, final Object msg) throws Exception {
         if (msg instanceof FullHttpRequest) {
             handleHttpRequest(ctx, (FullHttpRequest) msg);
         } else if (msg instanceof WebSocketFrame) {

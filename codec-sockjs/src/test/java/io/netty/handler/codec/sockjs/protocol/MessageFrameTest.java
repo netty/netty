@@ -28,12 +28,14 @@ public class MessageFrameTest {
     public void messages() {
         final MessageFrame messageFrame = new MessageFrame("first", "second", "third");
         assertThat(messageFrame.messages(), hasItems("first", "second", "third"));
+        messageFrame.release();
     }
 
     @Test
     public void content() {
         final MessageFrame messageFrame = new MessageFrame("first", "second");
         assertThat(messageFrame.content().toString(CharsetUtil.UTF_8), equalTo("a[\"first\",\"second\"]"));
+        messageFrame.release();
     }
 
 }

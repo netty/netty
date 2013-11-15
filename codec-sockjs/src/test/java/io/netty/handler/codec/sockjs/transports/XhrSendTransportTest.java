@@ -84,6 +84,7 @@ public class XhrSendTransportTest {
         assertThat(response.getStatus(), equalTo(HttpResponseStatus.INTERNAL_SERVER_ERROR));
         assertThat(response.getProtocolVersion(), equalTo(HttpVersion.HTTP_1_1));
         assertThat(response.content().toString(CharsetUtil.UTF_8), equalTo("Payload expected."));
+        response.release();
     }
 
     @Test
@@ -94,6 +95,7 @@ public class XhrSendTransportTest {
         assertThat(response.getProtocolVersion(), equalTo(HttpVersion.HTTP_1_1));
         assertThat(response.content().capacity(), is(0));
         verifyDefaultResponseHeaders(response, Transports.CONTENT_TYPE_PLAIN);
+        response.release();
     }
 
     @Test
@@ -104,6 +106,7 @@ public class XhrSendTransportTest {
         assertThat(response.getProtocolVersion(), equalTo(HttpVersion.HTTP_1_1));
         verifyContentType(response, Transports.CONTENT_TYPE_PLAIN);
         assertThat(response.content().toString(UTF_8), equalTo("Broken JSON encoding."));
+        response.release();
     }
 
     private FullHttpResponse processHttpRequest(final FullHttpRequest request) {

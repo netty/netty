@@ -27,6 +27,7 @@ public class CloseFrameTest {
     public void content() {
         final CloseFrame closeFrame = new CloseFrame(3000, "Go away!");
         assertThat(closeFrame.content().toString(CharsetUtil.UTF_8), equalTo("c[3000,\"Go away!\"]"));
+        closeFrame.release();
     }
 
 }

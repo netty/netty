@@ -54,7 +54,7 @@ import org.codehaus.jackson.JsonParseException;
 public class WebSocketTransport extends SimpleChannelInboundHandler<Object> {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketTransport.class);
-    private static final AttributeKey<HttpRequest> REQUEST_KEY = new AttributeKey<HttpRequest>("request.key");
+    private static final AttributeKey<HttpRequest> REQUEST_KEY = AttributeKey.valueOf("request.key");
     private final SockJsConfig config;
     private WebSocketServerHandshaker handshaker;
     private boolean passMessage = true;
@@ -64,7 +64,7 @@ public class WebSocketTransport extends SimpleChannelInboundHandler<Object> {
     }
 
     @Override
-    protected void channelRead0(final ChannelHandlerContext ctx, final Object msg) throws Exception {
+    protected void messageReceived(final ChannelHandlerContext ctx, final Object msg) throws Exception {
         if (msg instanceof FullHttpRequest) {
             handleHttpRequest(ctx, (FullHttpRequest) msg);
         } else if (msg instanceof WebSocketFrame) {
@@ -151,6 +151,8 @@ public class WebSocketTransport extends SimpleChannelInboundHandler<Object> {
                         ctx.pipeline().remove(CorsInboundHandler.class);
                         ctx.pipeline().remove(CorsOutboundHandler.class);
                         ctx.pipeline().addLast(new WebSocketSendHandler());
+                    } else {
+                        future.cause().printStackTrace();
                     }
                 }
             });

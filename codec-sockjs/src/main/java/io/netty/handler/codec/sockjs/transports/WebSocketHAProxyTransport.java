@@ -43,7 +43,7 @@ import org.codehaus.jackson.JsonParseException;
  */
 public class WebSocketHAProxyTransport extends SimpleChannelInboundHandler<Object> {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketHAProxyTransport.class);
-    private static final AttributeKey<HttpRequest> REQUEST_KEY = new AttributeKey<HttpRequest>("ha-request.key");
+    private static final AttributeKey<HttpRequest> REQUEST_KEY = AttributeKey.valueOf("ha-request.key");
     private WebSocketServerHandshaker handshaker;
     private final WebSocketHAProxyHandshaker haHandshaker;
 
@@ -52,7 +52,7 @@ public class WebSocketHAProxyTransport extends SimpleChannelInboundHandler<Objec
     }
 
     @Override
-    protected void channelRead0(final ChannelHandlerContext ctx, final Object msg) throws Exception {
+    protected void messageReceived(final ChannelHandlerContext ctx, final Object msg) throws Exception {
         if (msg instanceof ByteBuf) {
             handleContent(ctx, (ByteBuf) msg);
         } else if (msg instanceof WebSocketFrame) {

@@ -78,13 +78,13 @@ public class CorsInboundHandlerTest {
 
     @Test
     public void verifyChannelAttributesNotPreflightRequestDefaults() {
-        final HttpRequest httpRequest = createHttpRequest(HttpMethod.GET);
+        final FullHttpRequest httpRequest = createHttpRequest(HttpMethod.GET);
         final EmbeddedChannel channel = new EmbeddedChannel(new CorsInboundHandler());
         channel.writeInbound(httpRequest);
         final CorsMetadata corsMetadata = channel.attr(CorsInboundHandler.CORS).get();
         assertThat(corsMetadata.origin(), is("*"));
         assertThat(corsMetadata.hasHeaders(), is(false));
-        assertThat((HttpRequest) channel.readInbound(), equalTo(httpRequest));
+        assertThat((FullHttpRequest) channel.readInbound(), equalTo(httpRequest));
         channel.finish();
     }
 

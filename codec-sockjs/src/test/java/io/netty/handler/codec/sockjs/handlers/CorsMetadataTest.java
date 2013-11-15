@@ -40,4 +40,12 @@ public class CorsMetadataTest {
         assertThat(md.hasHeaders(), is(false));
     }
 
+    @Test
+    public void emptyAccessControllRequestHeader() {
+        final CorsMetadata md = new CorsMetadata("*", "");
+        assertThat(md.origin(), equalTo("*"));
+        assertThat(md.headers(), is(nullValue()));
+        assertThat(md.hasHeaders(), is(false));
+    }
+
 }

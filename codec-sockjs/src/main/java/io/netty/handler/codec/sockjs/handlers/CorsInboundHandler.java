@@ -44,10 +44,10 @@ import io.netty.util.ReferenceCountUtil;
  */
 public class CorsInboundHandler extends SimpleChannelInboundHandler<HttpRequest> {
 
-    static final AttributeKey<CorsMetadata> CORS = new AttributeKey<CorsMetadata>("cors.metadata");
+    static final AttributeKey<CorsMetadata> CORS = AttributeKey.valueOf("cors.metadata");
 
     @Override
-    public void channelRead0(final ChannelHandlerContext ctx, final HttpRequest request) throws Exception {
+    public void messageReceived(final ChannelHandlerContext ctx, final HttpRequest request) throws Exception {
         final CorsMetadata metadata = extractCorsMetadata(request);
         if (isPreflightRequest(request)) {
             handlePreflight(ctx, metadata, request);

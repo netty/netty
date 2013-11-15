@@ -43,7 +43,7 @@ public final class CorsMetadata {
      */
     public CorsMetadata(final String origin, final String headers) {
         this.origin = origin == null || origin.equals("null") ? "*" : origin;
-        this.headers = headers;
+        this.headers = headers != null && headers.length() == 0 ? null : headers;
     }
 
     /**

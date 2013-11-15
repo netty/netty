@@ -44,11 +44,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.EventLoop;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.ClientCookieEncoder;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -67,13 +65,11 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocket00FrameEncoder;
-import io.netty.handler.codec.http.websocketx.WebSocket13FrameDecoder;
-import io.netty.handler.codec.http.websocketx.WebSocket13FrameEncoder;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 import io.netty.handler.codec.sockjs.AbstractSockJsServiceFactory;
 import io.netty.handler.codec.sockjs.CloseService;
-import io.netty.handler.codec.sockjs.SockJsConfig;
 import io.netty.handler.codec.sockjs.EchoService;
+import io.netty.handler.codec.sockjs.SockJsConfig;
 import io.netty.handler.codec.sockjs.SockJsService;
 import io.netty.handler.codec.sockjs.SockJsServiceFactory;
 import io.netty.handler.codec.sockjs.handlers.CorsInboundHandler;
@@ -81,7 +77,8 @@ import io.netty.handler.codec.sockjs.handlers.CorsOutboundHandler;
 import io.netty.handler.codec.sockjs.handlers.SockJsHandler;
 import io.netty.handler.codec.sockjs.transports.EventSourceTransport;
 import io.netty.handler.codec.sockjs.transports.Transports;
-import io.netty.handler.codec.sockjs.transports.WebSocketTransport;
+import io.netty.handler.codec.sockjs.util.ChannelUtil;
+import io.netty.handler.codec.sockjs.util.HttpUtil;
 import io.netty.handler.codec.sockjs.util.JsonUtil;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
@@ -642,11 +639,11 @@ public class SockJsProtocolTest {
     @Test
     public void webSocketHybi10Firefox602ConnectionHeader() throws Exception {
         final SockJsServiceFactory echoFactory = echoService();
-        final EmbeddedChannel ch = createWebSocketChannel(echoFactory.config());
-        final FullHttpRequest request = webSocketUpgradeRequest("/websocket", WebSocketVersion.V08);
+        final EmbeddedChannel ch = ChannelUtil.webSocketChannel(echoFactory.config());
+        final FullHttpRequest request = HttpUtil.webSocketUpgradeRequest("/websocket", WebSocketVersion.V08);
         request.headers().set(Names.CONNECTION, "keep-alive, Upgrade");
         ch.writeInbound(request);
-        final FullHttpResponse response = (FullHttpResponse) ch.readOutbound();
+        final HttpResponse response = HttpUtil.decode(ch);
         assertThat(response.getStatus(), is(HttpResponseStatus.SWITCHING_PROTOCOLS));
         assertThat(response.headers().get(CONNECTION), equalTo("Upgrade"));
     }
@@ -1707,10 +1704,10 @@ public class SockJsProtocolTest {
 
     private void verifyHeaders(final WebSocketVersion version) throws Exception {
         final SockJsConfig config = SockJsConfig.withPrefix("/echo").build();
-        final EmbeddedChannel ch = createWebSocketChannel(config);
-        final FullHttpRequest request = webSocketUpgradeRequest("/websocket", version);
+        final EmbeddedChannel ch = ChannelUtil.webSocketChannel(config);
+        final FullHttpRequest request = HttpUtil.webSocketUpgradeRequest("/websocket", version);
         ch.writeInbound(request);
-        final FullHttpResponse response = (FullHttpResponse) ch.readOutbound();
+        final HttpResponse response = HttpUtil.decode(ch);
         assertThat(response.getStatus(), is(HttpResponseStatus.SWITCHING_PROTOCOLS));
         assertThat(response.headers().get(CONNECTION), equalTo("Upgrade"));
         assertThat(response.headers().get(UPGRADE), equalTo("websocket"));
@@ -2082,7 +2079,7 @@ public class SockJsProtocolTest {
     }
 
     private EmbeddedChannel channelForService(final SockJsServiceFactory service) {
-        return new TestEmbeddedChannel(
+        return new EmbeddedChannel(
                 new CorsInboundHandler(),
                 new SockJsHandler(service),
                 new CorsOutboundHandler(),
@@ -2090,7 +2087,7 @@ public class SockJsProtocolTest {
     }
 
     private EmbeddedChannel wsChannelForService(final SockJsServiceFactory service) {
-        final EmbeddedChannel ch = new TestEmbeddedChannel(
+        final EmbeddedChannel ch = new EmbeddedChannel(
                         new HttpRequestDecoder(),
                         new HttpResponseEncoder(),
                         new CorsInboundHandler(),
@@ -2099,25 +2096,6 @@ public class SockJsProtocolTest {
                         new ContentRetainer());
         removeLastInboundMessageHandlers(ch);
         return ch;
-    }
-
-    private EmbeddedChannel createWebSocketChannel(final SockJsConfig config) throws Exception {
-        return new TestEmbeddedChannel(
-                new WebSocket13FrameEncoder(true),
-                new WebSocket13FrameDecoder(true, false, 2048),
-                new WebSocketTransport(config));
-    }
-
-    private class TestEmbeddedChannel extends EmbeddedChannel {
-
-        public TestEmbeddedChannel(final ChannelHandler... handlers) {
-            super(handlers);
-        }
-
-        @Override
-        public EventLoop eventLoop() {
-            return new StubEmbeddedEventLoop(super.eventLoop());
-        }
     }
 
     private FullHttpResponse infoForMockService(final SockJsServiceFactory factory) {
@@ -2129,7 +2107,7 @@ public class SockJsProtocolTest {
     }
 
     private EmbeddedChannel jsonpChannelForService(final SockJsServiceFactory service) {
-        return new TestEmbeddedChannel(new CorsInboundHandler(),
+        return new EmbeddedChannel(new CorsInboundHandler(),
                 new SockJsHandler(service),
                 new ContentRetainer());
     }

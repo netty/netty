@@ -49,7 +49,7 @@ public abstract class AbstractSendTransport extends SimpleChannelInboundHandler<
     }
 
     @Override
-    public void channelRead0(final ChannelHandlerContext ctx, final FullHttpRequest request) throws Exception {
+    public void messageReceived(final ChannelHandlerContext ctx, final FullHttpRequest request) throws Exception {
         final String content = getContent(request);
         if (noContent(content)) {
             ctx.writeAndFlush(internalServerErrorResponse(request.getProtocolVersion(), "Payload expected."))
