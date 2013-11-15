@@ -35,6 +35,7 @@ import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory;
 import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.StringUtil;
 
 import java.util.logging.Level;
@@ -59,6 +60,8 @@ public class AutobahnServerHandler extends ChannelInboundHandlerAdapter {
             handleHttpRequest(ctx, (FullHttpRequest) msg);
         } else if (msg instanceof WebSocketFrame) {
             handleWebSocketFrame(ctx, (WebSocketFrame) msg);
+        } else {
+            ReferenceCountUtil.release(msg);
         }
     }
 
@@ -104,13 +107,13 @@ public class AutobahnServerHandler extends ChannelInboundHandlerAdapter {
         if (frame instanceof CloseWebSocketFrame) {
             handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame);
         } else if (frame instanceof PingWebSocketFrame) {
-            ctx.write(new PongWebSocketFrame(frame.isFinalFragment(), frame.rsv(), frame.content()));
+            ctx.write(new PongWebSocketFrame(frame.isFinalFragment(), frame.rsv(), frame.content()), ctx.voidPromise());
         } else if (frame instanceof TextWebSocketFrame) {
-            ctx.write(frame);
+            ctx.write(frame, ctx.voidPromise());
         } else if (frame instanceof BinaryWebSocketFrame) {
-            ctx.write(frame);
+            ctx.write(frame, ctx.voidPromise());
         } else if (frame instanceof ContinuationWebSocketFrame) {
-            ctx.write(frame);
+            ctx.write(frame, ctx.voidPromise());
         } else if (frame instanceof PongWebSocketFrame) {
             frame.release();
             // Ignore
@@ -139,7 +142,6 @@ public class AutobahnServerHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        cause.printStackTrace();
         ctx.close();
     }
 
