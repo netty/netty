@@ -25,6 +25,7 @@ import java.nio.ByteOrder;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
+import java.nio.charset.CharacterCodingException;
 
 /**
  * Big endian Java heap buffer implementation.
@@ -444,5 +445,10 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public ByteBuf unwrap() {
         return null;
+    }
+
+    @Override
+    protected int encodeUtf8(CharSequence seq, int index, int length) throws CharacterCodingException {
+        return ByteBufUtil.encodeUtf8(seq, array, index + arrayOffset(), length);
     }
 }

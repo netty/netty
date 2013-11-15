@@ -325,8 +325,7 @@
           </signature>
           <ignores>
             <ignore>sun.misc.Unsafe</ignore>
-            <ignore>sun.misc.Cleaner</ignore>
-
+            <ignore>sun.misc.Cleaner</ignore> ne
             <ignore>java.util.zip.Deflater</ignore>
 
             <!-- Used for NIO UDP multicast -->

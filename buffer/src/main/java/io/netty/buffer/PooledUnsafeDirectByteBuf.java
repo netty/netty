@@ -27,6 +27,7 @@ import java.nio.ByteOrder;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
+import java.nio.charset.CharacterCodingException;
 
 final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
 
@@ -381,5 +382,10 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     @Override
     protected Recycler<?> recycler() {
         return RECYCLER;
+    }
+
+    @Override
+    protected int encodeUtf8(CharSequence seq, int index, int length) throws CharacterCodingException {
+        return ByteBufUtil.encodeUtf8(seq, memoryAddress, index, length);
     }
 }

@@ -13,8 +13,29 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+/*
+ * Adaptation of http://bjoern.hoehrmann.de/utf-8/decoder/dfa/
+ *
+ * Copyright (c) 2008-2009 Bjoern Hoehrmann <bjoern@hoehrmann.de>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software
+ * and associated documentation files (the "Software"), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify, merge, publish, distribute,
+ * sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all copies or
+ * substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+ * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
 package io.netty.buffer;
 
+import io.netty.util.CharsetUtil;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.internal.PlatformDependent;
@@ -25,15 +46,40 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.CharBuffer;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
+import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
+import java.nio.charset.CoderResult;
 
 
 /**
  * A skeletal implementation of a buffer.
  */
 public abstract class AbstractByteBuf extends ByteBuf {
+
+    private static final int UTF8_ACCEPT = 0;
+    private static final int UTF8_REJECT = 12;
+    private static final char UTF8_REPLACEMENT = '\ufffd';
+
+    private static final byte[] UTF8_TYPES = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 7, 7, 7, 7,
+            7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 8,
+            8, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+            2, 2, 10, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 3, 3, 11, 6, 6, 6, 5, 8, 8, 8, 8, 8,
+            8, 8, 8, 8, 8, 8 };
+
+    private static final byte[] UTF8_STATES = { 0, 12, 24, 36, 60, 96, 84, 12, 12, 12, 48, 72, 12, 12,
+            12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 0, 12, 12, 12, 12, 12, 0, 12, 0, 12, 12,
+            12, 24, 12, 12, 12, 12, 12, 24, 12, 24, 12, 12, 12, 12, 12, 12, 12, 12, 12, 24, 12, 12,
+            12, 12, 12, 24, 12, 12, 12, 12, 12, 12, 12, 24, 12, 12, 12, 12, 12, 12, 12, 12, 12, 36,
+            12, 36, 12, 12, 12, 36, 12, 12, 12, 12, 12, 36, 12, 36, 12, 12, 12, 36, 12, 12, 12, 12,
+            12, 12, 12, 12, 12, 12 };
 
     static final ResourceLeakDetector<ByteBuf> leakDetector = new ResourceLeakDetector<ByteBuf>(ByteBuf.class);
 
@@ -948,7 +994,16 @@ public abstract class AbstractByteBuf extends ByteBuf {
         if (length == 0) {
             return "";
         }
+        // TODO: Optimize index / length check
+        checkIndex(index);
+        checkReadableBytes(length);
 
+        if (charset.equals(CharsetUtil.US_ASCII)) {
+            return decodeUsAscii(index, length);
+        }
+        if (charset.equals(CharsetUtil.UTF_8)) {
+            return decodeUtf8(index, length);
+        }
         ByteBuffer nioBuffer;
         if (nioBufferCount() == 1) {
             nioBuffer = nioBuffer(index, length);
@@ -1171,6 +1226,156 @@ public abstract class AbstractByteBuf extends ByteBuf {
     protected final void ensureAccessible() {
         if (refCnt() == 0) {
             throw new IllegalReferenceCountException(0);
+        }
+    }
+
+    @Override
+    public ByteBuf writeCharSequence(CharSequence seq, Charset charset) {
+        writerIndex += setCharSequence0(writerIndex, seq, charset);
+        return this;
+    }
+
+    @Override
+    public ByteBuf setCharSequence(int index, CharSequence seq, Charset charset) {
+        setCharSequence0(index, seq, charset);
+        return this;
+    }
+
+    private int setCharSequence0(int index, CharSequence seq, Charset charset) {
+        // check if we can write the seq in an optimized way
+        if (charset.equals(CharsetUtil.US_ASCII)) {
+            int length = seq.length();
+            checkIndex(index, length);
+            return encodeUsAscii(seq, index);
+        }
+        if (charset.equals(CharsetUtil.UTF_8)) {
+            int length = seq.length() * 4;
+            checkIndex(index, length);
+            try {
+                return encodeUtf8(seq, index, length);
+            } catch (CharacterCodingException e) {
+                throw new IllegalStateException(e);
+            }
+        }
+        if (nioBufferCount() == 1) {
+            return ByteBufUtil.encodeCharBuffer(this, index, CharBuffer.wrap(seq), charset);
+        } else {
+            byte[] bytes = seq.toString().getBytes(charset);
+            setBytes(index, bytes);
+            return bytes.length;
+        }
+    }
+
+    private int encodeUsAscii(CharSequence str, int index) {
+        int length = str.length();
+        for (int i = 0; i < length; i++) {
+            _setByte(index++, (byte) str.charAt(i));
+        }
+        return length;
+    }
+
+    private String decodeUsAscii(int index, int length) {
+        // TODO: Maybe we want to have some pre-allocated char[] in a ThreadLocal
+        //       and only create a new one of the needed is bigger then the stored
+        //       this would safe us one allocation and also the collection of this.
+        char[] chars = new char[length];
+        for (int i = 0;  i < length; i++) {
+            chars[i] = (char) _getByte(index++);
+        }
+        return new String(chars);
+    }
+
+    // Based on:
+    // http://bjoern.hoehrmann.de/utf-8/decoder/dfa/
+    private String decodeUtf8(int index, int length) {
+        long end = index + length;
+        int out = 0;
+        // TODO: Maybe we want to have some pre-allocated char[] in a ThreadLocal
+        //       and only create a new one of the needed is bigger then the stored
+        //       this would safe us one allocation and also the collection of this.
+        char[] chars = new char[length];
+        int codep = 0;
+        int state = UTF8_ACCEPT;
+        int prevState = state;
+        while (index < end) {
+            byte b = _getByte(index++);
+            byte type = UTF8_TYPES[b & 0xFF];
+
+            codep = state != UTF8_ACCEPT ? b & 0x3f | codep << 6 : 0xff >> type & b;
+
+            state = UTF8_STATES[state + type];
+
+            if (state == UTF8_ACCEPT) {
+                chars[out++] = (char) codep;
+            } else if (state == UTF8_REJECT) {
+                // Try to replace invalid sequences
+                chars[out++] = UTF8_REPLACEMENT;
+                state = UTF8_ACCEPT;
+                if (prevState != UTF8_ACCEPT) {
+                    index--;
+                }
+            }
+            prevState = state;
+        }
+        return new String(chars, 0, out);
+    }
+
+    // Based on:
+    //  * https://github.com/nitsanw/javanetperf/blob/psylobsaw/src/psy/lob/saw/CustomUtf8Encoder.java
+    //  * http://psy-lob-saw.blogspot.co.uk/2012/12/encode-utf-8-string-to-bytebuffer-faster.html
+    protected int encodeUtf8(CharSequence seq, int index, int length)  throws CharacterCodingException {
+        int startIndex = index;
+        int dstLimit = index + length;
+        int sourceOffset = 0;
+        int sourceLength = seq.length();
+        int dlASCII = index + Math.min(sourceLength, dstLimit - index);
+        // handle ascii encoded strings in an optimised loop
+        int c;
+        while (index < dlASCII && (c = seq.charAt(sourceOffset)) < 128) {
+            _setByte(index++, (byte) c);
+            sourceOffset++;
+        }
+
+        try {
+            while (sourceOffset < sourceLength) {
+                c = seq.charAt(sourceOffset);
+                if (c < 128) {
+                    if (index >= length) {
+                        CoderResult.OVERFLOW.throwException();
+                    }
+                    _setByte(index++, (byte) c);
+                } else if (c < 2048) {
+                    if (length - index < 2) {
+                        CoderResult.OVERFLOW.throwException();
+                    }
+                    _setByte(index++, (byte) (0xC0 | (c >> 6)));
+                    _setByte(index++, (byte) (0x80 | (c & 0x3F)));
+                } else if (ByteBufUtil.isSurrogate(c)) {
+                    int uc = ByteBufUtil.parseUtf8((char) c, seq, sourceOffset, sourceLength);
+                    if (uc == -1) {
+                        return index - startIndex;
+                    }
+                    if (length - index < 4) {
+                        CoderResult.OVERFLOW.throwException();
+                    }
+                    _setByte(index++, (byte) (0xF0 | uc >> 18));
+                    _setByte(index++, (byte) (0x80 | uc >> 12 & 0x3F));
+                    _setByte(index++, (byte) (0x80 | uc >> 6 & 0x3F));
+                    _setByte(index++, (byte) (0x80 | uc & 0x3F));
+                    sourceOffset++;
+                } else {
+                    if (length - index < 3) {
+                        CoderResult.OVERFLOW.throwException();
+                    }
+                    _setByte(index++, (byte) (0xE0 | c >> 12));
+                    _setByte(index++, (byte) (0x80 | c >> 6 & 0x3F));
+                    _setByte(index++, (byte) (0x80 | c & 0x3F));
+                }
+                sourceOffset++;
+            }
+            return index - startIndex;
+        } catch (CharacterCodingException e) {
+            throw new IllegalStateException(e);
         }
     }
 }

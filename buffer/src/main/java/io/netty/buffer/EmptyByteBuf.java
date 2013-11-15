@@ -841,6 +841,16 @@ public final class EmptyByteBuf extends ByteBuf {
         return false;
     }
 
+    @Override
+    public ByteBuf writeCharSequence(CharSequence seq, Charset charset) {
+        throw new IndexOutOfBoundsException();
+    }
+
+    @Override
+    public ByteBuf setCharSequence(int index, CharSequence seq, Charset charset) {
+        throw new IndexOutOfBoundsException();
+    }
+
     private ByteBuf checkIndex(int index) {
         if (index != 0) {
             throw new IndexOutOfBoundsException();

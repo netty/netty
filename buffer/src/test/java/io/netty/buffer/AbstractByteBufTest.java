@@ -30,6 +30,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.WritableByteChannel;
+import java.nio.charset.Charset;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -1957,6 +1958,26 @@ public abstract class AbstractByteBufTest {
         for (int i = 1; nioBuf.hasRemaining(); i++) {
             assertEquals(data[i], nioBuf.get());
         }
+    }
+
+    public void testWriteCharsequenceUS_ASCII() {
+        testWriteCharsequence0(CharsetUtil.US_ASCII);
+    }
+
+    @Test
+    public void testWriteCharsequenceUTF_8() {
+        testWriteCharsequence0(CharsetUtil.UTF_8);
+    }
+
+    private void testWriteCharsequence0(Charset charset) {
+        String text = "This is a test";
+        byte[] data = text.getBytes(charset);
+        final ByteBuf buffer = freeLater(newBuffer(64));
+        buffer.writeCharSequence(text, charset);
+        assertEquals(data.length, buffer.readableBytes());
+        byte[] bytes = new byte[data.length];
+        buffer.readBytes(bytes);
+        assertArrayEquals(data, bytes);
     }
 
     static final class TestGatheringByteChannel implements GatheringByteChannel {

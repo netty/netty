@@ -836,4 +836,16 @@ final class UnreleasableByteBuf extends ByteBuf {
     public boolean release(int decrement) {
         return false;
     }
+
+    @Override
+    public ByteBuf writeCharSequence(CharSequence seq, Charset charset) {
+        buf.writeCharSequence(seq, charset);
+        return this;
+    }
+
+    @Override
+    public ByteBuf setCharSequence(int index, CharSequence seq, Charset charset) {
+        buf.setCharSequence(index, seq, charset);
+        return this;
+    }
 }
