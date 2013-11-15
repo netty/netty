@@ -20,7 +20,6 @@ import io.netty.util.DefaultAttributeMap;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.ThreadLocalRandom;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -49,7 +48,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private MessageSizeEstimator.Handle estimatorHandle;
 
     private final Channel parent;
-    private final long hashCode = ThreadLocalRandom.current().nextLong();
+    private final ChannelId id = DefaultChannelId.newInstance();
     private final Unsafe unsafe;
     private final DefaultChannelPipeline pipeline;
     private final ChannelFuture succeededFuture = new SucceededChannelFuture(this, null);
@@ -77,6 +76,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         this.eventLoop = validate(eventLoop);
         unsafe = newUnsafe();
         pipeline = new DefaultChannelPipeline(this);
+    }
+
+    @Override
+    public final ChannelId id() {
+        return id;
     }
 
     @Override
@@ -271,7 +275,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      */
     @Override
     public final int hashCode() {
-        return (int) hashCode;
+        return id.hashCode();
     }
 
     /**
@@ -289,21 +293,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             return 0;
         }
 
-        long ret = hashCode - o.hashCode();
-        if (ret > 0) {
-            return 1;
-        }
-        if (ret < 0) {
-            return -1;
-        }
-
-        ret = System.identityHashCode(this) - System.identityHashCode(o);
-        if (ret != 0) {
-            return (int) ret;
-        }
-
-        // Jackpot! - different objects with same hashes
-        throw new Error();
+        return id().compareTo(o.id());
     }
 
     /**
@@ -331,11 +321,30 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 srcAddr = remoteAddr;
                 dstAddr = localAddr;
             }
-            strVal = String.format("[id: 0x%08x, %s %s %s]", (int) hashCode, srcAddr, active? "=>" : ":>", dstAddr);
+
+            StringBuilder buf = new StringBuilder(96);
+            buf.append("[id: 0x");
+            buf.append(id.asShortText());
+            buf.append(", ");
+            buf.append(srcAddr);
+            buf.append(active? " => " : " :> ");
+            buf.append(dstAddr);
+            buf.append(']');
+            strVal = buf.toString();
         } else if (localAddr != null) {
-            strVal = String.format("[id: 0x%08x, %s]", (int) hashCode, localAddr);
+            StringBuilder buf = new StringBuilder(64);
+            buf.append("[id: 0x");
+            buf.append(id.asShortText());
+            buf.append(", ");
+            buf.append(localAddr);
+            buf.append(']');
+            strVal = buf.toString();
         } else {
-            strVal = String.format("[id: 0x%08x]", (int) hashCode);
+            StringBuilder buf = new StringBuilder(16);
+            buf.append("[id: 0x");
+            buf.append(id.asShortText());
+            buf.append(']');
+            strVal = buf.toString();
         }
 
         strValActive = active;
