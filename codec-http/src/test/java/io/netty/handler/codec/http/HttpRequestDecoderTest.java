@@ -19,6 +19,7 @@ package io.netty.handler.codec.http;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
+
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -158,5 +159,17 @@ public class HttpRequestDecoderTest {
 
         Assert.assertFalse(channel.finish());
         Assert.assertNull(channel.readInbound());
+    }
+
+    @Test
+    public void testEmptyHeaderValue() {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
+        String crlf = "\r\n";
+        String request =  "GET /some/path HTTP/1.1" + crlf +
+                "Host: localhost" + crlf +
+                "EmptyHeader:" + crlf + crlf;
+        channel.writeInbound(Unpooled.wrappedBuffer(request.getBytes(CharsetUtil.US_ASCII)));
+        HttpRequest req = (HttpRequest) channel.readInbound();
+        Assert.assertEquals("", req.headers().get("EmptyHeader"));
     }
 }
