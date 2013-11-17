@@ -634,6 +634,30 @@ public class SockJsProtocolTest {
     }
 
     /*
+     * Equivalent to WebsocketHybi10.test_transport, but for Hybi17, in sockjs-protocol-0.3.3.py.
+     */
+    @Test
+    public void webSocketHybi17TestTransport() throws Exception {
+        webSocketTestTransport(WebSocketVersion.V13);
+    }
+
+    /*
+     * Equivalent to WebsocketHybi10.test_close, but for Hybi17, in sockjs-protocol-0.3.3.py.
+     */
+    @Test
+    public void webSocketHybi17TestClose() throws Exception {
+        webSocketTestClose(WebSocketVersion.V13);
+    }
+
+    /*
+     * Equivalent to WebsocketHybi10.test_broken_json, but for Hybi17, in sockjs-protocol-0.3.3.py.
+     */
+    @Test
+    public void webSocketHybi17TestBrokenJSON() throws Exception {
+        webSocketTestBrokenJSON(WebSocketVersion.V13);
+    }
+
+    /*
      * Equivalent to WebsocketHybi10.test_firefox_602_connection_header in sockjs-protocol-0.3.3.py.
      */
     @Test
