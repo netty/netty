@@ -123,6 +123,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     private int contentRead;
     private long contentLength = Long.MIN_VALUE;
     private State state = State.SKIP_CONTROL_CHARS;
+    private StringBuilder sb;
 
     /**
      * The internal state of {@link HttpObjectDecoder}.
@@ -201,7 +202,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 // FALL THROUGH
             }
             case READ_INITIAL: try {
-                StringBuilder sb = BUILDERS.get();
+                StringBuilder sb = builder();
 
                 HttpMessage msg = splitInitialLine(sb, buffer, maxInitialLineLength);
                 if (msg == null) {
@@ -217,7 +218,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 return;
             }
             case READ_HEADER: try {
-                State nextState = readHeaders(buffer, BUILDERS.get());
+                State nextState = readHeaders(buffer, builder());
                 if (nextState == state) {
                     // was not able to consume whole header
                     return;
@@ -438,7 +439,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 return;
             }
             case READ_CHUNK_FOOTER: try {
-                LastHttpContent trailer = readTrailingHeaders(buffer, BUILDERS.get());
+                LastHttpContent trailer = readTrailingHeaders(buffer, builder());
                 if (trailer == null) {
                     // not enough data
                     return;
@@ -868,9 +869,8 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         return Integer.parseInt(hex, 16);
     }
 
-    private static StringBuilder readLine(ByteBuf buffer, int maxLineLength) {
-        StringBuilder sb = BUILDERS.get();
-        sb.setLength(0);
+    private StringBuilder readLine(ByteBuf buffer, int maxLineLength) {
+        StringBuilder sb = builder();
         int lineLength = 0;
         buffer.markReaderIndex();
 
@@ -1062,5 +1062,15 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             }
         }
         return result;
+    }
+
+    private StringBuilder builder() {
+        if (sb == null) {
+            // Obtain the StringBuilder from the ThreadLocal and store it for later usage.
+            // This minimize the ThreadLocal.get() operations a lot and so eliminate some overhead
+            sb = BUILDERS.get();
+        }
+        sb.setLength(0);
+        return sb;
     }
 }

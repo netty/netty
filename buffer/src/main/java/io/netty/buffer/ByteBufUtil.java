@@ -324,7 +324,7 @@ public final class ByteBufUtil {
             if (!cr.isUnderflow()) {
                 cr.throwException();
             }
-            dst.writerIndex(dst.writerIndex() + (dstBuf.position() - pos));
+            dst.writerIndex(dst.writerIndex() + dstBuf.position() - pos);
             release = false;
             return dst;
         } catch (CharacterCodingException x) {
