@@ -237,7 +237,8 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                     t = newT;
                 }
 
-                connectPromise.setFailure(t);
+                // Use tryFailure() instead of setFailure() to avoid the race against cancel().
+                connectPromise.tryFailure(t);
                 closeIfClosed();
             } finally {
                 // Check for null as the connectTimeoutFuture is only created if a connectTimeoutMillis > 0 is used
