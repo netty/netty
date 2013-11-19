@@ -79,7 +79,7 @@ public class CorsInboundHandler extends SimpleChannelInboundHandler<HttpRequest>
     }
 
     private static boolean isPollingTransport(final String uri) {
-        return uri.contains(Transports.Types.XHR.path());
+        return uri.contains(Transports.Type.XHR.path());
     }
 
     private static boolean isPreflightRequest(final HttpRequest request) {

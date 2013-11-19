@@ -43,7 +43,6 @@ import io.netty.handler.codec.sockjs.transports.JsonpPollingTransport;
 import io.netty.handler.codec.sockjs.transports.JsonpSendTransport;
 import io.netty.handler.codec.sockjs.transports.RawWebSocketTransport;
 import io.netty.handler.codec.sockjs.transports.Transports;
-import io.netty.handler.codec.sockjs.transports.Transports.Types;
 import io.netty.handler.codec.sockjs.transports.WebSocketTransport;
 import io.netty.handler.codec.sockjs.transports.XhrPollingTransport;
 import io.netty.handler.codec.sockjs.transports.XhrSendTransport;
@@ -112,7 +111,7 @@ public class SockJsHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
             writeResponse(ctx.channel(), request, Info.response(factory.config(), request));
         } else if (Iframe.matches(path)) {
             writeResponse(ctx.channel(), request, Iframe.response(factory.config(), request));
-        } else if (Transports.Types.WEBSOCKET.path().equals(path)) {
+        } else if (Transports.Type.WEBSOCKET.path().equals(path)) {
             addTransportHandler(new RawWebSocketTransport(factory.config(), factory.create()), ctx);
             ctx.fireChannelRead(request.retain());
         } else {
@@ -262,22 +261,48 @@ public class SockJsHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         }
     }
 
-    interface PathParams {
+    /**
+     * Represents HTTP path parameters in SockJS.
+     *
+     * The path consists of the following parts:
+     * http://server:port/prefix/serverId/sessionId/transport
+     *
+     */
+    public interface PathParams {
         boolean matches();
+
+        /**
+         * The serverId is chosen by the client and exists to make it easier to configure
+         * load balancers to enable sticky sessions.
+         *
+         * @return String the server id for this path.
+         */
         String serverId();
+
+        /**
+         * The sessionId is a unique random number which identifies the session.
+         *
+         * @return String the session identifier for this path.
+         */
         String sessionId();
-        Types transport();
+
+        /**
+         * The type of transport.
+         *
+         * @return Transports.Type the type of the transport.
+         */
+        Transports.Type transport();
     }
 
     public static class MatchingSessionPath implements PathParams {
         private final String serverId;
         private final String sessionId;
-        private final Transports.Types transport;
+        private final Transports.Type transport;
 
         public MatchingSessionPath(final String serverId, final String sessionId, final String transport) {
             this.serverId = serverId;
             this.sessionId = sessionId;
-            this.transport = Transports.Types.valueOf(transport.toUpperCase());
+            this.transport = Transports.Type.valueOf(transport.toUpperCase());
         }
 
         @Override
@@ -296,7 +321,7 @@ public class SockJsHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         }
 
         @Override
-        public Types transport() {
+        public Transports.Type transport() {
             return transport;
         }
     }
@@ -319,7 +344,7 @@ public class SockJsHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         }
 
         @Override
-        public Types transport() {
+        public Transports.Type transport() {
             throw new UnsupportedOperationException("transport is not available in path");
         }
     }

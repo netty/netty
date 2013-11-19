@@ -56,7 +56,7 @@ public class EventSourceTransportTest {
     }
 
     private static EmbeddedChannel newStreamingChannel(final SockJsConfig config) {
-        final HttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, Transports.Types.EVENTSOURCE.path());
+        final HttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, Transports.Type.EVENTSOURCE.path());
         final EventSourceTransport transport = new EventSourceTransport(config, request);
         final EmbeddedChannel ch = new EmbeddedChannel(transport);
         return ch;

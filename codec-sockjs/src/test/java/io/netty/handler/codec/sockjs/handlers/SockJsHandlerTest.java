@@ -36,7 +36,7 @@ public class SockJsHandlerTest {
         assertThat(sessionPath.matches(), is(true));
         assertThat(sessionPath.serverId(), equalTo("000"));
         assertThat(sessionPath.sessionId(), equalTo("123"));
-        assertThat(sessionPath.transport(), equalTo(Transports.Types.XHR_SEND));
+        assertThat(sessionPath.transport(), equalTo(Transports.Type.XHR_SEND));
     }
 
 }

@@ -59,7 +59,7 @@ public final class Transports {
     public static final String JSESSIONID = "JSESSIONID";
     private static final String NO_CACHE_HEADER =  "no-store, no-cache, must-revalidate, max-age=0";
 
-    public enum Types {
+    public enum Type {
         WEBSOCKET,
         XHR,
         XHR_SEND,
