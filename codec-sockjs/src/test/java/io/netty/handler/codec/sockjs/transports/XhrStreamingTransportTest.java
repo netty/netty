@@ -33,12 +33,13 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.sockjs.SockJsConfig;
 import io.netty.handler.codec.sockjs.protocol.OpenFrame;
-import io.netty.handler.codec.sockjs.protocol.PreludeFrame;
 import io.netty.util.CharsetUtil;
 
 import org.junit.Test;
 
 public class XhrStreamingTransportTest {
+
+    private static final int PRELUDE_SIZE = 2048 + 1;
 
     @Test
     public void messageReceived() {
@@ -53,8 +54,8 @@ public class XhrStreamingTransportTest {
         verifyNoCacheHeaders(response);
 
         final DefaultHttpContent prelude = (DefaultHttpContent) ch.readOutbound();
-        assertThat(prelude.content().readableBytes(), is(PreludeFrame.CONTENT_SIZE + 1));
-        prelude.content().readBytes(Unpooled.buffer(PreludeFrame.CONTENT_SIZE + 1));
+        assertThat(prelude.content().readableBytes(), is(PRELUDE_SIZE));
+        prelude.content().readBytes(Unpooled.buffer(PRELUDE_SIZE));
 
         final DefaultHttpContent openResponse = (DefaultHttpContent) ch.readOutbound();
         assertThat(openResponse.content().toString(CharsetUtil.UTF_8), equalTo("o\n"));

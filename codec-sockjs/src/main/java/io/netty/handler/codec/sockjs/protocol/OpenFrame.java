@@ -27,7 +27,7 @@ import io.netty.util.CharsetUtil;
  */
 public class OpenFrame extends DefaultByteBufHolder implements Frame {
 
-    public static final String OPEN = "o";
+    static final String OPEN = "o";
     private static final ByteBuf OPEN_FRAME = unreleasableBuffer(copiedBuffer(OPEN, CharsetUtil.UTF_8));
 
     public OpenFrame() {

@@ -26,7 +26,7 @@ import io.netty.util.CharsetUtil;
  */
 public class HeartbeatFrame extends DefaultByteBufHolder implements Frame {
 
-    public static final String HEARTBEAT = "h";
+    private static final String HEARTBEAT = "h";
     private static final ByteBuf HEARTBEAT_FRAME = unreleasableBuffer(copiedBuffer(HEARTBEAT, CharsetUtil.UTF_8));
 
     public HeartbeatFrame() {

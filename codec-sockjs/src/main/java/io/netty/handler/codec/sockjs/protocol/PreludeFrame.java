@@ -26,7 +26,7 @@ import io.netty.buffer.Unpooled;
  */
 public class PreludeFrame extends DefaultByteBufHolder implements Frame {
 
-    public static final int CONTENT_SIZE = 2048;
+    static final int CONTENT_SIZE = 2048;
     private static final ByteBuf PRELUDE_FRAME = unreleasableBuffer(generateContent());
 
     public PreludeFrame() {
