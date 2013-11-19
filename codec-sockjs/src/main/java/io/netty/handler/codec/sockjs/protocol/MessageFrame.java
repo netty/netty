@@ -39,8 +39,12 @@ public class MessageFrame extends DefaultByteBufHolder implements Frame {
     }
 
     public MessageFrame(final String... messages) {
+        this(new ArrayList<String>(Arrays.asList(messages)));
+    }
+
+    public MessageFrame(final List<String> messages) {
         super(generateContent(messages));
-        this.messages = new ArrayList<String>(Arrays.asList(messages));
+        this.messages = messages;
     }
 
     public List<String> messages() {
@@ -48,18 +52,40 @@ public class MessageFrame extends DefaultByteBufHolder implements Frame {
     }
 
     @Override
+    public MessageFrame copy() {
+        return new MessageFrame(messages);
+    }
+
+    @Override
+    public MessageFrame duplicate() {
+        return new MessageFrame(messages);
+    }
+
+    @Override
+    public MessageFrame retain() {
+        super.retain();
+        return this;
+    }
+
+    @Override
+    public MessageFrame retain(int increment) {
+        super.retain(increment);
+        return this;
+    }
+
+    @Override
     public String toString() {
         return "MessageFrame[messages=" + messages + ']';
     }
 
-    private static ByteBuf generateContent(final String[] messages) {
-        final int size = messages.length;
+    private static ByteBuf generateContent(final List<String> messages) {
+        final int size = messages.size();
         final JsonStringEncoder jsonEndocder = new JsonStringEncoder();
         final ByteBuf content = Unpooled.buffer();
         content.writeByte('a').writeByte('[');
         for (int i = 0; i < size; i++) {
             content.writeByte('"');
-            final String escaped = escapeCharacters(jsonEndocder.quoteAsString(messages[i]));
+            final String escaped = escapeCharacters(jsonEndocder.quoteAsString(messages.get(i)));
             content.writeBytes(Unpooled.copiedBuffer(escaped, CharsetUtil.UTF_8)).writeByte('"');
             if (i < size - 1) {
                 content.writeByte(',');

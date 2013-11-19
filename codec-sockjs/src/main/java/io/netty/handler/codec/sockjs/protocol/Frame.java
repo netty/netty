@@ -22,4 +22,16 @@ import io.netty.buffer.ByteBufHolder;
  */
 public interface Frame extends ByteBufHolder {
 
+    @Override
+    Frame copy();
+
+    @Override
+    Frame duplicate();
+
+    @Override
+    Frame retain();
+
+    @Override
+    Frame retain(int increment);
+
 }

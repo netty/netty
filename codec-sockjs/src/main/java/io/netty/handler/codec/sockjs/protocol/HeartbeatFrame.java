@@ -24,13 +24,35 @@ import io.netty.util.CharsetUtil;
 /**
  * A heartbeat frame is sent by the server to keep the connection from breaking.
  */
-public class HeartbeatFrame extends DefaultByteBufHolder  implements Frame {
+public class HeartbeatFrame extends DefaultByteBufHolder implements Frame {
 
     public static final String HEARTBEAT = "h";
     private static final ByteBuf HEARTBEAT_FRAME = unreleasableBuffer(copiedBuffer(HEARTBEAT, CharsetUtil.UTF_8));
 
     public HeartbeatFrame() {
         super(HEARTBEAT_FRAME.duplicate());
+    }
+
+    @Override
+    public HeartbeatFrame copy() {
+        return new HeartbeatFrame();
+    }
+
+    @Override
+    public HeartbeatFrame duplicate() {
+        return new HeartbeatFrame();
+    }
+
+    @Override
+    public HeartbeatFrame retain() {
+        super.retain();
+        return this;
+    }
+
+    @Override
+    public HeartbeatFrame retain(int increment) {
+        super.retain(increment);
+        return this;
     }
 
     @Override

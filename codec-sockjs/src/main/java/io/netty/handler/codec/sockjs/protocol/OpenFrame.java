@@ -39,4 +39,26 @@ public class OpenFrame extends DefaultByteBufHolder implements Frame {
         return "OpenFrame[o]";
     }
 
+    @Override
+    public OpenFrame copy() {
+        return new OpenFrame();
+    }
+
+    @Override
+    public OpenFrame duplicate() {
+        return new OpenFrame();
+    }
+
+    @Override
+    public OpenFrame retain() {
+        super.retain();
+        return this;
+    }
+
+    @Override
+    public OpenFrame retain(int increment) {
+        super.retain(increment);
+        return this;
+    }
+
 }

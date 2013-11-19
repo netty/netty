@@ -62,4 +62,26 @@ public class CloseFrame extends DefaultByteBufHolder implements Frame {
         return "CloseFrame[statusCode=" + statusCode + ", statusMsg='" + statusMsg + "']";
     }
 
+    @Override
+    public CloseFrame copy() {
+        return new CloseFrame(statusCode, statusMsg);
+    }
+
+    @Override
+    public CloseFrame duplicate() {
+        return new CloseFrame(statusCode, statusMsg);
+    }
+
+    @Override
+    public CloseFrame retain() {
+        super.retain();
+        return this;
+    }
+
+    @Override
+    public CloseFrame retain(int increment) {
+        super.retain(increment);
+        return this;
+    }
+
 }

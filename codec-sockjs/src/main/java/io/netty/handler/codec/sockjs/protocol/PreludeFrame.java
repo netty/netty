@@ -41,4 +41,26 @@ public class PreludeFrame extends DefaultByteBufHolder implements Frame {
         return buf;
     }
 
+    @Override
+    public PreludeFrame copy() {
+        return new PreludeFrame();
+    }
+
+    @Override
+    public PreludeFrame duplicate() {
+        return new PreludeFrame();
+    }
+
+    @Override
+    public PreludeFrame retain() {
+        super.retain();
+        return this;
+    }
+
+    @Override
+    public PreludeFrame retain(int increment) {
+        super.retain(increment);
+        return this;
+    }
+
 }
