@@ -118,16 +118,16 @@ public class SockJsHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         } else {
             final PathParams sessionPath = matches(path);
             if (sessionPath.matches()) {
-                handleSession(ctx, request, factory, sessionPath);
+                handleSession(factory, request, ctx, sessionPath);
             } else {
                 writeNotFoundResponse(request, ctx);
             }
         }
     }
 
-    private static void handleSession(final ChannelHandlerContext ctx,
+    private static void handleSession(final SockJsServiceFactory factory,
                                       final FullHttpRequest request,
-                                      final SockJsServiceFactory factory,
+                                      final ChannelHandlerContext ctx,
                                       final PathParams pathParams) throws Exception {
         switch (pathParams.transport()) {
         case XHR:
