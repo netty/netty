@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-package io.netty.handler.codec.sockjs.protocol;
+package io.netty.handler.codec.sockjs.handler;
 
 import static io.netty.buffer.Unpooled.copiedBuffer;
 import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
@@ -37,13 +37,14 @@ import java.util.Formatter;
 import java.util.regex.Pattern;
 
 /**
- * IFrame is not a transport protocol is such be a way to get around problems
- * in browsers where the streaming protocols do not support cross domain communication.
+ * IFrame is a way to get around problems in browsers where the streaming protocols do not support
+ * cross domain communication.
+ *
  * The SockJS client library can in these cases issue a request with a path starting
  * with '/iframe'. The class will respond with a iframe that contains SockJS JavaScript
  * which is then able to do cross domain calls.
  */
-public final class Iframe {
+final class Iframe {
 
     private static final Pattern PATH_PATTERN = Pattern.compile(".*/iframe[0-9-.a-z_]*.html");
     private static final long ONE_YEAR = 31536000000L;

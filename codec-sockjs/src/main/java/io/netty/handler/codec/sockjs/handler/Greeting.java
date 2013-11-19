@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-package io.netty.handler.codec.sockjs.protocol;
+package io.netty.handler.codec.sockjs.handler;
 
 import static io.netty.buffer.Unpooled.copiedBuffer;
 import static io.netty.buffer.Unpooled.unreleasableBuffer;
@@ -26,7 +26,7 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.sockjs.transport.Transports;
 import io.netty.util.CharsetUtil;
 
-public final class Greeting {
+final class Greeting {
 
     private static final String GREETING = "Welcome to SockJS!";
     private static final ByteBuf CONTENT = unreleasableBuffer(copiedBuffer(GREETING + '\n', CharsetUtil.UTF_8));

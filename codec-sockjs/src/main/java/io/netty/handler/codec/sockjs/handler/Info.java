@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-package io.netty.handler.codec.sockjs.protocol;
+package io.netty.handler.codec.sockjs.handler;
 
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -24,7 +24,7 @@ import io.netty.handler.codec.sockjs.transport.Transports;
 
 import java.util.Random;
 
-public final class Info {
+final class Info {
     private static final Random RANDOM = new Random();
 
     private Info() {
