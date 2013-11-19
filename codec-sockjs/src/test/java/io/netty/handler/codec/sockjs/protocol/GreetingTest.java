@@ -37,9 +37,9 @@ public class GreetingTest {
         assertThat(response.content().toString(CharsetUtil.UTF_8), equalTo("Welcome to SockJS!\n"));
     }
 
-    private HttpRequest createHttpRequest(final String prefix) {
+    private static HttpRequest createHttpRequest(final String prefix) {
         return new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
-                HttpMethod.GET, prefix + "/",
+                HttpMethod.GET, prefix + '/',
                 Unpooled.copiedBuffer("", Charset.defaultCharset()));
     }
 

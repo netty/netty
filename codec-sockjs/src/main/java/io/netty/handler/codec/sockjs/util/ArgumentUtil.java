@@ -24,14 +24,14 @@ public final class ArgumentUtil {
 
     public static <T> void checkNotNull(final T ref, final String name) {
         if (ref == null) {
-            throw new NullPointerException("[" + name + "] must not be null");
+            throw new NullPointerException('[' + name + "] must not be null");
         }
     }
 
     public static <T> void checkNotNullAndNotEmpty(final T ref, final String name) {
         checkNotNull(ref, name);
         if ("".equals(ref)) {
-            throw new IllegalArgumentException("[" + name + "] must not be empty");
+            throw new IllegalArgumentException('[' + name + "] must not be empty");
         }
     }
 
@@ -50,7 +50,7 @@ public final class ArgumentUtil {
 
     public static void checkNotNegative(final long value, final String name) {
         if (value < 0) {
-            throw new IllegalArgumentException("[" + name + "] must not be a negative number");
+            throw new IllegalArgumentException('[' + name + "] must not be a negative number");
         }
     }
 

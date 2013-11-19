@@ -36,7 +36,7 @@ public class WebSocketSendHandlerTest {
         assertThat(textFrame.content().toString(CharsetUtil.UTF_8), equalTo("a[\"testing\"]"));
     }
 
-    private EmbeddedChannel createWebsocketChannel(final SockJsConfig config) throws Exception {
+    private static EmbeddedChannel createWebsocketChannel(final SockJsConfig config) throws Exception {
         return new EmbeddedChannel(
                 new WebSocket13FrameDecoder(true, false, 2048),
                 new WebSocketTransport(config),

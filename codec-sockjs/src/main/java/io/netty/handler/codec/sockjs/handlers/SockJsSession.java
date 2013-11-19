@@ -60,10 +60,6 @@ class SockJsSession {
         return state;
     }
 
-    /**
-     * Returns true if this session is currently in use.
-     * @return
-     */
     public boolean inuse() {
         return inuse.get();
     }
@@ -110,7 +106,7 @@ class SockJsSession {
     }
 
     public synchronized String[] getAllMessages() {
-        final String[] array = messages.toArray(new String[]{});
+        final String[] array = messages.toArray(new String[messages.size()]);
         messages.clear();
         return array;
     }
@@ -129,7 +125,7 @@ class SockJsSession {
 
     @Override
     public String toString() {
-        return "SockJSSession[sessionId=" + sessionId + ", state=" + state + "]";
+        return "SockJSSession[sessionId=" + sessionId + ", state=" + state + ']';
     }
 
 }

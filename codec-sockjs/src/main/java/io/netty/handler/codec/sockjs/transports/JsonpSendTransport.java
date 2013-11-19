@@ -42,7 +42,7 @@ public class JsonpSendTransport extends AbstractSendTransport {
 
     @Override
     public String toString() {
-        return "JsonpSendTransport[config=" + config + "]";
+        return "JsonpSendTransport[config=" + config + ']';
     }
 }
 

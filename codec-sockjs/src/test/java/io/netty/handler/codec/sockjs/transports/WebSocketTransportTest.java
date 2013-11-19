@@ -37,9 +37,6 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.handler.codec.http.HttpHeaders.Names;
-import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
@@ -74,7 +71,7 @@ public class WebSocketTransportTest {
     public void nonUpgradeRequest() throws Exception {
         final SockJsConfig config = SockJsConfig.withPrefix("/echo").build();
         final EmbeddedChannel ch = webSocketChannel(config);
-        final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, HttpMethod.GET, "/websocket");
+        final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, "/websocket");
         request.retain();
         ch.writeInbound(request);
         final FullHttpResponse response = decodeFullResponse(ch);
@@ -89,8 +86,8 @@ public class WebSocketTransportTest {
         final SockJsConfig config = SockJsConfig.withPrefix("/echo").build();
         final EmbeddedChannel ch = webSocketChannel(config);
         final FullHttpRequest request = webSocketUpgradeRequest("/websocket", WebSocketVersion.V13);
-        request.headers().set(Names.UPGRADE, "WebSocket");
-        request.headers().set(Names.CONNECTION, "close");
+        request.headers().set(UPGRADE, "WebSocket");
+        request.headers().set(CONNECTION, "close");
         ch.writeInbound(request);
         final FullHttpResponse response = decodeFullResponse(ch);
         assertThat(response.getStatus(), is(BAD_REQUEST));
@@ -140,7 +137,7 @@ public class WebSocketTransportTest {
         final SockJsConfig config = SockJsConfig.withPrefix("/echo").build();
         final EmbeddedChannel ch = webSocketChannel(config);
         final FullHttpRequest request = webSocketUpgradeRequest("/websocket", WebSocketVersion.V08);
-        request.headers().set(Names.CONNECTION, "keep-alive, Upgrade");
+        request.headers().set(CONNECTION, "keep-alive, Upgrade");
         ch.writeInbound(request);
         final HttpResponse response = decode(ch);
         assertThat(response.getStatus(), is(HttpResponseStatus.SWITCHING_PROTOCOLS));
@@ -155,7 +152,7 @@ public class WebSocketTransportTest {
         verifyHeaders(WebSocketVersion.V13);
     }
 
-    private void verifyHeaders(final WebSocketVersion version) throws Exception {
+    private static void verifyHeaders(final WebSocketVersion version) throws Exception {
         final SockJsConfig config = SockJsConfig.withPrefix("/echo").build();
         final EmbeddedChannel ch = webSocketChannel(config);
         final FullHttpRequest request = webSocketUpgradeRequest("/websocket", version);
@@ -168,13 +165,13 @@ public class WebSocketTransportTest {
         request.release();
     }
 
-    private void assertUpgradeRequest(final EmbeddedChannel ch) throws Exception {
+    private static void assertUpgradeRequest(final EmbeddedChannel ch) throws Exception {
         final FullHttpRequest request = webSocketUpgradeRequest("/websocket", WebSocketVersion.V13);
         ch.writeInbound(request);
         //final ByteBuf buf = (ByteBuf) ch.readOutbound();
         final HttpResponse response = decode(ch);
         assertThat(response.getStatus(), is(HttpResponseStatus.SWITCHING_PROTOCOLS));
-        assertThat(response.headers().get(HttpHeaders.Names.UPGRADE), equalTo("websocket"));
+        assertThat(response.headers().get(UPGRADE), equalTo("websocket"));
         request.release();
     }
 

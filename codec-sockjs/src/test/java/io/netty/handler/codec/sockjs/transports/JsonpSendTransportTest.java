@@ -83,7 +83,7 @@ public class JsonpSendTransportTest {
         verifyDefaultResponseHeaders(response, Transports.CONTENT_TYPE_PLAIN);
     }
 
-    private FullHttpResponse processHttpRequest(final FullHttpRequest request) {
+    private static FullHttpResponse processHttpRequest(final FullHttpRequest request) {
         final JsonpSendTransport transport = new JsonpSendTransport(SockJsConfig.withPrefix("/test")
                 .cookiesNeeded().build());
         final EmbeddedChannel channel = new EmbeddedChannel(transport);
@@ -93,11 +93,11 @@ public class JsonpSendTransportTest {
         return response;
     }
 
-    private FullHttpRequest requestWithBody(final String body) {
+    private static FullHttpRequest requestWithBody(final String body) {
         return requestWithBody(body, HttpVersion.HTTP_1_1);
     }
 
-    private FullHttpRequest requestWithBody(final String body, HttpVersion httpVersion) {
+    private static FullHttpRequest requestWithBody(final String body, HttpVersion httpVersion) {
         final DefaultFullHttpRequest r = new DefaultFullHttpRequest(httpVersion, HttpMethod.GET, "/test");
         if (body != null) {
             r.content().writeBytes(Unpooled.copiedBuffer(body, CharsetUtil.UTF_8));
@@ -105,7 +105,7 @@ public class JsonpSendTransportTest {
         return r;
     }
 
-    private FullHttpRequest requestWithFormData(final String data) {
+    private static FullHttpRequest requestWithFormData(final String data) {
         final DefaultFullHttpRequest r = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/test");
         r.headers().set(HttpHeaders.Names.CONTENT_TYPE, Transports.CONTENT_TYPE_FORM);
         if (data == null) {

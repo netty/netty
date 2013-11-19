@@ -57,7 +57,8 @@ public class CorsInboundHandler extends SimpleChannelInboundHandler<HttpRequest>
         }
     }
 
-    private void handlePreflight(final ChannelHandlerContext ctx, final CorsMetadata md, final HttpRequest request) {
+    private static void handlePreflight(final ChannelHandlerContext ctx, final CorsMetadata md,
+                                        final HttpRequest request) {
         final HttpResponse response = new DefaultHttpResponse(request.getProtocolVersion(), NO_CONTENT);
         final HttpHeaders headers = response.headers();
         headers.set(CONTENT_TYPE, Transports.CONTENT_TYPE_PLAIN);

@@ -43,6 +43,6 @@ public class XhrSendTransport extends AbstractSendTransport {
 
     @Override
     public String toString() {
-        return "XhrSendTransport[config=" + config + "]";
+        return "XhrSendTransport[config=" + config + ']';
     }
 }

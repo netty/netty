@@ -75,11 +75,11 @@ public class JsonpPollingTransportTest {
         assertThat(response.content().toString(CharsetUtil.UTF_8), equalTo("\"callback\" parameter required"));
     }
 
-    private FullHttpResponse writeFrame(final Frame frame) {
+    private static FullHttpResponse writeFrame(final Frame frame) {
         return writeFrame(frame, true);
     }
 
-    private FullHttpResponse writeFrame(final Frame frame, final boolean withCallback) {
+    private static FullHttpResponse writeFrame(final Frame frame, final boolean withCallback) {
         final String queryUrl = withCallback ? "/jsonp?c=callback" : "/jsonp";
         final DefaultFullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, queryUrl);
         final SockJsConfig config = SockJsConfig.withPrefix(queryUrl).cookiesNeeded().build();

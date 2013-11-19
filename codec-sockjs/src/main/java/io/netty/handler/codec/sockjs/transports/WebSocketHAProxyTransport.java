@@ -89,6 +89,7 @@ public class WebSocketHAProxyTransport extends SimpleChannelInboundHandler<Objec
         }
     }
 
+    @Override
     public void exceptionCaught(final ChannelHandlerContext ctx, final Throwable cause) throws Exception {
         if (cause instanceof JsonParseException) {
             logger.error("Could not parse json", cause);

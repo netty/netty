@@ -42,7 +42,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 public class SessionHandler extends ChannelInboundHandlerAdapter implements SockJsSessionContext {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(SessionHandler.class);
-    public enum Events { CLOSE_SESSION, HANDLE_SESSION };
+    public enum Events { CLOSE_SESSION, HANDLE_SESSION }
 
     private final SessionState sessionState;
     private final SockJsSession session;
@@ -78,7 +78,7 @@ public class SessionHandler extends ChannelInboundHandlerAdapter implements Sock
             break;
         case OPEN:
             if (sessionState.isInUse(session)) {
-                logger.debug("Another connection still in open for [" + session.sessionId() + "]");
+                logger.debug("Another connection still in open for [" + session.sessionId() + ']');
                 ctx.writeAndFlush(new CloseFrame(2010, "Another connection still open"));
                 session.setState(States.INTERRUPTED);
             } else {

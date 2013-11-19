@@ -61,11 +61,11 @@ public class XhrStreamingTransportTest {
         ch.finish();
     }
 
-    private EmbeddedChannel newStreamingChannel() {
+    private static EmbeddedChannel newStreamingChannel() {
         return newStreamingChannel(SockJsConfig.withPrefix("/test").cookiesNeeded().build());
     }
 
-    private EmbeddedChannel newStreamingChannel(final SockJsConfig config) {
+    private static EmbeddedChannel newStreamingChannel(final SockJsConfig config) {
         final HttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, "/xhr-streaming");
         final XhrStreamingTransport transport = new XhrStreamingTransport(config, request);
         final EmbeddedChannel ch = new EmbeddedChannel(transport);

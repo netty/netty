@@ -49,7 +49,7 @@ public class MessageFrame extends DefaultByteBufHolder implements Frame {
 
     @Override
     public String toString() {
-        return "MessageFrame[messages=" + messages + "]";
+        return "MessageFrame[messages=" + messages + ']';
     }
 
     private static ByteBuf generateContent(final String[] messages) {
@@ -70,14 +70,13 @@ public class MessageFrame extends DefaultByteBufHolder implements Frame {
 
     private static String escapeCharacters(final char[] value) {
         final StringBuilder sb = new StringBuilder(value.length);
-        for (int i = 0; i < value.length; i++) {
-            final char ch = value[i];
-            if ((ch >= '\u0000' && ch <= '\u001F') ||
-                    (ch >= '\uD800' && ch <= '\uDFFF') ||
-                    (ch >= '\u200C' && ch <= '\u200F') ||
-                    (ch >= '\u2028' && ch <= '\u202F') ||
-                    (ch >= '\u2060' && ch <= '\u206F') ||
-                    (ch >= '\uFFF0' && ch <= '\uFFFF')) {
+        for (char ch : value) {
+            if (ch >= '\u0000' && ch <= '\u001F' ||
+                    ch >= '\uD800' && ch <= '\uDFFF' ||
+                    ch >= '\u200C' && ch <= '\u200F' ||
+                    ch >= '\u2028' && ch <= '\u202F' ||
+                    ch >= '\u2060' && ch <= '\u206F' ||
+                    ch >= '\uFFF0' && ch <= '\uFFFF') {
                 final String ss = Integer.toHexString(ch);
                 sb.append('\\');
                 sb.append('u');

@@ -70,7 +70,7 @@ public final class Transports {
         HTMLFILE;
 
         public String path() {
-            return "/" + name().toLowerCase();
+            return '/' + name().toLowerCase();
         }
     }
 
@@ -135,7 +135,7 @@ public final class Transports {
      */
     public static void setDefaultHeaders(final HttpResponse response, final SockJsConfig config) {
         if (config.areCookiesNeeded()) {
-            response.headers().set(SET_COOKIE, Transports.DEFAULT_COOKIE);
+            response.headers().set(SET_COOKIE, DEFAULT_COOKIE);
         }
         setNoCacheHeaders(response);
         setCORSHeaders(response);
@@ -212,14 +212,13 @@ public final class Transports {
      */
     public static String escapeCharacters(final char[] value) {
         final StringBuilder buffer = new StringBuilder();
-        for (int i = 0; i < value.length; i++) {
-            final char ch = value[i];
-            if ((ch >= '\u0000' && ch <= '\u001F') ||
-                    (ch >= '\uD800' && ch <= '\uDFFF') ||
-                    (ch >= '\u200C' && ch <= '\u200F') ||
-                    (ch >= '\u2028' && ch <= '\u202F') ||
-                    (ch >= '\u2060' && ch <= '\u206F') ||
-                    (ch >= '\uFFF0' && ch <= '\uFFFF')) {
+        for (char ch : value) {
+            if (ch >= '\u0000' && ch <= '\u001F' ||
+                    ch >= '\uD800' && ch <= '\uDFFF' ||
+                    ch >= '\u200C' && ch <= '\u200F' ||
+                    ch >= '\u2028' && ch <= '\u202F' ||
+                    ch >= '\u2060' && ch <= '\u206F' ||
+                    ch >= '\uFFF0' && ch <= '\uFFFF') {
                 final String ss = Integer.toHexString(ch);
                 buffer.append('\\').append('u');
                 for (int k = 0; k < 4 - ss.length(); k++) {
@@ -258,12 +257,12 @@ public final class Transports {
 
                 default:
                     // Reference: http://www.unicode.org/versions/Unicode5.1.0/
-                    if ((ch >= '\u0000' && ch <= '\u001F') ||
-                            (ch >= '\uD800' && ch <= '\uDFFF') ||
-                            (ch >= '\u200C' && ch <= '\u200F') ||
-                            (ch >= '\u2028' && ch <= '\u202F') ||
-                            (ch >= '\u2060' && ch <= '\u206F') ||
-                            (ch >= '\uFFF0' && ch <= '\uFFFF')) {
+                    if (ch >= '\u0000' && ch <= '\u001F' ||
+                            ch >= '\uD800' && ch <= '\uDFFF' ||
+                            ch >= '\u200C' && ch <= '\u200F' ||
+                            ch >= '\u2028' && ch <= '\u202F' ||
+                            ch >= '\u2060' && ch <= '\u206F' ||
+                            ch >= '\uFFF0' && ch <= '\uFFFF') {
                         final String ss = Integer.toHexString(ch);
                         buffer.writeByte('\\').writeByte('u');
                         for (int k = 0; k < 4 - ss.length(); k++) {
@@ -357,7 +356,6 @@ public final class Transports {
      *
      * @param version the {@link HttpVersion} that the response should have.
      * @param status the status of the HTTP response
-     * @throws Exception if an error occurs while trying to send the response.
      */
     public static FullHttpResponse responseWithoutContent(final HttpVersion version, final HttpResponseStatus status) {
         final FullHttpResponse response = new DefaultFullHttpResponse(version, status);
@@ -372,7 +370,6 @@ public final class Transports {
      * @param status the status of the HTTP response
      * @param contentType the value for the 'Content-Type' HTTP response header.
      * @param content the content that will become the body of the HTTP response.
-     * @throws Exception if an error occurs while trying to send the response.
      */
     public static FullHttpResponse responseWithContent(final HttpVersion version, final HttpResponseStatus status,
             final String contentType, final String content) {

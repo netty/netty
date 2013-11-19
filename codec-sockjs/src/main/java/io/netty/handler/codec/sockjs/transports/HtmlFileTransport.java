@@ -41,7 +41,6 @@ import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.handler.codec.sockjs.SockJsConfig;
 import io.netty.handler.codec.sockjs.handlers.SessionHandler.Events;
 import io.netty.handler.codec.sockjs.protocol.Frame;
-import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -73,15 +72,15 @@ public class HtmlFileTransport extends ChannelDuplexHandler {
             "</head><body><h2>Don't panic!</h2>\n" +
             "  <script>\n" +
             "    document.domain = document.domain;\n" +
-            "    var c = parent.", CharsetUtil.UTF_8));
+            "    var c = parent.", UTF_8));
     private static final ByteBuf HEADER_PART2 = unreleasableBuffer(copiedBuffer(
             ";\n" +
             "    c.start();\n" +
             "    function p(d) {c.message(d);};\n" +
             "    window.onload = function() {c.stop();};\n" +
-            "  </script>", CharsetUtil.UTF_8));
-    private static final ByteBuf PREFIX = unreleasableBuffer(copiedBuffer("<script>\np(\"", CharsetUtil.UTF_8));
-    private static final ByteBuf POSTFIX = unreleasableBuffer(copiedBuffer("\");\n</script>\r\n", CharsetUtil.UTF_8));
+            "  </script>", UTF_8));
+    private static final ByteBuf PREFIX = unreleasableBuffer(copiedBuffer("<script>\np(\"", UTF_8));
+    private static final ByteBuf POSTFIX = unreleasableBuffer(copiedBuffer("\");\n</script>\r\n", UTF_8));
     private static final ByteBuf END_HEADER = unreleasableBuffer(copiedBuffer(new byte[] {CR, LF, CR, LF}));
 
     private final SockJsConfig config;
@@ -99,7 +98,7 @@ public class HtmlFileTransport extends ChannelDuplexHandler {
     public void channelRead(final ChannelHandlerContext ctx, final Object msg) throws Exception {
         if (msg instanceof HttpRequest) {
             final String c = getCallbackFromRequest((HttpRequest) msg);
-            if (c.length() == 0) {
+            if (c.isEmpty()) {
                 respondCallbackRequired(ctx);
                 ctx.fireUserEventTriggered(Events.CLOSE_SESSION);
                 return;

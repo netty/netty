@@ -29,13 +29,16 @@ import io.netty.util.CharsetUtil;
 public final class Greeting {
 
     private static final String GREETING = "Welcome to SockJS!";
-    private static final ByteBuf CONTENT = unreleasableBuffer(copiedBuffer(GREETING + "\n", CharsetUtil.UTF_8));
+    private static final ByteBuf CONTENT = unreleasableBuffer(copiedBuffer(GREETING + '\n', CharsetUtil.UTF_8));
 
     private Greeting() {
     }
 
     public static boolean matches(final String path) {
-        return path.equals("") || path.equals("/");
+        if (path == null) {
+            return false;
+        }
+        return path.isEmpty() || "/".equals(path);
     }
 
     public static FullHttpResponse response(final HttpRequest request) throws Exception {

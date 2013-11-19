@@ -102,7 +102,7 @@ public class CorsInboundHandlerTest {
         channel.finish();
     }
 
-    private FullHttpRequest createHttpRequest(HttpMethod method) {
+    private static FullHttpRequest createHttpRequest(HttpMethod method) {
         return new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
                 method, "/info",
                 Unpooled.copiedBuffer("", Charset.defaultCharset()));

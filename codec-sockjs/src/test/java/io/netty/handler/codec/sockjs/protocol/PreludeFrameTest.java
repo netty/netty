@@ -30,13 +30,13 @@ public class PreludeFrameTest {
         assertThat(getContent(preludeFrame), equalTo(expectedContent(PreludeFrame.CONTENT_SIZE)));
     }
 
-    private byte[] getContent(final PreludeFrame preludeFrame) {
+    private static byte[] getContent(final PreludeFrame preludeFrame) {
         final byte[] actualContent = new byte[PreludeFrame.CONTENT_SIZE];
         preludeFrame.content().readBytes(actualContent);
         return actualContent;
     }
 
-    private byte[] expectedContent(final int size) {
+    private static byte[] expectedContent(final int size) {
         final byte[] content = new byte[size];
         for (int i = 0; i < content.length; i++) {
             content[i] = 'h';

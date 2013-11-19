@@ -50,7 +50,7 @@ public final class Info {
         sb.append(", \"origins\": [\"*:*\"]");
         sb.append(", \"cookie_needed\": ").append(config.areCookiesNeeded());
         sb.append(", \"entropy\": ").append(RANDOM.nextInt(Integer.MAX_VALUE) + 1);
-        sb.append("}");
+        sb.append('}');
         return sb.toString();
     }
 }

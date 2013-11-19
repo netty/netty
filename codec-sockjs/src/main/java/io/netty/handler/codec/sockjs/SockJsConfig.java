@@ -115,7 +115,7 @@ public final class SockJsConfig {
        if (iterator.hasNext()) {
            sb.append(iterator.next());
            while (iterator.hasNext()) {
-               sb.append(",").append(iterator.next());
+               sb.append(',').append(iterator.next());
            }
        }
        return sb.toString();
@@ -201,18 +201,18 @@ public final class SockJsConfig {
     }
 
     public String toString() {
-        return new StringBuilder("Config[prefix=").append(prefix)
-            .append(", webSocketEnabled=").append(webSocketEnabled)
-            .append(", webSocketProtocols=").append(webSocketProtocols)
-            .append(", webSocketHeartbeatInterval=").append(webSocketHeartbeatInterval)
-            .append(", cookiesNeeded=").append(cookiesNeeded)
-            .append(", sockJsUrl=").append(sockjsUrl)
-            .append(", sessionTimeout=").append(sessionTimeout)
-            .append(", heartbeatInterval=").append(heartbeatInterval)
-            .append(", maxStreamingBytesSize=").append(maxStreamingBytesSize)
-            .append(", tls=").append(tls)
-            .append(", keyStore=").append(keyStore)
-            .append("]").toString();
+        return "Config[prefix=" + prefix +
+            ", webSocketEnabled=" + webSocketEnabled +
+            ", webSocketProtocols=" + webSocketProtocols +
+            ", webSocketHeartbeatInterval=" + webSocketHeartbeatInterval +
+            ", cookiesNeeded=" + cookiesNeeded +
+            ", sockJsUrl=" + sockjsUrl +
+            ", sessionTimeout=" + sessionTimeout +
+            ", heartbeatInterval=" + heartbeatInterval +
+            ", maxStreamingBytesSize=" + maxStreamingBytesSize +
+            ", tls=" + tls +
+            ", keyStore=" + keyStore +
+            ']';
     }
 
     /**
@@ -223,14 +223,14 @@ public final class SockJsConfig {
      */
     public static Builder withPrefix(final String prefix) {
         ArgumentUtil.checkNotNullAndNotEmpty(prefix, "prefix");
-        return new SockJsConfig.Builder(prefix);
+        return new Builder(prefix);
     }
 
     public static class Builder {
         private final String prefix;
         private boolean webSocketEnabled = true;
         private long webSocketHeartbeatInterval = -1;
-        private Set<String> webSocketProtocols = new HashSet<String>();
+        private final Set<String> webSocketProtocols = new HashSet<String>();
         private boolean cookiesNeeded;
         private String sockJsUrl = "http://cdn.sockjs.org/sockjs-0.3.4.min.js" ;
         private long sessionTimeout = 5000;
@@ -254,7 +254,7 @@ public final class SockJsConfig {
          * Will disable WebSocket suppport.
          */
         public Builder disableWebSocket() {
-            this.webSocketEnabled = false;
+            webSocketEnabled = false;
             return this;
         }
 
@@ -268,7 +268,7 @@ public final class SockJsConfig {
          * @param ms how often that a WebSocket heartbeat should be sent
          */
         public Builder webSocketHeartbeatInterval(final long ms) {
-            this.webSocketHeartbeatInterval = ms;
+            webSocketHeartbeatInterval = ms;
             return this;
         }
 
@@ -297,10 +297,10 @@ public final class SockJsConfig {
          * the url is replaced in the script returned to the client. This allows for configuring
          * the version of sockjs used. By default it is 'http://cdn.sockjs.org/sockjs-0.3.4.min.js'.
          *
-         * @param sockjsUrl the url to the sockjs version to be used.
+         * @param sockJsUrl the url to the sockjs version to be used.
          */
-        public Builder sockJsUrl(final String sockjsUrl) {
-            this.sockJsUrl = sockjsUrl;
+        public Builder sockJsUrl(final String sockJsUrl) {
+            this.sockJsUrl = sockJsUrl;
             return this;
         }
 
@@ -314,7 +314,7 @@ public final class SockJsConfig {
          * @param ms the max number of bytes that can be written. Default is 131072.
          */
         public Builder sessionTimeout(final long ms) {
-            this.sessionTimeout = ms;
+            sessionTimeout = ms;
             return this;
         }
 
@@ -324,7 +324,7 @@ public final class SockJsConfig {
          * @param ms how often that a heartbeat should be sent
          */
         public Builder heartbeatInterval(final long ms) {
-            this.heartbeatInterval = ms;
+            heartbeatInterval = ms;
             return this;
         }
 
@@ -338,14 +338,14 @@ public final class SockJsConfig {
          * @param max the max number of bytes that can be written. Default is 131072.
          */
         public Builder maxStreamingBytesSize(final int max) {
-            this.maxStreamingBytesSize = max;
+            maxStreamingBytesSize = max;
             return this;
         }
 
         /**
          * Determines whether transport layer security (TLS) should be used.
          *
-         * @param tsl if transport layer security should be used.
+         * @param tls if transport layer security should be used.
          */
         public Builder tls(final boolean tls) {
             this.tls = tls;

@@ -76,7 +76,7 @@ public class WebSocketTransport extends SimpleChannelInboundHandler<Object> {
         }
     }
 
-    private boolean checkRequestHeaders(final ChannelHandlerContext ctx, final HttpRequest req) {
+    private static boolean checkRequestHeaders(final ChannelHandlerContext ctx, final HttpRequest req) {
         if (req.getMethod() != GET) {
             logger.debug("Request was not of type GET, was " + req.getMethod());
             ctx.writeAndFlush(methodNotAllowedResponse(req.getProtocolVersion()))
@@ -85,7 +85,7 @@ public class WebSocketTransport extends SimpleChannelInboundHandler<Object> {
         }
 
         final String upgradeHeader = req.headers().get(HttpHeaders.Names.UPGRADE);
-        if (upgradeHeader == null || !upgradeHeader.toLowerCase().equals("websocket")) {
+        if (upgradeHeader == null || !"websocket".equals(upgradeHeader.toLowerCase())) {
             logger.debug("Upgrade header was not 'websocket' was: " + upgradeHeader);
             ctx.writeAndFlush(badRequestResponse(req.getProtocolVersion(), "Can \"Upgrade\" only to \"WebSocket\"."))
             .addListener(ChannelFutureListener.CLOSE);
@@ -93,12 +93,12 @@ public class WebSocketTransport extends SimpleChannelInboundHandler<Object> {
         }
 
         String connectHeader = req.headers().get(HttpHeaders.Names.CONNECTION);
-        if (connectHeader != null && connectHeader.toLowerCase().equals("keep-alive, upgrade")) {
+        if (connectHeader != null && "keep-alive, upgrade".equals(connectHeader.toLowerCase())) {
             logger.debug("Connection header was not 'keep-alive, upgrade' was: " + connectHeader);
             req.headers().set(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.UPGRADE);
-            connectHeader = HttpHeaders.Values.UPGRADE.toString();
+            connectHeader = HttpHeaders.Values.UPGRADE;
         }
-        if (connectHeader == null || !connectHeader.toLowerCase().equals("upgrade")) {
+        if (connectHeader == null || !"upgrade".equals(connectHeader.toLowerCase())) {
             logger.debug("Connection header was not 'upgrade' was: " + connectHeader);
             ctx.writeAndFlush(badRequestResponse(req.getProtocolVersion(), "\"Connection\" must be \"Upgrade\"."))
             .addListener(ChannelFutureListener.CLOSE);
@@ -133,11 +133,10 @@ public class WebSocketTransport extends SimpleChannelInboundHandler<Object> {
             });
             passMessage = false;
             return;
-        } else {
-            final String wsUrl = getWebSocketLocation(config.isTls(), req, Transports.Types.WEBSOCKET.path());
-            final WebSocketServerHandshakerFactory wsFactory = new WebSocketServerHandshakerFactory(wsUrl, null, false);
-            handshaker = wsFactory.newHandshaker(req);
         }
+        final String wsUrl = getWebSocketLocation(config.isTls(), req, Transports.Types.WEBSOCKET.path());
+        final WebSocketServerHandshakerFactory wsFactory = new WebSocketServerHandshakerFactory(wsUrl, null, false);
+        handshaker = wsFactory.newHandshaker(req);
 
         if (handshaker == null) {
             WebSocketServerHandshakerFactory.sendUnsupportedWebSocketVersionResponse(ctx.channel());

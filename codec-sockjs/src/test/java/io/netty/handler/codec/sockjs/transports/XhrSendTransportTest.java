@@ -31,7 +31,6 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.sockjs.SockJsConfig;
-import io.netty.util.CharsetUtil;
 
 import org.junit.Test;
 
@@ -47,7 +46,7 @@ public class XhrSendTransportTest {
         final FullHttpResponse response = processHttpRequest(requestWithBody(null));
         assertThat(response.getStatus(), equalTo(HttpResponseStatus.INTERNAL_SERVER_ERROR));
         assertThat(response.getProtocolVersion(), equalTo(HttpVersion.HTTP_1_1));
-        assertThat(response.content().toString(CharsetUtil.UTF_8), equalTo("Payload expected."));
+        assertThat(response.content().toString(UTF_8), equalTo("Payload expected."));
     }
 
     @Test
@@ -55,7 +54,7 @@ public class XhrSendTransportTest {
         final FullHttpResponse response = processHttpRequest(requestWithBody(null, HttpVersion.HTTP_1_0));
         assertThat(response.getStatus(), equalTo(HttpResponseStatus.INTERNAL_SERVER_ERROR));
         assertThat(response.getProtocolVersion(), equalTo(HttpVersion.HTTP_1_0));
-        assertThat(response.content().toString(CharsetUtil.UTF_8), equalTo("Payload expected."));
+        assertThat(response.content().toString(UTF_8), equalTo("Payload expected."));
     }
 
     @Test
@@ -83,7 +82,7 @@ public class XhrSendTransportTest {
         final FullHttpResponse response = processHttpRequest(requestWithFormData(null));
         assertThat(response.getStatus(), equalTo(HttpResponseStatus.INTERNAL_SERVER_ERROR));
         assertThat(response.getProtocolVersion(), equalTo(HttpVersion.HTTP_1_1));
-        assertThat(response.content().toString(CharsetUtil.UTF_8), equalTo("Payload expected."));
+        assertThat(response.content().toString(UTF_8), equalTo("Payload expected."));
         response.release();
     }
 
@@ -109,7 +108,7 @@ public class XhrSendTransportTest {
         response.release();
     }
 
-    private FullHttpResponse processHttpRequest(final FullHttpRequest request) {
+    private static FullHttpResponse processHttpRequest(final FullHttpRequest request) {
         final XhrSendTransport transport = new XhrSendTransport(SockJsConfig.withPrefix("/test")
                 .cookiesNeeded().build());
         final EmbeddedChannel channel = new EmbeddedChannel(transport);
@@ -119,25 +118,25 @@ public class XhrSendTransportTest {
         return response;
     }
 
-    private FullHttpRequest requestWithBody(final String body) {
+    private static FullHttpRequest requestWithBody(final String body) {
         return requestWithBody(body, HttpVersion.HTTP_1_1);
     }
 
-    private FullHttpRequest requestWithBody(final String body, HttpVersion httpVersion) {
+    private static FullHttpRequest requestWithBody(final String body, HttpVersion httpVersion) {
         final DefaultFullHttpRequest r = new DefaultFullHttpRequest(httpVersion, HttpMethod.GET, "/test");
         if (body != null) {
-            r.content().writeBytes(Unpooled.copiedBuffer(body, CharsetUtil.UTF_8));
+            r.content().writeBytes(Unpooled.copiedBuffer(body, UTF_8));
         }
         return r;
     }
 
-    private FullHttpRequest requestWithFormData(final String data) {
+    private static FullHttpRequest requestWithFormData(final String data) {
         final DefaultFullHttpRequest r = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/test");
         r.headers().set(HttpHeaders.Names.CONTENT_TYPE, Transports.CONTENT_TYPE_FORM);
         if (data == null) {
-            r.content().writeBytes(Unpooled.copiedBuffer("d=", CharsetUtil.UTF_8));
+            r.content().writeBytes(Unpooled.copiedBuffer("d=", UTF_8));
         } else {
-            r.content().writeBytes(Unpooled.copiedBuffer("d=" + data, CharsetUtil.UTF_8));
+            r.content().writeBytes(Unpooled.copiedBuffer("d=" + data, UTF_8));
         }
         return r;
     }

@@ -33,7 +33,7 @@ interface SessionState {
      * @param session the {@link SockJsSession}.
      * @param ctx the {@link ChannelHandlerContext} for the current connection/channel
      */
-    void onConnect(final SockJsSession session, final ChannelHandlerContext ctx);
+    void onConnect(SockJsSession session, ChannelHandlerContext ctx);
 
     /**
      * Called when a request for a connected session is received.
@@ -43,7 +43,7 @@ interface SessionState {
      *            that this ChannelHandlerContext is different from the one that opened the
      *            the sesssion and was passed to the onConnect method.
      */
-    void onOpen(final SockJsSession session, final ChannelHandlerContext ctx);
+    void onOpen(SockJsSession session, ChannelHandlerContext ctx);
 
     /**
      * Called after the {@link SockJsSession#onClose()} method has been called enabling
@@ -54,7 +54,7 @@ interface SessionState {
     /**
      * Called when the SockJS server has initiated a close of the session.
      */
-    void onSockJSServerInitiatedClose(final SockJsSession session);
+    void onSockJSServerInitiatedClose(SockJsSession session);
 
     /**
      * Indicates if this session is in use.

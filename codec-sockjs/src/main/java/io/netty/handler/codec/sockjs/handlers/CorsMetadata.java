@@ -42,8 +42,8 @@ public final class CorsMetadata {
      * @param headers the headers that should be stored, and later returned as CORS allowed headers.
      */
     public CorsMetadata(final String origin, final String headers) {
-        this.origin = origin == null || origin.equals("null") ? "*" : origin;
-        this.headers = headers != null && headers.length() == 0 ? null : headers;
+        this.origin = origin == null || "null".equals(origin) ? "*" : origin;
+        this.headers = headers != null && headers.isEmpty() ? null : headers;
     }
 
     /**
@@ -70,12 +70,12 @@ public final class CorsMetadata {
      * @return true if this instance has headers, false otherwise.
      */
     public boolean hasHeaders() {
-        return headers != null && !headers.isEmpty() && !headers.equals(" ");
+        return headers != null && !headers.isEmpty() && !" ".equals(headers);
     }
 
     @Override
     public String toString() {
-        return "CorsMetadata[origin=" + origin + ", headers=" + headers + "]";
+        return "CorsMetadata[origin=" + origin + ", headers=" + headers + ']';
     }
 
 }

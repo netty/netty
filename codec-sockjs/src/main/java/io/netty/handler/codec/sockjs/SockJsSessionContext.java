@@ -28,7 +28,7 @@ public interface SockJsSessionContext {
      *
      * @param message the message to be sent.
      */
-    void send(final String message);
+    void send(String message);
 
     /**
      * Close the current session.

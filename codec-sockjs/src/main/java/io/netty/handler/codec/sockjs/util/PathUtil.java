@@ -37,7 +37,7 @@ public final class PathUtil {
     public static String prefix(String url) {
         ArgumentUtil.checkNotNullAndNotEmpty(url, "url");
         final Matcher m = SERVICE_PATTERN.matcher(url);
-        while (m.find()) {
+        if (m.find()) {
             return m.group(1);
         }
         return null;

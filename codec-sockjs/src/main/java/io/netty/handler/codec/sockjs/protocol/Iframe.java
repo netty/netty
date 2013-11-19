@@ -46,7 +46,7 @@ import java.util.regex.Pattern;
 public final class Iframe {
 
     private static final Pattern PATH_PATTERN = Pattern.compile(".*/iframe[0-9-.a-z_]*.html");
-    private static final long ONE_YEAR = 365 * 24 * 60 * 60 * 1000;
+    private static final long ONE_YEAR = 31536000000L;
     private static final ThreadLocal<SimpleDateFormat> DATE_FORMAT = new ThreadLocal<SimpleDateFormat>() {
         @Override
         protected SimpleDateFormat initialValue() {
@@ -89,8 +89,8 @@ public final class Iframe {
             response.headers().set(HttpHeaders.Names.CONTENT_TYPE, "text/html; charset=UTF-8");
             response.headers().set(HttpHeaders.Names.CACHE_CONTROL, "max-age=31536000, public");
             response.headers().set(HttpHeaders.Names.EXPIRES, generateExpires());
-            final StringBuilder etag = new StringBuilder("\"").append(generateMd5(content)).append("\"");
-            response.headers().set(HttpHeaders.Names.ETAG, etag.toString());
+            final String etag = '\"' + generateMd5(content) + '\"';
+            response.headers().set(HttpHeaders.Names.ETAG, etag);
             return response;
         }
     }

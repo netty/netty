@@ -15,9 +15,15 @@
  */
 package io.netty.handler.codec.sockjs.transports;
 
+import static io.netty.handler.codec.http.HttpHeaders.Names.HOST;
+import static io.netty.handler.codec.http.HttpHeaders.Names.ORIGIN;
 import static io.netty.handler.codec.http.HttpHeaders.Names.CONNECTION;
 import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_LENGTH;
 import static io.netty.handler.codec.http.HttpHeaders.Names.UPGRADE;
+import static io.netty.handler.codec.http.HttpHeaders.Names.SEC_WEBSOCKET_KEY1;
+import static io.netty.handler.codec.http.HttpHeaders.Names.SEC_WEBSOCKET_KEY2;
+import static io.netty.handler.codec.http.HttpHeaders.Names.SEC_WEBSOCKET_LOCATION;
+import static io.netty.handler.codec.http.HttpHeaders.Names.SEC_WEBSOCKET_ORIGIN;
 import static io.netty.handler.codec.http.HttpHeaders.Values.WEBSOCKET;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -30,7 +36,6 @@ import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.util.CharsetUtil;
 
@@ -53,8 +58,8 @@ public class WebSocketHAProxyHandshakerTest {
         assertThat(response.getStatus(), is(HttpResponseStatus.SWITCHING_PROTOCOLS));
         assertThat(response.headers().get(CONNECTION), equalTo("Upgrade"));
         assertThat(response.headers().get(UPGRADE), equalTo("WebSocket"));
-        assertThat(response.headers().get("Sec-WebSocket-Location"), equalTo("ws://localhost/websocket"));
-        assertThat(response.headers().get("Sec-WebSocket-Origin"), equalTo("http://example.com"));
+        assertThat(response.headers().get(SEC_WEBSOCKET_LOCATION), equalTo("ws://localhost/websocket"));
+        assertThat(response.headers().get(SEC_WEBSOCKET_ORIGIN), equalTo("http://example.com"));
         assertThat(response.headers().get(CONTENT_LENGTH), is(nullValue()));
 
         ByteBuf content = Unpooled.copiedBuffer("^n:ds[4U", CharsetUtil.US_ASCII);
@@ -62,18 +67,18 @@ public class WebSocketHAProxyHandshakerTest {
         assertThat(key.toString(CharsetUtil.US_ASCII), equalTo("8jKS'y:G*Co,Wxa-"));
     }
 
-    private FullHttpRequest wsUpgradeRequest() {
+    private static FullHttpRequest wsUpgradeRequest() {
         final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, HttpMethod.GET, "/websocket");
-        request.headers().set(Names.HOST, "server.test.com");
-        request.headers().set(Names.UPGRADE, WEBSOCKET.toLowerCase());
-        request.headers().set(Names.CONNECTION, "Upgrade");
-        request.headers().set(Names.SEC_WEBSOCKET_KEY1, "4 @1  46546xW%0l 1 5");
-        request.headers().set(Names.SEC_WEBSOCKET_KEY2, "12998 5 Y3 1  .P00");
-        request.headers().set(Names.ORIGIN, "http://example.com");
+        request.headers().set(HOST, "server.test.com");
+        request.headers().set(UPGRADE, WEBSOCKET.toLowerCase());
+        request.headers().set(CONNECTION, "Upgrade");
+        request.headers().set(SEC_WEBSOCKET_KEY1, "4 @1  46546xW%0l 1 5");
+        request.headers().set(SEC_WEBSOCKET_KEY2, "12998 5 Y3 1  .P00");
+        request.headers().set(ORIGIN, "http://example.com");
         return request;
     }
 
-    private FullHttpRequest wsUpgradeRequestWithBody() {
+    private static FullHttpRequest wsUpgradeRequestWithBody() {
         final FullHttpRequest request = wsUpgradeRequest();
         request.content().writeBytes(Unpooled.copiedBuffer("^n:ds[4U", CharsetUtil.US_ASCII));
         return request;

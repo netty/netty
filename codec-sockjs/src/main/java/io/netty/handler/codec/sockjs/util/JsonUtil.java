@@ -28,7 +28,6 @@ import java.util.List;
 import org.codehaus.jackson.JsonGenerationException;
 import org.codehaus.jackson.JsonGenerator;
 import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.Version;
 import org.codehaus.jackson.impl.JsonWriteContext;
 import org.codehaus.jackson.map.JsonMappingException;
@@ -41,23 +40,23 @@ import org.codehaus.jackson.util.CharTypes;
 public final class JsonUtil {
 
     private static final ObjectMapper MAPPER;
+    private static final String[] EMPTY_STRING_ARRAY = {};
+    private static final char[] HEX_CHARS = "0123456789abcdef".toCharArray();
+    private static final int[] ESCAPE_CODES = CharTypes.get7BitOutputEscapes();
 
     static {
         MAPPER = new ObjectMapper();
 
         // This code adapted from Vert.x JsonCode.
         SimpleModule simpleModule = new SimpleModule("simplepush", new Version(0, 0, 8, null));
-
         simpleModule.addSerializer(String.class, new JsonSerializer<String>() {
-            final char[] HEX_CHARS = "0123456789abcdef".toCharArray();
-            final int[] ESCAPE_CODES = CharTypes.get7BitOutputEscapes();
 
             private void writeUnicodeEscape(final JsonGenerator gen, final char c) throws IOException {
                 gen.writeRaw('\\');
                 gen.writeRaw('u');
-                gen.writeRaw(HEX_CHARS[(c >> 12) & 0xF]);
-                gen.writeRaw(HEX_CHARS[(c >> 8) & 0xF]);
-                gen.writeRaw(HEX_CHARS[(c >> 4) & 0xF]);
+                gen.writeRaw(HEX_CHARS[c >> 12 & 0xF]);
+                gen.writeRaw(HEX_CHARS[c >> 8 & 0xF]);
+                gen.writeRaw(HEX_CHARS[c >> 4 & 0xF]);
                 gen.writeRaw(HEX_CHARS[c & 0xF]);
             }
 
@@ -106,11 +105,10 @@ public final class JsonUtil {
     }
 
     @SuppressWarnings("resource")
-    public static String[] decode(final TextWebSocketFrame frame) throws JsonParseException, JsonMappingException,
-            IOException {
+    public static String[] decode(final TextWebSocketFrame frame) throws IOException {
         final ByteBuf content = frame.content();
         if (content.readableBytes() == 0) {
-            return new String[] {};
+            return EMPTY_STRING_ARRAY;
         }
         final ByteBufInputStream byteBufInputStream = new ByteBufInputStream(content);
         final byte firstByte = content.getByte(0);
@@ -123,7 +121,7 @@ public final class JsonUtil {
         }
     }
 
-    public static String[] decode(final String content) throws JsonParseException, JsonMappingException, IOException {
+    public static String[] decode(final String content) throws IOException {
         final JsonNode root = MAPPER.readTree(content);
         if (root.isObject()) {
             return new String[] { root.toString() };
@@ -146,7 +144,7 @@ public final class JsonUtil {
                 messages.add(field.toString());
             }
         }
-        return messages.toArray(new String[] {});
+        return messages.toArray(new String[messages.size()]);
     }
 
     public static String encode(final String content) throws JsonMappingException {

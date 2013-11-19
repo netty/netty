@@ -39,7 +39,7 @@ abstract class AbstractTimersSessionState implements SessionState {
     private ScheduledFuture<?> heartbeatFuture;
     private ScheduledFuture<?> sessionTimer;
 
-    public AbstractTimersSessionState(final ConcurrentMap<String, SockJsSession> sessions) {
+    protected AbstractTimersSessionState(final ConcurrentMap<String, SockJsSession> sessions) {
         ArgumentUtil.checkNotNull(sessions, "sessions");
         this.sessions = sessions;
     }
@@ -64,7 +64,7 @@ abstract class AbstractTimersSessionState implements SessionState {
                         session.context().close();
                         sessionTimer.cancel(true);
                         heartbeatFuture.cancel(true);
-                        logger.debug("Removed " + removed.sessionId() + " from map[" + sessions.size() + "]");
+                        logger.debug("Removed " + removed.sessionId() + " from map[" + sessions.size() + ']');
                     }
                 }
             }, session.config().sessionTimeout(), session.config().sessionTimeout(), TimeUnit.MILLISECONDS);

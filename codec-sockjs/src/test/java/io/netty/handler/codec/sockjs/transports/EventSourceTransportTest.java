@@ -51,11 +51,11 @@ public class EventSourceTransportTest {
         assertThat(data.content().toString(UTF_8), equalTo("data: o\r\n\r\n"));
     }
 
-    private EmbeddedChannel newEventSourceChannel() {
+    private static EmbeddedChannel newEventSourceChannel() {
         return newStreamingChannel(SockJsConfig.withPrefix("/test").cookiesNeeded().build());
     }
 
-    private EmbeddedChannel newStreamingChannel(final SockJsConfig config) {
+    private static EmbeddedChannel newStreamingChannel(final SockJsConfig config) {
         final HttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, Transports.Types.EVENTSOURCE.path());
         final EventSourceTransport transport = new EventSourceTransport(config, request);
         final EmbeddedChannel ch = new EmbeddedChannel(transport);

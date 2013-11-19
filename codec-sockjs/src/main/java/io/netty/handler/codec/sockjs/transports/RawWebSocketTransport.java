@@ -71,7 +71,7 @@ public class RawWebSocketTransport extends SimpleChannelInboundHandler<Object> {
         }
     }
 
-    private boolean checkRequestHeaders(final ChannelHandlerContext ctx, final HttpRequest req) {
+    private static boolean checkRequestHeaders(final ChannelHandlerContext ctx, final HttpRequest req) {
         if (req.getMethod() != GET) {
             ctx.writeAndFlush(methodNotAllowedResponse(req.getProtocolVersion()))
             .addListener(ChannelFutureListener.CLOSE);
@@ -79,18 +79,18 @@ public class RawWebSocketTransport extends SimpleChannelInboundHandler<Object> {
         }
 
         final String upgradeHeader = req.headers().get(HttpHeaders.Names.UPGRADE);
-        if (upgradeHeader == null || !upgradeHeader.toLowerCase().equals("websocket")) {
+        if (upgradeHeader == null || !"websocket".equals(upgradeHeader.toLowerCase())) {
             ctx.writeAndFlush(badRequestResponse(req.getProtocolVersion(), "Can \"Upgrade\" only to \"WebSocket\"."))
             .addListener(ChannelFutureListener.CLOSE);
             return false;
         }
 
         String connectHeader = req.headers().get(HttpHeaders.Names.CONNECTION);
-        if (connectHeader != null && connectHeader.toLowerCase().equals("keep-alive, upgrade")) {
+        if (connectHeader != null && "keep-alive".equals(connectHeader.toLowerCase())) {
             req.headers().set(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.UPGRADE);
-            connectHeader = HttpHeaders.Values.UPGRADE.toString();
+            connectHeader = HttpHeaders.Values.UPGRADE;
         }
-        if (connectHeader == null || !connectHeader.toLowerCase().equals("upgrade")) {
+        if (connectHeader == null || !"upgrade".equals(connectHeader.toLowerCase())) {
             ctx.writeAndFlush(badRequestResponse(req.getProtocolVersion(), "\"Connection\" must be \"Upgrade\"."))
             .addListener(ChannelFutureListener.CLOSE);
             return false;
@@ -164,6 +164,7 @@ public class RawWebSocketTransport extends SimpleChannelInboundHandler<Object> {
         service.onMessage(message);
     }
 
+    @Override
     public void exceptionCaught(final ChannelHandlerContext ctx, final Throwable cause) throws Exception {
         if (cause instanceof WebSocketHandshakeException) {
             final HttpRequest request = ctx.attr(REQUEST_KEY).get();

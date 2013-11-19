@@ -114,18 +114,18 @@ public class InfoTest {
         assertThat(cacheControl.contains("max-age"), is(true));
     }
 
-    private HttpHeaders headersFromInfo() throws Exception {
+    private static HttpHeaders headersFromInfo() throws Exception {
         final SockJsConfig config = SockJsConfig.withPrefix("/simplepush").disableWebSocket().build();
         final FullHttpResponse response = Info.response(config, createHttpRequest("/simplepush"));
         return response.headers();
     }
 
-    private JsonNode infoAsJson(final FullHttpResponse response) throws Exception {
+    private static JsonNode infoAsJson(final FullHttpResponse response) throws Exception {
         final ObjectMapper om = new ObjectMapper();
         return om.readTree(response.content().toString(CharsetUtil.UTF_8));
     }
 
-    private HttpRequest createHttpRequest(final String prefix) {
+    private static HttpRequest createHttpRequest(final String prefix) {
         return new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
                 HttpMethod.GET, prefix + "/info",
                 Unpooled.copiedBuffer("", Charset.defaultCharset()));

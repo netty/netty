@@ -106,10 +106,10 @@ public class JsonpPollingTransport extends ChannelDuplexHandler {
         return Unpooled.copiedBuffer(function, UTF_8);
     }
 
-    private void respond(final ChannelHandlerContext ctx,
-            final HttpVersion httpVersion,
-            final HttpResponseStatus status,
-            final String message) throws Exception {
+    private static void respond(final ChannelHandlerContext ctx,
+                                final HttpVersion httpVersion,
+                                final HttpResponseStatus status,
+                                final String message) throws Exception {
         final FullHttpResponse response = new DefaultFullHttpResponse(httpVersion, status);
         Transports.writeContent(response, message, Transports.CONTENT_TYPE_JAVASCRIPT);
         Transports.writeResponse(ctx, response);

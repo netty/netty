@@ -53,7 +53,7 @@ class PollingSessionState extends AbstractTimersSessionState {
         flushMessages(ctx, session);
     }
 
-    private void flushMessages(final ChannelHandlerContext ctx, final SockJsSession session) {
+    private static void flushMessages(final ChannelHandlerContext ctx, final SockJsSession session) {
         final String[] allMessages = session.getAllMessages();
         if (allMessages.length == 0) {
             return;

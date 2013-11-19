@@ -47,7 +47,7 @@ class StreamingSessionState extends AbstractTimersSessionState {
         flushMessages(ctx, session);
     }
 
-    private void flushMessages(final ChannelHandlerContext ignored, final SockJsSession session) {
+    private static void flushMessages(final ChannelHandlerContext ignored, final SockJsSession session) {
         final Channel channel = session.context().channel();
         if (channel.isActive() && channel.isRegistered()) {
             final String[] allMessages = session.getAllMessages();
@@ -56,7 +56,7 @@ class StreamingSessionState extends AbstractTimersSessionState {
             }
 
             final MessageFrame messageFrame = new MessageFrame(allMessages);
-            logger.debug("flushing [" + messageFrame + "]");
+            logger.debug("flushing [" + messageFrame + ']');
             channel.writeAndFlush(messageFrame).addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(final ChannelFuture future) throws Exception {

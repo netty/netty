@@ -40,6 +40,7 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpHeaders.Values;
+import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpObjectDecoder;
 import io.netty.handler.codec.http.HttpRequestDecoder;
@@ -67,7 +68,7 @@ import java.util.regex.Pattern;
  *
  * Note that currently this does not work as desired with unless the HTTP request header 'Content-Lenght'
  * has been set. Netty's {@link HttpObjectDecoder} uses
- * {@link HttpHeaders#getContentLength(io.netty.handler.codec.http.HttpMessage, long)} which will set the lenght
+ * {@link HttpHeaders#getContentLength(HttpMessage, long)} which will set the lenght
  * of Hixie 76 request to '8'. But there will be no body in the first request and therefor the message will be
  * dropped.
  */

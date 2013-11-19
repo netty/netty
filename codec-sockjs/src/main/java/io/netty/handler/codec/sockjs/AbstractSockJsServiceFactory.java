@@ -19,7 +19,7 @@ public abstract class AbstractSockJsServiceFactory implements SockJsServiceFacto
 
     private final SockJsConfig config;
 
-    public AbstractSockJsServiceFactory(final SockJsConfig config) {
+    protected AbstractSockJsServiceFactory(final SockJsConfig config) {
         this.config = config;
     }
 

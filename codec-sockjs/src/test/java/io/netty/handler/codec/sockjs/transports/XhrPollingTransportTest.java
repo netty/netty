@@ -59,7 +59,7 @@ public class XhrPollingTransportTest {
         channel.finish();
     }
 
-    private FullHttpRequest request(final String body, HttpVersion httpVersion) {
+    private static FullHttpRequest request(final String body, HttpVersion httpVersion) {
         final DefaultFullHttpRequest r = new DefaultFullHttpRequest(httpVersion, HttpMethod.GET, "/test");
         if (body != null) {
             r.content().writeBytes(Unpooled.copiedBuffer(body, CharsetUtil.UTF_8));

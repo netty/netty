@@ -101,11 +101,11 @@ public class IframeTest {
         assertThat(response.headers().get(HttpHeaders.Names.ETAG), is(notNullValue()));
     }
 
-    private SockJsConfig config() {
+    private static SockJsConfig config() {
         return SockJsConfig.withPrefix("/simplepush").sockJsUrl("http://cdn.sockjs.org/sockjs-0.3.4.min.js").build();
     }
 
-    private HttpRequest createHttpRequest(final String path) {
+    private static HttpRequest createHttpRequest(final String path) {
         return new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
                 HttpMethod.GET, path,
                 Unpooled.copiedBuffer("", Charset.defaultCharset()));

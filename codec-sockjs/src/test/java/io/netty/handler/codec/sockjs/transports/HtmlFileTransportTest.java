@@ -31,10 +31,8 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpContent;
-import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
-import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.sockjs.SockJsConfig;
 import io.netty.handler.codec.sockjs.protocol.MessageFrame;
 import io.netty.handler.codec.sockjs.protocol.OpenFrame;
@@ -49,7 +47,7 @@ public class HtmlFileTransportTest {
     public void writeMissingCallback() {
         final String url = "/test/htmlfile?c=";
         final EmbeddedChannel ch = newHtmlFileChannel(url);
-        ch.writeInbound(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, url));
+        ch.writeInbound(new DefaultHttpRequest(HTTP_1_1, GET, url));
         final HttpResponse response = (HttpResponse) ch.readOutbound();
         assertThat(response.getStatus(), equalTo(INTERNAL_SERVER_ERROR));
         assertThat(response.headers().get(CONTENT_TYPE), equalTo(Transports.CONTENT_TYPE_PLAIN));
@@ -60,7 +58,7 @@ public class HtmlFileTransportTest {
     public void write() throws IOException {
         final String url = "/test/htmlfile?c=%63allback";
         final EmbeddedChannel ch = newHtmlFileChannel("/test/htmlfile?c=%63allback");
-        ch.writeInbound(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, url));
+        ch.writeInbound(new DefaultHttpRequest(HTTP_1_1, GET, url));
         ch.writeOutbound(new OpenFrame());
 
         final HttpResponse response = (HttpResponse) ch.readOutbound();
@@ -80,11 +78,11 @@ public class HtmlFileTransportTest {
         assertThat(messageContent.content().toString(UTF_8), equalTo("<script>\np(\"a[\\\"x\\\"]\");\n</script>\r\n"));
     }
 
-    private EmbeddedChannel newHtmlFileChannel(final String path) {
+    private static EmbeddedChannel newHtmlFileChannel(final String path) {
         return newStreamingChannel(SockJsConfig.withPrefix("/test").cookiesNeeded().build(), path);
     }
 
-    private EmbeddedChannel newStreamingChannel(final SockJsConfig config, final String path) {
+    private static EmbeddedChannel newStreamingChannel(final SockJsConfig config, final String path) {
         final HttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, path);
         final HtmlFileTransport transport = new HtmlFileTransport(config, request);
         final EmbeddedChannel ch = new EmbeddedChannel(transport);

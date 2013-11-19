@@ -63,7 +63,7 @@ public class XhrStreamingTransport extends ChannelOutboundHandlerAdapter {
      * Sole constructor.
      *
      * @param config the SockJS {@link SockJsConfig} instance.
-     * @param request the {@link FullHttpRequest} which can be used get information like the HTTP version.
+     * @param request the {@link HttpRequest} which can be used get information like the HTTP version.
      */
     public XhrStreamingTransport(final SockJsConfig config, final HttpRequest request) {
         this.config = config;
@@ -79,7 +79,7 @@ public class XhrStreamingTransport extends ChannelOutboundHandlerAdapter {
                 final HttpResponse response = createResponse(Transports.CONTENT_TYPE_JAVASCRIPT);
                 ctx.writeAndFlush(response);
 
-                final ByteBuf content = Transports.wrapWithLN(new PreludeFrame().content());
+                final ByteBuf content = wrapWithLN(new PreludeFrame().content());
                 final DefaultHttpContent preludeChunk = new DefaultHttpContent(content);
                 ctx.writeAndFlush(preludeChunk);
             }

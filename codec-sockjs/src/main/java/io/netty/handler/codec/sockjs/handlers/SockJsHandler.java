@@ -98,10 +98,10 @@ public class SockJsHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         writeNotFoundResponse(request, ctx);
     }
 
-    private void handleService(final SockJsServiceFactory factory,
-            final FullHttpRequest request,
-            final ChannelHandlerContext ctx) throws Exception {
-        logger.debug("RequestUri : [" + request.getUri() + "]");
+    private static void handleService(final SockJsServiceFactory factory,
+                                      final FullHttpRequest request,
+                                      final ChannelHandlerContext ctx) throws Exception {
+        logger.debug("RequestUri : [" + request.getUri() + ']');
         final String pathWithoutPrefix = request.getUri().replaceFirst(factory.config().prefix(), "");
         final String path = new QueryStringDecoder(pathWithoutPrefix).path();
         if (Greeting.matches(path)) {
@@ -123,10 +123,10 @@ public class SockJsHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         }
     }
 
-    private void handleSession(final ChannelHandlerContext ctx,
-            final FullHttpRequest request,
-            final SockJsServiceFactory factory,
-            final PathParams pathParams) throws Exception {
+    private static void handleSession(final ChannelHandlerContext ctx,
+                                      final FullHttpRequest request,
+                                      final SockJsServiceFactory factory,
+                                      final PathParams pathParams) throws Exception {
         switch (pathParams.transport()) {
         case XHR:
             addTransportHandler(new XhrPollingTransport(factory.config(), request), ctx);
@@ -167,22 +167,23 @@ public class SockJsHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         ctx.fireChannelRead(request.retain());
     }
 
-    private void addTransportHandler(final ChannelHandler transportHandler, final ChannelHandlerContext ctx) {
+    private static void addTransportHandler(final ChannelHandler transportHandler, final ChannelHandlerContext ctx) {
         ctx.pipeline().addLast(transportHandler);
     }
 
-    private void addSessionHandler(final SessionState sessionState, final SockJsSession session,
-            final ChannelHandlerContext ctx) {
+    private static void addSessionHandler(final SessionState sessionState, final SockJsSession session,
+                                          final ChannelHandlerContext ctx) {
         ctx.pipeline().addLast(new SessionHandler(sessionState, session));
     }
 
-    private void checkSessionExists(final String sessionId, final HttpRequest request) throws SessionNotFoundException {
+    private static void checkSessionExists(final String sessionId, final HttpRequest request)
+            throws SessionNotFoundException {
         if (!sessions.containsKey(sessionId)) {
             throw new SessionNotFoundException(sessionId, request);
         }
     }
 
-    private SockJsSession getSession(final SockJsServiceFactory factory, final String sessionId) {
+    private static SockJsSession getSession(final SockJsServiceFactory factory, final String sessionId) {
         SockJsSession session = sessions.get(sessionId);
         if (session == null) {
             final SockJsSession newSession = new SockJsSession(sessionId, factory.create());
@@ -190,20 +191,21 @@ public class SockJsHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
             if (session == null) {
                 session = newSession;
             }
-            logger.debug("Created new session [" + sessionId + "]");
+            logger.debug("Created new session [" + sessionId + ']');
         } else {
-            logger.debug("Using existing session {" + sessionId + "]");
+            logger.debug("Using existing session {" + sessionId + ']');
         }
         return session;
     }
 
-    private void writeNotFoundResponse(final HttpRequest request, final ChannelHandlerContext ctx) {
+    private static void writeNotFoundResponse(final HttpRequest request, final ChannelHandlerContext ctx) {
         final FullHttpResponse response = new DefaultFullHttpResponse(request.getProtocolVersion(), NOT_FOUND,
                 Unpooled.copiedBuffer("Not found", CharsetUtil.UTF_8));
         writeResponse(ctx.channel(), request, response);
     }
 
-    private void writeResponse(final Channel channel, final HttpRequest request, final FullHttpResponse response) {
+    private static void writeResponse(final Channel channel, final HttpRequest request,
+                                      final FullHttpResponse response) {
         response.headers().set(CONTENT_LENGTH, response.content().readableBytes());
         boolean hasKeepAliveHeader = KEEP_ALIVE.equalsIgnoreCase(request.headers().get(CONNECTION));
         if (!request.getProtocolVersion().isKeepAliveDefault() && hasKeepAliveHeader) {
@@ -219,7 +221,7 @@ public class SockJsHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         if (cause instanceof SessionNotFoundException) {
             final SessionNotFoundException se = (SessionNotFoundException) cause;
-            logger.debug("Could not find session [" + se.sessionId() + "]");
+            logger.debug("Could not find session [" + se.sessionId() + ']');
             writeNotFoundResponse(se.httpRequest(), ctx);
         } else {
             logger.error("exception caught:", cause);
@@ -227,7 +229,7 @@ public class SockJsHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         }
     }
 
-    public static PathParams matches(final String path) {
+    static PathParams matches(final String path) {
         final Matcher matcher = SERVER_SESSION_PATTERN.matcher(path);
         if (matcher.find()) {
             final String serverId = matcher.group(1);
@@ -239,7 +241,7 @@ public class SockJsHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         }
     }
 
-    private class SessionNotFoundException extends Exception {
+    private static class SessionNotFoundException extends Exception {
         private static final long serialVersionUID = 1101611486620901143L;
         private final String sessionId;
         private final HttpRequest request;
@@ -266,9 +268,9 @@ public class SockJsHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
     }
 
     public static class MatchingSessionPath implements PathParams {
-        private String serverId;
-        private String sessionId;
-        private Transports.Types transport;
+        private final String serverId;
+        private final String sessionId;
+        private final Transports.Types transport;
 
         public MatchingSessionPath(final String serverId, final String sessionId, final String transport) {
             this.serverId = serverId;
