@@ -17,4 +17,4 @@
 /**
  * An <a href="https://github.com/sockjs/sockjs-protocol">SockJS</a> impelementation.
  */
-package io.netty.handler.codec.sockjs.handlers;
+package io.netty.handler.codec.sockjs.handler;

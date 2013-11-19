@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-package io.netty.handler.codec.sockjs.handlers;
+package io.netty.handler.codec.sockjs.handler;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -21,7 +21,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import io.netty.handler.codec.sockjs.SockJsSessionContext;
 import io.netty.handler.codec.sockjs.SockJsService;
-import io.netty.handler.codec.sockjs.handlers.SockJsSession.States;
+import io.netty.handler.codec.sockjs.handler.SockJsSession.States;
 
 import org.junit.Test;
 

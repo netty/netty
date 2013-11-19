@@ -86,9 +86,9 @@ import io.netty.handler.codec.sockjs.EchoService;
 import io.netty.handler.codec.sockjs.SockJsConfig;
 import io.netty.handler.codec.sockjs.SockJsService;
 import io.netty.handler.codec.sockjs.SockJsServiceFactory;
-import io.netty.handler.codec.sockjs.handlers.CorsInboundHandler;
-import io.netty.handler.codec.sockjs.handlers.CorsOutboundHandler;
-import io.netty.handler.codec.sockjs.handlers.SockJsHandler;
+import io.netty.handler.codec.sockjs.handler.CorsInboundHandler;
+import io.netty.handler.codec.sockjs.handler.CorsOutboundHandler;
+import io.netty.handler.codec.sockjs.handler.SockJsHandler;
 import io.netty.handler.codec.sockjs.transports.EventSourceTransport;
 import io.netty.handler.codec.sockjs.transports.Transports;
 import io.netty.handler.codec.sockjs.util.ChannelUtil;
@@ -2012,7 +2012,7 @@ public class SockJsProtocolTest {
 
     /*
      * This is needed as otherwise the pipeline chain will stop, and since we
-     * add handlers to the end of the pipeline our handlers would otherwise
+     * add handler to the end of the pipeline our handler would otherwise
      * not get called.
      */
     private static void removeLastInboundMessageHandlers(final EmbeddedChannel ch) {

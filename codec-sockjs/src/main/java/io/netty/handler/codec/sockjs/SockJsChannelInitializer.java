@@ -21,9 +21,9 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
-import io.netty.handler.codec.sockjs.handlers.CorsInboundHandler;
-import io.netty.handler.codec.sockjs.handlers.CorsOutboundHandler;
-import io.netty.handler.codec.sockjs.handlers.SockJsHandler;
+import io.netty.handler.codec.sockjs.handler.CorsInboundHandler;
+import io.netty.handler.codec.sockjs.handler.CorsOutboundHandler;
+import io.netty.handler.codec.sockjs.handler.SockJsHandler;
 
 /**
  * {@link ChannelInitializer} for Sockjs.

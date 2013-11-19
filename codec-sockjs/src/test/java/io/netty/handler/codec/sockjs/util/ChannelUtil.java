@@ -17,9 +17,9 @@ import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.websocketx.WebSocket13FrameDecoder;
 import io.netty.handler.codec.http.websocketx.WebSocket13FrameEncoder;
 import io.netty.handler.codec.sockjs.SockJsConfig;
-import io.netty.handler.codec.sockjs.handlers.CorsInboundHandler;
-import io.netty.handler.codec.sockjs.handlers.CorsOutboundHandler;
-import io.netty.handler.codec.sockjs.handlers.SockJsHandler;
+import io.netty.handler.codec.sockjs.handler.CorsInboundHandler;
+import io.netty.handler.codec.sockjs.handler.CorsOutboundHandler;
+import io.netty.handler.codec.sockjs.handler.SockJsHandler;
 import io.netty.handler.codec.sockjs.transports.WebSocketTransport;
 
 public final class ChannelUtil {
