@@ -80,13 +80,18 @@ public class MessageFrame extends DefaultByteBufHolder implements Frame {
     }
 
     private static ByteBuf generateContent(final List<String> messages) {
-        final int size = messages.size();
         final JsonStringEncoder jsonEndocder = new JsonStringEncoder();
         final ByteBuf content = Unpooled.buffer();
         content.writeByte('a').writeByte('[');
+        final int size = messages.size();
         for (int i = 0; i < size; i++) {
             content.writeByte('"');
-            final String escaped = escapeCharacters(jsonEndocder.quoteAsString(messages.get(i)));
+            final String element = messages.get(i);
+            if (element == null) {
+                messages.removeAll(messages.subList(i, size));
+                break;
+            }
+            final String escaped = escapeCharacters(jsonEndocder.quoteAsString(element));
             content.writeBytes(Unpooled.copiedBuffer(escaped, CharsetUtil.UTF_8)).writeByte('"');
             if (i < size - 1) {
                 content.writeByte(',');
