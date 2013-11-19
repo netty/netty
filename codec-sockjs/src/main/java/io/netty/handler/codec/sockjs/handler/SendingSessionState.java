@@ -17,6 +17,7 @@ package io.netty.handler.codec.sockjs.handler;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.sockjs.util.ArgumentUtil;
+import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -61,7 +62,7 @@ class SendingSessionState implements SessionState {
 
     @Override
     public String toString() {
-        return "SendingSessionState";
+        return StringUtil.simpleClassName(this);
     }
 
     @Override

@@ -20,6 +20,7 @@ import java.util.concurrent.TimeUnit;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.sockjs.protocol.HeartbeatFrame;
 import io.netty.util.concurrent.ScheduledFuture;
+import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -75,7 +76,7 @@ class WebSocketSessionState implements SessionState {
 
     @Override
     public String toString() {
-        return "WebSocketSessionState";
+        return StringUtil.simpleClassName(this);
     }
 
     @Override

@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.sockjs.handler;
 
+import io.netty.util.internal.StringUtil;
+
 /**
  * Stores Cross Origin Resource Sharing (CORS) information.
  *
@@ -75,7 +77,7 @@ public final class CorsMetadata {
 
     @Override
     public String toString() {
-        return "CorsMetadata[origin=" + origin + ", headers=" + headers + ']';
+        return StringUtil.simpleClassName(this) + "[origin=" + origin + ", headers=" + headers + ']';
     }
 
 }

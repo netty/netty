@@ -20,6 +20,7 @@ import static io.netty.buffer.Unpooled.unreleasableBuffer;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.DefaultByteBufHolder;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.StringUtil;
 
 /**
  * Everytime a new session is estabilshed with the server the server must sent an OpenFrame in accordance with
@@ -36,7 +37,7 @@ public class OpenFrame extends DefaultByteBufHolder implements Frame {
 
     @Override
     public String toString() {
-        return "OpenFrame[o]";
+        return StringUtil.simpleClassName(this) + "[o]";
     }
 
     @Override

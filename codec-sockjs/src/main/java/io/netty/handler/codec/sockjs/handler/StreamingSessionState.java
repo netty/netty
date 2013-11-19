@@ -20,6 +20,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.sockjs.protocol.MessageFrame;
+import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -84,7 +85,7 @@ class StreamingSessionState extends AbstractTimersSessionState {
 
     @Override
     public String toString() {
-        return "StreamingSessionState";
+        return StringUtil.simpleClassName(this);
     }
 
     @Override

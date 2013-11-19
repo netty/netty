@@ -20,6 +20,7 @@ import static io.netty.buffer.Unpooled.unreleasableBuffer;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.DefaultByteBufHolder;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.StringUtil;
 
 /**
  * A heartbeat frame is sent by the server to keep the connection from breaking.
@@ -57,7 +58,7 @@ public class HeartbeatFrame extends DefaultByteBufHolder implements Frame {
 
     @Override
     public String toString() {
-        return "HeartbeatFrame[h]";
+        return StringUtil.simpleClassName(this) + "[h]";
     }
 
 }

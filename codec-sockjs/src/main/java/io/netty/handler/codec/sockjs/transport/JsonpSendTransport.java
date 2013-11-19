@@ -19,6 +19,7 @@ import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.sockjs.SockJsConfig;
+import io.netty.util.internal.StringUtil;
 
 /**
  * JSON Padding (JSONP) Polling is a transport where there is no open connection between
@@ -42,7 +43,7 @@ public class JsonpSendTransport extends AbstractSendTransport {
 
     @Override
     public String toString() {
-        return "JsonpSendTransport[config=" + config + ']';
+        return StringUtil.simpleClassName(this) + "[config=" + config + ']';
     }
 }
 

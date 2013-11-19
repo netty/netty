@@ -21,6 +21,7 @@ import java.util.Iterator;
 import java.util.Set;
 
 import io.netty.handler.codec.sockjs.util.ArgumentUtil;
+import io.netty.util.internal.StringUtil;
 
 /**
  * Configuration for a SockJS Session.
@@ -201,7 +202,7 @@ public final class SockJsConfig {
     }
 
     public String toString() {
-        return "Config[prefix=" + prefix +
+        return StringUtil.simpleClassName(this) + "[prefix=" + prefix +
             ", webSocketEnabled=" + webSocketEnabled +
             ", webSocketProtocols=" + webSocketProtocols +
             ", webSocketHeartbeatInterval=" + webSocketHeartbeatInterval +

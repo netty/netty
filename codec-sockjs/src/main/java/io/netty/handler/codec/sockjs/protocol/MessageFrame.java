@@ -25,6 +25,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import io.netty.util.internal.StringUtil;
 import org.codehaus.jackson.io.JsonStringEncoder;
 
 /**
@@ -75,7 +76,7 @@ public class MessageFrame extends DefaultByteBufHolder implements Frame {
 
     @Override
     public String toString() {
-        return "MessageFrame[messages=" + messages + ']';
+        return StringUtil.simpleClassName(this) + "[messages=" + messages + ']';
     }
 
     private static ByteBuf generateContent(final List<String> messages) {

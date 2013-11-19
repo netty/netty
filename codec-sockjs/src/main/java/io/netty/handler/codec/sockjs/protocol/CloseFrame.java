@@ -18,6 +18,7 @@ package io.netty.handler.codec.sockjs.protocol;
 import io.netty.buffer.DefaultByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.StringUtil;
 
 /**
  * This frame is sent from the server if the client requests data from a closed connection.
@@ -59,7 +60,7 @@ public class CloseFrame extends DefaultByteBufHolder implements Frame {
 
     @Override
     public String toString() {
-        return "CloseFrame[statusCode=" + statusCode + ", statusMsg='" + statusMsg + "']";
+        return StringUtil.simpleClassName(this) + "[statusCode=" + statusCode + ", statusMsg='" + statusMsg + "']";
     }
 
     @Override

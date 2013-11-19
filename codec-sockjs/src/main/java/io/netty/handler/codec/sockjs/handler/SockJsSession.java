@@ -19,6 +19,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.sockjs.SockJsConfig;
 import io.netty.handler.codec.sockjs.SockJsSessionContext;
 import io.netty.handler.codec.sockjs.SockJsService;
+import io.netty.util.internal.StringUtil;
 
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -125,7 +126,7 @@ class SockJsSession {
 
     @Override
     public String toString() {
-        return "SockJSSession[sessionId=" + sessionId + ", state=" + state + ']';
+        return StringUtil.simpleClassName(this) + "[sessionId=" + sessionId + ", state=" + state + ']';
     }
 
 }
