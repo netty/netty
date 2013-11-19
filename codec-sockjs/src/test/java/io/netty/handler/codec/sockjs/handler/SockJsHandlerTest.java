@@ -18,7 +18,7 @@ package io.netty.handler.codec.sockjs.handler;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.*;
-import io.netty.handler.codec.sockjs.transports.Transports;
+import io.netty.handler.codec.sockjs.transport.Transports;
 
 import org.junit.Test;
 

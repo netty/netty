@@ -17,4 +17,4 @@
 /**
  * Transport implementations for <a href="https://github.com/sockjs/sockjs-protocol">SockJS</a>
  */
-package io.netty.handler.codec.sockjs.transports;
+package io.netty.handler.codec.sockjs.transport;

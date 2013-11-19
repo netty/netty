@@ -20,7 +20,7 @@ import io.netty.handler.codec.sockjs.SockJsConfig;
 import io.netty.handler.codec.sockjs.handler.CorsInboundHandler;
 import io.netty.handler.codec.sockjs.handler.CorsOutboundHandler;
 import io.netty.handler.codec.sockjs.handler.SockJsHandler;
-import io.netty.handler.codec.sockjs.transports.WebSocketTransport;
+import io.netty.handler.codec.sockjs.transport.WebSocketTransport;
 
 public final class ChannelUtil {
 

@@ -20,7 +20,7 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.sockjs.SockJsConfig;
-import io.netty.handler.codec.sockjs.transports.Transports;
+import io.netty.handler.codec.sockjs.transport.Transports;
 
 import java.util.Random;
 

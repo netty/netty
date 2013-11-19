@@ -13,12 +13,12 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-package io.netty.handler.codec.sockjs.transports;
+package io.netty.handler.codec.sockjs.transport;
 
 import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_TYPE;
-import static io.netty.handler.codec.sockjs.transports.Transports.CONTENT_TYPE_PLAIN;
-import static io.netty.handler.codec.sockjs.transports.Transports.internalServerErrorResponse;
-import static io.netty.handler.codec.sockjs.transports.Transports.responseWithContent;
+import static io.netty.handler.codec.sockjs.transport.Transports.CONTENT_TYPE_PLAIN;
+import static io.netty.handler.codec.sockjs.transport.Transports.internalServerErrorResponse;
+import static io.netty.handler.codec.sockjs.transport.Transports.responseWithContent;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;

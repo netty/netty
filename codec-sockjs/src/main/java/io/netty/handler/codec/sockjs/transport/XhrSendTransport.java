@@ -13,36 +13,36 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-package io.netty.handler.codec.sockjs.transports;
+package io.netty.handler.codec.sockjs.transport;
 
-import static io.netty.handler.codec.http.HttpResponseStatus.OK;
+import static io.netty.handler.codec.http.HttpResponseStatus.NO_CONTENT;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.sockjs.SockJsConfig;
 
 /**
- * JSON Padding (JSONP) Polling is a transport where there is no open connection between
- * the client and the server. Instead the client will issue a new request for polling from
- * and sending data to the SockJS service.
+ * XMLHttpRequest (XHR) streaming transport is a transport where a persistent
+ * connection is maintained between the server and the client, over which the
+ * server can send HTTP chunks.
  *
- * This handler is responsible for handling data destined for the target SockJS service.
+ * This handler is responsible the send part the xhr-polling transport, which is
+ * sending data to the target SockJS service.
  *
- * @see JsonpPollingTransport
+ * @see XhrPollingTransport
  */
-public class JsonpSendTransport extends AbstractSendTransport {
+public class XhrSendTransport extends AbstractSendTransport {
 
-    public JsonpSendTransport(final SockJsConfig config) {
+    public XhrSendTransport(final SockJsConfig config) {
         super(config);
     }
 
     @Override
     public void respond(final ChannelHandlerContext ctx, final FullHttpRequest request) throws Exception {
-        respond(ctx, request.getProtocolVersion(), OK, "ok");
+        respond(ctx, request.getProtocolVersion(), NO_CONTENT, "");
     }
 
     @Override
     public String toString() {
-        return "JsonpSendTransport[config=" + config + ']';
+        return "XhrSendTransport[config=" + config + ']';
     }
 }
-

@@ -23,7 +23,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.sockjs.transports.Transports;
+import io.netty.handler.codec.sockjs.transport.Transports;
 import io.netty.util.CharsetUtil;
 
 public final class Greeting {

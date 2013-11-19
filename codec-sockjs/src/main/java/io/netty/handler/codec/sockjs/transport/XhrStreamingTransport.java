@@ -13,15 +13,11 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-package io.netty.handler.codec.sockjs.transports;
+package io.netty.handler.codec.sockjs.transport;
 
 import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_TYPE;
 import static io.netty.handler.codec.http.HttpHeaders.Names.TRANSFER_ENCODING;
-import static io.netty.util.CharsetUtil.UTF_8;
-import static io.netty.handler.codec.http.HttpConstants.CR;
-import static io.netty.handler.codec.http.HttpConstants.LF;
-import static io.netty.buffer.Unpooled.unreleasableBuffer;
-import static io.netty.buffer.Unpooled.copiedBuffer;
+import static io.netty.handler.codec.sockjs.transport.Transports.wrapWithLN;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -36,7 +32,10 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.sockjs.SockJsConfig;
+import io.netty.handler.codec.sockjs.protocol.CloseFrame;
 import io.netty.handler.codec.sockjs.protocol.Frame;
+import io.netty.handler.codec.sockjs.protocol.PreludeFrame;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -44,30 +43,29 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * EventSource transport is an streaming transport in that is maintains a persistent
- * connection from the server to the client over which the server can send messages.
- * This is often refered to a Server Side Events (SSE) and the client side.
+ * XMLHttpRequest (XHR) streaming transport is a transport where a persistent
+ * connection is maintained between the server and the client, over which the
+ * server can send HTTP chunks.
  *
- * The response for opening such a unidirection channel is done with a simple
- * plain response with a 'Content-Type' of 'text/event-stream'. Subsequent
- * http chunks will contain data that the server whishes to send to the client.
+ * This handler is responsible for handling {@link Frame}s and sending the
+ * contents of those frames to the client.
  *
+ * @see XhrSendTransport
  */
-public class EventSourceTransport extends ChannelOutboundHandlerAdapter {
-
-    public static final String CONTENT_TYPE_EVENT_STREAM = "text/event-stream; charset=UTF-8";
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(EventSourceTransport.class);
-
-    private static final ByteBuf FRAME_START = unreleasableBuffer(copiedBuffer("data: ", UTF_8));
-    private static final ByteBuf CRLF = unreleasableBuffer(copiedBuffer(new byte[] {CR, LF}));
-    private static final ByteBuf FRAME_END = unreleasableBuffer(copiedBuffer(new byte[] {CR, LF, CR, LF}));
-
-    private final SockJsConfig config;
-    private final HttpRequest request;
+public class XhrStreamingTransport extends ChannelOutboundHandlerAdapter {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(XhrStreamingTransport.class);
     private final AtomicBoolean headerSent = new AtomicBoolean(false);
     private final AtomicInteger bytesSent = new AtomicInteger(0);
+    private final SockJsConfig config;
+    private final HttpRequest request;
 
-    public EventSourceTransport(final SockJsConfig config, final HttpRequest request) {
+    /**
+     * Sole constructor.
+     *
+     * @param config the SockJS {@link SockJsConfig} instance.
+     * @param request the {@link HttpRequest} which can be used get information like the HTTP version.
+     */
+    public XhrStreamingTransport(final SockJsConfig config, final HttpRequest request) {
         this.config = config;
         this.request = request;
     }
@@ -78,23 +76,25 @@ public class EventSourceTransport extends ChannelOutboundHandlerAdapter {
         if (msg instanceof Frame) {
             final Frame frame = (Frame) msg;
             if (headerSent.compareAndSet(false, true)) {
-                ctx.write(createResponse(CONTENT_TYPE_EVENT_STREAM), promise);
-                ctx.writeAndFlush(new DefaultHttpContent(CRLF.duplicate()));
+                final HttpResponse response = createResponse(Transports.CONTENT_TYPE_JAVASCRIPT);
+                ctx.writeAndFlush(response);
+
+                final ByteBuf content = wrapWithLN(new PreludeFrame().content());
+                final DefaultHttpContent preludeChunk = new DefaultHttpContent(content);
+                ctx.writeAndFlush(preludeChunk);
             }
 
-            final ByteBuf data = ctx.alloc().buffer();
-            data.writeBytes(FRAME_START.duplicate());
-            data.writeBytes(frame.content());
-            data.writeBytes(FRAME_END.duplicate());
-            final int dataSize = data.readableBytes();
-            ctx.writeAndFlush(new DefaultHttpContent(data));
-
-            if (maxBytesLimit(dataSize)) {
-                if (logger.isDebugEnabled()) {
-                    logger.debug("max bytesSize limit reached [{}]", config.maxStreamingBytesSize());
-                }
+            ctx.writeAndFlush(new DefaultHttpContent(wrapWithLN(frame.content())), promise);
+            if (frame instanceof CloseFrame) {
                 ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT).addListener(ChannelFutureListener.CLOSE);
             }
+
+            if (maxBytesLimit(frame.content().readableBytes())) {
+                logger.debug("max bytesSize limit reached [{}]", config.maxStreamingBytesSize());
+                ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT).addListener(ChannelFutureListener.CLOSE);
+            }
+        } else {
+            ctx.write(ReferenceCountUtil.retain(msg), promise);
         }
     }
 

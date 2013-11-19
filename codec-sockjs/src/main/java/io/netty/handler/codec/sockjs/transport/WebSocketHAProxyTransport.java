@@ -13,9 +13,9 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-package io.netty.handler.codec.sockjs.transports;
+package io.netty.handler.codec.sockjs.transport;
 
-import static io.netty.handler.codec.sockjs.transports.Transports.internalServerErrorResponse;
+import static io.netty.handler.codec.sockjs.transport.Transports.internalServerErrorResponse;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;

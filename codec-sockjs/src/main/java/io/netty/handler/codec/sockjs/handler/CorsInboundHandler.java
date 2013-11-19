@@ -34,7 +34,7 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
-import io.netty.handler.codec.sockjs.transports.Transports;
+import io.netty.handler.codec.sockjs.transport.Transports;
 import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
 
