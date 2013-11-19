@@ -67,7 +67,9 @@ public class SessionHandler extends ChannelInboundHandlerAdapter implements Sock
 
     private void handleSession(final ChannelHandlerContext ctx) throws Exception {
         currentContext = ctx;
-        logger.debug("handleSession " + sessionState);
+        if (logger.isDebugEnabled()) {
+            logger.debug("handleSession {}", sessionState);
+        }
         switch (session.getState()) {
         case CONNECTING:
             logger.debug("State.CONNECTING sending open frame");
@@ -78,7 +80,9 @@ public class SessionHandler extends ChannelInboundHandlerAdapter implements Sock
             break;
         case OPEN:
             if (sessionState.isInUse(session)) {
-                logger.debug("Another connection still in open for [" + session.sessionId() + ']');
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Another connection still in open for [{}]", session.sessionId());
+                }
                 ctx.writeAndFlush(new CloseFrame(2010, "Another connection still open"));
                 session.setState(States.INTERRUPTED);
             } else {
@@ -132,7 +136,9 @@ public class SessionHandler extends ChannelInboundHandlerAdapter implements Sock
         final Channel channel = getActiveChannel();
         if (isWritable(channel)) {
             final CloseFrame closeFrame = new CloseFrame(3000, "Go away!");
-            logger.debug("Writing " + closeFrame);
+            if (logger.isDebugEnabled()) {
+                logger.debug("Writing {}", closeFrame);
+            }
             channel.writeAndFlush(closeFrame).addListener(ChannelFutureListener.CLOSE);
         }
     }

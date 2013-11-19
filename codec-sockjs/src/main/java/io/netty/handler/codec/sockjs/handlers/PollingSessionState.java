@@ -78,7 +78,9 @@ class PollingSessionState extends AbstractTimersSessionState {
     public void onSockJSServerInitiatedClose(final SockJsSession session) {
         final ChannelHandlerContext context = session.context();
         if (context != null) { //could be null if the request is aborted, for example due to missing callback.
-            logger.debug("Will close session context " + session.context());
+            if (logger.isDebugEnabled()) {
+                logger.debug("Will close session context {}", session.context());
+            }
             context.close();
         }
         sessions.remove(session.sessionId());

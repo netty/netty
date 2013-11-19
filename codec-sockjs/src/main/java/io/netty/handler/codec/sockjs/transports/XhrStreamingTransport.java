@@ -90,7 +90,7 @@ public class XhrStreamingTransport extends ChannelOutboundHandlerAdapter {
             }
 
             if (maxBytesLimit(frame.content().readableBytes())) {
-                logger.debug("max bytesSize limit reached [" + config.maxStreamingBytesSize() + "]. Closing");
+                logger.debug("max bytesSize limit reached [{}]", config.maxStreamingBytesSize());
                 ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT).addListener(ChannelFutureListener.CLOSE);
             }
         } else {

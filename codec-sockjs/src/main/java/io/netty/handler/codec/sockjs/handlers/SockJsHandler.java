@@ -101,7 +101,9 @@ public class SockJsHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
     private static void handleService(final SockJsServiceFactory factory,
                                       final FullHttpRequest request,
                                       final ChannelHandlerContext ctx) throws Exception {
-        logger.debug("RequestUri : [" + request.getUri() + ']');
+        if (logger.isDebugEnabled()) {
+            logger.debug("RequestUri : [{}]", request.getUri());
+        }
         final String pathWithoutPrefix = request.getUri().replaceFirst(factory.config().prefix(), "");
         final String path = new QueryStringDecoder(pathWithoutPrefix).path();
         if (Greeting.matches(path)) {
@@ -191,9 +193,9 @@ public class SockJsHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
             if (session == null) {
                 session = newSession;
             }
-            logger.debug("Created new session [" + sessionId + ']');
+            logger.debug("Created new session [{}]", sessionId);
         } else {
-            logger.debug("Using existing session {" + sessionId + ']');
+            logger.debug("Using existing session [{}]", sessionId);
         }
         return session;
     }
@@ -221,7 +223,7 @@ public class SockJsHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         if (cause instanceof SessionNotFoundException) {
             final SessionNotFoundException se = (SessionNotFoundException) cause;
-            logger.debug("Could not find session [" + se.sessionId() + ']');
+            logger.debug("Could not find session [{}]", se.sessionId());
             writeNotFoundResponse(se.httpRequest(), ctx);
         } else {
             logger.error("exception caught:", cause);

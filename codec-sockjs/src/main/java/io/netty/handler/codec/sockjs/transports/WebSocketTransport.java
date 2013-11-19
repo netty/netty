@@ -78,7 +78,7 @@ public class WebSocketTransport extends SimpleChannelInboundHandler<Object> {
 
     private static boolean checkRequestHeaders(final ChannelHandlerContext ctx, final HttpRequest req) {
         if (req.getMethod() != GET) {
-            logger.debug("Request was not of type GET, was " + req.getMethod());
+            logger.debug("Request was not of type GET, was {}", req.getMethod());
             ctx.writeAndFlush(methodNotAllowedResponse(req.getProtocolVersion()))
             .addListener(ChannelFutureListener.CLOSE);
             return false;
@@ -86,7 +86,7 @@ public class WebSocketTransport extends SimpleChannelInboundHandler<Object> {
 
         final String upgradeHeader = req.headers().get(HttpHeaders.Names.UPGRADE);
         if (upgradeHeader == null || !"websocket".equals(upgradeHeader.toLowerCase())) {
-            logger.debug("Upgrade header was not 'websocket' was: " + upgradeHeader);
+            logger.debug("Upgrade header was not 'websocket' was: {}", upgradeHeader);
             ctx.writeAndFlush(badRequestResponse(req.getProtocolVersion(), "Can \"Upgrade\" only to \"WebSocket\"."))
             .addListener(ChannelFutureListener.CLOSE);
             return false;
@@ -94,12 +94,12 @@ public class WebSocketTransport extends SimpleChannelInboundHandler<Object> {
 
         String connectHeader = req.headers().get(HttpHeaders.Names.CONNECTION);
         if (connectHeader != null && "keep-alive, upgrade".equals(connectHeader.toLowerCase())) {
-            logger.debug("Connection header was not 'keep-alive, upgrade' was: " + connectHeader);
+            logger.debug("Connection header was not 'keep-alive, upgrade' was: {}", connectHeader);
             req.headers().set(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.UPGRADE);
             connectHeader = HttpHeaders.Values.UPGRADE;
         }
         if (connectHeader == null || !"upgrade".equals(connectHeader.toLowerCase())) {
-            logger.debug("Connection header was not 'upgrade' was: " + connectHeader);
+            logger.debug("Connection header was not 'upgrade' was: {}", connectHeader);
             ctx.writeAndFlush(badRequestResponse(req.getProtocolVersion(), "\"Connection\" must be \"Upgrade\"."))
             .addListener(ChannelFutureListener.CLOSE);
             return false;

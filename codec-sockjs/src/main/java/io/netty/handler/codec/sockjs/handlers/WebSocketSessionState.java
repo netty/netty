@@ -42,12 +42,16 @@ class WebSocketSessionState implements SessionState {
     private void startHeartbeatTimer(final ChannelHandlerContext ctx, final SockJsSession session) {
         final long interval = session.config().webSocketHeartbeatInterval();
         if (interval > 0) {
-            logger.info("Starting heartbeat with interval : " + interval);
+            if (logger.isDebugEnabled()) {
+                logger.info("Starting heartbeat with interval {}", interval);
+            }
             heartbeatFuture = ctx.executor().scheduleAtFixedRate(new Runnable() {
                 @Override
                 public void run() {
                     if (ctx.channel().isActive() && ctx.channel().isRegistered()) {
-                        logger.debug("Sending heartbeat for " + session);
+                        if (logger.isDebugEnabled()) {
+                            logger.debug("Sending heartbeat for {}", session);
+                        }
                         ctx.channel().writeAndFlush(new HeartbeatFrame());
                     }
                 }
@@ -81,7 +85,7 @@ class WebSocketSessionState implements SessionState {
 
     private void shutdownHearbeat() {
         if (heartbeatFuture != null) {
-            logger.info("Stopping heartbeat job");
+            logger.debug("Stopping heartbeat job");
             heartbeatFuture.cancel(true);
         }
     }

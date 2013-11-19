@@ -145,7 +145,9 @@ public class HtmlFileTransport extends ChannelDuplexHandler {
             ctx.writeAndFlush(new DefaultHttpContent(data));
 
             if (maxBytesLimit(dataSize)) {
-                logger.debug("max bytesSize limit reached [" + config.maxStreamingBytesSize() + "]. Closing");
+                if (logger.isDebugEnabled()) {
+                    logger.debug("max bytesSize limit reached [{}]", config.maxStreamingBytesSize());
+                }
                 ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT).addListener(ChannelFutureListener.CLOSE);
             }
         } else {

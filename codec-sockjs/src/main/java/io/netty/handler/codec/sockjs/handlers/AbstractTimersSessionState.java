@@ -64,7 +64,9 @@ abstract class AbstractTimersSessionState implements SessionState {
                         session.context().close();
                         sessionTimer.cancel(true);
                         heartbeatFuture.cancel(true);
-                        logger.debug("Removed " + removed.sessionId() + " from map[" + sessions.size() + ']');
+                        if (logger.isDebugEnabled()) {
+                            logger.debug("Removed {} from map[{}]", removed.sessionId(), sessions.size());
+                        }
                     }
                 }
             }, session.config().sessionTimeout(), session.config().sessionTimeout(), TimeUnit.MILLISECONDS);
@@ -76,7 +78,9 @@ abstract class AbstractTimersSessionState implements SessionState {
             @Override
             public void run() {
                 if (ctx.channel().isActive() && ctx.channel().isRegistered()) {
-                    logger.debug("Sending heartbeat for " + session);
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("Sending heartbeat for {}", session);
+                    }
                     ctx.channel().writeAndFlush(new HeartbeatFrame());
                 }
             }
