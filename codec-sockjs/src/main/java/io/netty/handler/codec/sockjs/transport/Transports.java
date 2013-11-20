@@ -109,19 +109,7 @@ public final class Transports {
         response.headers().set(CONTENT_LENGTH, buf.readableBytes());
         response.content().writeBytes(buf);
         response.headers().set(CONTENT_TYPE, contentType);
-    }
-
-    /**
-     * Writes the passed in ByteBuf content to the response and also sets te content-type and content-lenght headaers.
-     *
-     * @param response the {@link FullHttpResponse} to write the content to.
-     * @param content the content to be written.
-     * @param contentType the content-type that will be set as the Content-Type Http response header.
-     */
-    public static void writeContent(final FullHttpResponse response, final ByteBuf content, final String contentType) {
-        response.headers().set(CONTENT_LENGTH, content.readableBytes());
-        response.content().writeBytes(content);
-        response.headers().set(CONTENT_TYPE, contentType);
+        buf.release();
     }
 
     /**
