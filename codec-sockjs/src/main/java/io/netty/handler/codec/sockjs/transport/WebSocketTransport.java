@@ -57,7 +57,6 @@ public class WebSocketTransport extends SimpleChannelInboundHandler<Object> {
     private static final AttributeKey<HttpRequest> REQUEST_KEY = AttributeKey.valueOf("request.key");
     private final SockJsConfig config;
     private WebSocketServerHandshaker handshaker;
-    private boolean passMessage = true;
 
     public WebSocketTransport(final SockJsConfig config) {
         this.config = config;
@@ -69,10 +68,6 @@ public class WebSocketTransport extends SimpleChannelInboundHandler<Object> {
             handleHttpRequest(ctx, (FullHttpRequest) msg);
         } else if (msg instanceof WebSocketFrame) {
             handleWebSocketFrame(ctx, (WebSocketFrame) msg);
-        }
-
-        if (passMessage) {
-            ctx.fireChannelRead(msg);
         }
     }
 
@@ -131,7 +126,6 @@ public class WebSocketTransport extends SimpleChannelInboundHandler<Object> {
                     }
                 }
             });
-            passMessage = false;
             return;
         }
         final String wsUrl = getWebSocketLocation(config.isTls(), req, Transports.Type.WEBSOCKET.path());
@@ -151,10 +145,11 @@ public class WebSocketTransport extends SimpleChannelInboundHandler<Object> {
                         ctx.pipeline().remove(CorsOutboundHandler.class);
                         ctx.pipeline().addLast(new WebSocketSendHandler());
                     } else {
-                        future.cause().printStackTrace();
+                        logger.error("Handshake error", future.cause());
                     }
                 }
             });
+            ctx.fireChannelRead(req);
         }
     }
 
