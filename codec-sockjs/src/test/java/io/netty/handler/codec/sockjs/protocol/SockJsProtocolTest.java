@@ -729,6 +729,18 @@ public class SockJsProtocolTest {
         assertMessageFrameContent(pollResponse, "x");
     }
 
+    @Test
+    public void xhrPollingSessionReuse() throws Exception {
+        final SockJsServiceFactory echoFactory = singletonEchoService();
+        final String sessionUrl = echoFactory.config().prefix() + "/abc/" + UUID.randomUUID().toString();
+        assertOpenFrameResponse(xhrRequest(sessionUrl, echoFactory));
+        assertNoContent(xhrSendRequest(sessionUrl, "[\"x\"]", echoFactory));
+        assertMessageFrameContent(xhrRequest(sessionUrl, echoFactory), "x");
+        xhrRequest(sessionUrl, echoFactory);
+        assertNoContent(xhrSendRequest(sessionUrl, "[\"x\"]", echoFactory));
+        assertMessageFrameContent(xhrRequest(sessionUrl, echoFactory), "x");
+    }
+
     /*
      * Equivalent to XhrPolling.test_invalid_session in sockjs-protocol-0.3.3.py.
      */
@@ -1804,6 +1816,18 @@ public class SockJsProtocolTest {
         };
     }
 
+    private static final EchoService singletonEchoService =
+            new EchoService(SockJsConfig.withPrefix("/echo").cookiesNeeded().build());
+
+    private static SockJsServiceFactory singletonEchoService() {
+        return new AbstractSockJsServiceFactory(singletonEchoService.config()) {
+            @Override
+            public SockJsService create() {
+                return singletonEchoService;
+            }
+        };
+    }
+
     private static SockJsServiceFactory echoService(final SockJsConfig config) {
         return new AbstractSockJsServiceFactory(config) {
             @Override
@@ -2124,8 +2148,7 @@ public class SockJsProtocolTest {
         return new EmbeddedChannel(
                 new CorsInboundHandler(),
                 new SockJsHandler(service),
-                new CorsOutboundHandler(),
-                new ContentRetainer());
+                new CorsOutboundHandler());
     }
 
     private static EmbeddedChannel wsChannelForService(final SockJsServiceFactory service) {
@@ -2135,7 +2158,7 @@ public class SockJsProtocolTest {
                         new CorsInboundHandler(),
                         new SockJsHandler(service),
                         new CorsOutboundHandler(),
-                        new ContentRetainer());
+                        new WsCodecRemover());
         removeLastInboundMessageHandlers(ch);
         return ch;
     }
@@ -2151,7 +2174,7 @@ public class SockJsProtocolTest {
     private static EmbeddedChannel jsonpChannelForService(final SockJsServiceFactory service) {
         return new EmbeddedChannel(new CorsInboundHandler(),
                 new SockJsHandler(service),
-                new ContentRetainer());
+                new WsCodecRemover());
     }
 
     private static Object readOutboundDiscardEmpty(final EmbeddedChannel ch) {
@@ -2159,14 +2182,13 @@ public class SockJsProtocolTest {
         if (obj instanceof ByteBuf) {
             final ByteBuf buf = (ByteBuf) obj;
             if (buf.capacity() == 0) {
-                ReferenceCountUtil.release(buf);
                 return ch.readOutbound();
             }
         }
         return obj;
     }
 
-    private static class ContentRetainer extends ChannelOutboundHandlerAdapter {
+    private static class WsCodecRemover extends ChannelOutboundHandlerAdapter {
 
         @Override
         public void write(final ChannelHandlerContext ctx, final Object msg,
