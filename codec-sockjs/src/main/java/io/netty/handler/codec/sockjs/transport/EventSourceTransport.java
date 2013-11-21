@@ -88,6 +88,7 @@ public class EventSourceTransport extends ChannelOutboundHandlerAdapter {
             data.writeBytes(FRAME_END.duplicate());
             final int dataSize = data.readableBytes();
             ctx.writeAndFlush(new DefaultHttpContent(data));
+            frame.release();
 
             if (maxBytesLimit(dataSize)) {
                 if (logger.isDebugEnabled()) {

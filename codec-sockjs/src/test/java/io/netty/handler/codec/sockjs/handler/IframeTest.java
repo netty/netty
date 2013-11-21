@@ -20,7 +20,6 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
-import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -29,8 +28,6 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.sockjs.SockJsConfig;
-
-import java.nio.charset.Charset;
 
 import org.junit.Test;
 
@@ -42,6 +39,7 @@ public class IframeTest {
         final String path = config.prefix() + "/iframe.htm";
         final FullHttpResponse response = Iframe.response(config, createHttpRequest(path));
         assertThat(response.getStatus().code(), is(HttpResponseStatus.NOT_FOUND.code()));
+        response.release();
     }
 
     @Test
@@ -50,6 +48,7 @@ public class IframeTest {
         final String path = config.prefix() + "/iframe.HTML";
         final FullHttpResponse response = Iframe.response(config, createHttpRequest(path));
         assertThat(response.getStatus().code(), is(HttpResponseStatus.NOT_FOUND.code()));
+        response.release();
     }
 
     @Test
@@ -58,6 +57,7 @@ public class IframeTest {
         final String path = config.prefix() + "/IFRAME.HTML";
         final FullHttpResponse response = Iframe.response(config, createHttpRequest(path));
         assertThat(response.getStatus().code(), is(HttpResponseStatus.NOT_FOUND.code()));
+        response.release();
     }
 
     @Test
@@ -66,6 +66,7 @@ public class IframeTest {
         final String path = config.prefix() + "/iframe.xml";
         final FullHttpResponse response = Iframe.response(config, createHttpRequest(path));
         assertThat(response.getStatus().code(), is(HttpResponseStatus.NOT_FOUND.code()));
+        response.release();
     }
 
     @Test
@@ -74,6 +75,7 @@ public class IframeTest {
         final String path = config.prefix() + "/IFRAME";
         final FullHttpResponse response = Iframe.response(config, createHttpRequest(path));
         assertThat(response.getStatus().code(), is(HttpResponseStatus.NOT_FOUND.code()));
+        response.release();
     }
 
     @Test
@@ -85,6 +87,7 @@ public class IframeTest {
         final FullHttpResponse response = Iframe.response(config, httpRequest);
         assertThat(response.headers().get(HttpHeaders.Names.SET_COOKIE), equalTo("JSESSIONID=dummy; path=/"));
         assertThat(response.getStatus().code(), is(HttpResponseStatus.NOT_MODIFIED.code()));
+        response.release();
     }
 
     @Test
@@ -98,6 +101,7 @@ public class IframeTest {
         assertThat(response.headers().get(HttpHeaders.Names.EXPIRES), is(notNullValue()));
         assertThat(response.headers().get(HttpHeaders.Names.SET_COOKIE), is(nullValue()));
         assertThat(response.headers().get(HttpHeaders.Names.ETAG), is(notNullValue()));
+        response.release();
     }
 
     private static SockJsConfig config() {
@@ -105,9 +109,7 @@ public class IframeTest {
     }
 
     private static HttpRequest createHttpRequest(final String path) {
-        return new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
-                HttpMethod.GET, path,
-                Unpooled.copiedBuffer("", Charset.defaultCharset()));
+        return new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, path);
     }
 
 }

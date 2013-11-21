@@ -87,6 +87,7 @@ public class JsonpPollingTransport extends ChannelDuplexHandler {
         if (msg instanceof Frame) {
             final Frame frame = (Frame) msg;
             final ByteBuf content = wrapWithFunction(frame.content(), ctx);
+            frame.release();
             final FullHttpResponse response = new DefaultFullHttpResponse(request.getProtocolVersion(), OK, content);
             response.headers().set(CONTENT_TYPE, Transports.CONTENT_TYPE_JAVASCRIPT);
             response.headers().set(CONTENT_LENGTH, content.readableBytes());
@@ -103,6 +104,7 @@ public class JsonpPollingTransport extends ChannelDuplexHandler {
         final ByteBuf content = ctx.alloc().buffer();
         Transports.escapeJson(data, content);
         final String function = callback + "(\"" + content.toString(UTF_8) + "\");\r\n";
+        content.release();
         return Unpooled.copiedBuffer(function, UTF_8);
     }
 

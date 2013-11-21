@@ -159,6 +159,7 @@ public class WebSocketHAProxyHandshaker extends WebSocketServerHandshaker00 {
         input.writeInt(b);
         input.writeLong(c);
         final ByteBuf key = Unpooled.buffer().writeBytes(md5(input.array()));
+        input.release();
         return key;
     }
 

@@ -21,6 +21,8 @@ import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static io.netty.util.CharsetUtil.UTF_8;
+
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -125,7 +127,9 @@ public class XhrSendTransportTest {
     private static FullHttpRequest requestWithBody(final String body, HttpVersion httpVersion) {
         final DefaultFullHttpRequest r = new DefaultFullHttpRequest(httpVersion, HttpMethod.GET, "/test");
         if (body != null) {
-            r.content().writeBytes(Unpooled.copiedBuffer(body, UTF_8));
+            final ByteBuf byteBuf = Unpooled.copiedBuffer(body, UTF_8);
+            r.content().writeBytes(byteBuf);
+            byteBuf.release();
         }
         return r;
     }
@@ -134,9 +138,13 @@ public class XhrSendTransportTest {
         final DefaultFullHttpRequest r = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/test");
         r.headers().set(HttpHeaders.Names.CONTENT_TYPE, Transports.CONTENT_TYPE_FORM);
         if (data == null) {
-            r.content().writeBytes(Unpooled.copiedBuffer("d=", UTF_8));
+            final ByteBuf byteBuf = Unpooled.copiedBuffer("d=", UTF_8);
+            r.content().writeBytes(byteBuf);
+            byteBuf.release();
         } else {
-            r.content().writeBytes(Unpooled.copiedBuffer("d=" + data, UTF_8));
+            final ByteBuf byteBuf = Unpooled.copiedBuffer("d=" + data, UTF_8);
+            r.content().writeBytes(byteBuf);
+            byteBuf.release();
         }
         return r;
     }

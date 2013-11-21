@@ -18,6 +18,8 @@ package io.netty.handler.codec.sockjs.transport;
 import static io.netty.handler.codec.sockjs.SockJsTestUtil.verifyDefaultResponseHeaders;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
+
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -100,7 +102,9 @@ public class JsonpSendTransportTest {
     private static FullHttpRequest requestWithBody(final String body, HttpVersion httpVersion) {
         final DefaultFullHttpRequest r = new DefaultFullHttpRequest(httpVersion, HttpMethod.GET, "/test");
         if (body != null) {
-            r.content().writeBytes(Unpooled.copiedBuffer(body, CharsetUtil.UTF_8));
+            final ByteBuf content = Unpooled.copiedBuffer(body, CharsetUtil.UTF_8);
+            r.content().writeBytes(content);
+            content.release();
         }
         return r;
     }
@@ -109,9 +113,13 @@ public class JsonpSendTransportTest {
         final DefaultFullHttpRequest r = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/test");
         r.headers().set(HttpHeaders.Names.CONTENT_TYPE, Transports.CONTENT_TYPE_FORM);
         if (data == null) {
-            r.content().writeBytes(Unpooled.copiedBuffer("d=", CharsetUtil.UTF_8));
+            final ByteBuf byteBuf = Unpooled.copiedBuffer("d=", CharsetUtil.UTF_8);
+            r.content().writeBytes(byteBuf);
+            byteBuf.release();
         } else {
-            r.content().writeBytes(Unpooled.copiedBuffer("d=" + data, CharsetUtil.UTF_8));
+            final ByteBuf byteBuf = Unpooled.copiedBuffer("d=" + data, CharsetUtil.UTF_8);
+            r.content().writeBytes(byteBuf);
+            byteBuf.release();
         }
         return r;
     }

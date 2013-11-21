@@ -72,6 +72,7 @@ public class XhrPollingTransport extends ChannelOutboundHandlerAdapter {
         if (msg instanceof Frame) {
             final Frame frame = (Frame) msg;
             final ByteBuf content = Transports.wrapWithLN(frame.content());
+            frame.release();
             final FullHttpResponse response = new DefaultFullHttpResponse(request.getProtocolVersion(), OK, content);
             response.headers().set(CONTENT_TYPE, CONTENT_TYPE_JAVASCRIPT);
             response.headers().set(CONTENT_LENGTH, content.readableBytes());

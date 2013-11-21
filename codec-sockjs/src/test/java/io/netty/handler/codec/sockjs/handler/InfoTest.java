@@ -43,6 +43,7 @@ public class InfoTest {
         final SockJsConfig config = SockJsConfig.withPrefix("/simplepush").build();
         final FullHttpResponse response = Info.response(config, createHttpRequest("/simplepush"));
         assertThat(infoAsJson(response).get("websocket").asBoolean(), is(true));
+        response.release();
     }
 
     @Test
@@ -50,6 +51,7 @@ public class InfoTest {
         final SockJsConfig config = SockJsConfig.withPrefix("/simplepush").disableWebSocket().build();
         final FullHttpResponse response = Info.response(config, createHttpRequest("/simplepush"));
         assertThat(infoAsJson(response).get("websocket").asBoolean(), is(false));
+        response.release();
     }
 
     @Test
@@ -57,6 +59,7 @@ public class InfoTest {
         final SockJsConfig config = SockJsConfig.withPrefix("/simplepush").disableWebSocket().cookiesNeeded().build();
         final FullHttpResponse response = Info.response(config, createHttpRequest("/simplepush"));
         assertThat(infoAsJson(response).get("cookie_needed").asBoolean(), is(true));
+        response.release();
     }
 
     @Test
@@ -64,6 +67,7 @@ public class InfoTest {
         final SockJsConfig config = SockJsConfig.withPrefix("/simplepush").disableWebSocket().build();
         final FullHttpResponse response = Info.response(config, createHttpRequest("/simplepush"));
         assertThat(infoAsJson(response).get("cookie_needed").asBoolean(), is(false));
+        response.release();
     }
 
     @Test
@@ -71,6 +75,7 @@ public class InfoTest {
         final SockJsConfig config = SockJsConfig.withPrefix("/simplepush").disableWebSocket().build();
         final FullHttpResponse response = Info.response(config, createHttpRequest("/simplepush"));
         assertThat(infoAsJson(response).get("origins").get(0).asText(), is("*:*"));
+        response.release();
     }
 
     @Test
@@ -78,6 +83,7 @@ public class InfoTest {
         final SockJsConfig config = SockJsConfig.withPrefix("/simplepush").disableWebSocket().build();
         final FullHttpResponse response = Info.response(config, createHttpRequest("/simplepush"));
         assertThat(infoAsJson(response).get("entropy").asLong(), is(notNullValue()));
+        response.release();
     }
 
     @Test
@@ -117,7 +123,9 @@ public class InfoTest {
     private static HttpHeaders headersFromInfo() throws Exception {
         final SockJsConfig config = SockJsConfig.withPrefix("/simplepush").disableWebSocket().build();
         final FullHttpResponse response = Info.response(config, createHttpRequest("/simplepush"));
-        return response.headers();
+        final HttpHeaders headers = response.headers();
+        response.release();
+        return headers;
     }
 
     private static JsonNode infoAsJson(final FullHttpResponse response) throws Exception {
@@ -126,9 +134,7 @@ public class InfoTest {
     }
 
     private static HttpRequest createHttpRequest(final String prefix) {
-        return new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
-                HttpMethod.GET, prefix + "/info",
-                Unpooled.copiedBuffer("", Charset.defaultCharset()));
+        return new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, prefix + "/info");
     }
 
 }

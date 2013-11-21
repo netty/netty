@@ -19,6 +19,8 @@ import static io.netty.handler.codec.sockjs.SockJsTestUtil.verifyDefaultResponse
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.mock;
+
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -62,7 +64,9 @@ public class XhrPollingTransportTest {
     private static FullHttpRequest request(final String body, HttpVersion httpVersion) {
         final DefaultFullHttpRequest r = new DefaultFullHttpRequest(httpVersion, HttpMethod.GET, "/test");
         if (body != null) {
-            r.content().writeBytes(Unpooled.copiedBuffer(body, CharsetUtil.UTF_8));
+            final ByteBuf buf = Unpooled.copiedBuffer(body, CharsetUtil.UTF_8);
+            r.content().writeBytes(buf);
+            buf.release();
         }
         return r;
     }

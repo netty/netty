@@ -124,7 +124,9 @@ public class HtmlFileTransport extends ChannelDuplexHandler {
                 final HttpResponse response = createResponse(Transports.CONTENT_TYPE_HTML);
                 final ByteBuf header = ctx.alloc().buffer();
                 header.writeBytes(HEADER_PART1.duplicate());
-                header.writeBytes(copiedBuffer(callback, UTF_8));
+                final ByteBuf content = copiedBuffer(callback, UTF_8);
+                header.writeBytes(content);
+                content.release();
                 header.writeBytes(HEADER_PART2.duplicate());
                 final int spaces = 1024 * header.readableBytes();
                 final ByteBuf paddedBuffer = ctx.alloc().buffer(1024 + 50);

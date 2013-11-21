@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.sockjs.transport;
 
+import static io.netty.buffer.Unpooled.copiedBuffer;
+import static io.netty.buffer.Unpooled.unreleasableBuffer;
 import static io.netty.handler.codec.http.HttpHeaders.Names.ACCESS_CONTROL_ALLOW_CREDENTIALS;
 import static io.netty.handler.codec.http.HttpHeaders.Names.ACCESS_CONTROL_ALLOW_ORIGIN;
 import static io.netty.handler.codec.http.HttpHeaders.Names.ALLOW;
@@ -27,7 +29,6 @@ import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
 import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
 import static io.netty.handler.codec.http.HttpResponseStatus.METHOD_NOT_ALLOWED;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.Cookie;
@@ -58,6 +59,7 @@ public final class Transports {
     public static final String DEFAULT_COOKIE = "JSESSIONID=dummy;path=/";
     public static final String JSESSIONID = "JSESSIONID";
     private static final String NO_CACHE_HEADER =  "no-store, no-cache, must-revalidate, max-age=0";
+    private static final ByteBuf NL = unreleasableBuffer(copiedBuffer("\n", CharsetUtil.UTF_8));
 
     public enum Type {
         WEBSOCKET,
@@ -105,7 +107,7 @@ public final class Transports {
      * @param contentType the content-type that will be set as the Content-Type Http response header.
      */
     public static void writeContent(final FullHttpResponse response, final String content, final String contentType) {
-        final ByteBuf buf = Unpooled.copiedBuffer(content, CharsetUtil.UTF_8);
+        final ByteBuf buf = copiedBuffer(content, CharsetUtil.UTF_8);
         response.headers().set(CONTENT_LENGTH, buf.readableBytes());
         response.content().writeBytes(buf);
         response.headers().set(CONTENT_TYPE, contentType);
@@ -188,7 +190,7 @@ public final class Transports {
      * @return {@code ByteBuf} a copied byte buffer with a '\n' appended.
      */
     public static ByteBuf wrapWithLN(final ByteBuf buf) {
-        return Unpooled.copiedBuffer(buf, Unpooled.copiedBuffer("\n", CharsetUtil.UTF_8));
+        return copiedBuffer(buf, NL.duplicate());
     }
 
     /**

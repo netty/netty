@@ -17,15 +17,12 @@ package io.netty.handler.codec.sockjs.handler;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
-import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.CharsetUtil;
-
-import java.nio.charset.Charset;
 
 import org.junit.Test;
 
@@ -35,12 +32,11 @@ public class GreetingTest {
     public void greeting() throws Exception {
         final FullHttpResponse response = Greeting.response(createHttpRequest("/simplepush"));
         assertThat(response.content().toString(CharsetUtil.UTF_8), equalTo("Welcome to SockJS!\n"));
+        response.release();
     }
 
     private static HttpRequest createHttpRequest(final String prefix) {
-        return new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
-                HttpMethod.GET, prefix + '/',
-                Unpooled.copiedBuffer("", Charset.defaultCharset()));
+        return new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, prefix + '/');
     }
 
 }

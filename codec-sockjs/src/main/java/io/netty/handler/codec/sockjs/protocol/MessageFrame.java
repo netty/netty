@@ -92,7 +92,9 @@ public class MessageFrame extends DefaultByteBufHolder implements Frame {
                 break;
             }
             final String escaped = escapeCharacters(jsonEndocder.quoteAsString(element));
-            content.writeBytes(Unpooled.copiedBuffer(escaped, CharsetUtil.UTF_8)).writeByte('"');
+            final ByteBuf escapedBuf = Unpooled.copiedBuffer(escaped, CharsetUtil.UTF_8);
+            content.writeBytes(escapedBuf).writeByte('"');
+            escapedBuf.release();
             if (i < size - 1) {
                 content.writeByte(',');
             }

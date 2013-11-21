@@ -34,6 +34,7 @@ public class WebSocketSendHandlerTest {
         ch.writeOutbound(new MessageFrame("testing"));
         final TextWebSocketFrame textFrame = (TextWebSocketFrame) ch.readOutbound();
         assertThat(textFrame.content().toString(CharsetUtil.UTF_8), equalTo("a[\"testing\"]"));
+        textFrame.release();
     }
 
     private static EmbeddedChannel createWebsocketChannel(final SockJsConfig config) throws Exception {

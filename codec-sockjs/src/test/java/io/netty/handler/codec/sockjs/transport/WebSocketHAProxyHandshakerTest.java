@@ -62,9 +62,10 @@ public class WebSocketHAProxyHandshakerTest {
         assertThat(response.headers().get(SEC_WEBSOCKET_ORIGIN), equalTo("http://example.com"));
         assertThat(response.headers().get(CONTENT_LENGTH), is(nullValue()));
 
-        ByteBuf content = Unpooled.copiedBuffer("^n:ds[4U", CharsetUtil.US_ASCII);
+        final ByteBuf content = Unpooled.copiedBuffer("^n:ds[4U", CharsetUtil.US_ASCII);
         final ByteBuf key = handshaker.calculateLastKey(content);
         assertThat(key.toString(CharsetUtil.US_ASCII), equalTo("8jKS'y:G*Co,Wxa-"));
+        content.release();
     }
 
     private static FullHttpRequest wsUpgradeRequest() {
@@ -80,7 +81,9 @@ public class WebSocketHAProxyHandshakerTest {
 
     private static FullHttpRequest wsUpgradeRequestWithBody() {
         final FullHttpRequest request = wsUpgradeRequest();
-        request.content().writeBytes(Unpooled.copiedBuffer("^n:ds[4U", CharsetUtil.US_ASCII));
+        final ByteBuf body = Unpooled.copiedBuffer("^n:ds[4U", CharsetUtil.US_ASCII);
+        request.content().writeBytes(body);
+        body.release();
         return request;
     }
 

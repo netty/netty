@@ -29,6 +29,7 @@ public class MessageFrameTest {
         final MessageFrame messageFrame = new MessageFrame(messages);
         assertThat(messageFrame.messages().size(), CoreMatchers.is(3));
         assertThat(messageFrame.messages(), CoreMatchers.hasItems("one", "two", "three"));
+        messageFrame.release();
     }
 
     @Test
@@ -37,6 +38,7 @@ public class MessageFrameTest {
         final MessageFrame messageFrame = new MessageFrame(nullTerminated);
         assertThat(messageFrame.messages().size(), CoreMatchers.is(2));
         assertThat(messageFrame.messages(), CoreMatchers.hasItems("one", "two"));
+        messageFrame.release();
     }
 
 }

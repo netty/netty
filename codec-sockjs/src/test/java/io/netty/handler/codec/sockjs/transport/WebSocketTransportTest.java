@@ -168,7 +168,6 @@ public class WebSocketTransportTest {
     private static void assertUpgradeRequest(final EmbeddedChannel ch) throws Exception {
         final FullHttpRequest request = webSocketUpgradeRequest("/websocket", WebSocketVersion.V13);
         ch.writeInbound(request);
-        //final ByteBuf buf = (ByteBuf) ch.readOutbound();
         final HttpResponse response = decode(ch);
         assertThat(response.getStatus(), is(HttpResponseStatus.SWITCHING_PROTOCOLS));
         assertThat(response.headers().get(UPGRADE), equalTo("websocket"));

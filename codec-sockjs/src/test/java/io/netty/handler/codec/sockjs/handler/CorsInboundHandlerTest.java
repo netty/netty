@@ -18,7 +18,6 @@ package io.netty.handler.codec.sockjs.handler;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -27,8 +26,6 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpVersion;
-
-import java.nio.charset.Charset;
 
 import org.junit.Test;
 
@@ -103,9 +100,7 @@ public class CorsInboundHandlerTest {
     }
 
     private static FullHttpRequest createHttpRequest(HttpMethod method) {
-        return new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
-                method, "/info",
-                Unpooled.copiedBuffer("", Charset.defaultCharset()));
+        return new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, "/info");
     }
 
 }

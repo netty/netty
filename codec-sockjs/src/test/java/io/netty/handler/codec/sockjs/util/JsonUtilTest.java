@@ -71,23 +71,29 @@ public class JsonUtilTest {
 
     @Test
     public void decodeTextWebSocketFrameSimpleString() throws Exception {
-        final String[] decode = JsonUtil.decode(new TextWebSocketFrame("\"test\""));
+        final TextWebSocketFrame frame = new TextWebSocketFrame("\"test\"");
+        final String[] decode = JsonUtil.decode(frame);
         assertThat(decode.length, is(1));
         assertThat(decode[0], equalTo("test"));
+        frame.release();
     }
 
     @Test
     public void decodeTextWebSocketFrameArray() throws Exception {
-        final String[] decode = JsonUtil.decode(new TextWebSocketFrame("[\"test\"]"));
+        final TextWebSocketFrame frame = new TextWebSocketFrame("[\"test\"]");
+        final String[] decode = JsonUtil.decode(frame);
         assertThat(decode.length, is(1));
         assertThat(decode[0], equalTo("test"));
+        frame.release();
     }
 
     @Test
     public void decodeTextWebSocketFrameObject() throws Exception {
-        final String[] decode = JsonUtil.decode(new TextWebSocketFrame("{\"firstName\":\"Fletch\"}"));
+        final TextWebSocketFrame frame = new TextWebSocketFrame("{\"firstName\":\"Fletch\"}");
+        final String[] decode = JsonUtil.decode(frame);
         assertThat(decode.length, is(1));
         assertThat(decode[0], equalTo("{\"firstName\":\"Fletch\"}"));
+        frame.release();
     }
 
 }

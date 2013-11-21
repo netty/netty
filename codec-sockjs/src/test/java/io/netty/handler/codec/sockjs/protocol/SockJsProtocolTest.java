@@ -95,7 +95,6 @@ import io.netty.handler.codec.sockjs.util.ChannelUtil;
 import io.netty.handler.codec.sockjs.util.HttpUtil;
 import io.netty.handler.codec.sockjs.util.JsonUtil;
 import io.netty.util.CharsetUtil;
-import io.netty.util.ReferenceCountUtil;
 
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -864,7 +863,9 @@ public class SockJsProtocolTest {
 
         final DefaultHttpContent prelude = (DefaultHttpContent) ch.readOutbound();
         assertThat(prelude.content().readableBytes(), is(PreludeFrame.CONTENT_SIZE + 1));
-        prelude.content().readBytes(Unpooled.buffer(PreludeFrame.CONTENT_SIZE + 1));
+        final ByteBuf buffer = Unpooled.buffer(PreludeFrame.CONTENT_SIZE + 1);
+        prelude.content().readBytes(buffer);
+        buffer.release();
 
         final DefaultHttpContent openResponse = (DefaultHttpContent) ch.readOutbound();
         assertThat(openResponse.content().toString(UTF_8), equalTo("o\n"));
@@ -897,7 +898,9 @@ public class SockJsProtocolTest {
 
         final DefaultHttpContent prelude = (DefaultHttpContent) ch.readOutbound();
         assertThat(prelude.content().readableBytes(), is(PreludeFrame.CONTENT_SIZE + 1));
-        prelude.content().readBytes(Unpooled.buffer(PreludeFrame.CONTENT_SIZE + 1));
+        final ByteBuf buf = Unpooled.buffer(PreludeFrame.CONTENT_SIZE + 1);
+        prelude.content().readBytes(buf);
+        buf.release();
 
         final DefaultHttpContent openResponse = (DefaultHttpContent) ch.readOutbound();
         assertThat(openResponse.content().toString(UTF_8), equalTo("o\n"));
@@ -1143,7 +1146,9 @@ public class SockJsProtocolTest {
 
         final FullHttpRequest plainRequest = httpRequest(sessionUrl + "/jsonp_send", POST);
         plainRequest.headers().set(CONTENT_TYPE, "text/plain");
-        plainRequest.content().writeBytes(Unpooled.copiedBuffer("[\"%61bc\"]", UTF_8));
+        final ByteBuf byteBuf = Unpooled.copiedBuffer("[\"%61bc\"]", UTF_8);
+        plainRequest.content().writeBytes(byteBuf);
+        byteBuf.release();
         final FullHttpResponse plainResponse = jsonpSend(plainRequest, echoService);
         assertThat(plainResponse.getStatus(), is(HttpResponseStatus.OK));
 
@@ -1778,7 +1783,9 @@ public class SockJsProtocolTest {
             req.headers().set(SEC_WEBSOCKET_KEY1, "4 @1  46546xW%0l 1 5");
             req.headers().set(SEC_WEBSOCKET_KEY2, "12998 5 Y3 1  .P00");
             req.headers().set(ORIGIN, "http://example.com");
-            req.content().writeBytes(Unpooled.copiedBuffer("^n:ds[4U", CharsetUtil.US_ASCII));
+            final ByteBuf byteBuf = Unpooled.copiedBuffer("^n:ds[4U", CharsetUtil.US_ASCII);
+            req.content().writeBytes(byteBuf);
+            byteBuf.release();
         } else {
             req.headers().set(SEC_WEBSOCKET_KEY, "dGhlIHNhbXBsZSBub25jZQ==");
             req.headers().set(SEC_WEBSOCKET_ORIGIN, "http://test.com");
@@ -1967,7 +1974,9 @@ public class SockJsProtocolTest {
                                               final SockJsServiceFactory service) {
         final FullHttpRequest request = httpRequest(url, POST);
         request.headers().set(CONTENT_TYPE, Transports.CONTENT_TYPE_FORM);
-        request.content().writeBytes(Unpooled.copiedBuffer(content, UTF_8));
+        final ByteBuf buf = Unpooled.copiedBuffer(content, UTF_8);
+        request.content().writeBytes(buf);
+        buf.release();
         return jsonpSend(request, service);
     }
 
@@ -1976,7 +1985,9 @@ public class SockJsProtocolTest {
         final EmbeddedChannel ch = channelForService(service);
         removeLastInboundMessageHandlers(ch);
         final FullHttpRequest sendRequest = httpRequest(path + "/xhr_send", POST);
-        sendRequest.content().writeBytes(Unpooled.copiedBuffer(content, UTF_8));
+        final ByteBuf byteBuf = Unpooled.copiedBuffer(content, UTF_8);
+        sendRequest.content().writeBytes(byteBuf);
+        byteBuf.release();
         ch.writeInbound(sendRequest);
         final FullHttpResponse response = (FullHttpResponse) ch.readOutbound();
         ch.finish();
@@ -1991,7 +2002,9 @@ public class SockJsProtocolTest {
         removeLastInboundMessageHandlers(ch);
         final FullHttpRequest request = httpRequest(path + Transports.Type.XHR_SEND.path(), POST);
         request.headers().set(CONTENT_TYPE, contentType);
-        request.content().writeBytes(Unpooled.copiedBuffer(content, UTF_8));
+        final ByteBuf byteBuf = Unpooled.copiedBuffer(content, UTF_8);
+        request.content().writeBytes(byteBuf);
+        byteBuf.release();
         ch.writeInbound(request);
         Object out;
         try {
