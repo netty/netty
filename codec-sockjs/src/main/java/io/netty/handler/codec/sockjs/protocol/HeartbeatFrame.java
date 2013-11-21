@@ -46,13 +46,13 @@ public class HeartbeatFrame extends DefaultByteBufHolder implements Frame {
 
     @Override
     public HeartbeatFrame retain() {
-        super.retain();
+        HEARTBEAT_FRAME.retain();
         return this;
     }
 
     @Override
     public HeartbeatFrame retain(int increment) {
-        super.retain(increment);
+        HEARTBEAT_FRAME.retain(increment);
         return this;
     }
 

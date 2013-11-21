@@ -52,13 +52,13 @@ public class OpenFrame extends DefaultByteBufHolder implements Frame {
 
     @Override
     public OpenFrame retain() {
-        super.retain();
+        OPEN_FRAME.retain();
         return this;
     }
 
     @Override
     public OpenFrame retain(int increment) {
-        super.retain(increment);
+        OPEN_FRAME.retain(increment);
         return this;
     }
 

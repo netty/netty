@@ -53,13 +53,13 @@ public class PreludeFrame extends DefaultByteBufHolder implements Frame {
 
     @Override
     public PreludeFrame retain() {
-        super.retain();
+        PRELUDE_FRAME.retain();
         return this;
     }
 
     @Override
     public PreludeFrame retain(int increment) {
-        super.retain(increment);
+        PRELUDE_FRAME.retain(increment);
         return this;
     }
 
