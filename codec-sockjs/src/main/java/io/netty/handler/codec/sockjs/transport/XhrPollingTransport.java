@@ -80,7 +80,7 @@ public class XhrPollingTransport extends ChannelOutboundHandlerAdapter {
             Transports.setDefaultHeaders(response, config, request);
             Transports.writeResponse(ctx, promise, response);
         } else {
-            ctx.write(ReferenceCountUtil.retain(msg), promise);
+            ctx.writeAndFlush(ReferenceCountUtil.retain(msg), promise);
         }
     }
 

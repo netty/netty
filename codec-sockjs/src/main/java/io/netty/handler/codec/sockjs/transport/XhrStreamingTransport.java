@@ -94,7 +94,7 @@ public class XhrStreamingTransport extends ChannelOutboundHandlerAdapter {
                 ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT).addListener(ChannelFutureListener.CLOSE);
             }
         } else {
-            ctx.write(ReferenceCountUtil.retain(msg), promise);
+            ctx.writeAndFlush(ReferenceCountUtil.retain(msg), promise);
         }
     }
 
