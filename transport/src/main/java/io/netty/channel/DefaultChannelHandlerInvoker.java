@@ -283,16 +283,9 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
         }
 
         validatePromise(ctx, promise, true);
-        invokeWrite(ctx, msg, false, promise);
-    }
-
-    private void invokeWrite(ChannelHandlerContext ctx, Object msg, boolean flush, ChannelPromise promise) {
 
         if (executor.inEventLoop()) {
             invokeWriteNow(ctx, msg, promise);
-            if (flush) {
-                invokeFlushNow(ctx);
-            }
         } else {
             AbstractChannel channel = (AbstractChannel) ctx.channel();
             int size = channel.estimatorHandle().size(msg);
@@ -303,7 +296,7 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
                     buffer.incrementPendingOutboundBytes(size);
                 }
             }
-            safeExecuteOutbound(WriteTask.newInstance(ctx, msg, size, flush, promise), promise, msg);
+            safeExecuteOutbound(WriteTask.newInstance(ctx, msg, size, promise), promise, msg);
         }
     }
 
@@ -324,17 +317,6 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
             }
             executor.execute(task);
         }
-    }
-
-    @Override
-    public void invokeWriteAndFlush(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-        if (msg == null) {
-            throw new NullPointerException("msg");
-        }
-
-        validatePromise(ctx, promise, true);
-
-        invokeWrite(ctx, msg, true, promise);
     }
 
     private static void validatePromise(ChannelHandlerContext ctx, ChannelPromise promise, boolean allowVoidPromise) {
@@ -406,7 +388,6 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
         private Object msg;
         private ChannelPromise promise;
         private int size;
-        private boolean flush;
 
         private static final Recycler<WriteTask> RECYCLER = new Recycler<WriteTask>() {
             @Override
@@ -416,13 +397,12 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
         };
 
         private static WriteTask newInstance(
-                ChannelHandlerContext ctx, Object msg, int size, boolean flush, ChannelPromise promise) {
+                ChannelHandlerContext ctx, Object msg, int size, ChannelPromise promise) {
             WriteTask task = RECYCLER.get();
             task.ctx = ctx;
             task.msg = msg;
             task.promise = promise;
             task.size = size;
-            task.flush = flush;
             return task;
         }
 
@@ -443,9 +423,6 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
                     }
                 }
                 invokeWriteNow(ctx, msg, promise);
-                if (flush) {
-                    invokeFlushNow(ctx);
-                }
             } finally {
                 // Set to null so the GC can collect them directly
                 ctx = null;

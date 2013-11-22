@@ -19,8 +19,8 @@ package io.netty.test.udt.util;
 import com.yammer.metrics.core.Meter;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.udt.nio.NioUdtProvider;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -30,7 +30,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
  * traffic between the echo client and server by sending the first message to
  * the server on activation.
  */
-public class EchoByteHandler extends ChannelInboundHandlerAdapter {
+public class EchoByteHandler extends ChannelHandlerAdapter {
 
     private static final InternalLogger log = InternalLoggerFactory.getInstance(EchoByteHandler.class);
 

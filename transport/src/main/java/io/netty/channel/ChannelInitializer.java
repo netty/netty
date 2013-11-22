@@ -22,7 +22,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 /**
- * A special {@link ChannelInboundHandler} which offers an easy way to initialize a {@link Channel} once it was
+ * A special {@link ChannelHandler} which offers an easy way to initialize a {@link Channel} once it was
  * registered to its {@link EventLoop}.
  *
  * Implementations are most often used in the context of {@link Bootstrap#handler(ChannelHandler)} ,
@@ -47,7 +47,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
  * @param <C>   A sub-type of {@link Channel}
  */
 @Sharable
-public abstract class ChannelInitializer<C extends Channel> extends ChannelInboundHandlerAdapter {
+public abstract class ChannelInitializer<C extends Channel> extends ChannelHandlerAdapter {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ChannelInitializer.class);
 

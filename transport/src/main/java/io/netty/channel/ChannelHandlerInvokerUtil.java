@@ -27,7 +27,7 @@ public final class ChannelHandlerInvokerUtil {
 
     public static void invokeChannelRegisteredNow(ChannelHandlerContext ctx) {
         try {
-            ((ChannelInboundHandler) ctx.handler()).channelRegistered(ctx);
+            ctx.handler().channelRegistered(ctx);
         } catch (Throwable t) {
             notifyHandlerException(ctx, t);
         }
@@ -35,7 +35,7 @@ public final class ChannelHandlerInvokerUtil {
 
     public static void invokeChannelActiveNow(final ChannelHandlerContext ctx) {
         try {
-            ((ChannelInboundHandler) ctx.handler()).channelActive(ctx);
+            ctx.handler().channelActive(ctx);
         } catch (Throwable t) {
             notifyHandlerException(ctx, t);
         }
@@ -43,7 +43,7 @@ public final class ChannelHandlerInvokerUtil {
 
     public static void invokeChannelInactiveNow(final ChannelHandlerContext ctx) {
         try {
-            ((ChannelInboundHandler) ctx.handler()).channelInactive(ctx);
+            ctx.handler().channelInactive(ctx);
         } catch (Throwable t) {
             notifyHandlerException(ctx, t);
         }
@@ -63,7 +63,7 @@ public final class ChannelHandlerInvokerUtil {
 
     public static void invokeUserEventTriggeredNow(final ChannelHandlerContext ctx, final Object event) {
         try {
-            ((ChannelInboundHandler) ctx.handler()).userEventTriggered(ctx, event);
+            ctx.handler().userEventTriggered(ctx, event);
         } catch (Throwable t) {
             notifyHandlerException(ctx, t);
         }
@@ -71,7 +71,7 @@ public final class ChannelHandlerInvokerUtil {
 
     public static void invokeChannelReadNow(final ChannelHandlerContext ctx, final Object msg) {
         try {
-            ((ChannelInboundHandler) ctx.handler()).channelRead(ctx, msg);
+            ctx.handler().channelRead(ctx, msg);
         } catch (Throwable t) {
             notifyHandlerException(ctx, t);
         }
@@ -79,7 +79,7 @@ public final class ChannelHandlerInvokerUtil {
 
     public static void invokeChannelReadCompleteNow(final ChannelHandlerContext ctx) {
         try {
-            ((ChannelInboundHandler) ctx.handler()).channelReadComplete(ctx);
+            ctx.handler().channelReadComplete(ctx);
         } catch (Throwable t) {
             notifyHandlerException(ctx, t);
         }
@@ -87,7 +87,7 @@ public final class ChannelHandlerInvokerUtil {
 
     public static void invokeChannelWritabilityChangedNow(final ChannelHandlerContext ctx) {
         try {
-            ((ChannelInboundHandler) ctx.handler()).channelWritabilityChanged(ctx);
+            ctx.handler().channelWritabilityChanged(ctx);
         } catch (Throwable t) {
             notifyHandlerException(ctx, t);
         }
@@ -96,7 +96,7 @@ public final class ChannelHandlerInvokerUtil {
     public static void invokeBindNow(
             final ChannelHandlerContext ctx, final SocketAddress localAddress, final ChannelPromise promise) {
         try {
-            ((ChannelOutboundHandler) ctx.handler()).bind(ctx, localAddress, promise);
+            ctx.handler().bind(ctx, localAddress, promise);
         } catch (Throwable t) {
             notifyOutboundHandlerException(t, promise);
         }
@@ -105,7 +105,7 @@ public final class ChannelHandlerInvokerUtil {
             final ChannelHandlerContext ctx,
             final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise promise) {
         try {
-            ((ChannelOutboundHandler) ctx.handler()).connect(ctx, remoteAddress, localAddress, promise);
+            ctx.handler().connect(ctx, remoteAddress, localAddress, promise);
         } catch (Throwable t) {
             notifyOutboundHandlerException(t, promise);
         }
@@ -113,7 +113,7 @@ public final class ChannelHandlerInvokerUtil {
 
     public static void invokeDisconnectNow(final ChannelHandlerContext ctx, final ChannelPromise promise) {
         try {
-            ((ChannelOutboundHandler) ctx.handler()).disconnect(ctx, promise);
+            ctx.handler().disconnect(ctx, promise);
         } catch (Throwable t) {
             notifyOutboundHandlerException(t, promise);
         }
@@ -121,7 +121,7 @@ public final class ChannelHandlerInvokerUtil {
 
     public static void invokeCloseNow(final ChannelHandlerContext ctx, final ChannelPromise promise) {
         try {
-            ((ChannelOutboundHandler) ctx.handler()).close(ctx, promise);
+            ctx.handler().close(ctx, promise);
         } catch (Throwable t) {
             notifyOutboundHandlerException(t, promise);
         }
@@ -129,7 +129,7 @@ public final class ChannelHandlerInvokerUtil {
 
     public static void invokeReadNow(final ChannelHandlerContext ctx) {
         try {
-            ((ChannelOutboundHandler) ctx.handler()).read(ctx);
+            ctx.handler().read(ctx);
         } catch (Throwable t) {
             notifyHandlerException(ctx, t);
         }
@@ -137,7 +137,7 @@ public final class ChannelHandlerInvokerUtil {
 
     public static void invokeWriteNow(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
         try {
-            ((ChannelOutboundHandler) ctx.handler()).write(ctx, msg, promise);
+            ctx.handler().write(ctx, msg, promise);
         } catch (Throwable t) {
             notifyOutboundHandlerException(t, promise);
         }
@@ -145,7 +145,7 @@ public final class ChannelHandlerInvokerUtil {
 
     public static void invokeFlushNow(final ChannelHandlerContext ctx) {
         try {
-            ((ChannelOutboundHandler) ctx.handler()).flush(ctx);
+            ctx.handler().flush(ctx);
         } catch (Throwable t) {
             notifyHandlerException(ctx, t);
         }

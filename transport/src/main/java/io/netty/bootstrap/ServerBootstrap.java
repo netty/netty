@@ -19,8 +19,8 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
@@ -254,7 +254,7 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
         return new Entry[size];
     }
 
-    private static class ServerBootstrapAcceptor extends ChannelInboundHandlerAdapter {
+    private static class ServerBootstrapAcceptor extends ChannelHandlerAdapter {
 
         private final ChannelHandler childHandler;
         private final Entry<ChannelOption<?>, Object>[] childOptions;

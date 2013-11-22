@@ -15,8 +15,8 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.HttpHeaders;
 
@@ -34,7 +34,7 @@ import java.util.List;
  * This implementation will establish the websocket connection once the connection to the remote server was complete.
  *
  * To know once a handshake was done you can intercept the
- * {@link ChannelInboundHandler#userEventTriggered(ChannelHandlerContext, Object)} and check if the event was of type
+ * {@link ChannelHandler#userEventTriggered(ChannelHandlerContext, Object)} and check if the event was of type
  * {@link ClientHandshakeStateEvent#HANDSHAKE_ISSUED} or {@link ClientHandshakeStateEvent#HANDSHAKE_COMPLETE}.
  */
 public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {

@@ -24,8 +24,8 @@ interface ChannelInboundOps {
     /**
      * A {@link Channel} was registered to its {@link EventLoop}.
      *
-     * This will result in having the  {@link ChannelInboundHandler#channelRegistered(ChannelHandlerContext)} method
-     * called of the next  {@link ChannelInboundHandler} contained in the  {@link ChannelPipeline} of the
+     * This will result in having the  {@link ChannelHandler#channelRegistered(ChannelHandlerContext)} method
+     * called of the next  {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelInboundOps fireChannelRegistered();
@@ -33,8 +33,8 @@ interface ChannelInboundOps {
     /**
      * A {@link Channel} is active now, which means it is connected.
      *
-     * This will result in having the  {@link ChannelInboundHandler#channelActive(ChannelHandlerContext)} method
-     * called of the next  {@link ChannelInboundHandler} contained in the  {@link ChannelPipeline} of the
+     * This will result in having the  {@link ChannelHandler#channelActive(ChannelHandlerContext)} method
+     * called of the next  {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelInboundOps fireChannelActive();
@@ -42,8 +42,8 @@ interface ChannelInboundOps {
     /**
      * A {@link Channel} is inactive now, which means it is closed.
      *
-     * This will result in having the  {@link ChannelInboundHandler#channelInactive(ChannelHandlerContext)} method
-     * called of the next  {@link ChannelInboundHandler} contained in the  {@link ChannelPipeline} of the
+     * This will result in having the  {@link ChannelHandler#channelInactive(ChannelHandlerContext)} method
+     * called of the next  {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelInboundOps fireChannelInactive();
@@ -51,8 +51,8 @@ interface ChannelInboundOps {
     /**
      * A {@link Channel} received an {@link Throwable} in one of its inbound operations.
      *
-     * This will result in having the  {@link ChannelInboundHandler#exceptionCaught(ChannelHandlerContext, Throwable)}
-     * method  called of the next  {@link ChannelInboundHandler} contained in the  {@link ChannelPipeline} of the
+     * This will result in having the  {@link ChannelHandler#exceptionCaught(ChannelHandlerContext, Throwable)}
+     * method  called of the next  {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelInboundOps fireExceptionCaught(Throwable cause);
@@ -60,8 +60,8 @@ interface ChannelInboundOps {
     /**
      * A {@link Channel} received an user defined event.
      *
-     * This will result in having the  {@link ChannelInboundHandler#userEventTriggered(ChannelHandlerContext, Object)}
-     * method  called of the next  {@link ChannelInboundHandler} contained in the  {@link ChannelPipeline} of the
+     * This will result in having the  {@link ChannelHandler#userEventTriggered(ChannelHandlerContext, Object)}
+     * method  called of the next  {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelInboundOps fireUserEventTriggered(Object event);
@@ -69,8 +69,8 @@ interface ChannelInboundOps {
     /**
      * A {@link Channel} received a message.
      *
-     * This will result in having the {@link ChannelInboundHandler#channelRead(ChannelHandlerContext, Object)}
-     * method  called of the next {@link ChannelInboundHandler} contained in the  {@link ChannelPipeline} of the
+     * This will result in having the {@link ChannelHandler#channelRead(ChannelHandlerContext, Object)}
+     * method  called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelInboundOps fireChannelRead(Object msg);
@@ -78,8 +78,8 @@ interface ChannelInboundOps {
     ChannelInboundOps fireChannelReadComplete();
 
     /**
-     * Triggers an {@link ChannelInboundHandler#channelWritabilityChanged(ChannelHandlerContext)}
-     * event to the next {@link ChannelInboundHandler} in the {@link ChannelPipeline}.
+     * Triggers an {@link ChannelHandler#channelWritabilityChanged(ChannelHandlerContext)}
+     * event to the next {@link ChannelHandler} in the {@link ChannelPipeline}.
      */
     ChannelInboundOps fireChannelWritabilityChanged();
 }

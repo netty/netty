@@ -28,8 +28,8 @@ interface ChannelOutboundOps {
      * completes, either because the operation was successful or because of an error.
      * <p>
      * This will result in having the
-     * {@link ChannelOutboundHandler#bind(ChannelHandlerContext, SocketAddress, ChannelPromise)} method
-     * called of the next {@link ChannelOutboundHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link ChannelHandler#bind(ChannelHandlerContext, SocketAddress, ChannelPromise)} method
+     * called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelFuture bind(SocketAddress localAddress);
@@ -43,8 +43,8 @@ interface ChannelOutboundOps {
      * will be used.
      * <p>
      * This will result in having the
-     * {@link ChannelOutboundHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, ChannelPromise)}
-     * method called of the next {@link ChannelOutboundHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link ChannelHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, ChannelPromise)}
+     * method called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelFuture connect(SocketAddress remoteAddress);
@@ -55,8 +55,8 @@ interface ChannelOutboundOps {
      * an error.
      * <p>
      * This will result in having the
-     * {@link ChannelOutboundHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, ChannelPromise)}
-     * method called of the next {@link ChannelOutboundHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link ChannelHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, ChannelPromise)}
+     * method called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress);
@@ -66,8 +66,8 @@ interface ChannelOutboundOps {
      * either because the operation was successful or because of an error.
      * <p>
      * This will result in having the
-     * {@link ChannelOutboundHandler#disconnect(ChannelHandlerContext, ChannelPromise)}
-     * method called of the next {@link ChannelOutboundHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link ChannelHandler#disconnect(ChannelHandlerContext, ChannelPromise)}
+     * method called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelFuture disconnect();
@@ -80,8 +80,8 @@ interface ChannelOutboundOps {
      * After it is closed it is not possible to reuse it again.
      * <p>
      * This will result in having the
-     * {@link ChannelOutboundHandler#close(ChannelHandlerContext, ChannelPromise)}
-     * method called of the next {@link ChannelOutboundHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link ChannelHandler#close(ChannelHandlerContext, ChannelPromise)}
+     * method called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelFuture close();
@@ -93,8 +93,8 @@ interface ChannelOutboundOps {
      * The given {@link ChannelPromise} will be notified.
      * <p>
      * This will result in having the
-     * {@link ChannelOutboundHandler#bind(ChannelHandlerContext, SocketAddress, ChannelPromise)} method
-     * called of the next {@link ChannelOutboundHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link ChannelHandler#bind(ChannelHandlerContext, SocketAddress, ChannelPromise)} method
+     * called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise);
@@ -111,8 +111,8 @@ interface ChannelOutboundOps {
      * will be used.
      * <p>
      * This will result in having the
-     * {@link ChannelOutboundHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, ChannelPromise)}
-     * method called of the next {@link ChannelOutboundHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link ChannelHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, ChannelPromise)}
+     * method called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise promise);
@@ -125,8 +125,8 @@ interface ChannelOutboundOps {
      * The given {@link ChannelPromise} will be notified and also returned.
      * <p>
      * This will result in having the
-     * {@link ChannelOutboundHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, ChannelPromise)}
-     * method called of the next {@link ChannelOutboundHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link ChannelHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, ChannelPromise)}
+     * method called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise);
@@ -138,8 +138,8 @@ interface ChannelOutboundOps {
      * The given {@link ChannelPromise} will be notified.
      * <p>
      * This will result in having the
-     * {@link ChannelOutboundHandler#disconnect(ChannelHandlerContext, ChannelPromise)}
-     * method called of the next {@link ChannelOutboundHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link ChannelHandler#disconnect(ChannelHandlerContext, ChannelPromise)}
+     * method called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelFuture disconnect(ChannelPromise promise);
@@ -153,22 +153,22 @@ interface ChannelOutboundOps {
      * The given {@link ChannelPromise} will be notified.
      * <p>
      * This will result in having the
-     * {@link ChannelOutboundHandler#close(ChannelHandlerContext, ChannelPromise)}
-     * method called of the next {@link ChannelOutboundHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link ChannelHandler#close(ChannelHandlerContext, ChannelPromise)}
+     * method called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelFuture close(ChannelPromise promise);
 
     /**
      * Request to Read data from the {@link Channel} into the first inbound buffer, triggers an
-     * {@link ChannelInboundHandler#channelRead(ChannelHandlerContext, Object)} event if data was
+     * {@link ChannelHandler#channelRead(ChannelHandlerContext, Object)} event if data was
      * read, and triggers a
-     * {@link ChannelInboundHandler#channelReadComplete(ChannelHandlerContext) channelReadComplete} event so the
+     * {@link ChannelHandler#channelReadComplete(ChannelHandlerContext) channelReadComplete} event so the
      * handler can decide to continue reading.  If there's a pending read operation already, this method does nothing.
      * <p>
      * This will result in having the
-     * {@link ChannelOutboundHandler#read(ChannelHandlerContext)}
-     * method called of the next {@link ChannelOutboundHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link ChannelHandler#read(ChannelHandlerContext)}
+     * method called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelOutboundOps read();

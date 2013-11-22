@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec;
 
-import io.netty.channel.ChannelDuplexHandler;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.ReferenceCounted;
@@ -52,7 +52,7 @@ import java.util.List;
  * are of type {@link ReferenceCounted}. This is needed as the {@link MessageToMessageCodec} will call
  * {@link ReferenceCounted#release()} on encoded / decoded messages.
  */
-public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN> extends ChannelDuplexHandler {
+public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN> extends ChannelHandlerAdapter {
 
     private final MessageToMessageEncoder<Object> encoder = new MessageToMessageEncoder<Object>() {
 
