@@ -15,11 +15,11 @@
  */
 package io.netty.example.localecho;
 
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 
 
-public class LocalEchoServerHandler extends ChannelInboundHandlerAdapter {
+public class LocalEchoServerHandler extends ChannelHandlerAdapter {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {

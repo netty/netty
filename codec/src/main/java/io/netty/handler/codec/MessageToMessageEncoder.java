@@ -15,9 +15,9 @@
  */
 package io.netty.handler.codec;
 
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandler;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.ReferenceCountUtil;
@@ -29,7 +29,7 @@ import io.netty.util.internal.TypeParameterMatcher;
 import java.util.List;
 
 /**
- * {@link ChannelOutboundHandlerAdapter} which encodes from one message to an other message
+ * A {@link ChannelHandler} which encodes from one message to an other message
  *
  * For example here is an implementation which decodes an {@link Integer} to an {@link String}.
  *
@@ -49,7 +49,7 @@ import java.util.List;
  * are of type {@link ReferenceCounted}. This is needed as the {@link MessageToMessageEncoder} will call
  * {@link ReferenceCounted#release()} on encoded messages.
  */
-public abstract class MessageToMessageEncoder<I> extends ChannelOutboundHandlerAdapter {
+public abstract class MessageToMessageEncoder<I> extends ChannelHandlerAdapter {
 
     private final TypeParameterMatcher matcher;
 
@@ -71,7 +71,7 @@ public abstract class MessageToMessageEncoder<I> extends ChannelOutboundHandlerA
 
     /**
      * Returns {@code true} if the given message should be handled. If {@code false} it will be passed to the next
-     * {@link ChannelOutboundHandler} in the {@link ChannelPipeline}.
+     * {@link ChannelHandler} in the {@link ChannelPipeline}.
      */
     public boolean acceptOutboundMessage(Object msg) throws Exception {
         return matcher.match(msg);

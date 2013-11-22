@@ -44,7 +44,7 @@ import java.nio.channels.Channels;
  * You can keep the {@link ChannelHandlerContext} for later use, such as
  * triggering an event outside the handler methods, even from a different thread.
  * <pre>
- * public class MyHandler extends {@link ChannelDuplexHandler} {
+ * public class MyHandler extends {@link ChannelHandlerAdapter} {
  *
  *     <b>private {@link ChannelHandlerContext} ctx;</b>
  *
@@ -79,15 +79,14 @@ import java.nio.channels.Channels;
  * as how many times it is added to pipelines, regardless if it is added to the
  * same pipeline multiple times or added to different pipelines multiple times:
  * <pre>
- * public class FactorialHandler extends {@link ChannelInboundHandlerAdapter}&lt{@link Integer}&gt {
+ * public class FactorialHandler extends {@link ChannelHandlerAdapter} {
  *
- *   private final {@link AttributeKey}&lt{@link Integer}&gt counter =
- *           new {@link AttributeKey}&lt{@link Integer}&gt("counter");
+ *   private final {@link AttributeKey}&lt{@link Integer}&gt counter = {@link AttributeKey}.valueOf("counter");
  *
  *   // This handler will receive a sequence of increasing integers starting
  *   // from 1.
  *   {@code @Override}
- *   public void channelRead({@link ChannelHandlerContext} ctx, {@link Integer} integer) {
+ *   public void channelRead({@link ChannelHandlerContext} ctx, Object msg) {
  *     {@link Attribute}&lt{@link Integer}&gt attr = ctx.getAttr(counter);
  *     Integer a = ctx.getAttr(counter).get();
  *
@@ -95,7 +94,7 @@ import java.nio.channels.Channels;
  *       a = 1;
  *     }
  *
- *     attr.set(a * integer));
+ *     attr.set(a * (Integer) msg);
  *   }
  * }
  *
@@ -133,6 +132,14 @@ public interface ChannelHandlerContext
      * Returns the {@link EventExecutor} which is used to execute an arbitrary task.
      */
     EventExecutor executor();
+
+    /**
+     * Returns the {@link ChannelHandlerInvoker} which is used to trigger an event for the associated
+     * {@link ChannelHandler}. Note that the methods in {@link ChannelHandlerInvoker} are not intended to be called
+     * by a user. Use this method only to obtain the reference to the {@link ChannelHandlerInvoker}
+     * (and not calling its methods) unless you know what you are doing.
+     */
+    ChannelHandlerInvoker invoker();
 
     /**
      * The unique name of the {@link ChannelHandlerContext}.The name was used when then {@link ChannelHandler}

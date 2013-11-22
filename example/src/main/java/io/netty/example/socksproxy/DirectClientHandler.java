@@ -15,12 +15,12 @@
  */
 package io.netty.example.socksproxy;
 
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.concurrent.Promise;
 
 
-public final class DirectClientHandler extends ChannelInboundHandlerAdapter {
+public final class DirectClientHandler extends ChannelHandlerAdapter {
     private static final String name = "DIRECT_CLIENT_HANDLER";
 
     public static String getName() {

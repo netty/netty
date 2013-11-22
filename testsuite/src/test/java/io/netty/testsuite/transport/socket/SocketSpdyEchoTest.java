@@ -20,8 +20,8 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.SocketChannel;
@@ -220,7 +220,7 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         }
     }
 
-    private static class SpdyEchoTestServerHandler extends ChannelInboundHandlerAdapter {
+    private static class SpdyEchoTestServerHandler extends ChannelHandlerAdapter {
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
 
         @Override

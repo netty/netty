@@ -17,10 +17,9 @@ package io.netty.channel.local;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultEventLoopGroup;
@@ -67,7 +66,7 @@ public class LocalTransportThreadModelTest3 {
                 .childHandler(new ChannelInitializer<LocalChannel>() {
                     @Override
                     public void initChannel(LocalChannel ch) throws Exception {
-                        ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                        ch.pipeline().addLast(new ChannelHandlerAdapter() {
                             @Override
                             public void channelRead(ChannelHandlerContext ctx, Object msg) {
                                 // Discard
@@ -247,9 +246,9 @@ public class LocalTransportThreadModelTest3 {
     }
 
     @ChannelHandler.Sharable
-    private static final class EventForwarder extends ChannelDuplexHandler { }
+    private static final class EventForwarder extends ChannelHandlerAdapter { }
 
-    private static final class EventRecorder extends ChannelDuplexHandler {
+    private static final class EventRecorder extends ChannelHandlerAdapter {
         private final Queue<EventType> events;
         private final boolean inbound;
 
