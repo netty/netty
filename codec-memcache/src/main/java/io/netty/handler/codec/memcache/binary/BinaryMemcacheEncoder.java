@@ -64,7 +64,12 @@ public abstract class BinaryMemcacheEncoder<M extends BinaryMemcacheMessage<H>, 
             return;
         }
 
-        buf.writeBytes(Unpooled.copiedBuffer(key, CharsetUtil.UTF_8));
+        ByteBuf keyBuf = Unpooled.copiedBuffer(key, CharsetUtil.UTF_8);
+        try {
+            buf.writeBytes(keyBuf);
+        } finally {
+            keyBuf.release();
+        }
     }
 
     /**
