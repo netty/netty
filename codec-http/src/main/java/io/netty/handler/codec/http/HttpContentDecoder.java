@@ -91,13 +91,13 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
                 if (contentEncoding != null) {
                     contentEncoding = contentEncoding.trim();
                 } else {
-                    contentEncoding = HttpHeaders.Values.IDENTITY;
+                    contentEncoding = HttpHeaders.Values.IDENTITY.toString();
                 }
 
                 if ((decoder = newContentDecoder(contentEncoding)) != null) {
                     // Decode the content and remove or replace the existing headers
                     // so that the message looks like a decoded message.
-                    String targetContentEncoding = getTargetContentEncoding(contentEncoding);
+                    CharSequence targetContentEncoding = getTargetContentEncoding(contentEncoding);
                     if (HttpHeaders.Values.IDENTITY.equals(targetContentEncoding)) {
                         // Do NOT set the 'Content-Encoding' header if the target encoding is 'identity'
                         // as per: http://tools.ietf.org/html/rfc2616#section-14.11
@@ -185,7 +185,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
      * @return the expected content encoding of the new content
      */
     @SuppressWarnings("unused")
-    protected String getTargetContentEncoding(String contentEncoding) throws Exception {
+    protected CharSequence getTargetContentEncoding(String contentEncoding) throws Exception {
         return HttpHeaders.Values.IDENTITY;
     }
 

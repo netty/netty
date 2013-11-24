@@ -188,8 +188,8 @@ public class HttpUploadClient {
         HttpHeaders headers = request.headers();
         headers.set(HttpHeaders.Names.HOST, host);
         headers.set(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
-        headers.set(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP + ','
-                + HttpHeaders.Values.DEFLATE);
+        headers.set(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP.toString() + ','
+                + HttpHeaders.Values.DEFLATE.toString());
 
         headers.set(HttpHeaders.Names.ACCEPT_CHARSET, "ISO-8859-1,utf-8;q=0.7,*;q=0.7");
         headers.set(HttpHeaders.Names.ACCEPT_LANGUAGE, "fr");
