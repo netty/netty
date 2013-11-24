@@ -50,30 +50,6 @@ public class DefaultHttpHeaders extends HttpHeaders {
         }
     }
 
-    private static boolean eq(String name1, String name2) {
-        int nameLen = name1.length();
-        if (nameLen != name2.length()) {
-            return false;
-        }
-
-        for (int i = nameLen - 1; i >= 0; i --) {
-            char c1 = name1.charAt(i);
-            char c2 = name2.charAt(i);
-            if (c1 != c2) {
-                if (c1 >= 'A' && c1 <= 'Z') {
-                    c1 += 32;
-                }
-                if (c2 >= 'A' && c2 <= 'Z') {
-                    c2 += 32;
-                }
-                if (c1 != c2) {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
-
     private static int index(int hash) {
         return hash % BUCKET_SIZE;
     }
@@ -157,7 +133,7 @@ public class DefaultHttpHeaders extends HttpHeaders {
         }
 
         for (;;) {
-            if (e.hash == h && eq(name, e.key)) {
+            if (e.hash == h && equalsIgnoreCase(name, e.key)) {
                 e.remove();
                 HeaderEntry next = e.next;
                 if (next != null) {
@@ -177,7 +153,7 @@ public class DefaultHttpHeaders extends HttpHeaders {
             if (next == null) {
                 break;
             }
-            if (next.hash == h && eq(name, next.key)) {
+            if (next.hash == h && equalsIgnoreCase(name, next.key)) {
                 e.next = next.next;
                 next.remove();
             } else {
@@ -249,7 +225,7 @@ public class DefaultHttpHeaders extends HttpHeaders {
         String value = null;
         // loop until the first header was found
         while (e != null) {
-            if (e.hash == h && eq(name, e.key)) {
+            if (e.hash == h && equalsIgnoreCase(name, e.key)) {
                 value = e.value;
             }
 
@@ -270,7 +246,7 @@ public class DefaultHttpHeaders extends HttpHeaders {
         int i = index(h);
         HeaderEntry e = entries[i];
         while (e != null) {
-            if (e.hash == h && eq(name, e.key)) {
+            if (e.hash == h && equalsIgnoreCase(name, e.key)) {
                 values.addFirst(e.value);
             }
             e = e.next;
@@ -316,7 +292,7 @@ public class DefaultHttpHeaders extends HttpHeaders {
         int i = index(h);
         HeaderEntry e = entries[i];
         while (e != null) {
-            if (e.hash == h && eq(name, e.key)) {
+            if (e.hash == h && equalsIgnoreCase(name, e.key)) {
                 if (ignoreCaseValue) {
                     if (e.value.equalsIgnoreCase(value)) {
                         return true;

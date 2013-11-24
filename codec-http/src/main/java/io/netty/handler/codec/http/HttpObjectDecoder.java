@@ -649,9 +649,9 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
                 } else {
                     String[] header = splitHeader(line);
                     String name = header[0];
-                    if (!name.equalsIgnoreCase(HttpHeaders.Names.CONTENT_LENGTH) &&
-                        !name.equalsIgnoreCase(HttpHeaders.Names.TRANSFER_ENCODING) &&
-                        !name.equalsIgnoreCase(HttpHeaders.Names.TRAILER)) {
+                    if (!HttpHeaders.equalsIgnoreCase(name, HttpHeaders.Names.CONTENT_LENGTH) &&
+                        !HttpHeaders.equalsIgnoreCase(name, HttpHeaders.Names.TRANSFER_ENCODING) &&
+                        !HttpHeaders.equalsIgnoreCase(name, HttpHeaders.Names.TRAILER)) {
                         trailer.trailingHeaders().add(name, header[1]);
                     }
                     lastHeader = name;
