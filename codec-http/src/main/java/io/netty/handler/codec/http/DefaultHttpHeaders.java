@@ -294,7 +294,7 @@ public class DefaultHttpHeaders extends HttpHeaders {
         while (e != null) {
             if (e.hash == h && equalsIgnoreCase(name, e.key)) {
                 if (ignoreCaseValue) {
-                    if (e.value.equalsIgnoreCase(value)) {
+                    if (equalsIgnoreCase(e.value, value)) {
                         return true;
                     }
                 } else {
