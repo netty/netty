@@ -73,7 +73,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
             throws Exception {
         String acceptedEncoding = msg.headers().get(HttpHeaders.Names.ACCEPT_ENCODING);
         if (acceptedEncoding == null) {
-            acceptedEncoding = HttpHeaders.Values.IDENTITY;
+            acceptedEncoding = HttpHeaders.Values.IDENTITY.toString();
         }
         acceptEncodingQueue.add(acceptedEncoding);
         out.add(ReferenceCountUtil.retain(msg));

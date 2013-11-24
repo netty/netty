@@ -91,7 +91,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
                 if (contentEncoding != null) {
                     contentEncoding = contentEncoding.trim();
                 } else {
-                    contentEncoding = HttpHeaders.Values.IDENTITY;
+                    contentEncoding = HttpHeaders.Values.IDENTITY.toString();
                 }
 
                 if ((decoder = newContentDecoder(contentEncoding)) != null) {
@@ -186,7 +186,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
      */
     @SuppressWarnings("unused")
     protected String getTargetContentEncoding(String contentEncoding) throws Exception {
-        return HttpHeaders.Values.IDENTITY;
+        return HttpHeaders.Values.IDENTITY.toString();
     }
 
     @Override
