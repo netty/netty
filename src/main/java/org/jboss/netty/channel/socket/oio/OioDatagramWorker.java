@@ -87,9 +87,14 @@ class OioDatagramWorker implements Runnable {
                     packet.getSocketAddress());
         }
 
-        // Setting the workerThread to null will prevent any channel
-        // operations from interrupting this thread from now on.
-        channel.workerThread = null;
+        synchronized (channel.interestOpsLock) {
+            // Setting the workerThread to null will prevent any channel
+            // operations from interrupting this thread from now on.
+            //
+            // Do this while holding the lock to not race with close(...) or
+            // setInterestOps(...)
+            channel.workerThread = null;
+        }
 
         // Clean up.
         close(channel, succeededFuture(channel));
@@ -202,9 +207,16 @@ class OioDatagramWorker implements Runnable {
                 if (connected) {
                     // Notify the worker so it stops reading.
                     Thread currentThread = Thread.currentThread();
-                    Thread workerThread = channel.workerThread;
-                    if (workerThread != null && currentThread != workerThread) {
-                        workerThread.interrupt();
+                    synchronized (channel.interestOpsLock) {
+                        // We need to do this while hold the lock as otherwise
+                        // we may race and so interrupt the workerThread even
+                        // if we are in the workerThread now.
+                        // This can happen if run() set channel.workerThread to null
+                        // between workerThread != null and currentThread!= workerThread
+                        Thread workerThread = channel.workerThread;
+                        if (workerThread != null && currentThread != workerThread) {
+                            workerThread.interrupt();
+                        }
                     }
                     fireChannelDisconnected(channel);
                 }
