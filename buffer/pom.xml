@@ -24,7 +24,7 @@
   </parent>
 
   <artifactId>netty-buffer</artifactId>
-  <packaging>bundle</packaging>
+  <packaging>jar</packaging>
 
   <name>Netty/Buffer</name>
 
@@ -35,5 +35,4 @@
       <version>${project.version}</version>
     </dependency>
   </dependencies>
-  
 </project>
