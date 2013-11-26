@@ -27,6 +27,7 @@ import java.util.Map;
 public class DefaultLastHttpContent extends DefaultHttpContent implements LastHttpContent {
 
     private final HttpHeaders trailingHeaders;
+    private final boolean validateHeaders;
 
     public DefaultLastHttpContent() {
         this(Unpooled.buffer(0));
@@ -39,18 +40,19 @@ public class DefaultLastHttpContent extends DefaultHttpContent implements LastHt
     public DefaultLastHttpContent(ByteBuf content, boolean validateHeaders) {
         super(content);
         trailingHeaders = new TrailingHeaders(validateHeaders);
+        this.validateHeaders = validateHeaders;
     }
 
     @Override
     public LastHttpContent copy() {
-        DefaultLastHttpContent copy = new DefaultLastHttpContent(content().copy());
+        DefaultLastHttpContent copy = new DefaultLastHttpContent(content().copy(), validateHeaders);
         copy.trailingHeaders().set(trailingHeaders());
         return copy;
     }
 
     @Override
     public LastHttpContent duplicate() {
-        DefaultLastHttpContent copy = new DefaultLastHttpContent(content().duplicate());
+        DefaultLastHttpContent copy = new DefaultLastHttpContent(content().duplicate(), validateHeaders);
         copy.trailingHeaders().set(trailingHeaders());
         return copy;
     }
