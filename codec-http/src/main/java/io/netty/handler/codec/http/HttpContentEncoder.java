@@ -149,7 +149,12 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                 } else {
                     out.add(res);
                     state = State.AWAIT_CONTENT;
-                    break;
+                    if (!(msg instanceof HttpContent)) {
+                        // only break out the switch statement if we have not content to process
+                        // See https://github.com/netty/netty/issues/2006
+                        break;
+                    }
+                    // Fall through to encode the content
                 }
             }
             case AWAIT_CONTENT: {
