@@ -25,14 +25,40 @@ import io.netty.handler.codec.compression.ZlibWrapper;
  * handler modifies the message, please refer to {@link HttpContentDecoder}.
  */
 public class HttpContentDecompressor extends HttpContentDecoder {
+
+    private final boolean strict;
+
+    /**
+     * Create a new {@link HttpContentDecompressor} in non-strict mode.
+     */
+    public HttpContentDecompressor() {
+        this(false);
+    }
+
+    /**
+     * Create a new {@link HttpContentDecompressor}.
+     *
+     * @param strict    if {@code true} use strict handling of deflate if used, otherwise handle it in a
+     *                  more lenient fashion.
+     */
+    public HttpContentDecompressor(boolean strict) {
+        this.strict = strict;
+    }
+
     @Override
     protected EmbeddedChannel newContentDecoder(String contentEncoding) throws Exception {
         if ("gzip".equalsIgnoreCase(contentEncoding) || "x-gzip".equalsIgnoreCase(contentEncoding)) {
             return new EmbeddedChannel(ZlibCodecFactory.newZlibDecoder(ZlibWrapper.GZIP));
         }
         if ("deflate".equalsIgnoreCase(contentEncoding) || "x-deflate".equalsIgnoreCase(contentEncoding)) {
+            ZlibWrapper wrapper;
+            if (strict) {
+                wrapper = ZlibWrapper.ZLIB;
+            }   else {
+                wrapper = ZlibWrapper.ZLIB_OR_NONE;
+            }
             // To be strict, 'deflate' means ZLIB, but some servers were not implemented correctly.
-            return new EmbeddedChannel(ZlibCodecFactory.newZlibDecoder(ZlibWrapper.ZLIB_OR_NONE));
+            return new EmbeddedChannel(ZlibCodecFactory.newZlibDecoder(wrapper));
         }
 
         // 'identity' or unsupported
