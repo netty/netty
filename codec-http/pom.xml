@@ -24,7 +24,7 @@
   </parent>
 
   <artifactId>netty-codec-http</artifactId>
-  <packaging>bundle</packaging>
+  <packaging>jar</packaging>
 
   <name>Netty/Codec/HTTP</name>
 
@@ -45,7 +45,5 @@
       <optional>true</optional>
     </dependency>
   </dependencies>
-  
-  
 </project>
 

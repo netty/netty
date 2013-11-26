@@ -24,7 +24,7 @@
   </parent>
 
   <artifactId>netty-transport-sctp</artifactId>
-  <packaging>bundle</packaging>
+  <packaging>jar</packaging>
 
   <name>Netty/Transport/SCTP</name>
 
@@ -48,7 +48,6 @@
 
   <build>
     <plugins>
-    
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
@@ -59,10 +58,7 @@
           </excludes>
         </configuration>
       </plugin>
-      
     </plugins>
-  
   </build>
-  
 </project>
 

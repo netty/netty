@@ -24,7 +24,7 @@
   </parent>
 
   <artifactId>netty-codec-memcache</artifactId>
-  <packaging>bundle</packaging>
+  <packaging>jar</packaging>
 
   <name>Netty/Codec/Memcache</name>
 
@@ -40,6 +40,5 @@
       <version>${project.version}</version>
     </dependency>
   </dependencies>
-
 </project>
 

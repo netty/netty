@@ -24,7 +24,7 @@
   </parent>
 
   <artifactId>netty-common</artifactId>
-  <packaging>bundle</packaging>
+  <packaging>jar</packaging>
 
   <name>Netty/Common</name>
 
@@ -54,84 +54,5 @@
       <optional>true</optional>
     </dependency>
   </dependencies>
-
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.apache.felix</groupId>
-        <artifactId>maven-bundle-plugin</artifactId>
-        <configuration>
-          <instructions>
-            <!-- enforce JVM vendor package as optional -->
-            <Import-Package>
-              sun.misc.*;resolution:=optional,
-              *
-            </Import-Package>
-            <!-- override "internal" private package convention -->
-            <Private-Package>
-              !*
-            </Private-Package>
-          </instructions>
-        </configuration>
-      </plugin>             
-      <plugin>
-        <artifactId>maven-antrun-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>write-version</id>
-            <phase>validate</phase>
-            <goals>
-              <goal>run</goal>
-            </goals>
-            <configuration>
-              <tasks>
-                <taskdef resource="net/sf/antcontrib/antlib.xml" />
-                <exec executable="git" outputproperty="gitOutput" resultproperty="gitExitCode" failonerror="false" failifexecutionfails="false">
-                  <arg value="log" />
-                  <arg value="-1" />
-                  <arg value="--format=format:%h" />
-                </exec>
-                <if>
-                  <equals arg2="0" arg1="${gitExitCode}" />
-                  <then>
-                    <property name="buildNumber" value="${gitOutput}" />
-                  </then>
-                  <else>
-                    <property name="buildNumber" value="unknown" />
-                  </else>
-                </if>
-                <echo>Build number: ${buildNumber}</echo>
-                <mkdir dir="${project.build.directory}" />
-                <echo message="${project.version}" file="${project.build.directory}/version.txt" />
-                <echo message="// DO NOT MODIFY - WILL BE OVERWRITTEN DURING THE BUILD PROCESS${line.separator}package io.netty.util;${line.separator}/**${line.separator} * Provides the version information of Netty.${line.separator} * @apiviz.landmark${line.separator} */${line.separator}@SuppressWarnings(&quot;all&quot;)${line.separator}public final class Version {${line.separator} /** The version identifier. */${line.separator} public static final String ID = &quot;${project.version}-${buildNumber}&quot;;${line.separator} /** Prints out the version identifier to stdout. */${line.separator} public static void main(String[] args) { System.out.println(ID); }${line.separator} private Version() { }${line.separator}}${line.separator}" file="${basedir}/src/main/java/io/netty/util/Version.java" />
-              </tasks>
-            </configuration>
-          </execution>
-        </executions>
-        <dependencies>
-          <dependency>
-            <groupId>org.apache.ant</groupId>
-            <artifactId>ant</artifactId>
-            <version>1.8.2</version>
-          </dependency>
-          <dependency>
-            <groupId>org.apache.ant</groupId>
-            <artifactId>ant-launcher</artifactId>
-            <version>1.8.2</version>
-          </dependency>
-          <dependency>
-            <groupId>ant-contrib</groupId>
-            <artifactId>ant-contrib</artifactId>
-            <version>1.0b3</version>
-            <exclusions>
-              <exclusion>
-                <groupId>ant</groupId>
-                <artifactId>ant</artifactId>
-              </exclusion>
-            </exclusions>
-          </dependency>
-        </dependencies>
-      </plugin>
-    </plugins>
-  </build>
 </project>
+

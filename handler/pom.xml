@@ -24,7 +24,7 @@
   </parent>
 
   <artifactId>netty-handler</artifactId>
-  <packaging>bundle</packaging>
+  <packaging>jar</packaging>
 
   <name>Netty/Handler</name>
 
@@ -45,5 +45,5 @@
       <version>${project.version}</version>
     </dependency>
   </dependencies>
-  
- </project>
+</project>
+
