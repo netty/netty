@@ -24,6 +24,7 @@ import io.netty.buffer.Unpooled;
 public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHttpRequest {
     private final ByteBuf content;
     private final HttpHeaders trailingHeader;
+    private final boolean validateHeaders;
 
     public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri) {
         this(httpVersion, method, uri, Unpooled.buffer(0));
@@ -41,6 +42,7 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
         }
         this.content = content;
         trailingHeader = new DefaultHttpHeaders(validateHeaders);
+        this.validateHeaders = validateHeaders;
     }
 
     @Override
@@ -101,7 +103,7 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
     @Override
     public FullHttpRequest copy() {
         DefaultFullHttpRequest copy = new DefaultFullHttpRequest(
-                getProtocolVersion(), getMethod(), getUri(), content().copy());
+                getProtocolVersion(), getMethod(), getUri(), content().copy(), validateHeaders);
         copy.headers().set(headers());
         copy.trailingHeaders().set(trailingHeaders());
         return copy;
@@ -110,7 +112,7 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
     @Override
     public FullHttpRequest duplicate() {
         DefaultFullHttpRequest duplicate = new DefaultFullHttpRequest(
-                getProtocolVersion(), getMethod(), getUri(), content().duplicate());
+                getProtocolVersion(), getMethod(), getUri(), content().duplicate(), validateHeaders);
         duplicate.headers().set(headers());
         duplicate.trailingHeaders().set(trailingHeaders());
         return duplicate;
