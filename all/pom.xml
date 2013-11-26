@@ -30,6 +30,8 @@
 
   <properties>
     <quickbuild>true</quickbuild>
+    <generatedSourceDir>${project.build.directory}/src</generatedSourceDir>
+    <dependencyVersionDir>${project.build.directory}/versions</dependencyVersionDir>
   </properties>
 
   <profiles>
@@ -181,6 +183,17 @@
       <plugin>
         <artifactId>maven-dependency-plugin</artifactId>
         <executions>
+          <!-- Populate the properties whose key is groupId:artifactId:type
+                                   and whose value is the path to the artifact -->
+          <execution>
+            <id>locate-dependencies</id>
+            <phase>initialize</phase>
+            <goals>
+              <goal>properties</goal>
+            </goals>
+          </execution>
+
+          <!-- Unpack all source files -->
           <execution>
             <id>unpack-sources</id>
             <phase>prepare-package</phase>
@@ -191,9 +204,11 @@
               <classifier>sources</classifier>
               <includes>io/netty/**</includes>
               <includeGroupIds>${project.groupId}</includeGroupIds>
-              <outputDirectory>${project.build.directory}/src</outputDirectory>
+              <outputDirectory>${generatedSourceDir}</outputDirectory>
             </configuration>
           </execution>
+
+          <!-- Unpack all class files -->
           <execution>
             <id>unpack-jars</id>
             <phase>prepare-package</phase>
@@ -208,6 +223,64 @@
           </execution>
         </executions>
       </plugin>
+
+      <plugin>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <executions>
+          <!-- Instead of generating a new version property file, merge others' version property files into one. -->
+          <execution>
+            <id>write-version-properties</id>
+            <phase>none</phase>
+          </execution>
+          <execution>
+            <id>merge-version-properties</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <taskdef resource="net/sf/antcontrib/antlib.xml" />
+                <propertyselector
+                  property="versions"
+                  match="^(${project.groupId}:(?!netty-example)[^:]+:jar)$" select="\1"/>
+                <for list="${versions}" param="x">
+                  <sequential>
+                    <unzip src="${@{x}}" dest="${dependencyVersionsDir}">
+                      <patternset>
+                        <include name="META-INF/${project.groupId}.versions.properties"/>
+                      </patternset>
+                    </unzip>
+                    <concat destfile="${project.build.outputDirectory}/META-INF/${project.groupId}.versions.properties"
+                            append="true">
+                            <path path="${dependencyVersionsDir}/META-INF/${project.groupId}.versions.properties"/>
+                    </concat>
+                  </sequential>
+                </for>
+                <delete dir="${dependencyVersionsDir}" quiet="true"/>
+              </target>
+            </configuration>
+          </execution>
+
+          <!-- Clean everything once finished so that IDE doesn't find the unpacked files. -->
+          <execution>
+            <id>clean-source-directory</id>
+            <phase>package</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <delete dir="${generatedSourceDir}" quiet="true" />
+                <delete dir="${dependencyVersionDir}" quiet="true" />
+                <delete dir="${project.build.outputDirectory}" quiet="true" />
+              </target>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Include the directory where the source files were unpacked -->
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>build-helper-maven-plugin</artifactId>
@@ -220,9 +293,46 @@
             </goals>
             <configuration>
               <sources>
-                <source>target/src</source>
+                <source>${generatedSourceDir}</source>
               </sources>
             </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Disable OSGi bundle manifest generation -->
+      <plugin>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>maven-bundle-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>generate-manifest</id>
+            <phase>none</phase>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- Override the default JAR configuration -->
+      <plugin>
+        <artifactId>maven-jar-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>default-jar</id>
+            <phase>none</phase>
+          </execution>
+          <execution>
+            <id>all-in-one-jar</id>
+            <phase>package</phase>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+        <configuration>
+          <archive>
+            <manifest>
+              <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+            </manifest>
+            <index>true</index>
+          </archive>
+        </configuration>
           </execution>
         </executions>
       </plugin>
@@ -238,6 +348,7 @@
           </execution>
         </executions>
       </plugin>
+
       <!-- Disable checkstyle -->
       <plugin>
         <artifactId>maven-checkstyle-plugin</artifactId>
@@ -248,6 +359,7 @@
           </execution>
         </executions>
       </plugin>
+
       <!-- Disable all plugin executions configured by jar packaging -->
       <plugin>
         <artifactId>maven-resources-plugin</artifactId>
@@ -284,6 +396,8 @@
           </execution>
         </executions>
       </plugin>
+
+      <!-- Generate Xref -->
       <plugin>
         <artifactId>maven-jxr-plugin</artifactId>
         <executions>
@@ -311,6 +425,8 @@
           </dependency>
         </dependencies>
       </plugin>
+
+      <!-- Generate Javadoc -->
       <plugin>
         <artifactId>maven-javadoc-plugin</artifactId>
         <executions>
@@ -326,7 +442,7 @@
           <excludePackageNames>*.internal,*.example</excludePackageNames>
           <docfilessubdirs>true</docfilessubdirs>
           <outputDirectory>${project.build.directory}/api</outputDirectory>
-          <overview>${basedir}/src/javadoc/overview.html</overview>
+          <overview>${project.basedir}/src/javadoc/overview.html</overview>
           <doctitle>Netty API Reference (${project.version})</doctitle>
           <windowtitle>Netty API Reference (${project.version})</windowtitle>
           <detectJavaApiLink>false</detectJavaApiLink>
@@ -345,24 +461,6 @@
             -group "Miscellaneous" io.netty.util*
           </additionalparam>
           <locale>en_US</locale>
-        </configuration>
-      </plugin>
-      <plugin>
-        <artifactId>maven-antrun-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>clean-source-directory</id>
-            <phase>package</phase>
-            <goals>
-              <goal>run</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <target>
-            <delete dir="${project.build.directory}/src" quiet="true" />
-            <delete dir="${project.build.directory}/classes" quiet="true" />
-          </target>
         </configuration>
       </plugin>
     </plugins>

@@ -24,7 +24,7 @@
   </parent>
 
   <artifactId>netty-codec-socks</artifactId>
-  <packaging>bundle</packaging>
+  <packaging>jar</packaging>
 
   <name>Netty/Codec/Socks</name>
 
@@ -41,3 +41,4 @@
     </dependency>
   </dependencies>
 </project>
+

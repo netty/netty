@@ -24,7 +24,7 @@
   </parent>
 
   <artifactId>netty-transport</artifactId>
-  <packaging>bundle</packaging>
+  <packaging>jar</packaging>
 
   <name>Netty/Transport</name>
 
@@ -35,6 +35,5 @@
       <version>${project.version}</version>
     </dependency>
   </dependencies>
-  
 </project>
 

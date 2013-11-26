@@ -25,7 +25,7 @@
   </parent>
 
   <artifactId>netty-transport-udt</artifactId>
-  <packaging>bundle</packaging>
+  <packaging>jar</packaging>
 
   <name>Netty/Transport/UDT</name>
 
@@ -85,7 +85,6 @@
         </configuration>
       </plugin>
 
-
       <!-- attach and deploy tests artifact -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -98,7 +97,7 @@
           </execution>
         </executions>
       </plugin>
-
     </plugins>
   </build>
 </project>
+
