@@ -15,12 +15,16 @@
  */
 package io.netty.channel;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.AttributeMap;
+import io.netty.util.concurrent.FutureListener;
 
+import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
@@ -66,7 +70,7 @@ import java.net.SocketAddress;
  * operations.  For example, with the old I/O datagram transport, multicast
  * join / leave operations are provided by {@link DatagramChannel}.
  */
-public interface Channel extends AttributeMap, ChannelOutboundOps, ChannelPropertyAccess, Comparable<Channel> {
+public interface Channel extends AttributeMap, Comparable<Channel> {
 
     /**
      * Returns the globally unique identifier of this {@link Channel}.
@@ -152,16 +156,239 @@ public interface Channel extends AttributeMap, ChannelOutboundOps, ChannelProper
      */
     boolean isWritable();
 
-    @Override
-    Channel flush();
-
-    @Override
-    Channel read();
-
     /**
      * Returns an <em>internal-use-only</em> object that provides unsafe operations.
      */
     Unsafe unsafe();
+
+    /**
+     * Return the assigned {@link ChannelPipeline}
+     */
+    ChannelPipeline pipeline();
+
+    /**
+     * Return the assigned {@link ByteBufAllocator} which will be used to allocate {@link ByteBuf}s.
+     */
+    ByteBufAllocator alloc();
+
+    /**
+     * Return a new {@link ChannelPromise}.
+     */
+    ChannelPromise newPromise();
+
+    /**
+     * Return an new {@link ChannelProgressivePromise}
+     */
+    ChannelProgressivePromise newProgressivePromise();
+
+    /**
+     * Create a new {@link ChannelFuture} which is marked as succeeded already. So {@link ChannelFuture#isSuccess()}
+     * will return {@code true}. All {@link FutureListener} added to it will be notified directly. Also
+     * every call of blocking methods will just return without blocking.
+     */
+    ChannelFuture newSucceededFuture();
+
+    /**
+     * Create a new {@link ChannelFuture} which is marked as failed already. So {@link ChannelFuture#isSuccess()}
+     * will return {@code false}. All {@link FutureListener} added to it will be notified directly. Also
+     * every call of blocking methods will just return without blocking.
+     */
+    ChannelFuture newFailedFuture(Throwable cause);
+
+    /**
+     * Return a special ChannelPromise which can be reused for different operations.
+     * <p>
+     * It's only supported to use
+     * it for {@link Channel#write(Object, ChannelPromise)}.
+     * </p>
+     * <p>
+     * Be aware that the returned {@link ChannelPromise} will not support most operations and should only be used
+     * if you want to save an object allocation for every write operation. You will not be able to detect if the
+     * operation  was complete, only if it failed as the implementation will call
+     * {@link ChannelPipeline#fireExceptionCaught(Throwable)} in this case.
+     * </p>
+     * <strong>Be aware this is an expert feature and should be used with care!</strong>
+     */
+    ChannelPromise voidPromise();
+
+    /**
+     * Request to bind to the given {@link SocketAddress} and notify the {@link ChannelFuture} once the operation
+     * completes, either because the operation was successful or because of an error.
+     * <p>
+     * This will result in having the
+     * {@link ChannelHandler#bind(ChannelHandlerContext, SocketAddress, ChannelPromise)} method
+     * called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link Channel}.
+     */
+    ChannelFuture bind(SocketAddress localAddress);
+
+    /**
+     * Request to connect to the given {@link SocketAddress} and notify the {@link ChannelFuture} once the operation
+     * completes, either because the operation was successful or because of an error.
+     * <p>
+     * If the connection fails because of a connection timeout, the {@link ChannelFuture} will get failed with
+     * a {@link ConnectTimeoutException}. If it fails because of connection refused a {@link ConnectException}
+     * will be used.
+     * <p>
+     * This will result in having the
+     * {@link ChannelHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, ChannelPromise)}
+     * method called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link Channel}.
+     */
+    ChannelFuture connect(SocketAddress remoteAddress);
+
+    /**
+     * Request to connect to the given {@link SocketAddress} while bind to the localAddress and notify the
+     * {@link ChannelFuture} once the operation completes, either because the operation was successful or because of
+     * an error.
+     * <p>
+     * This will result in having the
+     * {@link ChannelHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, ChannelPromise)}
+     * method called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link Channel}.
+     */
+    ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress);
+
+    /**
+     * Request to disconnect from the remote peer and notify the {@link ChannelFuture} once the operation completes,
+     * either because the operation was successful or because of an error.
+     * <p>
+     * This will result in having the
+     * {@link ChannelHandler#disconnect(ChannelHandlerContext, ChannelPromise)}
+     * method called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link Channel}.
+     */
+    ChannelFuture disconnect();
+
+    /**
+     * Request to close this {@link Channel} and notify the {@link ChannelFuture} once the operation completes,
+     * either because the operation was successful or because of
+     * an error.
+     *
+     * After it is closed it is not possible to reuse it again.
+     * <p>
+     * This will result in having the
+     * {@link ChannelHandler#close(ChannelHandlerContext, ChannelPromise)}
+     * method called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link Channel}.
+     */
+    ChannelFuture close();
+
+    /**
+     * Request to bind to the given {@link SocketAddress} and notify the {@link ChannelFuture} once the operation
+     * completes, either because the operation was successful or because of an error.
+     *
+     * The given {@link ChannelPromise} will be notified.
+     * <p>
+     * This will result in having the
+     * {@link ChannelHandler#bind(ChannelHandlerContext, SocketAddress, ChannelPromise)} method
+     * called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link Channel}.
+     */
+    ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise);
+
+    /**
+     * Request to connect to the given {@link SocketAddress} and notify the {@link ChannelFuture} once the operation
+     * completes, either because the operation was successful or because of an error.
+     *
+     * The given {@link ChannelFuture} will be notified.
+     *
+     * <p>
+     * If the connection fails because of a connection timeout, the {@link ChannelFuture} will get failed with
+     * a {@link ConnectTimeoutException}. If it fails because of connection refused a {@link ConnectException}
+     * will be used.
+     * <p>
+     * This will result in having the
+     * {@link ChannelHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, ChannelPromise)}
+     * method called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link Channel}.
+     */
+    ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise promise);
+
+    /**
+     * Request to connect to the given {@link SocketAddress} while bind to the localAddress and notify the
+     * {@link ChannelFuture} once the operation completes, either because the operation was successful or because of
+     * an error.
+     *
+     * The given {@link ChannelPromise} will be notified and also returned.
+     * <p>
+     * This will result in having the
+     * {@link ChannelHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, ChannelPromise)}
+     * method called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link Channel}.
+     */
+    ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise);
+
+    /**
+     * Request to disconnect from the remote peer and notify the {@link ChannelFuture} once the operation completes,
+     * either because the operation was successful or because of an error.
+     *
+     * The given {@link ChannelPromise} will be notified.
+     * <p>
+     * This will result in having the
+     * {@link ChannelHandler#disconnect(ChannelHandlerContext, ChannelPromise)}
+     * method called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link Channel}.
+     */
+    ChannelFuture disconnect(ChannelPromise promise);
+
+    /**
+     * Request to close this {@link Channel} and notify the {@link ChannelFuture} once the operation completes,
+     * either because the operation was successful or because of
+     * an error.
+     *
+     * After it is closed it is not possible to reuse it again.
+     * The given {@link ChannelPromise} will be notified.
+     * <p>
+     * This will result in having the
+     * {@link ChannelHandler#close(ChannelHandlerContext, ChannelPromise)}
+     * method called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link Channel}.
+     */
+    ChannelFuture close(ChannelPromise promise);
+
+    /**
+     * Request to Read data from the {@link Channel} into the first inbound buffer, triggers an
+     * {@link ChannelHandler#channelRead(ChannelHandlerContext, Object)} event if data was
+     * read, and triggers a
+     * {@link ChannelHandler#channelReadComplete(ChannelHandlerContext) channelReadComplete} event so the
+     * handler can decide to continue reading.  If there's a pending read operation already, this method does nothing.
+     * <p>
+     * This will result in having the
+     * {@link ChannelHandler#read(ChannelHandlerContext)}
+     * method called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link Channel}.
+     */
+    Channel read();
+
+    /**
+     * Request to write a message via this {@link Channel} through the {@link ChannelPipeline}.
+     * This method will not request to actual flush, so be sure to call {@link #flush()}
+     * once you want to request to flush all pending data to the actual transport.
+     */
+    ChannelFuture write(Object msg);
+
+    /**
+     * Request to write a message via this {@link Channel} through the {@link ChannelPipeline}.
+     * This method will not request to actual flush, so be sure to call {@link #flush()}
+     * once you want to request to flush all pending data to the actual transport.
+     */
+    ChannelFuture write(Object msg, ChannelPromise promise);
+
+    /**
+     * Request to flush all pending messages.
+     */
+    Channel flush();
+
+    /**
+     * Shortcut for call {@link #write(Object, ChannelPromise)} and {@link #flush()}.
+     */
+    ChannelFuture writeAndFlush(Object msg, ChannelPromise promise);
+
+    /**
+     * Shortcut for call {@link #write(Object)} and {@link #flush()}.
+     */
+    ChannelFuture writeAndFlush(Object msg);
 
     /**
      * <em>Unsafe</em> operations that should <em>never</em> be called from user-code. These methods
