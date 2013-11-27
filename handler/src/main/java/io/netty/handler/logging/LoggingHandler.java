@@ -17,9 +17,9 @@ package io.netty.handler.logging;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandler.Sharable;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.internal.logging.InternalLogLevel;
@@ -33,7 +33,7 @@ import java.net.SocketAddress;
  * By default, all events are logged at <tt>DEBUG</tt> level.
  */
 @Sharable
-public class LoggingHandler extends ChannelDuplexHandler {
+public class LoggingHandler extends ChannelHandlerAdapter {
 
     private static final LogLevel DEFAULT_LEVEL = LogLevel.DEBUG;
 

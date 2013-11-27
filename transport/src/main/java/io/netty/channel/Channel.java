@@ -235,7 +235,7 @@ public interface Channel extends AttributeMap, ChannelOutboundOps, ChannelProper
         void closeForcibly();
 
         /**
-         * Schedules a read operation that fills the inbound buffer of the first {@link ChannelInboundHandler} in the
+         * Schedules a read operation that fills the inbound buffer of the first {@link ChannelHandler} in the
          * {@link ChannelPipeline}.  If there's already a pending read operation, this method does nothing.
          */
         void beginRead();

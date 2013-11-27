@@ -16,8 +16,8 @@
 package io.netty.channel.nio;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.channel.socket.DatagramChannel;
@@ -44,7 +44,7 @@ public class NioDatagramChannelTest {
                 Bootstrap udpBootstrap = new Bootstrap();
                 udpBootstrap.group(group).channel(NioDatagramChannel.class)
                         .option(ChannelOption.SO_BROADCAST, true)
-                        .handler(new ChannelInboundHandlerAdapter() {
+                        .handler(new ChannelHandlerAdapter() {
                             @Override
                             public void channelRead(ChannelHandlerContext ctx, Object msg) {
                                 // Discard

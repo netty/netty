@@ -20,8 +20,8 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
@@ -116,7 +116,7 @@ public class SocketEchoTest extends AbstractSocketTest {
             });
         } else {
             sb.childHandler(sh);
-            sb.handler(new ChannelInboundHandlerAdapter() {
+            sb.handler(new ChannelHandlerAdapter() {
                 @Override
                 public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
                     cause.printStackTrace();

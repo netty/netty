@@ -324,7 +324,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         return invoker;
     }
 
-    private String generateName(ChannelHandler handler) {
+    String generateName(ChannelHandler handler) {
         WeakHashMap<Class<?>, String> cache = nameCaches[(int) (Thread.currentThread().getId() % nameCaches.length)];
         Class<?> handlerType = handler.getClass();
         String name;
@@ -529,7 +529,11 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    private void callHandlerAdded(final ChannelHandlerContext ctx) {
+    private void callHandlerAdded(final DefaultChannelHandlerContext ctx) {
+        if ((ctx.skipFlags & DefaultChannelHandlerContext.MASK_HANDLER_ADDED) != 0) {
+            return;
+        }
+
         if (ctx.channel().isRegistered() && !ctx.executor().inEventLoop()) {
             ctx.executor().execute(new Runnable() {
                 @Override
@@ -542,13 +546,13 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         callHandlerAdded0(ctx);
     }
 
-    private void callHandlerAdded0(final ChannelHandlerContext ctx) {
+    private void callHandlerAdded0(final DefaultChannelHandlerContext ctx) {
         try {
             ctx.handler().handlerAdded(ctx);
         } catch (Throwable t) {
             boolean removed = false;
             try {
-                remove((DefaultChannelHandlerContext) ctx);
+                remove(ctx);
                 removed = true;
             } catch (Throwable t2) {
                 if (logger.isWarnEnabled()) {
@@ -569,6 +573,10 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     private void callHandlerRemoved(final DefaultChannelHandlerContext ctx) {
+        if ((ctx.skipFlags & DefaultChannelHandlerContext.MASK_HANDLER_REMOVED) != 0) {
+            return;
+        }
+
         if (ctx.channel().isRegistered() && !ctx.executor().inEventLoop()) {
             ctx.executor().execute(new Runnable() {
                 @Override
@@ -970,7 +978,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     // A special catch-all handler that handles both bytes and messages.
-    static final class TailHandler implements ChannelInboundHandler {
+    static final class TailHandler extends ChannelHandlerAdapter {
 
         @Override
         public void channelRegistered(ChannelHandlerContext ctx) throws Exception { }
@@ -983,12 +991,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception { }
-
-        @Override
-        public void handlerAdded(ChannelHandlerContext ctx) throws Exception { }
-
-        @Override
-        public void handlerRemoved(ChannelHandlerContext ctx) throws Exception { }
 
         @Override
         public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception { }
@@ -1015,22 +1017,12 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         public void channelReadComplete(ChannelHandlerContext ctx) throws Exception { }
     }
 
-    static final class HeadHandler implements ChannelOutboundHandler {
+    static final class HeadHandler extends ChannelHandlerAdapter {
 
         protected final Unsafe unsafe;
 
         protected HeadHandler(Unsafe unsafe) {
             this.unsafe = unsafe;
-        }
-
-        @Override
-        public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-            // NOOP
-        }
-
-        @Override
-        public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-            // NOOP
         }
 
         @Override
@@ -1071,11 +1063,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         @Override
         public void flush(ChannelHandlerContext ctx) throws Exception {
             unsafe.flush();
-        }
-
-        @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-            ctx.fireExceptionCaught(cause);
         }
     }
 }

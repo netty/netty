@@ -18,12 +18,9 @@ package io.netty.handler.logging;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.util.CharsetUtil;
 import org.easymock.EasyMock;
 import org.easymock.IArgumentMatcher;
 import org.junit.Before;
@@ -31,7 +28,6 @@ import org.junit.Test;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
-import java.util.regex.Pattern;
 
 import static org.easymock.EasyMock.*;
 import static org.junit.Assert.assertEquals;

@@ -18,8 +18,8 @@ package io.netty.handler.codec.spdy;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -128,7 +128,7 @@ public class SpdyFrameDecoderTest {
         frame.headers().add(headerName.toString(), headerValue.toString());
     }
 
-    private static class CaptureHandler extends ChannelInboundHandlerAdapter {
+    private static class CaptureHandler extends ChannelHandlerAdapter {
         public volatile Object message;
 
         @Override

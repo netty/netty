@@ -16,7 +16,6 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.util.CharsetUtil;
 
 import static io.netty.handler.codec.http.HttpConstants.*;
 

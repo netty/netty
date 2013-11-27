@@ -18,7 +18,7 @@ package io.netty.handler.codec.http;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.CombinedChannelDuplexHandler;
+import io.netty.channel.ChannelHandlerAppender;
 import io.netty.handler.codec.PrematureChannelClosureException;
 
 import java.util.ArrayDeque;
@@ -40,8 +40,7 @@ import java.util.concurrent.atomic.AtomicLong;
  *
  * @see HttpServerCodec
  */
-public final class HttpClientCodec
-        extends CombinedChannelDuplexHandler<HttpResponseDecoder, HttpRequestEncoder> {
+public final class HttpClientCodec extends ChannelHandlerAppender {
 
     /** A queue that is used for correlating a request and a response. */
     private final Queue<HttpMethod> queue = new ArrayDeque<HttpMethod>();
@@ -59,14 +58,6 @@ public final class HttpClientCodec
      */
     public HttpClientCodec() {
         this(4096, 8192, 8192, false);
-    }
-
-    public void setSingleDecode(boolean singleDecode) {
-        inboundHandler().setSingleDecode(singleDecode);
-    }
-
-    public boolean isSingleDecode() {
-        return inboundHandler().isSingleDecode();
     }
 
     /**
@@ -92,6 +83,18 @@ public final class HttpClientCodec
             boolean validateHeaders) {
         init(new Decoder(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders), new Encoder());
         this.failOnMissingResponse = failOnMissingResponse;
+    }
+
+    private Decoder decoder() {
+        return handlerAt(0);
+    }
+
+    public void setSingleDecode(boolean singleDecode) {
+        decoder().setSingleDecode(singleDecode);
+    }
+
+    public boolean isSingleDecode() {
+        return decoder().isSingleDecode();
     }
 
     private final class Encoder extends HttpRequestEncoder {

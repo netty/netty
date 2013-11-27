@@ -16,8 +16,8 @@
 package io.netty.example.sctp;
 
 import io.netty.channel.ChannelHandler.Sharable;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -26,7 +26,7 @@ import java.util.logging.Logger;
  * Handler implementation for the SCTP echo server.
  */
 @Sharable
-public class SctpEchoServerHandler extends ChannelInboundHandlerAdapter {
+public class SctpEchoServerHandler extends ChannelHandlerAdapter {
 
     private static final Logger logger = Logger.getLogger(
             SctpEchoServerHandler.class.getName());

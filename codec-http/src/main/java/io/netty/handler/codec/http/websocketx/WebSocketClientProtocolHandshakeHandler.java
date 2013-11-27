@@ -17,11 +17,11 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.FullHttpResponse;
 
-class WebSocketClientProtocolHandshakeHandler extends ChannelInboundHandlerAdapter {
+class WebSocketClientProtocolHandshakeHandler extends ChannelHandlerAdapter {
     private final WebSocketClientHandshaker handshaker;
 
     public WebSocketClientProtocolHandshakeHandler(WebSocketClientHandshaker handshaker) {
