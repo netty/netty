@@ -93,7 +93,7 @@ public class WebSocketServerProtocolHandlerTest {
                 .uri("/test")
                 .key(null)
                 .connection("Upgrade")
-                .upgrade(WEBSOCKET.toLowerCase())
+                .upgrade(WEBSOCKET.toString().toLowerCase())
                 .version13()
                 .build();
 

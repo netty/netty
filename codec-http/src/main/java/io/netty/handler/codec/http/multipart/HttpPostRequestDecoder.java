@@ -152,9 +152,9 @@ public class HttpPostRequestDecoder implements InterfaceHttpPostRequestDecoder {
         // Check if Post using "multipart/form-data; boundary=--89421926422648"
         String[] headerContentType = splitHeaderContentType(contentType);
         if (headerContentType[0].toLowerCase().startsWith(
-                HttpHeaders.Values.MULTIPART_FORM_DATA) &&
+                HttpHeaders.Values.MULTIPART_FORM_DATA.toString()) &&
                 headerContentType[1].toLowerCase().startsWith(
-                        HttpHeaders.Values.BOUNDARY)) {
+                        HttpHeaders.Values.BOUNDARY.toString())) {
             String[] boundary = StringUtil.split(headerContentType[1], '=');
             if (boundary.length != 2) {
                 throw new ErrorDataDecoderException("Needs a boundary value");
