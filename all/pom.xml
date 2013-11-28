@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.0.13.Final-SNAPSHOT</version>
+    <version>4.0.13.Final</version>
   </parent>
 
   <artifactId>netty-all</artifactId>
@@ -241,23 +241,20 @@
             <configuration>
               <target>
                 <taskdef resource="net/sf/antcontrib/antlib.xml" />
-                <propertyselector
-                  property="versions"
-                  match="^(${project.groupId}:(?!netty-example)[^:]+:jar)$" select="\1"/>
+                <propertyselector property="versions" match="^(${project.groupId}:(?!netty-example)[^:]+:jar)$" select="\1" />
                 <for list="${versions}" param="x">
                   <sequential>
                     <unzip src="${@{x}}" dest="${dependencyVersionsDir}">
                       <patternset>
-                        <include name="META-INF/${project.groupId}.versions.properties"/>
+                        <include name="META-INF/${project.groupId}.versions.properties" />
                       </patternset>
                     </unzip>
-                    <concat destfile="${project.build.outputDirectory}/META-INF/${project.groupId}.versions.properties"
-                            append="true">
-                            <path path="${dependencyVersionsDir}/META-INF/${project.groupId}.versions.properties"/>
+                    <concat destfile="${project.build.outputDirectory}/META-INF/${project.groupId}.versions.properties" append="true">
+                            <path path="${dependencyVersionsDir}/META-INF/${project.groupId}.versions.properties" />
                     </concat>
                   </sequential>
                 </for>
-                <delete dir="${dependencyVersionsDir}" quiet="true"/>
+                <delete dir="${dependencyVersionsDir}" quiet="true" />
               </target>
             </configuration>
           </execution>
