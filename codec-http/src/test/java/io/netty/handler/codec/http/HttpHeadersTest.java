@@ -20,6 +20,9 @@ import org.junit.Test;
 
 import java.util.List;
 
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertThat;
+
 public class HttpHeadersTest {
 
     @Test
@@ -43,5 +46,13 @@ public class HttpHeadersTest {
         Assert.assertEquals(2, values.size());
         Assert.assertEquals("1", values.get(0));
         Assert.assertEquals("2", values.get(1));
+    }
+
+    @Test
+    public void testEquansIgnoreCase() {
+        assertThat(HttpHeaders.equalsIgnoreCase(null, null), is(true));
+        assertThat(HttpHeaders.equalsIgnoreCase(null, "foo"), is(false));
+        assertThat(HttpHeaders.equalsIgnoreCase("bar", null), is(false));
+        assertThat(HttpHeaders.equalsIgnoreCase("FoO", "fOo"), is(true));
     }
 }
