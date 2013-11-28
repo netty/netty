@@ -57,6 +57,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
 
     @Override
     protected void encode(ChannelHandlerContext ctx, Object msg, List<Object> out) throws Exception {
+        ByteBuf buf = null;
         if (msg instanceof HttpMessage) {
             if (state != ST_INIT) {
                 throw new IllegalStateException("unexpected message type: " + StringUtil.simpleClassName(msg));
@@ -65,12 +66,11 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
             @SuppressWarnings({ "unchecked", "CastConflictsWithInstanceof" })
             H m = (H) msg;
 
-            ByteBuf buf = ctx.alloc().buffer();
+            buf = ctx.alloc().buffer();
             // Encode the message.
             encodeInitialLine(buf, m);
             HttpHeaders.encode(m.headers(), buf);
             buf.writeBytes(CRLF);
-            out.add(buf);
             state = HttpHeaders.isTransferEncodingChunked(m) ? ST_CONTENT_CHUNK : ST_CONTENT_NON_CHUNK;
         }
         if (msg instanceof HttpContent || msg instanceof ByteBuf || msg instanceof FileRegion) {
@@ -81,20 +81,40 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
             int contentLength = contentLength(msg);
             if (state == ST_CONTENT_NON_CHUNK) {
                 if (contentLength > 0) {
-                    out.add(encodeAndRetain(msg));
+                    if (buf != null && buf.writableBytes() >= contentLength && msg instanceof HttpContent) {
+                        // merge into other buffer for performance reasons
+                        buf.writeBytes(((HttpContent) msg).content());
+                        out.add(buf);
+                    } else {
+                        if (buf != null) {
+                            out.add(buf);
+                        }
+                        out.add(encodeAndRetain(msg));
+                    }
                 } else {
-                    // Need to produce some output otherwise an
-                    // IllegalStateException will be thrown
-                    out.add(EMPTY_BUFFER);
+                    if (buf != null) {
+                        out.add(buf);
+                    } else {
+                        // Need to produce some output otherwise an
+                        // IllegalStateException will be thrown
+                        out.add(EMPTY_BUFFER);
+                    }
                 }
 
                 if (msg instanceof LastHttpContent) {
                     state = ST_INIT;
                 }
             } else if (state == ST_CONTENT_CHUNK) {
+                if (buf != null) {
+                    out.add(buf);
+                }
                 encodeChunkedContent(ctx, msg, contentLength, out);
             } else {
                 throw new Error();
+            }
+        } else {
+            if (buf != null) {
+                out.add(buf);
             }
         }
     }
