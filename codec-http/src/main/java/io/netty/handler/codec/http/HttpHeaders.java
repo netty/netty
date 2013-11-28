@@ -1161,6 +1161,10 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
             return true;
         }
 
+        if (name1 == null || name2 == null) {
+            return false;
+        }
+
         int nameLen = name1.length();
         if (nameLen != name2.length()) {
             return false;
