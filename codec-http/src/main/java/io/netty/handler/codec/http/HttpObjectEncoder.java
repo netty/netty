@@ -23,7 +23,6 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.internal.StringUtil;
 
 import java.util.List;
-import java.util.Map;
 
 import static io.netty.buffer.Unpooled.*;
 import static io.netty.handler.codec.http.HttpConstants.*;
@@ -45,7 +44,6 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
     private static final byte[] CRLF = { CR, LF };
     private static final byte[] ZERO_CRLF = { '0', CR, LF };
     private static final byte[] ZERO_CRLF_CRLF = { '0', CR, LF, CR, LF };
-    private static final byte[] HEADER_SEPARATOR = { COLON, SP };
     private static final ByteBuf CRLF_BUF = unreleasableBuffer(directBuffer(CRLF.length).writeBytes(CRLF));
     private static final ByteBuf ZERO_CRLF_CRLF_BUF = unreleasableBuffer(directBuffer(ZERO_CRLF_CRLF.length)
             .writeBytes(ZERO_CRLF_CRLF));
@@ -70,7 +68,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
             ByteBuf buf = ctx.alloc().buffer();
             // Encode the message.
             encodeInitialLine(buf, m);
-            encodeHeaders(buf, m.headers());
+            HttpHeaders.encode(m.headers(), buf);
             buf.writeBytes(CRLF);
             out.add(buf);
             state = HttpHeaders.isTransferEncodingChunked(m) ? ST_CONTENT_CHUNK : ST_CONTENT_NON_CHUNK;
@@ -119,7 +117,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
             } else {
                 ByteBuf buf = ctx.alloc().buffer();
                 buf.writeBytes(ZERO_CRLF);
-                encodeHeaders(buf, headers);
+                HttpHeaders.encode(headers, buf);
                 buf.writeBytes(CRLF);
                 out.add(buf);
             }
@@ -165,23 +163,9 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
         throw new IllegalStateException("unexpected message type: " + StringUtil.simpleClassName(msg));
     }
 
-    private static void encodeHeaders(ByteBuf buf, HttpHeaders headers) {
-        for (Map.Entry<String, String> h: headers) {
-            encodeHeader(buf, h.getKey(), h.getValue());
-        }
-    }
-
-    private static void encodeHeader(ByteBuf buf, String header, String value) {
-        encodeAscii(header, buf);
-        buf.writeBytes(HEADER_SEPARATOR);
-        encodeAscii(value, buf);
-        buf.writeBytes(CRLF);
-    }
-
+    @Deprecated
     protected static void encodeAscii(String s, ByteBuf buf) {
-        for (int i = 0; i < s.length(); i++) {
-            buf.writeByte(s.charAt(i));
-        }
+        HttpHeaders.encodeAscii0(s, buf);
     }
 
     protected abstract void encodeInitialLine(ByteBuf buf, H message) throws Exception;
