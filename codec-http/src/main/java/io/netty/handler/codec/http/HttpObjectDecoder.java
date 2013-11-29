@@ -104,13 +104,6 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     static final int DEFAULT_MAX_HEADER_SIZE = 8192;
     static final int DEFAULT_MAX_CHUNK_SIZE = 8192;
 
-    private static final ThreadLocal<StringBuilder> BUILDERS = new ThreadLocal<StringBuilder>() {
-        @Override
-        protected StringBuilder initialValue() {
-            return new StringBuilder(512);
-        }
-    };
-
     private final int maxInitialLineLength;
     private final int maxHeaderSize;
     private final int maxChunkSize;
@@ -123,7 +116,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     private int contentRead;
     private long contentLength = Long.MIN_VALUE;
     private State state = State.SKIP_CONTROL_CHARS;
-    private StringBuilder sb;
+    private final StringBuilder sb = new StringBuilder(128);
 
     /**
      * The internal state of {@link HttpObjectDecoder}.
@@ -202,7 +195,8 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 // FALL THROUGH
             }
             case READ_INITIAL: try {
-                StringBuilder sb = builder();
+                StringBuilder sb = this.sb;
+                sb.setLength(0);
 
                 HttpMessage msg = splitInitialLine(sb, buffer, maxInitialLineLength);
                 if (msg == null) {
@@ -218,7 +212,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 return;
             }
             case READ_HEADER: try {
-                State nextState = readHeaders(buffer, builder());
+                State nextState = readHeaders(buffer);
                 if (nextState == state) {
                     // was not able to consume whole header
                     return;
@@ -439,7 +433,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 return;
             }
             case READ_CHUNK_FOOTER: try {
-                LastHttpContent trailer = readTrailingHeaders(buffer, builder());
+                LastHttpContent trailer = readTrailingHeaders(buffer);
                 if (trailer == null) {
                     // not enough data
                     return;
@@ -595,9 +589,9 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         reset();
     }
 
-    private State readHeaders(ByteBuf buffer, StringBuilder sb) {
+    private State readHeaders(ByteBuf buffer) {
         final HttpMessage message = this.message;
-        if (!parseHeaders(message.headers(), buffer, sb)) {
+        if (!parseHeaders(message.headers(), buffer)) {
             return state;
         }
         // this means we consumed the header completly
@@ -625,8 +619,10 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         HEADERS_END
     }
 
-    private boolean parseHeaders(HttpHeaders headers, ByteBuf buffer, StringBuilder sb) {
+    private boolean parseHeaders(HttpHeaders headers, ByteBuf buffer) {
         // mark the index before try to start parsing and reset the StringBuilder
+        StringBuilder sb = this.sb;
+        sb.setLength(0);
         buffer.markReaderIndex();
 
         String name = null;
@@ -764,8 +760,8 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             return true;
         }
     }
-    private LastHttpContent readTrailingHeaders(ByteBuf buffer, StringBuilder sb) {
-        StringBuilder line = readHeader(buffer, sb);
+    private LastHttpContent readTrailingHeaders(ByteBuf buffer) {
+        StringBuilder line = readHeader(buffer);
         if (line == null) {
             // not enough data
             return null;
@@ -801,7 +797,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                     lastHeader = name;
                 }
 
-                line = readHeader(buffer, sb);
+                line = readHeader(buffer);
                 if (line == null) {
                     // not enough data
                     buffer.resetReaderIndex();
@@ -815,7 +811,8 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         return LastHttpContent.EMPTY_LAST_CONTENT;
     }
 
-    private StringBuilder readHeader(ByteBuf buffer, StringBuilder sb) {
+    private StringBuilder readHeader(ByteBuf buffer) {
+        StringBuilder sb = this.sb;
         sb.setLength(0);
         int headerSize = this.headerSize;
         buffer.markReaderIndex();
@@ -875,7 +872,8 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     }
 
     private StringBuilder readLine(ByteBuf buffer, int maxLineLength) {
-        StringBuilder sb = builder();
+        StringBuilder sb = this.sb;
+        sb.setLength(0);
         int lineLength = 0;
         buffer.markReaderIndex();
 
@@ -1067,15 +1065,5 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             }
         }
         return result;
-    }
-
-    private StringBuilder builder() {
-        if (sb == null) {
-            // Obtain the StringBuilder from the ThreadLocal and store it for later usage.
-            // This minimize the ThreadLocal.get() operations a lot and so eliminate some overhead
-            sb = BUILDERS.get();
-        }
-        sb.setLength(0);
-        return sb;
     }
 }
