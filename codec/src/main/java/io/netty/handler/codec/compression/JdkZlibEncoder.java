@@ -212,8 +212,11 @@ public class JdkZlibEncoder extends ZlibEncoder {
 
         deflater.setInput(inAry);
         while (!deflater.needsInput()) {
-            int numBytes = deflater.deflate(encodeBuf, 0, encodeBuf.length, Deflater.SYNC_FLUSH);
-            out.writeBytes(encodeBuf, 0, numBytes);
+            int numBytes = encodeBuf.length;
+            while (numBytes == encodeBuf.length) {
+                numBytes = deflater.deflate(encodeBuf, 0, encodeBuf.length, Deflater.SYNC_FLUSH);
+                out.writeBytes(encodeBuf, 0, numBytes);
+            }
         }
     }
 
