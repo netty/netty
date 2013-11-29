@@ -100,13 +100,6 @@ import static io.netty.buffer.ByteBufUtil.readBytes;
  */
 public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecoder.State> {
 
-    private static final ThreadLocal<StringBuilder> BUILDERS = new ThreadLocal<StringBuilder>() {
-        @Override
-        protected StringBuilder initialValue() {
-            return new StringBuilder(512);
-        }
-    };
-
     private final int maxInitialLineLength;
     private final int maxHeaderSize;
     private final int maxChunkSize;
@@ -118,7 +111,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
     private long chunkSize;
     private int headerSize;
     private int contentRead;
-    private StringBuilder sb;
+    private final StringBuilder sb = new StringBuilder(128);
 
     /**
      * The internal state of {@link HttpObjectDecoder}.
@@ -667,7 +660,8 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
     }
 
     private StringBuilder readHeader(ByteBuf buffer) {
-        StringBuilder sb = builder();
+        StringBuilder sb = this.sb;
+        sb.setLength(0);
         int headerSize = this.headerSize;
 
         loop:
@@ -723,7 +717,8 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
     }
 
     private StringBuilder readLine(ByteBuf buffer, int maxLineLength) {
-        StringBuilder sb = builder();
+        StringBuilder sb = this.sb;
+        sb.setLength(0);
         int lineLength = 0;
         while (true) {
             byte nextByte = buffer.readByte();
@@ -839,15 +834,5 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
             }
         }
         return result;
-    }
-
-    private StringBuilder builder() {
-        if (sb == null) {
-            // Obtain the StringBuilder from the ThreadLocal and store it for later usage.
-            // This minimize the ThreadLocal.get() operations a lot and so eliminate some overhead
-            sb = BUILDERS.get();
-        }
-        sb.setLength(0);
-        return sb;
     }
 }
