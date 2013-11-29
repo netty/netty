@@ -21,7 +21,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.0.14.Beta1</version>
+    <version>4.0.14.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-common</artifactId>
