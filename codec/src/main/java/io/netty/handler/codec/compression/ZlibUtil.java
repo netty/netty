@@ -61,6 +61,25 @@ final class ZlibUtil {
         return convertedWrapperType;
     }
 
+    static int wrapperOverhead(ZlibWrapper wrapper) {
+        int overhead;
+        switch (wrapper) {
+        case NONE:
+            overhead = 0;
+            break;
+        case ZLIB:
+        case ZLIB_OR_NONE:
+            overhead = 2;
+            break;
+        case GZIP:
+            overhead = 10;
+            break;
+        default:
+            throw new Error();
+        }
+        return overhead;
+    }
+
     private ZlibUtil() {
     }
 }

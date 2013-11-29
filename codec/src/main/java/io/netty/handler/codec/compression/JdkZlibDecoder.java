@@ -114,7 +114,13 @@ public class JdkZlibDecoder extends ZlibDecoder {
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-        if (!in.isReadable() && finished) {
+        if (finished) {
+            // Skip data received after finished.
+            in.skipBytes(in.readableBytes());
+            return;
+        }
+
+        if (!in.isReadable()) {
             return;
         }
 
@@ -330,12 +336,12 @@ public class JdkZlibDecoder extends ZlibDecoder {
         // read ISIZE and verify
         int dataLength = 0;
         for (int i = 0; i < 4; ++i) {
-            dataLength |= buf.readUnsignedByte() << (i * 8);
+            dataLength |= buf.readUnsignedByte() << i * 8;
         }
         int readLength = inflater.getTotalOut();
         if (dataLength != readLength) {
             throw new CompressionException(
-                    "Number of bytes missmatch. Expected: " + dataLength + ", Got: " + readLength);
+                    "Number of bytes mismatch. Expected: " + dataLength + ", Got: " + readLength);
         }
         return true;
     }
@@ -343,7 +349,7 @@ public class JdkZlibDecoder extends ZlibDecoder {
     private void verifyCrc(ByteBuf in) {
         long crcValue = 0;
         for (int i = 0; i < 4; ++i) {
-            crcValue |= (long) in.readUnsignedByte() << (i * 8);
+            crcValue |= (long) in.readUnsignedByte() << i * 8;
         }
         long readCrc = crc.getValue();
         if (crcValue != readCrc) {
