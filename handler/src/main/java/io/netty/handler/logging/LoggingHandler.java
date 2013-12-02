@@ -341,19 +341,17 @@ public class LoggingHandler extends ChannelDuplexHandler {
      * @param secondArg the second argument of the event
      */
     protected String format(ChannelHandlerContext ctx, String eventName, Object firstArg, Object secondArg) {
+        if (secondArg == null) {
+            return format(ctx, eventName, firstArg);
+        }
+
         String chStr = ctx.channel().toString();
         String arg1Str = String.valueOf(firstArg);
-        if (secondArg == null) {
-            StringBuilder buf = new StringBuilder(chStr.length() + 1 + eventName + 2 + arg1Str.length());
-            buf.append(chStr).append(' ').append(eventName).append(": ").append(arg1Str);
-            return buf.toString();
-        } else {
-            String arg2Str = secondArg.toString();
-            StringBuilder buf = new StringBuilder(
-                    chStr.length() + 1 + eventName + 2 + arg1Str.length() + 2 + arg2Str.length());
-            buf.append(chStr).append(' ').append(eventName).append(": ").append(arg1Str).append(", ").append(arg2Str);
-            return buf.toString();
-        }
+        String arg2Str = secondArg.toString();
+        StringBuilder buf = new StringBuilder(
+                chStr.length() + 1 + eventName + 2 + arg1Str.length() + 2 + arg2Str.length());
+        buf.append(chStr).append(' ').append(eventName).append(": ").append(arg1Str).append(", ").append(arg2Str);
+        return buf.toString();
     }
 
     /**
