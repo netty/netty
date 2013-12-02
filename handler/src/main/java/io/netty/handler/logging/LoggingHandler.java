@@ -334,7 +334,8 @@ public class LoggingHandler extends ChannelDuplexHandler {
     }
 
     /**
-     * Formats an event and returns the formatted message.
+     * Formats an event and returns the formatted message.  This method is currently only used for formatting
+     * {@link ChannelHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, ChannelPromise)}.
      *
      * @param eventName the name of the event
      * @param firstArg  the first argument of the event
