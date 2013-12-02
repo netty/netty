@@ -329,7 +329,7 @@ public class LoggingHandler extends ChannelDuplexHandler {
         } else if (arg instanceof ByteBufHolder) {
             return formatByteBufHolder(ctx, eventName, (ByteBufHolder) arg);
         } else {
-            return formatUserMessage(ctx, eventName, arg);
+            return formatSimple(ctx, eventName, arg);
         }
     }
 
@@ -342,7 +342,7 @@ public class LoggingHandler extends ChannelDuplexHandler {
      */
     protected String format(ChannelHandlerContext ctx, String eventName, Object firstArg, Object secondArg) {
         if (secondArg == null) {
-            return format(ctx, eventName, firstArg);
+            return formatSimple(ctx, eventName, firstArg);
         }
 
         String chStr = ctx.channel().toString();
@@ -478,7 +478,7 @@ public class LoggingHandler extends ChannelDuplexHandler {
     /**
      * Generates the default log message of the specified event whose argument is an arbitrary object.
      */
-    private static String formatUserMessage(ChannelHandlerContext ctx, String eventName, Object msg) {
+    private static String formatSimple(ChannelHandlerContext ctx, String eventName, Object msg) {
         String chStr = ctx.channel().toString();
         String msgStr = String.valueOf(msg);
         StringBuilder buf = new StringBuilder(chStr.length() + 1 + eventName.length() + 2 + msgStr.length());
