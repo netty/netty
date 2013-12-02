@@ -155,7 +155,7 @@ abstract class PoolArena<T> {
         if (chunk.unpooled) {
             destroyChunk(chunk);
         } else {
-            synchronized(this) {
+            synchronized (this) {
                 chunk.parent.free(chunk, handle);
             }
         }
