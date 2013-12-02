@@ -116,16 +116,19 @@ public abstract class BinaryMemcacheDecoder<M extends BinaryMemcacheMessage<H>, 
                         toRead = chunkSize;
                     }
 
-                    if (toRead > valueLength) {
-                        toRead = valueLength;
+                    int remainingLength = valueLength - alreadyReadChunkSize;
+                    if (toRead > remainingLength) {
+                        toRead = remainingLength;
                     }
 
                     ByteBuf chunkBuffer = readBytes(ctx.alloc(), in, toRead);
-                    boolean isLast = alreadyReadChunkSize + toRead >= valueLength;
-                    MemcacheContent chunk = isLast
-                        ? new DefaultLastMemcacheContent(chunkBuffer)
-                        : new DefaultMemcacheContent(chunkBuffer);
-                    alreadyReadChunkSize += toRead;
+
+                    MemcacheContent chunk;
+                    if ((alreadyReadChunkSize += toRead) >= valueLength) {
+                        chunk = new DefaultLastMemcacheContent(chunkBuffer);
+                    } else {
+                        chunk = new DefaultMemcacheContent(chunkBuffer);
+                    }
 
                     out.add(chunk);
                     if (alreadyReadChunkSize < valueLength) {
