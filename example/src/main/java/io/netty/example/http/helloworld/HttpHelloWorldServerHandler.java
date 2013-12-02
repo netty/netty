@@ -28,7 +28,7 @@ import static io.netty.handler.codec.http.HttpHeaders.*;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
 
-public class HttpHelloWorldServerHandler extends ChannelHandlerAdapter {
+public class HttpHelloWorldServerHandler extends ChannelInboundHandlerAdapter {
     private static final byte[] CONTENT = { 'H', 'e', 'l', 'l', 'o', ' ', 'W', 'o', 'r', 'l', 'd' };
 
     @Override
