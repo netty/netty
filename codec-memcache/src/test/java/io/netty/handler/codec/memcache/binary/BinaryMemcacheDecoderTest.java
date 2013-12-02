@@ -123,7 +123,6 @@ public class BinaryMemcacheDecoderTest {
         int expectedContentChunks = 4;
         for (int i = 1; i <= expectedContentChunks; i++) {
             MemcacheContent content = (MemcacheContent) channel.readInbound();
-            System.out.println(content);
             if (i < expectedContentChunks) {
                 assertThat(content, instanceOf(MemcacheContent.class));
             } else {
