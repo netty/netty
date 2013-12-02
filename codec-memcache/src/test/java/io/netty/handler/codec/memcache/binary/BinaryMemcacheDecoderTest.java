@@ -20,6 +20,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.memcache.LastMemcacheContent;
 import io.netty.handler.codec.memcache.MemcacheContent;
+import io.netty.util.CharsetUtil;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -40,25 +41,27 @@ public class BinaryMemcacheDecoderTest {
      * Represents a GET request header with a key size of three.
      */
     private static final byte[] GET_REQUEST = {
-        (byte) 0x80, 0x00, 0x00, 0x03,
-        0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x03,
-        0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00,
-        0x66, 0x6f, 0x6f
+        (byte) 0x80, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x66, 0x6f, 0x6f
     };
 
     private static final byte[] SET_REQUEST_WITH_CONTENT = {
-        (byte) 0x80, 0x01, 0x00, 0x03,
-        0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x0B,
-        0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00,
-        0x66, 0x6f, 0x6f,
-        0x01, 0x02, 0x03, 0x04,
-        0x05, 0x06, 0x07, 0x08
+        (byte) 0x80, 0x01, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0B, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x66, 0x6f, 0x6f, 0x01, 0x02, 0x03, 0x04, 0x05,
+        0x06, 0x07, 0x08
+    };
+
+    private static final byte[] GET_RESPONSE_CHUNK_1 =  {
+        (byte) 0x81, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x4e, 0x6f, 0x74, 0x20, 0x66, 0x6f, 0x75, 0x6e,
+        0x64, (byte) 0x81, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x4e, 0x6f, 0x74, 0x20, 0x66, 0x6f, 0x75,
+    };
+
+    private static final byte[] GET_RESPONSE_CHUNK_2 = {
+            0x6e, 0x64, (byte) 0x81, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x4e, 0x6f, 0x74, 0x20, 0x66, 0x6f,
+            0x75, 0x6e, 0x64
     };
 
     private EmbeddedChannel channel;
@@ -120,6 +123,7 @@ public class BinaryMemcacheDecoderTest {
         int expectedContentChunks = 4;
         for (int i = 1; i <= expectedContentChunks; i++) {
             MemcacheContent content = (MemcacheContent) channel.readInbound();
+            System.out.println(content);
             if (i < expectedContentChunks) {
                 assertThat(content, instanceOf(MemcacheContent.class));
             } else {
@@ -175,6 +179,50 @@ public class BinaryMemcacheDecoderTest {
         assertThat(request, instanceOf(BinaryMemcacheRequest.class));
         assertThat(request, notNullValue());
         assertThat(channel.readInbound(), instanceOf(LastMemcacheContent.class));
+    }
+
+    @Test
+    public void shouldDecodeSeparatedValues() {
+        String msgBody = "Not found";
+        channel = new EmbeddedChannel(new BinaryMemcacheResponseDecoder());
+
+        channel.writeInbound(Unpooled.buffer().writeBytes(GET_RESPONSE_CHUNK_1));
+        channel.writeInbound(Unpooled.buffer().writeBytes(GET_RESPONSE_CHUNK_2));
+
+        // First message
+        BinaryMemcacheResponse response = (BinaryMemcacheResponse) channel.readInbound();
+        assertThat(response.getHeader().getStatus(), is(BinaryMemcacheResponseStatus.KEY_ENOENT));
+        assertThat(response.getHeader().getTotalBodyLength(), is(msgBody.length()));
+
+        // First message first content chunk
+        MemcacheContent content = (MemcacheContent) channel.readInbound();
+        assertThat(content, instanceOf(LastMemcacheContent.class));
+        assertThat(content.content().toString(CharsetUtil.UTF_8), is(msgBody));
+
+        // Second message
+        response = (BinaryMemcacheResponse) channel.readInbound();
+        assertThat(response.getHeader().getStatus(), is(BinaryMemcacheResponseStatus.KEY_ENOENT));
+        assertThat(response.getHeader().getTotalBodyLength(), is(msgBody.length()));
+
+        // Second message first content chunk
+        content = (MemcacheContent) channel.readInbound();
+        assertThat(content, instanceOf(MemcacheContent.class));
+        assertThat(content.content().toString(CharsetUtil.UTF_8), is(msgBody.substring(0, 7)));
+
+        // Second message second content chunk
+        content = (MemcacheContent) channel.readInbound();
+        assertThat(content, instanceOf(LastMemcacheContent.class));
+        assertThat(content.content().toString(CharsetUtil.UTF_8), is(msgBody.substring(7, 9)));
+
+        // Third message
+        response = (BinaryMemcacheResponse) channel.readInbound();
+        assertThat(response.getHeader().getStatus(), is(BinaryMemcacheResponseStatus.KEY_ENOENT));
+        assertThat(response.getHeader().getTotalBodyLength(), is(msgBody.length()));
+
+        // Third message first content chunk
+        content = (MemcacheContent) channel.readInbound();
+        assertThat(content, instanceOf(LastMemcacheContent.class));
+        assertThat(content.content().toString(CharsetUtil.UTF_8), is(msgBody));
     }
 
 }
