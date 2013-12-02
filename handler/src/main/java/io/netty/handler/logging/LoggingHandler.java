@@ -402,7 +402,11 @@ public class LoggingHandler extends ChannelDuplexHandler {
         }
     }
 
-    private static void appendHexDump(StringBuilder dump, ByteBuf buf) {
+    /**
+     * Appends the prettifies multi-line hexadecimal dump of the specified {@link ByteBuf} to the specified
+     * {@link StringBuilder}.
+     */
+    protected static void appendHexDump(StringBuilder dump, ByteBuf buf) {
         dump.append(
                 NEWLINE + "         +-------------------------------------------------+" +
                 NEWLINE + "         |  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f |" +
