@@ -24,7 +24,7 @@
   </parent>
 
   <artifactId>netty-common</artifactId>
-  <packaging>bundle</packaging>
+  <packaging>jar</packaging>
 
   <name>Netty/Common</name>
 
@@ -54,26 +54,5 @@
       <optional>true</optional>
     </dependency>
   </dependencies>
-
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.apache.felix</groupId>
-        <artifactId>maven-bundle-plugin</artifactId>
-        <configuration>
-          <instructions>
-            <!-- enforce JVM vendor package as optional -->
-            <Import-Package>
-              sun.misc.*;resolution:=optional,
-              *
-            </Import-Package>
-            <!-- override "internal" private package convention -->
-            <Private-Package>
-              !*
-            </Private-Package>
-          </instructions>
-        </configuration>
-      </plugin>             
-    </plugins>
-  </build>
 </project>
+

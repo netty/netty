@@ -27,6 +27,7 @@ import java.util.Map;
 public class DefaultLastHttpContent extends DefaultHttpContent implements LastHttpContent {
 
     private final HttpHeaders trailingHeaders;
+    private final boolean validateHeaders;
 
     public DefaultLastHttpContent() {
         this(Unpooled.buffer(0));
@@ -39,18 +40,19 @@ public class DefaultLastHttpContent extends DefaultHttpContent implements LastHt
     public DefaultLastHttpContent(ByteBuf content, boolean validateHeaders) {
         super(content);
         trailingHeaders = new TrailingHeaders(validateHeaders);
+        this.validateHeaders = validateHeaders;
     }
 
     @Override
     public LastHttpContent copy() {
-        DefaultLastHttpContent copy = new DefaultLastHttpContent(content().copy());
+        DefaultLastHttpContent copy = new DefaultLastHttpContent(content().copy(), validateHeaders);
         copy.trailingHeaders().set(trailingHeaders());
         return copy;
     }
 
     @Override
     public LastHttpContent duplicate() {
-        DefaultLastHttpContent copy = new DefaultLastHttpContent(content().duplicate());
+        DefaultLastHttpContent copy = new DefaultLastHttpContent(content().duplicate(), validateHeaders);
         copy.trailingHeaders().set(trailingHeaders());
         return copy;
     }
@@ -93,47 +95,16 @@ public class DefaultLastHttpContent extends DefaultHttpContent implements LastHt
     }
 
     private static final class TrailingHeaders extends DefaultHttpHeaders {
-
-        TrailingHeaders(boolean validateHeaders) {
-            super(validateHeaders);
+        TrailingHeaders(boolean validate) {
+            super(validate);
         }
 
         @Override
-        public HttpHeaders add(String name, Object value) {
-            if (validate) {
-                validateName(name);
-            }
-            return super.add(name, value);
-        }
-
-        @Override
-        public HttpHeaders add(String name, Iterable<?> values) {
-            if (validate) {
-                validateName(name);
-            }
-            return super.add(name, values);
-        }
-
-        @Override
-        public HttpHeaders set(String name, Iterable<?> values) {
-            if (validate) {
-                validateName(name);
-            }
-            return super.set(name, values);
-        }
-
-        @Override
-        public HttpHeaders set(String name, Object value) {
-            if (validate) {
-                validateName(name);
-            }
-            return super.set(name, value);
-        }
-
-        private static void validateName(String name) {
-            if (name.equalsIgnoreCase(HttpHeaders.Names.CONTENT_LENGTH) ||
-                    name.equalsIgnoreCase(HttpHeaders.Names.TRANSFER_ENCODING) ||
-                    name.equalsIgnoreCase(HttpHeaders.Names.TRAILER)) {
+        void validateHeaderName0(CharSequence name) {
+            super.validateHeaderName0(name);
+            if (equalsIgnoreCase(name, HttpHeaders.Names.CONTENT_LENGTH) ||
+                    equalsIgnoreCase(name, HttpHeaders.Names.TRANSFER_ENCODING) ||
+                    equalsIgnoreCase(name, HttpHeaders.Names.TRAILER)) {
                 throw new IllegalArgumentException(
                         "prohibited trailing header: " + name);
             }

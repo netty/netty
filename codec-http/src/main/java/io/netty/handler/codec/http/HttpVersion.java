@@ -15,6 +15,9 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.util.CharsetUtil;
+
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -34,12 +37,12 @@ public class HttpVersion implements Comparable<HttpVersion> {
     /**
      * HTTP/1.0
      */
-    public static final HttpVersion HTTP_1_0 = new HttpVersion("HTTP", 1, 0, false);
+    public static final HttpVersion HTTP_1_0 = new HttpVersion("HTTP", 1, 0, false, true);
 
     /**
      * HTTP/1.1
      */
-    public static final HttpVersion HTTP_1_1 = new HttpVersion("HTTP", 1, 1, true);
+    public static final HttpVersion HTTP_1_1 = new HttpVersion("HTTP", 1, 1, true, true);
 
     /**
      * Returns an existing or new {@link HttpVersion} instance which matches to
@@ -68,18 +71,9 @@ public class HttpVersion implements Comparable<HttpVersion> {
         // * http://trac.tools.ietf.org/wg/httpbis/trac/ticket/1
         // * http://trac.tools.ietf.org/wg/httpbis/trac/wiki
         //
-        // TODO: Remove the uppercase conversion in 4.1.0 as the RFC state it must be HTTP (uppercase)
-        //       See https://github.com/netty/netty/issues/1682
-
         HttpVersion version = version0(text);
         if (version == null) {
-            text = text.toUpperCase();
-            // try again after convert to uppercase
-            version = version0(text);
-            if (version == null) {
-                // still no match, construct a new one
-                version = new HttpVersion(text, true);
-            }
+            version = new HttpVersion(text, true);
         }
         return version;
     }
@@ -99,6 +93,7 @@ public class HttpVersion implements Comparable<HttpVersion> {
     private final int minorVersion;
     private final String text;
     private final boolean keepAliveDefault;
+    private final byte[] bytes;
 
     /**
      * Creates a new HTTP version with the specified version string.  You will
@@ -131,6 +126,7 @@ public class HttpVersion implements Comparable<HttpVersion> {
         minorVersion = Integer.parseInt(m.group(3));
         this.text = protocolName + '/' + majorVersion + '.' + minorVersion;
         this.keepAliveDefault = keepAliveDefault;
+        bytes = null;
     }
 
     /**
@@ -147,6 +143,12 @@ public class HttpVersion implements Comparable<HttpVersion> {
     public HttpVersion(
             String protocolName, int majorVersion, int minorVersion,
             boolean keepAliveDefault) {
+        this(protocolName, majorVersion, minorVersion, keepAliveDefault, false);
+    }
+
+    private HttpVersion(
+            String protocolName, int majorVersion, int minorVersion,
+            boolean keepAliveDefault, boolean bytes) {
         if (protocolName == null) {
             throw new NullPointerException("protocolName");
         }
@@ -158,7 +160,7 @@ public class HttpVersion implements Comparable<HttpVersion> {
 
         for (int i = 0; i < protocolName.length(); i ++) {
             if (Character.isISOControl(protocolName.charAt(i)) ||
-                Character.isWhitespace(protocolName.charAt(i))) {
+                    Character.isWhitespace(protocolName.charAt(i))) {
                 throw new IllegalArgumentException("invalid character in protocolName");
             }
         }
@@ -175,6 +177,11 @@ public class HttpVersion implements Comparable<HttpVersion> {
         this.minorVersion = minorVersion;
         text = protocolName + '/' + majorVersion + '.' + minorVersion;
         this.keepAliveDefault = keepAliveDefault;
+        if (bytes) {
+            this.bytes = text.getBytes(CharsetUtil.US_ASCII);
+        } else {
+            this.bytes = null;
+        }
     }
 
     /**
@@ -252,5 +259,13 @@ public class HttpVersion implements Comparable<HttpVersion> {
         }
 
         return minorVersion() - o.minorVersion();
+    }
+
+    void encode(ByteBuf buf) {
+        if (bytes == null) {
+            HttpHeaders.encodeAscii0(text, buf);
+        } else {
+            buf.writeBytes(bytes);
+        }
     }
 }

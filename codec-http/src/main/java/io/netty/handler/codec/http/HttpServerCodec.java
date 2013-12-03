@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.channel.CombinedChannelDuplexHandler;
+import io.netty.channel.ChannelHandlerAppender;
 
 
 /**
@@ -24,8 +24,7 @@ import io.netty.channel.CombinedChannelDuplexHandler;
  *
  * @see HttpClientCodec
  */
-public final class HttpServerCodec
-        extends CombinedChannelDuplexHandler<HttpRequestDecoder, HttpResponseEncoder> {
+public final class HttpServerCodec extends ChannelHandlerAppender {
 
     /**
      * Creates a new instance with the default decoder options

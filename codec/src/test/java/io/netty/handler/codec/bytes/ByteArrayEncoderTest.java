@@ -26,7 +26,6 @@ import java.util.Random;
 
 import static io.netty.buffer.Unpooled.*;
 import static org.hamcrest.core.Is.*;
-import static org.hamcrest.core.IsNull.*;
 import static org.junit.Assert.*;
 
 @SuppressWarnings("ZeroLengthArrayAllocation")

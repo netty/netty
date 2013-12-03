@@ -35,6 +35,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class JZlibEncoder extends ZlibEncoder {
 
+    private final int wrapperOverhead;
     private final Deflater z = new Deflater();
     private volatile boolean finished;
     private volatile ChannelHandlerContext ctx;
@@ -145,6 +146,8 @@ public class JZlibEncoder extends ZlibEncoder {
         if (resultCode != JZlib.Z_OK) {
             ZlibUtil.fail(z, "initialization failure", resultCode);
         }
+
+        wrapperOverhead = ZlibUtil.wrapperOverhead(wrapper);
     }
 
     /**
@@ -233,6 +236,8 @@ public class JZlibEncoder extends ZlibEncoder {
                 ZlibUtil.fail(z, "failed to set the dictionary", resultCode);
             }
         }
+
+        wrapperOverhead = ZlibUtil.wrapperOverhead(ZlibWrapper.ZLIB);
     }
 
     @Override
@@ -295,7 +300,7 @@ public class JZlibEncoder extends ZlibEncoder {
             int oldNextInIndex = z.next_in_index;
 
             // Configure output.
-            int maxOutputLength = (int) Math.ceil(inputLength * 1.001) + 12;
+            int maxOutputLength = (int) Math.ceil(inputLength * 1.001) + 12 + wrapperOverhead;
             out.ensureWritable(maxOutputLength);
             z.avail_out = maxOutputLength;
             z.next_out = out.array();

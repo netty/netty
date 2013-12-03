@@ -41,7 +41,7 @@ public class WebSocketServerHandshaker08Test {
 
         FullHttpRequest req = new DefaultFullHttpRequest(HTTP_1_1, HttpMethod.GET, "/chat");
         req.headers().set(Names.HOST, "server.example.com");
-        req.headers().set(Names.UPGRADE, WEBSOCKET.toLowerCase());
+        req.headers().set(Names.UPGRADE, WEBSOCKET.toString().toLowerCase());
         req.headers().set(Names.CONNECTION, "Upgrade");
         req.headers().set(Names.SEC_WEBSOCKET_KEY, "dGhlIHNhbXBsZSBub25jZQ==");
         req.headers().set(Names.SEC_WEBSOCKET_ORIGIN, "http://example.com");

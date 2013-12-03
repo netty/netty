@@ -17,8 +17,8 @@ package io.netty.example.sctp;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.sctp.SctpMessage;
 
 import java.util.logging.Level;
@@ -29,7 +29,7 @@ import java.util.logging.Logger;
  * traffic between the echo client and server by sending the first message to
  * the server.
  */
-public class SctpEchoClientHandler extends ChannelInboundHandlerAdapter {
+public class SctpEchoClientHandler extends ChannelHandlerAdapter {
 
     private static final Logger logger = Logger.getLogger(
             SctpEchoClientHandler.class.getName());

@@ -45,7 +45,7 @@ public class WebSocketServerHandshaker00Test {
                 HTTP_1_1, HttpMethod.GET, "/chat", Unpooled.copiedBuffer("^n:ds[4U", CharsetUtil.US_ASCII));
 
         req.headers().set(Names.HOST, "server.example.com");
-        req.headers().set(Names.UPGRADE, WEBSOCKET.toLowerCase());
+        req.headers().set(Names.UPGRADE, WEBSOCKET.toString().toLowerCase());
         req.headers().set(Names.CONNECTION, "Upgrade");
         req.headers().set(Names.ORIGIN, "http://example.com");
         req.headers().set(Names.SEC_WEBSOCKET_KEY1, "4 @1  46546xW%0l 1 5");
@@ -56,7 +56,6 @@ public class WebSocketServerHandshaker00Test {
                 "ws://example.com/chat", "chat", Integer.MAX_VALUE).handshake(ch, req);
 
         EmbeddedChannel ch2 = new EmbeddedChannel(new HttpResponseDecoder());
-        ch2.writeInbound(ch.readOutbound());
         ch2.writeInbound(ch.readOutbound());
         HttpResponse res = (HttpResponse) ch2.readInbound();
 

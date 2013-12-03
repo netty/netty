@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
 
+import java.net.ConnectException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
@@ -42,11 +43,11 @@ import java.util.NoSuchElementException;
  * <h3>How an event flows in a pipeline</h3>
  *
  * The following diagram describes how I/O events are processed by {@link ChannelHandler}s in a {@link ChannelPipeline}
- * typically. An I/O event is handled by either a {@link ChannelInboundHandler} or a {@link ChannelOutboundHandler}
- * and be forwarded to its closest handler by calling the event propagation methods defined in
- * {@link ChannelHandlerContext}, such as {@link ChannelHandlerContext#fireChannelRead(Object)} and
- * {@link ChannelHandlerContext#write(Object)}.
- *
+ * typically. An I/O event is handled by a {@link ChannelHandler} and is forwarded by the {@link ChannelHandler} which
+ * handled the event to the {@link ChannelHandler} which is placed right next to it. A {@link ChannelHandler} can also
+ * trigger an arbitrary I/O event if necessary.  To forward or trigger an event, a {@link ChannelHandler} calls the
+ * event propagation methods defined in {@link ChannelHandlerContext}, such as
+ * {@link ChannelHandlerContext#fireChannelRead(Object)} and {@link ChannelHandlerContext#write(Object)}.
  * <pre>
  *                                                 I/O Request
  *                                            via {@link Channel} or
@@ -55,28 +56,28 @@ import java.util.NoSuchElementException;
  *  +---------------------------------------------------+---------------+
  *  |                           ChannelPipeline         |               |
  *  |                                                  \|/              |
- *  |    +---------------------+            +-----------+----------+    |
- *  |    | Inbound Handler  N  |            | Outbound Handler  1  |    |
- *  |    +----------+----------+            +-----------+----------+    |
+ *  |    +----------------------------------------------+----------+    |
+ *  |    |                   ChannelHandler  N                     |    |
+ *  |    +----------+-----------------------------------+----------+    |
  *  |              /|\                                  |               |
  *  |               |                                  \|/              |
- *  |    +----------+----------+            +-----------+----------+    |
- *  |    | Inbound Handler N-1 |            | Outbound Handler  2  |    |
- *  |    +----------+----------+            +-----------+----------+    |
+ *  |    +----------+-----------------------------------+----------+    |
+ *  |    |                   ChannelHandler N-1                    |    |
+ *  |    +----------+-----------------------------------+----------+    |
  *  |              /|\                                  .               |
  *  |               .                                   .               |
  *  | ChannelHandlerContext.fireIN_EVT() ChannelHandlerContext.OUT_EVT()|
- *  |        [ method call]                       [method call]         |
+ *  |          [method call]                      [method call]         |
  *  |               .                                   .               |
  *  |               .                                  \|/              |
- *  |    +----------+----------+            +-----------+----------+    |
- *  |    | Inbound Handler  2  |            | Outbound Handler M-1 |    |
- *  |    +----------+----------+            +-----------+----------+    |
+ *  |    +----------+-----------------------------------+----------+    |
+ *  |    |                   ChannelHandler  2                     |    |
+ *  |    +----------+-----------------------------------+----------+    |
  *  |              /|\                                  |               |
  *  |               |                                  \|/              |
- *  |    +----------+----------+            +-----------+----------+    |
- *  |    | Inbound Handler  1  |            | Outbound Handler  M  |    |
- *  |    +----------+----------+            +-----------+----------+    |
+ *  |    +----------+-----------------------------------+----------+    |
+ *  |    |                   ChannelHandler  1                     |    |
+ *  |    +----------+-----------------------------------+----------+    |
  *  |              /|\                                  |               |
  *  +---------------+-----------------------------------+---------------+
  *                  |                                  \|/
@@ -87,45 +88,23 @@ import java.util.NoSuchElementException;
  *  |  Netty Internal I/O Threads (Transport Implementation)            |
  *  +-------------------------------------------------------------------+
  * </pre>
- * An inbound event is handled by the inbound handlers in the bottom-up direction as shown on the left side of the
- * diagram.  An inbound handler usually handles the inbound data generated by the I/O thread on the bottom of the
- * diagram.  The inbound data is often read from a remote peer via the actual input operation such as
- * {@link SocketChannel#read(ByteBuffer)}.  If an inbound event goes beyond the top inbound handler, it is discarded
- * silently, or logged if it needs your attention.
+ * An inbound event is handled by the {@link ChannelHandler}s in the bottom-up direction as shown on the left side of
+ * the diagram.  An inbound event is usually triggered by the I/O thread on the bottom of the diagram so that the
+ * {@link ChannelHandler}s are notified when the state of a {@link Channel} changes (e.g. newly established connections
+ * and closed connections) or the inbound data was read from a remote peer.  If an inbound event goes beyond the
+ * {@link ChannelHandler} at the top of the diagram, it is discarded and logged, depending on your loglevel.
+ *
  * <p>
- * An outbound event is handled by the outbound handler in the top-down direction as shown on the right side of the
- * diagram.  An outbound handler usually generates or transforms the outbound traffic such as write requests.
- * If an outbound event goes beyond the bottom outbound handler, it is handled by an I/O thread associated with the
- * {@link Channel}. The I/O thread often performs the actual output operation such as
- * {@link SocketChannel#write(ByteBuffer)}.
+ * An outbound event is handled by the {@link ChannelHandler}s in the top-down direction as shown on the right side of
+ * the diagram.  An outbound event is usually triggered by your code that requests an outbound I/O operation, such as
+ * a write request and a connection attempt.  If an outbound event goes beyond the {@link ChannelHandler} at the
+ * bottom of the diagram, it is handled by an I/O thread associated with the {@link Channel}. The I/O thread often
+ * performs the actual output operation such as {@link SocketChannel#write(ByteBuffer)}.
  * <p>
- * For example, let us assume that we created the following pipeline:
- * <pre>
- * {@link ChannelPipeline} p = ...;
- * p.addLast("1", new InboundHandlerA());
- * p.addLast("2", new InboundHandlerB());
- * p.addLast("3", new OutboundHandlerA());
- * p.addLast("4", new OutboundHandlerB());
- * p.addLast("5", new InboundOutboundHandlerX());
- * </pre>
- * In the example above, the class whose name starts with {@code Inbound} means it is an inbound handler.
- * The class whose name starts with {@code Outbound} means it is a outbound handler.
- * <p>
- * In the given example configuration, the handler evaluation order is 1, 2, 3, 4, 5 when an event goes inbound.
- * When an event goes outbound, the order is 5, 4, 3, 2, 1.  On top of this principle, {@link ChannelPipeline} skips
- * the evaluation of certain handlers to shorten the stack depth:
- * <ul>
- * <li>3 and 4 don't implement {@link ChannelInboundHandler}, and therefore the actual evaluation order of an inbound
- *     event will be: 1, 2, and 5.</li>
- * <li>1 and 2 don't implement {@link ChannelOutboundHandler}, and therefore the actual evaluation order of a
- *     outbound event will be: 5, 4, and 3.</li>
- * <li>If 5 implements both {@link ChannelInboundHandler} and {@link ChannelOutboundHandler}, the evaluation order of
- *     an inbound and a outbound event could be 125 and 543 respectively.</li>
- * </ul>
  *
  * <h3>Forwarding an event to the next handler</h3>
  *
- * As you might noticed in the diagram shows, a handler has to invoke the event propagation methods in
+ * As explained briefly above, a {@link ChannelHandler} has to invoke the event propagation methods in
  * {@link ChannelHandlerContext} to forward an event to its next handler.  Those methods include:
  * <ul>
  * <li>Inbound event propagation methods:
@@ -156,7 +135,7 @@ import java.util.NoSuchElementException;
  * and the following example shows how the event propagation is usually done:
  *
  * <pre>
- * public class MyInboundHandler extends {@link ChannelInboundHandlerAdapter} {
+ * public class MyInboundHandler extends {@link ChannelHandlerAdapter} {
  *     {@code @Override}
  *     public void channelActive({@link ChannelHandlerContext} ctx) {
  *         System.out.println("Connected!");
@@ -164,7 +143,7 @@ import java.util.NoSuchElementException;
  *     }
  * }
  *
- * public clas MyOutboundHandler extends {@link ChannelOutboundHandlerAdapter} {
+ * public clas MyOutboundHandler extends {@link ChannelHandlerAdapter} {
  *     {@code @Override}
  *     public void close({@link ChannelHandlerContext} ctx, {@link ChannelPromise} promise) {
  *         System.out.println("Closing ..");
@@ -211,8 +190,7 @@ import java.util.NoSuchElementException;
  * For example, you can insert an encryption handler when sensitive information is about to be exchanged, and remove it
  * after the exchange.
  */
-public interface ChannelPipeline
-         extends ChannelInboundInvoker, ChannelOutboundInvoker, Iterable<Entry<String, ChannelHandler>> {
+public interface ChannelPipeline extends Iterable<Entry<String, ChannelHandler>> {
 
     /**
      * Inserts a {@link ChannelHandler} at the first position of this pipeline.
@@ -243,6 +221,20 @@ public interface ChannelPipeline
     ChannelPipeline addFirst(EventExecutorGroup group, String name, ChannelHandler handler);
 
     /**
+     * Inserts a {@link ChannelHandler} at the first position of this pipeline.
+     *
+     * @param invoker  the {@link ChannelHandlerInvoker} which invokes the {@code handler}s event handler methods
+     * @param name     the name of the handler to insert first
+     * @param handler  the handler to insert first
+     *
+     * @throws IllegalArgumentException
+     *         if there's an entry with the same name already in the pipeline
+     * @throws NullPointerException
+     *         if the specified name or handler is {@code null}
+     */
+    ChannelPipeline addFirst(ChannelHandlerInvoker invoker, String name, ChannelHandler handler);
+
+    /**
      * Appends a {@link ChannelHandler} at the last position of this pipeline.
      *
      * @param name     the name of the handler to append
@@ -269,6 +261,20 @@ public interface ChannelPipeline
      *         if the specified name or handler is {@code null}
      */
     ChannelPipeline addLast(EventExecutorGroup group, String name, ChannelHandler handler);
+
+    /**
+     * Appends a {@link ChannelHandler} at the last position of this pipeline.
+     *
+     * @param invoker  the {@link ChannelHandlerInvoker} which invokes the {@code handler}s event handler methods
+     * @param name     the name of the handler to append
+     * @param handler  the handler to append
+     *
+     * @throws IllegalArgumentException
+     *         if there's an entry with the same name already in the pipeline
+     * @throws NullPointerException
+     *         if the specified name or handler is {@code null}
+     */
+    ChannelPipeline addLast(ChannelHandlerInvoker invoker, String name, ChannelHandler handler);
 
     /**
      * Inserts a {@link ChannelHandler} before an existing handler of this
@@ -307,6 +313,24 @@ public interface ChannelPipeline
     ChannelPipeline addBefore(EventExecutorGroup group, String baseName, String name, ChannelHandler handler);
 
     /**
+     * Inserts a {@link ChannelHandler} before an existing handler of this
+     * pipeline.
+     *
+     * @param invoker   the {@link ChannelHandlerInvoker} which invokes the {@code handler}s event handler methods
+     * @param baseName  the name of the existing handler
+     * @param name      the name of the handler to insert before
+     * @param handler   the handler to insert before
+     *
+     * @throws NoSuchElementException
+     *         if there's no such entry with the specified {@code baseName}
+     * @throws IllegalArgumentException
+     *         if there's an entry with the same name already in the pipeline
+     * @throws NullPointerException
+     *         if the specified baseName, name, or handler is {@code null}
+     */
+    ChannelPipeline addBefore(ChannelHandlerInvoker invoker, String baseName, String name, ChannelHandler handler);
+
+    /**
      * Inserts a {@link ChannelHandler} after an existing handler of this
      * pipeline.
      *
@@ -343,6 +367,24 @@ public interface ChannelPipeline
     ChannelPipeline addAfter(EventExecutorGroup group, String baseName, String name, ChannelHandler handler);
 
     /**
+     * Inserts a {@link ChannelHandler} after an existing handler of this
+     * pipeline.
+     *
+     * @param invoker   the {@link ChannelHandlerInvoker} which invokes the {@code handler}s event handler methods
+     * @param baseName  the name of the existing handler
+     * @param name      the name of the handler to insert after
+     * @param handler   the handler to insert after
+     *
+     * @throws NoSuchElementException
+     *         if there's no such entry with the specified {@code baseName}
+     * @throws IllegalArgumentException
+     *         if there's an entry with the same name already in the pipeline
+     * @throws NullPointerException
+     *         if the specified baseName, name, or handler is {@code null}
+     */
+    ChannelPipeline addAfter(ChannelHandlerInvoker invoker, String baseName, String name, ChannelHandler handler);
+
+    /**
      * Inserts a {@link ChannelHandler}s at the first position of this pipeline.
      *
      * @param handlers  the handlers to insert first
@@ -361,6 +403,15 @@ public interface ChannelPipeline
     ChannelPipeline addFirst(EventExecutorGroup group, ChannelHandler... handlers);
 
     /**
+     * Inserts a {@link ChannelHandler}s at the first position of this pipeline.
+     *
+     * @param invoker   the {@link ChannelHandlerInvoker} which invokes the {@code handler}s event handler methods
+     * @param handlers  the handlers to insert first
+     *
+     */
+    ChannelPipeline addFirst(ChannelHandlerInvoker invoker, ChannelHandler... handlers);
+
+    /**
      * Inserts a {@link ChannelHandler}s at the last position of this pipeline.
      *
      * @param handlers  the handlers to insert last
@@ -377,6 +428,15 @@ public interface ChannelPipeline
      *
      */
     ChannelPipeline addLast(EventExecutorGroup group, ChannelHandler... handlers);
+
+    /**
+     * Inserts a {@link ChannelHandler}s at the last position of this pipeline.
+     *
+     * @param invoker   the {@link ChannelHandlerInvoker} which invokes the {@code handler}s event handler methods
+     * @param handlers  the handlers to insert last
+     *
+     */
+    ChannelPipeline addLast(ChannelHandlerInvoker invoker, ChannelHandler... handlers);
 
     /**
      * Removes the specified {@link ChannelHandler} from this pipeline.
@@ -592,33 +652,248 @@ public interface ChannelPipeline
      */
     Map<String, ChannelHandler> toMap();
 
-    @Override
+    /**
+     * A {@link Channel} was registered to its {@link EventLoop}.
+     *
+     * This will result in having the  {@link ChannelHandler#channelRegistered(ChannelHandlerContext)} method
+     * called of the next  {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link Channel}.
+     */
     ChannelPipeline fireChannelRegistered();
 
-    @Override
+    /**
+     * A {@link Channel} is active now, which means it is connected.
+     *
+     * This will result in having the  {@link ChannelHandler#channelActive(ChannelHandlerContext)} method
+     * called of the next  {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link Channel}.
+     */
     ChannelPipeline fireChannelActive();
 
-    @Override
+    /**
+     * A {@link Channel} is inactive now, which means it is closed.
+     *
+     * This will result in having the  {@link ChannelHandler#channelInactive(ChannelHandlerContext)} method
+     * called of the next  {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link Channel}.
+     */
     ChannelPipeline fireChannelInactive();
 
-    @Override
+    /**
+     * A {@link Channel} received an {@link Throwable} in one of its inbound operations.
+     *
+     * This will result in having the  {@link ChannelHandler#exceptionCaught(ChannelHandlerContext, Throwable)}
+     * method  called of the next  {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link Channel}.
+     */
     ChannelPipeline fireExceptionCaught(Throwable cause);
 
-    @Override
+    /**
+     * A {@link Channel} received an user defined event.
+     *
+     * This will result in having the  {@link ChannelHandler#userEventTriggered(ChannelHandlerContext, Object)}
+     * method  called of the next  {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link Channel}.
+     */
     ChannelPipeline fireUserEventTriggered(Object event);
 
-    @Override
+    /**
+     * A {@link Channel} received a message.
+     *
+     * This will result in having the {@link ChannelHandler#channelRead(ChannelHandlerContext, Object)}
+     * method  called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link Channel}.
+     */
     ChannelPipeline fireChannelRead(Object msg);
 
-    @Override
+    /**
+     * Triggers an {@link ChannelHandler#channelWritabilityChanged(ChannelHandlerContext)}
+     * event to the next {@link ChannelHandler} in the {@link ChannelPipeline}.
+     */
     ChannelPipeline fireChannelReadComplete();
 
-    @Override
+    /**
+     * Triggers an {@link ChannelHandler#channelWritabilityChanged(ChannelHandlerContext)}
+     * event to the next {@link ChannelHandler} in the {@link ChannelPipeline}.
+     */
     ChannelPipeline fireChannelWritabilityChanged();
 
-    @Override
+    /**
+     * Request to bind to the given {@link SocketAddress} and notify the {@link ChannelFuture} once the operation
+     * completes, either because the operation was successful or because of an error.
+     * <p>
+     * This will result in having the
+     * {@link ChannelHandler#bind(ChannelHandlerContext, SocketAddress, ChannelPromise)} method
+     * called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link Channel}.
+     */
+    ChannelFuture bind(SocketAddress localAddress);
+
+    /**
+     * Request to connect to the given {@link SocketAddress} and notify the {@link ChannelFuture} once the operation
+     * completes, either because the operation was successful or because of an error.
+     * <p>
+     * If the connection fails because of a connection timeout, the {@link ChannelFuture} will get failed with
+     * a {@link ConnectTimeoutException}. If it fails because of connection refused a {@link ConnectException}
+     * will be used.
+     * <p>
+     * This will result in having the
+     * {@link ChannelHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, ChannelPromise)}
+     * method called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link Channel}.
+     */
+    ChannelFuture connect(SocketAddress remoteAddress);
+
+    /**
+     * Request to connect to the given {@link SocketAddress} while bind to the localAddress and notify the
+     * {@link ChannelFuture} once the operation completes, either because the operation was successful or because of
+     * an error.
+     * <p>
+     * This will result in having the
+     * {@link ChannelHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, ChannelPromise)}
+     * method called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link Channel}.
+     */
+    ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress);
+
+    /**
+     * Request to disconnect from the remote peer and notify the {@link ChannelFuture} once the operation completes,
+     * either because the operation was successful or because of an error.
+     * <p>
+     * This will result in having the
+     * {@link ChannelHandler#disconnect(ChannelHandlerContext, ChannelPromise)}
+     * method called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link Channel}.
+     */
+    ChannelFuture disconnect();
+
+    /**
+     * Request to close the {@link Channel} and notify the {@link ChannelFuture} once the operation completes,
+     * either because the operation was successful or because of
+     * an error.
+     *
+     * After it is closed it is not possible to reuse it again.
+     * <p>
+     * This will result in having the
+     * {@link ChannelHandler#close(ChannelHandlerContext, ChannelPromise)}
+     * method called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link Channel}.
+     */
+    ChannelFuture close();
+
+    /**
+     * Request to bind to the given {@link SocketAddress} and notify the {@link ChannelFuture} once the operation
+     * completes, either because the operation was successful or because of an error.
+     *
+     * The given {@link ChannelPromise} will be notified.
+     * <p>
+     * This will result in having the
+     * {@link ChannelHandler#bind(ChannelHandlerContext, SocketAddress, ChannelPromise)} method
+     * called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link Channel}.
+     */
+    ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise);
+
+    /**
+     * Request to connect to the given {@link SocketAddress} and notify the {@link ChannelFuture} once the operation
+     * completes, either because the operation was successful or because of an error.
+     *
+     * The given {@link ChannelFuture} will be notified.
+     *
+     * <p>
+     * If the connection fails because of a connection timeout, the {@link ChannelFuture} will get failed with
+     * a {@link ConnectTimeoutException}. If it fails because of connection refused a {@link ConnectException}
+     * will be used.
+     * <p>
+     * This will result in having the
+     * {@link ChannelHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, ChannelPromise)}
+     * method called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link Channel}.
+     */
+    ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise promise);
+
+    /**
+     * Request to connect to the given {@link SocketAddress} while bind to the localAddress and notify the
+     * {@link ChannelFuture} once the operation completes, either because the operation was successful or because of
+     * an error.
+     *
+     * The given {@link ChannelPromise} will be notified and also returned.
+     * <p>
+     * This will result in having the
+     * {@link ChannelHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, ChannelPromise)}
+     * method called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link Channel}.
+     */
+    ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise);
+
+    /**
+     * Request to disconnect from the remote peer and notify the {@link ChannelFuture} once the operation completes,
+     * either because the operation was successful or because of an error.
+     *
+     * The given {@link ChannelPromise} will be notified.
+     * <p>
+     * This will result in having the
+     * {@link ChannelHandler#disconnect(ChannelHandlerContext, ChannelPromise)}
+     * method called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link Channel}.
+     */
+    ChannelFuture disconnect(ChannelPromise promise);
+
+    /**
+     * Request to close the {@link Channel} bound to this {@link ChannelPipeline} and notify the {@link ChannelFuture}
+     * once the operation completes, either because the operation was successful or because of
+     * an error.
+     *
+     * After it is closed it is not possible to reuse it again.
+     * The given {@link ChannelPromise} will be notified.
+     * <p>
+     * This will result in having the
+     * {@link ChannelHandler#close(ChannelHandlerContext, ChannelPromise)}
+     * method called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link Channel}.
+     */
+    ChannelFuture close(ChannelPromise promise);
+
+    /**
+     * Request to Read data from the {@link Channel} into the first inbound buffer, triggers an
+     * {@link ChannelHandler#channelRead(ChannelHandlerContext, Object)} event if data was
+     * read, and triggers a
+     * {@link ChannelHandler#channelReadComplete(ChannelHandlerContext) channelReadComplete} event so the
+     * handler can decide to continue reading.  If there's a pending read operation already, this method does nothing.
+     * <p>
+     * This will result in having the
+     * {@link ChannelHandler#read(ChannelHandlerContext)}
+     * method called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link Channel}.
+     */
+    ChannelPipeline read();
+
+    /**
+     * Request to write a message via this {@link ChannelPipeline}.
+     * This method will not request to actual flush, so be sure to call {@link #flush()}
+     * once you want to request to flush all pending data to the actual transport.
+     */
+    ChannelFuture write(Object msg);
+
+    /**
+     * Request to write a message via this {@link ChannelPipeline}.
+     * This method will not request to actual flush, so be sure to call {@link #flush()}
+     * once you want to request to flush all pending data to the actual transport.
+     */
+    ChannelFuture write(Object msg, ChannelPromise promise);
+
+    /**
+     * Request to flush all pending messages.
+     */
     ChannelPipeline flush();
 
-    @Override
-    ChannelPipeline read();
+    /**
+     * Shortcut for call {@link #write(Object, ChannelPromise)} and {@link #flush()}.
+     */
+    ChannelFuture writeAndFlush(Object msg, ChannelPromise promise);
+
+    /**
+     * Shortcut for call {@link #write(Object)} and {@link #flush()}.
+     */
+    ChannelFuture writeAndFlush(Object msg);
 }

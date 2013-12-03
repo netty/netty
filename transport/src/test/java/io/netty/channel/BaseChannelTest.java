@@ -16,27 +16,27 @@
 package io.netty.channel;
 
 
-import static org.junit.Assert.assertEquals;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.local.LocalChannel;
-import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.channel.local.LocalServerChannel;
 
 import java.io.UnsupportedEncodingException;
+
+import static org.junit.Assert.*;
 
 class BaseChannelTest {
 
     private final LoggingHandler loggingHandler;
 
     BaseChannelTest() {
-        this.loggingHandler = new LoggingHandler();
+        loggingHandler = new LoggingHandler();
     }
 
     ServerBootstrap getLocalServerBootstrap() {
-        EventLoopGroup serverGroup = new LocalEventLoopGroup();
+        EventLoopGroup serverGroup = new DefaultEventLoopGroup();
         ServerBootstrap sb = new ServerBootstrap();
         sb.group(serverGroup);
         sb.channel(LocalServerChannel.class);
@@ -50,12 +50,12 @@ class BaseChannelTest {
     }
 
     Bootstrap getLocalClientBootstrap() {
-        EventLoopGroup clientGroup = new LocalEventLoopGroup();
+        EventLoopGroup clientGroup = new DefaultEventLoopGroup();
         Bootstrap cb = new Bootstrap();
         cb.channel(LocalChannel.class);
         cb.group(clientGroup);
 
-        cb.handler(this.loggingHandler);
+        cb.handler(loggingHandler);
 
         return cb;
     }
@@ -79,16 +79,15 @@ class BaseChannelTest {
     }
 
     void assertLog(String expected) {
-        String actual = this.loggingHandler.getLog();
+        String actual = loggingHandler.getLog();
         assertEquals(expected, actual);
     }
 
     void clearLog() {
-        this.loggingHandler.clear();
+        loggingHandler.clear();
     }
 
     void setInterest(LoggingHandler.Event... events) {
-        this.loggingHandler.setInterest(events);
+        loggingHandler.setInterest(events);
     }
-
 }

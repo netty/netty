@@ -16,9 +16,8 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -94,7 +93,7 @@ public class WebSocketServerProtocolHandlerTest {
                 .uri("/test")
                 .key(null)
                 .connection("Upgrade")
-                .upgrade(WEBSOCKET.toLowerCase())
+                .upgrade(WEBSOCKET.toString().toLowerCase())
                 .version13()
                 .build();
 
@@ -143,7 +142,7 @@ public class WebSocketServerProtocolHandlerTest {
         return new String(response.content().array());
     }
 
-    private class MockOutboundHandler extends ChannelOutboundHandlerAdapter {
+    private class MockOutboundHandler extends ChannelHandlerAdapter {
 
         @Override
         public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
@@ -156,7 +155,7 @@ public class WebSocketServerProtocolHandlerTest {
         }
     }
 
-    private static class CustomTextFrameHandler extends ChannelInboundHandlerAdapter {
+    private static class CustomTextFrameHandler extends ChannelHandlerAdapter {
         private String content;
 
         @Override

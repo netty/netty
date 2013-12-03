@@ -167,10 +167,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
                 boolean wasActive = isActive();
                 if (doConnect(remoteAddress, localAddress)) {
-                    promise.setSuccess();
-                    if (!wasActive && isActive()) {
-                        pipeline().fireChannelActive();
-                    }
+                    fulfillConnectPromise(promise, wasActive);
                 } else {
                     connectPromise = promise;
                     requestedRemoteAddress = remoteAddress;
@@ -215,6 +212,22 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             }
         }
 
+        private void fulfillConnectPromise(ChannelPromise promise, boolean wasActive) {
+            // trySuccess() will return false if a user cancelled the connection attempt.
+            boolean promiseSet = promise.trySuccess();
+
+            // Regardless if the connection attempt was cancelled, channelActive() event should be triggered,
+            // because what happened is what happened.
+            if (!wasActive && isActive()) {
+                pipeline().fireChannelActive();
+            }
+
+            // If a user cancelled the connection attempt, close the channel, which is followed by channelInactive().
+            if (!promiseSet) {
+                close(voidPromise());
+            }
+        }
+
         @Override
         public void finishConnect() {
             // Note this method is invoked by the event loop only if the connection attempt was
@@ -226,10 +239,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             try {
                 boolean wasActive = isActive();
                 doFinishConnect();
-                connectPromise.setSuccess();
-                if (!wasActive && isActive()) {
-                    pipeline().fireChannelActive();
-                }
+                fulfillConnectPromise(connectPromise, wasActive);
             } catch (Throwable t) {
                 if (t instanceof ConnectException) {
                     Throwable newT = new ConnectException(t.getMessage() + ": " + requestedRemoteAddress);
@@ -237,7 +247,8 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                     t = newT;
                 }
 
-                connectPromise.setFailure(t);
+                // Use tryFailure() instead of setFailure() to avoid the race against cancel().
+                connectPromise.tryFailure(t);
                 closeIfClosed();
             } finally {
                 // Check for null as the connectTimeoutFuture is only created if a connectTimeoutMillis > 0 is used

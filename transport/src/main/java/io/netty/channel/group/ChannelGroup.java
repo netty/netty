@@ -20,8 +20,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelId;
 import io.netty.channel.ServerChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.GlobalEventExecutor;
@@ -81,7 +82,7 @@ import java.util.Set;
  *     b.releaseExternalResources();
  * }
  *
- * public class MyHandler extends {@link ChannelInboundHandlerAdapter} {
+ * public class MyHandler extends {@link ChannelHandlerAdapter} {
  *     {@code @Override}
  *     public void channelActive({@link ChannelHandlerContext} ctx) {
  *         // closed on shutdown.
@@ -98,6 +99,13 @@ public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
      * you to distinguish one group from others.
      */
     String name();
+
+    /**
+     * Returns the {@link Channel} which has the specified {@link ChannelId}.
+     *
+     * @return the matching {@link Channel} if found. {@code null} otherwise.
+     */
+    Channel find(ChannelId id);
 
     /**
      * Writes the specified {@code message} to all {@link Channel}s in this

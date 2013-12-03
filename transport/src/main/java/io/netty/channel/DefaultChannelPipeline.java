@@ -63,8 +63,8 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     private final Map<String, DefaultChannelHandlerContext> name2ctx =
         new HashMap<String, DefaultChannelHandlerContext>(4);
 
-    final Map<EventExecutorGroup, EventExecutor> childExecutors =
-            new IdentityHashMap<EventExecutorGroup, EventExecutor>();
+    final Map<EventExecutorGroup, ChannelHandlerInvoker> childInvokers =
+            new IdentityHashMap<EventExecutorGroup, ChannelHandlerInvoker>();
 
     public DefaultChannelPipeline(AbstractChannel channel) {
         if (channel == null) {
@@ -89,14 +89,22 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelPipeline addFirst(String name, ChannelHandler handler) {
-        return addFirst(null, name, handler);
+        return addFirst((ChannelHandlerInvoker) null, name, handler);
     }
 
     @Override
-    public ChannelPipeline addFirst(EventExecutorGroup group, final String name, ChannelHandler handler) {
+    public ChannelPipeline addFirst(EventExecutorGroup group, String name, ChannelHandler handler) {
+        return addFirst(findInvoker(group), name, handler);
+    }
+
+    @Override
+    public ChannelPipeline addFirst(ChannelHandlerInvoker invoker, final String name, ChannelHandler handler) {
         synchronized (this) {
             checkDuplicateName(name);
-            DefaultChannelHandlerContext newCtx = new DefaultChannelHandlerContext(this, group, name, handler);
+
+            DefaultChannelHandlerContext newCtx =
+                    new DefaultChannelHandlerContext(this, invoker, name, handler);
+
             addFirst0(name, newCtx);
         }
 
@@ -119,15 +127,22 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelPipeline addLast(String name, ChannelHandler handler) {
-        return addLast(null, name, handler);
+        return addLast((ChannelHandlerInvoker) null, name, handler);
     }
 
     @Override
-    public ChannelPipeline addLast(EventExecutorGroup group, final String name, ChannelHandler handler) {
+    public ChannelPipeline addLast(EventExecutorGroup group, String name, ChannelHandler handler) {
+        return addLast(findInvoker(group), name, handler);
+    }
+
+    @Override
+    public ChannelPipeline addLast(ChannelHandlerInvoker invoker, final String name, ChannelHandler handler) {
         synchronized (this) {
             checkDuplicateName(name);
 
-            DefaultChannelHandlerContext newCtx = new DefaultChannelHandlerContext(this, group, name, handler);
+            DefaultChannelHandlerContext newCtx =
+                    new DefaultChannelHandlerContext(this, invoker, name, handler);
+
             addLast0(name, newCtx);
         }
 
@@ -150,16 +165,25 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelPipeline addBefore(String baseName, String name, ChannelHandler handler) {
-        return addBefore(null, baseName, name, handler);
+        return addBefore((ChannelHandlerInvoker) null, baseName, name, handler);
+    }
+
+    @Override
+    public ChannelPipeline addBefore(EventExecutorGroup group, String baseName, String name, ChannelHandler handler) {
+        return addBefore(findInvoker(group), baseName, name, handler);
     }
 
     @Override
     public ChannelPipeline addBefore(
-            EventExecutorGroup group, String baseName, final String name, ChannelHandler handler) {
+            ChannelHandlerInvoker invoker, String baseName, final String name, ChannelHandler handler) {
         synchronized (this) {
             DefaultChannelHandlerContext ctx = getContextOrDie(baseName);
+
             checkDuplicateName(name);
-            DefaultChannelHandlerContext newCtx = new DefaultChannelHandlerContext(this, group, name, handler);
+
+            DefaultChannelHandlerContext newCtx =
+                    new DefaultChannelHandlerContext(this, invoker, name, handler);
+
             addBefore0(name, ctx, newCtx);
         }
         return this;
@@ -180,16 +204,24 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelPipeline addAfter(String baseName, String name, ChannelHandler handler) {
-        return addAfter(null, baseName, name, handler);
+        return addAfter((ChannelHandlerInvoker) null, baseName, name, handler);
+    }
+
+    @Override
+    public ChannelPipeline addAfter(EventExecutorGroup group, String baseName, String name, ChannelHandler handler) {
+        return addAfter(findInvoker(group), baseName, name, handler);
     }
 
     @Override
     public ChannelPipeline addAfter(
-            EventExecutorGroup group, String baseName, final String name, ChannelHandler handler) {
+            ChannelHandlerInvoker invoker, String baseName, final String name, ChannelHandler handler) {
         synchronized (this) {
             DefaultChannelHandlerContext ctx = getContextOrDie(baseName);
+
             checkDuplicateName(name);
-            DefaultChannelHandlerContext newCtx = new DefaultChannelHandlerContext(this, group, name, handler);
+
+            DefaultChannelHandlerContext newCtx =
+                    new DefaultChannelHandlerContext(this, invoker, name, handler);
 
             addAfter0(name, ctx, newCtx);
         }
@@ -213,11 +245,16 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelPipeline addFirst(ChannelHandler... handlers) {
-        return addFirst(null, handlers);
+        return addFirst((ChannelHandlerInvoker) null, handlers);
     }
 
     @Override
-    public ChannelPipeline addFirst(EventExecutorGroup executor, ChannelHandler... handlers) {
+    public ChannelPipeline addFirst(EventExecutorGroup group, ChannelHandler... handlers) {
+        return addFirst(findInvoker(group), handlers);
+    }
+
+    @Override
+    public ChannelPipeline addFirst(ChannelHandlerInvoker invoker, ChannelHandler... handlers) {
         if (handlers == null) {
             throw new NullPointerException("handlers");
         }
@@ -234,7 +271,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
         for (int i = size - 1; i >= 0; i --) {
             ChannelHandler h = handlers[i];
-            addFirst(executor, generateName(h), h);
+            addFirst(invoker, generateName(h), h);
         }
 
         return this;
@@ -242,11 +279,16 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelPipeline addLast(ChannelHandler... handlers) {
-        return addLast(null, handlers);
+        return addLast((ChannelHandlerInvoker) null, handlers);
     }
 
     @Override
-    public ChannelPipeline addLast(EventExecutorGroup executor, ChannelHandler... handlers) {
+    public ChannelPipeline addLast(EventExecutorGroup group, ChannelHandler... handlers) {
+        return addLast(findInvoker(group), handlers);
+    }
+
+    @Override
+    public ChannelPipeline addLast(ChannelHandlerInvoker invoker, ChannelHandler... handlers) {
         if (handlers == null) {
             throw new NullPointerException("handlers");
         }
@@ -255,13 +297,34 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             if (h == null) {
                 break;
             }
-            addLast(executor, generateName(h), h);
+            addLast(invoker, generateName(h), h);
         }
 
         return this;
     }
 
-    private String generateName(ChannelHandler handler) {
+    private ChannelHandlerInvoker findInvoker(EventExecutorGroup group) {
+        if (group == null) {
+            return null;
+        }
+
+        // Pin one of the child executors once and remember it so that the same child executor
+        // is used to fire events for the same channel.
+        ChannelHandlerInvoker invoker = childInvokers.get(group);
+        if (invoker == null) {
+            EventExecutor executor = group.next();
+            if (executor instanceof EventLoop) {
+                invoker = ((EventLoop) executor).asInvoker();
+            } else {
+                invoker = new DefaultChannelHandlerInvoker(executor);
+            }
+            childInvokers.put(group, invoker);
+        }
+
+        return invoker;
+    }
+
+    String generateName(ChannelHandler handler) {
         WeakHashMap<Class<?>, String> cache = nameCaches[(int) (Thread.currentThread().getId() % nameCaches.length)];
         Class<?> handlerType = handler.getClass();
         String name;
@@ -396,7 +459,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             }
 
             final DefaultChannelHandlerContext newCtx =
-                    new DefaultChannelHandlerContext(this, ctx.executor, newName, newHandler);
+                    new DefaultChannelHandlerContext(this, ctx.invoker, newName, newHandler);
 
             if (!newCtx.channel().isRegistered() || newCtx.executor().inEventLoop()) {
                 replace0(ctx, newName, newCtx);
@@ -466,7 +529,11 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    private void callHandlerAdded(final ChannelHandlerContext ctx) {
+    private void callHandlerAdded(final DefaultChannelHandlerContext ctx) {
+        if ((ctx.skipFlags & DefaultChannelHandlerContext.MASK_HANDLER_ADDED) != 0) {
+            return;
+        }
+
         if (ctx.channel().isRegistered() && !ctx.executor().inEventLoop()) {
             ctx.executor().execute(new Runnable() {
                 @Override
@@ -479,13 +546,13 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         callHandlerAdded0(ctx);
     }
 
-    private void callHandlerAdded0(final ChannelHandlerContext ctx) {
+    private void callHandlerAdded0(final DefaultChannelHandlerContext ctx) {
         try {
             ctx.handler().handlerAdded(ctx);
         } catch (Throwable t) {
             boolean removed = false;
             try {
-                remove((DefaultChannelHandlerContext) ctx);
+                remove(ctx);
                 removed = true;
             } catch (Throwable t2) {
                 if (logger.isWarnEnabled()) {
@@ -506,6 +573,10 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     private void callHandlerRemoved(final DefaultChannelHandlerContext ctx) {
+        if ((ctx.skipFlags & DefaultChannelHandlerContext.MASK_HANDLER_REMOVED) != 0) {
+            return;
+        }
+
         if (ctx.channel().isRegistered() && !ctx.executor().inEventLoop()) {
             ctx.executor().execute(new Runnable() {
                 @Override
@@ -907,7 +978,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     // A special catch-all handler that handles both bytes and messages.
-    static final class TailHandler implements ChannelInboundHandler {
+    static final class TailHandler extends ChannelHandlerAdapter {
 
         @Override
         public void channelRegistered(ChannelHandlerContext ctx) throws Exception { }
@@ -920,12 +991,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception { }
-
-        @Override
-        public void handlerAdded(ChannelHandlerContext ctx) throws Exception { }
-
-        @Override
-        public void handlerRemoved(ChannelHandlerContext ctx) throws Exception { }
 
         @Override
         public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception { }
@@ -952,22 +1017,12 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         public void channelReadComplete(ChannelHandlerContext ctx) throws Exception { }
     }
 
-    static final class HeadHandler implements ChannelOutboundHandler {
+    static final class HeadHandler extends ChannelHandlerAdapter {
 
         protected final Unsafe unsafe;
 
         protected HeadHandler(Unsafe unsafe) {
             this.unsafe = unsafe;
-        }
-
-        @Override
-        public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-            // NOOP
-        }
-
-        @Override
-        public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-            // NOOP
         }
 
         @Override
@@ -1008,11 +1063,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         @Override
         public void flush(ChannelHandlerContext ctx) throws Exception {
             unsafe.flush();
-        }
-
-        @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-            ctx.fireExceptionCaught(cause);
         }
     }
 }

@@ -151,11 +151,13 @@ abstract class PoolArena<T> {
         buf.initUnpooled(newUnpooledChunk(reqCapacity), reqCapacity);
     }
 
-    synchronized void free(PoolChunk<T> chunk, long handle) {
+     void free(PoolChunk<T> chunk, long handle) {
         if (chunk.unpooled) {
             destroyChunk(chunk);
         } else {
-            chunk.parent.free(chunk, handle);
+            synchronized (this) {
+                chunk.parent.free(chunk, handle);
+            }
         }
     }
 

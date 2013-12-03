@@ -51,10 +51,6 @@ import io.netty.handler.codec.TooLongFrameException;
  *     {@link HttpContent}s in your handler, insert {@link HttpObjectAggregator}
  *     after this decoder in the {@link ChannelPipeline}.</td>
  * </tr>
- * <tr>
- * <td>{@code validateHeaders}</td>
- * <td>Specify if the headers should be validated during adding them for invalid chars.</td>
- * </tr>
  * </table>
  *
  * <h3>Decoding a response for a <tt>HEAD</tt> request</h3>
@@ -102,27 +98,24 @@ public class HttpResponseDecoder extends HttpObjectDecoder {
      */
     public HttpResponseDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize) {
-        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, true);
+        super(maxInitialLineLength, maxHeaderSize, maxChunkSize, true);
     }
 
-    /**
-     * Creates a new instance with the specified parameters.
-     */
     public HttpResponseDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean validateHeaders) {
         super(maxInitialLineLength, maxHeaderSize, maxChunkSize, true, validateHeaders);
     }
 
     @Override
-    protected HttpMessage createMessage(String first, String second, String third) throws Exception {
+    protected HttpMessage createMessage(String[] initialLine) {
         return new DefaultHttpResponse(
-                HttpVersion.valueOf(first),
-                new HttpResponseStatus(Integer.valueOf(second), third), validateHeaders);
+                HttpVersion.valueOf(initialLine[0]),
+                new HttpResponseStatus(Integer.valueOf(initialLine[1]), initialLine[2]), validateHeaders);
     }
 
     @Override
     protected HttpMessage createInvalidMessage() {
-        return new DefaultHttpResponse(HttpVersion.HTTP_1_0, UNKNOWN_STATUS);
+        return new DefaultHttpResponse(HttpVersion.HTTP_1_0, UNKNOWN_STATUS, validateHeaders);
     }
 
     @Override

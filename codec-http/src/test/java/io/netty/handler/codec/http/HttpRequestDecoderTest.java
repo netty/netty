@@ -133,28 +133,24 @@ public class HttpRequestDecoderTest {
 
             // if header is done it should produce a HttpRequest
             boolean headerDone = a + amount == headerLength;
-            Assert.assertEquals(headerDone, channel.writeInbound(Unpooled.wrappedBuffer(content, a, amount)));
+            channel.writeInbound(Unpooled.wrappedBuffer(content, a, amount));
             a += amount;
         }
 
         for (int i = 8; i > 0; i--) {
             // Should produce HttpContent
-            Assert.assertTrue(channel.writeInbound(Unpooled.wrappedBuffer(content, content.length - i, 1)));
+            channel.writeInbound(Unpooled.wrappedBuffer(content, content.length - i, 1));
         }
 
         HttpRequest req = (HttpRequest) channel.readInbound();
         Assert.assertNotNull(req);
         checkHeaders(req.headers());
 
-        for (int i = 8; i > 1; i--) {
-            HttpContent c = (HttpContent) channel.readInbound();
-            Assert.assertEquals(1, c.content().readableBytes());
-            Assert.assertEquals(content[content.length - i], c.content().readByte());
-            c.release();
-        }
         LastHttpContent c = (LastHttpContent) channel.readInbound();
-        Assert.assertEquals(1, c.content().readableBytes());
-        Assert.assertEquals(content[content.length - 1], c.content().readByte());
+        Assert.assertEquals(8, c.content().readableBytes());
+        for (int i = 8; i > 1; i--) {
+            Assert.assertEquals(content[content.length - i], c.content().readByte());
+        }
         c.release();
 
         Assert.assertFalse(channel.finish());

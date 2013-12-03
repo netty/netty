@@ -33,7 +33,7 @@ public class HttpContentEncoderTest {
 
     private static final class TestEncoder extends HttpContentEncoder {
         @Override
-        protected Result beginEncode(HttpResponse headers, String acceptEncoding) {
+        protected Result beginEncode(HttpResponse headers, CharSequence acceptEncoding) {
             return new Result("test", new EmbeddedChannel(new MessageToByteEncoder<ByteBuf>() {
                 @Override
                 protected void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {

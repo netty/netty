@@ -16,7 +16,7 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelDuplexHandler;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.internal.TypeParameterMatcher;
@@ -31,7 +31,7 @@ import java.util.List;
  * Be aware that sub-classes of {@link ByteToMessageCodec} <strong>MUST NOT</strong>
  * annotated with {@link @Sharable}.
  */
-public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler {
+public abstract class ByteToMessageCodec<I> extends ChannelHandlerAdapter {
 
     private final TypeParameterMatcher outboundMsgMatcher;
     private final MessageToByteEncoder<I> encoder;

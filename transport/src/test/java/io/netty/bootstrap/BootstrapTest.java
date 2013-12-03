@@ -16,13 +16,13 @@
 
 package io.netty.bootstrap;
 
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandler.Sharable;
-import io.netty.channel.ChannelInboundHandler;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelHandlerAdapter;
+import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
-import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.util.concurrent.Future;
 import org.junit.Test;
 
@@ -33,11 +33,11 @@ public class BootstrapTest {
 
     @Test(timeout = 10000)
     public void testBindDeadLock() throws Exception {
-        EventLoopGroup groupA = new LocalEventLoopGroup(1);
-        EventLoopGroup groupB = new LocalEventLoopGroup(1);
+        EventLoopGroup groupA = new DefaultEventLoopGroup(1);
+        EventLoopGroup groupB = new DefaultEventLoopGroup(1);
 
         try {
-            ChannelInboundHandler dummyHandler = new DummyHandler();
+            ChannelHandler dummyHandler = new DummyHandler();
 
             final Bootstrap bootstrapA = new Bootstrap();
             bootstrapA.group(groupA);
@@ -81,11 +81,11 @@ public class BootstrapTest {
 
     @Test(timeout = 10000)
     public void testConnectDeadLock() throws Exception {
-        EventLoopGroup groupA = new LocalEventLoopGroup(1);
-        EventLoopGroup groupB = new LocalEventLoopGroup(1);
+        EventLoopGroup groupA = new DefaultEventLoopGroup(1);
+        EventLoopGroup groupB = new DefaultEventLoopGroup(1);
 
         try {
-            ChannelInboundHandler dummyHandler = new DummyHandler();
+            ChannelHandler dummyHandler = new DummyHandler();
 
             final Bootstrap bootstrapA = new Bootstrap();
             bootstrapA.group(groupA);
@@ -128,5 +128,5 @@ public class BootstrapTest {
     }
 
     @Sharable
-    private static final class DummyHandler extends ChannelInboundHandlerAdapter { }
+    private static final class DummyHandler extends ChannelHandlerAdapter { }
 }

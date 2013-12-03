@@ -19,8 +19,8 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.util.CharsetUtil;
 import org.junit.Test;
@@ -51,7 +51,7 @@ public class NioSocketChannelTest {
 
             ServerBootstrap sb = new ServerBootstrap();
             sb.group(group).channel(NioServerSocketChannel.class);
-            sb.childHandler(new ChannelInboundHandlerAdapter() {
+            sb.childHandler(new ChannelHandlerAdapter() {
                 @Override
                 public void channelActive(ChannelHandlerContext ctx) throws Exception {
                     // Write a large enough data so that it is split into two loops.
@@ -106,7 +106,7 @@ public class NioSocketChannelTest {
         try {
             ServerBootstrap sb = new ServerBootstrap();
             sb.group(group).channel(NioServerSocketChannel.class);
-            sb.childHandler(new ChannelInboundHandlerAdapter() {
+            sb.childHandler(new ChannelHandlerAdapter() {
                 @Override
                 public void channelActive(final ChannelHandlerContext ctx) throws Exception {
                     // Trigger a gathering write by writing two buffers.

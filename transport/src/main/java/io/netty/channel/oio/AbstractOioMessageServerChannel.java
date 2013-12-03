@@ -33,5 +33,4 @@ public abstract class AbstractOioMessageServerChannel extends AbstractOioMessage
     public EventLoopGroup childEventLoopGroup() {
         return childGroup;
     }
-
 }

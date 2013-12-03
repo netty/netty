@@ -20,8 +20,8 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
@@ -235,7 +235,7 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     /**
-     * Run all tasks that are pending in the {@link EventLoop} for this {@link Channel}
+     * Run all tasks that are pending in the {@link io.netty.channel.EventLoop} for this {@link Channel}
      */
     public void runPendingTasks() {
         try {
@@ -345,7 +345,7 @@ public class EmbeddedChannel extends AbstractChannel {
         }
     }
 
-    private final class LastInboundHandler extends ChannelInboundHandlerAdapter {
+    private final class LastInboundHandler extends ChannelHandlerAdapter {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             inboundMessages.add(msg);

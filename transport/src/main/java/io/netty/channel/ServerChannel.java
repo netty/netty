@@ -22,6 +22,5 @@ import io.netty.channel.socket.ServerSocketChannel;
  * them.  {@link ServerSocketChannel} is a good example.
  */
 public interface ServerChannel extends Channel {
-
     EventLoopGroup childEventLoopGroup();
 }

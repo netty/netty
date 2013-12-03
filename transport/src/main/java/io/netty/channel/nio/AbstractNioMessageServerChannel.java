@@ -26,8 +26,8 @@ public abstract class AbstractNioMessageServerChannel extends AbstractNioMessage
 
     private final EventLoopGroup childGroup;
 
-    protected AbstractNioMessageServerChannel(Channel parent, EventLoop eventLoop, EventLoopGroup childGroup,
-            SelectableChannel ch, int readInterestOp) {
+    protected AbstractNioMessageServerChannel(
+            Channel parent, EventLoop eventLoop, EventLoopGroup childGroup, SelectableChannel ch, int readInterestOp) {
         super(parent, eventLoop, ch, readInterestOp);
         this.childGroup = childGroup;
     }
@@ -36,5 +36,4 @@ public abstract class AbstractNioMessageServerChannel extends AbstractNioMessage
     public EventLoopGroup childEventLoopGroup() {
         return childGroup;
     }
-
 }

@@ -16,7 +16,6 @@
 package io.netty.handler.codec.memcache.binary;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.handler.codec.memcache.MemcacheObjectEncoder;
@@ -64,7 +63,7 @@ public abstract class BinaryMemcacheEncoder<M extends BinaryMemcacheMessage<H>, 
             return;
         }
 
-        buf.writeBytes(Unpooled.copiedBuffer(key, CharsetUtil.UTF_8));
+        buf.writeBytes(key.getBytes(CharsetUtil.UTF_8));
     }
 
     /**

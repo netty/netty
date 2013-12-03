@@ -19,10 +19,12 @@ import java.net.SocketAddress;
 import java.util.Collections;
 import java.util.EnumSet;
 
-final class LoggingHandler implements ChannelInboundHandler, ChannelOutboundHandler {
+final class LoggingHandler implements ChannelHandler {
 
-    static enum Event { WRITE, FLUSH, BIND, CONNECT, DISCONNECT, CLOSE, READ, WRITABILITY, HANDLER_ADDED,
-        HANDLER_REMOVED, EXCEPTION, READ_COMPLETE, REGISTERED, ACTIVE, INACTIVE, USER };
+    enum Event {
+        WRITE, FLUSH, BIND, CONNECT, DISCONNECT, CLOSE, READ, WRITABILITY, HANDLER_ADDED,
+        HANDLER_REMOVED, EXCEPTION, READ_COMPLETE, REGISTERED, ACTIVE, INACTIVE, USER
+    }
 
     private StringBuilder log = new StringBuilder();
 

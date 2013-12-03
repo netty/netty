@@ -23,7 +23,6 @@ import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.CharsetUtil;
 
-import static io.netty.handler.codec.http.HttpHeaders.Values.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
 
 /**
@@ -34,6 +33,9 @@ import static io.netty.handler.codec.http.HttpVersion.*;
  * </p>
  */
 public class WebSocketServerHandshaker07 extends WebSocketServerHandshaker {
+
+    private static final CharSequence WEBSOCKET = HttpHeaders.newEntity(
+            HttpHeaders.Values.WEBSOCKET.toString().toLowerCase());
 
     public static final String WEBSOCKET_07_ACCEPT_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
@@ -114,7 +116,7 @@ public class WebSocketServerHandshaker07 extends WebSocketServerHandshaker {
             logger.debug(String.format("WS Version 7 Server Handshake key: %s. Response: %s.", key, accept));
         }
 
-        res.headers().add(Names.UPGRADE, WEBSOCKET.toLowerCase());
+        res.headers().add(Names.UPGRADE, WEBSOCKET);
         res.headers().add(Names.CONNECTION, Names.UPGRADE);
         res.headers().add(Names.SEC_WEBSOCKET_ACCEPT, accept);
         String subprotocols = req.headers().get(Names.SEC_WEBSOCKET_PROTOCOL);

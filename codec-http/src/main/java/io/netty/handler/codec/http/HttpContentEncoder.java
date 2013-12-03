@@ -31,18 +31,18 @@ import java.util.Queue;
 /**
  * Encodes the content of the outbound {@link HttpResponse} and {@link HttpContent}.
  * The original content is replaced with the new content encoded by the
- * {@link EmbeddedChannel}, which is created by {@link #beginEncode(HttpResponse, String)}.
+ * {@link EmbeddedChannel}, which is created by {@link #beginEncode(HttpResponse, CharSequence)}.
  * Once encoding is finished, the value of the <tt>'Content-Encoding'</tt> header
  * is set to the target content encoding, as returned by
- * {@link #beginEncode(HttpResponse, String)}.
+ * {@link #beginEncode(HttpResponse, CharSequence)}.
  * Also, the <tt>'Content-Length'</tt> header is updated to the length of the
  * encoded content.  If there is no supported or allowed encoding in the
  * corresponding {@link HttpRequest}'s {@code "Accept-Encoding"} header,
- * {@link #beginEncode(HttpResponse, String)} should return {@code null} so that
+ * {@link #beginEncode(HttpResponse, CharSequence)} should return {@code null} so that
  * no encoding occurs (i.e. pass-through).
  * <p>
  * Please note that this is an abstract class.  You have to extend this class
- * and implement {@link #beginEncode(HttpResponse, String)} properly to make
+ * and implement {@link #beginEncode(HttpResponse, CharSequence)} properly to make
  * this class functional.  For example, refer to the source code of
  * {@link HttpContentCompressor}.
  * <p>
@@ -58,8 +58,8 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
         AWAIT_CONTENT
     }
 
-    private final Queue<String> acceptEncodingQueue = new ArrayDeque<String>();
-    private String acceptEncoding;
+    private final Queue<CharSequence> acceptEncodingQueue = new ArrayDeque<CharSequence>();
+    private CharSequence acceptEncoding;
     private EmbeddedChannel encoder;
     private State state = State.AWAIT_HEADERS;
 
@@ -71,7 +71,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
     @Override
     protected void decode(ChannelHandlerContext ctx, HttpRequest msg, List<Object> out)
             throws Exception {
-        String acceptedEncoding = msg.headers().get(HttpHeaders.Names.ACCEPT_ENCODING);
+        CharSequence acceptedEncoding = msg.headers().get(HttpHeaders.Names.ACCEPT_ENCODING);
         if (acceptedEncoding == null) {
             acceptedEncoding = HttpHeaders.Values.IDENTITY;
         }
@@ -149,7 +149,12 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                 } else {
                     out.add(res);
                     state = State.AWAIT_CONTENT;
-                    break;
+                    if (!(msg instanceof HttpContent)) {
+                        // only break out the switch statement if we have not content to process
+                        // See https://github.com/netty/netty/issues/2006
+                        break;
+                    }
+                    // Fall through to encode the content
                 }
             }
             case AWAIT_CONTENT: {
@@ -223,7 +228,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
      *         {@code null} if {@code acceptEncoding} is unsupported or rejected
      *         and thus the content should be handled as-is (i.e. no encoding).
      */
-    protected abstract Result beginEncode(HttpResponse headers, String acceptEncoding) throws Exception;
+    protected abstract Result beginEncode(HttpResponse headers, CharSequence acceptEncoding) throws Exception;
 
     @Override
     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {

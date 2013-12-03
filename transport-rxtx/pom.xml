@@ -24,7 +24,7 @@
   </parent>
 
   <artifactId>netty-transport-rxtx</artifactId>
-  <packaging>bundle</packaging>
+  <packaging>jar</packaging>
 
   <name>Netty/Transport/RXTX</name>
 
@@ -45,5 +45,5 @@
       <artifactId>rxtx</artifactId>
     </dependency>
   </dependencies>
- 
 </project>
+

@@ -15,22 +15,21 @@
  */
 package io.netty.handler.codec.spdy;
 
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.internal.EmptyArrays;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_SESSION_STREAM_ID;
+import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 
 /**
  * Manages streams within a SPDY session.
  */
-public class SpdySessionHandler
-        extends ChannelDuplexHandler {
+public class SpdySessionHandler extends ChannelHandlerAdapter {
 
     private static final SpdyProtocolException PROTOCOL_EXCEPTION = new SpdyProtocolException();
     private static final SpdyProtocolException STREAM_CLOSED = new SpdyProtocolException("Stream closed");

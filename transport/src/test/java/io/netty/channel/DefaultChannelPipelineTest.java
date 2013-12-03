@@ -21,7 +21,6 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
-import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.ReferenceCountUtil;
@@ -30,7 +29,6 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Test;
 
-import java.net.SocketAddress;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -44,7 +42,7 @@ import static org.junit.Assert.*;
 
 public class DefaultChannelPipelineTest {
 
-    private static final EventLoopGroup group = new LocalEventLoopGroup(1);
+    private static final EventLoopGroup group = new DefaultEventLoopGroup(1);
 
     private Channel self;
     private Channel peer;
@@ -58,7 +56,7 @@ public class DefaultChannelPipelineTest {
         final AtomicReference<Channel> peerRef = new AtomicReference<Channel>();
         ServerBootstrap sb = new ServerBootstrap();
         sb.group(group).channel(LocalServerChannel.class);
-        sb.childHandler(new ChannelInboundHandlerAdapter() {
+        sb.childHandler(new ChannelHandlerAdapter() {
             @Override
             public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
                 peerRef.set(ctx.channel());
@@ -118,7 +116,7 @@ public class DefaultChannelPipelineTest {
         assertTrue(handler.called);
     }
 
-    private static final class StringInboundHandler extends ChannelInboundHandlerAdapter {
+    private static final class StringInboundHandler extends ChannelHandlerAdapter {
         boolean called;
 
         @Override
@@ -196,7 +194,7 @@ public class DefaultChannelPipelineTest {
         pipeline.addLast(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
-                ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                ch.pipeline().addLast(new ChannelHandlerAdapter() {
                     @Override
                     public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
                         latch.countDown();
@@ -475,9 +473,9 @@ public class DefaultChannelPipelineTest {
     }
 
     @Sharable
-    private static class TestHandler extends ChannelDuplexHandler { }
+    private static class TestHandler extends ChannelHandlerAdapter { }
 
-    private static class BufferedTestHandler extends ChannelDuplexHandler {
+    private static class BufferedTestHandler extends ChannelHandlerAdapter {
         final Queue<Object> inboundBuffer = new ArrayDeque<Object>();
         final Queue<Object> outboundBuffer = new ArrayDeque<Object>();
 

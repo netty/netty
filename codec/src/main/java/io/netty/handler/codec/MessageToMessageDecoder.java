@@ -15,9 +15,9 @@
  */
 package io.netty.handler.codec;
 
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
@@ -27,7 +27,7 @@ import io.netty.util.internal.TypeParameterMatcher;
 import java.util.List;
 
 /**
- * {@link ChannelInboundHandlerAdapter} which decodes from one message to an other message.
+ * A {@link ChannelHandler} which decodes from one message to an other message.
  *
  *
  * For example here is an implementation which decodes a {@link String} to an {@link Integer} which represent
@@ -50,7 +50,7 @@ import java.util.List;
  * {@link ReferenceCounted#release()} on decoded messages.
  *
  */
-public abstract class MessageToMessageDecoder<I> extends ChannelInboundHandlerAdapter {
+public abstract class MessageToMessageDecoder<I> extends ChannelHandlerAdapter {
 
     private final TypeParameterMatcher matcher;
 
@@ -72,7 +72,7 @@ public abstract class MessageToMessageDecoder<I> extends ChannelInboundHandlerAd
 
     /**
      * Returns {@code true} if the given message should be handled. If {@code false} it will be passed to the next
-     * {@link ChannelInboundHandler} in the {@link ChannelPipeline}.
+     * {@link ChannelHandler} in the {@link ChannelPipeline}.
      */
     public boolean acceptInboundMessage(Object msg) throws Exception {
         return matcher.match(msg);

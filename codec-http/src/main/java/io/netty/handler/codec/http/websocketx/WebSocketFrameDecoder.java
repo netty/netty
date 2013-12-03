@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelPipeline;
 
 /**
@@ -23,5 +23,4 @@ import io.netty.channel.ChannelPipeline;
  *
  * This makes it easier to access the added encoder later in the {@link ChannelPipeline}.
  */
-public interface WebSocketFrameDecoder extends ChannelInboundHandler {
-}
+public interface WebSocketFrameDecoder extends ChannelHandler { }
