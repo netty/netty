@@ -82,9 +82,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     }
 
     public DefaultHttpDataFactory(long minSize, Charset charset) {
-        useDisk = false;
-        checkSize = true;
-        this.minSize = minSize;
+        this(minSize);
         this.charset = charset;
     }
 
