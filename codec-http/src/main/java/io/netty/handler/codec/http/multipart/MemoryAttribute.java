@@ -20,8 +20,9 @@ import io.netty.channel.ChannelException;
 import io.netty.handler.codec.http.HttpConstants;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
 
-import static io.netty.buffer.Unpooled.*;
+import static io.netty.buffer.Unpooled.wrappedBuffer;
 
 /**
  * Memory implementation of Attributes
@@ -32,8 +33,17 @@ public class MemoryAttribute extends AbstractMemoryHttpData implements Attribute
         super(name, HttpConstants.DEFAULT_CHARSET, 0);
     }
 
+    public MemoryAttribute(String name, Charset charset) {
+        super(name, charset, 0);
+    }
+
     public MemoryAttribute(String name, String value) throws IOException {
         super(name, HttpConstants.DEFAULT_CHARSET, 0); // Attribute have no default size
+        setValue(value);
+    }
+
+    public MemoryAttribute(String name, String value, Charset charset) throws IOException {
+        super(name, charset, 0); // Attribute have no default size
         setValue(value);
     }
 

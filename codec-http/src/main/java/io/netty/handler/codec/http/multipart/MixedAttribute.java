@@ -35,6 +35,11 @@ public class MixedAttribute implements Attribute {
         attribute = new MemoryAttribute(name);
     }
 
+    public MixedAttribute(String name, long limitSize, Charset charset) {
+        this.limitSize = limitSize;
+        attribute = new MemoryAttribute(name, charset);
+    }
+
     public MixedAttribute(String name, String value, long limitSize) {
         this.limitSize = limitSize;
         if (value.length() > this.limitSize) {
@@ -51,6 +56,28 @@ public class MixedAttribute implements Attribute {
         } else {
             try {
                 attribute = new MemoryAttribute(name, value);
+            } catch (IOException e) {
+                throw new IllegalArgumentException(e);
+            }
+        }
+    }
+
+    public MixedAttribute(String name, String value, long limitSize, Charset charset) {
+        this.limitSize = limitSize;
+        if (value.length() > this.limitSize) {
+            try {
+                attribute = new DiskAttribute(name, value);
+            } catch (IOException e) {
+                // revert to Memory mode
+                try {
+                    attribute = new MemoryAttribute(name, value, charset);
+                } catch (IOException e1) {
+                    throw new IllegalArgumentException(e);
+                }
+            }
+        } else {
+            try {
+                attribute = new MemoryAttribute(name, value, charset);
             } catch (IOException e) {
                 throw new IllegalArgumentException(e);
             }
