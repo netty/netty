@@ -22,6 +22,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.TooLongFrameException;
+import io.netty.util.internal.AppendableCharSequence;
 
 import java.util.List;
 
@@ -111,7 +112,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
     private long chunkSize;
     private int headerSize;
     private int contentRead;
-    private final StringBuilder sb = new StringBuilder(128);
+    private final AppendableCharSequence sb = new AppendableCharSequence(128);
 
     /**
      * The internal state of {@link HttpObjectDecoder}.
@@ -330,7 +331,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
          * read chunk, read and ignore the CRLF and repeat until 0
          */
         case READ_CHUNK_SIZE: try {
-            StringBuilder line = readLine(buffer, maxInitialLineLength);
+            AppendableCharSequence line = readLine(buffer, maxInitialLineLength);
             int chunkSize = getChunkSize(line.toString());
             this.chunkSize = chunkSize;
             if (chunkSize == 0) {
@@ -580,7 +581,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         final HttpMessage message = this.message;
         final HttpHeaders headers = message.headers();
 
-        StringBuilder line = readHeader(buffer);
+        AppendableCharSequence line = readHeader(buffer);
         String name = null;
         String value = null;
         if (line.length() > 0) {
@@ -624,7 +625,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
 
     private LastHttpContent readTrailingHeaders(ByteBuf buffer) {
         headerSize = 0;
-        StringBuilder line = readHeader(buffer);
+        AppendableCharSequence line = readHeader(buffer);
         String lastHeader = null;
         if (line.length() > 0) {
             LastHttpContent trailer = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER, validateHeaders);
@@ -659,9 +660,9 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         return LastHttpContent.EMPTY_LAST_CONTENT;
     }
 
-    private StringBuilder readHeader(ByteBuf buffer) {
-        StringBuilder sb = this.sb;
-        sb.setLength(0);
+    private AppendableCharSequence readHeader(ByteBuf buffer) {
+        AppendableCharSequence sb = this.sb;
+        sb.reset();
         int headerSize = this.headerSize;
 
         loop:
@@ -716,9 +717,9 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         return Integer.parseInt(hex, 16);
     }
 
-    private StringBuilder readLine(ByteBuf buffer, int maxLineLength) {
-        StringBuilder sb = this.sb;
-        sb.setLength(0);
+    private AppendableCharSequence readLine(ByteBuf buffer, int maxLineLength) {
+        AppendableCharSequence sb = this.sb;
+        sb.reset();
         int lineLength = 0;
         while (true) {
             byte nextByte = buffer.readByte();
@@ -745,7 +746,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         }
     }
 
-    private static String[] splitInitialLine(StringBuilder sb) {
+    private static String[] splitInitialLine(AppendableCharSequence sb) {
         int aStart;
         int aEnd;
         int bStart;
@@ -768,7 +769,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
                 cStart < cEnd? sb.substring(cStart, cEnd) : "" };
     }
 
-    private static String[] splitHeader(StringBuilder sb) {
+    private static String[] splitHeader(AppendableCharSequence sb) {
         final int length = sb.length();
         int nameStart;
         int nameEnd;
