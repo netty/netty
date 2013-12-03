@@ -207,7 +207,7 @@ public class IdleStateHandler extends ChannelHandlerAdapter {
 
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        if (ctx.channel().isActive() & ctx.channel().isRegistered()) {
+        if (ctx.channel().isActive() && ctx.channel().isRegistered()) {
             // channelActvie() event has been fired already, which means this.channelActive() will
             // not be invoked. We have to initialize here instead.
             initialize(ctx);
