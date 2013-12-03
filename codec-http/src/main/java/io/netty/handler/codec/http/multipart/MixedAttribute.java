@@ -66,7 +66,7 @@ public class MixedAttribute implements Attribute {
         this.limitSize = limitSize;
         if (value.length() > this.limitSize) {
             try {
-                attribute = new DiskAttribute(name, value);
+                attribute = new DiskAttribute(name, value, charset);
             } catch (IOException e) {
                 // revert to Memory mode
                 try {

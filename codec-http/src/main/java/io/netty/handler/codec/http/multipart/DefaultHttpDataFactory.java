@@ -138,7 +138,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
             return attribute;
         }
         try {
-            return new MemoryAttribute(name, value);
+            return new MemoryAttribute(name, value, charset);
         } catch (IOException e) {
             throw new IllegalArgumentException(e);
         }
