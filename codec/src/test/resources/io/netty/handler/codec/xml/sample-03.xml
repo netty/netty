@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright 2012 The Netty Project
+  ~
+  ~ The Netty Project licenses this file to you under the Apache License,
+  ~ version 2.0 (the "License"); you may not use this file except in compliance
+  ~ with the License. You may obtain a copy of the License at:
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+  ~ WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+  ~ License for the specific language governing permissions and limitations
+  ~ under the License.
+  -->
+<FindBugsFilter>
+  <!-- Tests -->
+  <Match>
+    <Class name="~.*Test(\$[^\$]+)*"/>
+  </Match>
+  <!-- Generated code -->
+  <Match>
+    <Class name="~.*\.LocalTimeProtocol(\$[^\$]+)*"/>
+  </Match>
+  <!-- Noise -->
+  <Match>
+    <Bug code="Co,SF"
+         category="I18N"
+         pattern="REC_CATCH_EXCEPTION,UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR,DB_DUPLICATE_SWITCH_CLAUSES,VO_VOLATILE_REFERENCE_TO_ARRAY" />
+  </Match>
+  <!-- Known false positives -->
+  <Match>
+    <Class name="~.*Channel(Group)?Future"/>
+    <Method name="~await.*"/>
+    <Bug pattern="PS_PUBLIC_SEMAPHORES"/>
+  </Match>
+  <Match>
+    <Class name="~.*SelectorLoop"/>
+    <Method name="run"/>
+    <Bug code="ESync"/>
+  </Match>
+  <Match>
+    <Class name="~.*Channel"/>
+    <Or>
+      <Method name="setClosed"/>
+      <Method name="setInterestOpsNow"/>
+    </Or>
+    <Bug pattern="USM_USELESS_SUBCLASS_METHOD"/>
+  </Match>
+  <Match>
+    <Class name="~.*HttpTunnelingChannelHandler"/>
+    <Method name="~await.*"/>
+    <Bug pattern="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE,RV_RETURN_VALUE_IGNORED2"/>
+  </Match>
+  <!-- Known issues that don't matter -->
+  <Match>
+    <Or>
+      <Class name="~.*\.util\.internal\.Concurrent[A-Za-z]*HashMap(\$[^\$]+)*"/>
+      <Class name="~.*\.util\.internal\..*TransferQueue(\$[^\$]+)*"/>
+      <Class name="~.*\.util\.internal\.MapBackedSet"/>
+    </Or>
+    <Bug pattern="SE_TRANSIENT_FIELD_NOT_RESTORED,SE_BAD_FIELD"/>
+  </Match>
+</FindBugsFilter>
