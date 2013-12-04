@@ -440,4 +440,9 @@ public class ChannelBuffersTest {
         String hexDump2 = hexDump(buffer2);
         assertEquals(hexDump, hexDump2);
     }
+
+    @Test
+    public void testEmptyBuffer() {
+        assertTrue(EMPTY_BUFFER instanceof EmptyChannelBuffer);
+    }
 }
