@@ -18,6 +18,12 @@ package io.netty.util;
 
 public interface ResourceLeak {
     /**
+     * Records the caller's current stack trace so that the {@link ResourceLeakDetector} can tell where the leaked
+     * resource was accessed lastly.
+     */
+    void record();
+
+    /**
      * Close the leak so that {@link ResourceLeakDetector} does not warn about leaked resources.
      *
      * @return {@code true} if called first time, {@code false} if called already

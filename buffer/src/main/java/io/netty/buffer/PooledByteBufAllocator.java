@@ -217,26 +217,34 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
     protected ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity) {
         PoolThreadCache cache = threadCache.get();
         PoolArena<byte[]> heapArena = cache.heapArena;
+
+        ByteBuf buf;
         if (heapArena != null) {
-            return heapArena.allocate(cache, initialCapacity, maxCapacity);
+            buf = heapArena.allocate(cache, initialCapacity, maxCapacity);
         } else {
-            return new UnpooledHeapByteBuf(this, initialCapacity, maxCapacity);
+            buf = new UnpooledHeapByteBuf(this, initialCapacity, maxCapacity);
         }
+
+        return toLeakAwareBuffer(buf);
     }
 
     @Override
     protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
         PoolThreadCache cache = threadCache.get();
         PoolArena<ByteBuffer> directArena = cache.directArena;
+
+        ByteBuf buf;
         if (directArena != null) {
-            return directArena.allocate(cache, initialCapacity, maxCapacity);
+            buf = directArena.allocate(cache, initialCapacity, maxCapacity);
         } else {
             if (PlatformDependent.hasUnsafe()) {
-                return new UnpooledUnsafeDirectByteBuf(this, initialCapacity, maxCapacity);
+                buf = new UnpooledUnsafeDirectByteBuf(this, initialCapacity, maxCapacity);
             } else {
-                return new UnpooledDirectByteBuf(this, initialCapacity, maxCapacity);
+                buf = new UnpooledDirectByteBuf(this, initialCapacity, maxCapacity);
             }
         }
+
+        return toLeakAwareBuffer(buf);
     }
 
     @Override

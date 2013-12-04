@@ -15,7 +15,6 @@
  */
 package io.netty.buffer;
 
-import io.netty.util.ResourceLeak;
 import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
@@ -34,7 +33,6 @@ import java.nio.channels.ScatteringByteChannel;
  */
 public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
-    private final ResourceLeak leak;
     private final ByteBufAllocator alloc;
 
     private ByteBuffer buffer;
@@ -66,7 +64,6 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
         this.alloc = alloc;
         setByteBuffer(ByteBuffer.allocateDirect(initialCapacity));
-        leak = leakDetector.open(this);
     }
 
     /**
@@ -99,7 +96,6 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
         doNotFree = true;
         setByteBuffer(initialBuffer.slice().order(ByteOrder.BIG_ENDIAN));
         writerIndex(initialCapacity);
-        leak = leakDetector.open(this);
     }
 
     /**
@@ -566,12 +562,7 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
             throw new IndexOutOfBoundsException("Too many bytes to read - Need " + (index + length));
         }
 
-        ByteBuffer dst =
-                src.isDirect()? allocateDirect(length) : ByteBuffer.allocate(length);
-        dst.put(src);
-        dst.order(order());
-        dst.clear();
-        return new UnpooledDirectByteBuf(alloc(), dst, maxCapacity());
+        return alloc().directBuffer(length, maxCapacity()).writeBytes(src);
     }
 
     @Override
@@ -603,10 +594,6 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
         if (!doNotFree) {
             freeDirect(buffer);
-        }
-
-        if (leak != null) {
-            leak.close();
         }
     }
 
