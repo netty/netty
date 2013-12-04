@@ -27,7 +27,7 @@ import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
 
-public class WrappedByteBuf extends ByteBuf {
+class WrappedByteBuf extends ByteBuf {
 
     protected final ByteBuf buf;
 
