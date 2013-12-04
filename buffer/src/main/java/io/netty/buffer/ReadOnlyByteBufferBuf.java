@@ -15,7 +15,6 @@
  */
 package io.netty.buffer;
 
-import io.netty.util.ResourceLeak;
 import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
@@ -32,7 +31,6 @@ import java.nio.channels.ScatteringByteChannel;
  * Read-only ByteBuf which wraps a read-only ByteBuffer.
  */
 class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
-    private final ResourceLeak leak;
 
     protected final ByteBuffer buffer;
     private final ByteBufAllocator allocator;
@@ -47,15 +45,10 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
         this.allocator = allocator;
         this.buffer = buffer.slice().order(ByteOrder.BIG_ENDIAN);
         writerIndex(this.buffer.limit());
-        leak = leakDetector.open(this);
     }
 
     @Override
-    protected void deallocate() {
-        if (leak != null) {
-            leak.close();
-        }
-    }
+    protected void deallocate() { }
 
     @Override
     public byte getByte(int index) {

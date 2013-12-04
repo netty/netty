@@ -15,7 +15,6 @@
  */
 package io.netty.buffer;
 
-import io.netty.util.ResourceLeak;
 import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
@@ -36,7 +35,6 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
 
     private static final boolean NATIVE_ORDER = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
 
-    private final ResourceLeak leak;
     private final ByteBufAllocator alloc;
 
     private long memoryAddress;
@@ -69,7 +67,6 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
 
         this.alloc = alloc;
         setByteBuffer(allocateDirect(initialCapacity));
-        leak = leakDetector.open(this);
     }
 
     /**
@@ -102,7 +99,6 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
         doNotFree = true;
         setByteBuffer(initialBuffer.slice().order(ByteOrder.BIG_ENDIAN));
         writerIndex(initialCapacity);
-        leak = leakDetector.open(this);
     }
 
     /**
@@ -466,10 +462,14 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
     @Override
     public ByteBuf copy(int index, int length) {
         checkIndex(index, length);
-        UnpooledUnsafeDirectByteBuf copy = (UnpooledUnsafeDirectByteBuf) alloc().directBuffer(length, maxCapacity());
+        ByteBuf copy = alloc().directBuffer(length, maxCapacity());
         if (length != 0) {
-            PlatformDependent.copyMemory(addr(index), copy.addr(0), length);
-            copy.setIndex(0, length);
+            if (copy.hasMemoryAddress()) {
+                PlatformDependent.copyMemory(addr(index), copy.memoryAddress(), length);
+                copy.setIndex(0, length);
+            } else {
+                copy.writeBytes(this, index, length);
+            }
         }
         return copy;
     }
@@ -503,10 +503,6 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
 
         if (!doNotFree) {
             freeDirect(buffer);
-        }
-
-        if (leak != null) {
-            leak.close();
         }
     }
 
