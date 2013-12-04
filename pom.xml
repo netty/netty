@@ -67,6 +67,26 @@
     </developer>
   </developers>
 
+  <profiles>
+    <profile>
+      <id>leak</id>
+      <properties>
+        <test.jvm.argLine>
+          -server 
+          -dsa -da -ea:io.netty...
+          -XX:+AggressiveOpts
+          -XX:+TieredCompilation
+          -XX:+UseBiasedLocking
+          -XX:+UseFastAccessorMethods
+          -XX:+UseStringCache
+          -XX:+OptimizeStringConcat
+          -XX:+HeapDumpOnOutOfMemoryError
+          -Dio.netty.leakDetectionLevel=3
+        </test.jvm.argLine>
+      </properties>
+    </profile>
+  </profiles>
+
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -83,7 +103,7 @@
       -XX:+HeapDumpOnOutOfMemoryError
     </test.jvm.argLine>
   </properties>
- 
+
   <modules>
     <module>common</module>
     <module>buffer</module>
