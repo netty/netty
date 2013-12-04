@@ -66,11 +66,16 @@ public final class ResourceLeakDetector<T> {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ResourceLeakDetector.class);
 
     static {
-        final boolean disabled = SystemPropertyUtil.getBoolean("io.netty.noResourceLeakDetection", false);
-        logger.debug("-Dio.netty.noResourceLeakDetection: {}", disabled);
-        logger.warn(
-                "-Dio.netty.noResourceLeakDetection is deprecated. Use '-D{}={}' instead.",
-                PROP_LEVEL, DEFAULT_LEVEL.name().toLowerCase());
+        final boolean disabled;
+        if (SystemPropertyUtil.get("io.netty.noResourceLeakDetection") != null) {
+            disabled = SystemPropertyUtil.getBoolean("io.netty.noResourceLeakDetection", false);
+            logger.debug("-Dio.netty.noResourceLeakDetection: {}", disabled);
+            logger.warn(
+                    "-Dio.netty.noResourceLeakDetection is deprecated. Use '-D{}={}' instead.",
+                    PROP_LEVEL, DEFAULT_LEVEL.name().toLowerCase());
+        } else {
+            disabled = false;
+        }
 
         Level defaultLevel = disabled? Level.DISABLED : DEFAULT_LEVEL;
         String levelStr = SystemPropertyUtil.get(PROP_LEVEL, defaultLevel.name()).trim().toUpperCase();
@@ -90,7 +95,7 @@ public final class ResourceLeakDetector<T> {
     private static final int DEFAULT_SAMPLING_INTERVAL = 113;
 
     /**
-     * @deprecated Use {@link #setLevel(ResourceLeakDetector.Level)} instead.
+     * @deprecated Use {@link #setLevel(Level)} instead.
      */
     @Deprecated
     public static void setEnabled(boolean enabled) {
