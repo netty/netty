@@ -100,7 +100,7 @@ public final class ChannelBuffers {
     /**
      * A buffer whose capacity is {@code 0}.
      */
-    public static final ChannelBuffer EMPTY_BUFFER = new BigEndianHeapChannelBuffer(0);
+    public static final ChannelBuffer EMPTY_BUFFER = new EmptyChannelBuffer();
 
     private static final char[] HEXDUMP_TABLE = new char[256 * 4];
 
