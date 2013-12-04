@@ -20,7 +20,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.handler.codec.TooLongFrameException;
-import io.netty.util.CharsetUtil;
 
 import java.util.List;
 
@@ -99,7 +98,7 @@ public class XmlFrameDecoder extends ByteToMessageDecoder {
             final byte readByte = in.getByte(i);
             if (!openingBracketFound && Character.isWhitespace(readByte)) {
                 // xml has not started and whitespace char found
-                leadingWhiteSpaceCount ++;
+                leadingWhiteSpaceCount++;
             } else if (!openingBracketFound && readByte != '<') {
                 // garbage found before xml start
                 fail(ctx);
@@ -148,7 +147,7 @@ public class XmlFrameDecoder extends ByteToMessageDecoder {
                     }
                 }
 
-                if (openingBracketFound && atLeastOneXmlElementFound && openBracketsCount == 0) {
+                if (atLeastOneXmlElementFound && openBracketsCount == 0) {
                     // xml is balanced, bailing out
                     break;
                 }
@@ -158,9 +157,11 @@ public class XmlFrameDecoder extends ByteToMessageDecoder {
         final int readerIndex = in.readerIndex();
 
         if (openBracketsCount == 0 && length > 0) {
+            if (length >= in.writerIndex()) {
+                length = in.readableBytes();
+            }
             final ByteBuf frame =
                     extractFrame(in, readerIndex + leadingWhiteSpaceCount, length - leadingWhiteSpaceCount);
-            System.err.println(in + ", " + frame + ", " + frame.toString(CharsetUtil.UTF_8));
             in.skipBytes(length);
             out.add(frame);
         }
