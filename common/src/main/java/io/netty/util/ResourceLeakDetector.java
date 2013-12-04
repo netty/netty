@@ -17,42 +17,100 @@
 package io.netty.util;
 
 import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.lang.ref.PhantomReference;
 import java.lang.ref.ReferenceQueue;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.EnumSet;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static io.netty.util.internal.StringUtil.*;
+
 public final class ResourceLeakDetector<T> {
 
-    private static boolean disabled;
+    private static final String PROP_LEVEL = "io.netty.leakDetectionLevel";
+
+    /**
+     * Represents the level of resource leak detection.
+     */
+    public enum Level {
+        /**
+         * Disables resource leak detection.
+         */
+        DISABLED,
+        /**
+         * Enables simplistic sampling resource leak detection which reports there is a leak or not,
+         * at the cost of small overhead (default).
+         */
+        SIMPLE,
+        /**
+         * Enables advanced sampling resource leak detection which reports where the leaked object was accessed
+         * recently at the cost of high overhead.
+         */
+        ADVANCED,
+        /**
+         * Enables paranoid resource leak detection which reports where the leaked object was accessed recently,
+         * at the cost of the highest possible overhead (for testing purposes only).
+         */
+        PARANOID;
+
+        public static Level valueOf(int value) {
+            for (Level l: EnumSet.allOf(Level.class)) {
+                if (l.value() == value) {
+                    return l;
+                }
+            }
+
+            if (value < 0) {
+                return DISABLED;
+            }
+
+            if (value >= Level.values().length) {
+                return PARANOID;
+            }
+
+            throw new Error();
+        }
+
+        public int value() {
+            return ordinal();
+        }
+    }
+
+    private static Level level;
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ResourceLeakDetector.class);
 
     static {
-        final boolean DISABLED = SystemPropertyUtil.getBoolean("io.netty.noResourceLeakDetection", false);
-        logger.debug("-Dio.netty.noResourceLeakDetection: {}", DISABLED);
-        disabled = DISABLED;
+        Level userLevel = Level.valueOf(SystemPropertyUtil.getInt(PROP_LEVEL, Level.SIMPLE.value()));
+        level = userLevel;
+        if (logger.isDebugEnabled()) {
+            logger.debug("-D{}: {} ({})", PROP_LEVEL, userLevel.value(), userLevel);
+        }
     }
 
     private static final int DEFAULT_SAMPLING_INTERVAL = 113;
 
     /**
-     * Enables or disabled the resource leak detection.
+     * Sets the resource leak detection level.
      */
-    public static void setEnabled(boolean enabled) {
-        disabled = !enabled;
+    public static void setLevel(Level level) {
+        if (level == null) {
+            throw new NullPointerException("level");
+        }
+        ResourceLeakDetector.level = level;
     }
 
     /**
-     * Returns {@code true} if resource leak detection is enabled.
+     * Returns the current resource leak detection level.
      */
-    public static boolean isEnabled() {
-        return !disabled;
+    public static Level getLevel() {
+        return level;
     }
 
     /** the linked list of active resources */
@@ -60,7 +118,7 @@ public final class ResourceLeakDetector<T> {
     private final DefaultResourceLeak tail = new DefaultResourceLeak(null);
 
     private final ReferenceQueue<Object> refQueue = new ReferenceQueue<Object>();
-    private final ConcurrentMap<Exception, Boolean> reportedLeaks = PlatformDependent.newConcurrentHashMap();
+    private final ConcurrentMap<String, Boolean> reportedLeaks = PlatformDependent.newConcurrentHashMap();
 
     private final String resourceType;
     private final int samplingInterval;
@@ -71,7 +129,7 @@ public final class ResourceLeakDetector<T> {
     private long leakCheckCnt;
 
     public ResourceLeakDetector(Class<?> resourceType) {
-        this(StringUtil.simpleClassName(resourceType));
+        this(simpleClassName(resourceType));
     }
 
     public ResourceLeakDetector(String resourceType) {
@@ -79,7 +137,7 @@ public final class ResourceLeakDetector<T> {
     }
 
     public ResourceLeakDetector(Class<?> resourceType, int samplingInterval, long maxActive) {
-        this(StringUtil.simpleClassName(resourceType), samplingInterval, maxActive);
+        this(simpleClassName(resourceType), samplingInterval, maxActive);
     }
 
     public ResourceLeakDetector(String resourceType, int samplingInterval, long maxActive) {
@@ -108,17 +166,26 @@ public final class ResourceLeakDetector<T> {
      * @return the {@link ResourceLeak} or {@code null}
      */
     public ResourceLeak open(T obj) {
-        if (disabled || leakCheckCnt ++ % samplingInterval != 0) {
+        Level level = ResourceLeakDetector.level;
+        if (level == Level.DISABLED) {
             return null;
         }
 
-        reportLeak();
-
-        return new DefaultResourceLeak(obj);
+        if (level.value() < Level.PARANOID.value()) {
+            if (leakCheckCnt ++ % samplingInterval == 0) {
+                reportLeak(level);
+                return new DefaultResourceLeak(obj);
+            } else {
+                return null;
+            }
+        } else {
+            reportLeak(level);
+            return new DefaultResourceLeak(obj);
+        }
     }
 
-    private void reportLeak() {
-        if (!logger.isWarnEnabled()) {
+    private void reportLeak(Level level) {
+        if (!logger.isErrorEnabled()) {
             for (;;) {
                 @SuppressWarnings("unchecked")
                 DefaultResourceLeak ref = (DefaultResourceLeak) refQueue.poll();
@@ -131,9 +198,9 @@ public final class ResourceLeakDetector<T> {
         }
 
         // Report too many instances.
+        int samplingInterval = level == Level.PARANOID? 1 : this.samplingInterval;
         if (active * samplingInterval > maxActive && loggedTooManyActive.compareAndSet(false, true)) {
-            logger.warn(
-                    "LEAK: You are creating too many " + resourceType + " instances.  " +
+            logger.error("LEAK: You are creating too many " + resourceType + " instances.  " +
                     resourceType + " is a shared resource that must be reused across the JVM," +
                     "so that only a few instances are created.");
         }
@@ -152,18 +219,29 @@ public final class ResourceLeakDetector<T> {
                 continue;
             }
 
-            if (reportedLeaks.putIfAbsent(ref.exception, Boolean.TRUE) == null) {
-                logger.warn(
-                        "LEAK: " + resourceType + " was GC'd before being released correctly.  " +
-                        "The following stack trace shows where the leaked object was created, " +
-                        "rather than where you failed to release it.", ref.exception);
+            String records = ref.toString();
+            if (reportedLeaks.putIfAbsent(records, Boolean.TRUE) == null) {
+                if (records.isEmpty()) {
+                    logger.error("LEAK: {}.release() was not called before it's garbage-collected. " +
+                            "Enable advanced leak reporting to find out where the leak occurred. " +
+                            "To enable advanced leak reporting, " +
+                            "specify the JVM option '-D{}={}' or call {}.setLevel()",
+                            resourceType, PROP_LEVEL, Level.ADVANCED.value(), simpleClassName(this));
+                } else {
+                    logger.error(
+                            "LEAK: {}.release() was not called before it's garbage-collected.{}",
+                            resourceType, records);
+                }
             }
         }
     }
 
     private final class DefaultResourceLeak extends PhantomReference<Object> implements ResourceLeak {
 
-        private final ResourceLeakException exception;
+        private static final int MAX_RECORDS = 4;
+
+        private final String creationRecord;
+        private final Deque<String> lastRecords = new ArrayDeque<String>();
         private final AtomicBoolean freed;
         private DefaultResourceLeak prev;
         private DefaultResourceLeak next;
@@ -172,8 +250,12 @@ public final class ResourceLeakDetector<T> {
             super(referent, referent != null? refQueue : null);
 
             if (referent != null) {
-                exception = new ResourceLeakException(
-                        referent.getClass().getName() + '@' + Integer.toHexString(System.identityHashCode(referent)));
+                Level level = getLevel();
+                if (level.value() >= Level.ADVANCED.value()) {
+                    creationRecord = newRecord();
+                } else {
+                    creationRecord = null;
+                }
 
                 // TODO: Use CAS to update the list.
                 synchronized (head) {
@@ -185,8 +267,25 @@ public final class ResourceLeakDetector<T> {
                 }
                 freed = new AtomicBoolean();
             } else {
-                exception = null;
+                creationRecord = null;
                 freed = new AtomicBoolean(true);
+            }
+        }
+
+        @Override
+        public void record() {
+            if (creationRecord != null) {
+                String value = newRecord();
+
+                synchronized (lastRecords) {
+                    int size = lastRecords.size();
+                    if (size == 0 || !lastRecords.getLast().equals(value)) {
+                        lastRecords.add(value);
+                    }
+                    if (size > MAX_RECORDS) {
+                        lastRecords.removeFirst();
+                    }
+                }
             }
         }
 
@@ -204,5 +303,54 @@ public final class ResourceLeakDetector<T> {
             }
             return false;
         }
+
+        public String toString() {
+            if (creationRecord == null) {
+                return "";
+            }
+
+            StringBuilder buf = new StringBuilder(16384);
+            int lastRecordCount = lastRecords.size();
+
+            buf.append(NEWLINE);
+            buf.append("Recent access records: ");
+            buf.append(lastRecordCount);
+            buf.append(NEWLINE);
+
+            if (lastRecordCount > 0) {
+                String[] lastRecords = this.lastRecords.toArray(new String[lastRecordCount]);
+                for (int i = lastRecords.length - 1; i >= 0; i --) {
+                    buf.append('#');
+                    buf.append(i + 1);
+                    buf.append(':');
+                    buf.append(NEWLINE);
+                    buf.append(lastRecords[i]);
+                }
+            }
+
+            buf.append("Created at:");
+            buf.append(NEWLINE);
+            buf.append(creationRecord);
+            buf.setLength(buf.length() - NEWLINE.length());
+
+            return buf.toString();
+        }
+    }
+
+    private static String newRecord() {
+        StringBuilder buf = new StringBuilder(4096);
+        StackTraceElement[] array = new Throwable().getStackTrace();
+        int recordsToSkip = 3;
+        for (StackTraceElement e: array) {
+            if (recordsToSkip > 0) {
+                recordsToSkip --;
+            } else {
+                buf.append('\t');
+                buf.append(e.toString());
+                buf.append(NEWLINE);
+            }
+        }
+
+        return buf.toString();
     }
 }
