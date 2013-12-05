@@ -32,7 +32,7 @@ public class MixedFileUpload implements FileUpload {
     private final long limitSize;
 
     private final long definedSize;
-    protected long maxSize = DefaultHttpDataFactory.MAXSIZE;
+    private long maxSize = DefaultHttpDataFactory.MAXSIZE;
 
     public MixedFileUpload(String name, String filename, String contentType,
             String contentTransferEncoding, Charset charset, long size,
@@ -48,11 +48,18 @@ public class MixedFileUpload implements FileUpload {
         definedSize = size;
     }
 
+    @Override
+    public long getMaxSize() {
+        return maxSize;
+    }
+
+    @Override
     public void setMaxSize(long maxSize) {
         this.maxSize = maxSize;
         fileUpload.setMaxSize(maxSize);
     }
 
+    @Override
     public void checkSize(long newSize) throws IOException {
         if (maxSize >= 0 && newSize > maxSize) {
             throw new IOException("Size exceed allowed maximum capacity");
@@ -239,6 +246,16 @@ public class MixedFileUpload implements FileUpload {
     @Override
     public String getName() {
         return fileUpload.getName();
+    }
+
+    @Override
+    public int hashCode() {
+        return fileUpload.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return fileUpload.equals(obj);
     }
 
     @Override
