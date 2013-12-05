@@ -32,8 +32,10 @@ import java.util.List;
  *
  */
 public class HttpPostRequestDecoder implements InterfaceHttpPostRequestDecoder {
-    protected static final int DEFAULT_DISCARD_THRESHOLD = 10 * 1024 * 1024;
-    protected InterfaceHttpPostRequestDecoder decoder;
+
+    static final int DEFAULT_DISCARD_THRESHOLD = 10 * 1024 * 1024;
+
+    private final InterfaceHttpPostRequestDecoder decoder;
 
     /**
      *
