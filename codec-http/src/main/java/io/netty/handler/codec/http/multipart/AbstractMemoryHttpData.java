@@ -37,7 +37,6 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
 
     private ByteBuf byteBuf;
     private int chunkPosition;
-    protected boolean isRenamed;
 
     protected AbstractMemoryHttpData(String name, Charset charset, long size) {
         super(name, charset, size);
@@ -59,7 +58,7 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
         }
         byteBuf = buffer;
         size = localsize;
-        completed = true;
+        setCompleted();
     }
 
     @Override
@@ -85,7 +84,7 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
             byteBuf.release();
         }
         byteBuf = buffer;
-        completed = true;
+        setCompleted();
     }
 
     @Override
@@ -113,7 +112,7 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
             }
         }
         if (last) {
-            completed = true;
+            setCompleted();
         } else {
             if (buffer == null) {
                 throw new NullPointerException("buffer");
@@ -148,7 +147,7 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
         }
         byteBuf = wrappedBuffer(Integer.MAX_VALUE, byteBuffer);
         size = newsize;
-        completed = true;
+        setCompleted();
     }
 
     @Override
@@ -227,8 +226,9 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
         }
         if (byteBuf == null) {
             // empty file
-            dest.createNewFile();
-            isRenamed = true;
+            if (!dest.createNewFile()) {
+                throw new IOException("file exists already: " + dest);
+            }
             return true;
         }
         int length = byteBuf.readableBytes();
@@ -250,7 +250,6 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
         fileChannel.force(false);
         fileChannel.close();
         outputStream.close();
-        isRenamed = true;
         return written == length;
     }
 

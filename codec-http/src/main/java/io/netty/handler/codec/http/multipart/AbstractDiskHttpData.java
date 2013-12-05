@@ -39,7 +39,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractDiskHttpData.class);
 
-    protected File file;
+    private File file;
     private boolean isRenamed;
     private FileChannel fileChannel;
 
@@ -114,7 +114,9 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
             }
             if (buffer.readableBytes() == 0) {
                 // empty file
-                file.createNewFile();
+                if (!file.createNewFile()) {
+                    throw new IOException("file exists already: " + file);
+                }
                 return;
             }
             FileOutputStream outputStream = new FileOutputStream(file);
@@ -128,7 +130,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
             localfileChannel.force(false);
             localfileChannel.close();
             outputStream.close();
-            completed = true;
+            setCompleted();
         } finally {
             // Release the buffer as it was retained before and we not need a reference to it at all
             // See https://github.com/netty/netty/issues/1516
@@ -178,7 +180,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
             fileChannel.force(false);
             fileChannel.close();
             fileChannel = null;
-            completed = true;
+            setCompleted();
         } else {
             if (buffer == null) {
                 throw new NullPointerException("buffer");
@@ -195,7 +197,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
         size = file.length();
         checkSize(size);
         isRenamed = true;
-        completed = true;
+        setCompleted();
     }
 
     @Override
@@ -223,12 +225,14 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
         localfileChannel.close();
         size = written;
         if (definedSize > 0 && definedSize < size) {
-            file.delete();
+            if (!file.delete()) {
+                logger.warn("Failed to delete: {}", file);
+            }
             file = null;
             throw new IOException("Out of size: " + size + " > " + definedSize);
         }
         isRenamed = true;
-        completed = true;
+        setCompleted();
     }
 
     @Override
@@ -244,7 +248,9 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
         }
         if (! isRenamed) {
             if (file != null && file.exists()) {
-                file.delete();
+                if (!file.delete()) {
+                    logger.warn("Failed to delete: {}", file);
+                }
             }
             file = null;
         }
@@ -346,12 +352,16 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
             in.close();
             out.close();
             if (position == size) {
-                file.delete();
+                if (!file.delete()) {
+                    logger.warn("Failed to delete: {}", file);
+                }
                 file = dest;
                 isRenamed = true;
                 return true;
             } else {
-                dest.delete();
+                if (!dest.delete()) {
+                    logger.warn("Failed to delete: {}", dest);
+                }
                 return false;
             }
         }
