@@ -44,7 +44,10 @@ public class XmlFrameDecoderTest {
     private final List<String> xmlSamples;
 
     public XmlFrameDecoderTest() throws IOException, URISyntaxException {
-        xmlSamples = Arrays.asList(sample("01"), sample("02"), sample("03"), sample("04"));
+        xmlSamples = Arrays.asList(
+                sample("01"), sample("02"), sample("03"),
+                sample("04"), sample("05"), sample("06")
+        );
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -99,18 +102,35 @@ public class XmlFrameDecoderTest {
     }
 
     @Test
+    public void testDecodeWithCDATABlock() {
+        final String xml = "<book>" +
+                "<![CDATA[K&R, a.k.a. Kernighan & Ritchie]]>" +
+                "</book>";
+        testDecodeWithXml(xml, xml);
+    }
+
+    @Test
+    public void testDecodeWithCDATABlockContainingNestedUnbalancedXml() {
+        // <br> isn't closed, also <a> should have been </a>
+        final String xml = "<info>" +
+                "<![CDATA[Copyright 2012-2013,<br><a href=\"http://www.acme.com\">ACME Inc.<a>]]>" +
+                "</info>";
+        testDecodeWithXml(xml, xml);
+    }
+
+    @Test
     public void testDecodeWithTwoMessages() {
-        testDecodeWithXml(
-                "<root xmlns=\"http://www.acme.com/acme\" status=\"loginok\" timestamp=\"1362410583776\"/>\n" +
-                        '\n' +
-                        "<root xmlns=\"http://www.acme.com/acme\" status=\"start\" time=\"0\" " +
-                        "timestamp=\"1362410584794\">\n<child active=\"1\" status=\"started\" id=\"935449\" " +
-                        "msgnr=\"2\"/>\n</root>",
-                "<root xmlns=\"http://www.acme.com/acme\" status=\"loginok\" timestamp=\"1362410583776\"/>",
-                "<root xmlns=\"http://www.acme.com/acme\" status=\"start\" time=\"0\" timestamp=\"1362410584794\">\n" +
-                        "<child active=\"1\" status=\"started\" id=\"935449\" msgnr=\"2\"/>\n" +
-                        "</root>"
-        );
+        final String input = "<root xmlns=\"http://www.acme.com/acme\" status=\"loginok\" " +
+                "timestamp=\"1362410583776\"/>\n\n" +
+                "<root xmlns=\"http://www.acme.com/acme\" status=\"start\" time=\"0\" " +
+                "timestamp=\"1362410584794\">\n<child active=\"1\" status=\"started\" id=\"935449\" " +
+                "msgnr=\"2\"/>\n</root>";
+        final String frame1 = "<root xmlns=\"http://www.acme.com/acme\" status=\"loginok\" " +
+                "timestamp=\"1362410583776\"/>";
+        final String frame2 = "<root xmlns=\"http://www.acme.com/acme\" status=\"start\" time=\"0\" " +
+                "timestamp=\"1362410584794\">\n<child active=\"1\" status=\"started\" id=\"935449\" " +
+                "msgnr=\"2\"/>\n</root>";
+        testDecodeWithXml(input, frame1, frame2);
     }
 
     @Test
