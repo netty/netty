@@ -20,6 +20,7 @@ import io.netty.channel.ChannelException;
 import io.netty.handler.codec.http.HttpConstants;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
 
 import static io.netty.buffer.Unpooled.*;
 
@@ -39,11 +40,19 @@ public class DiskAttribute extends AbstractDiskHttpData implements Attribute {
      * Constructor used for huge Attribute
      */
     public DiskAttribute(String name) {
-        super(name, HttpConstants.DEFAULT_CHARSET, 0);
+        this(name, HttpConstants.DEFAULT_CHARSET);
+    }
+
+    public DiskAttribute(String name, Charset charset) {
+        super(name, charset, 0);
     }
 
     public DiskAttribute(String name, String value) throws IOException {
-        super(name, HttpConstants.DEFAULT_CHARSET, 0); // Attribute have no default size
+        this(name, value, HttpConstants.DEFAULT_CHARSET);
+    }
+
+    public DiskAttribute(String name, String value, Charset charset) throws IOException {
+        super(name, charset, 0); // Attribute have no default size
         setValue(value);
     }
 
@@ -55,7 +64,7 @@ public class DiskAttribute extends AbstractDiskHttpData implements Attribute {
     @Override
     public String getValue() throws IOException {
         byte [] bytes = get();
-        return new String(bytes, charset.name());
+        return new String(bytes, getCharset());
     }
 
     @Override
@@ -63,7 +72,7 @@ public class DiskAttribute extends AbstractDiskHttpData implements Attribute {
         if (value == null) {
             throw new NullPointerException("value");
         }
-        byte [] bytes = value.getBytes(charset.name());
+        byte [] bytes = value.getBytes(getCharset());
         checkSize(bytes.length);
         ByteBuf buffer = wrappedBuffer(bytes);
         if (definedSize > 0) {
