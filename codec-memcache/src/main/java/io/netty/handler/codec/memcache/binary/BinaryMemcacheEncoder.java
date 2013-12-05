@@ -27,9 +27,14 @@ import io.netty.util.CharsetUtil;
 public abstract class BinaryMemcacheEncoder<M extends BinaryMemcacheMessage<H>, H extends BinaryMemcacheMessageHeader>
     extends MemcacheObjectEncoder<M> {
 
+    /**
+     * Every binary memcache message has at least a 24 bytes header.
+     */
+    public static final int DEFAULT_BUFFER_SIZE = 24;
+
     @Override
     protected ByteBuf encodeMessage(ChannelHandlerContext ctx, M msg) {
-        ByteBuf buf = ctx.alloc().buffer();
+        ByteBuf buf = ctx.alloc().buffer(DEFAULT_BUFFER_SIZE);
 
         encodeHeader(buf, msg.getHeader());
         encodeExtras(buf, msg.getExtras());
@@ -45,7 +50,7 @@ public abstract class BinaryMemcacheEncoder<M extends BinaryMemcacheMessage<H>, 
      * @param extras the extras to encode.
      */
     private static void encodeExtras(ByteBuf buf, ByteBuf extras) {
-        if (extras == null) {
+        if (extras == null || extras.readableBytes() == 0) {
             return;
         }
 
