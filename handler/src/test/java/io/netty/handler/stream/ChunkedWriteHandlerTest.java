@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.nio.channels.Channels;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static io.netty.util.ReferenceCountUtil.releaseLater;
 import static org.junit.Assert.*;
 
 public class ChunkedWriteHandlerTest {
@@ -102,7 +103,7 @@ public class ChunkedWriteHandlerTest {
 
         ChunkedInput<ByteBuf> input = new ChunkedInput<ByteBuf>() {
             private boolean done;
-            private final ByteBuf buffer = Unpooled.copiedBuffer("Test", CharsetUtil.ISO_8859_1);
+            private final ByteBuf buffer = releaseLater(Unpooled.copiedBuffer("Test", CharsetUtil.ISO_8859_1));
 
             @Override
             public boolean isEndOfInput() throws Exception {
@@ -141,7 +142,7 @@ public class ChunkedWriteHandlerTest {
         // the listener should have been notified
         assertTrue(listenerNotified.get());
 
-        assertEquals(buffer, ch.readOutbound());
+        assertEquals(releaseLater(buffer), releaseLater(ch.readOutbound()));
         assertNull(ch.readOutbound());
     }
 
@@ -203,6 +204,7 @@ public class ChunkedWriteHandlerTest {
                     i = 0;
                 }
             }
+            buffer.release();
         }
 
         assertEquals(BYTES.length * inputs.length, read);

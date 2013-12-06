@@ -21,6 +21,7 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.Signal;
 import org.junit.Test;
 
+import static io.netty.util.ReferenceCountUtil.releaseLater;
 import static org.junit.Assert.*;
 
 public class ReplayingDecoderBufferTest {
@@ -30,8 +31,8 @@ public class ReplayingDecoderBufferTest {
      */
     @Test
     public void testGetUnsignedByte() {
-        ReplayingDecoderBuffer buffer = new ReplayingDecoderBuffer(Unpooled.copiedBuffer("TestBuffer",
-                CharsetUtil.ISO_8859_1));
+        ReplayingDecoderBuffer buffer = new ReplayingDecoderBuffer(releaseLater(Unpooled.copiedBuffer("TestBuffer",
+                CharsetUtil.ISO_8859_1)));
 
         boolean error;
         int i = 0;
@@ -53,8 +54,8 @@ public class ReplayingDecoderBufferTest {
      */
     @Test
     public void testGetByte() {
-        ReplayingDecoderBuffer buffer = new ReplayingDecoderBuffer(Unpooled.copiedBuffer("TestBuffer",
-                CharsetUtil.ISO_8859_1));
+        ReplayingDecoderBuffer buffer = new ReplayingDecoderBuffer(releaseLater(Unpooled.copiedBuffer("TestBuffer",
+                CharsetUtil.ISO_8859_1)));
 
         boolean error;
         int i = 0;
@@ -76,7 +77,7 @@ public class ReplayingDecoderBufferTest {
      */
     @Test
     public void testGetBoolean() {
-        ByteBuf buf = Unpooled.buffer(10);
+        ByteBuf buf = releaseLater(Unpooled.buffer(10));
         while (buf.isWritable()) {
             buf.writeBoolean(true);
         }

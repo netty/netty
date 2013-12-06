@@ -63,6 +63,7 @@ public class WebSocketFrameAggregator extends MessageToMessageDecoder<WebSocketF
             } else if (msg instanceof BinaryWebSocketFrame) {
                 currentFrame = new BinaryWebSocketFrame(true, msg.rsv(), buf);
             } else {
+                buf.release();
                 throw new IllegalStateException(
                         "WebSocket frame was not of type TextWebSocketFrame or BinaryWebSocketFrame");
             }
@@ -77,6 +78,8 @@ public class WebSocketFrameAggregator extends MessageToMessageDecoder<WebSocketF
             }
             CompositeByteBuf content = (CompositeByteBuf) currentFrame.content();
             if (content.readableBytes() > maxFrameSize - msg.content().readableBytes()) {
+                // release the current frame
+                currentFrame.release();
                 tooLongFrameFound = true;
                 throw new TooLongFrameException(
                         "WebSocketFrame length exceeded " + content +
@@ -102,7 +105,6 @@ public class WebSocketFrameAggregator extends MessageToMessageDecoder<WebSocketF
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         super.channelInactive(ctx);
-
         // release current frame if it is not null as it may be a left-over
         if (currentFrame != null) {
             currentFrame.release();
@@ -113,7 +115,7 @@ public class WebSocketFrameAggregator extends MessageToMessageDecoder<WebSocketF
     @Override
     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
         super.handlerRemoved(ctx);
-        // release current frane if it is not null as it may be a left-over as there is not much more we can do in
+        // release current frame if it is not null as it may be a left-over as there is not much more we can do in
         // this case
         if (currentFrame != null) {
             currentFrame.release();

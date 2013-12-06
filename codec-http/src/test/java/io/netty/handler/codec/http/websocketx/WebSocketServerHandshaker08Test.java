@@ -26,6 +26,7 @@ import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -39,7 +40,8 @@ public class WebSocketServerHandshaker08Test {
         EmbeddedChannel ch = new EmbeddedChannel(
                 new HttpObjectAggregator(42), new HttpRequestDecoder(), new HttpResponseEncoder());
 
-        FullHttpRequest req = new DefaultFullHttpRequest(HTTP_1_1, HttpMethod.GET, "/chat");
+        FullHttpRequest req = ReferenceCountUtil.releaseLater(
+                new DefaultFullHttpRequest(HTTP_1_1, HttpMethod.GET, "/chat"));
         req.headers().set(Names.HOST, "server.example.com");
         req.headers().set(Names.UPGRADE, WEBSOCKET.toLowerCase());
         req.headers().set(Names.CONNECTION, "Upgrade");
@@ -60,5 +62,6 @@ public class WebSocketServerHandshaker08Test {
         Assert.assertEquals(
                 "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", res.headers().get(Names.SEC_WEBSOCKET_ACCEPT));
         Assert.assertEquals("chat", res.headers().get(Names.SEC_WEBSOCKET_PROTOCOL));
+        ReferenceCountUtil.release(res);
     }
 }

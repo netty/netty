@@ -393,7 +393,7 @@ public class HttpPostRequestDecoder {
         checkDestroyed();
 
         // Maybe we should better not copy here for performance reasons but this will need
-        // more care by teh caller to release the content in a correct manner later
+        // more care by the caller to release the content in a correct manner later
         // So maybe something to optimize on a later stage
         ByteBuf buf = content.content();
         if (undecodedChunk == null) {
