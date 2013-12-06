@@ -405,7 +405,8 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
     }
 
     public void writeByte(int value) {
-        setByte(writerIndex ++, value);
+        setByte(writerIndex, value);
+        writerIndex++;
     }
 
     public void writeShort(int value) {
