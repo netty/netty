@@ -610,6 +610,9 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
     }
 
     public int bytesBefore(int index, int length, byte value) {
+        if (index < 0 || length < 0 || index + length > capacity()) {
+            throw new IndexOutOfBoundsException();
+        }
         int endIndex = indexOf(index, index + length, value);
         if (endIndex < 0) {
             return -1;
@@ -619,6 +622,9 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
 
     public int bytesBefore(int index, int length,
             ChannelBufferIndexFinder indexFinder) {
+        if (index < 0 || length < 0 || index + length > capacity()) {
+            throw new IndexOutOfBoundsException();
+        }
         int endIndex = indexOf(index, index + length, indexFinder);
         if (endIndex < 0) {
             return -1;
