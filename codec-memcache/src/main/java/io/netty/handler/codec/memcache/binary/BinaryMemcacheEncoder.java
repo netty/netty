@@ -50,7 +50,7 @@ public abstract class BinaryMemcacheEncoder<M extends BinaryMemcacheMessage<H>, 
      * @param extras the extras to encode.
      */
     private static void encodeExtras(ByteBuf buf, ByteBuf extras) {
-        if (extras == null || extras.readableBytes() == 0) {
+        if (extras == null || !extras.isReadable()) {
             return;
         }
 
