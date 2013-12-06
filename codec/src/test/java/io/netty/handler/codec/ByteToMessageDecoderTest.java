@@ -44,6 +44,8 @@ public class ByteToMessageDecoderTest {
         channel.writeInbound(buf.copy());
         ByteBuf b = (ByteBuf) channel.readInbound();
         Assert.assertEquals(b, buf.skipBytes(1));
+        b.release();
+        buf.release();
     }
 
     @Test
@@ -67,5 +69,7 @@ public class ByteToMessageDecoderTest {
         channel.writeInbound(buf.copy());
         ByteBuf b = (ByteBuf) channel.readInbound();
         Assert.assertEquals(b, Unpooled.wrappedBuffer(new byte[] { 'b', 'c'}));
+        buf.release();
+        b.release();
     }
 }

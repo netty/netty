@@ -59,10 +59,15 @@ public class HttpContentEncoderTest {
         HttpContent chunk;
         chunk = (HttpContent) ch.readOutbound();
         assertThat(chunk.content().toString(CharsetUtil.US_ASCII), is("3"));
+        chunk.release();
+
         chunk = (HttpContent) ch.readOutbound();
         assertThat(chunk.content().toString(CharsetUtil.US_ASCII), is("2"));
+        chunk.release();
+
         chunk = (HttpContent) ch.readOutbound();
         assertThat(chunk.content().toString(CharsetUtil.US_ASCII), is("1"));
+        chunk.release();
 
         chunk = (HttpContent) ch.readOutbound();
         assertThat(chunk.content().isReadable(), is(false));
@@ -98,8 +103,9 @@ public class HttpContentEncoderTest {
 
         chunk = (HttpContent) ch.readOutbound();
         assertThat(chunk.content().toString(CharsetUtil.US_ASCII), is("1"));
-
         assertThat(chunk, is(instanceOf(HttpContent.class)));
+        chunk.release();
+
         chunk = (HttpContent) ch.readOutbound();
         assertThat(chunk.content().isReadable(), is(false));
         assertThat(chunk, is(instanceOf(LastHttpContent.class)));

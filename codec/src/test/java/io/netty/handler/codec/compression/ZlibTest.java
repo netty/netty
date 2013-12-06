@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.ThreadLocalRandom;
 import org.junit.Test;
 
@@ -93,6 +94,13 @@ public abstract class ZlibTest {
 
         // Closing an encoder channel will generate a footer.
         assertTrue(chEncoder.finish());
+        for (;;) {
+            Object msg = chEncoder.readOutbound();
+            if (msg == null) {
+                break;
+            }
+            ReferenceCountUtil.release(msg);
+        }
         // But, the footer will be decoded into nothing. It's only for validation.
         assertFalse(chDecoderZlib.finish());
 
