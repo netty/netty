@@ -17,11 +17,14 @@
 package org.jboss.netty.buffer;
 
 import org.jboss.netty.util.CharsetUtil;
+import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.experimental.theories.Theories;
 import org.junit.experimental.theories.Theory;
 import org.junit.experimental.theories.suppliers.TestedOn;
 import org.junit.rules.ExpectedException;
+import org.junit.runner.RunWith;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -35,7 +38,18 @@ import static org.jboss.netty.buffer.ChannelBuffers.*;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeThat;
 
+@RunWith(Theories.class)
 public class EmptyChannelBufferTest {
+
+    @After
+    public void assertInvariants() {
+        assertEquals(0, b.readerIndex());
+        assertEquals(0, b.writerIndex());
+        assertEquals(0, b.writableBytes());
+        assertEquals(0, b.readableBytes());
+        assertFalse(b.writable());
+        assertFalse(b.readable());
+    }
 
     @Rule
     public ExpectedException thrown = ExpectedException.none();
@@ -151,70 +165,57 @@ public class EmptyChannelBufferTest {
     }
 
     @Theory
-    public void testWriteBytesIndexOutOfBounds(@TestedOn(ints = {-1, 1}) int length) throws IOException {
+    public void testWriteBytesIndexOutOfBounds1() throws IOException {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.writeBytes(SINGLE_BYTE);
+    }
 
-        try {
-            b.writeBytes(SINGLE_BYTE);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    @Theory
+    public void testWriteBytesIndexOutOfBounds3() throws IOException {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.writeBytes(ByteBuffer.wrap(SINGLE_BYTE));
+    }
 
-        try {
-            b.writeBytes(SINGLE_BYTE, 0, length);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    @Theory
+    public void testWriteBytesIndexOutOfBounds4() throws IOException {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.writeBytes(wrappedBuffer(SINGLE_BYTE));
+    }
 
-        try {
-            b.writeBytes(ByteBuffer.wrap(SINGLE_BYTE));
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    @Theory
+    public void testWriteBytesIndexOutOfBounds2(@TestedOn(ints = {-1, 1}) int length) throws IOException {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.writeBytes(SINGLE_BYTE, 0, length);
+    }
 
-        try {
-            b.writeBytes(wrappedBuffer(SINGLE_BYTE));
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    @Theory
+    public void testWriteBytesIndexOutOfBounds5(@TestedOn(ints = {-1, 1}) int length) throws IOException {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.writeBytes(wrappedBuffer(SINGLE_BYTE), length);
+    }
 
-        try {
-            b.writeBytes(wrappedBuffer(SINGLE_BYTE), length);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    @Theory
+    public void testWriteBytesIndexOutOfBounds6(@TestedOn(ints = {-1, 1}) int length) throws IOException {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.writeBytes(wrappedBuffer(SINGLE_BYTE), 0, length);
+    }
 
-        try {
-            b.writeBytes(wrappedBuffer(SINGLE_BYTE), 0, length);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    @Theory
+    public void testWriteBytesIndexOutOfBounds7(@TestedOn(ints = {-1, 1}) int length) throws IOException {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.writeBytes(new ChannelBufferInputStream(wrappedBuffer(SINGLE_BYTE)), length);
+    }
 
-        try {
-            b.writeBytes(new ChannelBufferInputStream(wrappedBuffer(SINGLE_BYTE)), length);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    @Theory
+    public void testWriteBytesIndexOutOfBounds8(@TestedOn(ints = {-1, 1}) int length) throws IOException {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.writeBytes(SINGLE_BYTE_CHANNEL, length);
+    }
 
-        try {
-            b.writeBytes(SINGLE_BYTE_CHANNEL, length);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
-
-        try {
-            b.writeBytes(SINGLE_BYTE, 0, length);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    @Theory
+    public void testWriteBytesIndexOutOfBounds9(@TestedOn(ints = {-1, 1}) int length) throws IOException {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.writeBytes(SINGLE_BYTE, 0, length);
     }
 
     @Test
@@ -236,10 +237,15 @@ public class EmptyChannelBufferTest {
     }
 
     @Theory
-    public void testSetZeroOutOfBounds(@TestedOn(ints = {-1, 1}) int offset,
-                                       @TestedOn(ints = {-1, 1}) int length) {
+    public void testSetZeroIllegalArgument() {
+        thrown.expect(IllegalArgumentException.class);
+        b.setZero(-1, -1);
+    }
+
+    @Theory
+    public void testSetZeroOutOfBounds(@TestedOn(ints = {-1, 0, 1}) int offset) {
         thrown.expect(IndexOutOfBoundsException.class);
-        b.setZero(offset, length);
+        b.setZero(offset, 1);
     }
 
     @Test
@@ -254,192 +260,167 @@ public class EmptyChannelBufferTest {
     }
 
     @Theory
-    public void testSetBytesIndexOutOfBounds(@TestedOn(ints = {-1, 0, 1}) int offset,
-                                             @TestedOn(ints = {-1, 0, 1}) int length) {
+    public void testSetBytesIndexOutOfBounds1(@TestedOn(ints = {-1, 0, 1}) int offset) {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.setBytes(offset, SINGLE_BYTE);
+    }
 
+    @Theory
+    public void testSetBytesIndexOutOfBounds5(@TestedOn(ints = {-1, 0, 1}) int offset) {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.setBytes(offset, ByteBuffer.wrap(SINGLE_BYTE));
+    }
+
+    @Theory
+    public void testSetBytesIndexOutOfBounds2(@TestedOn(ints = {-1, 0, 1}) int offset,
+                                              @TestedOn(ints = {-1, 0, 1}) int length) {
         assumeThat(asList(offset, length), not(asList(0, 0)));
-
-        try {
-            b.setBytes(offset, SINGLE_BYTE);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
-
-        try {
-            b.setBytes(offset, SINGLE_BYTE, 0, length);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
-
-        try {
-            b.setBytes(offset, wrappedBuffer(SINGLE_BYTE), length);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
-
-        try {
-            b.setBytes(offset, wrappedBuffer(SINGLE_BYTE), 0, length);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
-
-        try {
-            b.setBytes(offset, ByteBuffer.wrap(SINGLE_BYTE));
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.setBytes(offset, SINGLE_BYTE, 0, length);
     }
 
     @Theory
-    public void testSetPrimitives(@TestedOn(ints = {-1, 0, 1}) int offset,
-                                  @TestedOn(ints = {-1, 0, 1}) int value) {
-        try {
-            b.setByte(offset, value);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
-
-        try {
-            b.setChar(offset, value);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
-
-        try {
-            b.setShort(offset, value);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
-
-        try {
-            b.setMedium(offset, value);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
-
-        try {
-            b.setInt(offset, value);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
-
-        try {
-            b.setLong(offset, value);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
-
-        try {
-            b.setFloat(offset, value);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
-
-        try {
-            b.setDouble(offset, value);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    public void testSetBytesIndexOutOfBounds3(@TestedOn(ints = {-1, 0, 1}) int offset,
+                                              @TestedOn(ints = {-1, 0, 1}) int length) {
+        assumeThat(asList(offset, length), not(asList(0, 0)));
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.setBytes(offset, wrappedBuffer(SINGLE_BYTE), length);
     }
 
     @Theory
-    public void testGetPrimitives(@TestedOn(ints = {-1, 0, 1}) int offset) {
-        try {
-            b.getByte(offset);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    public void testSetBytesIndexOutOfBounds4(@TestedOn(ints = {-1, 0, 1}) int offset,
+                                              @TestedOn(ints = {-1, 0, 1}) int length) {
+        assumeThat(asList(offset, length), not(asList(0, 0)));
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.setBytes(offset, wrappedBuffer(SINGLE_BYTE), 0, length);
+    }
 
-        try {
-            b.getChar(offset);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    @Theory
+    public void testSetByteOutOfBounds(@TestedOn(ints = {-1, 0, 1}) int offset,
+                                       @TestedOn(ints = {-1, 0, 1}) int value) {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.setByte(offset, value);
+    }
 
-        try {
-            b.getShort(offset);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    @Theory
+    public void testSetCharOutOfBounds(@TestedOn(ints = {-1, 0, 1}) int offset,
+                                       @TestedOn(ints = {-1, 0, 1}) int value) {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.setChar(offset, value);
+    }
 
-        try {
-            b.getMedium(offset);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    @Theory
+    public void testSetShortOutOfBounds(@TestedOn(ints = {-1, 0, 1}) int offset,
+                                        @TestedOn(ints = {-1, 0, 1}) int value) {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.setShort(offset, value);
+    }
 
-        try {
-            b.getInt(offset);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    @Theory
+    public void testSetMediumOutOfBounds(@TestedOn(ints = {-1, 0, 1}) int offset,
+                                         @TestedOn(ints = {-1, 0, 1}) int value) {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.setMedium(offset, value);
+    }
 
-        try {
-            b.getLong(offset);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    @Theory
+    public void testSetIntOutOfBounds(@TestedOn(ints = {-1, 0, 1}) int offset,
+                                      @TestedOn(ints = {-1, 0, 1}) int value) {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.setInt(offset, value);
+    }
 
-        try {
-            b.getUnsignedByte(offset);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    @Theory
+    public void testSetLongOutOfBounds(@TestedOn(ints = {-1, 0, 1}) int offset,
+                                       @TestedOn(ints = {-1, 0, 1}) int value) {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.setLong(offset, value);
+    }
 
-        try {
-            b.getUnsignedShort(offset);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    @Theory
+    public void testSetFloatOutOfBounds(@TestedOn(ints = {-1, 0, 1}) int offset,
+                                        @TestedOn(ints = {-1, 0, 1}) int value) {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.setFloat(offset, value);
+    }
 
-        try {
-            b.getUnsignedMedium(offset);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    @Theory
+    public void testSetDoubleOutOfBounds(@TestedOn(ints = {-1, 0, 1}) int offset,
+                                         @TestedOn(ints = {-1, 0, 1}) int value) {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.setDouble(offset, value);
+    }
 
-        try {
-            b.getUnsignedInt(offset);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    @Theory
+    public void testGetByteOutOfBounds(@TestedOn(ints = {-1, 0, 1}) int offset) {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.getByte(offset);
+    }
 
-        try {
-            b.getDouble(offset);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    @Theory
+    public void testGetCharOutOfBounds(@TestedOn(ints = {-1, 0, 1}) int offset) {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.getChar(offset);
+    }
 
-        try {
-            b.getFloat(offset);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    @Theory
+    public void testGetShortOutOfBounds(@TestedOn(ints = {-1, 0, 1}) int offset) {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.getShort(offset);
+    }
+
+    @Theory
+    public void testGetMediumOutOfBounds(@TestedOn(ints = {-1, 0, 1}) int offset) {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.getMedium(offset);
+    }
+
+    @Theory
+    public void testGetIntOutOfBounds(@TestedOn(ints = {-1, 0, 1}) int offset) {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.getInt(offset);
+    }
+
+    @Theory
+    public void testGetLongOutOfBounds(@TestedOn(ints = {-1, 0, 1}) int offset) {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.getLong(offset);
+    }
+
+    @Theory
+    public void testGetUnsignedByteOutOfBounds(@TestedOn(ints = {-1, 0, 1}) int offset) {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.getUnsignedByte(offset);
+    }
+
+    @Theory
+    public void testGetUnsignedShortOutOfBounds(@TestedOn(ints = {-1, 0, 1}) int offset) {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.getUnsignedShort(offset);
+    }
+
+    @Theory
+    public void testGetUnsignedMediumOutOfBounds(@TestedOn(ints = {-1, 0, 1}) int offset) {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.getUnsignedMedium(offset);
+    }
+
+    @Theory
+    public void testGetUnsignedIntOutOfBounds(@TestedOn(ints = {-1, 0, 1}) int offset) {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.getUnsignedInt(offset);
+    }
+
+    @Theory
+    public void testGetDoubleOutOfBounds(@TestedOn(ints = {-1, 0, 1}) int offset) {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.getDouble(offset);
+    }
+
+    @Theory
+    public void testGetFloatOutOfBounds(@TestedOn(ints = {-1, 0, 1}) int offset) {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.getFloat(offset);
     }
 
     @Test
@@ -449,158 +430,133 @@ public class EmptyChannelBufferTest {
     }
 
     @Theory
-    void testCopyOutOfBounds(@TestedOn(ints = {-1, 0, 1}) int offset,
-                             @TestedOn(ints = {-1, 0, 1}) int length) {
+    public void testCopyOutOfBounds(@TestedOn(ints = {-1, 0, 1}) int offset,
+                                    @TestedOn(ints = {-1, 0, 1}) int length) {
         assumeThat(asList(offset, length), not(asList(0, 0)));
         thrown.expect(IndexOutOfBoundsException.class);
         b.copy(offset, length);
     }
 
     @Test
-    public void testReadPrimitives() {
-        try {
-            b.readByte();
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    public void testReadByteOutOfBounds() {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.readByte();
+    }
 
-        try {
-            b.readChar();
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    @Test
+    public void testReadCharOutOfBounds() {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.readChar();
+    }
 
-        try {
-            b.readDouble();
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    @Test
+    public void testReadDoubleOutOfBounds() {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.readDouble();
+    }
 
-        try {
-            b.readFloat();
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    @Test
+    public void testReadFloatOutOfBounds() {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.readFloat();
+    }
 
-        try {
-            b.readInt();
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    @Test
+    public void testReadIntOutOfBounds() {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.readInt();
+    }
 
-        try {
-            b.readLong();
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    @Test
+    public void testReadLongOutOfBounds() {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.readLong();
+    }
 
-        try {
-            b.readMedium();
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    @Test
+    public void testReadMediumOutOfBounds() {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.readMedium();
+    }
 
-        try {
-            b.readShort();
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    @Test
+    public void testReadShortOutOfBounds() {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.readShort();
+    }
 
-        try {
-            b.readUnsignedByte();
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    @Test
+    public void testReadUnsignedByteOutOfBounds() {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.readUnsignedByte();
+    }
 
-        try {
-            b.readUnsignedInt();
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    @Test
+    public void testReadUnsignedIntOutOfBounds() {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.readUnsignedInt();
+    }
 
-        try {
-            b.readUnsignedMedium();
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    @Test
+    public void testReadUnsignedMediumOutOfBounds() {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.readUnsignedMedium();
+    }
 
-        try {
-            b.readUnsignedShort();
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    @Test
+    public void testReadUnsignedShortOutOfBounds() {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.readUnsignedShort();
     }
 
     @Theory
-    public void testWritePrimitives(@TestedOn(ints = {-1, 0, 1}) int value) {
-        try {
-            b.writeByte(value);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
-
-        try {
-            b.writeChar(value);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
-
-        try {
-            b.writeDouble(value);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
-
-        try {
-            b.writeFloat(value);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
-
-        try {
-            b.writeInt(value);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
-
-        try {
-            b.writeLong(value);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
-
-        try {
-            b.writeMedium(value);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
-
-        try {
-            b.writeShort(value);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    public void testWriteByteOutOfBounds(@TestedOn(ints = {-1, 0, 1}) int value) {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.writeByte(value);
     }
+
+    @Theory
+    public void testWriteCharOutOfBounds(@TestedOn(ints = {-1, 0, 1}) int value) {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.writeChar(value);
+    }
+
+    @Theory
+    public void testWriteDoubleOutOfBounds(@TestedOn(ints = {-1, 0, 1}) int value) {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.writeDouble(value);
+    }
+
+    @Theory
+    public void testWriteFloatOutOfBounds(@TestedOn(ints = {-1, 0, 1}) int value) {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.writeFloat(value);
+    }
+
+    @Theory
+    public void testWriteIntOutOfBounds(@TestedOn(ints = {-1, 0, 1}) int value) {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.writeInt(value);
+    }
+
+    @Theory
+    public void testWriteLongOutOfBounds(@TestedOn(ints = {-1, 0, 1}) int value) {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.writeLong(value);
+    }
+
+    @Theory
+    public void testWriteMediumOutOfBounds(@TestedOn(ints = {-1, 0, 1}) int value) {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.writeMedium(value);
+    }
+
+    @Theory
+    public void testWriteShortOutOfBounds(@TestedOn(ints = {-1, 0, 1}) int value) {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.writeShort(value);
+    }
+
 
     @Test
     public void testReadBytes() throws IOException {
@@ -615,63 +571,52 @@ public class EmptyChannelBufferTest {
     }
 
     @Theory
-    public void testReadBytesOutOfBounds(@TestedOn(ints = {-1, 1}) int length) throws IOException {
+    public void testReadBytesOutOfBounds1(@TestedOn(ints = {-1, 1}) int length) throws IOException {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.readBytes(length);
+    }
 
-        try {
-            b.readBytes(length);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
 
-        try {
-            b.readBytes(new byte[1]);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    @Theory
+    public void testReadBytesOutOfBounds2() {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.readBytes(new byte[1]);
+    }
 
-        try {
-            b.readBytes(new byte[1], 0, length);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    @Theory
+    public void testReadBytesOutOfBounds4() {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.readBytes(ByteBuffer.allocate(1));
+    }
 
-        try {
-            b.readBytes(ByteBuffer.allocate(1));
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    @Theory
+    public void testReadBytesOutOfBounds5() {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.readBytes(buffer(1));
+    }
 
-        try {
-            b.readBytes(buffer(1));
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    @Theory
+    public void testReadBytesOutOfBounds3(@TestedOn(ints = {-1, 1}) int length) {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.readBytes(new byte[1], 0, length);
+    }
 
-        try {
-            b.readBytes(buffer(1), length);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    @Theory
+    public void testReadBytesOutOfBounds6(@TestedOn(ints = {-1, 1}) int length) {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.readBytes(buffer(1), length);
+    }
 
-        try {
-            b.readBytes(buffer(1), 0, length);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    @Theory
+    public void testReadBytesOutOfBounds7(@TestedOn(ints = {-1, 1}) int length) {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.readBytes(buffer(1), 0, length);
+    }
 
-        try {
-            b.readBytes(BYTE_CHANNEL_SINK, length);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    @Theory
+    public void testReadBytesOutOfBounds8(@TestedOn(ints = {-1, 1}) int length) throws IOException {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.readBytes(BYTE_CHANNEL_SINK, length);
     }
 
     @Test
@@ -695,31 +640,24 @@ public class EmptyChannelBufferTest {
     }
 
     @Theory
+    public void testWriterIndexOutOfBounds(@TestedOn(ints = {-1, 1}) int index) {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.writerIndex(index);
+    }
+
+    @Theory
+    public void testReaderIndexOutOfBounds(@TestedOn(ints = {-1, 1}) int index) {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.readerIndex(index);
+    }
+
+    @Theory
     public void testIndexesOutOfBounds(@TestedOn(ints = {-1, 0, 1}) int writer,
                                        @TestedOn(ints = {-1, 0, 1}) int reader) {
 
         assumeThat(asList(writer, reader), not(asList(0, 0)));
-
-        try {
-            b.writerIndex(writer);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
-
-        try {
-            b.readerIndex(reader);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
-
-        try {
-            b.setIndex(reader, writer);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.setIndex(reader, writer);
     }
 
     @Theory
@@ -761,8 +699,7 @@ public class EmptyChannelBufferTest {
 
     @Theory
     public void testSliceOutOfBounds(@TestedOn(ints = {-1, 0, 1}) int offset,
-                                     @TestedOn(ints = {-1, 0, 1}) int length) {
-        assumeThat(asList(offset, length), not(asList(0, 0)));
+                                     @TestedOn(ints = {-1, 1}) int length) {
         thrown.expect(IndexOutOfBoundsException.class);
         b.slice(offset, length);
     }
@@ -794,9 +731,9 @@ public class EmptyChannelBufferTest {
     }
 
     @Theory
-    public void testBytesBeforeOutOfBounds1(@TestedOn(ints = {-1, 1}) int offset) {
+    public void testBytesBeforeOutOfBounds1(@TestedOn(ints = {-1, 1}) int length) {
         thrown.expect(IndexOutOfBoundsException.class);
-        b.bytesBefore(offset, POSITIVE_INDEX_FINDER);
+        b.bytesBefore(length, POSITIVE_INDEX_FINDER);
     }
 
     @Theory
@@ -804,6 +741,7 @@ public class EmptyChannelBufferTest {
                                             @TestedOn(ints = {-1, 0, 1}) int length) {
         assumeThat(asList(offset, length), not(asList(0, 0)));
         thrown.expect(IndexOutOfBoundsException.class);
+        b.bytesBefore(offset, length, POSITIVE_INDEX_FINDER);
         b.bytesBefore(offset, length, POSITIVE_INDEX_FINDER);
     }
 
@@ -878,65 +816,63 @@ public class EmptyChannelBufferTest {
     }
 
     @Theory
-    public void testGetBytesOutOfBounds(@TestedOn(ints = {-1, 0, 1}) int offset,
-                                        @TestedOn(ints = {-1, 0, 1}) int length) throws IOException {
+    public void testGetBytesOutOfBounds1(@TestedOn(ints = {-1, 0, 1}) int offset) {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.getBytes(offset, new byte[1]);
+    }
+
+    @Theory
+    public void testGetBytesOutOfBounds2(@TestedOn(ints = {-1, 0, 1}) int offset,
+                                         @TestedOn(ints = {-1, 0, 1}) int length) {
         assumeThat(asList(offset, length), not(asList(0, 0)));
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.getBytes(offset, new byte[1], 0, length);
+    }
 
-        try {
-            b.getBytes(offset, new byte[1]);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    @Theory
+    public void testGetBytesOutOfBounds3(@TestedOn(ints = {-1, 0, 1}) int offset,
+                                         @TestedOn(ints = {-1, 0, 1}) int length) {
+        assumeThat(asList(offset, length), not(asList(0, 0)));
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.getBytes(offset, buffer(1));
+    }
 
-        try {
-            b.getBytes(offset, new byte[1], 0, length);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    @Theory
+    public void testGetBytesOutOfBounds4(@TestedOn(ints = {-1, 0, 1}) int offset,
+                                         @TestedOn(ints = {-1, 0, 1}) int length) {
+        assumeThat(asList(offset, length), not(asList(0, 0)));
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.getBytes(offset, buffer(1), length);
+    }
 
-        try {
-            b.getBytes(offset, ByteBuffer.allocate(1));
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    @Theory
+    public void testGetBytesOutOfBounds5(@TestedOn(ints = {-1, 0, 1}) int offset,
+                                         @TestedOn(ints = {-1, 0, 1}) int length) {
+        assumeThat(asList(offset, length), not(asList(0, 0)));
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.getBytes(offset, buffer(1), 0, length);
+    }
 
-        try {
-            b.getBytes(offset, buffer(1));
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    @Theory
+    public void testGetBytesOutOfBounds7(@TestedOn(ints = {-1, 1}) int offset) {
+        thrown.expect(IndexOutOfBoundsException.class);
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.getBytes(offset, ByteBuffer.allocate(1));
+    }
 
-        try {
-            b.getBytes(offset, buffer(1), 0);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    @Theory
+    public void testGetBytesOutOfBounds6(@TestedOn(ints = {-1, 0, 1}) int offset,
+                                         @TestedOn(ints = {-1, 0, 1}) int length) throws IOException {
+        assumeThat(asList(offset, length), not(asList(0, 0)));
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.getBytes(offset, BYTE_CHANNEL_SINK, length);
+    }
 
-        try {
-            b.getBytes(offset, buffer(1), 0, length);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
-
-        try {
-            b.getBytes(offset, BYTE_CHANNEL_SINK, length);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
-
-        try {
-            b.getBytes(offset, new ChannelBufferOutputStream(buffer(length)), length);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+    @Theory
+    public void testGetBytesOutOfBounds8(@TestedOn(ints = {-1, 0, 1}) int index,
+                                         @TestedOn(ints = {-1, 1}) int length) throws IOException {
+        thrown.expect(IndexOutOfBoundsException.class);
+        b.getBytes(index, new ChannelBufferOutputStream(buffer(1)), length);
     }
 
     @Test
