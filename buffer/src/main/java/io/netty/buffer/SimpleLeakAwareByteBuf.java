@@ -18,6 +18,8 @@ package io.netty.buffer;
 
 import io.netty.util.ResourceLeak;
 
+import java.nio.ByteOrder;
+
 final class SimpleLeakAwareByteBuf extends WrappedByteBuf {
 
     private final ResourceLeak leak;
@@ -43,5 +45,35 @@ final class SimpleLeakAwareByteBuf extends WrappedByteBuf {
             leak.close();
         }
         return deallocated;
+    }
+
+    @Override
+    public ByteBuf order(ByteOrder endianness) {
+        leak.record();
+        if (order() == endianness) {
+            return this;
+        } else {
+            return new SimpleLeakAwareByteBuf(super.order(endianness), leak);
+        }
+    }
+
+    @Override
+    public ByteBuf slice() {
+        return new SimpleLeakAwareByteBuf(super.slice(), leak);
+    }
+
+    @Override
+    public ByteBuf slice(int index, int length) {
+        return new SimpleLeakAwareByteBuf(super.slice(index, length), leak);
+    }
+
+    @Override
+    public ByteBuf duplicate() {
+        return new SimpleLeakAwareByteBuf(super.duplicate(), leak);
+    }
+
+    @Override
+    public ByteBuf readSlice(int length) {
+        return new SimpleLeakAwareByteBuf(super.readSlice(length), leak);
     }
 }
