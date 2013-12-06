@@ -64,6 +64,9 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
 
         serverHandler.check();
         clientHandler.check();
+
+        serverHandler.release();
+        clientHandler.release();
     }
 
     private static class BufWriterHandler extends SimpleChannelInboundHandler<Object> {
@@ -103,6 +106,10 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
         public void check() throws InterruptedException {
             latch.await();
             assertEquals(1, buf.refCnt());
+        }
+
+        void release() {
+            buf.release();
         }
     }
 }

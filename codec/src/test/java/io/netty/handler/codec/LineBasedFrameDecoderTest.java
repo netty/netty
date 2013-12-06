@@ -18,9 +18,11 @@ package io.netty.handler.codec;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.Test;
 
 import static io.netty.buffer.Unpooled.*;
+import static io.netty.util.ReferenceCountUtil.releaseLater;
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
 
@@ -30,9 +32,12 @@ public class LineBasedFrameDecoderTest {
         EmbeddedChannel ch = new EmbeddedChannel(new LineBasedFrameDecoder(8192, true, false));
 
         ch.writeInbound(copiedBuffer("first\r\nsecond\nthird", CharsetUtil.US_ASCII));
-        assertEquals("first", ((ByteBuf) ch.readInbound()).toString(CharsetUtil.US_ASCII));
-        assertEquals("second", ((ByteBuf) ch.readInbound()).toString(CharsetUtil.US_ASCII));
+        assertEquals("first", releaseLater((ByteBuf) ch.readInbound()).toString(CharsetUtil.US_ASCII));
+        assertEquals("second", releaseLater((ByteBuf) ch.readInbound()).toString(CharsetUtil.US_ASCII));
         assertNull(ch.readInbound());
+        ch.finish();
+
+        ReferenceCountUtil.release(ch.readInbound());
     }
 
     @Test
@@ -40,9 +45,11 @@ public class LineBasedFrameDecoderTest {
         EmbeddedChannel ch = new EmbeddedChannel(new LineBasedFrameDecoder(8192, false, false));
 
         ch.writeInbound(copiedBuffer("first\r\nsecond\nthird", CharsetUtil.US_ASCII));
-        assertEquals("first\r\n", ((ByteBuf) ch.readInbound()).toString(CharsetUtil.US_ASCII));
-        assertEquals("second\n", ((ByteBuf) ch.readInbound()).toString(CharsetUtil.US_ASCII));
+        assertEquals("first\r\n", releaseLater((ByteBuf) ch.readInbound()).toString(CharsetUtil.US_ASCII));
+        assertEquals("second\n", releaseLater((ByteBuf) ch.readInbound()).toString(CharsetUtil.US_ASCII));
         assertNull(ch.readInbound());
+        ch.finish();
+        ReferenceCountUtil.release(ch.readInbound());
     }
 
     @Test
@@ -56,7 +63,8 @@ public class LineBasedFrameDecoderTest {
             assertThat(e, is(instanceOf(TooLongFrameException.class)));
         }
 
-        assertThat((ByteBuf) ch.readInbound(), is(copiedBuffer("first\n", CharsetUtil.US_ASCII)));
+        assertThat(releaseLater((ByteBuf) ch.readInbound()),
+                is(releaseLater(copiedBuffer("first\n", CharsetUtil.US_ASCII))));
         assertThat(ch.finish(), is(false));
     }
 
@@ -72,7 +80,8 @@ public class LineBasedFrameDecoderTest {
             assertThat(e, is(instanceOf(TooLongFrameException.class)));
         }
 
-        assertThat((ByteBuf) ch.readInbound(), is(copiedBuffer("first\r\n", CharsetUtil.US_ASCII)));
+        assertThat(releaseLater((ByteBuf) ch.readInbound()),
+                is(releaseLater(copiedBuffer("first\r\n", CharsetUtil.US_ASCII))));
         assertThat(ch.finish(), is(false));
     }
 
@@ -89,7 +98,8 @@ public class LineBasedFrameDecoderTest {
 
         assertThat(ch.writeInbound(copiedBuffer("890", CharsetUtil.US_ASCII)), is(false));
         assertThat(ch.writeInbound(copiedBuffer("123\r\nfirst\r\n", CharsetUtil.US_ASCII)), is(true));
-        assertThat((ByteBuf) ch.readInbound(), is(copiedBuffer("first\r\n", CharsetUtil.US_ASCII)));
+        assertThat(releaseLater((ByteBuf) ch.readInbound()),
+                is(releaseLater(copiedBuffer("first\r\n", CharsetUtil.US_ASCII))));
         assertThat(ch.finish(), is(false));
     }
 }

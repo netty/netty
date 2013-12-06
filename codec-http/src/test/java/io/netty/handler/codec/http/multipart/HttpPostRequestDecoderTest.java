@@ -15,7 +15,10 @@
  */
 package io.netty.handler.codec.http.multipart;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpContent;
@@ -23,15 +26,13 @@ import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.CharsetUtil;
 import org.junit.Test;
 
 import java.util.Arrays;
 
+import static io.netty.util.ReferenceCountUtil.*;
 import static org.junit.Assert.*;
 
 /** {@link HttpPostRequestDecoder} test case. */
@@ -78,8 +79,8 @@ public class HttpPostRequestDecoderTest {
             // Create decoder instance to test.
             final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
 
-            decoder.offer(new DefaultHttpContent(Unpooled.copiedBuffer(body, CharsetUtil.UTF_8)));
-            decoder.offer(new DefaultHttpContent(Unpooled.EMPTY_BUFFER));
+            decoder.offer(releaseLater(new DefaultHttpContent(Unpooled.copiedBuffer(body, CharsetUtil.UTF_8))));
+            decoder.offer(releaseLater(new DefaultHttpContent(Unpooled.EMPTY_BUFFER)));
 
             // Validate it's enough chunks to decode upload.
             assertTrue(decoder.hasNext());
@@ -90,6 +91,8 @@ public class HttpPostRequestDecoderTest {
             // Validate data has been parsed correctly as it was passed into request.
             assertEquals("Invalid decoded data [data=" + data.replaceAll("\r", "\\\\r") + ", upload=" + upload + ']',
                 data, upload.getString(CharsetUtil.UTF_8));
+            upload.release();
+            decoder.destroy();
         }
     }
 
@@ -122,6 +125,7 @@ public class HttpPostRequestDecoderTest {
         // Create decoder instance to test.
         final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
         assertFalse(decoder.getBodyHttpDatas().isEmpty());
+        decoder.destroy();
     }
 
     // See https://github.com/netty/netty/issues/1848
@@ -166,19 +170,20 @@ public class HttpPostRequestDecoderTest {
         aSmallBuf.writeBytes(aBytes, 0, split);
         aLargeBuf.writeBytes(aBytes, split, aBytes.length - split);
 
-        aDecoder.offer(new DefaultHttpContent(aSmallBuf));
-        aDecoder.offer(new DefaultHttpContent(aLargeBuf));
+        aDecoder.offer(releaseLater(new DefaultHttpContent(aSmallBuf)));
+        aDecoder.offer(releaseLater(new DefaultHttpContent(aLargeBuf)));
 
         aDecoder.offer(LastHttpContent.EMPTY_LAST_CONTENT);
 
         assertTrue("Should have a piece of data", aDecoder.hasNext());
 
         InterfaceHttpData aDecodedData = aDecoder.next();
-
         assertEquals(InterfaceHttpData.HttpDataType.Attribute, aDecodedData.getHttpDataType());
 
         Attribute aAttr = (Attribute) aDecodedData;
-
         assertEquals(aData, aAttr.getValue());
+
+        aDecodedData.release();
+        aDecoder.destroy();
     }
 }

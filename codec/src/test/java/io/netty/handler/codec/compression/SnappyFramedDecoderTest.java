@@ -21,6 +21,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.Before;
 import org.junit.Test;
 
+import static io.netty.util.ReferenceCountUtil.releaseLater;
 import static org.junit.Assert.*;
 
 public class SnappyFramedDecoderTest {
@@ -108,7 +109,7 @@ public class SnappyFramedDecoderTest {
         channel.writeInbound(in);
 
         ByteBuf expected = Unpooled.wrappedBuffer(new byte[] { 'n', 'e', 't', 't', 'y' });
-        assertEquals(expected, channel.readInbound());
+        assertEquals(releaseLater(expected), releaseLater(channel.readInbound()));
     }
 
     @Test
@@ -124,7 +125,7 @@ public class SnappyFramedDecoderTest {
         channel.writeInbound(in);
 
         ByteBuf expected = Unpooled.wrappedBuffer(new byte[] { 'n', 'e', 't', 't', 'y' });
-        assertEquals(expected, channel.readInbound());
+        assertEquals(releaseLater(expected), releaseLater(channel.readInbound()));
     }
 
     // The following two tests differ in only the checksum provided for the literal

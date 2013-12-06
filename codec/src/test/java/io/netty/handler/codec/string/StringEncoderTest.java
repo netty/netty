@@ -34,5 +34,6 @@ public class StringEncoderTest {
         buf.readBytes(data);
         Assert.assertArrayEquals(msg.getBytes(CharsetUtil.UTF_8), data);
         Assert.assertNull(channel.readOutbound());
+        buf.release();
     }
 }

@@ -19,10 +19,12 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.Test;
 
 import java.nio.charset.Charset;
 
+import static io.netty.util.ReferenceCountUtil.releaseLater;
 import static org.junit.Assert.*;
 
 public class DelimiterBasedFrameDecoderTest {
@@ -32,9 +34,10 @@ public class DelimiterBasedFrameDecoderTest {
         EmbeddedChannel ch = new EmbeddedChannel(new DelimiterBasedFrameDecoder(8192, true,
                 Delimiters.lineDelimiter()));
         ch.writeInbound(Unpooled.copiedBuffer("TestLine\r\ng\r\n", Charset.defaultCharset()));
-        assertEquals("TestLine", ((ByteBuf) ch.readInbound()).toString(Charset.defaultCharset()));
-        assertEquals("g", ((ByteBuf) ch.readInbound()).toString(Charset.defaultCharset()));
+        assertEquals("TestLine", releaseLater((ByteBuf) ch.readInbound()).toString(Charset.defaultCharset()));
+        assertEquals("g", releaseLater((ByteBuf) ch.readInbound()).toString(Charset.defaultCharset()));
         assertNull(ch.readInbound());
+        ch.finish();
     }
 
     @Test
@@ -44,9 +47,10 @@ public class DelimiterBasedFrameDecoderTest {
         ch.writeInbound(Unpooled.copiedBuffer("Test", Charset.defaultCharset()));
         assertNull(ch.readInbound());
         ch.writeInbound(Unpooled.copiedBuffer("Line\r\ng\r\n", Charset.defaultCharset()));
-        assertEquals("TestLine", ((ByteBuf) ch.readInbound()).toString(Charset.defaultCharset()));
-        assertEquals("g", ((ByteBuf) ch.readInbound()).toString(Charset.defaultCharset()));
+        assertEquals("TestLine", releaseLater((ByteBuf) ch.readInbound()).toString(Charset.defaultCharset()));
+        assertEquals("g", releaseLater((ByteBuf) ch.readInbound()).toString(Charset.defaultCharset()));
         assertNull(ch.readInbound());
+        ch.finish();
     }
 
     @Test
@@ -54,9 +58,10 @@ public class DelimiterBasedFrameDecoderTest {
         EmbeddedChannel ch = new EmbeddedChannel(new DelimiterBasedFrameDecoder(8192, false,
                 Delimiters.lineDelimiter()));
         ch.writeInbound(Unpooled.copiedBuffer("TestLine\r\ng\r\n", Charset.defaultCharset()));
-        assertEquals("TestLine\r\n", ((ByteBuf) ch.readInbound()).toString(Charset.defaultCharset()));
-        assertEquals("g\r\n", ((ByteBuf) ch.readInbound()).toString(Charset.defaultCharset()));
+        assertEquals("TestLine\r\n", releaseLater((ByteBuf) ch.readInbound()).toString(Charset.defaultCharset()));
+        assertEquals("g\r\n", releaseLater((ByteBuf) ch.readInbound()).toString(Charset.defaultCharset()));
         assertNull(ch.readInbound());
+        ch.finish();
     }
 
     @Test
@@ -66,9 +71,10 @@ public class DelimiterBasedFrameDecoderTest {
         ch.writeInbound(Unpooled.copiedBuffer("Test", Charset.defaultCharset()));
         assertNull(ch.readInbound());
         ch.writeInbound(Unpooled.copiedBuffer("Line\r\ng\r\n", Charset.defaultCharset()));
-        assertEquals("TestLine\r\n", ((ByteBuf) ch.readInbound()).toString(Charset.defaultCharset()));
-        assertEquals("g\r\n", ((ByteBuf) ch.readInbound()).toString(Charset.defaultCharset()));
+        assertEquals("TestLine\r\n", releaseLater((ByteBuf) ch.readInbound()).toString(Charset.defaultCharset()));
+        assertEquals("g\r\n", releaseLater((ByteBuf) ch.readInbound()).toString(Charset.defaultCharset()));
         assertNull(ch.readInbound());
+        ch.finish();
     }
 
     @Test
@@ -77,8 +83,11 @@ public class DelimiterBasedFrameDecoderTest {
                 new DelimiterBasedFrameDecoder(8192, true, Delimiters.lineDelimiter()));
 
         ch.writeInbound(Unpooled.copiedBuffer("first\r\nsecond\nthird", CharsetUtil.US_ASCII));
-        assertEquals("first", ((ByteBuf) ch.readInbound()).toString(CharsetUtil.US_ASCII));
-        assertEquals("second", ((ByteBuf) ch.readInbound()).toString(CharsetUtil.US_ASCII));
+        assertEquals("first", releaseLater((ByteBuf) ch.readInbound()).toString(CharsetUtil.US_ASCII));
+        assertEquals("second", releaseLater((ByteBuf) ch.readInbound()).toString(CharsetUtil.US_ASCII));
         assertNull(ch.readInbound());
+        ch.finish();
+
+        ReferenceCountUtil.release(ch.readInbound());
     }
 }

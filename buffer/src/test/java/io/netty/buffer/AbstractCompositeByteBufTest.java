@@ -101,8 +101,8 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
      */
     @Test
     public void testComponentAtOffset() {
-        CompositeByteBuf buf = (CompositeByteBuf) wrappedBuffer(new byte[]{1, 2, 3, 4, 5},
-                new byte[]{4, 5, 6, 7, 8, 9, 26});
+        CompositeByteBuf buf = releaseLater((CompositeByteBuf) wrappedBuffer(new byte[]{1, 2, 3, 4, 5},
+                new byte[]{4, 5, 6, 7, 8, 9, 26}));
 
         //Ensure that a random place will be fine
         assertEquals(5, buf.componentAtOffset(2).capacity());
@@ -161,7 +161,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
 
     @Test
     public void testAutoConsolidation() {
-        CompositeByteBuf buf = compositeBuffer(2);
+        CompositeByteBuf buf = releaseLater(compositeBuffer(2));
 
         buf.addComponent(wrappedBuffer(new byte[] { 1 }));
         assertEquals(1, buf.numComponents());
@@ -179,7 +179,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
 
     @Test
     public void testCompositeToSingleBuffer() {
-        CompositeByteBuf buf = compositeBuffer(3);
+        CompositeByteBuf buf = releaseLater(compositeBuffer(3));
 
         buf.addComponent(wrappedBuffer(new byte[] {1, 2, 3}));
         assertEquals(1, buf.numComponents());
@@ -229,13 +229,13 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
 
     @Test
     public void testCompositeWrappedBuffer() {
-        ByteBuf header = buffer(12).order(order);
-        ByteBuf payload = buffer(512).order(order);
+        ByteBuf header = releaseLater(buffer(12)).order(order);
+        ByteBuf payload = releaseLater(buffer(512)).order(order);
 
         header.writeBytes(new byte[12]);
         payload.writeBytes(new byte[512]);
 
-        ByteBuf buffer = wrappedBuffer(header, payload);
+        ByteBuf buffer = releaseLater(wrappedBuffer(header, payload));
 
         assertEquals(12, header.readableBytes());
         assertEquals(512, payload.readableBytes());
@@ -362,77 +362,81 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         //XXX Same tests than testEquals with written AggregateChannelBuffers
         ByteBuf a, b;
         // Different length.
-        a = wrappedBuffer(new byte[] { 1  }).order(order);
-        b = wrappedBuffer(wrappedBuffer(new byte[] { 1 }, new byte[1]).order(order));
+        a = releaseLater(wrappedBuffer(new byte[] { 1  })).order(order);
+        b = releaseLater(wrappedBuffer(wrappedBuffer(new byte[] { 1 }, new byte[1])).order(order));
         // to enable writeBytes
         b.writerIndex(b.writerIndex() - 1);
-        b.writeBytes(wrappedBuffer(new byte[] { 2 }).order(order));
+        b.writeBytes(releaseLater(wrappedBuffer(new byte[] { 2 })).order(order));
         assertFalse(ByteBufUtil.equals(a, b));
 
         // Same content, same firstIndex, short length.
-        a = wrappedBuffer(new byte[] { 1, 2, 3 }).order(order);
-        b = wrappedBuffer(wrappedBuffer(new byte[] { 1 }, new byte[2]).order(order));
+        a = releaseLater(wrappedBuffer(new byte[] { 1, 2, 3 })).order(order);
+        b = releaseLater(wrappedBuffer(releaseLater(wrappedBuffer(new byte[] { 1 }, new byte[2]))).order(order));
         // to enable writeBytes
         b.writerIndex(b.writerIndex() - 2);
-        b.writeBytes(wrappedBuffer(new byte[] { 2 }).order(order));
-        b.writeBytes(wrappedBuffer(new byte[] { 3 }).order(order));
+        b.writeBytes(releaseLater(wrappedBuffer(new byte[] { 2 })).order(order));
+        b.writeBytes(releaseLater(wrappedBuffer(new byte[] { 3 })).order(order));
         assertTrue(ByteBufUtil.equals(a, b));
 
         // Same content, different firstIndex, short length.
-        a = wrappedBuffer(new byte[] { 1, 2, 3 }).order(order);
-        b = wrappedBuffer(wrappedBuffer(new byte[] { 0, 1, 2, 3, 4 }, 1, 3).order(order));
+        a = releaseLater(wrappedBuffer(new byte[] { 1, 2, 3 })).order(order);
+        b = releaseLater(wrappedBuffer(releaseLater(wrappedBuffer(new byte[] { 0, 1, 2, 3, 4 }, 1, 3))).order(order));
         // to enable writeBytes
         b.writerIndex(b.writerIndex() - 1);
-        b.writeBytes(wrappedBuffer(new byte[] { 0, 1, 2, 3, 4 }, 3, 1).order(order));
+        b.writeBytes(releaseLater(wrappedBuffer(new byte[] { 0, 1, 2, 3, 4 }, 3, 1)).order(order));
         assertTrue(ByteBufUtil.equals(a, b));
 
         // Different content, same firstIndex, short length.
-        a = wrappedBuffer(new byte[] { 1, 2, 3 }).order(order);
-        b = releaseLater(wrappedBuffer(wrappedBuffer(new byte[] { 1, 2 }, new byte[1]).order(order)));
+        a = releaseLater(wrappedBuffer(new byte[] { 1, 2, 3 })).order(order);
+        b = releaseLater(wrappedBuffer(releaseLater(wrappedBuffer(new byte[] { 1, 2 }, new byte[1])).order(order)));
         // to enable writeBytes
         b.writerIndex(b.writerIndex() - 1);
-        b.writeBytes(wrappedBuffer(new byte[] { 4 }).order(order));
+        b.writeBytes(releaseLater(wrappedBuffer(new byte[] { 4 })).order(order));
         assertFalse(ByteBufUtil.equals(a, b));
 
         // Different content, different firstIndex, short length.
-        a = wrappedBuffer(new byte[] { 1, 2, 3 }).order(order);
-        b = wrappedBuffer(wrappedBuffer(new byte[] { 0, 1, 2, 4, 5 }, 1, 3).order(order));
+        a = releaseLater(wrappedBuffer(new byte[] { 1, 2, 3 })).order(order);
+        b = releaseLater(wrappedBuffer(releaseLater(wrappedBuffer(new byte[] { 0, 1, 2, 4, 5 }, 1, 3))).order(order));
         // to enable writeBytes
         b.writerIndex(b.writerIndex() - 1);
-        b.writeBytes(wrappedBuffer(new byte[] { 0, 1, 2, 4, 5 }, 3, 1).order(order));
+        b.writeBytes(releaseLater(wrappedBuffer(new byte[] { 0, 1, 2, 4, 5 }, 3, 1)).order(order));
         assertFalse(ByteBufUtil.equals(a, b));
 
         // Same content, same firstIndex, long length.
-        a = wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }).order(order);
-        b = releaseLater(wrappedBuffer(wrappedBuffer(new byte[] { 1, 2, 3 }, new byte[7])).order(order));
+        a = releaseLater(wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 })).order(order);
+        b = releaseLater(wrappedBuffer(releaseLater(wrappedBuffer(new byte[] { 1, 2, 3 }, new byte[7]))).order(order));
         // to enable writeBytes
         b.writerIndex(b.writerIndex() - 7);
-        b.writeBytes(wrappedBuffer(new byte[] { 4, 5, 6 }).order(order));
-        b.writeBytes(wrappedBuffer(new byte[] { 7, 8, 9, 10 }).order(order));
+        b.writeBytes(releaseLater(wrappedBuffer(new byte[] { 4, 5, 6 })).order(order));
+        b.writeBytes(releaseLater(wrappedBuffer(new byte[] { 7, 8, 9, 10 })).order(order));
         assertTrue(ByteBufUtil.equals(a, b));
 
         // Same content, different firstIndex, long length.
-        a = wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }).order(order);
-        b = wrappedBuffer(wrappedBuffer(new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}, 1, 10).order(order));
+        a = releaseLater(wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 })).order(order);
+        b = releaseLater(wrappedBuffer(releaseLater(
+                wrappedBuffer(new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}, 1, 10))).order(order));
         // to enable writeBytes
         b.writerIndex(b.writerIndex() - 5);
-        b.writeBytes(wrappedBuffer(new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}, 6, 5).order(order));
+        b.writeBytes(releaseLater(
+                wrappedBuffer(new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}, 6, 5)).order(order));
         assertTrue(ByteBufUtil.equals(a, b));
 
         // Different content, same firstIndex, long length.
-        a = wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }).order(order);
+        a = releaseLater(wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 })).order(order);
         b = releaseLater(wrappedBuffer(wrappedBuffer(new byte[] { 1, 2, 3, 4, 6 }, new byte[5])).order(order));
         // to enable writeBytes
         b.writerIndex(b.writerIndex() - 5);
-        b.writeBytes(wrappedBuffer(new byte[] { 7, 8, 5, 9, 10 }).order(order));
+        b.writeBytes(releaseLater(wrappedBuffer(new byte[] { 7, 8, 5, 9, 10 })).order(order));
         assertFalse(ByteBufUtil.equals(a, b));
 
         // Different content, different firstIndex, long length.
-        a = wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }).order(order);
-        b = wrappedBuffer(wrappedBuffer(new byte[] { 0, 1, 2, 3, 4, 6, 7, 8, 5, 9, 10, 11 }, 1, 10).order(order));
+        a = releaseLater(wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 })).order(order);
+        b = releaseLater(wrappedBuffer(releaseLater(
+                wrappedBuffer(new byte[] { 0, 1, 2, 3, 4, 6, 7, 8, 5, 9, 10, 11 }, 1, 10))).order(order));
         // to enable writeBytes
         b.writerIndex(b.writerIndex() - 5);
-        b.writeBytes(wrappedBuffer(new byte[] { 0, 1, 2, 3, 4, 6, 7, 8, 5, 9, 10, 11 }, 6, 5).order(order));
+        b.writeBytes(releaseLater(
+                wrappedBuffer(new byte[] { 0, 1, 2, 3, 4, 6, 7, 8, 5, 9, 10, 11 }, 6, 5)).order(order));
         assertFalse(ByteBufUtil.equals(a, b));
     }
 

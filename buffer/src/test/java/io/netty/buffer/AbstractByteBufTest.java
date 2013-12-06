@@ -1532,7 +1532,7 @@ public abstract class AbstractByteBufTest {
     @Test
     public void testToString() {
         buffer.clear();
-        buffer.writeBytes(copiedBuffer("Hello, World!", CharsetUtil.ISO_8859_1));
+        buffer.writeBytes(releaseLater(copiedBuffer("Hello, World!", CharsetUtil.ISO_8859_1)));
         assertEquals("Hello, World!", buffer.toString(CharsetUtil.ISO_8859_1));
     }
 
