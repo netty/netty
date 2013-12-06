@@ -688,7 +688,7 @@ final class AdvancedLeakAwareByteBuf extends WrappedByteBuf {
         boolean deallocated =  super.release();
         if (deallocated) {
             leak.close();
-        } else{
+        } else {
             leak.record();
         }
         return deallocated;
