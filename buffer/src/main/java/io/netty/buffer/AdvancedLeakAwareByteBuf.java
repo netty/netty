@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
@@ -33,6 +34,62 @@ final class AdvancedLeakAwareByteBuf extends WrappedByteBuf {
     AdvancedLeakAwareByteBuf(ByteBuf buf, ResourceLeak leak) {
         super(buf);
         this.leak = leak;
+    }
+
+    @Override
+    public boolean release() {
+        boolean deallocated =  super.release();
+        if (deallocated) {
+            leak.close();
+        } else {
+            leak.record();
+        }
+        return deallocated;
+    }
+
+    @Override
+    public boolean release(int decrement) {
+        boolean deallocated = super.release(decrement);
+        if (deallocated) {
+            leak.close();
+        } else {
+            leak.record();
+        }
+        return deallocated;
+    }
+
+    @Override
+    public ByteBuf order(ByteOrder endianness) {
+        leak.record();
+        if (order() == endianness) {
+            return this;
+        } else {
+            return new AdvancedLeakAwareByteBuf(super.order(endianness), leak);
+        }
+    }
+
+    @Override
+    public ByteBuf slice() {
+        leak.record();
+        return new AdvancedLeakAwareByteBuf(super.slice(), leak);
+    }
+
+    @Override
+    public ByteBuf slice(int index, int length) {
+        leak.record();
+        return new AdvancedLeakAwareByteBuf(super.slice(index, length), leak);
+    }
+
+    @Override
+    public ByteBuf duplicate() {
+        leak.record();
+        return new AdvancedLeakAwareByteBuf(super.duplicate(), leak);
+    }
+
+    @Override
+    public ByteBuf readSlice(int length) {
+        leak.record();
+        return new AdvancedLeakAwareByteBuf(super.readSlice(length), leak);
     }
 
     @Override
@@ -378,12 +435,6 @@ final class AdvancedLeakAwareByteBuf extends WrappedByteBuf {
     }
 
     @Override
-    public ByteBuf readSlice(int length) {
-        leak.record();
-        return super.readSlice(length);
-    }
-
-    @Override
     public ByteBuf readBytes(ByteBuf dst) {
         leak.record();
         return super.readBytes(dst);
@@ -606,24 +657,6 @@ final class AdvancedLeakAwareByteBuf extends WrappedByteBuf {
     }
 
     @Override
-    public ByteBuf slice() {
-        leak.record();
-        return super.slice();
-    }
-
-    @Override
-    public ByteBuf slice(int index, int length) {
-        leak.record();
-        return super.slice(index, length);
-    }
-
-    @Override
-    public ByteBuf duplicate() {
-        leak.record();
-        return super.duplicate();
-    }
-
-    @Override
     public int nioBufferCount() {
         leak.record();
         return super.nioBufferCount();
@@ -684,24 +717,8 @@ final class AdvancedLeakAwareByteBuf extends WrappedByteBuf {
     }
 
     @Override
-    public boolean release() {
-        boolean deallocated =  super.release();
-        if (deallocated) {
-            leak.close();
-        } else {
-            leak.record();
-        }
-        return deallocated;
-    }
-
-    @Override
-    public boolean release(int decrement) {
-        boolean deallocated = super.release(decrement);
-        if (deallocated) {
-            leak.close();
-        } else {
-            leak.record();
-        }
-        return deallocated;
+    public ByteBuf capacity(int newCapacity) {
+        leak.record();
+        return super.capacity(newCapacity);
     }
 }
