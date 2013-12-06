@@ -672,10 +672,24 @@ final class AdvancedLeakAwareByteBuf extends WrappedByteBuf {
     }
 
     @Override
+    public ByteBuf retain() {
+        leak.record();
+        return super.retain();
+    }
+
+    @Override
+    public ByteBuf retain(int increment) {
+        leak.record();
+        return super.retain(increment);
+    }
+
+    @Override
     public boolean release() {
         boolean deallocated =  super.release();
         if (deallocated) {
             leak.close();
+        } else{
+            leak.record();
         }
         return deallocated;
     }
@@ -685,6 +699,8 @@ final class AdvancedLeakAwareByteBuf extends WrappedByteBuf {
         boolean deallocated = super.release(decrement);
         if (deallocated) {
             leak.close();
+        } else {
+            leak.record();
         }
         return deallocated;
     }
