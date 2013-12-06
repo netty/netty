@@ -30,7 +30,7 @@ public abstract class BinaryMemcacheEncoder<M extends BinaryMemcacheMessage<H>, 
     /**
      * Every binary memcache message has at least a 24 bytes header.
      */
-    public static final int DEFAULT_BUFFER_SIZE = 24;
+    private static final int DEFAULT_BUFFER_SIZE = 24;
 
     @Override
     protected ByteBuf encodeMessage(ChannelHandlerContext ctx, M msg) {
