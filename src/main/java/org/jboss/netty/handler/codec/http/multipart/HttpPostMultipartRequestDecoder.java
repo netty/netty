@@ -179,7 +179,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      * Set from the request ContentType the multipartDataBoundary and the possible charset.
      */
     private void setMultipart(String contentType) throws ErrorDataDecoderException {
-    	String[] dataBoundary = HttpPostRequestDecoder.getMultipartDataBoundary(contentType);
+        String[] dataBoundary = HttpPostRequestDecoder.getMultipartDataBoundary(contentType);
         if (dataBoundary != null) {
             multipartDataBoundary = dataBoundary[0];
             if (dataBoundary.length > 1 && dataBoundary[1] != null) {

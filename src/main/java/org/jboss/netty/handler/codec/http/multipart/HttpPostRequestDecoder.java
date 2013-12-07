@@ -297,7 +297,6 @@ public class HttpPostRequestDecoder implements InterfaceHttpPostRequestDecoder {
      * @return the array of 3 Strings
      */
     private static String[] splitHeaderContentType(String sb) {
-        int size = sb.length();
         int aStart;
         int aEnd;
         int bStart;
@@ -305,15 +304,15 @@ public class HttpPostRequestDecoder implements InterfaceHttpPostRequestDecoder {
         int cStart;
         int cEnd;
         aStart = HttpPostBodyUtil.findNonWhitespace(sb, 0);
-        aEnd = HttpPostBodyUtil.findWhitespace(sb, aStart);
-        if (aEnd >= size) {
+        aEnd =  sb.indexOf(';');
+        if (aEnd == -1) {
             return new String[] { sb, "", "" };
         }
         bStart = HttpPostBodyUtil.findNonWhitespace(sb, aEnd + 1);
-        if (sb.charAt(aEnd) == ';') {
-            aEnd --;
+        if (sb.charAt(aEnd - 1) == ' ') {
+            aEnd--;
         }
-        bEnd =  sb.indexOf(';');
+        bEnd =  sb.indexOf(';', bStart);
         if (bEnd == -1) {
             bEnd = HttpPostBodyUtil.findEndOfString(sb);
             return new String[] { sb.substring(aStart, aEnd), sb.substring(bStart, bEnd), "" };
@@ -323,8 +322,7 @@ public class HttpPostRequestDecoder implements InterfaceHttpPostRequestDecoder {
             bEnd--;
         }
         cEnd = HttpPostBodyUtil.findEndOfString(sb);
-        return new String[] { sb.substring(aStart, aEnd), sb.substring(bStart, bEnd),
-                sb.substring(cStart, cEnd) };
+        return new String[] { sb.substring(aStart, aEnd), sb.substring(bStart, bEnd), sb.substring(cStart, cEnd) };
     }
 
     /**
