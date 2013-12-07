@@ -267,8 +267,8 @@ public class HttpPostRequestDecoder implements InterfaceHttpPostRequestDecoder {
         }
         bEnd =  sb.indexOf(';');
         if (bEnd == -1) {
-        	bEnd = HttpPostBodyUtil.findEndOfString(sb);
-        	return new String[] { sb.substring(aStart, aEnd), sb.substring(bStart, bEnd), "" };
+            bEnd = HttpPostBodyUtil.findEndOfString(sb);
+            return new String[] { sb.substring(aStart, aEnd), sb.substring(bStart, bEnd), "" };
         }
         cStart = HttpPostBodyUtil.findNonWhitespace(sb, bEnd + 1);
         if (sb.charAt(bEnd - 1) == ' ') {
