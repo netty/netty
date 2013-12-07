@@ -127,6 +127,8 @@ public class BinaryMemcacheDecoderTest {
         assertThat(header.getExtrasLength(), is((byte) 0));
         assertThat(header.getTotalBodyLength(), is(11));
 
+        request.release();
+
         int expectedContentChunks = 4;
         for (int i = 1; i <= expectedContentChunks; i++) {
             MemcacheContent content = (MemcacheContent) channel.readInbound();
@@ -136,6 +138,7 @@ public class BinaryMemcacheDecoderTest {
                 assertThat(content, instanceOf(LastMemcacheContent.class));
             }
             assertThat(content.content().readableBytes(), is(2));
+            content.release();
         }
         assertThat(channel.readInbound(), nullValue());
     }
