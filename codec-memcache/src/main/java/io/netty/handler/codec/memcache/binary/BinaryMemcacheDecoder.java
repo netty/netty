@@ -96,7 +96,8 @@ public abstract class BinaryMemcacheDecoder<M extends BinaryMemcacheMessage<H>, 
                         return;
                     }
 
-                    currentKey = readBytes(ctx.alloc(), in, keyLength).toString(CharsetUtil.UTF_8);
+                    currentKey = in.toString(in.readerIndex(), keyLength, CharsetUtil.UTF_8);
+                    in.skipBytes(keyLength);
                 }
 
                 out.add(buildMessage(currentHeader, currentExtras, currentKey));
