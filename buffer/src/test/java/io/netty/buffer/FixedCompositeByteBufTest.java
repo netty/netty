@@ -16,7 +16,6 @@
 package io.netty.buffer;
 
 
-import org.junit.After;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
@@ -24,87 +23,63 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ReadOnlyBufferException;
 import java.nio.channels.ScatteringByteChannel;
-import java.util.ArrayDeque;
-import java.util.Queue;
 
-import static io.netty.buffer.Unpooled.buffer;
-import static io.netty.buffer.Unpooled.compositeBuffer;
-import static io.netty.buffer.Unpooled.directBuffer;
-import static org.junit.Assert.assertArrayEquals;
+import static io.netty.buffer.Unpooled.*;
+import static io.netty.util.ReferenceCountUtil.*;
+import static org.junit.Assert.*;
 
 public class FixedCompositeByteBufTest {
 
-    private static final Queue<ByteBuf> freeLaterQueue = new ArrayDeque<ByteBuf>();
-
-    protected static <T extends ByteBuf> T freeLater(T buf) {
-        freeLaterQueue.add(buf);
-        return buf;
-    }
-
-    @After
-    public void dispose() {
-        for (;;) {
-            ByteBuf buf = freeLaterQueue.poll();
-            if (buf == null) {
-                break;
-            }
-
-            if (buf.refCnt() > 0) {
-                buf.release(buf.refCnt());
-            }
-        }
-    }
-
-    private ByteBuf newBuffer(ByteBuf... buffers) {
-        return new FixedCompositeByteBuf(UnpooledByteBufAllocator.DEFAULT, buffers);
+    private static ByteBuf newBuffer(ByteBuf... buffers) {
+        return releaseLater(new FixedCompositeByteBuf(UnpooledByteBufAllocator.DEFAULT, buffers));
     }
 
     @Test(expected = ReadOnlyBufferException.class)
     public void testSetBoolean() {
-        ByteBuf buf = newBuffer(Unpooled.wrappedBuffer(new byte[8]));
+        ByteBuf buf = newBuffer(wrappedBuffer(new byte[8]));
         buf.setBoolean(0, true);
     }
 
     @Test(expected = ReadOnlyBufferException.class)
     public void testSetByte() {
-        ByteBuf buf = newBuffer(Unpooled.wrappedBuffer(new byte[8]));
+        ByteBuf buf = newBuffer(wrappedBuffer(new byte[8]));
         buf.setByte(0, 1);
     }
 
     @Test(expected = ReadOnlyBufferException.class)
     public void testSetBytesWithByteBuf() {
-        ByteBuf buf = newBuffer(Unpooled.wrappedBuffer(new byte[8]));
-        buf.setBytes(0, Unpooled.wrappedBuffer(new byte[4]));
+        ByteBuf buf = newBuffer(wrappedBuffer(new byte[8]));
+        buf.setBytes(0, wrappedBuffer(new byte[4]));
     }
 
     @Test(expected = ReadOnlyBufferException.class)
     public void testSetBytesWithByteBuffer() {
-        ByteBuf buf = newBuffer(Unpooled.wrappedBuffer(new byte[8]));
+        ByteBuf buf = newBuffer(wrappedBuffer(new byte[8]));
         buf.setBytes(0, ByteBuffer.wrap(new byte[4]));
     }
 
     @Test(expected = ReadOnlyBufferException.class)
-         public void testSetBytesWithInputStream() throws IOException {
-        ByteBuf buf = newBuffer(Unpooled.wrappedBuffer(new byte[8]));
+    public void testSetBytesWithInputStream() throws IOException {
+        ByteBuf buf = newBuffer(wrappedBuffer(new byte[8]));
         buf.setBytes(0, new ByteArrayInputStream(new byte[4]), 4);
     }
 
     @Test(expected = ReadOnlyBufferException.class)
     public void testSetBytesWithChannel() throws IOException {
-        ByteBuf buf = newBuffer(Unpooled.wrappedBuffer(new byte[8]));
+        ByteBuf buf = newBuffer(wrappedBuffer(new byte[8]));
         buf.setBytes(0, new ScatteringByteChannel() {
             @Override
-            public long read(ByteBuffer[] dsts, int offset, int length) throws IOException {
+            public long read(ByteBuffer[] dsts, int offset, int length) {
                 return 0;
             }
 
             @Override
-            public long read(ByteBuffer[] dsts) throws IOException {
+            public long read(ByteBuffer[] dsts) {
                 return 0;
             }
 
             @Override
-            public int read(ByteBuffer dst) throws IOException {
+            public int read(ByteBuffer dst) {
                 return 0;
             }
 
@@ -114,44 +89,44 @@ public class FixedCompositeByteBufTest {
             }
 
             @Override
-            public void close() throws IOException {
+            public void close() {
             }
         }, 4);
     }
 
     @Test(expected = ReadOnlyBufferException.class)
     public void testSetChar() throws IOException {
-        ByteBuf buf = newBuffer(Unpooled.wrappedBuffer(new byte[8]));
+        ByteBuf buf = newBuffer(wrappedBuffer(new byte[8]));
         buf.setChar(0, 'b');
     }
 
     @Test(expected = ReadOnlyBufferException.class)
     public void testSetDouble() throws IOException {
-        ByteBuf buf = newBuffer(Unpooled.wrappedBuffer(new byte[8]));
+        ByteBuf buf = newBuffer(wrappedBuffer(new byte[8]));
         buf.setDouble(0, 1);
     }
 
     @Test(expected = ReadOnlyBufferException.class)
     public void testSetFloat() throws IOException {
-        ByteBuf buf = newBuffer(Unpooled.wrappedBuffer(new byte[8]));
+        ByteBuf buf = newBuffer(wrappedBuffer(new byte[8]));
         buf.setFloat(0, 1);
     }
 
     @Test(expected = ReadOnlyBufferException.class)
     public void testSetInt() throws IOException {
-        ByteBuf buf = newBuffer(Unpooled.wrappedBuffer(new byte[8]));
+        ByteBuf buf = newBuffer(wrappedBuffer(new byte[8]));
         buf.setInt(0, 1);
     }
 
     @Test(expected = ReadOnlyBufferException.class)
     public void testSetLong() {
-        ByteBuf buf = newBuffer(Unpooled.wrappedBuffer(new byte[8]));
+        ByteBuf buf = newBuffer(wrappedBuffer(new byte[8]));
         buf.setLong(0, 1);
     }
 
     @Test(expected = ReadOnlyBufferException.class)
     public void testSetMedium() throws IOException {
-        ByteBuf buf = newBuffer(Unpooled.wrappedBuffer(new byte[8]));
+        ByteBuf buf = newBuffer(wrappedBuffer(new byte[8]));
         buf.setMedium(0, 1);
     }
 
@@ -189,18 +164,19 @@ public class FixedCompositeByteBufTest {
     }
 
     private static void testGatheringWrites(ByteBuf buf1, ByteBuf buf2) throws Exception {
-        CompositeByteBuf buf = freeLater(compositeBuffer());
+        CompositeByteBuf buf = compositeBuffer();
         buf.addComponent(buf1.writeBytes(new byte[]{1, 2}));
         buf.addComponent(buf2.writeBytes(new byte[]{1, 2}));
         buf.writerIndex(3);
         buf.readerIndex(1);
 
         AbstractByteBufTest.TestGatheringByteChannel channel = new AbstractByteBufTest.TestGatheringByteChannel();
-
         buf.readBytes(channel, 2);
 
         byte[] data = new byte[2];
         buf.getBytes(1, data);
+        buf.release();
+
         assertArrayEquals(data, channel.writtenBytes());
     }
 
@@ -237,7 +213,7 @@ public class FixedCompositeByteBufTest {
                 PooledByteBufAllocator.DEFAULT.directBuffer());
     }
 
-    private void testGatheringWritesPartial(ByteBuf buf1, ByteBuf buf2) throws Exception {
+    private static void testGatheringWritesPartial(ByteBuf buf1, ByteBuf buf2) throws Exception {
         buf1.writeBytes(new byte[]{1, 2, 3, 4});
         buf2.writeBytes(new byte[]{1, 2, 3, 4});
         ByteBuf buf = newBuffer(buf1, buf2);
@@ -250,6 +226,7 @@ public class FixedCompositeByteBufTest {
         byte[] data = new byte[8];
         buf.getBytes(0, data);
         assertArrayEquals(data, channel.writtenBytes());
+        buf.release();
     }
 
     @Test
@@ -262,7 +239,7 @@ public class FixedCompositeByteBufTest {
         testGatheringWritesSingleBuf(directBuffer());
     }
 
-    private void testGatheringWritesSingleBuf(ByteBuf buf1) throws Exception {
+    private static void testGatheringWritesSingleBuf(ByteBuf buf1) throws Exception {
         ByteBuf buf = newBuffer(buf1.writeBytes(new byte[]{1, 2, 3, 4}));
         buf.readerIndex(1);
 
@@ -272,6 +249,7 @@ public class FixedCompositeByteBufTest {
         byte[] data = new byte[2];
         buf.getBytes(1, data);
         assertArrayEquals(data, channel.writtenBytes());
-    }
 
+        buf.release();
+    }
 }
