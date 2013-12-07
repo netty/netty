@@ -158,24 +158,41 @@ public class HttpPostRequestDecoder implements InterfaceHttpPostRequestDecoder {
 
     /**
      * Check from the request ContentType if this request is a Multipart request.
-     * @return the multipartDataBoundary if it exists, else null
+     * @return an array of String if multipartDataBoundary exists with the multipartDataBoundary
+     * as first element, charset if any as second (missing if not set), else null
      */
-    protected static String getMultipartDataBoundary(String contentType)
+    protected static String[] getMultipartDataBoundary(String contentType)
             throws ErrorDataDecoderException {
-        // Check if Post using "multipart/form-data; boundary=--89421926422648"
+        // Check if Post using "multipart/form-data; boundary=--89421926422648 [; charset=xxx]"
         String[] headerContentType = splitHeaderContentType(contentType);
         if (headerContentType[0].toLowerCase().startsWith(
-                HttpHeaders.Values.MULTIPART_FORM_DATA) &&
-                headerContentType[1].toLowerCase().startsWith(
-                        HttpHeaders.Values.BOUNDARY)) {
-            String[] boundary = StringUtil.split(headerContentType[1], '=');
+                HttpHeaders.Values.MULTIPART_FORM_DATA)) {
+            int mrank = 1, crank = 2;
+            if (headerContentType[1].toLowerCase().startsWith(
+                    HttpHeaders.Values.BOUNDARY.toString())) {
+                mrank = 1;
+                crank = 2;
+            } else if (headerContentType[2].toLowerCase().startsWith(
+                    HttpHeaders.Values.BOUNDARY.toString())) {
+                mrank = 2;
+                crank = 1;
+            } else {
+                return null;
+            }
+            String[] boundary = StringUtil.split(headerContentType[mrank], '=');
             if (boundary.length != 2) {
                 throw new ErrorDataDecoderException("Needs a boundary value");
             }
-            return "--" + boundary[1];
-        } else {
-            return null;
-        }
+            if (headerContentType[crank].toLowerCase().startsWith(
+                    HttpHeaders.Values.CHARSET.toString())) {
+                String[] charset = StringUtil.split(headerContentType[crank], '=');
+                if (charset.length > 1) {
+                    return new String[] {"--" + boundary[1], charset[1]};
+                }
+            }
+            return new String[] {"--" + boundary[1]};
+         }
+        return null;
     }
 
     /**
@@ -276,27 +293,36 @@ public class HttpPostRequestDecoder implements InterfaceHttpPostRequestDecoder {
     }
 
     /**
-     * Split the very first line (Content-Type value) in 2 Strings
-     * @return the array of 2 Strings
+     * Split the very first line (Content-Type value) in 3 Strings
+     * @return the array of 3 Strings
      */
     private static String[] splitHeaderContentType(String sb) {
-        int size = sb.length();
         int aStart;
         int aEnd;
         int bStart;
         int bEnd;
+        int cStart;
+        int cEnd;
         aStart = HttpPostBodyUtil.findNonWhitespace(sb, 0);
-        aEnd = HttpPostBodyUtil.findWhitespace(sb, aStart);
-        if (aEnd >= size) {
-            return new String[] { sb, "" };
+        aEnd =  sb.indexOf(';');
+        if (aEnd == -1) {
+            return new String[] { sb, "", "" };
         }
-        if (sb.charAt(aEnd) == ';') {
-            aEnd --;
+        bStart = HttpPostBodyUtil.findNonWhitespace(sb, aEnd + 1);
+        if (sb.charAt(aEnd - 1) == ' ') {
+            aEnd--;
         }
-        bStart = HttpPostBodyUtil.findNonWhitespace(sb, aEnd);
-        bEnd = HttpPostBodyUtil.findEndOfString(sb);
-        return new String[] { sb.substring(aStart, aEnd),
-                sb.substring(bStart, bEnd) };
+        bEnd =  sb.indexOf(';', bStart);
+        if (bEnd == -1) {
+            bEnd = HttpPostBodyUtil.findEndOfString(sb);
+            return new String[] { sb.substring(aStart, aEnd), sb.substring(bStart, bEnd), "" };
+        }
+        cStart = HttpPostBodyUtil.findNonWhitespace(sb, bEnd + 1);
+        if (sb.charAt(bEnd - 1) == ' ') {
+            bEnd--;
+        }
+        cEnd = HttpPostBodyUtil.findEndOfString(sb);
+        return new String[] { sb.substring(aStart, aEnd), sb.substring(bStart, bEnd), sb.substring(cStart, cEnd) };
     }
 
     /**
