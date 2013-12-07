@@ -152,7 +152,10 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
 
     @Override
     public void delete() {
-        // nothing to do
+        if (byteBuf != null) {
+            byteBuf.release();
+            byteBuf = null;
+        }
     }
 
     @Override
