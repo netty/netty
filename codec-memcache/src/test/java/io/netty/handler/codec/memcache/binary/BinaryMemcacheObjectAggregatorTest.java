@@ -71,5 +71,7 @@ public class BinaryMemcacheObjectAggregatorTest {
         request.release();
 
         assertThat(channel.readInbound(), nullValue());
+
+        channel.finish();
     }
 }
