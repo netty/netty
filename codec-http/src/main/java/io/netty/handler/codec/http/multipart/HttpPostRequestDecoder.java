@@ -265,7 +265,7 @@ public class HttpPostRequestDecoder implements InterfaceHttpPostRequestDecoder {
         if (sb.charAt(aEnd - 1) == ' ') {
             aEnd--;
         }
-        bEnd =  sb.indexOf(';');
+        bEnd =  sb.indexOf(';', bStart);
         if (bEnd == -1) {
             bEnd = HttpPostBodyUtil.findEndOfString(sb);
             return new String[] { sb.substring(aStart, aEnd), sb.substring(bStart, bEnd), "" };
