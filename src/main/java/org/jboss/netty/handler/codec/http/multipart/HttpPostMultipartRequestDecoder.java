@@ -57,7 +57,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
     /**
      * Default charset to use
      */
-    private final Charset charset;
+    private Charset charset;
 
     /**
      * Does the last chunk already received
@@ -176,10 +176,18 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
     }
 
     /**
-     * Set from the request ContentType the multipartDataBoundary.
+     * Set from the request ContentType the multipartDataBoundary and the possible charset.
      */
     private void setMultipart(String contentType) throws ErrorDataDecoderException {
-        multipartDataBoundary = HttpPostRequestDecoder.getMultipartDataBoundary(contentType);
+    	String[] dataBoundary = HttpPostRequestDecoder.getMultipartDataBoundary(contentType);
+        if (dataBoundary != null) {
+            multipartDataBoundary = dataBoundary[0];
+            if (dataBoundary.length > 1 && dataBoundary[1] != null) {
+                charset = Charset.forName(dataBoundary[1]);
+            }
+        } else {
+            multipartDataBoundary = null;
+        }
         currentStatus = MultiPartStatus.HEADERDELIMITER;
     }
 
