@@ -328,10 +328,27 @@ public class SingleThreadEventLoopTest {
     @SuppressWarnings("deprecation")
     public void testRegistrationAfterShutdown() throws Exception {
         loopA.shutdown();
-        ChannelFuture f = loopA.register(new LocalChannel());
-        f.awaitUninterruptibly();
-        assertFalse(f.isSuccess());
-        assertThat(f.cause(), is(instanceOf(RejectedExecutionException.class)));
+
+        // Disable logging temporarily.
+        Logger root = (Logger) LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
+        List<Appender<ILoggingEvent>> appenders = new ArrayList<Appender<ILoggingEvent>>();
+        for (Iterator<Appender<ILoggingEvent>> i = root.iteratorForAppenders(); i.hasNext();) {
+            Appender<ILoggingEvent> a = i.next();
+            appenders.add(a);
+            root.detachAppender(a);
+        }
+
+        try {
+            ChannelFuture f = loopA.register(new LocalChannel());
+            f.awaitUninterruptibly();
+            assertFalse(f.isSuccess());
+            assertThat(f.cause(), is(instanceOf(RejectedExecutionException.class)));
+            assertFalse(f.channel().isOpen());
+        } finally {
+            for (Appender<ILoggingEvent> a: appenders) {
+                root.addAppender(a);
+            }
+        }
     }
 
     @Test(timeout = 10000)
