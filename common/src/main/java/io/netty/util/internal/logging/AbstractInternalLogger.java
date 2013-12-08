@@ -79,7 +79,6 @@ public abstract class AbstractInternalLogger implements InternalLogger, Serializ
     @Override
     public void info(Throwable t) {
         info(EXCEPTION_MESSAGE, t);
-
     }
 
     @Override
