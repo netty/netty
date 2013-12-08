@@ -15,12 +15,19 @@
  */
 package io.netty.channel;
 
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.Appender;
 import io.netty.channel.local.LocalChannel;
 import io.netty.util.concurrent.EventExecutor;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -343,13 +350,29 @@ public class SingleThreadEventLoopTest {
             }
         });
 
-        ch.unsafe().register(promise);
-        promise.awaitUninterruptibly();
-        assertFalse(promise.isSuccess());
-        assertThat(promise.cause(), is(instanceOf(RejectedExecutionException.class)));
+        // Disable logging temporarily.
+        Logger root = (Logger) LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
+        List<Appender<ILoggingEvent>> appenders = new ArrayList<Appender<ILoggingEvent>>();
+        for (Iterator<Appender<ILoggingEvent>> i = root.iteratorForAppenders(); i.hasNext();) {
+            Appender<ILoggingEvent> a = i.next();
+            appenders.add(a);
+            root.detachAppender(a);
+        }
 
-        // Ensure the listener was notified.
-        assertFalse(latch.await(1, TimeUnit.SECONDS));
+        try {
+            ch.unsafe().register(promise);
+            promise.awaitUninterruptibly();
+            assertFalse(promise.isSuccess());
+            assertThat(promise.cause(), is(instanceOf(RejectedExecutionException.class)));
+
+            // Ensure the listener was notified.
+            assertFalse(latch.await(1, TimeUnit.SECONDS));
+            assertFalse(ch.isOpen());
+        } finally {
+            for (Appender<ILoggingEvent> a: appenders) {
+                root.addAppender(a);
+            }
+        }
     }
 
     @Test(timeout = 5000)
