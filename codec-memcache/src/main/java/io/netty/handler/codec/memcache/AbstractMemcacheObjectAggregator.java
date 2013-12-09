@@ -27,7 +27,7 @@ import io.netty.handler.codec.memcache.binary.BinaryMemcacheResponseEncoder;
  * and its following {@link MemcacheContent}s into a single {@link MemcacheMessage} with
  * no following {@link MemcacheContent}s.  It is useful when you don't want to take
  * care of memcache messages where the content comes along in chunks. Insert this
- * handler after a MemcacheObjectDecoder in the {@link ChannelPipeline}.
+ * handler after a AbstractMemcacheObjectDecoder in the {@link ChannelPipeline}.
  * <p/>
  * For example, here for the binary protocol:
  * <p/>
@@ -35,13 +35,14 @@ import io.netty.handler.codec.memcache.binary.BinaryMemcacheResponseEncoder;
  * {@link ChannelPipeline} p = ...;
  * ...
  * p.addLast("decoder", new {@link BinaryMemcacheRequestDecoder}());
- * p.addLast("aggregator", <b>new {@link MemcacheObjectAggregator}(1048576)</b>);
+ * p.addLast("aggregator", <b>new {@link io.netty.handler.codec.memcache.binary.BinaryMemcacheObjectAggregator}(1048576)
+ * </b>);
  * ...
  * p.addLast("encoder", new {@link BinaryMemcacheResponseEncoder}());
  * p.addLast("handler", new YourMemcacheRequestHandler());
  * </pre>
  */
-public abstract class MemcacheObjectAggregator extends MessageToMessageDecoder<MemcacheObject> {
+public abstract class AbstractMemcacheObjectAggregator extends MessageToMessageDecoder<MemcacheObject> {
 
     /**
      * Contains the current message that gets aggregated.
@@ -59,7 +60,7 @@ public abstract class MemcacheObjectAggregator extends MessageToMessageDecoder<M
 
     private final int maxContentLength;
 
-    protected MemcacheObjectAggregator(int maxContentLength) {
+    protected AbstractMemcacheObjectAggregator(int maxContentLength) {
         if (maxContentLength <= 0) {
             throw new IllegalArgumentException("maxContentLength must be a positive integer: " + maxContentLength);
         }

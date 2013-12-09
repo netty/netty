@@ -31,7 +31,7 @@ import static org.hamcrest.core.IsEqual.equalTo;
 import static org.junit.Assert.*;
 
 /**
- * Verifies the correct functionality of the {@link BinaryMemcacheEncoder}.
+ * Verifies the correct functionality of the {@link AbstractBinaryMemcacheEncoder}.
  */
 public class BinaryMemcacheEncoderTest {
 

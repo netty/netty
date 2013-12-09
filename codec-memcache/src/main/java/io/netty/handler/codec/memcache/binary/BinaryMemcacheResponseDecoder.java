@@ -21,7 +21,7 @@ import io.netty.buffer.ByteBuf;
  * The decoder which takes care of decoding the response headers.
  */
 public class BinaryMemcacheResponseDecoder
-    extends BinaryMemcacheDecoder<BinaryMemcacheResponse, BinaryMemcacheResponseHeader> {
+    extends AbstractBinaryMemcacheDecoder<BinaryMemcacheResponse, BinaryMemcacheResponseHeader> {
 
     public BinaryMemcacheResponseDecoder() {
         this(DEFAULT_MAX_CHUNK_SIZE);

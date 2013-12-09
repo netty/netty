@@ -18,7 +18,7 @@ package io.netty.handler.codec.memcache.binary;
 /**
  * The default implementation of a {@link BinaryMemcacheResponseHeader}.
  */
-public class DefaultBinaryMemcacheResponseHeader extends DefaultBinaryMemcacheMessageHeader
+public class DefaultBinaryMemcacheResponseHeader extends AbstractBinaryMemcacheMessageHeader
     implements BinaryMemcacheResponseHeader {
 
     /**
