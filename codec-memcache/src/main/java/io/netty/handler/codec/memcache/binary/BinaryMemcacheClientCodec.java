@@ -45,7 +45,7 @@ public final class BinaryMemcacheClientCodec
      * Create a new {@link BinaryMemcacheClientCodec} with the default settings applied.
      */
     public BinaryMemcacheClientCodec() {
-        this(BinaryMemcacheDecoder.DEFAULT_MAX_CHUNK_SIZE);
+        this(AbstractBinaryMemcacheDecoder.DEFAULT_MAX_CHUNK_SIZE);
     }
 
     /**

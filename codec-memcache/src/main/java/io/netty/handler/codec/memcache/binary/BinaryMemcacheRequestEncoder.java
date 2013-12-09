@@ -21,7 +21,7 @@ import io.netty.buffer.ByteBuf;
  * The encoder part which takes care of encoding the request headers.
  */
 public class BinaryMemcacheRequestEncoder
-    extends BinaryMemcacheEncoder<BinaryMemcacheRequest, BinaryMemcacheRequestHeader> {
+    extends AbstractBinaryMemcacheEncoder<BinaryMemcacheRequest, BinaryMemcacheRequestHeader> {
 
     @Override
     protected void encodeHeader(ByteBuf buf, BinaryMemcacheRequestHeader header) {
