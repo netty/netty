@@ -30,7 +30,7 @@ public class DefaultBinaryMemcacheRequest extends AbstractBinaryMemcacheMessage<
      * @param header the header to use.
      */
     public DefaultBinaryMemcacheRequest(BinaryMemcacheRequestHeader header) {
-        this(header, null, Unpooled.EMPTY_BUFFER);
+        this(header, null, null);
     }
 
     /**
@@ -40,7 +40,7 @@ public class DefaultBinaryMemcacheRequest extends AbstractBinaryMemcacheMessage<
      * @param key    the key to use.
      */
     public DefaultBinaryMemcacheRequest(BinaryMemcacheRequestHeader header, String key) {
-        this(header, key, Unpooled.EMPTY_BUFFER);
+        this(header, key, null);
     }
 
     /**
