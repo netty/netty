@@ -17,11 +17,11 @@ package io.netty.handler.codec.memcache.binary;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.memcache.AbstractMemcacheObjectDecoder;
 import io.netty.handler.codec.memcache.DefaultLastMemcacheContent;
 import io.netty.handler.codec.memcache.DefaultMemcacheContent;
 import io.netty.handler.codec.memcache.LastMemcacheContent;
 import io.netty.handler.codec.memcache.MemcacheContent;
-import io.netty.handler.codec.memcache.MemcacheObjectDecoder;
 import io.netty.util.CharsetUtil;
 
 import java.util.List;
@@ -33,8 +33,9 @@ import static io.netty.buffer.ByteBufUtil.*;
  * <p/>
  * The difference in the protocols (header) is implemented by the subclasses.
  */
-public abstract class BinaryMemcacheDecoder<M extends BinaryMemcacheMessage<H>, H extends BinaryMemcacheMessageHeader>
-    extends MemcacheObjectDecoder {
+public abstract class AbstractBinaryMemcacheDecoder
+        <M extends BinaryMemcacheMessage<H>, H extends BinaryMemcacheMessageHeader>
+    extends AbstractMemcacheObjectDecoder {
 
     public static final int DEFAULT_MAX_CHUNK_SIZE = 8192;
 
@@ -48,18 +49,18 @@ public abstract class BinaryMemcacheDecoder<M extends BinaryMemcacheMessage<H>, 
     private State state = State.READ_HEADER;
 
     /**
-     * Create a new {@link BinaryMemcacheDecoder} with default settings.
+     * Create a new {@link AbstractBinaryMemcacheDecoder} with default settings.
      */
-    protected BinaryMemcacheDecoder() {
+    protected AbstractBinaryMemcacheDecoder() {
         this(DEFAULT_MAX_CHUNK_SIZE);
     }
 
     /**
-     * Create a new {@link BinaryMemcacheDecoder} with custom settings.
+     * Create a new {@link AbstractBinaryMemcacheDecoder} with custom settings.
      *
      * @param chunkSize the maximum chunk size of the payload.
      */
-    protected BinaryMemcacheDecoder(int chunkSize) {
+    protected AbstractBinaryMemcacheDecoder(int chunkSize) {
         if (chunkSize < 0) {
             throw new IllegalArgumentException("chunkSize must be a positive integer: " + chunkSize);
         }

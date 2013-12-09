@@ -32,7 +32,7 @@ import static org.hamcrest.core.IsNull.notNullValue;
 import static org.hamcrest.core.IsNull.nullValue;
 
 /**
- * Verifies the correct functionality of the {@link BinaryMemcacheDecoder}.
+ * Verifies the correct functionality of the {@link AbstractBinaryMemcacheDecoder}.
  * <p/>
  * While technically there are both a {@link BinaryMemcacheRequestDecoder} and a {@link BinaryMemcacheResponseDecoder}
  * they implement the same basics and just differ in the type of headers returned.
