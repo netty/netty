@@ -23,5 +23,5 @@ import io.netty.handler.codec.ByteToMessageDecoder;
  * Currently it just acts as a common denominator, but will certainly include methods once the ascii protocol
  * is implemented.
  */
-public abstract class MemcacheObjectDecoder extends ByteToMessageDecoder {
+public abstract class AbstractMemcacheObjectDecoder extends ByteToMessageDecoder {
 }

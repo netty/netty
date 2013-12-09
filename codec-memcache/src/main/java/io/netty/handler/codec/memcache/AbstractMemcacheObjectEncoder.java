@@ -25,13 +25,13 @@ import io.netty.util.internal.StringUtil;
 import java.util.List;
 
 /**
- * A general purpose {@link MemcacheObjectEncoder} that encodes {@link MemcacheMessage}s.
+ * A general purpose {@link AbstractMemcacheObjectEncoder} that encodes {@link MemcacheMessage}s.
  * <p/>
  * <p>Note that this class is designed to be extended, especially because both the binary and ascii protocol
  * require different treatment of their messages. Since the content chunk writing is the same for both, the encoder
  * abstracts this right away.</p>
  */
-public abstract class MemcacheObjectEncoder<M extends MemcacheMessage> extends MessageToMessageEncoder<Object> {
+public abstract class AbstractMemcacheObjectEncoder<M extends MemcacheMessage> extends MessageToMessageEncoder<Object> {
 
     private boolean expectingMoreContent;
 

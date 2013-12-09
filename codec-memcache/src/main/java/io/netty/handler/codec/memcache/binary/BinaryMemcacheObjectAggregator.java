@@ -20,20 +20,20 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.TooLongFrameException;
+import io.netty.handler.codec.memcache.AbstractMemcacheObjectAggregator;
 import io.netty.handler.codec.memcache.FullMemcacheMessage;
 import io.netty.handler.codec.memcache.LastMemcacheContent;
 import io.netty.handler.codec.memcache.MemcacheContent;
 import io.netty.handler.codec.memcache.MemcacheMessage;
 import io.netty.handler.codec.memcache.MemcacheObject;
-import io.netty.handler.codec.memcache.MemcacheObjectAggregator;
 import io.netty.util.ReferenceCountUtil;
 
 import java.util.List;
 
 /**
- * A {@link MemcacheObjectAggregator} for the binary protocol.
+ * A memcache object aggregator for the binary protocol.
  */
-public class BinaryMemcacheObjectAggregator extends MemcacheObjectAggregator {
+public class BinaryMemcacheObjectAggregator extends AbstractMemcacheObjectAggregator {
 
     private boolean tooLongFrameFound;
 
