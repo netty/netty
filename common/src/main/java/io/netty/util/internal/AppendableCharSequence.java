@@ -23,6 +23,10 @@ public final class AppendableCharSequence implements CharSequence, Appendable {
     private int pos;
 
     public AppendableCharSequence(int length) {
+        if (length == 0) {
+            throw new IllegalArgumentException("Length must be greater than zero");
+        }
+
         chars = new char[length];
     }
 
