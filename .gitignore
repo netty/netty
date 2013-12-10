@@ -1,15 +1,28 @@
+#Eclipse project files
 .project
 .classpath
 .settings
+
+#IntelliJ IDEA project files and directories
 *.iml
 *.ipr
 *.iws
 .idea/
+
+#Geany project file
 .geany
-/target
-*/target
-/reports
-*/reports
-.DS_Store
+
+#KDevelop project file and directory
 .kdev4/
 *.kdev4
+
+#Build targets
+/target
+*/target
+
+#Report directories
+/reports
+*/reports
+
+#Mac-specific directory that no other operating system needs.
+.DS_Store
