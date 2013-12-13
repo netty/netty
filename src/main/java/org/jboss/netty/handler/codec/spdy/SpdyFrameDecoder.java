@@ -163,14 +163,6 @@ public class SpdyFrameDecoder extends FrameDecoder {
                 int value = getSignedInt(buffer, buffer.readerIndex() + 4);
                 buffer.skipBytes(8);
 
-                // Check for invalid ID -- avoid IllegalArgumentException in setValue
-                if (ID == 0) {
-                    state = State.FRAME_ERROR;
-                    spdySettingsFrame = null;
-                    fireInvalidFrameException(ctx);
-                    return null;
-                }
-
                 if (!spdySettingsFrame.isSet(ID)) {
                     boolean persistVal = (ID_flags & SPDY_SETTINGS_PERSIST_VALUE) != 0;
                     boolean persisted  = (ID_flags & SPDY_SETTINGS_PERSISTED) != 0;

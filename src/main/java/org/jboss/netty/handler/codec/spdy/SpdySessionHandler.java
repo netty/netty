@@ -62,6 +62,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
     private volatile ChannelFutureListener closeSessionFutureListener;
 
     private final boolean server;
+    private final int minorVersion;
     private final boolean sessionFlowControl;
 
     /**
@@ -78,6 +79,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
             throw new NullPointerException("spdyVersion");
         }
         this.server = server;
+        minorVersion = spdyVersion.getMinorVersion();
         sessionFlowControl = spdyVersion.useSessionFlowControl();
     }
 
@@ -295,6 +297,13 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
         } else if (msg instanceof SpdySettingsFrame) {
 
             SpdySettingsFrame spdySettingsFrame = (SpdySettingsFrame) msg;
+
+            int settingsMinorVersion = spdySettingsFrame.getValue(SpdySettingsFrame.SETTINGS_MINOR_VERSION);
+            if (settingsMinorVersion >= 0 && settingsMinorVersion != minorVersion) {
+                // Settings frame had the wrong minor version
+                issueSessionError(ctx, e.getChannel(), e.getRemoteAddress(), SpdySessionStatus.PROTOCOL_ERROR);
+                return;
+            }
 
             int newConcurrentStreams =
                 spdySettingsFrame.getValue(SpdySettingsFrame.SETTINGS_MAX_CONCURRENT_STREAMS);
@@ -583,6 +592,13 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
         } else if (msg instanceof SpdySettingsFrame) {
 
             SpdySettingsFrame spdySettingsFrame = (SpdySettingsFrame) msg;
+
+            int settingsMinorVersion = spdySettingsFrame.getValue(SpdySettingsFrame.SETTINGS_MINOR_VERSION);
+            if (settingsMinorVersion >= 0 && settingsMinorVersion != minorVersion) {
+                // Settings frame had the wrong minor version
+                e.getFuture().setFailure(PROTOCOL_EXCEPTION);
+                return;
+            }
 
             int newConcurrentStreams =
                     spdySettingsFrame.getValue(SpdySettingsFrame.SETTINGS_MAX_CONCURRENT_STREAMS);
