@@ -22,6 +22,7 @@ import java.util.Set;
  */
 public interface SpdySettingsFrame extends SpdyFrame {
 
+    int SETTINGS_MINOR_VERSION                  = 0;
     int SETTINGS_UPLOAD_BANDWIDTH               = 1;
     int SETTINGS_DOWNLOAD_BANDWIDTH             = 2;
     int SETTINGS_ROUND_TRIP_TIME                = 3;
@@ -50,7 +51,7 @@ public interface SpdySettingsFrame extends SpdyFrame {
 
     /**
      * Sets the value of the setting ID.
-     * The ID must be positive and cannot exceed 16777215.
+     * The ID cannot be negative and cannot exceed 16777215.
      */
     void setValue(int id, int value);
 
@@ -58,7 +59,7 @@ public interface SpdySettingsFrame extends SpdyFrame {
      * Sets the value of the setting ID.
      * Sets if the setting should be persisted (should only be set by the server).
      * Sets if the setting is persisted (should only be set by the client).
-     * The ID must be positive and cannot exceed 16777215.
+     * The ID cannot be negative and cannot exceed 16777215.
      */
     void setValue(int id, int value, boolean persistVal, boolean persisted);
 
