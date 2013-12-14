@@ -60,6 +60,7 @@ public class SpdySessionHandler extends ChannelHandlerAdapter {
     private ChannelFutureListener closeSessionFutureListener;
 
     private final boolean server;
+    private final int minorVersion;
     private final boolean sessionFlowControl;
 
     /**
@@ -76,6 +77,7 @@ public class SpdySessionHandler extends ChannelHandlerAdapter {
             throw new NullPointerException("version");
         }
         this.server = server;
+        minorVersion = version.getMinorVersion();
         sessionFlowControl = version.useSessionFlowControl();
     }
 
@@ -293,6 +295,13 @@ public class SpdySessionHandler extends ChannelHandlerAdapter {
         } else if (msg instanceof SpdySettingsFrame) {
 
             SpdySettingsFrame spdySettingsFrame = (SpdySettingsFrame) msg;
+
+            int settingsMinorVersion = spdySettingsFrame.getValue(SpdySettingsFrame.SETTINGS_MINOR_VERSION);
+            if (settingsMinorVersion >= 0 && settingsMinorVersion != minorVersion) {
+                // Settings frame had the wrong minor version
+                issueSessionError(ctx, SpdySessionStatus.PROTOCOL_ERROR);
+                return;
+            }
 
             int newConcurrentStreams =
                 spdySettingsFrame.getValue(SpdySettingsFrame.SETTINGS_MAX_CONCURRENT_STREAMS);
@@ -573,6 +582,13 @@ public class SpdySessionHandler extends ChannelHandlerAdapter {
         } else if (msg instanceof SpdySettingsFrame) {
 
             SpdySettingsFrame spdySettingsFrame = (SpdySettingsFrame) msg;
+
+            int settingsMinorVersion = spdySettingsFrame.getValue(SpdySettingsFrame.SETTINGS_MINOR_VERSION);
+            if (settingsMinorVersion >= 0 && settingsMinorVersion != minorVersion) {
+                // Settings frame had the wrong minor version
+                promise.setFailure(PROTOCOL_EXCEPTION);
+                return;
+            }
 
             int newConcurrentStreams =
                     spdySettingsFrame.getValue(SpdySettingsFrame.SETTINGS_MAX_CONCURRENT_STREAMS);
