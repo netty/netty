@@ -19,7 +19,6 @@ package io.netty.handler.codec.http;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
-
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -70,10 +69,10 @@ public class HttpRequestDecoderTest {
     private static void testDecodeWholeRequestAtOnce(byte[] content) {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
         Assert.assertTrue(channel.writeInbound(Unpooled.wrappedBuffer(content)));
-        HttpRequest req = (HttpRequest) channel.readInbound();
+        HttpRequest req = channel.readInbound();
         Assert.assertNotNull(req);
         checkHeaders(req.headers());
-        LastHttpContent c = (LastHttpContent) channel.readInbound();
+        LastHttpContent c = channel.readInbound();
         Assert.assertEquals(8, c.content().readableBytes());
         Assert.assertEquals(Unpooled.wrappedBuffer(content, content.length - 8, 8), c.content().readBytes(8));
         c.release();
@@ -142,11 +141,11 @@ public class HttpRequestDecoderTest {
             channel.writeInbound(Unpooled.wrappedBuffer(content, content.length - i, 1));
         }
 
-        HttpRequest req = (HttpRequest) channel.readInbound();
+        HttpRequest req = channel.readInbound();
         Assert.assertNotNull(req);
         checkHeaders(req.headers());
 
-        LastHttpContent c = (LastHttpContent) channel.readInbound();
+        LastHttpContent c = channel.readInbound();
         Assert.assertEquals(8, c.content().readableBytes());
         for (int i = 8; i > 1; i--) {
             Assert.assertEquals(content[content.length - i], c.content().readByte());
@@ -165,7 +164,7 @@ public class HttpRequestDecoderTest {
                 "Host: localhost" + crlf +
                 "EmptyHeader:" + crlf + crlf;
         channel.writeInbound(Unpooled.wrappedBuffer(request.getBytes(CharsetUtil.US_ASCII)));
-        HttpRequest req = (HttpRequest) channel.readInbound();
+        HttpRequest req = channel.readInbound();
         Assert.assertEquals("", req.headers().get("EmptyHeader"));
     }
 }

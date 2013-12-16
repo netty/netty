@@ -147,15 +147,17 @@ public class EmbeddedChannel extends AbstractChannel {
     /**
      * Return received data from this {@link Channel}
      */
-    public Object readInbound() {
-        return inboundMessages.poll();
+    @SuppressWarnings("unchecked")
+    public <T> T readInbound() {
+        return (T) inboundMessages.poll();
     }
 
     /**
      * Read data froum the outbound. This may return {@code null} if nothing is readable.
      */
-    public Object readOutbound() {
-        return outboundMessages.poll();
+    @SuppressWarnings("unchecked")
+    public <T> T readOutbound() {
+        return (T) outboundMessages.poll();
     }
 
     /**

@@ -47,13 +47,13 @@ public class HttpServerCodecTest {
         decoderEmbedder.writeInbound(prepareDataChunk(offeredContentLength));
         decoderEmbedder.finish();
 
-        HttpMessage httpMessage = (HttpMessage) decoderEmbedder.readInbound();
+        HttpMessage httpMessage = decoderEmbedder.readInbound();
         assertNotNull(httpMessage);
 
         boolean empty = true;
         int totalBytesPolled = 0;
         for (;;) {
-            HttpContent httpChunk = (HttpContent) decoderEmbedder.readInbound();
+            HttpContent httpChunk = decoderEmbedder.readInbound();
             if (httpChunk == null) {
                 break;
             }
@@ -80,7 +80,7 @@ public class HttpServerCodecTest {
         assertThat(ch.readInbound(), is(nullValue()));
 
         // Ensure the aggregator writes a 100 Continue response.
-        ByteBuf continueResponse = (ByteBuf) ch.readOutbound();
+        ByteBuf continueResponse = ch.readOutbound();
         assertThat(continueResponse.toString(CharsetUtil.UTF_8), is("HTTP/1.1 100 Continue\r\n\r\n"));
         continueResponse.release();
 
@@ -91,7 +91,7 @@ public class HttpServerCodecTest {
         ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 42 }));
 
         // Ensure the aggregator generates a full request.
-        FullHttpRequest req = (FullHttpRequest) ch.readInbound();
+        FullHttpRequest req = ch.readInbound();
         assertThat(req.headers().get(CONTENT_LENGTH), is("1"));
         assertThat(req.content().readableBytes(), is(1));
         assertThat(req.content().readByte(), is((byte) 42));
@@ -107,7 +107,7 @@ public class HttpServerCodecTest {
         ch.writeOutbound(res);
 
         // Ensure the encoder handles the response after handling 100 Continue.
-        ByteBuf encodedRes = (ByteBuf) ch.readOutbound();
+        ByteBuf encodedRes = ch.readOutbound();
         assertThat(encodedRes.toString(CharsetUtil.UTF_8), is("HTTP/1.1 201 Created\r\nContent-Length: 2\r\n\r\nOK"));
         encodedRes.release();
 
