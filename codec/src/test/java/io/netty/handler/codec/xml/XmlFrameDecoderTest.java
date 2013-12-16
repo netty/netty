@@ -36,7 +36,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
 
 public class XmlFrameDecoderTest {
@@ -147,7 +147,6 @@ public class XmlFrameDecoderTest {
             ch.writeInbound(Unpooled.copiedBuffer(xml, CharsetUtil.UTF_8));
         } catch (Exception e) {
             cause = e;
-            e.printStackTrace();
         }
         List<Object> actual = new ArrayList<Object>();
         for (;;) {
@@ -168,10 +167,10 @@ public class XmlFrameDecoderTest {
     }
 
     private String sample(String number) throws IOException, URISyntaxException {
-        String path = "io/netty/handler/codec/xml/sample-".concat(number).concat(".xml");
+        String path = "io/netty/handler/codec/xml/sample-" + number + ".xml";
         URL url = getClass().getClassLoader().getResource(path);
         if (url == null) {
-            throw new IllegalArgumentException("file not found: ".concat(path));
+            throw new IllegalArgumentException("file not found: " + path);
         }
         byte[] buf = Files.readAllBytes(Paths.get(url.toURI()));
         return StandardCharsets.UTF_8.decode(ByteBuffer.wrap(buf)).toString();
