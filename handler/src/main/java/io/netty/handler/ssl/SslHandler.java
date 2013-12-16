@@ -443,6 +443,12 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     out = ctx.alloc().buffer(maxPacketBufferSize);
                 }
 
+                if (!(pending.msg() instanceof ByteBuf)) {
+                    ctx.write(pending.msg(), (ChannelPromise) pending.recycleAndGet());
+                    pendingUnencryptedWrites.remove();
+                    continue;
+                }
+
                 ByteBuf buf = (ByteBuf) pending.msg();
                 SSLEngineResult result = wrap(engine, buf, out);
 
