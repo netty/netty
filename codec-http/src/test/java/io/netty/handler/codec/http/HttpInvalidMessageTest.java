@@ -20,7 +20,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.util.CharsetUtil;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Random;
@@ -42,7 +41,6 @@ public class HttpInvalidMessageTest {
         ensureInboundTrafficDiscarded(ch);
     }
 
-    @Ignore("expected ATM")
     @Test
     public void testRequestWithBadHeader() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpRequestDecoder());
@@ -70,7 +68,6 @@ public class HttpInvalidMessageTest {
         ensureInboundTrafficDiscarded(ch);
     }
 
-    @Ignore("expected ATM")
     @Test
     public void testResponseWithBadHeader() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
