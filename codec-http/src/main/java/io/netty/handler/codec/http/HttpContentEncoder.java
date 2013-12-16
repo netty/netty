@@ -247,7 +247,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
             // Clean-up the previous encoder if not cleaned up correctly.
             if (encoder.finish()) {
                 for (;;) {
-                    ByteBuf buf = (ByteBuf) encoder.readOutbound();
+                    ByteBuf buf = encoder.readOutbound();
                     if (buf == null) {
                         break;
                     }
@@ -275,7 +275,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
 
     private void fetchEncoderOutput(List<Object> out) {
         for (;;) {
-            ByteBuf buf = (ByteBuf) encoder.readOutbound();
+            ByteBuf buf = encoder.readOutbound();
             if (buf == null) {
                 break;
             }

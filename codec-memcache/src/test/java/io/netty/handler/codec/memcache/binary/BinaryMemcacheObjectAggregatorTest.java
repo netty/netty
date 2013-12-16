@@ -57,7 +57,7 @@ public class BinaryMemcacheObjectAggregatorTest {
         incoming.writeBytes(SET_REQUEST_WITH_CONTENT);
         channel.writeInbound(incoming);
 
-        FullBinaryMemcacheRequest request = (FullBinaryMemcacheRequest) channel.readInbound();
+        FullBinaryMemcacheRequest request = channel.readInbound();
 
         assertThat(request, instanceOf(FullBinaryMemcacheRequest.class));
         assertThat(request, notNullValue());

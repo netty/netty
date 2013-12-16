@@ -50,7 +50,7 @@ public abstract class ZlibTest {
         EmbeddedChannel chDecoderGZip = new EmbeddedChannel(createDecoder(ZlibWrapper.GZIP));
         chDecoderGZip.writeInbound(deflatedData.copy());
         assertTrue(chDecoderGZip.finish());
-        ByteBuf buf = (ByteBuf) chDecoderGZip.readInbound();
+        ByteBuf buf = chDecoderGZip.readInbound();
         assertEquals(buf, data);
         assertNull(chDecoderGZip.readInbound());
         data.release();
@@ -66,7 +66,7 @@ public abstract class ZlibTest {
 
         EmbeddedChannel chDecoderZlib = new EmbeddedChannel(createDecoder(decoderWrapper));
         for (;;) {
-            ByteBuf deflatedData = (ByteBuf) chEncoder.readOutbound();
+            ByteBuf deflatedData = chEncoder.readOutbound();
             if (deflatedData == null) {
                 break;
             }
@@ -76,7 +76,7 @@ public abstract class ZlibTest {
         byte[] decompressed = new byte[data.readableBytes()];
         int offset = 0;
         for (;;) {
-            ByteBuf buf = (ByteBuf) chDecoderZlib.readInbound();
+            ByteBuf buf = chDecoderZlib.readInbound();
             if (buf == null) {
                 break;
             }
@@ -114,7 +114,7 @@ public abstract class ZlibTest {
 
         EmbeddedChannel chDecoderZlib = new EmbeddedChannel(createDecoder(decoderWrapper));
         for (;;) {
-            ByteBuf deflatedData = (ByteBuf) chEncoder.readOutbound();
+            ByteBuf deflatedData = chEncoder.readOutbound();
             if (deflatedData == null) {
                 break;
             }
@@ -123,7 +123,7 @@ public abstract class ZlibTest {
 
         // Decoder should not generate anything at all.
         for (;;) {
-            ByteBuf buf = (ByteBuf) chDecoderZlib.readInbound();
+            ByteBuf buf = chDecoderZlib.readInbound();
             if (buf == null) {
                 break;
             }
