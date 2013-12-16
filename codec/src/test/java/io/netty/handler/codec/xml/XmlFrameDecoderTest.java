@@ -155,6 +155,7 @@ public class XmlFrameDecoderTest {
                 break;
             }
             actual.add(buf.toString(CharsetUtil.UTF_8));
+            buf.release();
         }
 
         if (cause != null) {
@@ -175,5 +176,4 @@ public class XmlFrameDecoderTest {
         byte[] buf = Files.readAllBytes(Paths.get(url.toURI()));
         return StandardCharsets.UTF_8.decode(ByteBuffer.wrap(buf)).toString();
     }
-
 }
