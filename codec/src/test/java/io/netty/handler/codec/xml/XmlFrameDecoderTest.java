@@ -162,9 +162,13 @@ public class XmlFrameDecoderTest {
             actual.add(cause.getClass());
         }
 
-        List<Object> expectedList = new ArrayList<Object>();
-        Collections.addAll(expectedList, expected);
-        assertThat(actual, is(expectedList));
+        try {
+            List<Object> expectedList = new ArrayList<Object>();
+            Collections.addAll(expectedList, expected);
+            assertThat(actual, is(expectedList));
+        } finally {
+            ch.finish();
+        }
     }
 
     private String sample(String number) throws IOException, URISyntaxException {
