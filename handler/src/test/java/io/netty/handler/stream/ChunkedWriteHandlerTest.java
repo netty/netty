@@ -23,6 +23,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import org.junit.Test;
+
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -30,7 +31,7 @@ import java.io.IOException;
 import java.nio.channels.Channels;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static io.netty.util.ReferenceCountUtil.releaseLater;
+import static io.netty.util.ReferenceCountUtil.*;
 import static org.junit.Assert.*;
 
 public class ChunkedWriteHandlerTest {
@@ -193,7 +194,7 @@ public class ChunkedWriteHandlerTest {
         int i = 0;
         int read = 0;
         for (;;) {
-            ByteBuf buffer = (ByteBuf) ch.readOutbound();
+            ByteBuf buffer = ch.readOutbound();
             if (buffer == null) {
                 break;
             }

@@ -57,7 +57,7 @@ public class BinaryMemcacheEncoderTest {
         boolean result = channel.writeOutbound(request);
         assertThat(result, is(true));
 
-        ByteBuf written = (ByteBuf) channel.readOutbound();
+        ByteBuf written = channel.readOutbound();
         assertThat(written.readableBytes(), is(DEFAULT_HEADER_SIZE));
         assertThat(written.readByte(), is((byte) 0x80));
         assertThat(written.readByte(), is((byte) 0x00));
@@ -74,7 +74,7 @@ public class BinaryMemcacheEncoderTest {
         boolean result = channel.writeOutbound(request);
         assertThat(result, is(true));
 
-        ByteBuf written = (ByteBuf) channel.readOutbound();
+        ByteBuf written = channel.readOutbound();
         assertThat(written.readableBytes(), is(DEFAULT_HEADER_SIZE));
         assertThat(written.readByte(), is((byte) 0xAA));
         assertThat(written.readByte(), is(BinaryMemcacheOpcodes.GET));
@@ -93,7 +93,7 @@ public class BinaryMemcacheEncoderTest {
         boolean result = channel.writeOutbound(request);
         assertThat(result, is(true));
 
-        ByteBuf written = (ByteBuf) channel.readOutbound();
+        ByteBuf written = channel.readOutbound();
         assertThat(written.readableBytes(), is(DEFAULT_HEADER_SIZE + extrasLength));
         written.readBytes(DEFAULT_HEADER_SIZE);
         assertThat(written.readBytes(extrasLength).toString(CharsetUtil.UTF_8), equalTo(extrasContent));
@@ -111,7 +111,7 @@ public class BinaryMemcacheEncoderTest {
         boolean result = channel.writeOutbound(request);
         assertThat(result, is(true));
 
-        ByteBuf written = (ByteBuf) channel.readOutbound();
+        ByteBuf written = channel.readOutbound();
         assertThat(written.readableBytes(), is(DEFAULT_HEADER_SIZE + keyLength));
         written.readBytes(DEFAULT_HEADER_SIZE);
         assertThat(written.readBytes(keyLength).toString(CharsetUtil.UTF_8), equalTo(key));
@@ -137,9 +137,9 @@ public class BinaryMemcacheEncoderTest {
         result = channel.writeOutbound(content2);
         assertThat(result, is(true));
 
-        ByteBuf written = (ByteBuf) channel.readOutbound();
+        ByteBuf written = channel.readOutbound();
         assertThat(written.readableBytes(), is(DEFAULT_HEADER_SIZE));
-        written = (ByteBuf) channel.readOutbound();
+        written = channel.readOutbound();
         assertThat(written.readableBytes(), is(content1.content().readableBytes()));
         assertThat(
                 written.readBytes(content1.content().readableBytes()).toString(CharsetUtil.UTF_8),
@@ -147,7 +147,7 @@ public class BinaryMemcacheEncoderTest {
         );
         written.release();
 
-        written = (ByteBuf) channel.readOutbound();
+        written = channel.readOutbound();
         assertThat(written.readableBytes(), is(content2.content().readableBytes()));
         assertThat(
                 written.readBytes(content2.content().readableBytes()).toString(CharsetUtil.UTF_8),

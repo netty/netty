@@ -24,7 +24,7 @@ import org.junit.Test;
 
 import java.util.List;
 
-import static io.netty.util.ReferenceCountUtil.releaseLater;
+import static io.netty.util.ReferenceCountUtil.*;
 import static org.junit.Assert.*;
 
 public class ReplayingDecoderTest {
@@ -122,7 +122,7 @@ public class ReplayingDecoderTest {
 
         ByteBuf buf = Unpooled.wrappedBuffer(new byte[] {'a', 'b', 'c'});
         channel.writeInbound(buf.copy());
-        ByteBuf b = (ByteBuf) channel.readInbound();
+        ByteBuf b = channel.readInbound();
         assertEquals(b, buf.skipBytes(1));
         b.release();
         buf.release();
@@ -146,7 +146,7 @@ public class ReplayingDecoderTest {
 
         ByteBuf buf = Unpooled.wrappedBuffer(new byte[] {'a', 'b', 'c'});
         channel.writeInbound(buf.copy());
-        ByteBuf b = (ByteBuf) channel.readInbound();
+        ByteBuf b = channel.readInbound();
 
         assertEquals("Expect to have still all bytes in the buffer", b, buf);
         b.release();
@@ -172,7 +172,7 @@ public class ReplayingDecoderTest {
         });
 
         channel.writeInbound(buf.copy());
-        ByteBuf b = (ByteBuf) channel.readInbound();
+        ByteBuf b = channel.readInbound();
         assertEquals(b, Unpooled.wrappedBuffer(new byte[] { 'b', 'c'}));
         b.release();
         buf.release();

@@ -16,7 +16,6 @@
 package io.netty.handler.codec.bytes;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.internal.EmptyArrays;
 import org.junit.Before;
@@ -50,7 +49,7 @@ public class ByteArrayEncoderTest {
     @Test
     public void testEncodeEmpty() {
         ch.writeOutbound(EmptyArrays.EMPTY_BYTES);
-        assertThat((ByteBuf) ch.readOutbound(), is(Unpooled.EMPTY_BUFFER));
+        assertThat((ByteBuf) ch.readOutbound(), is(EMPTY_BUFFER));
     }
 
     @Test

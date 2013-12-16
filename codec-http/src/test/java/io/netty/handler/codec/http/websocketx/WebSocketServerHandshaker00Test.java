@@ -72,7 +72,7 @@ public class WebSocketServerHandshaker00Test {
 
         EmbeddedChannel ch2 = new EmbeddedChannel(new HttpResponseDecoder());
         ch2.writeInbound(ch.readOutbound());
-        HttpResponse res = (HttpResponse) ch2.readInbound();
+        HttpResponse res = ch2.readInbound();
 
         Assert.assertEquals("ws://example.com/chat", res.headers().get(Names.SEC_WEBSOCKET_LOCATION));
         if (subProtocol) {
@@ -80,7 +80,7 @@ public class WebSocketServerHandshaker00Test {
         } else {
             Assert.assertNull(res.headers().get(Names.SEC_WEBSOCKET_PROTOCOL));
         }
-        LastHttpContent content = (LastHttpContent) ch2.readInbound();
+        LastHttpContent content = ch2.readInbound();
 
         Assert.assertEquals("8jKS'y:G*Co,Wxa-", content.content().toString(CharsetUtil.US_ASCII));
         content.release();

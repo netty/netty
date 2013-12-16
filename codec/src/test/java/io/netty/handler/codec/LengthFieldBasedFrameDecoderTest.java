@@ -21,7 +21,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.Assert;
 import org.junit.Test;
 
-import static io.netty.util.ReferenceCountUtil.releaseLater;
+import static io.netty.util.ReferenceCountUtil.*;
 
 public class LengthFieldBasedFrameDecoderTest {
 
@@ -43,7 +43,7 @@ public class LengthFieldBasedFrameDecoderTest {
         }
         Assert.assertTrue(channel.finish());
 
-        ByteBuf b = (ByteBuf) channel.readInbound();
+        ByteBuf b = channel.readInbound();
         Assert.assertEquals(5, b.readableBytes());
         Assert.assertEquals(1, b.readInt());
         Assert.assertEquals('a', b.readByte());
@@ -73,7 +73,7 @@ public class LengthFieldBasedFrameDecoderTest {
 
         Assert.assertTrue(channel.finish());
 
-        ByteBuf b = (ByteBuf) channel.readInbound();
+        ByteBuf b = channel.readInbound();
         Assert.assertEquals(5, b.readableBytes());
         Assert.assertEquals(1, b.readInt());
         Assert.assertEquals('a', b.readByte());

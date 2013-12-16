@@ -29,7 +29,7 @@ public class StringEncoderTest {
         EmbeddedChannel channel = new EmbeddedChannel(new StringEncoder());
         Assert.assertTrue(channel.writeOutbound(msg));
         Assert.assertTrue(channel.finish());
-        ByteBuf buf = (ByteBuf) channel.readOutbound();
+        ByteBuf buf = channel.readOutbound();
         byte[] data = new byte[buf.readableBytes()];
         buf.readBytes(data);
         Assert.assertArrayEquals(msg.getBytes(CharsetUtil.UTF_8), data);

@@ -71,10 +71,10 @@ public class HttpRequestDecoderTest {
     private static void testDecodeWholeRequestAtOnce(byte[] content) {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
         assertTrue(channel.writeInbound(Unpooled.wrappedBuffer(content)));
-        HttpRequest req = (HttpRequest) channel.readInbound();
+        HttpRequest req = channel.readInbound();
         assertNotNull(req);
         checkHeaders(req.headers());
-        LastHttpContent c = (LastHttpContent) channel.readInbound();
+        LastHttpContent c = channel.readInbound();
         assertEquals(CONTENT_LENGTH, c.content().readableBytes());
         assertEquals(
                 Unpooled.wrappedBuffer(content, content.length - CONTENT_LENGTH, CONTENT_LENGTH),
@@ -145,12 +145,12 @@ public class HttpRequestDecoderTest {
             channel.writeInbound(Unpooled.wrappedBuffer(content, content.length - i, 1));
         }
 
-        HttpRequest req = (HttpRequest) channel.readInbound();
+        HttpRequest req = channel.readInbound();
         assertNotNull(req);
         checkHeaders(req.headers());
 
         for (int i = CONTENT_LENGTH; i > 1; i --) {
-            HttpContent c = (HttpContent) channel.readInbound();
+            HttpContent c = channel.readInbound();
             assertEquals(1, c.content().readableBytes());
             assertEquals(content[content.length - i], c.content().readByte());
             c.release();
@@ -173,7 +173,7 @@ public class HttpRequestDecoderTest {
                 "Host: localhost" + crlf +
                 "EmptyHeader:" + crlf + crlf;
         channel.writeInbound(Unpooled.wrappedBuffer(request.getBytes(CharsetUtil.US_ASCII)));
-        HttpRequest req = (HttpRequest) channel.readInbound();
+        HttpRequest req = channel.readInbound();
         assertEquals("", req.headers().get("EmptyHeader"));
     }
 }
