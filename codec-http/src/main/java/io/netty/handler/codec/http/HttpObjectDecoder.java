@@ -399,8 +399,8 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
 
         // Handle the last unfinished message.
         if (message != null) {
-            // Get the length of the content received so far for the last message.
             HttpMessage message = this.message;
+            this.message = null;
 
             // Check if the closure of the connection signifies the end of the content.
             boolean prematureClosure;
