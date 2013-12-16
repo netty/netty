@@ -171,7 +171,9 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     public ChannelGroupFuture disconnect() {
         return disconnect(ChannelMatchers.all());
     }
+
     @Override
+    @Deprecated
     public ChannelGroupFuture deregister() {
         return deregister(ChannelMatchers.all());
     }
@@ -216,6 +218,11 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     @Override
     public ChannelGroup flush() {
         return flush(ChannelMatchers.all());
+    }
+
+    @Override
+    public ChannelGroupFuture flushAndWrite(Object message) {
+        return writeAndFlush(message);
     }
 
     @Override
@@ -270,6 +277,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     }
 
     @Override
+    @Deprecated
     public ChannelGroupFuture deregister(ChannelMatcher matcher) {
         if (matcher == null) {
             throw new NullPointerException("matcher");
@@ -300,6 +308,11 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
             }
         }
         return this;
+    }
+
+    @Override
+    public ChannelGroupFuture flushAndWrite(Object message, ChannelMatcher matcher) {
+        return writeAndFlush(message, matcher);
     }
 
     @Override
