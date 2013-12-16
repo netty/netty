@@ -24,14 +24,12 @@ import org.jboss.marshalling.MarshallingConfiguration;
 import org.jboss.marshalling.Unmarshaller;
 import org.junit.Test;
 
-import java.io.IOException;
-
 import static org.junit.Assert.*;
 
 public abstract class AbstractCompatibleMarshallingEncoderTest {
 
     @Test
-    public void testMarshalling() throws IOException, ClassNotFoundException {
+    public void testMarshalling() throws Exception {
         @SuppressWarnings("RedundantStringConstructorCall")
         String testObject = new String("test");
 
@@ -43,7 +41,7 @@ public abstract class AbstractCompatibleMarshallingEncoderTest {
         ch.writeOutbound(testObject);
         assertTrue(ch.finish());
 
-        ByteBuf buffer = (ByteBuf) ch.readOutbound();
+        ByteBuf buffer = ch.readOutbound();
 
         Unmarshaller unmarshaller = marshallerFactory.createUnmarshaller(configuration);
         unmarshaller.start(Marshalling.createByteInput(truncate(buffer).nioBuffer()));

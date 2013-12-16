@@ -31,7 +31,7 @@ public class SocksAuthResponseDecoderTest {
         SocksAuthResponseDecoder decoder = new SocksAuthResponseDecoder();
         EmbeddedChannel embedder = new EmbeddedChannel(decoder);
         SocksCommonTestUtils.writeMessageIntoEmbedder(embedder, msg);
-        msg = (SocksAuthResponse) embedder.readInbound();
+        msg = embedder.readInbound();
         assertSame(msg.authStatus(), authStatus);
         assertNull(embedder.readInbound());
     }

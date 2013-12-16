@@ -53,11 +53,11 @@ public class WebSocketServerHandshaker13Test {
         new WebSocketServerHandshaker13(
                 "ws://example.com/chat", "chat", false, Integer.MAX_VALUE).handshake(ch, req);
 
-        ByteBuf resBuf = (ByteBuf) ch.readOutbound();
+        ByteBuf resBuf = ch.readOutbound();
 
         EmbeddedChannel ch2 = new EmbeddedChannel(new HttpResponseDecoder());
         ch2.writeInbound(resBuf);
-        HttpResponse res = (HttpResponse) ch2.readInbound();
+        HttpResponse res = ch2.readInbound();
 
         Assert.assertEquals(
                 "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", res.headers().get(Names.SEC_WEBSOCKET_ACCEPT));

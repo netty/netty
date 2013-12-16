@@ -27,7 +27,7 @@ import org.junit.Test;
 
 import java.util.List;
 
-import static io.netty.util.ReferenceCountUtil.releaseLater;
+import static io.netty.util.ReferenceCountUtil.*;
 import static org.junit.Assert.*;
 
 public class HttpObjectAggregatorTest {
@@ -50,7 +50,7 @@ public class HttpObjectAggregatorTest {
         // this should trigger a channelRead event so return true
         assertTrue(embedder.writeInbound(chunk3));
         assertTrue(embedder.finish());
-        DefaultFullHttpRequest aggratedMessage = (DefaultFullHttpRequest) embedder.readInbound();
+        FullHttpRequest aggratedMessage = embedder.readInbound();
         assertNotNull(aggratedMessage);
 
         assertEquals(chunk1.content().readableBytes() + chunk2.content().readableBytes(),
@@ -92,7 +92,7 @@ public class HttpObjectAggregatorTest {
         // this should trigger a channelRead event so return true
         assertTrue(embedder.writeInbound(trailer));
         assertTrue(embedder.finish());
-        DefaultFullHttpRequest aggratedMessage = (DefaultFullHttpRequest) embedder.readInbound();
+        FullHttpRequest aggratedMessage = embedder.readInbound();
         assertNotNull(aggratedMessage);
 
         assertEquals(chunk1.content().readableBytes() + chunk2.content().readableBytes(),
@@ -177,7 +177,7 @@ public class HttpObjectAggregatorTest {
         // this should trigger a channelRead event so return true
         assertTrue(embedder.writeInbound(chunk3));
         assertTrue(embedder.finish());
-        FullHttpRequest aggratedMessage = (FullHttpRequest) embedder.readInbound();
+        FullHttpRequest aggratedMessage = embedder.readInbound();
         assertNotNull(aggratedMessage);
 
         assertEquals(chunk1.content().readableBytes() + chunk2.content().readableBytes(),

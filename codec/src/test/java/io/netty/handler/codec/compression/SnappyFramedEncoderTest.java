@@ -22,7 +22,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.Before;
 import org.junit.Test;
 
-import static io.netty.util.ReferenceCountUtil.releaseLater;
+import static io.netty.util.ReferenceCountUtil.*;
 import static org.junit.Assert.*;
 
 public class SnappyFramedEncoderTest {
@@ -90,7 +90,7 @@ public class SnappyFramedEncoderTest {
 
         CompositeByteBuf actual = Unpooled.compositeBuffer();
         for (;;) {
-            ByteBuf m = (ByteBuf) channel.readOutbound();
+            ByteBuf m = channel.readOutbound();
             if (m == null) {
                 break;
             }
@@ -145,7 +145,7 @@ public class SnappyFramedEncoderTest {
 
         channel.writeOutbound(in);
         assertTrue(channel.finish());
-        ByteBuf out = (ByteBuf) channel.readOutbound();
+        ByteBuf out = channel.readOutbound();
         out.release();
     }
 }

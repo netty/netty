@@ -210,7 +210,7 @@ public class LoggingHandlerTest {
         channel.writeInbound(msg);
         verify(appender);
 
-        String handledMsg = (String) channel.readInbound();
+        String handledMsg = channel.readInbound();
         assertThat(msg, is(sameInstance(handledMsg)));
         assertThat(channel.readInbound(), is(nullValue()));
     }
@@ -224,7 +224,7 @@ public class LoggingHandlerTest {
         channel.writeInbound(msg);
         verify(appender);
 
-        ByteBuf handledMsg = (ByteBuf) channel.readInbound();
+        ByteBuf handledMsg = channel.readInbound();
         assertThat(msg, is(sameInstance(handledMsg)));
         handledMsg.release();
         assertThat(channel.readInbound(), is(nullValue()));
@@ -239,7 +239,7 @@ public class LoggingHandlerTest {
         channel.writeInbound(msg);
         verify(appender);
 
-        ByteBuf handledMsg = (ByteBuf) channel.readInbound();
+        ByteBuf handledMsg = channel.readInbound();
         assertThat(msg, is(sameInstance(handledMsg)));
         assertThat(channel.readInbound(), is(nullValue()));
     }
@@ -259,7 +259,7 @@ public class LoggingHandlerTest {
         channel.writeInbound(msg);
         verify(appender);
 
-        ByteBufHolder handledMsg = (ByteBufHolder) channel.readInbound();
+        ByteBufHolder handledMsg = channel.readInbound();
         assertThat(msg, is(sameInstance(handledMsg)));
         handledMsg.release();
         assertThat(channel.readInbound(), is(nullValue()));
@@ -279,12 +279,12 @@ public class LoggingHandlerTest {
     /**
      * A custom EasyMock matcher that matches on Logback messages.
      */
-    private static class RegexLogMatcher implements IArgumentMatcher {
+    private static final class RegexLogMatcher implements IArgumentMatcher {
 
         private final String expected;
         private String actualMsg;
 
-        public RegexLogMatcher(String expected) {
+        RegexLogMatcher(String expected) {
             this.expected = expected;
         }
 

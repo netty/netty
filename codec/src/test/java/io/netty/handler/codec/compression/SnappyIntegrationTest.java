@@ -122,7 +122,7 @@ public class SnappyIntegrationTest {
         EmbeddedChannel decoder = new EmbeddedChannel(new SnappyFramedDecoder());
         try {
             encoder.writeOutbound(in.copy());
-            ByteBuf compressed = (ByteBuf) encoder.readOutbound();
+            ByteBuf compressed = encoder.readOutbound();
             assertThat(compressed, is(notNullValue()));
             assertThat(compressed, is(not(in)));
             decoder.writeInbound(compressed.retain());
