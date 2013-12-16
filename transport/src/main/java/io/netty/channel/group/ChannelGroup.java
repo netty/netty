@@ -157,10 +157,22 @@ public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
     ChannelGroupFuture writeAndFlush(Object message);
 
     /**
+     * @deprecated Use {@link #writeAndFlush(Object)} instead.
+     */
+    @Deprecated
+    ChannelGroupFuture flushAndWrite(Object message);
+
+    /**
      * Shortcut for calling {@link #write(Object)} and {@link #flush()} and only act on
      * {@link Channel}s that match the {@link ChannelMatcher}.
      */
     ChannelGroupFuture writeAndFlush(Object message, ChannelMatcher matcher);
+
+    /**
+     * @deprecated Use {@link #writeAndFlush(Object, ChannelMatcher)} instead.
+     */
+    @Deprecated
+    ChannelGroupFuture flushAndWrite(Object message, ChannelMatcher matcher);
 
     /**
      * Disconnects all {@link Channel}s in this group from their remote peers.
@@ -200,6 +212,8 @@ public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
     ChannelGroupFuture close(ChannelMatcher matcher);
 
     /**
+     * @deprecated This method will be removed in the next major feature release.
+     *
      * Deregister all {@link Channel}s in this group from their {@link EventLoop}.
      * Please note that this operation is asynchronous as {@link Channel#deregister()} is.
      *
@@ -210,6 +224,8 @@ public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
     ChannelGroupFuture deregister();
 
     /**
+     * @deprecated This method will be removed in the next major feature release.
+     *
      * Deregister all {@link Channel}s in this group from their {@link EventLoop} that match the given
      * {@link ChannelMatcher}. Please note that this operation is asynchronous as {@link Channel#deregister()} is.
      *
