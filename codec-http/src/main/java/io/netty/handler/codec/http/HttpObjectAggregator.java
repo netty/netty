@@ -15,21 +15,21 @@
  */
 package io.netty.handler.codec.http;
 
-import static io.netty.handler.codec.http.HttpHeaders.is100ContinueExpected;
-import static io.netty.handler.codec.http.HttpHeaders.removeTransferEncodingChunked;
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.TooLongFrameException;
-import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 
 import java.util.List;
+
+import static io.netty.handler.codec.http.HttpHeaders.*;
 
 /**
  * A {@link ChannelHandler} that aggregates an {@link HttpMessage}
@@ -49,8 +49,8 @@ import java.util.List;
  */
 public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
     public static final int DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS = 1024;
-    private static final ByteBuf CONTINUE = Unpooled.unreleasableBuffer(Unpooled.copiedBuffer(
-            "HTTP/1.1 100 Continue\r\n\r\n", CharsetUtil.US_ASCII));
+    private static final FullHttpResponse CONTINUE =
+            new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE, Unpooled.EMPTY_BUFFER);
 
     private final int maxContentLength;
     private FullHttpMessage currentMessage;
@@ -109,7 +109,7 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, HttpObject msg, List<Object> out) throws Exception {
+    protected void decode(final ChannelHandlerContext ctx, HttpObject msg, List<Object> out) throws Exception {
         FullHttpMessage currentMessage = this.currentMessage;
 
         if (msg instanceof HttpMessage) {
@@ -124,7 +124,14 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
             //       No need to notify the upstream handlers - just log.
             //       If decoding a response, just throw an exception.
             if (is100ContinueExpected(m)) {
-                ctx.writeAndFlush(CONTINUE.duplicate());
+                ctx.writeAndFlush(CONTINUE).addListener(new ChannelFutureListener() {
+                    @Override
+                    public void operationComplete(ChannelFuture future) throws Exception {
+                        if (!future.isSuccess()) {
+                            ctx.fireExceptionCaught(future.cause());
+                        }
+                    }
+                });
             }
 
             if (!m.getDecoderResult().isSuccess()) {
