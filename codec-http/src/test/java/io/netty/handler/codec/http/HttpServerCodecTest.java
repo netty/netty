@@ -82,6 +82,7 @@ public class HttpServerCodecTest {
         // Ensure the aggregator writes a 100 Continue response.
         ByteBuf continueResponse = (ByteBuf) ch.readOutbound();
         assertThat(continueResponse.toString(CharsetUtil.UTF_8), is("HTTP/1.1 100 Continue\r\n\r\n"));
+        continueResponse.release();
 
         // But nothing more.
         assertThat(ch.readOutbound(), is(nullValue()));
@@ -98,6 +99,17 @@ public class HttpServerCodecTest {
 
         // But nothing more.
         assertThat(ch.readInbound(), is(nullValue()));
+
+        // Send the actual response.
+        FullHttpResponse res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CREATED);
+        res.content().writeBytes("OK".getBytes(CharsetUtil.UTF_8));
+        res.headers().set(CONTENT_LENGTH, 2);
+        ch.writeOutbound(res);
+
+        // Ensure the encoder handles the response after handling 100 Continue.
+        ByteBuf encodedRes = (ByteBuf) ch.readOutbound();
+        assertThat(encodedRes.toString(CharsetUtil.UTF_8), is("HTTP/1.1 201 Created\r\nContent-Length: 2\r\n\r\nOK"));
+        encodedRes.release();
 
         ch.finish();
     }
