@@ -60,23 +60,21 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelHandl
      */
     protected abstract void initChannel(C ch) throws Exception;
 
-    @SuppressWarnings("unchecked")
     @Override
-    public final void channelRegistered(ChannelHandlerContext ctx)
-            throws Exception {
-        boolean removed = false;
+    @SuppressWarnings("unchecked")
+    public final void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+        ChannelPipeline pipeline = ctx.pipeline();
         boolean success = false;
         try {
             initChannel((C) ctx.channel());
-            ctx.pipeline().remove(this);
-            removed = true;
+            pipeline.remove(this);
             ctx.fireChannelRegistered();
             success = true;
         } catch (Throwable t) {
             logger.warn("Failed to initialize a channel. Closing: " + ctx.channel(), t);
         } finally {
-            if (!removed) {
-                ctx.pipeline().remove(this);
+            if (pipeline.context(this) != null) {
+                pipeline.remove(this);
             }
             if (!success) {
                 ctx.close();

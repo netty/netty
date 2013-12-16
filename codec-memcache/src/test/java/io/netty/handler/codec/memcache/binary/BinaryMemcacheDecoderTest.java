@@ -21,6 +21,8 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.memcache.LastMemcacheContent;
 import io.netty.handler.codec.memcache.MemcacheContent;
 import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCounted;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -30,7 +32,7 @@ import static org.hamcrest.core.IsNull.notNullValue;
 import static org.hamcrest.core.IsNull.nullValue;
 
 /**
- * Verifies the correct functionality of the {@link BinaryMemcacheDecoder}.
+ * Verifies the correct functionality of the {@link AbstractBinaryMemcacheDecoder}.
  * <p/>
  * While technically there are both a {@link BinaryMemcacheRequestDecoder} and a {@link BinaryMemcacheResponseDecoder}
  * they implement the same basics and just differ in the type of headers returned.
@@ -69,6 +71,11 @@ public class BinaryMemcacheDecoderTest {
     @Before
     public void setup() throws Exception {
         channel = new EmbeddedChannel(new BinaryMemcacheRequestDecoder());
+    }
+
+    @After
+    public void teardown() throws Exception {
+        channel.finish();
     }
 
     /**
@@ -120,6 +127,8 @@ public class BinaryMemcacheDecoderTest {
         assertThat(header.getExtrasLength(), is((byte) 0));
         assertThat(header.getTotalBodyLength(), is(11));
 
+        request.release();
+
         int expectedContentChunks = 4;
         for (int i = 1; i <= expectedContentChunks; i++) {
             MemcacheContent content = (MemcacheContent) channel.readInbound();
@@ -129,6 +138,7 @@ public class BinaryMemcacheDecoderTest {
                 assertThat(content, instanceOf(LastMemcacheContent.class));
             }
             assertThat(content.content().readableBytes(), is(2));
+            content.release();
         }
         assertThat(channel.readInbound(), nullValue());
     }
@@ -151,6 +161,8 @@ public class BinaryMemcacheDecoderTest {
         assertThat(request.getKey(), notNullValue());
         assertThat(request.getExtras(), nullValue());
 
+        request.release();
+
         MemcacheContent content1 = (MemcacheContent) channel.readInbound();
         MemcacheContent content2 = (MemcacheContent) channel.readInbound();
 
@@ -159,6 +171,9 @@ public class BinaryMemcacheDecoderTest {
 
         assertThat(content1.content().readableBytes(), is(3));
         assertThat(content2.content().readableBytes(), is(5));
+
+        content1.release();
+        content2.release();
     }
 
     /**
@@ -172,12 +187,20 @@ public class BinaryMemcacheDecoderTest {
         BinaryMemcacheRequest request = (BinaryMemcacheRequest) channel.readInbound();
         assertThat(request, instanceOf(BinaryMemcacheRequest.class));
         assertThat(request, notNullValue());
-        assertThat(channel.readInbound(), instanceOf(LastMemcacheContent.class));
+        request.release();
+
+        Object lastContent = channel.readInbound();
+        assertThat(lastContent, instanceOf(LastMemcacheContent.class));
+        ((ReferenceCounted) lastContent).release();
 
         request = (BinaryMemcacheRequest) channel.readInbound();
         assertThat(request, instanceOf(BinaryMemcacheRequest.class));
         assertThat(request, notNullValue());
-        assertThat(channel.readInbound(), instanceOf(LastMemcacheContent.class));
+        request.release();
+
+        lastContent = channel.readInbound();
+        assertThat(lastContent, instanceOf(LastMemcacheContent.class));
+        ((ReferenceCounted) lastContent).release();
     }
 
     @Test
@@ -192,36 +215,42 @@ public class BinaryMemcacheDecoderTest {
         BinaryMemcacheResponse response = (BinaryMemcacheResponse) channel.readInbound();
         assertThat(response.getHeader().getStatus(), is(BinaryMemcacheResponseStatus.KEY_ENOENT));
         assertThat(response.getHeader().getTotalBodyLength(), is(msgBody.length()));
+        response.release();
 
         // First message first content chunk
         MemcacheContent content = (MemcacheContent) channel.readInbound();
         assertThat(content, instanceOf(LastMemcacheContent.class));
         assertThat(content.content().toString(CharsetUtil.UTF_8), is(msgBody));
+        content.release();
 
         // Second message
         response = (BinaryMemcacheResponse) channel.readInbound();
         assertThat(response.getHeader().getStatus(), is(BinaryMemcacheResponseStatus.KEY_ENOENT));
         assertThat(response.getHeader().getTotalBodyLength(), is(msgBody.length()));
+        response.release();
 
         // Second message first content chunk
         content = (MemcacheContent) channel.readInbound();
         assertThat(content, instanceOf(MemcacheContent.class));
         assertThat(content.content().toString(CharsetUtil.UTF_8), is(msgBody.substring(0, 7)));
+        content.release();
 
         // Second message second content chunk
         content = (MemcacheContent) channel.readInbound();
         assertThat(content, instanceOf(LastMemcacheContent.class));
         assertThat(content.content().toString(CharsetUtil.UTF_8), is(msgBody.substring(7, 9)));
+        content.release();
 
         // Third message
         response = (BinaryMemcacheResponse) channel.readInbound();
         assertThat(response.getHeader().getStatus(), is(BinaryMemcacheResponseStatus.KEY_ENOENT));
         assertThat(response.getHeader().getTotalBodyLength(), is(msgBody.length()));
+        response.release();
 
         // Third message first content chunk
         content = (MemcacheContent) channel.readInbound();
         assertThat(content, instanceOf(LastMemcacheContent.class));
         assertThat(content.content().toString(CharsetUtil.UTF_8), is(msgBody));
+        content.release();
     }
-
 }

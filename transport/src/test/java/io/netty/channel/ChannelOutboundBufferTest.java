@@ -39,11 +39,7 @@ public class ChannelOutboundBufferTest {
             assertNull(b);
         }
         assertEquals(0, buffer.nioBufferCount());
-        for (;;) {
-            if (!buffer.remove()) {
-                break;
-            }
-        }
+        release(buffer);
     }
 
     @Test
@@ -77,11 +73,7 @@ public class ChannelOutboundBufferTest {
                 assertNull(buffers[i]);
             }
         }
-        for (;;) {
-            if (!buffer.remove()) {
-                break;
-            }
-        }
+        release(buffer);
     }
 
     @Test
@@ -105,11 +97,8 @@ public class ChannelOutboundBufferTest {
         for (ByteBuffer nioBuf: nioBuffers) {
             assertEquals(nioBuf, buf.internalNioBuffer(0, buf.readableBytes()));
         }
-        for (;;) {
-            if (!buffer.remove()) {
-                break;
-            }
-        }
+        release(buffer);
+        buf.release();
     }
 
     @Test
@@ -140,6 +129,11 @@ public class ChannelOutboundBufferTest {
                 assertNull(buffers[i]);
             }
         }
+        release(buffer);
+        buf.release();
+    }
+
+    private static void release(ChannelOutboundBuffer buffer) {
         for (;;) {
             if (!buffer.remove()) {
                 break;

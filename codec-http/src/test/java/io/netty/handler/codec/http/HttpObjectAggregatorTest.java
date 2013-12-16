@@ -27,6 +27,7 @@ import org.junit.Test;
 
 import java.util.List;
 
+import static io.netty.util.ReferenceCountUtil.releaseLater;
 import static org.junit.Assert.*;
 
 public class HttpObjectAggregatorTest {
@@ -99,7 +100,6 @@ public class HttpObjectAggregatorTest {
         assertEquals(aggratedMessage.headers().get("X-Test"), Boolean.TRUE.toString());
         assertEquals(aggratedMessage.headers().get("X-Trailer"), Boolean.TRUE.toString());
         checkContentBuffer(aggratedMessage);
-
         assertNull(embedder.readInbound());
     }
 
@@ -109,9 +109,9 @@ public class HttpObjectAggregatorTest {
         EmbeddedChannel embedder = new EmbeddedChannel(aggr);
         HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1,
                 HttpMethod.GET, "http://localhost");
-        HttpContent chunk1 = new DefaultHttpContent(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII));
-        HttpContent chunk2 = new DefaultHttpContent(Unpooled.copiedBuffer("test2", CharsetUtil.US_ASCII));
-        HttpContent chunk3 = new DefaultHttpContent(Unpooled.copiedBuffer("test3", CharsetUtil.US_ASCII));
+        HttpContent chunk1 = releaseLater(new DefaultHttpContent(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII)));
+        HttpContent chunk2 = releaseLater(new DefaultHttpContent(Unpooled.copiedBuffer("test2", CharsetUtil.US_ASCII)));
+        HttpContent chunk3 = releaseLater(new DefaultHttpContent(Unpooled.copiedBuffer("test3", CharsetUtil.US_ASCII)));
         HttpContent chunk4 = LastHttpContent.EMPTY_LAST_CONTENT;
 
         assertFalse(embedder.writeInbound(message));
@@ -135,6 +135,7 @@ public class HttpObjectAggregatorTest {
         }
         assertFalse(embedder.writeInbound(chunk3.copy()));
         assertFalse(embedder.writeInbound(chunk4.copy()));
+        embedder.finish();
     }
 
     @Test(expected = IllegalArgumentException.class)

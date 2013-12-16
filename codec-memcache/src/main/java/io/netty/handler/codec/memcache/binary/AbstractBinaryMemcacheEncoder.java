@@ -18,19 +18,20 @@ package io.netty.handler.codec.memcache.binary;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
-import io.netty.handler.codec.memcache.MemcacheObjectEncoder;
+import io.netty.handler.codec.memcache.AbstractMemcacheObjectEncoder;
 import io.netty.util.CharsetUtil;
 
 /**
  * A {@link MessageToByteEncoder} that encodes binary memache messages into bytes.
  */
-public abstract class BinaryMemcacheEncoder<M extends BinaryMemcacheMessage<H>, H extends BinaryMemcacheMessageHeader>
-    extends MemcacheObjectEncoder<M> {
+public abstract class AbstractBinaryMemcacheEncoder
+        <M extends BinaryMemcacheMessage<H>, H extends BinaryMemcacheMessageHeader>
+    extends AbstractMemcacheObjectEncoder<M> {
 
     /**
      * Every binary memcache message has at least a 24 bytes header.
      */
-    public static final int DEFAULT_BUFFER_SIZE = 24;
+    private static final int DEFAULT_BUFFER_SIZE = 24;
 
     @Override
     protected ByteBuf encodeMessage(ChannelHandlerContext ctx, M msg) {
@@ -50,7 +51,7 @@ public abstract class BinaryMemcacheEncoder<M extends BinaryMemcacheMessage<H>, 
      * @param extras the extras to encode.
      */
     private static void encodeExtras(ByteBuf buf, ByteBuf extras) {
-        if (extras == null || extras.readableBytes() == 0) {
+        if (extras == null || !extras.isReadable()) {
             return;
         }
 

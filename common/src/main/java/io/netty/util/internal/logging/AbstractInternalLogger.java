@@ -29,6 +29,8 @@ public abstract class AbstractInternalLogger implements InternalLogger, Serializ
 
     private static final long serialVersionUID = -6382972526573193470L;
 
+    private static final String EXCEPTION_MESSAGE = "Unexpected exception:";
+
     private final String name;
 
     /**
@@ -65,6 +67,31 @@ public abstract class AbstractInternalLogger implements InternalLogger, Serializ
     }
 
     @Override
+    public void trace(Throwable t) {
+        trace(EXCEPTION_MESSAGE, t);
+    }
+
+    @Override
+    public void debug(Throwable t) {
+        debug(EXCEPTION_MESSAGE, t);
+    }
+
+    @Override
+    public void info(Throwable t) {
+        info(EXCEPTION_MESSAGE, t);
+    }
+
+    @Override
+    public void warn(Throwable t) {
+        warn(EXCEPTION_MESSAGE, t);
+    }
+
+    @Override
+    public void error(Throwable t) {
+        error(EXCEPTION_MESSAGE, t);
+    }
+
+    @Override
     public void log(InternalLogLevel level, String msg, Throwable cause) {
         switch (level) {
         case TRACE:
@@ -84,6 +111,29 @@ public abstract class AbstractInternalLogger implements InternalLogger, Serializ
             break;
         default:
             throw new Error();
+        }
+    }
+
+    @Override
+    public void log(InternalLogLevel level, Throwable cause) {
+        switch (level) {
+            case TRACE:
+                trace(cause);
+                break;
+            case DEBUG:
+                debug(cause);
+                break;
+            case INFO:
+                info(cause);
+                break;
+            case WARN:
+                warn(cause);
+                break;
+            case ERROR:
+                error(cause);
+                break;
+            default:
+                throw new Error();
         }
     }
 

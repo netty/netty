@@ -68,8 +68,10 @@ public class BinaryMemcacheObjectAggregatorTest {
         assertThat(request.content().readableBytes(), is(8));
         assertThat(request.content().readByte(), is((byte) 0x01));
         assertThat(request.content().readByte(), is((byte) 0x02));
+        request.release();
 
         assertThat(channel.readInbound(), nullValue());
-    }
 
+        channel.finish();
+    }
 }

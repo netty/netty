@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,15 +13,8 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.memcache;
-
-import io.netty.handler.codec.ByteToMessageDecoder;
 
 /**
- * Abstract super class for both ascii and binary decoders.
- * <p/>
- * Currently it just acts as a common denominator, but will certainly include methods once the ascii protocol
- * is implemented.
+ * Xml specific codecs.
  */
-public abstract class MemcacheObjectDecoder extends ByteToMessageDecoder {
-}
+package io.netty.handler.codec.xml;
