@@ -36,6 +36,7 @@ public final class StringUtil {
         try {
             newLine = new Formatter().format("%n").toString();
         } catch (Exception e) {
+            // Should not reach here, but just in case.
             newLine = "\n";
         }
 
@@ -89,7 +90,11 @@ public final class StringUtil {
      * The shortcut to {@link #simpleClassName(Class) simpleClassName(o.getClass())}.
      */
     public static String simpleClassName(Object o) {
-        return simpleClassName(o.getClass());
+        if (o == null) {
+            return "null_object";
+        } else {
+            return simpleClassName(o.getClass());
+        }
     }
 
     /**
@@ -97,6 +102,10 @@ public final class StringUtil {
      * with anonymous classes.
      */
     public static String simpleClassName(Class<?> clazz) {
+        if (clazz == null) {
+            return "null_class";
+        }
+
         Package pkg = clazz.getPackage();
         if (pkg != null) {
             return clazz.getName().substring(pkg.getName().length() + 1);
