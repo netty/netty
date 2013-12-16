@@ -219,8 +219,8 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     }
 
     @Override
-    public ChannelGroupFuture flushAndWrite(Object message) {
-        return flushAndWrite(message, ChannelMatchers.all());
+    public ChannelGroupFuture writeAndFlush(Object message) {
+        return writeAndFlush(message, ChannelMatchers.all());
     }
 
     @Override
@@ -303,7 +303,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     }
 
     @Override
-    public ChannelGroupFuture flushAndWrite(Object message, ChannelMatcher matcher) {
+    public ChannelGroupFuture writeAndFlush(Object message, ChannelMatcher matcher) {
         if (message == null) {
             throw new NullPointerException("message");
         }

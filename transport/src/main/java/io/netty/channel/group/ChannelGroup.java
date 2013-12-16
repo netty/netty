@@ -154,13 +154,13 @@ public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
     /**
      * Shortcut for calling {@link #write(Object)} and {@link #flush()}.
      */
-    ChannelGroupFuture flushAndWrite(Object message);
+    ChannelGroupFuture writeAndFlush(Object message);
 
     /**
      * Shortcut for calling {@link #write(Object)} and {@link #flush()} and only act on
      * {@link Channel}s that match the {@link ChannelMatcher}.
      */
-    ChannelGroupFuture flushAndWrite(Object message, ChannelMatcher matcher);
+    ChannelGroupFuture writeAndFlush(Object message, ChannelMatcher matcher);
 
     /**
      * Disconnects all {@link Channel}s in this group from their remote peers.
