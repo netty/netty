@@ -278,6 +278,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
                 try {
                     wait();
                 } catch (InterruptedException e) {
+                    // Interrupted while waiting.
                     interrupted = true;
                 } finally {
                     decWaiters();
@@ -297,6 +298,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         try {
             return await0(unit.toNanos(timeout), false);
         } catch (InterruptedException e) {
+            // Should not be raised at all.
             throw new InternalError();
         }
     }
@@ -306,6 +308,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         try {
             return await0(MILLISECONDS.toNanos(timeoutMillis), false);
         } catch (InterruptedException e) {
+            // Should not be raised at all.
             throw new InternalError();
         }
     }
@@ -323,7 +326,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             throw new InterruptedException(toString());
         }
 
-        long startTime = timeoutNanos <= 0 ? 0 : System.nanoTime();
+        long startTime = System.nanoTime();
         long waitTime = timeoutNanos;
         boolean interrupted = false;
 
