@@ -26,7 +26,7 @@ import io.netty.util.internal.AppendableCharSequence;
 
 import java.util.List;
 
-import static io.netty.buffer.ByteBufUtil.readBytes;
+import static io.netty.buffer.ByteBufUtil.*;
 
 /**
  * Decodes {@link ByteBuf}s into {@link HttpMessage}s and
@@ -107,11 +107,9 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
     private final boolean chunkedSupported;
     protected final boolean validateHeaders;
 
-    private ByteBuf content;
     private HttpMessage message;
     private long chunkSize;
     private int headerSize;
-    private int contentRead;
     private final AppendableCharSequence sb = new AppendableCharSequence(128);
 
     /**
@@ -123,12 +121,9 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         READ_INITIAL,
         READ_HEADER,
         READ_VARIABLE_LENGTH_CONTENT,
-        READ_VARIABLE_LENGTH_CONTENT_AS_CHUNKS,
         READ_FIXED_LENGTH_CONTENT,
-        READ_FIXED_LENGTH_CONTENT_AS_CHUNKS,
         READ_CHUNK_SIZE,
         READ_CHUNKED_CONTENT,
-        READ_CHUNKED_CONTENT_AS_CHUNKS,
         READ_CHUNK_DELIMITER,
         READ_CHUNK_FOOTER,
         BAD_MESSAGE
@@ -170,7 +165,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
                     "maxHeaderSize must be a positive integer: " +
                     maxHeaderSize);
         }
-        if (maxChunkSize < 0) {
+        if (maxChunkSize <= 0) {
             throw new IllegalArgumentException(
                     "maxChunkSize must be a positive integer: " +
                     maxChunkSize);
@@ -221,39 +216,28 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
             }
             if (nextState == State.SKIP_CONTROL_CHARS) {
                 // No content is expected.
-                reset(out);
+                out.add(message);
+                out.add(LastHttpContent.EMPTY_LAST_CONTENT);
+                reset();
                 return;
             }
             long contentLength = HttpHeaders.getContentLength(message, -1);
             if (contentLength == 0 || contentLength == -1 && isDecodingRequest()) {
-                content = Unpooled.EMPTY_BUFFER;
-                reset(out);
+                out.add(message);
+                out.add(LastHttpContent.EMPTY_LAST_CONTENT);
+                reset();
                 return;
             }
 
-            switch (nextState) {
-            case READ_FIXED_LENGTH_CONTENT:
-                if (contentLength > maxChunkSize || HttpHeaders.is100ContinueExpected(message)) {
-                    // Generate FullHttpMessage first.  HttpChunks will follow.
-                    checkpoint(State.READ_FIXED_LENGTH_CONTENT_AS_CHUNKS);
-                    // chunkSize will be decreased as the READ_FIXED_LENGTH_CONTENT_AS_CHUNKS
-                    // state reads data chunk by chunk.
-                    chunkSize = HttpHeaders.getContentLength(message, -1);
-                    out.add(message);
-                    return;
-                }
-                break;
-            case READ_VARIABLE_LENGTH_CONTENT:
-                if (buffer.readableBytes() > maxChunkSize || HttpHeaders.is100ContinueExpected(message)) {
-                    // Generate FullHttpMessage first.  HttpChunks will follow.
-                    checkpoint(State.READ_VARIABLE_LENGTH_CONTENT_AS_CHUNKS);
-                    out.add(message);
-                    return;
-                }
-                break;
-            default:
-                throw new IllegalStateException("Unexpected state: " + nextState);
+            assert nextState == State.READ_FIXED_LENGTH_CONTENT || nextState == State.READ_VARIABLE_LENGTH_CONTENT;
+
+            out.add(message);
+
+            if (nextState == State.READ_FIXED_LENGTH_CONTENT) {
+                // chunkSize will be decreased as the READ_FIXED_LENGTH_CONTENT state reads data chunk by chunk.
+                chunkSize = HttpHeaders.getContentLength(message, -1);
             }
+
             // We return here, this forces decode to be called again where we will decode the content
             return;
         } catch (Exception e) {
@@ -261,35 +245,25 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
             return;
         }
         case READ_VARIABLE_LENGTH_CONTENT: {
-            int toRead = actualReadableBytes();
-            if (toRead > maxChunkSize) {
-                toRead = maxChunkSize;
-            }
-            out.add(message);
-            out.add(new DefaultHttpContent(readBytes(ctx.alloc(), buffer, toRead)));
-            return;
-        }
-        case READ_VARIABLE_LENGTH_CONTENT_AS_CHUNKS: {
             // Keep reading data as a chunk until the end of connection is reached.
-            int toRead = actualReadableBytes();
-            if (toRead > maxChunkSize) {
-                toRead = maxChunkSize;
-            }
-            ByteBuf content = readBytes(ctx.alloc(), buffer, toRead);
-            if (!buffer.isReadable()) {
+            int toRead = Math.min(actualReadableBytes(), maxChunkSize);
+            if (toRead > 0) {
+                ByteBuf content = readBytes(ctx.alloc(), buffer, toRead);
+                if (buffer.isReadable()) {
+                    out.add(new DefaultHttpContent(content));
+                } else {
+                    // End of connection.
+                    out.add(new DefaultLastHttpContent(content, validateHeaders));
+                    reset();
+                }
+            } else if (!buffer.isReadable()) {
+                // End of connection.
+                out.add(LastHttpContent.EMPTY_LAST_CONTENT);
                 reset();
-                out.add(new DefaultLastHttpContent(content, validateHeaders));
-                return;
             }
-            out.add(new DefaultHttpContent(content));
             return;
         }
         case READ_FIXED_LENGTH_CONTENT: {
-            readFixedLengthContent(ctx, buffer, out);
-            return;
-        }
-        case READ_FIXED_LENGTH_CONTENT_AS_CHUNKS: {
-            long chunkSize = this.chunkSize;
             int readLimit = actualReadableBytes();
 
             // Check if the buffer is readable first as we use the readable byte count
@@ -302,28 +276,20 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
                 return;
             }
 
-            int toRead = readLimit;
-            if (toRead > maxChunkSize) {
-                toRead = maxChunkSize;
-            }
+            int toRead = Math.min(readLimit, maxChunkSize);
             if (toRead > chunkSize) {
                 toRead = (int) chunkSize;
             }
             ByteBuf content = readBytes(ctx.alloc(), buffer, toRead);
-            if (chunkSize > toRead) {
-                chunkSize -= toRead;
-            } else {
-                chunkSize = 0;
-            }
-            this.chunkSize = chunkSize;
+            chunkSize -= toRead;
 
             if (chunkSize == 0) {
                 // Read all content.
-                reset();
                 out.add(new DefaultLastHttpContent(content, validateHeaders));
-                return;
+                reset();
+            } else {
+                out.add(new DefaultHttpContent(content));
             }
-            out.add(new DefaultHttpContent(content));
             return;
         }
         /**
@@ -337,9 +303,6 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
             if (chunkSize == 0) {
                 checkpoint(State.READ_CHUNK_FOOTER);
                 return;
-            } else if (chunkSize > maxChunkSize) {
-                // A chunk is too large. Split them into multiple chunks again.
-                checkpoint(State.READ_CHUNKED_CONTENT_AS_CHUNKS);
             } else {
                 checkpoint(State.READ_CHUNKED_CONTENT);
             }
@@ -349,48 +312,19 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         }
         case READ_CHUNKED_CONTENT: {
             assert chunkSize <= Integer.MAX_VALUE;
-            HttpContent chunk = new DefaultHttpContent(readBytes(ctx.alloc(), buffer, (int) chunkSize));
-            checkpoint(State.READ_CHUNK_DELIMITER);
-            out.add(chunk);
-            return;
-        }
-        case READ_CHUNKED_CONTENT_AS_CHUNKS: {
-            assert chunkSize <= Integer.MAX_VALUE;
-            int chunkSize = (int) this.chunkSize;
-            int readLimit = actualReadableBytes();
+            int toRead = Math.min((int) chunkSize, maxChunkSize);
 
-            // Check if the buffer is readable first as we use the readable byte count
-            // to create the HttpChunk. This is needed as otherwise we may end up with
-            // create a HttpChunk instance that contains an empty buffer and so is
-            // handled like it is the last HttpChunk.
-            //
-            // See https://github.com/netty/netty/issues/433
-            if (readLimit == 0) {
-                return;
-            }
-
-            int toRead = chunkSize;
-            if (toRead > maxChunkSize) {
-                toRead = maxChunkSize;
-            }
-            if (toRead > readLimit) {
-                toRead = readLimit;
-            }
             HttpContent chunk = new DefaultHttpContent(readBytes(ctx.alloc(), buffer, toRead));
-            if (chunkSize > toRead) {
-                chunkSize -= toRead;
-            } else {
-                chunkSize = 0;
-            }
-            this.chunkSize = chunkSize;
+            chunkSize -= toRead;
+
+            out.add(chunk);
 
             if (chunkSize == 0) {
                 // Read all content.
                 checkpoint(State.READ_CHUNK_DELIMITER);
+            } else {
+                return;
             }
-
-            out.add(chunk);
-            return;
         }
         case READ_CHUNK_DELIMITER: {
             for (;;) {
@@ -410,16 +344,9 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         }
         case READ_CHUNK_FOOTER: try {
             LastHttpContent trailer = readTrailingHeaders(buffer);
-            if (maxChunkSize == 0) {
-                // Chunked encoding disabled.
-                reset(out);
-                return;
-            } else {
-                reset();
-                // The last chunk, which is empty
-                out.add(trailer);
-                return;
-            }
+            out.add(trailer);
+            reset();
+            return;
         } catch (Exception e) {
             out.add(invalidChunk(e));
             return;
@@ -427,10 +354,6 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         case BAD_MESSAGE: {
             // Keep discarding until disconnection.
             buffer.skipBytes(actualReadableBytes());
-            return;
-        }
-        default: {
-            throw new Error("Shouldn't reach here.");
         }
         }
     }
@@ -441,14 +364,8 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
 
         // Handle the last unfinished message.
         if (message != null) {
-            // Get the length of the content received so far for the last message.
             HttpMessage message = this.message;
-            int actualContentLength;
-            if (content != null) {
-                actualContentLength = content.readableBytes();
-            } else {
-                actualContentLength = 0;
-            }
+            this.message = null;
 
             // Check if the closure of the connection signifies the end of the content.
             boolean prematureClosure;
@@ -460,15 +377,11 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
                 // If the 'Content-Length' header is absent, the length of the content is determined by the end of the
                 // connection, so it is perfectly fine.
                 long expectedContentLength = HttpHeaders.getContentLength(message, -1);
-                prematureClosure = expectedContentLength >= 0 && actualContentLength != expectedContentLength;
+                prematureClosure = expectedContentLength > 0;
             }
 
             if (!prematureClosure) {
-                if (actualContentLength == 0) {
-                    out.add(LastHttpContent.EMPTY_LAST_CONTENT);
-                } else {
-                    out.add(new DefaultLastHttpContent(content, validateHeaders));
-                }
+                out.add(LastHttpContent.EMPTY_LAST_CONTENT);
             }
         }
     }
@@ -484,11 +397,8 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
             //     - http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html Section 4.4
             //     - https://github.com/netty/netty/issues/222
             if (code >= 100 && code < 200) {
-                if (code == 101 && !res.headers().contains(HttpHeaders.Names.SEC_WEBSOCKET_ACCEPT)) {
-                    // It's Hixie 76 websocket handshake response
-                    return false;
-                }
-                return true;
+                // One exception: Hixie 76 websocket handshake response
+                return !(code == 101 && !res.headers().contains(HttpHeaders.Names.SEC_WEBSOCKET_ACCEPT));
             }
 
             switch (code) {
@@ -500,28 +410,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
     }
 
     private void reset() {
-        reset(null);
-    }
-
-    private void reset(List<Object> out) {
-        if (out != null) {
-            HttpMessage message = this.message;
-            ByteBuf content = this.content;
-            LastHttpContent httpContent;
-
-            if (content == null || !content.isReadable()) {
-                httpContent = LastHttpContent.EMPTY_LAST_CONTENT;
-            } else {
-                httpContent = new DefaultLastHttpContent(content, validateHeaders);
-            }
-
-            out.add(message);
-            out.add(httpContent);
-        }
-
-        content = null;
         message = null;
-
         checkpoint(State.SKIP_CONTROL_CHARS);
     }
 
@@ -552,28 +441,6 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
                 break;
             }
         }
-    }
-
-    private void readFixedLengthContent(ChannelHandlerContext ctx, ByteBuf buffer, List<Object> out) {
-        //we have a content-length so we just read the correct number of bytes
-        long length = HttpHeaders.getContentLength(message, -1);
-        assert length <= Integer.MAX_VALUE;
-        int toRead = (int) length - contentRead;
-        if (toRead > actualReadableBytes()) {
-            toRead = actualReadableBytes();
-        }
-        contentRead += toRead;
-        if (length < contentRead) {
-            out.add(message);
-            out.add(new DefaultHttpContent(readBytes(ctx.alloc(), buffer, toRead)));
-            return;
-        }
-        if (content == null) {
-            content = readBytes(ctx.alloc(), buffer, (int) length);
-        } else {
-            content.writeBytes(buffer, (int) length);
-        }
-        reset(out);
     }
 
     private State readHeaders(ByteBuf buffer) {
