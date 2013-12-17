@@ -54,12 +54,10 @@ public class CorsHandler extends ChannelHandlerAdapter {
             request = (HttpRequest) msg;
             if (isPreflightRequest(request)) {
                 handlePreflight(ctx, request);
-            } else {
-                ctx.fireChannelRead(ReferenceCountUtil.retain(request));
+                return;
             }
-        } else {
-            ctx.fireChannelRead(msg);
         }
+        ctx.fireChannelRead(msg);
     }
 
     private void handlePreflight(final ChannelHandlerContext ctx, final HttpRequest request) {
