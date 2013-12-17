@@ -333,13 +333,14 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
             chunkSize -= toRead;
             this.chunkSize = chunkSize;
 
+            out.add(chunk);
+
             if (chunkSize == 0) {
                 // Read all content.
                 checkpoint(State.READ_CHUNK_DELIMITER);
+            } else {
+                return;
             }
-
-            out.add(chunk);
-            return;
         }
         case READ_CHUNK_DELIMITER: {
             for (;;) {
