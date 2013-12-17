@@ -124,7 +124,6 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         READ_FIXED_LENGTH_CONTENT,
         READ_CHUNK_SIZE,
         READ_CHUNKED_CONTENT,
-        READ_CHUNKED_CONTENT_AS_CHUNKS,
         READ_CHUNK_DELIMITER,
         READ_CHUNK_FOOTER,
         BAD_MESSAGE
@@ -306,9 +305,6 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
             if (chunkSize == 0) {
                 checkpoint(State.READ_CHUNK_FOOTER);
                 return;
-            } else if (chunkSize > maxChunkSize) {
-                // A chunk is too large. Split them into multiple chunks again.
-                checkpoint(State.READ_CHUNKED_CONTENT_AS_CHUNKS);
             } else {
                 checkpoint(State.READ_CHUNKED_CONTENT);
             }
@@ -317,13 +313,6 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
             return;
         }
         case READ_CHUNKED_CONTENT: {
-            assert chunkSize <= Integer.MAX_VALUE;
-            HttpContent chunk = new DefaultHttpContent(readBytes(ctx.alloc(), buffer, (int) chunkSize));
-            checkpoint(State.READ_CHUNK_DELIMITER);
-            out.add(chunk);
-            return;
-        }
-        case READ_CHUNKED_CONTENT_AS_CHUNKS: {
             assert chunkSize <= Integer.MAX_VALUE;
             int chunkSize = (int) this.chunkSize;
             int readLimit = actualReadableBytes();
@@ -338,19 +327,10 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
                 return;
             }
 
-            int toRead = chunkSize;
-            if (toRead > maxChunkSize) {
-                toRead = maxChunkSize;
-            }
-            if (toRead > readLimit) {
-                toRead = readLimit;
-            }
+            int toRead = Math.min(Math.min(chunkSize, maxChunkSize), readLimit);
+
             HttpContent chunk = new DefaultHttpContent(readBytes(ctx.alloc(), buffer, toRead));
-            if (chunkSize > toRead) {
-                chunkSize -= toRead;
-            } else {
-                chunkSize = 0;
-            }
+            chunkSize -= toRead;
             this.chunkSize = chunkSize;
 
             if (chunkSize == 0) {
