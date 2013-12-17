@@ -157,10 +157,13 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                     "write", ChannelHandlerContext.class,
                     Object.class, ChannelPromise.class).isAnnotationPresent(Skip.class)) {
                 flags |= MASK_WRITE;
-            }
-            if (handlerType.getMethod(
-                    "flush", ChannelHandlerContext.class).isAnnotationPresent(Skip.class)) {
-                flags |= MASK_FLUSH;
+
+                // flush() is skipped only when write() is also skipped to avoid the situation where
+                // flush() is handled by the event loop before write() in staged execution.
+                if (handlerType.getMethod(
+                        "flush", ChannelHandlerContext.class).isAnnotationPresent(Skip.class)) {
+                    flags |= MASK_FLUSH;
+                }
             }
         } catch (Exception e) {
             // Should never reach here.
