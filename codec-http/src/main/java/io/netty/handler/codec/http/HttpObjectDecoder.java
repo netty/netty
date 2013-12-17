@@ -264,7 +264,6 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
             return;
         }
         case READ_FIXED_LENGTH_CONTENT: {
-            long chunkSize = this.chunkSize;
             int readLimit = actualReadableBytes();
 
             // Check if the buffer is readable first as we use the readable byte count
@@ -283,7 +282,6 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
             }
             ByteBuf content = readBytes(ctx.alloc(), buffer, toRead);
             chunkSize -= toRead;
-            this.chunkSize = chunkSize;
 
             if (chunkSize == 0) {
                 // Read all content.
@@ -314,24 +312,10 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         }
         case READ_CHUNKED_CONTENT: {
             assert chunkSize <= Integer.MAX_VALUE;
-            int chunkSize = (int) this.chunkSize;
-            int readLimit = actualReadableBytes();
-
-            // Check if the buffer is readable first as we use the readable byte count
-            // to create the HttpChunk. This is needed as otherwise we may end up with
-            // create a HttpChunk instance that contains an empty buffer and so is
-            // handled like it is the last HttpChunk.
-            //
-            // See https://github.com/netty/netty/issues/433
-            if (readLimit == 0) {
-                return;
-            }
-
-            int toRead = Math.min(Math.min(chunkSize, maxChunkSize), readLimit);
+            int toRead = Math.min((int) chunkSize, maxChunkSize);
 
             HttpContent chunk = new DefaultHttpContent(readBytes(ctx.alloc(), buffer, toRead));
             chunkSize -= toRead;
-            this.chunkSize = chunkSize;
 
             out.add(chunk);
 
