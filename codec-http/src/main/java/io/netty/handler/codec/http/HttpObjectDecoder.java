@@ -417,14 +417,17 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
     }
 
     private void reset() {
+        HttpMessage message = this.message;
+        this.message = null;
+
         if (!isDecodingRequest()) {
             HttpResponse res = (HttpResponse) message;
             if (res != null && res.getStatus().code() == 101) {
                 checkpoint(State.UPGRADED);
+                return;
             }
         }
 
-        message = null;
         checkpoint(State.SKIP_CONTROL_CHARS);
     }
 
