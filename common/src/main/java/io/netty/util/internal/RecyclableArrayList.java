@@ -35,7 +35,7 @@ public final class RecyclableArrayList extends ArrayList<Object> {
 
     private static final Recycler<RecyclableArrayList> RECYCLER = new Recycler<RecyclableArrayList>() {
         @Override
-        protected RecyclableArrayList newObject(Handle handle) {
+        protected RecyclableArrayList newObject(Handle<RecyclableArrayList> handle) {
             return new RecyclableArrayList(handle);
         }
     };
@@ -56,13 +56,13 @@ public final class RecyclableArrayList extends ArrayList<Object> {
         return ret;
     }
 
-    private final Handle handle;
+    private final Handle<RecyclableArrayList> handle;
 
-    private RecyclableArrayList(Handle handle) {
+    private RecyclableArrayList(Handle<RecyclableArrayList> handle) {
         this(handle, DEFAULT_INITIAL_CAPACITY);
     }
 
-    private RecyclableArrayList(Handle handle, int initialCapacity) {
+    private RecyclableArrayList(Handle<RecyclableArrayList> handle, int initialCapacity) {
         super(initialCapacity);
         this.handle = handle;
     }

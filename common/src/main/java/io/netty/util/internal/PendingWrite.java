@@ -25,7 +25,7 @@ import io.netty.util.concurrent.Promise;
 public final class PendingWrite {
     private static final Recycler<PendingWrite> RECYCLER = new Recycler<PendingWrite>() {
         @Override
-        protected PendingWrite newObject(Handle handle) {
+        protected PendingWrite newObject(Handle<PendingWrite> handle) {
             return new PendingWrite(handle);
         }
     };
@@ -40,11 +40,11 @@ public final class PendingWrite {
         return pending;
     }
 
-    private final Recycler.Handle handle;
+    private final Recycler.Handle<PendingWrite> handle;
     private Object msg;
     private Promise<Void> promise;
 
-    private PendingWrite(Recycler.Handle handle) {
+    private PendingWrite(Recycler.Handle<PendingWrite> handle) {
         this.handle = handle;
     }
 
