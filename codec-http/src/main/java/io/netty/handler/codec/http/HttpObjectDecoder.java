@@ -126,7 +126,8 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         READ_CHUNKED_CONTENT,
         READ_CHUNK_DELIMITER,
         READ_CHUNK_FOOTER,
-        BAD_MESSAGE
+        BAD_MESSAGE,
+        UPGRADED
     }
 
     /**
@@ -354,6 +355,12 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         case BAD_MESSAGE: {
             // Keep discarding until disconnection.
             buffer.skipBytes(actualReadableBytes());
+            break;
+        }
+        case UPGRADED: {
+            // Do not touch anything read - other handler will replace this codec with the upgraded protocol codec to
+            // take the trafic over.
+            break;
         }
         }
     }
@@ -410,6 +417,13 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
     }
 
     private void reset() {
+        if (!isDecodingRequest()) {
+            HttpResponse res = (HttpResponse) message;
+            if (res != null && res.getStatus().code() == 101) {
+                checkpoint(State.UPGRADED);
+            }
+        }
+
         message = null;
         checkpoint(State.SKIP_CONTROL_CHARS);
     }
