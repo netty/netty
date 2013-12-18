@@ -42,7 +42,7 @@ public abstract class Recycler<T> {
         return o;
     }
 
-    public final boolean recycle(T o, Handle handle) {
+    public final boolean recycle(T o, Handle<T> handle) {
         @SuppressWarnings("unchecked")
         Stack<T> stack = (Stack<T>) handle;
         if (stack.parent != this) {
@@ -57,11 +57,13 @@ public abstract class Recycler<T> {
         return true;
     }
 
-    protected abstract T newObject(Handle handle);
+    protected abstract T newObject(Handle<T> handle);
 
-    public interface Handle { }
+    public interface Handle<T> {
+        void recycle(T object);
+    }
 
-    static final class Stack<T> implements Handle {
+    static final class Stack<T> implements Handle<T> {
 
         private static final int INITIAL_CAPACITY = 256;
 
@@ -76,6 +78,11 @@ public abstract class Recycler<T> {
             this.parent = parent;
             this.thread = thread;
             elements = newArray(INITIAL_CAPACITY);
+        }
+
+        @Override
+        public void recycle(T object) {
+            parent.recycle(object, this);
         }
 
         T pop() {

@@ -57,7 +57,7 @@ public final class ChannelOutboundBuffer {
 
     private static final Recycler<ChannelOutboundBuffer> RECYCLER = new Recycler<ChannelOutboundBuffer>() {
         @Override
-        protected ChannelOutboundBuffer newObject(Handle handle) {
+        protected ChannelOutboundBuffer newObject(Handle<ChannelOutboundBuffer> handle) {
             return new ChannelOutboundBuffer(handle);
         }
     };
@@ -70,7 +70,7 @@ public final class ChannelOutboundBuffer {
         return buffer;
     }
 
-    private final Handle handle;
+    private final Handle<ChannelOutboundBuffer> handle;
 
     private AbstractChannel channel;
 
@@ -98,7 +98,7 @@ public final class ChannelOutboundBuffer {
 
     private volatile int writable = 1;
 
-    private ChannelOutboundBuffer(Handle handle) {
+    private ChannelOutboundBuffer(Handle<ChannelOutboundBuffer> handle) {
         this.handle = handle;
 
         buffer = new Entry[INITIAL_CAPACITY];
@@ -618,16 +618,16 @@ public final class ChannelOutboundBuffer {
     }
 
     static final class ThreadLocalPooledByteBuf extends UnpooledDirectByteBuf {
-        private final Recycler.Handle handle;
+        private final Recycler.Handle<ThreadLocalPooledByteBuf> handle;
 
         private static final Recycler<ThreadLocalPooledByteBuf> RECYCLER = new Recycler<ThreadLocalPooledByteBuf>() {
             @Override
-            protected ThreadLocalPooledByteBuf newObject(Handle handle) {
+            protected ThreadLocalPooledByteBuf newObject(Handle<ThreadLocalPooledByteBuf> handle) {
                 return new ThreadLocalPooledByteBuf(handle);
             }
         };
 
-        private ThreadLocalPooledByteBuf(Recycler.Handle handle) {
+        private ThreadLocalPooledByteBuf(Recycler.Handle<ThreadLocalPooledByteBuf> handle) {
             super(UnpooledByteBufAllocator.DEFAULT, 256, Integer.MAX_VALUE);
             this.handle = handle;
         }
