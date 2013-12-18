@@ -110,6 +110,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
     private HttpMessage message;
     private long chunkSize;
     private int headerSize;
+    private long contentLength = Long.MIN_VALUE;
     private final AppendableCharSequence sb = new AppendableCharSequence(128);
 
     /**
@@ -222,7 +223,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
                 reset();
                 return;
             }
-            long contentLength = HttpHeaders.getContentLength(message, -1);
+            long contentLength = contentLength();
             if (contentLength == 0 || contentLength == -1 && isDecodingRequest()) {
                 out.add(message);
                 out.add(LastHttpContent.EMPTY_LAST_CONTENT);
@@ -236,7 +237,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
 
             if (nextState == State.READ_FIXED_LENGTH_CONTENT) {
                 // chunkSize will be decreased as the READ_FIXED_LENGTH_CONTENT state reads data chunk by chunk.
-                chunkSize = HttpHeaders.getContentLength(message, -1);
+                chunkSize = contentLength;
             }
 
             // We return here, this forces decode to be called again where we will decode the content
@@ -371,8 +372,6 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
 
         // Handle the last unfinished message.
         if (message != null) {
-            HttpMessage message = this.message;
-            this.message = null;
 
             // Check if the closure of the connection signifies the end of the content.
             boolean prematureClosure;
@@ -383,9 +382,9 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
                 // Compare the length of the received content and the 'Content-Length' header.
                 // If the 'Content-Length' header is absent, the length of the content is determined by the end of the
                 // connection, so it is perfectly fine.
-                long expectedContentLength = HttpHeaders.getContentLength(message, -1);
-                prematureClosure = expectedContentLength > 0;
+                prematureClosure = contentLength() > 0;
             }
+            reset();
 
             if (!prematureClosure) {
                 out.add(LastHttpContent.EMPTY_LAST_CONTENT);
@@ -419,7 +418,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
     private void reset() {
         HttpMessage message = this.message;
         this.message = null;
-
+        contentLength = Long.MIN_VALUE;
         if (!isDecodingRequest()) {
             HttpResponse res = (HttpResponse) message;
             if (res != null && res.getStatus().code() == 101) {
@@ -499,12 +498,19 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
             nextState = State.SKIP_CONTROL_CHARS;
         } else if (HttpHeaders.isTransferEncodingChunked(message)) {
             nextState = State.READ_CHUNK_SIZE;
-        } else if (HttpHeaders.getContentLength(message, -1) >= 0) {
+        } else if (contentLength() >= 0) {
             nextState = State.READ_FIXED_LENGTH_CONTENT;
         } else {
             nextState = State.READ_VARIABLE_LENGTH_CONTENT;
         }
         return nextState;
+    }
+
+    private long contentLength() {
+        if (contentLength == Long.MIN_VALUE) {
+            contentLength = HttpHeaders.getContentLength(message, -1);
+        }
+        return contentLength;
     }
 
     private LastHttpContent readTrailingHeaders(ByteBuf buffer) {
