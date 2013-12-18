@@ -94,6 +94,7 @@ public class HttpResponseDecoderTest {
             HttpContent content = ch.readInbound();
             assertEquals(32, content.content().readableBytes());
             content.content().readBytes(decodedData, 0, 32);
+            content.release();
 
             content = ch.readInbound();
             assertEquals(32, content.content().readableBytes());
