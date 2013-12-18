@@ -157,10 +157,8 @@ public abstract class WebSocketClientHandshaker {
                        "a HttpResponseDecoder or HttpClientCodec"));
                return promise;
             }
-            codec.setSingleDecode(true);
-        } else {
-            decoder.setSingleDecode(true);
         }
+
         channel.writeAndFlush(request).addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) {
