@@ -210,7 +210,7 @@ public final class ChannelFlushPromiseNotifier {
         }
     }
 
-    interface FlushCheckpoint {
+    public interface FlushCheckpoint {
         long flushCheckpoint();
         void flushCheckpoint(long checkpoint);
         ChannelPromise promise();

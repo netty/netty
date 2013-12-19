@@ -142,7 +142,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
         int writeSpinCount = -1;
 
         for (;;) {
-            Object msg = in.current(true);
+            Object msg = in.current();
             if (msg == null) {
                 // Wrote all messages.
                 clearOpWrite();

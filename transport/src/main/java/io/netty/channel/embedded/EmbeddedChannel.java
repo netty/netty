@@ -329,7 +329,7 @@ public class EmbeddedChannel extends AbstractChannel {
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
         for (;;) {
-            Object msg = in.current(false);
+            Object msg = in.current();
             if (msg == null) {
                 break;
             }

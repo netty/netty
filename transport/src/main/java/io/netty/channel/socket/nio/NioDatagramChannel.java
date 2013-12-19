@@ -16,7 +16,6 @@
 package io.netty.channel.socket.nio;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.Channel;
@@ -25,8 +24,8 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
+import io.netty.channel.DefaultChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.DefaultAddressedEnvelope;
 import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.nio.AbstractNioMessageChannel;
@@ -257,46 +256,14 @@ public final class NioDatagramChannel
             return true;
         }
 
-        ByteBufAllocator alloc = alloc();
-        boolean needsCopy = data.nioBufferCount() != 1;
-        if (!needsCopy) {
-            if (!data.isDirect() && alloc.isDirectBufferPooled()) {
-                needsCopy = true;
-            }
-        }
-        ByteBuffer nioData;
-        if (!needsCopy) {
-            nioData = data.nioBuffer();
-        } else {
-            data = alloc.directBuffer(dataLen).writeBytes(data);
-            nioData = data.nioBuffer();
-        }
-
+        ByteBuffer nioData = data.nioBuffer();
         final int writtenBytes;
         if (remoteAddress != null) {
             writtenBytes = javaChannel().send(nioData, remoteAddress);
         } else {
             writtenBytes = javaChannel().write(nioData);
         }
-
-        boolean done =  writtenBytes > 0;
-        if (needsCopy) {
-            // This means we have allocated a new buffer and need to store it back so we not need to allocate it again
-            // later
-            if (remoteAddress == null) {
-                // remoteAddress is null which means we can handle it as ByteBuf directly
-                in.current(data);
-            } else {
-                if (!done) {
-                    // store it back with all the needed informations
-                    in.current(new DefaultAddressedEnvelope<ByteBuf, SocketAddress>(data, remoteAddress));
-                } else {
-                    // Just store back the new create buffer so it is cleaned up once in.remove() is called.
-                    in.current(data);
-                }
-            }
-        }
-        return done;
+        return writtenBytes > 0;
     }
 
     @Override
@@ -536,5 +503,32 @@ public final class NioDatagramChannel
             promise.setFailure(e);
         }
         return promise;
+    }
+
+    @Override
+    protected DefaultChannelOutboundBuffer newOutboundBuffer() {
+        return new DefaultChannelOutboundBuffer(this) {
+            @Override
+            protected void addMessage(Object msg, int size, ChannelPromise promise) {
+                if (msg instanceof DatagramPacket) {
+                    DatagramPacket packet = (DatagramPacket) msg;
+                    ByteBuf content = packet.content();
+                    if (isCopyNeeded(content)) {
+                        ByteBuf buf = toDirect(content);
+                        msg = new DatagramPacket(buf, packet.recipient(), packet.sender());
+                    }
+                } else if (msg instanceof ByteBuf) {
+                    ByteBuf content = (ByteBuf) msg;
+                    if (isCopyNeeded(content)) {
+                        msg = toDirect(content);
+                    }
+                }
+                super.addMessage(msg, size, promise);
+            }
+
+            private boolean isCopyNeeded(ByteBuf buf) {
+                return !buf.isDirect() || buf.nioBufferCount() > 1;
+            }
+        };
     }
 }

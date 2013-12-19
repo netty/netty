@@ -237,7 +237,7 @@ public final class OioDatagramChannel extends AbstractOioMessageChannel implemen
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
         for (;;) {
-            final Object o = in.current(false);
+            final Object o = in.current();
             if (o == null) {
                 break;
             }

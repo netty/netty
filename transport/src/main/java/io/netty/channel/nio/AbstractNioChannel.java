@@ -15,6 +15,8 @@
  */
 package io.netty.channel.nio;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
@@ -23,6 +25,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoop;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -332,6 +335,35 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         }
     }
 
+    protected ByteBuf toDirect(ByteBuf buf) {
+        int readableBytes = buf.readableBytes();
+        if (readableBytes == 0 || buf.isDirect()) {
+            return buf;
+        }
+
+        // Non-direct buffers are copied into JDK's own internal direct buffer on every I/O.
+        // We can do a better job by using our pooled allocator. If the current allocator does not
+        // pool a direct buffer, we use a ThreadLocal based pool.
+        ByteBufAllocator alloc = alloc();
+        ByteBuf directBuf;
+        if (alloc.isDirectBufferPooled()) {
+            directBuf = alloc.directBuffer(readableBytes);
+        } else {
+            directBuf = ThreadLocalPooledByteBuf.newInstance();
+        }
+        directBuf.writeBytes(buf, buf.readerIndex(), readableBytes);
+        safeRelease(buf);
+        return directBuf;
+    }
+
+    private static void safeRelease(Object message) {
+        try {
+            ReferenceCountUtil.release(message);
+        } catch (Throwable t) {
+            logger.warn("Failed to release a message.", t);
+        }
+    }
+
     /**
      * Connect to the remote peer
      */
@@ -341,4 +373,5 @@ public abstract class AbstractNioChannel extends AbstractChannel {
      * Finish the connect
      */
     protected abstract void doFinishConnect() throws Exception;
+
 }
