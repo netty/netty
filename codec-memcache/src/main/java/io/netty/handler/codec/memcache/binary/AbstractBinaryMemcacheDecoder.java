@@ -70,80 +70,82 @@ public abstract class AbstractBinaryMemcacheDecoder
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-        switch (state) {
-            case READ_HEADER:
-                if (in.readableBytes() < 24) {
-                    return;
-                }
-                resetDecoder();
-
-                currentHeader = decodeHeader(in);
-                state = State.READ_EXTRAS;
-            case READ_EXTRAS:
-                byte extrasLength = currentHeader.getExtrasLength();
-                if (extrasLength > 0) {
-                    if (in.readableBytes() < extrasLength) {
+        while (in.isReadable()) {
+            switch (state) {
+                case READ_HEADER:
+                    if (in.readableBytes() < 24) {
                         return;
                     }
+                    resetDecoder();
 
-                    currentExtras = readBytes(ctx.alloc(), in, extrasLength);
-                }
+                    currentHeader = decodeHeader(in);
+                    state = State.READ_EXTRAS;
+                case READ_EXTRAS:
+                    byte extrasLength = currentHeader.getExtrasLength();
+                    if (extrasLength > 0) {
+                        if (in.readableBytes() < extrasLength) {
+                            return;
+                        }
 
-                state = State.READ_KEY;
-            case READ_KEY:
-                short keyLength = currentHeader.getKeyLength();
-                if (keyLength > 0) {
-                    if (in.readableBytes() < keyLength) {
-                        return;
+                        currentExtras = readBytes(ctx.alloc(), in, extrasLength);
                     }
 
-                    currentKey = in.toString(in.readerIndex(), keyLength, CharsetUtil.UTF_8);
-                    in.skipBytes(keyLength);
-                }
+                    state = State.READ_KEY;
+                case READ_KEY:
+                    short keyLength = currentHeader.getKeyLength();
+                    if (keyLength > 0) {
+                        if (in.readableBytes() < keyLength) {
+                            return;
+                        }
 
-                out.add(buildMessage(currentHeader, currentExtras, currentKey));
-                currentExtras = null;
-                state = State.READ_VALUE;
-            case READ_VALUE:
-                int valueLength = currentHeader.getTotalBodyLength()
-                    - currentHeader.getKeyLength()
-                    - currentHeader.getExtrasLength();
-                int toRead = in.readableBytes();
-                if (valueLength > 0) {
-                    if (toRead == 0) {
-                        return;
+                        currentKey = in.toString(in.readerIndex(), keyLength, CharsetUtil.UTF_8);
+                        in.skipBytes(keyLength);
                     }
 
-                    if (toRead > chunkSize) {
-                        toRead = chunkSize;
-                    }
+                    out.add(buildMessage(currentHeader, currentExtras, currentKey));
+                    currentExtras = null;
+                    state = State.READ_VALUE;
+                case READ_VALUE:
+                    int valueLength = currentHeader.getTotalBodyLength()
+                        - currentHeader.getKeyLength()
+                        - currentHeader.getExtrasLength();
+                    int toRead = in.readableBytes();
+                    if (valueLength > 0) {
+                        if (toRead == 0) {
+                            return;
+                        }
 
-                    int remainingLength = valueLength - alreadyReadChunkSize;
-                    if (toRead > remainingLength) {
-                        toRead = remainingLength;
-                    }
+                        if (toRead > chunkSize) {
+                            toRead = chunkSize;
+                        }
 
-                    ByteBuf chunkBuffer = readBytes(ctx.alloc(), in, toRead);
+                        int remainingLength = valueLength - alreadyReadChunkSize;
+                        if (toRead > remainingLength) {
+                            toRead = remainingLength;
+                        }
 
-                    MemcacheContent chunk;
-                    if ((alreadyReadChunkSize += toRead) >= valueLength) {
-                        chunk = new DefaultLastMemcacheContent(chunkBuffer);
+                        ByteBuf chunkBuffer = readBytes(ctx.alloc(), in, toRead);
+
+                        MemcacheContent chunk;
+                        if ((alreadyReadChunkSize += toRead) >= valueLength) {
+                            chunk = new DefaultLastMemcacheContent(chunkBuffer);
+                        } else {
+                            chunk = new DefaultMemcacheContent(chunkBuffer);
+                        }
+
+                        out.add(chunk);
+                        if (alreadyReadChunkSize < valueLength) {
+                            return;
+                        }
                     } else {
-                        chunk = new DefaultMemcacheContent(chunkBuffer);
+                        out.add(LastMemcacheContent.EMPTY_LAST_CONTENT);
                     }
 
-                    out.add(chunk);
-                    if (alreadyReadChunkSize < valueLength) {
-                        return;
-                    }
-                } else {
-                    out.add(LastMemcacheContent.EMPTY_LAST_CONTENT);
-                }
-
-                state = State.READ_HEADER;
-                return;
-            default:
-                throw new Error("Unknown state reached: " + state);
+                    state = State.READ_HEADER;
+                    return;
+                default:
+                    throw new Error("Unknown state reached: " + state);
+            }
         }
     }
 
