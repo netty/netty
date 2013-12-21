@@ -176,6 +176,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
                 c.endOffset = readableBytes;
             } else {
                 Component prev = components.get(cIndex - 1);
+                prev.endOffset = readableBytes();
                 c.offset = prev.endOffset;
                 c.endOffset = c.offset + readableBytes;
             }
