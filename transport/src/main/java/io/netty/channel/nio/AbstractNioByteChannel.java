@@ -111,8 +111,10 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             int messages = 0;
             boolean close = false;
             try {
+                int byteBufCapacity = allocHandle.guess();
+                int totalReadAmount = 0;
                 do {
-                    byteBuf = allocHandle.allocate(allocator);
+                    byteBuf = allocator.ioBuffer(byteBufCapacity);
                     int writable = byteBuf.writableBytes();
                     int localReadAmount = doReadBytes(byteBuf);
                     if (localReadAmount <= 0) {
@@ -121,16 +123,26 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                         close = localReadAmount < 0;
                         break;
                     }
+
                     pipeline.fireChannelRead(byteBuf);
                     byteBuf = null;
-                    allocHandle.record(localReadAmount);
+
+                    if (totalReadAmount >= Integer.MAX_VALUE - localReadAmount) {
+                        // Avoid overflow.
+                        totalReadAmount = Integer.MAX_VALUE;
+                        break;
+                    }
+
+                    totalReadAmount += localReadAmount;
                     if (localReadAmount < writable) {
-                        // we read less then what the buffer can hold so it seems like we drained it completely
+                        // Read less than what the buffer can hold,
+                        // which might mean we drained the recv buffer completely.
                         break;
                     }
                 } while (++ messages < maxMessagesPerRead);
 
                 pipeline.fireChannelReadComplete();
+                allocHandle.record(totalReadAmount);
 
                 if (close) {
                     closeOnRead(pipeline);
