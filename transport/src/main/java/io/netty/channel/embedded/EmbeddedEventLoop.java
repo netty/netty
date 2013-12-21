@@ -18,6 +18,7 @@ package io.netty.channel.embedded;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.DefaultChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.concurrent.AbstractEventExecutor;
@@ -90,7 +91,7 @@ final class EmbeddedEventLoop extends AbstractEventExecutor implements EventLoop
 
     @Override
     public ChannelFuture register(Channel channel) {
-        return register(channel, channel.newPromise());
+        return register(channel, new DefaultChannelPromise(channel, this));
     }
 
     @Override

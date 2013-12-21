@@ -256,9 +256,10 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
             throw new NullPointerException("channel");
         }
         try {
-            return nextChild().register(channel);
+            EventLoop l = nextChild();
+            return l.register(channel, new DefaultChannelPromise(channel, l));
         } catch (Throwable t) {
-            return channel.newFailedFuture(t);
+            return new FailedChannelFuture(channel, GlobalEventExecutor.INSTANCE, t);
         }
     }
 

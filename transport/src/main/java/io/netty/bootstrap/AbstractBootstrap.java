@@ -23,9 +23,11 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.DefaultChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.AttributeKey;
+import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.internal.StringUtil;
 
 import java.net.InetAddress;
@@ -267,16 +269,23 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     }
 
     private ChannelFuture doBind(final SocketAddress localAddress) {
-        final ChannelFuture regPromise = initAndRegister();
-        final Channel channel = regPromise.channel();
-        final ChannelPromise promise = channel.newPromise();
-        if (regPromise.isDone()) {
-            doBind0(regPromise, channel, localAddress, promise);
+        final ChannelFuture regFuture = initAndRegister();
+        final Channel channel = regFuture.channel();
+        if (regFuture.cause() != null) {
+            return regFuture;
+        }
+
+        final ChannelPromise promise;
+        if (regFuture.isDone()) {
+            promise = channel.newPromise();
+            doBind0(regFuture, channel, localAddress, promise);
         } else {
-            regPromise.addListener(new ChannelFutureListener() {
+            // Registration future is almost always fulfilled already, but just in case it's not.
+            promise = new DefaultChannelPromise(channel, GlobalEventExecutor.INSTANCE);
+            regFuture.addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(ChannelFuture future) throws Exception {
-                    doBind0(future, channel, localAddress, promise);
+                    doBind0(regFuture, channel, localAddress, promise);
                 }
             });
         }
@@ -293,9 +302,8 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
             return channel.newFailedFuture(t);
         }
 
-        ChannelPromise regPromise = channel.newPromise();
-        group().register(channel, regPromise);
-        if (regPromise.cause() != null) {
+        ChannelFuture regFuture = group().register(channel);
+        if (regFuture.cause() != null) {
             if (channel.isRegistered()) {
                 channel.close();
             } else {
@@ -312,7 +320,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         //         because bind() or connect() will be executed *after* the scheduled registration task is executed
         //         because register(), bind(), and connect() are all bound to the same thread.
 
-        return regPromise;
+        return regFuture;
     }
 
     abstract void init(Channel channel) throws Exception;
@@ -323,7 +331,6 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
 
         // This method is invoked before channelRegistered() is triggered.  Give user handlers a chance to set up
         // the pipeline in its channelRegistered() implementation.
-
         channel.eventLoop().execute(new Runnable() {
             @Override
             public void run() {
