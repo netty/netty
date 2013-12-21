@@ -15,7 +15,6 @@
  */
 package io.netty.buffer;
 
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
@@ -791,10 +790,10 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         buf.addComponent(Unpooled.wrappedBuffer(buf2));
         buf.writerIndex(buf.writerIndex() + 4);
         
-        Assert.assertEquals(12, buf.readableBytes());
-        Assert.assertEquals(-1, buf.readInt());
-        Assert.assertEquals(-2, buf.readInt());    
-        Assert.assertEquals(-3, buf.readInt());
+        assertEquals(12, buf.readableBytes());
+        assertEquals(-1, buf.readInt());
+        assertEquals(-2, buf.readInt());    
+        assertEquals(-3, buf.readInt());
     }
 
     @Override
