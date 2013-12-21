@@ -774,6 +774,27 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         buf.getBytes(1, data);
         assertArrayEquals(data, channel.writtenBytes());
     }
+    
+    @Test
+    public void testAddComponents() {
+        CompositeByteBuf buf = Unpooled.compositeBuffer();
+        ByteBuf buf1 = Unpooled.buffer(10);
+        ByteBuf buf2 = Unpooled.buffer(10);
+        
+        buf.writeInt(-1);
+        buf1.writeInt(-2);
+        buf2.writeInt(-3);
+        
+        buf.addComponent(Unpooled.wrappedBuffer(buf1));
+        buf.writerIndex(buf.writerIndex() + 4);
+        buf.addComponent(Unpooled.wrappedBuffer(buf2));
+        buf.writerIndex(buf.writerIndex() + 4);
+        
+        assertEquals(12, buf.readableBytes());
+        assertEquals(-1, buf.readInt());
+        assertEquals(-2, buf.readInt());    
+        assertEquals(-3, buf.readInt());
+    }
 
     @Override
     @Test
