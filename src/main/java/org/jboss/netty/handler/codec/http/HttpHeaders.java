@@ -1177,10 +1177,9 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     public abstract List<String> getAll(String name);
 
     /**
-     * Returns the all headers that this message contains.
-     *
-     * @return A {@link List} of the header name-value entries, which will be
-     *         empty if no pairs are found
+     * Returns a new {@link List} that contains all headers in this object.  Note that modifying the
+     * returned {@link List} will not affect the state of this object.  If you intend to enumerate over the header
+     * entries only, use {@link #iterator()} instead, which has much less overhead.
      */
     public abstract List<Map.Entry<String, String>> entries();
 
@@ -1198,9 +1197,9 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     public abstract boolean isEmpty();
 
     /**
-     * Gets a {@link Set} of all header names that this message contains
-     *
-     * @return A {@link Set} of all header names
+     * Returns a new {@link Set} that contains the names of all headers in this object.  Note that modifying the
+     * returned {@link Set} will not affect the state of this object.  If you intend to enumerate over the header
+     * entries only, use {@link #iterator()} instead, which has much less overhead.
      */
     public abstract Set<String> names();
 
