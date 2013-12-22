@@ -20,12 +20,12 @@ import com.sun.nio.sctp.MessageInfo;
 import com.sun.nio.sctp.NotificationHandler;
 import com.sun.nio.sctp.SctpChannel;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
+import io.netty.channel.DefaultChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
@@ -303,21 +303,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
             return true;
         }
 
-        ByteBufAllocator alloc = alloc();
-        boolean needsCopy = data.nioBufferCount() != 1;
-        if (!needsCopy) {
-            if (!data.isDirect() && alloc.isDirectBufferPooled()) {
-                needsCopy = true;
-            }
-        }
-        ByteBuffer nioData;
-        if (!needsCopy) {
-            nioData = data.nioBuffer();
-        } else {
-            data = alloc.directBuffer(dataLen).writeBytes(data);
-            nioData = data.nioBuffer();
-        }
-
+        ByteBuffer nioData = data.nioBuffer();
         final MessageInfo mi = MessageInfo.createOutgoing(association(), null, packet.streamIdentifier());
         mi.payloadProtocolID(packet.protocolIdentifier());
         mi.streamNumber(packet.streamIdentifier());
@@ -325,13 +311,6 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
         final int writtenBytes = javaChannel().send(nioData, mi);
 
         boolean done = writtenBytes > 0;
-        if (needsCopy) {
-            if (!done) {
-                in.current(new SctpMessage(mi, data));
-            } else {
-                in.current(data);
-            }
-        }
         return done;
     }
 
@@ -383,5 +362,23 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
             });
         }
         return promise;
+    }
+
+    @Override
+    protected ChannelOutboundBuffer newOutboundBuffer() {
+        return new DefaultChannelOutboundBuffer(this) {
+            @Override
+            protected void addMessage(Object msg, int pendingSize, ChannelPromise promise) {
+                if (msg instanceof SctpMessage) {
+                    SctpMessage packet = (SctpMessage) msg;
+                    ByteBuf content = packet.content();
+                    if (!content.isDirect() || content.nioBufferCount() > 1) {
+                        ByteBuf buf = toDirect(content);
+                        msg = new SctpMessage(packet.protocolIdentifier(), packet.streamIdentifier(), buf);
+                    }
+                }
+                super.addMessage(msg, pendingSize, promise);
+            }
+        };
     }
 }

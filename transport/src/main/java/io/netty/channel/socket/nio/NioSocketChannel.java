@@ -21,13 +21,12 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
+import io.netty.channel.DefaultChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.FileRegion;
 import io.netty.channel.nio.AbstractNioByteChannel;
-import io.netty.channel.socket.DefaultSocketChannelConfig;
 import io.netty.channel.socket.ServerSocketChannel;
-import io.netty.channel.socket.SocketChannelConfig;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -51,7 +50,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         }
     }
 
-    private final SocketChannelConfig config;
+    private final NioSocketChannelConfig config;
 
     /**
      * Create a new instance
@@ -75,7 +74,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
      */
     public NioSocketChannel(Channel parent, EventLoop eventLoop, SocketChannel socket) {
         super(parent, eventLoop, socket);
-        config = new DefaultSocketChannelConfig(this, socket.socket());
+        config = new DefaultNioSocketChannelConfig(this, socket.socket());
     }
 
     @Override
@@ -89,7 +88,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     }
 
     @Override
-    public SocketChannelConfig config() {
+    public NioSocketChannelConfig config() {
         return config;
     }
 
@@ -223,15 +222,16 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     }
 
     @Override
-    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+    protected void doWrite(ChannelOutboundBuffer buffer) throws Exception {
         for (;;) {
             // Do non-gathering write for a single buffer case.
-            final int msgCount = in.size();
+            final int msgCount = buffer.size();
             if (msgCount <= 1) {
-                super.doWrite(in);
+                super.doWrite(buffer);
                 return;
             }
 
+            NioSocketChannelOutboundBuffer in = (NioSocketChannelOutboundBuffer) buffer;
             // Ensure the pending writes are made of ByteBufs only.
             ByteBuffer[] nioBuffers = in.nioBuffers();
             if (nioBuffers == null) {
@@ -299,5 +299,15 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
                 break;
             }
         }
+    }
+
+    @Override
+    protected ChannelOutboundBuffer newOutboundBuffer() {
+        return NioSocketChannelOutboundBuffer.newBuffer(this);
+    }
+
+    @Override
+    protected final ByteBuf toDirect(ByteBuf buf) {
+        return super.toDirect(buf);
     }
 }
