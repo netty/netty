@@ -54,15 +54,26 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
      */
     public enum EncoderMode {
         /**
-         *  Legacy mode which should work for most. It is known to not work with OAUTH. For OAUTH use
-         *  {@link EncoderMode#RFC3986}. The W3C form recommentations this for submitting post form data.
+         * Legacy mode which should work for most. It is known to not work with OAUTH. For OAUTH use
+         * {@link EncoderMode#RFC3986}. The W3C form recommentations this for submitting post form data.
          */
         RFC1738,
 
         /**
          * Mode which is more new and is used for OAUTH
          */
-        RFC3986
+        RFC3986,
+
+        /**
+         * The HTML5 spec disallows mixed mode in multipart/form-data
+         * requests. More concretely this means that more files submitted
+         * under the same name will not be encoded using mixed mode, but
+         * will be treated as distinct fields.
+         *
+         * Reference:
+         *   http://www.w3.org/TR/html5/forms.html#multipart-form-data
+         */
+        HTML5
     }
 
     private static final Map<Pattern, String> percentEncodings = new HashMap<Pattern, String>();
@@ -371,7 +382,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
     }
 
     /**
-     * Add a series of Files associated with one File parameter (implied Mixed mode in Multipart)
+     * Add a series of Files associated with one File parameter
      *
      * @param name
      *            the name of the parameter
@@ -533,7 +544,8 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
                     duringMixedMode = false;
                 }
             } else {
-                if (currentFileUpload != null && currentFileUpload.getName().equals(fileUpload.getName())) {
+                if (encoderMode != EncoderMode.HTML5 && currentFileUpload != null
+                        && currentFileUpload.getName().equals(fileUpload.getName())) {
                     // create a new mixed mode (from previous file)
 
                     // change multipart body header of previous file into
