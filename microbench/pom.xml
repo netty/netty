@@ -67,6 +67,9 @@
             <exclude>**/AbstractMicrobenchmark.java</exclude>
             <exclude>**/*$*.class</exclude>
           </excludes>
+            <systemPropertyVariables>
+                <perfReportDir>${project.build.directory}/reports/performance/</perfReportDir>
+            </systemPropertyVariables>
         </configuration>
       </plugin>
     </plugins>

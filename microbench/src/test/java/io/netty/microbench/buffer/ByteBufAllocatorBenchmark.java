@@ -23,6 +23,9 @@ import io.netty.microbench.util.AbstractMicrobenchmark;
 import org.openjdk.jmh.annotations.GenerateMicroBenchmark;
 import org.openjdk.jmh.annotations.State;
 
+/**
+ * This class benchmarks different allocators with different allocation sizes.
+ */
 @State
 public class ByteBufAllocatorBenchmark extends AbstractMicrobenchmark {
 
