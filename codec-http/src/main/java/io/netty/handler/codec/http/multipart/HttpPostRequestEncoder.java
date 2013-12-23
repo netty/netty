@@ -571,7 +571,8 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
                             .size() - 2);
                     // remove past size
                     globalBodySize -= pastAttribute.size();
-                    String replacement = HttpPostBodyUtil.CONTENT_DISPOSITION + ": " + HttpPostBodyUtil.FORM_DATA
+                    String replacement = "--" + multipartDataBoundary + "\r\n";
+                    replacement += HttpPostBodyUtil.CONTENT_DISPOSITION + ": " + HttpPostBodyUtil.FORM_DATA
                             + "; " + HttpPostBodyUtil.NAME + "=\"" + fileUpload.getName() + "\"\r\n";
                     replacement += HttpHeaders.Names.CONTENT_TYPE + ": " + HttpPostBodyUtil.MULTIPART_MIXED + "; "
                             + HttpHeaders.Values.BOUNDARY + '=' + multipartMixedBoundary + "\r\n\r\n";
