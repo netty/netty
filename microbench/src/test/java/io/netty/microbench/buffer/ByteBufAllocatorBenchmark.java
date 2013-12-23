@@ -102,4 +102,76 @@ public class ByteBufAllocatorBenchmark extends AbstractMicrobenchmark {
         ByteBuf buffer = unpooledDirectAllocator.buffer(65536);
         buffer.release();
     }
+
+    @GenerateMicroBenchmark
+    public void pooledHeapAllocAndFree_1_0() {
+        ByteBuf buffer = pooledHeapAllocator.buffer(0);
+        buffer.release();
+    }
+
+    @GenerateMicroBenchmark
+    public void pooledHeapAllocAndFree_2_256() {
+        ByteBuf buffer = pooledHeapAllocator.buffer(256);
+        buffer.release();
+    }
+
+    @GenerateMicroBenchmark
+    public void pooledHeapAllocAndFree_3_1024() {
+        ByteBuf buffer = pooledHeapAllocator.buffer(1024);
+        buffer.release();
+    }
+
+    @GenerateMicroBenchmark
+    public void pooledHeapAllocAndFree_4_4096() {
+        ByteBuf buffer = pooledHeapAllocator.buffer(4096);
+        buffer.release();
+    }
+
+    @GenerateMicroBenchmark
+    public void pooledHeapAllocAndFree_5_16384() {
+        ByteBuf buffer = pooledHeapAllocator.buffer(16384);
+        buffer.release();
+    }
+
+    @GenerateMicroBenchmark
+    public void pooledHeapAllocAndFree_6_65536() {
+        ByteBuf buffer = pooledHeapAllocator.buffer(65536);
+        buffer.release();
+    }
+
+    @GenerateMicroBenchmark
+    public void pooledDirectAllocAndFree_1_0() {
+        ByteBuf buffer = pooledDirectAllocator.buffer(0);
+        buffer.release();
+    }
+
+    @GenerateMicroBenchmark
+    public void pooledDirectAllocAndFree_2_256() {
+        ByteBuf buffer = pooledDirectAllocator.buffer(256);
+        buffer.release();
+    }
+
+    @GenerateMicroBenchmark
+    public void pooledDirectAllocAndFree_3_1024() {
+        ByteBuf buffer = pooledDirectAllocator.buffer(1024);
+        buffer.release();
+    }
+
+    @GenerateMicroBenchmark
+    public void pooledDirectAllocAndFree_4_4096() {
+        ByteBuf buffer = pooledDirectAllocator.buffer(4096);
+        buffer.release();
+    }
+
+    @GenerateMicroBenchmark
+    public void pooledDirectAllocAndFree_5_16384() {
+        ByteBuf buffer = pooledDirectAllocator.buffer(16384);
+        buffer.release();
+    }
+
+    @GenerateMicroBenchmark
+    public void pooledDirectAllocAndFree_6_65536() {
+        ByteBuf buffer = pooledDirectAllocator.buffer(65536);
+        buffer.release();
+    }
 }
