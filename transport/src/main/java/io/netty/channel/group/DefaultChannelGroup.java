@@ -54,7 +54,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     };
 
     /**
-     * Creates a new group with a generated name amd the provided {@link EventExecutor} to notify the
+     * Creates a new group with a generated name and the provided {@link EventExecutor} to notify the
      * {@link ChannelGroupFuture}s.
      */
     public DefaultChannelGroup(EventExecutor executor) {
