@@ -545,6 +545,10 @@ public final class ChannelOutboundBuffer {
         RECYCLER.recycle(this, handle);
     }
 
+    public long totalPendingWriteBytes() {
+        return this.totalPendingSize;
+    }
+
     private static final class Entry {
         Object msg;
         ByteBuffer[] buffers;
