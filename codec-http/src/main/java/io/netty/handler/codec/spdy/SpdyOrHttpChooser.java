@@ -25,24 +25,51 @@ import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.ssl.SslHandler;
 
-import javax.net.ssl.SSLEngine;
 import java.util.List;
 
+import javax.net.ssl.SSLEngine;
+
 /**
- * {@link ChannelHandler} which is responsible to setup the {@link ChannelPipeline} either for
- * HTTP or SPDY. This offers an easy way for users to support both at the same time while not care to
- * much about the low-level details.
+ * {@link ChannelHandler} which is responsible to setup the {@link ChannelPipeline} either for HTTP or SPDY. This offers
+ * an easy way for users to support both at the same time while not care to much about the low-level details.
  */
 public abstract class SpdyOrHttpChooser extends ByteToMessageDecoder {
 
     // TODO: Replace with generic NPN handler
 
     public enum SelectedProtocol {
-        SPDY_3,
-        SPDY_3_1,
-        HTTP_1_1,
-        HTTP_1_0,
-        UNKNOWN
+        SPDY_3("spdy/3"),
+        SPDY_3_1("spdy/3.1"),
+        HTTP_1_1("http/1.1"),
+        HTTP_1_0("http/1.0"),
+        UNKNOWN("Unknown");
+
+        private String name;
+
+        private SelectedProtocol(String defaultName) {
+            this.name = defaultName;
+        }
+
+        public String getName() {
+            return this.name;
+        }
+
+        /**
+         * Get an instance of this enum based on the protocol name returned by the NPN server provider
+         *
+         * @param name
+         *            the protocol name
+         * @return the SelectedProtocol instance
+         */
+        public static SelectedProtocol getProtocolByName(String name) {
+
+            for (SelectedProtocol protocol : SelectedProtocol.values()) {
+                if (protocol.getName().equals(name)) {
+                    return protocol;
+                }
+            }
+            return UNKNOWN;
+        }
     }
 
     private final int maxSpdyContentLength;
@@ -54,8 +81,8 @@ public abstract class SpdyOrHttpChooser extends ByteToMessageDecoder {
     }
 
     /**
-     * Return the {@link SelectedProtocol} for the {@link SSLEngine}. If its not known yet implementations
-     * MUST return {@link SelectedProtocol#UNKNOWN}.
+     * Return the {@link SelectedProtocol} for the {@link SSLEngine}. If its not known yet implementations MUST return
+     * {@link SelectedProtocol#UNKNOWN}.
      *
      */
     protected abstract SelectedProtocol getProtocol(SSLEngine engine);
@@ -63,14 +90,17 @@ public abstract class SpdyOrHttpChooser extends ByteToMessageDecoder {
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         if (initPipeline(ctx)) {
-            // When we reached here we can remove this handler as its now clear what protocol we want to use
-            // from this point on. This will also take care of forward all messages.
+            // When we reached here we can remove this handler as its now clear
+            // what protocol we want to use
+            // from this point on. This will also take care of forward all
+            // messages.
             ctx.pipeline().remove(this);
         }
     }
 
     private boolean initPipeline(ChannelHandlerContext ctx) {
-        // Get the SslHandler from the ChannelPipeline so we can obtain the SslEngine from it.
+        // Get the SslHandler from the ChannelPipeline so we can obtain the
+        // SslEngine from it.
         SslHandler handler = ctx.pipeline().get(SslHandler.class);
         if (handler == null) {
             // SslHandler is needed by SPDY by design.
@@ -124,19 +154,17 @@ public abstract class SpdyOrHttpChooser extends ByteToMessageDecoder {
     }
 
     /**
-     * Create the {@link ChannelHandler} that is responsible for handling the http requests
-     * when the {@link SelectedProtocol} was {@link SelectedProtocol#HTTP_1_0} or
-     * {@link SelectedProtocol#HTTP_1_1}
+     * Create the {@link ChannelHandler} that is responsible for handling the http requests when the
+     * {@link SelectedProtocol} was {@link SelectedProtocol#HTTP_1_0} or {@link SelectedProtocol#HTTP_1_1}
      */
     protected abstract ChannelHandler createHttpRequestHandlerForHttp();
 
     /**
-     * Create the {@link ChannelHandler} that is responsible for handling the http responses
-     * when the {@link SelectedProtocol} was {@link SelectedProtocol#SPDY_3} or
-     * {@link SelectedProtocol#SPDY_3_1}.
+     * Create the {@link ChannelHandler} that is responsible for handling the http responses when the
+     * {@link SelectedProtocol} was {@link SelectedProtocol#SPDY_3} or {@link SelectedProtocol#SPDY_3_1}.
      *
-     * By default this getMethod will just delecate to {@link #createHttpRequestHandlerForHttp()}, but
-     * sub-classes may override this to change the behaviour.
+     * By default this getMethod will just delecate to {@link #createHttpRequestHandlerForHttp()}, but sub-classes may
+     * override this to change the behaviour.
      */
     protected ChannelHandler createHttpRequestHandlerForSpdy() {
         return createHttpRequestHandlerForHttp();
