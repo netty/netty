@@ -19,63 +19,33 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelOption;
-import io.netty.testsuite.transport.socket.SocketTestPermutation.Factory;
 import io.netty.testsuite.util.TestUtils;
 import io.netty.util.NetUtil;
-import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
-import org.junit.Rule;
-import org.junit.rules.TestName;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.util.List;
-import java.util.Map.Entry;
 
-public abstract class AbstractSocketTest {
+public abstract class AbstractSocketTest extends AbstractComboTestsuiteTest<ServerBootstrap, Bootstrap> {
 
-    private static final List<Entry<Factory<ServerBootstrap>, Factory<Bootstrap>>> COMBO =
-            SocketTestPermutation.socket();
-
-    private static final List<ByteBufAllocator> ALLOCATORS = SocketTestPermutation.allocator();
-
-    @Rule
-    public final TestName testName = new TestName();
-
-    protected final InternalLogger logger = InternalLoggerFactory.getInstance(getClass());
-
-    protected volatile ServerBootstrap sb;
-    protected volatile Bootstrap cb;
     protected volatile InetSocketAddress addr;
-    protected volatile Factory<Bootstrap> currentBootstrap;
 
-    protected void run() throws Throwable {
-        for (ByteBufAllocator allocator: ALLOCATORS) {
-            int i = 0;
-            for (Entry<Factory<ServerBootstrap>, Factory<Bootstrap>> e: COMBO) {
-                currentBootstrap = e.getValue();
-                sb = e.getKey().newInstance();
-                cb = e.getValue().newInstance();
-                addr = new InetSocketAddress(NetUtil.LOCALHOST, TestUtils.getFreePort());
-                sb.localAddress(addr);
-                sb.option(ChannelOption.ALLOCATOR, allocator);
-                sb.childOption(ChannelOption.ALLOCATOR, allocator);
-                cb.remoteAddress(addr);
-                cb.option(ChannelOption.ALLOCATOR, allocator);
+    protected AbstractSocketTest() {
+        super(ServerBootstrap.class, Bootstrap.class);
+    }
 
-                logger.info(String.format(
-                        "Running: %s %d of %d (%s + %s) with %s",
-                        testName.getMethodName(), ++ i, COMBO.size(), sb, cb, StringUtil.simpleClassName(allocator)));
-                try {
-                    Method m = getClass().getDeclaredMethod(
-                            TestUtils.testMethodName(testName), ServerBootstrap.class, Bootstrap.class);
-                    m.invoke(this, sb, cb);
-                } catch (InvocationTargetException ex) {
-                    throw ex.getCause();
-                }
-            }
-        }
+    @Override
+    protected List<SocketTestPermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
+        return SocketTestPermutation.socket();
+    }
+
+    @Override
+    protected void configure(ServerBootstrap bootstrap, Bootstrap bootstrap2, ByteBufAllocator allocator) {
+        addr = new InetSocketAddress(
+                NetUtil.LOCALHOST, TestUtils.getFreePort());
+        bootstrap.localAddress(addr);
+        bootstrap.option(ChannelOption.ALLOCATOR, allocator);
+        bootstrap.childOption(ChannelOption.ALLOCATOR, allocator);
+        bootstrap2.remoteAddress(addr);
+        bootstrap2.option(ChannelOption.ALLOCATOR, allocator);
     }
 }
