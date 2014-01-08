@@ -23,19 +23,13 @@ public class SpdyHeaderBlockRawDecoder extends SpdyHeaderBlockDecoder {
 
     private static final int LENGTH_FIELD_SIZE = 4;
 
-    private final int version;
     private final int maxHeaderSize;
 
     // Header block decoding fields
     private int headerSize;
     private int numHeaders = -1;
 
-    public SpdyHeaderBlockRawDecoder(SpdyVersion spdyVersion, int maxHeaderSize) {
-        if (spdyVersion == null) {
-            throw new NullPointerException("spdyVersion");
-        }
-
-        this.version = spdyVersion.getVersion();
+    public SpdyHeaderBlockRawDecoder(int maxHeaderSize) {
         this.maxHeaderSize = maxHeaderSize;
     }
 

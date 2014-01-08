@@ -71,7 +71,7 @@ public class SpdyFrameDecoder extends FrameDecoder {
      * Creates a new instance with the specified parameters.
      */
     public SpdyFrameDecoder(SpdyVersion spdyVersion, int maxChunkSize, int maxHeaderSize) {
-        this(spdyVersion, maxChunkSize, SpdyHeaderBlockDecoder.newInstance(spdyVersion, maxHeaderSize));
+        this(spdyVersion, maxChunkSize, SpdyHeaderBlockDecoder.newInstance(maxHeaderSize));
     }
 
     protected SpdyFrameDecoder(

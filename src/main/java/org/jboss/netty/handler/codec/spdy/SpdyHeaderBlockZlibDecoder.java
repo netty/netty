@@ -29,8 +29,8 @@ final class SpdyHeaderBlockZlibDecoder extends SpdyHeaderBlockRawDecoder {
 
     private final ChannelBuffer decompressed = ChannelBuffers.buffer(4096);
 
-    public SpdyHeaderBlockZlibDecoder(SpdyVersion spdyVersion, int maxHeaderSize) {
-        super(spdyVersion, maxHeaderSize);
+    public SpdyHeaderBlockZlibDecoder(int maxHeaderSize) {
+        super(maxHeaderSize);
     }
 
     @Override
