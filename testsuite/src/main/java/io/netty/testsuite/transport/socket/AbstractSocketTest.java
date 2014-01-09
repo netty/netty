@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -13,13 +13,13 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.testsuite.transport.sctp;
+package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelOption;
-import io.netty.testsuite.transport.sctp.SctpTestPermutation.Factory;
+import io.netty.testsuite.transport.socket.SocketTestPermutation.Factory;
 import io.netty.testsuite.util.TestUtils;
 import io.netty.util.NetUtil;
 import io.netty.util.internal.StringUtil;
@@ -34,11 +34,12 @@ import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Map.Entry;
 
-public abstract class AbstractSctpTest {
+public abstract class AbstractSocketTest {
 
     private static final List<Entry<Factory<ServerBootstrap>, Factory<Bootstrap>>> COMBO =
-            SctpTestPermutation.sctpChannel();
-    private static final List<ByteBufAllocator> ALLOCATORS = SctpTestPermutation.allocator();
+            SocketTestPermutation.socket();
+
+    private static final List<ByteBufAllocator> ALLOCATORS = SocketTestPermutation.allocator();
 
     @Rule
     public final TestName testName = new TestName();
@@ -57,19 +58,19 @@ public abstract class AbstractSctpTest {
                 currentBootstrap = e.getValue();
                 sb = e.getKey().newInstance();
                 cb = e.getValue().newInstance();
-                addr = new InetSocketAddress(
-                        NetUtil.LOCALHOST, TestUtils.getFreePort());
+                addr = new InetSocketAddress(NetUtil.LOCALHOST, TestUtils.getFreePort());
                 sb.localAddress(addr);
                 sb.option(ChannelOption.ALLOCATOR, allocator);
                 sb.childOption(ChannelOption.ALLOCATOR, allocator);
                 cb.remoteAddress(addr);
                 cb.option(ChannelOption.ALLOCATOR, allocator);
+
                 logger.info(String.format(
                         "Running: %s %d of %d (%s + %s) with %s",
                         testName.getMethodName(), ++ i, COMBO.size(), sb, cb, StringUtil.simpleClassName(allocator)));
                 try {
                     Method m = getClass().getDeclaredMethod(
-                            testName.getMethodName(), ServerBootstrap.class, Bootstrap.class);
+                            TestUtils.testMethodName(testName), ServerBootstrap.class, Bootstrap.class);
                     m.invoke(this, sb, cb);
                 } catch (InvocationTargetException ex) {
                     throw ex.getCause();
