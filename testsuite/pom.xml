@@ -70,9 +70,9 @@
       <version>${project.version}</version>
     </dependency>
     <dependency>
-    	<groupId>io.netty</groupId>
-    	<artifactId>netty-transport-udt</artifactId>
-    	<version>${project.version}</version>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-transport-udt</artifactId>
+      <version>${project.version}</version>
     </dependency>
   </dependencies>
 </project>
