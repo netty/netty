@@ -16,6 +16,8 @@
 package io.netty.testsuite.util;
 
 import io.netty.util.NetUtil;
+import org.junit.rules.TestName;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
@@ -109,6 +111,17 @@ public final class TestUtils {
             return true;
         }
         return false;
+    }
+
+    /**
+     * Returns the method name of the current test.
+     */
+    public static String testMethodName(TestName testName) {
+        String testMethodName = testName.getMethodName();
+        if (testMethodName.contains("[")) {
+            testMethodName = testMethodName.substring(0, testMethodName.indexOf('['));
+        }
+        return testMethodName;
     }
 
     private TestUtils() { }

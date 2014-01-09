@@ -53,8 +53,7 @@ public abstract class AbstractDatagramTest {
             for (Entry<Factory<Bootstrap>, Factory<Bootstrap>> e: COMBO) {
                 sb = e.getKey().newInstance();
                 cb = e.getValue().newInstance();
-                addr = new InetSocketAddress(
-                        NetUtil.LOCALHOST4, TestUtils.getFreePort());
+                addr = new InetSocketAddress(NetUtil.LOCALHOST4, TestUtils.getFreePort());
                 sb.localAddress(addr);
                 sb.option(ChannelOption.ALLOCATOR, allocator);
                 cb.localAddress(0).remoteAddress(addr);
@@ -64,7 +63,7 @@ public abstract class AbstractDatagramTest {
                         testName.getMethodName(), ++ i, COMBO.size(), sb, cb, StringUtil.simpleClassName(allocator)));
                 try {
                     Method m = getClass().getDeclaredMethod(
-                            testName.getMethodName(), Bootstrap.class, Bootstrap.class);
+                            TestUtils.testMethodName(testName), Bootstrap.class, Bootstrap.class);
                     m.invoke(this, sb, cb);
                 } catch (InvocationTargetException ex) {
                     throw ex.getCause();
