@@ -70,8 +70,11 @@ public abstract class AbstractSocketTest {
                         "Running: %s %d of %d (%s + %s) with %s",
                         testName.getMethodName(), ++ i, COMBO.size(), sb, cb, StringUtil.simpleClassName(allocator)));
                 try {
-                    Method m = getClass().getDeclaredMethod(
-                            testName.getMethodName(), ServerBootstrap.class, Bootstrap.class);
+                    String testMethodName = testName.getMethodName();
+                    if (testMethodName.contains("[")) {
+                        testMethodName = testMethodName.substring(0, testMethodName.indexOf('['));
+                    }
+                    Method m = getClass().getDeclaredMethod(testMethodName, ServerBootstrap.class, Bootstrap.class);
                     m.invoke(this, sb, cb);
                 } catch (InvocationTargetException ex) {
                     throw ex.getCause();
