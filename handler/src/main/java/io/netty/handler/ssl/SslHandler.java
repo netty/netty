@@ -51,8 +51,10 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -204,7 +206,7 @@ public class SslHandler extends ByteToMessageDecoder {
      * @param engine  the {@link SSLEngine} this handler will use
      */
     public SslHandler(SSLEngine engine) {
-        this(engine, ImmediateExecutor.INSTANCE);
+        this(engine, false);
     }
 
     /**
@@ -214,35 +216,23 @@ public class SslHandler extends ByteToMessageDecoder {
      * @param startTls  {@code true} if the first write request shouldn't be
      *                  encrypted by the {@link SSLEngine}
      */
+    @SuppressWarnings("deprecation")
     public SslHandler(SSLEngine engine, boolean startTls) {
         this(engine, startTls, ImmediateExecutor.INSTANCE);
     }
 
     /**
-     * Creates a new instance.
-     *
-     * @param engine
-     *        the {@link SSLEngine} this handler will use
-     * @param delegatedTaskExecutor
-     *        the {@link Executor} which will execute the delegated task
-     *        that {@link SSLEngine#getDelegatedTask()} will return
+     * @deprecated Use {@link #SslHandler(SSLEngine)} instead.
      */
+    @Deprecated
     public SslHandler(SSLEngine engine, Executor delegatedTaskExecutor) {
         this(engine, false, delegatedTaskExecutor);
     }
 
     /**
-     * Creates a new instance.
-     *
-     * @param engine
-     *        the {@link SSLEngine} this handler will use
-     * @param startTls
-     *        {@code true} if the first write request shouldn't be encrypted
-     *        by the {@link SSLEngine}
-     * @param delegatedTaskExecutor
-     *        the {@link Executor} which will execute the delegated task
-     *        that {@link SSLEngine#getDelegatedTask()} will return
+     * @deprecated Use {@link #SslHandler(SSLEngine, boolean)} instead.
      */
+    @Deprecated
     public SslHandler(SSLEngine engine, boolean startTls, Executor delegatedTaskExecutor) {
         if (engine == null) {
             throw new NullPointerException("engine");
@@ -947,14 +937,66 @@ public class SslHandler extends ByteToMessageDecoder {
         }
     }
 
+    /**
+     * Fetches all delegated tasks from the {@link SSLEngine} and runs them via the {@link #delegatedTaskExecutor}.
+     * If the {@link #delegatedTaskExecutor} is {@link ImmediateExecutor}, just call {@link Runnable#run()} directly
+     * instead of using {@link Executor#execute(Runnable)}.  Otherwise, run the tasks via
+     * the {@link #delegatedTaskExecutor} and wait until the tasks are finished.
+     */
     private void runDelegatedTasks() {
-        for (;;) {
-            Runnable task = engine.getDelegatedTask();
-            if (task == null) {
-                break;
+        if (delegatedTaskExecutor == ImmediateExecutor.INSTANCE) {
+            for (;;) {
+                Runnable task = engine.getDelegatedTask();
+                if (task == null) {
+                    break;
+                }
+
+                task.run();
+            }
+        } else {
+            final List<Runnable> tasks = new ArrayList<Runnable>(2);
+            for (;;) {
+                final Runnable task = engine.getDelegatedTask();
+                if (task == null) {
+                    break;
+                }
+
+                tasks.add(task);
             }
 
-            delegatedTaskExecutor.execute(task);
+            if (tasks.isEmpty()) {
+                return;
+            }
+
+            final CountDownLatch latch = new CountDownLatch(1);
+            delegatedTaskExecutor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        for (Runnable task: tasks) {
+                            task.run();
+                        }
+                    } catch (Exception e) {
+                        ctx.fireExceptionCaught(e);
+                    } finally {
+                        latch.countDown();
+                    }
+                }
+            });
+
+            boolean interrupted = false;
+            while (latch.getCount() != 0) {
+                try {
+                    latch.await();
+                } catch (InterruptedException e) {
+                    // Interrupt later.
+                    interrupted = true;
+                }
+            }
+
+            if (interrupted) {
+                Thread.currentThread().interrupt();
+            }
         }
     }
 
