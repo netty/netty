@@ -66,7 +66,29 @@ public abstract class AbstractSocketSslEchoTest {
     }
 
     @Test
-    public void testSslEcho() throws Throwable {
+    public void testSslEcho1() throws Throwable {
+        testSslEcho(false, false);
+    }
+
+    @Test
+    public void testSslEcho2() throws Throwable {
+        testSslEcho(false, true);
+    }
+
+    @Test
+    public void testSslEcho3() throws Throwable {
+        testSslEcho(true, false);
+    }
+
+    @Test
+    public void testSslEcho4() throws Throwable {
+        testSslEcho(true, true);
+    }
+
+
+    private void testSslEcho(
+            boolean serverUsesDelegatedTaskExecutor, boolean clientUsesDelegatedTaskExecutor) throws Throwable {
+        ExecutorService delegatedTaskExecutor = Executors.newCachedThreadPool();
         ServerBootstrap sb = new ServerBootstrap(newServerSocketChannelFactory(Executors.newCachedThreadPool()));
         ClientBootstrap cb = new ClientBootstrap(newClientSocketChannelFactory(Executors.newCachedThreadPool()));
 
@@ -82,10 +104,22 @@ public abstract class AbstractSocketSslEchoTest {
         sb.setOption("receiveBufferSize", 1048576);
         sb.setOption("receiveBufferSize", 1048576);
 
-        sb.getPipeline().addFirst("ssl", new SslHandler(sse));
+        // Configure the server pipeline.
+        if (serverUsesDelegatedTaskExecutor) {
+            sb.getPipeline().addFirst("ssl", new SslHandler(sse, delegatedTaskExecutor));
+        } else {
+            sb.getPipeline().addFirst("ssl", new SslHandler(sse));
+        }
         sb.getPipeline().addLast("handler", sh);
-        cb.getPipeline().addFirst("ssl", new SslHandler(cse));
+
+        // Configure the client pipeline.
+        if (clientUsesDelegatedTaskExecutor) {
+            cb.getPipeline().addFirst("ssl", new SslHandler(cse, delegatedTaskExecutor));
+        } else {
+            cb.getPipeline().addFirst("ssl", new SslHandler(cse));
+        }
         cb.getPipeline().addLast("handler", ch);
+
         ExecutorService eventExecutor = null;
         if (isExecutorRequired()) {
             eventExecutor = new OrderedMemoryAwareThreadPoolExecutor(16, 0, 0);
@@ -159,6 +193,7 @@ public abstract class AbstractSocketSslEchoTest {
         sb.shutdown();
         cb.releaseExternalResources();
         sb.releaseExternalResources();
+        delegatedTaskExecutor.shutdown();
 
         if (eventExecutor != null) {
             eventExecutor.shutdown();

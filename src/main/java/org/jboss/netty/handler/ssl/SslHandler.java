@@ -49,7 +49,9 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.SocketChannel;
+import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
@@ -431,7 +433,7 @@ public class SslHandler extends FrameDecoder
             handshaking = true;
             try {
                 engine.beginHandshake();
-                runDelegatedTasks();
+                runDelegatedTasks(false);
                 handshakeFuture = this.handshakeFuture = future(channel);
                 if (handshakeTimeoutInMillis > 0) {
                     handshakeTimeout = timer.newTimeout(new TimerTask() {
@@ -1037,7 +1039,7 @@ public class SslHandler extends FrameDecoder
                                     needsUnwrap = true;
                                     break loop;
                                 case NEED_TASK:
-                                    runDelegatedTasks();
+                                    runDelegatedTasks(false);
                                     break;
                                 case FINISHED:
                                 case NOT_HANDSHAKING:
@@ -1182,10 +1184,10 @@ public class SslHandler extends FrameDecoder
                 switch (handshakeStatus) {
                 case FINISHED:
                     setHandshakeSuccess(channel);
-                    runDelegatedTasks();
+                    runDelegatedTasks(false);
                     break;
                 case NEED_TASK:
-                    runDelegatedTasks();
+                    runDelegatedTasks(false);
                     break;
                 case NEED_UNWRAP:
                     if (!Thread.holdsLock(handshakeLock)) {
@@ -1294,7 +1296,7 @@ public class SslHandler extends FrameDecoder
                         wrapNonAppData(ctx, channel);
                         break;
                     case NEED_TASK:
-                        runDelegatedTasks();
+                        runDelegatedTasks(true);
                         break;
                     case FINISHED:
                         setHandshakeSuccess(channel);
@@ -1393,21 +1395,64 @@ public class SslHandler extends FrameDecoder
         }
     }
 
-    private void runDelegatedTasks() {
-        for (;;) {
-            final Runnable task;
-            synchronized (handshakeLock) {
-                task = engine.getDelegatedTask();
+    /**
+     * Fetches all delegated tasks from the {@link SSLEngine} and runs them via the {@link #delegatedTaskExecutor}.
+     * If the {@link #delegatedTaskExecutor} is {@link ImmediateExecutor}, just call {@link Runnable#run()} directly
+     * instead of using {@link Executor#execute(Runnable)}.  Otherwise, run the tasks via
+     * the {@link #delegatedTaskExecutor} and continue unwrapping so that the handshake completes.
+     */
+    private void runDelegatedTasks(final boolean unwrapLater) {
+        if (delegatedTaskExecutor == ImmediateExecutor.INSTANCE) {
+            for (;;) {
+                final Runnable task;
+                synchronized (handshakeLock) {
+                    task = engine.getDelegatedTask();
+                }
+
+                if (task == null) {
+                    break;
+                }
+
+                delegatedTaskExecutor.execute(task);
+            }
+        } else {
+            final List<Runnable> tasks = new ArrayList<Runnable>(2);
+            for (;;) {
+                final Runnable task;
+                synchronized (handshakeLock) {
+                    task = engine.getDelegatedTask();
+                }
+
+                if (task == null) {
+                    break;
+                }
+
+                tasks.add(task);
             }
 
-            if (task == null) {
-                break;
+            if (tasks.isEmpty()) {
+                return;
             }
 
             delegatedTaskExecutor.execute(new Runnable() {
                 public void run() {
-                    synchronized (handshakeLock) {
-                        task.run();
+                    try {
+                        for (Runnable task: tasks) {
+                            task.run();
+                        }
+                        if (unwrapLater) {
+                            ctx.getPipeline().execute(new Runnable() {
+                                public void run() {
+                                    try {
+                                        unwrap(ctx, ctx.getChannel(), ChannelBuffers.EMPTY_BUFFER, 0, 0);
+                                    } catch (Exception e) {
+                                        fireExceptionCaught(ctx, e);
+                                    }
+                                }
+                            });
+                        }
+                    } catch (Exception e) {
+                        fireExceptionCaught(ctx, e);
                     }
                 }
             });
@@ -1664,7 +1709,7 @@ public class SslHandler extends FrameDecoder
     }
 
     private final class SSLEngineInboundCloseFuture extends DefaultChannelFuture {
-        public SSLEngineInboundCloseFuture() {
+        SSLEngineInboundCloseFuture() {
             super(null, true);
         }
 
