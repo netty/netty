@@ -25,9 +25,11 @@ import org.jboss.netty.buffer.ChannelBuffers;
 
 final class SpdyHeaderBlockZlibDecoder extends SpdyHeaderBlockRawDecoder {
 
+    private static final int DEFAULT_BUFFER_CAPACITY = 4096;
+
     private final Inflater decompressor = new Inflater();
 
-    private final ChannelBuffer decompressed = ChannelBuffers.buffer(4096);
+    private ChannelBuffer decompressed;
 
     public SpdyHeaderBlockZlibDecoder(SpdyVersion spdyVersion, int maxHeaderSize) {
         super(spdyVersion, maxHeaderSize);
@@ -40,7 +42,7 @@ final class SpdyHeaderBlockZlibDecoder extends SpdyHeaderBlockRawDecoder {
         int numBytes;
         do {
             numBytes = decompress(frame);
-        } while (!decompressed.readable() && numBytes > 0);
+        } while (numBytes > 0);
 
         if (decompressor.getRemaining() != 0) {
             throw new SpdyProtocolException("client sent extra data beyond headers");
@@ -64,6 +66,7 @@ final class SpdyHeaderBlockZlibDecoder extends SpdyHeaderBlockRawDecoder {
     }
 
     private int decompress(SpdyHeadersFrame frame) throws Exception {
+        ensureBuffer();
         byte[] out = decompressed.array();
         int off = decompressed.arrayOffset() + decompressed.writerIndex();
         try {
@@ -84,15 +87,22 @@ final class SpdyHeaderBlockZlibDecoder extends SpdyHeaderBlockRawDecoder {
         }
     }
 
+    private void ensureBuffer() {
+        if (decompressed == null) {
+            decompressed = ChannelBuffers.dynamicBuffer(DEFAULT_BUFFER_CAPACITY);
+        }
+        decompressed.ensureWritableBytes(1);
+    }
+
     @Override
     void reset() {
-        decompressed.clear();
+        decompressed = null;
         super.reset();
     }
 
     @Override
     public void end() {
-        decompressed.clear();
+        decompressed = null;
         decompressor.end();
         super.end();
     }
