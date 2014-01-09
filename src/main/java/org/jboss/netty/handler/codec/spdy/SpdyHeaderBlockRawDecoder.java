@@ -168,6 +168,10 @@ public class SpdyHeaderBlockRawDecoder extends SpdyHeaderBlockDecoder {
         }
     }
 
+    boolean isFinished() {
+        return numHeaders == 0;
+    }
+
     @Override
     void reset() {
         // Initialize header block decoding fields
