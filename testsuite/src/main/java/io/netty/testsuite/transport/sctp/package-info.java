@@ -15,6 +15,6 @@
  */
 
 /**
- * Util Test suite classes
+ * Reusable classes that help testing the code that uses SCTP transport.
  */
-package io.netty.testsuite.util;
+package io.netty.testsuite.transport.sctp;

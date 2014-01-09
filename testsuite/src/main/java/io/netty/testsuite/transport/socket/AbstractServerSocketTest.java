@@ -15,7 +15,6 @@
  */
 package io.netty.testsuite.transport.socket;
 
-import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelOption;
@@ -32,13 +31,10 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.util.List;
-import java.util.Map.Entry;
 
-public abstract class AbstractSocketTest {
+public abstract class AbstractServerSocketTest {
 
-    private static final List<Entry<Factory<ServerBootstrap>, Factory<Bootstrap>>> COMBO =
-            SocketTestPermutation.socket();
-
+    private static final List<Factory<ServerBootstrap>> COMBO = SocketTestPermutation.serverSocket();
     private static final List<ByteBufAllocator> ALLOCATORS = SocketTestPermutation.allocator();
 
     @Rule
@@ -47,35 +43,24 @@ public abstract class AbstractSocketTest {
     protected final InternalLogger logger = InternalLoggerFactory.getInstance(getClass());
 
     protected volatile ServerBootstrap sb;
-    protected volatile Bootstrap cb;
     protected volatile InetSocketAddress addr;
-    protected volatile Factory<Bootstrap> currentBootstrap;
 
     protected void run() throws Throwable {
         for (ByteBufAllocator allocator: ALLOCATORS) {
             int i = 0;
-            for (Entry<Factory<ServerBootstrap>, Factory<Bootstrap>> e: COMBO) {
-                currentBootstrap = e.getValue();
-                sb = e.getKey().newInstance();
-                cb = e.getValue().newInstance();
-                addr = new InetSocketAddress(
-                        NetUtil.LOCALHOST, TestUtils.getFreePort());
+            for (Factory<ServerBootstrap> e: COMBO) {
+                sb = e.newInstance();
+                addr = new InetSocketAddress(NetUtil.LOCALHOST, TestUtils.getFreePort());
                 sb.localAddress(addr);
                 sb.option(ChannelOption.ALLOCATOR, allocator);
                 sb.childOption(ChannelOption.ALLOCATOR, allocator);
-                cb.remoteAddress(addr);
-                cb.option(ChannelOption.ALLOCATOR, allocator);
 
                 logger.info(String.format(
-                        "Running: %s %d of %d (%s + %s) with %s",
-                        testName.getMethodName(), ++ i, COMBO.size(), sb, cb, StringUtil.simpleClassName(allocator)));
+                        "Running: %s %d of %d (%s) with %s",
+                        testName.getMethodName(), ++ i, COMBO.size(), sb, StringUtil.simpleClassName(allocator)));
                 try {
-                    String testMethodName = testName.getMethodName();
-                    if (testMethodName.contains("[")) {
-                        testMethodName = testMethodName.substring(0, testMethodName.indexOf('['));
-                    }
-                    Method m = getClass().getDeclaredMethod(testMethodName, ServerBootstrap.class, Bootstrap.class);
-                    m.invoke(this, sb, cb);
+                    Method m = getClass().getDeclaredMethod(TestUtils.testMethodName(testName), ServerBootstrap.class);
+                    m.invoke(this, sb);
                 } catch (InvocationTargetException ex) {
                     throw ex.getCause();
                 }

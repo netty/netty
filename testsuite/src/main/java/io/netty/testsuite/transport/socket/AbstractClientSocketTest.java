@@ -15,7 +15,7 @@
  */
 package io.netty.testsuite.transport.socket;
 
-import io.netty.bootstrap.ServerBootstrap;
+import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelOption;
 import io.netty.testsuite.transport.socket.SocketTestPermutation.Factory;
@@ -32,9 +32,9 @@ import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.util.List;
 
-public abstract class AbstractServerSocketTest {
+public abstract class AbstractClientSocketTest {
 
-    private static final List<Factory<ServerBootstrap>> COMBO = SocketTestPermutation.serverSocket();
+    private static final List<Factory<Bootstrap>> COMBO = SocketTestPermutation.clientSocket();
     private static final List<ByteBufAllocator> ALLOCATORS = SocketTestPermutation.allocator();
 
     @Rule
@@ -42,27 +42,23 @@ public abstract class AbstractServerSocketTest {
 
     protected final InternalLogger logger = InternalLoggerFactory.getInstance(getClass());
 
-    protected volatile ServerBootstrap sb;
+    protected volatile Bootstrap cb;
     protected volatile InetSocketAddress addr;
 
     protected void run() throws Throwable {
         for (ByteBufAllocator allocator: ALLOCATORS) {
             int i = 0;
-            for (Factory<ServerBootstrap> e: COMBO) {
-                sb = e.newInstance();
-                addr = new InetSocketAddress(
-                        NetUtil.LOCALHOST, TestUtils.getFreePort());
-                sb.localAddress(addr);
-                sb.option(ChannelOption.ALLOCATOR, allocator);
-                sb.childOption(ChannelOption.ALLOCATOR, allocator);
-
+            for (Factory<Bootstrap> e: COMBO) {
+                cb = e.newInstance();
+                addr = new InetSocketAddress(NetUtil.LOCALHOST, TestUtils.getFreePort());
+                cb.remoteAddress(addr);
+                cb.option(ChannelOption.ALLOCATOR, allocator);
                 logger.info(String.format(
-                        "Running: %s %d of %d (%s) with %s",
-                        testName.getMethodName(), ++ i, COMBO.size(), sb, StringUtil.simpleClassName(allocator)));
+                        "Running: %s %d of %d with %s",
+                        testName.getMethodName(), ++ i, COMBO.size(), StringUtil.simpleClassName(allocator)));
                 try {
-                    Method m = getClass().getDeclaredMethod(
-                            testName.getMethodName(), ServerBootstrap.class);
-                    m.invoke(this, sb);
+                    Method m = getClass().getDeclaredMethod(TestUtils.testMethodName(testName), Bootstrap.class);
+                    m.invoke(this, cb);
                 } catch (InvocationTargetException ex) {
                     throw ex.getCause();
                 }
