@@ -57,7 +57,6 @@ public abstract class AbstractSocketSslEchoTest {
         random.nextBytes(data);
     }
 
-
     protected abstract ChannelFactory newServerSocketChannelFactory(Executor executor);
     protected abstract ChannelFactory newClientSocketChannelFactory(Executor executor);
 
@@ -85,7 +84,7 @@ public abstract class AbstractSocketSslEchoTest {
         testSslEcho(true, true);
     }
 
-
+    @SuppressWarnings("deprecation")
     private void testSslEcho(
             boolean serverUsesDelegatedTaskExecutor, boolean clientUsesDelegatedTaskExecutor) throws Throwable {
         ExecutorService delegatedTaskExecutor = Executors.newCachedThreadPool();

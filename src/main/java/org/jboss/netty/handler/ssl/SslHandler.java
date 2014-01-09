@@ -54,6 +54,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
@@ -255,7 +256,7 @@ public class SslHandler extends FrameDecoder
      * @param engine  the {@link SSLEngine} this handler will use
      */
     public SslHandler(SSLEngine engine) {
-        this(engine, getDefaultBufferPool(), ImmediateExecutor.INSTANCE);
+        this(engine, getDefaultBufferPool(), false, null, 0);
     }
 
     /**
@@ -266,7 +267,7 @@ public class SslHandler extends FrameDecoder
      *                    acquire the buffers required by the {@link SSLEngine}
      */
     public SslHandler(SSLEngine engine, SslBufferPool bufferPool) {
-        this(engine, bufferPool, ImmediateExecutor.INSTANCE);
+        this(engine, bufferPool, false, null, 0);
     }
 
     /**
@@ -290,52 +291,7 @@ public class SslHandler extends FrameDecoder
      *                    encrypted by the {@link SSLEngine}
      */
     public SslHandler(SSLEngine engine, SslBufferPool bufferPool, boolean startTls) {
-        this(engine, bufferPool, startTls, ImmediateExecutor.INSTANCE);
-    }
-
-    /**
-     * Creates a new instance.
-     *
-     * @param engine
-     *        the {@link SSLEngine} this handler will use
-     * @param delegatedTaskExecutor
-     *        the {@link Executor} which will execute the delegated task
-     *        that {@link SSLEngine#getDelegatedTask()} will return
-     */
-    public SslHandler(SSLEngine engine, Executor delegatedTaskExecutor) {
-        this(engine, getDefaultBufferPool(), delegatedTaskExecutor);
-    }
-
-    /**
-     * Creates a new instance.
-     *
-     * @param engine
-     *        the {@link SSLEngine} this handler will use
-     * @param bufferPool
-     *        the {@link SslBufferPool} where this handler will acquire
-     *        the buffers required by the {@link SSLEngine}
-     * @param delegatedTaskExecutor
-     *        the {@link Executor} which will execute the delegated task
-     *        that {@link SSLEngine#getDelegatedTask()} will return
-     */
-    public SslHandler(SSLEngine engine, SslBufferPool bufferPool, Executor delegatedTaskExecutor) {
-        this(engine, bufferPool, false, delegatedTaskExecutor);
-    }
-
-    /**
-     * Creates a new instance.
-     *
-     * @param engine
-     *        the {@link SSLEngine} this handler will use
-     * @param startTls
-     *        {@code true} if the first write request shouldn't be encrypted
-     *        by the {@link SSLEngine}
-     * @param delegatedTaskExecutor
-     *        the {@link Executor} which will execute the delegated task
-     *        that {@link SSLEngine#getDelegatedTask()} will return
-     */
-    public SslHandler(SSLEngine engine, boolean startTls, Executor delegatedTaskExecutor) {
-        this(engine, getDefaultBufferPool(), startTls, delegatedTaskExecutor);
+        this(engine, bufferPool, startTls, null, 0);
     }
 
     /**
@@ -349,36 +305,56 @@ public class SslHandler extends FrameDecoder
      * @param startTls
      *        {@code true} if the first write request shouldn't be encrypted
      *        by the {@link SSLEngine}
-     * @param delegatedTaskExecutor
-     *        the {@link Executor} which will execute the delegated task
-     *        that {@link SSLEngine#getDelegatedTask()} will return
-     */
-    public SslHandler(SSLEngine engine, SslBufferPool bufferPool, boolean startTls, Executor delegatedTaskExecutor) {
-        this(engine, bufferPool, startTls, delegatedTaskExecutor, null, 0);
-    }
-
-    /**
-     * Creates a new instance.
-     *
-     * @param engine
-     *        the {@link SSLEngine} this handler will use
-     * @param bufferPool
-     *        the {@link SslBufferPool} where this handler will acquire
-     *        the buffers required by the {@link SSLEngine}
-     * @param startTls
-     *        {@code true} if the first write request shouldn't be encrypted
-     *        by the {@link SSLEngine}
-     * @param delegatedTaskExecutor
-     *        the {@link Executor} which will execute the delegated task
-     *        that {@link SSLEngine#getDelegatedTask()} will return
      * @param timer
      *        the {@link Timer} which will be used to process the timeout of the {@link #handshake()}.
      *        Be aware that the given {@link Timer} will not get stopped automaticly, so it is up to you to cleanup
      *        once you not need it anymore
      * @param handshakeTimeoutInMillis
      *        the time in milliseconds after whic the {@link #handshake()}  will be failed, and so the future notified
-     *
      */
+    @SuppressWarnings("deprecation")
+    public SslHandler(SSLEngine engine, SslBufferPool bufferPool, boolean startTls,
+                      Timer timer, long handshakeTimeoutInMillis) {
+        this(engine, bufferPool, startTls, ImmediateExecutor.INSTANCE, timer, handshakeTimeoutInMillis);
+    }
+
+    /**
+     * @deprecated Use {@link #SslHandler(SSLEngine)} instead.
+     */
+    @Deprecated
+    public SslHandler(SSLEngine engine, Executor delegatedTaskExecutor) {
+        this(engine, getDefaultBufferPool(), delegatedTaskExecutor);
+    }
+
+    /**
+     * @deprecated Use {@link #SslHandler(SSLEngine, boolean)} instead.
+     */
+    @Deprecated
+    public SslHandler(SSLEngine engine, SslBufferPool bufferPool, Executor delegatedTaskExecutor) {
+        this(engine, bufferPool, false, delegatedTaskExecutor);
+    }
+
+    /**
+     * @deprecated  Use {@link #SslHandler(SSLEngine, boolean)} instead.
+     */
+    @Deprecated
+    public SslHandler(SSLEngine engine, boolean startTls, Executor delegatedTaskExecutor) {
+        this(engine, getDefaultBufferPool(), startTls, delegatedTaskExecutor);
+    }
+
+    /**
+     * @deprecated Use {@link #SslHandler(SSLEngine, SslBufferPool, boolean)} instead.
+     */
+    @Deprecated
+    public SslHandler(SSLEngine engine, SslBufferPool bufferPool, boolean startTls, Executor delegatedTaskExecutor) {
+        this(engine, bufferPool, startTls, delegatedTaskExecutor, null, 0);
+    }
+
+    /**
+     * @deprecated Use {@link #SslHandler(SSLEngine engine, SslBufferPool bufferPool, boolean startTls, Timer timer,
+     *             long handshakeTimeoutInMillis)} instead.
+     */
+    @Deprecated
     public SslHandler(SSLEngine engine, SslBufferPool bufferPool, boolean startTls, Executor delegatedTaskExecutor,
                       Timer timer, long handshakeTimeoutInMillis) {
         if (engine == null) {
@@ -433,7 +409,7 @@ public class SslHandler extends FrameDecoder
             handshaking = true;
             try {
                 engine.beginHandshake();
-                runDelegatedTasks(false);
+                runDelegatedTasks();
                 handshakeFuture = this.handshakeFuture = future(channel);
                 if (handshakeTimeoutInMillis > 0) {
                     handshakeTimeout = timer.newTimeout(new TimerTask() {
@@ -1039,7 +1015,7 @@ public class SslHandler extends FrameDecoder
                                     needsUnwrap = true;
                                     break loop;
                                 case NEED_TASK:
-                                    runDelegatedTasks(false);
+                                    runDelegatedTasks();
                                     break;
                                 case FINISHED:
                                 case NOT_HANDSHAKING:
@@ -1184,10 +1160,10 @@ public class SslHandler extends FrameDecoder
                 switch (handshakeStatus) {
                 case FINISHED:
                     setHandshakeSuccess(channel);
-                    runDelegatedTasks(false);
+                    runDelegatedTasks();
                     break;
                 case NEED_TASK:
-                    runDelegatedTasks(false);
+                    runDelegatedTasks();
                     break;
                 case NEED_UNWRAP:
                     if (!Thread.holdsLock(handshakeLock)) {
@@ -1296,7 +1272,7 @@ public class SslHandler extends FrameDecoder
                         wrapNonAppData(ctx, channel);
                         break;
                     case NEED_TASK:
-                        runDelegatedTasks(true);
+                        runDelegatedTasks();
                         break;
                     case FINISHED:
                         setHandshakeSuccess(channel);
@@ -1399,9 +1375,9 @@ public class SslHandler extends FrameDecoder
      * Fetches all delegated tasks from the {@link SSLEngine} and runs them via the {@link #delegatedTaskExecutor}.
      * If the {@link #delegatedTaskExecutor} is {@link ImmediateExecutor}, just call {@link Runnable#run()} directly
      * instead of using {@link Executor#execute(Runnable)}.  Otherwise, run the tasks via
-     * the {@link #delegatedTaskExecutor} and continue unwrapping so that the handshake completes.
+     * the {@link #delegatedTaskExecutor} and wait until the tasks are finished.
      */
-    private void runDelegatedTasks(final boolean unwrapLater) {
+    private void runDelegatedTasks() {
         if (delegatedTaskExecutor == ImmediateExecutor.INSTANCE) {
             for (;;) {
                 final Runnable task;
@@ -1434,28 +1410,34 @@ public class SslHandler extends FrameDecoder
                 return;
             }
 
+            final CountDownLatch latch = new CountDownLatch(1);
             delegatedTaskExecutor.execute(new Runnable() {
                 public void run() {
                     try {
                         for (Runnable task: tasks) {
                             task.run();
                         }
-                        if (unwrapLater) {
-                            ctx.getPipeline().execute(new Runnable() {
-                                public void run() {
-                                    try {
-                                        unwrap(ctx, ctx.getChannel(), ChannelBuffers.EMPTY_BUFFER, 0, 0);
-                                    } catch (Exception e) {
-                                        fireExceptionCaught(ctx, e);
-                                    }
-                                }
-                            });
-                        }
                     } catch (Exception e) {
                         fireExceptionCaught(ctx, e);
+                    } finally {
+                        latch.countDown();
                     }
                 }
             });
+
+            boolean interrupted = false;
+            while (latch.getCount() != 0) {
+                try {
+                    latch.await();
+                } catch (InterruptedException e) {
+                    // Interrupt later.
+                    interrupted = true;
+                }
+            }
+
+            if (interrupted) {
+                Thread.currentThread().interrupt();
+            }
         }
     }
 
