@@ -236,10 +236,15 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             assert eventLoop().inEventLoop();
             assert connectPromise != null;
 
+            // Cache connect promise as connectPromise will be set to null once it is notified.
+            // This is needed to prevent a possible NPE
+            // See https://github.com/netty/netty/issues/2086
+            ChannelPromise promise = connectPromise;
+
             try {
                 boolean wasActive = isActive();
                 doFinishConnect();
-                fulfillConnectPromise(connectPromise, wasActive);
+                fulfillConnectPromise(promise, wasActive);
             } catch (Throwable t) {
                 if (t instanceof ConnectException) {
                     Throwable newT = new ConnectException(t.getMessage() + ": " + requestedRemoteAddress);
@@ -248,7 +253,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                 }
 
                 // Use tryFailure() instead of setFailure() to avoid the race against cancel().
-                connectPromise.tryFailure(t);
+                promise.tryFailure(t);
                 closeIfClosed();
             } finally {
                 // Check for null as the connectTimeoutFuture is only created if a connectTimeoutMillis > 0 is used
