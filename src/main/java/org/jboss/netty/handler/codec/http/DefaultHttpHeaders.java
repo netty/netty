@@ -333,7 +333,6 @@ public class DefaultHttpHeaders extends HttpHeaders {
         return all;
     }
 
-    @Override
     public Iterator<Map.Entry<String, String>> iterator() {
         return new HeaderIterator();
     }
@@ -408,12 +407,10 @@ public class DefaultHttpHeaders extends HttpHeaders {
 
         private HeaderEntry current = head;
 
-        @Override
         public boolean hasNext() {
             return current.after != head;
         }
 
-        @Override
         public Entry<String, String> next() {
             current = current.after;
 
@@ -424,7 +421,6 @@ public class DefaultHttpHeaders extends HttpHeaders {
             return current;
         }
 
-        @Override
         public void remove() {
             throw new UnsupportedOperationException();
         }
@@ -455,17 +451,14 @@ public class DefaultHttpHeaders extends HttpHeaders {
             after.before = this;
         }
 
-        @Override
         public String getKey() {
             return key;
         }
 
-        @Override
         public String getValue() {
             return value;
         }
 
-        @Override
         public String setValue(String value) {
             if (value == null) {
                 throw new NullPointerException("value");

@@ -93,7 +93,6 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
             throw new UnsupportedOperationException("read only");
         }
 
-        @Override
         public Iterator<Entry<String, String>> iterator() {
             return entries().iterator();
         }
@@ -710,6 +709,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
         try {
             return Integer.parseInt(value);
         } catch (NumberFormatException e) {
+            // Not an integer header - use the default.
             return defaultValue;
         }
     }
@@ -771,6 +771,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
         try {
             return HttpHeaderDateFormat.get().parse(value);
         } catch (ParseException e) {
+            // Not a date header - use the default.
             return defaultValue;
         }
     }
@@ -853,6 +854,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
             try {
                 return Long.parseLong(contentLength);
             } catch (NumberFormatException e) {
+                // Not a long integer header - use the default.
                 return defaultValue;
             }
         }
