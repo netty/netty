@@ -213,6 +213,11 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         }
 
         private void fulfillConnectPromise(ChannelPromise promise, boolean wasActive) {
+            if (promise == null) {
+                // Closed via cancellation and the promise has been notified already.
+                return;
+            }
+
             // trySuccess() will return false if a user cancelled the connection attempt.
             boolean promiseSet = promise.trySuccess();
 
@@ -228,23 +233,27 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             }
         }
 
+        private void fulfillConnectPromise(ChannelPromise promise, Throwable cause) {
+            if (promise == null) {
+                // Closed via cancellation and the promise has been notified already.
+            }
+
+            // Use tryFailure() instead of setFailure() to avoid the race against cancel().
+            promise.tryFailure(cause);
+            closeIfClosed();
+        }
+
         @Override
         public void finishConnect() {
             // Note this method is invoked by the event loop only if the connection attempt was
             // neither cancelled nor timed out.
 
             assert eventLoop().inEventLoop();
-            assert connectPromise != null;
-
-            // Cache connect promise as connectPromise will be set to null once it is notified.
-            // This is needed to prevent a possible NPE
-            // See https://github.com/netty/netty/issues/2086
-            ChannelPromise promise = connectPromise;
 
             try {
                 boolean wasActive = isActive();
                 doFinishConnect();
-                fulfillConnectPromise(promise, wasActive);
+                fulfillConnectPromise(connectPromise, wasActive);
             } catch (Throwable t) {
                 if (t instanceof ConnectException) {
                     Throwable newT = new ConnectException(t.getMessage() + ": " + requestedRemoteAddress);
@@ -252,9 +261,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                     t = newT;
                 }
 
-                // Use tryFailure() instead of setFailure() to avoid the race against cancel().
-                promise.tryFailure(t);
-                closeIfClosed();
+                fulfillConnectPromise(connectPromise, t);
             } finally {
                 // Check for null as the connectTimeoutFuture is only created if a connectTimeoutMillis > 0 is used
                 // See https://github.com/netty/netty/issues/1770
