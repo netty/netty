@@ -40,8 +40,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Random;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -58,29 +56,21 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         random.nextBytes(data);
     }
 
-    @Parameters(name = "{index}: " +
-            "serverUsesDelegatedTaskExecutor = {0}, clientUsesDelegatedTaskExecutor = {1}, " +
-            "useChunkedWriteHandler = {2}, useCompositeByteBuf = {3}")
+    @Parameters(name = "{index}: useChunkedWriteHandler = {0}, useCompositeByteBuf = {1}")
     public static Collection<Object[]> data() {
         List<Object[]> params = new ArrayList<Object[]>();
-        for (int i = 0; i < 16; i ++) {
+        for (int i = 0; i < 4; i ++) {
             params.add(new Object[] {
-                    (i & 8) != 0, (i & 4) != 0, (i & 2) != 0, (i & 1) != 0
+                    (i & 2) != 0, (i & 1) != 0
             });
         }
         return params;
     }
 
-    private final boolean serverUsesDelegatedTaskExecutor;
-    private final boolean clientUsesDelegatedTaskExecutor;
     private final boolean useChunkedWriteHandler;
     private final boolean useCompositeByteBuf;
 
-    public SocketSslEchoTest(
-            boolean serverUsesDelegatedTaskExecutor, boolean clientUsesDelegatedTaskExecutor,
-            boolean useChunkedWriteHandler, boolean useCompositeByteBuf) {
-        this.serverUsesDelegatedTaskExecutor = serverUsesDelegatedTaskExecutor;
-        this.clientUsesDelegatedTaskExecutor = clientUsesDelegatedTaskExecutor;
+    public SocketSslEchoTest(boolean useChunkedWriteHandler, boolean useCompositeByteBuf) {
         this.useChunkedWriteHandler = useChunkedWriteHandler;
         this.useCompositeByteBuf = useCompositeByteBuf;
     }
@@ -91,7 +81,6 @@ public class SocketSslEchoTest extends AbstractSocketTest {
     }
 
     public void testSslEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        final ExecutorService delegatedTaskExecutor = Executors.newCachedThreadPool();
         final EchoHandler sh = new EchoHandler(true, useCompositeByteBuf);
         final EchoHandler ch = new EchoHandler(false, useCompositeByteBuf);
 
@@ -104,11 +93,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
             @Override
             @SuppressWarnings("deprecation")
             public void initChannel(SocketChannel sch) throws Exception {
-                if (serverUsesDelegatedTaskExecutor) {
-                    sch.pipeline().addFirst("ssl", new SslHandler(sse, delegatedTaskExecutor));
-                } else {
-                    sch.pipeline().addFirst("ssl", new SslHandler(sse));
-                }
+                sch.pipeline().addFirst("ssl", new SslHandler(sse));
                 if (useChunkedWriteHandler) {
                     sch.pipeline().addLast(new ChunkedWriteHandler());
                 }
@@ -120,11 +105,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
             @Override
             @SuppressWarnings("deprecation")
             public void initChannel(SocketChannel sch) throws Exception {
-                if (clientUsesDelegatedTaskExecutor) {
-                    sch.pipeline().addFirst("ssl", new SslHandler(cse, delegatedTaskExecutor));
-                } else {
-                    sch.pipeline().addFirst("ssl", new SslHandler(cse));
-                }
+                sch.pipeline().addFirst("ssl", new SslHandler(cse));
                 if (useChunkedWriteHandler) {
                     sch.pipeline().addLast(new ChunkedWriteHandler());
                 }
@@ -186,7 +167,6 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         sh.channel.close().awaitUninterruptibly();
         ch.channel.close().awaitUninterruptibly();
         sc.close().awaitUninterruptibly();
-        delegatedTaskExecutor.shutdown();
 
         if (sh.exception.get() != null && !(sh.exception.get() instanceof IOException)) {
             throw sh.exception.get();
