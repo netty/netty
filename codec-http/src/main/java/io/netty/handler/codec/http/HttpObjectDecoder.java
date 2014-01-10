@@ -438,7 +438,10 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
             message = createInvalidMessage();
             message.setDecoderResult(DecoderResult.failure(cause));
         }
-        return message;
+
+        HttpMessage ret = message;
+        message = null;
+        return ret;
     }
 
     private HttpContent invalidChunk(Exception cause) {
