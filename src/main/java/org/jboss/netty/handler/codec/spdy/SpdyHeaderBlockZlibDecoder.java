@@ -94,7 +94,8 @@ final class SpdyHeaderBlockZlibDecoder extends SpdyHeaderBlockRawDecoder {
         decompressed.ensureWritableBytes(1);
     }
 
-    private void clearBuffer() {
+    @Override
+    void reset() {
         if (decompressed != null) {
             if (decompressed.capacity() > DEFAULT_BUFFER_CAPACITY) {
                 decompressed = null;
@@ -102,17 +103,12 @@ final class SpdyHeaderBlockZlibDecoder extends SpdyHeaderBlockRawDecoder {
                 decompressed.clear();
             }
         }
-    }
-
-    @Override
-    void reset() {
-        clearBuffer();
         super.reset();
     }
 
     @Override
     public void end() {
-        clearBuffer();
+        decompressed = null;
         decompressor.end();
         super.end();
     }
