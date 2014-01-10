@@ -54,15 +54,26 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
      */
     public enum EncoderMode {
         /**
-         *  Legacy mode which should work for most. It is known to not work with OAUTH. For OAUTH use
-         *  {@link EncoderMode#RFC3986}. The W3C form recommentations this for submitting post form data.
+         * Legacy mode which should work for most. It is known to not work with OAUTH. For OAUTH use
+         * {@link EncoderMode#RFC3986}. The W3C form recommentations this for submitting post form data.
          */
         RFC1738,
 
         /**
          * Mode which is more new and is used for OAUTH
          */
-        RFC3986
+        RFC3986,
+
+        /**
+         * The HTML5 spec disallows mixed mode in multipart/form-data
+         * requests. More concretely this means that more files submitted
+         * under the same name will not be encoded using mixed mode, but
+         * will be treated as distinct fields.
+         *
+         * Reference:
+         *   http://www.w3.org/TR/html5/forms.html#multipart-form-data
+         */
+        HTML5
     }
 
     private static final Map<Pattern, String> percentEncodings = new HashMap<Pattern, String>();
@@ -371,7 +382,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
     }
 
     /**
-     * Add a series of Files associated with one File parameter (implied Mixed mode in Multipart)
+     * Add a series of Files associated with one File parameter
      *
      * @param name
      *            the name of the parameter
@@ -533,7 +544,8 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
                     duringMixedMode = false;
                 }
             } else {
-                if (currentFileUpload != null && currentFileUpload.getName().equals(fileUpload.getName())) {
+                if (encoderMode != EncoderMode.HTML5 && currentFileUpload != null
+                        && currentFileUpload.getName().equals(fileUpload.getName())) {
                     // create a new mixed mode (from previous file)
 
                     // change multipart body header of previous file into
@@ -552,21 +564,23 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
                     // * Content-Type: multipart/mixed; boundary=BbC04y
                     // *
                     // * --BbC04y
-                    // * Content-Disposition: file; filename="file1.txt"
+                    // * Content-Disposition: attachment; filename="file1.txt"
                     // Content-Type: text/plain
                     initMixedMultipart();
                     InternalAttribute pastAttribute = (InternalAttribute) multipartHttpDatas.get(multipartHttpDatas
                             .size() - 2);
                     // remove past size
                     globalBodySize -= pastAttribute.size();
-                    String replacement = HttpPostBodyUtil.CONTENT_DISPOSITION + ": " + HttpPostBodyUtil.FORM_DATA
+                    String replacement = "--" + multipartDataBoundary + "\r\n";
+                    replacement += HttpPostBodyUtil.CONTENT_DISPOSITION + ": " + HttpPostBodyUtil.FORM_DATA
                             + "; " + HttpPostBodyUtil.NAME + "=\"" + fileUpload.getName() + "\"\r\n";
                     replacement += HttpHeaders.Names.CONTENT_TYPE + ": " + HttpPostBodyUtil.MULTIPART_MIXED + "; "
                             + HttpHeaders.Values.BOUNDARY + '=' + multipartMixedBoundary + "\r\n\r\n";
                     replacement += "--" + multipartMixedBoundary + "\r\n";
-                    replacement += HttpPostBodyUtil.CONTENT_DISPOSITION + ": " + HttpPostBodyUtil.FILE + "; "
+                    replacement += HttpPostBodyUtil.CONTENT_DISPOSITION + ": " + HttpPostBodyUtil.ATTACHMENT + "; "
                             + HttpPostBodyUtil.FILENAME + "=\"" + fileUpload.getFilename() + "\"\r\n";
                     pastAttribute.setValue(replacement, 1);
+                    pastAttribute.setValue("", 2);
                     // update past size
                     globalBodySize += pastAttribute.size();
 
@@ -590,8 +604,8 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
                 // add mixedmultipart delimiter, mixedmultipart body header and
                 // Data to multipart list
                 internal.addValue("--" + multipartMixedBoundary + "\r\n");
-                // Content-Disposition: file; filename="file1.txt"
-                internal.addValue(HttpPostBodyUtil.CONTENT_DISPOSITION + ": " + HttpPostBodyUtil.FILE + "; "
+                // Content-Disposition: attachment; filename="file1.txt"
+                internal.addValue(HttpPostBodyUtil.CONTENT_DISPOSITION + ": " + HttpPostBodyUtil.ATTACHMENT + "; "
                         + HttpPostBodyUtil.FILENAME + "=\"" + fileUpload.getFilename() + "\"\r\n");
             } else {
                 internal.addValue("--" + multipartDataBoundary + "\r\n");
