@@ -13,10 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.testsuite.transport.socket;
+package io.netty.testsuite.transport;
 
 import io.netty.bootstrap.AbstractBootstrap;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.testsuite.util.TestUtils;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -27,43 +28,38 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
 
-public abstract class AbstractComboTestsuiteTest<T extends AbstractBootstrap<?, ?>,
-        V extends AbstractBootstrap<?, ?>> {
-    private final Class<T> sbClazz;
-    private final Class<V> cbClazz;
+public abstract class AbstractTestsuiteTest<T extends AbstractBootstrap<?, ?>> {
+    private final Class<T> clazz;
     protected final InternalLogger logger = InternalLoggerFactory.getInstance(getClass());
-    protected volatile V cb;
-    protected volatile T sb;
+    protected volatile T cb;
 
-    protected AbstractComboTestsuiteTest(Class<T> sbClazz, Class<V> cbClazz) {
-        this.sbClazz = sbClazz;
-        this.cbClazz = cbClazz;
+    protected AbstractTestsuiteTest(Class<T> clazz) {
+        this.clazz = clazz;
     }
 
-    protected abstract List<SocketTestPermutation.BootstrapComboFactory<T, V>> newFactories();
+    protected abstract List<TestsuitePermutation.BootstrapFactory<T>> newFactories();
 
     protected List<ByteBufAllocator> newAllocators() {
-        return SocketTestPermutation.allocator();
+        return TestsuitePermutation.allocator();
     }
 
     @Rule
     public final TestName testName = new TestName();
 
     protected void run() throws Throwable {
-        List<SocketTestPermutation.BootstrapComboFactory<T, V>> combos = newFactories();
+        List<TestsuitePermutation.BootstrapFactory<T>> combos = newFactories();
         for (ByteBufAllocator allocator: newAllocators()) {
             int i = 0;
-            for (SocketTestPermutation.BootstrapComboFactory<T, V> e: combos) {
-                sb = e.newServerInstance();
-                cb = e.newClientInstance();
-                configure(sb, cb, allocator);
+            for (TestsuitePermutation.BootstrapFactory<T> e: combos) {
+                cb = e.newInstance();
+                configure(cb, allocator);
                 logger.info(String.format(
-                        "Running: %s %d of %d (%s + %s) with %s",
-                        testName.getMethodName(), ++ i, combos.size(), sb, cb, StringUtil.simpleClassName(allocator)));
+                        "Running: %s %d of %d with %s",
+                        testName.getMethodName(), ++ i, combos.size(), StringUtil.simpleClassName(allocator)));
                 try {
-                    Method m = getClass().getMethod(
-                            testName.getMethodName(), sbClazz, cbClazz);
-                    m.invoke(this, sb, cb);
+                    Method m = getClass().getDeclaredMethod(
+                            TestUtils.testMethodName(testName), clazz);
+                    m.invoke(this, cb);
                 } catch (InvocationTargetException ex) {
                     throw ex.getCause();
                 }
@@ -71,5 +67,5 @@ public abstract class AbstractComboTestsuiteTest<T extends AbstractBootstrap<?, 
         }
     }
 
-    protected abstract void configure(T bootstrap, V bootstrap2, ByteBufAllocator allocator);
+    protected abstract void configure(T bootstrap, ByteBufAllocator allocator);
 }

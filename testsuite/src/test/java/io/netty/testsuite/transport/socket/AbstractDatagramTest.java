@@ -18,6 +18,8 @@ package io.netty.testsuite.transport.socket;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelOption;
+import io.netty.testsuite.transport.AbstractComboTestsuiteTest;
+import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.util.TestUtils;
 import io.netty.util.NetUtil;
 
@@ -33,7 +35,7 @@ public abstract class AbstractDatagramTest extends AbstractComboTestsuiteTest<Bo
     }
 
     @Override
-    protected List<SocketTestPermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> newFactories() {
+    protected List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> newFactories() {
         return SocketTestPermutation.datagram();
     }
 

@@ -19,6 +19,8 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelOption;
+import io.netty.testsuite.transport.AbstractComboTestsuiteTest;
+import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.util.TestUtils;
 import io.netty.util.NetUtil;
 
@@ -34,7 +36,7 @@ public abstract class AbstractSocketTest extends AbstractComboTestsuiteTest<Serv
     }
 
     @Override
-    protected List<SocketTestPermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
+    protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
         return SocketTestPermutation.socket();
     }
 

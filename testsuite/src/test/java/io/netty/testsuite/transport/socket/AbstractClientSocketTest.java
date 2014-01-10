@@ -18,6 +18,8 @@ package io.netty.testsuite.transport.socket;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelOption;
+import io.netty.testsuite.transport.AbstractTestsuiteTest;
+import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.util.TestUtils;
 import io.netty.util.NetUtil;
 
@@ -33,7 +35,7 @@ public abstract class AbstractClientSocketTest extends AbstractTestsuiteTest<Boo
     }
 
     @Override
-    protected List<SocketTestPermutation.BootstrapFactory<Bootstrap>> newFactories() {
+    protected List<TestsuitePermutation.BootstrapFactory<Bootstrap>> newFactories() {
         return SocketTestPermutation.clientSocket();
     }
 

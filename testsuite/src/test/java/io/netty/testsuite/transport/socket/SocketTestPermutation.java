@@ -15,13 +15,9 @@
  */
 package io.netty.testsuite.transport.socket;
 
-import io.netty.bootstrap.AbstractBootstrap;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ChannelFactory;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -33,12 +29,18 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.channel.socket.oio.OioDatagramChannel;
 import io.netty.channel.socket.oio.OioServerSocketChannel;
 import io.netty.channel.socket.oio.OioSocketChannel;
+import io.netty.testsuite.transport.TestsuitePermutation.BootstrapComboFactory;
+import io.netty.testsuite.transport.TestsuitePermutation.BootstrapFactory;
 import io.netty.util.concurrent.DefaultThreadFactory;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public final class SocketTestPermutation {
+    private SocketTestPermutation() {
+        // utility
+    }
+
     private static final int BOSSES = 2;
     private static final int WORKERS = 3;
     private static final EventLoopGroup nioBossGroup =
@@ -176,21 +178,4 @@ public final class SocketTestPermutation {
         return list;
     }
 
-    static List<ByteBufAllocator> allocator() {
-        List<ByteBufAllocator> allocators = new ArrayList<ByteBufAllocator>();
-        allocators.add(UnpooledByteBufAllocator.DEFAULT);
-        allocators.add(PooledByteBufAllocator.DEFAULT);
-        return allocators;
-    }
-
-    private SocketTestPermutation() { }
-
-    public interface BootstrapFactory<T extends AbstractBootstrap<?, ?>> {
-        T newInstance();
-    }
-
-    public interface BootstrapComboFactory<S extends AbstractBootstrap<?, ?>, C extends AbstractBootstrap<?, ?>> {
-        S newServerInstance();
-        C newClientInstance();
-    }
 }
