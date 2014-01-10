@@ -478,4 +478,36 @@ public class HttpResponseDecoderTest {
 
         assertThat(ch.readInbound(), is(nullValue()));
     }
+
+    @Test
+    public void testGarbageHeaders() {
+        // A response without headers - from https://github.com/netty/netty/issues/2103
+        byte[] data = ("<html>\r\n" +
+                "<head><title>400 Bad Request</title></head>\r\n" +
+                "<body bgcolor=\"white\">\r\n" +
+                "<center><h1>400 Bad Request</h1></center>\r\n" +
+                "<hr><center>nginx/1.1.19</center>\r\n" +
+                "</body>\r\n" +
+                "</html>\r\n").getBytes();
+
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
+
+        ch.writeInbound(Unpooled.wrappedBuffer(data));
+
+        // Garbage input should generate the 999 Unknown response.
+        HttpResponse res = ch.readInbound();
+        assertThat(res.getProtocolVersion(), sameInstance(HttpVersion.HTTP_1_0));
+        assertThat(res.getStatus().code(), is(999));
+        assertThat(res.getDecoderResult().isFailure(), is(true));
+        assertThat(res.getDecoderResult().isFinished(), is(true));
+        assertThat(ch.readInbound(), is(nullValue()));
+
+        // More garbage should not generate anything (i.e. the decoder discards anything beyond this point.)
+        ch.writeInbound(Unpooled.wrappedBuffer(data));
+        assertThat(ch.readInbound(), is(nullValue()));
+
+        // Closing the connection should not generate anything since the protocol has been violated.
+        ch.finish();
+        assertThat(ch.readInbound(), is(nullValue()));
+    }
 }

@@ -83,6 +83,11 @@ public interface LastHttpContent extends HttpContent {
         public boolean release(int decrement) {
             return false;
         }
+
+        @Override
+        public String toString() {
+            return "EmptyLastHttpContent";
+        }
     };
 
     HttpHeaders trailingHeaders();
