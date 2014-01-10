@@ -42,7 +42,7 @@ final class SpdyHeaderBlockZlibDecoder extends SpdyHeaderBlockRawDecoder {
         int numBytes;
         do {
             numBytes = decompress(frame);
-        } while (!isFinished() && numBytes > 0);
+        } while (numBytes > 0);
 
         if (decompressor.getRemaining() != 0) {
             throw new SpdyProtocolException("client sent extra data beyond headers");
