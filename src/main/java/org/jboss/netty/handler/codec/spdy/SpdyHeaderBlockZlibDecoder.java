@@ -96,13 +96,7 @@ final class SpdyHeaderBlockZlibDecoder extends SpdyHeaderBlockRawDecoder {
 
     @Override
     void reset() {
-        if (decompressed != null) {
-            if (decompressed.capacity() > DEFAULT_BUFFER_CAPACITY) {
-                decompressed = null;
-            } else {
-                decompressed.clear();
-            }
-        }
+        decompressed = null;
         super.reset();
     }
 
