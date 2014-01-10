@@ -468,7 +468,7 @@ public class HttpResponseDecoderTest {
         ch.writeInbound(Unpooled.wrappedBuffer(data));
 
         // Garbage input should generate the 999 Unknown response.
-        HttpResponse res = ch.readInbound();
+        HttpResponse res = (HttpResponse) ch.readInbound();
         assertThat(res.getProtocolVersion(), sameInstance(HttpVersion.HTTP_1_0));
         assertThat(res.getStatus().code(), is(999));
         assertThat(res.getDecoderResult().isFailure(), is(true));
