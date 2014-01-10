@@ -258,7 +258,7 @@ public class SpdyFrameDecoderTest {
         SpdyHeaders headers = frame.headers();
 
         SpdyHeaderBlockEncoder encoder = SpdyHeaderBlockEncoder.newInstance(SpdyVersion.SPDY_3_1, 6, 15, 8);
-        SpdyHeaderBlockDecoder decoder = SpdyHeaderBlockDecoder.newInstance(8192);
+        SpdyHeaderBlockDecoder decoder = SpdyHeaderBlockDecoder.newInstance(SpdyVersion.SPDY_3_1, 8192);
 
         headers.add(createString('a', 100), createString('b', 100));        
         SpdyHeadersFrame actual = roundTrip(encoder, decoder, frame);
@@ -328,7 +328,7 @@ public class SpdyFrameDecoderTest {
     
     private SpdyHeadersFrame roundTrip(SpdyHeadersFrame frame, int maxHeaderSize) throws Exception {
         SpdyHeaderBlockEncoder encoder = SpdyHeaderBlockEncoder.newInstance(SpdyVersion.SPDY_3_1, 6, 15, 8);
-        SpdyHeaderBlockDecoder decoder = SpdyHeaderBlockDecoder.newInstance(maxHeaderSize);
+        SpdyHeaderBlockDecoder decoder = SpdyHeaderBlockDecoder.newInstance(SpdyVersion.SPDY_3_1, maxHeaderSize);
         return roundTrip(encoder, decoder, frame);
     }
     
