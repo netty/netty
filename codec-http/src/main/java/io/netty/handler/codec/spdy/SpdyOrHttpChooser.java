@@ -44,14 +44,14 @@ public abstract class SpdyOrHttpChooser extends ByteToMessageDecoder {
         HTTP_1_0("http/1.0"),
         UNKNOWN("Unknown");
 
-        private String name;
+        private final String name;
 
-        private SelectedProtocol(String defaultName) {
-            this.name = defaultName;
+        SelectedProtocol(String defaultName) {
+            name = defaultName;
         }
 
-        public String getName() {
-            return this.name;
+        public String protocolName() {
+            return name;
         }
 
         /**
@@ -61,10 +61,9 @@ public abstract class SpdyOrHttpChooser extends ByteToMessageDecoder {
          *            the protocol name
          * @return the SelectedProtocol instance
          */
-        public static SelectedProtocol getProtocolByName(String name) {
-
+        public static SelectedProtocol protocol(String name) {
             for (SelectedProtocol protocol : SelectedProtocol.values()) {
-                if (protocol.getName().equals(name)) {
+                if (protocol.protocolName().equals(name)) {
                     return protocol;
                 }
             }
