@@ -35,11 +35,11 @@ public class SpdyHeaderBlockRawDecoder extends SpdyHeaderBlockDecoder {
             throw new NullPointerException("spdyVersion");
         }
 
-        this.version = spdyVersion.getVersion();
+        version = spdyVersion.getVersion();
         this.maxHeaderSize = maxHeaderSize;
     }
 
-    private int readLengthField(ChannelBuffer buffer) {
+    private static int readLengthField(ChannelBuffer buffer) {
         int length = getSignedInt(buffer, buffer.readerIndex());
         buffer.skipBytes(LENGTH_FIELD_SIZE);
         return length;

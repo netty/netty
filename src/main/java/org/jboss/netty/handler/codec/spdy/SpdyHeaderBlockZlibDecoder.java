@@ -15,13 +15,13 @@
  */
 package org.jboss.netty.handler.codec.spdy;
 
-import static org.jboss.netty.handler.codec.spdy.SpdyCodecUtil.*;
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
 
 import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
+import static org.jboss.netty.handler.codec.spdy.SpdyCodecUtil.*;
 
 final class SpdyHeaderBlockZlibDecoder extends SpdyHeaderBlockRawDecoder {
 
@@ -31,7 +31,7 @@ final class SpdyHeaderBlockZlibDecoder extends SpdyHeaderBlockRawDecoder {
 
     private ChannelBuffer decompressed;
 
-    public SpdyHeaderBlockZlibDecoder(SpdyVersion spdyVersion, int maxHeaderSize) {
+    SpdyHeaderBlockZlibDecoder(SpdyVersion spdyVersion, int maxHeaderSize) {
         super(spdyVersion, maxHeaderSize);
     }
 
