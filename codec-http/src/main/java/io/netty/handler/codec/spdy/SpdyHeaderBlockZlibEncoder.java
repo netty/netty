@@ -24,13 +24,12 @@ import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 
 class SpdyHeaderBlockZlibEncoder extends SpdyHeaderBlockRawEncoder {
 
-    private final byte[] out = new byte[8192];
     private final Deflater compressor;
 
     private boolean finished;
 
-    SpdyHeaderBlockZlibEncoder(SpdyVersion version, int compressionLevel) {
-        super(version);
+    SpdyHeaderBlockZlibEncoder(SpdyVersion spdyVersion, int compressionLevel) {
+        super(spdyVersion);
         if (compressionLevel < 0 || compressionLevel > 9) {
             throw new IllegalArgumentException(
                     "compressionLevel: " + compressionLevel + " (expected: 0-9)");
@@ -39,18 +38,34 @@ class SpdyHeaderBlockZlibEncoder extends SpdyHeaderBlockRawEncoder {
         compressor.setDictionary(SPDY_DICT);
     }
 
-    private void setInput(ByteBuf decompressed) {
-        byte[] in = new byte[decompressed.readableBytes()];
-        decompressed.readBytes(in);
-        compressor.setInput(in);
+    private int setInput(ByteBuf decompressed) {
+        int len = decompressed.readableBytes();
+
+        if (decompressed.hasArray()) {
+            compressor.setInput(decompressed.array(), decompressed.arrayOffset() + decompressed.readerIndex(), len);
+        } else {
+            byte[] in = new byte[len];
+            decompressed.getBytes(decompressed.readerIndex(), in);
+            compressor.setInput(in, 0, in.length);
+        }
+
+        return len;
     }
 
     private void encode(ByteBuf compressed) {
-        int numBytes = out.length;
-        while (numBytes == out.length) {
-            numBytes = compressor.deflate(out, 0, out.length, Deflater.SYNC_FLUSH);
-            compressed.writeBytes(out, 0, numBytes);
+        while (compressInto(compressed)) {
+            // Although unlikely, it's possible that the compressed size is larger than the decompressed size
+            compressed.ensureWritable(compressed.capacity() << 1);
         }
+    }
+
+    private boolean compressInto(ByteBuf compressed) {
+        byte[] out = compressed.array();
+        int off = compressed.arrayOffset() + compressed.writerIndex();
+        int toWrite = compressed.writableBytes();
+        int numBytes = compressor.deflate(out, off, toWrite, Deflater.SYNC_FLUSH);
+        compressed.writerIndex(compressed.writerIndex() + numBytes);
+        return numBytes == toWrite;
     }
 
     @Override
@@ -68,9 +83,11 @@ class SpdyHeaderBlockZlibEncoder extends SpdyHeaderBlockRawEncoder {
             return Unpooled.EMPTY_BUFFER;
         }
 
-        ByteBuf compressed = decompressed.alloc().buffer();
-        setInput(decompressed);
+        ByteBuf compressed = decompressed.alloc().heapBuffer(decompressed.readableBytes());
+        int len = setInput(decompressed);
         encode(compressed);
+        decompressed.skipBytes(len);
+
         return compressed;
     }
 
