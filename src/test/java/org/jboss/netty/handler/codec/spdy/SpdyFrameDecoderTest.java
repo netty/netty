@@ -326,14 +326,14 @@ public class SpdyFrameDecoderTest {
         assertEquals(5, actual.headers().getAll(createString('o', 1000)).size());
     }
     
-    private SpdyHeadersFrame roundTrip(SpdyHeadersFrame frame, int maxHeaderSize) throws Exception {
+    private static SpdyHeadersFrame roundTrip(SpdyHeadersFrame frame, int maxHeaderSize) throws Exception {
         SpdyHeaderBlockEncoder encoder = SpdyHeaderBlockEncoder.newInstance(SpdyVersion.SPDY_3_1, 6, 15, 8);
         SpdyHeaderBlockDecoder decoder = SpdyHeaderBlockDecoder.newInstance(SpdyVersion.SPDY_3_1, maxHeaderSize);
         return roundTrip(encoder, decoder, frame);
     }
     
-    private SpdyHeadersFrame roundTrip(SpdyHeaderBlockEncoder encoder, SpdyHeaderBlockDecoder decoder, 
-            SpdyHeadersFrame frame) throws Exception {
+    private static SpdyHeadersFrame roundTrip(
+            SpdyHeaderBlockEncoder encoder, SpdyHeaderBlockDecoder decoder, SpdyHeadersFrame frame) throws Exception {
         ChannelBuffer encoded = encoder.encode(frame);
         
         SpdyHeadersFrame actual = new DefaultSpdySynStreamFrame(1, 0, (byte) 0);
@@ -343,7 +343,10 @@ public class SpdyFrameDecoderTest {
     }
     
     private static boolean equals(SpdyHeaders h1, SpdyHeaders h2) {
-        if (!h1.names().equals(h2.names())) return false;
+        if (!h1.names().equals(h2.names())) {
+            return false;
+        }
+
         for (String name : h1.names()) {
             if (!h1.getAll(name).equals(h2.getAll(name))) {
                 return false;
