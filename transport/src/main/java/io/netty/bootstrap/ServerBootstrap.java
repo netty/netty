@@ -241,6 +241,9 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
             logger.warn("childGroup is not set. Using parentGroup instead.");
             childGroup = group();
         }
+        if (channelFactory == null) {
+            throw new IllegalStateException("factory not set");
+        }
         return this;
     }
 
