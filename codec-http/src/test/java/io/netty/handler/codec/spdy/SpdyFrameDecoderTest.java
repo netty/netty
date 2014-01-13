@@ -106,7 +106,6 @@ public class SpdyFrameDecoderTest {
         }
     }
 
-
     @Test
     public void testLargeHeaderNameOnSynStreamRequest() throws Exception {
         testLargeHeaderNameOnSynStreamRequest(SpdyVersion.SPDY_3);
