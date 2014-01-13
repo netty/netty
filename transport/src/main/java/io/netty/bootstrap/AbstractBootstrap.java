@@ -202,7 +202,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
             throw new IllegalStateException("group not set");
         }
         if (channelFactory == null) {
-            throw new IllegalStateException("factory not set");
+            throw new IllegalStateException("channel or channelFactory not set");
         }
         return (B) this;
     }
