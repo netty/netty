@@ -190,9 +190,8 @@ public class DefaultChannelPipelineTest {
 
     @Test
     public void testFireChannelRegistered() throws Exception {
-        ChannelPipeline pipeline = new LocalChannel().pipeline();
-        group.register(pipeline.channel());
         final CountDownLatch latch = new CountDownLatch(1);
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
         pipeline.addLast(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
@@ -204,7 +203,7 @@ public class DefaultChannelPipelineTest {
                 });
             }
         });
-        pipeline.fireChannelRegistered();
+        group.register(pipeline.channel());
         assertTrue(latch.await(2, TimeUnit.SECONDS));
     }
 
