@@ -15,11 +15,11 @@
  */
 package org.jboss.netty.handler.codec.spdy;
 
-import java.nio.ByteOrder;
-import java.util.Set;
-
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
+
+import java.nio.ByteOrder;
+import java.util.Set;
 
 import static org.jboss.netty.handler.codec.spdy.SpdyCodecUtil.*;
 
@@ -34,11 +34,11 @@ public class SpdyHeaderBlockRawEncoder extends SpdyHeaderBlockEncoder {
         version = spdyVersion.getVersion();
     }
 
-    private void setLengthField(ChannelBuffer buffer, int writerIndex, int length) {
+    private static void setLengthField(ChannelBuffer buffer, int writerIndex, int length) {
         buffer.setInt(writerIndex, length);
     }
 
-    private void writeLengthField(ChannelBuffer buffer, int length) {
+    private static void writeLengthField(ChannelBuffer buffer, int length) {
         buffer.writeInt(length);
     }
 

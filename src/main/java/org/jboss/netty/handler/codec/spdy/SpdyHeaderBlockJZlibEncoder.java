@@ -15,13 +15,13 @@
  */
 package org.jboss.netty.handler.codec.spdy;
 
-import static org.jboss.netty.handler.codec.spdy.SpdyCodecUtil.*;
-
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.compression.CompressionException;
 import org.jboss.netty.util.internal.jzlib.JZlib;
 import org.jboss.netty.util.internal.jzlib.ZStream;
+
+import static org.jboss.netty.handler.codec.spdy.SpdyCodecUtil.*;
 
 class SpdyHeaderBlockJZlibEncoder extends SpdyHeaderBlockRawEncoder {
 
@@ -29,7 +29,7 @@ class SpdyHeaderBlockJZlibEncoder extends SpdyHeaderBlockRawEncoder {
 
     private boolean finished;
 
-    public SpdyHeaderBlockJZlibEncoder(
+    SpdyHeaderBlockJZlibEncoder(
             SpdyVersion spdyVersion, int compressionLevel, int windowBits, int memLevel) {
         super(spdyVersion);
         if (compressionLevel < 0 || compressionLevel > 9) {

@@ -15,12 +15,12 @@
  */
 package org.jboss.netty.handler.codec.spdy;
 
-import static org.jboss.netty.handler.codec.spdy.SpdyCodecUtil.*;
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
 
 import java.util.zip.Deflater;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
+import static org.jboss.netty.handler.codec.spdy.SpdyCodecUtil.*;
 
 class SpdyHeaderBlockZlibEncoder extends SpdyHeaderBlockRawEncoder {
 
@@ -28,7 +28,7 @@ class SpdyHeaderBlockZlibEncoder extends SpdyHeaderBlockRawEncoder {
 
     private boolean finished;
 
-    public SpdyHeaderBlockZlibEncoder(SpdyVersion spdyVersion, int compressionLevel) {
+    SpdyHeaderBlockZlibEncoder(SpdyVersion spdyVersion, int compressionLevel) {
         super(spdyVersion);
         if (compressionLevel < 0 || compressionLevel > 9) {
             throw new IllegalArgumentException(
