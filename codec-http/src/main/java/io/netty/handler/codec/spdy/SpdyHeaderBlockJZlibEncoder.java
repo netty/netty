@@ -19,7 +19,6 @@ import com.jcraft.jzlib.Deflater;
 import com.jcraft.jzlib.JZlib;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.compression.CompressionException;
 
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
@@ -30,7 +29,7 @@ class SpdyHeaderBlockJZlibEncoder extends SpdyHeaderBlockRawEncoder {
 
     private boolean finished;
 
-    public SpdyHeaderBlockJZlibEncoder(
+    SpdyHeaderBlockJZlibEncoder(
             SpdyVersion version, int compressionLevel, int windowBits, int memLevel) {
         super(version);
         if (compressionLevel < 0 || compressionLevel > 9) {
@@ -94,7 +93,7 @@ class SpdyHeaderBlockJZlibEncoder extends SpdyHeaderBlockRawEncoder {
     }
 
     @Override
-    public ByteBuf encode(ChannelHandlerContext ctx, SpdyHeadersFrame frame) throws Exception {
+    public ByteBuf encode(SpdyHeadersFrame frame) throws Exception {
         if (frame == null) {
             throw new IllegalArgumentException("frame");
         }
@@ -103,12 +102,12 @@ class SpdyHeaderBlockJZlibEncoder extends SpdyHeaderBlockRawEncoder {
             return Unpooled.EMPTY_BUFFER;
         }
 
-        ByteBuf decompressed = super.encode(ctx, frame);
+        ByteBuf decompressed = super.encode(frame);
         if (decompressed.readableBytes() == 0) {
             return Unpooled.EMPTY_BUFFER;
         }
 
-        ByteBuf compressed = ctx.alloc().buffer();
+        ByteBuf compressed = decompressed.alloc().buffer();
         setInput(decompressed);
         encode(compressed);
         return compressed;
