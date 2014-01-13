@@ -112,6 +112,6 @@ public class HttpChunkedHandlerTest {
         }
 
         assertEquals(BYTES.length * inputs.length, read);
-        assertTrue("Last chunk must be DefaultLastHttpContent", (lastHttpContent instanceof DefaultLastHttpContent));
+        assertTrue("Last chunk must be DefaultLastHttpContent", lastHttpContent instanceof DefaultLastHttpContent);
     }
 }
