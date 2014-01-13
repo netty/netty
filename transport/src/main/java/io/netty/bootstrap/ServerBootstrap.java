@@ -242,7 +242,7 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
             childGroup = group();
         }
         if (channelFactory == null) {
-            throw new IllegalStateException("factory not set");
+            throw new IllegalStateException("channel or channelFactory not set");
         }
         return this;
     }

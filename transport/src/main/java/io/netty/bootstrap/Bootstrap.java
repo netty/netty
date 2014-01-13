@@ -256,7 +256,7 @@ public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
             throw new IllegalStateException("handler not set");
         }
         if (channelFactory == null) {
-            throw new IllegalStateException("factory not set");
+            throw new IllegalStateException("channel or channelFactory not set");
         }
         return this;
     }
