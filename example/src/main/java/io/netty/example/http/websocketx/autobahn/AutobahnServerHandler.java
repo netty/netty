@@ -91,7 +91,7 @@ public class AutobahnServerHandler extends ChannelInboundHandlerAdapter {
                 getWebSocketLocation(req), null, false, Integer.MAX_VALUE);
         handshaker = wsFactory.newHandshaker(req);
         if (handshaker == null) {
-            WebSocketServerHandshakerFactory.sendUnsupportedWebSocketVersionResponse(ctx.channel());
+            WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(ctx.channel());
         } else {
             handshaker.handshake(ctx.channel(), req);
         }
