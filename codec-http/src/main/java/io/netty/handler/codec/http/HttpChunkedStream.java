@@ -42,7 +42,7 @@ public class HttpChunkedStream implements ChunkedInput<HttpContent> {
     private final PushbackInputStream in;
     private final int chunkSize;
     private long offset;
-    private volatile boolean sentLastChunk = false;
+    private volatile boolean sentLastChunk;
 
     /**
      * Creates a new instance that fetches data from the specified stream.
@@ -53,7 +53,6 @@ public class HttpChunkedStream implements ChunkedInput<HttpContent> {
 
     /**
      * Creates a new instance that fetches data from the specified stream.
-     * 
      * @param chunkSize
      *            the number of bytes to fetch on each {@link #readChunk(ChannelHandlerContext)} call
      */

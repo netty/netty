@@ -38,7 +38,7 @@ public class HttpChunkedNioStream implements ChunkedInput<HttpContent> {
 
     private final int chunkSize;
     private long offset;
-    private volatile boolean sentLastChunk = false;
+    private volatile boolean sentLastChunk;
 
     /**
      * Associated ByteBuffer
@@ -54,7 +54,6 @@ public class HttpChunkedNioStream implements ChunkedInput<HttpContent> {
 
     /**
      * Creates a new instance that fetches data from the specified channel.
-     * 
      * @param chunkSize
      *            the number of bytes to fetch on each {@link #readChunk(ChannelHandlerContext)} call
      */

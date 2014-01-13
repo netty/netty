@@ -40,7 +40,7 @@ public class HttpChunkedNioFile implements ChunkedInput<HttpContent> {
     private final long endOffset;
     private final int chunkSize;
     private long offset;
-    private volatile boolean sentLastChunk = false;
+    private volatile boolean sentLastChunk;
 
     /**
      * Creates a new instance that fetches data from the specified file.
@@ -51,7 +51,6 @@ public class HttpChunkedNioFile implements ChunkedInput<HttpContent> {
 
     /**
      * Creates a new instance that fetches data from the specified file.
-     * 
      * @param chunkSize
      *            the number of bytes to fetch on each {@link #readChunk(ChannelHandlerContext)} call
      */
@@ -68,7 +67,6 @@ public class HttpChunkedNioFile implements ChunkedInput<HttpContent> {
 
     /**
      * Creates a new instance that fetches data from the specified file.
-     * 
      * @param chunkSize
      *            the number of bytes to fetch on each {@link #readChunk(ChannelHandlerContext)} call
      */
@@ -78,7 +76,6 @@ public class HttpChunkedNioFile implements ChunkedInput<HttpContent> {
 
     /**
      * Creates a new instance that fetches data from the specified file.
-     * 
      * @param offset
      *            the offset of the file where the transfer begins
      * @param length
