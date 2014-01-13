@@ -17,7 +17,6 @@ package io.netty.handler.codec.spdy;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelHandlerContext;
 
 import java.util.zip.Deflater;
 
@@ -30,7 +29,7 @@ class SpdyHeaderBlockZlibEncoder extends SpdyHeaderBlockRawEncoder {
 
     private boolean finished;
 
-    public SpdyHeaderBlockZlibEncoder(SpdyVersion version, int compressionLevel) {
+    SpdyHeaderBlockZlibEncoder(SpdyVersion version, int compressionLevel) {
         super(version);
         if (compressionLevel < 0 || compressionLevel > 9) {
             throw new IllegalArgumentException(
@@ -55,7 +54,7 @@ class SpdyHeaderBlockZlibEncoder extends SpdyHeaderBlockRawEncoder {
     }
 
     @Override
-    public ByteBuf encode(ChannelHandlerContext ctx, SpdyHeadersFrame frame) throws Exception {
+    public ByteBuf encode(SpdyHeadersFrame frame) throws Exception {
         if (frame == null) {
             throw new IllegalArgumentException("frame");
         }
@@ -64,12 +63,12 @@ class SpdyHeaderBlockZlibEncoder extends SpdyHeaderBlockRawEncoder {
             return Unpooled.EMPTY_BUFFER;
         }
 
-        ByteBuf decompressed = super.encode(ctx, frame);
+        ByteBuf decompressed = super.encode(frame);
         if (decompressed.readableBytes() == 0) {
             return Unpooled.EMPTY_BUFFER;
         }
 
-        ByteBuf compressed = ctx.alloc().buffer();
+        ByteBuf compressed = decompressed.alloc().buffer();
         setInput(decompressed);
         encode(compressed);
         return compressed;

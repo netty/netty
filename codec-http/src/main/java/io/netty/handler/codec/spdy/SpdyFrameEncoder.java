@@ -85,7 +85,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<SpdyFrame> {
         } else if (msg instanceof SpdySynStreamFrame) {
 
             SpdySynStreamFrame spdySynStreamFrame = (SpdySynStreamFrame) msg;
-            ByteBuf data = headerBlockEncoder.encode(ctx, spdySynStreamFrame);
+            ByteBuf data = headerBlockEncoder.encode(spdySynStreamFrame);
             try {
                 byte flags = spdySynStreamFrame.isLast() ? SPDY_FLAG_FIN : 0;
                 if (spdySynStreamFrame.isUnidirectional()) {
@@ -109,7 +109,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<SpdyFrame> {
         } else if (msg instanceof SpdySynReplyFrame) {
 
             SpdySynReplyFrame spdySynReplyFrame = (SpdySynReplyFrame) msg;
-            ByteBuf data = headerBlockEncoder.encode(ctx, spdySynReplyFrame);
+            ByteBuf data = headerBlockEncoder.encode(spdySynReplyFrame);
             try {
                 byte flags = spdySynReplyFrame.isLast() ? SPDY_FLAG_FIN : 0;
                 int headerBlockLength = data.readableBytes();
@@ -184,7 +184,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<SpdyFrame> {
         } else if (msg instanceof SpdyHeadersFrame) {
 
             SpdyHeadersFrame spdyHeadersFrame = (SpdyHeadersFrame) msg;
-            ByteBuf data = headerBlockEncoder.encode(ctx, spdyHeadersFrame);
+            ByteBuf data = headerBlockEncoder.encode(spdyHeadersFrame);
             try {
                 byte flags = spdyHeadersFrame.isLast() ? SPDY_FLAG_FIN : 0;
                 int headerBlockLength = data.readableBytes();
