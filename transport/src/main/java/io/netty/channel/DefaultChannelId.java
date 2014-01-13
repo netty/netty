@@ -228,9 +228,10 @@ final class DefaultChannelId implements ChannelId {
     }
 
     private static int defaultProcessId() {
+        final ClassLoader loader = ClassLoader.getSystemClassLoader();
         String value;
         try {
-            ClassLoader loader = ClassLoader.getSystemClassLoader();
+            // Invoke java.lang.management.ManagementFactory.getRuntimeMXBean().getName()
             Class<?> mgmtFactoryType = Class.forName("java.lang.management.ManagementFactory", true, loader);
             Class<?> runtimeMxBeanType = Class.forName("java.lang.management.RuntimeMXBean", true, loader);
 
@@ -240,7 +241,15 @@ final class DefaultChannelId implements ChannelId {
             value = (String) getName.invoke(bean, null);
         } catch (Exception e) {
             logger.debug("Could not invoke ManagementFactory.getRuntimeMXBean().getName(); Android?", e);
-            value = "";
+            try {
+                // Invoke android.os.Process.myPid()
+                Class<?> processType = Class.forName("android.os.Process", true, loader);
+                Method myPid = processType.getMethod("myPid", null);
+                value = myPid.invoke(null, null).toString();
+            } catch (Exception e2) {
+                logger.debug("Could not invoke Process.myPid(); not Android?", e2);
+                value = "";
+            }
         }
 
         int atIndex = value.indexOf('@');
