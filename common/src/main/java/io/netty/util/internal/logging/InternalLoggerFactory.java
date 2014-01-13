@@ -18,9 +18,9 @@ package io.netty.util.internal.logging;
 /**
  * Creates an {@link InternalLogger} or changes the default factory
  * implementation.  This factory allows you to choose what logging framework
- * Netty should use.  The default factory is {@link Slf4JLoggerFactory}.  If SLF4J 
+ * Netty should use.  The default factory is {@link Slf4JLoggerFactory}.  If SLF4J
  * is not available, {@link Log4JLoggerFactory} is used.  If Log4J is not available,
- * {@link JdkLoggerFactory} is used.  You can change it to your preferred 
+ * {@link JdkLoggerFactory} is used.  You can change it to your preferred
  * logging framework before other Netty classes are loaded:
  * <pre>
  * {@link InternalLoggerFactory}.setDefaultFactory(new {@link Log4JLoggerFactory}());
