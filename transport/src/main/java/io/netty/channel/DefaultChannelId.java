@@ -22,7 +22,7 @@ import io.netty.util.internal.ThreadLocalRandom;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.lang.management.ManagementFactory;
+import java.lang.reflect.Method;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.util.Arrays;
@@ -228,7 +228,21 @@ final class DefaultChannelId implements ChannelId {
     }
 
     private static int defaultProcessId() {
-        String value = ManagementFactory.getRuntimeMXBean().getName();
+        String value;
+        try {
+            ClassLoader loader = ClassLoader.getSystemClassLoader();
+            Class<?> mgmtFactoryType = Class.forName("java.lang.management.ManagementFactory", true, loader);
+            Class<?> runtimeMxBeanType = Class.forName("java.lang.management.RuntimeMXBean", true, loader);
+
+            Method getRuntimeMXBean = mgmtFactoryType.getMethod("getRuntimeMXBean", null);
+            Object bean = getRuntimeMXBean.invoke(null, null);
+            Method getName = runtimeMxBeanType.getDeclaredMethod("getName");
+            value = (String) getName.invoke(bean, null);
+        } catch (Exception e) {
+            logger.debug("Could not invoke ManagementFactory.getRuntimeMXBean().getName(); Android?", e);
+            value = "";
+        }
+
         int atIndex = value.indexOf('@');
         if (atIndex >= 0) {
             value = value.substring(0, atIndex);
@@ -238,12 +252,13 @@ final class DefaultChannelId implements ChannelId {
         try {
             pid = Integer.parseInt(value);
         } catch (NumberFormatException e) {
+            // value did not contain an integer.
             pid = -1;
         }
 
         if (pid < 0 || pid > MAX_PROCESS_ID) {
             pid = ThreadLocalRandom.current().nextInt(MAX_PROCESS_ID + 1);
-            logger.warn("Failed to find the current process ID; using a random value: {}",  pid);
+            logger.warn("Failed to find the current process ID from '{}'; using a random value: {}",  value, pid);
         }
 
         return pid;
@@ -254,8 +269,6 @@ final class DefaultChannelId implements ChannelId {
 
     private transient String shortValue;
     private transient String longValue;
-
-    public DefaultChannelId() { }
 
     private void init() {
         int i = 0;
