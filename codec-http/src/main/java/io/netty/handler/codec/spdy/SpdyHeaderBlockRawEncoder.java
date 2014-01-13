@@ -17,7 +17,6 @@ package io.netty.handler.codec.spdy;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelHandlerContext;
 
 import java.util.Set;
 
@@ -51,7 +50,7 @@ public class SpdyHeaderBlockRawEncoder extends SpdyHeaderBlockEncoder {
     }
 
     @Override
-    public ByteBuf encode(ChannelHandlerContext ctx, SpdyHeadersFrame frame) throws Exception {
+    public ByteBuf encode(SpdyHeadersFrame frame) throws Exception {
         Set<String> names = frame.headers().names();
         int numHeaders = names.size();
         if (numHeaders == 0) {
