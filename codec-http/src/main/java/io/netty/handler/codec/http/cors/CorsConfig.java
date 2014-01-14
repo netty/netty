@@ -69,12 +69,12 @@ public final class CorsConfig {
     /**
      * Web browsers may set the 'Origin' request header to 'null' if a resource is loaded
      * from the local file system.
-     * If allowNullOrigin is true then the server will response with the wildcard for the
+     * If isNullOriginAllowed is true then the server will response with the wildcard for the
      * the CORS response header 'Access-Control-Allow-Origin'.
      *
      * @return {@code true} if a 'null' origin should be supported.
      */
-    public boolean allowNullOrigin() {
+    public boolean isNullOriginAllowed() {
         return allowNullOrigin;
     }
 
@@ -100,20 +100,20 @@ public final class CorsConfig {
      *
      * @return {@code List<String>} a list of the headers to expose.
      */
-    public Set<String> exposeHeaders() {
+    public Set<String> exposedHeaders() {
         return Collections.unmodifiableSet(exposeHeaders);
     }
 
     /**
      * Determines if cookies are supported for CORS requests.
      *
-     * By default cookies are not included in CORS requests but if allowCredentials returns true cookies will be added
-     * to CORS requests. Setting this value to true will set the CORS 'Access-Control-Allow-Credentials' response
-     * header to true.
+     * By default cookies are not included in CORS requests but if isCredentialsAllowed returns true cookies will
+     * be added to CORS requests. Setting this value to true will set the CORS 'Access-Control-Allow-Credentials'
+     * response header to true.
      *
      * @return {@code true} if cookies are supported.
      */
-    public boolean allowCredentials() {
+    public boolean isCredentialsAllowed() {
         return allowCredentials;
     }
 
@@ -156,8 +156,8 @@ public final class CorsConfig {
     public String toString() {
         return StringUtil.simpleClassName(this) + "[enabled=" + enabled +
                 ", origin=" + origin +
-                ", exposeHeaders=" + exposeHeaders +
-                ", allowCredentials=" + allowCredentials +
+                ", exposedHeaders=" + exposeHeaders +
+                ", isCredentialsAllowed=" + allowCredentials +
                 ", maxAge=" + maxAge +
                 ", allowedRequestMethods=" + allowedRequestMethods +
                 ", allowedRequestHeaders=" + allowedRequestHeaders + ']';

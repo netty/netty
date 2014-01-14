@@ -40,7 +40,7 @@ import io.netty.handler.stream.ChunkedWriteHandler;
  * To enable the server to handle an origin specified as 'null', which happens
  * when a web browser loads a file from the local file system use the following:
  * <pre>
- * corsConfig.allowNullOrigin()
+ * corsConfig.isNullOriginAllowed()
  * </pre>
  *
  * <h3>Enable request headers</h3>
@@ -65,7 +65,7 @@ import io.netty.handler.stream.ChunkedWriteHandler;
  * </pre>
  * If you need to get access to other headers this must be enabled by the server, for example:
  * <pre>
- * corsConfig.exposeHeaders("custom-response-header");
+ * corsConfig.exposedHeaders("custom-response-header");
  * </pre>
  */
 public class HttpServerInitializer extends ChannelInitializer<SocketChannel> {

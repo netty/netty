@@ -48,13 +48,13 @@ public class CorsConfigurationTest {
     @Test
     public void exposeHeaders() {
         final CorsConfig cors = withOrigin("*").exposeHeaders("custom-header1", "custom-header2").build();
-        assertThat(cors.exposeHeaders(), hasItems("custom-header1", "custom-header2"));
+        assertThat(cors.exposedHeaders(), hasItems("custom-header1", "custom-header2"));
     }
 
     @Test
     public void allowCredentials() {
         final CorsConfig cors = withOrigin("*").allowCredentials().build();
-        assertThat(cors.allowCredentials(), is(true));
+        assertThat(cors.isCredentialsAllowed(), is(true));
     }
 
     @Test

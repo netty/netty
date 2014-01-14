@@ -27,7 +27,6 @@ import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -74,7 +73,7 @@ public class CorsHandler extends ChannelHandlerAdapter {
     private boolean setOrigin(final HttpResponse response) {
         final String origin = request.headers().get(ORIGIN);
         if (origin != null) {
-            if ("null".equals(origin) && config.allowNullOrigin()) {
+            if ("null".equals(origin) && config.isNullOriginAllowed()) {
                 response.headers().set(ACCESS_CONTROL_ALLOW_ORIGIN, "*");
             } else {
                 response.headers().set(ACCESS_CONTROL_ALLOW_ORIGIN, config.origin());
@@ -85,7 +84,7 @@ public class CorsHandler extends ChannelHandlerAdapter {
     }
 
     private void setAllowCredentials(final HttpResponse response) {
-        if (config.allowCredentials()) {
+        if (config.isCredentialsAllowed()) {
             response.headers().set(ACCESS_CONTROL_ALLOW_CREDENTIALS, "true");
         }
     }
@@ -98,8 +97,8 @@ public class CorsHandler extends ChannelHandlerAdapter {
     }
 
     private void setExposeHeaders(final HttpResponse response) {
-        if (!config.exposeHeaders().isEmpty()) {
-            response.headers().set(ACCESS_CONTROL_EXPOSE_HEADERS, config.exposeHeaders());
+        if (!config.exposedHeaders().isEmpty()) {
+            response.headers().set(ACCESS_CONTROL_EXPOSE_HEADERS, config.exposedHeaders());
         }
     }
 
