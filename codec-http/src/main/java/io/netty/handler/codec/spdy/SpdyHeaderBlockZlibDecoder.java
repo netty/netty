@@ -16,7 +16,7 @@
 package io.netty.handler.codec.spdy;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.ByteBufAllocator;
 
 import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
@@ -41,7 +41,7 @@ final class SpdyHeaderBlockZlibDecoder extends SpdyHeaderBlockRawDecoder {
 
         int numBytes;
         do {
-            numBytes = decompress(frame);
+            numBytes = decompress(encoded.alloc(), frame);
         } while (numBytes > 0);
 
         if (decompressor.getRemaining() != 0) {
@@ -65,8 +65,8 @@ final class SpdyHeaderBlockZlibDecoder extends SpdyHeaderBlockRawDecoder {
         return len;
     }
 
-    private int decompress(SpdyHeadersFrame frame) throws Exception {
-        ensureBuffer();
+    private int decompress(ByteBufAllocator alloc, SpdyHeadersFrame frame) throws Exception {
+        ensureBuffer(alloc);
         byte[] out = decompressed.array();
         int off = decompressed.arrayOffset() + decompressed.writerIndex();
         try {
@@ -87,23 +87,30 @@ final class SpdyHeaderBlockZlibDecoder extends SpdyHeaderBlockRawDecoder {
         }
     }
 
-    private void ensureBuffer() {
+    private void ensureBuffer(ByteBufAllocator alloc) {
         if (decompressed == null) {
-            decompressed = Unpooled.buffer(DEFAULT_BUFFER_CAPACITY);
+            decompressed = alloc.heapBuffer(DEFAULT_BUFFER_CAPACITY);
         }
         decompressed.ensureWritable(1);
     }
 
     @Override
     void reset() {
-        decompressed = null;
+        releaseBuffer();
         super.reset();
     }
 
     @Override
     public void end() {
-        decompressed = null;
+        releaseBuffer();
         decompressor.end();
         super.end();
+    }
+
+    private void releaseBuffer() {
+        if (decompressed != null) {
+            decompressed.release();
+            decompressed = null;
+        }
     }
 }
