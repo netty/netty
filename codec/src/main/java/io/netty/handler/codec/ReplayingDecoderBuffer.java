@@ -345,7 +345,7 @@ final class ReplayingDecoderBuffer extends ByteBuf {
     @Override
     public int forEachByte(ByteBufProcessor processor) {
         int ret = buffer.forEachByte(processor);
-        if (!terminated && ret < 0) {
+        if (ret < 0) {
             throw REPLAY;
         } else {
             return ret;

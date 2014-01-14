@@ -189,7 +189,6 @@ public class HttpResponseDecoderTest {
 
         // Close the connection without sending anything.
         ch.finish();
-
         // The decoder should not generate the last chunk because it's closed prematurely.
         assertThat(ch.readInbound(), is(nullValue()));
     }
