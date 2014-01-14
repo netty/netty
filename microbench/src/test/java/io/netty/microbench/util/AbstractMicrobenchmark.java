@@ -17,11 +17,14 @@ package io.netty.microbench.util;
 
 import io.netty.util.ResourceLeakDetector;
 import org.junit.Test;
-import org.openjdk.jmh.output.OutputFormatType;
+import org.openjdk.jmh.annotations.Fork;
+import org.openjdk.jmh.annotations.Measurement;
+import org.openjdk.jmh.annotations.Scope;
+import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.output.results.ResultFormatType;
 import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.options.ChainedOptionsBuilder;
-import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 import java.io.File;
@@ -29,11 +32,15 @@ import java.io.File;
 /**
  * Base class for all JMH benchmarks.
  */
+@Warmup(iterations = AbstractMicrobenchmark.DEFAULT_WARMUP_ITERATIONS)
+@Measurement(iterations = AbstractMicrobenchmark.DEFAULT_MEASURE_ITERATIONS)
+@Fork(AbstractMicrobenchmark.DEFAULT_FORKS)
+@State(Scope.Thread)
 public class AbstractMicrobenchmark {
 
-    protected static final String WARMUP_ITERATIONS = "10";
-    protected static final String MEASURE_ITERATIONS = "10";
-    protected static final String NUM_FORKS = "2";
+    protected static final int DEFAULT_WARMUP_ITERATIONS = 10;
+    protected static final int DEFAULT_MEASURE_ITERATIONS = 1;
+    protected static final int DEFAULT_FORKS = 2;
 
     protected static final String JVM_ARGS = "-server -dsa -da -ea:io.netty... -Xms768m" +
         " -Xmx768m -XX:MaxDirectMemorySize=768m -XX:+AggressiveOpts -XX:+UseBiasedLocking" +
@@ -50,10 +57,19 @@ public class AbstractMicrobenchmark {
 
         ChainedOptionsBuilder runnerOptions = new OptionsBuilder()
             .include(".*" + className + ".*")
-            .jvmArgs(JVM_ARGS)
-            .warmupIterations(getWarmupIterations())
-            .measurementIterations(getMeasureIterations())
-            .forks(getForks());
+            .jvmArgs(JVM_ARGS);
+
+        if (getWarmupIterations() > 0) {
+            runnerOptions.warmupIterations(getWarmupIterations());
+        }
+
+        if (getMeasureIterations() > 0) {
+            runnerOptions.measurementIterations(getMeasureIterations());
+        }
+
+        if (getForks() > 0) {
+            runnerOptions.forks(getForks());
+        }
 
         if (getReportDir() != null) {
             String filePath = getReportDir() + className + ".json";
@@ -73,15 +89,15 @@ public class AbstractMicrobenchmark {
     }
 
     protected int getWarmupIterations() {
-        return Integer.parseInt(System.getProperty("warmupIterations", WARMUP_ITERATIONS));
+        return Integer.parseInt(System.getProperty("warmupIterations", "-1"));
     }
 
     protected int getMeasureIterations() {
-        return Integer.parseInt(System.getProperty("measureIterations", MEASURE_ITERATIONS));
+        return Integer.parseInt(System.getProperty("measureIterations", "-1"));
     }
 
     protected int getForks() {
-        return Integer.parseInt(System.getProperty("forks", NUM_FORKS));
+        return Integer.parseInt(System.getProperty("forks", "-1"));
     }
 
     protected String getReportDir() {
