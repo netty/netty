@@ -29,13 +29,13 @@ import org.eclipse.jetty.npn.NextProtoNego.ServerProvider;
  * <p>
  * To enable NPN support, start the JVM with: {@code java -Xbootclasspath/p:<path_to_npn_boot_jar> ...}. The
  * "path_to_npn_boot_jar" is the path on the file system for the NPN Boot Jar file which can be downloaded from
- * Maven at coordinates org.mortbay.jetty.npn:npn-boot. Different versions applies to different OpenJDK versions. 
+ * Maven at coordinates org.mortbay.jetty.npn:npn-boot. Different versions applies to different OpenJDK versions.
  *
- * @see http://www.eclipse.org/jetty/documentation/current/npn-chapter.html 
+ * @see http://www.eclipse.org/jetty/documentation/current/npn-chapter.html
  */
 public class SpdyServerProvider implements ServerProvider {
 
-    private String selectedProtocol = null;
+    private String selectedProtocol;
 
     public void unsupported() {
         // if unsupported, default to http/1.1

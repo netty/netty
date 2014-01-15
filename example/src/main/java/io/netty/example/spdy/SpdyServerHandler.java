@@ -33,7 +33,7 @@ import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
 
 /**
- * HTTP handler that responds with a "Hello World" 
+ * HTTP handler that responds with a "Hello World"
  */
 public class SpdyServerHandler extends ChannelHandlerAdapter {
     @Override
