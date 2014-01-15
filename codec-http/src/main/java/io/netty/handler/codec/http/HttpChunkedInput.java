@@ -41,9 +41,9 @@ import io.netty.handler.stream.ChunkedInput;
  */
 public class HttpChunkedInput implements ChunkedInput<HttpContent> {
 
-    private ChunkedInput<ByteBuf> input;
+    private final ChunkedInput<ByteBuf> input;
+    private final LastHttpContent lastHttpContent;
     private boolean sentLastChunk;
-    private LastHttpContent lastHttpContent;
 
     /**
      * Creates a new instance using the specified input.
@@ -51,7 +51,7 @@ public class HttpChunkedInput implements ChunkedInput<HttpContent> {
      */
     public HttpChunkedInput(ChunkedInput<ByteBuf> input) {
         this.input = input;
-        this.lastHttpContent = LastHttpContent.EMPTY_LAST_CONTENT;
+        lastHttpContent = LastHttpContent.EMPTY_LAST_CONTENT;
     }
 
     /**
