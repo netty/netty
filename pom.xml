@@ -143,6 +143,13 @@
         <optional>true</optional>
       </dependency>
     
+      <!-- SPDY Example - completely optional -->
+      <dependency>
+        <groupId>org.eclipse.jetty.npn</groupId>
+        <artifactId>npn-api</artifactId>
+        <version>1.1.0.v20120525</version>
+      </dependency>
+        
       <dependency>
         <groupId>com.google.protobuf</groupId>
         <artifactId>protobuf-java</artifactId>
