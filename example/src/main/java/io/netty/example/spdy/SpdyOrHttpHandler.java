@@ -1,0 +1,67 @@
+/*
+ * Copyright 2014 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+package io.netty.example.spdy;
+
+import javax.net.ssl.SSLEngine;
+
+import org.eclipse.jetty.npn.NextProtoNego;
+
+import io.netty.channel.ChannelHandler;
+import io.netty.handler.codec.spdy.SpdyOrHttpChooser;
+
+/**
+ * Negotiates with the browser if SPDY or HTTP is going to be used. Once decided, the Netty pipeline is setup with
+ * the correct handlers for the selected protocol.
+ */
+public class SpdyOrHttpHandler extends SpdyOrHttpChooser {
+    private static final int MAX_CONTENT_LENGTH = 1024 * 100;
+
+    public SpdyOrHttpHandler() {
+        this(MAX_CONTENT_LENGTH, MAX_CONTENT_LENGTH);
+    }
+
+    public SpdyOrHttpHandler(int maxSpdyContentLength, int maxHttpContentLength) {
+        super(maxSpdyContentLength, maxHttpContentLength);
+    }
+
+    @Override
+    protected SelectedProtocol getProtocol(SSLEngine engine) {
+        SpdyServerProvider provider = (SpdyServerProvider) NextProtoNego.get(engine);
+        String selectedProtocol = provider.getSelectedProtocol();
+
+        System.out.println("Selected Protocol is " + (selectedProtocol == null ? "Unknown" : selectedProtocol));
+
+        if (selectedProtocol == null) {
+            return SpdyOrHttpChooser.SelectedProtocol.UNKNOWN;
+        } else if (selectedProtocol.equalsIgnoreCase("spdy/3.1")) {
+            return SpdyOrHttpChooser.SelectedProtocol.SPDY_3_1;
+        } else if (selectedProtocol.equalsIgnoreCase("spdy/3")) {
+            return SpdyOrHttpChooser.SelectedProtocol.SPDY_3;
+        } else if (selectedProtocol.equalsIgnoreCase("http/1.1")) {
+            return SpdyOrHttpChooser.SelectedProtocol.HTTP_1_1;
+        } else if (selectedProtocol.equalsIgnoreCase("http/1.0")) {
+            return SpdyOrHttpChooser.SelectedProtocol.HTTP_1_0;
+        } else {
+            return SpdyOrHttpChooser.SelectedProtocol.UNKNOWN;
+        }
+    }
+
+    @Override
+    protected ChannelHandler createHttpRequestHandlerForHttp() {
+        return new SpdyServerHandler();
+    }
+
+}
