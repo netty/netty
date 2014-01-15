@@ -16,6 +16,7 @@
 package io.netty.microbench.util;
 
 import io.netty.util.ResourceLeakDetector;
+import io.netty.util.internal.SystemPropertyUtil;
 import org.junit.Test;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Measurement;
@@ -89,18 +90,18 @@ public class AbstractMicrobenchmark {
     }
 
     protected int getWarmupIterations() {
-        return Integer.parseInt(System.getProperty("warmupIterations", "-1"));
+        return SystemPropertyUtil.getInt("warmupIterations", -1);
     }
 
     protected int getMeasureIterations() {
-        return Integer.parseInt(System.getProperty("measureIterations", "-1"));
+        return SystemPropertyUtil.getInt("measureIterations", -1);
     }
 
     protected int getForks() {
-        return Integer.parseInt(System.getProperty("forks", "-1"));
+        return SystemPropertyUtil.getInt("forks", -1);
     }
 
     protected String getReportDir() {
-        return System.getProperty("perfReportDir", null);
+        return SystemPropertyUtil.get("perfReportDir");
     }
 }
