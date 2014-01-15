@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2014 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -22,7 +22,7 @@ import io.netty.handler.stream.ChunkedInput;
 /**
  * A {@link ChunkedInput} that fetches data chunk by chunk for use with HTTP chunked transfers.
  * <p>
- * Each chunk from the input data will be wrapped within a {@link DefaultHttpContent}. At the end of the input data,
+ * Each chunk from the input data will be wrapped within a {@link HttpContent}. At the end of the input data,
  * {@link LastHttpContent} will be written.
  * <p>
  * Ensure that your HTTP response header contains {@code Transfer-Encoding: chunked}.
@@ -46,20 +46,19 @@ public class HttpContentChunkedInput implements ChunkedInput<HttpContent> {
     private LastHttpContent lastHttpContent;
 
     /**
-     * Creates a new instance using the specified input. {@link DefaultLastHttpContent} will be written as the the
-     * terminating chunk.
+     * Creates a new instance using the specified input.
      * @param input {@link ChunkedInput} containing data to write
      */
     public HttpContentChunkedInput(ChunkedInput<ByteBuf> input) {
         this.input = input;
-        this.lastHttpContent = new DefaultLastHttpContent();
+        this.lastHttpContent = LastHttpContent.EMPTY_LAST_CONTENT;
     }
 
     /**
      * Creates a new instance using the specified input. {@code lastHttpContent} will be written as the terminating
      * chunk.
      * @param input {@link ChunkedInput} containing data to write
-     * @param lastHttpContent {@link LastHttpContent} that will be written as the terminating chunk. Use this to for
+     * @param lastHttpContent {@link LastHttpContent} that will be written as the terminating chunk. Use this for
      *            training headers.
      */
     public HttpContentChunkedInput(ChunkedInput<ByteBuf> input, LastHttpContent lastHttpContent) {
