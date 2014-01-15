@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2014 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -34,7 +34,7 @@ import java.nio.channels.Channels;
 
 import org.junit.Test;
 
-public class HttpContentChunkedInputTest {
+public class HttpChunkedInputTest {
     private static final byte[] BYTES = new byte[1024 * 64];
     private static final File TMP;
 
@@ -65,22 +65,22 @@ public class HttpContentChunkedInputTest {
 
     @Test
     public void testChunkedStream() {
-        check(new HttpContentChunkedInput(new ChunkedStream(new ByteArrayInputStream(BYTES))));
+        check(new HttpChunkedInput(new ChunkedStream(new ByteArrayInputStream(BYTES))));
     }
 
     @Test
     public void testChunkedNioStream() {
-        check(new HttpContentChunkedInput(new ChunkedNioStream(Channels.newChannel(new ByteArrayInputStream(BYTES)))));
+        check(new HttpChunkedInput(new ChunkedNioStream(Channels.newChannel(new ByteArrayInputStream(BYTES)))));
     }
 
     @Test
     public void testChunkedFile() throws IOException {
-        check(new HttpContentChunkedInput(new ChunkedFile(TMP)));
+        check(new HttpChunkedInput(new ChunkedFile(TMP)));
     }
 
     @Test
     public void testChunkedNioFile() throws IOException {
-        check(new HttpContentChunkedInput(new ChunkedNioFile(TMP)));
+        check(new HttpChunkedInput(new ChunkedNioFile(TMP)));
     }
 
     private static void check(ChunkedInput<?>... inputs) {
@@ -101,7 +101,7 @@ public class HttpContentChunkedInputTest {
                 break;
             } else {
                 if (lastHttpContent != null) {
-                    assertTrue("Last chunk must be DefaultHttpContent", lastHttpContent instanceof DefaultHttpContent);
+                    assertTrue("Chunk must be DefaultHttpContent", lastHttpContent instanceof DefaultHttpContent);
                 }
             }
 
@@ -120,6 +120,6 @@ public class HttpContentChunkedInputTest {
         }
 
         assertEquals(BYTES.length * inputs.length, read);
-        assertTrue("Last chunk must be DefaultLastHttpContent", lastHttpContent instanceof DefaultLastHttpContent);
+        assertTrue("Last chunk must be DefaultLastHttpContent", lastHttpContent == LastHttpContent.EMPTY_LAST_CONTENT);
     }
 }

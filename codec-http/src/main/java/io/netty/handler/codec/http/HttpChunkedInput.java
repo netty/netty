@@ -33,13 +33,13 @@ import io.netty.handler.stream.ChunkedInput;
  *     response.headers().set(TRANSFER_ENCODING, CHUNKED);
  *     ctx.write(response);
  *
- *     HttpContentChunkedInput httpChunkWriter = new HttpContentChunkedInput(
+ *     HttpContentChunkedInput httpChunkWriter = new HttpChunkedInput(
  *         new ChunkedFile(&quot;/tmp/myfile.txt&quot;));
  *     ChannelFuture sendFileFuture = ctx.write(httpChunkWriter);
  * }
  * </pre>
  */
-public class HttpContentChunkedInput implements ChunkedInput<HttpContent> {
+public class HttpChunkedInput implements ChunkedInput<HttpContent> {
 
     private ChunkedInput<ByteBuf> input;
     private boolean sentLastChunk;
@@ -49,7 +49,7 @@ public class HttpContentChunkedInput implements ChunkedInput<HttpContent> {
      * Creates a new instance using the specified input.
      * @param input {@link ChunkedInput} containing data to write
      */
-    public HttpContentChunkedInput(ChunkedInput<ByteBuf> input) {
+    public HttpChunkedInput(ChunkedInput<ByteBuf> input) {
         this.input = input;
         this.lastHttpContent = LastHttpContent.EMPTY_LAST_CONTENT;
     }
@@ -61,7 +61,7 @@ public class HttpContentChunkedInput implements ChunkedInput<HttpContent> {
      * @param lastHttpContent {@link LastHttpContent} that will be written as the terminating chunk. Use this for
      *            training headers.
      */
-    public HttpContentChunkedInput(ChunkedInput<ByteBuf> input, LastHttpContent lastHttpContent) {
+    public HttpChunkedInput(ChunkedInput<ByteBuf> input, LastHttpContent lastHttpContent) {
         this.input = input;
         this.lastHttpContent = lastHttpContent;
     }
