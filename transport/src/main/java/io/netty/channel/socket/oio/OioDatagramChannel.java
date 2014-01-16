@@ -126,8 +126,9 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
 
     @Override
     public boolean isActive() {
-        return isOpen() && (config.getOption(ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION) && isRegistered())
-                || socket.isBound();
+        return isOpen()
+            && ((config.getOption(ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION) && isRegistered())
+                 || socket.isBound());
     }
 
     @Override
