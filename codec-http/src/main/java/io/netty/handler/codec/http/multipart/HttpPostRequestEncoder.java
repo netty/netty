@@ -213,7 +213,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
      * Clean all HttpDatas (on Disk) for the current request.
      */
     public void cleanFiles() {
-        factory.cleanRequestHttpDatas(request);
+        factory.cleanRequestHttpData(request);
     }
 
     /**

@@ -718,7 +718,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
     public void cleanFiles() {
         checkDestroyed();
 
-        factory.cleanRequestHttpDatas(request);
+        factory.cleanRequestHttpData(request);
     }
 
     /**
