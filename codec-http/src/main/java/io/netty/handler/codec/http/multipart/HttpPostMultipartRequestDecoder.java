@@ -914,7 +914,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
     public void cleanFiles() {
         checkDestroyed();
 
-        factory.cleanRequestHttpDatas(request);
+        factory.cleanRequestHttpData(request);
     }
 
     /**

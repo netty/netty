@@ -34,6 +34,7 @@ import java.util.Map;
  * according to the constructor.
  */
 public class DefaultHttpDataFactory implements HttpDataFactory {
+
     /**
      * Proposed default MINSIZE as 16 KB.
      */
@@ -54,7 +55,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     private Charset charset = HttpConstants.DEFAULT_CHARSET;
 
     /**
-     * Keep all HttpDatas until cleanAllHttpDatas() is called.
+     * Keep all HttpDatas until cleanAllHttpData() is called.
      */
     private final Map<HttpRequest, List<HttpData>> requestFileDeleteMap = PlatformDependent.newConcurrentHashMap();
 
@@ -222,7 +223,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     }
 
     @Override
-    public void cleanRequestHttpDatas(HttpRequest request) {
+    public void cleanRequestHttpData(HttpRequest request) {
         List<HttpData> fileToDelete = requestFileDeleteMap.remove(request);
         if (fileToDelete != null) {
             for (HttpData data: fileToDelete) {
@@ -233,7 +234,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     }
 
     @Override
-    public void cleanAllHttpDatas() {
+    public void cleanAllHttpData() {
         for (HttpRequest request : requestFileDeleteMap.keySet()) {
             List<HttpData> fileToDelete = requestFileDeleteMap.get(request);
             if (fileToDelete != null) {
