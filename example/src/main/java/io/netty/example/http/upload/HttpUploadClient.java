@@ -130,14 +130,14 @@ public class HttpUploadClient {
             // Simple Get form: no factory used (not usable)
             List<Entry<String, String>> headers = formGet(b, host, port, get, uriSimple);
             if (headers == null) {
-                factory.cleanAllHttpDatas();
+                factory.cleanAllHttpData();
                 return;
             }
 
             // Simple Post form: factory used for big attributes
             List<InterfaceHttpData> bodylist = formPost(b, host, port, uriSimple, file, factory, headers);
             if (bodylist == null) {
-                factory.cleanAllHttpDatas();
+                factory.cleanAllHttpData();
                 return;
             }
 
@@ -148,7 +148,7 @@ public class HttpUploadClient {
             group.shutdownGracefully();
 
             // Really clean all temporary files if they still exist
-            factory.cleanAllHttpDatas();
+            factory.cleanAllHttpData();
         }
     }
 
