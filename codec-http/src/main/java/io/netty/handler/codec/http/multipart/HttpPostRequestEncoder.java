@@ -559,14 +559,14 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
                             .size() - 2);
                     // remove past size
                     globalBodySize -= pastAttribute.size();
-                    String replacement = HttpPostBodyUtil.CONTENT_DISPOSITION + ": " + HttpPostBodyUtil.FORM_DATA
-                            + "; " + HttpPostBodyUtil.NAME + "=\"" + fileUpload.getName() + "\"\r\n";
-                    replacement += HttpHeaders.Names.CONTENT_TYPE + ": " + HttpPostBodyUtil.MULTIPART_MIXED + "; "
-                            + HttpHeaders.Values.BOUNDARY + '=' + multipartMixedBoundary + "\r\n\r\n";
-                    replacement += "--" + multipartMixedBoundary + "\r\n";
-                    replacement += HttpPostBodyUtil.CONTENT_DISPOSITION + ": " + HttpPostBodyUtil.FILE + "; "
-                            + HttpPostBodyUtil.FILENAME + "=\"" + fileUpload.getFilename() + "\"\r\n";
-                    pastAttribute.setValue(replacement, 1);
+                    StringBuilder replacement = new StringBuilder().append(HttpPostBodyUtil.CONTENT_DISPOSITION).append(": ").append(HttpPostBodyUtil.FORM_DATA)
+                            .append("; ").append(HttpPostBodyUtil.NAME).append("=\"").append(fileUpload.getName()).append("\"\r\n");
+                    replacement.append(HttpHeaders.Names.CONTENT_TYPE).append(": ").append(HttpPostBodyUtil.MULTIPART_MIXED).append("; ")
+                            .append(HttpHeaders.Values.BOUNDARY).append('=').append(multipartMixedBoundary).append("\r\n\r\n");
+                    replacement.append("--").append(multipartMixedBoundary).append("\r\n");
+                    replacement.append(HttpPostBodyUtil.CONTENT_DISPOSITION).append(": ").append(HttpPostBodyUtil.FILE).append("; ")
+                            .append(HttpPostBodyUtil.FILENAME).append("=\"").append(fileUpload.getFilename()).append("\"\r\n");
+                    pastAttribute.setValue(replacement.toString(), 1);
                     // update past size
                     globalBodySize += pastAttribute.size();
 
