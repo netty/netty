@@ -108,8 +108,8 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
     private final boolean chunkedSupported;
     protected final boolean validateHeaders;
     private final AppendableCharSequence seq = new AppendableCharSequence(128);
-    private final HeaderByteBufProcessor processor = new HeaderByteBufProcessor(seq);
-    private final InitialLineByteBufProcessor initialLineProcessor = new InitialLineByteBufProcessor(seq);
+    private final HeaderParser headerParser = new HeaderParser(seq);
+    private final LineParser lineParser = new LineParser(seq);
 
     private HttpMessage message;
     private long chunkSize;
@@ -194,7 +194,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
             }
         }
         case READ_INITIAL: try {
-            String[] initialLine = splitInitialLine(readLine(buffer));
+            String[] initialLine = splitInitialLine(lineParser.parse(buffer));
             if (initialLine.length < 3) {
                 // Invalid initial line - ignore.
                 checkpoint(State.SKIP_CONTROL_CHARS);
@@ -302,7 +302,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
          * read chunk, read and ignore the CRLF and repeat until 0
          */
         case READ_CHUNK_SIZE: try {
-            AppendableCharSequence line = readLine(buffer);
+            AppendableCharSequence line = lineParser.parse(buffer);
             int chunkSize = getChunkSize(line.toString());
             this.chunkSize = chunkSize;
             if (chunkSize == 0) {
@@ -470,7 +470,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         final HttpMessage message = this.message;
         final HttpHeaders headers = message.headers();
 
-        AppendableCharSequence line = readHeader(buffer);
+        AppendableCharSequence line = headerParser.parse(buffer);
         String name = null;
         String value = null;
         if (line.length() > 0) {
@@ -488,7 +488,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
                     value = header[1];
                 }
 
-                line = readHeader(buffer);
+                line = headerParser.parse(buffer);
             } while (line.length() > 0);
 
             // Add the last header.
@@ -521,7 +521,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
 
     private LastHttpContent readTrailingHeaders(ByteBuf buffer) {
         headerSize = 0;
-        AppendableCharSequence line = readHeader(buffer);
+        AppendableCharSequence line = headerParser.parse(buffer);
         String lastHeader = null;
         if (line.length() > 0) {
             LastHttpContent trailer = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER, validateHeaders);
@@ -547,21 +547,13 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
                     lastHeader = name;
                 }
 
-                line = readHeader(buffer);
+                line = headerParser.parse(buffer);
             } while (line.length() > 0);
 
             return trailer;
         }
 
         return LastHttpContent.EMPTY_LAST_CONTENT;
-    }
-
-    private AppendableCharSequence readHeader(ByteBuf buffer) {
-        HeaderByteBufProcessor processor = this.processor.get();
-        int index = buffer.forEachByte(processor);
-        buffer.readerIndex(index + 1);
-        headerSize += processor.size;
-        return processor.seq;
     }
 
     protected abstract boolean isDecodingRequest();
@@ -579,13 +571,6 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         }
 
         return Integer.parseInt(hex, 16);
-    }
-
-    private AppendableCharSequence readLine(ByteBuf buffer) {
-        InitialLineByteBufProcessor processor = initialLineProcessor.get();
-        int index = buffer.forEachByte(processor);
-        buffer.readerIndex(index + 1);
-        return processor.seq;
     }
 
     private static String[] splitInitialLine(AppendableCharSequence sb) {
@@ -679,24 +664,25 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         return result;
     }
 
-    private final class HeaderByteBufProcessor implements ByteBufProcessor {
+    private final class HeaderParser implements ByteBufProcessor {
         private final AppendableCharSequence seq;
-        private int size;
 
-        HeaderByteBufProcessor(AppendableCharSequence seq) {
+        HeaderParser(AppendableCharSequence seq) {
             this.seq = seq;
         }
 
-        HeaderByteBufProcessor get() {
+        public AppendableCharSequence parse(ByteBuf buffer) {
             seq.reset();
-            size = 0;
-            return this;
+            headerSize = 0;
+            int i = buffer.forEachByte(this);
+            buffer.readerIndex(i + 1);
+            return seq;
         }
 
         @Override
         public boolean process(byte value) throws Exception {
             char nextByte = (char) value;
-            size++;
+            headerSize++;
             if (nextByte == HttpConstants.CR) {
                 return true;
             }
@@ -720,18 +706,20 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         }
     }
 
-    private final class InitialLineByteBufProcessor implements ByteBufProcessor {
+    private final class LineParser implements ByteBufProcessor {
         private final AppendableCharSequence seq;
         private int size;
 
-        InitialLineByteBufProcessor(AppendableCharSequence seq) {
+        LineParser(AppendableCharSequence seq) {
             this.seq = seq;
         }
 
-        InitialLineByteBufProcessor get() {
+        public AppendableCharSequence parse(ByteBuf buffer) {
             seq.reset();
             size = 0;
-            return this;
+            int i = buffer.forEachByte(this);
+            buffer.readerIndex(i + 1);
+            return seq;
         }
 
         @Override
