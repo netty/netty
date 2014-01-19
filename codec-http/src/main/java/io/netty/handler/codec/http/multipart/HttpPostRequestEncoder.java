@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.http.multipart;
 
-import static io.netty.buffer.Unpooled.wrappedBuffer;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.DecoderResult;
@@ -43,6 +42,8 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.regex.Pattern;
+
+import static io.netty.buffer.Unpooled.*;
 
 /**
  * This encoder will help to encode Request for a FORM as POST.
@@ -557,16 +558,40 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
                             .size() - 2);
                     // remove past size
                     globalBodySize -= pastAttribute.size();
-                    StringBuilder replacement = new StringBuilder().append(HttpPostBodyUtil.CONTENT_DISPOSITION)
-                            .append(": ").append(HttpPostBodyUtil.FORM_DATA).append("; ").append(HttpPostBodyUtil.NAME)
-                            .append("=\"").append(fileUpload.getName()).append("\"\r\n");
-                    replacement.append(HttpHeaders.Names.CONTENT_TYPE).append(": ")
-                            .append(HttpPostBodyUtil.MULTIPART_MIXED).append("; ").append(HttpHeaders.Values.BOUNDARY)
-                            .append('=').append(multipartMixedBoundary).append("\r\n\r\n");
-                    replacement.append("--").append(multipartMixedBoundary).append("\r\n");
-                    replacement.append(HttpPostBodyUtil.CONTENT_DISPOSITION).append(": ").append(HttpPostBodyUtil.FILE)
-                            .append("; ").append(HttpPostBodyUtil.FILENAME).append("=\"")
-                            .append(fileUpload.getFilename()).append("\"\r\n");
+                    StringBuilder replacement = new StringBuilder(
+                            139 + multipartMixedBoundary.length() * 2 +
+                                    fileUpload.getName().length() + fileUpload.getFilename().length());
+
+                    replacement.append(HttpPostBodyUtil.CONTENT_DISPOSITION);
+                    replacement.append(": ");
+                    replacement.append(HttpPostBodyUtil.FORM_DATA);
+                    replacement.append("; ");
+                    replacement.append(HttpPostBodyUtil.NAME);
+                    replacement.append("=\"");
+                    replacement.append(fileUpload.getName());
+                    replacement.append("\"\r\n");
+
+                    replacement.append(HttpHeaders.Names.CONTENT_TYPE);
+                    replacement.append(": ");
+                    replacement.append(HttpPostBodyUtil.MULTIPART_MIXED);
+                    replacement.append("; ");
+                    replacement.append(HttpHeaders.Values.BOUNDARY);
+                    replacement.append('=');
+                    replacement.append(multipartMixedBoundary);
+                    replacement.append("\r\n\r\n");
+
+                    replacement.append("--");
+                    replacement.append(multipartMixedBoundary);
+                    replacement.append("\r\n");
+                    replacement.append(HttpPostBodyUtil.CONTENT_DISPOSITION);
+                    replacement.append(": ");
+                    replacement.append(HttpPostBodyUtil.FILE);
+                    replacement.append("; ");
+                    replacement.append(HttpPostBodyUtil.FILENAME);
+                    replacement.append("=\"");
+                    replacement.append(fileUpload.getFilename());
+                    replacement.append("\"\r\n");
+
                     pastAttribute.setValue(replacement.toString(), 1);
                     // update past size
                     globalBodySize += pastAttribute.size();
@@ -664,9 +689,9 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
             headers.remove(HttpHeaders.Names.CONTENT_TYPE);
             for (String contentType : contentTypes) {
                 // "multipart/form-data; boundary=--89421926422648"
-                if (contentType.toLowerCase().startsWith(HttpHeaders.Values.MULTIPART_FORM_DATA)) {
-                    // ignore
-                } else if (contentType.toLowerCase().startsWith(HttpHeaders.Values.APPLICATION_X_WWW_FORM_URLENCODED)) {
+                String lowercased = contentType.toLowerCase();
+                if (lowercased.startsWith(HttpHeaders.Values.MULTIPART_FORM_DATA) ||
+                    lowercased.startsWith(HttpHeaders.Values.APPLICATION_X_WWW_FORM_URLENCODED)) {
                     // ignore
                 } else {
                     headers.add(HttpHeaders.Names.CONTENT_TYPE, contentType);
