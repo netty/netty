@@ -31,7 +31,8 @@ final class InternalAttribute extends AbstractReferenceCounted implements Interf
     private final List<ByteBuf> value = new ArrayList<ByteBuf>();
     private final Charset charset;
     private int size;
-    public InternalAttribute(Charset charset) {
+
+    InternalAttribute(Charset charset) {
         this.charset = charset;
     }
 
@@ -66,6 +67,7 @@ final class InternalAttribute extends AbstractReferenceCounted implements Interf
         ByteBuf old = this.value.set(rank, buf);
         if (old != null) {
             size -= old.readableBytes();
+            old.release();
         }
         size += buf.readableBytes();
     }
