@@ -206,7 +206,7 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
         if (sizeLeft < length) {
             sliceLength = sizeLeft;
         }
-        ByteBuf chunk = byteBuf.slice(chunkPosition, sliceLength);
+        ByteBuf chunk = byteBuf.slice(chunkPosition, sliceLength).retain();
         chunkPosition += sliceLength;
         return chunk;
     }
