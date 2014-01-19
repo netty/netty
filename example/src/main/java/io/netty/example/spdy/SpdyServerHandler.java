@@ -15,9 +15,9 @@
  */
 package io.netty.example.spdy;
 
-import java.nio.ByteBuffer;
 import java.util.Date;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerAdapter;
@@ -51,9 +51,9 @@ public class SpdyServerHandler extends ChannelHandlerAdapter {
             }
             boolean keepAlive = isKeepAlive(req);
 
-            ByteBuffer content = CharsetUtil.UTF_8.encode("Hello World " + (new Date()).toString());
+            ByteBuf content = Unpooled.copiedBuffer("Hello World " + (new Date()).toString(), CharsetUtil.UTF_8);
 
-            FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, Unpooled.wrappedBuffer(content));
+            FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, content);
             response.headers().set(CONTENT_TYPE, "text/plain; charset=UTF-8");
             response.headers().set(CONTENT_LENGTH, response.content().readableBytes());
 

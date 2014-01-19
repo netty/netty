@@ -37,15 +37,18 @@ public class SpdyServerProvider implements ServerProvider {
 
     private String selectedProtocol;
 
+    @Override
     public void unsupported() {
         // if unsupported, default to http/1.1
         selectedProtocol = "http/1.1";
     }
 
+    @Override
     public List<String> protocols() {
         return Arrays.asList("spdy/3.1", "spdy/3", "http/1.1");
     }
 
+    @Override
     public void protocolSelected(String protocol) {
         selectedProtocol = protocol;
     }
