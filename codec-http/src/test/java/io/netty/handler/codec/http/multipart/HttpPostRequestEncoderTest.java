@@ -15,22 +15,19 @@
  */
 package io.netty.handler.codec.http.multipart;
 
-import static org.junit.Assert.assertEquals;
-
-import org.junit.Test;
-
-import java.io.File;
-import java.lang.reflect.Field;
-import java.util.List;
-
-import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder.EncoderMode;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder.EncoderMode;
 import io.netty.util.CharsetUtil;
+import org.junit.Test;
+
+import java.io.File;
+import java.util.List;
+
+import static org.junit.Assert.*;
 
 /** {@link HttpPostRequestEncoder} test case. */
 public class HttpPostRequestEncoderTest {
@@ -45,7 +42,7 @@ public class HttpPostRequestEncoderTest {
         encoder.addBodyAttribute("foo", "bar");
         encoder.addBodyFileUpload("quux", file1, "text/plain", false);
 
-        String multipartDataBoundary = getEncoderField(encoder, "multipartDataBoundary");
+        String multipartDataBoundary = encoder.multipartDataBoundary;
         String content = getRequestBody(encoder);
 
         String expected = "--" + multipartDataBoundary + "\r\n" +
@@ -80,8 +77,8 @@ public class HttpPostRequestEncoderTest {
 
         // We have to query the value of these two fields before finalizing
         // the request, which unsets one of them.
-        String multipartDataBoundary = getEncoderField(encoder, "multipartDataBoundary");
-        String multipartMixedBoundary = getEncoderField(encoder, "multipartMixedBoundary");
+        String multipartDataBoundary = encoder.multipartDataBoundary;
+        String multipartMixedBoundary = encoder.multipartMixedBoundary;
         String content = getRequestBody(encoder);
 
         String expected = "--" + multipartDataBoundary + "\r\n" +
@@ -128,7 +125,7 @@ public class HttpPostRequestEncoderTest {
         encoder.addBodyFileUpload("quux", file1, "text/plain", false);
         encoder.addBodyFileUpload("quux", file2, "text/plain", false);
 
-        String multipartDataBoundary = getEncoderField(encoder, "multipartDataBoundary");
+        String multipartDataBoundary = encoder.multipartDataBoundary;
         String content = getRequestBody(encoder);
 
         String expected = "--" + multipartDataBoundary + "\r\n" +
@@ -167,7 +164,7 @@ public class HttpPostRequestEncoderTest {
         encoder.addBodyAttribute("foo", "bar");
         encoder.addBodyFileUpload("quux", file1, "text/plain", false);
 
-        String multipartDataBoundary = getEncoderField(encoder, "multipartDataBoundary");
+        String multipartDataBoundary = encoder.multipartDataBoundary;
         String content = getRequestBody(encoder);
 
         String expected = "--" + multipartDataBoundary + "\r\n" +
@@ -188,10 +185,10 @@ public class HttpPostRequestEncoderTest {
         assertEquals(expected, content);
     }
 
-    private String getRequestBody(HttpPostRequestEncoder encoder) throws Exception {
+    private static String getRequestBody(HttpPostRequestEncoder encoder) throws Exception {
         encoder.finalizeRequest();
 
-        List<InterfaceHttpData> chunks = getEncoderField(encoder, "multipartHttpDatas");
+        List<InterfaceHttpData> chunks = encoder.multipartHttpDatas;
         ByteBuf[] buffers = new ByteBuf[chunks.size()];
 
         for (int i = 0; i < buffers.length; i++) {
@@ -204,16 +201,5 @@ public class HttpPostRequestEncoderTest {
         }
 
         return Unpooled.wrappedBuffer(buffers).toString(CharsetUtil.UTF_8);
-    }
-
-    private <A> A getEncoderField(HttpPostRequestEncoder encoder, String fieldName) throws Exception {
-        return this.<A, HttpPostRequestEncoder>getField(encoder, HttpPostRequestEncoder.class, fieldName);
-    }
-
-    @SuppressWarnings("unchecked")
-    private <A, T> A getField(T instance, Class<T> klass, String fieldName) throws Exception {
-        Field requestField = klass.getDeclaredField(fieldName);
-        requestField.setAccessible(true);
-        return (A) requestField.get(instance);
     }
 }
