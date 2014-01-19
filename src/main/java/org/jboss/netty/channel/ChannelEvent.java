@@ -15,13 +15,13 @@
  */
 package org.jboss.netty.channel;
 
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.channel.socket.ServerSocketChannel;
+
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.net.SocketAddress;
-
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.socket.ServerSocketChannel;
 
 /**
  * An I/O event or I/O request associated with a {@link Channel}.
@@ -71,7 +71,7 @@ import org.jboss.netty.channel.socket.ServerSocketChannel;
  * <td>{@code "channelOpen"}</td>
  * <td>{@link ChannelStateEvent}<br/>(state = {@link ChannelState#OPEN OPEN}, value = {@code true})</td>
  * <td>a {@link Channel} is open, but not bound nor connected</td>
- * <td><strong>Be aware that this event is fired from within the Boss-Thread so you should not
+ * <td><strong>Be aware that this event is fired from within the worker thread.  You should never
  *     execute any heavy operation in there as it will block the dispatching to other workers!</strong></td>
  * </tr>
  * <tr>
@@ -83,7 +83,7 @@ import org.jboss.netty.channel.socket.ServerSocketChannel;
  * <td>{@code "channelBound"}</td>
  * <td>{@link ChannelStateEvent}<br/>(state = {@link ChannelState#BOUND BOUND}, value = {@link SocketAddress})</td>
  * <td>a {@link Channel} is open and bound to a local address, but not connected.</td>
- * <td><strong>Be aware that this event is fired from within the Boss-Thread so you should not
+ * <td><strong>Be aware that this event is fired from within the worker thread.  You should never
  *     execute any heavy operation in there as it will block the dispatching to other workers!</strong></td>
  * </tr>
  * <tr>
@@ -96,7 +96,7 @@ import org.jboss.netty.channel.socket.ServerSocketChannel;
  * <td>{@link ChannelStateEvent}<br/>(state = {@link ChannelState#CONNECTED CONNECTED}, value =
  *     {@link SocketAddress})</td>
  * <td>a {@link Channel} is open, bound to a local address, and connected to a remote address</td>
- * <td><strong>Be aware that this event is fired from within the Boss-Thread so you should not
+ * <td><strong>Be aware that this event is fired from within the worker thread.  You should never
  *     execute any heavy operation in there as it will block the dispatching to other workers!</strong></td>
  * </tr>
  * <tr>
