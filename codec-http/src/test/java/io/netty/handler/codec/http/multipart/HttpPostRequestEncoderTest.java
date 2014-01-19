@@ -22,6 +22,7 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder.EncoderMode;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.StringUtil;
 import org.junit.Test;
 
 import java.io.File;
@@ -56,7 +57,7 @@ public class HttpPostRequestEncoderTest {
                 "Content-Type: text/plain" + "\r\n" +
                 "Content-Transfer-Encoding: binary" + "\r\n" +
                 "\r\n" +
-                "File 01\n" +
+                "File 01" + StringUtil.NEWLINE +
                 "\r\n" +
                 "--" + multipartDataBoundary + "--" + "\r\n";
 
@@ -95,14 +96,14 @@ public class HttpPostRequestEncoderTest {
                 "Content-Type: text/plain" + "\r\n" +
                 "Content-Transfer-Encoding: binary" + "\r\n" +
                 "\r\n" +
-                "File 01\n" +
+                "File 01" + StringUtil.NEWLINE +
                 "\r\n" +
                 "--" + multipartMixedBoundary + "\r\n" +
                 "Content-Disposition: attachment; filename=\"file-02.txt\"" + "\r\n" +
                 "Content-Type: text/plain" + "\r\n" +
                 "Content-Transfer-Encoding: binary" + "\r\n" +
                 "\r\n" +
-                "File 02\n" +
+                "File 02" + StringUtil.NEWLINE +
                 "\r\n" +
                 "--" + multipartMixedBoundary + "--" + "\r\n" +
                 "--" + multipartDataBoundary + "--" + "\r\n";
@@ -138,13 +139,13 @@ public class HttpPostRequestEncoderTest {
                 "Content-Type: text/plain" + "\r\n" +
                 "Content-Transfer-Encoding: binary" + "\r\n" +
                 "\r\n" +
-                "File 01\n" + "\r\n" +
+                "File 01" + StringUtil.NEWLINE + "\r\n" +
                 "--" + multipartDataBoundary + "\r\n" +
                 "Content-Disposition: form-data; name=\"quux\"; filename=\"file-02.txt\"" + "\r\n" +
                 "Content-Type: text/plain" + "\r\n" +
                 "Content-Transfer-Encoding: binary" + "\r\n" +
                 "\r\n" +
-                "File 02\n" +
+                "File 02" + StringUtil.NEWLINE +
                 "\r\n" +
                 "--" + multipartDataBoundary + "--" + "\r\n";
 
@@ -178,7 +179,7 @@ public class HttpPostRequestEncoderTest {
                 "Content-Type: text/plain" + "\r\n" +
                 "Content-Transfer-Encoding: binary" + "\r\n" +
                 "\r\n" +
-                "File 01\n" +
+                "File 01" + StringUtil.NEWLINE +
                 "\r\n" +
                 "--" + multipartDataBoundary + "--" + "\r\n";
 
