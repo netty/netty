@@ -101,7 +101,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
     /**
      * The final Multipart List of InterfaceHttpData including encoding
      */
-    private final List<InterfaceHttpData> multipartHttpDatas;
+    final List<InterfaceHttpData> multipartHttpDatas;
 
     /**
      * Does this request is a Multipart request
@@ -111,12 +111,12 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
     /**
      * If multipart, this is the boundary for the flobal multipart
      */
-    private String multipartDataBoundary;
+    String multipartDataBoundary;
 
     /**
      * If multipart, there could be internal multiparts (mixed) to the global multipart. Only one level is allowed.
      */
-    private String multipartMixedBoundary;
+    String multipartMixedBoundary;
     /**
      * To check if the header has been finalized
      */
@@ -559,8 +559,12 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
                     // remove past size
                     globalBodySize -= pastAttribute.size();
                     StringBuilder replacement = new StringBuilder(
-                            139 + multipartMixedBoundary.length() * 2 +
-                                    fileUpload.getName().length() + fileUpload.getFilename().length());
+                            139 + multipartDataBoundary.length() + multipartMixedBoundary.length() * 2 +
+                                    fileUpload.getFilename().length() + fileUpload.getName().length());
+
+                    replacement.append("--");
+                    replacement.append(multipartDataBoundary);
+                    replacement.append("\r\n");
 
                     replacement.append(HttpPostBodyUtil.CONTENT_DISPOSITION);
                     replacement.append(": ");
@@ -583,9 +587,10 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
                     replacement.append("--");
                     replacement.append(multipartMixedBoundary);
                     replacement.append("\r\n");
+
                     replacement.append(HttpPostBodyUtil.CONTENT_DISPOSITION);
                     replacement.append(": ");
-                    replacement.append(HttpPostBodyUtil.FILE);
+                    replacement.append(HttpPostBodyUtil.ATTACHMENT);
                     replacement.append("; ");
                     replacement.append(HttpPostBodyUtil.FILENAME);
                     replacement.append("=\"");
@@ -593,6 +598,8 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
                     replacement.append("\"\r\n");
 
                     pastAttribute.setValue(replacement.toString(), 1);
+                    pastAttribute.setValue("", 2);
+
                     // update past size
                     globalBodySize += pastAttribute.size();
 
@@ -617,7 +624,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
                 // Data to multipart list
                 internal.addValue("--" + multipartMixedBoundary + "\r\n");
                 // Content-Disposition: file; filename="file1.txt"
-                internal.addValue(HttpPostBodyUtil.CONTENT_DISPOSITION + ": " + HttpPostBodyUtil.FILE + "; "
+                internal.addValue(HttpPostBodyUtil.CONTENT_DISPOSITION + ": " + HttpPostBodyUtil.ATTACHMENT + "; "
                         + HttpPostBodyUtil.FILENAME + "=\"" + fileUpload.getFilename() + "\"\r\n");
             } else {
                 internal.addValue("--" + multipartDataBoundary + "\r\n");
