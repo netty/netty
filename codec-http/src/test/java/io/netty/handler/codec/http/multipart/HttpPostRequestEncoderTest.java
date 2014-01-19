@@ -112,7 +112,7 @@ public class HttpPostRequestEncoderTest {
     }
 
     @Test
-    public void testSinleFileUploadInHtml5Mode() throws Exception {
+    public void testSingleFileUploadInHtml5Mode() throws Exception {
         DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
                 HttpMethod.POST, "http://localhost");
 
@@ -201,6 +201,9 @@ public class HttpPostRequestEncoderTest {
             }
         }
 
-        return Unpooled.wrappedBuffer(buffers).toString(CharsetUtil.UTF_8);
+        ByteBuf content = Unpooled.wrappedBuffer(buffers);
+        String contentStr = content.toString(CharsetUtil.UTF_8);
+        content.release();
+        return contentStr;
     }
 }
