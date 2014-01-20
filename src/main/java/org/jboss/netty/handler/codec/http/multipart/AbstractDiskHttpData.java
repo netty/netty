@@ -211,9 +211,10 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
 
     public void delete() {
         if (! isRenamed) {
-            if (file != null) {
+            if (file != null && file.exists()) {
                 file.delete();
             }
+            file = null;
         }
     }
 
@@ -285,6 +286,9 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
     public boolean renameTo(File dest) throws IOException {
         if (dest == null) {
             throw new NullPointerException("dest");
+        }
+        if (file == null) {
+            throw new IOException("No file defined so cannot be renamed");
         }
         if (!file.renameTo(dest)) {
             // must copy
