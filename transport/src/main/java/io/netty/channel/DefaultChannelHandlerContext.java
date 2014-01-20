@@ -17,14 +17,15 @@ package io.netty.channel;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandler.Skip;
-import io.netty.util.DefaultAttributeMap;
+import io.netty.util.Attribute;
+import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.PlatformDependent;
 
 import java.net.SocketAddress;
 import java.util.WeakHashMap;
 
-final class DefaultChannelHandlerContext extends DefaultAttributeMap implements ChannelHandlerContext {
+final class DefaultChannelHandlerContext implements ChannelHandlerContext {
 
     // This class keeps an integer member field 'skipFlags' whose each bit tells if the corresponding handler method
     // is annotated with @Skip. 'skipFlags' is retrieved in runtime via the reflection API and is cached.
@@ -277,6 +278,11 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     @Override
     public String name() {
         return name;
+    }
+
+    @Override
+    public <T> Attribute<T> attr(AttributeKey<T> key) {
+        return channel.attr(key);
     }
 
     @Override
