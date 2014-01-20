@@ -15,9 +15,9 @@
  */
 package io.netty.channel;
 
-import static io.netty.channel.DefaultChannelPipeline.logger;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.util.DefaultAttributeMap;
+import io.netty.util.Attribute;
+import io.netty.util.AttributeKey;
 import io.netty.util.Recycler;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
@@ -26,7 +26,9 @@ import io.netty.util.internal.StringUtil;
 
 import java.net.SocketAddress;
 
-final class DefaultChannelHandlerContext extends DefaultAttributeMap implements ChannelHandlerContext {
+import static io.netty.channel.DefaultChannelPipeline.*;
+
+final class DefaultChannelHandlerContext implements ChannelHandlerContext {
 
     volatile DefaultChannelHandlerContext next;
     volatile DefaultChannelHandlerContext prev;
@@ -144,6 +146,11 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     @Override
+    public <T> Attribute<T> attr(AttributeKey<T> key) {
+        return channel.attr(key);
+    }
+
+    @Override
     public ChannelHandlerContext fireChannelRegistered() {
         final DefaultChannelHandlerContext next = findContextInbound();
         EventExecutor executor = next.executor();
@@ -185,6 +192,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         return this;
     }
 
+    @SuppressWarnings("deprecation")
     private void invokeChannelUnregistered() {
         try {
             ((ChannelInboundHandler) handler).channelUnregistered(this);
@@ -273,6 +281,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         return this;
     }
 
+    @SuppressWarnings("deprecation")
     private void invokeExceptionCaught(final Throwable cause) {
         try {
             handler.exceptionCaught(this, cause);
@@ -586,6 +595,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         return promise;
     }
 
+    @SuppressWarnings("deprecation")
     private void invokeDeregister(ChannelPromise promise) {
         try {
             ((ChannelOutboundHandler) handler).deregister(this, promise);
@@ -870,19 +880,19 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         }
     }
 
-    abstract static class AbstractWriteTask implements Runnable {
-        private final Recycler.Handle handle;
+    abstract static class AbstractWriteTask<T extends AbstractWriteTask<T>> implements Runnable {
+        private final Recycler.Handle<T> handle;
 
         private DefaultChannelHandlerContext ctx;
         private Object msg;
         private ChannelPromise promise;
         private int size;
 
-        private AbstractWriteTask(Recycler.Handle handle) {
+        private AbstractWriteTask(Recycler.Handle<T> handle) {
             this.handle = handle;
         }
 
-        protected static void init(AbstractWriteTask task, DefaultChannelHandlerContext ctx,
+        protected static void init(AbstractWriteTask<?> task, DefaultChannelHandlerContext ctx,
                                    Object msg, int size, ChannelPromise promise) {
             task.ctx = ctx;
             task.msg = msg;
@@ -914,14 +924,15 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             ctx.invokeWrite(msg, promise);
         }
 
-        protected abstract void recycle(Recycler.Handle handle);
+        protected abstract void recycle(Recycler.Handle<T> handle);
     }
 
-    static final class WriteTask extends AbstractWriteTask implements SingleThreadEventLoop.NonWakeupRunnable {
+    static final class WriteTask
+            extends AbstractWriteTask<WriteTask> implements SingleThreadEventLoop.NonWakeupRunnable {
 
         private static final Recycler<WriteTask> RECYCLER = new Recycler<WriteTask>() {
             @Override
-            protected WriteTask newObject(Handle handle) {
+            protected WriteTask newObject(Handle<WriteTask> handle) {
                 return new WriteTask(handle);
             }
         };
@@ -933,21 +944,21 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             return task;
         }
 
-        private WriteTask(Recycler.Handle handle) {
+        private WriteTask(Recycler.Handle<WriteTask> handle) {
             super(handle);
         }
 
         @Override
-        protected void recycle(Recycler.Handle handle) {
+        protected void recycle(Recycler.Handle<WriteTask> handle) {
             RECYCLER.recycle(this, handle);
         }
     }
 
-    static final class WriteAndFlushTask extends AbstractWriteTask {
+    static final class WriteAndFlushTask extends AbstractWriteTask<WriteAndFlushTask> {
 
         private static final Recycler<WriteAndFlushTask> RECYCLER = new Recycler<WriteAndFlushTask>() {
             @Override
-            protected WriteAndFlushTask newObject(Handle handle) {
+            protected WriteAndFlushTask newObject(Handle<WriteAndFlushTask> handle) {
                 return new WriteAndFlushTask(handle);
             }
         };
@@ -959,7 +970,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             return task;
         }
 
-        private WriteAndFlushTask(Recycler.Handle handle) {
+        private WriteAndFlushTask(Recycler.Handle<WriteAndFlushTask> handle) {
             super(handle);
         }
 
@@ -970,7 +981,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         }
 
         @Override
-        protected void recycle(Recycler.Handle handle) {
+        protected void recycle(Recycler.Handle<WriteAndFlushTask> handle) {
             RECYCLER.recycle(this, handle);
         }
     }
