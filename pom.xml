@@ -470,6 +470,13 @@
       <plugin>
         <artifactId>maven-source-plugin</artifactId>
         <version>2.2.1</version>
+        <configuration>
+          <!--
+            ~ Add generated MANIFEST.MF.
+            ~ See https://github.com/netty/netty/issues/2058
+          -->
+          <useDefaultManifestFile>true</useDefaultManifestFile>
+        </configuration>
         <executions>
           <!--
             ~ This workaround prevents Maven from executing the 'generate-sources' phase twice.
