@@ -71,7 +71,7 @@ import java.net.SocketAddress;
  * <td>{@code "channelOpen"}</td>
  * <td>{@link ChannelStateEvent}<br/>(state = {@link ChannelState#OPEN OPEN}, value = {@code true})</td>
  * <td>a {@link Channel} is open, but not bound nor connected</td>
- * <td><strong>Be aware that this event is fired from within the worker thread.  You should never
+ * <td><strong>Be aware that this event is fired from within the I/O thread.  You should never
  *     execute any heavy operation in there as it will block the dispatching to other workers!</strong></td>
  * </tr>
  * <tr>
@@ -83,7 +83,7 @@ import java.net.SocketAddress;
  * <td>{@code "channelBound"}</td>
  * <td>{@link ChannelStateEvent}<br/>(state = {@link ChannelState#BOUND BOUND}, value = {@link SocketAddress})</td>
  * <td>a {@link Channel} is open and bound to a local address, but not connected.</td>
- * <td><strong>Be aware that this event is fired from within the worker thread.  You should never
+ * <td><strong>Be aware that this event is fired from within the I/O thread.  You should never
  *     execute any heavy operation in there as it will block the dispatching to other workers!</strong></td>
  * </tr>
  * <tr>
@@ -96,7 +96,7 @@ import java.net.SocketAddress;
  * <td>{@link ChannelStateEvent}<br/>(state = {@link ChannelState#CONNECTED CONNECTED}, value =
  *     {@link SocketAddress})</td>
  * <td>a {@link Channel} is open, bound to a local address, and connected to a remote address</td>
- * <td><strong>Be aware that this event is fired from within the worker thread.  You should never
+ * <td><strong>Be aware that this event is fired from within the I/O thread.  You should never
  *     execute any heavy operation in there as it will block the dispatching to other workers!</strong></td>
  * </tr>
  * <tr>
