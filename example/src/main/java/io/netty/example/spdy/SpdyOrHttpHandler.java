@@ -22,11 +22,15 @@ import org.eclipse.jetty.npn.NextProtoNego;
 import io.netty.channel.ChannelHandler;
 import io.netty.handler.codec.spdy.SpdyOrHttpChooser;
 
+import java.util.logging.Logger;
+
 /**
  * Negotiates with the browser if SPDY or HTTP is going to be used. Once decided, the Netty pipeline is setup with
  * the correct handlers for the selected protocol.
  */
 public class SpdyOrHttpHandler extends SpdyOrHttpChooser {
+    private static final Logger logger = Logger.getLogger(
+            SpdyOrHttpHandler.class.getName());
     private static final int MAX_CONTENT_LENGTH = 1024 * 100;
 
     public SpdyOrHttpHandler() {
@@ -40,23 +44,10 @@ public class SpdyOrHttpHandler extends SpdyOrHttpChooser {
     @Override
     protected SelectedProtocol getProtocol(SSLEngine engine) {
         SpdyServerProvider provider = (SpdyServerProvider) NextProtoNego.get(engine);
-        String selectedProtocol = provider.getSelectedProtocol();
+        SelectedProtocol selectedProtocol = provider.getSelectedProtocol();
 
-        System.out.println("Selected Protocol is " + (selectedProtocol == null ? "Unknown" : selectedProtocol));
-
-        if (selectedProtocol == null) {
-            return SpdyOrHttpChooser.SelectedProtocol.UNKNOWN;
-        } else if (selectedProtocol.equalsIgnoreCase("spdy/3.1")) {
-            return SpdyOrHttpChooser.SelectedProtocol.SPDY_3_1;
-        } else if (selectedProtocol.equalsIgnoreCase("spdy/3")) {
-            return SpdyOrHttpChooser.SelectedProtocol.SPDY_3;
-        } else if (selectedProtocol.equalsIgnoreCase("http/1.1")) {
-            return SpdyOrHttpChooser.SelectedProtocol.HTTP_1_1;
-        } else if (selectedProtocol.equalsIgnoreCase("http/1.0")) {
-            return SpdyOrHttpChooser.SelectedProtocol.HTTP_1_0;
-        } else {
-            return SpdyOrHttpChooser.SelectedProtocol.UNKNOWN;
-        }
+        logger.info("Selected Protocol is " + selectedProtocol);
+        return selectedProtocol;
     }
 
     @Override
