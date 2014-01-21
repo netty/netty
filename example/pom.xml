@@ -68,6 +68,10 @@
       <artifactId>javassist</artifactId>
       <scope>runtime</scope>
     </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty.npn</groupId>
+      <artifactId>npn-api</artifactId>
+    </dependency>
 
     <!-- see https://github.com/netty/netty/issues/874 -->
     <dependency>
