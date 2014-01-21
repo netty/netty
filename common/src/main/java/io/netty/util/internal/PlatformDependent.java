@@ -302,6 +302,7 @@ public final class PlatformDependent {
             Class.forName("android.app.Application", false, ClassLoader.getSystemClassLoader());
             android = true;
         } catch (Exception e) {
+            // Failed to load the class uniquely available in Android.
             android = false;
         }
 
@@ -348,6 +349,7 @@ public final class PlatformDependent {
                     }
                 }
             } catch (Exception e) {
+                // Failed to run the command.
                 uid = null;
             } finally {
                 if (in != null) {
@@ -481,6 +483,7 @@ public final class PlatformDependent {
             logger.debug("sun.misc.Unsafe: {}", hasUnsafe ? "available" : "unavailable");
             return hasUnsafe;
         } catch (Throwable t) {
+            // Probably failed to initialize PlatformDependent0.
             return false;
         }
     }
@@ -555,6 +558,10 @@ public final class PlatformDependent {
     }
 
     private static boolean hasJavassist0() {
+        if (isAndroid()) {
+            return false;
+        }
+
         boolean noJavassist = SystemPropertyUtil.getBoolean("io.netty.noJavassist", false);
         logger.debug("-Dio.netty.noJavassist: {}", noJavassist);
 
@@ -568,6 +575,7 @@ public final class PlatformDependent {
             logger.debug("Javassist: available");
             return true;
         } catch (Throwable t) {
+            // Failed to generate a Javassist-based matcher.
             logger.debug("Javassist: unavailable");
             logger.debug(
                     "You don't have Javassist in your class path or you don't have enough permission " +
