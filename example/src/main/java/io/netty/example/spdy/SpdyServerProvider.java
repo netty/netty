@@ -18,6 +18,7 @@ package io.netty.example.spdy;
 import java.util.Arrays;
 import java.util.List;
 
+import io.netty.handler.codec.spdy.SpdyOrHttpChooser;
 import org.eclipse.jetty.npn.NextProtoNego.ServerProvider;
 
 /**
@@ -53,7 +54,10 @@ public class SpdyServerProvider implements ServerProvider {
         selectedProtocol = protocol;
     }
 
-    public String getSelectedProtocol() {
-        return selectedProtocol;
+    public SpdyOrHttpChooser.SelectedProtocol getSelectedProtocol() {
+        if (selectedProtocol == null) {
+            return SpdyOrHttpChooser.SelectedProtocol.UNKNOWN;
+        }
+        return SpdyOrHttpChooser.SelectedProtocol.protocol(selectedProtocol);
     }
 }
