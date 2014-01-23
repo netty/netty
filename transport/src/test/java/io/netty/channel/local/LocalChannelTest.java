@@ -23,6 +23,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.Test;
@@ -141,6 +142,39 @@ public class LocalChannelTest {
         clientGroup.shutdownGracefully();
         serverGroup.terminationFuture().sync();
         clientGroup.terminationFuture().sync();
+    }
+
+    @Test
+    public void testServerCloseChannelSameEventLoop() throws Exception {
+        LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
+        LocalEventLoopGroup group = new LocalEventLoopGroup(1);
+        final CountDownLatch latch = new CountDownLatch(1);
+        ServerBootstrap sb = new ServerBootstrap()
+                .group(group)
+                .channel(LocalServerChannel.class)
+                .childHandler(new SimpleChannelInboundHandler<Object>() {
+                    @Override
+                    protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+                        ctx.close();
+                        latch.countDown();
+                    }
+                });
+        sb.bind(addr).sync();
+
+        Bootstrap b = new Bootstrap()
+                .group(group)
+                .channel(LocalChannel.class)
+                .handler(new SimpleChannelInboundHandler<Object>() {
+                    @Override
+                    protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+                        // discard
+                    }
+                });
+        Channel channel = b.connect(addr).sync().channel();
+        channel.writeAndFlush(new Object());
+        latch.await();
+        group.shutdownGracefully();
+        group.terminationFuture().sync();
     }
 
     static class TestHandler extends ChannelInboundHandlerAdapter {
