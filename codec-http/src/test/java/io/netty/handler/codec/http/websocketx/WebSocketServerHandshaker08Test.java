@@ -37,6 +37,15 @@ public class WebSocketServerHandshaker08Test {
 
     @Test
     public void testPerformOpeningHandshake() {
+        testPerformOpeningHandshake0(true);
+    }
+
+    @Test
+    public void testPerformOpeningHandshakeSubProtocolNotSupported() {
+        testPerformOpeningHandshake0(false);
+    }
+
+    private static void testPerformOpeningHandshake0(boolean subProtocol) {
         EmbeddedChannel ch = new EmbeddedChannel(
                 new HttpObjectAggregator(42), new HttpRequestDecoder(), new HttpResponseEncoder());
 
@@ -50,8 +59,13 @@ public class WebSocketServerHandshaker08Test {
         req.headers().set(Names.SEC_WEBSOCKET_PROTOCOL, "chat, superchat");
         req.headers().set(Names.SEC_WEBSOCKET_VERSION, "8");
 
-        new WebSocketServerHandshaker08(
-                "ws://example.com/chat", "chat", false, Integer.MAX_VALUE).handshake(ch, req);
+        if (subProtocol) {
+            new WebSocketServerHandshaker08(
+                    "ws://example.com/chat", "chat", false, Integer.MAX_VALUE).handshake(ch, req);
+        } else {
+            new WebSocketServerHandshaker08(
+                    "ws://example.com/chat", null, false, Integer.MAX_VALUE).handshake(ch, req);
+        }
 
         ByteBuf resBuf = ch.readOutbound();
 
@@ -61,7 +75,11 @@ public class WebSocketServerHandshaker08Test {
 
         Assert.assertEquals(
                 "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", res.headers().get(Names.SEC_WEBSOCKET_ACCEPT));
-        Assert.assertEquals("chat", res.headers().get(Names.SEC_WEBSOCKET_PROTOCOL));
+        if (subProtocol) {
+            Assert.assertEquals("chat", res.headers().get(Names.SEC_WEBSOCKET_PROTOCOL));
+        } else {
+            Assert.assertNull(res.headers().get(Names.SEC_WEBSOCKET_PROTOCOL));
+        }
         ReferenceCountUtil.release(res);
     }
 }

@@ -122,7 +122,9 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
         if (subprotocols != null) {
             String selectedSubprotocol = selectSubprotocol(subprotocols);
             if (selectedSubprotocol == null) {
-                throw new WebSocketHandshakeException("Requested subprotocol(s) not supported: " + subprotocols);
+                if (logger.isDebugEnabled()) {
+                    logger.debug(String.format("Requested subprotocol(s) not supported: %s.", subprotocols));
+                }
             } else {
                 res.headers().add(Names.SEC_WEBSOCKET_PROTOCOL, selectedSubprotocol);
             }

@@ -39,6 +39,15 @@ public class WebSocketServerHandshaker00Test {
 
     @Test
     public void testPerformOpeningHandshake() {
+        testPerformOpeningHandshake0(true);
+    }
+
+    @Test
+    public void testPerformOpeningHandshakeSubProtocolNotSupported() {
+        testPerformOpeningHandshake0(false);
+    }
+
+    private static void testPerformOpeningHandshake0(boolean subProtocol) {
         EmbeddedChannel ch = new EmbeddedChannel(
                 new HttpObjectAggregator(42), new HttpRequestDecoder(), new HttpResponseEncoder());
 
@@ -53,15 +62,25 @@ public class WebSocketServerHandshaker00Test {
         req.headers().set(Names.SEC_WEBSOCKET_KEY2, "12998 5 Y3 1  .P00");
         req.headers().set(Names.SEC_WEBSOCKET_PROTOCOL, "chat, superchat");
 
-        new WebSocketServerHandshaker00(
-                "ws://example.com/chat", "chat", Integer.MAX_VALUE).handshake(ch, req);
+        if (subProtocol) {
+            new WebSocketServerHandshaker00(
+                    "ws://example.com/chat", "chat", Integer.MAX_VALUE).handshake(ch, req);
+        } else {
+            new WebSocketServerHandshaker00(
+                    "ws://example.com/chat", null, Integer.MAX_VALUE).handshake(ch, req);
+        }
 
         EmbeddedChannel ch2 = new EmbeddedChannel(new HttpResponseDecoder());
         ch2.writeInbound(ch.readOutbound());
         HttpResponse res = ch2.readInbound();
 
         Assert.assertEquals("ws://example.com/chat", res.headers().get(Names.SEC_WEBSOCKET_LOCATION));
-        Assert.assertEquals("chat", res.headers().get(Names.SEC_WEBSOCKET_PROTOCOL));
+
+        if (subProtocol) {
+            Assert.assertEquals("chat", res.headers().get(Names.SEC_WEBSOCKET_PROTOCOL));
+        } else {
+            Assert.assertNull(res.headers().get(Names.SEC_WEBSOCKET_PROTOCOL));
+        }
         LastHttpContent content = ch2.readInbound();
 
         Assert.assertEquals("8jKS'y:G*Co,Wxa-", content.content().toString(CharsetUtil.US_ASCII));
