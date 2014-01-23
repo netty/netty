@@ -237,6 +237,14 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
 
     @Override
     public void delete() {
+        if (fileChannel != null) {
+            try {
+                fileChannel.force(false);
+                fileChannel.close();
+            } catch (IOException e) { //ignore
+            }
+            fileChannel = null;
+        }
         if (! isRenamed) {
             if (file != null && file.exists()) {
                 if (!file.delete()) {
