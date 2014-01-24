@@ -18,6 +18,8 @@ package org.jboss.netty.handler.codec.http.multipart;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.HttpConstants;
+import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -32,6 +34,8 @@ import java.nio.charset.Charset;
  * Abstract Disk HttpData implementation
  */
 public abstract class AbstractDiskHttpData extends AbstractHttpData {
+
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractDiskHttpData.class);
 
     protected File file;
     private boolean isRenamed;
@@ -214,7 +218,8 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
             try {
                 fileChannel.force(false);
                 fileChannel.close();
-            } catch (IOException e) { //ignore
+            } catch (IOException e) {
+                logger.debug("Failed to close a file.", e);
             }
             fileChannel = null;
         }
