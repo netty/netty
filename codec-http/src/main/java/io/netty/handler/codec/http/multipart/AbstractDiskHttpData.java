@@ -18,6 +18,8 @@ package io.netty.handler.codec.http.multipart;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -34,6 +36,8 @@ import static io.netty.buffer.Unpooled.*;
  * Abstract Disk HttpData implementation
  */
 public abstract class AbstractDiskHttpData extends AbstractHttpData {
+
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractDiskHttpData.class);
 
     protected File file;
     private boolean isRenamed;
