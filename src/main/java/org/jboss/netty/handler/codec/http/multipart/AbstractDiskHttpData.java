@@ -219,7 +219,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
                 fileChannel.force(false);
                 fileChannel.close();
             } catch (IOException e) {
-                logger.debug("Failed to close a file.", e);
+                logger.warn("Failed to close a file.", e);
             }
             fileChannel = null;
         }
