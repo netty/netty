@@ -85,14 +85,11 @@
           </execution>
         </executions>
       </plugin>
-<!--
       <plugin>
         <groupId>me.normanmaurer.maven.autobahntestsuite</groupId>
         <artifactId>autobahntestsuite-maven-plugin</artifactId>
-        <version>0.1.0</version>
+        <version>0.1.1</version>
         <configuration>
-          <host>127.0.0.1</host>
-          <port>9876</port>
           <mainClass>io.netty.testsuite.websockets.autobahn.AutobahnServer</mainClass>
           <cases>
             <case>*</case>
@@ -109,7 +106,6 @@
           </execution>
         </executions>
       </plugin>
-    -->
     </plugins>
   </build>
 </project>
