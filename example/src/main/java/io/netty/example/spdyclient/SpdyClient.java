@@ -20,13 +20,13 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpVersion;
 
 import java.net.InetSocketAddress;
@@ -44,14 +44,10 @@ import java.util.concurrent.BlockingQueue;
 public class SpdyClient {
 
     private final String host;
-
     private final int port;
-
     private final HttpResponseClientHandler httpResponseHandler;
-
     private Channel channel;
-
-    private NioEventLoopGroup workerGroup;
+    private EventLoopGroup workerGroup;
 
     public SpdyClient(String host, int port) {
         this.host = host;
@@ -60,41 +56,29 @@ public class SpdyClient {
     }
 
     public void start() {
-
         if (this.channel != null) {
-            info("Already running!");
+            System.out.println("Already running!");
             return;
         }
 
         this.workerGroup = new NioEventLoopGroup();
 
-        try {
-            Bootstrap b = new Bootstrap();
-            b.group(workerGroup);
-            b.channel(NioSocketChannel.class);
-            b.option(ChannelOption.SO_KEEPALIVE, true);
-            b.remoteAddress(new InetSocketAddress(this.host, this.port));
-            b.handler(new SpdyClientInitializer(this.httpResponseHandler));
+        Bootstrap b = new Bootstrap();
+        b.group(workerGroup);
+        b.channel(NioSocketChannel.class);
+        b.option(ChannelOption.SO_KEEPALIVE, true);
+        b.remoteAddress(new InetSocketAddress(this.host, this.port));
+        b.handler(new SpdyClientInitializer(this.httpResponseHandler));
 
-            // Start the client.
-            this.channel = b.connect().sync().channel();
-            info("Connected to [" + this.host + ":" + this.port + "]");
-
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private void info(String string) {
-        System.out.println(string);
+        // Start the client.
+        this.channel = b.connect().syncUninterruptibly().channel();
+        System.out.println("Connected to [" + this.host + ":" + this.port + "]");
     }
 
     public void stop() {
         try {
             // Wait until the connection is closed.
-            this.channel.close().sync();
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
+            this.channel.close().syncUninterruptibly();
         } finally {
             if (this.workerGroup != null) {
                 this.workerGroup.shutdownGracefully();
@@ -108,19 +92,17 @@ public class SpdyClient {
     }
 
     public HttpRequest get() {
-
         HttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "");
         request.headers().set(HttpHeaders.Names.HOST, this.host);
         request.headers().set(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP);
         return request;
     }
 
-    public BlockingQueue<HttpResponse> httpResponseQueue() {
+    public BlockingQueue<ChannelFuture> httpResponseQueue() {
         return this.httpResponseHandler.queue();
     }
 
     public static void main(String[] args) throws Exception {
-
         int port;
         if (args.length > 0) {
             port = Integer.parseInt(args[0]);
@@ -132,19 +114,22 @@ public class SpdyClient {
 
         try {
             client.start();
-            ChannelFuture future = client.send(client.get()).sync();
+            ChannelFuture requestFuture = client.send(client.get()).sync();
 
-            if (!future.isSuccess()) {
-                future.cause().printStackTrace();
+            if (!requestFuture.isSuccess()) {
+                requestFuture.cause().printStackTrace();
             }
 
-            // Waits for the response
-            client.httpResponseQueue().poll(5, SECONDS);
+            // Waits for the complete HTTP response
+            ChannelFuture responseFuture = client.httpResponseQueue().poll(5, SECONDS);
+
+            if (!responseFuture.isSuccess()) {
+                responseFuture.cause().printStackTrace();
+            }
 
             System.out.println("Finished SPDY HTTP GET");
         } finally {
             client.stop();
         }
     }
-
 }

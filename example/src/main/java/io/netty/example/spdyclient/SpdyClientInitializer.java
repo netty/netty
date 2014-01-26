@@ -44,7 +44,6 @@ public class SpdyClientInitializer extends ChannelInitializer<SocketChannel> {
 
     @Override
     public void initChannel(SocketChannel ch) throws Exception {
-
         SSLEngine engine = SecureChatSslContextFactory.getClientContext().createSSLEngine();
         engine.setUseClientMode(true);
         NextProtoNego.put(engine, new SpdyClientProvider());

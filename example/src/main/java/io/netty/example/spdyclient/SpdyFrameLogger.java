@@ -15,20 +15,18 @@
  */
 package io.netty.example.spdyclient;
 
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.MessageToMessageCodec;
+import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.spdy.SpdyFrame;
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogLevel;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.util.List;
-
 /**
  * Logs SPDY frames for debugging purposes.
  */
-public class SpdyFrameLogger extends MessageToMessageCodec<SpdyFrame, SpdyFrame> {
+public class SpdyFrameLogger extends ChannelHandlerAdapter {
 
     private enum Direction {
         INBOUND, OUTBOUND
@@ -47,25 +45,23 @@ public class SpdyFrameLogger extends MessageToMessageCodec<SpdyFrame, SpdyFrame>
     }
 
     @Override
-    public boolean acceptInboundMessage(Object msg) throws Exception {
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        if (acceptMessage(msg)) {
+            log((SpdyFrame) msg, Direction.INBOUND);
+        }
+        super.channelRead(ctx, msg);
+    }
+
+    @Override
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        if (acceptMessage(msg)) {
+            log((SpdyFrame) msg, Direction.OUTBOUND);
+        }
+        super.write(ctx, msg, promise);
+    }
+
+    private boolean acceptMessage(Object msg) throws Exception {
         return msg instanceof SpdyFrame;
-    }
-
-    @Override
-    public boolean acceptOutboundMessage(Object msg) throws Exception {
-        return msg instanceof SpdyFrame;
-    }
-
-    @Override
-    protected void encode(ChannelHandlerContext ctx, SpdyFrame msg, List<Object> out) throws Exception {
-        log(msg, Direction.OUTBOUND);
-        out.add(ReferenceCountUtil.retain(msg));
-    }
-
-    @Override
-    protected void decode(ChannelHandlerContext ctx, SpdyFrame msg, List<Object> out) throws Exception {
-        log(msg, Direction.INBOUND);
-        out.add(ReferenceCountUtil.retain(msg));
     }
 
     private void log(SpdyFrame msg, Direction d) {
