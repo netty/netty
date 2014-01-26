@@ -15,32 +15,33 @@
  */
 package io.netty.example.spdyclient;
 
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.MessageToMessageEncoder;
+import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.spdy.SpdyHttpHeaders;
-import io.netty.util.ReferenceCountUtil;
-
-import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Adds a unique client stream ID to the SPDY header. Client stream IDs MUST be odd.
  */
-public class SpdyClientStreamIdHandler extends MessageToMessageEncoder<HttpMessage> {
+public class SpdyClientStreamIdHandler extends ChannelHandlerAdapter {
 
-    private final AtomicInteger currentStreamId = new AtomicInteger(1);
+    private int currentStreamId = 1;
 
-    @Override
-    protected void encode(ChannelHandlerContext ctx, HttpMessage msg, List<Object> out) throws Exception {
-
-        boolean contains = msg.headers().contains(SpdyHttpHeaders.Names.STREAM_ID);
-        if (!contains) {
-            // Client stream IDs are always odd
-            SpdyHttpHeaders.setStreamId(msg, currentStreamId.getAndAdd(2));
-        }
-
-        out.add(ReferenceCountUtil.retain(msg));
+    public boolean acceptOutboundMessage(Object msg) throws Exception {
+        return msg instanceof HttpMessage;
     }
 
+    @Override
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        if (acceptOutboundMessage(msg)) {
+            HttpMessage httpMsg = (HttpMessage) msg;
+            if (!httpMsg.headers().contains(SpdyHttpHeaders.Names.STREAM_ID)) {
+                SpdyHttpHeaders.setStreamId(httpMsg, this.currentStreamId);
+                // Client stream IDs are always odd
+                currentStreamId += 2;
+            }
+        }
+        super.write(ctx, msg, promise);
+    }
 }
