@@ -64,6 +64,7 @@ final class PlatformDependent0 {
             if (addressField.getLong(ByteBuffer.allocate(1)) != 0) {
                 addressField = null;
             } else {
+                direct = ByteBuffer.allocateDirect(1);
                 if (addressField.getLong(direct) == 0) {
                     addressField = null;
                 }
@@ -142,29 +143,29 @@ final class PlatformDependent0 {
 
     static void freeDirectBufferUnsafe(ByteBuffer buffer) {
         try {
-            Cleaner cleaner = ((DirectBuffer)buffer).cleaner();
+            Cleaner cleaner = ((DirectBuffer) buffer).cleaner();
             if (cleaner == null) {
                 throw new IllegalArgumentException(
                         "attempted to deallocate the buffer which was allocated via JNIEnv->NewDirectByteBuffer()");
             }
             cleaner.clean();
-        }catch (Throwable t) {
+        } catch (Throwable t) {
             // Nothing we can do here.
         }
     }
 
     static void freeDirectBuffer(ByteBuffer buffer) {
-        if (!buffer.isDirect()) {
+        if (!(buffer instanceof DirectBuffer)) {
             return;
         }
         try {
-            Cleaner cleaner = ((DirectBuffer)buffer).cleaner();
-            if(cleaner == null) {
+            Cleaner cleaner = ((DirectBuffer) buffer).cleaner();
+            if (cleaner == null) {
                 throw new IllegalArgumentException(
                         "attempted to deallocate the buffer which was allocated via JNIEnv->NewDirectByteBuffer()");
             }
             cleaner.clean();
-        }catch (Throwable t) {
+        } catch (Throwable t) {
             // Nothing we can do here.
         }
     }
