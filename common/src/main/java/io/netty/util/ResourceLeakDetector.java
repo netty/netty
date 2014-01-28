@@ -232,7 +232,7 @@ public final class ResourceLeakDetector<T> {
         private DefaultResourceLeak prev;
         private DefaultResourceLeak next;
 
-        public DefaultResourceLeak(Object referent) {
+        private DefaultResourceLeak(Object referent) {
             super(referent, referent != null? refQueue : null);
 
             if (referent != null) {
@@ -334,7 +334,7 @@ public final class ResourceLeakDetector<T> {
                 recordsToSkip --;
             } else {
                 buf.append('\t');
-                buf.append(e.toString());
+                buf.append(e);
                 buf.append(NEWLINE);
             }
         }
