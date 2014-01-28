@@ -115,13 +115,13 @@ import java.lang.annotation.Target;
  * {@code @Sharable}
  * public class DataServerHandler extends {@link SimpleChannelInboundHandler}&lt;Message&gt; {
  *   private final {@link AttributeKey}&lt{@link Boolean}&gt auth =
- *           new {@link AttributeKey}&lt{@link Boolean}&gt("auth");
+ *           {@link AttributeKey#valueOf(String) AttributeKey.valueOf("auth")};
  *
  *   // This handler will receive a sequence of increasing integers starting
  *   // from 1.
  *   {@code @Override}
  *   public void channelRead({@link ChannelHandlerContext} ctx, {@link Integer} integer) {
- *     {@link Attribute}&lt{@link Boolean}&gt attr = ctx.getAttr(auth);
+ *     {@link Attribute}&lt{@link Boolean}&gt attr = ctx.attr(auth);
  *
  *     {@code @Override}
  *     public void channelRead({@link ChannelHandlerContext} ctx, Message message) {
