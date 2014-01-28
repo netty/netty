@@ -717,6 +717,12 @@ final class AdvancedLeakAwareByteBuf extends WrappedByteBuf {
     }
 
     @Override
+    public ByteBuf touch() {
+        leak.record();
+        return this;
+    }
+
+    @Override
     public ByteBuf capacity(int newCapacity) {
         leak.record();
         return super.capacity(newCapacity);

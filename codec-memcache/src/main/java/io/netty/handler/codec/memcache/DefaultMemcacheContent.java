@@ -68,6 +68,12 @@ public class DefaultMemcacheContent extends AbstractMemcacheObject implements Me
     }
 
     @Override
+    public MemcacheContent touch() {
+        content.touch();
+        return this;
+    }
+
+    @Override
     public boolean release() {
         return content.release();
     }
@@ -82,5 +88,4 @@ public class DefaultMemcacheContent extends AbstractMemcacheObject implements Me
         return StringUtil.simpleClassName(this) +
                "(data: " + content() + ", getDecoderResult: " + getDecoderResult() + ')';
     }
-
 }

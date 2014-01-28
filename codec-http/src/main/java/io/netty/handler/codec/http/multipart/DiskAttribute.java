@@ -122,7 +122,7 @@ public class DiskAttribute extends AbstractDiskHttpData implements Attribute {
         try {
             return getName() + '=' + getValue();
         } catch (IOException e) {
-            return getName() + "=IoException";
+            return getName() + '=' + e;
         }
     }
 
@@ -190,6 +190,12 @@ public class DiskAttribute extends AbstractDiskHttpData implements Attribute {
     @Override
     public Attribute retain() {
         super.retain();
+        return this;
+    }
+
+    @Override
+    public Attribute touch() {
+        super.touch();
         return this;
     }
 }

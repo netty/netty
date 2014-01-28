@@ -38,4 +38,7 @@ public interface HttpContent extends HttpObject, ByteBufHolder {
 
     @Override
     HttpContent retain(int increment);
+
+    @Override
+    HttpContent touch();
 }

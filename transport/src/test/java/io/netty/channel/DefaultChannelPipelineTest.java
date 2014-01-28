@@ -105,6 +105,11 @@ public class DefaultChannelPipelineTest {
             protected void deallocate() {
                 free.countDown();
             }
+
+            @Override
+            public ReferenceCounted touch() {
+                return this;
+            }
         };
 
         StringInboundHandler handler = new StringInboundHandler();

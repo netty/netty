@@ -108,6 +108,11 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
     }
 
     @Override
+    public final ByteBuf touch() {
+        return this;
+    }
+
+    @Override
     public final boolean release() {
         for (;;) {
             int refCnt = this.refCnt;

@@ -73,6 +73,12 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
     }
 
     @Override
+    public FullHttpRequest touch() {
+        content.touch();
+        return this;
+    }
+
+    @Override
     public boolean release() {
         return content.release();
     }

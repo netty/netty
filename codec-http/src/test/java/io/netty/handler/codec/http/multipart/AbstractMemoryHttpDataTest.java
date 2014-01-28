@@ -68,7 +68,7 @@ public class AbstractMemoryHttpDataTest {
          * @param charset Used charset for data decoding.
          * @param size    Expected data block size.
          */
-        protected TestHttpData(String name, Charset charset, long size) {
+        private TestHttpData(String name, Charset charset, long size) {
             super(name, charset, size);
         }
 

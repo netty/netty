@@ -1161,6 +1161,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
 
     private static final class WrappedFullHttpRequest extends WrappedHttpRequest implements FullHttpRequest {
         private final HttpContent content;
+
         private WrappedFullHttpRequest(HttpRequest request, HttpContent content) {
             super(request);
             this.content = content;
@@ -1211,6 +1212,12 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
         @Override
         public FullHttpRequest retain() {
             content.retain();
+            return this;
+        }
+
+        @Override
+        public FullHttpRequest touch() {
+            content.touch();
             return this;
         }
 

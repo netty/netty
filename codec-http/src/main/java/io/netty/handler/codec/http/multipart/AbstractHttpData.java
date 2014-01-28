@@ -130,4 +130,7 @@ public abstract class AbstractHttpData extends AbstractReferenceCounted implemen
         super.retain(increment);
         return this;
     }
+
+    @Override
+    public abstract HttpData touch();
 }

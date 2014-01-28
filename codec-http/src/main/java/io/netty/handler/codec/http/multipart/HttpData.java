@@ -208,4 +208,7 @@ public interface HttpData extends InterfaceHttpData, ByteBufHolder {
 
     @Override
     HttpData retain(int increment);
+
+    @Override
+    HttpData touch();
 }

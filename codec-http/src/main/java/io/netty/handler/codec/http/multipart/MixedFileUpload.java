@@ -265,7 +265,7 @@ public class MixedFileUpload implements FileUpload {
 
     @Override
     public String toString() {
-        return "Mixed: " + fileUpload.toString();
+        return "Mixed: " + fileUpload;
     }
 
     @Override
@@ -307,6 +307,12 @@ public class MixedFileUpload implements FileUpload {
     @Override
     public FileUpload retain(int increment) {
         fileUpload.retain(increment);
+        return this;
+    }
+
+    @Override
+    public FileUpload touch() {
+        fileUpload.touch();
         return this;
     }
 
