@@ -85,6 +85,27 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>me.normanmaurer.maven.autobahntestsuite</groupId>
+        <artifactId>autobahntestsuite-maven-plugin</artifactId>
+        <version>0.1.1</version>
+        <configuration>
+          <mainClass>io.netty.testsuite.websockets.autobahn.AutobahnServer</mainClass>
+          <cases>
+            <case>*</case>
+          </cases>
+          <excludeCases></excludeCases>
+          <failOnNonStrict>false</failOnNonStrict>
+        </configuration>
+        <executions>
+          <execution>
+            <phase>test</phase>
+            <goals>
+              <goal>fuzzingclient</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
 </project>

@@ -60,5 +60,5 @@
  *
  * <p>10. See the results in <tt>./reports/servers/index.html</tt>
  */
-package io.netty.example.http.websocketx.autobahn;
+package io.netty.testsuite.websockets.autobahn;
 
