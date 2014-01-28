@@ -54,7 +54,7 @@ public class MixedAttribute implements Attribute {
                 // revert to Memory mode
                 try {
                     attribute = new MemoryAttribute(name, value, charset);
-                } catch (IOException e1) {
+                } catch (IOException ignore) {
                     throw new IllegalArgumentException(e);
                 }
             }
@@ -221,7 +221,7 @@ public class MixedAttribute implements Attribute {
 
     @Override
     public String toString() {
-        return "Mixed: " + attribute.toString();
+        return "Mixed: " + attribute;
     }
 
     @Override
@@ -276,6 +276,12 @@ public class MixedAttribute implements Attribute {
     @Override
     public Attribute retain(int increment) {
         attribute.retain(increment);
+        return this;
+    }
+
+    @Override
+    public Attribute touch() {
+        attribute.touch();
         return this;
     }
 

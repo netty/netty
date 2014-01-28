@@ -46,6 +46,12 @@ public abstract class AbstractDerivedByteBuf extends AbstractByteBuf {
     }
 
     @Override
+    public final ByteBuf touch() {
+        unwrap().touch();
+        return this;
+    }
+
+    @Override
     public final boolean release() {
         return unwrap().release();
     }

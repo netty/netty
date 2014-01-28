@@ -32,6 +32,8 @@ public interface FullBinaryMemcacheRequest extends BinaryMemcacheRequest, FullMe
     FullBinaryMemcacheRequest retain();
 
     @Override
-    FullBinaryMemcacheRequest duplicate();
+    FullBinaryMemcacheRequest touch();
 
+    @Override
+    FullBinaryMemcacheRequest duplicate();
 }

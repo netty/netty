@@ -78,6 +78,12 @@ public class DefaultFullBinaryMemcacheRequest extends DefaultBinaryMemcacheReque
     }
 
     @Override
+    public FullBinaryMemcacheRequest touch() {
+        content.touch();
+        return this;
+    }
+
+    @Override
     public boolean release() {
         return content.release();
     }
@@ -96,5 +102,4 @@ public class DefaultFullBinaryMemcacheRequest extends DefaultBinaryMemcacheReque
     public FullBinaryMemcacheRequest duplicate() {
         return new DefaultFullBinaryMemcacheRequest(getHeader(), getKey(), getExtras(), content().duplicate());
     }
-
 }

@@ -28,4 +28,12 @@ public interface BinaryMemcacheResponse extends BinaryMemcacheMessage<BinaryMemc
     @Override
     BinaryMemcacheResponseHeader getHeader();
 
+    @Override
+    BinaryMemcacheResponse retain();
+
+    @Override
+    BinaryMemcacheResponse retain(int increment);
+
+    @Override
+    BinaryMemcacheResponse touch();
 }

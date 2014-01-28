@@ -153,4 +153,10 @@ public class MemoryAttribute extends AbstractMemoryHttpData implements Attribute
         super.retain(increment);
         return this;
     }
+
+    @Override
+    public Attribute touch() {
+        super.touch();
+        return this;
+    }
 }

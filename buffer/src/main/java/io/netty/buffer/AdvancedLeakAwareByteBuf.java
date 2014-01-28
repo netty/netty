@@ -701,6 +701,12 @@ final class AdvancedLeakAwareByteBuf extends WrappedByteBuf {
     }
 
     @Override
+    public ByteBuf touch() {
+        leak.record();
+        return this;
+    }
+
+    @Override
     public boolean release() {
         boolean deallocated =  super.release();
         if (deallocated) {

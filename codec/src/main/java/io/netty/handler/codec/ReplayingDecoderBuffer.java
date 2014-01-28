@@ -973,6 +973,12 @@ final class ReplayingDecoderBuffer extends ByteBuf {
     }
 
     @Override
+    public ByteBuf touch() {
+        buffer.touch();
+        return this;
+    }
+
+    @Override
     public boolean release() {
         reject();
         return false;

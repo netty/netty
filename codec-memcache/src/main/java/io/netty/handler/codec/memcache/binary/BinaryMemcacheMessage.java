@@ -64,4 +64,6 @@ public interface BinaryMemcacheMessage<H extends BinaryMemcacheMessageHeader> ex
     @Override
     BinaryMemcacheMessage<H> retain(int increment);
 
+    @Override
+    BinaryMemcacheMessage<H> touch();
 }

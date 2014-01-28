@@ -63,4 +63,10 @@ public final class DatagramPacket
         super.retain(increment);
         return this;
     }
+
+    @Override
+    public DatagramPacket touch() {
+        super.touch();
+        return this;
+    }
 }

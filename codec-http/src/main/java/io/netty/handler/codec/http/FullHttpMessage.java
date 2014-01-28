@@ -30,5 +30,8 @@ public interface FullHttpMessage extends HttpMessage, LastHttpContent {
     FullHttpMessage retain();
 
     @Override
+    FullHttpMessage touch();
+
+    @Override
     FullHttpMessage duplicate();
 }

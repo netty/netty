@@ -832,6 +832,11 @@ public final class EmptyByteBuf extends ByteBuf {
     }
 
     @Override
+    public ByteBuf touch() {
+        return this;
+    }
+
+    @Override
     public boolean release() {
         return false;
     }

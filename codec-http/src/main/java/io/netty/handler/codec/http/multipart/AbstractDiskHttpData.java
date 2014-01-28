@@ -396,4 +396,9 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
     public File getFile() throws IOException {
         return file;
     }
+
+    @Override
+    public HttpData touch() {
+        return this;
+    }
 }

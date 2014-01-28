@@ -34,4 +34,6 @@ public interface MemcacheMessage extends MemcacheObject, ReferenceCounted {
     @Override
     MemcacheMessage retain(int increment);
 
+    @Override
+    MemcacheMessage touch();
 }

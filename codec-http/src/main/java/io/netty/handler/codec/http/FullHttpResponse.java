@@ -30,6 +30,9 @@ public interface FullHttpResponse extends HttpResponse, FullHttpMessage {
     FullHttpResponse retain();
 
     @Override
+    FullHttpResponse touch();
+
+    @Override
     FullHttpResponse duplicate();
 
     @Override

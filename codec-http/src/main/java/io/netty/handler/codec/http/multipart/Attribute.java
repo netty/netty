@@ -42,4 +42,7 @@ public interface Attribute extends HttpData {
 
     @Override
     Attribute retain(int increment);
+
+    @Override
+    Attribute touch();
 }
