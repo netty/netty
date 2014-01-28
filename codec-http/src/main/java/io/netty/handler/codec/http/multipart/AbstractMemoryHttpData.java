@@ -257,4 +257,12 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
     public File getFile() throws IOException {
         throw new IOException("Not represented by a file");
     }
+
+    @Override
+    public HttpData touch() {
+        if (byteBuf != null) {
+            byteBuf.touch();
+        }
+        return this;
+    }
 }

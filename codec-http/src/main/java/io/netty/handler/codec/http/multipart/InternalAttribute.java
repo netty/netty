@@ -125,4 +125,28 @@ final class InternalAttribute extends AbstractReferenceCounted implements Interf
     protected void deallocate() {
         // Do nothing
     }
+
+    @Override
+    public InterfaceHttpData retain() {
+        for (ByteBuf buf: value) {
+            buf.retain();
+        }
+        return this;
+    }
+
+    @Override
+    public InterfaceHttpData retain(int increment) {
+        for (ByteBuf buf: value) {
+            buf.retain(increment);
+        }
+        return this;
+    }
+
+    @Override
+    public InterfaceHttpData touch() {
+        for (ByteBuf buf: value) {
+            buf.touch();
+        }
+        return this;
+    }
 }

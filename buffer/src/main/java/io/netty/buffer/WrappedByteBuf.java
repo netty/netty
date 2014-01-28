@@ -800,6 +800,12 @@ class WrappedByteBuf extends ByteBuf {
     }
 
     @Override
+    public ByteBuf touch() {
+        buf.touch();
+        return this;
+    }
+
+    @Override
     public boolean isReadable(int size) {
         return buf.isReadable(size);
     }

@@ -16,7 +16,6 @@
 package io.netty.handler.codec.memcache.binary;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 
 /**
  * The default implementation of the {@link BinaryMemcacheResponse}.
@@ -64,4 +63,21 @@ public class DefaultBinaryMemcacheResponse extends AbstractBinaryMemcacheMessage
         super(header, key, extras);
     }
 
+    @Override
+    public BinaryMemcacheResponse retain() {
+        super.retain();
+        return this;
+    }
+
+    @Override
+    public BinaryMemcacheResponse retain(int increment) {
+        super.retain(increment);
+        return this;
+    }
+
+    @Override
+    public BinaryMemcacheResponse touch() {
+        super.touch();
+        return this;
+    }
 }

@@ -140,4 +140,10 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
         super.retain(increment);
         return this;
     }
+
+    @Override
+    public ContinuationWebSocketFrame touch() {
+        super.touch();
+        return this;
+    }
 }

@@ -32,6 +32,8 @@ public interface FullBinaryMemcacheResponse extends BinaryMemcacheResponse, Full
     FullBinaryMemcacheResponse retain();
 
     @Override
-    FullBinaryMemcacheResponse duplicate();
+    FullBinaryMemcacheResponse touch();
 
+    @Override
+    FullBinaryMemcacheResponse duplicate();
 }

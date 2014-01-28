@@ -50,4 +50,7 @@ public interface SpdyDataFrame extends ByteBufHolder, SpdyStreamFrame {
 
     @Override
     SpdyDataFrame retain(int increment);
+
+    @Override
+    SpdyDataFrame touch();
 }

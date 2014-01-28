@@ -211,4 +211,10 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
         super.retain();
         return this;
     }
+
+    @Override
+    public FileUpload touch() {
+        super.touch();
+        return this;
+    }
 }

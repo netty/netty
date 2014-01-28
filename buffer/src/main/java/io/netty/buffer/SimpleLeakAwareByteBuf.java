@@ -30,6 +30,11 @@ final class SimpleLeakAwareByteBuf extends WrappedByteBuf {
     }
 
     @Override
+    public ByteBuf touch() {
+        return this;
+    }
+
+    @Override
     public boolean release() {
         boolean deallocated =  super.release();
         if (deallocated) {

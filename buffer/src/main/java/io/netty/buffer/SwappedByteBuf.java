@@ -815,6 +815,12 @@ public final class SwappedByteBuf extends ByteBuf {
     }
 
     @Override
+    public ByteBuf touch() {
+        buf.touch();
+        return this;
+    }
+
+    @Override
     public boolean release() {
         return buf.release();
     }
@@ -847,6 +853,6 @@ public final class SwappedByteBuf extends ByteBuf {
 
     @Override
     public String toString() {
-        return "Swapped(" + buf.toString() + ')';
+        return "Swapped(" + buf + ')';
     }
 }

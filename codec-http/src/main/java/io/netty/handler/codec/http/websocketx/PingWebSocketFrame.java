@@ -75,4 +75,10 @@ public class PingWebSocketFrame extends WebSocketFrame {
         super.retain(increment);
         return this;
     }
+
+    @Override
+    public PingWebSocketFrame touch() {
+        super.touch();
+        return this;
+    }
 }

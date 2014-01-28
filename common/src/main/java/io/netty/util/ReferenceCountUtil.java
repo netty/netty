@@ -60,6 +60,18 @@ public final class ReferenceCountUtil {
     }
 
     /**
+     * Tries to call {@link ReferenceCounted#touch()} if the specified message implements {@link ReferenceCounted}.
+     * If the specified message doesn't implement {@link ReferenceCounted}, this method does nothing.
+     */
+    @SuppressWarnings("unchecked")
+    public static <T> T touch(T msg) {
+        if (msg instanceof ReferenceCounted) {
+            return (T) ((ReferenceCounted) msg).touch();
+        }
+        return msg;
+    }
+
+    /**
      * Try to call {@link ReferenceCounted#release()} if the specified message implements {@link ReferenceCounted}.
      * If the specified message doesn't implement {@link ReferenceCounted}, this method does nothing.
      */

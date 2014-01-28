@@ -28,4 +28,12 @@ public interface BinaryMemcacheRequest extends BinaryMemcacheMessage<BinaryMemca
     @Override
     BinaryMemcacheRequestHeader getHeader();
 
+    @Override
+    BinaryMemcacheRequest retain();
+
+    @Override
+    BinaryMemcacheRequest retain(int increment);
+
+    @Override
+    BinaryMemcacheRequest touch();
 }

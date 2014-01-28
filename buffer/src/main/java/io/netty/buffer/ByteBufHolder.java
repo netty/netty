@@ -42,4 +42,7 @@ public interface ByteBufHolder extends ReferenceCounted {
 
     @Override
     ByteBufHolder retain(int increment);
+
+    @Override
+    ByteBufHolder touch();
 }
