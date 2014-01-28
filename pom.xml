@@ -515,7 +515,6 @@
           <version>false</version>
           <author>false</author>
           <keywords>true</keywords>
-          <additionalJOption>-J-XX:MaxPermSize=256m</additionalJOption>
         </configuration>
       </plugin>
       <plugin>
