@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandler.Skip;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.PlatformDependent;
 
@@ -322,6 +323,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext {
 
     @Override
     public ChannelHandlerContext fireChannelRead(Object msg) {
+        ReferenceCountUtil.touch(msg);
         DefaultChannelHandlerContext next = findContextInbound(MASK_CHANNEL_READ);
         next.invoker.invokeChannelRead(next, msg);
         return this;
@@ -417,6 +419,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext {
 
     @Override
     public ChannelFuture write(Object msg, ChannelPromise promise) {
+        ReferenceCountUtil.touch(msg);
         DefaultChannelHandlerContext next = findContextOutbound(MASK_WRITE);
         next.invoker.invokeWrite(next, msg, promise);
         return promise;
@@ -431,6 +434,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext {
 
     @Override
     public ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
+        ReferenceCountUtil.touch(msg);
         DefaultChannelHandlerContext next;
         next = findContextOutbound(MASK_WRITE);
         next.invoker.invokeWrite(next, msg, promise);
