@@ -38,7 +38,7 @@ public class HttpResponseClientHandler extends SimpleChannelInboundHandler<HttpO
     private final BlockingQueue<ChannelFuture> queue = new LinkedBlockingQueue<ChannelFuture>();
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
+    public void channelRead0(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
         if (msg instanceof HttpResponse) {
             HttpResponse response = (HttpResponse) msg;
 
