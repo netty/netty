@@ -378,6 +378,7 @@
           <ignores>
             <ignore>sun.misc.Unsafe</ignore>
             <ignore>sun.misc.Cleaner</ignore>
+            <ignore>sun.nio.ch.DirectBuffer</ignore>
 
             <ignore>java.util.zip.Deflater</ignore>
 
