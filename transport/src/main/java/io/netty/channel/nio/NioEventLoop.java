@@ -253,7 +253,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 for (SelectionKey key: oldSelector.keys()) {
                     Object a = key.attachment();
                     try {
-                        if (key.channel().keyFor(newSelector) != null) {
+                        if (!key.isValid() || key.channel().keyFor(newSelector) != null) {
                             continue;
                         }
 
