@@ -111,8 +111,10 @@ public class WriteTimeoutHandler extends ChannelHandlerAdapter {
             final ScheduledFuture<?> sf = ctx.executor().schedule(new Runnable() {
                 @Override
                 public void run() {
-                    if (future.tryFailure(WriteTimeoutException.INSTANCE)) {
-                        // If succeeded to mark as failure, notify the pipeline, too.
+                    // Was not written yet so issue a write timeout
+                    // The future itself will be failed with a ClosedChannelException once the close() was issued
+                    // See https://github.com/netty/netty/issues/2159
+                    if (!future.isDone()) {
                         try {
                             writeTimedOut(ctx);
                         } catch (Throwable t) {
