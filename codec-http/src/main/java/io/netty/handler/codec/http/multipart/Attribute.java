@@ -45,4 +45,7 @@ public interface Attribute extends HttpData {
 
     @Override
     Attribute touch();
+
+    @Override
+    Attribute touch(Object hint);
 }

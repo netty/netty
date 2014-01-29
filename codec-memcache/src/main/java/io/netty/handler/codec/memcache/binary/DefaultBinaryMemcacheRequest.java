@@ -80,4 +80,10 @@ public class DefaultBinaryMemcacheRequest extends AbstractBinaryMemcacheMessage<
         super.touch();
         return this;
     }
+
+    @Override
+    public BinaryMemcacheRequest touch(Object hint) {
+        super.touch(hint);
+        return this;
+    }
 }

@@ -76,6 +76,12 @@ public class DefaultLastHttpContent extends DefaultHttpContent implements LastHt
     }
 
     @Override
+    public LastHttpContent touch(Object hint) {
+        super.touch(hint);
+        return this;
+    }
+
+    @Override
     public HttpHeaders trailingHeaders() {
         return trailingHeaders;
     }

@@ -286,6 +286,12 @@ public class MixedAttribute implements Attribute {
     }
 
     @Override
+    public Attribute touch(Object hint) {
+        attribute.touch(hint);
+        return this;
+    }
+
+    @Override
     public boolean release() {
         return attribute.release();
     }

@@ -149,4 +149,12 @@ final class InternalAttribute extends AbstractReferenceCounted implements Interf
         }
         return this;
     }
+
+    @Override
+    public InterfaceHttpData touch(Object hint) {
+        for (ByteBuf buf: value) {
+            buf.touch(hint);
+        }
+        return this;
+    }
 }

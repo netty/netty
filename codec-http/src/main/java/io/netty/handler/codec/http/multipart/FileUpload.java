@@ -70,4 +70,7 @@ public interface FileUpload extends HttpData {
 
     @Override
     FileUpload touch();
+
+    @Override
+    FileUpload touch(Object hint);
 }

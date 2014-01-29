@@ -74,6 +74,12 @@ public class DefaultHttpContent extends DefaultHttpObject implements HttpContent
     }
 
     @Override
+    public HttpContent touch(Object hint) {
+        content.touch(hint);
+        return this;
+    }
+
+    @Override
     public boolean release() {
         return content.release();
     }

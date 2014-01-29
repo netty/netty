@@ -211,4 +211,7 @@ public interface HttpData extends InterfaceHttpData, ByteBufHolder {
 
     @Override
     HttpData touch();
+
+    @Override
+    HttpData touch(Object hint);
 }

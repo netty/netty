@@ -108,7 +108,12 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
     }
 
     @Override
-    public final ByteBuf touch() {
+    public ByteBuf touch() {
+        return this;
+    }
+
+    @Override
+    public ByteBuf touch(Object hint) {
         return this;
     }
 

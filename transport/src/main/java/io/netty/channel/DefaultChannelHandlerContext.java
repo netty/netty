@@ -20,13 +20,15 @@ import io.netty.channel.ChannelHandler.Skip;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ResourceLeakHint;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.StringUtil;
 
 import java.net.SocketAddress;
 import java.util.WeakHashMap;
 
-final class DefaultChannelHandlerContext implements ChannelHandlerContext {
+final class DefaultChannelHandlerContext implements ChannelHandlerContext, ResourceLeakHint {
 
     // This class keeps an integer member field 'skipFlags' whose each bit tells if the corresponding handler method
     // is annotated with @Skip. 'skipFlags' is retrieved in runtime via the reflection API and is cached.
@@ -323,8 +325,8 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext {
 
     @Override
     public ChannelHandlerContext fireChannelRead(Object msg) {
-        ReferenceCountUtil.touch(msg);
         DefaultChannelHandlerContext next = findContextInbound(MASK_CHANNEL_READ);
+        ReferenceCountUtil.touch(msg, next);
         next.invoker.invokeChannelRead(next, msg);
         return this;
     }
@@ -419,8 +421,8 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext {
 
     @Override
     public ChannelFuture write(Object msg, ChannelPromise promise) {
-        ReferenceCountUtil.touch(msg);
         DefaultChannelHandlerContext next = findContextOutbound(MASK_WRITE);
+        ReferenceCountUtil.touch(msg, next);
         next.invoker.invokeWrite(next, msg, promise);
         return promise;
     }
@@ -434,9 +436,9 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext {
 
     @Override
     public ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
-        ReferenceCountUtil.touch(msg);
         DefaultChannelHandlerContext next;
         next = findContextOutbound(MASK_WRITE);
+        ReferenceCountUtil.touch(msg, next);
         next.invoker.invokeWrite(next, msg, promise);
         next = findContextOutbound(MASK_FLUSH);
         next.invoker.invokeFlush(next);
@@ -500,5 +502,15 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext {
     @Override
     public boolean isRemoved() {
         return removed;
+    }
+
+    @Override
+    public String toHintString() {
+        return '\'' + name + "' will handle the message from this point.";
+    }
+
+    @Override
+    public String toString() {
+        return StringUtil.simpleClassName(ChannelHandlerContext.class) + '(' + name + ", " + channel + ')';
     }
 }

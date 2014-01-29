@@ -116,6 +116,12 @@ public class DefaultSpdyDataFrame extends DefaultSpdyStreamFrame implements Spdy
     }
 
     @Override
+    public SpdyDataFrame touch(Object hint) {
+        data.touch(hint);
+        return this;
+    }
+
+    @Override
     public boolean release() {
         return data.release();
     }

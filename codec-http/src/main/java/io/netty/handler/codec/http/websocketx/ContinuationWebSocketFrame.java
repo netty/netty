@@ -146,4 +146,10 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
         super.touch();
         return this;
     }
+
+    @Override
+    public ContinuationWebSocketFrame touch(Object hint) {
+        super.touch(hint);
+        return this;
+    }
 }

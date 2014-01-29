@@ -84,6 +84,12 @@ public class DefaultFullBinaryMemcacheRequest extends DefaultBinaryMemcacheReque
     }
 
     @Override
+    public FullBinaryMemcacheRequest touch(Object hint) {
+        content.touch(hint);
+        return this;
+    }
+
+    @Override
     public boolean release() {
         return content.release();
     }

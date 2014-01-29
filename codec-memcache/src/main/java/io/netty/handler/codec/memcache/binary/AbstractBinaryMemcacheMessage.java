@@ -110,8 +110,13 @@ public abstract class AbstractBinaryMemcacheMessage<H extends BinaryMemcacheMess
 
     @Override
     public BinaryMemcacheMessage<H> touch() {
+        return touch(null);
+    }
+
+    @Override
+    public BinaryMemcacheMessage<H> touch(Object hint) {
         if (extras != null) {
-            extras.touch();
+            extras.touch(hint);
         }
         return this;
     }

@@ -107,7 +107,7 @@ public class DefaultChannelPipelineTest {
             }
 
             @Override
-            public ReferenceCounted touch() {
+            public ReferenceCounted touch(Object hint) {
                 return this;
             }
         };

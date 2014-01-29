@@ -69,4 +69,10 @@ public final class DatagramPacket
         super.touch();
         return this;
     }
+
+    @Override
+    public DatagramPacket touch(Object hint) {
+        super.touch(hint);
+        return this;
+    }
 }
