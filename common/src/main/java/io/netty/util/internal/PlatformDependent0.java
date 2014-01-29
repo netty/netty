@@ -19,6 +19,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import sun.misc.Cleaner;
 import sun.misc.Unsafe;
+import sun.nio.ch.DirectBuffer;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -34,10 +35,7 @@ final class PlatformDependent0 {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PlatformDependent0.class);
     private static final Unsafe UNSAFE;
     private static final boolean BIG_ENDIAN = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
-
-    private static final long CLEANER_FIELD_OFFSET;
     private static final long ADDRESS_FIELD_OFFSET;
-    private static final Field CLEANER_FIELD;
 
     /**
      * {@code true} if and only if the platform supports unaligned access.
@@ -57,7 +55,6 @@ final class PlatformDependent0 {
         } catch (Throwable t) {
             cleanerField = null;
         }
-        CLEANER_FIELD = cleanerField;
         logger.debug("java.nio.ByteBuffer.cleaner: {}", cleanerField != null? "available" : "unavailable");
 
         Field addressField;
@@ -114,13 +111,10 @@ final class PlatformDependent0 {
         UNSAFE = unsafe;
 
         if (unsafe == null) {
-            CLEANER_FIELD_OFFSET = -1;
             ADDRESS_FIELD_OFFSET = -1;
             UNALIGNED = false;
         } else {
             ADDRESS_FIELD_OFFSET = objectFieldOffset(addressField);
-            CLEANER_FIELD_OFFSET = objectFieldOffset(cleanerField);
-
             boolean unaligned;
             try {
                 Class<?> bitsClass = Class.forName("java.nio.Bits", false, ClassLoader.getSystemClassLoader());
@@ -148,9 +142,8 @@ final class PlatformDependent0 {
     }
 
     static void freeDirectBufferUnsafe(ByteBuffer buffer) {
-        Cleaner cleaner;
         try {
-            cleaner = (Cleaner) getObject(buffer, CLEANER_FIELD_OFFSET);
+            Cleaner cleaner = ((DirectBuffer) buffer).cleaner();
             if (cleaner == null) {
                 throw new IllegalArgumentException(
                         "attempted to deallocate the buffer which was allocated via JNIEnv->NewDirectByteBuffer()");
@@ -162,11 +155,11 @@ final class PlatformDependent0 {
     }
 
     static void freeDirectBuffer(ByteBuffer buffer) {
-        if (CLEANER_FIELD == null) {
+        if (!(buffer instanceof DirectBuffer)) {
             return;
         }
         try {
-            Cleaner cleaner = (Cleaner) CLEANER_FIELD.get(buffer);
+            Cleaner cleaner = ((DirectBuffer) buffer).cleaner();
             if (cleaner == null) {
                 throw new IllegalArgumentException(
                         "attempted to deallocate the buffer which was allocated via JNIEnv->NewDirectByteBuffer()");
