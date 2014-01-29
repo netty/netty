@@ -44,4 +44,7 @@ public interface InterfaceHttpData extends Comparable<InterfaceHttpData>, Refere
 
     @Override
     InterfaceHttpData touch();
+
+    @Override
+    InterfaceHttpData touch(Object hint);
 }

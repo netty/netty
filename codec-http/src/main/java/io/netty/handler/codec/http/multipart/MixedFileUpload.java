@@ -317,6 +317,12 @@ public class MixedFileUpload implements FileUpload {
     }
 
     @Override
+    public FileUpload touch(Object hint) {
+        fileUpload.touch(hint);
+        return this;
+    }
+
+    @Override
     public boolean release() {
         return fileUpload.release();
     }

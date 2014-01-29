@@ -88,4 +88,10 @@ public abstract class WebSocketFrame extends DefaultByteBufHolder {
         super.touch();
         return this;
     }
+
+    @Override
+    public WebSocketFrame touch(Object hint) {
+        super.touch(hint);
+        return this;
+    }
 }

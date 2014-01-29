@@ -159,4 +159,10 @@ public class MemoryAttribute extends AbstractMemoryHttpData implements Attribute
         super.touch();
         return this;
     }
+
+    @Override
+    public Attribute touch(Object hint) {
+        super.touch(hint);
+        return this;
+    }
 }

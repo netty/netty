@@ -133,4 +133,7 @@ public abstract class AbstractHttpData extends AbstractReferenceCounted implemen
 
     @Override
     public abstract HttpData touch();
+
+    @Override
+    public abstract HttpData touch(Object hint);
 }

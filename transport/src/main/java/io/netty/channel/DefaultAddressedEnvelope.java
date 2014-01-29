@@ -109,6 +109,12 @@ public class DefaultAddressedEnvelope<M, A extends SocketAddress> implements Add
     }
 
     @Override
+    public AddressedEnvelope<M, A> touch(Object hint) {
+        ReferenceCountUtil.touch(message, hint);
+        return this;
+    }
+
+    @Override
     public String toString() {
         if (sender != null) {
             return StringUtil.simpleClassName(this) +

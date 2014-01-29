@@ -33,6 +33,9 @@ public interface FullHttpRequest extends HttpRequest, FullHttpMessage {
     FullHttpRequest touch();
 
     @Override
+    FullHttpRequest touch(Object hint);
+
+    @Override
     FullHttpRequest duplicate();
 
     @Override

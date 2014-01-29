@@ -121,4 +121,9 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
     public FileRegion touch() {
         return this;
     }
+
+    @Override
+    public FileRegion touch(Object hint) {
+        return this;
+    }
 }

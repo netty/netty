@@ -80,6 +80,11 @@ public interface LastHttpContent extends HttpContent {
         }
 
         @Override
+        public LastHttpContent touch(Object hint) {
+            return this;
+        }
+
+        @Override
         public boolean release() {
             return false;
         }
@@ -108,6 +113,9 @@ public interface LastHttpContent extends HttpContent {
 
     @Override
     LastHttpContent touch();
+
+    @Override
+    LastHttpContent touch(Object hint);
 
     @Override
     LastHttpContent duplicate();

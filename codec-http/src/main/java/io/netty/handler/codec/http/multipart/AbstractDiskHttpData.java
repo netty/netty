@@ -401,4 +401,9 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
     public HttpData touch() {
         return this;
     }
+
+    @Override
+    public HttpData touch(Object hint) {
+        return this;
+    }
 }

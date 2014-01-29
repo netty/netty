@@ -34,5 +34,8 @@ public interface FullMemcacheMessage extends MemcacheMessage, LastMemcacheConten
     FullMemcacheMessage touch();
 
     @Override
+    FullMemcacheMessage touch(Object hint);
+
+    @Override
     FullMemcacheMessage duplicate();
 }

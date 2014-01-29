@@ -1222,6 +1222,12 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
         }
 
         @Override
+        public FullHttpRequest touch(Object hint) {
+            content.touch(hint);
+            return this;
+        }
+
+        @Override
         public ByteBuf content() {
             return content.content();
         }

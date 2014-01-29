@@ -20,6 +20,7 @@ import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import io.netty.util.Recycler;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ResourceLeakHint;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.internal.StringUtil;
@@ -28,7 +29,7 @@ import java.net.SocketAddress;
 
 import static io.netty.channel.DefaultChannelPipeline.*;
 
-final class DefaultChannelHandlerContext implements ChannelHandlerContext {
+final class DefaultChannelHandlerContext implements ChannelHandlerContext, ResourceLeakHint {
 
     volatile DefaultChannelHandlerContext next;
     volatile DefaultChannelHandlerContext prev;
@@ -329,8 +330,8 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext {
             throw new NullPointerException("msg");
         }
 
-        ReferenceCountUtil.touch(msg);
         final DefaultChannelHandlerContext next = findContextInbound();
+        ReferenceCountUtil.touch(msg, next);
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
             next.invokeChannelRead(msg);
@@ -706,8 +707,8 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext {
 
     private void write(Object msg, boolean flush, ChannelPromise promise) {
 
-        ReferenceCountUtil.touch(msg);
         DefaultChannelHandlerContext next = findContextOutbound();
+        ReferenceCountUtil.touch(msg, next);
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
             next.invokeWrite(msg, promise);
@@ -986,5 +987,15 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext {
         protected void recycle(Recycler.Handle<WriteAndFlushTask> handle) {
             RECYCLER.recycle(this, handle);
         }
+    }
+
+    @Override
+    public String toHintString() {
+        return '\'' + name + "' will handle the message from this point.";
+    }
+
+    @Override
+    public String toString() {
+        return StringUtil.simpleClassName(ChannelHandlerContext.class) + '(' + name + ", " + channel + ')';
     }
 }

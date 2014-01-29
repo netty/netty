@@ -89,6 +89,11 @@ public abstract class AbstractReferenceCounted implements ReferenceCounted {
     }
 
     @Override
+    public ReferenceCounted touch() {
+        return touch(null);
+    }
+
+    @Override
     public final boolean release() {
         for (;;) {
             int refCnt = this.refCnt;

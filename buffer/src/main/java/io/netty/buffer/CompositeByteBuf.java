@@ -1571,6 +1571,16 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    public CompositeByteBuf touch() {
+        return (CompositeByteBuf) super.touch();
+    }
+
+    @Override
+    public CompositeByteBuf touch(Object hint) {
+        return (CompositeByteBuf) super.touch(hint);
+    }
+
+    @Override
     public ByteBuffer[] nioBuffers() {
         return nioBuffers(readerIndex(), readableBytes());
     }

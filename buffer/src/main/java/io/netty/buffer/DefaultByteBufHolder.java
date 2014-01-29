@@ -75,6 +75,12 @@ public class DefaultByteBufHolder implements ByteBufHolder {
     }
 
     @Override
+    public ByteBufHolder touch(Object hint) {
+        data.touch(hint);
+        return this;
+    }
+
+    @Override
     public boolean release() {
         return data.release();
     }

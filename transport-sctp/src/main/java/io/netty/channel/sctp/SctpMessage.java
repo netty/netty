@@ -159,6 +159,12 @@ public final class SctpMessage extends DefaultByteBufHolder {
     }
 
     @Override
+    public SctpMessage touch(Object hint) {
+        super.touch(hint);
+        return this;
+    }
+
+    @Override
     public String toString() {
         if (refCnt() == 0) {
             return "SctpFrame{" +

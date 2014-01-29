@@ -42,4 +42,7 @@ public interface MemcacheContent extends MemcacheObject, ByteBufHolder {
 
     @Override
     MemcacheContent touch();
+
+    @Override
+    MemcacheContent touch(Object hint);
 }

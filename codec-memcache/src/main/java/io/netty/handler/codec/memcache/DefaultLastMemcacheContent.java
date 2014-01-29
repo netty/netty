@@ -51,6 +51,12 @@ public class DefaultLastMemcacheContent extends DefaultMemcacheContent implement
     }
 
     @Override
+    public LastMemcacheContent touch(Object hint) {
+        super.touch(hint);
+        return this;
+    }
+
+    @Override
     public LastMemcacheContent copy() {
         return new DefaultLastMemcacheContent(content().copy());
     }

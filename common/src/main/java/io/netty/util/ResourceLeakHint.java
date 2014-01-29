@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 The Netty Project
+ * Copyright 2014 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,28 +13,15 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.http;
+
+package io.netty.util;
 
 /**
- * Combines {@link HttpMessage} and {@link LastHttpContent} into one
- * message. So it represent a <i>complete</i> http message.
+ * A hint object that provides human-readable message for easier resource leak tracking.
  */
-public interface FullHttpMessage extends HttpMessage, LastHttpContent {
-    @Override
-    FullHttpMessage copy();
-
-    @Override
-    FullHttpMessage retain(int increment);
-
-    @Override
-    FullHttpMessage retain();
-
-    @Override
-    FullHttpMessage touch();
-
-    @Override
-    FullHttpMessage touch(Object hint);
-
-    @Override
-    FullHttpMessage duplicate();
+public interface ResourceLeakHint {
+    /**
+     * Returns a human-readable message that potentially enables easier resource leak tracking.
+     */
+    String toHintString();
 }

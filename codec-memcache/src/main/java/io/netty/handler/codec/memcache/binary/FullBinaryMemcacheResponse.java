@@ -35,5 +35,8 @@ public interface FullBinaryMemcacheResponse extends BinaryMemcacheResponse, Full
     FullBinaryMemcacheResponse touch();
 
     @Override
+    FullBinaryMemcacheResponse touch(Object hint);
+
+    @Override
     FullBinaryMemcacheResponse duplicate();
 }

@@ -260,8 +260,13 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
 
     @Override
     public HttpData touch() {
+        return touch(null);
+    }
+
+    @Override
+    public HttpData touch(Object hint) {
         if (byteBuf != null) {
-            byteBuf.touch();
+            byteBuf.touch(hint);
         }
         return this;
     }
