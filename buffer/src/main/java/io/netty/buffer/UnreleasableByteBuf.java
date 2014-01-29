@@ -81,6 +81,11 @@ final class UnreleasableByteBuf extends WrappedByteBuf {
     }
 
     @Override
+    public ByteBuf touch(Object hint) {
+        return this;
+    }
+
+    @Override
     public boolean release() {
         return false;
     }

@@ -66,4 +66,7 @@ public interface BinaryMemcacheMessage<H extends BinaryMemcacheMessageHeader> ex
 
     @Override
     BinaryMemcacheMessage<H> touch();
+
+    @Override
+    BinaryMemcacheMessage<H> touch(Object hint);
 }

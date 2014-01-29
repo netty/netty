@@ -41,4 +41,7 @@ public interface HttpContent extends HttpObject, ByteBufHolder {
 
     @Override
     HttpContent touch();
+
+    @Override
+    HttpContent touch(Object hint);
 }

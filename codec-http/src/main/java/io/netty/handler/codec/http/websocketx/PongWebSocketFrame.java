@@ -81,4 +81,10 @@ public class PongWebSocketFrame extends WebSocketFrame {
         super.touch();
         return this;
     }
+
+    @Override
+    public PongWebSocketFrame touch(Object hint) {
+        super.touch(hint);
+        return this;
+    }
 }

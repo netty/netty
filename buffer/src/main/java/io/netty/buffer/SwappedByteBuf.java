@@ -821,6 +821,12 @@ public final class SwappedByteBuf extends ByteBuf {
     }
 
     @Override
+    public ByteBuf touch(Object hint) {
+        buf.touch(hint);
+        return this;
+    }
+
+    @Override
     public boolean release() {
         return buf.release();
     }

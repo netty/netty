@@ -53,4 +53,7 @@ public interface SpdyDataFrame extends ByteBufHolder, SpdyStreamFrame {
 
     @Override
     SpdyDataFrame touch();
+
+    @Override
+    SpdyDataFrame touch(Object hint);
 }

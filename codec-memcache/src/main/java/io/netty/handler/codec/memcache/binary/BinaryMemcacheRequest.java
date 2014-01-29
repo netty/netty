@@ -36,4 +36,7 @@ public interface BinaryMemcacheRequest extends BinaryMemcacheMessage<BinaryMemca
 
     @Override
     BinaryMemcacheRequest touch();
+
+    @Override
+    BinaryMemcacheRequest touch(Object hint);
 }

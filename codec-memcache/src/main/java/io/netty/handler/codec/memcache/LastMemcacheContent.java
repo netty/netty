@@ -51,6 +51,11 @@ public interface LastMemcacheContent extends MemcacheContent {
         }
 
         @Override
+        public LastMemcacheContent touch(Object hint) {
+            return this;
+        }
+
+        @Override
         public LastMemcacheContent duplicate() {
             return this;
         }
@@ -97,6 +102,9 @@ public interface LastMemcacheContent extends MemcacheContent {
 
     @Override
     LastMemcacheContent touch();
+
+    @Override
+    LastMemcacheContent touch(Object hint);
 
     @Override
     LastMemcacheContent duplicate();

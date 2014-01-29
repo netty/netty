@@ -89,4 +89,7 @@ public interface FileRegion extends ReferenceCounted {
 
     @Override
     FileRegion touch();
+
+    @Override
+    FileRegion touch(Object hint);
 }

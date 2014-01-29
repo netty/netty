@@ -265,7 +265,7 @@ public final class ResourceLeakDetector<T> {
             if (referent != null) {
                 Level level = getLevel();
                 if (level.ordinal() >= Level.ADVANCED.ordinal()) {
-                    creationRecord = newRecord(3);
+                    creationRecord = newRecord(null, 3);
                 } else {
                     creationRecord = null;
                 }
@@ -287,8 +287,17 @@ public final class ResourceLeakDetector<T> {
 
         @Override
         public void record() {
+            record0(null, 3);
+        }
+
+        @Override
+        public void record(Object hint) {
+            record0(hint, 3);
+        }
+
+        private void record0(Object hint, int recordsToSkip) {
             if (creationRecord != null) {
-                String value = newRecord(2);
+                String value = newRecord(hint, recordsToSkip);
 
                 synchronized (lastRecords) {
                     int size = lastRecords.size();
@@ -353,11 +362,27 @@ public final class ResourceLeakDetector<T> {
     }
 
     private static final String[] STACK_TRACE_ELEMENT_EXCLUSIONS = {
+            "io.netty.util.ReferenceCountUtil.touch(",
+            "io.netty.buffer.AdvancedLeakAwareByteBuf.touch(",
             "io.netty.buffer.AbstractByteBufAllocator.toLeakAwareBuffer(",
     };
 
-    static String newRecord(int recordsToSkip) {
+    static String newRecord(Object hint, int recordsToSkip) {
         StringBuilder buf = new StringBuilder(4096);
+
+        // Append the hint first if available.
+        if (hint != null) {
+            buf.append("\tHint: ");
+            // Prefer a hint string to a simple string form.
+            if (hint instanceof ResourceLeakHint) {
+                buf.append(((ResourceLeakHint) hint).toHintString());
+            } else {
+                buf.append(hint);
+            }
+            buf.append(NEWLINE);
+        }
+
+        // Append the stack trace.
         StackTraceElement[] array = new Throwable().getStackTrace();
         for (StackTraceElement e: array) {
             if (recordsToSkip > 0) {

@@ -177,4 +177,10 @@ public class MemoryFileUpload extends AbstractMemoryHttpData implements FileUplo
         super.touch();
         return this;
     }
+
+    @Override
+    public FileUpload touch(Object hint) {
+        super.touch(hint);
+        return this;
+    }
 }
