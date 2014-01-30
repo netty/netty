@@ -58,8 +58,7 @@ public abstract class ZlibTest {
         buf.release();
     }
 
-    private void testCompress0(ZlibWrapper encoderWrapper, ZlibWrapper decoderWrapper, byte[] bytes) throws Exception {
-        ByteBuf data = Unpooled.wrappedBuffer(bytes);
+    private void testCompress0(ZlibWrapper encoderWrapper, ZlibWrapper decoderWrapper, ByteBuf data) throws Exception {
         EmbeddedChannel chEncoder = new EmbeddedChannel(createEncoder(encoderWrapper));
 
         chEncoder.writeOutbound(data.copy());
@@ -74,7 +73,7 @@ public abstract class ZlibTest {
             chDecoderZlib.writeInbound(deflatedData);
         }
 
-        byte[] decompressed = new byte[bytes.length];
+        byte[] decompressed = new byte[data.readableBytes()];
         int offset = 0;
         for (;;) {
             ByteBuf buf = (ByteBuf) chDecoderZlib.readInbound();
@@ -89,7 +88,7 @@ public abstract class ZlibTest {
                 break;
             }
         }
-        assertArrayEquals(bytes, decompressed);
+        assertEquals(data, Unpooled.wrappedBuffer(decompressed));
         assertNull(chDecoderZlib.readInbound());
 
         // Closing an encoder channel will generate a footer.
@@ -137,11 +136,15 @@ public abstract class ZlibTest {
     }
 
     private void testCompressSmall(ZlibWrapper encoderWrapper, ZlibWrapper decoderWrapper) throws Exception {
-        testCompress0(encoderWrapper, decoderWrapper, BYTES_SMALL);
+        testCompress0(encoderWrapper, decoderWrapper, Unpooled.wrappedBuffer(BYTES_SMALL));
+        testCompress0(encoderWrapper, decoderWrapper,
+                Unpooled.directBuffer(BYTES_SMALL.length).writeBytes(BYTES_SMALL));
     }
 
     private void testCompressLarge(ZlibWrapper encoderWrapper, ZlibWrapper decoderWrapper) throws Exception {
-        testCompress0(encoderWrapper, decoderWrapper, BYTES_LARGE);
+        testCompress0(encoderWrapper, decoderWrapper, Unpooled.wrappedBuffer(BYTES_LARGE));
+        testCompress0(encoderWrapper, decoderWrapper,
+                Unpooled.directBuffer(BYTES_LARGE.length).writeBytes(BYTES_LARGE));
     }
 
     @Test
