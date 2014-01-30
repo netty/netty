@@ -196,8 +196,20 @@ public class JdkZlibEncoder extends ZlibEncoder {
             return;
         }
 
-        byte[] inAry = new byte[uncompressed.readableBytes()];
-        uncompressed.readBytes(inAry);
+        int len = uncompressed.readableBytes();
+        int offset;
+        byte[] inAry;
+        if (uncompressed.hasArray()) {
+            // if it is backed by an array we not need to to do a copy at all
+            inAry = uncompressed.array();
+            offset = uncompressed.arrayOffset() + uncompressed.readerIndex();
+            // skip all bytes as we will consume all of them
+            uncompressed.skipBytes(len);
+        } else {
+            inAry = new byte[len];
+            uncompressed.readBytes(inAry);
+            offset = 0;
+        }
 
         int sizeEstimate = (int) Math.ceil(inAry.length * 1.001) + 12;
 
@@ -222,7 +234,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
             crc.update(inAry);
         }
 
-        deflater.setInput(inAry);
+        deflater.setInput(inAry, offset, len);
         while (!deflater.needsInput()) {
             deflate(out);
         }
