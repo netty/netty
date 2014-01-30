@@ -658,9 +658,14 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
             }
         }
 
-        if (!addTaskWakesUp) {
+        if (!addTaskWakesUp && wakesUpForTask(task)) {
             wakeup(inEventLoop);
         }
+    }
+
+    @SuppressWarnings("unused")
+    protected boolean wakesUpForTask(Runnable task) {
+        return true;
     }
 
     protected static void reject() {

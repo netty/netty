@@ -383,7 +383,7 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
         }
     }
 
-    static final class WriteTask implements Runnable {
+    static final class WriteTask implements SingleThreadEventLoop.NonWakeupRunnable {
         private ChannelHandlerContext ctx;
         private Object msg;
         private ChannelPromise promise;
@@ -391,7 +391,7 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
 
         private static final Recycler<WriteTask> RECYCLER = new Recycler<WriteTask>() {
             @Override
-            protected WriteTask newObject(Handle handle) {
+            protected WriteTask newObject(Handle<WriteTask> handle) {
                 return new WriteTask(handle);
             }
         };
@@ -406,9 +406,9 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
             return task;
         }
 
-        private final Recycler.Handle handle;
+        private final Recycler.Handle<WriteTask> handle;
 
-        private WriteTask(Recycler.Handle handle) {
+        private WriteTask(Recycler.Handle<WriteTask> handle) {
             this.handle = handle;
         }
 

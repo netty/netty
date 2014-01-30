@@ -50,4 +50,14 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
     public ChannelHandlerInvoker asInvoker() {
         return invoker;
     }
+
+    @Override
+    protected boolean wakesUpForTask(Runnable task) {
+        return !(task instanceof NonWakeupRunnable);
+    }
+
+    /**
+     * Marker interface for {@linkRunnable} that will not trigger an {@link #wakeup(boolean)} in all cases.
+     */
+    interface NonWakeupRunnable extends Runnable { }
 }
