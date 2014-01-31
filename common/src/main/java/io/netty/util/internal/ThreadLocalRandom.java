@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 The Netty Project
+ * Copyright 2014 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -110,8 +110,9 @@ public class ThreadLocalRandom extends Random {
                         initialSeedUniquifier = result;
                         break;
                     }
-                } catch (InterruptedException ignore) {
-                    // Ignore
+                } catch (InterruptedException e) {
+                    // restore interrupt status because we don't know how to/don't need to handle it here
+                    Thread.currentThread().interrupt();
                 }
             }
 
