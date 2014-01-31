@@ -31,7 +31,7 @@ public class ThreadLocalRandomTest {
             assertTrue("Assert that thread is interrupted after invocation of getInitialSeedUniquifier()",
                     Thread.currentThread().isInterrupted());
         } finally {
-            Thread.interrupted();// clear interrupted status in order to not affect other tests
+            Thread.interrupted(); // clear interrupted status in order to not affect other tests
         }
     }
 }
