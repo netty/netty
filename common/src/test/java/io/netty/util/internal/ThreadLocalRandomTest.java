@@ -23,11 +23,15 @@ public class ThreadLocalRandomTest {
 
     @Test
     public void getInitialSeedUniquifierPreservesInterrupt() {
-        Thread.currentThread().interrupt();
-        assertTrue("Assert that thread is interrupted before invocation of getInitialSeedUniquifier()",
-                Thread.currentThread().isInterrupted());
-        ThreadLocalRandom.getInitialSeedUniquifier();
-        assertTrue("Assert that thread is interrupted after invocation of getInitialSeedUniquifier()",
-                Thread.currentThread().isInterrupted());
+        try {
+            Thread.currentThread().interrupt();
+            assertTrue("Assert that thread is interrupted before invocation of getInitialSeedUniquifier()",
+                    Thread.currentThread().isInterrupted());
+            ThreadLocalRandom.getInitialSeedUniquifier();
+            assertTrue("Assert that thread is interrupted after invocation of getInitialSeedUniquifier()",
+                    Thread.currentThread().isInterrupted());
+        } finally {
+            Thread.interrupted();// clear interrupted status in order to not affect other tests
+        }
     }
 }
