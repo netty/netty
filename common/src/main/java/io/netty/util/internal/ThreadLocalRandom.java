@@ -110,8 +110,9 @@ public class ThreadLocalRandom extends Random {
                         initialSeedUniquifier = result;
                         break;
                     }
-                } catch (InterruptedException ignore) {
-                    // Ignore
+                } catch (InterruptedException e) {
+                	// restore interrupt status because we don't know how to/don't need to handle it here
+                    Thread.currentThread().interrupt();
                 }
             }
 
