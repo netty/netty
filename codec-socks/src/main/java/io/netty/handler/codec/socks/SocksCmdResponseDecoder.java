@@ -67,20 +67,20 @@ public class SocksCmdResponseDecoder extends ReplayingDecoder<SocksCmdResponseDe
                     case IPv4: {
                         host = SocksCommonUtils.intToIp(byteBuf.readInt());
                         port = byteBuf.readUnsignedShort();
-                        msg = new SocksCmdResponse(cmdStatus, addressType);
+                        msg = new SocksCmdResponse(cmdStatus, addressType, host, port);
                         break;
                     }
                     case DOMAIN: {
                         fieldLength = byteBuf.readByte();
                         host = byteBuf.readBytes(fieldLength).toString(CharsetUtil.US_ASCII);
                         port = byteBuf.readUnsignedShort();
-                        msg = new SocksCmdResponse(cmdStatus, addressType);
+                        msg = new SocksCmdResponse(cmdStatus, addressType, host, port);
                         break;
                     }
                     case IPv6: {
                         host = SocksCommonUtils.ipv6toStr(byteBuf.readBytes(16).array());
                         port = byteBuf.readUnsignedShort();
-                        msg = new SocksCmdResponse(cmdStatus, addressType);
+                        msg = new SocksCmdResponse(cmdStatus, addressType, host, port);
                         break;
                     }
                     case UNKNOWN:
