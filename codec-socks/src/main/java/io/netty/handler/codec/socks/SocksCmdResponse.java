@@ -16,6 +16,10 @@
 package io.netty.handler.codec.socks;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.util.CharsetUtil;
+import io.netty.util.NetUtil;
+
+import java.net.IDN;
 
 /**
  * An socks cmd response.
@@ -27,7 +31,11 @@ public final class SocksCmdResponse extends SocksResponse {
     private final SocksCmdStatus cmdStatus;
 
     private final SocksAddressType addressType;
+    private final String boundAddress;
+    private final int boundPort;
+
     // All arrays are initialized on construction time to 0/false/null remove array Initialization
+    private static final byte[] DOMAIN_ZEROED = {0x00};
     private static final byte[] IPv4_HOSTNAME_ZEROED = {0x00, 0x00, 0x00, 0x00};
     private static final byte[] IPv6_HOSTNAME_ZEROED = {0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00,
@@ -35,6 +43,11 @@ public final class SocksCmdResponse extends SocksResponse {
             0x00, 0x00, 0x00, 0x00};
 
     public SocksCmdResponse(SocksCmdStatus cmdStatus, SocksAddressType addressType) {
+        this(cmdStatus, addressType, null, 0);
+    }
+
+    public SocksCmdResponse(SocksCmdStatus cmdStatus, SocksAddressType addressType,
+                            String boundAddress, int boundPort) {
         super(SocksResponseType.CMD);
         if (cmdStatus == null) {
             throw new NullPointerException("cmdStatus");
@@ -44,6 +57,17 @@ public final class SocksCmdResponse extends SocksResponse {
         }
         this.cmdStatus = cmdStatus;
         this.addressType = addressType;
+
+        if (boundAddress != null) {
+            this.boundAddress = IDN.toASCII(boundAddress);
+        } else {
+            this.boundAddress = null;
+        }
+
+        if (boundPort < 0 && boundPort >= 65535) {
+            throw new IllegalArgumentException(boundPort + " is not in bounds 0 < x < 65536");
+        }
+        this.boundPort = boundPort;
     }
 
     /**
@@ -64,6 +88,24 @@ public final class SocksCmdResponse extends SocksResponse {
         return addressType;
     }
 
+    /**
+     * Returns bound host that is used as a parameter in {@link io.netty.handler.codec.socks.SocksCmdType}.
+     *
+     * @return bound host that is used as a parameter in {@link io.netty.handler.codec.socks.SocksCmdType}
+     */
+    public String boundAddress() {
+        return boundAddress;
+    }
+
+    /**
+     * Returns bound port that is used as a parameter in {@link io.netty.handler.codec.socks.SocksCmdType}
+     *
+     * @return bound port that is used as a parameter in {@link io.netty.handler.codec.socks.SocksCmdType}
+     */
+    public int boundPort() {
+        return boundPort;
+    }
+
     @Override
     public void encodeAsByteBuf(ByteBuf byteBuf) {
         byteBuf.writeByte(protocolVersion().byteValue());
@@ -72,19 +114,34 @@ public final class SocksCmdResponse extends SocksResponse {
         byteBuf.writeByte(addressType.byteValue());
         switch (addressType) {
             case IPv4: {
-                byteBuf.writeBytes(IPv4_HOSTNAME_ZEROED);
-                byteBuf.writeShort(0);
+                byte[] boundAddressContent = boundAddress == null ?
+                        IPv4_HOSTNAME_ZEROED : NetUtil.createByteArrayFromIpAddressString(boundAddress);
+                if (boundAddressContent == null) {
+                    throw new IllegalArgumentException("Provided IPv4 address is invalid " + boundAddress);
+                }
+                byteBuf.writeBytes(boundAddressContent);
+                byteBuf.writeShort(boundPort);
                 break;
             }
             case DOMAIN: {
-                byteBuf.writeByte(1);   // domain length
-                byteBuf.writeByte(0);   // domain value
-                byteBuf.writeShort(0);  // port value
+                byte[] boundAddressContent = boundAddress == null ?
+                        DOMAIN_ZEROED : boundAddress.getBytes(CharsetUtil.US_ASCII);
+                if (boundAddressContent == null) {
+                    throw new IllegalArgumentException("Provided domain address is invalid " + boundAddress);
+                }
+                byteBuf.writeByte(boundAddressContent.length);   // domain length
+                byteBuf.writeBytes(boundAddressContent);   // domain value
+                byteBuf.writeShort(boundPort);  // port value
                 break;
             }
             case IPv6: {
-                byteBuf.writeBytes(IPv6_HOSTNAME_ZEROED);
-                byteBuf.writeShort(0);
+                byte[] boundAddressContent = boundAddress == null
+                        ? IPv6_HOSTNAME_ZEROED : NetUtil.createByteArrayFromIpAddressString(boundAddress);
+                if (boundAddressContent == null) {
+                    throw new IllegalArgumentException("Provided IPv6 address is invalid " + boundAddress);
+                }
+                byteBuf.writeBytes(boundAddressContent);
+                byteBuf.writeShort(boundPort);
                 break;
             }
         }
