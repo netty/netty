@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.socks;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -33,4 +35,92 @@ public class SocksCmdResponseTest {
             assertTrue(e instanceof NullPointerException);
         }
     }
+
+    /**
+     * Verifies content of the response when domain is not specified.
+     */
+    @Test
+    public void testEmptyDomain() {
+        SocksCmdResponse socksCmdResponse = new SocksCmdResponse(SocksCmdStatus.SUCCESS, SocksAddressType.DOMAIN);
+        assertNull(socksCmdResponse.host());
+        assertEquals(0, socksCmdResponse.port());
+        ByteBuf buffer = Unpooled.buffer(20);
+        socksCmdResponse.encodeAsByteBuf(buffer);
+        byte[] expected = {
+                0x05, // version
+                0x00, // success reply
+                0x00, // reserved
+                0x03, // address type domain
+                0x01, // length of domain
+                0x00, // domain value
+                0x00, // port value
+                0x00
+        };
+        assertByteBufEquals(expected, buffer);
+    }
+
+    /**
+     * Verifies content of the response when IPv4 address is specified.
+     */
+    @Test
+    public void testIPv4Host() {
+        SocksCmdResponse socksCmdResponse = new SocksCmdResponse(SocksCmdStatus.SUCCESS, SocksAddressType.IPv4,
+                "127.0.0.1", 80);
+        assertEquals("127.0.0.1", socksCmdResponse.host());
+        assertEquals(80, socksCmdResponse.port());
+        ByteBuf buffer = Unpooled.buffer(20);
+        socksCmdResponse.encodeAsByteBuf(buffer);
+        byte[] expected = {
+                0x05, // version
+                0x00, // success reply
+                0x00, // reserved
+                0x01, // address type IPv4
+                0x7F, // address 127.0.0.1
+                0x00,
+                0x00,
+                0x01,
+                0x00, // port
+                0x50
+                };
+        assertByteBufEquals(expected, buffer);
+    }
+
+    /**
+     * Verifies that empty domain is allowed Response.
+     */
+    @Test
+    public void testEmptyBoundAddress() {
+        SocksCmdResponse socksCmdResponse = new SocksCmdResponse(SocksCmdStatus.SUCCESS, SocksAddressType.DOMAIN,
+                "", 80);
+        assertEquals("", socksCmdResponse.host());
+        assertEquals(80, socksCmdResponse.port());
+        ByteBuf buffer = Unpooled.buffer(20);
+        socksCmdResponse.encodeAsByteBuf(buffer);
+        byte[] expected = {
+                0x05, // version
+                0x00, // success reply
+                0x00, // reserved
+                0x03, // address type domain
+                0x00, // domain length
+                0x00, // port
+                0x50
+        };
+        assertByteBufEquals(expected, buffer);
+    }
+
+    /**
+     * Verifies that Response cannot be constructed with invalid IP.
+     */
+    @Test(expected = IllegalArgumentException.class)
+    public void testInvalidBoundAddress() {
+        new SocksCmdResponse(SocksCmdStatus.SUCCESS, SocksAddressType.IPv4, "127.0.0", 1000);
+    }
+
+    private static void assertByteBufEquals(byte[] expected, ByteBuf actual) {
+        byte[] actualBytes = new byte[actual.readableBytes()];
+        actual.readBytes(actualBytes);
+        assertEquals("Generated response has incorrect length", expected.length, actualBytes.length);
+        assertArrayEquals("Generated response differs from expected", expected, actualBytes);
+    }
+
 }
