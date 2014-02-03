@@ -85,6 +85,37 @@ public class SocksCmdResponseTest {
         assertByteBufEquals(expected, buffer);
     }
 
+    /**
+     * Verifies that empty domain is allowed Response.
+     */
+    @Test
+    public void testEmptyBoundAddress() {
+        SocksCmdResponse socksCmdResponse = new SocksCmdResponse(SocksCmdStatus.SUCCESS, SocksAddressType.DOMAIN,
+                "", 80);
+        assertEquals("", socksCmdResponse.boundAddress());
+        assertEquals(80, socksCmdResponse.boundPort());
+        ByteBuf buffer = Unpooled.buffer(20);
+        socksCmdResponse.encodeAsByteBuf(buffer);
+        byte[] expected = {
+                0x05, // version
+                0x00, // success reply
+                0x00, // reserved
+                0x03, // address type domain
+                0x00, // domain length
+                0x00, // port
+                0x50
+        };
+        assertByteBufEquals(expected, buffer);
+    }
+
+    /**
+     * Verifies that Response cannot be constructed with invalid IP.
+     */
+    @Test(expected = IllegalArgumentException.class)
+    public void testInvalidBoundAddress() {
+        new SocksCmdResponse(SocksCmdStatus.SUCCESS, SocksAddressType.IPv4, "127.0.0", 1000);
+    }
+
     private void assertByteBufEquals(byte[] expected, ByteBuf actual) {
         byte[] actualBytes = new byte[actual.readableBytes()];
         actual.readBytes(actualBytes);

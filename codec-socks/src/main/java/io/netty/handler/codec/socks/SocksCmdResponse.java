@@ -46,6 +46,17 @@ public final class SocksCmdResponse extends SocksResponse {
         this(cmdStatus, addressType, null, 0);
     }
 
+    /**
+     * Constructs new response and provides bound address and bound host as part of it.
+     *
+     * @param cmdStatus status of the response
+     * @param addressType type of returned bound address
+     * @param boundAddress bound address, when null a value of 4/8 0x00 octets will be used for IPv4/IPv8 and a single
+     *                     0x00 byte will be used for domain addressType
+     * @param boundPort bound port
+     * @throws NullPointerException in case cmdStatus or addressType are missing
+     * @throws IllegalArgumentException in case bound address or bound port cannot be validated
+     */
     public SocksCmdResponse(SocksCmdStatus cmdStatus, SocksAddressType addressType,
                             String boundAddress, int boundPort) {
         super(SocksResponseType.CMD);
@@ -57,13 +68,31 @@ public final class SocksCmdResponse extends SocksResponse {
         }
         this.cmdStatus = cmdStatus;
         this.addressType = addressType;
-
         if (boundAddress != null) {
             this.boundAddress = IDN.toASCII(boundAddress);
+            switch (addressType) {
+                case IPv4:
+                    if (!NetUtil.isValidIpV4Address(boundAddress)) {
+                        throw new IllegalArgumentException(boundAddress + " is not a valid IPv4 address");
+                    }
+                    break;
+                case DOMAIN:
+                    if (boundAddress.length() > 255) {
+                        throw new IllegalArgumentException(boundAddress + " IDN: " +
+                                boundAddress + " exceeds 255 char limit");
+                    }
+                    break;
+                case IPv6:
+                    if (!NetUtil.isValidIpV6Address(boundAddress)) {
+                        throw new IllegalArgumentException(boundAddress + " is not a valid IPv6 address");
+                    }
+                    break;
+                case UNKNOWN:
+                    break;
+            }
         } else {
             this.boundAddress = null;
         }
-
         if (boundPort < 0 && boundPort >= 65535) {
             throw new IllegalArgumentException(boundPort + " is not in bounds 0 < x < 65536");
         }
@@ -116,9 +145,6 @@ public final class SocksCmdResponse extends SocksResponse {
             case IPv4: {
                 byte[] boundAddressContent = boundAddress == null ?
                         IPv4_HOSTNAME_ZEROED : NetUtil.createByteArrayFromIpAddressString(boundAddress);
-                if (boundAddressContent == null) {
-                    throw new IllegalArgumentException("Provided IPv4 address is invalid " + boundAddress);
-                }
                 byteBuf.writeBytes(boundAddressContent);
                 byteBuf.writeShort(boundPort);
                 break;
@@ -126,9 +152,6 @@ public final class SocksCmdResponse extends SocksResponse {
             case DOMAIN: {
                 byte[] boundAddressContent = boundAddress == null ?
                         DOMAIN_ZEROED : boundAddress.getBytes(CharsetUtil.US_ASCII);
-                if (boundAddressContent == null) {
-                    throw new IllegalArgumentException("Provided domain address is invalid " + boundAddress);
-                }
                 byteBuf.writeByte(boundAddressContent.length);   // domain length
                 byteBuf.writeBytes(boundAddressContent);   // domain value
                 byteBuf.writeShort(boundPort);  // port value
@@ -137,9 +160,6 @@ public final class SocksCmdResponse extends SocksResponse {
             case IPv6: {
                 byte[] boundAddressContent = boundAddress == null
                         ? IPv6_HOSTNAME_ZEROED : NetUtil.createByteArrayFromIpAddressString(boundAddress);
-                if (boundAddressContent == null) {
-                    throw new IllegalArgumentException("Provided IPv6 address is invalid " + boundAddress);
-                }
                 byteBuf.writeBytes(boundAddressContent);
                 byteBuf.writeShort(boundPort);
                 break;
