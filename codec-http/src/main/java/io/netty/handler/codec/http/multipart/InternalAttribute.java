@@ -15,6 +15,11 @@
  */
 package io.netty.handler.codec.http.multipart;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.util.AbstractReferenceCounted;
+
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,37 +27,49 @@ import java.util.List;
  * This Attribute is only for Encoder use to insert special command between object if needed
  * (like Multipart Mixed mode)
  */
-final class InternalAttribute implements InterfaceHttpData {
-    private final List<String> value = new ArrayList<String>();
+final class InternalAttribute extends AbstractReferenceCounted implements InterfaceHttpData {
+    private final List<ByteBuf> value = new ArrayList<ByteBuf>();
+    private final Charset charset;
+    private int size;
+
+    InternalAttribute(Charset charset) {
+        this.charset = charset;
+    }
 
     @Override
     public HttpDataType getHttpDataType() {
         return HttpDataType.InternalAttribute;
     }
 
-    public List<String> getValue() {
-        return value;
-    }
-
     public void addValue(String value) {
         if (value == null) {
             throw new NullPointerException("value");
         }
-        this.value.add(value);
+        ByteBuf buf = Unpooled.copiedBuffer(value, charset);
+        this.value.add(buf);
+        size += buf.readableBytes();
     }
 
     public void addValue(String value, int rank) {
         if (value == null) {
             throw new NullPointerException("value");
         }
-        this.value.add(rank, value);
+        ByteBuf buf = Unpooled.copiedBuffer(value, charset);
+        this.value.add(rank, buf);
+        size += buf.readableBytes();
     }
 
     public void setValue(String value, int rank) {
         if (value == null) {
             throw new NullPointerException("value");
         }
-        this.value.set(rank, value);
+        ByteBuf buf = Unpooled.copiedBuffer(value, charset);
+        ByteBuf old = this.value.set(rank, buf);
+        if (old != null) {
+            size -= old.readableBytes();
+            old.release();
+        }
+        size += buf.readableBytes();
     }
 
     @Override
@@ -82,24 +99,62 @@ final class InternalAttribute implements InterfaceHttpData {
         return getName().compareToIgnoreCase(o.getName());
     }
 
-    public int size() {
-        int size = 0;
-        for (String elt : value) {
-            size += elt.length();
-        }
-        return size;
-    }
     @Override
     public String toString() {
         StringBuilder result = new StringBuilder();
-        for (String elt : value) {
-            result.append(elt);
+        for (ByteBuf elt : value) {
+            result.append(elt.toString(charset));
         }
         return result.toString();
+    }
+
+    public int size() {
+        return size;
+    }
+
+    public ByteBuf toByteBuf() {
+        return Unpooled.compositeBuffer().addComponents(value).writerIndex(size()).readerIndex(0);
     }
 
     @Override
     public String getName() {
         return "InternalAttribute";
+    }
+
+    @Override
+    protected void deallocate() {
+        // Do nothing
+    }
+
+    @Override
+    public InterfaceHttpData retain() {
+        for (ByteBuf buf: value) {
+            buf.retain();
+        }
+        return this;
+    }
+
+    @Override
+    public InterfaceHttpData retain(int increment) {
+        for (ByteBuf buf: value) {
+            buf.retain(increment);
+        }
+        return this;
+    }
+
+    @Override
+    public InterfaceHttpData touch() {
+        for (ByteBuf buf: value) {
+            buf.touch();
+        }
+        return this;
+    }
+
+    @Override
+    public InterfaceHttpData touch(Object hint) {
+        for (ByteBuf buf: value) {
+            buf.touch(hint);
+        }
+        return this;
     }
 }

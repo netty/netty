@@ -16,11 +16,10 @@
 package io.netty.example.uptime;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundByteHandlerAdapter;
 import io.netty.channel.EventLoop;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
 
@@ -32,7 +31,7 @@ import java.util.concurrent.TimeUnit;
  * connection attempt getStatus.
  */
 @Sharable
-public class UptimeClientHandler extends ChannelInboundByteHandlerAdapter {
+public class UptimeClientHandler extends SimpleChannelInboundHandler<Object> {
 
     private final UptimeClient client;
     private long startTime = -1;
@@ -50,9 +49,8 @@ public class UptimeClientHandler extends ChannelInboundByteHandlerAdapter {
     }
 
     @Override
-    public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
         // Discard received data
-        in.clear();
     }
 
     @Override
@@ -70,13 +68,9 @@ public class UptimeClientHandler extends ChannelInboundByteHandlerAdapter {
     }
 
     @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+    public void channelInactive(final ChannelHandlerContext ctx) throws Exception {
         println("Disconnected from: " + ctx.channel().remoteAddress());
-    }
 
-    @Override
-    public void channelUnregistered(final ChannelHandlerContext ctx)
-            throws Exception {
         println("Sleeping for: " + UptimeClient.RECONNECT_DELAY + 's');
 
         final EventLoop loop = ctx.channel().eventLoop();

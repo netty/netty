@@ -22,7 +22,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.ClientCookieEncoder;
 import io.netty.handler.codec.http.DefaultCookie;
-import io.netty.handler.codec.http.DefaultHttpRequest;
+import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
@@ -73,7 +73,7 @@ public class HttpSnoopClient {
             Channel ch = b.connect(host, port).sync().channel();
 
             // Prepare the HTTP request.
-            HttpRequest request = new DefaultHttpRequest(
+            HttpRequest request = new DefaultFullHttpRequest(
                     HttpVersion.HTTP_1_1, HttpMethod.GET, uri.getRawPath());
             request.headers().set(HttpHeaders.Names.HOST, host);
             request.headers().set(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
@@ -87,7 +87,7 @@ public class HttpSnoopClient {
                             new DefaultCookie("another-cookie", "bar")));
 
             // Send the HTTP request.
-            ch.write(request);
+            ch.writeAndFlush(request);
 
             // Wait for the server to close the connection.
             ch.closeFuture().sync();

@@ -16,7 +16,7 @@
 package io.netty.example.worldclock;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.example.worldclock.WorldClockProtocol.Continent;
 import io.netty.example.worldclock.WorldClockProtocol.DayOfWeek;
 import io.netty.example.worldclock.WorldClockProtocol.LocalTime;
@@ -31,7 +31,7 @@ import java.util.logging.Logger;
 
 import static java.util.Calendar.*;
 
-public class WorldClockServerHandler extends ChannelInboundMessageHandlerAdapter<Locations> {
+public class WorldClockServerHandler extends SimpleChannelInboundHandler<Locations> {
 
     private static final Logger logger = Logger.getLogger(
             WorldClockServerHandler.class.getName());
@@ -58,6 +58,11 @@ public class WorldClockServerHandler extends ChannelInboundMessageHandlerAdapter
         }
 
         ctx.write(builder.build());
+    }
+
+    @Override
+    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        ctx.flush();
     }
 
     @Override

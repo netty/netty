@@ -18,6 +18,8 @@ package io.netty.channel.rxtx;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
+import io.netty.channel.MessageSizeEstimator;
+import io.netty.channel.RecvByteBufAllocator;
 
 import java.util.Map;
 
@@ -35,6 +37,7 @@ final class DefaultRxtxChannelConfig extends DefaultChannelConfig implements Rxt
     private volatile Databits databits = Databits.DATABITS_8;
     private volatile Paritybit paritybit = Paritybit.NONE;
     private volatile int waitTime;
+    private volatile int readTimeout = 1000;
 
     public DefaultRxtxChannelConfig(RxtxChannel channel) {
         super(channel);
@@ -69,6 +72,9 @@ final class DefaultRxtxChannelConfig extends DefaultChannelConfig implements Rxt
         if (option == WAIT_TIME) {
             return (T) Integer.valueOf(getWaitTimeMillis());
         }
+        if (option == READ_TIMEOUT) {
+            return (T) Integer.valueOf(getReadTimeout());
+        }
         return super.getOption(option);
     }
 
@@ -90,6 +96,8 @@ final class DefaultRxtxChannelConfig extends DefaultChannelConfig implements Rxt
             setParitybit((Paritybit) value);
         } else if (option == WAIT_TIME) {
             setWaitTimeMillis((Integer) value);
+        } else if (option == READ_TIMEOUT) {
+            setReadTimeout((Integer) value);
         } else {
             return super.setOption(option, value);
         }
@@ -177,27 +185,70 @@ final class DefaultRxtxChannelConfig extends DefaultChannelConfig implements Rxt
     }
 
     @Override
+    public RxtxChannelConfig setReadTimeout(int readTimeout) {
+        if (readTimeout < 0) {
+            throw new IllegalArgumentException("readTime must be >= 0");
+        }
+        this.readTimeout = readTimeout;
+        return this;
+    }
+
+    @Override
+    public int getReadTimeout() {
+        return readTimeout;
+    }
+
+    @Override
     public RxtxChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
-        return (RxtxChannelConfig) super.setConnectTimeoutMillis(connectTimeoutMillis);
+        super.setConnectTimeoutMillis(connectTimeoutMillis);
+        return this;
+    }
+
+    @Override
+    public RxtxChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
+        super.setMaxMessagesPerRead(maxMessagesPerRead);
+        return this;
     }
 
     @Override
     public RxtxChannelConfig setWriteSpinCount(int writeSpinCount) {
-        return (RxtxChannelConfig) super.setWriteSpinCount(writeSpinCount);
+        super.setWriteSpinCount(writeSpinCount);
+        return this;
     }
 
     @Override
     public RxtxChannelConfig setAllocator(ByteBufAllocator allocator) {
-        return (RxtxChannelConfig) super.setAllocator(allocator);
+        super.setAllocator(allocator);
+        return this;
+    }
+
+    @Override
+    public RxtxChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
+        super.setRecvByteBufAllocator(allocator);
+        return this;
     }
 
     @Override
     public RxtxChannelConfig setAutoRead(boolean autoRead) {
-        return (RxtxChannelConfig) super.setAutoRead(autoRead);
+        super.setAutoRead(autoRead);
+        return this;
     }
 
     @Override
-    public RxtxChannelConfig setDefaultHandlerByteBufType(ChannelHandlerByteBufType type) {
-        return (RxtxChannelConfig) super.setDefaultHandlerByteBufType(type);
+    public RxtxChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
+        super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
+        return this;
+    }
+
+    @Override
+    public RxtxChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
+        super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
+        return this;
+    }
+
+    @Override
+    public RxtxChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
+        super.setMessageSizeEstimator(estimator);
+        return this;
     }
 }

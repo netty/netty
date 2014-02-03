@@ -17,8 +17,8 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -35,8 +35,7 @@ import static io.netty.handler.codec.http.HttpVersion.*;
 /**
  * Handles the HTTP handshake (the HTTP Upgrade request) for {@link WebSocketServerProtocolHandler}.
  */
-class WebSocketServerProtocolHandshakeHandler
-        extends ChannelInboundMessageHandlerAdapter<FullHttpRequest> {
+class WebSocketServerProtocolHandshakeHandler extends ChannelHandlerAdapter {
 
     private final String websocketPath;
     private final String subprotocols;
@@ -50,7 +49,8 @@ class WebSocketServerProtocolHandshakeHandler
     }
 
     @Override
-    public void messageReceived(final ChannelHandlerContext ctx, FullHttpRequest req) throws Exception {
+    public void channelRead(final ChannelHandlerContext ctx, Object msg) throws Exception {
+        FullHttpRequest req = (FullHttpRequest) msg;
         if (req.getMethod() != GET) {
             sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, FORBIDDEN));
             return;
@@ -60,7 +60,7 @@ class WebSocketServerProtocolHandshakeHandler
                 getWebSocketLocation(ctx.pipeline(), req, websocketPath), subprotocols, allowExtensions);
         final WebSocketServerHandshaker handshaker = wsFactory.newHandshaker(req);
         if (handshaker == null) {
-            WebSocketServerHandshakerFactory.sendUnsupportedWebSocketVersionResponse(ctx.channel());
+            WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(ctx.channel());
         } else {
             final ChannelFuture handshakeFuture = handshaker.handshake(ctx.channel(), req);
             handshakeFuture.addListener(new ChannelFutureListener() {
@@ -76,12 +76,12 @@ class WebSocketServerProtocolHandshakeHandler
             });
             WebSocketServerProtocolHandler.setHandshaker(ctx, handshaker);
             ctx.pipeline().replace(this, "WS403Responder",
-                WebSocketServerProtocolHandler.forbiddenHttpRequestResponder());
+                    WebSocketServerProtocolHandler.forbiddenHttpRequestResponder());
         }
     }
 
     private static void sendHttpResponse(ChannelHandlerContext ctx, HttpRequest req, HttpResponse res) {
-        ChannelFuture f = ctx.channel().write(res);
+        ChannelFuture f = ctx.channel().writeAndFlush(res);
         if (!isKeepAlive(req) || res.getStatus().code() != 200) {
             f.addListener(ChannelFutureListener.CLOSE);
         }

@@ -16,10 +16,11 @@
 package io.netty.handler.codec.socks;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.util.CharsetUtil;
+
+import java.util.List;
 
 /**
  * Decodes {@link ByteBuf}s into {@link SocksAuthRequest}.
@@ -43,7 +44,7 @@ public class SocksAuthRequestDecoder extends ReplayingDecoder<SocksAuthRequestDe
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf byteBuf, MessageBuf<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf byteBuf, List<Object> out) throws Exception {
         switch (state()) {
             case CHECK_PROTOCOL_VERSION: {
                 version = SocksSubnegotiationVersion.fromByte(byteBuf.readByte());

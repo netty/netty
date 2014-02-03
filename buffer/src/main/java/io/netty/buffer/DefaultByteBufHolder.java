@@ -15,6 +15,9 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.IllegalReferenceCountException;
+import io.netty.util.internal.StringUtil;
+
 /**
  * Default implementation of a {@link ByteBufHolder} that holds it's data in a {@link ByteBuf}.
  *
@@ -33,7 +36,7 @@ public class DefaultByteBufHolder implements ByteBufHolder {
     @Override
     public ByteBuf content() {
         if (data.refCnt() <= 0) {
-            throw new IllegalBufferAccessException();
+            throw new IllegalReferenceCountException(data.refCnt());
         }
         return data;
     }
@@ -41,6 +44,11 @@ public class DefaultByteBufHolder implements ByteBufHolder {
     @Override
     public ByteBufHolder copy() {
         return new DefaultByteBufHolder(data.copy());
+    }
+
+    @Override
+    public ByteBufHolder duplicate() {
+        return new DefaultByteBufHolder(data.duplicate());
     }
 
     @Override
@@ -61,6 +69,18 @@ public class DefaultByteBufHolder implements ByteBufHolder {
     }
 
     @Override
+    public ByteBufHolder touch() {
+        data.touch();
+        return this;
+    }
+
+    @Override
+    public ByteBufHolder touch(Object hint) {
+        data.touch(hint);
+        return this;
+    }
+
+    @Override
     public boolean release() {
         return data.release();
     }
@@ -72,6 +92,6 @@ public class DefaultByteBufHolder implements ByteBufHolder {
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + '(' + content().toString() + ')';
+        return StringUtil.simpleClassName(this) + '(' + content().toString() + ')';
     }
 }

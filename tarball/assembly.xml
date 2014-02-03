@@ -39,6 +39,13 @@
         <include>**/*.jar</include>
       </includes>
     </fileSet>
+    <fileSet>
+      <directory>target/apidocs-all</directory>
+      <outputDirectory>javadoc</outputDirectory>
+      <includes>
+        <include>**/*.jar</include>
+      </includes>
+    </fileSet>
   </fileSets>
 </assembly>
 

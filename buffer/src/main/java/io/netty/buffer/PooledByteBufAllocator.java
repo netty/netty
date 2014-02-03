@@ -17,7 +17,6 @@
 package io.netty.buffer;
 
 import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -29,10 +28,9 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PooledByteBufAllocator.class);
 
-    private static final int DEFAULT_NUM_HEAP_ARENA = Math.max(0, SystemPropertyUtil.getInt(
-            "io.netty.allocator.numHeapArenas", Runtime.getRuntime().availableProcessors()));
-    private static final int DEFAULT_NUM_DIRECT_ARENA = Math.max(0, SystemPropertyUtil.getInt(
-            "io.netty.allocator.numDirectArenas", Runtime.getRuntime().availableProcessors()));
+    private static final int DEFAULT_NUM_HEAP_ARENA;
+    private static final int DEFAULT_NUM_DIRECT_ARENA;
+
     private static final int DEFAULT_PAGE_SIZE;
     private static final int DEFAULT_MAX_ORDER; // 8192 << 11 = 16 MiB per chunk
 
@@ -60,20 +58,37 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         }
         DEFAULT_MAX_ORDER = defaultMaxOrder;
 
+        // Determine reasonable default for nHeapArena and nDirectArena.
+        // Assuming each arena has 3 chunks, the pool should not consume more than 50% of max memory.
+        final Runtime runtime = Runtime.getRuntime();
+        final int defaultChunkSize = DEFAULT_PAGE_SIZE << DEFAULT_MAX_ORDER;
+        DEFAULT_NUM_HEAP_ARENA = Math.max(0,
+                SystemPropertyUtil.getInt(
+                        "io.netty.allocator.numHeapArenas",
+                        (int) Math.min(
+                                runtime.availableProcessors(),
+                                Runtime.getRuntime().maxMemory() / defaultChunkSize / 2 / 3)));
+        DEFAULT_NUM_DIRECT_ARENA = Math.max(0,
+                SystemPropertyUtil.getInt(
+                        "io.netty.allocator.numDirectArenas",
+                        (int) Math.min(
+                                runtime.availableProcessors(),
+                                PlatformDependent.maxDirectMemory() / defaultChunkSize / 2 / 3)));
+
         if (logger.isDebugEnabled()) {
-            logger.debug("io.netty.allocator.numHeapArenas: {}", DEFAULT_NUM_HEAP_ARENA);
-            logger.debug("io.netty.allocator.numDirectArenas: {}", DEFAULT_NUM_DIRECT_ARENA);
+            logger.debug("-Dio.netty.allocator.numHeapArenas: {}", DEFAULT_NUM_HEAP_ARENA);
+            logger.debug("-Dio.netty.allocator.numDirectArenas: {}", DEFAULT_NUM_DIRECT_ARENA);
             if (pageSizeFallbackCause == null) {
-                logger.debug("io.netty.allocator.pageSize: {}", DEFAULT_PAGE_SIZE);
+                logger.debug("-Dio.netty.allocator.pageSize: {}", DEFAULT_PAGE_SIZE);
             } else {
-                logger.debug("io.netty.allocator.pageSize: {}", DEFAULT_PAGE_SIZE, pageSizeFallbackCause);
+                logger.debug("-Dio.netty.allocator.pageSize: {}", DEFAULT_PAGE_SIZE, pageSizeFallbackCause);
             }
             if (maxOrderFallbackCause == null) {
-                logger.debug("io.netty.allocator.maxOrder: {}", DEFAULT_MAX_ORDER);
+                logger.debug("-Dio.netty.allocator.maxOrder: {}", DEFAULT_MAX_ORDER);
             } else {
-                logger.debug("io.netty.allocator.maxOrder: {}", DEFAULT_MAX_ORDER, maxOrderFallbackCause);
+                logger.debug("-Dio.netty.allocator.maxOrder: {}", DEFAULT_MAX_ORDER, maxOrderFallbackCause);
             }
-            logger.debug("io.netty.allocator.chunkSize: {}", DEFAULT_PAGE_SIZE << DEFAULT_MAX_ORDER);
+            logger.debug("-Dio.netty.allocator.chunkSize: {}", DEFAULT_PAGE_SIZE << DEFAULT_MAX_ORDER);
         }
     }
 
@@ -142,7 +157,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             heapArenas = null;
         }
 
-        if (nHeapArena > 0) {
+        if (nDirectArena > 0) {
             directArenas = newArenaArray(nDirectArena);
             for (int i = 0; i < directArenas.length; i ++) {
                 directArenas[i] = new PoolArena.DirectArena(this, pageSize, maxOrder, pageShifts, chunkSize);
@@ -202,42 +217,57 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
     protected ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity) {
         PoolThreadCache cache = threadCache.get();
         PoolArena<byte[]> heapArena = cache.heapArena;
+
+        ByteBuf buf;
         if (heapArena != null) {
-            return heapArena.allocate(cache, initialCapacity, maxCapacity);
+            buf = heapArena.allocate(cache, initialCapacity, maxCapacity);
         } else {
-            return new UnpooledHeapByteBuf(this, initialCapacity, maxCapacity);
+            buf = new UnpooledHeapByteBuf(this, initialCapacity, maxCapacity);
         }
+
+        return toLeakAwareBuffer(buf);
     }
 
     @Override
     protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
         PoolThreadCache cache = threadCache.get();
         PoolArena<ByteBuffer> directArena = cache.directArena;
+
+        ByteBuf buf;
         if (directArena != null) {
-            return directArena.allocate(cache, initialCapacity, maxCapacity);
+            buf = directArena.allocate(cache, initialCapacity, maxCapacity);
         } else {
             if (PlatformDependent.hasUnsafe()) {
-                return new UnpooledUnsafeDirectByteBuf(this, initialCapacity, maxCapacity);
+                buf = new UnpooledUnsafeDirectByteBuf(this, initialCapacity, maxCapacity);
             } else {
-                return new UnpooledDirectByteBuf(this, initialCapacity, maxCapacity);
+                buf = new UnpooledDirectByteBuf(this, initialCapacity, maxCapacity);
             }
         }
+
+        return toLeakAwareBuffer(buf);
     }
 
-    public String toString() {
-        StringBuilder buf = new StringBuilder();
-        buf.append(heapArenas.length);
-        buf.append(" heap arena(s):");
-        buf.append(StringUtil.NEWLINE);
-        for (PoolArena<byte[]> a: heapArenas) {
-            buf.append(a);
-        }
-        buf.append(directArenas.length);
-        buf.append(" direct arena(s):");
-        buf.append(StringUtil.NEWLINE);
-        for (PoolArena<ByteBuffer> a: directArenas) {
-            buf.append(a);
-        }
-        return buf.toString();
+    @Override
+    public boolean isDirectBufferPooled() {
+        return directArenas != null;
     }
+
+//    Too noisy at the moment.
+//
+//    public String toString() {
+//        StringBuilder buf = new StringBuilder();
+//        buf.append(heapArenas.length);
+//        buf.append(" heap arena(s):");
+//        buf.append(StringUtil.NEWLINE);
+//        for (PoolArena<byte[]> a: heapArenas) {
+//            buf.append(a);
+//        }
+//        buf.append(directArenas.length);
+//        buf.append(" direct arena(s):");
+//        buf.append(StringUtil.NEWLINE);
+//        for (PoolArena<ByteBuffer> a: directArenas) {
+//            buf.append(a);
+//        }
+//        return buf.toString();
+//    }
 }

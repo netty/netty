@@ -16,8 +16,8 @@
 package io.netty.channel.sctp;
 
 import com.sun.nio.sctp.MessageInfo;
-import io.netty.buffer.BufUtil;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.DefaultByteBufHolder;
 
 /**
@@ -111,11 +111,7 @@ public final class SctpMessage extends DefaultByteBufHolder {
             return false;
         }
 
-        if (!content().equals(sctpFrame.content())) {
-            return false;
-        }
-
-        return true;
+        return content().equals(sctpFrame.content());
     }
 
     @Override
@@ -136,6 +132,15 @@ public final class SctpMessage extends DefaultByteBufHolder {
     }
 
     @Override
+    public SctpMessage duplicate() {
+        if (msgInfo == null) {
+            return new SctpMessage(protocolIdentifier, streamIdentifier, content().duplicate());
+        } else {
+            return new SctpMessage(msgInfo, content().copy());
+        }
+    }
+
+    @Override
     public SctpMessage retain() {
         super.retain();
         return this;
@@ -148,6 +153,18 @@ public final class SctpMessage extends DefaultByteBufHolder {
     }
 
     @Override
+    public SctpMessage touch() {
+        super.touch();
+        return this;
+    }
+
+    @Override
+    public SctpMessage touch(Object hint) {
+        super.touch(hint);
+        return this;
+    }
+
+    @Override
     public String toString() {
         if (refCnt() == 0) {
             return "SctpFrame{" +
@@ -156,6 +173,6 @@ public final class SctpMessage extends DefaultByteBufHolder {
         }
         return "SctpFrame{" +
                 "streamIdentifier=" + streamIdentifier + ", protocolIdentifier=" + protocolIdentifier +
-                ", data=" + BufUtil.hexDump(content()) + '}';
+                ", data=" + ByteBufUtil.hexDump(content()) + '}';
     }
 }

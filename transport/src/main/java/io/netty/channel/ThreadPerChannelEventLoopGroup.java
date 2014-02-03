@@ -16,33 +16,50 @@
 package io.netty.channel;
 
 
-import io.netty.util.concurrent.AbstractEventExecutorGroup;
+import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.GlobalEventExecutor;
+import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.ThreadPerTaskExecutor;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.ReadOnlyIterator;
 
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 /**
  * An {@link EventLoopGroup} that creates one {@link EventLoop} per {@link Channel}.
  */
-public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup implements EventLoopGroup {
+public class ThreadPerChannelEventLoopGroup extends AbstractEventLoopGroup {
 
     private final Object[] childArgs;
     private final int maxChannels;
-    final ThreadFactory threadFactory;
-    final Set<ThreadPerChannelEventLoop> activeChildren =
-            Collections.newSetFromMap(PlatformDependent.<ThreadPerChannelEventLoop, Boolean>newConcurrentHashMap());
-    final Queue<ThreadPerChannelEventLoop> idleChildren = new ConcurrentLinkedQueue<ThreadPerChannelEventLoop>();
+    final Executor executor;
+    final Set<EventLoop> activeChildren =
+            Collections.newSetFromMap(PlatformDependent.<EventLoop, Boolean>newConcurrentHashMap());
+    final Queue<EventLoop> idleChildren = new ConcurrentLinkedQueue<EventLoop>();
     private final ChannelException tooManyChannels;
+
+    private volatile boolean shuttingDown;
+    private final Promise<?> terminationFuture = new DefaultPromise<Void>(GlobalEventExecutor.INSTANCE);
+    private final FutureListener<Object> childTerminationListener = new FutureListener<Object>() {
+        @Override
+        public void operationComplete(Future<Object> future) throws Exception {
+            // Inefficient, but works.
+            if (isTerminated()) {
+                terminationFuture.trySuccess(null);
+            }
+        }
+    };
 
     /**
      * Create a new {@link ThreadPerChannelEventLoopGroup} with no limit in place.
@@ -56,9 +73,7 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
      *
      * @param maxChannels       the maximum number of channels to handle with this instance. Once you try to register
      *                          a new {@link Channel} and the maximum is exceed it will throw an
-     *                          {@link ChannelException} on the {@link #register(Channel)} and
-     *                          {@link #register(Channel, ChannelPromise)} method.
-     *                          Use {@code 0} to use no limit
+     *                          {@link ChannelException}. Use {@code 0} to use no limit
      */
     protected ThreadPerChannelEventLoopGroup(int maxChannels) {
         this(maxChannels, Executors.defaultThreadFactory());
@@ -69,20 +84,32 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
      *
      * @param maxChannels       the maximum number of channels to handle with this instance. Once you try to register
      *                          a new {@link Channel} and the maximum is exceed it will throw an
-     *                          {@link ChannelException} on the {@link #register(Channel)} and
-     *                          {@link #register(Channel, ChannelPromise)} method.
-     *                          Use {@code 0} to use no limit
+     *                          {@link ChannelException}. Use {@code 0} to use no limit
      * @param threadFactory     the {@link ThreadFactory} used to create new {@link Thread} instances that handle the
      *                          registered {@link Channel}s
      * @param args              arguments which will passed to each {@link #newChild(Object...)} call.
      */
     protected ThreadPerChannelEventLoopGroup(int maxChannels, ThreadFactory threadFactory, Object... args) {
+        this(maxChannels, new ThreadPerTaskExecutor(threadFactory), args);
+    }
+
+    /**
+     * Create a new {@link ThreadPerChannelEventLoopGroup}.
+     *
+     * @param maxChannels       the maximum number of channels to handle with this instance. Once you try to register
+     *                          a new {@link Channel} and the maximum is exceed it will throw an
+     *                          {@link ChannelException}. Use {@code 0} to use no limit
+     * @param executor          the {@link Executor} used to create new {@link Thread} instances that handle the
+     *                          registered {@link Channel}s
+     * @param args              arguments which will passed to each {@link #newChild(Object...)} call.
+     */
+    protected ThreadPerChannelEventLoopGroup(int maxChannels, Executor executor, Object... args) {
         if (maxChannels < 0) {
             throw new IllegalArgumentException(String.format(
                     "maxChannels: %d (expected: >= 0)", maxChannels));
         }
-        if (threadFactory == null) {
-            throw new NullPointerException("threadFactory");
+        if (executor == null) {
+            throw new NullPointerException("executor");
         }
 
         if (args == null) {
@@ -92,48 +119,82 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
         }
 
         this.maxChannels = maxChannels;
-        this.threadFactory = threadFactory;
+        this.executor = executor;
 
         tooManyChannels = new ChannelException("too many channels (max: " + maxChannels + ')');
         tooManyChannels.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
     }
 
     /**
-     * Creates a new {@link EventLoop}.  The default implementation creates a new {@link ThreadPerChannelEventLoop}.
+     * Creates a new {@link EventLoop}.
      */
-    protected ThreadPerChannelEventLoop newChild(
-            @SuppressWarnings("UnusedParameters") Object... args) throws Exception {
+    protected EventLoop newChild(@SuppressWarnings("UnusedParameters") Object... args) {
         return new ThreadPerChannelEventLoop(this);
     }
 
     @Override
-    public Iterator<EventExecutor> iterator() {
-        return new ReadOnlyIterator<EventExecutor>(activeChildren.iterator());
+    @SuppressWarnings("unchecked")
+    public <E extends EventExecutor> Set<E> children() {
+        return Collections.unmodifiableSet((Set<E>) activeChildren);
     }
 
     @Override
     public EventLoop next() {
-        throw new UnsupportedOperationException();
+        if (shuttingDown) {
+            throw new RejectedExecutionException("shutting down");
+        }
+
+        EventLoop loop = idleChildren.poll();
+        if (loop == null) {
+            if (maxChannels > 0 && activeChildren.size() >= maxChannels) {
+                throw tooManyChannels;
+            }
+            loop = newChild(childArgs);
+            loop.terminationFuture().addListener(childTerminationListener);
+        }
+        activeChildren.add(loop);
+        return loop;
     }
 
     @Override
-    public void shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+    public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+        shuttingDown = true;
+
         for (EventLoop l: activeChildren) {
             l.shutdownGracefully(quietPeriod, timeout, unit);
         }
         for (EventLoop l: idleChildren) {
             l.shutdownGracefully(quietPeriod, timeout, unit);
         }
+
+        // Notify the future if there was no children.
+        if (isTerminated()) {
+            terminationFuture.trySuccess(null);
+        }
+
+        return terminationFuture();
+    }
+
+    @Override
+    public Future<?> terminationFuture() {
+        return terminationFuture;
     }
 
     @Override
     @Deprecated
     public void shutdown() {
+        shuttingDown = true;
+
         for (EventLoop l: activeChildren) {
             l.shutdown();
         }
         for (EventLoop l: idleChildren) {
             l.shutdown();
+        }
+
+        // Notify the future if there was no children.
+        if (isTerminated()) {
+            terminationFuture.trySuccess(null);
         }
     }
 
@@ -209,42 +270,5 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
             }
         }
         return isTerminated();
-    }
-
-    @Override
-    public ChannelFuture register(Channel channel) {
-        if (channel == null) {
-            throw new NullPointerException("channel");
-        }
-        try {
-            return nextChild().register(channel);
-        } catch (Throwable t) {
-            return channel.newFailedFuture(t);
-        }
-    }
-
-    @Override
-    public ChannelFuture register(Channel channel, ChannelPromise promise) {
-        if (channel == null) {
-            throw new NullPointerException("channel");
-        }
-        try {
-            return nextChild().register(channel, promise);
-        } catch (Throwable t) {
-            promise.setFailure(t);
-            return promise;
-        }
-    }
-
-    private EventLoop nextChild() throws Exception {
-        ThreadPerChannelEventLoop loop = idleChildren.poll();
-        if (loop == null) {
-            if (maxChannels > 0 && activeChildren.size() >= maxChannels) {
-                throw tooManyChannels;
-            }
-            loop = newChild(childArgs);
-        }
-        activeChildren.add(loop);
-        return loop;
     }
 }

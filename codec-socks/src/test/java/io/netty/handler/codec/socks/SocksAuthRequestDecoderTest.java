@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.socks;
 
-import io.netty.channel.embedded.EmbeddedByteChannel;
+import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -28,9 +28,9 @@ public class SocksAuthRequestDecoderTest {
         String password = "test";
         SocksAuthRequest msg = new SocksAuthRequest(username, password);
         SocksAuthRequestDecoder decoder = new SocksAuthRequestDecoder();
-        EmbeddedByteChannel embedder = new EmbeddedByteChannel(decoder);
+        EmbeddedChannel embedder = new EmbeddedChannel(decoder);
         SocksCommonTestUtils.writeMessageIntoEmbedder(embedder, msg);
-        msg = (SocksAuthRequest) embedder.readInbound();
+        msg = embedder.readInbound();
         assertEquals(msg.username(), username);
         assertEquals(msg.username(), password);
         assertNull(embedder.readInbound());

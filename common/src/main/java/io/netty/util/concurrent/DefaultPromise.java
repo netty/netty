@@ -16,10 +16,13 @@
 package io.netty.util.concurrent;
 
 import io.netty.util.Signal;
+import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.concurrent.TimeUnit.*;
@@ -37,18 +40,20 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             return 0;
         }
     };
-    private static final Signal SUCCESS = new Signal(DefaultPromise.class.getName() + ".SUCCESS");
+    private static final Signal SUCCESS = Signal.valueOf(DefaultPromise.class.getName() + ".SUCCESS");
+    private static final Signal UNCANCELLABLE = Signal.valueOf(DefaultPromise.class.getName() + ".UNCANCELLABLE");
+    private static final CauseHolder CANCELLATION_CAUSE_HOLDER = new CauseHolder(new CancellationException());
+
+    static {
+        CANCELLATION_CAUSE_HOLDER.cause.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
+    }
+
     private final EventExecutor executor;
 
     private volatile Object result;
     private Object listeners; // Can be ChannelFutureListener or DefaultFutureListeners
 
-    /**
-     * The the most significant 24 bits of this field represents the number of waiter threads waiting for this promise
-     * with await*() and sync*().  Subclasses can use the other 40 bits of this field to represents its own state, and
-     * are responsible for retaining the most significant 24 bits as is when modifying this field.
-     */
-    protected long state;
+    private short waiters;
 
     /**
      * Creates a new instance.
@@ -75,14 +80,32 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     @Override
+    public boolean isCancelled() {
+        return isCancelled0(result);
+    }
+
+    private static boolean isCancelled0(Object result) {
+        return result instanceof CauseHolder && ((CauseHolder) result).cause instanceof CancellationException;
+    }
+
+    @Override
+    public boolean isCancellable() {
+        return result == null;
+    }
+
+    @Override
     public boolean isDone() {
-        return result != null;
+        return isDone0(result);
+    }
+
+    private static boolean isDone0(Object result) {
+        return result != null && result != UNCANCELLABLE;
     }
 
     @Override
     public boolean isSuccess() {
         Object result = this.result;
-        if (result == null) {
+        if (result == null || result == UNCANCELLABLE) {
             return false;
         }
         return !(result instanceof CauseHolder);
@@ -90,15 +113,15 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
     @Override
     public Throwable cause() {
-        Object cause = result;
-        if (cause instanceof CauseHolder) {
-            return ((CauseHolder) cause).cause;
+        Object result = this.result;
+        if (result instanceof CauseHolder) {
+            return ((CauseHolder) result).cause;
         }
         return null;
     }
 
     @Override
-    public Promise<V> addListener(GenericFutureListener<? extends Future<V>> listener) {
+    public Promise<V> addListener(GenericFutureListener<? extends Future<? super V>> listener) {
         if (listener == null) {
             throw new NullPointerException("listener");
         }
@@ -131,12 +154,12 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     @Override
-    public Promise<V> addListeners(GenericFutureListener<? extends Future<V>>... listeners) {
+    public Promise<V> addListeners(GenericFutureListener<? extends Future<? super V>>... listeners) {
         if (listeners == null) {
             throw new NullPointerException("listeners");
         }
 
-        for (GenericFutureListener<? extends Future<V>> l: listeners) {
+        for (GenericFutureListener<? extends Future<? super V>> l: listeners) {
             if (l == null) {
                 break;
             }
@@ -146,7 +169,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     @Override
-    public Promise<V> removeListener(GenericFutureListener<? extends Future<V>> listener) {
+    public Promise<V> removeListener(GenericFutureListener<? extends Future<? super V>> listener) {
         if (listener == null) {
             throw new NullPointerException("listener");
         }
@@ -169,12 +192,12 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     @Override
-    public Promise<V> removeListeners(GenericFutureListener<? extends Future<V>>... listeners) {
+    public Promise<V> removeListeners(GenericFutureListener<? extends Future<? super V>>... listeners) {
         if (listeners == null) {
             throw new NullPointerException("listeners");
         }
 
-        for (GenericFutureListener<? extends Future<V>> l: listeners) {
+        for (GenericFutureListener<? extends Future<? super V>> l: listeners) {
             if (l == null) {
                 break;
             }
@@ -213,7 +236,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         }
 
         if (Thread.interrupted()) {
-            throw new InterruptedException();
+            throw new InterruptedException(toString());
         }
 
         synchronized (this) {
@@ -255,6 +278,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
                 try {
                     wait();
                 } catch (InterruptedException e) {
+                    // Interrupted while waiting.
                     interrupted = true;
                 } finally {
                     decWaiters();
@@ -274,6 +298,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         try {
             return await0(unit.toNanos(timeout), false);
         } catch (InterruptedException e) {
+            // Should not be raised at all.
             throw new InternalError();
         }
     }
@@ -283,6 +308,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         try {
             return await0(MILLISECONDS.toNanos(timeoutMillis), false);
         } catch (InterruptedException e) {
+            // Should not be raised at all.
             throw new InternalError();
         }
     }
@@ -297,10 +323,10 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         }
 
         if (interruptable && Thread.interrupted()) {
-            throw new InterruptedException();
+            throw new InterruptedException(toString());
         }
 
-        long startTime = timeoutNanos <= 0 ? 0 : System.nanoTime();
+        long startTime = System.nanoTime();
         long waitTime = timeoutNanos;
         boolean interrupted = false;
 
@@ -354,7 +380,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     protected void checkDeadLock() {
         EventExecutor e = executor();
         if (e != null && e.inEventLoop()) {
-            throw new BlockingOperationException();
+            throw new BlockingOperationException(toString());
         }
     }
 
@@ -364,7 +390,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             notifyListeners();
             return this;
         }
-        throw new IllegalStateException("complete already");
+        throw new IllegalStateException("complete already: " + this);
     }
 
     @Override
@@ -382,7 +408,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             notifyListeners();
             return this;
         }
-        throw new IllegalStateException("complete already", cause);
+        throw new IllegalStateException("complete already: " + this, cause);
     }
 
     @Override
@@ -392,6 +418,49 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             return true;
         }
         return false;
+    }
+
+    @Override
+    public boolean cancel(boolean mayInterruptIfRunning) {
+        Object result = this.result;
+        if (isDone0(result) || result == UNCANCELLABLE) {
+            return false;
+        }
+
+        synchronized (this) {
+            // Allow only once.
+            result = this.result;
+            if (isDone0(result) || result == UNCANCELLABLE) {
+                return false;
+            }
+
+            this.result = CANCELLATION_CAUSE_HOLDER;
+            if (hasWaiters()) {
+                notifyAll();
+            }
+        }
+
+        notifyListeners();
+        return true;
+    }
+
+    @Override
+    public boolean setUncancellable() {
+        Object result = this.result;
+        if (isDone0(result)) {
+            return false;
+        }
+
+        synchronized (this) {
+            // Allow only once.
+            result = this.result;
+            if (isDone0(result)) {
+                return false;
+            }
+
+            this.result = UNCANCELLABLE;
+        }
+        return true;
     }
 
     private boolean setFailure0(Throwable cause) {
@@ -446,19 +515,18 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     private boolean hasWaiters() {
-        return (state & 0xFFFFFF0000000000L) != 0;
+        return waiters > 0;
     }
 
     private void incWaiters() {
-        long newState = state + 0x10000000000L;
-        if ((newState & 0xFFFFFF0000000000L) == 0) {
-            throw new IllegalStateException("too many waiters");
+        if (waiters == Short.MAX_VALUE) {
+            throw new IllegalStateException("too many waiters: " + this);
         }
-        state = newState;
+        waiters ++;
     }
 
     private void decWaiters() {
-        state -= 0x10000000000L;
+        waiters --;
     }
 
     private void notifyListeners() {
@@ -477,38 +545,47 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
+            final Integer stackDepth = LISTENER_STACK_DEPTH.get();
+            if (stackDepth < MAX_LISTENER_STACK_DEPTH) {
+                LISTENER_STACK_DEPTH.set(stackDepth + 1);
+                try {
+                    if (listeners instanceof DefaultFutureListeners) {
+                        notifyListeners0(this, (DefaultFutureListeners) listeners);
+                    } else {
+                        @SuppressWarnings("unchecked")
+                        final GenericFutureListener<? extends Future<V>> l =
+                                (GenericFutureListener<? extends Future<V>>) listeners;
+                        notifyListener0(this, l);
+                    }
+                } finally {
+                    LISTENER_STACK_DEPTH.set(stackDepth);
+                }
+                return;
+            }
+        }
+
+        try {
             if (listeners instanceof DefaultFutureListeners) {
-                notifyListeners0(this, (DefaultFutureListeners) listeners);
+                final DefaultFutureListeners dfl = (DefaultFutureListeners) listeners;
+                executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        notifyListeners0(DefaultPromise.this, dfl);
+                    }
+                });
             } else {
                 @SuppressWarnings("unchecked")
                 final GenericFutureListener<? extends Future<V>> l =
                         (GenericFutureListener<? extends Future<V>>) listeners;
-                notifyListener0(this, l);
+                executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        notifyListener0(DefaultPromise.this, l);
+                    }
+                });
             }
-        } else {
-            try {
-                if (listeners instanceof DefaultFutureListeners) {
-                    final DefaultFutureListeners dfl = (DefaultFutureListeners) listeners;
-                    executor.execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            notifyListeners0(DefaultPromise.this, dfl);
-                        }
-                    });
-                } else {
-                    @SuppressWarnings("unchecked")
-                    final GenericFutureListener<? extends Future<V>> l =
-                            (GenericFutureListener<? extends Future<V>>) listeners;
-                    executor.execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            notifyListener0(DefaultPromise.this, l);
-                        }
-                    });
-                }
-            } catch (Throwable t) {
-                logger.error("Failed to notify listener(s). Event loop shut down?", t);
-            }
+        } catch (Throwable t) {
+            logger.error("Failed to notify listener(s). Event loop shut down?", t);
         }
     }
 
@@ -540,7 +617,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             eventExecutor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    notifyListener(eventExecutor, future, l);
+                    notifyListener0(future, l);
                 }
             });
         } catch (Throwable t) {
@@ -549,7 +626,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    private static void notifyListener0(Future future, GenericFutureListener l) {
+    static void notifyListener0(Future future, GenericFutureListener l) {
         try {
             l.operationComplete(future);
         } catch (Throwable t) {
@@ -676,5 +753,31 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         private CauseHolder(Throwable cause) {
             this.cause = cause;
         }
+    }
+
+    @Override
+    public String toString() {
+        return toStringBuilder().toString();
+    }
+
+    protected StringBuilder toStringBuilder() {
+        StringBuilder buf = new StringBuilder(64);
+        buf.append(StringUtil.simpleClassName(this));
+        buf.append('@');
+        buf.append(Integer.toHexString(hashCode()));
+
+        Object result = this.result;
+        if (result == SUCCESS) {
+            buf.append("(success)");
+        } else if (result == UNCANCELLABLE) {
+            buf.append("(uncancellable)");
+        } else if (result instanceof CauseHolder) {
+            buf.append("(failure(");
+            buf.append(((CauseHolder) result).cause);
+            buf.append(')');
+        } else {
+            buf.append("(incomplete)");
+        }
+        return buf;
     }
 }

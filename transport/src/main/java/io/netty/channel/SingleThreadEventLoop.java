@@ -17,16 +17,23 @@ package io.netty.channel;
 
 import io.netty.util.concurrent.SingleThreadEventExecutor;
 
+import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 
 /**
- * Abstract base class for {@link EventLoop}'s that execute all its submitted tasks in a single thread.
+ * Abstract base class for {@link EventLoop}s that execute all its submitted tasks in a single thread.
  *
  */
 public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor implements EventLoop {
 
+    private final ChannelHandlerInvoker invoker = new DefaultChannelHandlerInvoker(this);
+
     protected SingleThreadEventLoop(EventLoopGroup parent, ThreadFactory threadFactory, boolean addTaskWakesUp) {
         super(parent, threadFactory, addTaskWakesUp);
+    }
+
+    protected SingleThreadEventLoop(EventLoopGroup parent, Executor executor, boolean addTaskWakesUp) {
+        super(parent, executor, addTaskWakesUp);
     }
 
     @Override
@@ -40,20 +47,17 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
     }
 
     @Override
-    public ChannelFuture register(Channel channel) {
-        return register(channel, channel.newPromise());
+    public ChannelHandlerInvoker asInvoker() {
+        return invoker;
     }
 
     @Override
-    public ChannelFuture register(final Channel channel, final ChannelPromise promise) {
-        if (channel == null) {
-            throw new NullPointerException("channel");
-        }
-        if (promise == null) {
-            throw new NullPointerException("promise");
-        }
-
-        channel.unsafe().register(this, promise);
-        return promise;
+    protected boolean wakesUpForTask(Runnable task) {
+        return !(task instanceof NonWakeupRunnable);
     }
+
+    /**
+     * Marker interface for {@linkRunnable} that will not trigger an {@link #wakeup(boolean)} in all cases.
+     */
+    interface NonWakeupRunnable extends Runnable { }
 }

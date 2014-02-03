@@ -19,8 +19,8 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.oio.OioDatagramChannel;
@@ -43,11 +43,9 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
     public void testMulticast(Bootstrap sb, Bootstrap cb) throws Throwable {
         MulticastTestHandler mhandler = new MulticastTestHandler();
 
-        sb.handler(new ChannelInboundMessageHandlerAdapter<DatagramPacket>() {
+        sb.handler(new SimpleChannelInboundHandler<Object>() {
             @Override
-            public void messageReceived(
-                    ChannelHandlerContext ctx,
-                    DatagramPacket msg) throws Exception {
+            public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
                 // Nothing will be sent.
             }
         });
@@ -75,7 +73,7 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
 
         cc.joinGroup(groupAddress, NetUtil.LOOPBACK_IF).sync();
 
-        sc.write(new DatagramPacket(Unpooled.copyInt(1), groupAddress)).sync();
+        sc.writeAndFlush(new DatagramPacket(Unpooled.copyInt(1), groupAddress)).sync();
         assertTrue(mhandler.await());
 
         // leave the group
@@ -85,26 +83,27 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
         Thread.sleep(1000);
 
         // we should not receive a message anymore as we left the group before
-        sc.write(new DatagramPacket(Unpooled.copyInt(1), groupAddress)).sync();
+        sc.writeAndFlush(new DatagramPacket(Unpooled.copyInt(1), groupAddress)).sync();
         mhandler.await();
 
         sc.close().awaitUninterruptibly();
         cc.close().awaitUninterruptibly();
     }
 
-    private static final class MulticastTestHandler extends ChannelInboundMessageHandlerAdapter<DatagramPacket> {
+    private static final class MulticastTestHandler extends SimpleChannelInboundHandler<DatagramPacket> {
         private final CountDownLatch latch = new CountDownLatch(1);
 
         private boolean done;
         private volatile boolean fail;
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
+        protected void messageReceived(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
             if (done) {
                 fail = true;
             }
 
             assertEquals(1, msg.content().readInt());
+
             latch.countDown();
 
             // mark the handler as done as we only are supposed to receive one message

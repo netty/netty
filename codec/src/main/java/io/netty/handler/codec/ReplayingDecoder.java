@@ -20,6 +20,10 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.util.Signal;
+import io.netty.util.internal.RecyclableArrayList;
+import io.netty.util.internal.StringUtil;
+
+import java.util.List;
 
 /**
  * A specialized variation of {@link ByteToMessageDecoder} which enables implementation
@@ -30,16 +34,16 @@ import io.netty.util.Signal;
  * implement the {@code decode()} and {@code decodeLast()} methods just like
  * all required bytes were received already, rather than checking the
  * availability of the required bytes.  For example, the following
- * {@link ByteToByteDecoder} implementation:
+ * {@link ByteToMessageDecoder} implementation:
  * <pre>
- * public class IntegerHeaderFrameDecoder extends {@link ByteToMessageDecoder}&lt;{@link ByteBuf}&gt; {
+ * public class IntegerHeaderFrameDecoder extends {@link ByteToMessageDecoder} {
  *
  *   {@code @Override}
- *   protected ByteBuf decode({@link ChannelHandlerContext} ctx,
- *                           {@link ByteBuf} in) throws Exception {
+ *   protected void decode({@link ChannelHandlerContext} ctx,
+ *                           {@link ByteBuf} in, List&lt;Object&gt; out) throws Exception {
  *
  *     if (in.readableBytes() &lt; 4) {
- *        return <strong>null</strong>;
+ *        return;
  *     }
  *
  *     in.markReaderIndex();
@@ -47,22 +51,22 @@ import io.netty.util.Signal;
  *
  *     if (in.readableBytes() &lt; length) {
  *        in.resetReaderIndex();
- *        return <strong>null</strong>;
+ *        return;
  *     }
  *
- *     return in.readBytes(length);
+ *     out.add(in.readBytes(length));
  *   }
  * }
  * </pre>
  * is simplified like the following with {@link ReplayingDecoder}:
  * <pre>
  * public class IntegerHeaderFrameDecoder
- *      extends {@link ReplayingDecoder}&lt;{@link ByteBuf},{@link Void}&gt; {
+ *      extends {@link ReplayingDecoder}&lt;{@link Void}&gt; {
  *
- *   protected Object decode({@link ChannelHandlerContext} ctx,
+ *   protected void decode({@link ChannelHandlerContext} ctx,
  *                           {@link ByteBuf} buf) throws Exception {
  *
- *     return buf.readBytes(buf.readInt());
+ *     out.add(buf.readBytes(buf.readInt()));
  *   }
  * }
  * </pre>
@@ -99,12 +103,12 @@ import io.netty.util.Signal;
  * <li>You must keep in mind that {@code decode(..)} method can be called many
  *     times to decode a single message.  For example, the following code will
  *     not work:
- * <pre> public class MyDecoder extends {@link ReplayingDecoder}&lt;{@link Integer}, {@link Void}&gt; {
+ * <pre> public class MyDecoder extends {@link ReplayingDecoder}&lt;{@link Void}&gt; {
  *
  *   private final Queue&lt;Integer&gt; values = new LinkedList&lt;Integer&gt;();
  *
  *   {@code @Override}
- *   public {@link Integer} decode(.., {@link ByteBuf} in) throws Exception {
+ *   public void decode(.., {@link ByteBuf} in, List&lt;Object&gt; out) throws Exception {
  *
  *     // A message contains 2 integers.
  *     values.offer(buffer.readInt());
@@ -113,18 +117,18 @@ import io.netty.util.Signal;
  *     // This assertion will fail intermittently since values.offer()
  *     // can be called more than two times!
  *     assert values.size() == 2;
- *     return values.poll() + values.poll();
+ *     out.add(values.poll() + values.poll());
  *   }
  * }</pre>
  *      The correct implementation looks like the following, and you can also
  *      utilize the 'checkpoint' feature which is explained in detail in the
  *      next section.
- * <pre> public class MyDecoder extends {@link ReplayingDecoder}&lt;{@link Integer}, {@link Void}&gt; {
+ * <pre> public class MyDecoder extends {@link ReplayingDecoder}&lt;{@link Void}&gt; {
  *
  *   private final Queue&lt;Integer&gt; values = new LinkedList&lt;Integer&gt;();
  *
  *   {@code @Override}
- *   public {@link Integer} decode(.., {@link ByteBuf} buffer) throws Exception {
+ *   public void decode(.., {@link ByteBuf} buffer, List&lt;Object&gt; out) throws Exception {
  *
  *     // Revert the state of the variable that might have been changed
  *     // since the last partial decode.
@@ -136,7 +140,7 @@ import io.netty.util.Signal;
  *
  *     // Now we know this assertion will never fail.
  *     assert values.size() == 2;
- *     return values.poll() + values.poll();
+ *     out.add(values.poll() + values.poll());
  *   }
  * }</pre>
  *     </li>
@@ -176,8 +180,8 @@ import io.netty.util.Signal;
  *   }
  *
  *   {@code @Override}
- *   protected {@link Object} decode({@link ChannelHandlerContext} ctx,
- *                           {@link ByteBuf} in) throws Exception {
+ *   protected void decode({@link ChannelHandlerContext} ctx,
+ *                           {@link ByteBuf} in, List&lt;Object&gt; out) throws Exception {
  *     switch (state()) {
  *     case READ_LENGTH:
  *       length = buf.readInt();
@@ -185,7 +189,7 @@ import io.netty.util.Signal;
  *     case READ_CONTENT:
  *       ByteBuf frame = buf.readBytes(length);
  *       <strong>checkpoint(MyDecoderState.READ_LENGTH);</strong>
- *       return frame;
+ *       out.add(frame);
  *     default:
  *       throw new Error("Shouldn't reach here.");
  *     }
@@ -204,8 +208,8 @@ import io.netty.util.Signal;
  *   private int length;
  *
  *   {@code @Override}
- *   protected {@link Object} decode({@link ChannelHandlerContext} ctx,
- *                           {@link ByteBuf} in) throws Exception {
+ *   protected void decode({@link ChannelHandlerContext} ctx,
+ *                           {@link ByteBuf} in, List&lt;Object&gt; out) throws Exception {
  *     if (!readLength) {
  *       length = buf.readInt();
  *       <strong>readLength = true;</strong>
@@ -216,7 +220,7 @@ import io.netty.util.Signal;
  *       ByteBuf frame = buf.readBytes(length);
  *       <strong>readLength = false;</strong>
  *       <strong>checkpoint();</strong>
- *       return frame;
+ *       out.add(frame);
  *     }
  *   }
  * }
@@ -226,7 +230,7 @@ import io.netty.util.Signal;
  * <p>
  * If you are going to write a protocol multiplexer, you will probably want to
  * replace a {@link ReplayingDecoder} (protocol detector) with another
- * {@link ReplayingDecoder}, {@link ByteToByteDecoder}, {@link ByteToMessageDecoder} or {@link MessageToMessageDecoder}
+ * {@link ReplayingDecoder}, {@link ByteToMessageDecoder} or {@link MessageToMessageDecoder}
  * (actual protocol decoder).
  * It is not possible to achieve this simply by calling
  * {@link ChannelPipeline#replace(ChannelHandler, String, ChannelHandler)}, but
@@ -236,7 +240,7 @@ import io.netty.util.Signal;
  *
  *     {@code @Override}
  *     protected Object decode({@link ChannelHandlerContext} ctx,
- *                             {@link ByteBuf} in) {
+ *                             {@link ByteBuf} in, List&lt;Object&gt; out) {
  *         ...
  *         // Decode the first message
  *         Object firstMessage = ...;
@@ -244,16 +248,16 @@ import io.netty.util.Signal;
  *         // Add the second decoder
  *         ctx.pipeline().addLast("second", new SecondDecoder());
  *
- *         // Remove the first decoder (me)
- *         ctx.pipeline().remove(this);
- *
  *         if (buf.isReadable()) {
  *             // Hand off the remaining data to the second decoder
- *             return new Object[] { firstMessage, buf.readBytes(<b>super.actualReadableBytes()</b>) };
+ *             out.add(firstMessage);
+ *             out.add(buf.readBytes(<b>super.actualReadableBytes()</b>));
  *         } else {
  *             // Nothing to hand off
- *             return firstMessage;
+ *             out.add(firstMessage);
  *         }
+ *         // Remove the first decoder (me)
+ *         ctx.pipeline().remove(this);
  *     }
  * </pre>
  * @param <S>
@@ -262,13 +266,11 @@ import io.netty.util.Signal;
  */
 public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
 
-    static final Signal REPLAY = new Signal(ReplayingDecoder.class.getName() + ".REPLAY");
+    static final Signal REPLAY = Signal.valueOf(ReplayingDecoder.class, "REPLAY");
 
-    private ChannelHandlerContext ctx;
     private final ReplayingDecoderBuffer replayable = new ReplayingDecoderBuffer();
     private S state;
     private int checkpoint = -1;
-    private boolean decodeWasNull;
 
     /**
      * Creates a new instance with no initial state (i.e: {@code null}).
@@ -318,89 +320,60 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
         return oldState;
     }
 
-    /**
-     * Returns the actual number of readable bytes in the internal cumulative
-     * buffer of this decoder. You usually do not need to rely on this value
-     * to write a decoder. Use it only when you muse use it at your own risk.
-     * This method is a shortcut to {@link #internalBuffer() internalBuffer().readableBytes()}.
-     */
-    protected int actualReadableBytes() {
-        return internalBuffer().readableBytes();
-    }
-
-    /**
-     * Returns the internal cumulative buffer of this decoder. You usually
-     * do not need to access the internal buffer directly to write a decoder.
-     * Use it only when you must use it at your own risk.
-     */
-    protected ByteBuf internalBuffer() {
-        return ctx.inboundByteBuffer();
-    }
-
-    @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        this.ctx = ctx;
-    }
-
-    @Override
-    public final void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
-        ByteBuf in = ctx.inboundByteBuffer();
-        final int oldReaderIndex = in.readerIndex();
-        discardInboundReadBytes0(ctx);
-        final int newReaderIndex = in.readerIndex();
-        checkpoint -= oldReaderIndex - newReaderIndex;
-    }
-
-    protected void discardInboundReadBytes0(ChannelHandlerContext ctx) throws Exception {
-        super.discardInboundReadBytes(ctx);
-    }
-
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        OutputMessageBuf out = OutputMessageBuf.get();
+        RecyclableArrayList out = RecyclableArrayList.newInstance();
         try {
             replayable.terminate();
-            ByteBuf in = internalBuffer();
-            replayable.setCumulation(in);
-            if (in.isReadable()) {
-                callDecode(ctx, in);
-            }
-
+            callDecode(ctx, internalBuffer(), out);
             decodeLast(ctx, replayable, out);
         } catch (Signal replay) {
             // Ignore
             replay.expect(REPLAY);
-        } catch (CodecException e) {
+        } catch (DecoderException e) {
             throw e;
-        } catch (Throwable cause) {
-            throw new DecoderException(cause);
+        } catch (Exception e) {
+            throw new DecoderException(e);
         } finally {
-            if (out.drainToNextInbound(ctx)) {
-                ctx.fireInboundBufferUpdated();
+            if (cumulation != null) {
+                cumulation.release();
+                cumulation = null;
             }
 
+            int size = out.size();
+            for (int i = 0; i < size; i ++) {
+                ctx.fireChannelRead(out.get(i));
+            }
             ctx.fireChannelInactive();
+            out.recycle();
         }
     }
 
     @Override
-    protected void callDecode(ChannelHandlerContext ctx, ByteBuf buf) {
-        boolean wasNull = false;
-        ByteBuf in = internalBuffer();
+    protected void callDecode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
         replayable.setCumulation(in);
-        OutputMessageBuf out = OutputMessageBuf.get();
         try {
             while (in.isReadable()) {
                 int oldReaderIndex = checkpoint = in.readerIndex();
                 int outSize = out.size();
                 S oldState = state;
+                int oldInputLength = in.readableBytes();
                 try {
                     decode(ctx, replayable, out);
+
+                    // Check if this handler was removed before continuing the loop.
+                    // If it was removed, it is not safe to continue to operate on the buffer.
+                    //
+                    // See https://github.com/netty/netty/issues/1664
+                    if (ctx.isRemoved()) {
+                        break;
+                    }
+
                     if (outSize == out.size()) {
-                        wasNull = true;
-                        if (oldReaderIndex == in.readerIndex() && oldState == state) {
-                            throw new IllegalStateException(
-                                    "null cannot be returned if no data is consumed and state didn't change.");
+                        if (oldInputLength == in.readableBytes() && oldState == state) {
+                            throw new DecoderException(
+                                    StringUtil.simpleClassName(getClass()) + ".decode() must consume the inbound " +
+                                    "data or change its state if it did not decode anything.");
                         } else {
                             // Previous data has been discarded or caused state transition.
                             // Probably it is reading on.
@@ -409,6 +382,15 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
                     }
                 } catch (Signal replay) {
                     replay.expect(REPLAY);
+
+                    // Check if this handler was removed before continuing the loop.
+                    // If it was removed, it is not safe to continue to operate on the buffer.
+                    //
+                    // See https://github.com/netty/netty/issues/1664
+                    if (ctx.isRemoved()) {
+                        break;
+                    }
+
                     // Return to the checkpoint (or oldPosition) and retry.
                     int checkpoint = this.checkpoint;
                     if (checkpoint >= 0) {
@@ -419,43 +401,20 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
                     }
                     break;
                 }
-                wasNull = false;
 
                 if (oldReaderIndex == in.readerIndex() && oldState == state) {
-                    throw new IllegalStateException(
-                           "decode() method must consume at least one byte " +
-                           "if it returned a decoded message (caused by: " +
-                           getClass() + ')');
+                    throw new DecoderException(
+                           StringUtil.simpleClassName(getClass()) + ".decode() method must consume the inbound data " +
+                           "or change its state if it decoded something.");
                 }
                 if (isSingleDecode()) {
                     break;
                 }
             }
-        } catch (CodecException e) {
+        } catch (DecoderException e) {
             throw e;
         } catch (Throwable cause) {
             throw new DecoderException(cause);
-        } finally {
-            if (out.drainToNextInbound(ctx)) {
-                decodeWasNull = false;
-                ctx.fireInboundBufferUpdated();
-            } else {
-                if (wasNull) {
-                    decodeWasNull = true;
-                }
-            }
         }
-    }
-
-    @Override
-    public void channelReadSuspended(ChannelHandlerContext ctx) throws Exception {
-        if (decodeWasNull) {
-            decodeWasNull = false;
-            if (!ctx.channel().config().isAutoRead()) {
-                ctx.read();
-            }
-        }
-
-        super.channelReadSuspended(ctx);
     }
 }

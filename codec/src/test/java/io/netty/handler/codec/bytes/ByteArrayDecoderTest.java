@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.bytes;
 
-import io.netty.channel.embedded.EmbeddedMessageChannel;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.internal.EmptyArrays;
 import org.junit.Before;
 import org.junit.Test;
@@ -31,11 +31,11 @@ import static org.junit.Assert.*;
 @SuppressWarnings("ZeroLengthArrayAllocation")
 public class ByteArrayDecoderTest {
 
-    private EmbeddedMessageChannel ch;
+    private EmbeddedChannel ch;
 
     @Before
     public void setUp() {
-        ch = new EmbeddedMessageChannel(new ByteArrayDecoder());
+        ch = new EmbeddedChannel(new ByteArrayDecoder());
     }
 
     @Test

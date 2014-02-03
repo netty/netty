@@ -16,14 +16,14 @@
 package io.netty.handler.stream;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.embedded.EmbeddedByteChannel;
-import io.netty.channel.embedded.EmbeddedMessageChannel;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import org.junit.Test;
+
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.nio.channels.Channels;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static io.netty.util.ReferenceCountUtil.*;
 import static org.junit.Assert.*;
 
 public class ChunkedWriteHandlerTest {
@@ -101,9 +102,9 @@ public class ChunkedWriteHandlerTest {
     public void testListenerNotifiedWhenIsEnd() {
         ByteBuf buffer = Unpooled.copiedBuffer("Test", CharsetUtil.ISO_8859_1);
 
-        ChunkedByteInput input = new ChunkedByteInput() {
+        ChunkedInput<ByteBuf> input = new ChunkedInput<ByteBuf>() {
             private boolean done;
-            private final ByteBuf buffer = Unpooled.copiedBuffer("Test", CharsetUtil.ISO_8859_1);
+            private final ByteBuf buffer = releaseLater(Unpooled.copiedBuffer("Test", CharsetUtil.ISO_8859_1));
 
             @Override
             public boolean isEndOfInput() throws Exception {
@@ -116,13 +117,12 @@ public class ChunkedWriteHandlerTest {
             }
 
             @Override
-            public boolean readChunk(ByteBuf buffer) throws Exception {
+            public ByteBuf readChunk(ChannelHandlerContext ctx) throws Exception {
                 if (done) {
-                    return false;
+                    return null;
                 }
                 done = true;
-                buffer.writeBytes(this.buffer.duplicate());
-                return true;
+                return buffer.duplicate().retain();
             }
         };
 
@@ -135,23 +135,22 @@ public class ChunkedWriteHandlerTest {
             }
         };
 
-        EmbeddedByteChannel ch = new EmbeddedByteChannel(new ChunkedWriteHandler());
-        ch.outboundMessageBuffer().add(input);
-        ch.flush().addListener(listener).syncUninterruptibly();
+        EmbeddedChannel ch = new EmbeddedChannel(new ChunkedWriteHandler());
+        ch.writeAndFlush(input).addListener(listener).syncUninterruptibly();
         ch.checkException();
         ch.finish();
 
         // the listener should have been notified
         assertTrue(listenerNotified.get());
 
-        assertEquals(buffer, ch.readOutbound());
+        assertEquals(releaseLater(buffer), releaseLater(ch.readOutbound()));
         assertNull(ch.readOutbound());
     }
 
     @Test
     public void testChunkedMessageInput() {
 
-        ChunkedMessageInput<Object> input = new ChunkedMessageInput<Object>() {
+        ChunkedInput<Object> input = new ChunkedInput<Object>() {
             private boolean done;
 
             @Override
@@ -165,19 +164,17 @@ public class ChunkedWriteHandlerTest {
             }
 
             @Override
-            public boolean readChunk(MessageBuf<Object> buffer) throws Exception {
+            public Object readChunk(ChannelHandlerContext ctx) throws Exception {
                 if (done) {
                     return false;
                 }
                 done = true;
-                buffer.add(0);
-                return true;
+                return 0;
             }
         };
 
-        EmbeddedMessageChannel ch = new EmbeddedMessageChannel(new ChunkedWriteHandler());
-        ch.outboundMessageBuffer().add(input);
-        ch.flush().syncUninterruptibly();
+        EmbeddedChannel ch = new EmbeddedChannel(new ChunkedWriteHandler());
+        ch.writeAndFlush(input).syncUninterruptibly();
         ch.checkException();
         assertTrue(ch.finish());
 
@@ -186,7 +183,7 @@ public class ChunkedWriteHandlerTest {
     }
 
     private static void check(ChunkedInput<?>... inputs) {
-        EmbeddedByteChannel ch = new EmbeddedByteChannel(new ChunkedWriteHandler());
+        EmbeddedChannel ch = new EmbeddedChannel(new ChunkedWriteHandler());
 
         for (ChunkedInput<?> input: inputs) {
             ch.writeOutbound(input);
@@ -208,6 +205,7 @@ public class ChunkedWriteHandlerTest {
                     i = 0;
                 }
             }
+            buffer.release();
         }
 
         assertEquals(BYTES.length * inputs.length, read);

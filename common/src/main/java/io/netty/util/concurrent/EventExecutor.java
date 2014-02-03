@@ -15,6 +15,10 @@
  */
 package io.netty.util.concurrent;
 
+import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
+
 /**
  * The {@link EventExecutor} is a special {@link EventExecutorGroup} which comes
  * with some handy methods to see if a {@link Thread} is executed in a event loop.
@@ -29,6 +33,12 @@ public interface EventExecutor extends EventExecutorGroup {
      */
     @Override
     EventExecutor next();
+
+    /**
+     * Returns an unmodifiable singleton set which contains itself.
+     */
+    @Override
+    <E extends EventExecutor> Set<E> children();
 
     /**
      * Return the {@link EventExecutorGroup} which is the parent of this {@link EventExecutor},
@@ -69,4 +79,25 @@ public interface EventExecutor extends EventExecutorGroup {
      * every call of blocking methods will just return without blocking.
      */
     <V> Future<V> newFailedFuture(Throwable cause);
+
+    @Override
+    Future<?> submit(Runnable task);
+
+    @Override
+    <T> Future<T> submit(Runnable task, T result);
+
+    @Override
+    <T> Future<T> submit(Callable<T> task);
+
+    @Override
+    ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit);
+
+    @Override
+    <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit);
+
+    @Override
+    ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit);
+
+    @Override
+    ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit);
 }

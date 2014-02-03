@@ -16,48 +16,35 @@
 package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.testsuite.transport.socket.SocketTestPermutation.Factory;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.ChannelOption;
+import io.netty.testsuite.transport.AbstractTestsuiteTest;
+import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.util.TestUtils;
 import io.netty.util.NetUtil;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
-import org.junit.Rule;
-import org.junit.rules.TestName;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.util.List;
 
-public abstract class AbstractServerSocketTest {
+public abstract class AbstractServerSocketTest extends AbstractTestsuiteTest<ServerBootstrap> {
 
-    private static final List<Factory<ServerBootstrap>> COMBO = SocketTestPermutation.serverSocket();
-
-    @Rule
-    public final TestName testName = new TestName();
-
-    protected final InternalLogger logger = InternalLoggerFactory.getInstance(getClass());
-
-    protected volatile ServerBootstrap sb;
     protected volatile InetSocketAddress addr;
 
-    protected void run() throws Throwable {
-        int i = 0;
-        for (Factory<ServerBootstrap> e: COMBO) {
-            sb = e.newInstance();
-            addr = new InetSocketAddress(
-                    NetUtil.LOCALHOST, TestUtils.getFreePort());
-            sb.localAddress(addr);
+    protected AbstractServerSocketTest() {
+        super(ServerBootstrap.class);
+    }
 
-            logger.info(String.format(
-                    "Running: %s %d of %d (%s)", testName.getMethodName(), ++ i, COMBO.size(), sb));
-            try {
-                Method m = getClass().getDeclaredMethod(
-                        testName.getMethodName(), ServerBootstrap.class);
-                m.invoke(this, sb);
-            } catch (InvocationTargetException ex) {
-                throw ex.getCause();
-            }
-        }
+    @Override
+    protected List<TestsuitePermutation.BootstrapFactory<ServerBootstrap>> newFactories() {
+        return SocketTestPermutation.serverSocket();
+    }
+
+    @Override
+    protected void configure(ServerBootstrap bootstrap, ByteBufAllocator allocator) {
+        addr = new InetSocketAddress(
+                NetUtil.LOCALHOST, TestUtils.getFreePort());
+        bootstrap.localAddress(addr);
+        bootstrap.option(ChannelOption.ALLOCATOR, allocator);
+        bootstrap.childOption(ChannelOption.ALLOCATOR, allocator);
     }
 }

@@ -16,11 +16,13 @@
 package io.netty.channel.nio;
 
 import io.netty.channel.Channel;
+import io.netty.channel.EventLoop;
 import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.util.concurrent.EventExecutor;
 
 import java.nio.channels.Selector;
 import java.nio.channels.spi.SelectorProvider;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 
 /**
@@ -29,36 +31,45 @@ import java.util.concurrent.ThreadFactory;
 public class NioEventLoopGroup extends MultithreadEventLoopGroup {
 
     /**
-     * Create a new instance using {@link #DEFAULT_EVENT_LOOP_THREADS} number of threads, the default
-     * {@link ThreadFactory} and  the {@link SelectorProvider} which is returned by {@link SelectorProvider#provider()}.
+     * Create a new instance using the default number of threads, the default {@link ThreadFactory} and
+     * the {@link SelectorProvider} which is returned by {@link SelectorProvider#provider()}.
      */
     public NioEventLoopGroup() {
-        this(DEFAULT_EVENT_LOOP_THREADS);
+        this(0);
     }
 
     /**
-     * Create a new instance using nThreads number of threads, {@link ThreadFactory} and the
+     * Create a new instance using the specified number of threads, {@link ThreadFactory} and the
      * {@link SelectorProvider} which is returned by {@link SelectorProvider#provider()}.
      */
     public NioEventLoopGroup(int nThreads) {
-        this(nThreads, null);
+        this(nThreads, (Executor) null);
     }
 
     /**
-     * Create a new instance using nThreads number of threads, the given {@link ThreadFactory} and the
+     * Create a new instance using the specified number of threads, the given {@link ThreadFactory} and the
      * {@link SelectorProvider} which is returned by {@link SelectorProvider#provider()}.
      */
     public NioEventLoopGroup(int nThreads, ThreadFactory threadFactory) {
         this(nThreads, threadFactory, SelectorProvider.provider());
     }
 
+    public NioEventLoopGroup(int nThreads, Executor executor) {
+        this(nThreads, executor, SelectorProvider.provider());
+    }
+
     /**
-     * Create a new instance using nThreads number of threads, the given {@link ThreadFactory} and the given
+     * Create a new instance using the specified number of threads, the given {@link ThreadFactory} and the given
      * {@link SelectorProvider}.
      */
     public NioEventLoopGroup(
             int nThreads, ThreadFactory threadFactory, final SelectorProvider selectorProvider) {
         super(nThreads, threadFactory, selectorProvider);
+    }
+
+    public NioEventLoopGroup(
+            int nThreads, Executor executor, final SelectorProvider selectorProvider) {
+        super(nThreads, executor, selectorProvider);
     }
 
     /**
@@ -82,8 +93,7 @@ public class NioEventLoopGroup extends MultithreadEventLoopGroup {
     }
 
     @Override
-    protected EventExecutor newChild(
-            ThreadFactory threadFactory, Object... args) throws Exception {
-        return new NioEventLoop(this, threadFactory, (SelectorProvider) args[0]);
+    protected EventLoop newChild(Executor executor, Object... args) throws Exception {
+        return new NioEventLoop(this, executor, (SelectorProvider) args[0]);
     }
 }

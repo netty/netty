@@ -28,7 +28,7 @@ public class LittleEndianDirectByteBufTest extends AbstractByteBufTest {
 
     @Override
     protected ByteBuf newBuffer(int length) {
-        buffer = Unpooled.directBuffer(length).order(ByteOrder.LITTLE_ENDIAN);
+        buffer = newDirectBuffer(length).order(ByteOrder.LITTLE_ENDIAN);
         assertSame(ByteOrder.LITTLE_ENDIAN, buffer.order());
         assertEquals(0, buffer.writerIndex());
         return buffer;
@@ -37,5 +37,9 @@ public class LittleEndianDirectByteBufTest extends AbstractByteBufTest {
     @Override
     protected ByteBuf[] components() {
         return new ByteBuf[] { buffer };
+    }
+
+    protected ByteBuf newDirectBuffer(int length) {
+        return new UnpooledDirectByteBuf(UnpooledByteBufAllocator.DEFAULT, length, Integer.MAX_VALUE);
     }
 }

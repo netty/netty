@@ -15,17 +15,17 @@
  */
 package io.netty.channel.rxtx;
 
-import static io.netty.channel.rxtx.RxtxChannelOption.*;
-
+import gnu.io.CommPort;
+import gnu.io.CommPortIdentifier;
+import gnu.io.SerialPort;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.EventLoop;
 import io.netty.channel.oio.OioByteStreamChannel;
 
 import java.net.SocketAddress;
 import java.util.concurrent.TimeUnit;
 
-import gnu.io.CommPort;
-import gnu.io.CommPortIdentifier;
-import gnu.io.SerialPort;
+import static io.netty.channel.rxtx.RxtxChannelOption.*;
 
 /**
  * A channel to a serial device using the RXTX library.
@@ -40,8 +40,8 @@ public class RxtxChannel extends OioByteStreamChannel {
     private RxtxDeviceAddress deviceAddress;
     private SerialPort serialPort;
 
-    public RxtxChannel() {
-        super(null, null);
+    public RxtxChannel(EventLoop eventLoop) {
+        super(null, eventLoop);
 
         config = new DefaultRxtxChannelConfig(this);
     }
@@ -134,50 +134,41 @@ public class RxtxChannel extends OioByteStreamChannel {
         public void connect(
                 final SocketAddress remoteAddress,
                 final SocketAddress localAddress, final ChannelPromise promise) {
-            if (eventLoop().inEventLoop()) {
-                if (!ensureOpen(promise)) {
-                    return;
-                }
+            if (!ensureOpen(promise)) {
+                return;
+            }
 
-                try {
-                    final boolean wasActive = isActive();
-                    doConnect(remoteAddress, localAddress);
+            try {
+                final boolean wasActive = isActive();
+                doConnect(remoteAddress, localAddress);
 
-                    int waitTime = config().getOption(WAIT_TIME);
-                    if (waitTime > 0) {
-                        eventLoop().schedule(new Runnable() {
-                            @Override
-                            public void run() {
-                                try {
-                                    doInit();
-                                    promise.setSuccess();
-                                    if (!wasActive && isActive()) {
-                                        pipeline().fireChannelActive();
-                                    }
-                                } catch (Throwable t) {
-                                    promise.setFailure(t);
-                                    closeIfClosed();
+                int waitTime = config().getOption(WAIT_TIME);
+                if (waitTime > 0) {
+                    eventLoop().schedule(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                doInit();
+                                promise.setSuccess();
+                                if (!wasActive && isActive()) {
+                                    pipeline().fireChannelActive();
                                 }
+                            } catch (Throwable t) {
+                                promise.setFailure(t);
+                                closeIfClosed();
                             }
-                       }, waitTime, TimeUnit.MILLISECONDS);
-                    } else {
-                        doInit();
-                        promise.setSuccess();
-                        if (!wasActive && isActive()) {
-                            pipeline().fireChannelActive();
                         }
+                   }, waitTime, TimeUnit.MILLISECONDS);
+                } else {
+                    doInit();
+                    promise.setSuccess();
+                    if (!wasActive && isActive()) {
+                        pipeline().fireChannelActive();
                     }
-                } catch (Throwable t) {
-                    promise.setFailure(t);
-                    closeIfClosed();
                 }
-            } else {
-                eventLoop().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        connect(remoteAddress, localAddress, promise);
-                    }
-                });
+            } catch (Throwable t) {
+                promise.setFailure(t);
+                closeIfClosed();
             }
         }
     }

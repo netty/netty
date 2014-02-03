@@ -17,55 +17,35 @@ package io.netty.testsuite.transport.sctp;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.testsuite.transport.sctp.SctpTestPermutation.Factory;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.ChannelOption;
+import io.netty.testsuite.transport.AbstractComboTestsuiteTest;
+import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.util.TestUtils;
 import io.netty.util.NetUtil;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
-import org.junit.Rule;
-import org.junit.rules.TestName;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.util.List;
-import java.util.Map.Entry;
 
-public abstract class AbstractSctpTest {
-
-    private static final List<Entry<Factory<ServerBootstrap>, Factory<Bootstrap>>> COMBO =
-            SctpTestPermutation.sctpChannel();
-
-    @Rule
-    public final TestName testName = new TestName();
-
-    protected final InternalLogger logger = InternalLoggerFactory.getInstance(getClass());
-
-    protected volatile ServerBootstrap sb;
-    protected volatile Bootstrap cb;
+public abstract class AbstractSctpTest extends AbstractComboTestsuiteTest<ServerBootstrap, Bootstrap> {
     protected volatile InetSocketAddress addr;
-    protected volatile Factory<Bootstrap> currentBootstrap;
 
-    protected void run() throws Throwable {
-        int i = 0;
-        for (Entry<Factory<ServerBootstrap>, Factory<Bootstrap>> e: COMBO) {
-            currentBootstrap = e.getValue();
-            sb = e.getKey().newInstance();
-            cb = e.getValue().newInstance();
-            addr = new InetSocketAddress(
-                    NetUtil.LOCALHOST, TestUtils.getFreePort());
-            sb.localAddress(addr);
-            cb.remoteAddress(addr);
+    protected AbstractSctpTest() {
+        super(ServerBootstrap.class, Bootstrap.class);
+    }
 
-            logger.info(String.format(
-                    "Running: %s %d of %d (%s + %s)", testName.getMethodName(), ++ i, COMBO.size(), sb, cb));
-            try {
-                Method m = getClass().getDeclaredMethod(
-                        testName.getMethodName(), ServerBootstrap.class, Bootstrap.class);
-                m.invoke(this, sb, cb);
-            } catch (InvocationTargetException ex) {
-                throw ex.getCause();
-            }
-        }
+    @Override
+    protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
+        return SctpTestPermutation.sctpChannel();
+    }
+
+    @Override
+    protected void configure(ServerBootstrap serverBootstrap, Bootstrap bootstrap, ByteBufAllocator allocator) {
+        addr = new InetSocketAddress(NetUtil.LOCALHOST, TestUtils.getFreePort());
+        serverBootstrap.localAddress(addr);
+        serverBootstrap.option(ChannelOption.ALLOCATOR, allocator);
+        serverBootstrap.childOption(ChannelOption.ALLOCATOR, allocator);
+        bootstrap.remoteAddress(addr);
+        bootstrap.option(ChannelOption.ALLOCATOR, allocator);
     }
 }

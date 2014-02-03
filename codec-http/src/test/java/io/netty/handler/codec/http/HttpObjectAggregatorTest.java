@@ -19,7 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.embedded.EmbeddedMessageChannel;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.CharsetUtil;
 import org.easymock.EasyMock;
@@ -27,6 +27,7 @@ import org.junit.Test;
 
 import java.util.List;
 
+import static io.netty.util.ReferenceCountUtil.*;
 import static org.junit.Assert.*;
 
 public class HttpObjectAggregatorTest {
@@ -34,7 +35,7 @@ public class HttpObjectAggregatorTest {
     @Test
     public void testAggregate() {
         HttpObjectAggregator aggr = new HttpObjectAggregator(1024 * 1024);
-        EmbeddedMessageChannel embedder = new EmbeddedMessageChannel(aggr);
+        EmbeddedChannel embedder = new EmbeddedChannel(aggr);
 
         HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1,
                 HttpMethod.GET, "http://localhost");
@@ -46,10 +47,10 @@ public class HttpObjectAggregatorTest {
         assertFalse(embedder.writeInbound(chunk1));
         assertFalse(embedder.writeInbound(chunk2));
 
-        // this should trigger a messageReceived event so return true
+        // this should trigger a channelRead event so return true
         assertTrue(embedder.writeInbound(chunk3));
         assertTrue(embedder.finish());
-        DefaultFullHttpRequest aggratedMessage = (DefaultFullHttpRequest) embedder.readInbound();
+        FullHttpRequest aggratedMessage = embedder.readInbound();
         assertNotNull(aggratedMessage);
 
         assertEquals(chunk1.content().readableBytes() + chunk2.content().readableBytes(),
@@ -68,12 +69,13 @@ public class HttpObjectAggregatorTest {
             // This should be false as we decompose the buffer before to not have deep hierarchy
             assertFalse(buf instanceof CompositeByteBuf);
         }
+        aggregatedMessage.release();
     }
 
     @Test
     public void testAggregateWithTrailer() {
         HttpObjectAggregator aggr = new HttpObjectAggregator(1024 * 1024);
-        EmbeddedMessageChannel embedder = new EmbeddedMessageChannel(aggr);
+        EmbeddedChannel embedder = new EmbeddedChannel(aggr);
         HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1,
                 HttpMethod.GET, "http://localhost");
         HttpHeaders.setHeader(message, "X-Test", true);
@@ -87,10 +89,10 @@ public class HttpObjectAggregatorTest {
         assertFalse(embedder.writeInbound(chunk1));
         assertFalse(embedder.writeInbound(chunk2));
 
-        // this should trigger a messageReceived event so return true
+        // this should trigger a channelRead event so return true
         assertTrue(embedder.writeInbound(trailer));
         assertTrue(embedder.finish());
-        DefaultFullHttpRequest aggratedMessage = (DefaultFullHttpRequest) embedder.readInbound();
+        FullHttpRequest aggratedMessage = embedder.readInbound();
         assertNotNull(aggratedMessage);
 
         assertEquals(chunk1.content().readableBytes() + chunk2.content().readableBytes(),
@@ -98,22 +100,42 @@ public class HttpObjectAggregatorTest {
         assertEquals(aggratedMessage.headers().get("X-Test"), Boolean.TRUE.toString());
         assertEquals(aggratedMessage.headers().get("X-Trailer"), Boolean.TRUE.toString());
         checkContentBuffer(aggratedMessage);
-
         assertNull(embedder.readInbound());
     }
 
-    @Test(expected = TooLongFrameException.class)
+    @Test
     public void testTooLongFrameException() {
         HttpObjectAggregator aggr = new HttpObjectAggregator(4);
-        EmbeddedMessageChannel embedder = new EmbeddedMessageChannel(aggr);
+        EmbeddedChannel embedder = new EmbeddedChannel(aggr);
         HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1,
                 HttpMethod.GET, "http://localhost");
-        HttpContent chunk1 = new DefaultHttpContent(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII));
-        HttpContent chunk2 = new DefaultHttpContent(Unpooled.copiedBuffer("test2", CharsetUtil.US_ASCII));
+        HttpContent chunk1 = releaseLater(new DefaultHttpContent(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII)));
+        HttpContent chunk2 = releaseLater(new DefaultHttpContent(Unpooled.copiedBuffer("test2", CharsetUtil.US_ASCII)));
+        HttpContent chunk3 = releaseLater(new DefaultHttpContent(Unpooled.copiedBuffer("test3", CharsetUtil.US_ASCII)));
+        HttpContent chunk4 = LastHttpContent.EMPTY_LAST_CONTENT;
+
         assertFalse(embedder.writeInbound(message));
-        assertFalse(embedder.writeInbound(chunk1));
-        embedder.writeInbound(chunk2);
-        fail();
+        assertFalse(embedder.writeInbound(chunk1.copy()));
+        try {
+            embedder.writeInbound(chunk2.copy());
+            fail();
+        } catch (TooLongFrameException e) {
+            // expected
+        }
+        assertFalse(embedder.writeInbound(chunk3.copy()));
+        assertFalse(embedder.writeInbound(chunk4.copy()));
+
+        assertFalse(embedder.writeInbound(message));
+        assertFalse(embedder.writeInbound(chunk1.copy()));
+        try {
+            embedder.writeInbound(chunk2.copy());
+            fail();
+        } catch (TooLongFrameException e) {
+            // expected
+        }
+        assertFalse(embedder.writeInbound(chunk3.copy()));
+        assertFalse(embedder.writeInbound(chunk4.copy()));
+        embedder.finish();
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -139,7 +161,7 @@ public class HttpObjectAggregatorTest {
     @Test
     public void testAggregateTransferEncodingChunked() {
         HttpObjectAggregator aggr = new HttpObjectAggregator(1024 * 1024);
-        EmbeddedMessageChannel embedder = new EmbeddedMessageChannel(aggr);
+        EmbeddedChannel embedder = new EmbeddedChannel(aggr);
 
         HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1,
                 HttpMethod.GET, "http://localhost");
@@ -152,10 +174,10 @@ public class HttpObjectAggregatorTest {
         assertFalse(embedder.writeInbound(chunk1));
         assertFalse(embedder.writeInbound(chunk2));
 
-        // this should trigger a messageReceived event so return true
+        // this should trigger a channelRead event so return true
         assertTrue(embedder.writeInbound(chunk3));
         assertTrue(embedder.finish());
-        FullHttpRequest aggratedMessage = (FullHttpRequest) embedder.readInbound();
+        FullHttpRequest aggratedMessage = embedder.readInbound();
         assertNotNull(aggratedMessage);
 
         assertEquals(chunk1.content().readableBytes() + chunk2.content().readableBytes(),

@@ -20,24 +20,32 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundByteHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.testsuite.util.BogusSslContextFactory;
 import io.netty.util.concurrent.Future;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
 import javax.net.ssl.SSLEngine;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.*;
 
+@RunWith(Parameterized.class)
 public class SocketSslEchoTest extends AbstractSocketTest {
 
     private static final int FIRST_MESSAGE_SIZE = 16384;
@@ -48,27 +56,33 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         random.nextBytes(data);
     }
 
+    @Parameters(name = "{index}: useChunkedWriteHandler = {0}, useCompositeByteBuf = {1}")
+    public static Collection<Object[]> data() {
+        List<Object[]> params = new ArrayList<Object[]>();
+        for (int i = 0; i < 4; i ++) {
+            params.add(new Object[] {
+                    (i & 2) != 0, (i & 1) != 0
+            });
+        }
+        return params;
+    }
+
+    private final boolean useChunkedWriteHandler;
+    private final boolean useCompositeByteBuf;
+
+    public SocketSslEchoTest(boolean useChunkedWriteHandler, boolean useCompositeByteBuf) {
+        this.useChunkedWriteHandler = useChunkedWriteHandler;
+        this.useCompositeByteBuf = useCompositeByteBuf;
+    }
+
     @Test
     public void testSslEcho() throws Throwable {
         run();
     }
 
     public void testSslEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSslEcho0(sb, cb, false);
-    }
-
-    @Test
-    public void testSslEchoWithChunkHandler() throws Throwable {
-        run();
-    }
-
-    public void testSslEchoWithChunkHandler(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSslEcho0(sb, cb, true);
-    }
-
-    private void testSslEcho0(ServerBootstrap sb, Bootstrap cb, final boolean chunkWriteHandler) throws Throwable {
-        final EchoHandler sh = new EchoHandler(true);
-        final EchoHandler ch = new EchoHandler(false);
+        final EchoHandler sh = new EchoHandler(true, useCompositeByteBuf);
+        final EchoHandler ch = new EchoHandler(false, useCompositeByteBuf);
 
         final SSLEngine sse = BogusSslContextFactory.getServerContext().createSSLEngine();
         final SSLEngine cse = BogusSslContextFactory.getClientContext().createSSLEngine();
@@ -77,9 +91,10 @@ public class SocketSslEchoTest extends AbstractSocketTest {
 
         sb.childHandler(new ChannelInitializer<SocketChannel>() {
             @Override
+            @SuppressWarnings("deprecation")
             public void initChannel(SocketChannel sch) throws Exception {
                 sch.pipeline().addFirst("ssl", new SslHandler(sse));
-                if (chunkWriteHandler) {
+                if (useChunkedWriteHandler) {
                     sch.pipeline().addLast(new ChunkedWriteHandler());
                 }
                 sch.pipeline().addLast("handler", sh);
@@ -88,9 +103,10 @@ public class SocketSslEchoTest extends AbstractSocketTest {
 
         cb.handler(new ChannelInitializer<SocketChannel>() {
             @Override
+            @SuppressWarnings("deprecation")
             public void initChannel(SocketChannel sch) throws Exception {
                 sch.pipeline().addFirst("ssl", new SslHandler(cse));
-                if (chunkWriteHandler) {
+                if (useChunkedWriteHandler) {
                     sch.pipeline().addLast(new ChunkedWriteHandler());
                 }
                 sch.pipeline().addLast("handler", ch);
@@ -100,7 +116,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         Channel sc = sb.bind().sync().channel();
         Channel cc = cb.connect().sync().channel();
         Future<Channel> hf = cc.pipeline().get(SslHandler.class).handshakeFuture();
-        cc.write(Unpooled.wrappedBuffer(data, 0, FIRST_MESSAGE_SIZE));
+        cc.writeAndFlush(Unpooled.wrappedBuffer(data, 0, FIRST_MESSAGE_SIZE));
         final AtomicBoolean firstByteWriteFutureDone = new AtomicBoolean();
 
         hf.sync();
@@ -109,7 +125,12 @@ public class SocketSslEchoTest extends AbstractSocketTest {
 
         for (int i = FIRST_MESSAGE_SIZE; i < data.length;) {
             int length = Math.min(random.nextInt(1024 * 64), data.length - i);
-            cc.write(Unpooled.wrappedBuffer(data, i, length));
+            ByteBuf buf = Unpooled.wrappedBuffer(data, i, length);
+            if (useCompositeByteBuf) {
+                buf = Unpooled.compositeBuffer().addComponent(buf).writerIndex(buf.writerIndex());
+            }
+            ChannelFuture future = cc.writeAndFlush(buf);
+            future.sync();
             i += length;
         }
 
@@ -161,14 +182,16 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         }
     }
 
-    private class EchoHandler extends ChannelInboundByteHandlerAdapter {
+    private class EchoHandler extends SimpleChannelInboundHandler<ByteBuf> {
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;
         private final boolean server;
+        private final boolean composite;
 
-        EchoHandler(boolean server) {
+        EchoHandler(boolean server, boolean composite) {
             this.server = server;
+            this.composite = composite;
         }
 
         @Override
@@ -178,9 +201,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void inboundBufferUpdated(
-                ChannelHandlerContext ctx, ByteBuf in)
-                throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
             byte[] actual = new byte[in.readableBytes()];
             in.readBytes(actual);
 
@@ -190,10 +211,19 @@ public class SocketSslEchoTest extends AbstractSocketTest {
             }
 
             if (channel.parent() != null) {
-                channel.write(Unpooled.wrappedBuffer(actual));
+                ByteBuf buf = Unpooled.wrappedBuffer(actual);
+                if (composite) {
+                    buf = Unpooled.compositeBuffer().addComponent(buf).writerIndex(buf.writerIndex());
+                }
+                channel.write(buf);
             }
 
             counter += actual.length;
+        }
+
+        @Override
+        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+            ctx.flush();
         }
 
         @Override

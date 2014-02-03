@@ -16,16 +16,15 @@
 
 package io.netty.buffer;
 
-import io.netty.util.ResourceLeak;
+import io.netty.util.Recycler;
+import io.netty.util.Recycler.Handle;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.ArrayDeque;
-import java.util.Queue;
 
 abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
 
-    private final ResourceLeak leak;
+    private final Recycler.Handle<PooledByteBuf<T>> recyclerHandle;
 
     protected PoolChunk<T> chunk;
     protected long handle;
@@ -35,11 +34,11 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
     private int maxLength;
 
     private ByteBuffer tmpNioBuf;
-    private Queue<Allocation<T>> suspendedDeallocations;
 
-    protected PooledByteBuf(int maxCapacity) {
+    @SuppressWarnings("unchecked")
+    protected PooledByteBuf(Recycler.Handle<? extends PooledByteBuf<T>> recyclerHandle, int maxCapacity) {
         super(maxCapacity);
-        leak = leakDetector.open(this);
+        this.recyclerHandle = (Handle<PooledByteBuf<T>>) recyclerHandle;
     }
 
     void init(PoolChunk<T> chunk, long handle, int offset, int length, int maxLength) {
@@ -108,13 +107,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
         }
 
         // Reallocation required.
-        if (suspendedDeallocations == null) {
-            chunk.arena.reallocate(this, newCapacity, true);
-        } else {
-            Allocation<T> old = new Allocation<T>(chunk, handle);
-            chunk.arena.reallocate(this, newCapacity, false);
-            suspendedDeallocations.add(old);
-        }
+        chunk.arena.reallocate(this, newCapacity, true);
         return this;
     }
 
@@ -144,56 +137,22 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
     protected abstract ByteBuffer newInternalNioBuffer(T memory);
 
     @Override
-    public final ByteBuf suspendIntermediaryDeallocations() {
-        ensureAccessible();
-        if (suspendedDeallocations == null) {
-            suspendedDeallocations = new ArrayDeque<Allocation<T>>(2);
-        }
-        return this;
-    }
-
-    @Override
-    public final ByteBuf resumeIntermediaryDeallocations() {
-        if (suspendedDeallocations == null) {
-            return this;
-        }
-
-        Queue<Allocation<T>> suspendedDeallocations = this.suspendedDeallocations;
-        this.suspendedDeallocations = null;
-
-        if (suspendedDeallocations.isEmpty()) {
-            return this;
-        }
-
-        for (Allocation<T> a: suspendedDeallocations) {
-            a.chunk.arena.free(a.chunk, a.handle);
-        }
-        return this;
-    }
-
-    @Override
     protected final void deallocate() {
         if (handle >= 0) {
-            resumeIntermediaryDeallocations();
             final long handle = this.handle;
             this.handle = -1;
             memory = null;
             chunk.arena.free(chunk, handle);
-            leak.close();
+            recycle();
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void recycle() {
+        recyclerHandle.recycle(this);
     }
 
     protected final int idx(int index) {
         return offset + index;
-    }
-
-    private static final class Allocation<T> {
-        final PoolChunk<T> chunk;
-        final long handle;
-
-        Allocation(PoolChunk<T> chunk, long handle) {
-            this.chunk = chunk;
-            this.handle = handle;
-        }
     }
 }

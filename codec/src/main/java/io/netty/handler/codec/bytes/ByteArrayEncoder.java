@@ -19,10 +19,12 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
+import io.netty.handler.codec.MessageToMessageEncoder;
+
+import java.util.List;
 
 /**
  * Encodes the requested array of bytes into a {@link ByteBuf}.
@@ -43,29 +45,15 @@ import io.netty.handler.codec.LengthFieldPrepender;
  * and then you can use an array of bytes instead of a {@link ByteBuf}
  * as a message:
  * <pre>
- * void messageReceived({@link ChannelHandlerContext} ctx, byte[] bytes) {
+ * void channelRead({@link ChannelHandlerContext} ctx, byte[] bytes) {
  *     ...
  * }
  * </pre>
  */
 @Sharable
-public class ByteArrayEncoder extends ChannelOutboundMessageHandlerAdapter<byte[]> {
-
+public class ByteArrayEncoder extends MessageToMessageEncoder<byte[]> {
     @Override
-    public void flush(ChannelHandlerContext ctx, byte[] msg) throws Exception {
-        if (msg.length == 0) {
-            return;
-        }
-
-        switch (ctx.nextOutboundBufferType()) {
-            case BYTE:
-                ctx.nextOutboundByteBuffer().writeBytes(msg);
-                break;
-            case MESSAGE:
-                ctx.nextOutboundMessageBuffer().add(Unpooled.wrappedBuffer(msg));
-                break;
-            default:
-                throw new Error();
-        }
+    protected void encode(ChannelHandlerContext ctx, byte[] msg, List<Object> out) throws Exception {
+        out.add(Unpooled.wrappedBuffer(msg));
     }
 }

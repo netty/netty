@@ -17,7 +17,7 @@ package io.netty.handler.codec.socks;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.embedded.EmbeddedByteChannel;
+import io.netty.channel.embedded.EmbeddedChannel;
 
 final class SocksCommonTestUtils {
     /**
@@ -27,7 +27,7 @@ final class SocksCommonTestUtils {
         //NOOP
     }
 
-    public static void writeMessageIntoEmbedder(EmbeddedByteChannel embedder, SocksMessage msg) {
+    public static void writeMessageIntoEmbedder(EmbeddedChannel embedder, SocksMessage msg) {
         ByteBuf buf = Unpooled.buffer();
         msg.encodeAsByteBuf(buf);
         embedder.writeInbound(buf);

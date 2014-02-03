@@ -13,88 +13,166 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty.microbench.buffer;
 
-import com.google.caliper.Param;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
-import io.netty.microbench.util.DefaultBenchmark;
+import io.netty.microbench.util.AbstractMicrobenchmark;
+import org.openjdk.jmh.annotations.GenerateMicroBenchmark;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
+/**
+ * This class benchmarks different allocators with different allocation sizes.
+ */
+public class ByteBufAllocatorBenchmark extends AbstractMicrobenchmark {
 
-public class ByteBufAllocatorBenchmark extends DefaultBenchmark {
+    private final ByteBufAllocator unpooledHeapAllocator = new UnpooledByteBufAllocator(false);
+    private final ByteBufAllocator unpooledDirectAllocator = new UnpooledByteBufAllocator(true);
+    private final ByteBufAllocator pooledHeapAllocator = new PooledByteBufAllocator(false);
+    private final ByteBufAllocator pooledDirectAllocator = new PooledByteBufAllocator(true);
 
-    private static final ByteBufAllocator UNPOOLED_ALLOCATOR_HEAP = new UnpooledByteBufAllocator(false);
-    private static final ByteBufAllocator UNPOOLED_ALLOCATOR_DIRECT = new UnpooledByteBufAllocator(true);
-    private static final ByteBufAllocator POOLED_ALLOCATOR_HEAP = new PooledByteBufAllocator(false);
-    private static final ByteBufAllocator POOLED_ALLOCATOR_DIRECT = new PooledByteBufAllocator(true);
-
-    @Param({ "0", "256", "1024", "4096", "16384", "65536" })
-    private int size;
-
-    @Param
-    private Allocator allocator;
-
-    private final Deque<ByteBuf> queue = new ArrayDeque<ByteBuf>();
-    private ByteBufAllocator alloc;
-
-    @Override
-    protected void setUp() throws Exception {
-        alloc = allocator.alloc();
-        for (int i = 0; i < 2560; i ++) {
-            queue.add(alloc.buffer(size));
-        }
+    @GenerateMicroBenchmark
+    public void unpooledHeapAllocAndFree_1_0() {
+        ByteBuf buffer = unpooledHeapAllocator.buffer(0);
+        buffer.release();
     }
 
-    @Override
-    protected void tearDown() throws Exception {
-        for (ByteBuf b: queue) {
-            b.release();
-        }
-        queue.clear();
+    @GenerateMicroBenchmark
+    public void unpooledHeapAllocAndFree_2_256() {
+        ByteBuf buffer = unpooledHeapAllocator.buffer(256);
+        buffer.release();
     }
 
-    public void timeAllocAndFree(int reps) {
-        final ByteBufAllocator alloc = this.alloc;
-        final Deque<ByteBuf> queue = this.queue;
-        final int size = this.size;
-
-        for (int i = 0; i < reps; i ++) {
-            queue.add(alloc.buffer(size));
-            queue.removeFirst().release();
-        }
+    @GenerateMicroBenchmark
+    public void unpooledHeapAllocAndFree_3_1024() {
+        ByteBuf buffer = unpooledHeapAllocator.buffer(1024);
+        buffer.release();
     }
 
-    public enum Allocator {
-        UNPOOLED_HEAP {
-            @Override
-            ByteBufAllocator alloc() {
-                return UNPOOLED_ALLOCATOR_HEAP;
-            }
-        },
-        UNPOOLED_DIRECT {
-            @Override
-            ByteBufAllocator alloc() {
-                return UNPOOLED_ALLOCATOR_DIRECT;
-            }
-        },
-        POOLED_HEAP {
-            @Override
-            ByteBufAllocator alloc() {
-                return POOLED_ALLOCATOR_HEAP;
-            }
-        },
-        POOLED_DIRECT {
-            @Override
-            ByteBufAllocator alloc() {
-                return POOLED_ALLOCATOR_DIRECT;
-            }
-        };
+    @GenerateMicroBenchmark
+    public void unpooledHeapAllocAndFree_4_4096() {
+        ByteBuf buffer = unpooledHeapAllocator.buffer(4096);
+        buffer.release();
+    }
 
-        abstract ByteBufAllocator alloc();
+    @GenerateMicroBenchmark
+    public void unpooledHeapAllocAndFree_5_16384() {
+        ByteBuf buffer = unpooledHeapAllocator.buffer(16384);
+        buffer.release();
+    }
+
+    @GenerateMicroBenchmark
+    public void unpooledHeapAllocAndFree_6_65536() {
+        ByteBuf buffer = unpooledHeapAllocator.buffer(65536);
+        buffer.release();
+    }
+
+    @GenerateMicroBenchmark
+    public void unpooledDirectAllocAndFree_1_0() {
+        ByteBuf buffer = unpooledDirectAllocator.buffer(0);
+        buffer.release();
+    }
+
+    @GenerateMicroBenchmark
+    public void unpooledDirectAllocAndFree_2_256() {
+        ByteBuf buffer = unpooledDirectAllocator.buffer(256);
+        buffer.release();
+    }
+
+    @GenerateMicroBenchmark
+    public void unpooledDirectAllocAndFree_3_1024() {
+        ByteBuf buffer = unpooledDirectAllocator.buffer(1024);
+        buffer.release();
+    }
+
+    @GenerateMicroBenchmark
+    public void unpooledDirectAllocAndFree_4_4096() {
+        ByteBuf buffer = unpooledDirectAllocator.buffer(4096);
+        buffer.release();
+    }
+
+    @GenerateMicroBenchmark
+    public void unpooledDirectAllocAndFree_5_16384() {
+        ByteBuf buffer = unpooledDirectAllocator.buffer(16384);
+        buffer.release();
+    }
+
+    @GenerateMicroBenchmark
+    public void unpooledDirectAllocAndFree_6_65536() {
+        ByteBuf buffer = unpooledDirectAllocator.buffer(65536);
+        buffer.release();
+    }
+
+    @GenerateMicroBenchmark
+    public void pooledHeapAllocAndFree_1_0() {
+        ByteBuf buffer = pooledHeapAllocator.buffer(0);
+        buffer.release();
+    }
+
+    @GenerateMicroBenchmark
+    public void pooledHeapAllocAndFree_2_256() {
+        ByteBuf buffer = pooledHeapAllocator.buffer(256);
+        buffer.release();
+    }
+
+    @GenerateMicroBenchmark
+    public void pooledHeapAllocAndFree_3_1024() {
+        ByteBuf buffer = pooledHeapAllocator.buffer(1024);
+        buffer.release();
+    }
+
+    @GenerateMicroBenchmark
+    public void pooledHeapAllocAndFree_4_4096() {
+        ByteBuf buffer = pooledHeapAllocator.buffer(4096);
+        buffer.release();
+    }
+
+    @GenerateMicroBenchmark
+    public void pooledHeapAllocAndFree_5_16384() {
+        ByteBuf buffer = pooledHeapAllocator.buffer(16384);
+        buffer.release();
+    }
+
+    @GenerateMicroBenchmark
+    public void pooledHeapAllocAndFree_6_65536() {
+        ByteBuf buffer = pooledHeapAllocator.buffer(65536);
+        buffer.release();
+    }
+
+    @GenerateMicroBenchmark
+    public void pooledDirectAllocAndFree_1_0() {
+        ByteBuf buffer = pooledDirectAllocator.buffer(0);
+        buffer.release();
+    }
+
+    @GenerateMicroBenchmark
+    public void pooledDirectAllocAndFree_2_256() {
+        ByteBuf buffer = pooledDirectAllocator.buffer(256);
+        buffer.release();
+    }
+
+    @GenerateMicroBenchmark
+    public void pooledDirectAllocAndFree_3_1024() {
+        ByteBuf buffer = pooledDirectAllocator.buffer(1024);
+        buffer.release();
+    }
+
+    @GenerateMicroBenchmark
+    public void pooledDirectAllocAndFree_4_4096() {
+        ByteBuf buffer = pooledDirectAllocator.buffer(4096);
+        buffer.release();
+    }
+
+    @GenerateMicroBenchmark
+    public void pooledDirectAllocAndFree_5_16384() {
+        ByteBuf buffer = pooledDirectAllocator.buffer(16384);
+        buffer.release();
+    }
+
+    @GenerateMicroBenchmark
+    public void pooledDirectAllocAndFree_6_65536() {
+        ByteBuf buffer = pooledDirectAllocator.buffer(65536);
+        buffer.release();
     }
 }

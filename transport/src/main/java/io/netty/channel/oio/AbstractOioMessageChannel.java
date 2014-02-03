@@ -15,84 +15,63 @@
  */
 package io.netty.channel.oio;
 
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.EventLoop;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Abstract base class for OIO which reads and writes objects from/to a Socket
  */
 public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
 
-    /**
-     * @see AbstractOioChannel#AbstractOioChannel(Channel, Integer)
-     */
-    protected AbstractOioMessageChannel(Channel parent, Integer id) {
-        super(parent, id);
+    private final List<Object> readBuf = new ArrayList<Object>();
+
+    protected AbstractOioMessageChannel(Channel parent, EventLoop eventLoop) {
+        super(parent, eventLoop);
     }
 
     @Override
     protected void doRead() {
         final ChannelPipeline pipeline = pipeline();
-        final MessageBuf<Object> msgBuf = pipeline.inboundMessageBuffer();
         boolean closed = false;
-        boolean read = false;
-        boolean firedChannelReadSuspended = false;
+        Throwable exception = null;
         try {
-            int localReadAmount = doReadMessages(msgBuf);
-            if (localReadAmount > 0) {
-                read = true;
-            } else if (localReadAmount < 0) {
+            int localReadAmount = doReadMessages(readBuf);
+            if (localReadAmount < 0) {
                 closed = true;
             }
         } catch (Throwable t) {
-            if (read) {
-                read = false;
-                pipeline.fireInboundBufferUpdated();
+            exception = t;
+        }
+
+        int size = readBuf.size();
+        for (int i = 0; i < size; i ++) {
+            pipeline.fireChannelRead(readBuf.get(i));
+        }
+        readBuf.clear();
+        pipeline.fireChannelReadComplete();
+
+        if (exception != null) {
+            if (exception instanceof IOException) {
+                closed = true;
             }
-            firedChannelReadSuspended = true;
-            pipeline.fireChannelReadSuspended();
-            pipeline.fireExceptionCaught(t);
-            if (t instanceof IOException) {
-                unsafe().close(unsafe().voidFuture());
-            }
-        } finally {
-            if (read) {
-                pipeline.fireInboundBufferUpdated();
-            }
-            if (!firedChannelReadSuspended) {
-                pipeline.fireChannelReadSuspended();
-            }
-            if (closed && isOpen()) {
-                unsafe().close(unsafe().voidFuture());
+
+            pipeline().fireExceptionCaught(exception);
+        }
+
+        if (closed) {
+            if (isOpen()) {
+                unsafe().close(unsafe().voidPromise());
             }
         }
     }
 
-    @Override
-    protected void doFlushMessageBuffer(MessageBuf<Object> buf) throws Exception {
-        while (!buf.isEmpty()) {
-            doWriteMessages(buf);
-        }
-    }
-
     /**
-     * Read Objects from the underlying Socket.
-     *
-     * @param buf           the {@link MessageBuf} into which the read objects will be written
-     * @return amount       the number of objects read. This may return a negative amount if the underlying
-     *                      Socket was closed
-     * @throws Exception    is thrown if an error accoured
+     * Read messages into the given array and return the amount which was read.
      */
-    protected abstract int doReadMessages(MessageBuf<Object> buf) throws Exception;
-
-    /**
-     * Write the Objects which is hold by the {@link MessageBuf} to the underlying Socket.
-     *
-     * @param buf           the {@link MessageBuf} which holds the data to transfer
-     * @throws Exception    is thrown if an error accoured
-     */
-    protected abstract void doWriteMessages(MessageBuf<Object> buf) throws Exception;
+    protected abstract int doReadMessages(List<Object> msgs) throws Exception;
 }

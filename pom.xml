@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.0.0.CR2-SNAPSHOT</version>
+  <version>5.0.0.Alpha2-SNAPSHOT</version>
 
   <name>Netty</name>
   <url>http://netty.io/</url>
@@ -67,13 +67,32 @@
     </developer>
   </developers>
 
+  <profiles>
+    <profile>
+      <id>leak</id>
+      <properties>
+        <test.jvm.argLine>
+          -server 
+          -dsa -da -ea:io.netty...
+          -XX:+AggressiveOpts
+          -XX:+TieredCompilation
+          -XX:+UseBiasedLocking
+          -XX:+UseFastAccessorMethods
+          -XX:+UseStringCache
+          -XX:+OptimizeStringConcat
+          -XX:+HeapDumpOnOutOfMemoryError
+          -Dio.netty.leakDetectionLevel=3
+        </test.jvm.argLine>
+      </properties>
+    </profile>
+  </profiles>
+
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    <jboss.marshalling.version>1.3.17.GA</jboss.marshalling.version>
+    <jboss.marshalling.version>1.3.18.GA</jboss.marshalling.version>
     <test.jvm.argLine>
       -server 
-      -Dio.netty.resourceLeakDetection
       -dsa -da -ea:io.netty...
       -XX:+AggressiveOpts
       -XX:+TieredCompilation
@@ -84,12 +103,13 @@
       -XX:+HeapDumpOnOutOfMemoryError
     </test.jvm.argLine>
   </properties>
- 
+
   <modules>
     <module>common</module>
     <module>buffer</module>
     <module>codec</module>
     <module>codec-http</module>
+    <module>codec-memcache</module>
     <module>codec-socks</module>
     <module>transport</module>
     <module>transport-rxtx</module>
@@ -98,7 +118,6 @@
     <module>handler</module>
     <module>example</module>
     <module>testsuite</module>
-    <module>testsuite-osgi</module>
     <module>microbench</module>
     <module>all</module>
     <module>tarball</module>
@@ -110,7 +129,7 @@
       <dependency>
         <groupId>org.javassist</groupId>
         <artifactId>javassist</artifactId>
-        <version>3.17.1-GA</version>
+        <version>3.18.0-GA</version>
         <scope>compile</scope>
         <optional>true</optional>
       </dependency>
@@ -124,6 +143,13 @@
         <optional>true</optional>
       </dependency>
     
+      <!-- SPDY Example - completely optional -->
+      <dependency>
+        <groupId>org.eclipse.jetty.npn</groupId>
+        <artifactId>npn-api</artifactId>
+        <version>1.1.0.v20120525</version>
+      </dependency>
+        
       <dependency>
         <groupId>com.google.protobuf</groupId>
         <artifactId>protobuf-java</artifactId>
@@ -144,7 +170,7 @@
       <dependency>
         <groupId>com.barchart.udt</groupId>
         <artifactId>barchart-udt-bundle</artifactId>
-        <version>2.2.6</version>
+        <version>2.3.0</version>
       </dependency>
 
       <dependency>
@@ -156,12 +182,12 @@
       <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-api</artifactId>
-        <version>1.7.4</version>
+        <version>1.7.5</version>
       </dependency>
       <dependency>
         <groupId>commons-logging</groupId>
         <artifactId>commons-logging</artifactId>
-        <version>1.1.1</version>
+        <version>1.1.3</version>
       </dependency>
       <dependency>
         <groupId>log4j</groupId>
@@ -195,6 +221,38 @@
         <version>2.2.0</version>
       </dependency>
       
+      <!-- Common test dependencies -->
+      <dependency>
+        <groupId>junit</groupId>
+        <artifactId>junit</artifactId>
+        <version>4.11</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.easymock</groupId>
+        <artifactId>easymock</artifactId>
+        <version>3.2</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.easymock</groupId>
+        <artifactId>easymockclassextension</artifactId>
+        <version>3.2</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.jmock</groupId>
+        <artifactId>jmock-junit4</artifactId>
+        <version>2.6.0</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>ch.qos.logback</groupId>
+        <artifactId>logback-classic</artifactId>
+        <version>1.0.13</version>
+        <scope>test</scope>
+      </dependency>
+
       <!-- Test dependencies for jboss marshalling encoder/decoder -->
       <dependency>
         <groupId>org.jboss.marshalling</groupId>
@@ -231,31 +289,26 @@
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <version>4.11</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.easymock</groupId>
       <artifactId>easymock</artifactId>
-      <version>3.1</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.easymock</groupId>
       <artifactId>easymockclassextension</artifactId>
-      <version>3.1</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.jmock</groupId>
       <artifactId>jmock-junit4</artifactId>
-      <version>2.6.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
-      <version>1.0.10</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -264,7 +317,7 @@
     <plugins>
       <plugin>
         <artifactId>maven-enforcer-plugin</artifactId>
-        <version>1.2</version>
+        <version>1.3</version>
         <executions>
           <execution>
             <id>enforce-tools</id>
@@ -288,7 +341,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.0</version>
+        <version>3.1</version>
         <configuration>
           <compilerVersion>1.7</compilerVersion>
           <fork>true</fork>
@@ -307,6 +360,8 @@
             <Xlint:deprecation />
           </compilerArguments>
           -->
+          <meminitial>256m</meminitial>
+          <maxmem>1024m</maxmem>
         </configuration>
       </plugin>
       <plugin>
@@ -324,6 +379,7 @@
           <ignores>
             <ignore>sun.misc.Unsafe</ignore>
             <ignore>sun.misc.Cleaner</ignore>
+            <ignore>sun.nio.ch.DirectBuffer</ignore>
 
             <ignore>java.util.zip.Deflater</ignore>
 
@@ -399,24 +455,61 @@
       <plugin>
         <groupId>org.apache.felix</groupId>
         <artifactId>maven-bundle-plugin</artifactId>
-        <version>2.3.7</version>
-        <extensions>true</extensions>
-      </plugin>             
-       <plugin>
-        <artifactId>maven-source-plugin</artifactId>
-        <version>2.2.1</version>
+        <version>2.4.0</version>
         <executions>
           <execution>
+            <id>generate-manifest</id>
+            <phase>process-classes</phase>
+            <goals>
+              <goal>manifest</goal>
+            </goals>
+            <configuration>
+              <instructions>
+                <Export-Package>${project.groupId}.*</Export-Package>
+                <!-- enforce JVM vendor package as optional -->
+                <Import-Package>sun.misc.*;resolution:=optional,*</Import-Package>
+                <!-- override "internal" private package convention -->
+                <Private-Package>!*</Private-Package>
+              </instructions>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>             
+      <plugin>
+        <artifactId>maven-source-plugin</artifactId>
+        <version>2.2.1</version>
+        <configuration>
+          <!--
+            ~ Add generated MANIFEST.MF.
+            ~ See https://github.com/netty/netty/issues/2058
+          -->
+          <useDefaultManifestFile>true</useDefaultManifestFile>
+        </configuration>
+        <executions>
+          <!--
+            ~ This workaround prevents Maven from executing the 'generate-sources' phase twice.
+            ~ See http://jira.codehaus.org/browse/MSOURCES-13
+            ~ and http://blog.peterlynch.ca/2010/05/maven-how-to-prevent-generate-sources.html
+            -->
+          <execution>
             <id>attach-sources</id>
+            <phase>invalid</phase>
             <goals>
               <goal>jar</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>attach-sources-no-fork</id>
+            <phase>package</phase>
+            <goals>
+              <goal>jar-no-fork</goal>
             </goals>
           </execution>
         </executions>
       </plugin>
       <plugin>
         <artifactId>maven-javadoc-plugin</artifactId>
-        <version>2.9</version>
+        <version>2.9.1</version>
         <configuration>
           <detectOfflineLinks>false</detectOfflineLinks>
           <breakiterator>true</breakiterator>
@@ -434,7 +527,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-release-plugin</artifactId>
-        <version>2.4</version>
+        <version>2.4.2</version>
         <configuration>
           <useReleaseProfile>false</useReleaseProfile>
           <arguments>-P release,sonatype-oss-release,full,no-osgi</arguments>
@@ -442,8 +535,153 @@
           <allowTimestampedSnapshots>false</allowTimestampedSnapshots>
           <tagNameFormat>netty-@{project.version}</tagNameFormat>
         </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>org.apache.maven.scm</groupId>
+            <artifactId>maven-scm-api</artifactId>
+            <version>1.8.1</version>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.maven.scm</groupId>
+            <artifactId>maven-scm-provider-gitexe</artifactId>
+            <version>1.8.1</version>
+          </dependency>
+        </dependencies>
       </plugin>
-      
+
+      <!-- Ensure to put maven-antrun-plugin at the end of the plugin list
+           so that they are run lastly in the same phase. -->
+      <plugin>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <executions>
+          <!-- Generate the version properties for all artifacts. -->
+          <execution>
+            <id>write-version-properties</id>
+            <phase>initialize</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <taskdef resource="net/sf/antcontrib/antlib.xml" />
+
+                <!-- Get the information about the latest commit -->
+                <exec executable="git" outputproperty="gitOutput.shortCommitHash" resultproperty="gitExitCode.shortCommitHash" failonerror="false" failifexecutionfails="false">
+                  <arg value="log" />
+                  <arg value="-1" />
+                  <arg value="--format=format:%h" />
+                </exec>
+                <if>
+                  <equals arg2="0" arg1="${gitExitCode.shortCommitHash}" />
+                  <then>
+                    <property name="shortCommitHash" value="${gitOutput.shortCommitHash}" />
+                  </then>
+                  <else>
+                    <property name="shortCommitHash" value="0" />
+                  </else>
+                </if>
+
+                <exec executable="git" outputproperty="gitOutput.longCommitHash" resultproperty="gitExitCode.longCommitHash" failonerror="false" failifexecutionfails="false">
+                  <arg value="log" />
+                  <arg value="-1" />
+                  <arg value="--format=format:%H" />
+                </exec>
+                <if>
+                  <equals arg2="0" arg1="${gitExitCode.longCommitHash}" />
+                  <then>
+                    <property name="longCommitHash" value="${gitOutput.longCommitHash}" />
+                  </then>
+                  <else>
+                    <property name="longCommitHash" value="0000000000000000000000000000000000000000" />
+                  </else>
+                </if>
+
+                <exec executable="git" outputproperty="gitOutput.commitDate" resultproperty="gitExitCode.commitDate" failonerror="false" failifexecutionfails="false">
+                  <arg value="log" />
+                  <arg value="-1" />
+                  <arg value="--format=format:%cd" />
+                  <arg value="--date=iso" />
+                </exec>
+                <if>
+                  <equals arg2="0" arg1="${gitExitCode.commitDate}" />
+                  <then>
+                    <property name="commitDate" value="${gitOutput.commitDate}" />
+                  </then>
+                  <else>
+                    <property name="commitDate" value="1970-01-01 00:00:00 +0000" />
+                  </else>
+                </if>
+
+                <exec executable="git" outputproperty="gitOutput.repoStatus" resultproperty="gitExitCode.repoStatus" failonerror="false" failifexecutionfails="false">
+                  <arg value="status" />
+                  <arg value="--porcelain" />
+                </exec>
+                <if>
+                  <equals arg2="0" arg1="${gitExitCode.repoStatus}" />
+                  <then>
+                    <if>
+                      <equals arg2="" arg1="${gitOutput.repoStatus}" />
+                      <then>
+                        <property name="repoStatus" value="clean" />
+                      </then>
+                      <else>
+                        <property name="repoStatus" value="dirty" />
+                      </else>
+                    </if>
+                  </then>
+                  <else>
+                    <property name="repoStatus" value="unknown" />
+                  </else>
+                </if>
+
+                <!-- Print the obtained commit information. -->
+                <echo>Current commit: ${shortCommitHash} on ${commitDate}</echo>
+
+                <!-- Generate the .properties file. -->
+                <!--
+                <property name="metaInfDir" value="${project.basedir}/src/main/resources/META-INF" />
+                -->
+                <property name="metaInfDir" value="${project.build.outputDirectory}/META-INF" />
+                <property name="versionPropFile" value="${metaInfDir}/${project.groupId}.versions.properties" />
+                <mkdir dir="${metaInfDir}" />
+                <delete file="${versionPropFile}" quiet="true" />
+
+                <propertyfile file="${versionPropFile}" comment="Generated by netty-parent/pom.xml">
+                  <entry key="${project.artifactId}.version" value="${project.version}" />
+                  <entry key="${project.artifactId}.buildDate" type="date" value="now" pattern="yyyy-MM-dd HH:mm:ss Z" />
+                  <entry key="${project.artifactId}.commitDate" value="${commitDate}" />
+                  <entry key="${project.artifactId}.shortCommitHash" value="${shortCommitHash}" />
+                  <entry key="${project.artifactId}.longCommitHash" value="${longCommitHash}" />
+                  <entry key="${project.artifactId}.repoStatus" value="${repoStatus}" />
+                </propertyfile>
+              </target>
+            </configuration>
+          </execution>
+        </executions>
+        <dependencies>
+          <dependency>
+            <groupId>org.apache.ant</groupId>
+            <artifactId>ant</artifactId>
+            <version>1.8.2</version>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.ant</groupId>
+            <artifactId>ant-launcher</artifactId>
+            <version>1.8.2</version>
+          </dependency>
+          <dependency>
+            <groupId>ant-contrib</groupId>
+            <artifactId>ant-contrib</artifactId>
+            <version>1.0b3</version>
+            <exclusions>
+              <exclusion>
+                <groupId>ant</groupId>
+                <artifactId>ant</artifactId>
+              </exclusion>
+            </exclusions>
+          </dependency>
+        </dependencies>
+      </plugin>
     </plugins>
 
     <pluginManagement>
@@ -451,12 +689,12 @@
         <!-- keep surefire and failsafe in sync -->
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>
-          <version>2.14</version>
+          <version>2.15</version>
         </plugin>
         <!-- keep surefire and failsafe in sync -->
         <plugin>
           <artifactId>maven-failsafe-plugin</artifactId>
-          <version>2.14</version>
+          <version>2.15</version>
         </plugin>
         <plugin>
           <artifactId>maven-clean-plugin</artifactId>
@@ -469,16 +707,31 @@
         <plugin>
           <artifactId>maven-jar-plugin</artifactId>
           <version>2.4</version>
+          <executions>
+            <execution>
+              <id>default-jar</id>
+              <configuration>
+                <archive>
+                  <manifest>
+                    <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                  </manifest>
+                  <index>true</index>
+                  <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
+                </archive>
+              </configuration>
+            </execution>
+          </executions>
         </plugin>
         <plugin>
           <artifactId>maven-dependency-plugin</artifactId>
-          <version>2.7</version>
+          <version>2.8</version>
         </plugin>
         <plugin>
           <artifactId>maven-assembly-plugin</artifactId>
           <version>2.4</version>
         </plugin>
         <plugin>
+          <!-- Do NOT upgrade -->
           <artifactId>maven-jxr-plugin</artifactId>
           <version>2.2</version>
         </plugin>
@@ -502,7 +755,7 @@
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>build-helper-maven-plugin</artifactId>
-          <version>1.7</version>
+          <version>1.8</version>
         </plugin>               
 
         <!-- Workaround for the 'M2E plugin execution not covered' problem.
@@ -514,6 +767,19 @@
           <configuration>
             <lifecycleMappingMetadata>
               <pluginExecutions>
+                <pluginExecution>
+                  <pluginExecutionFilter>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-antrun-plugin</artifactId>
+                    <versionRange>[1.7,)</versionRange>
+                    <goals>
+                      <goal>run</goal>
+                    </goals>
+                  </pluginExecutionFilter>
+                  <action>
+                    <ignore />
+                  </action>
+                </pluginExecution>
                 <pluginExecution>
                   <pluginExecutionFilter>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -559,6 +825,19 @@
                     </execute>
                   </action>
                 </pluginExecution>
+                <pluginExecution>
+                  <pluginExecutionFilter>
+                    <groupId>org.apache.felix</groupId>
+                    <artifactId>maven-bundle-plugin</artifactId>
+                    <versionRange>[2.4,)</versionRange>
+                    <goals>
+                      <goal>manifest</goal>
+                    </goals>
+                  </pluginExecutionFilter>
+                  <action>
+                    <ignore />
+                  </action>
+                </pluginExecution>
               </pluginExecutions>
             </lifecycleMappingMetadata>
           </configuration>
@@ -567,3 +846,4 @@
     </pluginManagement>
   </build>
 </project>
+

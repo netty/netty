@@ -16,12 +16,14 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.Unpooled;
-import io.netty.channel.embedded.EmbeddedByteChannel;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.PrematureChannelClosureException;
 import io.netty.util.CharsetUtil;
 import org.junit.Test;
 
+import static io.netty.util.ReferenceCountUtil.*;
+import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
 
 public class HttpClientCodecTest {
@@ -37,32 +39,60 @@ public class HttpClientCodecTest {
     @Test
     public void testFailsNotOnRequestResponse() {
         HttpClientCodec codec = new HttpClientCodec(4096, 8192, 8192, true);
-        EmbeddedByteChannel ch = new EmbeddedByteChannel(codec);
+        EmbeddedChannel ch = new EmbeddedChannel(codec);
 
         ch.writeOutbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/"));
         ch.writeInbound(Unpooled.copiedBuffer(RESPONSE, CharsetUtil.ISO_8859_1));
         ch.finish();
+
+        for (;;) {
+            Object msg = ch.readOutbound();
+            if (msg == null) {
+                break;
+            }
+            release(msg);
+        }
+        for (;;) {
+            Object msg = ch.readInbound();
+            if (msg == null) {
+                break;
+            }
+            release(msg);
+        }
     }
 
     @Test
     public void testFailsNotOnRequestResponseChunked() {
         HttpClientCodec codec = new HttpClientCodec(4096, 8192, 8192, true);
-        EmbeddedByteChannel ch = new EmbeddedByteChannel(codec);
+        EmbeddedChannel ch = new EmbeddedChannel(codec);
 
         ch.writeOutbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/"));
         ch.writeInbound(Unpooled.copiedBuffer(CHUNKED_RESPONSE, CharsetUtil.ISO_8859_1));
         ch.finish();
+        for (;;) {
+            Object msg = ch.readOutbound();
+            if (msg == null) {
+                break;
+            }
+            release(msg);
+        }
+        for (;;) {
+            Object msg = ch.readInbound();
+            if (msg == null) {
+                break;
+            }
+            release(msg);
+        }
     }
 
     @Test
     public void testFailsOnMissingResponse() {
         HttpClientCodec codec = new HttpClientCodec(4096, 8192, 8192, true);
-        EmbeddedByteChannel ch = new EmbeddedByteChannel(codec);
+        EmbeddedChannel ch = new EmbeddedChannel(codec);
 
         assertTrue(ch.writeOutbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
                 "http://localhost/")));
-        assertNotNull(ch.readOutbound());
-
+        assertNotNull(releaseLater(ch.readOutbound()));
         try {
             ch.finish();
             fail();
@@ -74,10 +104,18 @@ public class HttpClientCodecTest {
     @Test
     public void testFailsOnIncompleteChunkedResponse() {
         HttpClientCodec codec = new HttpClientCodec(4096, 8192, 8192, true);
-        EmbeddedByteChannel ch = new EmbeddedByteChannel(codec);
+        EmbeddedChannel ch = new EmbeddedChannel(codec);
 
-        ch.writeOutbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/"));
-        ch.writeInbound(Unpooled.copiedBuffer(INCOMPLETE_CHUNKED_RESPONSE, CharsetUtil.ISO_8859_1));
+        ch.writeOutbound(releaseLater(
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/")));
+        assertNotNull(releaseLater(ch.readOutbound()));
+        assertNull(ch.readInbound());
+        ch.writeInbound(releaseLater(
+                Unpooled.copiedBuffer(INCOMPLETE_CHUNKED_RESPONSE, CharsetUtil.ISO_8859_1)));
+        assertThat(releaseLater(ch.readInbound()), instanceOf(HttpResponse.class));
+        assertThat(releaseLater(ch.readInbound()), instanceOf(HttpContent.class)); // Chunk 'first'
+        assertThat(releaseLater(ch.readInbound()), instanceOf(HttpContent.class)); // Chunk 'second'
+        assertNull(ch.readInbound());
 
         try {
             ch.finish();

@@ -17,8 +17,11 @@ package io.netty.handler.codec.rtsp;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.util.CharsetUtil;
+
+import static io.netty.handler.codec.http.HttpConstants.*;
 
 /**
  * Encodes an RTSP response represented in {@link FullHttpResponse} into
@@ -26,6 +29,7 @@ import io.netty.util.CharsetUtil;
 
  */
 public class RtspResponseEncoder extends RtspObjectEncoder<HttpResponse> {
+    private static final byte[] CRLF = { CR, LF };
 
     @Override
     public boolean acceptOutboundMessage(Object msg) throws Exception {
@@ -35,12 +39,11 @@ public class RtspResponseEncoder extends RtspObjectEncoder<HttpResponse> {
     @Override
     protected void encodeInitialLine(ByteBuf buf, HttpResponse response)
             throws Exception {
-        buf.writeBytes(response.getProtocolVersion().toString().getBytes(CharsetUtil.US_ASCII));
-        buf.writeByte((byte) ' ');
+        HttpHeaders.encodeAscii(response.getProtocolVersion().toString(), buf);
+        buf.writeByte(SP);
         buf.writeBytes(String.valueOf(response.getStatus().code()).getBytes(CharsetUtil.US_ASCII));
-        buf.writeByte((byte) ' ');
-        buf.writeBytes(String.valueOf(response.getStatus().reasonPhrase()).getBytes(CharsetUtil.US_ASCII));
-        buf.writeByte((byte) '\r');
-        buf.writeByte((byte) '\n');
+        buf.writeByte(SP);
+        HttpHeaders.encodeAscii(String.valueOf(response.getStatus().reasonPhrase()), buf);
+        buf.writeBytes(CRLF);
     }
 }

@@ -112,7 +112,7 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
         int oldCapacity = array.length;
         if (newCapacity > oldCapacity) {
             byte[] newArray = new byte[newCapacity];
-            System.arraycopy(array, readerIndex(), newArray, readerIndex(), readableBytes());
+            System.arraycopy(array, 0, newArray, 0, array.length);
             setArray(newArray);
         } else if (newCapacity < oldCapacity) {
             byte[] newArray = new byte[newCapacity];
@@ -194,7 +194,26 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public int getBytes(int index, GatheringByteChannel out, int length) throws IOException {
         ensureAccessible();
-        return out.write((ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length));
+        return getBytes(index, out, length, false);
+    }
+
+    private int getBytes(int index, GatheringByteChannel out, int length, boolean internal) throws IOException {
+        ensureAccessible();
+        ByteBuffer tmpBuf;
+        if (internal) {
+            tmpBuf = internalNioBuffer();
+        } else {
+            tmpBuf = ByteBuffer.wrap(array);
+        }
+        return out.write((ByteBuffer) tmpBuf.clear().position(index).limit(index + length));
+    }
+
+    @Override
+    public int readBytes(GatheringByteChannel out, int length) throws IOException {
+        checkReadableBytes(length);
+        int readBytes = getBytes(readerIndex, out, length, true);
+        readerIndex += readBytes;
+        return readBytes;
     }
 
     @Override
@@ -248,12 +267,17 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public ByteBuffer nioBuffer(int index, int length) {
         ensureAccessible();
-        return ByteBuffer.wrap(array, index, length);
+        return ByteBuffer.wrap(array, index, length).slice();
     }
 
     @Override
     public ByteBuffer[] nioBuffers(int index, int length) {
         return new ByteBuffer[] { nioBuffer(index, length) };
+    }
+
+    @Override
+    public ByteBuffer internalNioBuffer(int index, int length) {
+        return (ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length);
     }
 
     @Override
@@ -415,16 +439,6 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     protected void deallocate() {
         array = null;
-    }
-
-    @Override
-    public ByteBuf suspendIntermediaryDeallocations() {
-        return this;
-    }
-
-    @Override
-    public ByteBuf resumeIntermediaryDeallocations() {
-        return this;
     }
 
     @Override

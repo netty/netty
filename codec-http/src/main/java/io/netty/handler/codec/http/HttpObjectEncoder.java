@@ -17,10 +17,12 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.MessageToByteEncoder;
+import io.netty.channel.FileRegion;
+import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.StringUtil;
 
-import java.util.Map;
+import java.util.List;
 
 import static io.netty.buffer.Unpooled.*;
 import static io.netty.handler.codec.http.HttpConstants.*;
@@ -38,7 +40,13 @@ import static io.netty.handler.codec.http.HttpConstants.*;
  * To implement the encoder of such a derived protocol, extend this class and
  * implement all abstract methods properly.
  */
-public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageToByteEncoder<HttpObject> {
+public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageToMessageEncoder<Object> {
+    private static final byte[] CRLF = { CR, LF };
+    private static final byte[] ZERO_CRLF = { '0', CR, LF };
+    private static final byte[] ZERO_CRLF_CRLF = { '0', CR, LF, CR, LF };
+    private static final ByteBuf CRLF_BUF = unreleasableBuffer(directBuffer(CRLF.length).writeBytes(CRLF));
+    private static final ByteBuf ZERO_CRLF_CRLF_BUF = unreleasableBuffer(directBuffer(ZERO_CRLF_CRLF.length)
+            .writeBytes(ZERO_CRLF_CRLF));
 
     private static final int ST_INIT = 0;
     private static final int ST_CONTENT_NON_CHUNK = 1;
@@ -48,85 +56,131 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
     private int state = ST_INIT;
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, HttpObject msg, ByteBuf out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, Object msg, List<Object> out) throws Exception {
+        ByteBuf buf = null;
         if (msg instanceof HttpMessage) {
             if (state != ST_INIT) {
-                throw new IllegalStateException("unexpected message type: " + msg.getClass().getSimpleName());
+                throw new IllegalStateException("unexpected message type: " + StringUtil.simpleClassName(msg));
             }
 
             @SuppressWarnings({ "unchecked", "CastConflictsWithInstanceof" })
             H m = (H) msg;
 
+            buf = ctx.alloc().buffer();
             // Encode the message.
-            encodeInitialLine(out, m);
-            encodeHeaders(out, m);
-            out.writeByte(CR);
-            out.writeByte(LF);
-
+            encodeInitialLine(buf, m);
+            HttpHeaders.encode(m.headers(), buf);
+            buf.writeBytes(CRLF);
             state = HttpHeaders.isTransferEncodingChunked(m) ? ST_CONTENT_CHUNK : ST_CONTENT_NON_CHUNK;
         }
-
-        if (msg instanceof HttpContent) {
+        if (msg instanceof HttpContent || msg instanceof ByteBuf || msg instanceof FileRegion) {
             if (state == ST_INIT) {
-                throw new IllegalStateException("unexpected message type: " + msg.getClass().getSimpleName());
+                throw new IllegalStateException("unexpected message type: " + StringUtil.simpleClassName(msg));
             }
 
-            HttpContent chunk = (HttpContent) msg;
-            ByteBuf content = chunk.content();
-            int contentLength = content.readableBytes();
-
+            int contentLength = contentLength(msg);
             if (state == ST_CONTENT_NON_CHUNK) {
                 if (contentLength > 0) {
-                    out.writeBytes(content, content.readerIndex(), content.readableBytes());
+                    if (buf != null && buf.writableBytes() >= contentLength && msg instanceof HttpContent) {
+                        // merge into other buffer for performance reasons
+                        buf.writeBytes(((HttpContent) msg).content());
+                        out.add(buf);
+                    } else {
+                        if (buf != null) {
+                            out.add(buf);
+                        }
+                        out.add(encodeAndRetain(msg));
+                    }
+                } else {
+                    if (buf != null) {
+                        out.add(buf);
+                    } else {
+                        // Need to produce some output otherwise an
+                        // IllegalStateException will be thrown
+                        out.add(EMPTY_BUFFER);
+                    }
                 }
 
-                if (chunk instanceof LastHttpContent) {
+                if (msg instanceof LastHttpContent) {
                     state = ST_INIT;
                 }
             } else if (state == ST_CONTENT_CHUNK) {
-                if (contentLength > 0) {
-                    out.writeBytes(copiedBuffer(Integer.toHexString(contentLength), CharsetUtil.US_ASCII));
-                    out.writeByte(CR);
-                    out.writeByte(LF);
-                    out.writeBytes(content, content.readerIndex(), contentLength);
-                    out.writeByte(CR);
-                    out.writeByte(LF);
+                if (buf != null) {
+                    out.add(buf);
                 }
-
-                if (chunk instanceof LastHttpContent) {
-                    out.writeByte((byte) '0');
-                    out.writeByte(CR);
-                    out.writeByte(LF);
-                    encodeTrailingHeaders(out, (LastHttpContent) chunk);
-                    out.writeByte(CR);
-                    out.writeByte(LF);
-                    state = ST_INIT;
-                }
+                encodeChunkedContent(ctx, msg, contentLength, out);
             } else {
                 throw new Error();
+            }
+        } else {
+            if (buf != null) {
+                out.add(buf);
             }
         }
     }
 
-    private static void encodeHeaders(ByteBuf buf, HttpMessage message) {
-        for (Map.Entry<String, String> h: message.headers()) {
-            encodeHeader(buf, h.getKey(), h.getValue());
+    private void encodeChunkedContent(ChannelHandlerContext ctx, Object msg, int contentLength, List<Object> out) {
+        if (contentLength > 0) {
+            byte[] length = Integer.toHexString(contentLength).getBytes(CharsetUtil.US_ASCII);
+            ByteBuf buf = ctx.alloc().buffer(length.length + 2);
+            buf.writeBytes(length);
+            buf.writeBytes(CRLF);
+            out.add(buf);
+            out.add(encodeAndRetain(msg));
+            out.add(CRLF_BUF.duplicate());
+        }
+
+        if (msg instanceof LastHttpContent) {
+            HttpHeaders headers = ((LastHttpContent) msg).trailingHeaders();
+            if (headers.isEmpty()) {
+                out.add(ZERO_CRLF_CRLF_BUF.duplicate());
+            } else {
+                ByteBuf buf = ctx.alloc().buffer();
+                buf.writeBytes(ZERO_CRLF);
+                HttpHeaders.encode(headers, buf);
+                buf.writeBytes(CRLF);
+                out.add(buf);
+            }
+
+            state = ST_INIT;
+        } else {
+            if (contentLength == 0) {
+                // Need to produce some output otherwise an
+                // IllegalstateException will be thrown
+                out.add(EMPTY_BUFFER);
+            }
         }
     }
 
-    private static void encodeTrailingHeaders(ByteBuf buf, LastHttpContent trailer) {
-        for (Map.Entry<String, String> h: trailer.trailingHeaders()) {
-            encodeHeader(buf, h.getKey(), h.getValue());
-        }
+    @Override
+    public boolean acceptOutboundMessage(Object msg) throws Exception {
+        return msg instanceof HttpObject || msg instanceof ByteBuf || msg instanceof FileRegion;
     }
 
-    private static void encodeHeader(ByteBuf buf, String header, String value) {
-        buf.writeBytes(header.getBytes(CharsetUtil.US_ASCII));
-        buf.writeByte(COLON);
-        buf.writeByte(SP);
-        buf.writeBytes(value.getBytes(CharsetUtil.US_ASCII));
-        buf.writeByte(CR);
-        buf.writeByte(LF);
+    private static Object encodeAndRetain(Object msg) {
+        if (msg instanceof ByteBuf) {
+            return ((ByteBuf) msg).retain();
+        }
+        if (msg instanceof HttpContent) {
+            return ((HttpContent) msg).content().retain();
+        }
+        if (msg instanceof FileRegion) {
+            return ((FileRegion) msg).retain();
+        }
+        throw new IllegalStateException("unexpected message type: " + StringUtil.simpleClassName(msg));
+    }
+
+    private static int contentLength(Object msg) {
+        if (msg instanceof HttpContent) {
+            return ((HttpContent) msg).content().readableBytes();
+        }
+        if (msg instanceof ByteBuf) {
+            return ((ByteBuf) msg).readableBytes();
+        }
+        if (msg instanceof FileRegion) {
+            return (int) ((FileRegion) msg).count();
+        }
+        throw new IllegalStateException("unexpected message type: " + StringUtil.simpleClassName(msg));
     }
 
     protected abstract void encodeInitialLine(ByteBuf buf, H message) throws Exception;

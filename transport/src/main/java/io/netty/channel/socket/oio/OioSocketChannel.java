@@ -49,8 +49,8 @@ public class OioSocketChannel extends OioByteStreamChannel
     /**
      * Create a new instance with an new {@link Socket}
      */
-    public OioSocketChannel() {
-        this(new Socket());
+    public OioSocketChannel(EventLoop eventLoop) {
+        this(eventLoop, new Socket());
     }
 
     /**
@@ -58,8 +58,8 @@ public class OioSocketChannel extends OioByteStreamChannel
      *
      * @param socket    the {@link Socket} which is used by this instance
      */
-    public OioSocketChannel(Socket socket) {
-        this(null, null, socket);
+    public OioSocketChannel(EventLoop eventLoop, Socket socket) {
+        this(null, eventLoop, socket);
     }
 
     /**
@@ -67,11 +67,10 @@ public class OioSocketChannel extends OioByteStreamChannel
      *
      * @param parent    the parent {@link Channel} which was used to create this instance. This can be null if the
      *                  {@link} has no parent as it was created by your self.
-     * @param id        the id which should be used for this instance or {@code null} if a new one should be generated
      * @param socket    the {@link Socket} which is used by this instance
      */
-    public OioSocketChannel(Channel parent, Integer id, Socket socket) {
-        super(parent, id);
+    public OioSocketChannel(Channel parent, EventLoop eventLoop, Socket socket) {
+        super(parent, eventLoop);
         this.socket = socket;
         config = new DefaultOioSocketChannelConfig(this, socket);
 

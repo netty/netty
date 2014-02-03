@@ -15,71 +15,79 @@
  */
 package io.netty.handler.codec;
 
-import static org.junit.Assert.*;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
+import org.junit.Test;
 
 import java.nio.charset.Charset;
 
-import io.netty.util.CharsetUtil;
-import org.junit.Test;
-
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.channel.embedded.EmbeddedByteChannel;
+import static io.netty.util.ReferenceCountUtil.releaseLater;
+import static org.junit.Assert.*;
 
 public class DelimiterBasedFrameDecoderTest {
 
     @Test
     public void testMultipleLinesStrippedDelimiters() {
-        EmbeddedByteChannel ch = new EmbeddedByteChannel(new DelimiterBasedFrameDecoder(8192, true,
+        EmbeddedChannel ch = new EmbeddedChannel(new DelimiterBasedFrameDecoder(8192, true,
                 Delimiters.lineDelimiter()));
         ch.writeInbound(Unpooled.copiedBuffer("TestLine\r\ng\r\n", Charset.defaultCharset()));
-        assertEquals("TestLine", ((ByteBuf) ch.readInbound()).toString(Charset.defaultCharset()));
-        assertEquals("g", ((ByteBuf) ch.readInbound()).toString(Charset.defaultCharset()));
+        assertEquals("TestLine", releaseLater((ByteBuf) ch.readInbound()).toString(Charset.defaultCharset()));
+        assertEquals("g", releaseLater((ByteBuf) ch.readInbound()).toString(Charset.defaultCharset()));
         assertNull(ch.readInbound());
+        ch.finish();
     }
 
     @Test
     public void testIncompleteLinesStrippedDelimiters() {
-        EmbeddedByteChannel ch = new EmbeddedByteChannel(new DelimiterBasedFrameDecoder(8192, true,
+        EmbeddedChannel ch = new EmbeddedChannel(new DelimiterBasedFrameDecoder(8192, true,
                 Delimiters.lineDelimiter()));
         ch.writeInbound(Unpooled.copiedBuffer("Test", Charset.defaultCharset()));
         assertNull(ch.readInbound());
         ch.writeInbound(Unpooled.copiedBuffer("Line\r\ng\r\n", Charset.defaultCharset()));
-        assertEquals("TestLine", ((ByteBuf) ch.readInbound()).toString(Charset.defaultCharset()));
-        assertEquals("g", ((ByteBuf) ch.readInbound()).toString(Charset.defaultCharset()));
+        assertEquals("TestLine", releaseLater((ByteBuf) ch.readInbound()).toString(Charset.defaultCharset()));
+        assertEquals("g", releaseLater((ByteBuf) ch.readInbound()).toString(Charset.defaultCharset()));
         assertNull(ch.readInbound());
+        ch.finish();
     }
 
     @Test
     public void testMultipleLines() {
-        EmbeddedByteChannel ch = new EmbeddedByteChannel(new DelimiterBasedFrameDecoder(8192, false,
+        EmbeddedChannel ch = new EmbeddedChannel(new DelimiterBasedFrameDecoder(8192, false,
                 Delimiters.lineDelimiter()));
         ch.writeInbound(Unpooled.copiedBuffer("TestLine\r\ng\r\n", Charset.defaultCharset()));
-        assertEquals("TestLine\r\n", ((ByteBuf) ch.readInbound()).toString(Charset.defaultCharset()));
-        assertEquals("g\r\n", ((ByteBuf) ch.readInbound()).toString(Charset.defaultCharset()));
+        assertEquals("TestLine\r\n", releaseLater((ByteBuf) ch.readInbound()).toString(Charset.defaultCharset()));
+        assertEquals("g\r\n", releaseLater((ByteBuf) ch.readInbound()).toString(Charset.defaultCharset()));
         assertNull(ch.readInbound());
+        ch.finish();
     }
 
     @Test
     public void testIncompleteLines() {
-        EmbeddedByteChannel ch = new EmbeddedByteChannel(new DelimiterBasedFrameDecoder(8192, false,
+        EmbeddedChannel ch = new EmbeddedChannel(new DelimiterBasedFrameDecoder(8192, false,
                 Delimiters.lineDelimiter()));
         ch.writeInbound(Unpooled.copiedBuffer("Test", Charset.defaultCharset()));
         assertNull(ch.readInbound());
         ch.writeInbound(Unpooled.copiedBuffer("Line\r\ng\r\n", Charset.defaultCharset()));
-        assertEquals("TestLine\r\n", ((ByteBuf) ch.readInbound()).toString(Charset.defaultCharset()));
-        assertEquals("g\r\n", ((ByteBuf) ch.readInbound()).toString(Charset.defaultCharset()));
+        assertEquals("TestLine\r\n", releaseLater((ByteBuf) ch.readInbound()).toString(Charset.defaultCharset()));
+        assertEquals("g\r\n", releaseLater((ByteBuf) ch.readInbound()).toString(Charset.defaultCharset()));
         assertNull(ch.readInbound());
+        ch.finish();
     }
 
     @Test
     public void testDecode() throws Exception {
-        EmbeddedByteChannel ch = new EmbeddedByteChannel(
+        EmbeddedChannel ch = new EmbeddedChannel(
                 new DelimiterBasedFrameDecoder(8192, true, Delimiters.lineDelimiter()));
 
         ch.writeInbound(Unpooled.copiedBuffer("first\r\nsecond\nthird", CharsetUtil.US_ASCII));
-        assertEquals("first", ((ByteBuf) ch.readInbound()).toString(CharsetUtil.US_ASCII));
-        assertEquals("second", ((ByteBuf) ch.readInbound()).toString(CharsetUtil.US_ASCII));
+        assertEquals("first", releaseLater((ByteBuf) ch.readInbound()).toString(CharsetUtil.US_ASCII));
+        assertEquals("second", releaseLater((ByteBuf) ch.readInbound()).toString(CharsetUtil.US_ASCII));
         assertNull(ch.readInbound());
+        ch.finish();
+
+        ReferenceCountUtil.release(ch.readInbound());
     }
 }

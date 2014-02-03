@@ -40,6 +40,11 @@ public interface LastHttpContent extends HttpContent {
         }
 
         @Override
+        public LastHttpContent duplicate() {
+            return this;
+        }
+
+        @Override
         public HttpHeaders trailingHeaders() {
             return HttpHeaders.EMPTY_HEADERS;
         }
@@ -70,6 +75,16 @@ public interface LastHttpContent extends HttpContent {
         }
 
         @Override
+        public LastHttpContent touch() {
+            return this;
+        }
+
+        @Override
+        public LastHttpContent touch(Object hint) {
+            return this;
+        }
+
+        @Override
         public boolean release() {
             return false;
         }
@@ -77,6 +92,11 @@ public interface LastHttpContent extends HttpContent {
         @Override
         public boolean release(int decrement) {
             return false;
+        }
+
+        @Override
+        public String toString() {
+            return "EmptyLastHttpContent";
         }
     };
 
@@ -90,4 +110,13 @@ public interface LastHttpContent extends HttpContent {
 
     @Override
     LastHttpContent retain();
+
+    @Override
+    LastHttpContent touch();
+
+    @Override
+    LastHttpContent touch(Object hint);
+
+    @Override
+    LastHttpContent duplicate();
 }

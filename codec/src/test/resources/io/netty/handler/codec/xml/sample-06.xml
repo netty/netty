@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- this sample file tests CDATA blocks with explicitly unbalanced xml inside -->
+<chapter id="rockets">
+	<title>Rocket Launching</title>
+
+	<sect1 id="rocket-configuration">
+		<title>Configuration</title>
+
+		<para>
+			Configuring rockets should look very familiar if you're used
+			to Jakarta Commons-Rocket or Commons-Space. You will first
+			create a normal
+			<literal>ContextSource</literal>
+			then wrap it in a
+			<literal>RocketContextSource</literal>
+			.
+			<informalexample>
+				<programlisting><![CDATA[
+<beans>
+   ...
+   <bean id="contextSource" class="org.apache.commons.rocket.factory.RocketContextSource">
+      <property name="contextSource" ref="contextSourceTarget" />
+   ...
+]]></programlisting>
+			</informalexample>
+			In a real world example you would probably configure the
+			rocket options and enable connection validation; the above
+			serves as an example to demonstrate the general idea.
+		</para>
+
+		<sect2 id="rocket-advanced-configuration">
+			<title>Validation Configuration</title>
+
+			<para>
+				Adding validation and a few rocket configuration tweaks to
+				the above example is straight forward. Inject a
+				<literal>RocketContextValidator</literal>
+				and set when validation should occur and the rocket is
+				ready to go.
+				<informalexample>
+					<programlisting><![CDATA[
+<beans>
+   ...
+   <bean id="contextSource" class="org.apache.commons.rocket.factory.RocketContextSource">
+      <property name="contextSource" ref="contextSourceTarget" />
+   ...
+   <bean id="rocketContextValidator"
+   ...
+   <bean id="contextSourceTarget" class="org.apache.commons.rocket.core.support.OrbitContextSource">
+      <property name="url" value="orbit://localhost:12345" />
+   ...
+]]></programlisting>
+				</informalexample>
+				The above example will test each
+				<literal>RocketContext</literal>
+				before it is passed to the client application and test
+				<literal>RocketContext</literal>
+				s that have been sitting idle in orbit.
+			</para>
+		</sect2>
+	</sect1>
+</chapter>

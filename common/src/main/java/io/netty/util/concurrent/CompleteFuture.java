@@ -34,12 +34,15 @@ public abstract class CompleteFuture<V> extends AbstractFuture<V> {
         this.executor = executor;
     }
 
+    /**
+     * Return the {@link EventExecutor} which is used by this {@link CompleteFuture}.
+     */
     protected EventExecutor executor() {
         return executor;
     }
 
     @Override
-    public Future<V> addListener(GenericFutureListener<? extends Future<V>> listener) {
+    public Future<V> addListener(GenericFutureListener<? extends Future<? super V>> listener) {
         if (listener == null) {
             throw new NullPointerException("listener");
         }
@@ -48,11 +51,11 @@ public abstract class CompleteFuture<V> extends AbstractFuture<V> {
     }
 
     @Override
-    public Future<V> addListeners(GenericFutureListener<? extends Future<V>>... listeners) {
+    public Future<V> addListeners(GenericFutureListener<? extends Future<? super V>>... listeners) {
         if (listeners == null) {
             throw new NullPointerException("listeners");
         }
-        for (GenericFutureListener<? extends Future<V>> l: listeners) {
+        for (GenericFutureListener<? extends Future<? super V>> l: listeners) {
             if (l == null) {
                 break;
             }
@@ -62,13 +65,13 @@ public abstract class CompleteFuture<V> extends AbstractFuture<V> {
     }
 
     @Override
-    public Future<V> removeListener(GenericFutureListener<? extends Future<V>> listener) {
+    public Future<V> removeListener(GenericFutureListener<? extends Future<? super V>> listener) {
         // NOOP
         return this;
     }
 
     @Override
-    public Future<V> removeListeners(GenericFutureListener<? extends Future<V>>... listeners) {
+    public Future<V> removeListeners(GenericFutureListener<? extends Future<? super V>>... listeners) {
         // NOOP
         return this;
     }
@@ -125,5 +128,20 @@ public abstract class CompleteFuture<V> extends AbstractFuture<V> {
     @Override
     public boolean isDone() {
         return true;
+    }
+
+    @Override
+    public boolean isCancellable() {
+        return false;
+    }
+
+    @Override
+    public boolean isCancelled() {
+        return false;
+    }
+
+    @Override
+    public boolean cancel(boolean mayInterruptIfRunning) {
+        return false;
     }
 }

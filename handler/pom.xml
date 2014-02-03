@@ -20,11 +20,11 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.0.0.CR2-SNAPSHOT</version>
+    <version>5.0.0.Alpha2-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-handler</artifactId>
-  <packaging>bundle</packaging>
+  <packaging>jar</packaging>
 
   <name>Netty/Handler</name>
 
@@ -39,6 +39,11 @@
       <artifactId>netty-transport</artifactId>
       <version>${project.version}</version>
     </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-codec</artifactId>
+      <version>${project.version}</version>
+    </dependency>
   </dependencies>
-  
- </project>
+</project>
+

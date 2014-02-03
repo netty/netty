@@ -18,20 +18,39 @@ package io.netty.util.internal;
 
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import javassist.ClassClassPath;
+import javassist.ClassPath;
 import javassist.ClassPool;
 import javassist.CtClass;
 import javassist.Modifier;
+import javassist.NotFoundException;
 
 import java.lang.reflect.Method;
 
-final class JavassistTypeParameterMatcherGenerator {
+public final class JavassistTypeParameterMatcherGenerator {
 
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(JavassistTypeParameterMatcherGenerator.class);
 
     private static final ClassPool classPool = new ClassPool(true);
 
-    static TypeParameterMatcher generate(Class<?> type) {
+    static {
+        classPool.appendClassPath(new ClassClassPath(NoOpTypeParameterMatcher.class));
+    }
+
+    public static void appendClassPath(ClassPath classpath) {
+        classPool.appendClassPath(classpath);
+    }
+
+    public static void appendClassPath(String pathname) throws NotFoundException {
+        classPool.appendClassPath(pathname);
+    }
+
+    public static ClassPool classPool() {
+        return classPool;
+    }
+
+    public static TypeParameterMatcher generate(Class<?> type) {
         ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
         if (classLoader == null) {
             classLoader = ClassLoader.getSystemClassLoader();
@@ -39,7 +58,7 @@ final class JavassistTypeParameterMatcherGenerator {
         return generate(type, classLoader);
     }
 
-    static TypeParameterMatcher generate(Class<?> type, ClassLoader classLoader) {
+    public static TypeParameterMatcher generate(Class<?> type, ClassLoader classLoader) {
         final String typeName = typeName(type);
         final String className = "io.netty.util.internal.__matchers__." + typeName + "Matcher";
         try {

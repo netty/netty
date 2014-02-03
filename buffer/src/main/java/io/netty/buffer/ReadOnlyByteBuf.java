@@ -45,6 +45,16 @@ public class ReadOnlyByteBuf extends AbstractDerivedByteBuf {
     }
 
     @Override
+    public boolean isWritable() {
+        return false;
+    }
+
+    @Override
+    public boolean isWritable(int numBytes) {
+        return false;
+    }
+
+    @Override
     public ByteBuf unwrap() {
         return buffer;
     }
@@ -278,6 +288,21 @@ public class ReadOnlyByteBuf extends AbstractDerivedByteBuf {
     @Override
     public ByteBuffer[] nioBuffers(int index, int length) {
         return buffer.nioBuffers(index, length);
+    }
+
+    @Override
+    public ByteBuffer internalNioBuffer(int index, int length) {
+        return nioBuffer(index, length);
+    }
+
+    @Override
+    public int forEachByte(int index, int length, ByteBufProcessor processor) {
+        return buffer.forEachByte(index, length, processor);
+    }
+
+    @Override
+    public int forEachByteDesc(int index, int length, ByteBufProcessor processor) {
+        return buffer.forEachByteDesc(index, length, processor);
     }
 
     @Override

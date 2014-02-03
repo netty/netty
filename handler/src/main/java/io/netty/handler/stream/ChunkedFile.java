@@ -16,6 +16,7 @@
 package io.netty.handler.stream;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.FileRegion;
 
 import java.io.File;
@@ -23,13 +24,13 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 
 /**
- * A {@link ChunkedByteInput} that fetches data from a file chunk by chunk.
+ * A {@link ChunkedInput} that fetches data from a file chunk by chunk.
  * <p>
  * If your operating system supports
  * <a href="http://en.wikipedia.org/wiki/Zero-copy">zero-copy file transfer</a>
  * such as {@code sendfile()}, you might want to use {@link FileRegion} instead.
  */
-public class ChunkedFile implements ChunkedByteInput {
+public class ChunkedFile implements ChunkedInput<ByteBuf> {
 
     private final RandomAccessFile file;
     private final long startOffset;
@@ -48,7 +49,7 @@ public class ChunkedFile implements ChunkedByteInput {
      * Creates a new instance that fetches data from the specified file.
      *
      * @param chunkSize the number of bytes to fetch on each
-     *                  {@link #readChunk(ByteBuf)} call
+     *                  {@link #readChunk(ChannelHandlerContext)} call
      */
     public ChunkedFile(File file, int chunkSize) throws IOException {
         this(new RandomAccessFile(file, "r"), chunkSize);
@@ -65,7 +66,7 @@ public class ChunkedFile implements ChunkedByteInput {
      * Creates a new instance that fetches data from the specified file.
      *
      * @param chunkSize the number of bytes to fetch on each
-     *                  {@link #readChunk(ByteBuf)} call
+     *                  {@link #readChunk(ChannelHandlerContext)} call
      */
     public ChunkedFile(RandomAccessFile file, int chunkSize) throws IOException {
         this(file, 0, file.length(), chunkSize);
@@ -77,7 +78,7 @@ public class ChunkedFile implements ChunkedByteInput {
      * @param offset the offset of the file where the transfer begins
      * @param length the number of bytes to transfer
      * @param chunkSize the number of bytes to fetch on each
-     *                  {@link #readChunk(ByteBuf)} call
+     *                  {@link #readChunk(ChannelHandlerContext)} call
      */
     public ChunkedFile(RandomAccessFile file, long offset, long length, int chunkSize) throws IOException {
         if (file == null) {
@@ -137,20 +138,27 @@ public class ChunkedFile implements ChunkedByteInput {
     }
 
     @Override
-    public boolean readChunk(ByteBuf buffer) throws Exception {
+    public ByteBuf readChunk(ChannelHandlerContext ctx) throws Exception {
         long offset = this.offset;
         if (offset >= endOffset) {
-            return false;
+            return null;
         }
 
         int chunkSize = (int) Math.min(this.chunkSize, endOffset - offset);
         // Check if the buffer is backed by an byte array. If so we can optimize it a bit an safe a copy
 
-        byte[] chunk = new byte[chunkSize];
-        file.readFully(chunk);
-        buffer.writeBytes(chunk);
-        this.offset = offset + chunkSize;
-
-        return true;
+        ByteBuf buf = ctx.alloc().heapBuffer(chunkSize);
+        boolean release = true;
+        try {
+            file.readFully(buf.array(), buf.arrayOffset(), chunkSize);
+            buf.writerIndex(chunkSize);
+            this.offset = offset + chunkSize;
+            release = false;
+            return buf;
+        } finally {
+            if (release) {
+                buf.release();
+            }
+        }
     }
 }

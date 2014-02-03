@@ -17,33 +17,30 @@ package io.netty.channel.group;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelStateHandlerAdapter;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.util.concurrent.GlobalEventExecutor;
 import org.junit.Test;
 
 public class DefaultChannnelGroupTest {
 
     // Test for #1183
     @Test
-    public void testNotThrowBlockingOperationException() {
+    public void testNotThrowBlockingOperationException() throws Exception {
         EventLoopGroup bossGroup = new NioEventLoopGroup();
         EventLoopGroup workerGroup = new NioEventLoopGroup();
 
-        final ChannelGroup allChannels = new DefaultChannelGroup();
+        final ChannelGroup allChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
 
         ServerBootstrap b = new ServerBootstrap();
         b.group(bossGroup, workerGroup);
-        b.childHandler(new ChannelStateHandlerAdapter() {
+        b.childHandler(new ChannelHandlerAdapter() {
             @Override
             public void channelActive(ChannelHandlerContext ctx) {
                 allChannels.add(ctx.channel());
-            }
-
-            @Override
-            public void inboundBufferUpdated(ChannelHandlerContext ctx) {
             }
         });
         b.channel(NioServerSocketChannel.class);
@@ -57,5 +54,7 @@ public class DefaultChannnelGroupTest {
 
         bossGroup.shutdownGracefully();
         workerGroup.shutdownGracefully();
+        bossGroup.terminationFuture().sync();
+        workerGroup.terminationFuture().sync();
     }
 }

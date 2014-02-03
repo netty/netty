@@ -56,12 +56,13 @@ package io.netty.handler.codec.http.websocketx;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.MessageToByteEncoder;
+import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.nio.ByteBuffer;
+import java.util.List;
 
 /**
  * <p>
@@ -69,7 +70,7 @@ import java.nio.ByteBuffer;
  * href="https://github.com/joewalnes/webbit">webbit</a> and modified.
  * </p>
  */
-public class WebSocket08FrameEncoder extends MessageToByteEncoder<WebSocketFrame> {
+public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFrame> implements WebSocketFrameEncoder {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocket08FrameEncoder.class);
 
@@ -94,7 +95,7 @@ public class WebSocket08FrameEncoder extends MessageToByteEncoder<WebSocketFrame
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, WebSocketFrame msg, ByteBuf out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, WebSocketFrame msg, List<Object> out) throws Exception {
 
         byte[] mask;
 
@@ -138,38 +139,67 @@ public class WebSocket08FrameEncoder extends MessageToByteEncoder<WebSocketFrame
                     + length);
         }
 
-        int maskLength = maskPayload ? 4 : 0;
-        if (length <= 125) {
-            out.ensureWritable(2 + maskLength + length);
-            out.writeByte(b0);
-            byte b = (byte) (maskPayload ? 0x80 | (byte) length : (byte) length);
-            out.writeByte(b);
-        } else if (length <= 0xFFFF) {
-            out.ensureWritable(4 + maskLength + length);
-            out.writeByte(b0);
-            out.writeByte(maskPayload ? 0xFE : 126);
-            out.writeByte(length >>> 8 & 0xFF);
-            out.writeByte(length & 0xFF);
-        } else {
-            out.ensureWritable(10 + maskLength + length);
-            out.writeByte(b0);
-            out.writeByte(maskPayload ? 0xFF : 127);
-            out.writeLong(length);
-        }
-
-        // Write payload
-        if (maskPayload) {
-            int random = (int) (Math.random() * Integer.MAX_VALUE);
-            mask = ByteBuffer.allocate(4).putInt(random).array();
-            out.writeBytes(mask);
-
-            int counter = 0;
-            for (int i = data.readerIndex(); i < data.writerIndex(); i ++) {
-                byte byteData = data.getByte(i);
-                out.writeByte(byteData ^ mask[counter++ % 4]);
+        boolean release = true;
+        ByteBuf buf = null;
+        try {
+            int maskLength = maskPayload ? 4 : 0;
+            if (length <= 125) {
+                int size = 2 + maskLength;
+                if (maskPayload) {
+                    size += length;
+                }
+                buf = ctx.alloc().buffer(size);
+                buf.writeByte(b0);
+                byte b = (byte) (maskPayload ? 0x80 | (byte) length : (byte) length);
+                buf.writeByte(b);
+            } else if (length <= 0xFFFF) {
+                int size = 4 + maskLength;
+                if (maskPayload) {
+                    size += length;
+                }
+                buf = ctx.alloc().buffer(size);
+                buf.writeByte(b0);
+                buf.writeByte(maskPayload ? 0xFE : 126);
+                buf.writeByte(length >>> 8 & 0xFF);
+                buf.writeByte(length & 0xFF);
+            } else {
+                int size = 10 + maskLength;
+                if (maskPayload) {
+                    size += length;
+                }
+                buf = ctx.alloc().buffer(size);
+                buf.writeByte(b0);
+                buf.writeByte(maskPayload ? 0xFF : 127);
+                buf.writeLong(length);
             }
-        } else {
-            out.writeBytes(data, data.readerIndex(), data.readableBytes());
+
+            // Write payload
+            if (maskPayload) {
+                int random = (int) (Math.random() * Integer.MAX_VALUE);
+                mask = ByteBuffer.allocate(4).putInt(random).array();
+                buf.writeBytes(mask);
+
+                int counter = 0;
+                for (int i = data.readerIndex(); i < data.writerIndex(); i ++) {
+                    byte byteData = data.getByte(i);
+                    buf.writeByte(byteData ^ mask[counter++ % 4]);
+                }
+                out.add(buf);
+            } else {
+                if (buf.writableBytes() >= data.readableBytes()) {
+                    // merge buffers as this is cheaper then a gathering write if the payload is small enough
+                    buf.writeBytes(data);
+                    out.add(buf);
+                } else {
+                    out.add(buf);
+                    out.add(data.retain());
+                }
+            }
+            release = false;
+        } finally {
+            if (release && buf != null) {
+                buf.release();
+            }
         }
     }
 }

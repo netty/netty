@@ -38,16 +38,16 @@ public interface ChannelPromise extends ChannelFuture, Promise<Void> {
     ChannelPromise setFailure(Throwable cause);
 
     @Override
-    ChannelPromise addListener(GenericFutureListener<? extends Future<Void>> listener);
+    ChannelPromise addListener(GenericFutureListener<? extends Future<? super Void>> listener);
 
     @Override
-    ChannelPromise addListeners(GenericFutureListener<? extends Future<Void>>... listeners);
+    ChannelPromise addListeners(GenericFutureListener<? extends Future<? super Void>>... listeners);
 
     @Override
-    ChannelPromise removeListener(GenericFutureListener<? extends Future<Void>> listener);
+    ChannelPromise removeListener(GenericFutureListener<? extends Future<? super Void>> listener);
 
     @Override
-    ChannelPromise removeListeners(GenericFutureListener<? extends Future<Void>>... listeners);
+    ChannelPromise removeListeners(GenericFutureListener<? extends Future<? super Void>>... listeners);
 
     @Override
     ChannelPromise sync() throws InterruptedException;

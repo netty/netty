@@ -16,14 +16,13 @@
 
 package io.netty.bootstrap;
 
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandler.Sharable;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandler;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelHandlerAdapter;
+import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
-import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.util.concurrent.Future;
 import org.junit.Test;
 
@@ -34,11 +33,11 @@ public class BootstrapTest {
 
     @Test(timeout = 10000)
     public void testBindDeadLock() throws Exception {
-        EventLoopGroup groupA = new LocalEventLoopGroup(1);
-        EventLoopGroup groupB = new LocalEventLoopGroup(1);
+        EventLoopGroup groupA = new DefaultEventLoopGroup(1);
+        EventLoopGroup groupB = new DefaultEventLoopGroup(1);
 
         try {
-            ChannelInboundMessageHandler<Object> dummyHandler = new DummyHandler();
+            ChannelHandler dummyHandler = new DummyHandler();
 
             final Bootstrap bootstrapA = new Bootstrap();
             bootstrapA.group(groupA);
@@ -75,16 +74,18 @@ public class BootstrapTest {
         } finally {
             groupA.shutdownGracefully();
             groupB.shutdownGracefully();
+            groupA.terminationFuture().sync();
+            groupB.terminationFuture().sync();
         }
     }
 
     @Test(timeout = 10000)
     public void testConnectDeadLock() throws Exception {
-        EventLoopGroup groupA = new LocalEventLoopGroup(1);
-        EventLoopGroup groupB = new LocalEventLoopGroup(1);
+        EventLoopGroup groupA = new DefaultEventLoopGroup(1);
+        EventLoopGroup groupB = new DefaultEventLoopGroup(1);
 
         try {
-            ChannelInboundMessageHandler<Object> dummyHandler = new DummyHandler();
+            ChannelHandler dummyHandler = new DummyHandler();
 
             final Bootstrap bootstrapA = new Bootstrap();
             bootstrapA.group(groupA);
@@ -121,14 +122,11 @@ public class BootstrapTest {
         } finally {
             groupA.shutdownGracefully();
             groupB.shutdownGracefully();
+            groupA.terminationFuture().sync();
+            groupB.terminationFuture().sync();
         }
     }
 
     @Sharable
-    private static final class DummyHandler extends ChannelInboundMessageHandlerAdapter<Object> {
-        @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
-            // NOOP
-        }
-    }
+    private static final class DummyHandler extends ChannelHandlerAdapter { }
 }

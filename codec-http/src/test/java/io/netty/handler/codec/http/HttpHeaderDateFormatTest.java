@@ -32,7 +32,7 @@ public class HttpHeaderDateFormatTest {
 
     @Test
     public void testParse() throws ParseException {
-        HttpHeaderDateFormat format = new HttpHeaderDateFormat();
+        HttpHeaderDateFormat format = HttpHeaderDateFormat.get();
 
         final Date parsedDateWithSingleDigitDay = format.parse("Sun, 6 Nov 1994 08:49:37 GMT");
         Assert.assertNotNull(parsedDateWithSingleDigitDay);
@@ -61,7 +61,7 @@ public class HttpHeaderDateFormatTest {
 
     @Test
     public void testFormat() {
-        HttpHeaderDateFormat format = new HttpHeaderDateFormat();
+        HttpHeaderDateFormat format = HttpHeaderDateFormat.get();
 
         final String formatted = format.format(DATE);
         Assert.assertNotNull(formatted);

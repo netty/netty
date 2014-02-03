@@ -27,16 +27,6 @@ import java.util.concurrent.TimeoutException;
 public abstract class AbstractFuture<V> implements Future<V> {
 
     @Override
-    public boolean cancel(boolean mayInterruptIfRunning) {
-        return false;
-    }
-
-    @Override
-    public boolean isCancelled() {
-        return false;
-    }
-
-    @Override
     public V get() throws InterruptedException, ExecutionException {
         await();
 

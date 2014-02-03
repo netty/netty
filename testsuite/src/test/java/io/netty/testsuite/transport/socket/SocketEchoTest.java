@@ -20,13 +20,13 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelHandlerUtil;
-import io.netty.channel.ChannelInboundByteHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.DefaultEventLoopGroup;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.util.concurrent.DefaultEventExecutorGroup;
-import io.netty.util.concurrent.EventExecutorGroup;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -42,7 +42,7 @@ public class SocketEchoTest extends AbstractSocketTest {
     private static final Random random = new Random();
     static final byte[] data = new byte[1048576];
 
-    private static EventExecutorGroup group;
+    private static EventLoopGroup group;
 
     static {
         random.nextBytes(data);
@@ -50,12 +50,12 @@ public class SocketEchoTest extends AbstractSocketTest {
 
     @BeforeClass
     public static void createGroup() {
-        group = new DefaultEventExecutorGroup(2);
+        group = new DefaultEventLoopGroup(2);
     }
 
     @AfterClass
-    public static void destroyGroup() {
-        group.shutdownGracefully();
+    public static void destroyGroup() throws Exception {
+        group.shutdownGracefully().sync();
     }
 
     @Test(timeout = 30000)
@@ -64,43 +64,44 @@ public class SocketEchoTest extends AbstractSocketTest {
     }
 
     public void testSimpleEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSimpleEcho0(sb, cb, Integer.MAX_VALUE, false);
+        testSimpleEcho0(sb, cb, false, false);
     }
 
-    @Test(timeout = 30000)
-    public void testSimpleEchoWithBridge() throws Throwable {
+    @Test//(timeout = 30000)
+    public void testSimpleEchoWithAdditionalExecutor() throws Throwable {
         run();
     }
 
-    public void testSimpleEchoWithBridge(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSimpleEcho0(sb, cb, Integer.MAX_VALUE, true);
+    public void testSimpleEchoWithAdditionalExecutor(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        testSimpleEcho0(sb, cb, true, false);
     }
 
-    @Test(timeout = 30000)
-    public void testSimpleEchoWithBoundedBuffer() throws Throwable {
+    @Test//(timeout = 30000)
+    public void testSimpleEchoWithVoidPromise() throws Throwable {
         run();
     }
 
-    public void testSimpleEchoWithBoundedBuffer(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSimpleEcho0(sb, cb, 32, false);
+    public void testSimpleEchoWithVoidPromise(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        testSimpleEcho0(sb, cb, false, true);
     }
 
     @Test(timeout = 30000)
-    public void testSimpleEchoWithBridgedBoundedBuffer() throws Throwable {
+    public void testSimpleEchoWithAdditionalExecutorAndVoidPromise() throws Throwable {
         run();
     }
 
-    public void testSimpleEchoWithBridgedBoundedBuffer(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSimpleEcho0(sb, cb, 32, true);
+    public void testSimpleEchoWithAdditionalExecutorAndVoidPromise(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        testSimpleEcho0(sb, cb, true, true);
     }
 
     private static void testSimpleEcho0(
-            ServerBootstrap sb, Bootstrap cb, int maxInboundBufferSize, boolean bridge) throws Throwable {
+            ServerBootstrap sb, Bootstrap cb, boolean additionalExecutor, boolean voidPromise)
+            throws Throwable {
 
-        final EchoHandler sh = new EchoHandler(maxInboundBufferSize);
-        final EchoHandler ch = new EchoHandler(maxInboundBufferSize);
+        final EchoHandler sh = new EchoHandler();
+        final EchoHandler ch = new EchoHandler();
 
-        if (bridge) {
+        if (additionalExecutor) {
             sb.childHandler(new ChannelInitializer<SocketChannel>() {
                 @Override
                 protected void initChannel(SocketChannel c) throws Exception {
@@ -115,6 +116,12 @@ public class SocketEchoTest extends AbstractSocketTest {
             });
         } else {
             sb.childHandler(sh);
+            sb.handler(new ChannelHandlerAdapter() {
+                @Override
+                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                    cause.printStackTrace();
+                }
+            });
             cb.handler(ch);
         }
 
@@ -123,7 +130,12 @@ public class SocketEchoTest extends AbstractSocketTest {
 
         for (int i = 0; i < data.length;) {
             int length = Math.min(random.nextInt(1024 * 64), data.length - i);
-            cc.write(Unpooled.wrappedBuffer(data, i, length));
+            ByteBuf buf = Unpooled.wrappedBuffer(data, i, length);
+            if (voidPromise) {
+                assertEquals(cc.voidPromise(), cc.writeAndFlush(buf, cc.voidPromise()));
+            } else {
+                assertNotEquals(cc.voidPromise(), cc.writeAndFlush(buf));
+            }
             i += length;
         }
 
@@ -175,20 +187,10 @@ public class SocketEchoTest extends AbstractSocketTest {
         }
     }
 
-    private static class EchoHandler extends ChannelInboundByteHandlerAdapter {
-        private final int maxInboundBufferSize;
+    private static class EchoHandler extends SimpleChannelInboundHandler<ByteBuf> {
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;
-
-        EchoHandler(int maxInboundBufferSize) {
-            this.maxInboundBufferSize = maxInboundBufferSize;
-        }
-
-        @Override
-        public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            return ChannelHandlerUtil.allocate(ctx, 0, maxInboundBufferSize);
-        }
 
         @Override
         public void channelActive(ChannelHandlerContext ctx)
@@ -197,9 +199,7 @@ public class SocketEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void inboundBufferUpdated(
-                ChannelHandlerContext ctx, ByteBuf in)
-                throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
             byte[] actual = new byte[in.readableBytes()];
             in.readBytes(actual);
 
@@ -216,9 +216,15 @@ public class SocketEchoTest extends AbstractSocketTest {
         }
 
         @Override
+        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+            ctx.flush();
+        }
+
+        @Override
         public void exceptionCaught(ChannelHandlerContext ctx,
                 Throwable cause) throws Exception {
             if (exception.compareAndSet(null, cause)) {
+                cause.printStackTrace();
                 ctx.close();
             }
         }

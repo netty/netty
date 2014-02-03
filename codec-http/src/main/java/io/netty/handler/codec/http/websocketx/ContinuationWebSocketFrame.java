@@ -125,6 +125,11 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
     }
 
     @Override
+    public ContinuationWebSocketFrame duplicate() {
+        return new ContinuationWebSocketFrame(isFinalFragment(), rsv(), content().duplicate(), aggregatedText());
+    }
+
+    @Override
     public ContinuationWebSocketFrame retain() {
         super.retain();
         return this;
@@ -133,6 +138,18 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
     @Override
     public ContinuationWebSocketFrame retain(int increment) {
         super.retain(increment);
+        return this;
+    }
+
+    @Override
+    public ContinuationWebSocketFrame touch() {
+        super.touch();
+        return this;
+    }
+
+    @Override
+    public ContinuationWebSocketFrame touch(Object hint) {
+        super.touch(hint);
         return this;
     }
 }

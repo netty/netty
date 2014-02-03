@@ -19,8 +19,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelInboundByteHandler;
-import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -111,8 +109,8 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
     protected FullHttpResponse newHandshakeResponse(FullHttpRequest req, HttpHeaders headers) {
 
         // Serve the WebSocket handshake request.
-        if (!Values.UPGRADE.equalsIgnoreCase(req.headers().get(CONNECTION))
-                || !WEBSOCKET.equalsIgnoreCase(req.headers().get(Names.UPGRADE))) {
+        if (!HttpHeaders.equalsIgnoreCase(Values.UPGRADE, req.headers().get(CONNECTION))
+                || !HttpHeaders.equalsIgnoreCase(WEBSOCKET, req.headers().get(Names.UPGRADE))) {
             throw new WebSocketHandshakeException("not a WebSocket handshake request: missing upgrade");
         }
 
@@ -138,10 +136,11 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
             if (subprotocols != null) {
                 String selectedSubprotocol = selectSubprotocol(subprotocols);
                 if (selectedSubprotocol == null) {
-                    throw new WebSocketHandshakeException("Requested subprotocol(s) not supported: " + subprotocols);
+                    if (logger.isDebugEnabled()) {
+                        logger.debug(String.format("Requested subprotocol(s) not supported: %s.", subprotocols));
+                    }
                 } else {
                     res.headers().add(SEC_WEBSOCKET_PROTOCOL, selectedSubprotocol);
-                    setSelectedSubprotocol(selectedSubprotocol);
                 }
             }
 
@@ -180,16 +179,16 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
      */
     @Override
     public ChannelFuture close(Channel channel, CloseWebSocketFrame frame, ChannelPromise promise) {
-        return channel.write(frame, promise);
+        return channel.writeAndFlush(frame, promise);
     }
 
     @Override
-    protected ChannelInboundByteHandler newWebsocketDecoder() {
+    protected WebSocketFrameDecoder newWebsocketDecoder() {
         return new WebSocket00FrameDecoder(maxFramePayloadLength());
     }
 
     @Override
-    protected ChannelOutboundMessageHandler<WebSocketFrame> newWebSocketEncoder() {
+    protected WebSocketFrameEncoder newWebSocketEncoder() {
         return new WebSocket00FrameEncoder();
     }
 }

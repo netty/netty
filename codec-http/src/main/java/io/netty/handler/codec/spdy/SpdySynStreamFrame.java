@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,9 +16,9 @@
 package io.netty.handler.codec.spdy;
 
 /**
- * A SPDY Protocol SYN_STREAM Control Frame
+ * A SPDY Protocol SYN_STREAM Frame
  */
-public interface SpdySynStreamFrame extends SpdyHeaderBlock, SpdyControlFrame , SpdyStreamFrame {
+public interface SpdySynStreamFrame extends SpdyHeadersFrame {
 
     /**
      * Returns the Associated-To-Stream-ID of this frame.

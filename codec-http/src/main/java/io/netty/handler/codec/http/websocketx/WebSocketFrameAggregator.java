@@ -17,10 +17,11 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.TooLongFrameException;
+
+import java.util.List;
 
 /**
  * Handler that aggregate fragmented WebSocketFrame's.
@@ -31,6 +32,7 @@ import io.netty.handler.codec.TooLongFrameException;
 public class WebSocketFrameAggregator extends MessageToMessageDecoder<WebSocketFrame> {
     private final int maxFrameSize;
     private WebSocketFrame currentFrame;
+    private boolean tooLongFrameFound;
 
     /**
      * Construct a new instance
@@ -46,8 +48,9 @@ public class WebSocketFrameAggregator extends MessageToMessageDecoder<WebSocketF
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, WebSocketFrame msg, MessageBuf<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, WebSocketFrame msg, List<Object> out) throws Exception {
         if (currentFrame == null) {
+            tooLongFrameFound = false;
             if (msg.isFinalFragment()) {
                 out.add(msg.retain());
                 return;
@@ -60,14 +63,24 @@ public class WebSocketFrameAggregator extends MessageToMessageDecoder<WebSocketF
             } else if (msg instanceof BinaryWebSocketFrame) {
                 currentFrame = new BinaryWebSocketFrame(true, msg.rsv(), buf);
             } else {
+                buf.release();
                 throw new IllegalStateException(
                         "WebSocket frame was not of type TextWebSocketFrame or BinaryWebSocketFrame");
             }
             return;
         }
         if (msg instanceof ContinuationWebSocketFrame) {
+            if (tooLongFrameFound) {
+                if (msg.isFinalFragment()) {
+                    currentFrame = null;
+                }
+                return;
+            }
             CompositeByteBuf content = (CompositeByteBuf) currentFrame.content();
             if (content.readableBytes() > maxFrameSize - msg.content().readableBytes()) {
+                // release the current frame
+                currentFrame.release();
+                tooLongFrameFound = true;
                 throw new TooLongFrameException(
                         "WebSocketFrame length exceeded " + content +
                                 " bytes.");
@@ -87,5 +100,26 @@ public class WebSocketFrameAggregator extends MessageToMessageDecoder<WebSocketF
         // It is possible to receive CLOSE/PING/PONG frames during fragmented frames so just pass them to the next
         // handler in the chain
         out.add(msg.retain());
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        super.channelInactive(ctx);
+        // release current frame if it is not null as it may be a left-over
+        if (currentFrame != null) {
+            currentFrame.release();
+            currentFrame = null;
+        }
+    }
+
+    @Override
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        super.handlerRemoved(ctx);
+        // release current frame if it is not null as it may be a left-over as there is not much more we can do in
+        // this case
+        if (currentFrame != null) {
+            currentFrame.release();
+            currentFrame = null;
+        }
     }
 }

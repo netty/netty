@@ -48,6 +48,11 @@ public final class DatagramPacket
     }
 
     @Override
+    public DatagramPacket duplicate() {
+        return new DatagramPacket(content().duplicate(), recipient(), sender());
+    }
+
+    @Override
     public DatagramPacket retain() {
         super.retain();
         return this;
@@ -56,6 +61,18 @@ public final class DatagramPacket
     @Override
     public DatagramPacket retain(int increment) {
         super.retain(increment);
+        return this;
+    }
+
+    @Override
+    public DatagramPacket touch() {
+        super.touch();
+        return this;
+    }
+
+    @Override
+    public DatagramPacket touch(Object hint) {
+        super.touch(hint);
         return this;
     }
 }

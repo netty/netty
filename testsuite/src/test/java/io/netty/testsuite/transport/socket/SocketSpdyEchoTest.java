@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -17,18 +17,17 @@ package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.BufUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundByteHandlerAdapter;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.handler.codec.spdy.SpdyConstants;
 import io.netty.handler.codec.spdy.SpdyFrameDecoder;
 import io.netty.handler.codec.spdy.SpdyFrameEncoder;
+import io.netty.handler.codec.spdy.SpdyVersion;
 import io.netty.util.NetUtil;
 import org.junit.Test;
 
@@ -45,8 +44,7 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
     static final int ignoredBytes = 20;
 
     private static ByteBuf createFrames(int version) {
-        int length = version < 3 ? 1176 : 1174;
-        ByteBuf frames = Unpooled.buffer(length);
+        ByteBuf frames = Unpooled.buffer(1174);
 
         // SPDY UNKNOWN Frame
         frames.writeByte(0x80);
@@ -75,11 +73,7 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         frames.writeByte(version);
         frames.writeShort(1);
         frames.writeByte(0x03);
-        if (version < 3) {
-            frames.writeMedium(12);
-        } else {
-            frames.writeMedium(10);
-        }
+        frames.writeMedium(10);
         frames.writeInt(random.nextInt() & 0x7FFFFFFF | 0x01);
         frames.writeInt(random.nextInt() & 0x7FFFFFFF);
         frames.writeShort(0x8000);
@@ -92,11 +86,7 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         frames.writeByte(version);
         frames.writeShort(2);
         frames.writeByte(0x01);
-        if (version < 3) {
-            frames.writeMedium(8);
-        } else {
-            frames.writeMedium(4);
-        }
+        frames.writeMedium(4);
         frames.writeInt(random.nextInt() & 0x7FFFFFFF | 0x01);
         if (version < 3) {
             frames.writeInt(0);
@@ -117,13 +107,8 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         frames.writeByte(0x01);
         frames.writeMedium(12);
         frames.writeInt(1);
-        if (version < 3) {
-            frames.writeMedium(random.nextInt());
-            frames.writeByte(0x03);
-        } else {
-            frames.writeByte(0x03);
-            frames.writeMedium(random.nextInt());
-        }
+        frames.writeByte(0x03);
+        frames.writeMedium(random.nextInt());
         frames.writeInt(random.nextInt());
 
         // SPDY PING Frame
@@ -137,15 +122,9 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         frames.writeByte(0x80);
         frames.writeByte(version);
         frames.writeShort(7);
-        if (version < 3) {
-            frames.writeInt(4);
-        } else {
-            frames.writeInt(8);
-        }
+        frames.writeInt(8);
         frames.writeInt(random.nextInt() & 0x7FFFFFFF);
-        if (version >= 3) {
-            frames.writeInt(random.nextInt() | 0x01);
-        }
+        frames.writeInt(random.nextInt() | 0x01);
 
         // SPDY HEADERS Frame
         frames.writeByte(0x80);
@@ -166,19 +145,30 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         return frames;
     }
 
-    private int version;
+    private SpdyVersion version;
 
     @Test(timeout = 15000)
     public void testSpdyEcho() throws Throwable {
-        for (version = SpdyConstants.SPDY_MIN_VERSION; version <= SpdyConstants.SPDY_MAX_VERSION; version ++) {
-            logger.info("Testing against SPDY v" + version);
-            run();
-        }
+        version = SpdyVersion.SPDY_3;
+        logger.info("Testing against SPDY v3");
+        run();
+
+        version = SpdyVersion.SPDY_3_1;
+        logger.info("Testing against SPDY v3.1");
+        run();
     }
 
     public void testSpdyEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {
 
-        ByteBuf frames = createFrames(version);
+        ByteBuf frames;
+        switch (version) {
+        case SPDY_3:
+        case SPDY_3_1:
+            frames = createFrames(3);
+            break;
+        default:
+            throw new IllegalArgumentException("unknown version");
+        }
 
         final SpdyEchoTestServerHandler sh = new SpdyEchoTestServerHandler();
         final SpdyEchoTestClientHandler ch = new SpdyEchoTestClientHandler(frames.copy());
@@ -199,7 +189,7 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         int port = ((InetSocketAddress) sc.localAddress()).getPort();
 
         Channel cc = cb.remoteAddress(NetUtil.LOCALHOST, port).connect().sync().channel();
-        cc.write(frames);
+        cc.writeAndFlush(frames);
 
         while (ch.counter < frames.writerIndex() - ignoredBytes) {
             if (sh.exception.get() != null) {
@@ -230,13 +220,17 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         }
     }
 
-    private static class SpdyEchoTestServerHandler extends ChannelInboundMessageHandlerAdapter<Object> {
+    private static class SpdyEchoTestServerHandler extends ChannelHandlerAdapter {
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
-            BufUtil.retain(msg);
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             ctx.write(msg);
+        }
+
+        @Override
+        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+            ctx.flush();
         }
 
         @Override
@@ -247,7 +241,7 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         }
     }
 
-    private static class SpdyEchoTestClientHandler extends ChannelInboundByteHandlerAdapter {
+    private static class SpdyEchoTestClientHandler extends SimpleChannelInboundHandler<ByteBuf> {
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         final ByteBuf frames;
         volatile int counter;
@@ -257,7 +251,7 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
             byte[] actual = new byte[in.readableBytes()];
             in.readBytes(actual);
 

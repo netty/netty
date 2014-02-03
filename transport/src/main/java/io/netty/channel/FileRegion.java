@@ -15,7 +15,7 @@
  */
 package io.netty.channel;
 
-import io.netty.buffer.ReferenceCounted;
+import io.netty.util.ReferenceCounted;
 
 import java.io.IOException;
 import java.nio.channels.FileChannel;
@@ -60,6 +60,11 @@ public interface FileRegion extends ReferenceCounted {
     long position();
 
     /**
+     * Return the bytes which was transfered already
+     */
+    long transfered();
+
+    /**
      * Returns the number of bytes to transfer.
      */
     long count();
@@ -75,4 +80,16 @@ public interface FileRegion extends ReferenceCounted {
      *                  byte of the region transferred.
      */
     long transferTo(WritableByteChannel target, long position) throws IOException;
+
+    @Override
+    FileRegion retain();
+
+    @Override
+    FileRegion retain(int increment);
+
+    @Override
+    FileRegion touch();
+
+    @Override
+    FileRegion touch(Object hint);
 }

@@ -27,6 +27,26 @@ import java.nio.charset.Charset;
  * Extended interface for InterfaceHttpData
  */
 public interface HttpData extends InterfaceHttpData, ByteBufHolder {
+
+    /**
+     * Returns the maxSize for this HttpData.
+     */
+    long getMaxSize();
+
+    /**
+     * Set the maxSize for this HttpData. When limit will be reached, an exception will be raised.
+     * Setting it to (-1) means no limitation.
+     *
+     * By default, to be set from the HttpDataFactory.
+     */
+    void setMaxSize(long maxSize);
+
+    /**
+     * Check if the new size is not reaching the max limit allowed.
+     * The limit is always computed in term of bytes.
+     */
+    void checkSize(long newSize) throws IOException;
+
     /**
      * Set the content from the ChannelBuffer (erase any previous data)
      *
@@ -181,8 +201,17 @@ public interface HttpData extends InterfaceHttpData, ByteBufHolder {
     HttpData copy();
 
     @Override
+    HttpData duplicate();
+
+    @Override
     HttpData retain();
 
     @Override
     HttpData retain(int increment);
+
+    @Override
+    HttpData touch();
+
+    @Override
+    HttpData touch(Object hint);
 }

@@ -17,7 +17,7 @@ package io.netty.example.socksproxy;
 
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.socks.SocksAuthResponse;
 import io.netty.handler.codec.socks.SocksAuthScheme;
 import io.netty.handler.codec.socks.SocksAuthStatus;
@@ -29,7 +29,7 @@ import io.netty.handler.codec.socks.SocksRequest;
 
 
 @ChannelHandler.Sharable
-public final class SocksServerHandler extends ChannelInboundMessageHandlerAdapter<SocksRequest> {
+public final class SocksServerHandler extends SimpleChannelInboundHandler<SocksRequest> {
     private static final String name = "SOCKS_SERVER_HANDLER";
 
     public static String getName() {
@@ -56,8 +56,7 @@ public final class SocksServerHandler extends ChannelInboundMessageHandlerAdapte
                 if (req.cmdType() == SocksCmdType.CONNECT) {
                     ctx.pipeline().addLast(SocksServerConnectHandler.getName(), new SocksServerConnectHandler());
                     ctx.pipeline().remove(this);
-                    ctx.nextInboundMessageBuffer().add(socksRequest);
-                    ctx.fireInboundBufferUpdated();
+                    ctx.fireChannelRead(socksRequest);
                 } else {
                     ctx.close();
                 }
@@ -66,6 +65,11 @@ public final class SocksServerHandler extends ChannelInboundMessageHandlerAdapte
                 ctx.close();
                 break;
         }
+    }
+
+    @Override
+    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        ctx.flush();
     }
 
     @Override

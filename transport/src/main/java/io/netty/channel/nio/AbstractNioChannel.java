@@ -18,6 +18,8 @@ package io.netty.channel.nio;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoop;
@@ -30,8 +32,6 @@ import java.net.SocketAddress;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -47,7 +47,6 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     protected final int readInterestOp;
     private volatile SelectionKey selectionKey;
     private volatile boolean inputShutdown;
-    final Queue<NioTask<SelectableChannel>> writableTasks = new ConcurrentLinkedQueue<NioTask<SelectableChannel>>();
 
     /**
      * The future of the current connection attempt.  If not null, subsequent
@@ -61,13 +60,11 @@ public abstract class AbstractNioChannel extends AbstractChannel {
      * Create a new instance
      *
      * @param parent            the parent {@link Channel} by which this instance was created. May be {@code null}
-     * @param id                the id of this instance or {@code null} if one should be generated
      * @param ch                the underlying {@link SelectableChannel} on which it operates
      * @param readInterestOp    the ops to set to receive data from the {@link SelectableChannel}
      */
-    protected AbstractNioChannel(
-            Channel parent, Integer id, SelectableChannel ch, int readInterestOp) {
-        super(parent, id);
+    protected AbstractNioChannel(Channel parent, EventLoop eventLoop, SelectableChannel ch, int readInterestOp) {
+        super(parent, eventLoop);
         this.ch = ch;
         this.readInterestOp = readInterestOp;
         try {
@@ -145,6 +142,8 @@ public abstract class AbstractNioChannel extends AbstractChannel {
          * Read from underlying {@link SelectableChannel}
          */
         void read();
+
+        void forceFlush();
     }
 
     protected abstract class AbstractNioUnsafe extends AbstractUnsafe implements NioUnsafe {
@@ -157,72 +156,104 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         @Override
         public void connect(
                 final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise promise) {
-            if (eventLoop().inEventLoop()) {
-                if (!ensureOpen(promise)) {
-                    return;
-                }
-
-                try {
-                    if (connectPromise != null) {
-                        throw new IllegalStateException("connection attempt already made");
-                    }
-
-                    boolean wasActive = isActive();
-                    if (doConnect(remoteAddress, localAddress)) {
-                        promise.setSuccess();
-                        if (!wasActive && isActive()) {
-                            pipeline().fireChannelActive();
-                        }
-                    } else {
-                        connectPromise = promise;
-                        requestedRemoteAddress = remoteAddress;
-
-                        // Schedule connect timeout.
-                        int connectTimeoutMillis = config().getConnectTimeoutMillis();
-                        if (connectTimeoutMillis > 0) {
-                            connectTimeoutFuture = eventLoop().schedule(new Runnable() {
-                                @Override
-                                public void run() {
-                                    ChannelPromise connectPromise = AbstractNioChannel.this.connectPromise;
-                                    ConnectTimeoutException cause =
-                                            new ConnectTimeoutException("connection timed out: " + remoteAddress);
-                                    if (connectPromise != null && connectPromise.tryFailure(cause)) {
-                                        close(voidFuture());
-                                    }
-                                }
-                            }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
-                        }
-                    }
-                } catch (Throwable t) {
-                    if (t instanceof ConnectException) {
-                        Throwable newT = new ConnectException(t.getMessage() + ": " + remoteAddress);
-                        newT.setStackTrace(t.getStackTrace());
-                        t = newT;
-                    }
-                    promise.setFailure(t);
-                    closeIfClosed();
-                }
-            } else {
-                eventLoop().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        connect(remoteAddress, localAddress, promise);
-                    }
-                });
+            if (!ensureOpen(promise)) {
+                return;
             }
+
+            try {
+                if (connectPromise != null) {
+                    throw new IllegalStateException("connection attempt already made");
+                }
+
+                boolean wasActive = isActive();
+                if (doConnect(remoteAddress, localAddress)) {
+                    fulfillConnectPromise(promise, wasActive);
+                } else {
+                    connectPromise = promise;
+                    requestedRemoteAddress = remoteAddress;
+
+                    // Schedule connect timeout.
+                    int connectTimeoutMillis = config().getConnectTimeoutMillis();
+                    if (connectTimeoutMillis > 0) {
+                        connectTimeoutFuture = eventLoop().schedule(new Runnable() {
+                            @Override
+                            public void run() {
+                                ChannelPromise connectPromise = AbstractNioChannel.this.connectPromise;
+                                ConnectTimeoutException cause =
+                                        new ConnectTimeoutException("connection timed out: " + remoteAddress);
+                                if (connectPromise != null && connectPromise.tryFailure(cause)) {
+                                    close(voidPromise());
+                                }
+                            }
+                        }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
+                    }
+
+                    promise.addListener(new ChannelFutureListener() {
+                        @Override
+                        public void operationComplete(ChannelFuture future) throws Exception {
+                            if (future.isCancelled()) {
+                                if (connectTimeoutFuture != null) {
+                                    connectTimeoutFuture.cancel(false);
+                                }
+                                connectPromise = null;
+                                close(voidPromise());
+                            }
+                        }
+                    });
+                }
+            } catch (Throwable t) {
+                if (t instanceof ConnectException) {
+                    Throwable newT = new ConnectException(t.getMessage() + ": " + remoteAddress);
+                    newT.setStackTrace(t.getStackTrace());
+                    t = newT;
+                }
+                promise.tryFailure(t);
+                closeIfClosed();
+            }
+        }
+
+        private void fulfillConnectPromise(ChannelPromise promise, boolean wasActive) {
+            if (promise == null) {
+                // Closed via cancellation and the promise has been notified already.
+                return;
+            }
+
+            // trySuccess() will return false if a user cancelled the connection attempt.
+            boolean promiseSet = promise.trySuccess();
+
+            // Regardless if the connection attempt was cancelled, channelActive() event should be triggered,
+            // because what happened is what happened.
+            if (!wasActive && isActive()) {
+                pipeline().fireChannelActive();
+            }
+
+            // If a user cancelled the connection attempt, close the channel, which is followed by channelInactive().
+            if (!promiseSet) {
+                close(voidPromise());
+            }
+        }
+
+        private void fulfillConnectPromise(ChannelPromise promise, Throwable cause) {
+            if (promise == null) {
+                // Closed via cancellation and the promise has been notified already.
+            }
+
+            // Use tryFailure() instead of setFailure() to avoid the race against cancel().
+            promise.tryFailure(cause);
+            closeIfClosed();
         }
 
         @Override
         public void finishConnect() {
+            // Note this method is invoked by the event loop only if the connection attempt was
+            // neither cancelled nor timed out.
+
             assert eventLoop().inEventLoop();
-            assert connectPromise != null;
+
             try {
                 boolean wasActive = isActive();
                 doFinishConnect();
-                connectPromise.setSuccess();
-                if (!wasActive && isActive()) {
-                    pipeline().fireChannelActive();
-                }
+                fulfillConnectPromise(connectPromise, wasActive);
             } catch (Throwable t) {
                 if (t instanceof ConnectException) {
                     Throwable newT = new ConnectException(t.getMessage() + ": " + requestedRemoteAddress);
@@ -230,12 +261,37 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                     t = newT;
                 }
 
-                connectPromise.setFailure(t);
-                closeIfClosed();
+                fulfillConnectPromise(connectPromise, t);
             } finally {
-                connectTimeoutFuture.cancel(false);
+                // Check for null as the connectTimeoutFuture is only created if a connectTimeoutMillis > 0 is used
+                // See https://github.com/netty/netty/issues/1770
+                if (connectTimeoutFuture != null) {
+                    connectTimeoutFuture.cancel(false);
+                }
                 connectPromise = null;
             }
+        }
+
+        @Override
+        protected void flush0() {
+            // Flush immediately only when there's no pending flush.
+            // If there's a pending flush operation, event loop will call forceFlush() later,
+            // and thus there's no need to call it now.
+            if (isFlushPending()) {
+                return;
+            }
+            super.flush0();
+        }
+
+        @Override
+        public void forceFlush() {
+            // directly call super.flush0() to force a flush now
+            super.flush0();
+        }
+
+        private boolean isFlushPending() {
+            SelectionKey selectionKey = selectionKey();
+            return selectionKey.isValid() && (selectionKey.interestOps() & SelectionKey.OP_WRITE) != 0;
         }
     }
 
@@ -245,21 +301,15 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     }
 
     @Override
-    protected boolean isFlushPending() {
-        SelectionKey selectionKey = this.selectionKey;
-        return selectionKey.isValid() && (selectionKey.interestOps() & SelectionKey.OP_WRITE) != 0;
-    }
-
-    @Override
-    protected Runnable doRegister() throws Exception {
+    protected void doRegister() throws Exception {
         boolean selected = false;
         for (;;) {
             try {
                 selectionKey = javaChannel().register(eventLoop().selector, 0, this);
-                return null;
+                return;
             } catch (CancelledKeyException e) {
                 if (!selected) {
-                    // Force the Selector to select now  as the "canceled" SelectionKey may still be
+                    // Force the Selector to select now as the "canceled" SelectionKey may still be
                     // cached and not removed because no Select.select(..) operation was called yet.
                     eventLoop().selectNow();
                     selected = true;
@@ -273,9 +323,8 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     }
 
     @Override
-    protected Runnable doDeregister() throws Exception {
+    protected void doDeregister() throws Exception {
         eventLoop().cancel(selectionKey());
-        return null;
     }
 
     @Override

@@ -23,8 +23,6 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.logging.LogLevel;
-import io.netty.handler.logging.LoggingHandler;
 
 /**
  * Sends one message when a connection is open and echoes back any received
@@ -56,7 +54,7 @@ public class EchoClient {
                  @Override
                  public void initChannel(SocketChannel ch) throws Exception {
                      ch.pipeline().addLast(
-                             new LoggingHandler(LogLevel.INFO),
+                             //new LoggingHandler(LogLevel.INFO),
                              new EchoClientHandler(firstMessageSize));
                  }
              });

@@ -15,8 +15,8 @@
  */
 package io.netty.example.objectecho;
 
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,7 +28,7 @@ import java.util.logging.Logger;
  * ping-pong traffic between the object echo client and server by sending the
  * first message to the server.
  */
-public class ObjectEchoClientHandler extends ChannelInboundMessageHandlerAdapter<List<Integer>> {
+public class ObjectEchoClientHandler extends ChannelHandlerAdapter {
 
     private static final Logger logger = Logger.getLogger(
             ObjectEchoClientHandler.class.getName());
@@ -52,13 +52,18 @@ public class ObjectEchoClientHandler extends ChannelInboundMessageHandlerAdapter
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         // Send the first message if this handler is a client-side handler.
-        ctx.write(firstMessage);
+        ctx.writeAndFlush(firstMessage);
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, List<Integer> msg) throws Exception {
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         // Echo back the received object to the server.
         ctx.write(msg);
+    }
+
+    @Override
+    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        ctx.flush();
     }
 
     @Override

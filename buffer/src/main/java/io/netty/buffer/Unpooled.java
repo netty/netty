@@ -23,11 +23,10 @@ import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Queue;
 
 
 /**
- * Creates a new {@link ByteBuf} or a new {@link MessageBuf} by allocating new space or by wrapping
+ * Creates a new {@link ByteBuf} by allocating new space or by wrapping
  * or copying existing byte arrays, byte buffers and a string.
  *
  * <h3>Use static import</h3>
@@ -95,39 +94,6 @@ public final class Unpooled {
     public static final ByteBuf EMPTY_BUFFER = ALLOC.buffer(0, 0);
 
     /**
-     * Creates a new {@link MessageBuf} with reasonably small initial capacity, which
-     * expands its capacity boundlessly on demand.
-     */
-    public static <T> MessageBuf<T> messageBuffer() {
-        return new DefaultMessageBuf<T>();
-    }
-
-    /**
-     * Creates a new {@link MessageBuf} with the specified {@code initialCapacity}.
-     */
-    public static <T> MessageBuf<T> messageBuffer(int initialCapacity) {
-        return new DefaultMessageBuf<T>(initialCapacity);
-    }
-
-    /**
-     * Creates a new {@link MessageBuf} with the specified {@code initialCapacity} and
-     * {@code maxCapacity}.
-     */
-    public static <T> MessageBuf<T> messageBuffer(int initialCapacity, int maxCapacity) {
-        return new DefaultMessageBuf<T>(initialCapacity, maxCapacity);
-    }
-
-    /**
-     * Creates a new {@link MessageBuf} which wraps the given {@code queue}.
-     */
-    public static <T> MessageBuf<T> wrappedBuffer(Queue<T> queue) {
-        if (queue instanceof MessageBuf) {
-            return (MessageBuf<T>) queue;
-        }
-        return new QueueBackedMessageBuf<T>(queue);
-    }
-
-    /**
      * Creates a new big-endian Java heap buffer with reasonably small initial capacity, which
      * expands its capacity boundlessly on demand.
      */
@@ -136,7 +102,7 @@ public final class Unpooled {
     }
 
     /**
-     * Creates a new big-endian direct buffer with resaonably small initial capacity, which
+     * Creates a new big-endian direct buffer with reasonably small initial capacity, which
      * expands its capacity boundlessly on demand.
      */
     public static ByteBuf directBuffer() {
@@ -163,8 +129,9 @@ public final class Unpooled {
 
     /**
      * Creates a new big-endian Java heap buffer with the specified
-     * {@code capacity}.  The new buffer's {@code readerIndex} and
-     * {@code writerIndex} are {@code 0}.
+     * {@code initialCapacity}, that may grow up to {@code maxCapacity}
+     * The new buffer's {@code readerIndex} and {@code writerIndex} are
+     * {@code 0}.
      */
     public static ByteBuf buffer(int initialCapacity, int maxCapacity) {
         return ALLOC.heapBuffer(initialCapacity, maxCapacity);
@@ -172,8 +139,9 @@ public final class Unpooled {
 
     /**
      * Creates a new big-endian direct buffer with the specified
-     * {@code capacity}.  The new buffer's {@code readerIndex} and
-     * {@code writerIndex} are {@code 0}.
+     * {@code initialCapacity}, that may grow up to {@code maxCapacity}.
+     * The new buffer's {@code readerIndex} and {@code writerIndex} are
+     * {@code 0}.
      */
     public static ByteBuf directBuffer(int initialCapacity, int maxCapacity) {
         return ALLOC.directBuffer(initialCapacity, maxCapacity);
@@ -308,7 +276,7 @@ public final class Unpooled {
             }
 
             if (!components.isEmpty()) {
-                return new DefaultCompositeByteBuf(ALLOC, false, maxNumComponents, components);
+                return new CompositeByteBuf(ALLOC, false, maxNumComponents, components);
             }
         }
 
@@ -332,7 +300,7 @@ public final class Unpooled {
         default:
             for (ByteBuf b: buffers) {
                 if (b.isReadable()) {
-                    return new DefaultCompositeByteBuf(ALLOC, false, maxNumComponents, buffers);
+                    return new CompositeByteBuf(ALLOC, false, maxNumComponents, buffers);
                 }
             }
         }
@@ -366,7 +334,7 @@ public final class Unpooled {
             }
 
             if (!components.isEmpty()) {
-                return new DefaultCompositeByteBuf(ALLOC, false, maxNumComponents, components);
+                return new CompositeByteBuf(ALLOC, false, maxNumComponents, components);
             }
         }
 
@@ -384,7 +352,7 @@ public final class Unpooled {
      * Returns a new big-endian composite buffer with no components.
      */
     public static CompositeByteBuf compositeBuffer(int maxNumComponents) {
-        return new DefaultCompositeByteBuf(ALLOC, false, maxNumComponents);
+        return new CompositeByteBuf(ALLOC, false, maxNumComponents);
     }
 
     /**
@@ -442,8 +410,16 @@ public final class Unpooled {
      * respectively.
      */
     public static ByteBuf copiedBuffer(ByteBuf buffer) {
-        if (buffer.isReadable()) {
-            return buffer.copy();
+        int readable = buffer.readableBytes();
+        if (readable > 0) {
+            ByteBuf copy;
+            if (buffer.isDirect()) {
+                copy = directBuffer(readable);
+            } else {
+                copy = buffer(readable);
+            }
+            copy.writeBytes(buffer, buffer.readerIndex(), readable);
+            return copy;
         } else {
             return EMPTY_BUFFER;
         }
@@ -681,10 +657,7 @@ public final class Unpooled {
     }
 
     private static ByteBuf copiedBuffer(CharBuffer buffer, Charset charset) {
-        ByteBuffer dst = BufUtil.encodeString(buffer, charset);
-        ByteBuf result = wrappedBuffer(dst.array());
-        result.writerIndex(dst.remaining());
-        return result;
+        return ByteBufUtil.encodeString(ALLOC, buffer, charset);
     }
 
     /**
@@ -882,6 +855,14 @@ public final class Unpooled {
      */
     public static ByteBuf unreleasableBuffer(ByteBuf buf) {
         return new UnreleasableByteBuf(buf);
+    }
+
+    /**
+     * Wrap the given {@link ByteBuf}s in an unmodifiable {@link ByteBuf}. Be aware the returned {@link ByteBuf} will
+     * not try to slice the given {@link ByteBuf}s to reduce GC-Pressure.
+     */
+    public static ByteBuf unmodifiableBuffer(ByteBuf... buffers) {
+        return new FixedCompositeByteBuf(ALLOC, buffers);
     }
 
     private Unpooled() {

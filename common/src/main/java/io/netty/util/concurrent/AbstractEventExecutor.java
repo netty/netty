@@ -16,9 +16,8 @@
 package io.netty.util.concurrent;
 
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
-import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.concurrent.AbstractExecutorService;
 import java.util.concurrent.Callable;
 import java.util.concurrent.RunnableFuture;
@@ -29,19 +28,43 @@ import java.util.concurrent.TimeUnit;
  */
 public abstract class AbstractEventExecutor extends AbstractExecutorService implements EventExecutor {
 
+    static final long DEFAULT_SHUTDOWN_QUIET_PERIOD = 2;
+    static final long DEFAULT_SHUTDOWN_TIMEOUT = 15;
+
+    private final EventExecutorGroup parent;
+
+    protected AbstractEventExecutor() {
+        this(null);
+    }
+
+    protected AbstractEventExecutor(EventExecutorGroup parent) {
+        this.parent = parent;
+    }
+
+    @Override
+    public EventExecutorGroup parent() {
+        return parent;
+    }
+
     @Override
     public EventExecutor next() {
         return this;
     }
 
     @Override
-    public Iterator<EventExecutor> iterator() {
-        return new EventExecutorIterator();
+    @SuppressWarnings("unchecked")
+    public <E extends EventExecutor> Set<E> children() {
+        return Collections.singleton((E) this);
     }
 
     @Override
-    public void shutdownGracefully() {
-        shutdownGracefully(2, 15, TimeUnit.SECONDS);
+    public boolean inEventLoop() {
+        return inEventLoop(Thread.currentThread());
+    }
+
+    @Override
+    public Future<?> shutdownGracefully() {
+        return shutdownGracefully(DEFAULT_SHUTDOWN_QUIET_PERIOD, DEFAULT_SHUTDOWN_TIMEOUT, TimeUnit.SECONDS);
     }
 
     /**
@@ -125,28 +148,5 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
     @Override
     public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
         throw new UnsupportedOperationException();
-    }
-
-    private final class EventExecutorIterator implements Iterator<EventExecutor> {
-        private boolean nextCalled;
-
-        @Override
-        public boolean hasNext() {
-            return !nextCalled;
-        }
-
-        @Override
-        public EventExecutor next() {
-            if (!hasNext()) {
-                throw new NoSuchElementException();
-            }
-            nextCalled = true;
-            return AbstractEventExecutor.this;
-        }
-
-        @Override
-        public void remove() {
-            throw new UnsupportedOperationException("read-only");
-        }
     }
 }

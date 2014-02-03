@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.socks;
 
-import io.netty.channel.embedded.EmbeddedByteChannel;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.Test;
@@ -25,17 +25,17 @@ import static org.junit.Assert.*;
 public class SocksCmdResponseDecoderTest {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(SocksCmdResponseDecoderTest.class);
 
-    private static void testSocksCmdResponseDecoderWithDifferentParams(SocksCmdStatus cmdStatus,
-                                                                       SocksAddressType addressType) {
+    private static void testSocksCmdResponseDecoderWithDifferentParams(
+            SocksCmdStatus cmdStatus, SocksAddressType addressType) {
         logger.debug("Testing cmdStatus: " + cmdStatus + " addressType: " + addressType);
         SocksResponse msg = new SocksCmdResponse(cmdStatus, addressType);
         SocksCmdResponseDecoder decoder = new SocksCmdResponseDecoder();
-        EmbeddedByteChannel embedder = new EmbeddedByteChannel(decoder);
+        EmbeddedChannel embedder = new EmbeddedChannel(decoder);
         SocksCommonTestUtils.writeMessageIntoEmbedder(embedder, msg);
         if (addressType == SocksAddressType.UNKNOWN) {
             assertTrue(embedder.readInbound() instanceof UnknownSocksResponse);
         } else {
-            msg = (SocksResponse) embedder.readInbound();
+            msg = embedder.readInbound();
             assertEquals(((SocksCmdResponse) msg).cmdStatus(), cmdStatus);
         }
         assertNull(embedder.readInbound());

@@ -15,16 +15,17 @@
  */
 package io.netty.handler.codec.string;
 
-import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.LineBasedFrameDecoder;
+import io.netty.handler.codec.MessageToMessageEncoder;
 
+import java.nio.CharBuffer;
 import java.nio.charset.Charset;
+import java.util.List;
 
 /**
  * Encodes the requested {@link String} into a {@link ByteBuf}.
@@ -42,52 +43,40 @@ import java.nio.charset.Charset;
  * and then you can use a {@link String} instead of a {@link ByteBuf}
  * as a message:
  * <pre>
- * void messageReceived({@link ChannelHandlerContext} ctx, {@link String} msg) {
+ * void channelRead({@link ChannelHandlerContext} ctx, {@link String} msg) {
  *     ch.write("Did you say '" + msg + "'?\n");
  * }
  * </pre>
  */
 @Sharable
-public class StringEncoder extends ChannelOutboundMessageHandlerAdapter<CharSequence> {
+public class StringEncoder extends MessageToMessageEncoder<CharSequence> {
 
-    private final BufType nextBufferType;
     // TODO Use CharsetEncoder instead.
     private final Charset charset;
 
     /**
      * Creates a new instance with the current system character set.
      */
-    public StringEncoder(BufType nextBufferType) {
-        this(nextBufferType, Charset.defaultCharset());
+    public StringEncoder() {
+        this(Charset.defaultCharset());
     }
 
     /**
      * Creates a new instance with the specified character set.
      */
-    public StringEncoder(BufType nextBufferType, Charset charset) {
-        if (nextBufferType == null) {
-            throw new NullPointerException("nextBufferType");
-        }
+    public StringEncoder(Charset charset) {
         if (charset == null) {
             throw new NullPointerException("charset");
         }
-        this.nextBufferType = nextBufferType;
         this.charset = charset;
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx, CharSequence msg) throws Exception {
-        ByteBuf encoded = Unpooled.copiedBuffer(msg, charset);
-
-        switch (nextBufferType) {
-        case BYTE:
-            ctx.nextOutboundByteBuffer().writeBytes(encoded);
-            break;
-        case MESSAGE:
-            ctx.nextOutboundMessageBuffer().add(encoded);
-            break;
-        default:
-            throw new Error();
+    protected void encode(ChannelHandlerContext ctx, CharSequence msg, List<Object> out) throws Exception {
+        if (msg.length() == 0) {
+            return;
         }
+
+        out.add(ByteBufUtil.encodeString(ctx.alloc(), CharBuffer.wrap(msg), charset));
     }
 }

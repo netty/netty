@@ -15,13 +15,16 @@
  */
 package io.netty.channel.oio;
 
-import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.EventLoop;
+import io.netty.channel.FileRegion;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
+import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
 
@@ -31,13 +34,10 @@ import java.io.IOException;
 public abstract class AbstractOioByteChannel extends AbstractOioChannel {
 
     private volatile boolean inputShutdown;
-    private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.BYTE, false);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
-    /**
-     * @see AbstractOioByteChannel#AbstractOioByteChannel(Channel, Integer)
-     */
-    protected AbstractOioByteChannel(Channel parent, Integer id) {
-        super(parent, id);
+    protected AbstractOioByteChannel(Channel parent, EventLoop eventLoop) {
+        super(parent, eventLoop);
     }
 
     protected boolean isInputShutdown() {
@@ -72,10 +72,12 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
         }
 
         final ChannelPipeline pipeline = pipeline();
-        final ByteBuf byteBuf = pipeline.inboundByteBuffer();
+
+        // TODO: calculate size as in 3.x
+        ByteBuf byteBuf = alloc().buffer();
         boolean closed = false;
         boolean read = false;
-        boolean firedInboundBufferSuspeneded = false;
+        Throwable exception = null;
         try {
             for (;;) {
                 int localReadAmount = doReadBytes(byteBuf);
@@ -90,71 +92,86 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
                     break;
                 }
 
-                if (byteBuf.isWritable()) {
-                    continue;
-                }
-
-                final int capacity = byteBuf.capacity();
-                final int maxCapacity = byteBuf.maxCapacity();
-                if (capacity == maxCapacity) {
-                    if (read) {
-                        read = false;
-                        pipeline.fireInboundBufferUpdated();
-                        if (!byteBuf.isWritable()) {
-                            throw new IllegalStateException(
-                                    "an inbound handler whose buffer is full must consume at " +
-                                            "least one byte.");
+                if (!byteBuf.isWritable()) {
+                    final int capacity = byteBuf.capacity();
+                    final int maxCapacity = byteBuf.maxCapacity();
+                    if (capacity == maxCapacity) {
+                        if (read) {
+                            read = false;
+                            pipeline.fireChannelRead(byteBuf);
+                            byteBuf = alloc().buffer();
+                        }
+                    } else {
+                        final int writerIndex = byteBuf.writerIndex();
+                        if (writerIndex + available > maxCapacity) {
+                            byteBuf.capacity(maxCapacity);
+                        } else {
+                            byteBuf.ensureWritable(available);
                         }
                     }
-                } else {
-                    final int writerIndex = byteBuf.writerIndex();
-                    if (writerIndex + available > maxCapacity) {
-                        byteBuf.capacity(maxCapacity);
-                    } else {
-                        byteBuf.ensureWritable(available);
-                    }
+                }
+                if (!config().isAutoRead()) {
+                    // stop reading until next Channel.read() call
+                    // See https://github.com/netty/netty/issues/1363
+                    break;
                 }
             }
         } catch (Throwable t) {
-            if (read) {
-                read = false;
-                pipeline.fireInboundBufferUpdated();
-            }
-
-            if (t instanceof IOException) {
-                closed = true;
-                pipeline.fireExceptionCaught(t);
-            } else {
-                firedInboundBufferSuspeneded = true;
-                pipeline.fireChannelReadSuspended();
-                pipeline.fireExceptionCaught(t);
-                unsafe().close(unsafe().voidFuture());
-            }
+            exception = t;
         } finally {
             if (read) {
-                pipeline.fireInboundBufferUpdated();
+                pipeline.fireChannelRead(byteBuf);
+            } else {
+                // nothing read into the buffer so release it
+                byteBuf.release();
             }
+
+            pipeline.fireChannelReadComplete();
+            if (exception != null) {
+                if (exception instanceof IOException) {
+                    closed = true;
+                    pipeline().fireExceptionCaught(exception);
+                } else {
+                    pipeline.fireExceptionCaught(exception);
+                    unsafe().close(voidPromise());
+                }
+            }
+
             if (closed) {
                 inputShutdown = true;
                 if (isOpen()) {
                     if (Boolean.TRUE.equals(config().getOption(ChannelOption.ALLOW_HALF_CLOSURE))) {
                         pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
                     } else {
-                        unsafe().close(unsafe().voidFuture());
+                        unsafe().close(unsafe().voidPromise());
                     }
                 }
-            } else if (!firedInboundBufferSuspeneded) {
-                pipeline.fireChannelReadSuspended();
             }
         }
     }
 
     @Override
-    protected void doFlushByteBuffer(ByteBuf buf) throws Exception {
-        while (buf.isReadable()) {
-            doWriteBytes(buf);
+    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+        for (;;) {
+            Object msg = in.current(false);
+            if (msg == null) {
+                // nothing left to write
+                break;
+            }
+            if (msg instanceof ByteBuf) {
+                ByteBuf buf = (ByteBuf) msg;
+                while (buf.isReadable()) {
+                    doWriteBytes(buf);
+                }
+                in.remove();
+            } else if (msg instanceof FileRegion) {
+                doWriteFileRegion((FileRegion) msg);
+                in.remove();
+            } else {
+                in.remove(new UnsupportedOperationException(
+                        "unsupported message type: " + StringUtil.simpleClassName(msg)));
+            }
         }
-        buf.clear();
     }
 
     /**
@@ -168,7 +185,7 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
      * @param buf           the {@link ByteBuf} into which the read bytes will be written
      * @return amount       the number of bytes read. This may return a negative amount if the underlying
      *                      Socket was closed
-     * @throws Exception    is thrown if an error accoured
+     * @throws Exception    is thrown if an error occurred
      */
     protected abstract int doReadBytes(ByteBuf buf) throws Exception;
 
@@ -176,7 +193,15 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
      * Write the data which is hold by the {@link ByteBuf} to the underlying Socket.
      *
      * @param buf           the {@link ByteBuf} which holds the data to transfer
-     * @throws Exception    is thrown if an error accoured
+     * @throws Exception    is thrown if an error occurred
      */
     protected abstract void doWriteBytes(ByteBuf buf) throws Exception;
+
+    /**
+     * Write the data which is hold by the {@link FileRegion} to the underlying Socket.
+     *
+     * @param region        the {@link FileRegion} which holds the data to transfer
+     * @throws Exception    is thrown if an error occurred
+     */
+    protected abstract void doWriteFileRegion(FileRegion region) throws Exception;
 }

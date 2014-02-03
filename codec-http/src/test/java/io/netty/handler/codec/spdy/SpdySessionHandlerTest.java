@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,9 +15,9 @@
  */
 package io.netty.handler.codec.spdy;
 
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
-import io.netty.channel.embedded.EmbeddedMessageChannel;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.Test;
@@ -39,40 +39,25 @@ public class SpdySessionHandlerTest {
         closeMessage.setValue(closeSignal, 0);
     }
 
-    private static void assertHeaderBlock(SpdyHeaderBlock received, SpdyHeaderBlock expected) {
-        for (String name: expected.headers().names()) {
-            List<String> expectedValues = expected.headers().getAll(name);
-            List<String> receivedValues = received.headers().getAll(name);
-            assertTrue(receivedValues.containsAll(expectedValues));
-            receivedValues.removeAll(expectedValues);
-            assertTrue(receivedValues.isEmpty());
-            received.headers().remove(name);
-        }
-        assertTrue(received.headers().entries().isEmpty());
-    }
-
-    private static void assertDataFrame(Object msg, int streamID, boolean last) {
+    private static void assertDataFrame(Object msg, int streamId, boolean last) {
         assertNotNull(msg);
         assertTrue(msg instanceof SpdyDataFrame);
         SpdyDataFrame spdyDataFrame = (SpdyDataFrame) msg;
-        assertEquals(spdyDataFrame.getStreamId(), streamID);
+        assertEquals(spdyDataFrame.getStreamId(), streamId);
         assertEquals(spdyDataFrame.isLast(), last);
     }
 
-    private static void assertSynReply(Object msg, int streamID, boolean last, SpdyHeaderBlock headers) {
+    private static void assertSynReply(Object msg, int streamId, boolean last, SpdyHeaders headers) {
         assertNotNull(msg);
         assertTrue(msg instanceof SpdySynReplyFrame);
-        SpdySynReplyFrame spdySynReplyFrame = (SpdySynReplyFrame) msg;
-        assertEquals(spdySynReplyFrame.getStreamId(), streamID);
-        assertEquals(spdySynReplyFrame.isLast(), last);
-        assertHeaderBlock(spdySynReplyFrame, headers);
+        assertHeaders(msg, streamId, last, headers);
     }
 
-    private static void assertRstStream(Object msg, int streamID, SpdyStreamStatus status) {
+    private static void assertRstStream(Object msg, int streamId, SpdyStreamStatus status) {
         assertNotNull(msg);
         assertTrue(msg instanceof SpdyRstStreamFrame);
         SpdyRstStreamFrame spdyRstStreamFrame = (SpdyRstStreamFrame) msg;
-        assertEquals(spdyRstStreamFrame.getStreamId(), streamID);
+        assertEquals(spdyRstStreamFrame.getStreamId(), streamId);
         assertEquals(spdyRstStreamFrame.getStatus(), status);
     }
 
@@ -83,94 +68,111 @@ public class SpdySessionHandlerTest {
         assertEquals(spdyPingFrame.getId(), id);
     }
 
-    private static void assertGoAway(Object msg, int lastGoodStreamID) {
+    private static void assertGoAway(Object msg, int lastGoodStreamId) {
         assertNotNull(msg);
         assertTrue(msg instanceof SpdyGoAwayFrame);
         SpdyGoAwayFrame spdyGoAwayFrame = (SpdyGoAwayFrame) msg;
-        assertEquals(spdyGoAwayFrame.getLastGoodStreamId(), lastGoodStreamID);
+        assertEquals(spdyGoAwayFrame.getLastGoodStreamId(), lastGoodStreamId);
     }
 
-    private static void assertHeaders(Object msg, int streamID, SpdyHeaderBlock headers) {
+    private static void assertHeaders(Object msg, int streamId, boolean last, SpdyHeaders headers) {
         assertNotNull(msg);
         assertTrue(msg instanceof SpdyHeadersFrame);
         SpdyHeadersFrame spdyHeadersFrame = (SpdyHeadersFrame) msg;
-        assertEquals(spdyHeadersFrame.getStreamId(), streamID);
-        assertHeaderBlock(spdyHeadersFrame, headers);
+        assertEquals(spdyHeadersFrame.getStreamId(), streamId);
+        assertEquals(spdyHeadersFrame.isLast(), last);
+        for (String name: headers.names()) {
+            List<String> expectedValues = headers.getAll(name);
+            List<String> receivedValues = spdyHeadersFrame.headers().getAll(name);
+            assertTrue(receivedValues.containsAll(expectedValues));
+            receivedValues.removeAll(expectedValues);
+            assertTrue(receivedValues.isEmpty());
+            spdyHeadersFrame.headers().remove(name);
+        }
+        assertTrue(spdyHeadersFrame.headers().isEmpty());
     }
 
-    private static void testSpdySessionHandler(int version, boolean server) {
-        EmbeddedMessageChannel sessionHandler = new EmbeddedMessageChannel(
+    private static void testSpdySessionHandler(SpdyVersion version, boolean server) {
+        EmbeddedChannel sessionHandler = new EmbeddedChannel(
                 new SpdySessionHandler(version, server), new EchoHandler(closeSignal, server));
 
         while (sessionHandler.readOutbound() != null) {
             continue;
         }
 
-        int localStreamID = server ? 1 : 2;
-        int remoteStreamID = server ? 2 : 1;
-
-        SpdyPingFrame localPingFrame = new DefaultSpdyPingFrame(localStreamID);
-        SpdyPingFrame remotePingFrame = new DefaultSpdyPingFrame(remoteStreamID);
+        int localStreamId = server ? 1 : 2;
+        int remoteStreamId = server ? 2 : 1;
 
         SpdySynStreamFrame spdySynStreamFrame =
-                new DefaultSpdySynStreamFrame(localStreamID, 0, (byte) 0);
+                new DefaultSpdySynStreamFrame(localStreamId, 0, (byte) 0);
         spdySynStreamFrame.headers().set("Compression", "test");
 
-        SpdyDataFrame spdyDataFrame = new DefaultSpdyDataFrame(localStreamID);
+        SpdyDataFrame spdyDataFrame = new DefaultSpdyDataFrame(localStreamId);
         spdyDataFrame.setLast(true);
 
         // Check if session handler returns INVALID_STREAM if it receives
         // a data frame for a Stream-ID that is not open
-        sessionHandler.writeInbound(new DefaultSpdyDataFrame(localStreamID));
-        assertRstStream(sessionHandler.readOutbound(), localStreamID, SpdyStreamStatus.INVALID_STREAM);
+        sessionHandler.writeInbound(new DefaultSpdyDataFrame(localStreamId));
+        assertRstStream(sessionHandler.readOutbound(), localStreamId, SpdyStreamStatus.INVALID_STREAM);
         assertNull(sessionHandler.readOutbound());
 
         // Check if session handler returns PROTOCOL_ERROR if it receives
         // a data frame for a Stream-ID before receiving a SYN_REPLY frame
-        sessionHandler.writeInbound(new DefaultSpdyDataFrame(remoteStreamID));
-        assertRstStream(sessionHandler.readOutbound(), remoteStreamID, SpdyStreamStatus.PROTOCOL_ERROR);
+        sessionHandler.writeInbound(new DefaultSpdyDataFrame(remoteStreamId));
+        assertRstStream(sessionHandler.readOutbound(), remoteStreamId, SpdyStreamStatus.PROTOCOL_ERROR);
         assertNull(sessionHandler.readOutbound());
-        remoteStreamID += 2;
+        remoteStreamId += 2;
 
         // Check if session handler returns PROTOCOL_ERROR if it receives
         // multiple SYN_REPLY frames for the same active Stream-ID
-        sessionHandler.writeInbound(new DefaultSpdySynReplyFrame(remoteStreamID));
+        sessionHandler.writeInbound(new DefaultSpdySynReplyFrame(remoteStreamId));
         assertNull(sessionHandler.readOutbound());
-        sessionHandler.writeInbound(new DefaultSpdySynReplyFrame(remoteStreamID));
-        assertRstStream(sessionHandler.readOutbound(), remoteStreamID, SpdyStreamStatus.STREAM_IN_USE);
+        sessionHandler.writeInbound(new DefaultSpdySynReplyFrame(remoteStreamId));
+        assertRstStream(sessionHandler.readOutbound(), remoteStreamId, SpdyStreamStatus.STREAM_IN_USE);
         assertNull(sessionHandler.readOutbound());
-        remoteStreamID += 2;
+        remoteStreamId += 2;
 
         // Check if frame codec correctly compresses/uncompresses headers
         sessionHandler.writeInbound(spdySynStreamFrame);
-        assertSynReply(sessionHandler.readOutbound(), localStreamID, false, spdySynStreamFrame);
+        assertSynReply(sessionHandler.readOutbound(), localStreamId, false, spdySynStreamFrame.headers());
         assertNull(sessionHandler.readOutbound());
-        SpdyHeadersFrame spdyHeadersFrame = new DefaultSpdyHeadersFrame(localStreamID);
+        SpdyHeadersFrame spdyHeadersFrame = new DefaultSpdyHeadersFrame(localStreamId);
 
         spdyHeadersFrame.headers().add("HEADER", "test1");
         spdyHeadersFrame.headers().add("HEADER", "test2");
 
         sessionHandler.writeInbound(spdyHeadersFrame);
-        assertHeaders(sessionHandler.readOutbound(), localStreamID, spdyHeadersFrame);
+        assertHeaders(sessionHandler.readOutbound(), localStreamId, false, spdyHeadersFrame.headers());
         assertNull(sessionHandler.readOutbound());
-        localStreamID += 2;
+        localStreamId += 2;
 
         // Check if session handler closed the streams using the number
         // of concurrent streams and that it returns REFUSED_STREAM
         // if it receives a SYN_STREAM frame it does not wish to accept
-        spdySynStreamFrame.setStreamId(localStreamID);
+        spdySynStreamFrame.setStreamId(localStreamId);
         spdySynStreamFrame.setLast(true);
         spdySynStreamFrame.setUnidirectional(true);
 
         sessionHandler.writeInbound(spdySynStreamFrame);
-        assertRstStream(sessionHandler.readOutbound(), localStreamID, SpdyStreamStatus.REFUSED_STREAM);
+        assertRstStream(sessionHandler.readOutbound(), localStreamId, SpdyStreamStatus.REFUSED_STREAM);
+        assertNull(sessionHandler.readOutbound());
+
+        // Check if session handler rejects HEADERS for closed streams
+        int testStreamId = spdyDataFrame.getStreamId();
+        sessionHandler.writeInbound(spdyDataFrame);
+        assertDataFrame(sessionHandler.readOutbound(), testStreamId, spdyDataFrame.isLast());
+        assertNull(sessionHandler.readOutbound());
+        spdyHeadersFrame.setStreamId(testStreamId);
+
+        sessionHandler.writeInbound(spdyHeadersFrame);
+        assertRstStream(sessionHandler.readOutbound(), testStreamId, SpdyStreamStatus.INVALID_STREAM);
         assertNull(sessionHandler.readOutbound());
 
         // Check if session handler drops active streams if it receives
         // a RST_STREAM frame for that Stream-ID
-        sessionHandler.writeInbound(new DefaultSpdyRstStreamFrame(remoteStreamID, 3));
+        sessionHandler.writeInbound(new DefaultSpdyRstStreamFrame(remoteStreamId, 3));
         assertNull(sessionHandler.readOutbound());
-        remoteStreamID += 2;
+        remoteStreamId += 2;
 
         // Check if session handler honors UNIDIRECTIONAL streams
         spdySynStreamFrame.setLast(false);
@@ -181,53 +183,43 @@ public class SpdySessionHandlerTest {
         // Check if session handler returns PROTOCOL_ERROR if it receives
         // multiple SYN_STREAM frames for the same active Stream-ID
         sessionHandler.writeInbound(spdySynStreamFrame);
-        assertRstStream(sessionHandler.readOutbound(), localStreamID, SpdyStreamStatus.PROTOCOL_ERROR);
+        assertRstStream(sessionHandler.readOutbound(), localStreamId, SpdyStreamStatus.PROTOCOL_ERROR);
         assertNull(sessionHandler.readOutbound());
-        localStreamID += 2;
+        localStreamId += 2;
 
         // Check if session handler returns PROTOCOL_ERROR if it receives
         // a SYN_STREAM frame with an invalid Stream-ID
-        spdySynStreamFrame.setStreamId(localStreamID - 1);
+        spdySynStreamFrame.setStreamId(localStreamId - 1);
         sessionHandler.writeInbound(spdySynStreamFrame);
-        assertRstStream(sessionHandler.readOutbound(), localStreamID - 1, SpdyStreamStatus.PROTOCOL_ERROR);
+        assertRstStream(sessionHandler.readOutbound(), localStreamId - 1, SpdyStreamStatus.PROTOCOL_ERROR);
         assertNull(sessionHandler.readOutbound());
-        spdySynStreamFrame.setStreamId(localStreamID);
-
-        // Check if session handler correctly limits the number of
-        // concurrent streams in the SETTINGS frame
-        SpdySettingsFrame spdySettingsFrame = new DefaultSpdySettingsFrame();
-        spdySettingsFrame.setValue(SpdySettingsFrame.SETTINGS_MAX_CONCURRENT_STREAMS, 2);
-        sessionHandler.writeInbound(spdySettingsFrame);
-        assertNull(sessionHandler.readOutbound());
-        sessionHandler.writeInbound(spdySynStreamFrame);
-        assertRstStream(sessionHandler.readOutbound(), localStreamID, SpdyStreamStatus.REFUSED_STREAM);
-        assertNull(sessionHandler.readOutbound());
-        spdySettingsFrame.setValue(SpdySettingsFrame.SETTINGS_MAX_CONCURRENT_STREAMS, 4);
-        sessionHandler.writeInbound(spdySettingsFrame);
-        assertNull(sessionHandler.readOutbound());
-        sessionHandler.writeInbound(spdySynStreamFrame);
-        assertSynReply(sessionHandler.readOutbound(), localStreamID, false, spdySynStreamFrame);
-        assertNull(sessionHandler.readOutbound());
-
-        // Check if session handler rejects HEADERS for closed streams
-        int testStreamID = spdyDataFrame.getStreamId();
-        sessionHandler.writeInbound(spdyDataFrame);
-        assertDataFrame(sessionHandler.readOutbound(), testStreamID, spdyDataFrame.isLast());
-        assertNull(sessionHandler.readOutbound());
-        spdyHeadersFrame.setStreamId(testStreamID);
-
-        sessionHandler.writeInbound(spdyHeadersFrame);
-        assertRstStream(sessionHandler.readOutbound(), testStreamID, SpdyStreamStatus.INVALID_STREAM);
-        assertNull(sessionHandler.readOutbound());
+        spdySynStreamFrame.setStreamId(localStreamId);
 
         // Check if session handler returns PROTOCOL_ERROR if it receives
         // an invalid HEADERS frame
-        spdyHeadersFrame.setStreamId(localStreamID);
+        spdyHeadersFrame.setStreamId(localStreamId);
 
         spdyHeadersFrame.setInvalid();
         sessionHandler.writeInbound(spdyHeadersFrame);
-        assertRstStream(sessionHandler.readOutbound(), localStreamID, SpdyStreamStatus.PROTOCOL_ERROR);
+        assertRstStream(sessionHandler.readOutbound(), localStreamId, SpdyStreamStatus.PROTOCOL_ERROR);
         assertNull(sessionHandler.readOutbound());
+
+        sessionHandler.finish();
+    }
+
+    private static void testSpdySessionHandlerPing(SpdyVersion version, boolean server) {
+        EmbeddedChannel sessionHandler = new EmbeddedChannel(
+                new SpdySessionHandler(version, server), new EchoHandler(closeSignal, server));
+
+        while (sessionHandler.readOutbound() != null) {
+            continue;
+        }
+
+        int localStreamId = server ? 1 : 2;
+        int remoteStreamId = server ? 2 : 1;
+
+        SpdyPingFrame localPingFrame = new DefaultSpdyPingFrame(localStreamId);
+        SpdyPingFrame remotePingFrame = new DefaultSpdyPingFrame(remoteStreamId);
 
         // Check if session handler returns identical local PINGs
         sessionHandler.writeInbound(localPingFrame);
@@ -238,22 +230,50 @@ public class SpdySessionHandlerTest {
         sessionHandler.writeInbound(remotePingFrame);
         assertNull(sessionHandler.readOutbound());
 
+        sessionHandler.finish();
+    }
+
+    private static void testSpdySessionHandlerGoAway(SpdyVersion version, boolean server) {
+        EmbeddedChannel sessionHandler = new EmbeddedChannel(
+                new SpdySessionHandler(version, server), new EchoHandler(closeSignal, server));
+
+        while (sessionHandler.readOutbound() != null) {
+            continue;
+        }
+
+        int localStreamId = server ? 1 : 2;
+
+        SpdySynStreamFrame spdySynStreamFrame =
+                new DefaultSpdySynStreamFrame(localStreamId, 0, (byte) 0);
+        spdySynStreamFrame.headers().set("Compression", "test");
+
+        SpdyDataFrame spdyDataFrame = new DefaultSpdyDataFrame(localStreamId);
+        spdyDataFrame.setLast(true);
+
+        // Send an initial request
+        sessionHandler.writeInbound(spdySynStreamFrame);
+        assertSynReply(sessionHandler.readOutbound(), localStreamId, false, spdySynStreamFrame.headers());
+        assertNull(sessionHandler.readOutbound());
+        sessionHandler.writeInbound(spdyDataFrame);
+        assertDataFrame(sessionHandler.readOutbound(), localStreamId, true);
+        assertNull(sessionHandler.readOutbound());
+
         // Check if session handler sends a GOAWAY frame when closing
         sessionHandler.writeInbound(closeMessage);
-        assertGoAway(sessionHandler.readOutbound(), localStreamID);
+        assertGoAway(sessionHandler.readOutbound(), localStreamId);
         assertNull(sessionHandler.readOutbound());
-        localStreamID += 2;
+        localStreamId += 2;
 
         // Check if session handler returns REFUSED_STREAM if it receives
         // SYN_STREAM frames after sending a GOAWAY frame
-        spdySynStreamFrame.setStreamId(localStreamID);
+        spdySynStreamFrame.setStreamId(localStreamId);
         sessionHandler.writeInbound(spdySynStreamFrame);
-        assertRstStream(sessionHandler.readOutbound(), localStreamID, SpdyStreamStatus.REFUSED_STREAM);
+        assertRstStream(sessionHandler.readOutbound(), localStreamId, SpdyStreamStatus.REFUSED_STREAM);
         assertNull(sessionHandler.readOutbound());
 
         // Check if session handler ignores Data frames after sending
         // a GOAWAY frame
-        spdyDataFrame.setStreamId(localStreamID);
+        spdyDataFrame.setStreamId(localStreamId);
         sessionHandler.writeInbound(spdyDataFrame);
         assertNull(sessionHandler.readOutbound());
 
@@ -262,23 +282,55 @@ public class SpdySessionHandlerTest {
 
     @Test
     public void testSpdyClientSessionHandler() {
-        for (int version = SpdyConstants.SPDY_MIN_VERSION; version <= SpdyConstants.SPDY_MAX_VERSION; version ++) {
-            logger.info("Running: testSpdyClientSessionHandler v" + version);
-            testSpdySessionHandler(version, false);
-        }
+        logger.info("Running: testSpdyClientSessionHandler v3");
+        testSpdySessionHandler(SpdyVersion.SPDY_3, false);
+        logger.info("Running: testSpdyClientSessionHandler v3.1");
+        testSpdySessionHandler(SpdyVersion.SPDY_3_1, false);
+    }
+
+    @Test
+    public void testSpdyClientSessionHandlerPing() {
+        logger.info("Running: testSpdyClientSessionHandlerPing v3");
+        testSpdySessionHandlerPing(SpdyVersion.SPDY_3, false);
+        logger.info("Running: testSpdyClientSessionHandlerPing v3.1");
+        testSpdySessionHandlerPing(SpdyVersion.SPDY_3_1, false);
+    }
+
+    @Test
+    public void testSpdyClientSessionHandlerGoAway() {
+        logger.info("Running: testSpdyClientSessionHandlerGoAway v3");
+        testSpdySessionHandlerGoAway(SpdyVersion.SPDY_3, false);
+        logger.info("Running: testSpdyClientSessionHandlerGoAway v3.1");
+        testSpdySessionHandlerGoAway(SpdyVersion.SPDY_3_1, false);
     }
 
     @Test
     public void testSpdyServerSessionHandler() {
-        for (int version = SpdyConstants.SPDY_MIN_VERSION; version <= SpdyConstants.SPDY_MAX_VERSION; version ++) {
-            logger.info("Running: testSpdyServerSessionHandler v" + version);
-            testSpdySessionHandler(version, true);
-        }
+        logger.info("Running: testSpdyServerSessionHandler v3");
+        testSpdySessionHandler(SpdyVersion.SPDY_3, true);
+        logger.info("Running: testSpdyServerSessionHandler v3.1");
+        testSpdySessionHandler(SpdyVersion.SPDY_3_1, true);
+    }
+
+    @Test
+    public void testSpdyServerSessionHandlerPing() {
+        logger.info("Running: testSpdyServerSessionHandlerPing v3");
+        testSpdySessionHandlerPing(SpdyVersion.SPDY_3, true);
+        logger.info("Running: testSpdyServerSessionHandlerPing v3.1");
+        testSpdySessionHandlerPing(SpdyVersion.SPDY_3_1, true);
+    }
+
+    @Test
+    public void testSpdyServerSessionHandlerGoAway() {
+        logger.info("Running: testSpdyServerSessionHandlerGoAway v3");
+        testSpdySessionHandlerGoAway(SpdyVersion.SPDY_3, true);
+        logger.info("Running: testSpdyServerSessionHandlerGoAway v3.1");
+        testSpdySessionHandlerGoAway(SpdyVersion.SPDY_3_1, true);
     }
 
     // Echo Handler opens 4 half-closed streams on session connection
-    // and then sets the number of concurrent streams to 3
-    private static class EchoHandler extends ChannelInboundMessageHandlerAdapter<Object> {
+    // and then sets the number of concurrent streams to 1
+    private static class EchoHandler extends ChannelHandlerAdapter {
         private final int closeSignal;
         private final boolean server;
 
@@ -290,47 +342,51 @@ public class SpdySessionHandlerTest {
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
             // Initiate 4 new streams
-            int streamID = server ? 2 : 1;
+            int streamId = server ? 2 : 1;
             SpdySynStreamFrame spdySynStreamFrame =
-                    new DefaultSpdySynStreamFrame(streamID, 0, (byte) 0);
+                    new DefaultSpdySynStreamFrame(streamId, 0, (byte) 0);
             spdySynStreamFrame.setLast(true);
-            ctx.write(spdySynStreamFrame);
+            ctx.writeAndFlush(spdySynStreamFrame);
             spdySynStreamFrame.setStreamId(spdySynStreamFrame.getStreamId() + 2);
-            ctx.write(spdySynStreamFrame);
+            ctx.writeAndFlush(spdySynStreamFrame);
             spdySynStreamFrame.setStreamId(spdySynStreamFrame.getStreamId() + 2);
-            ctx.write(spdySynStreamFrame);
+            ctx.writeAndFlush(spdySynStreamFrame);
             spdySynStreamFrame.setStreamId(spdySynStreamFrame.getStreamId() + 2);
-            ctx.write(spdySynStreamFrame);
+            ctx.writeAndFlush(spdySynStreamFrame);
 
-            // Limit the number of concurrent streams to 3
+            // Limit the number of concurrent streams to 1
             SpdySettingsFrame spdySettingsFrame = new DefaultSpdySettingsFrame();
-            spdySettingsFrame.setValue(SpdySettingsFrame.SETTINGS_MAX_CONCURRENT_STREAMS, 3);
-            ctx.write(spdySettingsFrame);
+            spdySettingsFrame.setValue(SpdySettingsFrame.SETTINGS_MAX_CONCURRENT_STREAMS, 1);
+            ctx.writeAndFlush(spdySettingsFrame);
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
-            if (msg instanceof SpdyDataFrame ||
-                    msg instanceof SpdyPingFrame ||
-                    msg instanceof SpdyHeadersFrame) {
-
-                ctx.write(msg);
-                return;
-            }
-
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             if (msg instanceof SpdySynStreamFrame) {
 
                 SpdySynStreamFrame spdySynStreamFrame = (SpdySynStreamFrame) msg;
                 if (!spdySynStreamFrame.isUnidirectional()) {
-                    int streamID = spdySynStreamFrame.getStreamId();
-                    SpdySynReplyFrame spdySynReplyFrame = new DefaultSpdySynReplyFrame(streamID);
+                    int streamId = spdySynStreamFrame.getStreamId();
+                    SpdySynReplyFrame spdySynReplyFrame = new DefaultSpdySynReplyFrame(streamId);
                     spdySynReplyFrame.setLast(spdySynStreamFrame.isLast());
                     for (Map.Entry<String, String> entry: spdySynStreamFrame.headers()) {
                         spdySynReplyFrame.headers().add(entry.getKey(), entry.getValue());
                     }
 
-                    ctx.write(spdySynReplyFrame);
+                    ctx.writeAndFlush(spdySynReplyFrame);
                 }
+                return;
+            }
+
+            if (msg instanceof SpdySynReplyFrame) {
+                return;
+            }
+
+            if (msg instanceof SpdyDataFrame ||
+                msg instanceof SpdyPingFrame ||
+                msg instanceof SpdyHeadersFrame) {
+
+                ctx.writeAndFlush(msg);
                 return;
             }
 

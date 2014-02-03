@@ -29,6 +29,9 @@ public final class ImmediateExecutor implements Executor {
 
     @Override
     public void execute(Runnable command) {
+        if (command == null) {
+            throw new NullPointerException("command");
+        }
         command.run();
     }
 }

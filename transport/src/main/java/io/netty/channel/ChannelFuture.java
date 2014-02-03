@@ -50,8 +50,8 @@ import java.util.concurrent.TimeUnit;
  * +--------------------------+    |    | Completed with failure    |
  * |      isDone() = <b>false</b>    |    |    +---------------------------+
  * |   isSuccess() = false    |----+---->   isDone() = <b>true</b>         |
- * | isCancelled() = false    |    |    | getCause() = <b>non-null</b>     |
- * |    getCause() = null     |    |    +===========================+
+ * | isCancelled() = false    |    |    | cause() = <b>non-null</b>     |
+ * |    cause() = null     |    |    +===========================+
  * +--------------------------+    |    | Completed by cancellation |
  *                                 |    +---------------------------+
  *                                 +---->      isDone() = <b>true</b>      |
@@ -95,7 +95,7 @@ import java.util.concurrent.TimeUnit;
  * <pre>
  * // BAD - NEVER DO THIS
  * {@code @Override}
- * public void messageReceived({@link ChannelHandlerContext} ctx, GoodByeMessage msg) {
+ * public void channelRead({@link ChannelHandlerContext} ctx, GoodByeMessage msg) {
  *     {@link ChannelFuture} future = ctx.channel().close();
  *     future.awaitUninterruptibly();
  *     // Perform post-closure operation
@@ -104,7 +104,7 @@ import java.util.concurrent.TimeUnit;
  *
  * // GOOD
  * {@code @Override}
- * public void messageReceived({@link ChannelHandlerContext} ctx,  GoodByeMessage msg) {
+ * public void channelRead({@link ChannelHandlerContext} ctx,  GoodByeMessage msg) {
  *     {@link ChannelFuture} future = ctx.channel().close();
  *     future.addListener(new {@link ChannelFutureListener}() {
  *         public void operationComplete({@link ChannelFuture} future) {
@@ -138,7 +138,7 @@ import java.util.concurrent.TimeUnit;
  * } else if (!f.isSuccess()) {
  *     // You might get a NullPointerException here because the future
  *     // might not be completed yet.
- *     f.getCause().printStackTrace();
+ *     f.cause().printStackTrace();
  * } else {
  *     // Connection established successfully
  * }
@@ -146,7 +146,7 @@ import java.util.concurrent.TimeUnit;
  * // GOOD
  * {@link Bootstrap} b = ...;
  * // Configure the connect timeout option.
- * <b>b.setOption({@link ChannelOption}.CONNECT_TIMEOUT_MILLIS, 10000);</b>
+ * <b>b.option({@link ChannelOption}.CONNECT_TIMEOUT_MILLIS, 10000);</b>
  * {@link ChannelFuture} f = b.connect(...);
  * f.awaitUninterruptibly();
  *
@@ -156,7 +156,7 @@ import java.util.concurrent.TimeUnit;
  * if (f.isCancelled()) {
  *     // Connection attempt cancelled by user
  * } else if (!f.isSuccess()) {
- *     f.getCause().printStackTrace();
+ *     f.cause().printStackTrace();
  * } else {
  *     // Connection established successfully
  * }
@@ -171,16 +171,16 @@ public interface ChannelFuture extends Future<Void> {
     Channel channel();
 
     @Override
-    ChannelFuture addListener(GenericFutureListener<? extends Future<Void>> listener);
+    ChannelFuture addListener(GenericFutureListener<? extends Future<? super Void>> listener);
 
     @Override
-    ChannelFuture addListeners(GenericFutureListener<? extends Future<Void>>... listeners);
+    ChannelFuture addListeners(GenericFutureListener<? extends Future<? super Void>>... listeners);
 
     @Override
-    ChannelFuture removeListener(GenericFutureListener<? extends Future<Void>> listener);
+    ChannelFuture removeListener(GenericFutureListener<? extends Future<? super Void>> listener);
 
     @Override
-    ChannelFuture removeListeners(GenericFutureListener<? extends Future<Void>>... listeners);
+    ChannelFuture removeListeners(GenericFutureListener<? extends Future<? super Void>>... listeners);
 
     @Override
     ChannelFuture sync() throws InterruptedException;
@@ -193,12 +193,4 @@ public interface ChannelFuture extends Future<Void> {
 
     @Override
     ChannelFuture awaitUninterruptibly();
-
-    /**
-     * A {@link ChannelFuture} which is not allowed to be sent to {@link ChannelPipeline} due to
-     * implementation details.
-     */
-    interface Unsafe extends ChannelFuture {
-        // Tag interface
-    }
 }

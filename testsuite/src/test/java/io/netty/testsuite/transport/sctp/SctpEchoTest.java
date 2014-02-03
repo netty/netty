@@ -21,9 +21,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelHandlerUtil;
-import io.netty.channel.ChannelInboundByteHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.sctp.SctpChannel;
 import io.netty.handler.codec.sctp.SctpInboundByteStreamHandler;
 import io.netty.handler.codec.sctp.SctpMessageCompletionHandler;
@@ -54,22 +53,12 @@ public class SctpEchoTest extends AbstractSctpTest {
     }
 
     public void testSimpleEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSimpleEcho0(sb, cb, Integer.MAX_VALUE);
+        testSimpleEcho0(sb, cb);
     }
 
-    @Test
-    public void testSimpleEchoWithBoundedBuffer() throws Throwable {
-        Assume.assumeTrue(TestUtils.isSctpSupported());
-        run();
-    }
-
-    public void testSimpleEchoWithBoundedBuffer(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSimpleEcho0(sb, cb, 4096);
-    }
-
-    private static void testSimpleEcho0(ServerBootstrap sb, Bootstrap cb, int maxInboundBufferSize) throws Throwable {
-        final EchoHandler sh = new EchoHandler(maxInboundBufferSize);
-        final EchoHandler ch = new EchoHandler(maxInboundBufferSize);
+    private static void testSimpleEcho0(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        final EchoHandler sh = new EchoHandler();
+        final EchoHandler ch = new EchoHandler();
 
         sb.childHandler(new ChannelInitializer<SctpChannel>() {
             @Override
@@ -97,7 +86,7 @@ public class SctpEchoTest extends AbstractSctpTest {
 
         for (int i = 0; i < data.length;) {
             int length = Math.min(random.nextInt(1024 * 64), data.length - i);
-            cc.write(Unpooled.wrappedBuffer(data, i, length));
+            cc.writeAndFlush(Unpooled.wrappedBuffer(data, i, length));
             i += length;
         }
 
@@ -149,31 +138,18 @@ public class SctpEchoTest extends AbstractSctpTest {
         }
     }
 
-    private static class EchoHandler extends ChannelInboundByteHandlerAdapter {
-        private final int maxInboundBufferSize;
+    private static class EchoHandler extends SimpleChannelInboundHandler<ByteBuf> {
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;
 
-        EchoHandler(int maxInboundBufferSize) {
-            this.maxInboundBufferSize = maxInboundBufferSize;
-        }
-
         @Override
-        public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            return ChannelHandlerUtil.allocate(ctx, 0, maxInboundBufferSize);
-        }
-
-        @Override
-        public void channelActive(ChannelHandlerContext ctx)
-                throws Exception {
+        public void channelActive(ChannelHandlerContext ctx) throws Exception {
             channel = ctx.channel();
         }
 
         @Override
-        public void inboundBufferUpdated(
-                ChannelHandlerContext ctx, ByteBuf in)
-                throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
             byte[] actual = new byte[in.readableBytes()];
             in.readBytes(actual);
 
@@ -183,15 +159,14 @@ public class SctpEchoTest extends AbstractSctpTest {
             }
 
             if (channel.parent() != null) {
-                channel.write(Unpooled.wrappedBuffer(actual));
+                channel.writeAndFlush(Unpooled.wrappedBuffer(actual));
             }
 
             counter += actual.length;
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx,
-                                    Throwable cause) throws Exception {
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             if (exception.compareAndSet(null, cause)) {
                 ctx.close();
             }

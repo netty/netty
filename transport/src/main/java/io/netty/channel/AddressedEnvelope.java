@@ -16,7 +16,7 @@
 
 package io.netty.channel;
 
-import io.netty.buffer.ReferenceCounted;
+import io.netty.util.ReferenceCounted;
 
 import java.net.SocketAddress;
 
@@ -41,4 +41,16 @@ public interface AddressedEnvelope<M, A extends SocketAddress> extends Reference
      * Returns the address of the recipient of this message.
      */
     A recipient();
+
+    @Override
+    AddressedEnvelope<M, A> retain();
+
+    @Override
+    AddressedEnvelope<M, A> retain(int increment);
+
+    @Override
+    AddressedEnvelope<M, A> touch();
+
+    @Override
+    AddressedEnvelope<M, A> touch(Object hint);
 }

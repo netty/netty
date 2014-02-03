@@ -15,28 +15,30 @@
  */
 package io.netty.handler.codec.protobuf;
 
-import static io.netty.buffer.Unpooled.*;
-import static org.hamcrest.core.Is.*;
-import static org.junit.Assert.*;
-import io.netty.channel.embedded.EmbeddedByteChannel;
-
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.Before;
 import org.junit.Test;
 
+import static io.netty.buffer.Unpooled.*;
+import static io.netty.util.ReferenceCountUtil.releaseLater;
+import static org.hamcrest.core.Is.*;
+import static org.junit.Assert.*;
+
 public class ProtobufVarint32LengthFieldPrependerTest {
 
-    private EmbeddedByteChannel ch;
+    private EmbeddedChannel ch;
 
     @Before
     public void setUp() {
-        ch = new EmbeddedByteChannel(new ProtobufVarint32LengthFieldPrepender());
+        ch = new EmbeddedChannel(new ProtobufVarint32LengthFieldPrepender());
     }
 
     @Test
     public void testTinyEncode() {
         byte[] b = { 4, 1, 1, 1, 1 };
         ch.writeOutbound(wrappedBuffer(b, 1, b.length - 1));
-        assertThat(ch.readOutbound(), is(wrappedBuffer(b)));
+        assertThat(releaseLater((ByteBuf) ch.readOutbound()), is(releaseLater(wrappedBuffer(b))));
     }
 
     @Test
@@ -48,6 +50,6 @@ public class ProtobufVarint32LengthFieldPrependerTest {
         b[0] = -2;
         b[1] = 15;
         ch.writeOutbound(wrappedBuffer(b, 2, b.length - 2));
-        assertThat(ch.readOutbound(), is(wrappedBuffer(b)));
+        assertThat(releaseLater((ByteBuf) ch.readOutbound()), is(releaseLater(wrappedBuffer(b))));
     }
 }

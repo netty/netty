@@ -16,16 +16,15 @@
 package io.netty.example.proxy;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundByteHandlerAdapter;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.socket.nio.NioSocketChannel;
 
-public class HexDumpProxyFrontendHandler extends ChannelInboundByteHandlerAdapter {
+public class HexDumpProxyFrontendHandler extends ChannelHandlerAdapter {
 
     private final String remoteHost;
     private final int remotePort;
@@ -44,7 +43,7 @@ public class HexDumpProxyFrontendHandler extends ChannelInboundByteHandlerAdapte
         // Start the connection attempt.
         Bootstrap b = new Bootstrap();
         b.group(inboundChannel.eventLoop())
-         .channel(NioSocketChannel.class)
+         .channel(ctx.channel().getClass())
          .handler(new HexDumpProxyBackendHandler(inboundChannel))
          .option(ChannelOption.AUTO_READ, false);
         ChannelFuture f = b.connect(remoteHost, remotePort);
@@ -64,11 +63,9 @@ public class HexDumpProxyFrontendHandler extends ChannelInboundByteHandlerAdapte
     }
 
     @Override
-    public void inboundBufferUpdated(final ChannelHandlerContext ctx, ByteBuf in) throws Exception {
-        ByteBuf out = outboundChannel.outboundByteBuffer();
-        out.writeBytes(in);
+    public void channelRead(final ChannelHandlerContext ctx, Object msg) throws Exception {
         if (outboundChannel.isActive()) {
-            outboundChannel.flush().addListener(new ChannelFutureListener() {
+            outboundChannel.writeAndFlush(msg).addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(ChannelFuture future) throws Exception {
                     if (future.isSuccess()) {
@@ -100,7 +97,7 @@ public class HexDumpProxyFrontendHandler extends ChannelInboundByteHandlerAdapte
      */
     static void closeOnFlush(Channel ch) {
         if (ch.isActive()) {
-            ch.flush().addListener(ChannelFutureListener.CLOSE);
+            ch.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
         }
     }
 }

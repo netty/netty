@@ -19,13 +19,12 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundByteHandler;
-import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpClientCodec;
+import io.netty.handler.codec.http.HttpContentDecompressor;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.codec.http.HttpResponseDecoder;
@@ -41,11 +40,11 @@ public abstract class WebSocketClientHandshaker {
 
     private final WebSocketVersion version;
 
-    private boolean handshakeComplete;
+    private volatile boolean handshakeComplete;
 
     private final String expectedSubprotocol;
 
-    private String actualSubprotocol;
+    private volatile String actualSubprotocol;
 
     protected final HttpHeaders customHeaders;
 
@@ -149,6 +148,7 @@ public abstract class WebSocketClientHandshaker {
      */
     public final ChannelFuture handshake(Channel channel, final ChannelPromise promise) {
         FullHttpRequest request =  newHandshakeRequest();
+
         HttpResponseDecoder decoder = channel.pipeline().get(HttpResponseDecoder.class);
         if (decoder == null) {
             HttpClientCodec codec = channel.pipeline().get(HttpClientCodec.class);
@@ -157,11 +157,9 @@ public abstract class WebSocketClientHandshaker {
                        "a HttpResponseDecoder or HttpClientCodec"));
                return promise;
             }
-            codec.setSingleDecode(true);
-        } else {
-            decoder.setSingleDecode(true);
         }
-        channel.write(request).addListener(new ChannelFutureListener() {
+
+        channel.writeAndFlush(request).addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) {
                 if (future.isSuccess()) {
@@ -205,6 +203,12 @@ public abstract class WebSocketClientHandshaker {
         setHandshakeComplete();
 
         ChannelPipeline p = channel.pipeline();
+        // Remove decompressor from pipeline if its in use
+        HttpContentDecompressor decompressor = p.get(HttpContentDecompressor.class);
+        if (decompressor != null) {
+            p.remove(decompressor);
+        }
+
         ChannelHandlerContext ctx = p.context(HttpResponseDecoder.class);
         if (ctx == null) {
             ctx = p.context(HttpClientCodec.class);
@@ -230,11 +234,42 @@ public abstract class WebSocketClientHandshaker {
     /**
      * Returns the decoder to use after handshake is complete.
      */
-    protected abstract ChannelInboundByteHandler newWebsocketDecoder();
+    protected abstract WebSocketFrameDecoder newWebsocketDecoder();
 
     /**
      * Returns the encoder to use after the handshake is complete.
      */
-    protected abstract ChannelOutboundMessageHandler<WebSocketFrame> newWebSocketEncoder();
+    protected abstract WebSocketFrameEncoder newWebSocketEncoder();
 
+    /**
+     * Performs the closing handshake
+     *
+     * @param channel
+     *            Channel
+     * @param frame
+     *            Closing Frame that was received
+     */
+    public ChannelFuture close(Channel channel, CloseWebSocketFrame frame) {
+        if (channel == null) {
+            throw new NullPointerException("channel");
+        }
+        return close(channel, frame, channel.newPromise());
+    }
+
+    /**
+     * Performs the closing handshake
+     *
+     * @param channel
+     *            Channel
+     * @param frame
+     *            Closing Frame that was received
+     * @param promise
+     *            the {@link ChannelPromise} to be notified when the closing handshake is done
+     */
+    public ChannelFuture close(Channel channel, CloseWebSocketFrame frame, ChannelPromise promise) {
+        if (channel == null) {
+            throw new NullPointerException("channel");
+        }
+        return channel.writeAndFlush(frame, promise);
+    }
 }

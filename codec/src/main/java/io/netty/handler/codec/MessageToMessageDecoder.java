@@ -15,13 +15,20 @@
  */
 package io.netty.handler.codec;
 
-import io.netty.buffer.MessageBuf;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandler;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelPipeline;
+import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ReferenceCounted;
+import io.netty.util.internal.RecyclableArrayList;
+import io.netty.util.internal.TypeParameterMatcher;
+
+import java.util.List;
 
 /**
- * {@link ChannelInboundMessageHandler} which decodes from one message to an other message
+ * A {@link ChannelHandler} which decodes from one message to an other message.
+ *
  *
  * For example here is an implementation which decodes a {@link String} to an {@link Integer} which represent
  * the length of the {@link String}.
@@ -32,43 +39,81 @@ import io.netty.channel.ChannelInboundMessageHandlerAdapter;
  *
  *         {@code @Override}
  *         public void decode({@link ChannelHandlerContext} ctx, {@link String} message,
- *                 {@link MessageBuf} out) throws {@link Exception} {
+ *                            List&lt;Object&gt; out) throws {@link Exception} {
  *             out.add(message.length());
  *         }
  *     }
  * </pre>
  *
+ * Be aware that you need to call {@link ReferenceCounted#retain()} on messages that are just passed through if they
+ * are of type {@link ReferenceCounted}. This is needed as the {@link MessageToMessageDecoder} will call
+ * {@link ReferenceCounted#release()} on decoded messages.
+ *
  */
-public abstract class MessageToMessageDecoder<I> extends ChannelInboundMessageHandlerAdapter<I> {
+public abstract class MessageToMessageDecoder<I> extends ChannelHandlerAdapter {
 
-    protected MessageToMessageDecoder() { }
+    private final TypeParameterMatcher matcher;
 
+    /**
+     * Create a new instance which will try to detect the types to match out of the type parameter of the class.
+     */
+    protected MessageToMessageDecoder() {
+        matcher = TypeParameterMatcher.find(this, MessageToMessageDecoder.class, "I");
+    }
+
+    /**
+     * Create a new instance
+     *
+     * @param inboundMessageType    The type of messages to match and so decode
+     */
     protected MessageToMessageDecoder(Class<? extends I> inboundMessageType) {
-        super(inboundMessageType);
+        matcher = TypeParameterMatcher.get(inboundMessageType);
+    }
+
+    /**
+     * Returns {@code true} if the given message should be handled. If {@code false} it will be passed to the next
+     * {@link ChannelHandler} in the {@link ChannelPipeline}.
+     */
+    public boolean acceptInboundMessage(Object msg) throws Exception {
+        return matcher.match(msg);
     }
 
     @Override
-    public final void messageReceived(ChannelHandlerContext ctx, I msg) throws Exception {
-        OutputMessageBuf out = OutputMessageBuf.get();
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        RecyclableArrayList out = RecyclableArrayList.newInstance();
         try {
-            decode(ctx, msg, out);
-        } catch (CodecException e) {
+            if (acceptInboundMessage(msg)) {
+                @SuppressWarnings("unchecked")
+                I cast = (I) msg;
+                try {
+                    decode(ctx, cast, out);
+                } finally {
+                    ReferenceCountUtil.release(cast);
+                }
+            } else {
+                out.add(msg);
+            }
+        } catch (DecoderException e) {
             throw e;
-        } catch (Throwable cause) {
-            throw new DecoderException(cause);
+        } catch (Exception e) {
+            throw new DecoderException(e);
         } finally {
-            out.drainToNextInbound(ctx);
+            int size = out.size();
+            for (int i = 0; i < size; i ++) {
+                ctx.fireChannelRead(out.get(i));
+            }
+            out.recycle();
         }
     }
 
     /**
-     * Decode from one message to an other. This method will be called till either the {@link MessageBuf} has
-     * nothing left or till this method returns {@code null}.
+     * Decode from one message to an other. This method will be called for each written message that can be handled
+     * by this encoder.
      *
      * @param ctx           the {@link ChannelHandlerContext} which this {@link MessageToMessageDecoder} belongs to
      * @param msg           the message to decode to an other one
-     * @param out           the {@link MessageBuf} to which decoded messages should be added
+     * @param out           the {@link List} to which decoded messages should be added
      * @throws Exception    is thrown if an error accour
      */
-    protected abstract void decode(ChannelHandlerContext ctx, I msg, MessageBuf<Object> out) throws Exception;
+    protected abstract void decode(ChannelHandlerContext ctx, I msg, List<Object> out) throws Exception;
 }

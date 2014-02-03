@@ -16,17 +16,18 @@
 package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.ByteToByteEncoder;
+import io.netty.handler.codec.MessageToByteEncoder;
 
-import static io.netty.handler.codec.compression.SnappyChecksumUtil.*;
+import static io.netty.handler.codec.compression.Snappy.*;
 
 /**
  * Compresses a {@link ByteBuf} using the Snappy framing format.
  *
  * See http://code.google.com/p/snappy/source/browse/trunk/framing_format.txt
  */
-public class SnappyFramedEncoder extends ByteToByteEncoder {
+public class SnappyFramedEncoder extends MessageToByteEncoder<ByteBuf> {
     /**
      * The minimum amount that we'll consider actually attempting to compress.
      * This value is preamble + the minimum length our Snappy service will
@@ -98,9 +99,7 @@ public class SnappyFramedEncoder extends ByteToByteEncoder {
         if (chunkLength >>> 24 != 0) {
             throw new CompressionException("compressed data too large: " + chunkLength);
         }
-        out.setByte(lengthIdx, chunkLength & 0xff);
-        out.setByte(lengthIdx + 1, chunkLength >>> 8 & 0xff);
-        out.setByte(lengthIdx + 2, chunkLength >>> 16 & 0xff);
+        out.setMedium(lengthIdx, ByteBufUtil.swapMedium(chunkLength));
     }
 
     /**
@@ -110,9 +109,7 @@ public class SnappyFramedEncoder extends ByteToByteEncoder {
      * @param chunkLength The length to write
      */
     private static void writeChunkLength(ByteBuf out, int chunkLength) {
-        out.writeByte(chunkLength & 0xff);
-        out.writeByte(chunkLength >>> 8 & 0xff);
-        out.writeByte(chunkLength >>> 16 & 0xff);
+        out.writeMedium(ByteBufUtil.swapMedium(chunkLength));
     }
 
     /**
@@ -122,10 +119,6 @@ public class SnappyFramedEncoder extends ByteToByteEncoder {
      * @param out The output buffer to write the checksum to
      */
     private static void calculateAndWriteChecksum(ByteBuf slice, ByteBuf out) {
-        int checksum = calculateChecksum(slice);
-        out.writeByte(checksum & 0x0ff);
-        out.writeByte(checksum >>> 8 & 0x0ff);
-        out.writeByte(checksum >>> 16 & 0x0ff);
-        out.writeByte(checksum >>> 24);
+        out.writeInt(ByteBufUtil.swapInt(calculateChecksum(slice)));
     }
 }

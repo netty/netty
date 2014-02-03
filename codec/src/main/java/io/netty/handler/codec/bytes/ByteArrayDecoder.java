@@ -16,12 +16,13 @@
 package io.netty.handler.codec.bytes;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
 import io.netty.handler.codec.MessageToMessageDecoder;
+
+import java.util.List;
 
 /**
  * Decodes a received {@link ByteBuf} into an array of bytes.
@@ -42,31 +43,17 @@ import io.netty.handler.codec.MessageToMessageDecoder;
  * and then you can use an array of bytes instead of a {@link ByteBuf}
  * as a message:
  * <pre>
- * void messageReceived({@link ChannelHandlerContext} ctx, byte[] bytes) {
+ * void channelRead({@link ChannelHandlerContext} ctx, byte[] bytes) {
  *     ...
  * }
  * </pre>
  */
 public class ByteArrayDecoder extends MessageToMessageDecoder<ByteBuf> {
-
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf msg, MessageBuf<Object> out) throws Exception {
-        byte[] array;
-        if (msg.hasArray()) {
-            if (msg.arrayOffset() == 0 && msg.readableBytes() == msg.capacity()) {
-                // we have no offset and the length is the same as the capacity. Its safe to reuse
-                // the array without copy it first
-                array = msg.array();
-            } else {
-                // copy the ChannelBuffer to a byte array
-                array = new byte[msg.readableBytes()];
-                msg.getBytes(0, array);
-            }
-        } else {
-            // copy the ChannelBuffer to a byte array
-            array = new byte[msg.readableBytes()];
-            msg.getBytes(0, array);
-        }
+    protected void decode(ChannelHandlerContext ctx, ByteBuf msg, List<Object> out) throws Exception {
+         // copy the ByteBuf content to a byte array
+        byte[] array = new byte[msg.readableBytes()];
+        msg.getBytes(0, array);
 
         out.add(array);
     }

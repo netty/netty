@@ -15,10 +15,9 @@
  */
 package io.netty.example.objectecho;
 
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 
-import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -26,16 +25,21 @@ import java.util.logging.Logger;
  * Handles both client-side and server-side handler depending on which
  * constructor was called.
  */
-public class ObjectEchoServerHandler extends ChannelInboundMessageHandlerAdapter<List<Integer>> {
+public class ObjectEchoServerHandler extends ChannelHandlerAdapter {
 
     private static final Logger logger = Logger.getLogger(
             ObjectEchoServerHandler.class.getName());
 
     @Override
-    public void messageReceived(
-            ChannelHandlerContext ctx, List<Integer> msg) throws Exception {
+    public void channelRead(
+            ChannelHandlerContext ctx, Object msg) throws Exception {
         // Echo back the received object to the client.
         ctx.write(msg);
+    }
+
+    @Override
+    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        ctx.flush();
     }
 
     @Override

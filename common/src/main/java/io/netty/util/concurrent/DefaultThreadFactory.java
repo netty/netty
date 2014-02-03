@@ -16,6 +16,8 @@
 
 package io.netty.util.concurrent;
 
+import io.netty.util.internal.StringUtil;
+
 import java.util.Locale;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -64,14 +66,8 @@ public class DefaultThreadFactory implements ThreadFactory {
         if (poolType == null) {
             throw new NullPointerException("poolType");
         }
-        String poolName;
-        Package pkg = poolType.getPackage();
-        if (pkg != null) {
-            poolName = poolType.getName().substring(pkg.getName().length() + 1);
-        } else {
-            poolName = poolType.getName();
-        }
 
+        String poolName = StringUtil.simpleClassName(poolType);
         switch (poolName.length()) {
             case 0:
                 return "unknown";

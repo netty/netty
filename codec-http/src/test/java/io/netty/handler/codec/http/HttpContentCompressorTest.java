@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.channel.embedded.EmbeddedMessageChannel;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.handler.codec.http.HttpHeaders.Names;
 import org.junit.Test;
@@ -63,14 +63,14 @@ public class HttpContentCompressorTest {
 
     @Test
     public void testEmptyContentCompression() throws Exception {
-        EmbeddedMessageChannel ch = new EmbeddedMessageChannel(new HttpContentCompressor());
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
         FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
         req.headers().set(Names.ACCEPT_ENCODING, "deflate");
         ch.writeInbound(req);
 
         ch.writeOutbound(new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK));
 
-        HttpResponse res = (HttpResponse) ch.readOutbound();
+        HttpResponse res = ch.readOutbound();
         assertThat(res, is(not(instanceOf(FullHttpResponse.class))));
         assertThat(res.headers().get(Names.TRANSFER_ENCODING), is("chunked"));
         assertThat(res.headers().get(Names.CONTENT_LENGTH), is(nullValue()));
@@ -79,9 +79,15 @@ public class HttpContentCompressorTest {
         ch.writeOutbound(LastHttpContent.EMPTY_LAST_CONTENT);
 
         HttpContent chunk;
-        chunk = (HttpContent) ch.readOutbound();
-        assertThat(chunk, is(instanceOf(LastHttpContent.class)));
+        chunk = ch.readOutbound();
+        assertThat(chunk, is(instanceOf(HttpContent.class)));
         assertThat(chunk.content().isReadable(), is(true));
+        chunk.release();
+
+        chunk = ch.readOutbound();
+        assertThat(chunk, is(instanceOf(LastHttpContent.class)));
+        assertThat(chunk.content().isReadable(), is(false));
+        chunk.release();
 
         assertThat(ch.readOutbound(), is(nullValue()));
     }

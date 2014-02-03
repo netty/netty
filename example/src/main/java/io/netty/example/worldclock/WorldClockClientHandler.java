@@ -17,7 +17,7 @@ package io.netty.example.worldclock;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.example.worldclock.WorldClockProtocol.Continent;
 import io.netty.example.worldclock.WorldClockProtocol.LocalTime;
 import io.netty.example.worldclock.WorldClockProtocol.LocalTimes;
@@ -34,7 +34,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
-public class WorldClockClientHandler extends ChannelInboundMessageHandlerAdapter<LocalTimes> {
+public class WorldClockClientHandler extends SimpleChannelInboundHandler<LocalTimes> {
 
     private static final Logger logger = Logger.getLogger(
             WorldClockClientHandler.class.getName());
@@ -44,6 +44,10 @@ public class WorldClockClientHandler extends ChannelInboundMessageHandlerAdapter
     // Stateful properties
     private volatile Channel channel;
     private final BlockingQueue<LocalTimes> answer = new LinkedBlockingQueue<LocalTimes>();
+
+    public WorldClockClientHandler() {
+        super(false);
+    }
 
     public List<String> getLocalTimes(Collection<String> cities) {
         Locations.Builder builder = Locations.newBuilder();
@@ -55,7 +59,7 @@ public class WorldClockClientHandler extends ChannelInboundMessageHandlerAdapter
                 setCity(components[1]).build());
         }
 
-        channel.write(builder.build());
+        channel.writeAndFlush(builder.build());
 
         LocalTimes localTimes;
         boolean interrupted = false;
@@ -95,8 +99,8 @@ public class WorldClockClientHandler extends ChannelInboundMessageHandlerAdapter
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, LocalTimes msg) throws Exception {
-        answer.add(msg);
+    public void messageReceived(ChannelHandlerContext ctx, LocalTimes times) throws Exception {
+        answer.add(times);
     }
 
     @Override

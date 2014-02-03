@@ -16,188 +16,126 @@
 package io.netty.channel;
 
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.MessageBuf;
-import io.netty.buffer.ReferenceCounted;
-import io.netty.buffer.Unpooled;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelHandler.Sharable;
+import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
-import io.netty.channel.local.LocalEventLoopGroup;
+import io.netty.channel.local.LocalServerChannel;
+import io.netty.util.AbstractReferenceCounted;
+import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ReferenceCounted;
+import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Test;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.*;
 
 public class DefaultChannelPipelineTest {
-    @Test
-    public void testMessageCatchAllInboundSink() throws Exception {
-        LocalChannel channel = new LocalChannel();
-        LocalEventLoopGroup group = new LocalEventLoopGroup();
 
-        group.register(channel).awaitUninterruptibly();
-        final AtomicBoolean forwarded = new AtomicBoolean();
-        final DefaultChannelPipeline pipeline = new DefaultChannelPipeline(channel);
-        pipeline.addLast(new ChannelInboundMessageHandlerAdapter<Object>() {
+    private static final EventLoopGroup group = new DefaultEventLoopGroup(1);
+
+    private Channel self;
+    private Channel peer;
+
+    @AfterClass
+    public static void afterClass() throws Exception {
+        group.shutdownGracefully().sync();
+    }
+
+    private void setUp(final ChannelHandler... handlers) throws Exception {
+        final AtomicReference<Channel> peerRef = new AtomicReference<Channel>();
+        ServerBootstrap sb = new ServerBootstrap();
+        sb.group(group).channel(LocalServerChannel.class);
+        sb.childHandler(new ChannelHandlerAdapter() {
             @Override
-            public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
-                forwarded.set(ctx.nextInboundMessageBuffer().add(msg));
+            public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+                peerRef.set(ctx.channel());
             }
 
             @Override
-            public void endMessageReceived(ChannelHandlerContext ctx) throws Exception {
-                ctx.fireInboundBufferUpdated();
+            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                ReferenceCountUtil.release(msg);
             }
         });
-        channel.eventLoop().submit(new Runnable() {
-            @Override
-            public void run() {
-                pipeline.fireChannelActive();
-                pipeline.inboundMessageBuffer().add(new Object());
-                pipeline.fireInboundBufferUpdated();
-            }
-        }).get();
 
-        assertTrue(forwarded.get());
+        ChannelFuture bindFuture = sb.bind(LocalAddress.ANY).sync();
+
+        Bootstrap b = new Bootstrap();
+        b.group(group).channel(LocalChannel.class);
+        b.handler(new ChannelInitializer<LocalChannel>() {
+            @Override
+            protected void initChannel(LocalChannel ch) throws Exception {
+                ch.pipeline().addLast(handlers);
+            }
+        });
+
+        self = b.connect(bindFuture.channel().localAddress()).sync().channel();
+        peer = peerRef.get();
+
+        bindFuture.channel().close().sync();
+    }
+
+    @After
+    public void tearDown() throws Exception {
+        if (peer != null) {
+            peer.close();
+            peer = null;
+        }
+        if (self != null) {
+            self = null;
+        }
     }
 
     @Test
-    public void testByteCatchAllInboundSink() throws Exception {
-        LocalChannel channel = new LocalChannel();
-        LocalEventLoopGroup group = new LocalEventLoopGroup();
-        group.register(channel).awaitUninterruptibly();
-        final AtomicBoolean forwarded = new AtomicBoolean();
-        final DefaultChannelPipeline pipeline = new DefaultChannelPipeline(channel);
-        pipeline.addLast(new ChannelInboundByteHandlerAdapter() {
-            @Override
-            protected void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
-                ByteBuf out = ctx.nextInboundByteBuffer();
-                out.writeBytes(in);
-                forwarded.set(true);
-                ctx.fireInboundBufferUpdated();
-            }
-        });
-        channel.eventLoop().submit(new Runnable() {
-            @Override
-            public void run() {
-                pipeline.fireChannelActive();
-                pipeline.inboundByteBuffer().writeByte(0);
-                pipeline.fireInboundBufferUpdated();
-            }
-        }).get();
-
-        assertTrue(forwarded.get());
-    }
-
-    @Test
-    public void testByteCatchAllOutboundSink() throws Exception {
-        LocalChannel channel = new LocalChannel();
-        LocalEventLoopGroup group = new LocalEventLoopGroup();
-        group.register(channel).awaitUninterruptibly();
-        final AtomicBoolean forwarded = new AtomicBoolean();
-        final DefaultChannelPipeline pipeline = new DefaultChannelPipeline(channel);
-        pipeline.addLast(new ChannelOutboundByteHandlerAdapter() {
-            @Override
-            protected void flush(ChannelHandlerContext ctx, ByteBuf in, ChannelPromise promise) throws Exception {
-                ByteBuf out = ctx.nextOutboundByteBuffer();
-                out.writeBytes(in);
-                forwarded.set(true);
-                ctx.flush(promise);
-            }
-        });
-        channel.eventLoop().submit(new Runnable() {
-            @Override
-            public void run() {
-                pipeline.fireChannelActive();
-                pipeline.outboundByteBuffer().writeByte(0);
-                pipeline.flush();
-            }
-        }).get();
-
-        Thread.sleep(1000);
-        assertTrue(forwarded.get());
-    }
-
-    @Test
-    public void testFreeCalled() throws InterruptedException {
+    public void testFreeCalled() throws Exception {
         final CountDownLatch free = new CountDownLatch(1);
 
-        final ReferenceCounted holder = new ReferenceCounted() {
+        final ReferenceCounted holder = new AbstractReferenceCounted() {
             @Override
-            public int refCnt() {
-                return (int) free.getCount();
-            }
-
-            @Override
-            public ReferenceCounted retain() {
-                fail();
-                return this;
-            }
-
-            @Override
-            public ReferenceCounted retain(int increment) {
-                fail();
-                return this;
-            }
-
-            @Override
-            public boolean release() {
-                assertEquals(1, refCnt());
+            protected void deallocate() {
                 free.countDown();
-                return true;
             }
 
             @Override
-            public boolean release(int decrement) {
-                for (int i = 0; i < decrement; i ++) {
-                    release();
-                }
-                return true;
+            public ReferenceCounted touch(Object hint) {
+                return this;
             }
         };
-        LocalChannel channel = new LocalChannel();
-        LocalEventLoopGroup group = new LocalEventLoopGroup();
-        group.register(channel).awaitUninterruptibly();
-        final DefaultChannelPipeline pipeline = new DefaultChannelPipeline(channel);
 
         StringInboundHandler handler = new StringInboundHandler();
-        pipeline.addLast(handler);
-        channel.eventLoop().execute(new Runnable() {
-            @Override
-            public void run() {
-                pipeline.fireChannelActive();
-                pipeline.inboundMessageBuffer().add(holder);
-                pipeline.fireInboundBufferUpdated();
-            }
-        });
+        setUp(handler);
+
+        peer.writeAndFlush(holder).sync();
 
         assertTrue(free.await(10, TimeUnit.SECONDS));
         assertTrue(handler.called);
     }
 
-    private static final class StringInboundHandler extends ChannelInboundMessageHandlerAdapter<String> {
+    private static final class StringInboundHandler extends ChannelHandlerAdapter {
         boolean called;
 
         @Override
-        public boolean acceptInboundMessage(Object msg) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             called = true;
-            return super.acceptInboundMessage(msg);
-        }
-
-        @Override
-        public void messageReceived(ChannelHandlerContext ctx, String msg) throws Exception {
-            fail();
+            if (!(msg instanceof String)) {
+                ctx.fireChannelRead(msg);
+            }
         }
     }
 
     @Test
     public void testRemoveChannelHandler() {
-        DefaultChannelPipeline pipeline = new DefaultChannelPipeline(new LocalChannel());
+        ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
 
         ChannelHandler handler1 = newHandler();
         ChannelHandler handler2 = newHandler();
@@ -217,7 +155,7 @@ public class DefaultChannelPipelineTest {
 
     @Test
     public void testReplaceChannelHandler() {
-        DefaultChannelPipeline pipeline = new DefaultChannelPipeline(new LocalChannel());
+        ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
 
         ChannelHandler handler1 = newHandler();
         pipeline.addLast("handler1", handler1);
@@ -242,7 +180,7 @@ public class DefaultChannelPipelineTest {
 
     @Test
     public void testChannelHandlerContextNavigation() {
-        DefaultChannelPipeline pipeline = new DefaultChannelPipeline(new LocalChannel());
+        ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
 
         final int HANDLER_ARRAY_LEN = 5;
         ChannelHandler[] firstHandlers = newHandlers(HANDLER_ARRAY_LEN);
@@ -255,8 +193,29 @@ public class DefaultChannelPipelineTest {
     }
 
     @Test
+    public void testFireChannelRegistered() throws Exception {
+        final CountDownLatch latch = new CountDownLatch(1);
+        Channel ch = new LocalChannel(group.next());
+        ChannelPipeline pipeline = ch.pipeline();
+        pipeline.addLast(new ChannelInitializer<Channel>() {
+            @Override
+            protected void initChannel(Channel ch) throws Exception {
+                ch.pipeline().addLast(new ChannelHandlerAdapter() {
+                    @Override
+                    public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+                        latch.countDown();
+                    }
+                });
+            }
+        });
+        ch.unsafe().register(ch.newPromise());
+        assertTrue(latch.await(2, TimeUnit.SECONDS));
+    }
+
+    @Test
     public void testPipelineOperation() {
-        DefaultChannelPipeline pipeline = new DefaultChannelPipeline(new LocalChannel());
+        ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
+
         final int handlerNum = 5;
         ChannelHandler[] handlers1 = newHandlers(handlerNum);
         ChannelHandler[] handlers2 = newHandlers(handlerNum);
@@ -283,7 +242,8 @@ public class DefaultChannelPipelineTest {
 
     @Test
     public void testChannelHandlerContextOrder() {
-        DefaultChannelPipeline pipeline = new DefaultChannelPipeline(new LocalChannel());
+        ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
+
         pipeline.addFirst("1", newHandler());
         pipeline.addLast("10", newHandler());
 
@@ -311,342 +271,21 @@ public class DefaultChannelPipelineTest {
         verifyContextNumber(pipeline, 8);
     }
 
-    @Test
-    public void testRemoveAndForwardInboundByte() throws Exception {
-        LocalChannel channel = new LocalChannel();
-        LocalEventLoopGroup group = new LocalEventLoopGroup();
-        group.register(channel).awaitUninterruptibly();
-        final DefaultChannelPipeline pipeline = new DefaultChannelPipeline(channel);
+    @Test(timeout = 10000)
+    public void testLifeCycleAwareness() throws Exception {
+        setUp();
 
-        final ChannelInboundByteHandlerImpl handler1 = new ChannelInboundByteHandlerImpl();
-        final ChannelInboundByteHandlerImpl handler2 = new ChannelInboundByteHandlerImpl();
-        pipeline.addLast("handler1", handler1);
-        pipeline.addLast("handler2", handler2);
-        final CountDownLatch latch = new CountDownLatch(1);
-        channel.eventLoop().execute(new Runnable() {
-            @Override
-            public void run() {
-                pipeline.context(handler1).inboundByteBuffer().writeLong(8);
-                assertEquals(8, pipeline.context(handler1).inboundByteBuffer().readableBytes());
-                assertEquals(0, pipeline.context(handler2).inboundByteBuffer().readableBytes());
-                pipeline.remove(handler1);
-                assertEquals(8, pipeline.context(handler2).inboundByteBuffer().readableBytes());
-                latch.countDown();
-            }
-        });
-
-        assertTrue(latch.await(10, TimeUnit.SECONDS));
-        assertTrue(handler2.updated);
-    }
-
-    @Test
-    public void testReplaceAndForwardInboundByte() throws Exception {
-        LocalChannel channel = new LocalChannel();
-        LocalEventLoopGroup group = new LocalEventLoopGroup();
-        group.register(channel).awaitUninterruptibly();
-        final DefaultChannelPipeline pipeline = new DefaultChannelPipeline(channel);
-
-        final ChannelInboundByteHandlerImpl handler1 = new ChannelInboundByteHandlerImpl();
-        final ChannelInboundByteHandlerImpl handler2 = new ChannelInboundByteHandlerImpl();
-        pipeline.addLast("handler1", handler1);
-        final CountDownLatch latch = new CountDownLatch(1);
-        channel.eventLoop().execute(new Runnable() {
-            @Override
-            public void run() {
-                pipeline.context(handler1).inboundByteBuffer().writeLong(8);
-                assertEquals(8, pipeline.context(handler1).inboundByteBuffer().readableBytes());
-                pipeline.replace(handler1, "handler2", handler2);
-                assertEquals(8, pipeline.context(handler2).inboundByteBuffer().readableBytes());
-                latch.countDown();
-            }
-        });
-
-        assertTrue(latch.await(10, TimeUnit.SECONDS));
-        assertTrue(handler2.updated);
-    }
-
-    @Test
-    public void testRemoveAndForwardOutboundByte() throws Exception {
-        LocalChannel channel = new LocalChannel();
-        LocalEventLoopGroup group = new LocalEventLoopGroup();
-        group.register(channel).awaitUninterruptibly();
-        final DefaultChannelPipeline pipeline = new DefaultChannelPipeline(channel);
-
-        final ChannelOutboundByteHandlerImpl handler1 = new ChannelOutboundByteHandlerImpl();
-        final ChannelOutboundByteHandlerImpl handler2 = new ChannelOutboundByteHandlerImpl();
-        pipeline.addLast("handler1", handler1);
-        pipeline.addLast("handler2", handler2);
-        final CountDownLatch latch = new CountDownLatch(1);
-        channel.eventLoop().execute(new Runnable() {
-            @Override
-            public void run() {
-                pipeline.context(handler2).outboundByteBuffer().writeLong(8);
-                assertEquals(8, pipeline.context(handler2).outboundByteBuffer().readableBytes());
-                assertEquals(0, pipeline.context(handler1).outboundByteBuffer().readableBytes());
-                pipeline.remove(handler2);
-                assertEquals(8, pipeline.context(handler1).outboundByteBuffer().readableBytes());
-                latch.countDown();
-            }
-        });
-
-        assertTrue(latch.await(10, TimeUnit.SECONDS));
-        assertTrue(handler1.flushed);
-    }
-
-    @Test
-    public void testReplaceAndForwardOutboundByte() throws Exception {
-        LocalChannel channel = new LocalChannel();
-        LocalEventLoopGroup group = new LocalEventLoopGroup();
-        group.register(channel).awaitUninterruptibly();
-        final DefaultChannelPipeline pipeline = new DefaultChannelPipeline(channel);
-
-        final ChannelOutboundByteHandlerImpl handler1 = new ChannelOutboundByteHandlerImpl();
-        final ChannelOutboundByteHandlerImpl handler2 = new ChannelOutboundByteHandlerImpl();
-        pipeline.addLast("handler1", handler1);
-        final CountDownLatch latch = new CountDownLatch(1);
-        channel.eventLoop().execute(new Runnable() {
-            @Override
-            public void run() {
-                pipeline.context(handler1).outboundByteBuffer().writeLong(8);
-                assertEquals(8, pipeline.context(handler1).outboundByteBuffer().readableBytes());
-                pipeline.replace(handler1, "handler2", handler2);
-                assertEquals(8, pipeline.context(handler2).outboundByteBuffer().readableBytes());
-                latch.countDown();
-            }
-        });
-
-        assertTrue(latch.await(10, TimeUnit.SECONDS));
-        assertTrue(handler2.flushed);
-    }
-
-    @Test
-    public void testReplaceAndForwardDuplexByte() throws Exception {
-        LocalChannel channel = new LocalChannel();
-        LocalEventLoopGroup group = new LocalEventLoopGroup();
-        group.register(channel).awaitUninterruptibly();
-        final DefaultChannelPipeline pipeline = new DefaultChannelPipeline(channel);
-
-        final ByteHandlerImpl handler1 = new ByteHandlerImpl();
-        final ByteHandlerImpl handler2 = new ByteHandlerImpl();
-        pipeline.addLast("handler1", handler1);
-        final CountDownLatch latch = new CountDownLatch(1);
-        channel.eventLoop().execute(new Runnable() {
-            @Override
-            public void run() {
-                pipeline.context(handler1).outboundByteBuffer().writeLong(8);
-                pipeline.context(handler1).inboundByteBuffer().writeLong(8);
-
-                assertEquals(8, pipeline.context(handler1).outboundByteBuffer().readableBytes());
-                assertEquals(8, pipeline.context(handler1).inboundByteBuffer().readableBytes());
-
-                pipeline.replace(handler1, "handler2", handler2);
-                assertEquals(8, pipeline.context(handler2).outboundByteBuffer().readableBytes());
-                assertEquals(8, pipeline.context(handler2).inboundByteBuffer().readableBytes());
-
-                latch.countDown();
-            }
-        });
-
-        assertTrue(latch.await(10, TimeUnit.SECONDS));
-        assertTrue(((ChannelInboundByteHandlerImpl) handler2.stateHandler()).updated);
-        assertTrue(((ChannelOutboundByteHandlerImpl) handler2.operationHandler()).flushed);
-    }
-
-    @Test
-    public void testRemoveAndForwardDuplexByte() throws Exception {
-        LocalChannel channel = new LocalChannel();
-        LocalEventLoopGroup group = new LocalEventLoopGroup();
-        group.register(channel).awaitUninterruptibly();
-        final DefaultChannelPipeline pipeline = new DefaultChannelPipeline(channel);
-
-        final ChannelOutboundByteHandlerImpl handler1 = new ChannelOutboundByteHandlerImpl();
-        final ByteHandlerImpl handler2 = new ByteHandlerImpl();
-        final ChannelInboundByteHandlerImpl handler3 = new ChannelInboundByteHandlerImpl();
-        pipeline.addLast("handler1", handler1);
-        pipeline.addLast("handler2", handler2);
-        pipeline.addLast("handler3", handler3);
-
-        final CountDownLatch latch = new CountDownLatch(1);
-        channel.eventLoop().execute(new Runnable() {
-            @Override
-            public void run() {
-                pipeline.context(handler2).outboundByteBuffer().writeLong(8);
-                pipeline.context(handler2).inboundByteBuffer().writeLong(8);
-
-                assertEquals(8, pipeline.context(handler2).outboundByteBuffer().readableBytes());
-                assertEquals(8, pipeline.context(handler2).inboundByteBuffer().readableBytes());
-
-                assertEquals(0, pipeline.context(handler1).outboundByteBuffer().readableBytes());
-                assertEquals(0, pipeline.context(handler3).inboundByteBuffer().readableBytes());
-
-                pipeline.remove(handler2);
-                assertEquals(8, pipeline.context(handler1).outboundByteBuffer().readableBytes());
-                assertEquals(8, pipeline.context(handler3).inboundByteBuffer().readableBytes());
-                latch.countDown();
-            }
-        });
-
-        assertTrue(latch.await(10, TimeUnit.SECONDS));
-        assertTrue(handler1.flushed);
-        assertTrue(handler3.updated);
-    }
-
-    @Test
-    public void testRemoveAndForwardInboundMessage() throws Exception {
-        LocalChannel channel = new LocalChannel();
-        LocalEventLoopGroup group = new LocalEventLoopGroup();
-        group.register(channel).awaitUninterruptibly();
-        final DefaultChannelPipeline pipeline = new DefaultChannelPipeline(channel);
-
-        final ChannelInboundMessageHandlerImpl handler1 = new ChannelInboundMessageHandlerImpl();
-        final ChannelInboundMessageHandlerImpl handler2 = new ChannelInboundMessageHandlerImpl();
-        pipeline.addLast("handler1", handler1);
-        pipeline.addLast("handler2", handler2);
-        final CountDownLatch latch = new CountDownLatch(1);
-        channel.eventLoop().execute(new Runnable() {
-            @Override
-            public void run() {
-                pipeline.context(handler1).inboundMessageBuffer().add(new Object());
-                assertEquals(1, pipeline.context(handler1).inboundMessageBuffer().size());
-                assertEquals(0, pipeline.context(handler2).inboundMessageBuffer().size());
-                pipeline.remove(handler1);
-                assertEquals(1, pipeline.context(handler2).inboundMessageBuffer().size());
-                latch.countDown();
-            }
-        });
-
-        assertTrue(latch.await(10, TimeUnit.SECONDS));
-        assertTrue(handler2.updated);
-    }
-
-    @Test
-    public void testReplaceAndForwardInboundMessage() throws Exception {
-        LocalChannel channel = new LocalChannel();
-        LocalEventLoopGroup group = new LocalEventLoopGroup();
-        group.register(channel).awaitUninterruptibly();
-        final DefaultChannelPipeline pipeline = new DefaultChannelPipeline(channel);
-
-        final ChannelInboundMessageHandlerImpl handler1 = new ChannelInboundMessageHandlerImpl();
-        final ChannelInboundMessageHandlerImpl handler2 = new ChannelInboundMessageHandlerImpl();
-        pipeline.addLast("handler1", handler1);
-        final CountDownLatch latch = new CountDownLatch(1);
-        channel.eventLoop().execute(new Runnable() {
-            @Override
-            public void run() {
-                pipeline.context(handler1).inboundMessageBuffer().add(new Object());
-                assertEquals(1, pipeline.context(handler1).inboundMessageBuffer().size());
-                pipeline.replace(handler1, "handler2", handler2);
-                assertEquals(1, pipeline.context(handler2).inboundMessageBuffer().size());
-                latch.countDown();
-            }
-        });
-
-        assertTrue(latch.await(10, TimeUnit.SECONDS));
-        assertTrue(handler2.updated);
-    }
-
-    @Test
-    public void testRemoveAndForwardOutboundMessage() throws Exception {
-        LocalChannel channel = new LocalChannel();
-        LocalEventLoopGroup group = new LocalEventLoopGroup();
-        group.register(channel).awaitUninterruptibly();
-        final DefaultChannelPipeline pipeline = new DefaultChannelPipeline(channel);
-
-        final ChannelOutboundMessageHandlerImpl handler1 = new ChannelOutboundMessageHandlerImpl();
-        final ChannelOutboundMessageHandlerImpl handler2 = new ChannelOutboundMessageHandlerImpl();
-        pipeline.addLast("handler1", handler1);
-        pipeline.addLast("handler2", handler2);
-        final CountDownLatch latch = new CountDownLatch(1);
-        channel.eventLoop().execute(new Runnable() {
-            @Override
-            public void run() {
-                pipeline.context(handler2).outboundMessageBuffer().add(new Object());
-                assertEquals(1, pipeline.context(handler2).outboundMessageBuffer().size());
-                assertEquals(0, pipeline.context(handler1).outboundMessageBuffer().size());
-                pipeline.remove(handler2);
-                assertEquals(1, pipeline.context(handler1).outboundMessageBuffer().size());
-                latch.countDown();
-            }
-        });
-
-        assertTrue(latch.await(10, TimeUnit.SECONDS));
-        assertTrue(handler1.flushed);
-    }
-
-    @Test
-    public void testReplaceAndForwardOutboundMessage() throws Exception {
-        LocalChannel channel = new LocalChannel();
-        LocalEventLoopGroup group = new LocalEventLoopGroup();
-        group.register(channel).awaitUninterruptibly();
-        final DefaultChannelPipeline pipeline = new DefaultChannelPipeline(channel);
-
-        final ChannelOutboundMessageHandlerImpl handler1 = new ChannelOutboundMessageHandlerImpl();
-        final ChannelOutboundMessageHandlerImpl handler2 = new ChannelOutboundMessageHandlerImpl();
-        pipeline.addLast("handler1", handler1);
-        final CountDownLatch latch = new CountDownLatch(1);
-        channel.eventLoop().execute(new Runnable() {
-            @Override
-            public void run() {
-                pipeline.context(handler1).outboundMessageBuffer().add(new Object());
-                assertEquals(1, pipeline.context(handler1).outboundMessageBuffer().size());
-                pipeline.replace(handler1, "handler2", handler2);
-                assertEquals(1, pipeline.context(handler2).outboundMessageBuffer().size());
-                latch.countDown();
-            }
-        });
-
-        assertTrue(latch.await(10, TimeUnit.SECONDS));
-        assertTrue(handler2.flushed);
-    }
-
-    @Test
-    public void testReplaceAndForwardDuplexMessage() throws Exception {
-        LocalChannel channel = new LocalChannel();
-        LocalEventLoopGroup group = new LocalEventLoopGroup();
-        group.register(channel).awaitUninterruptibly();
-        final DefaultChannelPipeline pipeline = new DefaultChannelPipeline(channel);
-
-        final MessageHandlerImpl handler1 = new MessageHandlerImpl();
-        final MessageHandlerImpl handler2 = new MessageHandlerImpl();
-        pipeline.addLast("handler1", handler1);
-        final CountDownLatch latch = new CountDownLatch(1);
-        channel.eventLoop().execute(new Runnable() {
-            @Override
-            public void run() {
-                pipeline.context(handler1).outboundMessageBuffer().add(new Object());
-                pipeline.context(handler1).inboundMessageBuffer().add(new Object());
-
-                assertEquals(1, pipeline.context(handler1).outboundMessageBuffer().size());
-                assertEquals(1, pipeline.context(handler1).inboundMessageBuffer().size());
-
-                pipeline.replace(handler1, "handler2", handler2);
-                assertEquals(1, pipeline.context(handler2).outboundMessageBuffer().size());
-                assertEquals(1, pipeline.context(handler2).inboundMessageBuffer().size());
-
-                latch.countDown();
-            }
-        });
-
-        assertTrue(latch.await(10, TimeUnit.SECONDS));
-        assertTrue(((ChannelInboundMessageHandlerImpl) handler2.stateHandler()).updated);
-        assertTrue(((ChannelOutboundMessageHandlerImpl) handler2.operationHandler()).flushed);
-    }
-
-    @Test(timeout = 20000)
-    public void testLifeCycleAware() throws Exception {
-        LocalChannel channel = new LocalChannel();
-        LocalEventLoopGroup group = new LocalEventLoopGroup();
-        group.register(channel).awaitUninterruptibly();
-        final DefaultChannelPipeline pipeline = new DefaultChannelPipeline(channel);
+        ChannelPipeline p = self.pipeline();
 
         final List<LifeCycleAwareTestHandler> handlers = new ArrayList<LifeCycleAwareTestHandler>();
-        final CountDownLatch addLatch = new CountDownLatch(20);
-        for (int i = 0; i < 20; i++) {
+        final int COUNT = 20;
+        final CountDownLatch addLatch = new CountDownLatch(COUNT);
+        for (int i = 0; i < COUNT; i++) {
             final LifeCycleAwareTestHandler handler = new LifeCycleAwareTestHandler("handler-" + i);
 
             // Add handler.
-            pipeline.addFirst(handler.name, handler);
-            channel.eventLoop().execute(new Runnable() {
+            p.addFirst(handler.name, handler);
+            self.eventLoop().execute(new Runnable() {
                 @Override
                 public void run() {
                     // Validate handler life-cycle methods called.
@@ -664,12 +303,12 @@ public class DefaultChannelPipelineTest {
         // Change the order of remove operations over all handlers in the pipeline.
         Collections.shuffle(handlers);
 
-        final CountDownLatch removeLatch = new CountDownLatch(20);
+        final CountDownLatch removeLatch = new CountDownLatch(COUNT);
 
         for (final LifeCycleAwareTestHandler handler : handlers) {
-            assertSame(handler, pipeline.remove(handler.name));
+            assertSame(handler, p.remove(handler.name));
 
-            channel.eventLoop().execute(new Runnable() {
+            self.eventLoop().execute(new Runnable() {
                 @Override
                 public void run() {
                     // Validate handler life-cycle methods called.
@@ -681,44 +320,122 @@ public class DefaultChannelPipelineTest {
         removeLatch.await();
     }
 
-    @Test
-    public void testRemoveAndForwardDuplexMessage() throws Exception {
-        LocalChannel channel = new LocalChannel();
-        LocalEventLoopGroup group = new LocalEventLoopGroup();
-        group.register(channel).awaitUninterruptibly();
-        final DefaultChannelPipeline pipeline = new DefaultChannelPipeline(channel);
+    @Test(timeout = 100000)
+    public void testRemoveAndForwardInbound() throws Exception {
+        final BufferedTestHandler handler1 = new BufferedTestHandler();
+        final BufferedTestHandler handler2 = new BufferedTestHandler();
 
-        final ChannelOutboundMessageHandlerImpl handler1 = new ChannelOutboundMessageHandlerImpl();
-        final MessageHandlerImpl handler2 = new MessageHandlerImpl();
-        final ChannelInboundMessageHandlerImpl handler3 = new ChannelInboundMessageHandlerImpl();
-        pipeline.addLast("handler1", handler1);
-        pipeline.addLast("handler2", handler2);
-        pipeline.addLast("handler3", handler3);
+        setUp(handler1, handler2);
 
-        final CountDownLatch latch = new CountDownLatch(1);
-        channel.eventLoop().execute(new Runnable() {
+        self.eventLoop().submit(new Runnable() {
             @Override
             public void run() {
-                pipeline.context(handler2).outboundMessageBuffer().add(new Object());
-                pipeline.context(handler2).inboundMessageBuffer().add(new Object());
-
-                assertEquals(1, pipeline.context(handler2).outboundMessageBuffer().size());
-                assertEquals(1, pipeline.context(handler2).inboundMessageBuffer().size());
-
-                assertEquals(0, pipeline.context(handler1).outboundMessageBuffer().size());
-                assertEquals(0, pipeline.context(handler3).inboundMessageBuffer().size());
-
-                pipeline.remove(handler2);
-                assertEquals(1, pipeline.context(handler1).outboundMessageBuffer().size());
-                assertEquals(1, pipeline.context(handler3).inboundMessageBuffer().size());
-                latch.countDown();
+                ChannelPipeline p = self.pipeline();
+                handler1.inboundBuffer.add(8);
+                assertEquals(8, handler1.inboundBuffer.peek());
+                assertTrue(handler2.inboundBuffer.isEmpty());
+                p.remove(handler1);
+                assertEquals(1, handler2.inboundBuffer.size());
+                assertEquals(8, handler2.inboundBuffer.peek());
             }
-        });
-
-        assertTrue(latch.await(10, TimeUnit.SECONDS));
-        assertTrue(handler1.flushed);
-        assertTrue(handler3.updated);
+        }).sync();
     }
+
+    @Test(timeout = 10000)
+    public void testRemoveAndForwardOutbound() throws Exception {
+        final BufferedTestHandler handler1 = new BufferedTestHandler();
+        final BufferedTestHandler handler2 = new BufferedTestHandler();
+
+        setUp(handler1, handler2);
+
+        self.eventLoop().submit(new Runnable() {
+            @Override
+            public void run() {
+                ChannelPipeline p = self.pipeline();
+                handler2.outboundBuffer.add(8);
+                assertEquals(8, handler2.outboundBuffer.peek());
+                assertTrue(handler1.outboundBuffer.isEmpty());
+                p.remove(handler2);
+                assertEquals(1, handler1.outboundBuffer.size());
+                assertEquals(8, handler1.outboundBuffer.peek());
+            }
+        }).sync();
+    }
+
+    @Test(timeout = 10000)
+    public void testReplaceAndForwardOutbound() throws Exception {
+        final BufferedTestHandler handler1 = new BufferedTestHandler();
+        final BufferedTestHandler handler2 = new BufferedTestHandler();
+
+        setUp(handler1);
+
+        self.eventLoop().submit(new Runnable() {
+            @Override
+            public void run() {
+                ChannelPipeline p = self.pipeline();
+                handler1.outboundBuffer.add(8);
+                assertEquals(8, handler1.outboundBuffer.peek());
+                assertTrue(handler2.outboundBuffer.isEmpty());
+                p.replace(handler1, "handler2", handler2);
+                assertEquals(8, handler2.outboundBuffer.peek());
+            }
+        }).sync();
+    }
+
+    @Test(timeout = 10000)
+    public void testReplaceAndForwardInboundAndOutbound() throws Exception {
+        final BufferedTestHandler handler1 = new BufferedTestHandler();
+        final BufferedTestHandler handler2 = new BufferedTestHandler();
+
+        setUp(handler1);
+
+        self.eventLoop().submit(new Runnable() {
+            @Override
+            public void run() {
+                ChannelPipeline p = self.pipeline();
+                handler1.inboundBuffer.add(8);
+                handler1.outboundBuffer.add(8);
+
+                assertEquals(8, handler1.inboundBuffer.peek());
+                assertEquals(8, handler1.outboundBuffer.peek());
+                assertTrue(handler2.inboundBuffer.isEmpty());
+                assertTrue(handler2.outboundBuffer.isEmpty());
+
+                p.replace(handler1, "handler2", handler2);
+                assertEquals(8, handler2.outboundBuffer.peek());
+                assertEquals(8, handler2.inboundBuffer.peek());
+            }
+        }).sync();
+    }
+
+    @Test(timeout = 10000)
+    public void testRemoveAndForwardInboundOutbound() throws Exception {
+        final BufferedTestHandler handler1 = new BufferedTestHandler();
+        final BufferedTestHandler handler2 = new BufferedTestHandler();
+        final BufferedTestHandler handler3 = new BufferedTestHandler();
+
+        setUp(handler1, handler2, handler3);
+
+        self.eventLoop().submit(new Runnable() {
+            @Override
+            public void run() {
+                ChannelPipeline p = self.pipeline();
+                handler2.inboundBuffer.add(8);
+                handler2.outboundBuffer.add(8);
+
+                assertEquals(8, handler2.inboundBuffer.peek());
+                assertEquals(8, handler2.outboundBuffer.peek());
+
+                assertEquals(0, handler1.outboundBuffer.size());
+                assertEquals(0, handler3.inboundBuffer.size());
+
+                p.remove(handler2);
+                assertEquals(8, handler3.inboundBuffer.peek());
+                assertEquals(8, handler1.outboundBuffer.peek());
+            }
+        }).sync();
+    }
+
     private static int next(DefaultChannelHandlerContext ctx) {
         DefaultChannelHandlerContext next = ctx.next;
         if (next == null) {
@@ -736,10 +453,10 @@ public class DefaultChannelPipelineTest {
         }
     }
 
-    private static void verifyContextNumber(DefaultChannelPipeline pipeline, int expectedNumber) {
+    private static void verifyContextNumber(ChannelPipeline pipeline, int expectedNumber) {
         DefaultChannelHandlerContext ctx = (DefaultChannelHandlerContext) pipeline.firstContext();
         int handlerNumber = 0;
-        while (ctx != pipeline.tail) {
+        while (ctx != ((DefaultChannelPipeline) pipeline).tail) {
             handlerNumber++;
             ctx = ctx.next;
         }
@@ -762,109 +479,36 @@ public class DefaultChannelPipelineTest {
     }
 
     @Sharable
-    private static class TestHandler extends ChannelDuplexHandler {
-        @Override
-        public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-            ctx.flush(promise);
-        }
+    private static class TestHandler extends ChannelHandlerAdapter { }
+
+    private static class BufferedTestHandler extends ChannelHandlerAdapter {
+        final Queue<Object> inboundBuffer = new ArrayDeque<Object>();
+        final Queue<Object> outboundBuffer = new ArrayDeque<Object>();
 
         @Override
-        public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
-            ctx.fireInboundBufferUpdated();
-        }
-    }
-
-    private static final class ChannelInboundByteHandlerImpl extends ChannelInboundByteHandlerAdapter {
-        boolean updated;
-
-        @Override
-        protected void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
-            updated = true;
-        }
-    }
-
-    private static final class ChannelOutboundByteHandlerImpl extends ChannelOutboundByteHandlerAdapter {
-        boolean flushed;
-
-        @Override
-        protected void flush(ChannelHandlerContext ctx, ByteBuf in, ChannelPromise promise) throws Exception {
-            promise.setSuccess();
-            flushed = true;
-        }
-    }
-
-    private static final class ChannelInboundMessageHandlerImpl extends ChannelStateHandlerAdapter
-            implements ChannelInboundMessageHandler<Object> {
-        boolean updated;
-        @Override
-        public MessageBuf<Object> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            return Unpooled.messageBuffer();
+        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+            outboundBuffer.add(msg);
         }
 
         @Override
-        public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
-            updated = true;
-        }
-    }
-
-    private static final class ChannelOutboundMessageHandlerImpl extends ChannelOperationHandlerAdapter
-            implements ChannelOutboundMessageHandler<Object> {
-        boolean flushed;
-        @Override
-        public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            return Unpooled.messageBuffer();
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            inboundBuffer.add(msg);
         }
 
         @Override
-        public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-            promise.setSuccess();
-            flushed = true;
-        }
-    }
-
-    private static final class ByteHandlerImpl extends CombinedChannelDuplexHandler
-            implements ChannelInboundByteHandler, ChannelOutboundByteHandler {
-        ByteHandlerImpl() {
-            super(new ChannelInboundByteHandlerImpl(), new ChannelOutboundByteHandlerImpl());
-        }
-
-        @Override
-        public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            return ((ChannelInboundByteHandler) stateHandler()).newInboundBuffer(ctx);
-        }
-
-        @Override
-        public void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
-            ((ChannelInboundByteHandler) stateHandler()).discardInboundReadBytes(ctx);
-        }
-
-        @Override
-        public ByteBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            return ((ChannelOutboundByteHandler) operationHandler()).newOutboundBuffer(ctx);
-        }
-
-        @Override
-        public void discardOutboundReadBytes(ChannelHandlerContext ctx) throws Exception {
-            ((ChannelOutboundByteHandler) operationHandler()).discardOutboundReadBytes(ctx);
-        }
-    }
-
-    private static final class MessageHandlerImpl extends CombinedChannelDuplexHandler
-            implements ChannelInboundMessageHandler<Object>, ChannelOutboundMessageHandler<Object> {
-        MessageHandlerImpl() {
-            super(new ChannelInboundMessageHandlerImpl(), new ChannelOutboundMessageHandlerImpl());
-        }
-
-        @SuppressWarnings("unchecked")
-        @Override
-        public MessageBuf<Object> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            return ((ChannelInboundMessageHandler<Object>) stateHandler()).newInboundBuffer(ctx);
-        }
-
-        @SuppressWarnings("unchecked")
-        @Override
-        public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            return ((ChannelOutboundMessageHandler<Object>) operationHandler()).newOutboundBuffer(ctx);
+        public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+            if (!inboundBuffer.isEmpty()) {
+                for (Object o: inboundBuffer) {
+                    ctx.fireChannelRead(o);
+                }
+                ctx.fireChannelReadComplete();
+            }
+            if (!outboundBuffer.isEmpty()) {
+                for (Object o: outboundBuffer) {
+                    ctx.write(o);
+                }
+                ctx.flush();
+            }
         }
     }
 

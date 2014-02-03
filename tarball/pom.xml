@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.0.0.CR2-SNAPSHOT</version>
+    <version>5.0.0.Alpha2-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-tarball</artifactId>
@@ -147,6 +147,19 @@
                 <configuration>
                   <classifier>sources</classifier>
                   <outputDirectory>${project.build.directory}/jars-all</outputDirectory>
+                  <includeGroupIds>${project.groupId}</includeGroupIds>
+                  <includeArtifactIds>netty-all</includeArtifactIds>
+                </configuration>
+              </execution>
+              <execution>
+                <id>copy-apidocs-all-in-one</id>
+                <phase>prepare-package</phase>
+                <goals>
+                  <goal>copy-dependencies</goal>
+                </goals>
+                <configuration>
+                  <classifier>javadoc</classifier>
+                  <outputDirectory>${project.build.directory}/apidocs-all</outputDirectory>
                   <includeGroupIds>${project.groupId}</includeGroupIds>
                   <includeArtifactIds>netty-all</includeArtifactIds>
                 </configuration>

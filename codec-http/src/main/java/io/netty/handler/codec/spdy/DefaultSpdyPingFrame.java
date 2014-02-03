@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -47,10 +47,10 @@ public class DefaultSpdyPingFrame implements SpdyPingFrame {
     @Override
     public String toString() {
         StringBuilder buf = new StringBuilder();
-        buf.append(getClass().getSimpleName());
+        buf.append(StringUtil.simpleClassName(this));
         buf.append(StringUtil.NEWLINE);
         buf.append("--> ID = ");
-        buf.append(id);
+        buf.append(getId());
         return buf.toString();
     }
 }

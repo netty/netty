@@ -17,11 +17,10 @@ package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.BufType;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.Delimiters;
@@ -67,7 +66,7 @@ public class SocketStringEchoTest extends AbstractSocketTest {
             public void initChannel(SocketChannel sch) throws Exception {
                 sch.pipeline().addLast("framer", new DelimiterBasedFrameDecoder(512, Delimiters.lineDelimiter()));
                 sch.pipeline().addLast("decoder", new StringDecoder(CharsetUtil.ISO_8859_1));
-                sch.pipeline().addBefore("decoder", "encoder", new StringEncoder(BufType.BYTE, CharsetUtil.ISO_8859_1));
+                sch.pipeline().addBefore("decoder", "encoder", new StringEncoder(CharsetUtil.ISO_8859_1));
                 sch.pipeline().addAfter("decoder", "handler", sh);
             }
         });
@@ -77,7 +76,7 @@ public class SocketStringEchoTest extends AbstractSocketTest {
             public void initChannel(SocketChannel sch) throws Exception {
                 sch.pipeline().addLast("framer", new DelimiterBasedFrameDecoder(512, Delimiters.lineDelimiter()));
                 sch.pipeline().addLast("decoder", new StringDecoder(CharsetUtil.ISO_8859_1));
-                sch.pipeline().addBefore("decoder", "encoder", new StringEncoder(BufType.BYTE, CharsetUtil.ISO_8859_1));
+                sch.pipeline().addBefore("decoder", "encoder", new StringEncoder(CharsetUtil.ISO_8859_1));
                 sch.pipeline().addAfter("decoder", "handler", ch);
             }
         });
@@ -86,7 +85,7 @@ public class SocketStringEchoTest extends AbstractSocketTest {
         Channel cc = cb.connect().sync().channel();
         for (String element : data) {
             String delimiter = random.nextBoolean() ? "\r\n" : "\n";
-            cc.write(element + delimiter);
+            cc.writeAndFlush(element + delimiter);
         }
 
         while (ch.counter < data.length) {
@@ -136,20 +135,18 @@ public class SocketStringEchoTest extends AbstractSocketTest {
         }
     }
 
-    static class StringEchoHandler extends ChannelInboundMessageHandlerAdapter<String> {
+    static class StringEchoHandler extends SimpleChannelInboundHandler<String> {
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;
 
         @Override
-        public void channelActive(ChannelHandlerContext ctx)
-                throws Exception {
+        public void channelActive(ChannelHandlerContext ctx) throws Exception {
             channel = ctx.channel();
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx,
-                String msg) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, String msg) throws Exception {
             assertEquals(data[counter], msg);
 
             if (channel.parent() != null) {
@@ -161,8 +158,12 @@ public class SocketStringEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx,
-                Throwable cause) throws Exception {
+        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+            ctx.flush();
+        }
+
+        @Override
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             if (exception.compareAndSet(null, cause)) {
                 ctx.close();
             }

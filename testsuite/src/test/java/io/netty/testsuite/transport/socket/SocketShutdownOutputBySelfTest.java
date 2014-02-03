@@ -19,7 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundByteHandlerAdapter;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.SocketChannel;
 import org.junit.Test;
 
@@ -48,7 +48,7 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
             assertFalse(ch.isOutputShutdown());
 
             s = ss.accept();
-            ch.write(Unpooled.wrappedBuffer(new byte[] { 1 })).sync();
+            ch.writeAndFlush(Unpooled.wrappedBuffer(new byte[] { 1 })).sync();
             assertEquals(1, s.getInputStream().read());
 
             assertTrue(h.ch.isOpen());
@@ -76,7 +76,7 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
         }
     }
 
-    private static class TestHandler extends ChannelInboundByteHandlerAdapter {
+    private static class TestHandler extends SimpleChannelInboundHandler<ByteBuf> {
         volatile SocketChannel ch;
         final BlockingQueue<Byte> queue = new LinkedBlockingQueue<Byte>();
 
@@ -86,8 +86,8 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
         }
 
         @Override
-        public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
-            queue.offer(in.readByte());
+        public void messageReceived(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+            queue.offer(msg.readByte());
         }
     }
 }

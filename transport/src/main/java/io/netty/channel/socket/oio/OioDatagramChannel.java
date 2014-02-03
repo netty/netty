@@ -15,17 +15,18 @@
  */
 package io.netty.channel.socket.oio;
 
-import io.netty.buffer.BufType;
-import io.netty.buffer.BufUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.EventLoop;
+import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.oio.AbstractOioMessageChannel;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
@@ -45,6 +46,7 @@ import java.net.NetworkInterface;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
+import java.util.List;
 import java.util.Locale;
 
 /**
@@ -54,16 +56,17 @@ import java.util.Locale;
  * @see AddressedEnvelope
  * @see DatagramPacket
  */
-public class OioDatagramChannel extends AbstractOioMessageChannel
-                                implements DatagramChannel {
+public final class OioDatagramChannel extends AbstractOioMessageChannel implements DatagramChannel {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(OioDatagramChannel.class);
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.MESSAGE, true);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(true);
 
     private final MulticastSocket socket;
     private final DatagramChannelConfig config;
     private final java.net.DatagramPacket tmpPacket = new java.net.DatagramPacket(EmptyArrays.EMPTY_BYTES, 0);
+
+    private RecvByteBufAllocator.Handle allocHandle;
 
     private static MulticastSocket newSocket() {
         try {
@@ -76,8 +79,8 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     /**
      * Create a new instance with an new {@link MulticastSocket}.
      */
-    public OioDatagramChannel() {
-        this(newSocket());
+    public OioDatagramChannel(EventLoop eventLoop) {
+        this(eventLoop, newSocket());
     }
 
     /**
@@ -85,18 +88,8 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
      *
      * @param socket    the {@link MulticastSocket} which is used by this instance
      */
-    public OioDatagramChannel(MulticastSocket socket) {
-        this(null, socket);
-    }
-
-    /**
-     * Create a new instance from the given {@link MulticastSocket}.
-     *
-     * @param id        the id which should be used for this instance or {@code null} if a new one should be generated
-     * @param socket    the {@link MulticastSocket} which is used by this instance
-     */
-    public OioDatagramChannel(Integer id, MulticastSocket socket) {
-        super(null, id);
+    public OioDatagramChannel(EventLoop eventLoop, MulticastSocket socket) {
+        super(null, eventLoop);
 
         boolean success = false;
         try {
@@ -133,7 +126,9 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
 
     @Override
     public boolean isActive() {
-        return isOpen() && socket.isBound();
+        return isOpen()
+            && ((config.getOption(ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION) && isRegistered())
+                 || socket.isBound());
     }
 
     @Override
@@ -199,13 +194,17 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected int doReadMessages(MessageBuf<Object> buf) throws Exception {
-        int packetSize = config().getReceivePacketSize();
-        ByteBuf data = alloc().heapBuffer(packetSize);
-        boolean free = true;
+    protected int doReadMessages(List<Object> buf) throws Exception {
+        DatagramChannelConfig config = config();
+        RecvByteBufAllocator.Handle allocHandle = this.allocHandle;
+        if (allocHandle == null) {
+            this.allocHandle = allocHandle = config.getRecvByteBufAllocator().newHandle();
+        }
 
+        ByteBuf data = config.getAllocator().heapBuffer(allocHandle.guess());
+        boolean free = true;
         try {
-            tmpPacket.setData(data.array(), data.arrayOffset(), packetSize);
+            tmpPacket.setData(data.array(), data.arrayOffset(), data.capacity());
             socket.receive(tmpPacket);
 
             InetSocketAddress remoteAddr = (InetSocketAddress) tmpPacket.getSocketAddress();
@@ -213,7 +212,9 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
                 remoteAddr = remoteAddress();
             }
 
-            buf.add(new DatagramPacket(data.writerIndex(tmpPacket.getLength()), localAddress(), remoteAddr));
+            int readBytes = tmpPacket.getLength();
+            allocHandle.record(readBytes);
+            buf.add(new DatagramPacket(data.writerIndex(readBytes), localAddress(), remoteAddr));
             free = false;
             return 1;
         } catch (SocketTimeoutException e) {
@@ -235,31 +236,34 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected void doWriteMessages(MessageBuf<Object> buf) throws Exception {
-        final Object o = buf.poll();
-        final Object m;
-        final ByteBuf data;
-        final SocketAddress remoteAddress;
-        if (o instanceof AddressedEnvelope) {
-            @SuppressWarnings("unchecked")
-            AddressedEnvelope<Object, SocketAddress> envelope = (AddressedEnvelope<Object, SocketAddress>) o;
-            remoteAddress = envelope.recipient();
-            m = envelope.content();
-        } else {
-            m = o;
-            remoteAddress = null;
-        }
+    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+        for (;;) {
+            final Object o = in.current(false);
+            if (o == null) {
+                break;
+            }
 
-        if (m instanceof ByteBufHolder) {
-            data = ((ByteBufHolder) m).content();
-        } else if (m instanceof ByteBuf) {
-            data = (ByteBuf) m;
-        } else {
-            BufUtil.release(buf.remove());
-            throw new ChannelException("unsupported message type: " + StringUtil.simpleClassName(o));
-        }
+            final Object m;
+            final ByteBuf data;
+            final SocketAddress remoteAddress;
+            if (o instanceof AddressedEnvelope) {
+                @SuppressWarnings("unchecked")
+                AddressedEnvelope<Object, SocketAddress> envelope = (AddressedEnvelope<Object, SocketAddress>) o;
+                remoteAddress = envelope.recipient();
+                m = envelope.content();
+            } else {
+                m = o;
+                remoteAddress = null;
+            }
 
-        try {
+            if (m instanceof ByteBufHolder) {
+                data = ((ByteBufHolder) m).content();
+            } else if (m instanceof ByteBuf) {
+                data = (ByteBuf) m;
+            } else {
+                throw new UnsupportedOperationException("unsupported message type: " + StringUtil.simpleClassName(o));
+            }
+
             int length = data.readableBytes();
             if (remoteAddress != null) {
                 tmpPacket.setSocketAddress(remoteAddress);
@@ -272,8 +276,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
                 tmpPacket.setData(tmp);
             }
             socket.send(tmpPacket);
-        } finally {
-            BufUtil.release(o);
+            in.remove();
         }
     }
 

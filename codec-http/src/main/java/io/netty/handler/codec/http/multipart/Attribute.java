@@ -35,8 +35,17 @@ public interface Attribute extends HttpData {
     Attribute copy();
 
     @Override
+    Attribute duplicate();
+
+    @Override
     Attribute retain();
 
     @Override
     Attribute retain(int increment);
+
+    @Override
+    Attribute touch();
+
+    @Override
+    Attribute touch(Object hint);
 }

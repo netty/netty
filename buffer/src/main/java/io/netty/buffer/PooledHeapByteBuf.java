@@ -14,6 +14,7 @@
 
 package io.netty.buffer;
 
+import io.netty.util.Recycler;
 import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
@@ -26,8 +27,22 @@ import java.nio.channels.ScatteringByteChannel;
 
 final class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
 
-    PooledHeapByteBuf(int maxCapacity) {
-        super(maxCapacity);
+    private static final Recycler<PooledHeapByteBuf> RECYCLER = new Recycler<PooledHeapByteBuf>() {
+        @Override
+        protected PooledHeapByteBuf newObject(Handle<PooledHeapByteBuf> handle) {
+            return new PooledHeapByteBuf(handle, 0);
+        }
+    };
+
+    static PooledHeapByteBuf newInstance(int maxCapacity) {
+        PooledHeapByteBuf buf = RECYCLER.get();
+        buf.setRefCnt(1);
+        buf.maxCapacity(maxCapacity);
+        return buf;
+    }
+
+    private PooledHeapByteBuf(Recycler.Handle<PooledHeapByteBuf> recyclerHandle, int maxCapacity) {
+        super(recyclerHandle, maxCapacity);
     }
 
     @Override
@@ -112,9 +127,27 @@ final class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
 
     @Override
     public int getBytes(int index, GatheringByteChannel out, int length) throws IOException {
+        return getBytes(index, out, length, false);
+    }
+
+    private int getBytes(int index, GatheringByteChannel out, int length, boolean internal) throws IOException {
         checkIndex(index, length);
         index = idx(index);
-        return out.write((ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length));
+        ByteBuffer tmpBuf;
+        if (internal) {
+            tmpBuf = internalNioBuffer();
+        } else {
+            tmpBuf = ByteBuffer.wrap(memory);
+        }
+        return out.write((ByteBuffer) tmpBuf.clear().position(index).limit(index + length));
+    }
+
+    @Override
+    public int readBytes(GatheringByteChannel out, int length) throws IOException {
+        checkReadableBytes(length);
+        int readBytes = getBytes(readerIndex, out, length, true);
+        readerIndex += readBytes;
+        return readBytes;
     }
 
     @Override
@@ -218,15 +251,23 @@ final class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
     }
 
     @Override
-    public ByteBuffer nioBuffer(int index, int length) {
-        checkIndex(index, length);
-        index = idx(index);
-        return ((ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length)).slice();
+    public ByteBuffer[] nioBuffers(int index, int length) {
+        return new ByteBuffer[] { nioBuffer(index, length) };
     }
 
     @Override
-    public ByteBuffer[] nioBuffers(int index, int length) {
-        return new ByteBuffer[] { nioBuffer(index, length) };
+    public ByteBuffer nioBuffer(int index, int length) {
+        checkIndex(index, length);
+        index = idx(index);
+        ByteBuffer buf =  ByteBuffer.wrap(memory, index, length);
+        return buf.slice();
+    }
+
+    @Override
+    public ByteBuffer internalNioBuffer(int index, int length) {
+        checkIndex(index, length);
+        index = idx(index);
+        return (ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length);
     }
 
     @Override

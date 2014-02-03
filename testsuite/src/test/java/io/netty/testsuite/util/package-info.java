@@ -15,6 +15,6 @@
  */
 
 /**
- * Util Test suite classes
+ * Utility classes that help testing a network application.
  */
 package io.netty.testsuite.util;

@@ -28,6 +28,7 @@ import io.netty.util.concurrent.GenericFutureListener;
 public class DefaultChannelPromise extends DefaultPromise<Void> implements ChannelPromise, FlushCheckpoint {
 
     private final Channel channel;
+    private long checkpoint;
 
     /**
      * Creates a new instance.
@@ -88,25 +89,25 @@ public class DefaultChannelPromise extends DefaultPromise<Void> implements Chann
     }
 
     @Override
-    public ChannelPromise addListener(GenericFutureListener<? extends Future<Void>> listener) {
+    public ChannelPromise addListener(GenericFutureListener<? extends Future<? super Void>> listener) {
         super.addListener(listener);
         return this;
     }
 
     @Override
-    public ChannelPromise addListeners(GenericFutureListener<? extends Future<Void>>... listeners) {
+    public ChannelPromise addListeners(GenericFutureListener<? extends Future<? super Void>>... listeners) {
         super.addListeners(listeners);
         return this;
     }
 
     @Override
-    public ChannelPromise removeListener(GenericFutureListener<? extends Future<Void>> listener) {
+    public ChannelPromise removeListener(GenericFutureListener<? extends Future<? super Void>> listener) {
         super.removeListener(listener);
         return this;
     }
 
     @Override
-    public ChannelPromise removeListeners(GenericFutureListener<? extends Future<Void>>... listeners) {
+    public ChannelPromise removeListeners(GenericFutureListener<? extends Future<? super Void>>... listeners) {
         super.removeListeners(listeners);
         return this;
     }
@@ -137,15 +138,12 @@ public class DefaultChannelPromise extends DefaultPromise<Void> implements Chann
 
     @Override
     public long flushCheckpoint() {
-        return state & 0x000000FFFFFFFFFFL;
+        return checkpoint;
     }
 
     @Override
     public void flushCheckpoint(long checkpoint) {
-        if ((checkpoint & 0xFFFFFF0000000000L) != 0) {
-            throw new IllegalStateException("flushCheckpoint overflow");
-        }
-        state = state & 0xFFFFFF0000000000L | checkpoint;
+        this.checkpoint = checkpoint;
     }
 
     @Override

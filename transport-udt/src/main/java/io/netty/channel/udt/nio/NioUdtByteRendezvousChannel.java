@@ -15,15 +15,17 @@
  */
 package io.netty.channel.udt.nio;
 
+
 import com.barchart.udt.TypeUDT;
+import io.netty.channel.EventLoop;
 
 /**
  * Byte Channel Rendezvous for UDT Streams.
  */
 public class NioUdtByteRendezvousChannel extends NioUdtByteConnectorChannel {
 
-    public NioUdtByteRendezvousChannel() {
-        super(NioUdtProvider.newRendezvousChannelUDT(TypeUDT.STREAM));
+    public NioUdtByteRendezvousChannel(EventLoop eventLoop) {
+        super(eventLoop, NioUdtProvider.newRendezvousChannelUDT(TypeUDT.STREAM));
     }
 
 }

@@ -68,7 +68,7 @@ public class AbstractMemoryHttpDataTest {
          * @param charset Used charset for data decoding.
          * @param size    Expected data block size.
          */
-        protected TestHttpData(String name, Charset charset, long size) {
+        private TestHttpData(String name, Charset charset, long size) {
             super(name, charset, size);
         }
 
@@ -79,6 +79,11 @@ public class AbstractMemoryHttpDataTest {
 
         @Override
         public HttpData copy() {
+            throw new UnsupportedOperationException("Should never be called.");
+        }
+
+        @Override
+        public HttpData duplicate() {
             throw new UnsupportedOperationException("Should never be called.");
         }
 

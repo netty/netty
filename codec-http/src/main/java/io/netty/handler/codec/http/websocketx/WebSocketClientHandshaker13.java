@@ -15,8 +15,6 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.channel.ChannelInboundByteHandler;
-import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -42,6 +40,7 @@ import java.net.URI;
 public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketClientHandshaker13.class);
+    private static final CharSequence WEBSOCKET = HttpHeaders.newEntity(Values.WEBSOCKET.toString().toLowerCase());
 
     public static final String MAGIC_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
@@ -117,15 +116,25 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
         }
 
         // Format request
+        int wsPort = wsURL.getPort();
+        // check if the URI contained a port if not set the correct one depending on the schema.
+        // See https://github.com/netty/netty/pull/1558
+        if (wsPort == -1) {
+            if ("wss".equals(wsURL.getScheme())) {
+                wsPort = 443;
+            } else {
+                wsPort = 80;
+            }
+        }
+
         FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, path);
         HttpHeaders headers = request.headers();
 
-        headers.add(Names.UPGRADE, Values.WEBSOCKET.toLowerCase())
+        headers.add(Names.UPGRADE, WEBSOCKET)
                .add(Names.CONNECTION, Values.UPGRADE)
                .add(Names.SEC_WEBSOCKET_KEY, key)
-               .add(Names.HOST, wsURL.getHost());
+               .add(Names.HOST, wsURL.getHost() + ':' + wsPort);
 
-        int wsPort = wsURL.getPort();
         String originValue = "http://" + wsURL.getHost();
         if (wsPort != 80 && wsPort != 443) {
             // if the port is not standard (80/443) its needed to add the port to the header.
@@ -174,12 +183,12 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
         }
 
         String upgrade = headers.get(Names.UPGRADE);
-        if (!Values.WEBSOCKET.equalsIgnoreCase(upgrade)) {
+        if (!HttpHeaders.equalsIgnoreCase(Values.WEBSOCKET, upgrade)) {
             throw new WebSocketHandshakeException("Invalid handshake response upgrade: " + upgrade);
         }
 
         String connection = headers.get(Names.CONNECTION);
-        if (!Values.UPGRADE.equalsIgnoreCase(connection)) {
+        if (!HttpHeaders.equalsIgnoreCase(Values.UPGRADE, connection)) {
             throw new WebSocketHandshakeException("Invalid handshake response connection: " + connection);
         }
 
@@ -191,12 +200,12 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
     }
 
     @Override
-    protected ChannelInboundByteHandler newWebsocketDecoder() {
+    protected WebSocketFrameDecoder newWebsocketDecoder() {
         return new WebSocket13FrameDecoder(false, allowExtensions, maxFramePayloadLength());
     }
 
     @Override
-    protected ChannelOutboundMessageHandler<WebSocketFrame> newWebSocketEncoder() {
+    protected WebSocketFrameEncoder newWebSocketEncoder() {
         return new WebSocket13FrameEncoder(true);
     }
 }

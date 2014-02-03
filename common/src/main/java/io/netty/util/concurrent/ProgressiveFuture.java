@@ -22,16 +22,16 @@ package io.netty.util.concurrent;
 public interface ProgressiveFuture<V> extends Future<V> {
 
     @Override
-    ProgressiveFuture<V> addListener(GenericFutureListener<? extends Future<V>> listener);
+    ProgressiveFuture<V> addListener(GenericFutureListener<? extends Future<? super V>> listener);
 
     @Override
-    ProgressiveFuture<V> addListeners(GenericFutureListener<? extends Future<V>>... listeners);
+    ProgressiveFuture<V> addListeners(GenericFutureListener<? extends Future<? super V>>... listeners);
 
     @Override
-    ProgressiveFuture<V> removeListener(GenericFutureListener<? extends Future<V>> listener);
+    ProgressiveFuture<V> removeListener(GenericFutureListener<? extends Future<? super V>> listener);
 
     @Override
-    ProgressiveFuture<V> removeListeners(GenericFutureListener<? extends Future<V>>... listeners);
+    ProgressiveFuture<V> removeListeners(GenericFutureListener<? extends Future<? super V>>... listeners);
 
     @Override
     ProgressiveFuture<V> sync() throws InterruptedException;

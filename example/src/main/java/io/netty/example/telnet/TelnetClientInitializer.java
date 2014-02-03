@@ -15,7 +15,6 @@
  */
 package io.netty.example.telnet;
 
-import io.netty.buffer.BufType;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
@@ -29,7 +28,7 @@ import io.netty.handler.codec.string.StringEncoder;
  */
 public class TelnetClientInitializer extends ChannelInitializer<SocketChannel> {
     private static final StringDecoder DECODER = new StringDecoder();
-    private static final StringEncoder ENCODER = new StringEncoder(BufType.BYTE);
+    private static final StringEncoder ENCODER = new StringEncoder();
     private static final TelnetClientHandler CLIENTHANDLER = new TelnetClientHandler();
     @Override
     public void initChannel(SocketChannel ch) throws Exception {

@@ -15,13 +15,14 @@
  */
 package io.netty.example.socksproxy;
 
-import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundByteHandlerAdapter;
+import io.netty.util.ReferenceCountUtil;
 
 
-public final class RelayHandler extends ChannelInboundByteHandlerAdapter {
+public final class RelayHandler extends ChannelHandlerAdapter {
     private static final String name = "RELAY_HANDLER";
 
     public static String getName() {
@@ -36,15 +37,15 @@ public final class RelayHandler extends ChannelInboundByteHandlerAdapter {
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        ctx.flush();
+        ctx.writeAndFlush(Unpooled.EMPTY_BUFFER);
     }
 
     @Override
-    public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
-        ByteBuf out = relayChannel.outboundByteBuffer();
-        out.writeBytes(in);
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (relayChannel.isActive()) {
-            relayChannel.flush();
+            relayChannel.writeAndFlush(msg);
+        } else {
+            ReferenceCountUtil.release(msg);
         }
     }
 

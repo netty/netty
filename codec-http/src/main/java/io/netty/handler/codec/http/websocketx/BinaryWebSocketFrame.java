@@ -60,6 +60,11 @@ public class BinaryWebSocketFrame extends WebSocketFrame {
     }
 
     @Override
+    public BinaryWebSocketFrame duplicate() {
+        return new BinaryWebSocketFrame(isFinalFragment(), rsv(), content().duplicate());
+    }
+
+    @Override
     public BinaryWebSocketFrame retain() {
         super.retain();
         return this;
@@ -68,6 +73,18 @@ public class BinaryWebSocketFrame extends WebSocketFrame {
     @Override
     public BinaryWebSocketFrame retain(int increment) {
         super.retain(increment);
+        return this;
+    }
+
+    @Override
+    public BinaryWebSocketFrame touch() {
+        super.touch();
+        return this;
+    }
+
+    @Override
+    public BinaryWebSocketFrame touch(Object hint) {
+        super.touch(hint);
         return this;
     }
 }

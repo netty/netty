@@ -17,10 +17,9 @@ package io.netty.handler.timeout;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelDuplexHandler;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelStateHandlerAdapter;
 
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -41,7 +40,7 @@ import java.util.concurrent.TimeUnit;
  * }
  *
  * // Handler should handle the {@link ReadTimeoutException}.
- * public class MyHandler extends {@link ChannelDuplexHandler} {
+ * public class MyHandler extends {@link ChannelHandlerAdapter} {
  *     {@code @Override}
  *     public void exceptionCaught({@link ChannelHandlerContext} ctx, {@link Throwable} cause)
  *             throws {@link Exception} {
@@ -61,7 +60,7 @@ import java.util.concurrent.TimeUnit;
  * @see WriteTimeoutHandler
  * @see IdleStateHandler
  */
-public class ReadTimeoutHandler extends ChannelStateHandlerAdapter {
+public class ReadTimeoutHandler extends ChannelHandlerAdapter {
 
     private final long timeoutMillis;
 
@@ -144,9 +143,9 @@ public class ReadTimeoutHandler extends ChannelStateHandlerAdapter {
     }
 
     @Override
-    public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         lastReadTime = System.currentTimeMillis();
-        ctx.fireInboundBufferUpdated();
+        ctx.fireChannelRead(msg);
     }
 
     private void initialize(ChannelHandlerContext ctx) {
@@ -177,6 +176,9 @@ public class ReadTimeoutHandler extends ChannelStateHandlerAdapter {
         }
     }
 
+    /**
+     * Is called when a read timeout was detected.
+     */
     protected void readTimedOut(ChannelHandlerContext ctx) throws Exception {
         if (!closed) {
             ctx.fireExceptionCaught(ReadTimeoutException.INSTANCE);

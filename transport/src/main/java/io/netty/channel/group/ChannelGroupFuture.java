@@ -111,16 +111,6 @@ public interface ChannelGroupFuture extends Future<Void>, Iterable<ChannelFuture
 
     /**
      * Returns the {@link ChannelFuture} of the individual I/O operation which
-     * is associated with the {@link Channel} whose ID matches the specified
-     * integer.
-     *
-     * @return the matching {@link ChannelFuture} if found.
-     *         {@code null} otherwise.
-     */
-    ChannelFuture find(Integer channelId);
-
-    /**
-     * Returns the {@link ChannelFuture} of the individual I/O operation which
      * is associated with the specified {@link Channel}.
      *
      * @return the matching {@link ChannelFuture} if found.
@@ -151,16 +141,16 @@ public interface ChannelGroupFuture extends Future<Void>, Iterable<ChannelFuture
     boolean isPartialFailure();
 
     @Override
-    ChannelGroupFuture addListener(GenericFutureListener<? extends Future<Void>> listener);
+    ChannelGroupFuture addListener(GenericFutureListener<? extends Future<? super Void>> listener);
 
     @Override
-    ChannelGroupFuture addListeners(GenericFutureListener<? extends Future<Void>>... listeners);
+    ChannelGroupFuture addListeners(GenericFutureListener<? extends Future<? super Void>>... listeners);
 
     @Override
-    ChannelGroupFuture removeListener(GenericFutureListener<? extends Future<Void>> listener);
+    ChannelGroupFuture removeListener(GenericFutureListener<? extends Future<? super Void>> listener);
 
     @Override
-    ChannelGroupFuture removeListeners(GenericFutureListener<? extends Future<Void>>... listeners);
+    ChannelGroupFuture removeListeners(GenericFutureListener<? extends Future<? super Void>>... listeners);
 
     @Override
     ChannelGroupFuture await() throws InterruptedException;

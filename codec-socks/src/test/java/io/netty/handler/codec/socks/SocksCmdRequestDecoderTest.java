@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.socks;
 
-import io.netty.channel.embedded.EmbeddedByteChannel;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.Test;
@@ -34,12 +34,12 @@ public class SocksCmdRequestDecoderTest {
                 " port: " + port);
         SocksCmdRequest msg = new SocksCmdRequest(cmdType, addressType, host, port);
         SocksCmdRequestDecoder decoder = new SocksCmdRequestDecoder();
-        EmbeddedByteChannel embedder = new EmbeddedByteChannel(decoder);
+        EmbeddedChannel embedder = new EmbeddedChannel(decoder);
         SocksCommonTestUtils.writeMessageIntoEmbedder(embedder, msg);
         if (msg.addressType() == SocksAddressType.UNKNOWN) {
             assertTrue(embedder.readInbound() instanceof UnknownSocksRequest);
         } else {
-            msg = (SocksCmdRequest) embedder.readInbound();
+            msg = embedder.readInbound();
             assertSame(msg.cmdType(), cmdType);
             assertSame(msg.addressType(), addressType);
             assertEquals(msg.host(), host);

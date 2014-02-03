@@ -17,14 +17,12 @@ package io.netty.handler.timeout;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOperationHandlerAdapter;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.FileRegion;
 
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -45,7 +43,7 @@ import java.util.concurrent.TimeUnit;
  * }
  *
  * // Handler should handle the {@link WriteTimeoutException}.
- * public class MyHandler extends {@link ChannelDuplexHandler} {
+ * public class MyHandler extends {@link ChannelHandlerAdapter} {
  *     {@code @Override}
  *     public void exceptionCaught({@link ChannelHandlerContext} ctx, {@link Throwable} cause)
  *             throws {@link Exception} {
@@ -65,7 +63,7 @@ import java.util.concurrent.TimeUnit;
  * @see ReadTimeoutHandler
  * @see IdleStateHandler
  */
-public class WriteTimeoutHandler extends ChannelOperationHandlerAdapter {
+public class WriteTimeoutHandler extends ChannelHandlerAdapter {
 
     private final long timeoutMillis;
 
@@ -102,15 +100,9 @@ public class WriteTimeoutHandler extends ChannelOperationHandlerAdapter {
     }
 
     @Override
-    public void flush(final ChannelHandlerContext ctx, final ChannelPromise promise) throws Exception {
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         scheduleTimeout(ctx, promise);
-        ctx.flush(promise);
-    }
-
-    @Override
-    public void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelPromise promise) throws Exception {
-        scheduleTimeout(ctx, promise);
-        super.sendFile(ctx, region, promise);
+        ctx.write(msg, promise);
     }
 
     private void scheduleTimeout(final ChannelHandlerContext ctx, final ChannelPromise future) {
@@ -119,8 +111,10 @@ public class WriteTimeoutHandler extends ChannelOperationHandlerAdapter {
             final ScheduledFuture<?> sf = ctx.executor().schedule(new Runnable() {
                 @Override
                 public void run() {
-                    if (future.tryFailure(WriteTimeoutException.INSTANCE)) {
-                        // If succeeded to mark as failure, notify the pipeline, too.
+                    // Was not written yet so issue a write timeout
+                    // The future itself will be failed with a ClosedChannelException once the close() was issued
+                    // See https://github.com/netty/netty/issues/2159
+                    if (!future.isDone()) {
                         try {
                             writeTimedOut(ctx);
                         } catch (Throwable t) {
@@ -140,6 +134,9 @@ public class WriteTimeoutHandler extends ChannelOperationHandlerAdapter {
         }
     }
 
+    /**
+     * Is called when a write timeout was detected
+     */
     protected void writeTimedOut(ChannelHandlerContext ctx) throws Exception {
         if (!closed) {
             ctx.fireExceptionCaught(WriteTimeoutException.INSTANCE);

@@ -15,12 +15,9 @@
  */
 package io.netty.example.udt.echo.bytes;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler.Sharable;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelHandlerUtil;
-import io.netty.channel.ChannelInboundByteHandlerAdapter;
-import io.netty.channel.ChannelOption;
 import io.netty.channel.udt.nio.NioUdtProvider;
 
 import java.util.logging.Level;
@@ -30,16 +27,17 @@ import java.util.logging.Logger;
  * Handler implementation for the echo server.
  */
 @Sharable
-public class ByteEchoServerHandler extends ChannelInboundByteHandlerAdapter {
+public class ByteEchoServerHandler extends ChannelHandlerAdapter {
 
     private static final Logger log = Logger.getLogger(ByteEchoServerHandler.class.getName());
 
     @Override
-    public void inboundBufferUpdated(final ChannelHandlerContext ctx,
-            final ByteBuf in) {
-        final ByteBuf out = ctx.nextOutboundByteBuffer();
-        out.discardReadBytes();
-        out.writeBytes(in);
+    public void channelRead(final ChannelHandlerContext ctx, Object msg) {
+        ctx.write(msg);
+    }
+
+    @Override
+    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
         ctx.flush();
     }
 
@@ -53,13 +51,6 @@ public class ByteEchoServerHandler extends ChannelInboundByteHandlerAdapter {
     @Override
     public void channelActive(final ChannelHandlerContext ctx) throws Exception {
         log.info("ECHO active " + NioUdtProvider.socketUDT(ctx.channel()).toStringOptions());
-    }
-
-    @Override
-    public ByteBuf newInboundBuffer(final ChannelHandlerContext ctx)
-            throws Exception {
-        return ChannelHandlerUtil.allocate(ctx,
-                ctx.channel().config().getOption(ChannelOption.SO_RCVBUF));
     }
 
 }

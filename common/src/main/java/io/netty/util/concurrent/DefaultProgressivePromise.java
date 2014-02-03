@@ -34,7 +34,13 @@ public class DefaultProgressivePromise<V> extends DefaultPromise<V> implements P
 
     @Override
     public ProgressivePromise<V> setProgress(long progress, long total) {
-        if (progress < 0 || progress > total) {
+        if (total < 0) {
+            // total unknown
+            total = -1; // normalize
+            if (progress < 0) {
+                throw new IllegalArgumentException("progress: " + progress + " (expected: >= 0)");
+            }
+        } else if (progress < 0 || progress > total) {
             throw new IllegalArgumentException(
                     "progress: " + progress + " (expected: 0 <= progress <= total (" + total + "))");
         }
@@ -49,7 +55,12 @@ public class DefaultProgressivePromise<V> extends DefaultPromise<V> implements P
 
     @Override
     public boolean tryProgress(long progress, long total) {
-        if (progress < 0 || progress > total || isDone()) {
+        if (total < 0) {
+            total = -1;
+            if (progress < 0 || isDone()) {
+                return false;
+            }
+        } else if (progress < 0 || progress > total || isDone()) {
             return false;
         }
 
@@ -58,25 +69,25 @@ public class DefaultProgressivePromise<V> extends DefaultPromise<V> implements P
     }
 
     @Override
-    public ProgressivePromise<V> addListener(GenericFutureListener<? extends Future<V>> listener) {
+    public ProgressivePromise<V> addListener(GenericFutureListener<? extends Future<? super V>> listener) {
         super.addListener(listener);
         return this;
     }
 
     @Override
-    public ProgressivePromise<V> addListeners(GenericFutureListener<? extends Future<V>>... listeners) {
+    public ProgressivePromise<V> addListeners(GenericFutureListener<? extends Future<? super V>>... listeners) {
         super.addListeners(listeners);
         return this;
     }
 
     @Override
-    public ProgressivePromise<V> removeListener(GenericFutureListener<? extends Future<V>> listener) {
+    public ProgressivePromise<V> removeListener(GenericFutureListener<? extends Future<? super V>> listener) {
         super.removeListener(listener);
         return this;
     }
 
     @Override
-    public ProgressivePromise<V> removeListeners(GenericFutureListener<? extends Future<V>>... listeners) {
+    public ProgressivePromise<V> removeListeners(GenericFutureListener<? extends Future<? super V>>... listeners) {
         super.removeListeners(listeners);
         return this;
     }

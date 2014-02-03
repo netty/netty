@@ -20,7 +20,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.example.http.websocketx.server.WebSocketServerIndexPage;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -46,7 +46,7 @@ import static io.netty.handler.codec.http.HttpVersion.*;
 /**
  * Handles handshakes and messages
  */
-public class WebSocketSslServerHandler extends ChannelInboundMessageHandlerAdapter<Object> {
+public class WebSocketSslServerHandler extends SimpleChannelInboundHandler<Object> {
     private static final Logger logger = Logger.getLogger(WebSocketSslServerHandler.class.getName());
 
     private static final String WEBSOCKET_PATH = "/websocket";
@@ -98,7 +98,7 @@ public class WebSocketSslServerHandler extends ChannelInboundMessageHandlerAdapt
                 getWebSocketLocation(req), null, false);
         handshaker = wsFactory.newHandshaker(req);
         if (handshaker == null) {
-            WebSocketServerHandshakerFactory.sendUnsupportedWebSocketVersionResponse(ctx.channel());
+            WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(ctx.channel());
         } else {
             handshaker.handshake(ctx.channel(), req);
         }
@@ -108,13 +108,11 @@ public class WebSocketSslServerHandler extends ChannelInboundMessageHandlerAdapt
 
         // Check for closing frame
         if (frame instanceof CloseWebSocketFrame) {
-            frame.retain();
-            handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame);
+            handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame.retain());
             return;
         }
         if (frame instanceof PingWebSocketFrame) {
-            frame.content().retain();
-            ctx.channel().write(new PongWebSocketFrame(frame.content()));
+            ctx.channel().write(new PongWebSocketFrame(frame.content().retain()));
             return;
         }
         if (!(frame instanceof TextWebSocketFrame)) {
@@ -125,7 +123,7 @@ public class WebSocketSslServerHandler extends ChannelInboundMessageHandlerAdapt
         // Send the uppercase string back.
         String request = ((TextWebSocketFrame) frame).text();
         if (logger.isLoggable(Level.FINE)) {
-            logger.fine(String.format("Channel %s received %s", ctx.channel().id(), request));
+            logger.fine(String.format("%s received %s", ctx.channel(), request));
         }
         ctx.channel().write(new TextWebSocketFrame(request.toUpperCase()));
     }
@@ -134,7 +132,9 @@ public class WebSocketSslServerHandler extends ChannelInboundMessageHandlerAdapt
             ChannelHandlerContext ctx, FullHttpRequest req, FullHttpResponse res) {
         // Generate an error page if response getStatus code is not OK (200).
         if (res.getStatus().code() != 200) {
-            res.content().writeBytes(Unpooled.copiedBuffer(res.getStatus().toString(), CharsetUtil.UTF_8));
+            ByteBuf buf = Unpooled.copiedBuffer(res.getStatus().toString(), CharsetUtil.UTF_8);
+            res.content().writeBytes(buf);
+            buf.release();
             setContentLength(res, res.content().readableBytes());
         }
 
@@ -143,6 +143,11 @@ public class WebSocketSslServerHandler extends ChannelInboundMessageHandlerAdapt
         if (!isKeepAlive(req) || res.getStatus().code() != 200) {
             f.addListener(ChannelFutureListener.CLOSE);
         }
+    }
+
+    @Override
+    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        ctx.flush();
     }
 
     @Override

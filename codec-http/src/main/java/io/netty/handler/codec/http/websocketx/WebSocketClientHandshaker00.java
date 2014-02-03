@@ -17,8 +17,6 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelInboundByteHandler;
-import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -200,13 +198,13 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         HttpHeaders headers = response.headers();
 
         String upgrade = headers.get(Names.UPGRADE);
-        if (!Values.WEBSOCKET.equalsIgnoreCase(upgrade)) {
+        if (!HttpHeaders.equalsIgnoreCase(Values.WEBSOCKET, upgrade)) {
             throw new WebSocketHandshakeException("Invalid handshake response upgrade: "
                     + upgrade);
         }
 
         String connection = headers.get(Names.CONNECTION);
-        if (!Values.UPGRADE.equalsIgnoreCase(connection)) {
+        if (!HttpHeaders.equalsIgnoreCase(Values.UPGRADE, connection)) {
             throw new WebSocketHandshakeException("Invalid handshake response connection: "
                     + connection);
         }
@@ -252,12 +250,12 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
     }
 
     @Override
-    protected ChannelInboundByteHandler newWebsocketDecoder() {
+    protected WebSocketFrameDecoder newWebsocketDecoder() {
         return new WebSocket00FrameDecoder(maxFramePayloadLength());
     }
 
     @Override
-    protected ChannelOutboundMessageHandler<WebSocketFrame> newWebSocketEncoder() {
+    protected WebSocketFrameEncoder newWebSocketEncoder() {
         return new WebSocket00FrameEncoder();
     }
 }

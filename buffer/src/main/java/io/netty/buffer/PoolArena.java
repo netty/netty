@@ -151,11 +151,13 @@ abstract class PoolArena<T> {
         buf.initUnpooled(newUnpooledChunk(reqCapacity), reqCapacity);
     }
 
-    synchronized void free(PoolChunk<T> chunk, long handle) {
+     void free(PoolChunk<T> chunk, long handle) {
         if (chunk.unpooled) {
             destroyChunk(chunk);
         } else {
-            chunk.parent.free(chunk, handle);
+            synchronized (this) {
+                chunk.parent.free(chunk, handle);
+            }
         }
     }
 
@@ -188,10 +190,19 @@ abstract class PoolArena<T> {
 
         if ((reqCapacity & 0xFFFFFE00) != 0) { // >= 512
             // Doubled
-            int normalizedCapacity = 512;
-            while (normalizedCapacity < reqCapacity) {
-                normalizedCapacity <<= 1;
+
+            int normalizedCapacity = reqCapacity;
+            normalizedCapacity |= normalizedCapacity >>>  1;
+            normalizedCapacity |= normalizedCapacity >>>  2;
+            normalizedCapacity |= normalizedCapacity >>>  4;
+            normalizedCapacity |= normalizedCapacity >>>  8;
+            normalizedCapacity |= normalizedCapacity >>> 16;
+            normalizedCapacity ++;
+
+            if (normalizedCapacity < 0) {
+                normalizedCapacity >>>= 1;
             }
+
             return normalizedCapacity;
         }
 
@@ -224,8 +235,8 @@ abstract class PoolArena<T> {
         allocate(parent.threadCache.get(), buf, newCapacity);
         if (newCapacity > oldCapacity) {
             memoryCopy(
-                    oldMemory, oldOffset + readerIndex,
-                    buf.memory, buf.offset + readerIndex, writerIndex - readerIndex);
+                    oldMemory, oldOffset,
+                    buf.memory, buf.offset, oldCapacity);
         } else if (newCapacity < oldCapacity) {
             if (readerIndex < newCapacity) {
                 if (writerIndex > newCapacity) {
@@ -345,7 +356,7 @@ abstract class PoolArena<T> {
 
         @Override
         protected PooledByteBuf<byte[]> newByteBuf(int maxCapacity) {
-            return new PooledHeapByteBuf(maxCapacity);
+            return PooledHeapByteBuf.newInstance(maxCapacity);
         }
 
         @Override
@@ -385,9 +396,9 @@ abstract class PoolArena<T> {
         @Override
         protected PooledByteBuf<ByteBuffer> newByteBuf(int maxCapacity) {
             if (HAS_UNSAFE) {
-                return new PooledUnsafeDirectByteBuf(maxCapacity);
+                return PooledUnsafeDirectByteBuf.newInstance(maxCapacity);
             } else {
-                return new PooledDirectByteBuf(maxCapacity);
+                return PooledDirectByteBuf.newInstance(maxCapacity);
             }
         }
 

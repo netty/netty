@@ -15,11 +15,12 @@
  */
 package io.netty.channel.socket.oio;
 
-import io.netty.buffer.BufType;
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
-import io.netty.channel.oio.AbstractOioMessageChannel;
+import io.netty.channel.ChannelOutboundBuffer;
+import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.oio.AbstractOioMessageServerChannel;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -30,6 +31,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
+import java.util.List;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -38,13 +40,12 @@ import java.util.concurrent.locks.ReentrantLock;
  *
  * This implementation use Old-Blocking-IO.
  */
-public class OioServerSocketChannel extends AbstractOioMessageChannel
-                                    implements ServerSocketChannel {
+public class OioServerSocketChannel extends AbstractOioMessageServerChannel implements ServerSocketChannel {
 
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(OioServerSocketChannel.class);
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.MESSAGE, false);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
     private static ServerSocket newServerSocket() {
         try {
@@ -61,8 +62,8 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
     /**
      * Create a new instance with an new {@link Socket}
      */
-    public OioServerSocketChannel() {
-        this(newServerSocket());
+    public OioServerSocketChannel(EventLoop eventLoop, EventLoopGroup childGroup) {
+        this(eventLoop, childGroup, newServerSocket());
     }
 
     /**
@@ -70,18 +71,8 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
      *
      * @param socket    the {@link ServerSocket} which is used by this instance
      */
-    public OioServerSocketChannel(ServerSocket socket) {
-        this(null, socket);
-    }
-
-    /**
-     * Create a new instance from the given {@link ServerSocket}
-     *
-     * @param id        the id which should be used for this instance or {@code null} if a new one should be generated
-     * @param socket    the {@link ServerSocket} which is used by this instance
-     */
-    public OioServerSocketChannel(Integer id, ServerSocket socket) {
-        super(null, id);
+    public OioServerSocketChannel(EventLoop eventLoop, EventLoopGroup childGroup, ServerSocket socket) {
+        super(null, eventLoop, childGroup);
         if (socket == null) {
             throw new NullPointerException("socket");
         }
@@ -155,32 +146,37 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected int doReadMessages(MessageBuf<Object> buf) throws Exception {
+    protected int doReadMessages(List<Object> buf) throws Exception {
         if (socket.isClosed()) {
             return -1;
         }
 
-        Socket s = null;
         try {
-            s = socket.accept();
-            if (s != null) {
-                buf.add(new OioSocketChannel(this, null, s));
-                return 1;
+            Socket s = socket.accept();
+            try {
+                if (s != null) {
+                    buf.add(new OioSocketChannel(this, childEventLoopGroup().next(), s));
+                    return 1;
+                }
+            } catch (Throwable t) {
+                logger.warn("Failed to create a new channel from an accepted socket.", t);
+                if (s != null) {
+                    try {
+                        s.close();
+                    } catch (Throwable t2) {
+                        logger.warn("Failed to close a socket.", t2);
+                    }
+                }
             }
         } catch (SocketTimeoutException e) {
             // Expected
-        } catch (Throwable t) {
-            logger.warn("Failed to create a new channel from an accepted socket.", t);
-            if (s != null) {
-                try {
-                    s.close();
-                } catch (Throwable t2) {
-                    logger.warn("Failed to close a socket.", t2);
-                }
-            }
         }
-
         return 0;
+    }
+
+    @Override
+    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -196,11 +192,6 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
 
     @Override
     protected void doDisconnect() throws Exception {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    protected void doWriteMessages(MessageBuf<Object> buf) throws Exception {
         throw new UnsupportedOperationException();
     }
 }

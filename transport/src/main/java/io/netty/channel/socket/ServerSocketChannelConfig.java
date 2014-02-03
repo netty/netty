@@ -17,6 +17,8 @@ package io.netty.channel.socket;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelConfig;
+import io.netty.channel.MessageSizeEstimator;
+import io.netty.channel.RecvByteBufAllocator;
 
 import java.net.ServerSocket;
 import java.net.StandardSocketOptions;
@@ -86,14 +88,20 @@ public interface ServerSocketChannelConfig extends ChannelConfig {
     ServerSocketChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis);
 
     @Override
+    ServerSocketChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead);
+
+    @Override
     ServerSocketChannelConfig setWriteSpinCount(int writeSpinCount);
 
     @Override
     ServerSocketChannelConfig setAllocator(ByteBufAllocator allocator);
 
     @Override
+    ServerSocketChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator);
+
+    @Override
     ServerSocketChannelConfig setAutoRead(boolean autoRead);
 
     @Override
-    ServerSocketChannelConfig setDefaultHandlerByteBufType(ChannelHandlerByteBufType type);
+    ServerSocketChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator);
 }

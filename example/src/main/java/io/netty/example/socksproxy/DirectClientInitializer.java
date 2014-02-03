@@ -18,19 +18,20 @@ package io.netty.example.socksproxy;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.util.concurrent.Promise;
 
 
 public final class DirectClientInitializer extends ChannelInitializer<SocketChannel> {
 
-    private final CallbackNotifier callbackNotifier;
+    private final Promise promise;
 
-    public DirectClientInitializer(CallbackNotifier callbackNotifier) {
-        this.callbackNotifier = callbackNotifier;
+    public DirectClientInitializer(Promise promise) {
+        this.promise = promise;
     }
 
     @Override
     public void initChannel(SocketChannel socketChannel) throws Exception {
         ChannelPipeline channelPipeline = socketChannel.pipeline();
-        channelPipeline.addLast(DirectClientHandler.getName(), new DirectClientHandler(callbackNotifier));
+        channelPipeline.addLast(DirectClientHandler.getName(), new DirectClientHandler(promise));
     }
 }

@@ -15,18 +15,19 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.BufUtil;
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
-import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.TooLongFrameException;
-import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
+
+import java.util.List;
 
 import static io.netty.handler.codec.http.HttpHeaders.*;
 
@@ -48,11 +49,12 @@ import static io.netty.handler.codec.http.HttpHeaders.*;
  */
 public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
     public static final int DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS = 1024;
-    private static final ByteBuf CONTINUE = Unpooled.unreleasableBuffer(Unpooled.copiedBuffer(
-            "HTTP/1.1 100 Continue\r\n\r\n", CharsetUtil.US_ASCII));
+    private static final FullHttpResponse CONTINUE =
+            new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE, Unpooled.EMPTY_BUFFER);
 
     private final int maxContentLength;
     private FullHttpMessage currentMessage;
+    private boolean tooLongFrameFound;
 
     private int maxCumulationBufferComponents = DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS;
     private ChannelHandlerContext ctx;
@@ -107,10 +109,11 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, HttpObject msg, MessageBuf<Object> out) throws Exception {
+    protected void decode(final ChannelHandlerContext ctx, HttpObject msg, List<Object> out) throws Exception {
         FullHttpMessage currentMessage = this.currentMessage;
 
         if (msg instanceof HttpMessage) {
+            tooLongFrameFound = false;
             assert currentMessage == null;
 
             HttpMessage m = (HttpMessage) msg;
@@ -121,13 +124,20 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
             //       No need to notify the upstream handlers - just log.
             //       If decoding a response, just throw an exception.
             if (is100ContinueExpected(m)) {
-                ctx.write(CONTINUE.duplicate());
+                ctx.writeAndFlush(CONTINUE).addListener(new ChannelFutureListener() {
+                    @Override
+                    public void operationComplete(ChannelFuture future) throws Exception {
+                        if (!future.isSuccess()) {
+                            ctx.fireExceptionCaught(future.cause());
+                        }
+                    }
+                });
             }
 
             if (!m.getDecoderResult().isSuccess()) {
                 removeTransferEncodingChunked(m);
                 this.currentMessage = null;
-                out.add(BufUtil.retain(m));
+                out.add(ReferenceCountUtil.retain(m));
                 return;
             }
             if (msg instanceof HttpRequest) {
@@ -148,6 +158,13 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
             // A streamed message - initialize the cumulative buffer, and wait for incoming chunks.
             removeTransferEncodingChunked(currentMessage);
         } else if (msg instanceof HttpContent) {
+            if (tooLongFrameFound) {
+                if (msg instanceof LastHttpContent) {
+                    this.currentMessage = null;
+                }
+                // already detect the too long frame so just discard the content
+                return;
+            }
             assert currentMessage != null;
 
             // Merge the received chunk into the content of the current message.
@@ -155,10 +172,12 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
             CompositeByteBuf content = (CompositeByteBuf) currentMessage.content();
 
             if (content.readableBytes() > maxContentLength - chunk.content().readableBytes()) {
-                // TODO: Respond with 413 Request Entity Too Large
-                //   and discard the traffic or close the connection.
-                //       No need to notify the upstream handlers - just log.
-                //       If decoding a response, just throw an exception.
+                tooLongFrameFound = true;
+
+                // release current message to prevent leaks
+                currentMessage.release();
+                this.currentMessage = null;
+
                 throw new TooLongFrameException(
                         "HTTP content length exceeded " + maxContentLength +
                         " bytes.");
@@ -203,7 +222,29 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
     }
 
     @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        super.channelInactive(ctx);
+
+        // release current message if it is not null as it may be a left-over
+        if (currentMessage != null) {
+            currentMessage.release();
+            currentMessage = null;
+        }
+    }
+
+    @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
         this.ctx = ctx;
+    }
+
+    @Override
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        super.handlerRemoved(ctx);
+        // release current message if it is not null as it may be a left-over as there is not much more we can do in
+        // this case
+        if (currentMessage != null) {
+            currentMessage.release();
+            currentMessage = null;
+        }
     }
 }

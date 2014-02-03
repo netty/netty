@@ -16,8 +16,10 @@
 package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.embedded.EmbeddedByteChannel;
+import io.netty.buffer.CompositeByteBuf;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.Test;
 
 import java.util.Random;
@@ -116,22 +118,48 @@ public class SnappyIntegrationTest {
     }
 
     private static void testIdentity(ByteBuf in) {
-        EmbeddedByteChannel encoder = new EmbeddedByteChannel(new SnappyFramedEncoder());
-        EmbeddedByteChannel decoder = new EmbeddedByteChannel(new SnappyFramedDecoder());
+        EmbeddedChannel encoder = new EmbeddedChannel(new SnappyFramedEncoder());
+        EmbeddedChannel decoder = new EmbeddedChannel(new SnappyFramedDecoder());
         try {
             encoder.writeOutbound(in.copy());
             ByteBuf compressed = encoder.readOutbound();
             assertThat(compressed, is(notNullValue()));
             assertThat(compressed, is(not(in)));
-            decoder.writeInbound(compressed);
+            decoder.writeInbound(compressed.retain());
             assertFalse(compressed.isReadable());
-            compressed.discardReadBytes();
-            ByteBuf decompressed = (ByteBuf) decoder.readInbound();
+            compressed.release();
+            CompositeByteBuf decompressed = compositeBuffer();
+            for (;;) {
+                Object o = decoder.readInbound();
+                if (o == null) {
+                    break;
+                }
+                decompressed.addComponent((ByteBuf) o);
+                decompressed.writerIndex(decompressed.writerIndex() + ((ByteBuf) o).readableBytes());
+            }
             assertEquals(in, decompressed);
+            decompressed.release();
+            in.release();
         } finally {
             // Avoids memory leak through AbstractChannel.allChannels
             encoder.close();
             decoder.close();
+
+            for (;;) {
+                Object msg = encoder.readOutbound();
+                if (msg == null) {
+                    break;
+                }
+                ReferenceCountUtil.release(msg);
+            }
+
+            for (;;) {
+                Object msg = decoder.readInbound();
+                if (msg == null) {
+                    break;
+                }
+                ReferenceCountUtil.release(msg);
+            }
         }
     }
 

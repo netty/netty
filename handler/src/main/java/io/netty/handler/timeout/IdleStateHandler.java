@@ -17,18 +17,14 @@ package io.netty.handler.timeout;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOperationHandler;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.ChannelStateHandlerAdapter;
 import io.netty.util.concurrent.EventExecutor;
-import io.netty.channel.FileRegion;
 
-import java.net.SocketAddress;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -69,21 +65,21 @@ import java.util.concurrent.TimeUnit;
  * public class MyChannelInitializer extends {@link ChannelInitializer}&lt{@link Channel}&gt {
  *     {@code @Override}
  *     public void initChannel({@link Channel} channel) {
- *         channel.pipeline().addLast("idleStateHandler", new {@link IdleStateHandler}(60, 30, 0);
+ *         channel.pipeline().addLast("idleStateHandler", new {@link IdleStateHandler}(60, 30, 0));
  *         channel.pipeline().addLast("myHandler", new MyHandler());
  *     }
  * }
  *
  * // Handler should handle the {@link IdleStateEvent} triggered by {@link IdleStateHandler}.
- * public class MyHandler extends {@link ChannelDuplexHandler} {
+ * public class MyHandler extends {@link ChannelHandlerAdapter} {
  *     {@code @Override}
  *     public void userEventTriggered({@link ChannelHandlerContext} ctx, {@link Object} evt) throws {@link Exception} {
- *         if (evt instanceof {@link IdleState}} {
- *             {@link IdleState} e = ({@link IdleState}) evt;
- *             if (e.getState() == {@link IdleState}.READER_IDLE) {
- *                 ctx.channel().close();
- *             } else if (e.getState() == {@link IdleState}.WRITER_IDLE) {
- *                 ctx.channel().write(new PingMessage());
+ *         if (evt instanceof {@link IdleStateEvent}} {
+ *             {@link IdleStateEvent} e = ({@link IdleStateEvent}) evt;
+ *             if (e.state() == {@link IdleState}.READER_IDLE) {
+ *                 ctx.close();
+ *             } else if (e.state() == {@link IdleState}.WRITER_IDLE) {
+ *                 ctx.writeAndFlush(new PingMessage());
  *             }
  *         }
  *     }
@@ -98,7 +94,7 @@ import java.util.concurrent.TimeUnit;
  * @see ReadTimeoutHandler
  * @see WriteTimeoutHandler
  */
-public class IdleStateHandler extends ChannelStateHandlerAdapter implements ChannelOperationHandler {
+public class IdleStateHandler extends ChannelHandlerAdapter {
 
     private final long readerIdleTimeMillis;
     private final long writerIdleTimeMillis;
@@ -211,7 +207,7 @@ public class IdleStateHandler extends ChannelStateHandlerAdapter implements Chan
 
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        if (ctx.channel().isActive() & ctx.channel().isRegistered()) {
+        if (ctx.channel().isActive() && ctx.channel().isRegistered()) {
             // channelActvie() event has been fired already, which means this.channelActive() will
             // not be invoked. We have to initialize here instead.
             initialize(ctx);
@@ -251,20 +247,14 @@ public class IdleStateHandler extends ChannelStateHandlerAdapter implements Chan
     }
 
     @Override
-    public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         lastReadTime = System.currentTimeMillis();
         firstReaderIdleEvent = firstAllIdleEvent = true;
-        ctx.fireInboundBufferUpdated();
+        ctx.fireChannelRead(msg);
     }
 
     @Override
-    public void read(ChannelHandlerContext ctx) {
-        ctx.read();
-    }
-
-    @Override
-
-    public void flush(final ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         promise.addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
@@ -272,46 +262,7 @@ public class IdleStateHandler extends ChannelStateHandlerAdapter implements Chan
                 firstWriterIdleEvent = firstAllIdleEvent = true;
             }
         });
-
-        ctx.flush(promise);
-    }
-
-    @Override
-    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) throws Exception {
-        ctx.bind(localAddress, promise);
-    }
-
-    @Override
-    public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-                        ChannelPromise promise) throws Exception {
-        ctx.connect(remoteAddress, localAddress, promise);
-    }
-
-    @Override
-    public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-        ctx.disconnect(promise);
-    }
-
-    @Override
-    public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-        ctx.close(promise);
-    }
-
-    @Override
-    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-        ctx.deregister(promise);
-    }
-
-    @Override
-    public void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelPromise promise) throws Exception {
-        promise.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
-                lastWriteTime = System.currentTimeMillis();
-                firstWriterIdleEvent = firstAllIdleEvent = true;
-            }
-        });
-        ctx.sendFile(region, promise);
+        ctx.write(msg, promise);
     }
 
     private void initialize(ChannelHandlerContext ctx) {
@@ -362,6 +313,10 @@ public class IdleStateHandler extends ChannelStateHandlerAdapter implements Chan
         }
     }
 
+    /**
+     * Is called when an {@link IdleStateEvent} should be fired. This implementation calls
+     * {@link ChannelHandlerContext#fireUserEventTriggered(Object)}.
+     */
     protected void channelIdle(ChannelHandlerContext ctx, IdleStateEvent evt) throws Exception {
         ctx.fireUserEventTriggered(evt);
     }

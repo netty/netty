@@ -19,8 +19,8 @@ package io.netty.test.udt.nio;
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Meter;
 import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.BufType;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.EventLoop;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.udt.nio.NioUdtMessageRendezvousChannel;
 import io.netty.channel.udt.nio.NioUdtProvider;
@@ -45,7 +45,8 @@ public class NioUdtMessageRendezvousChannelTest extends AbstractUdtTest {
      */
     @Test
     public void metadata() throws Exception {
-        assertEquals(BufType.MESSAGE, new NioUdtMessageRendezvousChannel().metadata().bufferType());
+        EventLoop loop = new NioEventLoopGroup().next();
+        assertFalse(new NioUdtMessageRendezvousChannel(loop).metadata().hasDisconnect());
     }
 
     /**
@@ -109,5 +110,8 @@ public class NioUdtMessageRendezvousChannelTest extends AbstractUdtTest {
 
         group1.shutdownGracefully();
         group2.shutdownGracefully();
+
+        group1.terminationFuture().sync();
+        group2.terminationFuture().sync();
     }
 }

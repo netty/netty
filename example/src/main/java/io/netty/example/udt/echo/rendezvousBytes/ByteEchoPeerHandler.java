@@ -20,9 +20,7 @@ import com.yammer.metrics.core.Meter;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelHandlerUtil;
-import io.netty.channel.ChannelInboundByteHandlerAdapter;
-import io.netty.channel.ChannelOption;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.udt.nio.NioUdtProvider;
 
 import java.util.concurrent.TimeUnit;
@@ -34,7 +32,7 @@ import java.util.logging.Logger;
  * traffic between the echo client and server by sending the first message to
  * the server on activation.
  */
-public class ByteEchoPeerHandler extends ChannelInboundByteHandlerAdapter {
+public class ByteEchoPeerHandler extends SimpleChannelInboundHandler<ByteBuf> {
     private static final Logger log = Logger.getLogger(ByteEchoPeerHandler.class.getName());
     private final ByteBuf message;
 
@@ -42,6 +40,7 @@ public class ByteEchoPeerHandler extends ChannelInboundByteHandlerAdapter {
             "bytes", TimeUnit.SECONDS);
 
     public ByteEchoPeerHandler(final int messageSize) {
+        super(false);
         message = Unpooled.buffer(messageSize);
         for (int i = 0; i < message.capacity(); i++) {
             message.writeByte((byte) i);
@@ -49,15 +48,9 @@ public class ByteEchoPeerHandler extends ChannelInboundByteHandlerAdapter {
     }
 
     @Override
-    public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return ChannelHandlerUtil.allocate(ctx,
-                ctx.channel().config().getOption(ChannelOption.SO_RCVBUF));
-    }
-
-    @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         log.info("ECHO active " + NioUdtProvider.socketUDT(ctx.channel()).toStringOptions());
-        ctx.write(message);
+        ctx.writeAndFlush(message);
     }
 
     @Override
@@ -67,10 +60,14 @@ public class ByteEchoPeerHandler extends ChannelInboundByteHandlerAdapter {
     }
 
     @Override
-    protected void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
-        meter.mark(in.readableBytes());
-        final ByteBuf out = ctx.nextOutboundByteBuffer();
-        out.writeBytes(in);
+    public void messageReceived(ChannelHandlerContext ctx, ByteBuf buf) throws Exception {
+        meter.mark(buf.readableBytes());
+
+        ctx.write(buf);
+    }
+
+    @Override
+    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
         ctx.flush();
     }
 }

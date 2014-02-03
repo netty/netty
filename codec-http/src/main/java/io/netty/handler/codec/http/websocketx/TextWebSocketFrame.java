@@ -100,6 +100,11 @@ public class TextWebSocketFrame extends WebSocketFrame {
     }
 
     @Override
+    public TextWebSocketFrame duplicate() {
+        return new TextWebSocketFrame(isFinalFragment(), rsv(), content().duplicate());
+    }
+
+    @Override
     public TextWebSocketFrame retain() {
         super.retain();
         return this;
@@ -108,6 +113,18 @@ public class TextWebSocketFrame extends WebSocketFrame {
     @Override
     public TextWebSocketFrame retain(int increment) {
         super.retain(increment);
+        return this;
+    }
+
+    @Override
+    public TextWebSocketFrame touch() {
+        super.touch();
+        return this;
+    }
+
+    @Override
+    public TextWebSocketFrame touch(Object hint) {
+        super.touch(hint);
         return this;
     }
 }

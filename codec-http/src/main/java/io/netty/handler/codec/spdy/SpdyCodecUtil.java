@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,9 +16,10 @@
 package io.netty.handler.codec.spdy;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.util.CharsetUtil;
 
 final class SpdyCodecUtil {
+
+    static final int SPDY_SESSION_STREAM_ID = 0;
 
     static final int SPDY_HEADER_TYPE_OFFSET   = 2;
     static final int SPDY_HEADER_FLAGS_OFFSET  = 4;
@@ -29,16 +30,16 @@ final class SpdyCodecUtil {
 
     static final byte SPDY_DATA_FLAG_FIN = 0x01;
 
+    static final int SPDY_DATA_FRAME          = 0;
     static final int SPDY_SYN_STREAM_FRAME    = 1;
     static final int SPDY_SYN_REPLY_FRAME     = 2;
     static final int SPDY_RST_STREAM_FRAME    = 3;
     static final int SPDY_SETTINGS_FRAME      = 4;
-    static final int SPDY_NOOP_FRAME          = 5;
+    static final int SPDY_PUSH_PROMISE_FRAME  = 5;
     static final int SPDY_PING_FRAME          = 6;
     static final int SPDY_GOAWAY_FRAME        = 7;
     static final int SPDY_HEADERS_FRAME       = 8;
     static final int SPDY_WINDOW_UPDATE_FRAME = 9;
-    static final int SPDY_CREDENTIAL_FRAME    = 10;
 
     static final byte SPDY_FLAG_FIN            = 0x01;
     static final byte SPDY_FLAG_UNIDIRECTIONAL = 0x02;
@@ -232,35 +233,6 @@ final class SpdyCodecUtil {
         0x31, 0x2c, 0x75, 0x74, 0x66, 0x2d, 0x2c, 0x2a,   // 1 - u t f - - -
         0x2c, 0x65, 0x6e, 0x71, 0x3d, 0x30, 0x2e          // - e n q - 0 -
     };
-
-    private static final String SPDY2_DICT_S =
-        "optionsgetheadpostputdeletetraceacceptaccept-charsetaccept-encodingaccept-" +
-        "languageauthorizationexpectfromhostif-modified-sinceif-matchif-none-matchi" +
-        "f-rangeif-unmodifiedsincemax-forwardsproxy-authorizationrangerefererteuser" +
-        "-agent10010120020120220320420520630030130230330430530630740040140240340440" +
-        "5406407408409410411412413414415416417500501502503504505accept-rangesageeta" +
-        "glocationproxy-authenticatepublicretry-afterservervarywarningwww-authentic" +
-        "ateallowcontent-basecontent-encodingcache-controlconnectiondatetrailertran" +
-        "sfer-encodingupgradeviawarningcontent-languagecontent-lengthcontent-locati" +
-        "oncontent-md5content-rangecontent-typeetagexpireslast-modifiedset-cookieMo" +
-        "ndayTuesdayWednesdayThursdayFridaySaturdaySundayJanFebMarAprMayJunJulAugSe" +
-        "pOctNovDecchunkedtext/htmlimage/pngimage/jpgimage/gifapplication/xmlapplic" +
-        "ation/xhtmltext/plainpublicmax-agecharset=iso-8859-1utf-8gzipdeflateHTTP/1" +
-        ".1statusversionurl ";
-    static final byte[] SPDY2_DICT;
-    static {
-        byte[] SPDY2_DICT_;
-
-        try {
-            SPDY2_DICT_ = SPDY2_DICT_S.getBytes(CharsetUtil.US_ASCII);
-            // dictionary is null terminated
-            SPDY2_DICT_[SPDY2_DICT_.length - 1] = 0;
-        } catch (Exception e) {
-            SPDY2_DICT_ = new byte[1];
-        }
-
-        SPDY2_DICT = SPDY2_DICT_;
-    }
 
     private SpdyCodecUtil() {
     }

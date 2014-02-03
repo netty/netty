@@ -41,11 +41,8 @@ public abstract class AbstractOioChannel extends AbstractChannel {
         }
     };
 
-    /**
-     * @see AbstractChannel#AbstractChannel(Channel, Integer)
-     */
-    protected AbstractOioChannel(Channel parent, Integer id) {
-        super(parent, id);
+    protected AbstractOioChannel(Channel parent, EventLoop eventLoop) {
+        super(parent, eventLoop);
     }
 
     @Override
@@ -58,34 +55,30 @@ public abstract class AbstractOioChannel extends AbstractChannel {
         public void connect(
                 final SocketAddress remoteAddress,
                 final SocketAddress localAddress, final ChannelPromise promise) {
-            if (eventLoop().inEventLoop()) {
-                if (!ensureOpen(promise)) {
-                    return;
-                }
+            if (!ensureOpen(promise)) {
+                return;
+            }
 
-                try {
-                    boolean wasActive = isActive();
-                    doConnect(remoteAddress, localAddress);
-                    promise.setSuccess();
-                    if (!wasActive && isActive()) {
-                        pipeline().fireChannelActive();
-                    }
-                } catch (Throwable t) {
-                    if (t instanceof ConnectException) {
-                        Throwable newT = new ConnectException(t.getMessage() + ": " + remoteAddress);
-                        newT.setStackTrace(t.getStackTrace());
-                        t = newT;
-                    }
-                    promise.setFailure(t);
-                    closeIfClosed();
+            if (!promise.setUncancellable()) {
+                close(voidPromise());
+                return;
+            }
+
+            try {
+                boolean wasActive = isActive();
+                doConnect(remoteAddress, localAddress);
+                promise.setSuccess();
+                if (!wasActive && isActive()) {
+                    pipeline().fireChannelActive();
                 }
-            } else {
-                eventLoop().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        connect(remoteAddress, localAddress, promise);
-                    }
-                });
+            } catch (Throwable t) {
+                if (t instanceof ConnectException) {
+                    Throwable newT = new ConnectException(t.getMessage() + ": " + remoteAddress);
+                    newT.setStackTrace(t.getStackTrace());
+                    t = newT;
+                }
+                promise.setFailure(t);
+                closeIfClosed();
             }
         }
     }
@@ -93,11 +86,6 @@ public abstract class AbstractOioChannel extends AbstractChannel {
     @Override
     protected boolean isCompatible(EventLoop loop) {
         return loop instanceof ThreadPerChannelEventLoop;
-    }
-
-    @Override
-    protected boolean isFlushPending() {
-        return false;
     }
 
     /**

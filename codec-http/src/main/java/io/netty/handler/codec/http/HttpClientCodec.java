@@ -16,16 +16,13 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.FilteredMessageBuf;
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundByteHandler;
-import io.netty.channel.ChannelOutboundMessageHandler;
-import io.netty.channel.CombinedChannelDuplexHandler;
+import io.netty.channel.ChannelHandlerAppender;
 import io.netty.handler.codec.PrematureChannelClosureException;
 
 import java.util.ArrayDeque;
+import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -43,15 +40,13 @@ import java.util.concurrent.atomic.AtomicLong;
  *
  * @see HttpServerCodec
  */
-public final class HttpClientCodec
-        extends CombinedChannelDuplexHandler
-        implements ChannelInboundByteHandler, ChannelOutboundMessageHandler<HttpObject> {
+public final class HttpClientCodec extends ChannelHandlerAppender {
 
     /** A queue that is used for correlating a request and a response. */
     private final Queue<HttpMethod> queue = new ArrayDeque<HttpMethod>();
 
     /** If true, decoding stops (i.e. pass-through) */
-    private volatile boolean done;
+    private boolean done;
 
     private final AtomicLong requestResponseCounter = new AtomicLong();
     private final boolean failOnMissingResponse;
@@ -65,6 +60,35 @@ public final class HttpClientCodec
         this(4096, 8192, 8192, false);
     }
 
+    /**
+     * Creates a new instance with the specified decoder options.
+     */
+    public HttpClientCodec(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize) {
+        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, false);
+    }
+
+    /**
+     * Creates a new instance with the specified decoder options.
+     */
+    public HttpClientCodec(
+            int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean failOnMissingResponse) {
+        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, failOnMissingResponse, true);
+    }
+
+    /**
+     * Creates a new instance with the specified decoder options.
+     */
+    public HttpClientCodec(
+            int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean failOnMissingResponse,
+            boolean validateHeaders) {
+        add(new Decoder(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders), new Encoder());
+        this.failOnMissingResponse = failOnMissingResponse;
+    }
+
+    private Decoder decoder() {
+        return handlerAt(0);
+    }
+
     public void setSingleDecode(boolean singleDecode) {
         decoder().setSingleDecode(singleDecode);
     }
@@ -73,47 +97,11 @@ public final class HttpClientCodec
         return decoder().isSingleDecode();
     }
 
-    /**
-     * Creates a new instance with the specified decoder options.
-     */
-    public HttpClientCodec(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize) {
-        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, false);
-    }
-
-    public HttpClientCodec(
-            int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean failOnMissingResponse) {
-        init(new Decoder(maxInitialLineLength, maxHeaderSize, maxChunkSize), new Encoder());
-        this.failOnMissingResponse = failOnMissingResponse;
-    }
-
-    private Decoder decoder() {
-        return (Decoder) stateHandler();
-    }
-
-    private Encoder encoder() {
-        return (Encoder) operationHandler();
-    }
-
-    @Override
-    public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return decoder().newInboundBuffer(ctx);
-    }
-
-    @Override
-    public void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
-        decoder().discardInboundReadBytes(ctx);
-    }
-
-    @Override
-    public MessageBuf<HttpObject> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return encoder().newOutboundBuffer(ctx);
-    }
-
     private final class Encoder extends HttpRequestEncoder {
 
         @Override
         protected void encode(
-                ChannelHandlerContext ctx, HttpObject msg, ByteBuf out) throws Exception {
+                ChannelHandlerContext ctx, Object msg, List<Object> out) throws Exception {
             if (msg instanceof HttpRequest && !done) {
                 queue.offer(((HttpRequest) msg).getMethod());
             }
@@ -131,13 +119,13 @@ public final class HttpClientCodec
     }
 
     private final class Decoder extends HttpResponseDecoder {
-        Decoder(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize) {
-            super(maxInitialLineLength, maxHeaderSize, maxChunkSize);
+        Decoder(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean validateHeaders) {
+            super(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders);
         }
 
         @Override
         protected void decode(
-                ChannelHandlerContext ctx, ByteBuf buffer, MessageBuf<Object> out) throws Exception {
+                ChannelHandlerContext ctx, ByteBuf buffer, List<Object> out) throws Exception {
             if (done) {
                 int readable = actualReadableBytes();
                 if (readable == 0) {
@@ -147,16 +135,14 @@ public final class HttpClientCodec
                 }
                 out.add(buffer.readBytes(readable));
             } else {
-                if (failOnMissingResponse) {
-                    out = new FilteredMessageBuf(out) {
-                        @Override
-                        protected Object filter(Object msg) {
-                            decrement(msg);
-                            return msg;
-                        }
-                    };
-                }
+                int oldSize = out.size();
                 super.decode(ctx, buffer, out);
+                if (failOnMissingResponse) {
+                    int size = out.size();
+                    for (int i = oldSize; i < size; i++) {
+                        decrement(out.get(i));
+                    }
+                }
             }
         }
 

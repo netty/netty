@@ -60,6 +60,11 @@ public class PingWebSocketFrame extends WebSocketFrame {
     }
 
     @Override
+    public PingWebSocketFrame duplicate() {
+        return new PingWebSocketFrame(isFinalFragment(), rsv(), content().duplicate());
+    }
+
+    @Override
     public PingWebSocketFrame retain() {
         super.retain();
         return this;
@@ -68,6 +73,18 @@ public class PingWebSocketFrame extends WebSocketFrame {
     @Override
     public PingWebSocketFrame retain(int increment) {
         super.retain(increment);
+        return this;
+    }
+
+    @Override
+    public PingWebSocketFrame touch() {
+        super.touch();
+        return this;
+    }
+
+    @Override
+    public PingWebSocketFrame touch(Object hint) {
+        super.touch(hint);
         return this;
     }
 }

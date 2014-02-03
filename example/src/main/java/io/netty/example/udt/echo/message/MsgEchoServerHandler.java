@@ -15,11 +15,9 @@
  */
 package io.netty.example.udt.echo.message;
 
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandler.Sharable;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
-import io.netty.channel.udt.UdtMessage;
 import io.netty.channel.udt.nio.NioUdtProvider;
 
 import java.util.logging.Level;
@@ -29,8 +27,7 @@ import java.util.logging.Logger;
  * Handler implementation for the echo server.
  */
 @Sharable
-public class MsgEchoServerHandler extends
-        ChannelInboundMessageHandlerAdapter<UdtMessage> {
+public class MsgEchoServerHandler extends ChannelHandlerAdapter {
 
     private static final Logger log = Logger.getLogger(MsgEchoServerHandler.class.getName());
 
@@ -47,10 +44,12 @@ public class MsgEchoServerHandler extends
     }
 
     @Override
-    public void messageReceived(final ChannelHandlerContext ctx,
-            final UdtMessage message) throws Exception {
-        final MessageBuf<Object> out = ctx.nextOutboundMessageBuffer();
-        out.add(message.retain());
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        ctx.write(msg);
+    }
+
+    @Override
+    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
         ctx.flush();
     }
 }

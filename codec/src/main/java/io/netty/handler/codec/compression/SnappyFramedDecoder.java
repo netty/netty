@@ -15,21 +15,27 @@
  */
 package io.netty.handler.codec.compression;
 
+import static io.netty.handler.codec.compression.Snappy.validateChecksum;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.ByteToByteDecoder;
+import io.netty.handler.codec.ByteToMessageDecoder;
 
-import java.nio.charset.Charset;
 import java.util.Arrays;
-
-import static io.netty.handler.codec.compression.SnappyChecksumUtil.*;
+import java.util.List;
 
 /**
  * Uncompresses a {@link ByteBuf} encoded with the Snappy framing format.
  *
  * See http://code.google.com/p/snappy/source/browse/trunk/framing_format.txt
+ *
+ * Note that by default, validation of the checksum header in each chunk is
+ * DISABLED for performance improvements. If performance is less of an issue,
+ * or if you would prefer the safety that checksum validation brings, please
+ * use the {@link #SnappyFramedDecoder(boolean)} constructor with the argument
+ * set to {@code true}.
  */
-public class SnappyFramedDecoder extends ByteToByteDecoder {
+public class SnappyFramedDecoder extends ByteToMessageDecoder {
     enum ChunkType {
         STREAM_IDENTIFIER,
         COMPRESSED_DATA,
@@ -38,7 +44,7 @@ public class SnappyFramedDecoder extends ByteToByteDecoder {
         RESERVED_SKIPPABLE
     }
 
-    private static final byte[] SNAPPY = "sNaPpY".getBytes(Charset.forName("US-ASCII"));
+    private static final byte[] SNAPPY = { 's', 'N', 'a', 'P', 'p', 'Y' };
 
     private final Snappy snappy = new Snappy();
     private final boolean validateChecksums;
@@ -48,7 +54,8 @@ public class SnappyFramedDecoder extends ByteToByteDecoder {
 
     /**
      * Creates a new snappy-framed decoder with validation of checksums
-     * turned off
+     * turned OFF. To turn checksum validation on, please use the alternate
+     * {@link #SnappyFramedDecoder(boolean)} constructor.
      */
     public SnappyFramedDecoder() {
         this(false);
@@ -61,14 +68,14 @@ public class SnappyFramedDecoder extends ByteToByteDecoder {
      * @param validateChecksums
      *        If true, the checksum field will be validated against the actual
      *        uncompressed data, and if the checksums do not match, a suitable
-     *        {@link CompressionException} will be thrown
+     *        {@link DecompressionException} will be thrown
      */
     public SnappyFramedDecoder(boolean validateChecksums) {
         this.validateChecksums = validateChecksums;
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         if (corrupted) {
             in.skipBytes(in.readableBytes());
             return;
@@ -85,14 +92,12 @@ public class SnappyFramedDecoder extends ByteToByteDecoder {
 
             final int chunkTypeVal = in.getUnsignedByte(idx);
             final ChunkType chunkType = mapChunkType((byte) chunkTypeVal);
-            final int chunkLength = in.getUnsignedByte(idx + 1)
-                                  | in.getUnsignedByte(idx + 2) << 8
-                                  | in.getUnsignedByte(idx + 3) << 16;
+            final int chunkLength = ByteBufUtil.swapMedium(in.getUnsignedMedium(idx + 1));
 
             switch (chunkType) {
                 case STREAM_IDENTIFIER:
                     if (chunkLength != SNAPPY.length) {
-                        throw new CompressionException("Unexpected length of stream identifier: " + chunkLength);
+                        throw new DecompressionException("Unexpected length of stream identifier: " + chunkLength);
                     }
 
                     if (inSize < 4 + SNAPPY.length) {
@@ -103,7 +108,7 @@ public class SnappyFramedDecoder extends ByteToByteDecoder {
                     in.skipBytes(4).readBytes(identifier);
 
                     if (!Arrays.equals(identifier, SNAPPY)) {
-                        throw new CompressionException("Unexpected stream identifier contents. Mismatched snappy " +
+                        throw new DecompressionException("Unexpected stream identifier contents. Mismatched snappy " +
                                 "protocol version?");
                     }
 
@@ -111,7 +116,7 @@ public class SnappyFramedDecoder extends ByteToByteDecoder {
                     break;
                 case RESERVED_SKIPPABLE:
                     if (!started) {
-                        throw new CompressionException("Received RESERVED_SKIPPABLE tag before STREAM_IDENTIFIER");
+                        throw new DecompressionException("Received RESERVED_SKIPPABLE tag before STREAM_IDENTIFIER");
                     }
 
                     if (inSize < 4 + chunkLength) {
@@ -125,14 +130,14 @@ public class SnappyFramedDecoder extends ByteToByteDecoder {
                     // The spec mandates that reserved unskippable chunks must immediately
                     // return an error, as we must assume that we cannot decode the stream
                     // correctly
-                    throw new CompressionException(
+                    throw new DecompressionException(
                             "Found reserved unskippable chunk type: 0x" + Integer.toHexString(chunkTypeVal));
                 case UNCOMPRESSED_DATA:
                     if (!started) {
-                        throw new CompressionException("Received UNCOMPRESSED_DATA tag before STREAM_IDENTIFIER");
+                        throw new DecompressionException("Received UNCOMPRESSED_DATA tag before STREAM_IDENTIFIER");
                     }
                     if (chunkLength > 65536 + 4) {
-                        throw new CompressionException("Received UNCOMPRESSED_DATA larger than 65540 bytes");
+                        throw new DecompressionException("Received UNCOMPRESSED_DATA larger than 65540 bytes");
                     }
 
                     if (inSize < 4 + chunkLength) {
@@ -141,21 +146,16 @@ public class SnappyFramedDecoder extends ByteToByteDecoder {
 
                     in.skipBytes(4);
                     if (validateChecksums) {
-                        int checksum = in.readUnsignedByte()
-                                     | in.readUnsignedByte() << 8
-                                     | in.readUnsignedByte() << 16
-                                     | in.readUnsignedByte() << 24;
-                        ByteBuf data = in.readSlice(chunkLength - 4);
-                        validateChecksum(data, checksum);
-                        out.writeBytes(data);
+                        int checksum = ByteBufUtil.swapInt(in.readInt());
+                        validateChecksum(checksum, in, in.readerIndex(), chunkLength - 4);
                     } else {
                         in.skipBytes(4);
-                        in.readBytes(out, chunkLength - 4);
                     }
+                    out.add(in.readSlice(chunkLength - 4).retain());
                     break;
                 case COMPRESSED_DATA:
                     if (!started) {
-                        throw new CompressionException("Received COMPRESSED_DATA tag before STREAM_IDENTIFIER");
+                        throw new DecompressionException("Received COMPRESSED_DATA tag before STREAM_IDENTIFIER");
                     }
 
                     if (inSize < 4 + chunkLength) {
@@ -163,19 +163,21 @@ public class SnappyFramedDecoder extends ByteToByteDecoder {
                     }
 
                     in.skipBytes(4);
-                    int checksum = in.readUnsignedByte()
-                                 | in.readUnsignedByte() << 8
-                                 | in.readUnsignedByte() << 16
-                                 | in.readUnsignedByte() << 24;
+                    int checksum = ByteBufUtil.swapInt(in.readInt());
+                    ByteBuf uncompressed = ctx.alloc().buffer(0);
                     if (validateChecksums) {
-                        // TODO: Optimize me.
-                        ByteBuf uncompressed = ctx.alloc().buffer();
-                        snappy.decode(in.readSlice(chunkLength - 4), uncompressed);
-                        validateChecksum(uncompressed, checksum);
-                        out.writeBytes(uncompressed);
+                        int oldWriterIndex = in.writerIndex();
+                        try {
+                            in.writerIndex(in.readerIndex() + chunkLength - 4);
+                            snappy.decode(in, uncompressed);
+                        } finally {
+                            in.writerIndex(oldWriterIndex);
+                        }
+                        validateChecksum(checksum, uncompressed, 0, uncompressed.writerIndex());
                     } else {
-                        snappy.decode(in.readSlice(chunkLength - 4), out);
+                        snappy.decode(in.readSlice(chunkLength - 4), uncompressed);
                     }
+                    out.add(uncompressed);
                     snappy.reset();
                     break;
             }
@@ -189,8 +191,7 @@ public class SnappyFramedDecoder extends ByteToByteDecoder {
      * Decodes the chunk type from the type tag byte.
      *
      * @param type The tag byte extracted from the stream
-     * @return The appropriate {@link ChunkType}, defaulting to
-     *     {@link ChunkType#RESERVED_UNSKIPPABLE}
+     * @return The appropriate {@link ChunkType}, defaulting to {@link ChunkType#RESERVED_UNSKIPPABLE}
      */
     static ChunkType mapChunkType(byte type) {
         if (type == 0) {

@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http.multipart;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.handler.codec.http.HttpConstants;
 
 import java.io.File;
@@ -36,7 +37,6 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
 
     private ByteBuf byteBuf;
     private int chunkPosition;
-    protected boolean isRenamed;
 
     protected AbstractMemoryHttpData(String name, Charset charset, long size) {
         super(name, charset, size);
@@ -48,13 +48,17 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
             throw new NullPointerException("buffer");
         }
         long localsize = buffer.readableBytes();
+        checkSize(localsize);
         if (definedSize > 0 && definedSize < localsize) {
             throw new IOException("Out of size: " + localsize + " > " +
                     definedSize);
         }
+        if (byteBuf != null) {
+            byteBuf.release();
+        }
         byteBuf = buffer;
         size = localsize;
-        completed = true;
+        setCompleted();
     }
 
     @Override
@@ -69,14 +73,18 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
         while (read > 0) {
             buffer.writeBytes(bytes, 0, read);
             written += read;
+            checkSize(written);
             read = inputStream.read(bytes);
         }
         size = written;
         if (definedSize > 0 && definedSize < size) {
             throw new IOException("Out of size: " + size + " > " + definedSize);
         }
+        if (byteBuf != null) {
+            byteBuf.release();
+        }
         byteBuf = buffer;
-        completed = true;
+        setCompleted();
     }
 
     @Override
@@ -84,6 +92,7 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
             throws IOException {
         if (buffer != null) {
             long localsize = buffer.readableBytes();
+            checkSize(size + localsize);
             if (definedSize > 0 && definedSize < size + localsize) {
                 throw new IOException("Out of size: " + (size + localsize) +
                         " > " + definedSize);
@@ -91,12 +100,19 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
             size += localsize;
             if (byteBuf == null) {
                 byteBuf = buffer;
+            } else if (byteBuf instanceof CompositeByteBuf) {
+                CompositeByteBuf cbb = (CompositeByteBuf) byteBuf;
+                cbb.addComponent(buffer);
+                cbb.writerIndex(cbb.writerIndex() + buffer.readableBytes());
             } else {
-                byteBuf = wrappedBuffer(byteBuf, buffer);
+                CompositeByteBuf cbb = compositeBuffer(Integer.MAX_VALUE);
+                cbb.addComponents(byteBuf, buffer);
+                cbb.writerIndex(byteBuf.readableBytes() + buffer.readableBytes());
+                byteBuf = cbb;
             }
         }
         if (last) {
-            completed = true;
+            setCompleted();
         } else {
             if (buffer == null) {
                 throw new NullPointerException("buffer");
@@ -114,6 +130,7 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
             throw new IllegalArgumentException(
                     "File too big to be loaded in memory");
         }
+        checkSize(newsize);
         FileInputStream inputStream = new FileInputStream(file);
         FileChannel fileChannel = inputStream.getChannel();
         byte[] array = new byte[(int) newsize];
@@ -125,14 +142,20 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
         fileChannel.close();
         inputStream.close();
         byteBuffer.flip();
-        byteBuf = wrappedBuffer(byteBuffer);
+        if (byteBuf != null) {
+            byteBuf.release();
+        }
+        byteBuf = wrappedBuffer(Integer.MAX_VALUE, byteBuffer);
         size = newsize;
-        completed = true;
+        setCompleted();
     }
 
     @Override
     public void delete() {
-        // nothing to do
+        if (byteBuf != null) {
+            byteBuf.release();
+            byteBuf = null;
+        }
     }
 
     @Override
@@ -186,7 +209,7 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
         if (sizeLeft < length) {
             sliceLength = sizeLeft;
         }
-        ByteBuf chunk = byteBuf.slice(chunkPosition, sliceLength);
+        ByteBuf chunk = byteBuf.slice(chunkPosition, sliceLength).retain();
         chunkPosition += sliceLength;
         return chunk;
     }
@@ -203,27 +226,48 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
         }
         if (byteBuf == null) {
             // empty file
-            dest.createNewFile();
-            isRenamed = true;
+            if (!dest.createNewFile()) {
+                throw new IOException("file exists already: " + dest);
+            }
             return true;
         }
         int length = byteBuf.readableBytes();
         FileOutputStream outputStream = new FileOutputStream(dest);
         FileChannel fileChannel = outputStream.getChannel();
-        ByteBuffer byteBuffer = byteBuf.nioBuffer();
         int written = 0;
-        while (written < length) {
-            written += fileChannel.write(byteBuffer);
+        if (byteBuf.nioBufferCount() == 1) {
+            ByteBuffer byteBuffer = byteBuf.nioBuffer();
+            while (written < length) {
+                written += fileChannel.write(byteBuffer);
+            }
+        } else {
+            ByteBuffer[] byteBuffers = byteBuf.nioBuffers();
+            while (written < length) {
+                written += fileChannel.write(byteBuffers);
+            }
         }
+
         fileChannel.force(false);
         fileChannel.close();
         outputStream.close();
-        isRenamed = true;
         return written == length;
     }
 
     @Override
     public File getFile() throws IOException {
         throw new IOException("Not represented by a file");
+    }
+
+    @Override
+    public HttpData touch() {
+        return touch(null);
+    }
+
+    @Override
+    public HttpData touch(Object hint) {
+        if (byteBuf != null) {
+            byteBuf.touch(hint);
+        }
+        return this;
     }
 }

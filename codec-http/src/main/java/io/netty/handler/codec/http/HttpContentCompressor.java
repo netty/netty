@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.channel.embedded.EmbeddedByteChannel;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.util.internal.StringUtil;
@@ -93,10 +93,10 @@ public class HttpContentCompressor extends HttpContentEncoder {
     }
 
     @Override
-    protected Result beginEncode(HttpResponse headers, String acceptEncoding) throws Exception {
+    protected Result beginEncode(HttpResponse headers, CharSequence acceptEncoding) throws Exception {
         String contentEncoding = headers.headers().get(HttpHeaders.Names.CONTENT_ENCODING);
         if (contentEncoding != null &&
-            !HttpHeaders.Values.IDENTITY.equalsIgnoreCase(contentEncoding)) {
+            !HttpHeaders.equalsIgnoreCase(HttpHeaders.Values.IDENTITY, contentEncoding)) {
             return null;
         }
 
@@ -119,15 +119,15 @@ public class HttpContentCompressor extends HttpContentEncoder {
 
         return new Result(
                 targetContentEncoding,
-                new EmbeddedByteChannel(ZlibCodecFactory.newZlibEncoder(
+                new EmbeddedChannel(ZlibCodecFactory.newZlibEncoder(
                         wrapper, compressionLevel, windowBits, memLevel)));
     }
 
-    protected ZlibWrapper determineWrapper(String acceptEncoding) {
+    protected ZlibWrapper determineWrapper(CharSequence acceptEncoding) {
         float starQ = -1.0f;
         float gzipQ = -1.0f;
         float deflateQ = -1.0f;
-        for (String encoding: StringUtil.split(acceptEncoding, ',')) {
+        for (String encoding: StringUtil.split(acceptEncoding.toString(), ',')) {
             float q = 1.0f;
             int equalsPos = encoding.indexOf('=');
             if (equalsPos != -1) {

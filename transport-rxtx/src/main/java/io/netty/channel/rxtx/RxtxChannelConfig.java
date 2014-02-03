@@ -18,6 +18,8 @@ package io.netty.channel.rxtx;
 import gnu.io.SerialPort;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelConfig;
+import io.netty.channel.MessageSizeEstimator;
+import io.netty.channel.RecvByteBufAllocator;
 
 /**
  * A configuration class for RXTX device connections.
@@ -258,8 +260,21 @@ public interface RxtxChannelConfig extends ChannelConfig {
      */
     RxtxChannelConfig setWaitTimeMillis(int waitTimeMillis);
 
+    /**
+     * Sets the maximal time (in ms) to block while try to read from the serial port. Default is 1000ms
+     */
+    RxtxChannelConfig setReadTimeout(int readTimout);
+
+    /**
+     * Return the maximal time (in ms) to block and wait for something to be ready to read.
+     */
+    int getReadTimeout();
+
     @Override
     RxtxChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis);
+
+    @Override
+    RxtxChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead);
 
     @Override
     RxtxChannelConfig setWriteSpinCount(int writeSpinCount);
@@ -268,8 +283,17 @@ public interface RxtxChannelConfig extends ChannelConfig {
     RxtxChannelConfig setAllocator(ByteBufAllocator allocator);
 
     @Override
+    RxtxChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator);
+
+    @Override
     RxtxChannelConfig setAutoRead(boolean autoRead);
 
     @Override
-    RxtxChannelConfig setDefaultHandlerByteBufType(ChannelHandlerByteBufType type);
+    RxtxChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark);
+
+    @Override
+    RxtxChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark);
+
+    @Override
+    RxtxChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator);
 }

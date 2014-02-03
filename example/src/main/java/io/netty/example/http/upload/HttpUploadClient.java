@@ -23,9 +23,11 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.ClientCookieEncoder;
 import io.netty.handler.codec.http.DefaultCookie;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.QueryStringEncoder;
 import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
@@ -128,14 +130,14 @@ public class HttpUploadClient {
             // Simple Get form: no factory used (not usable)
             List<Entry<String, String>> headers = formGet(b, host, port, get, uriSimple);
             if (headers == null) {
-                factory.cleanAllHttpDatas();
+                factory.cleanAllHttpData();
                 return;
             }
 
             // Simple Post form: factory used for big attributes
             List<InterfaceHttpData> bodylist = formPost(b, host, port, uriSimple, file, factory, headers);
             if (bodylist == null) {
-                factory.cleanAllHttpDatas();
+                factory.cleanAllHttpData();
                 return;
             }
 
@@ -146,7 +148,7 @@ public class HttpUploadClient {
             group.shutdownGracefully();
 
             // Really clean all temporary files if they still exist
-            factory.cleanAllHttpDatas();
+            factory.cleanAllHttpData();
         }
     }
 
@@ -186,8 +188,8 @@ public class HttpUploadClient {
         HttpHeaders headers = request.headers();
         headers.set(HttpHeaders.Names.HOST, host);
         headers.set(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
-        headers.set(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP + ','
-                + HttpHeaders.Values.DEFLATE);
+        headers.set(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP.toString() + ','
+                + HttpHeaders.Values.DEFLATE.toString());
 
         headers.set(HttpHeaders.Names.ACCEPT_CHARSET, "ISO-8859-1,utf-8;q=0.7,*;q=0.7");
         headers.set(HttpHeaders.Names.ACCEPT_LANGUAGE, "fr");
@@ -200,7 +202,7 @@ public class HttpUploadClient {
 
         // send request
         List<Entry<String, String>> entries = headers.entries();
-        channel.write(request).sync();
+        channel.writeAndFlush(request).sync();
 
         // Wait for the server to close the connection.
         channel.closeFuture().sync();
@@ -220,8 +222,8 @@ public class HttpUploadClient {
         Channel channel = bootstrap.connect(host, port).sync().channel();
 
         // Prepare the HTTP request.
-        FullHttpRequest request =
-                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, uriSimple.toASCIIString());
+        HttpRequest request =
+                new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, uriSimple.toASCIIString());
 
         // Use the PostBody encoder
         HttpPostRequestEncoder bodyRequestEncoder = null;
@@ -274,7 +276,9 @@ public class HttpUploadClient {
         if (bodyRequestEncoder.isChunked()) {
             // could do either request.isChunked()
             // either do it through ChunkedWriteHandler
-            channel.write(bodyRequestEncoder).awaitUninterruptibly();
+            channel.writeAndFlush(bodyRequestEncoder).awaitUninterruptibly();
+        }  else {
+            channel.flush();
         }
 
         // Do not clear here since we will reuse the InterfaceHttpData on the
@@ -304,7 +308,7 @@ public class HttpUploadClient {
         Channel channel = bootstrap.connect(host, port).sync().channel();
 
         // Prepare the HTTP request.
-        FullHttpRequest request =
+        HttpRequest request =
                 new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, uriFile.toASCIIString());
 
         // Use the PostBody encoder
@@ -338,7 +342,7 @@ public class HttpUploadClient {
 
         // finalize request
         try {
-            bodyRequestEncoder.finalizeRequest();
+            request = bodyRequestEncoder.finalizeRequest();
         } catch (ErrorDataEncoderException e) {
             // if an encoding error occurs
             e.printStackTrace();
@@ -349,7 +353,9 @@ public class HttpUploadClient {
 
         // test if request was chunked and if so, finish the write
         if (bodyRequestEncoder.isChunked()) {
-            channel.write(bodyRequestEncoder).awaitUninterruptibly();
+            channel.writeAndFlush(bodyRequestEncoder).awaitUninterruptibly();
+        } else {
+            channel.flush();
         }
 
         // Now no more use of file representation (and list of HttpData)
