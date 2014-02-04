@@ -59,8 +59,7 @@ public final class SocksCmdResponse extends SocksResponse {
      * @throws IllegalArgumentException in case host or port cannot be validated
      * @see IDN#toASCII(String)
      */
-    public SocksCmdResponse(SocksCmdStatus cmdStatus, SocksAddressType addressType,
-                            String host, int port) {
+    public SocksCmdResponse(SocksCmdStatus cmdStatus, SocksAddressType addressType, String host, int port) {
         super(SocksResponseType.CMD);
         if (cmdStatus == null) {
             throw new NullPointerException("cmdStatus");
@@ -68,8 +67,6 @@ public final class SocksCmdResponse extends SocksResponse {
         if (addressType == null) {
             throw new NullPointerException("addressType");
         }
-        this.cmdStatus = cmdStatus;
-        this.addressType = addressType;
         if (host != null) {
             switch (addressType) {
                 case IPv4:
@@ -91,13 +88,14 @@ public final class SocksCmdResponse extends SocksResponse {
                 case UNKNOWN:
                     break;
             }
-            this.host = IDN.toASCII(host);
-        } else {
-            this.host = null;
+            host = IDN.toASCII(host);
         }
         if (port < 0 && port >= 65535) {
             throw new IllegalArgumentException(port + " is not in bounds 0 < x < 65536");
         }
+        this.cmdStatus = cmdStatus;
+        this.addressType = addressType;
+        this.host = host;
         this.port = port;
     }
 
