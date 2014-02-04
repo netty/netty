@@ -71,7 +71,6 @@ public final class SocksCmdResponse extends SocksResponse {
         this.cmdStatus = cmdStatus;
         this.addressType = addressType;
         if (host != null) {
-            this.host = IDN.toASCII(host);
             switch (addressType) {
                 case IPv4:
                     if (!NetUtil.isValidIpV4Address(host)) {
@@ -79,9 +78,9 @@ public final class SocksCmdResponse extends SocksResponse {
                     }
                     break;
                 case DOMAIN:
-                    if (host.length() > 255) {
+                    if (IDN.toASCII(host).length() > 255) {
                         throw new IllegalArgumentException(host + " IDN: " +
-                                host + " exceeds 255 char limit");
+                                IDN.toASCII(host) + " exceeds 255 char limit");
                     }
                     break;
                 case IPv6:
@@ -92,6 +91,7 @@ public final class SocksCmdResponse extends SocksResponse {
                 case UNKNOWN:
                     break;
             }
+            this.host = IDN.toASCII(host);
         } else {
             this.host = null;
         }

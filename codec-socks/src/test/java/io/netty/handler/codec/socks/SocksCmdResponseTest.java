@@ -116,7 +116,7 @@ public class SocksCmdResponseTest {
         new SocksCmdResponse(SocksCmdStatus.SUCCESS, SocksAddressType.IPv4, "127.0.0", 1000);
     }
 
-    private void assertByteBufEquals(byte[] expected, ByteBuf actual) {
+    private static void assertByteBufEquals(byte[] expected, ByteBuf actual) {
         byte[] actualBytes = new byte[actual.readableBytes()];
         actual.readBytes(actualBytes);
         assertEquals("Generated response has incorrect length", expected.length, actualBytes.length);
