@@ -36,12 +36,11 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         InternalLoggerFactory.getInstance(DefaultPromise.class);
 
     @SuppressWarnings("rawtypes")
-    private static final AtomicIntegerFieldUpdater<DefaultPromise> PROGRESSIVE_SIZE_UPDATER =
-            AtomicIntegerFieldUpdater.newUpdater(DefaultPromise.class, "progressiveSize");
+    private static final AtomicIntegerFieldUpdater<DefaultPromise> PROGRESSIVE_SIZE_UPDATER;
 
     @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<DefaultPromise, Object> ENTRY_UPDATER =
-            AtomicReferenceFieldUpdater.newUpdater(DefaultPromise.class, Object.class, "entry");
+    private static final AtomicReferenceFieldUpdater<DefaultPromise, Object> ENTRY_UPDATER;
+
     private static final int MAX_LISTENER_STACK_DEPTH = 8;
     private static final ThreadLocal<Integer> LISTENER_STACK_DEPTH = new ThreadLocal<Integer>() {
         @Override
@@ -54,6 +53,22 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     private static final CauseHolder CANCELLATION_CAUSE_HOLDER = new CauseHolder(new CancellationException());
     static {
         CANCELLATION_CAUSE_HOLDER.cause.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
+
+        @SuppressWarnings("rawtypes")
+        AtomicReferenceFieldUpdater<DefaultPromise, Object> entryUpdater =
+        PlatformDependent.newAtomicReferenceFieldUpdater(DefaultPromise.class, "entry");
+        if (entryUpdater == null) {
+            entryUpdater = AtomicReferenceFieldUpdater.newUpdater(DefaultPromise.class, Object.class, "entry");
+        }
+        ENTRY_UPDATER = entryUpdater;
+
+        @SuppressWarnings("rawtypes")
+        AtomicIntegerFieldUpdater<DefaultPromise> sizeUpdater =
+                PlatformDependent.newAtomicIntegerFieldUpdater(DefaultPromise.class, "progressiveSize");
+        if (sizeUpdater == null) {
+            sizeUpdater = AtomicIntegerFieldUpdater.newUpdater(DefaultPromise.class, "progressiveSize");
+        }
+        PROGRESSIVE_SIZE_UPDATER = sizeUpdater;
     }
 
     private final EventExecutor executor;
@@ -786,10 +801,23 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         private volatile GenericFutureListener curr;
         @SuppressWarnings("unused")
         private volatile Entry next;
-        private static final AtomicReferenceFieldUpdater<Entry, GenericFutureListener> CURR_UPDATER =
-                AtomicReferenceFieldUpdater.newUpdater(Entry.class, GenericFutureListener.class, "curr");
-        private static final AtomicReferenceFieldUpdater<Entry, Entry> NEXT_UPDATER =
-                AtomicReferenceFieldUpdater.newUpdater(Entry.class, Entry.class, "next");
+        private static final AtomicReferenceFieldUpdater<Entry, GenericFutureListener> CURR_UPDATER;
+        private static final AtomicReferenceFieldUpdater<Entry, Entry> NEXT_UPDATER;
+
+        static {
+            AtomicReferenceFieldUpdater<Entry, GenericFutureListener> currUpdater =
+                    PlatformDependent.newAtomicReferenceFieldUpdater(Entry.class, "curr");
+            if (currUpdater == null) {
+                currUpdater = AtomicReferenceFieldUpdater.newUpdater(Entry.class, GenericFutureListener.class, "curr");
+            }
+            CURR_UPDATER = currUpdater;
+            AtomicReferenceFieldUpdater<Entry, Entry> nextUpdater =
+                    PlatformDependent.newAtomicReferenceFieldUpdater(Entry.class, "next");
+            if (nextUpdater == null) {
+                nextUpdater = AtomicReferenceFieldUpdater.newUpdater(Entry.class, Entry.class, "next");
+            }
+            NEXT_UPDATER = nextUpdater;
+        }
 
         // done is always only modified and read from one thread so no need for volatile
         private boolean done;

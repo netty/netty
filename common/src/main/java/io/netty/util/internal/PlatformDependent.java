@@ -34,6 +34,9 @@ import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.atomic.AtomicLongFieldUpdater;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -294,6 +297,57 @@ public final class PlatformDependent {
 
     public static void copyMemory(long srcAddr, byte[] dst, int dstIndex, long length) {
         PlatformDependent0.copyMemory(null, srcAddr, dst, ARRAY_BASE_OFFSET + dstIndex, length);
+    }
+
+    /**
+     * Create a new optimized {@link AtomicReferenceFieldUpdater} or {@code null} if it
+     * could not be created. Because of this the caller need to check for {@code null} and if {@code null} is returned
+     * use {@link AtomicReferenceFieldUpdater#newUpdater(Class, Class, String)} as fallback.
+     */
+    public static <U, W> AtomicReferenceFieldUpdater<U, W> newAtomicReferenceFieldUpdater(
+            Class<U> tclass, String fieldName) {
+        if (hasUnsafe()) {
+            try {
+                return PlatformDependent0.newAtomicReferenceFieldUpdater(tclass, fieldName);
+            } catch (Throwable ignore) {
+                // ignore
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Create a new optimized {@link AtomicIntegerFieldUpdater} or {@code null} if it
+     * could not be created. Because of this the caller need to check for {@code null} and if {@code null} is returned
+     * use {@link AtomicIntegerFieldUpdater#newUpdater(Class, String)} as fallback.
+     */
+    public static <T> AtomicIntegerFieldUpdater<T> newAtomicIntegerFieldUpdater(
+            Class<?> tclass, String fieldName) {
+        if (hasUnsafe()) {
+            try {
+                return PlatformDependent0.newAtomicIntegerFieldUpdater(tclass, fieldName);
+            } catch (Throwable ignore) {
+                // ignore
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Create a new optimized {@link AtomicLongFieldUpdater} or {@code null} if it
+     * could not be created. Because of this the caller need to check for {@code null} and if {@code null} is returned
+     * use {@link AtomicLongFieldUpdater#newUpdater(Class, String)} as fallback.
+     */
+    public static <T> AtomicLongFieldUpdater<T> newAtomicLongFieldUpdater(
+            Class<?> tclass, String fieldName) {
+        if (hasUnsafe()) {
+            try {
+                return PlatformDependent0.newAtomicLongFieldUpdater(tclass, fieldName);
+            } catch (Throwable ignore) {
+                // ignore
+            }
+        }
+        return null;
     }
 
     private static boolean isAndroid0() {
