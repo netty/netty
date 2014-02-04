@@ -15,6 +15,8 @@
  */
 package io.netty.util;
 
+import io.netty.util.internal.PlatformDependent;
+
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -27,8 +29,17 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 public class DefaultAttributeMap implements AttributeMap {
 
     @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<DefaultAttributeMap, Map> updater =
-            AtomicReferenceFieldUpdater.newUpdater(DefaultAttributeMap.class, Map.class, "map");
+    private static final AtomicReferenceFieldUpdater<DefaultAttributeMap, Map> updater;
+
+    static {
+        @SuppressWarnings("rawtypes")
+        AtomicReferenceFieldUpdater<DefaultAttributeMap, Map> referenceFieldUpdater =
+                PlatformDependent.newAtomicReferenceFieldUpdater(DefaultAttributeMap.class, "map");
+        if (referenceFieldUpdater == null) {
+            referenceFieldUpdater = AtomicReferenceFieldUpdater.newUpdater(DefaultAttributeMap.class, Map.class, "map");
+        }
+        updater = referenceFieldUpdater;
+    }
 
     // Initialize lazily to reduce memory consumption; updated by AtomicReferenceFieldUpdater above.
     @SuppressWarnings("UnusedDeclaration")
