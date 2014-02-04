@@ -42,8 +42,8 @@ public class SocksCmdResponseTest {
     @Test
     public void testEmptyDomain() {
         SocksCmdResponse socksCmdResponse = new SocksCmdResponse(SocksCmdStatus.SUCCESS, SocksAddressType.DOMAIN);
-        assertNull(socksCmdResponse.boundAddress());
-        assertEquals(0, socksCmdResponse.boundPort());
+        assertNull(socksCmdResponse.host());
+        assertEquals(0, socksCmdResponse.port());
         ByteBuf buffer = Unpooled.buffer(20);
         socksCmdResponse.encodeAsByteBuf(buffer);
         byte[] expected = {
@@ -66,8 +66,8 @@ public class SocksCmdResponseTest {
     public void testIPv4Host() {
         SocksCmdResponse socksCmdResponse = new SocksCmdResponse(SocksCmdStatus.SUCCESS, SocksAddressType.IPv4,
                 "127.0.0.1", 80);
-        assertEquals("127.0.0.1", socksCmdResponse.boundAddress());
-        assertEquals(80, socksCmdResponse.boundPort());
+        assertEquals("127.0.0.1", socksCmdResponse.host());
+        assertEquals(80, socksCmdResponse.port());
         ByteBuf buffer = Unpooled.buffer(20);
         socksCmdResponse.encodeAsByteBuf(buffer);
         byte[] expected = {
@@ -92,8 +92,8 @@ public class SocksCmdResponseTest {
     public void testEmptyBoundAddress() {
         SocksCmdResponse socksCmdResponse = new SocksCmdResponse(SocksCmdStatus.SUCCESS, SocksAddressType.DOMAIN,
                 "", 80);
-        assertEquals("", socksCmdResponse.boundAddress());
-        assertEquals(80, socksCmdResponse.boundPort());
+        assertEquals("", socksCmdResponse.host());
+        assertEquals(80, socksCmdResponse.port());
         ByteBuf buffer = Unpooled.buffer(20);
         socksCmdResponse.encodeAsByteBuf(buffer);
         byte[] expected = {

@@ -31,8 +31,8 @@ public final class SocksCmdResponse extends SocksResponse {
     private final SocksCmdStatus cmdStatus;
 
     private final SocksAddressType addressType;
-    private final String boundAddress;
-    private final int boundPort;
+    private final String host;
+    private final int port;
 
     // All arrays are initialized on construction time to 0/false/null remove array Initialization
     private static final byte[] DOMAIN_ZEROED = {0x00};
@@ -47,18 +47,20 @@ public final class SocksCmdResponse extends SocksResponse {
     }
 
     /**
-     * Constructs new response and provides bound address and bound host as part of it.
+     * Constructs new response and includes provided host and port as part of it.
      *
      * @param cmdStatus status of the response
-     * @param addressType type of returned bound address
-     * @param boundAddress bound address, when null a value of 4/8 0x00 octets will be used for IPv4/IPv6 and a single
-     *                     0x00 byte will be used for domain addressType
-     * @param boundPort bound port
+     * @param addressType type of host parameter
+     * @param host host (BND.ADDR field) is address that server used when connecting to the target host.
+     *             When null a value of 4/8 0x00 octets will be used for IPv4/IPv6 and a single 0x00 byte will be
+     *             used for domain addressType. Value is converted to ASCII using {@link IDN#toASCII(String)}.
+     * @param port port (BND.PORT field) that the server assigned to connect to the target host
      * @throws NullPointerException in case cmdStatus or addressType are missing
-     * @throws IllegalArgumentException in case bound address or bound port cannot be validated
+     * @throws IllegalArgumentException in case host or port cannot be validated
+     * @see IDN#toASCII(String)
      */
     public SocksCmdResponse(SocksCmdStatus cmdStatus, SocksAddressType addressType,
-                            String boundAddress, int boundPort) {
+                            String host, int port) {
         super(SocksResponseType.CMD);
         if (cmdStatus == null) {
             throw new NullPointerException("cmdStatus");
@@ -68,35 +70,35 @@ public final class SocksCmdResponse extends SocksResponse {
         }
         this.cmdStatus = cmdStatus;
         this.addressType = addressType;
-        if (boundAddress != null) {
-            this.boundAddress = IDN.toASCII(boundAddress);
+        if (host != null) {
+            this.host = IDN.toASCII(host);
             switch (addressType) {
                 case IPv4:
-                    if (!NetUtil.isValidIpV4Address(boundAddress)) {
-                        throw new IllegalArgumentException(boundAddress + " is not a valid IPv4 address");
+                    if (!NetUtil.isValidIpV4Address(host)) {
+                        throw new IllegalArgumentException(host + " is not a valid IPv4 address");
                     }
                     break;
                 case DOMAIN:
-                    if (boundAddress.length() > 255) {
-                        throw new IllegalArgumentException(boundAddress + " IDN: " +
-                                boundAddress + " exceeds 255 char limit");
+                    if (host.length() > 255) {
+                        throw new IllegalArgumentException(host + " IDN: " +
+                                host + " exceeds 255 char limit");
                     }
                     break;
                 case IPv6:
-                    if (!NetUtil.isValidIpV6Address(boundAddress)) {
-                        throw new IllegalArgumentException(boundAddress + " is not a valid IPv6 address");
+                    if (!NetUtil.isValidIpV6Address(host)) {
+                        throw new IllegalArgumentException(host + " is not a valid IPv6 address");
                     }
                     break;
                 case UNKNOWN:
                     break;
             }
         } else {
-            this.boundAddress = null;
+            this.host = null;
         }
-        if (boundPort < 0 && boundPort >= 65535) {
-            throw new IllegalArgumentException(boundPort + " is not in bounds 0 < x < 65536");
+        if (port < 0 && port >= 65535) {
+            throw new IllegalArgumentException(port + " is not in bounds 0 < x < 65536");
         }
-        this.boundPort = boundPort;
+        this.port = port;
     }
 
     /**
@@ -118,21 +120,29 @@ public final class SocksCmdResponse extends SocksResponse {
     }
 
     /**
-     * Returns bound host that is used as a parameter in {@link io.netty.handler.codec.socks.SocksCmdType}.
+     * Returns host that is used as a parameter in {@link io.netty.handler.codec.socks.SocksCmdType}.
+     * Host (BND.ADDR field in response) is address that server used when connecting to the target host.
+     * This is typically different from address which client uses to connect to the SOCKS server.
      *
-     * @return bound host that is used as a parameter in {@link io.netty.handler.codec.socks.SocksCmdType}
+     * @return host that is used as a parameter in {@link io.netty.handler.codec.socks.SocksCmdType}
+     *         or null when there was no host specified during response construction
      */
-    public String boundAddress() {
-        return boundAddress;
+    public String host() {
+        if (host != null) {
+            return IDN.toUnicode(host);
+        } else {
+            return null;
+        }
     }
 
     /**
-     * Returns bound port that is used as a parameter in {@link io.netty.handler.codec.socks.SocksCmdType}
+     * Returns port that is used as a parameter in {@link io.netty.handler.codec.socks.SocksCmdType}.
+     * Port (BND.PORT field in response) is port that the server assigned to connect to the target host.
      *
-     * @return bound port that is used as a parameter in {@link io.netty.handler.codec.socks.SocksCmdType}
+     * @return port that is used as a parameter in {@link io.netty.handler.codec.socks.SocksCmdType}
      */
-    public int boundPort() {
-        return boundPort;
+    public int port() {
+        return port;
     }
 
     @Override
@@ -143,25 +153,25 @@ public final class SocksCmdResponse extends SocksResponse {
         byteBuf.writeByte(addressType.byteValue());
         switch (addressType) {
             case IPv4: {
-                byte[] boundAddressContent = boundAddress == null ?
-                        IPv4_HOSTNAME_ZEROED : NetUtil.createByteArrayFromIpAddressString(boundAddress);
-                byteBuf.writeBytes(boundAddressContent);
-                byteBuf.writeShort(boundPort);
+                byte[] hostContent = host == null ?
+                        IPv4_HOSTNAME_ZEROED : NetUtil.createByteArrayFromIpAddressString(host);
+                byteBuf.writeBytes(hostContent);
+                byteBuf.writeShort(port);
                 break;
             }
             case DOMAIN: {
-                byte[] boundAddressContent = boundAddress == null ?
-                        DOMAIN_ZEROED : boundAddress.getBytes(CharsetUtil.US_ASCII);
-                byteBuf.writeByte(boundAddressContent.length);   // domain length
-                byteBuf.writeBytes(boundAddressContent);   // domain value
-                byteBuf.writeShort(boundPort);  // port value
+                byte[] hostContent = host == null ?
+                        DOMAIN_ZEROED : host.getBytes(CharsetUtil.US_ASCII);
+                byteBuf.writeByte(hostContent.length);   // domain length
+                byteBuf.writeBytes(hostContent);   // domain value
+                byteBuf.writeShort(port);  // port value
                 break;
             }
             case IPv6: {
-                byte[] boundAddressContent = boundAddress == null
-                        ? IPv6_HOSTNAME_ZEROED : NetUtil.createByteArrayFromIpAddressString(boundAddress);
-                byteBuf.writeBytes(boundAddressContent);
-                byteBuf.writeShort(boundPort);
+                byte[] hostContent = host == null
+                        ? IPv6_HOSTNAME_ZEROED : NetUtil.createByteArrayFromIpAddressString(host);
+                byteBuf.writeBytes(hostContent);
+                byteBuf.writeShort(port);
                 break;
             }
         }

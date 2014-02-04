@@ -38,9 +38,9 @@ public class SocksCmdResponseDecoderTest {
             msg = (SocksResponse) embedder.readInbound();
             assertEquals(((SocksCmdResponse) msg).cmdStatus(), cmdStatus);
             if (host != null) {
-                assertEquals(((SocksCmdResponse) msg).boundAddress(), host);
+                assertEquals(((SocksCmdResponse) msg).host(), host);
             }
-            assertEquals(((SocksCmdResponse) msg).boundPort(), port);
+            assertEquals(((SocksCmdResponse) msg).port(), port);
         }
         assertNull(embedder.readInbound());
     }
