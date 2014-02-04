@@ -26,6 +26,9 @@ import java.lang.reflect.Method;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.atomic.AtomicLongFieldUpdater;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 /**
  * The {@link PlatformDependent} operations which requires access to {@code sun.misc.*}.
@@ -312,6 +315,22 @@ final class PlatformDependent0 {
         UNSAFE.copyMemory(src, srcOffset, dst, dstOffset, length);
     }
 
+    static <U, W> AtomicReferenceFieldUpdater<U, W> newAtomicReferenceFieldUpdater(
+            Class<U> tclass, String fieldName) throws Exception {
+        return new UnsafeAtomicReferenceFieldUpdater<U, W>(UNSAFE, tclass, fieldName);
+    }
+
+    static <T> AtomicIntegerFieldUpdater<T> newAtomicIntegerFieldUpdater(
+            Class<?> tclass, String fieldName) throws Exception {
+        return new UnsafeAtomicIntegerFieldUpdater<T>(UNSAFE, tclass, fieldName);
+    }
+
+    static <T> AtomicLongFieldUpdater<T> newAtomicLongFieldUpdater(
+            Class<?> tclass, String fieldName) throws Exception {
+        return new UnsafeAtomicLongFieldUpdater<T>(UNSAFE, tclass, fieldName);
+    }
+
     private PlatformDependent0() {
     }
+
 }

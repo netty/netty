@@ -26,8 +26,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
  */
 public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
 
-    private static final AtomicIntegerFieldUpdater<AbstractReferenceCountedByteBuf> refCntUpdater =
-            AtomicIntegerFieldUpdater.newUpdater(AbstractReferenceCountedByteBuf.class, "refCnt");
+    private static final AtomicIntegerFieldUpdater<AbstractReferenceCountedByteBuf> refCntUpdater;
 
     private static final long REFCNT_FIELD_OFFSET;
 
@@ -43,6 +42,12 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
         }
 
         REFCNT_FIELD_OFFSET = refCntFieldOffset;
+        AtomicIntegerFieldUpdater<AbstractReferenceCountedByteBuf> updater =
+                PlatformDependent.newAtomicIntegerFieldUpdater(AbstractReferenceCountedByteBuf.class, "refCnt");
+        if (updater == null) {
+            updater = AtomicIntegerFieldUpdater.newUpdater(AbstractReferenceCountedByteBuf.class, "refCnt");
+        }
+        refCntUpdater = updater;
     }
 
     @SuppressWarnings("FieldMayBeFinal")

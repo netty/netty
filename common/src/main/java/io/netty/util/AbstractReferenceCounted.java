@@ -24,8 +24,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
  */
 public abstract class AbstractReferenceCounted implements ReferenceCounted {
 
-    private static final AtomicIntegerFieldUpdater<AbstractReferenceCounted> refCntUpdater =
-            AtomicIntegerFieldUpdater.newUpdater(AbstractReferenceCounted.class, "refCnt");
+    private static final AtomicIntegerFieldUpdater<AbstractReferenceCounted> refCntUpdater;
 
     private static final long REFCNT_FIELD_OFFSET;
 
@@ -41,6 +40,13 @@ public abstract class AbstractReferenceCounted implements ReferenceCounted {
         }
 
         REFCNT_FIELD_OFFSET = refCntFieldOffset;
+
+        AtomicIntegerFieldUpdater<AbstractReferenceCounted> updater =
+                PlatformDependent.newAtomicIntegerFieldUpdater(AbstractReferenceCounted.class, "refCnt");
+        if (updater == null) {
+            updater = AtomicIntegerFieldUpdater.newUpdater(AbstractReferenceCounted.class, "refCnt");
+        }
+        refCntUpdater = updater;
     }
 
     @SuppressWarnings("FieldMayBeFinal")
