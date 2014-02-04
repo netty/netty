@@ -22,7 +22,7 @@ import io.netty.util.NetUtil;
 import java.net.IDN;
 
 /**
- * An socks cmd response.
+ * A socks cmd response.
  *
  * @see SocksCmdRequest
  * @see SocksCmdResponseDecoder
@@ -51,7 +51,7 @@ public final class SocksCmdResponse extends SocksResponse {
      *
      * @param cmdStatus status of the response
      * @param addressType type of returned bound address
-     * @param boundAddress bound address, when null a value of 4/8 0x00 octets will be used for IPv4/IPv8 and a single
+     * @param boundAddress bound address, when null a value of 4/8 0x00 octets will be used for IPv4/IPv6 and a single
      *                     0x00 byte will be used for domain addressType
      * @param boundPort bound port
      * @throws NullPointerException in case cmdStatus or addressType are missing
