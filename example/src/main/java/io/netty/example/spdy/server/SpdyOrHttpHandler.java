@@ -13,15 +13,13 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.example.spdy;
-
-import javax.net.ssl.SSLEngine;
+package io.netty.example.spdy.server;
 
 import io.netty.channel.ChannelInboundHandler;
+import io.netty.handler.codec.spdy.SpdyOrHttpChooser;
 import org.eclipse.jetty.npn.NextProtoNego;
 
-import io.netty.handler.codec.spdy.SpdyOrHttpChooser;
-
+import javax.net.ssl.SSLEngine;
 import java.util.logging.Logger;
 
 /**

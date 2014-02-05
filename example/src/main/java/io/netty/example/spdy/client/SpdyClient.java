@@ -13,9 +13,8 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.example.spdyclient;
+package io.netty.example.spdy.client;
 
-import static java.util.concurrent.TimeUnit.SECONDS;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -32,13 +31,15 @@ import io.netty.handler.codec.http.HttpVersion;
 import java.net.InetSocketAddress;
 import java.util.concurrent.BlockingQueue;
 
+import static java.util.concurrent.TimeUnit.*;
+
 /**
  * An SPDY client that allows you to send HTTP GET to a SPDY server.
  * <p>
  * This class must be run with the JVM parameter: {@code java -Xbootclasspath/p:<path_to_npn_boot_jar> ...}. The
  * "path_to_npn_boot_jar" is the path on the file system for the NPN Boot Jar file which can be downloaded from Maven at
  * coordinates org.mortbay.jetty.npn:npn-boot. Different versions applies to different OpenJDK versions. See
- * {@link http://www.eclipse.org/jetty/documentation/current/npn-chapter.html Jetty docs} for more information.
+ * <a href="http://www.eclipse.org/jetty/documentation/current/npn-chapter.html">Jetty docs</a> for more information.
  * <p>
  */
 public class SpdyClient {
@@ -52,54 +53,54 @@ public class SpdyClient {
     public SpdyClient(String host, int port) {
         this.host = host;
         this.port = port;
-        this.httpResponseHandler = new HttpResponseClientHandler();
+        httpResponseHandler = new HttpResponseClientHandler();
     }
 
     public void start() {
-        if (this.channel != null) {
+        if (channel != null) {
             System.out.println("Already running!");
             return;
         }
 
-        this.workerGroup = new NioEventLoopGroup();
+        workerGroup = new NioEventLoopGroup();
 
         Bootstrap b = new Bootstrap();
         b.group(workerGroup);
         b.channel(NioSocketChannel.class);
         b.option(ChannelOption.SO_KEEPALIVE, true);
-        b.remoteAddress(new InetSocketAddress(this.host, this.port));
-        b.handler(new SpdyClientInitializer(this.httpResponseHandler));
+        b.remoteAddress(new InetSocketAddress(host, port));
+        b.handler(new SpdyClientInitializer(httpResponseHandler));
 
         // Start the client.
-        this.channel = b.connect().syncUninterruptibly().channel();
-        System.out.println("Connected to [" + this.host + ":" + this.port + "]");
+        channel = b.connect().syncUninterruptibly().channel();
+        System.out.println("Connected to [" + host + ':' + port + ']');
     }
 
     public void stop() {
         try {
             // Wait until the connection is closed.
-            this.channel.close().syncUninterruptibly();
+            channel.close().syncUninterruptibly();
         } finally {
-            if (this.workerGroup != null) {
-                this.workerGroup.shutdownGracefully();
+            if (workerGroup != null) {
+                workerGroup.shutdownGracefully();
             }
         }
     }
 
     public ChannelFuture send(HttpRequest request) {
         // Sends the HTTP request.
-        return this.channel.writeAndFlush(request);
+        return channel.writeAndFlush(request);
     }
 
     public HttpRequest get() {
         HttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "");
-        request.headers().set(HttpHeaders.Names.HOST, this.host);
+        request.headers().set(HttpHeaders.Names.HOST, host);
         request.headers().set(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP);
         return request;
     }
 
     public BlockingQueue<ChannelFuture> httpResponseQueue() {
-        return this.httpResponseHandler.queue();
+        return httpResponseHandler.queue();
     }
 
     public static void main(String[] args) throws Exception {

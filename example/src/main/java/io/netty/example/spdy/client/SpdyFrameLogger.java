@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.example.spdyclient;
+package io.netty.example.spdy.client;
 
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -40,7 +40,7 @@ public class SpdyFrameLogger extends ChannelDuplexHandler {
             throw new NullPointerException("level");
         }
 
-        this.logger = InternalLoggerFactory.getInstance(getClass());
+        logger = InternalLoggerFactory.getInstance(getClass());
         this.level = level;
     }
 
@@ -60,16 +60,16 @@ public class SpdyFrameLogger extends ChannelDuplexHandler {
         super.write(ctx, msg, promise);
     }
 
-    private boolean acceptMessage(Object msg) throws Exception {
+    private static boolean acceptMessage(Object msg) throws Exception {
         return msg instanceof SpdyFrame;
     }
 
     private void log(SpdyFrame msg, Direction d) {
-        if (logger.isEnabled(this.level)) {
+        if (logger.isEnabled(level)) {
             StringBuilder b = new StringBuilder("\n----------------").append(d.name()).append("--------------------\n");
-            b.append(msg.toString());
+            b.append(msg);
             b.append("\n------------------------------------");
-            logger.log(this.level, b.toString());
+            logger.log(level, b.toString());
         }
     }
 }
