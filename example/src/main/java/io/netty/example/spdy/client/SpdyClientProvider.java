@@ -13,14 +13,13 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.example.spdyclient;
+package io.netty.example.spdy.client;
 
-import static io.netty.handler.codec.spdy.SpdyOrHttpChooser.SelectedProtocol.HTTP_1_1;
-import static io.netty.handler.codec.spdy.SpdyOrHttpChooser.SelectedProtocol.SPDY_3_1;
+import org.eclipse.jetty.npn.NextProtoNego.ClientProvider;
 
 import java.util.List;
 
-import org.eclipse.jetty.npn.NextProtoNego.ClientProvider;
+import static io.netty.handler.codec.spdy.SpdyOrHttpChooser.SelectedProtocol.*;
 
 /**
  * The Jetty project provides an implementation of the Transport Layer Security (TLS) extension for Next Protocol
@@ -33,7 +32,7 @@ import org.eclipse.jetty.npn.NextProtoNego.ClientProvider;
  * "path_to_npn_boot_jar" is the path on the file system for the NPN Boot Jar file which can be downloaded from Maven
  * at coordinates org.mortbay.jetty.npn:npn-boot. Different versions applies to different OpenJDK versions.
  *
- * @see http://www.eclipse.org/jetty/documentation/current/npn-chapter.html
+ * @see <a href="http://www.eclipse.org/jetty/documentation/current/npn-chapter.html">Jetty documentation</a>
  */
 public class SpdyClientProvider implements ClientProvider {
 
@@ -54,6 +53,6 @@ public class SpdyClientProvider implements ClientProvider {
 
     @Override
     public void unsupported() {
-        this.selectedProtocol = HTTP_1_1.protocolName();
+        selectedProtocol = HTTP_1_1.protocolName();
     }
 }

@@ -13,9 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.example.spdy;
-
-import java.util.Date;
+package io.netty.example.spdy.server;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -26,6 +24,8 @@ import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.util.CharsetUtil;
+
+import java.util.Date;
 
 import static io.netty.handler.codec.http.HttpHeaders.Names.*;
 import static io.netty.handler.codec.http.HttpHeaders.*;
@@ -51,7 +51,7 @@ public class SpdyServerHandler extends SimpleChannelInboundHandler<Object> {
             }
             boolean keepAlive = isKeepAlive(req);
 
-            ByteBuf content = Unpooled.copiedBuffer("Hello World " + (new Date()).toString(), CharsetUtil.UTF_8);
+            ByteBuf content = Unpooled.copiedBuffer("Hello World " + new Date(), CharsetUtil.UTF_8);
 
             FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, content);
             response.headers().set(CONTENT_TYPE, "text/plain; charset=UTF-8");

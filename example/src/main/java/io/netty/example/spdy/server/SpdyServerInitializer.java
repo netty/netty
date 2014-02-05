@@ -13,17 +13,16 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.example.spdy;
-
-import javax.net.ssl.SSLEngine;
-
-import org.eclipse.jetty.npn.NextProtoNego;
+package io.netty.example.spdy.server;
 
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.example.securechat.SecureChatSslContextFactory;
 import io.netty.handler.ssl.SslHandler;
+import org.eclipse.jetty.npn.NextProtoNego;
+
+import javax.net.ssl.SSLEngine;
 
 /**
  * Sets up the Netty pipeline
