@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.example.spdyclient;
+package io.netty.example.spdy.client;
 
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
@@ -37,7 +37,7 @@ public class SpdyClientStreamIdHandler extends ChannelHandlerAdapter {
         if (acceptOutboundMessage(msg)) {
             HttpMessage httpMsg = (HttpMessage) msg;
             if (!httpMsg.headers().contains(SpdyHttpHeaders.Names.STREAM_ID)) {
-                SpdyHttpHeaders.setStreamId(httpMsg, this.currentStreamId);
+                SpdyHttpHeaders.setStreamId(httpMsg, currentStreamId);
                 // Client stream IDs are always odd
                 currentStreamId += 2;
             }

@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.example.spdyclient;
+package io.netty.example.spdy.client;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
@@ -69,20 +69,20 @@ public class HttpResponseClientHandler extends SimpleChannelInboundHandler<HttpO
 
             if (content instanceof LastHttpContent) {
                 System.out.println("} END OF CONTENT");
-                this.queue.add(ctx.channel().newSucceededFuture());
+                queue.add(ctx.channel().newSucceededFuture());
             }
         }
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        this.queue.add(ctx.channel().newFailedFuture(cause));
+        queue.add(ctx.channel().newFailedFuture(cause));
         cause.printStackTrace();
         ctx.close();
     }
 
     public BlockingQueue<ChannelFuture> queue() {
-        return this.queue;
+        return queue;
     }
 
 }

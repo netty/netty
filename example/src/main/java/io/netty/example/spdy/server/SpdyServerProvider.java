@@ -13,13 +13,13 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.example.spdy;
-
-import java.util.Arrays;
-import java.util.List;
+package io.netty.example.spdy.server;
 
 import io.netty.handler.codec.spdy.SpdyOrHttpChooser;
 import org.eclipse.jetty.npn.NextProtoNego.ServerProvider;
+
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * The Jetty project provides an implementation of the Transport Layer Security (TLS) extension for Next
@@ -32,7 +32,7 @@ import org.eclipse.jetty.npn.NextProtoNego.ServerProvider;
  * "path_to_npn_boot_jar" is the path on the file system for the NPN Boot Jar file which can be downloaded from
  * Maven at coordinates org.mortbay.jetty.npn:npn-boot. Different versions applies to different OpenJDK versions.
  *
- * @see http://www.eclipse.org/jetty/documentation/current/npn-chapter.html
+ * @see <a href="http://www.eclipse.org/jetty/documentation/current/npn-chapter.html">Jetty documentation</a>
  */
 public class SpdyServerProvider implements ServerProvider {
 
