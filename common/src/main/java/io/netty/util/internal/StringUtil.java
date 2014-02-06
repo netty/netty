@@ -15,6 +15,7 @@
  */
 package io.netty.util.internal;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Formatter;
 import java.util.List;
@@ -24,13 +25,14 @@ import java.util.List;
  */
 public final class StringUtil {
 
-    private StringUtil() {
-        // Unused.
-    }
-
     public static final String NEWLINE;
 
+    private static final String[] BYTE2HEX_PAD = new String[256];
+    private static final String[] BYTE2HEX_NOPAD = new String[256];
+    private static final String EMPTY_STRING = "";
+
     static {
+        // Determine the newline character of the current platform.
         String newLine;
 
         try {
@@ -41,9 +43,32 @@ public final class StringUtil {
         }
 
         NEWLINE = newLine;
-    }
 
-    private static final String EMPTY_STRING = "";
+        // Generate the lookup table that converts a byte into a 2-digit hexadecimal integer.
+        int i;
+        for (i = 0; i < 10; i ++) {
+            StringBuilder buf = new StringBuilder(2);
+            buf.append('0');
+            buf.append(i);
+            BYTE2HEX_PAD[i] = buf.toString();
+            BYTE2HEX_NOPAD[i] = String.valueOf(i);
+        }
+        for (; i < 16; i ++) {
+            StringBuilder buf = new StringBuilder(2);
+            char c = (char) ('a' + i - 10);
+            buf.append('0');
+            buf.append(c);
+            BYTE2HEX_PAD[i] = buf.toString();
+            BYTE2HEX_NOPAD[i] = String.valueOf(c);
+        }
+        for (; i < BYTE2HEX_PAD.length; i ++) {
+            StringBuilder buf = new StringBuilder(2);
+            buf.append(Integer.toHexString(i));
+            String str = buf.toString();
+            BYTE2HEX_PAD[i] = str;
+            BYTE2HEX_NOPAD[i] = str;
+        }
+    }
 
     /**
      * Splits the specified {@link String} with the specified delimiter.  This operation is a simplified and optimized
@@ -87,6 +112,124 @@ public final class StringUtil {
     }
 
     /**
+     * Converts the specified byte value into a 2-digit hexadecimal integer.
+     */
+    public static String byteToHexStringPadded(int value) {
+        return BYTE2HEX_PAD[value & 0xff];
+    }
+
+    /**
+     * Converts the specified byte value into a 2-digit hexadecimal integer and appends it to the specified buffer.
+     */
+    public static <T extends Appendable> T byteToHexStringPadded(T buf, int value) {
+        try {
+            buf.append(byteToHexStringPadded(value));
+        } catch (IOException e) {
+            PlatformDependent.throwException(e);
+        }
+        return buf;
+    }
+
+    /**
+     * Converts the specified byte array into a hexadecimal value.
+     */
+    public static String toHexStringPadded(byte[] src) {
+        return toHexStringPadded(src, 0, src.length);
+    }
+
+    /**
+     * Converts the specified byte array into a hexadecimal value.
+     */
+    public static String toHexStringPadded(byte[] src, int offset, int length) {
+        return toHexStringPadded(new StringBuilder(length << 1), src, offset, length).toString();
+    }
+
+    /**
+     * Converts the specified byte array into a hexadecimal value and appends it to the specified buffer.
+     */
+    public static <T extends Appendable> T toHexStringPadded(T dst, byte[] src) {
+        return toHexStringPadded(dst, src, 0, src.length);
+    }
+
+    /**
+     * Converts the specified byte array into a hexadecimal value and appends it to the specified buffer.
+     */
+    public static <T extends Appendable> T toHexStringPadded(T dst, byte[] src, int offset, int length) {
+        final int end = offset + length;
+        for (int i = offset; i < end; i ++) {
+            byteToHexStringPadded(dst, src[i]);
+        }
+        return dst;
+    }
+
+    /**
+     * Converts the specified byte value into a hexadecimal integer.
+     */
+    public static String byteToHexString(int value) {
+        return BYTE2HEX_NOPAD[value & 0xff];
+    }
+
+    /**
+     * Converts the specified byte value into a hexadecimal integer and appends it to the specified buffer.
+     */
+    public static <T extends Appendable> T byteToHexString(T buf, int value) {
+        try {
+            buf.append(byteToHexString(value));
+        } catch (IOException e) {
+            PlatformDependent.throwException(e);
+        }
+        return buf;
+    }
+
+    /**
+     * Converts the specified byte array into a hexadecimal value.
+     */
+    public static String toHexString(byte[] src) {
+        return toHexString(src, 0, src.length);
+    }
+
+    /**
+     * Converts the specified byte array into a hexadecimal value.
+     */
+    public static String toHexString(byte[] src, int offset, int length) {
+        return toHexString(new StringBuilder(length << 1), src, offset, length).toString();
+    }
+
+    /**
+     * Converts the specified byte array into a hexadecimal value and appends it to the specified buffer.
+     */
+    public static <T extends Appendable> T toHexString(T dst, byte[] src) {
+        return toHexString(dst, src, 0, src.length);
+    }
+
+    /**
+     * Converts the specified byte array into a hexadecimal value and appends it to the specified buffer.
+     */
+    public static <T extends Appendable> T toHexString(T dst, byte[] src, int offset, int length) {
+        assert length >= 0;
+        if (length == 0) {
+            return dst;
+        }
+
+        final int end = offset + length;
+        final int endMinusOne = end - 1;
+        int i;
+
+        // Skip preceding zeroes.
+        for (i = offset; i < endMinusOne; i ++) {
+            if (src[i] != 0) {
+                break;
+            }
+        }
+
+        byteToHexString(dst, src[i ++]);
+        int remaining = end - i;
+        toHexStringPadded(dst, src, i, remaining);
+
+        return dst;
+    }
+
+    /**
      * The shortcut to {@link #simpleClassName(Class) simpleClassName(o.getClass())}.
      */
     public static String simpleClassName(Object o) {
@@ -112,5 +255,9 @@ public final class StringUtil {
         } else {
             return clazz.getName();
         }
+    }
+
+    private StringUtil() {
+        // Unused.
     }
 }

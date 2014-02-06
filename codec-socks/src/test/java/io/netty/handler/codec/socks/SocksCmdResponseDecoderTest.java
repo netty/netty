@@ -77,7 +77,8 @@ public class SocksCmdResponseDecoderTest {
                     "testDomain.com", 80);
             testSocksCmdResponseDecoderWithDifferentParams(cmdStatus, SocksAddressType.IPv6,
                     "2001:db8:85a3:42:1000:8a2e:370:7334", 80);
+            testSocksCmdResponseDecoderWithDifferentParams(cmdStatus, SocksAddressType.IPv6,
+                    "1111:111:11:1:0:0:0:1", 80);
         }
     }
-
 }
