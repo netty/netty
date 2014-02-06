@@ -72,4 +72,50 @@ public class ByteToMessageDecoderTest {
         buf.release();
         b.release();
     }
+
+    /**
+     * Verifies that internal buffer of the ByteToMessageDecoder is released once decoder is removed from pipeline. In
+     * this case input is read fully.
+     */
+    @Test
+    public void testInternalBufferClearReadAll() {
+
+        final ByteBuf buf = Unpooled.buffer().writeBytes(new byte[]{'a'});
+        EmbeddedChannel channel = new EmbeddedChannel(new ByteToMessageDecoder() {
+            @Override
+            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+                ByteBuf byteBuf = internalBuffer();
+                Assert.assertEquals(1, byteBuf.refCnt());
+                in.readByte();
+                // Removal from pipeline should clear internal buffer
+                ctx.pipeline().remove(this);
+                Assert.assertEquals(0, byteBuf.refCnt());
+            }
+        });
+        channel.writeInbound(buf.copy());
+
+    }
+
+    /**
+     * Verifies that internal buffer of the ByteToMessageDecoder is released once decoder is removed from pipeline. In
+     * this case input was not fully read.
+     */
+    @Test
+    public void testInternalBufferClearReadPartly() {
+
+        final ByteBuf buf = Unpooled.buffer().writeBytes(new byte[]{'a', 'b'});
+        EmbeddedChannel channel = new EmbeddedChannel(new ByteToMessageDecoder() {
+            @Override
+            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+                ByteBuf byteBuf = internalBuffer();
+                Assert.assertEquals(1, byteBuf.refCnt());
+                in.readByte();
+                // Removal from pipeline should clear internal buffer
+                ctx.pipeline().remove(this);
+                Assert.assertEquals(0, byteBuf.refCnt());
+            }
+        });
+        channel.writeInbound(buf.copy());
+
+    }
 }

@@ -109,6 +109,8 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
             ByteBuf bytes = buf.readBytes(readable);
             buf.release();
             ctx.fireChannelRead(bytes);
+        } else {
+            buf.release();
         }
         cumulation = null;
         ctx.fireChannelReadComplete();
