@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.socks;
 
+import io.netty.util.internal.StringUtil;
+
 final class SocksCommonUtils {
     public static final SocksRequest UNKNOWN_SOCKS_REQUEST = new UnknownSocksRequest();
     public static final SocksResponse UNKNOWN_SOCKS_RESPONSE = new UnknownSocksResponse();
@@ -28,7 +30,7 @@ final class SocksCommonUtils {
      * A constructor to stop this class being constructed.
      */
     private SocksCommonUtils() {
-        //NOOP
+        // NOOP
     }
 
     public static String intToIp(int i) {
@@ -41,10 +43,10 @@ final class SocksCommonUtils {
     private static final char[] ipv6conseqZeroFiller = {':', ':'};
     private static final char ipv6hextetSeparator = ':';
 
-    /*
-    * Convert numeric IPv6 to compressed format, where
-    * the longest sequence of 0's (with 2 or more 0's) is replaced with "::"
-    */
+    /**
+     * Convert numeric IPv6 to compressed format, where
+     * the longest sequence of 0's (with 2 or more 0's) is replaced with "::"
+     */
     public static String ipv6toCompressedForm(byte[] src) {
         assert src.length == 16;
         //Find the longest sequence of 0's
@@ -77,12 +79,9 @@ final class SocksCommonUtils {
         return sb.toString();
     }
 
-    /*
-    * Convert numeric IPv6 to standard (non-compressed) format.
-    *
-    * Borrowed from Inet6Address.java #numericToTextFormat(byte[])
-    * Changed StringBuffer -> StringBuilder and ":" -> ':' for performance.
-    */
+    /**
+     * Converts numeric IPv6 to standard (non-compressed) format.
+     */
     public static String ipv6toStr(byte[] src) {
         assert src.length == 16;
         StringBuilder sb = new StringBuilder(39);
@@ -90,14 +89,18 @@ final class SocksCommonUtils {
         return sb.toString();
     }
 
-    private static void ipv6toStr(StringBuilder sb, byte[] src,
-                                  int fromHextet, int toHextet) {
-        for (int i = fromHextet; i < toHextet; i++) {
-            sb.append(Integer.toHexString(src[i << 1] << 8 & 0xff00
-                    | src[(i << 1) + 1] & 0xff));
-            if (i < toHextet - 1) {
-                sb.append(ipv6hextetSeparator);
-            }
+    private static void ipv6toStr(StringBuilder sb, byte[] src, int fromHextet, int toHextet) {
+        int i;
+        toHextet --;
+        for (i = fromHextet; i < toHextet; i++) {
+            appendHextet(sb, src, i);
+            sb.append(ipv6hextetSeparator);
         }
+
+        appendHextet(sb, src, i);
+    }
+
+    private static void appendHextet(StringBuilder sb, byte[] src, int i) {
+        StringUtil.toHexString(sb, src, i << 1, 2);
     }
 }
