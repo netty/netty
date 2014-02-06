@@ -159,11 +159,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         }
 
         Entry newEntry = new Entry(listener);
-        boolean added = false;
-        if (entry == null) {
-            added = ENTRY_UPDATER.compareAndSet(this, null, newEntry);
-        }
-        if (!added) {
+        if (!ENTRY_UPDATER.compareAndSet(this, null, newEntry)) {
             // was updated in the meantime so try again via CAS
             Object first = entry;
             Entry entry;
@@ -791,7 +787,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     private static final class Entry {
         // Dummy handler which is used as replacement for the previous used listener to allow GC to kick in
         @SuppressWarnings("rawtypes")
-        private static final GenericFutureListener REMOVED_LISTENER = new  GenericFutureListener() {
+        private static final GenericFutureListener REMOVED_LISTENER = new GenericFutureListener() {
             @Override
             public void operationComplete(Future future) throws Exception {
                 // NOOP
