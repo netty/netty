@@ -478,6 +478,33 @@ public class HttpResponseDecoderTest {
         assertThat(ch.readInbound(), is(nullValue()));
     }
 
+    // See https://github.com/netty/netty/issues/2173
+    @Test
+    public void testWebSocketResponseWithDataFollowing() {
+        byte[] data = ("HTTP/1.1 101 WebSocket Protocol Handshake\r\n" +
+                "Upgrade: WebSocket\r\n" +
+                "Connection: Upgrade\r\n" +
+                "Sec-WebSocket-Origin: http://localhost:8080\r\n" +
+                "Sec-WebSocket-Location: ws://localhost/some/path\r\n" +
+                "\r\n" +
+                "1234567812345678").getBytes();
+        byte[] otherData = {1, 2, 3, 4};
+
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
+        ch.writeInbound(Unpooled.wrappedBuffer(data, otherData));
+
+        HttpResponse res = (HttpResponse) ch.readInbound();
+        assertThat(res.getProtocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
+        assertThat(res.getStatus(), is(HttpResponseStatus.SWITCHING_PROTOCOLS));
+        HttpContent content = (HttpContent) ch.readInbound();
+        assertThat(content.content().readableBytes(), is(16));
+        content.release();
+
+        assertThat(ch.finish(), is(true));
+
+        assertEquals(ch.readInbound(), Unpooled.wrappedBuffer(otherData));
+    }
+
     @Test
     public void testGarbageHeaders() {
         // A response without headers - from https://github.com/netty/netty/issues/2103
