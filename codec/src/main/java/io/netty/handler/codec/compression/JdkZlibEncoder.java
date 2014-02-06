@@ -231,7 +231,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
         }
 
         if (wrapper == ZlibWrapper.GZIP) {
-            crc.update(inAry);
+            crc.update(inAry, offset, len);
         }
 
         deflater.setInput(inAry, offset, len);
