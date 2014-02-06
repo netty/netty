@@ -22,6 +22,7 @@ import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogLevel;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -50,23 +51,8 @@ public class LoggingHandler extends ChannelHandlerAdapter {
         int i;
 
         // Generate the lookup table for byte-to-hex-dump conversion
-        for (i = 0; i < 10; i ++) {
-            StringBuilder buf = new StringBuilder(3);
-            buf.append(" 0");
-            buf.append(i);
-            BYTE2HEX[i] = buf.toString();
-        }
-        for (; i < 16; i ++) {
-            StringBuilder buf = new StringBuilder(3);
-            buf.append(" 0");
-            buf.append((char) ('a' + i - 10));
-            BYTE2HEX[i] = buf.toString();
-        }
-        for (; i < BYTE2HEX.length; i ++) {
-            StringBuilder buf = new StringBuilder(3);
-            buf.append(' ');
-            buf.append(Integer.toHexString(i));
-            BYTE2HEX[i] = buf.toString();
+        for (i = 0; i < BYTE2HEX.length; i ++) {
+            BYTE2HEX[i] = ' ' + StringUtil.byteToHexStringPadded(i);
         }
 
         // Generate the lookup table for hex dump paddings
