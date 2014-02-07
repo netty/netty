@@ -71,12 +71,44 @@
     </dependency>
   </dependencies>
 
+  <!--
+    autobahntestsuite-maven-plugin lacks an option to skip the testsuite,
+    so we run the least possible number of tests when skipTests or skipAutobahnTestsuite is set.
+  -->
+  <properties>
+    <enabledCase>*</enabledCase>
+  </properties>
+
+  <profiles>
+    <profile>
+      <id>skipTests</id>
+      <activation>
+        <property>
+          <name>skipTests</name>
+        </property>
+      </activation>
+      <properties>
+        <enabledCase>1.1.1</enabledCase>
+      </properties>
+    </profile>
+    <profile>
+      <id>skipAutobahnTestsuite</id>
+      <activation>
+        <property>
+          <name>skipAutobahnTestsuite</name>
+        </property>
+      </activation>
+      <properties>
+        <enabledCase>1.1.1</enabledCase>
+      </properties>
+    </profile>
+  </profiles>
+
   <build>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
-        <version>2.4</version>
         <executions>
           <execution>
             <goals>
@@ -85,44 +117,29 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>me.normanmaurer.maven.autobahntestsuite</groupId>
+        <artifactId>autobahntestsuite-maven-plugin</artifactId>
+        <version>0.1.1</version>
+        <configuration>
+          <mainClass>io.netty.testsuite.websockets.autobahn.AutobahnServer</mainClass>
+          <cases>
+            <case>${enabledCase}</case>
+          </cases>
+          <excludeCases/>
+          <failOnNonStrict>false</failOnNonStrict>
+        </configuration>
+        <executions>
+          <execution>
+            <phase>test</phase>
+            <goals>
+              <goal>fuzzingclient</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
 
-  <profiles>
-    <profile>
-      <!-- Only run the autobahntestsuite if it is not disabled -->
-      <id>autobahntestsuite</id>
-      <activation>
-        <property>
-          <name>!skipAutobahnTestsuite</name>
-        </property>
-      </activation>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>me.normanmaurer.maven.autobahntestsuite</groupId>
-            <artifactId>autobahntestsuite-maven-plugin</artifactId>
-            <version>0.1.1</version>
-            <configuration>
-              <mainClass>io.netty.testsuite.websockets.autobahn.AutobahnServer</mainClass>
-              <cases>
-                <case>*</case>
-              </cases>
-              <excludeCases></excludeCases>
-              <failOnNonStrict>false</failOnNonStrict>
-            </configuration>
-            <executions>
-              <execution>
-                <phase>test</phase>
-                <goals>
-                  <goal>fuzzingclient</goal>
-                </goals>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-  </profiles>
 </project>
 
