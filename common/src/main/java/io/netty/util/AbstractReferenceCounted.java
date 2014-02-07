@@ -26,21 +26,7 @@ public abstract class AbstractReferenceCounted implements ReferenceCounted {
 
     private static final AtomicIntegerFieldUpdater<AbstractReferenceCounted> refCntUpdater;
 
-    private static final long REFCNT_FIELD_OFFSET;
-
     static {
-        long refCntFieldOffset = -1;
-        try {
-            if (PlatformDependent.hasUnsafe()) {
-                refCntFieldOffset = PlatformDependent.objectFieldOffset(
-                        AbstractReferenceCounted.class.getDeclaredField("refCnt"));
-            }
-        } catch (Throwable t) {
-            // Ignored
-        }
-
-        REFCNT_FIELD_OFFSET = refCntFieldOffset;
-
         AtomicIntegerFieldUpdater<AbstractReferenceCounted> updater =
                 PlatformDependent.newAtomicIntegerFieldUpdater(AbstractReferenceCounted.class, "refCnt");
         if (updater == null) {
@@ -54,12 +40,7 @@ public abstract class AbstractReferenceCounted implements ReferenceCounted {
 
     @Override
     public final int refCnt() {
-        if (REFCNT_FIELD_OFFSET >= 0) {
-            // Try to do non-volatile read for performance.
-            return PlatformDependent.getInt(this, REFCNT_FIELD_OFFSET);
-        } else {
-            return refCnt;
-        }
+        return refCnt;
     }
 
     /**
