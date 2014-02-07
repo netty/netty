@@ -30,7 +30,7 @@ public final class SocksServer {
     public void run() throws Exception {
         System.err.println(
                 "Listening on*:" + localPort + "...");
-        EventLoopGroup bossGroup = new NioEventLoopGroup();
+        EventLoopGroup bossGroup = new NioEventLoopGroup(1);
         EventLoopGroup workerGroup = new NioEventLoopGroup();
         try {
             ServerBootstrap b = new ServerBootstrap();
