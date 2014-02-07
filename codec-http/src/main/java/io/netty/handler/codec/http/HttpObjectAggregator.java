@@ -136,8 +136,8 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
 
             if (!m.getDecoderResult().isSuccess()) {
                 removeTransferEncodingChunked(m);
-                this.currentMessage = null;
                 out.add(ReferenceCountUtil.retain(m));
+                this.currentMessage = null;
                 return;
             }
             if (msg instanceof HttpRequest) {
@@ -178,9 +178,7 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
                 currentMessage.release();
                 this.currentMessage = null;
 
-                throw new TooLongFrameException(
-                        "HTTP content length exceeded " + maxContentLength +
-                        " bytes.");
+                throw new TooLongFrameException("HTTP content length exceeded " + maxContentLength + " bytes.");
             }
 
             // Append the content of the chunk
@@ -200,8 +198,6 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
             }
 
             if (last) {
-                this.currentMessage = null;
-
                 // Merge trailing headers into the message.
                 if (chunk instanceof LastHttpContent) {
                     LastHttpContent trailer = (LastHttpContent) chunk;
@@ -215,6 +211,7 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
 
                 // All done
                 out.add(currentMessage);
+                this.currentMessage = null;
             }
         } else {
             throw new Error();
@@ -223,13 +220,13 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        super.channelInactive(ctx);
-
         // release current message if it is not null as it may be a left-over
         if (currentMessage != null) {
             currentMessage.release();
             currentMessage = null;
         }
+
+        super.channelInactive(ctx);
     }
 
     @Override
@@ -240,6 +237,7 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
     @Override
     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
         super.handlerRemoved(ctx);
+
         // release current message if it is not null as it may be a left-over as there is not much more we can do in
         // this case
         if (currentMessage != null) {
