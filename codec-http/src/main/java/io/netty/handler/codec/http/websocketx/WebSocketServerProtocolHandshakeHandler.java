@@ -42,7 +42,7 @@ class WebSocketServerProtocolHandshakeHandler
     private final String subprotocols;
     private final boolean allowExtensions;
 
-    public WebSocketServerProtocolHandshakeHandler(String websocketPath, String subprotocols,
+    WebSocketServerProtocolHandshakeHandler(String websocketPath, String subprotocols,
             boolean allowExtensions) {
         this.websocketPath = websocketPath;
         this.subprotocols = subprotocols;
@@ -52,32 +52,36 @@ class WebSocketServerProtocolHandshakeHandler
     @Override
     public void channelRead(final ChannelHandlerContext ctx, Object msg) throws Exception {
         FullHttpRequest req = (FullHttpRequest) msg;
-        if (req.getMethod() != GET) {
-            sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, FORBIDDEN));
-            return;
-        }
+        try {
+            if (req.getMethod() != GET) {
+                sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, FORBIDDEN));
+                return;
+            }
 
-        final WebSocketServerHandshakerFactory wsFactory = new WebSocketServerHandshakerFactory(
-                getWebSocketLocation(ctx.pipeline(), req, websocketPath), subprotocols, allowExtensions);
-        final WebSocketServerHandshaker handshaker = wsFactory.newHandshaker(req);
-        if (handshaker == null) {
-            WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(ctx.channel());
-        } else {
-            final ChannelFuture handshakeFuture = handshaker.handshake(ctx.channel(), req);
-            handshakeFuture.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    if (!future.isSuccess()) {
-                        ctx.fireExceptionCaught(future.cause());
-                    } else {
-                        ctx.fireUserEventTriggered(
-                                WebSocketServerProtocolHandler.ServerHandshakeStateEvent.HANDSHAKE_COMPLETE);
+            final WebSocketServerHandshakerFactory wsFactory = new WebSocketServerHandshakerFactory(
+                    getWebSocketLocation(ctx.pipeline(), req, websocketPath), subprotocols, allowExtensions);
+            final WebSocketServerHandshaker handshaker = wsFactory.newHandshaker(req);
+            if (handshaker == null) {
+                WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(ctx.channel());
+            } else {
+                final ChannelFuture handshakeFuture = handshaker.handshake(ctx.channel(), req);
+                handshakeFuture.addListener(new ChannelFutureListener() {
+                    @Override
+                    public void operationComplete(ChannelFuture future) throws Exception {
+                        if (!future.isSuccess()) {
+                            ctx.fireExceptionCaught(future.cause());
+                        } else {
+                            ctx.fireUserEventTriggered(
+                                    WebSocketServerProtocolHandler.ServerHandshakeStateEvent.HANDSHAKE_COMPLETE);
+                        }
                     }
-                }
-            });
-            WebSocketServerProtocolHandler.setHandshaker(ctx, handshaker);
-            ctx.pipeline().replace(this, "WS403Responder",
-                    WebSocketServerProtocolHandler.forbiddenHttpRequestResponder());
+                });
+                WebSocketServerProtocolHandler.setHandshaker(ctx, handshaker);
+                ctx.pipeline().replace(this, "WS403Responder",
+                        WebSocketServerProtocolHandler.forbiddenHttpRequestResponder());
+            }
+        } finally {
+            req.release();
         }
     }
 
