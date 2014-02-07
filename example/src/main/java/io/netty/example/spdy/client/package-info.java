@@ -32,6 +32,13 @@
  * <p>
  * After that, you can run {@link io.netty.example.spdy.client.SpdyClient}, also settings the JVM parameter
  * mentioned above.
+ * <p>
+ * You may also use maven to start the server and the client from the command line:
+ * <pre>
+ *     mvn exec:exec -Pspdy-server
+ * </pre>
+ * Then start the client in a different terminal window:
+ *     mvn exec:exec -Pspdy-client
  */
 package io.netty.example.spdy.client;
 

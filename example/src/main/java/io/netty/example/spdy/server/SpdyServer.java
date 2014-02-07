@@ -31,6 +31,11 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
  * See <a href="http://www.eclipse.org/jetty/documentation/current/npn-chapter.html">Jetty docs</a> for more
  * information.
  * <p>
+ * You may also use maven to start the server from the command line:
+ * <pre>
+ *     mvn exec:exec -Pspdy-server
+ * </pre>
+ * <p>
  * Once started, you can test the server with your
  * <a href="http://en.wikipedia.org/wiki/SPDY#Browser_support_and_usage">SPDY enabled web browser</a> by navigating
  * to https://localhost:8443/.
