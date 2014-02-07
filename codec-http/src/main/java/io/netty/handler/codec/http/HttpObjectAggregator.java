@@ -119,10 +119,6 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
             HttpMessage m = (HttpMessage) msg;
 
             // Handle the 'Expect: 100-continue' header if necessary.
-            // TODO: Respond with 413 Request Entity Too Large
-            //   and discard the traffic or close the connection.
-            //       No need to notify the upstream handlers - just log.
-            //       If decoding a response, just throw an exception.
             if (is100ContinueExpected(m)) {
                 ctx.writeAndFlush(CONTINUE).addListener(new ChannelFutureListener() {
                     @Override
@@ -174,11 +170,10 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
             if (content.readableBytes() > maxContentLength - chunk.content().readableBytes()) {
                 tooLongFrameFound = true;
 
-                // release current message to prevent leaks
-                currentMessage.release();
                 this.currentMessage = null;
 
-                throw new TooLongFrameException("HTTP content length exceeded " + maxContentLength + " bytes.");
+                messageTooLong(ctx, currentMessage);
+                return;
             }
 
             // Append the content of the chunk
@@ -216,6 +211,25 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
         } else {
             throw new Error();
         }
+    }
+
+    /**
+     * Invoked when an incoming request exceeds the maximum content length.
+     *
+     * By default, a {@link TooLongFrameException} will be thrown.
+     *
+     * Sub-classes may override this method to change behavior. <em>Note:</em>
+     * you are responsible for releasing {@literal msg} if you override the
+     * default behavior.
+     *
+     * @param ctx the {@link ChannelHandlerContext}
+     * @param msg the accumulated HTTP message up to this point
+     * @throws Exception
+     */
+    protected void messageTooLong(ChannelHandlerContext ctx, FullHttpMessage msg) throws Exception {
+        // release current message to prevent leaks
+        msg.release();
+        throw new TooLongFrameException("HTTP content length exceeded " + maxContentLength + " bytes.");
     }
 
     @Override
