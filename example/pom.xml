@@ -127,7 +127,6 @@
           <plugin>
             <groupId>org.codehaus.mojo</groupId>
             <artifactId>exec-maven-plugin</artifactId>
-            <version>1.2.1</version>
             <configuration>
               <executable>${java.home}/bin/java</executable>
               <arguments>
@@ -136,13 +135,7 @@
                 <classpath/>
                 <argument>io.netty.example.spdy.server.SpdyServer</argument>
               </arguments>
-              <classpathScope>compile</classpathScope>
-              <systemProperties>
-                <property>
-                  <key>io.netty.leakDetectionLevel</key>
-                  <value>disabled</value>
-                </property>
-              </systemProperties>
+              <classpathScope>runtime</classpathScope>
             </configuration>
           </plugin>
         </plugins>
@@ -155,7 +148,6 @@
           <plugin>
             <groupId>org.codehaus.mojo</groupId>
             <artifactId>exec-maven-plugin</artifactId>
-            <version>1.2.1</version>
             <configuration>
               <executable>${java.home}/bin/java</executable>
               <arguments>
@@ -164,13 +156,7 @@
                 <classpath/>
                 <argument>io.netty.example.spdy.client.SpdyClient</argument>
               </arguments>
-              <classpathScope>compile</classpathScope>
-              <systemProperties>
-                <property>
-                  <key>io.netty.leakDetectionLevel</key>
-                  <value>disabled</value>
-                </property>
-              </systemProperties>
+              <classpathScope>runtime</classpathScope>
             </configuration>
           </plugin>
         </plugins>
