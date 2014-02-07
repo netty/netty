@@ -31,6 +31,8 @@ import static java.util.concurrent.TimeUnit.*;
 public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultPromise.class);
+    private static final InternalLogger rejectedExecutionLogger =
+            InternalLoggerFactory.getInstance(DefaultPromise.class.getName() + ".rejectedExecution");
 
     private static final int MAX_LISTENER_STACK_DEPTH = 8;
     private static final ThreadLocal<Integer> LISTENER_STACK_DEPTH = new ThreadLocal<Integer>() {
@@ -574,30 +576,26 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             }
         }
 
-        try {
-            if (listeners instanceof DefaultFutureListeners) {
-                final DefaultFutureListeners dfl = (DefaultFutureListeners) listeners;
-                execute(executor, new Runnable() {
-                    @Override
-                    public void run() {
-                        notifyListeners0(DefaultPromise.this, dfl);
-                        DefaultPromise.this.listeners = null;
-                    }
-                });
-            } else {
-                @SuppressWarnings("unchecked")
-                final GenericFutureListener<? extends Future<V>> l =
-                        (GenericFutureListener<? extends Future<V>>) listeners;
-                execute(executor, new Runnable() {
-                    @Override
-                    public void run() {
-                        notifyListener0(DefaultPromise.this, l);
-                        DefaultPromise.this.listeners = null;
-                    }
-                });
-            }
-        } catch (Throwable t) {
-            logger.error("Failed to notify listener(s). Event loop shut down?", t);
+        if (listeners instanceof DefaultFutureListeners) {
+            final DefaultFutureListeners dfl = (DefaultFutureListeners) listeners;
+            execute(executor, new Runnable() {
+                @Override
+                public void run() {
+                    notifyListeners0(DefaultPromise.this, dfl);
+                    DefaultPromise.this.listeners = null;
+                }
+            });
+        } else {
+            @SuppressWarnings("unchecked")
+            final GenericFutureListener<? extends Future<V>> l =
+                    (GenericFutureListener<? extends Future<V>>) listeners;
+            execute(executor, new Runnable() {
+                @Override
+                public void run() {
+                    notifyListener0(DefaultPromise.this, l);
+                    DefaultPromise.this.listeners = null;
+                }
+            });
         }
     }
 
@@ -671,7 +669,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         try {
             executor.execute(task);
         } catch (Throwable t) {
-            logger.error("Failed to notify a listener. Event loop shut down?", t);
+            rejectedExecutionLogger.error("Failed to submit a listener notification task. Event loop shut down?", t);
         }
     }
 
