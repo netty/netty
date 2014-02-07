@@ -577,7 +577,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         try {
             if (listeners instanceof DefaultFutureListeners) {
                 final DefaultFutureListeners dfl = (DefaultFutureListeners) listeners;
-                executor.execute(new Runnable() {
+                execute(executor, new Runnable() {
                     @Override
                     public void run() {
                         notifyListeners0(DefaultPromise.this, dfl);
@@ -588,7 +588,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
                 @SuppressWarnings("unchecked")
                 final GenericFutureListener<? extends Future<V>> l =
                         (GenericFutureListener<? extends Future<V>>) listeners;
-                executor.execute(new Runnable() {
+                execute(executor, new Runnable() {
                     @Override
                     public void run() {
                         notifyListener0(DefaultPromise.this, l);
@@ -750,28 +750,24 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
                         self, (GenericProgressiveFutureListener<ProgressiveFuture<V>>) listeners, progress, total);
             }
         } else {
-            try {
-                if (listeners instanceof GenericProgressiveFutureListener[]) {
-                    final GenericProgressiveFutureListener<?>[] array =
-                            (GenericProgressiveFutureListener<?>[]) listeners;
-                    executor.execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            notifyProgressiveListeners0(self, array, progress, total);
-                        }
-                    });
-                } else {
-                    final GenericProgressiveFutureListener<ProgressiveFuture<V>> l =
-                            (GenericProgressiveFutureListener<ProgressiveFuture<V>>) listeners;
-                    executor.execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            notifyProgressiveListener0(self, l, progress, total);
-                        }
-                    });
-                }
-            } catch (Throwable t) {
-                logger.error("Failed to notify listener(s). Event loop shut down?", t);
+            if (listeners instanceof GenericProgressiveFutureListener[]) {
+                final GenericProgressiveFutureListener<?>[] array =
+                        (GenericProgressiveFutureListener<?>[]) listeners;
+                execute(executor, new Runnable() {
+                    @Override
+                    public void run() {
+                        notifyProgressiveListeners0(self, array, progress, total);
+                    }
+                });
+            } else {
+                final GenericProgressiveFutureListener<ProgressiveFuture<V>> l =
+                        (GenericProgressiveFutureListener<ProgressiveFuture<V>>) listeners;
+                execute(executor, new Runnable() {
+                    @Override
+                    public void run() {
+                        notifyProgressiveListener0(self, l, progress, total);
+                    }
+                });
             }
         }
     }
@@ -852,7 +848,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             } else {
                 // Reschedule until the initial notification is done to avoid the race condition
                 // where the notification is made in an incorrect order.
-                executor().execute(this);
+                execute(executor(), this);
             }
         }
     }
