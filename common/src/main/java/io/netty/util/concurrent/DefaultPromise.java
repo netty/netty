@@ -582,7 +582,6 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
                     public void run() {
                         notifyListeners0(DefaultPromise.this, dfl);
                         DefaultPromise.this.listeners = null;
-
                     }
                 });
             } else {
