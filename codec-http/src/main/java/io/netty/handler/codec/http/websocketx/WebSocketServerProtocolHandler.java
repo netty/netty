@@ -95,8 +95,12 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
     protected void decode(ChannelHandlerContext ctx, WebSocketFrame frame, List<Object> out) throws Exception {
         if (frame instanceof CloseWebSocketFrame) {
             WebSocketServerHandshaker handshaker = getHandshaker(ctx);
-            frame.retain();
-            handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame);
+            if (handshaker != null) {
+                frame.retain();
+                handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame);
+            } else {
+                ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
+            }
             return;
         }
         super.decode(ctx, frame, out);
@@ -126,6 +130,7 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                 if (msg instanceof FullHttpRequest) {
+                    ((FullHttpRequest) msg).release();
                     FullHttpResponse response =
                             new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.FORBIDDEN);
                     ctx.channel().writeAndFlush(response);
