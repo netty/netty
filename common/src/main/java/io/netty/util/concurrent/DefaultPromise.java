@@ -27,11 +27,9 @@ import java.util.concurrent.TimeUnit;
 
 import static java.util.concurrent.TimeUnit.*;
 
-
 public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
-    private static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(DefaultPromise.class);
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultPromise.class);
 
     private static final int MAX_LISTENER_STACK_DEPTH = 8;
     private static final ThreadLocal<Integer> LISTENER_STACK_DEPTH = new ThreadLocal<Integer>() {
@@ -51,7 +49,16 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     private final EventExecutor executor;
 
     private volatile Object result;
-    private Object listeners; // Can be ChannelFutureListener or DefaultFutureListeners
+
+    /**
+     * Set once all {@link #listeners} are notified and {@link #listeners} is set to {@code null}.
+     */
+    private volatile boolean listenersNotified;
+
+    /**
+     * One or more listeners. Can be a {@link GenericFutureListener} or a {@link DefaultFutureListeners}.
+     */
+    private Object listeners;
 
     private short waiters;
 
@@ -127,7 +134,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         }
 
         if (isDone()) {
-            notifyListener(executor(), this, listener);
+            notifyLateListener(listener);
             return this;
         }
 
@@ -149,7 +156,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             }
         }
 
-        notifyListener(executor(), this, listener);
+        notifyLateListener(listener);
         return this;
     }
 
@@ -538,6 +545,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
         Object listeners = this.listeners;
         if (listeners == null) {
+            listenersNotified = true;
             return;
         }
 
@@ -558,6 +566,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
                         notifyListener0(this, l);
                     }
                 } finally {
+                    listenersNotified = true;
                     LISTENER_STACK_DEPTH.set(stackDepth);
                 }
                 return;
@@ -571,6 +580,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
                     @Override
                     public void run() {
                         notifyListeners0(DefaultPromise.this, dfl);
+                        listenersNotified = true;
                     }
                 });
             } else {
@@ -581,6 +591,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
                     @Override
                     public void run() {
                         notifyListener0(DefaultPromise.this, l);
+                        listenersNotified = true;
                     }
                 });
             }
@@ -594,6 +605,44 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         final int size = listeners.size();
         for (int i = 0; i < size; i ++) {
             notifyListener0(future, a[i]);
+        }
+    }
+
+    /**
+     * Notifies the specified listener which were added after this promise is already done.
+     * This method ensures that the specified listener is not notified until {@link #listenersNotified} is set to avoid
+     * the case where the late listeners are notified even before the early listeners are notified.
+     */
+    private void notifyLateListener(final GenericFutureListener<?> l) {
+        final EventExecutor executor = executor();
+        if (executor.inEventLoop() && listenersNotified) {
+            final Integer stackDepth = LISTENER_STACK_DEPTH.get();
+            if (stackDepth < MAX_LISTENER_STACK_DEPTH) {
+                LISTENER_STACK_DEPTH.set(stackDepth + 1);
+                try {
+                    notifyListener0(this, l);
+                } finally {
+                    LISTENER_STACK_DEPTH.set(stackDepth);
+                }
+                return;
+            }
+        }
+
+        try {
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    if (listenersNotified) {
+                        notifyListener0(DefaultPromise.this, l);
+                    } else {
+                        // Reschedule until the initial notification is done to avoid the race condition
+                        // where the notification is made in an incorrect order.
+                        executor.execute(this);
+                    }
+                }
+            });
+        } catch (Throwable t) {
+            logger.error("Failed to notify a listener. Event loop shut down?", t);
         }
     }
 
