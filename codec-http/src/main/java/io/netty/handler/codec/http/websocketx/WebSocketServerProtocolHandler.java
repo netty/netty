@@ -94,8 +94,12 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
     protected void decode(ChannelHandlerContext ctx, WebSocketFrame frame, List<Object> out) throws Exception {
         if (frame instanceof CloseWebSocketFrame) {
             WebSocketServerHandshaker handshaker = getHandshaker(ctx);
-            frame.retain();
-            handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame);
+            if (handshaker != null) {
+                frame.retain();
+                handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame);
+            } else {
+                ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
+            }
             return;
         }
         super.decode(ctx, frame, out);
