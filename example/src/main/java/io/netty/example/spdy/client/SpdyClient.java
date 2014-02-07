@@ -41,6 +41,10 @@ import static java.util.concurrent.TimeUnit.*;
  * coordinates org.mortbay.jetty.npn:npn-boot. Different versions applies to different OpenJDK versions. See
  * <a href="http://www.eclipse.org/jetty/documentation/current/npn-chapter.html">Jetty docs</a> for more information.
  * <p>
+ * You may also use maven to start the client from the command line:
+ * <pre>
+ *     mvn exec:exec -Pspdy-client
+ * </pre>
  */
 public class SpdyClient {
 
