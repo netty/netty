@@ -45,10 +45,12 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     private ChannelFuture succeededFuture;
 
     // Lazily instantiated tasks used to trigger events to a handler with different executor.
-    private Runnable invokeChannelReadCompleteTask;
-    private Runnable invokeReadTask;
-    private Runnable invokeFlushTask;
-    private Runnable invokeChannelWritableStateChangedTask;
+    // These needs to be volatile as otherwise an other Thread may see an half initialized instance.
+    // See the JMM for more details
+    private volatile Runnable invokeChannelReadCompleteTask;
+    private volatile Runnable invokeReadTask;
+    private volatile Runnable invokeChannelWritableStateChangedTask;
+    private volatile Runnable invokeFlushTask;
 
     DefaultChannelHandlerContext(DefaultChannelPipeline pipeline, EventExecutorGroup group, String name,
             ChannelHandler handler) {
