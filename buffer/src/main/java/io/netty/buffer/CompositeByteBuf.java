@@ -1572,12 +1572,18 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public CompositeByteBuf touch() {
-        return (CompositeByteBuf) super.touch();
+        if (leak != null) {
+            leak.record();
+        }
+        return this;
     }
 
     @Override
     public CompositeByteBuf touch(Object hint) {
-        return (CompositeByteBuf) super.touch(hint);
+        if (leak != null) {
+            leak.record(hint);
+        }
+        return this;
     }
 
     @Override
