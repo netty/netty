@@ -39,7 +39,7 @@ public class OioSctpEchoServer {
 
     public void run() throws Exception {
         // Configure the server.
-        EventLoopGroup bossGroup = new OioEventLoopGroup();
+        EventLoopGroup bossGroup = new OioEventLoopGroup(1);
         EventLoopGroup workerGroup = new OioEventLoopGroup();
         try {
             ServerBootstrap b = new ServerBootstrap();
