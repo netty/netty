@@ -140,7 +140,7 @@ public abstract class SpdyOrHttpChooser extends ByteToMessageDecoder {
         pipeline.addLast("spdyHttpEncoder", new SpdyHttpEncoder(version));
         pipeline.addLast("spdyHttpDecoder", new SpdyHttpDecoder(version, maxSpdyContentLength));
         pipeline.addLast("spdyStreamIdHandler", new SpdyHttpResponseStreamIdHandler());
-        pipeline.addLast("httpRquestHandler", createHttpRequestHandlerForSpdy());
+        pipeline.addLast("httpRequestHandler", createHttpRequestHandlerForSpdy());
     }
 
     /**
@@ -148,10 +148,10 @@ public abstract class SpdyOrHttpChooser extends ByteToMessageDecoder {
      */
     protected void addHttpHandlers(ChannelHandlerContext ctx) {
         ChannelPipeline pipeline = ctx.pipeline();
-        pipeline.addLast("httpRquestDecoder", new HttpRequestDecoder());
+        pipeline.addLast("httpRequestDecoder", new HttpRequestDecoder());
         pipeline.addLast("httpResponseEncoder", new HttpResponseEncoder());
         pipeline.addLast("httpChunkAggregator", new HttpObjectAggregator(maxHttpContentLength));
-        pipeline.addLast("httpRquestHandler", createHttpRequestHandlerForHttp());
+        pipeline.addLast("httpRequestHandler", createHttpRequestHandlerForHttp());
     }
 
     /**
