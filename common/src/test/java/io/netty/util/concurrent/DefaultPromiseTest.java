@@ -104,35 +104,46 @@ public class DefaultPromiseTest {
 
         for (int i = 0; i < runs; i++) {
             final Promise<Void> promise = new DefaultPromise<Void>(executor);
-            FutureListener<Void> listener1 = new FutureListener<Void>() {
+            final FutureListener<Void> listener1 = new FutureListener<Void>() {
                 @Override
                 public void operationComplete(Future<Void> future) throws Exception {
                     listeners.add(this);
                 }
             };
-            FutureListener<Void> listener2 = new FutureListener<Void>() {
+            final FutureListener<Void> listener2 = new FutureListener<Void>() {
                 @Override
                 public void operationComplete(Future<Void> future) throws Exception {
                     listeners.add(this);
                 }
             };
-            FutureListener<Void> listener3 = new FutureListener<Void>() {
+            final FutureListener<Void> listener4 = new FutureListener<Void>() {
                 @Override
                 public void operationComplete(Future<Void> future) throws Exception {
                     listeners.add(this);
                 }
             };
+            final FutureListener<Void> listener3 = new FutureListener<Void>() {
+                @Override
+                public void operationComplete(Future<Void> future) throws Exception {
+                    // Ensure listener4 is notified *after* this method returns to maintain the order.
+                    future.addListener(listener4);
+                    listeners.add(this);
+                }
+            };
+
             GlobalEventExecutor.INSTANCE.execute(new Runnable() {
                 @Override
                 public void run() {
                     promise.setSuccess(null);
                 }
             });
+
             promise.addListener(listener1).addListener(listener2).addListener(listener3);
 
             assertSame("Fail during run " + i + " / " + runs, listener1, listeners.take());
             assertSame("Fail during run " + i + " / " + runs, listener2, listeners.take());
             assertSame("Fail during run " + i + " / " + runs, listener3, listeners.take());
+            assertSame("Fail during run " + i + " / " + runs, listener4, listeners.take());
             assertTrue("Fail during run " + i + " / " + runs, listeners.isEmpty());
         }
         executor.shutdownGracefully().sync();
