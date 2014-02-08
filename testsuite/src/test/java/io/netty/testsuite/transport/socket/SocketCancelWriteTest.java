@@ -23,7 +23,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.util.ReferenceCountUtil;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -40,17 +39,13 @@ public class SocketCancelWriteTest extends AbstractSocketTest {
     }
 
     public void testCancelWrite(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testCancelWrite(sb, cb, true);
-    }
-
-    private static void testCancelWrite(ServerBootstrap sb, Bootstrap cb, boolean composite) throws Throwable {
         final TestHandler sh = new TestHandler();
         final TestHandler ch = new TestHandler();
-        final ByteBuf a = ReferenceCountUtil.releaseLater(Unpooled.buffer().writeByte('a'));
-        final ByteBuf b =  ReferenceCountUtil.releaseLater(Unpooled.buffer().writeByte('b'));
-        final ByteBuf c =  ReferenceCountUtil.releaseLater(Unpooled.buffer().writeByte('c'));
-        final ByteBuf d =  ReferenceCountUtil.releaseLater(Unpooled.buffer().writeByte('d'));
-        final ByteBuf e =  ReferenceCountUtil.releaseLater(Unpooled.buffer().writeByte('e'));
+        final ByteBuf a = Unpooled.buffer().writeByte('a');
+        final ByteBuf b = Unpooled.buffer().writeByte('b');
+        final ByteBuf c = Unpooled.buffer().writeByte('c');
+        final ByteBuf d = Unpooled.buffer().writeByte('d');
+        final ByteBuf e = Unpooled.buffer().writeByte('e');
 
         cb.handler(ch);
         sb.childHandler(sh);

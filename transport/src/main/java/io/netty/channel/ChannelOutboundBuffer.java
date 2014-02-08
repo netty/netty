@@ -567,10 +567,6 @@ public final class ChannelOutboundBuffer {
         try {
             for (int i = 0; i < unflushedCount; i++) {
                 Entry e = buffer[unflushed + i & buffer.length - 1];
-                safeRelease(e.msg);
-                e.msg = null;
-                safeFail(e.promise, cause);
-                e.promise = null;
 
                 // Just decrease; do not trigger any events via decrementPendingOutboundBytes()
                 int size = e.pendingSize;
@@ -582,6 +578,12 @@ public final class ChannelOutboundBuffer {
                 }
 
                 e.pendingSize = 0;
+                if (!e.cancelled) {
+                    safeRelease(e.msg);
+                    safeFail(e.promise, cause);
+                }
+                e.msg = null;
+                e.promise = null;
             }
         } finally {
             tail = unflushed;
