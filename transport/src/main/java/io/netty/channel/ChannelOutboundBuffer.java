@@ -174,19 +174,6 @@ public final class ChannelOutboundBuffer {
 
     void addFlush() {
         unflushed = tail;
-
-        int i = flushed;
-        final int mask = buffer.length - 1;
-        while (i != unflushed && buffer[i].msg != null) {
-            Entry entry = buffer[i];
-            if (!entry.promise.setUncancellable() && entry.promise.isCancelled()) {
-                // Was cancelled so make sure we free up memory and notify about the freed bytes
-                int pending = entry.cancel();
-                decrementPendingOutboundBytes(pending);
-            }
-
-            i = i + 1 & mask;
-        }
     }
 
     /**
@@ -266,8 +253,15 @@ public final class ChannelOutboundBuffer {
         if (isEmpty()) {
             return null;
         } else {
+            Entry entry = buffer[flushed];
+            if (!entry.promise.setUncancellable() && entry.promise.isCancelled()) {
+                // Was cancelled so make sure we free up memory and notify about the freed bytes
+                int pending = entry.cancel();
+                decrementPendingOutboundBytes(pending);
+            }
+
             // TODO: Think of a smart way to handle ByteBufHolder messages
-            Object msg = buffer[flushed].msg;
+            Object msg = entry.msg;
             if (threadLocalDirectBufferSize <= 0 || !preferDirect) {
                 return msg;
             }
@@ -405,6 +399,12 @@ public final class ChannelOutboundBuffer {
             }
 
             Entry entry = buffer[i];
+            if (!entry.promise.setUncancellable() && entry.promise.isCancelled()) {
+                // Was cancelled so make sure we free up memory and notify about the freed bytes
+                int pending = entry.cancel();
+                decrementPendingOutboundBytes(pending);
+            }
+
             if (!entry.cancelled) {
                 ByteBuf buf = (ByteBuf) m;
                 final int readerIndex = buf.readerIndex();
