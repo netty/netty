@@ -78,7 +78,6 @@
           -XX:+TieredCompilation
           -XX:+UseBiasedLocking
           -XX:+UseFastAccessorMethods
-          -XX:+UseStringCache
           -XX:+OptimizeStringConcat
           -XX:+HeapDumpOnOutOfMemoryError
           -Dio.netty.leakDetectionLevel=3
@@ -125,7 +124,6 @@
       -XX:+TieredCompilation
       -XX:+UseBiasedLocking
       -XX:+UseFastAccessorMethods
-      -XX:+UseStringCache
       -XX:+OptimizeStringConcat
       -XX:+HeapDumpOnOutOfMemoryError
     </test.jvm.argLine>
