@@ -85,6 +85,26 @@
         </test.jvm.argLine>
       </properties>
     </profile>
+    <profile>
+      <id>coverage</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.jacoco</groupId>
+            <artifactId>jacoco-maven-plugin</artifactId>
+            <version>0.6.4.201312101107</version>
+            <executions>
+              <execution>
+                <id>jacoco-prepare-agent</id>
+                <goals>
+                  <goal>prepare-agent</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
   </profiles>
 
   <properties>
@@ -447,7 +467,7 @@
             <exclude>**/TestUtil*</exclude>
           </excludes>
           <runOrder>random</runOrder>
-          <argLine>${test.jvm.argLine}</argLine>
+          <argLine>${argLine} ${test.jvm.argLine}</argLine>
         </configuration>
       </plugin>
       <!-- always produce osgi bundles -->
