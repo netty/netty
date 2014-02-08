@@ -29,6 +29,9 @@
 
   <name>Netty/Example</name>
 
+  <properties>
+    <npn.version>1.1.6.v20130911</npn.version>
+  </properties>
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -72,6 +75,7 @@
     <dependency>
       <groupId>org.eclipse.jetty.npn</groupId>
       <artifactId>npn-api</artifactId>
+      <version>${npn.version}</version>
     </dependency>
 
     <!-- see https://github.com/netty/netty/issues/874 -->
@@ -262,42 +266,6 @@
       </activation>
       <properties>
         <npn.version>1.1.5.v20130313</npn.version>
-      </properties>
-    </profile>
-    <profile>
-      <id>7u40</id>
-      <activation>
-        <property>
-          <name>java.version</name>
-          <value>1.7.0_40</value>
-        </property>
-      </activation>
-      <properties>
-        <npn.version>1.1.6.v20130911</npn.version>
-      </properties>
-    </profile>
-    <profile>
-      <id>7u45</id>
-      <activation>
-        <property>
-          <name>java.version</name>
-          <value>1.7.0_45</value>
-        </property>
-      </activation>
-      <properties>
-        <npn.version>1.1.6.v20130911</npn.version>
-      </properties>
-    </profile>
-    <profile>
-      <id>7u51</id>
-      <activation>
-        <property>
-          <name>java.version</name>
-          <value>1.7.0_51</value>
-        </property>
-      </activation>
-      <properties>
-        <npn.version>1.1.6.v20130911</npn.version>
       </properties>
     </profile>
   </profiles>
