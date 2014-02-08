@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -52,8 +53,8 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     /**
      * Keep all HttpDatas until cleanAllHttpDatas() is called.
      */
-    private final ConcurrentHashMap<HttpRequest, List<HttpData>> requestFileDeleteMap =
-        new ConcurrentHashMap<HttpRequest, List<HttpData>>();
+    private final Map<HttpRequest, List<HttpData>> requestFileDeleteMap =
+            new ConcurrentHashMap<HttpRequest, List<HttpData>>();
     /**
      * HttpData will be in memory if less than default size (16KB). No limit setup.
      * The type will be Mixed.
