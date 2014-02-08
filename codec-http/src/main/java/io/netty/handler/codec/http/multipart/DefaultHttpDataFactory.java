@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ConcurrentMap;
+import java.util.Map;
 
 /**
  * Default factory giving Attribute and FileUpload according to constructor
@@ -47,8 +47,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     /**
      * Keep all HttpDatas until cleanAllHttpDatas() is called.
      */
-    private final ConcurrentMap<HttpRequest, List<HttpData>> requestFileDeleteMap =
-            PlatformDependent.newConcurrentHashMap();
+    private final Map<HttpRequest, List<HttpData>> requestFileDeleteMap = PlatformDependent.newConcurrentHashMap();
 
     /**
      * HttpData will be in memory if less than default size (16KB).
