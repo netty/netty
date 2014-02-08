@@ -74,7 +74,6 @@
     <dependency>
       <groupId>org.eclipse.jetty.npn</groupId>
       <artifactId>npn-api</artifactId>
-      <version>${npn.version}</version>
     </dependency>
 
     <!-- see https://github.com/netty/netty/issues/874 -->
