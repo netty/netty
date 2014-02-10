@@ -58,12 +58,7 @@ public abstract class AbstractOioChannel extends AbstractChannel {
         public void connect(
                 final SocketAddress remoteAddress,
                 final SocketAddress localAddress, final ChannelPromise promise) {
-            if (!ensureOpen(promise)) {
-                return;
-            }
-
-            if (!promise.setUncancellable()) {
-                close(voidPromise());
+            if (!promise.setUncancellable() || !ensureOpen(promise)) {
                 return;
             }
 
