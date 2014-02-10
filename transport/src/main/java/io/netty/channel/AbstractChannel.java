@@ -418,7 +418,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             try {
                 // check if the channel is still open as it could be closed in the mean time when the register
                 // call was outside of the eventLoop
-                if (!ensureOpen(promise)) {
+                if (!promise.setUncancellable() || !ensureOpen(promise)) {
                     return;
                 }
                 doRegister();
@@ -442,7 +442,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public final void bind(final SocketAddress localAddress, final ChannelPromise promise) {
-            if (!ensureOpen(promise)) {
+            if (!promise.setUncancellable() || !ensureOpen(promise)) {
                 return;
             }
 
@@ -480,6 +480,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public final void disconnect(final ChannelPromise promise) {
+            if (!promise.setUncancellable()) {
+                return;
+            }
+
             boolean wasActive = isActive();
             try {
                 doDisconnect();
@@ -502,6 +506,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public final void close(final ChannelPromise promise) {
+            if (!promise.setUncancellable()) {
+                return;
+            }
+
             if (inFlush0) {
                 invokeLater(new Runnable() {
                     @Override
