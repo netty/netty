@@ -236,7 +236,6 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
      *
      * @param ctx the {@link ChannelHandlerContext}
      * @param msg the accumulated HTTP message up to this point
-     * @throws Exception
      */
     protected void messageTooLong(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
         // release current message to prevent leaks
