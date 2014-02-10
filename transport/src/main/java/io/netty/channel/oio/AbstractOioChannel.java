@@ -62,7 +62,7 @@ public abstract class AbstractOioChannel extends AbstractChannel {
             try {
                 boolean wasActive = isActive();
                 doConnect(remoteAddress, localAddress);
-                promise.setSuccess();
+                safeSetSuccess(promise);
                 if (!wasActive && isActive()) {
                     pipeline().fireChannelActive();
                 }
@@ -72,7 +72,7 @@ public abstract class AbstractOioChannel extends AbstractChannel {
                     newT.setStackTrace(t.getStackTrace());
                     t = newT;
                 }
-                promise.setFailure(t);
+                safeSetFailure(promise, t);
                 closeIfClosed();
             }
         }

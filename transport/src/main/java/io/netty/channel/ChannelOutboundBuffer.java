@@ -28,8 +28,8 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.Recycler;
 import io.netty.util.Recycler.Handle;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -325,8 +325,7 @@ public final class ChannelOutboundBuffer {
         flushed = flushed + 1 & buffer.length - 1;
 
         safeRelease(msg);
-
-        promise.trySuccess();
+        safeSuccess(promise);
         decrementPendingOutboundBytes(size);
 
         return true;
@@ -393,6 +392,7 @@ public final class ChannelOutboundBuffer {
                 nioBufferSize += readableBytes;
                 int count = entry.count;
                 if (count == -1) {
+                    //noinspection ConstantValueVariableUse
                     entry.count = count = buf.nioBufferCount();
                 }
                 int neededSpace = nioBufferCount + count;
@@ -577,9 +577,15 @@ public final class ChannelOutboundBuffer {
         }
     }
 
+    private static void safeSuccess(ChannelPromise promise) {
+        if (!promise.trySuccess()) {
+            logger.warn("Failed to mark a promise as success because it is done already: {}", promise);
+        }
+    }
+
     private static void safeFail(ChannelPromise promise, Throwable cause) {
         if (!(promise instanceof VoidChannelPromise) && !promise.tryFailure(cause)) {
-            logger.warn("Promise done already: {} - new exception is:", promise, cause);
+            logger.warn("Failed to mark a promise as failure because it's done already: {}", promise, cause);
         }
     }
 
@@ -611,7 +617,7 @@ public final class ChannelOutboundBuffer {
     }
 
     public long totalPendingWriteBytes() {
-        return this.totalPendingSize;
+        return totalPendingSize;
     }
 
     private static final class Entry {
