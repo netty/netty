@@ -148,25 +148,25 @@ public class RxtxChannel extends OioByteStreamChannel {
                         public void run() {
                             try {
                                 doInit();
-                                promise.setSuccess();
+                                safeSetSuccess(promise);
                                 if (!wasActive && isActive()) {
                                     pipeline().fireChannelActive();
                                 }
                             } catch (Throwable t) {
-                                promise.setFailure(t);
+                                safeSetFailure(promise, t);
                                 closeIfClosed();
                             }
                         }
                    }, waitTime, TimeUnit.MILLISECONDS);
                 } else {
                     doInit();
-                    promise.setSuccess();
+                    safeSetSuccess(promise);
                     if (!wasActive && isActive()) {
                         pipeline().fireChannelActive();
                     }
                 }
             } catch (Throwable t) {
-                promise.setFailure(t);
+                safeSetFailure(promise, t);
                 closeIfClosed();
             }
         }

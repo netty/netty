@@ -281,8 +281,7 @@ public final class ChannelOutboundBuffer {
         flushed = flushed + 1 & buffer.length - 1;
 
         safeRelease(msg);
-
-        promise.trySuccess();
+        safeSuccess(promise);
         decrementPendingOutboundBytes(size);
 
         return true;
@@ -349,7 +348,8 @@ public final class ChannelOutboundBuffer {
                 nioBufferSize += readableBytes;
                 int count = entry.count;
                 if (count == -1) {
-                    entry.count = count =  buf.nioBufferCount();
+                    //noinspection ConstantValueVariableUse
+                    entry.count = count = buf.nioBufferCount();
                 }
                 int neededSpace = nioBufferCount + count;
                 if (neededSpace > nioBuffers.length) {
@@ -527,9 +527,15 @@ public final class ChannelOutboundBuffer {
         }
     }
 
+    private static void safeSuccess(ChannelPromise promise) {
+        if (!promise.trySuccess()) {
+            logger.warn("Failed to mark a promise as success because it is done already: {}", promise);
+        }
+    }
+
     private static void safeFail(ChannelPromise promise, Throwable cause) {
         if (!(promise instanceof VoidChannelPromise) && !promise.tryFailure(cause)) {
-            logger.warn("Promise done already: {} - new exception is:", promise, cause);
+            logger.warn("Failed to mark a promise as failure because it's done already: {}", promise, cause);
         }
     }
 
@@ -561,7 +567,7 @@ public final class ChannelOutboundBuffer {
     }
 
     public long totalPendingWriteBytes() {
-        return this.totalPendingSize;
+        return totalPendingSize;
     }
 
     private static final class Entry {
