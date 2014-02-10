@@ -40,10 +40,10 @@ import static io.netty.handler.codec.http.HttpHeaders.*;
  * <pre>
  * {@link ChannelPipeline} p = ...;
  * ...
+ * p.addLast("encoder", new {@link HttpResponseEncoder}());
  * p.addLast("decoder", new {@link HttpRequestDecoder}());
  * p.addLast("aggregator", <b>new {@link HttpObjectAggregator}(1048576)</b>);
  * ...
- * p.addLast("encoder", new {@link HttpResponseEncoder}());
  * p.addLast("handler", new HttpRequestHandler());
  * </pre>
  */

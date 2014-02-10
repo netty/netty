@@ -194,10 +194,12 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     private ChannelFuture succeededFuture;
 
     // Lazily instantiated tasks used to trigger events to a handler with different executor.
-    Runnable invokeChannelReadCompleteTask;
-    Runnable invokeReadTask;
-    Runnable invokeFlushTask;
-    Runnable invokeChannelWritableStateChangedTask;
+    // These needs to be volatile as otherwise an other Thread may see an half initialized instance.
+    // See the JMM for more details
+    volatile Runnable invokeChannelReadCompleteTask;
+    volatile Runnable invokeReadTask;
+    volatile Runnable invokeFlushTask;
+    volatile Runnable invokeChannelWritableStateChangedTask;
 
     DefaultChannelHandlerContext(
             DefaultChannelPipeline pipeline, ChannelHandlerInvoker invoker, String name, ChannelHandler handler) {

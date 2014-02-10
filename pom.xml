@@ -78,12 +78,37 @@
           -XX:+TieredCompilation
           -XX:+UseBiasedLocking
           -XX:+UseFastAccessorMethods
-          -XX:+UseStringCache
           -XX:+OptimizeStringConcat
           -XX:+HeapDumpOnOutOfMemoryError
           -Dio.netty.leakDetectionLevel=3
         </test.jvm.argLine>
       </properties>
+    </profile>
+    <profile>
+      <id>coverage</id>
+      <properties>
+        <test.jvm.argLine.coverage>${jacoco.argLine}</test.jvm.argLine.coverage>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.jacoco</groupId>
+            <artifactId>jacoco-maven-plugin</artifactId>
+            <version>0.6.4.201312101107</version>
+            <executions>
+              <execution>
+                <id>jacoco-prepare-agent</id>
+                <goals>
+                  <goal>prepare-agent</goal>
+                </goals>
+                <configuration>
+                  <propertyName>jacoco.argLine</propertyName>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
   </profiles>
 
@@ -91,6 +116,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <jboss.marshalling.version>1.3.18.GA</jboss.marshalling.version>
+    <test.jvm.argLine.coverage></test.jvm.argLine.coverage> <!-- Set when 'coverage' profile is active -->
     <test.jvm.argLine>
       -server 
       -dsa -da -ea:io.netty...
@@ -98,7 +124,6 @@
       -XX:+TieredCompilation
       -XX:+UseBiasedLocking
       -XX:+UseFastAccessorMethods
-      -XX:+UseStringCache
       -XX:+OptimizeStringConcat
       -XX:+HeapDumpOnOutOfMemoryError
     </test.jvm.argLine>
@@ -448,7 +473,7 @@
             <exclude>**/TestUtil*</exclude>
           </excludes>
           <runOrder>random</runOrder>
-          <argLine>${test.jvm.argLine}</argLine>
+          <argLine>${test.jvm.argLine.coverage} ${test.jvm.argLine}</argLine>
         </configuration>
       </plugin>
       <!-- always produce osgi bundles -->
@@ -757,6 +782,11 @@
           <artifactId>build-helper-maven-plugin</artifactId>
           <version>1.8</version>
         </plugin>               
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>exec-maven-plugin</artifactId>
+          <version>1.2.1</version>
+        </plugin>
 
         <!-- Workaround for the 'M2E plugin execution not covered' problem.
              See: http://wiki.eclipse.org/M2E_plugin_execution_not_covered -->

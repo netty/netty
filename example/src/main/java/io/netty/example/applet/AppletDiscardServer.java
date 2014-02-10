@@ -41,7 +41,7 @@ public class AppletDiscardServer extends JApplet {
 
     @Override
     public void init() {
-        bossGroup = new NioEventLoopGroup();
+        bossGroup = new NioEventLoopGroup(1);
         workerGroup = new NioEventLoopGroup();
         try {
             ServerBootstrap bootstrap = new ServerBootstrap();
