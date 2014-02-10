@@ -104,7 +104,7 @@ public class HttpObjectAggregatorTest {
     }
 
     @Test
-    public void testTooLongFrameException() {
+    public void testTooOversizedMessage() {
         HttpObjectAggregator aggr = new HttpObjectAggregator(4);
         EmbeddedChannel embedder = new EmbeddedChannel(aggr);
         HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1,
@@ -116,12 +116,15 @@ public class HttpObjectAggregatorTest {
 
         assertFalse(embedder.writeInbound(message));
         assertFalse(embedder.writeInbound(chunk1.copy()));
-        try {
-            embedder.writeInbound(chunk2.copy());
-            fail();
-        } catch (TooLongFrameException e) {
-            // expected
-        }
+//        try {
+        embedder.writeInbound(chunk2.copy());
+//            fail();
+//        } catch (TooLongFrameException e) {
+        // expected
+//        }
+        assertFalse(embedder.isOpen());
+        DefaultFullHttpResponse response = embedder.readOutbound();
+        assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.getStatus());
         assertFalse(embedder.writeInbound(chunk3.copy()));
         assertFalse(embedder.writeInbound(chunk4.copy()));
 
@@ -136,6 +139,19 @@ public class HttpObjectAggregatorTest {
         assertFalse(embedder.writeInbound(chunk3.copy()));
         assertFalse(embedder.writeInbound(chunk4.copy()));
         embedder.finish();
+    }
+
+    @Test
+    public void testOversizedMessageWithContentLength() {
+        HttpObjectAggregator aggr = new HttpObjectAggregator(4);
+        EmbeddedChannel embedder = new EmbeddedChannel(aggr);
+        HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1,
+                HttpMethod.GET, "http://localhost");
+        HttpHeaders.setContentLength(message, 5);
+
+        assertFalse(embedder.writeInbound(message));
+        HttpResponse response = embedder.readOutbound();
+        assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.getStatus());
     }
 
     @Test(expected = IllegalArgumentException.class)
