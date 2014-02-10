@@ -110,6 +110,16 @@
         </plugins>
       </build>
     </profile>
+    <!-- Our Javadoc has poor enough quality to fail the build thanks to JDK8 javadoc which got more strict. -->
+    <profile>
+      <id>jdk8</id>
+      <activation>
+        <jdk>[1.8,)</jdk>
+      </activation>
+      <properties>
+        <maven.javadoc.failOnError>false</maven.javadoc.failOnError>
+      </properties>
+    </profile>
   </profiles>
 
   <properties>
