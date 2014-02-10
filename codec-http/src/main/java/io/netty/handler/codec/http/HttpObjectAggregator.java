@@ -67,7 +67,7 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
      * @param maxContentLength
      *        the maximum length of the aggregated content.
      *        If the length of the aggregated content exceeds this value,
-     *        a {@link #messageTooLong(io.netty.channel.ChannelHandlerContext, HttpObject)}
+     *        {@link #messageTooLong(io.netty.channel.ChannelHandlerContext, HttpObject)}
      *        will be called.
      */
     public HttpObjectAggregator(int maxContentLength) {
@@ -183,6 +183,7 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
 
                 this.currentMessage = null;
 
+                // handle oversized message
                 messageTooLong(ctx, currentMessage);
                 return;
             }
@@ -227,7 +228,7 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
     /**
      * Invoked when an incoming request exceeds the maximum content length.
      *
-     * By default, TODO
+     * The default behavior returns a {@code 413} HTTP response and closes the channel.
      *
      * Sub-classes may override this method to change behavior. <em>Note:</em>
      * you are responsible for releasing {@code msg} if you override the
