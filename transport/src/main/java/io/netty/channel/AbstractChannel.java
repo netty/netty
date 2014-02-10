@@ -393,6 +393,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public final void register(final ChannelPromise promise) {
+            if (checkCancelled(promise)) {
+                return;
+            }
             if (eventLoop.inEventLoop()) {
                 register0(promise);
             } else {
@@ -442,6 +445,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public final void bind(final SocketAddress localAddress, final ChannelPromise promise) {
+            if (checkCancelled(promise)) {
+                return;
+            }
             if (!ensureOpen(promise)) {
                 return;
             }
@@ -480,6 +486,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public final void disconnect(final ChannelPromise promise) {
+            if (checkCancelled(promise)) {
+                return;
+            }
             boolean wasActive = isActive();
             try {
                 doDisconnect();
@@ -502,6 +511,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public final void close(final ChannelPromise promise) {
+            if (checkCancelled(promise)) {
+                return;
+            }
             if (inFlush0) {
                 invokeLater(new Runnable() {
                     @Override
@@ -596,6 +608,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public void write(Object msg, ChannelPromise promise) {
+            // handling of cancelled writes are handled in ChannelOutboundBuffer so no need to check here
+
             if (!isActive()) {
                 // Mark the write request as failure if the channel is inactive.
                 if (isOpen()) {
@@ -769,6 +783,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     + region.count() + " bytes, but only wrote "
                     + region.transfered());
         }
+    }
+
+    protected static boolean checkCancelled(ChannelPromise promise) {
+        if (!promise.setUncancellable() && promise.isCancelled()) {
+            return true;
+        }
+        return false;
     }
 
     static final class CloseFuture extends DefaultChannelPromise {

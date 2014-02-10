@@ -320,7 +320,7 @@ public class LocalChannel extends AbstractChannel {
         @Override
         public void connect(final SocketAddress remoteAddress,
                 SocketAddress localAddress, final ChannelPromise promise) {
-            if (!ensureOpen(promise)) {
+            if (!ensureOpen(promise) || checkCancelled(promise)) {
                 return;
             }
 

@@ -354,7 +354,9 @@ public final class NioDatagramChannel
     public ChannelFuture joinGroup(
             InetAddress multicastAddress, NetworkInterface networkInterface,
             InetAddress source, ChannelPromise promise) {
-
+        if (checkCancelled(promise)) {
+            return promise;
+        }
         checkJavaVersion();
 
         if (multicastAddress == null) {
@@ -429,6 +431,9 @@ public final class NioDatagramChannel
     public ChannelFuture leaveGroup(
             InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source,
             ChannelPromise promise) {
+        if (checkCancelled(promise)) {
+            return promise;
+        }
         checkJavaVersion();
 
         if (multicastAddress == null) {
@@ -482,6 +487,9 @@ public final class NioDatagramChannel
     public ChannelFuture block(
             InetAddress multicastAddress, NetworkInterface networkInterface,
             InetAddress sourceToBlock, ChannelPromise promise) {
+        if (checkCancelled(promise)) {
+            return promise;
+        }
         checkJavaVersion();
 
         if (multicastAddress == null) {
