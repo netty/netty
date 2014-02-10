@@ -156,7 +156,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         @Override
         public void connect(
                 final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise promise) {
-            if (!ensureOpen(promise)) {
+            if (!promise.setUncancellable() || !ensureOpen(promise)) {
                 return;
             }
 

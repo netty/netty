@@ -320,13 +320,13 @@ public class LocalChannel extends AbstractChannel {
         @Override
         public void connect(final SocketAddress remoteAddress,
                 SocketAddress localAddress, final ChannelPromise promise) {
-            if (!ensureOpen(promise)) {
+            if (!promise.setUncancellable() || !ensureOpen(promise)) {
                 return;
             }
 
             if (state == 2) {
                 Exception cause = new AlreadyConnectedException();
-                promise.setFailure(cause);
+                safeSetFailure(promise, cause);
                 pipeline().fireExceptionCaught(cause);
                 return;
             }
@@ -348,7 +348,7 @@ public class LocalChannel extends AbstractChannel {
                 try {
                     doBind(localAddress);
                 } catch (Throwable t) {
-                    promise.setFailure(t);
+                    safeSetFailure(promise, t);
                     close(voidPromise());
                     return;
                 }
@@ -357,7 +357,7 @@ public class LocalChannel extends AbstractChannel {
             Channel boundChannel = LocalChannelRegistry.get(remoteAddress);
             if (!(boundChannel instanceof LocalServerChannel)) {
                 Exception cause = new ChannelException("connection refused");
-                promise.setFailure(cause);
+                safeSetFailure(promise, cause);
                 close(voidPromise());
                 return;
             }
