@@ -461,14 +461,14 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     public boolean setUncancellable() {
         Object result = this.result;
         if (isDone0(result)) {
-            return false;
+            return isCancelled0(result);
         }
 
         synchronized (this) {
             // Allow only once.
             result = this.result;
             if (isDone0(result)) {
-                return false;
+                return isCancelled0(result);
             }
 
             this.result = UNCANCELLABLE;
