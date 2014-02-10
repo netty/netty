@@ -436,7 +436,7 @@ public class HttpPostRequestEncoder implements ChunkedInput {
          *              currentFileUpload = data
          *              duringMixedMode = false;
          *      else
-         *          if (currentFileUpload.name == data.name && not HTML5 mode)
+         *          if (currentFileUpload.name == data.name && !EncoderMode.HTML5)
          *              change multipart body header of previous file into multipart list to
          *                      mixedmultipart start, mixedmultipart body header
          *              add mixedmultipart delimiter, mixedmultipart body header and Data to multipart list
