@@ -578,7 +578,7 @@ public final class ChannelOutboundBuffer {
     }
 
     private static void safeSuccess(ChannelPromise promise) {
-        if (!promise.trySuccess()) {
+        if (!(promise instanceof VoidChannelPromise) && !promise.trySuccess()) {
             logger.warn("Failed to mark a promise as success because it is done already: {}", promise);
         }
     }
