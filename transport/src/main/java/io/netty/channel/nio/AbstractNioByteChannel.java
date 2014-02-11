@@ -109,9 +109,6 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             if (allocHandle == null) {
                 this.allocHandle = allocHandle = config.getRecvByteBufAllocator().newHandle();
             }
-            if (!config.isAutoRead()) {
-                removeReadOp();
-            }
 
             ByteBuf byteBuf = null;
             int messages = 0;
@@ -140,6 +137,12 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                     }
 
                     totalReadAmount += localReadAmount;
+
+                    // stop reading
+                    if (!config.isAutoRead()) {
+                        break;
+                    }
+
                     if (localReadAmount < writable) {
                         // Read less than what the buffer can hold,
                         // which might mean we drained the recv buffer completely.
@@ -156,6 +159,10 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 }
             } catch (Throwable t) {
                 handleReadException(pipeline, byteBuf, t, close);
+            } finally {
+                if (!config.isAutoRead()) {
+                    removeReadOp();
+                }
             }
         }
     }

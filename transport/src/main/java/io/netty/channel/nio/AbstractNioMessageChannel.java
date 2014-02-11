@@ -58,55 +58,62 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
         @Override
         public void read() {
             assert eventLoop().inEventLoop();
-            if (!config().isAutoRead()) {
-                removeReadOp();
-            }
-
             final ChannelConfig config = config();
-            final int maxMessagesPerRead = config.getMaxMessagesPerRead();
-            final boolean autoRead = config.isAutoRead();
-            final ChannelPipeline pipeline = pipeline();
-            boolean closed = false;
-            Throwable exception = null;
+
             try {
-                for (;;) {
-                    int localRead = doReadMessages(readBuf);
-                    if (localRead == 0) {
-                        break;
-                    }
-                    if (localRead < 0) {
-                        closed = true;
-                        break;
-                    }
+                final int maxMessagesPerRead = config.getMaxMessagesPerRead();
+                final ChannelPipeline pipeline = pipeline();
+                boolean closed = false;
+                Throwable exception = null;
+                try {
+                    for (;;) {
+                        int localRead = doReadMessages(readBuf);
+                        if (localRead == 0) {
+                            break;
+                        }
+                        if (localRead < 0) {
+                            closed = true;
+                            break;
+                        }
 
-                    if (readBuf.size() >= maxMessagesPerRead | !autoRead) {
-                        break;
+                        // stop reading and remove op
+                        if (!config.isAutoRead()) {
+                            break;
+                        }
+
+                        if (readBuf.size() >= maxMessagesPerRead) {
+                            break;
+                        }
                     }
-                }
-            } catch (Throwable t) {
-                exception = t;
-            }
-
-            int size = readBuf.size();
-            for (int i = 0; i < size; i ++) {
-                pipeline.fireChannelRead(readBuf.get(i));
-            }
-            readBuf.clear();
-            pipeline.fireChannelReadComplete();
-
-            if (exception != null) {
-                if (exception instanceof IOException) {
-                    // ServerChannel should not be closed even on IOException because it can often continue
-                    // accepting incoming connections. (e.g. too many open files)
-                    closed = !(AbstractNioMessageChannel.this instanceof ServerChannel);
+                } catch (Throwable t) {
+                    exception = t;
                 }
 
-                pipeline.fireExceptionCaught(exception);
-            }
+                int size = readBuf.size();
+                for (int i = 0; i < size; i ++) {
+                    pipeline.fireChannelRead(readBuf.get(i));
+                }
+                readBuf.clear();
+                pipeline.fireChannelReadComplete();
 
-            if (closed) {
-                if (isOpen()) {
-                    close(voidPromise());
+                if (exception != null) {
+                    if (exception instanceof IOException) {
+                        // ServerChannel should not be closed even on IOException because it can often continue
+                        // accepting incoming connections. (e.g. too many open files)
+                        closed = !(AbstractNioMessageChannel.this instanceof ServerChannel);
+                    }
+
+                    pipeline.fireExceptionCaught(exception);
+                }
+
+                if (closed) {
+                    if (isOpen()) {
+                        close(voidPromise());
+                    }
+                }
+            } finally {
+                if (!config().isAutoRead()) {
+                    removeReadOp();
                 }
             }
         }
