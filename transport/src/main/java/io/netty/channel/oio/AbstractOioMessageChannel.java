@@ -16,6 +16,7 @@
 package io.netty.channel.oio;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelPipeline;
 
 import java.io.IOException;
@@ -37,11 +38,24 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
     protected void doRead() {
         final ChannelPipeline pipeline = pipeline();
         boolean closed = false;
+        final ChannelConfig config = config();
+        final int maxMessagesPerRead = config.getMaxMessagesPerRead();
+
         Throwable exception = null;
         try {
-            int localReadAmount = doReadMessages(readBuf);
-            if (localReadAmount < 0) {
-                closed = true;
+            for (;;) {
+                int localRead = doReadMessages(readBuf);
+                if (localRead == 0) {
+                    break;
+                }
+                if (localRead < 0) {
+                    closed = true;
+                    break;
+                }
+
+                if (readBuf.size() >= maxMessagesPerRead || !config.isAutoRead()) {
+                    break;
+                }
             }
         } catch (Throwable t) {
             exception = t;

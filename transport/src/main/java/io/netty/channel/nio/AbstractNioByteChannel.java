@@ -108,9 +108,6 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             if (allocHandle == null) {
                 this.allocHandle = allocHandle = config.getRecvByteBufAllocator().newHandle();
             }
-            if (!config.isAutoRead()) {
-                removeReadOp();
-            }
 
             ByteBuf byteBuf = null;
             int messages = 0;
@@ -135,15 +132,26 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                     if (totalReadAmount >= Integer.MAX_VALUE - localReadAmount) {
                         // Avoid overflow.
                         totalReadAmount = Integer.MAX_VALUE;
+                        // remove read op if necessary
+                        if (!config.isAutoRead()) {
+                            removeReadOp();
+                        }
                         break;
                     }
 
                     totalReadAmount += localReadAmount;
+
+                    // stop reading
+                    if (!config.isAutoRead()) {
+                        break;
+                    }
+
                     if (localReadAmount < writable) {
                         // Read less than what the buffer can hold,
                         // which might mean we drained the recv buffer completely.
                         break;
                     }
+
                 } while (++ messages < maxMessagesPerRead);
 
                 pipeline.fireChannelReadComplete();
@@ -155,6 +163,10 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 }
             } catch (Throwable t) {
                 handleReadException(pipeline, byteBuf, t, close);
+            } finally {
+                if (!config.isAutoRead()) {
+                    removeReadOp();
+                }
             }
         }
     }
