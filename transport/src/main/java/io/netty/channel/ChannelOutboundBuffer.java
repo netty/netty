@@ -240,7 +240,7 @@ public final class ChannelOutboundBuffer {
             return null;
         } else {
             Entry entry = buffer[flushed];
-            if (!entry.promise.setUncancellable() && entry.promise.isCancelled()) {
+            if (!entry.cancelled && !entry.promise.setUncancellable()) {
                 // Was cancelled so make sure we free up memory and notify about the freed bytes
                 int pending = entry.cancel();
                 decrementPendingOutboundBytes(pending);
@@ -354,13 +354,11 @@ public final class ChannelOutboundBuffer {
             }
 
             Entry entry = buffer[i];
-            if (!entry.promise.setUncancellable() && entry.promise.isCancelled()) {
+            if (!entry.promise.setUncancellable()) {
                 // Was cancelled so make sure we free up memory and notify about the freed bytes
                 int pending = entry.cancel();
                 decrementPendingOutboundBytes(pending);
-            }
-
-            if (!entry.cancelled) {
+            } else if (!entry.cancelled) {
                 ByteBuf buf = (ByteBuf) m;
                 final int readerIndex = buf.readerIndex();
                 final int readableBytes = buf.writerIndex() - readerIndex;
