@@ -221,7 +221,8 @@ public class NioClientSocketChannelFactory implements ClientSocketChannelFactory
     }
 
     public void releaseExternalResources() {
-        shutdown();
+        bossPool.shutdown();
+        workerPool.shutdown();
         releasePools();
     }
 

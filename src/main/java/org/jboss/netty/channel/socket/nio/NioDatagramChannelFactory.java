@@ -215,7 +215,7 @@ public class NioDatagramChannelFactory implements DatagramChannelFactory {
     }
 
     public void releaseExternalResources() {
-        shutdown();
+        workerPool.shutdown();
         releasePool();
     }
 

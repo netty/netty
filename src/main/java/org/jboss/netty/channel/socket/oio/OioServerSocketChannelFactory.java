@@ -150,7 +150,6 @@ public class OioServerSocketChannelFactory implements ServerSocketChannelFactory
     }
 
     public void releaseExternalResources() {
-        shutdown();
         ExecutorUtil.shutdownNow(workerExecutor);
     }
 }

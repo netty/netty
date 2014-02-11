@@ -127,7 +127,6 @@ public class OioClientSocketChannelFactory implements ClientSocketChannelFactory
     }
 
     public void releaseExternalResources() {
-        shutdown();
         ExecutorUtil.shutdownNow(workerExecutor);
     }
 }

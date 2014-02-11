@@ -214,7 +214,8 @@ public class NioServerSocketChannelFactory implements ServerSocketChannelFactory
     }
 
     public void releaseExternalResources() {
-        shutdown();
+        bossPool.shutdown();
+        workerPool.shutdown();
         releasePools();
     }
 
