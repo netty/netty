@@ -384,6 +384,12 @@ public final class ChannelOutboundBuffer {
             }
 
             Entry entry = buffer[i];
+            // skip cancelled entries
+            if (entry.promise.isCancelled()) {
+                remove();
+                continue;
+            }
+
             ByteBuf buf = (ByteBuf) m;
             final int readerIndex = buf.readerIndex();
             final int readableBytes = buf.writerIndex() - readerIndex;
