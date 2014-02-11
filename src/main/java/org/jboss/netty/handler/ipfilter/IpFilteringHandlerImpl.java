@@ -101,6 +101,11 @@ public abstract class IpFilteringHandlerImpl implements ChannelUpstreamHandler, 
             switch (evt.getState()) {
                 case OPEN:
                 case BOUND:
+                    if (evt.getValue() != Boolean.TRUE) {
+                        ctx.sendUpstream(e);
+                        return;
+                    }
+
                     // Special case: OPEND and BOUND events are before CONNECTED,
                     // but CLOSED and UNBOUND events are after DISCONNECTED: should those events be blocked too?
                     if (isBlocked(ctx) && !continues(ctx, evt)) {
