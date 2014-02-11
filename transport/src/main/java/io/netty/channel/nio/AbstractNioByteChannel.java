@@ -132,6 +132,10 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                     if (totalReadAmount >= Integer.MAX_VALUE - localReadAmount) {
                         // Avoid overflow.
                         totalReadAmount = Integer.MAX_VALUE;
+                        // remove read op if necessary
+                        if (!config.isAutoRead()) {
+                            removeReadOp();
+                        }
                         break;
                     }
 
@@ -147,6 +151,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                         // which might mean we drained the recv buffer completely.
                         break;
                     }
+
                 } while (++ messages < maxMessagesPerRead);
 
                 pipeline.fireChannelReadComplete();
