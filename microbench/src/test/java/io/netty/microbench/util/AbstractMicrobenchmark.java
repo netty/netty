@@ -27,6 +27,7 @@ import org.openjdk.jmh.output.results.ResultFormatType;
 import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.options.ChainedOptionsBuilder;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
+import org.openjdk.jmh.runner.options.VerboseMode;
 
 import java.io.File;
 
@@ -43,10 +44,12 @@ public class AbstractMicrobenchmark {
     protected static final int DEFAULT_MEASURE_ITERATIONS = 1;
     protected static final int DEFAULT_FORKS = 2;
 
-    protected static final String JVM_ARGS = "-server -dsa -da -ea:io.netty... -Xms768m" +
-        " -Xmx768m -XX:MaxDirectMemorySize=768m -XX:+AggressiveOpts -XX:+UseBiasedLocking" +
-        " -XX:+UseFastAccessorMethods -XX:+UseStringCache -XX:+OptimizeStringConcat" +
-        " -XX:+HeapDumpOnOutOfMemoryError -Dio.netty.noResourceLeakDetection";
+    protected static final String[] JVM_ARGS = new String[] {
+        "-server", "-dsa", "-da", "-ea:io.netty...", "-Xms768m", "-Xmx768m",
+        "-XX:MaxDirectMemorySize=768m", "-XX:+AggressiveOpts", "-XX:+UseBiasedLocking",
+        "-XX:+UseFastAccessorMethods", "-XX:+UseStringCache", "-XX:+OptimizeStringConcat",
+        "-XX:+HeapDumpOnOutOfMemoryError", "-Dio.netty.noResourceLeakDetection"
+    };
 
     static {
         ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.DISABLED);
