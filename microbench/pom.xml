@@ -47,7 +47,7 @@
     <dependency>
       <groupId>org.openjdk.jmh</groupId>
       <artifactId>jmh-core</artifactId>
-      <version>0.2.1</version>
+      <version>0.3.2</version>
     </dependency>
   </dependencies>
 
