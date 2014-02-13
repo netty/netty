@@ -17,10 +17,10 @@ package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import org.junit.Test;
 
-import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 
 import static io.netty.buffer.Unpooled.*;
@@ -30,7 +30,7 @@ public class ChannelOutboundBufferTest {
 
     @Test
     public void testEmptyNioBuffers() {
-        TestChannel channel = new TestChannel();
+        AbstractChannel channel = new EmbeddedChannel();
         ChannelOutboundBuffer buffer = ChannelOutboundBuffer.newInstance(channel);
         assertEquals(0, buffer.nioBufferCount());
         ByteBuffer[] buffers = buffer.nioBuffers();
@@ -44,8 +44,7 @@ public class ChannelOutboundBufferTest {
 
     @Test
     public void testNioBuffersSingleBacked() {
-        TestChannel channel = new TestChannel();
-
+        AbstractChannel channel = new EmbeddedChannel();
         ChannelOutboundBuffer buffer = ChannelOutboundBuffer.newInstance(channel);
         assertEquals(0, buffer.nioBufferCount());
         ByteBuffer[] buffers = buffer.nioBuffers();
@@ -69,7 +68,7 @@ public class ChannelOutboundBufferTest {
         assertEquals("Should still be 0 as not flushed yet", 1, buffer.nioBufferCount());
         for (int i = 0;  i < buffers.length; i++) {
             if (i == 0) {
-                assertEquals(buffers[i], nioBuf);
+                assertEquals(buffers[0], nioBuf);
             } else {
                 assertNull(buffers[i]);
             }
@@ -79,25 +78,24 @@ public class ChannelOutboundBufferTest {
 
     @Test
     public void testNioBuffersExpand() {
-        TestChannel channel = new TestChannel();
-
+        AbstractChannel channel = new EmbeddedChannel();
         ChannelOutboundBuffer buffer = ChannelOutboundBuffer.newInstance(channel);
 
         ByteBuf buf = directBuffer().writeBytes("buf1".getBytes(CharsetUtil.US_ASCII));
         for (int i = 0; i < 64; i++) {
             buffer.addMessage(buf.copy(), channel.voidPromise());
         }
-        ByteBuffer[] buffers = buffer.nioBuffers();
+        ByteBuffer[] nioBuffers = buffer.nioBuffers();
         assertEquals("Should still be 0 as not flushed yet", 0, buffer.nioBufferCount());
-        for (ByteBuffer b: buffers) {
+        for (ByteBuffer b: nioBuffers) {
             assertNull(b);
         }
         buffer.addFlush();
-        buffers = buffer.nioBuffers();
-        assertEquals(64, buffers.length);
+        nioBuffers = buffer.nioBuffers();
+        assertEquals(64, nioBuffers.length);
         assertEquals(64, buffer.nioBufferCount());
-        for (int i = 0;  i < buffers.length; i++) {
-            assertEquals(buffers[i], buf.internalNioBuffer(0, buf.readableBytes()));
+        for (ByteBuffer nioBuf: nioBuffers) {
+            assertEquals(nioBuf, buf.internalNioBuffer(0, buf.readableBytes()));
         }
         release(buffer);
         buf.release();
@@ -105,8 +103,7 @@ public class ChannelOutboundBufferTest {
 
     @Test
     public void testNioBuffersExpand2() {
-        TestChannel channel = new TestChannel();
-
+        AbstractChannel channel = new EmbeddedChannel();
         ChannelOutboundBuffer buffer = ChannelOutboundBuffer.newInstance(channel);
 
         CompositeByteBuf comp = compositeBuffer(256);
@@ -140,86 +137,6 @@ public class ChannelOutboundBufferTest {
         for (;;) {
             if (!buffer.remove()) {
                 break;
-            }
-        }
-    }
-
-    private static final class TestChannel extends AbstractChannel {
-        private final ChannelConfig config = new DefaultChannelConfig(this);
-
-        TestChannel() {
-            super(null);
-        }
-
-        @Override
-        protected AbstractUnsafe newUnsafe() {
-            return new TestUnsafe();
-        }
-
-        @Override
-        protected boolean isCompatible(EventLoop loop) {
-            return false;
-        }
-
-        @Override
-        protected SocketAddress localAddress0() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        protected SocketAddress remoteAddress0() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        protected void doBind(SocketAddress localAddress) throws Exception {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        protected void doDisconnect() throws Exception {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        protected void doClose() throws Exception {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        protected void doBeginRead() throws Exception {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        protected void doWrite(ChannelOutboundBuffer in) throws Exception {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelConfig config() {
-            return config;
-        }
-
-        @Override
-        public boolean isOpen() {
-            return true;
-        }
-
-        @Override
-        public boolean isActive() {
-            return true;
-        }
-
-        @Override
-        public ChannelMetadata metadata() {
-            throw new UnsupportedOperationException();
-        }
-
-        final class TestUnsafe extends AbstractUnsafe {
-            @Override
-            public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-                throw new UnsupportedOperationException();
             }
         }
     }
