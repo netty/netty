@@ -16,6 +16,9 @@
 package io.netty.buffer;
 
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -25,13 +28,18 @@ import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CharsetEncoder;
 import java.nio.charset.CoderResult;
+import java.util.Locale;
 
 /**
  * A collection of utility methods that is related with handling {@link ByteBuf}.
  */
 public final class ByteBufUtil {
 
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(ByteBufUtil.class);
+
     private static final char[] HEXDUMP_TABLE = new char[256 * 4];
+
+    static final ByteBufAllocator DEFAULT_ALLOCATOR;
 
     static {
         final char[] DIGITS = "0123456789abcdef".toCharArray();
@@ -39,6 +47,21 @@ public final class ByteBufUtil {
             HEXDUMP_TABLE[ i << 1     ] = DIGITS[i >>> 4 & 0x0F];
             HEXDUMP_TABLE[(i << 1) + 1] = DIGITS[i       & 0x0F];
         }
+
+        String allocType = SystemPropertyUtil.get("io.netty.allocator.type", "pooled").toLowerCase(Locale.US).trim();
+        ByteBufAllocator alloc;
+        if ("unpooled".equals(allocType)) {
+            alloc = UnpooledByteBufAllocator.DEFAULT;
+            logger.debug("-Dio.netty.allocator.type: {}", allocType);
+        } else if ("pooled".equals(allocType)) {
+            alloc = PooledByteBufAllocator.DEFAULT;
+            logger.debug("-Dio.netty.allocator.type: {}", allocType);
+        } else {
+            alloc = UnpooledByteBufAllocator.DEFAULT;
+            logger.debug("-Dio.netty.allocator.type: unpooled (unknown: {})", allocType);
+        }
+
+        DEFAULT_ALLOCATOR = alloc;
     }
 
     /**
