@@ -329,6 +329,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext {
             throw new NullPointerException("msg");
         }
 
+        ReferenceCountUtil.touch(msg);
         final DefaultChannelHandlerContext next = findContextInbound();
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
@@ -705,6 +706,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext {
 
     private void write(Object msg, boolean flush, ChannelPromise promise) {
 
+        ReferenceCountUtil.touch(msg);
         DefaultChannelHandlerContext next = findContextOutbound();
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
