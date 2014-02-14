@@ -1,4 +1,4 @@
 ## Microbenchmark tests
 
-See [our wiki page](http://netty.io/wiki/microbench-module.html).
+See [our wiki page](http://netty.io/wiki/microbenchmarks.html).
 
