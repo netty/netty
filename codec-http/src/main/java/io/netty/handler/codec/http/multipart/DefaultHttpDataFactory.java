@@ -246,4 +246,14 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
             requestFileDeleteMap.remove(request);
         }
     }
+
+    @Override
+    public void cleanRequestHttpDatas(HttpRequest request) {
+        cleanRequestHttpData(request);
+    }
+
+    @Override
+    public void cleanAllHttpDatas() {
+        cleanAllHttpData();
+    }
 }

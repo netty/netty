@@ -27,7 +27,6 @@ public interface HttpDataFactory {
     /**
      * To set a max size limitation on fields. Exceeding it will generate an ErrorDataDecoderException.
      * A value of -1 means no limitation (default).
-     * @param max
      */
     void setMaxLimit(long max);
 
@@ -71,4 +70,16 @@ public interface HttpDataFactory {
      * Remove all InterfaceHttpData from virtual File storage from clean list for all requests
      */
     void cleanAllHttpData();
+
+    /**
+     * @deprecated Use {@link #cleanRequestHttpData(HttpRequest)} instead.
+     */
+    @Deprecated
+    void cleanRequestHttpDatas(HttpRequest request);
+
+    /**
+     * @deprecated Use {@link #cleanAllHttpData()} instead.
+     */
+    @Deprecated
+    void cleanAllHttpDatas();
 }
