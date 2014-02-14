@@ -38,7 +38,7 @@ public class LoggingHandler extends ChannelDuplexHandler {
 
     private static final LogLevel DEFAULT_LEVEL = LogLevel.DEBUG;
 
-    private static final String NEWLINE = String.format("%n");
+    private static final String NEWLINE = StringUtil.NEWLINE;
 
     private static final String[] BYTE2HEX = new String[256];
     private static final String[] HEXPADDING = new String[16];
