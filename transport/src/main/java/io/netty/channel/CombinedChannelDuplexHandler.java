@@ -18,9 +18,9 @@ package io.netty.channel;
 import java.net.SocketAddress;
 
 /**
- *  Combines a {@link ChannelInboundHandler} and a {@link ChannelOutboundHandler} into one {@link ChannelHandler}.
- *
+ * @deprecated Use {@link ChannelHandlerAppender} instead.
  */
+@Deprecated
 public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O extends ChannelOutboundHandler>
         extends ChannelDuplexHandler {
 

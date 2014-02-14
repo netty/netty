@@ -15,12 +15,12 @@
  */
 package io.netty.handler.codec.spdy;
 
-import io.netty.channel.CombinedChannelDuplexHandler;
+import io.netty.channel.ChannelHandlerAppender;
 
 /**
  * A combination of {@link SpdyFrameDecoder} and {@link SpdyFrameEncoder}.
  */
-public final class SpdyFrameCodec extends CombinedChannelDuplexHandler<SpdyFrameDecoder, SpdyFrameEncoder> {
+public final class SpdyFrameCodec extends ChannelHandlerAppender {
     /**
      * Creates a new instance with the specified {@code version} and
      * the default decoder and encoder options

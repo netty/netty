@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.memcache.binary;
 
-import io.netty.channel.CombinedChannelDuplexHandler;
+import io.netty.channel.ChannelHandlerAppender;
 
 /**
  * The full server codec that combines the correct encoder and decoder.
@@ -24,14 +24,14 @@ import io.netty.channel.CombinedChannelDuplexHandler;
  * Internally, it combines the {@link BinaryMemcacheRequestDecoder} and the
  * {@link BinaryMemcacheResponseEncoder} to request decoding and response encoding.
  */
-public class BinaryMemcacheServerCodec
-    extends CombinedChannelDuplexHandler<BinaryMemcacheRequestDecoder, BinaryMemcacheResponseEncoder> {
+public class BinaryMemcacheServerCodec extends ChannelHandlerAppender {
 
     public BinaryMemcacheServerCodec() {
         this(AbstractBinaryMemcacheDecoder.DEFAULT_MAX_CHUNK_SIZE);
     }
 
     public BinaryMemcacheServerCodec(int decodeChunkSize) {
-        init(new BinaryMemcacheRequestDecoder(decodeChunkSize), new BinaryMemcacheResponseEncoder());
+        add(new BinaryMemcacheRequestDecoder(decodeChunkSize));
+        add(new BinaryMemcacheResponseEncoder());
     }
 }

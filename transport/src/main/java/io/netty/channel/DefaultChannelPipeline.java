@@ -66,7 +66,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     final Map<EventExecutorGroup, EventExecutor> childExecutors =
             new IdentityHashMap<EventExecutorGroup, EventExecutor>();
 
-    public DefaultChannelPipeline(AbstractChannel channel) {
+    DefaultChannelPipeline(AbstractChannel channel) {
         if (channel == null) {
             throw new NullPointerException("channel");
         }
@@ -261,7 +261,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         return this;
     }
 
-    private String generateName(ChannelHandler handler) {
+    String generateName(ChannelHandler handler) {
         WeakHashMap<Class<?>, String> cache = nameCaches[(int) (Thread.currentThread().getId() % nameCaches.length)];
         Class<?> handlerType = handler.getClass();
         String name;
@@ -977,9 +977,9 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     static final class HeadHandler implements ChannelOutboundHandler {
 
-        protected final Unsafe unsafe;
+        private final Unsafe unsafe;
 
-        protected HeadHandler(Unsafe unsafe) {
+        HeadHandler(Unsafe unsafe) {
             this.unsafe = unsafe;
         }
 
@@ -1019,6 +1019,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
+        @Deprecated
         public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
             unsafe.deregister(promise);
         }
