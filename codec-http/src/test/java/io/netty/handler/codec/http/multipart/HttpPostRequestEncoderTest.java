@@ -20,6 +20,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder.EncoderMode;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.StringUtil;
 import org.junit.Test;
@@ -105,6 +106,81 @@ public class HttpPostRequestEncoderTest {
                 "File 02" + StringUtil.NEWLINE +
                 "\r\n" +
                 "--" + multipartMixedBoundary + "--" + "\r\n" +
+                "--" + multipartDataBoundary + "--" + "\r\n";
+
+        assertEquals(expected, content);
+    }
+
+    @Test
+    public void testSingleFileUploadInHtml5Mode() throws Exception {
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
+                HttpMethod.POST, "http://localhost");
+
+        DefaultHttpDataFactory factory = new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE);
+
+        HttpPostRequestEncoder encoder = new HttpPostRequestEncoder(factory,
+                request, true, CharsetUtil.UTF_8, EncoderMode.HTML5);
+        File file1 = new File(getClass().getResource("/file-01.txt").toURI());
+        File file2 = new File(getClass().getResource("/file-02.txt").toURI());
+        encoder.addBodyAttribute("foo", "bar");
+        encoder.addBodyFileUpload("quux", file1, "text/plain", false);
+        encoder.addBodyFileUpload("quux", file2, "text/plain", false);
+
+        String multipartDataBoundary = encoder.multipartDataBoundary;
+        String content = getRequestBody(encoder);
+
+        String expected = "--" + multipartDataBoundary + "\r\n" +
+                "Content-Disposition: form-data; name=\"foo\"" + "\r\n" +
+                "Content-Type: text/plain; charset=UTF-8" + "\r\n" +
+                "\r\n" +
+                "bar" + "\r\n" +
+                "--" + multipartDataBoundary + "\r\n" +
+                "Content-Disposition: form-data; name=\"quux\"; filename=\"file-01.txt\"" + "\r\n" +
+                "Content-Type: text/plain" + "\r\n" +
+                "Content-Transfer-Encoding: binary" + "\r\n" +
+                "\r\n" +
+                "File 01" + StringUtil.NEWLINE + "\r\n" +
+                "--" + multipartDataBoundary + "\r\n" +
+                "Content-Disposition: form-data; name=\"quux\"; filename=\"file-02.txt\"" + "\r\n" +
+                "Content-Type: text/plain" + "\r\n" +
+                "Content-Transfer-Encoding: binary" + "\r\n" +
+                "\r\n" +
+                "File 02" + StringUtil.NEWLINE +
+                "\r\n" +
+                "--" + multipartDataBoundary + "--" + "\r\n";
+
+        assertEquals(expected, content);
+    }
+
+    @Test
+    public void testMultiFileUploadInHtml5Mode() throws Exception {
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
+                HttpMethod.POST, "http://localhost");
+
+        DefaultHttpDataFactory factory = new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE);
+
+        HttpPostRequestEncoder encoder = new HttpPostRequestEncoder(factory,
+                request, true, CharsetUtil.UTF_8, EncoderMode.HTML5);
+        File file1 = new File(getClass().getResource("/file-01.txt").toURI());
+        encoder.addBodyAttribute("foo", "bar");
+        encoder.addBodyFileUpload("quux", file1, "text/plain", false);
+
+        String multipartDataBoundary = encoder.multipartDataBoundary;
+        String content = getRequestBody(encoder);
+
+        String expected = "--" + multipartDataBoundary + "\r\n" +
+                "Content-Disposition: form-data; name=\"foo\"" + "\r\n" +
+                "Content-Type: text/plain; charset=UTF-8" + "\r\n" +
+                "\r\n" +
+                "bar" +
+                "\r\n" +
+                "--" + multipartDataBoundary + "\r\n" +
+                "Content-Disposition: form-data; name=\"quux\"; filename=\"file-01.txt\"" + "\r\n" +
+                "Content-Type: text/plain" + "\r\n" +
+                "Content-Transfer-Encoding: binary" + "\r\n" +
+                "\r\n" +
+                "File 01" + StringUtil.NEWLINE +
+                "\r\n" +
                 "--" + multipartDataBoundary + "--" + "\r\n";
 
         assertEquals(expected, content);
