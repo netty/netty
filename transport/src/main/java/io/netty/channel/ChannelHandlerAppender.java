@@ -181,9 +181,9 @@ public class ChannelHandlerAppender extends ChannelInboundHandlerAdapter {
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
         added = true;
 
-        DefaultChannelPipeline pipeline = (DefaultChannelPipeline) ctx.pipeline();
-
-        String name = ctx.name();
+        DefaultChannelHandlerContext dctx = (DefaultChannelHandlerContext) ctx;
+        DefaultChannelPipeline pipeline = (DefaultChannelPipeline) dctx.pipeline();
+        String name = dctx.name();
         try {
             for (Entry e: handlers) {
                 String oldName = name;
@@ -192,7 +192,7 @@ public class ChannelHandlerAppender extends ChannelInboundHandlerAdapter {
                 } else {
                     name = e.name;
                 }
-                pipeline.addAfter(ctx.executor(), oldName, name, e.handler);
+                pipeline.addAfter(dctx.executor, oldName, name, e.handler);
             }
         } finally {
             if (selfRemoval) {
