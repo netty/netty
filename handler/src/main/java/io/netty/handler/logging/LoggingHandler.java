@@ -21,6 +21,7 @@ import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogLevel;
@@ -38,7 +39,7 @@ public class LoggingHandler extends ChannelDuplexHandler {
 
     private static final LogLevel DEFAULT_LEVEL = LogLevel.DEBUG;
 
-    private static final String NEWLINE = String.format("%n");
+    private static final String NEWLINE = StringUtil.NEWLINE;
 
     private static final String[] BYTE2HEX = new String[256];
     private static final String[] HEXPADDING = new String[16];
@@ -335,7 +336,7 @@ public class LoggingHandler extends ChannelDuplexHandler {
 
     /**
      * Formats an event and returns the formatted message.  This method is currently only used for formatting
-     * {@link ChannelHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, ChannelPromise)}.
+     * {@link ChannelOutboundHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, ChannelPromise)}.
      *
      * @param eventName the name of the event
      * @param firstArg  the first argument of the event

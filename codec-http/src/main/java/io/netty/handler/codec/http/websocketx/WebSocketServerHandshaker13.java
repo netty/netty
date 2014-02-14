@@ -108,7 +108,7 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
         String accept = WebSocketUtil.base64(sha1);
 
         if (logger.isDebugEnabled()) {
-            logger.debug(String.format("WS Version 13 Server Handshake key: %s. Response: %s.", key, accept));
+            logger.debug("WebSocket version 13 server handshake key: {}, response: {}", key, accept);
         }
 
         res.headers().add(Names.UPGRADE, WEBSOCKET.toLowerCase());
@@ -119,7 +119,7 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
             String selectedSubprotocol = selectSubprotocol(subprotocols);
             if (selectedSubprotocol == null) {
                 if (logger.isDebugEnabled()) {
-                    logger.debug(String.format("Requested subprotocol(s) not supported: %s.", subprotocols));
+                    logger.debug("Requested subprotocol(s) not supported: {}", subprotocols);
                 }
             } else {
                 res.headers().add(Names.SEC_WEBSOCKET_PROTOCOL, selectedSubprotocol);
