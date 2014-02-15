@@ -120,6 +120,17 @@
         <maven.javadoc.failOnError>false</maven.javadoc.failOnError>
       </properties>
     </profile>
+    <profile>
+      <id>linux-native</id>
+      <activation>
+        <os>
+          <family>linux</family>
+        </os>
+      </activation>
+      <modules>
+        <module>transport-native-epoll</module>
+      </modules>
+    </profile>
   </profiles>
 
   <properties>
@@ -498,6 +509,10 @@
               <goal>manifest</goal>
             </goals>
             <configuration>
+              <supportedProjectTypes>
+                <supportedProjectType>jar</supportedProjectType>
+                <supportedProjectType>bundle</supportedProjectType>
+              </supportedProjectTypes>
               <instructions>
                 <Export-Package>${project.groupId}.*</Export-Package>
                 <!-- enforce JVM vendor package as optional -->
@@ -564,7 +579,7 @@
         <version>2.4.2</version>
         <configuration>
           <useReleaseProfile>false</useReleaseProfile>
-          <arguments>-P release,sonatype-oss-release,full,no-osgi</arguments>
+          <arguments>-P release,sonatype-oss-release,full,no-osgi,linux-native</arguments>
           <autoVersionSubmodules>true</autoVersionSubmodules>
           <allowTimestampedSnapshots>false</allowTimestampedSnapshots>
           <tagNameFormat>netty-@{project.version}</tagNameFormat>
