@@ -22,9 +22,9 @@ package io.netty.channel;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.buffer.UnpooledDirectByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.Recycler;
 import io.netty.util.Recycler.Handle;
@@ -690,16 +690,16 @@ public final class ChannelOutboundBuffer {
     }
 
     static final class ThreadLocalPooledByteBuf extends UnpooledDirectByteBuf {
-        private final Recycler.Handle<ThreadLocalPooledByteBuf> handle;
+        private final Recycler.Handle handle;
 
         private static final Recycler<ThreadLocalPooledByteBuf> RECYCLER = new Recycler<ThreadLocalPooledByteBuf>() {
             @Override
-            protected ThreadLocalPooledByteBuf newObject(Handle<ThreadLocalPooledByteBuf> handle) {
+            protected ThreadLocalPooledByteBuf newObject(Handle handle) {
                 return new ThreadLocalPooledByteBuf(handle);
             }
         };
 
-        private ThreadLocalPooledByteBuf(Recycler.Handle<ThreadLocalPooledByteBuf> handle) {
+        private ThreadLocalPooledByteBuf(Recycler.Handle handle) {
             super(UnpooledByteBufAllocator.DEFAULT, 256, Integer.MAX_VALUE);
             this.handle = handle;
         }
