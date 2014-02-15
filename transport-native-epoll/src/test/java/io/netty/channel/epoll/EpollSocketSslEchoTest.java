@@ -24,12 +24,9 @@ import java.util.List;
 
 public class EpollSocketSslEchoTest extends SocketSslEchoTest {
 
-    public EpollSocketSslEchoTest(boolean serverUsesDelegatedTaskExecutor,
-                                  boolean clientUsesDelegatedTaskExecutor,
-                                  boolean useChunkedWriteHandler,
+    public EpollSocketSslEchoTest(boolean useChunkedWriteHandler,
                                   boolean useCompositeByteBuf) {
-        super(serverUsesDelegatedTaskExecutor, clientUsesDelegatedTaskExecutor,
-                useChunkedWriteHandler, useCompositeByteBuf);
+        super(useChunkedWriteHandler, useCompositeByteBuf);
     }
 
     @Override
