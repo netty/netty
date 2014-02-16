@@ -502,10 +502,11 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
          * Read bytes into the given {@link ByteBuf} and return the amount.
          */
         private int doReadBytes(ByteBuf byteBuf) throws Exception {
-            ByteBuffer buf = byteBuf.internalNioBuffer(0, byteBuf.writableBytes());
+            int writerIndex = byteBuf.writerIndex();
+            ByteBuffer buf = byteBuf.internalNioBuffer(writerIndex, byteBuf.writableBytes());
             int localReadAmount = Native.read(fd, buf, buf.position(), buf.limit());
             if (localReadAmount > 0) {
-                byteBuf.writerIndex(byteBuf.writerIndex() + localReadAmount);
+                byteBuf.writerIndex(writerIndex + localReadAmount);
             }
             return localReadAmount;
         }
