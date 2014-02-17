@@ -93,10 +93,28 @@
         </plugins>
       </build>
     </profile>
+    <profile>
+      <id>linux-native</id>
+      <activation>
+        <os>
+          <family>linux</family>
+        </os>
+      </activation>
+      <dependencies>
+        <!-- All release modules -->
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-transport-native-epoll</artifactId>
+          <version>${project.version}</version>
+          <scope>compile</scope>
+          <optional>true</optional>
+        </dependency>
+      </dependencies>
+    </profile>
   </profiles>
 
   <dependencies>
-  
+
     <!-- All release modules -->
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -242,7 +260,7 @@
             </goals>
             <configuration>
               <classifier>sources</classifier>
-              <includes>io/netty/**</includes>
+              <includes>io/netty/**,META-INF/native/**</includes>
               <includeGroupIds>${project.groupId}</includeGroupIds>
               <outputDirectory>${generatedSourceDir}</outputDirectory>
             </configuration>
@@ -256,7 +274,7 @@
               <goal>unpack-dependencies</goal>
             </goals>
             <configuration>
-              <includes>io/netty/**</includes>
+              <includes>io/netty/**,META-INF/native/**</includes>
               <excludes>io/netty/example/**</excludes>
               <outputDirectory>${project.build.outputDirectory}</outputDirectory>
             </configuration>
