@@ -132,7 +132,8 @@ jobject createInetSocketAddress(JNIEnv * env, struct sockaddr_storage addr) {
         port = ntohs(s->sin6_port);
         inet_ntop(AF_INET6, &s->sin6_addr, ipstr, sizeof ipstr);
     }
-    jobject socketAddr = (*env)->NewObject(env, inetSocketAddressClass, inetSocketAddrMethodId, ipstr, port);
+    jstring ipString = (*env)->NewStringUTF(env, ipstr);
+    jobject socketAddr = (*env)->NewObject(env, inetSocketAddressClass, inetSocketAddrMethodId, ipString, port);
     return socketAddr;
 }
 
