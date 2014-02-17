@@ -128,45 +128,79 @@ public class HttpObjectAggregatorTest {
             assertTrue(e instanceof ClosedChannelException);
         }
 
-        embedder.finish();
+        assertFalse(embedder.finish());
     }
 
     @Test
-    public void testOversizedMessageWith100Continue() {
-        HttpObjectAggregator aggr = new HttpObjectAggregator(4);
-        EmbeddedChannel embedder = new EmbeddedChannel(aggr);
-        // provide a request with 100 continue
-        HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1,
+    public void testOversizedMessageWithoutKeepAlive() {
+        // send a HTTP/1.0 request with no keep-alive header
+        HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_0,
                 HttpMethod.GET, "http://localhost");
-        HttpHeaders.set100ContinueExpected(message);
         HttpHeaders.setContentLength(message, 5);
 
-        assertFalse(embedder.writeInbound(message));
-        HttpResponse response = embedder.readOutbound();
-        assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.getStatus());
-
-        HttpContent chunk1 = releaseLater(new DefaultHttpContent(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII)));
-
-        try {
-            embedder.writeInbound(chunk1.copy());
-            fail();
-        } catch (Exception e) {
-            assertTrue(e instanceof ClosedChannelException);
-        }
-        embedder.finish();
+        checkOversizedMessage(message);
     }
 
     @Test
     public void testOversizedMessageWithContentLength() {
-        HttpObjectAggregator aggr = new HttpObjectAggregator(4);
-        EmbeddedChannel embedder = new EmbeddedChannel(aggr);
         HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1,
                 HttpMethod.GET, "http://localhost");
         HttpHeaders.setContentLength(message, 5);
 
+        checkOversizedMessage(message);
+    }
+
+    @Test
+    public void testOversizedMessageWith100Continue() {
+        HttpObjectAggregator aggr = new HttpObjectAggregator(8);
+        EmbeddedChannel embedder = new EmbeddedChannel(aggr);
+
+        // send an oversized request with 100 continue
+        HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1,
+                HttpMethod.GET, "http://localhost");
+        HttpHeaders.set100ContinueExpected(message);
+        HttpHeaders.setContentLength(message, 16);
+
+        HttpContent chunk1 = releaseLater(new DefaultHttpContent(Unpooled.copiedBuffer("some", CharsetUtil.US_ASCII)));
+        HttpContent chunk2 = releaseLater(new DefaultHttpContent(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII)));
+        HttpContent chunk3 = LastHttpContent.EMPTY_LAST_CONTENT;
+
+        assertFalse(embedder.writeInbound(message));
+
+        try {
+            embedder.writeInbound(chunk1);
+            fail();
+        } catch (AssertionError e) {}
+
+        HttpResponse response = embedder.readOutbound();
+        assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.getStatus());
+        assertTrue(embedder.isOpen());
+
+        // now send a valid request
+        HttpRequest message2 = new DefaultHttpRequest(HttpVersion.HTTP_1_1,
+                HttpMethod.GET, "http://localhost");
+
+        assertFalse(embedder.writeInbound(message2));
+        assertFalse(embedder.writeInbound(chunk2));
+        assertTrue(embedder.writeInbound(chunk3));
+
+        FullHttpRequest aggratedMessage = embedder.readInbound();
+        assertNotNull(aggratedMessage);
+
+        assertEquals(chunk2.content().readableBytes() + chunk3.content().readableBytes(),
+                HttpHeaders.getContentLength(aggratedMessage));
+
+        assertFalse(embedder.finish());
+    }
+
+    private void checkOversizedMessage(HttpMessage message) {
+        HttpObjectAggregator aggr = new HttpObjectAggregator(4);
+        EmbeddedChannel embedder = new EmbeddedChannel(aggr);
+
         assertFalse(embedder.writeInbound(message));
         HttpResponse response = embedder.readOutbound();
         assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.getStatus());
+        assertFalse(embedder.isOpen());
 
         HttpContent chunk1 = releaseLater(new DefaultHttpContent(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII)));
 
@@ -176,7 +210,7 @@ public class HttpObjectAggregatorTest {
         } catch (Exception e) {
             assertTrue(e instanceof ClosedChannelException);
         }
-        embedder.finish();
+        assertFalse(embedder.finish());
     }
 
     @Test(expected = IllegalArgumentException.class)
