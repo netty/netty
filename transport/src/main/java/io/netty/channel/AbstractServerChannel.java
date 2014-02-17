@@ -97,7 +97,7 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
         }
 
         private void reject(ChannelPromise promise) {
-            promise.setFailure(new UnsupportedOperationException());
+            safeSetFailure(promise, new UnsupportedOperationException());
         }
     }
 }

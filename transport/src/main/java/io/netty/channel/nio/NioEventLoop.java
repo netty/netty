@@ -211,8 +211,8 @@ public final class NioEventLoop extends SingleThreadEventLoop {
      * {@code 50}, which means the event loop will try to spend the same amount of time for I/O as for non-I/O tasks.
      */
     public void setIoRatio(int ioRatio) {
-        if (ioRatio <= 0 || ioRatio >= 100) {
-            throw new IllegalArgumentException("ioRatio: " + ioRatio + " (expected: 0 < ioRatio < 100)");
+        if (ioRatio <= 0 || ioRatio > 100) {
+            throw new IllegalArgumentException("ioRatio: " + ioRatio + " (expected: 0 < ioRatio <= 100)");
         }
         this.ioRatio = ioRatio;
     }
@@ -339,18 +339,19 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 }
 
                 cancelledKeys = 0;
-
-                final long ioStartTime = System.nanoTime();
                 needsToSelectAgain = false;
-                if (selectedKeys != null) {
-                    processSelectedKeysOptimized(selectedKeys.flip());
-                } else {
-                    processSelectedKeysPlain(selector.selectedKeys());
-                }
-                final long ioTime = System.nanoTime() - ioStartTime;
-
                 final int ioRatio = this.ioRatio;
-                runAllTasks(ioTime * (100 - ioRatio) / ioRatio);
+                if (ioRatio == 100) {
+                    processSelectedKeys();
+                    runAllTasks();
+                } else {
+                    final long ioStartTime = System.nanoTime();
+
+                    processSelectedKeys();
+
+                    final long ioTime = System.nanoTime() - ioStartTime;
+                    runAllTasks(ioTime * (100 - ioRatio) / ioRatio);
+                }
 
                 if (isShuttingDown()) {
                     closeAll();
@@ -369,6 +370,14 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     // Ignore.
                 }
             }
+        }
+    }
+
+    private void processSelectedKeys() {
+        if (selectedKeys != null) {
+            processSelectedKeysOptimized(selectedKeys.flip());
+        } else {
+            processSelectedKeysPlain(selector.selectedKeys());
         }
     }
 

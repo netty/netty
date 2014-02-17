@@ -24,12 +24,13 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.buffer.UnpooledDirectByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.Recycler;
 import io.netty.util.Recycler.Handle;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -173,6 +174,18 @@ public final class ChannelOutboundBuffer {
 
     void addFlush() {
         unflushed = tail;
+
+        final int mask = buffer.length - 1;
+        int i = flushed;
+        while (i != unflushed && buffer[i].msg != null) {
+            Entry entry = buffer[i];
+            if (!entry.promise.setUncancellable()) {
+                // Was cancelled so make sure we free up memory and notify about the freed bytes
+                int pending = entry.cancel();
+                decrementPendingOutboundBytes(pending);
+            }
+            i = i + 1 & mask;
+        }
     }
 
     /**
@@ -253,7 +266,8 @@ public final class ChannelOutboundBuffer {
             return null;
         } else {
             // TODO: Think of a smart way to handle ByteBufHolder messages
-            Object msg = buffer[flushed].msg;
+            Entry entry = buffer[flushed];
+            Object msg = entry.msg;
             if (threadLocalDirectBufferSize <= 0 || !preferDirect) {
                 return msg;
             }
@@ -324,10 +338,12 @@ public final class ChannelOutboundBuffer {
 
         flushed = flushed + 1 & buffer.length - 1;
 
-        safeRelease(msg);
-
-        promise.trySuccess();
-        decrementPendingOutboundBytes(size);
+        if (!e.cancelled) {
+            // only release message, notify and decrement if it was not canceled before.
+            safeRelease(msg);
+            safeSuccess(promise);
+            decrementPendingOutboundBytes(size);
+        }
 
         return true;
     }
@@ -350,10 +366,13 @@ public final class ChannelOutboundBuffer {
 
         flushed = flushed + 1 & buffer.length - 1;
 
-        safeRelease(msg);
+        if (!e.cancelled) {
+            // only release message, fail and decrement if it was not canceled before.
+            safeRelease(msg);
 
-        safeFail(promise, cause);
-        decrementPendingOutboundBytes(size);
+            safeFail(promise, cause);
+            decrementPendingOutboundBytes(size);
+        }
 
         return true;
     }
@@ -385,43 +404,49 @@ public final class ChannelOutboundBuffer {
             }
 
             Entry entry = buffer[i];
-            ByteBuf buf = (ByteBuf) m;
-            final int readerIndex = buf.readerIndex();
-            final int readableBytes = buf.writerIndex() - readerIndex;
 
-            if (readableBytes > 0) {
-                nioBufferSize += readableBytes;
-                int count = entry.count;
-                if (count == -1) {
-                    entry.count = count = buf.nioBufferCount();
-                }
-                int neededSpace = nioBufferCount + count;
-                if (neededSpace > nioBuffers.length) {
-                    this.nioBuffers = nioBuffers = expandNioBufferArray(nioBuffers, neededSpace, nioBufferCount);
-                }
+            if (!entry.cancelled) {
+                ByteBuf buf = (ByteBuf) m;
+                final int readerIndex = buf.readerIndex();
+                final int readableBytes = buf.writerIndex() - readerIndex;
 
-                if (buf.isDirect() || threadLocalDirectBufferSize <= 0) {
-                    if (count == 1) {
-                        ByteBuffer nioBuf = entry.buf;
-                        if (nioBuf == null) {
-                            // cache ByteBuffer as it may need to create a new ByteBuffer instance if its a
-                            // derived buffer
-                            entry.buf = nioBuf = buf.internalNioBuffer(readerIndex, readableBytes);
-                        }
-                        nioBuffers[nioBufferCount ++] = nioBuf;
-                    } else {
-                        ByteBuffer[] nioBufs = entry.buffers;
-                        if (nioBufs == null) {
-                            // cached ByteBuffers as they may be expensive to create in terms of Object allocation
-                            entry.buffers = nioBufs = buf.nioBuffers();
-                        }
-                        nioBufferCount = fillBufferArray(nioBufs, nioBuffers, nioBufferCount);
+                if (readableBytes > 0) {
+                    nioBufferSize += readableBytes;
+                    int count = entry.count;
+                    if (count == -1) {
+                        //noinspection ConstantValueVariableUse
+                        entry.count = count =  buf.nioBufferCount();
                     }
-                } else {
-                    nioBufferCount = fillBufferArrayNonDirect(entry, buf, readerIndex,
-                            readableBytes, alloc, nioBuffers, nioBufferCount);
+                    int neededSpace = nioBufferCount + count;
+                    if (neededSpace > nioBuffers.length) {
+                        this.nioBuffers = nioBuffers =
+                                expandNioBufferArray(nioBuffers, neededSpace, nioBufferCount);
+                    }
+                    if (buf.isDirect() || threadLocalDirectBufferSize <= 0) {
+                        if (count == 1) {
+                            ByteBuffer nioBuf = entry.buf;
+                            if (nioBuf == null) {
+                                // cache ByteBuffer as it may need to create a new ByteBuffer instance if its a
+                                // derived buffer
+                                entry.buf = nioBuf = buf.internalNioBuffer(readerIndex, readableBytes);
+                            }
+                            nioBuffers[nioBufferCount ++] = nioBuf;
+                        } else {
+                            ByteBuffer[] nioBufs = entry.buffers;
+                            if (nioBufs == null) {
+                                // cached ByteBuffers as they may be expensive to create in terms
+                                // of Object allocation
+                                entry.buffers = nioBufs = buf.nioBuffers();
+                            }
+                            nioBufferCount = fillBufferArray(nioBufs, nioBuffers, nioBufferCount);
+                        }
+                    } else {
+                        nioBufferCount = fillBufferArrayNonDirect(entry, buf, readerIndex,
+                                readableBytes, alloc, nioBuffers, nioBufferCount);
+                    }
                 }
             }
+
             i = i + 1 & mask;
         }
         this.nioBufferCount = nioBufferCount;
@@ -545,10 +570,6 @@ public final class ChannelOutboundBuffer {
         try {
             for (int i = 0; i < unflushedCount; i++) {
                 Entry e = buffer[unflushed + i & buffer.length - 1];
-                safeRelease(e.msg);
-                e.msg = null;
-                safeFail(e.promise, cause);
-                e.promise = null;
 
                 // Just decrease; do not trigger any events via decrementPendingOutboundBytes()
                 int size = e.pendingSize;
@@ -560,6 +581,12 @@ public final class ChannelOutboundBuffer {
                 }
 
                 e.pendingSize = 0;
+                if (!e.cancelled) {
+                    safeRelease(e.msg);
+                    safeFail(e.promise, cause);
+                }
+                e.msg = null;
+                e.promise = null;
             }
         } finally {
             tail = unflushed;
@@ -577,9 +604,15 @@ public final class ChannelOutboundBuffer {
         }
     }
 
+    private static void safeSuccess(ChannelPromise promise) {
+        if (!(promise instanceof VoidChannelPromise) && !promise.trySuccess()) {
+            logger.warn("Failed to mark a promise as success because it is done already: {}", promise);
+        }
+    }
+
     private static void safeFail(ChannelPromise promise, Throwable cause) {
         if (!(promise instanceof VoidChannelPromise) && !promise.tryFailure(cause)) {
-            logger.warn("Promise done already: {} - new exception is:", promise, cause);
+            logger.warn("Failed to mark a promise as failure because it's done already: {}", promise, cause);
         }
     }
 
@@ -611,7 +644,7 @@ public final class ChannelOutboundBuffer {
     }
 
     public long totalPendingWriteBytes() {
-        return this.totalPendingSize;
+        return totalPendingSize;
     }
 
     private static final class Entry {
@@ -623,6 +656,26 @@ public final class ChannelOutboundBuffer {
         long total;
         int pendingSize;
         int count = -1;
+        boolean cancelled;
+
+        public int cancel() {
+            if (!cancelled) {
+                cancelled = true;
+                int pSize = pendingSize;
+
+                // release message and replace with an empty buffer
+                safeRelease(msg);
+                msg = Unpooled.EMPTY_BUFFER;
+
+                pendingSize = 0;
+                total = 0;
+                progress = 0;
+                buffers = null;
+                buf = null;
+                return pSize;
+            }
+            return 0;
+        }
 
         public void clear() {
             buffers = null;
@@ -633,6 +686,7 @@ public final class ChannelOutboundBuffer {
             total = 0;
             pendingSize = 0;
             count = -1;
+            cancelled = false;
         }
     }
 

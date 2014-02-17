@@ -21,6 +21,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.Field;
@@ -74,12 +75,16 @@ public final class PlatformDependent {
 
     private static final boolean HAS_JAVASSIST = hasJavassist0();
 
+    private static final File TMPDIR = tmpdir0();
+
+    private static final int BIT_MODE = bitMode0();
+
     static {
         if (logger.isDebugEnabled()) {
             logger.debug("-Dio.netty.noPreferDirect: {}", !DIRECT_BUFFER_PREFERRED);
         }
 
-        if (!hasUnsafe()) {
+        if (!hasUnsafe() && !isAndroid()) {
             logger.info(
                     "Your platform does not provide complete low-level API for accessing direct buffers reliably. " +
                     "Unless explicitly requested, heap buffer will always be preferred to avoid potential system " +
@@ -151,6 +156,20 @@ public final class PlatformDependent {
      */
     public static boolean hasJavassist() {
         return HAS_JAVASSIST;
+    }
+
+    /**
+     * Returns the temporary directory.
+     */
+    public static File tmpdir() {
+        return TMPDIR;
+    }
+
+    /**
+     * Returns the bit mode of the current VM (usually 32 or 64.)
+     */
+    public static int bitMode() {
+        return BIT_MODE;
     }
 
     /**
@@ -635,6 +654,130 @@ public final class PlatformDependent {
                     "You don't have Javassist in your class path or you don't have enough permission " +
                     "to load dynamically generated classes.  Please check the configuration for better performance.");
             return false;
+        }
+    }
+
+    private static File tmpdir0() {
+        File f;
+        try {
+            f = toDirectory(SystemPropertyUtil.get("io.netty.tmpdir"));
+            if (f != null) {
+                logger.debug("-Dio.netty.tmpdir: {}", f);
+                return f;
+            }
+
+            f = toDirectory(SystemPropertyUtil.get("java.io.tmpdir"));
+            if (f != null) {
+                logger.debug("-Dio.netty.tmpdir: {} (java.io.tmpdir)", f);
+                return f;
+            }
+
+            // This shouldn't happen, but just in case ..
+            if (isWindows()) {
+                f = toDirectory(System.getenv("TEMP"));
+                if (f != null) {
+                    logger.debug("-Dio.netty.tmpdir: {} (%TEMP%)", f);
+                    return f;
+                }
+
+                String userprofile = System.getenv("USERPROFILE");
+                if (userprofile != null) {
+                    f = toDirectory(userprofile + "\\AppData\\Local\\Temp");
+                    if (f != null) {
+                        logger.debug("-Dio.netty.tmpdir: {} (%USERPROFILE%\\AppData\\Local\\Temp)", f);
+                        return f;
+                    }
+
+                    f = toDirectory(userprofile + "\\Local Settings\\Temp");
+                    if (f != null) {
+                        logger.debug("-Dio.netty.tmpdir: {} (%USERPROFILE%\\Local Settings\\Temp)", f);
+                        return f;
+                    }
+                }
+            } else {
+                f = toDirectory(System.getenv("TMPDIR"));
+                if (f != null) {
+                    logger.debug("-Dio.netty.tmpdir: {} ($TMPDIR)", f);
+                    return f;
+                }
+            }
+        } catch (Exception ignored) {
+            // Environment variable inaccessible
+        }
+
+        // Last resort.
+        if (isWindows()) {
+            f = new File("C:\\Windows\\Temp");
+        } else {
+            f = new File("/tmp");
+        }
+
+        logger.warn("Failed to get the temporary directory; falling back to: {}", f);
+        return f;
+    }
+
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    private static File toDirectory(String path) {
+        if (path == null) {
+            return null;
+        }
+
+        File f = new File(path);
+        if (!f.exists()) {
+            f.mkdirs();
+        }
+
+        if (!f.isDirectory()) {
+            return null;
+        }
+
+        try {
+            return f.getAbsoluteFile();
+        } catch (Exception ignored) {
+            return f;
+        }
+    }
+
+    private static int bitMode0() {
+        // Check user-specified bit mode first.
+        int bitMode = SystemPropertyUtil.getInt("io.netty.bitMode", 0);
+        if (bitMode > 0) {
+            logger.debug("-Dio.netty.bitMode: {}", bitMode);
+            return bitMode;
+        }
+
+        // And then the vendor specific ones which is probably most reliable.
+        bitMode = SystemPropertyUtil.getInt("sun.arch.data.model", 0);
+        if (bitMode > 0) {
+            logger.debug("-Dio.netty.bitMode: {} (sun.arch.data.model)", bitMode);
+            return bitMode;
+        }
+        bitMode = SystemPropertyUtil.getInt("com.ibm.vm.bitmode", 0);
+        if (bitMode > 0) {
+            logger.debug("-Dio.netty.bitMode: {} (com.ibm.vm.bitmode)", bitMode);
+            return bitMode;
+        }
+
+        // os.arch also gives us a good hint.
+        String arch = SystemPropertyUtil.get("os.arch", "").toLowerCase(Locale.US).trim();
+        if ("amd64".equals(arch) || "x86_64".equals(arch)) {
+            bitMode = 64;
+        } else if ("i386".equals(arch) || "i486".equals(arch) || "i586".equals(arch) || "i686".equals(arch)) {
+            bitMode = 32;
+        }
+
+        if (bitMode > 0) {
+            logger.debug("-Dio.netty.bitMode: {} (os.arch: {})", bitMode, arch);
+        }
+
+        // Last resort: guess from VM name and then fall back to most common 64-bit mode.
+        String vm = SystemPropertyUtil.get("java.vm.name", "").toLowerCase(Locale.US);
+        Pattern BIT_PATTERN = Pattern.compile("([1-9][0-9]+)-?bit");
+        Matcher m = BIT_PATTERN.matcher(vm);
+        if (m.find()) {
+            return Integer.parseInt(m.group(1));
+        } else {
+            return 64;
         }
     }
 

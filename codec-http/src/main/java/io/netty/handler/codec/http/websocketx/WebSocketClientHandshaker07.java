@@ -110,8 +110,9 @@ public class WebSocketClientHandshaker07 extends WebSocketClientHandshaker {
         expectedChallengeResponseString = WebSocketUtil.base64(sha1);
 
         if (logger.isDebugEnabled()) {
-            logger.debug(String.format("WS Version 07 Client Handshake key: %s. Expected response: %s.", key,
-                    expectedChallengeResponseString));
+            logger.debug(
+                    "WebSocket version 07 client handshake key: {}, expected response: {}",
+                    key, expectedChallengeResponseString);
         }
 
         // Format request

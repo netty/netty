@@ -409,7 +409,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                             AbstractChannel.this, t);
                     closeForcibly();
                     closeFuture.setClosed();
-                    promise.setFailure(t);
+                    safeSetFailure(promise, t);
                 }
             }
         }
@@ -418,12 +418,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             try {
                 // check if the channel is still open as it could be closed in the mean time when the register
                 // call was outside of the eventLoop
-                if (!ensureOpen(promise)) {
+                if (!promise.setUncancellable() || !ensureOpen(promise)) {
                     return;
                 }
                 doRegister();
                 registered = true;
-                promise.setSuccess();
+                safeSetSuccess(promise);
                 pipeline.fireChannelRegistered();
                 if (isActive()) {
                     pipeline.fireChannelActive();
@@ -432,17 +432,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 // Close the channel directly to avoid FD leak.
                 closeForcibly();
                 closeFuture.setClosed();
-                if (!promise.tryFailure(t)) {
-                    logger.warn(
-                            "Tried to fail the registration promise, but it is complete already. " +
-                                    "Swallowing the cause of the registration failure:", t);
-                }
+                safeSetFailure(promise, t);
             }
         }
 
         @Override
         public final void bind(final SocketAddress localAddress, final ChannelPromise promise) {
-            if (!ensureOpen(promise)) {
+            if (!promise.setUncancellable() || !ensureOpen(promise)) {
                 return;
             }
 
@@ -463,7 +459,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             try {
                 doBind(localAddress);
             } catch (Throwable t) {
-                promise.setFailure(t);
+                safeSetFailure(promise, t);
                 closeIfClosed();
                 return;
             }
@@ -475,16 +471,20 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     }
                 });
             }
-            promise.setSuccess();
+            safeSetSuccess(promise);
         }
 
         @Override
         public final void disconnect(final ChannelPromise promise) {
+            if (!promise.setUncancellable()) {
+                return;
+            }
+
             boolean wasActive = isActive();
             try {
                 doDisconnect();
             } catch (Throwable t) {
-                promise.setFailure(t);
+                safeSetFailure(promise, t);
                 closeIfClosed();
                 return;
             }
@@ -496,12 +496,16 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     }
                 });
             }
-            promise.setSuccess();
+            safeSetSuccess(promise);
             closeIfClosed(); // doDisconnect() might have closed the channel
         }
 
         @Override
         public final void close(final ChannelPromise promise) {
+            if (!promise.setUncancellable()) {
+                return;
+            }
+
             if (inFlush0) {
                 invokeLater(new Runnable() {
                     @Override
@@ -514,7 +518,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
             if (closeFuture.isDone()) {
                 // Closed already.
-                promise.setSuccess();
+                safeSetSuccess(promise);
                 return;
             }
 
@@ -525,10 +529,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             try {
                 doClose();
                 closeFuture.setClosed();
-                promise.setSuccess();
+                safeSetSuccess(promise);
             } catch (Throwable t) {
                 closeFuture.setClosed();
-                promise.setFailure(t);
+                safeSetFailure(promise, t);
             }
 
             // Fail all the queued messages
@@ -599,9 +603,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             if (!isActive()) {
                 // Mark the write request as failure if the channel is inactive.
                 if (isOpen()) {
-                    promise.tryFailure(NOT_YET_CONNECTED_EXCEPTION);
+                    safeSetFailure(promise, NOT_YET_CONNECTED_EXCEPTION);
                 } else {
-                    promise.tryFailure(CLOSED_CHANNEL_EXCEPTION);
+                    safeSetFailure(promise, CLOSED_CHANNEL_EXCEPTION);
                 }
                 // release message now to prevent resource-leak
                 ReferenceCountUtil.release(msg);
@@ -667,8 +671,26 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return true;
             }
 
-            promise.setFailure(CLOSED_CHANNEL_EXCEPTION);
+            safeSetFailure(promise, CLOSED_CHANNEL_EXCEPTION);
             return false;
+        }
+
+        /**
+         * Marks the specified {@code promise} as success.  If the {@code promise} is done already, log a message.
+         */
+        protected final void safeSetSuccess(ChannelPromise promise) {
+            if (!(promise instanceof VoidChannelPromise) && !promise.trySuccess()) {
+                logger.warn("Failed to mark a promise as success because it is done already: {}", promise);
+            }
+        }
+
+        /**
+         * Marks the specified {@code promise} as failure.  If the {@code promise} is done already, log a message.
+         */
+        protected final void safeSetFailure(ChannelPromise promise, Throwable cause) {
+            if (!(promise instanceof VoidChannelPromise) && !promise.tryFailure(cause)) {
+                logger.warn("Failed to mark a promise as failure because it's done already: {}", promise, cause);
+            }
         }
 
         protected final void closeIfClosed() {
