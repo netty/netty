@@ -461,14 +461,8 @@ JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_epollCtlDel(JNIEnv * e
     }
 }
 
-JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_write(JNIEnv * env, jclass clazz, jint fd, jobject jbuffer, jint pos, jint limit) {
-    // TODO: We could also maybe pass the address in directly and so eliminate this call
-    //       not sure if this would buy us much. So some testing is needed.
-    void *buffer = (*env)->GetDirectBufferAddress(env, jbuffer);
-    if (buffer == NULL) {
-        throwRuntimeException(env, "Unable to access address of buffer");
-        return -1;
-    }
+
+jint write0(JNIEnv * env, jclass clazz, jint fd, void *buffer, jint pos, jint limit) {
     ssize_t res;
     int err;
     do {
@@ -488,12 +482,20 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_write(JNIEnv * env, jc
         throwIOException(env, exceptionMessage("Error while write(...): ", err));
         return -1;
     }
-    if (posFieldId == NULL) {
-        (*env)->CallObjectMethod(env, jbuffer, updatePosId, pos + res);
-    } else {
-        (*env)->SetIntField(env, jbuffer, posFieldId, pos + res);
-    }
     return (jint) res;
+}
+
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_write(JNIEnv * env, jclass clazz, jint fd, jobject jbuffer, jint pos, jint limit) {
+    void *buffer = (*env)->GetDirectBufferAddress(env, jbuffer);
+    if (buffer == NULL) {
+        throwRuntimeException(env, "Unable to access address of buffer");
+        return -1;
+    }
+    return write0(env, clazz, fd, buffer, pos, limit);
+}
+
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_writeAddress(JNIEnv * env, jclass clazz, jint fd, jlong address, jint pos, jint limit) {
+    return write0(env, clazz, fd, (void *) address, pos, limit);
 }
 
 void incrementPosition(JNIEnv * env, jobject bufObj, int written) {
@@ -578,14 +580,7 @@ JNIEXPORT jlong JNICALL Java_io_netty_channel_epoll_Native_writev(JNIEnv * env, 
     return res;
 }
 
-JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_read(JNIEnv * env, jclass clazz, jint fd, jobject jbuffer, jint pos, jint limit) {
-    // TODO: We could also maybe pass the address in directly and so eliminate this call
-    //       not sure if this would buy us much. So some testing is needed.
-    void *buffer = (*env)->GetDirectBufferAddress(env, jbuffer);
-    if (buffer == NULL) {
-        throwRuntimeException(env, "Unable to access address of buffer");
-        return -1;
-    }
+jint read0(JNIEnv * env, jclass clazz, jint fd, void *buffer, jint pos, jint limit) {
     ssize_t res;
     int err;
     do {
@@ -611,6 +606,19 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_read(JNIEnv * env, jcl
         return -1;
     }
     return (jint) res;
+}
+
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_read(JNIEnv * env, jclass clazz, jint fd, jobject jbuffer, jint pos, jint limit) {
+    void *buffer = (*env)->GetDirectBufferAddress(env, jbuffer);
+    if (buffer == NULL) {
+        throwRuntimeException(env, "Unable to access address of buffer");
+        return -1;
+    }
+    return read0(env, clazz, fd, buffer, pos, limit);
+}
+
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_readAddress(JNIEnv * env, jclass clazz, jint fd, jlong address, jint pos, jint limit) {
+    return read0(env, clazz, fd, (void*) address, pos, limit);
 }
 
 JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_close(JNIEnv * env, jclass clazz, jint fd) {
