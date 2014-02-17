@@ -47,6 +47,7 @@ import java.util.concurrent.TimeUnit;
  * maximal performance.
  */
 public final class EpollSocketChannel extends AbstractEpollChannel implements SocketChannel {
+
     private final EpollSocketChannelConfig config;
 
     /**
@@ -61,8 +62,7 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
     private volatile boolean outputShutdown;
 
     EpollSocketChannel(Channel parent, int fd) {
-        super(parent, fd, Native.EPOLLIN);
-        active = true;
+        super(parent, fd, Native.EPOLLIN, true);
         config = new EpollSocketChannelConfig(this);
     }
 

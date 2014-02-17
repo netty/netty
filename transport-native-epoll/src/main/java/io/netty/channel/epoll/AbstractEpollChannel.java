@@ -32,15 +32,16 @@ abstract class AbstractEpollChannel extends AbstractChannel {
     volatile int fd;
     int id;
 
-    AbstractEpollChannel(Channel parent, int fd, int flag) {
+    AbstractEpollChannel(int flag) {
+        this(null, socketFd(), flag, false);
+    }
+
+    AbstractEpollChannel(Channel parent, int fd, int flag, boolean active) {
         super(parent);
         this.fd = fd;
         readFlag = flag;
         flags |= flag;
-    }
-
-    AbstractEpollChannel(int flag) {
-        this(null, socketFd(), flag);
+        this.active = active;
     }
 
     private static int socketFd() {
