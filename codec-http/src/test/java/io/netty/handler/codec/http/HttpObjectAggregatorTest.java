@@ -171,7 +171,7 @@ public class HttpObjectAggregatorTest {
             embedder.writeInbound(chunk1);
             fail();
         } catch (AssertionError e) {
-
+            assertTrue(embedder.isWritable());
         }
 
         HttpResponse response = embedder.readOutbound();
