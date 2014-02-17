@@ -170,7 +170,9 @@ public class HttpObjectAggregatorTest {
         try {
             embedder.writeInbound(chunk1);
             fail();
-        } catch (AssertionError e) {}
+        } catch (AssertionError e) {
+
+        }
 
         HttpResponse response = embedder.readOutbound();
         assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.getStatus());
