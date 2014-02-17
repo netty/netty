@@ -160,7 +160,6 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
                     long localWrittenBytes = Native.writev(fd, nioBuffers, 0, nioBufferCnt);
 
                     if (localWrittenBytes < expectedWrittenBytes) {
-                        int nioBufIndex = 0;
                         setEpollOut();
 
                         // Did not write all buffers completely.
@@ -171,17 +170,12 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
                             final int readableBytes = buf.writerIndex() - readerIndex;
 
                             if (readableBytes < localWrittenBytes) {
-                                nioBufIndex += buf.nioBufferCount();
                                 in.remove();
                                 localWrittenBytes -= readableBytes;
                             } else if (readableBytes > localWrittenBytes) {
 
                                 buf.readerIndex(readerIndex + (int) localWrittenBytes);
                                 in.progress(localWrittenBytes);
-
-                                // update position in ByteBuffer as we not do this in the native methods
-                                ByteBuffer bb = nioBuffers[nioBufIndex];
-                                bb.position(bb.position() + (int) localWrittenBytes);
                                 break;
                             } else { // readable == writtenBytes
                                 in.remove();
