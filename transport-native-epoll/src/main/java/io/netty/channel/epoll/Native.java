@@ -60,9 +60,14 @@ final class Native {
 
     // File-descriptor operations
     public static native void close(int fd) throws IOException;
+
     public static native int write(int fd, ByteBuffer buf, int pos, int limit) throws IOException;
+    public static native int writeAddress(int fd, long address, int pos, int limit) throws IOException;
+
     public static native long writev(int fd, ByteBuffer[] buffers, int offset, int length) throws IOException;
     public static native int read(int fd, ByteBuffer buf, int pos, int limit) throws IOException;
+    public static native int readAddress(int fd, long address, int pos, int limit) throws IOException;
+
     public static native long sendfile(int dest, DefaultFileRegion src, long offset, long length) throws IOException;
 
     // socket operations

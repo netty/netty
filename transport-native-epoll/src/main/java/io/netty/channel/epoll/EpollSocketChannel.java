@@ -115,8 +115,12 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
         int readerIndex = buf.readerIndex();
         int localFlushedAmount;
         if (buf.nioBufferCount() == 1) {
-            ByteBuffer nioBuf = buf.internalNioBuffer(readerIndex, readable);
-            localFlushedAmount = Native.write(fd, nioBuf, nioBuf.position(), nioBuf.limit());
+            if (buf.hasMemoryAddress()) {
+                localFlushedAmount = Native.writeAddress(fd, buf.memoryAddress(), readerIndex, buf.writerIndex());
+            } else {
+                ByteBuffer nioBuf = buf.internalNioBuffer(readerIndex, readable);
+                localFlushedAmount = Native.write(fd, nioBuf, nioBuf.position(), nioBuf.limit());
+            }
         } else {
             // backed by more then one buffer, do a gathering write...
             ByteBuffer[] nioBufs = buf.nioBuffers();
@@ -509,8 +513,13 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
          */
         private int doReadBytes(ByteBuf byteBuf) throws Exception {
             int writerIndex = byteBuf.writerIndex();
-            ByteBuffer buf = byteBuf.internalNioBuffer(writerIndex, byteBuf.writableBytes());
-            int localReadAmount = Native.read(fd, buf, buf.position(), buf.limit());
+            int localReadAmount;
+            if (byteBuf.hasMemoryAddress()) {
+                localReadAmount = Native.readAddress(fd, byteBuf.memoryAddress(), writerIndex, byteBuf.capacity());
+            } else {
+                ByteBuffer buf = byteBuf.internalNioBuffer(writerIndex, byteBuf.writableBytes());
+                localReadAmount = Native.read(fd, buf, buf.position(), buf.limit());
+            }
             if (localReadAmount > 0) {
                 byteBuf.writerIndex(writerIndex + localReadAmount);
             }
