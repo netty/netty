@@ -18,12 +18,17 @@ package io.netty.channel.epoll;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ThreadLocalPooledDirectByteBuf;
-import io.netty.channel.AbstractChannel;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.util.Recycler;
 
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 
+/**
+ * Special {@link ChannelOutboundBuffer} implementation which allows to obtain an array of {@link AddressEntry}
+ * and so doing gathering writes without the need to create a {@link ByteBuffer} internally. This reduce
+ * GC pressure a lot.
+ */
 final class EpollChannelOutboundBuffer extends ChannelOutboundBuffer {
     private AddressEntry[] addresses;
     private int addressCount;
@@ -35,7 +40,10 @@ final class EpollChannelOutboundBuffer extends ChannelOutboundBuffer {
         }
     };
 
-    static EpollChannelOutboundBuffer newInstance(AbstractChannel channel) {
+    /**
+     * Get a new instance of this {@link EpollChannelOutboundBuffer} and attach it the given {@link EpollSocketChannel}
+     */
+    static EpollChannelOutboundBuffer newInstance(EpollSocketChannel channel) {
         EpollChannelOutboundBuffer buffer = RECYCLER.get();
         buffer.channel = channel;
         return buffer;
@@ -46,8 +54,12 @@ final class EpollChannelOutboundBuffer extends ChannelOutboundBuffer {
         addresses = new AddressEntry[INITIAL_CAPACITY];
     }
 
+    /**
+     * Check if the message is a {@link ByteBuf} and if so if it has a memoryAddress. If not it will convert this
+     * {@link ByteBuf} to be able to operate on the memoryAddress directly for maximal performance.
+     */
     @Override
-    protected Object message(Object msg) {
+    protected Object beforeAdd(Object msg) {
         if (msg instanceof ByteBuf) {
             ByteBuf buf = (ByteBuf) msg;
             if (!buf.hasMemoryAddress()) {
@@ -69,7 +81,18 @@ final class EpollChannelOutboundBuffer extends ChannelOutboundBuffer {
         return msg;
     }
 
-    public AddressEntry[] memoryAddresses() {
+    /**
+     * Returns an array of {@link AddressEntry}'s if the currently pending messages are made of {@link ByteBuf} only.
+     * {@code null} is returned otherwise.  If this method returns a non-null array, {@link #addressCount()} and
+     * {@link #addressSize()} ()} will return the number of {@link AddressEntry}'s in the returned array and the total
+     * number of readable bytes of the NIO buffers respectively.
+     * <p>
+     * Note that the returned array is reused and thus should not escape
+     * {@link io.netty.channel.AbstractChannel#doWrite(ChannelOutboundBuffer)}.
+     * Refer to {@link EpollSocketChannel#doWrite(ChannelOutboundBuffer)} for an example.
+     * </p>
+     */
+    AddressEntry[] memoryAddresses() {
         long addressSize = 0;
         int addressCount = 0;
         final Entry[] buffer = entries();
@@ -77,16 +100,17 @@ final class EpollChannelOutboundBuffer extends ChannelOutboundBuffer {
         AddressEntry[] addresses = this.addresses;
         Object m;
         int unflushed = unflushed();
-        int i = flushed();
-        while (i != unflushed && (m = buffer[i].msg()) != null) {
+        int flushed = flushed();
+        while (flushed != unflushed && (m = buffer[flushed].msg()) != null) {
             if (!(m instanceof ByteBuf)) {
                 this.addressCount = 0;
                 this.addressSize = 0;
                 return null;
             }
 
-            AddressEntry entry = (AddressEntry) buffer[i];
+            AddressEntry entry = (AddressEntry) buffer[flushed];
 
+            // Check if the entry was cancelled. if so we just skip it.
             if (!entry.isCancelled()) {
                 ByteBuf buf = (ByteBuf) m;
                 final int readerIndex = buf.readerIndex();
@@ -94,6 +118,7 @@ final class EpollChannelOutboundBuffer extends ChannelOutboundBuffer {
 
                 if (readableBytes > 0) {
                     addressSize += readableBytes;
+                    // See if there is enough space to at least store one more entry.
                     int neededSpace = addressCount + 1;
                     if (neededSpace > addresses.length) {
                         this.addresses = addresses =
@@ -107,7 +132,7 @@ final class EpollChannelOutboundBuffer extends ChannelOutboundBuffer {
                 }
             }
 
-            i = i + 1 & mask;
+            flushed = flushed + 1 & mask;
         }
         this.addressCount = addressCount;
         this.addressSize = addressSize;
@@ -134,11 +159,17 @@ final class EpollChannelOutboundBuffer extends ChannelOutboundBuffer {
         return newArray;
     }
 
-    public int addressCount() {
+    /**
+     * Return the number of {@link AddressEntry}'s which can be written.
+     */
+    int addressCount() {
         return addressCount;
     }
 
-    public long addressSize() {
+    /**
+     * Return the number of bytes that can be written via gathering writes.
+     */
+    long addressSize() {
         return addressSize;
     }
 
@@ -159,7 +190,8 @@ final class EpollChannelOutboundBuffer extends ChannelOutboundBuffer {
         return new AddressEntry();
     }
 
-    static class AddressEntry extends Entry {
+    static final class AddressEntry extends Entry {
+        // These fields will be accessed via JNI directly so be carefully when touch them!
         long memoryAddress;
         int readerIndex;
         int writerIndex;

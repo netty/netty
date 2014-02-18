@@ -239,6 +239,7 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
             // * they are all buffers rather than a file region.
             if (msgCount > 1) {
                 if (PlatformDependent.hasUnsafe()) {
+                    // this means we can cast to EpollChannelOutboundBuffer and write the AdressEntry directly.
                     EpollChannelOutboundBuffer epollIn = (EpollChannelOutboundBuffer) in;
                     // Ensure the pending writes are made of memoryaddresses only.
                     AddressEntry[] addresses = epollIn.memoryAddresses();
@@ -652,9 +653,11 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
     @Override
     protected ChannelOutboundBuffer newOutboundBuffer() {
         if (PlatformDependent.hasUnsafe()) {
-            // this means we will be able to access the memory addresses directly
+            // This means we will be able to access the memory addresses directly and so be able to do
+            // gathering writes with the AddressEntry.
             return EpollChannelOutboundBuffer.newInstance(this);
         } else {
+            // No access to the memoryAddres, so fallback to use ByteBuffer[] for gathering writes.
             return NioSocketChannelOutboundBuffer.newInstance(this);
         }
     }

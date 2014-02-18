@@ -392,7 +392,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
         }
 
         @Override
-        protected Object message(Object msg) {
+        protected Object beforeAdd(Object msg) {
             if (msg instanceof SctpMessage) {
                 SctpMessage message = (SctpMessage) msg;
                 ByteBuf content = message.content();

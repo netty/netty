@@ -29,6 +29,10 @@ import io.netty.util.Recycler;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
+/**
+ * Special {@link ChannelOutboundBuffer} implementation which allows to also access flushed {@link ByteBuffer} to
+ * allow efficent gathering writes.
+ */
 public final class NioSocketChannelOutboundBuffer extends ChannelOutboundBuffer {
 
     private ByteBuffer[] nioBuffers;
@@ -43,19 +47,26 @@ public final class NioSocketChannelOutboundBuffer extends ChannelOutboundBuffer 
         }
     };
 
+    /**
+     * Get a new instance of this {@link NioSocketChannelOutboundBuffer} and attach it the given {@link AbstractChannel}
+     */
     public static NioSocketChannelOutboundBuffer newInstance(AbstractChannel channel) {
         NioSocketChannelOutboundBuffer buffer = RECYCLER.get();
         buffer.channel = channel;
         return buffer;
     }
 
-    protected NioSocketChannelOutboundBuffer(Recycler.Handle<? extends NioSocketChannelOutboundBuffer> handle) {
+    private NioSocketChannelOutboundBuffer(Recycler.Handle<? extends NioSocketChannelOutboundBuffer> handle) {
         super(handle);
         nioBuffers = new ByteBuffer[INITIAL_CAPACITY];
     }
 
+    /**
+     * Convert all non direct {@link ByteBuf} to direct {@link ByteBuf}'s. This is done as the JDK implementation
+     * will do the conversation itself and we can do a better job here.
+     */
     @Override
-    protected Object message(Object msg) {
+    protected Object beforeAdd(Object msg) {
         if (msg instanceof ByteBuf) {
             ByteBuf buf = (ByteBuf) msg;
             if (!buf.isDirect()) {
@@ -180,16 +191,23 @@ public final class NioSocketChannelOutboundBuffer extends ChannelOutboundBuffer 
         return newArray;
     }
 
+    /**
+     * Return the number of {@link java.nio.ByteBuffer} which can be written.
+     */
     public int nioBufferCount() {
         return nioBufferCount;
     }
 
+    /**
+     * Return the number of bytes that can be written via gathering writes.
+     */
     public long nioBufferSize() {
         return nioBufferSize;
     }
 
     @Override
     public void recycle() {
+        // take care of recycle the ByteBuffer[] structure.
         if (nioBuffers.length > INITIAL_CAPACITY) {
             nioBuffers = new ByteBuffer[INITIAL_CAPACITY];
         } else {
@@ -205,7 +223,7 @@ public final class NioSocketChannelOutboundBuffer extends ChannelOutboundBuffer 
         return new NioEntry();
     }
 
-    protected static class NioEntry extends Entry {
+    protected static final class NioEntry extends Entry {
         ByteBuffer[] buffers;
         ByteBuffer buf;
         int count = -1;

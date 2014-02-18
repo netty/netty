@@ -18,11 +18,13 @@ package io.netty.channel.socket.nio;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ThreadLocalPooledDirectByteBuf;
-import io.netty.channel.AbstractChannel;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.util.Recycler;
 
+/**
+ * Special {@link ChannelOutboundBuffer} for {@link NioDatagramChannel} implementations.
+ */
 final class NioDatagramChannelOutboundBuffer extends ChannelOutboundBuffer {
     private static final Recycler<NioDatagramChannelOutboundBuffer> RECYCLER =
             new Recycler<NioDatagramChannelOutboundBuffer>() {
@@ -32,7 +34,11 @@ final class NioDatagramChannelOutboundBuffer extends ChannelOutboundBuffer {
                 }
             };
 
-    static NioDatagramChannelOutboundBuffer newInstance(AbstractChannel channel) {
+    /**
+     * Get a new instance of this {@link NioSocketChannelOutboundBuffer} and attach it the given
+     * {@link .NioDatagramChannel}.
+     */
+    static NioDatagramChannelOutboundBuffer newInstance(NioDatagramChannel channel) {
         NioDatagramChannelOutboundBuffer buffer = RECYCLER.get();
         buffer.channel = channel;
         return buffer;
@@ -42,8 +48,12 @@ final class NioDatagramChannelOutboundBuffer extends ChannelOutboundBuffer {
         super(handle);
     }
 
+    /**
+     * Convert all non direct {@link ByteBuf} to direct {@link ByteBuf}'s. This is done as the JDK implementation
+     * will do the conversation itself and we can do a better job here.
+     */
     @Override
-    protected Object message(Object msg) {
+    protected Object beforeAdd(Object msg) {
         if (msg instanceof DatagramPacket) {
             DatagramPacket packet = (DatagramPacket) msg;
             ByteBuf content = packet.content();

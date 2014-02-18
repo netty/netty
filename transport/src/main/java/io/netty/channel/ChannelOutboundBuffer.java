@@ -50,6 +50,9 @@ public class ChannelOutboundBuffer {
         }
     };
 
+    /**
+     * Get a new instance of this {@link ChannelOutboundBuffer} and attach it the given {@link AbstractChannel}
+     */
     static ChannelOutboundBuffer newInstance(AbstractChannel channel) {
         ChannelOutboundBuffer buffer = RECYCLER.get();
         buffer.channel = channel;
@@ -103,12 +106,20 @@ public class ChannelOutboundBuffer {
         }
     }
 
+    /**
+     * Return the array of {@link Entry}'s which hold the pending write requests in an circular array.
+     */
     protected final Entry[] entries() {
         return buffer;
     }
 
+    /**
+     * Add the given message to this {@link ChannelOutboundBuffer} so it will be marked as flushed once
+     * {@link #addFlush()} was called. The {@link ChannelPromise} will be notified once the write operations
+     * completes.
+     */
     public final void addMessage(Object msg, ChannelPromise promise) {
-        msg = message(msg);
+        msg = beforeAdd(msg);
         int size = channel.estimatorHandle().size(msg);
         if (size < 0) {
             size = 0;
@@ -131,10 +142,17 @@ public class ChannelOutboundBuffer {
         incrementPendingOutboundBytes(size);
     }
 
-    protected Object message(Object msg) {
+    /**
+     * Is called before the message is actually added to the {@link ChannelOutboundBuffer} and so allow to
+     * convert it to a different format. Sub-classes may override this.
+     */
+    protected Object beforeAdd(Object msg) {
         return msg;
     }
 
+    /**
+     * Expand internal array which holds the {@link Entry}'s.
+     */
     private void addCapacity() {
         int p = flushed;
         int n = buffer.length;
@@ -159,7 +177,10 @@ public class ChannelOutboundBuffer {
         tail = n;
     }
 
-   public final void addFlush() {
+    /**
+     * Mark all messages in this {@link ChannelOutboundBuffer} as flushed.
+     */
+    public final void addFlush() {
         unflushed = tail;
 
         final int mask = buffer.length - 1;
@@ -207,7 +228,7 @@ public class ChannelOutboundBuffer {
      * Decrement the pending bytes which will be written at some point.
      * This method is thread-safe!
      */
-   final void decrementPendingOutboundBytes(int size) {
+    final void decrementPendingOutboundBytes(int size) {
         // Cache the channel and check for null to make sure we not produce a NPE in case of the Channel gets
         // recycled while process this method.
         Channel channel = this.channel;
@@ -244,7 +265,10 @@ public class ChannelOutboundBuffer {
         return -1;
     }
 
-   public final Object current() {
+    /**
+     * Return current message or {@code null} if no flushed message is left to process.
+     */
+    public final Object current() {
         if (isEmpty()) {
             return null;
         } else {
@@ -264,6 +288,10 @@ public class ChannelOutboundBuffer {
         }
     }
 
+    /**
+     * Mark the current message as successful written and remove it from this {@link ChannelOutboundBuffer}.
+     * This method will return {@code true} if there are more messages left to process,  {@code false} otherwise.
+     */
     public final boolean remove() {
         if (isEmpty()) {
             return false;
@@ -292,6 +320,11 @@ public class ChannelOutboundBuffer {
         return true;
     }
 
+    /**
+     * Mark the current message as failure with the given {@link java.lang.Throwable} and remove it from this
+     * {@link ChannelOutboundBuffer}. This method will return {@code true} if there are more messages left to process,
+     * {@code false} otherwise.
+     */
     public final boolean remove(Throwable cause) {
         if (isEmpty()) {
             return false;
@@ -325,14 +358,23 @@ public class ChannelOutboundBuffer {
         return writable != 0;
     }
 
+    /**
+     * Return the number of messages that are ready to be written (flushed before).
+     */
     public final int size() {
         return unflushed - flushed & buffer.length - 1;
     }
 
+    /**
+     * Return {@code true} if this {@link ChannelOutboundBuffer} contains no flushed messages
+     */
     public final boolean isEmpty() {
         return unflushed == flushed;
     }
 
+    /**
+     * Fail all previous flushed messages with the given {@link Throwable}.
+     */
     final void failFlushed(Throwable cause) {
         // Make sure that this method does not reenter.  A listener added to the current promise can be notified by the
         // current thread in the tryFailure() call of the loop below, and the listener can trigger another fail() call
@@ -355,6 +397,9 @@ public class ChannelOutboundBuffer {
         }
     }
 
+    /**
+     * Fail all pending messages with the given {@link ClosedChannelException}.
+     */
    final void close(final ClosedChannelException cause) {
         if (inFail) {
             channel.eventLoop().execute(new Runnable() {
@@ -407,6 +452,9 @@ public class ChannelOutboundBuffer {
         recycle();
     }
 
+    /**
+     * Release the message and log if any error happens during release.
+     */
     protected static void safeRelease(Object message) {
         try {
             ReferenceCountUtil.release(message);
@@ -415,18 +463,28 @@ public class ChannelOutboundBuffer {
         }
     }
 
+    /**
+     * Try to mark the given {@link ChannelPromise} as success and log if this failed.
+     */
     private static void safeSuccess(ChannelPromise promise) {
         if (!(promise instanceof VoidChannelPromise) && !promise.trySuccess()) {
             logger.warn("Failed to mark a promise as success because it is done already: {}", promise);
         }
     }
 
+    /**
+     * Try to mark the given {@link ChannelPromise} as failued with the given {@link Throwable} and log if this failed.
+     */
     private static void safeFail(ChannelPromise promise, Throwable cause) {
         if (!(promise instanceof VoidChannelPromise) && !promise.tryFailure(cause)) {
             logger.warn("Failed to mark a promise as failure because it's done already: {}", promise, cause);
         }
     }
 
+    /**
+     * Recycle this {@link ChannelOutboundBuffer}. After this was called it is disallowed to use it with the previous
+     * assigned {@link AbstractChannel}.
+     */
     public void recycle() {
         if (buffer.length > INITIAL_CAPACITY) {
             Entry[] e = new Entry[INITIAL_CAPACITY];
@@ -449,18 +507,31 @@ public class ChannelOutboundBuffer {
         RECYCLER.recycle(this, (Handle<ChannelOutboundBuffer>) handle);
     }
 
+    /**
+     * Return the total number of pending bytes.
+     */
     public final long totalPendingWriteBytes() {
         return totalPendingSize;
     }
 
+    /**
+     * Create a new {@link Entry} to use for the internal datastructure. Sub-classes may override this use a special
+     * sub-class.
+     */
     protected Entry newEntry() {
         return new Entry();
     }
 
+    /**
+     * Return the index of the first flushed message.
+     */
     protected final int flushed() {
         return flushed;
     }
 
+    /**
+     * Return the index of the first unflushed messages.
+     */
     protected final int unflushed() {
         return unflushed;
     }
@@ -478,10 +549,18 @@ public class ChannelOutboundBuffer {
             return msg;
         }
 
+        /**
+         * Return {@code true} if the {@link Entry} was cancelled via {@link #cancel()} before,
+         * {@code false} otherwise.
+         */
         public boolean isCancelled() {
             return cancelled;
         }
 
+        /**
+         * Cancel this {@link Entry} and the message that was hold by this {@link Entry}. This method returns the
+         * number of pending bytes for the cancelled message.
+         */
         public int cancel() {
             if (!cancelled) {
                 cancelled = true;
@@ -499,6 +578,9 @@ public class ChannelOutboundBuffer {
             return 0;
         }
 
+        /**
+         * Clear this {@link Entry} and so release all resources.
+         */
         public void clear() {
             msg = null;
             promise = null;
