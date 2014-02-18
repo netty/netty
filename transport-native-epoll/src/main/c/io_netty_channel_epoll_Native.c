@@ -43,6 +43,9 @@ jfieldID fileChannelFieldId = NULL;
 jfieldID transferedFieldId = NULL;
 jfieldID fdFieldId = NULL;
 jfieldID fileDescriptorFieldId = NULL;
+jfieldID readerIndexFieldId = NULL;
+jfieldID writerIndexFieldId = NULL;
+jfieldID memoryAddressFieldId = NULL;
 jmethodID inetSocketAddrMethodId = NULL;
 jclass runtimeExceptionClass = NULL;
 jclass ioExceptionClass = NULL;
@@ -322,6 +325,27 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
             return JNI_ERR;
         }
         socketType = socket_type();
+
+        jclass addressEntryClass = (*env)->FindClass(env, "io/netty/channel/epoll/EpollChannelOutboundBuffer$AddressEntry");
+        if (addressEntryClass == NULL) {
+             // pending exception...
+            return JNI_ERR;
+        }
+        readerIndexFieldId = (*env)->GetFieldID(env, addressEntryClass, "readerIndex", "I");
+        if (readerIndexFieldId == NULL) {
+            // pending exception...
+            return JNI_ERR;
+        }
+        writerIndexFieldId = (*env)->GetFieldID(env, addressEntryClass, "writerIndex", "I");
+        if (writerIndexFieldId == NULL) {
+            // pending exception...
+            return JNI_ERR;
+        }
+        memoryAddressFieldId = (*env)->GetFieldID(env, addressEntryClass, "memoryAddress", "J");
+        if (memoryAddressFieldId == NULL) {
+            // pending exception...
+            return JNI_ERR;
+        }
         return JNI_VERSION_1_6;
     }
 }
@@ -510,6 +534,29 @@ void incrementPosition(JNIEnv * env, jobject bufObj, int written) {
     }
 }
 
+jlong writev0(JNIEnv * env, jclass clazz, jint fd, struct iovec iov[], jint length) {
+    ssize_t res;
+    int err;
+    do {
+        res = writev(fd, iov, length);
+        // keep on writing if it was interrupted
+    } while(res == -1 && ((err = errno) == EINTR));
+
+    if (res < 0) {
+        if (err == EAGAIN || err == EWOULDBLOCK) {
+            // network stack is saturated we will try again later
+            return 0;
+        }
+        if (err == EBADF) {
+            throwClosedChannelException(env);
+            return -1;
+        }
+        throwIOException(env, exceptionMessage("Error while writev(...): ", err));
+        return -1;
+    }
+    return (jlong) res;
+}
+
 JNIEXPORT jlong JNICALL Java_io_netty_channel_epoll_Native_writev(JNIEnv * env, jclass clazz, jint fd, jobjectArray buffers, jint offset, jint length) {
     struct iovec iov[length];
     int i;
@@ -541,32 +588,15 @@ JNIEXPORT jlong JNICALL Java_io_netty_channel_epoll_Native_writev(JNIEnv * env, 
         iov[iovidx].iov_len = (size_t) (limit - pos);
         iovidx++;
     }
-
-    ssize_t res;
-    int err;
-    do {
-        res = writev(fd, iov, length);
-        // keep on writing if it was interrupted
-    } while(res == -1 && ((err = errno) == EINTR));
-
-    if (res < 0) {
-        if (err == EAGAIN || err == EWOULDBLOCK) {
-            // network stack is saturated we will try again later
-            return 0;
-        }
-        if (err == EBADF) {
-            throwClosedChannelException(env);
-            return -1;
-        }
-        throwIOException(env, exceptionMessage("Error while writev(...): ", err));
-        return -1;
+    jlong res = writev0(env, clazz, fd, iov, length);
+    if (res <= 0) {
+        return res;
     }
 
     // update the position of the written buffers
     int written = res;
     int a;
     for (a = 0; a < length; a++) {
-        int pos;
         int len = iov[a].iov_len;
         jobject bufObj = (*env)->GetObjectArrayElement(env, buffers, a + offset);
         if (len >= written) {
@@ -578,6 +608,27 @@ JNIEXPORT jlong JNICALL Java_io_netty_channel_epoll_Native_writev(JNIEnv * env, 
         }
     }
     return res;
+}
+
+JNIEXPORT jlong JNICALL Java_io_netty_channel_epoll_Native_writevAddresses(JNIEnv * env, jclass clazz, jint fd, jobjectArray addresses, jint offset, jint length) {
+    struct iovec iov[length];
+    int i;
+    int iovidx = 0;
+    for (i = offset; i < length; i++) {
+        jobject addressEntry = (*env)->GetObjectArrayElement(env, addresses, i);
+        jint readerIndex = (*env)->GetIntField(env, addressEntry, readerIndexFieldId);
+        jint writerIndex = (*env)->GetIntField(env, addressEntry, writerIndexFieldId);
+        void* memoryAddress = (void*) (*env)->GetLongField(env, addressEntry, memoryAddressFieldId);
+
+        iov[iovidx].iov_base = memoryAddress + readerIndex;
+        iov[iovidx].iov_len = (size_t) (writerIndex - readerIndex);
+        iovidx++;
+    }
+
+    jlong res = writev0(env, clazz, fd, iov, length);
+    if (res <= 0) {
+        return res;
+    }
 }
 
 jint read0(JNIEnv * env, jclass clazz, jint fd, void *buffer, jint pos, jint limit) {

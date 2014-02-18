@@ -382,7 +382,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      */
     protected abstract class AbstractUnsafe implements Unsafe {
 
-        private ChannelOutboundBuffer outboundBuffer = ChannelOutboundBuffer.newInstance(AbstractChannel.this);
+        private ChannelOutboundBuffer outboundBuffer = newOutboundBuffer();
+
         private boolean inFlush0;
 
         @Override
@@ -767,6 +768,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 logger.warn("Can't invoke task later as EventLoop rejected it", e);
             }
         }
+    }
+
+    /**
+     * Create a new {@link ChannelOutboundBuffer} which holds the pending messages for this {@link AbstractChannel}.
+     */
+    protected ChannelOutboundBuffer newOutboundBuffer() {
+        return ChannelOutboundBuffer.newInstance(this);
     }
 
     /**
