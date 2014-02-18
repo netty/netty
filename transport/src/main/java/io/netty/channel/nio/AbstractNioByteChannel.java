@@ -194,17 +194,6 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                     continue;
                 }
 
-                if (!buf.isDirect()) {
-                    ByteBufAllocator alloc = alloc();
-                    if (alloc.isDirectBufferPooled()) {
-                        // Non-direct buffers are copied into JDK's own internal direct buffer on every I/O.
-                        // We can do a better job by using our pooled allocator. If the current allocator does not
-                        // pool a direct buffer, we rely on JDK's direct buffer pool.
-                        buf = alloc.directBuffer(readableBytes).writeBytes(buf);
-                        in.current(buf);
-                    }
-                }
-
                 boolean setOpWrite = false;
                 boolean done = false;
                 long flushedAmount = 0;

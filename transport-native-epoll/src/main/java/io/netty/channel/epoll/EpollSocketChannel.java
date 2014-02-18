@@ -29,9 +29,12 @@ import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.epoll.EpollChannelOutboundBuffer.AddressEntry;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioSocketChannelOutboundBuffer;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
@@ -133,10 +136,49 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
     }
 
     private void writeBytesMultiple(
-            ChannelOutboundBuffer in, int msgCount, ByteBuffer[] nioBuffers) throws IOException {
+            EpollChannelOutboundBuffer in, int msgCount, AddressEntry[] nioBuffers) throws IOException {
+
+        int nioBufferCnt = in.addressCount();
+        long expectedWrittenBytes = in.addressSize();
+
+        long localWrittenBytes = Native.writevAddresses(fd, nioBuffers, 0, nioBufferCnt);
+
+        if (localWrittenBytes < expectedWrittenBytes) {
+            setEpollOut();
+
+            // Did not write all buffers completely.
+            // Release the fully written buffers and update the indexes of the partially written buffer.
+            for (int i = msgCount; i > 0; i --) {
+                final ByteBuf buf = (ByteBuf) in.current();
+                final int readerIndex = buf.readerIndex();
+                final int readableBytes = buf.writerIndex() - readerIndex;
+
+                if (readableBytes < localWrittenBytes) {
+                    in.remove();
+                    localWrittenBytes -= readableBytes;
+                } else if (readableBytes > localWrittenBytes) {
+
+                    buf.readerIndex(readerIndex + (int) localWrittenBytes);
+                    in.progress(localWrittenBytes);
+                    break;
+                } else { // readable == writtenBytes
+                    in.remove();
+                    break;
+                }
+            }
+        } else {
+            // Release all buffers
+            for (int i = msgCount; i > 0; i --) {
+                in.remove();
+            }
+        }
+    }
+
+    private void writeBytesMultiple(
+            NioSocketChannelOutboundBuffer in, int msgCount, ByteBuffer[] nioBuffers) throws IOException {
 
         int nioBufferCnt = in.nioBufferCount();
-        long expectedWrittenBytes = in.nioBufferSize();
+        long expectedWrittenBytes = in.nioBufferCount();
 
         long localWrittenBytes = Native.writev(fd, nioBuffers, 0, nioBufferCnt);
 
@@ -196,15 +238,30 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
             // * the outbound buffer contains more than one messages and
             // * they are all buffers rather than a file region.
             if (msgCount > 1) {
-                // Ensure the pending writes are made of ByteBufs only.
-                ByteBuffer[] nioBuffers = in.nioBuffers();
-                if (nioBuffers != null) {
-                    writeBytesMultiple(in, msgCount, nioBuffers);
+                if (PlatformDependent.hasUnsafe()) {
+                    EpollChannelOutboundBuffer epollIn = (EpollChannelOutboundBuffer) in;
+                    // Ensure the pending writes are made of memoryaddresses only.
+                    AddressEntry[] addresses = epollIn.memoryAddresses();
+                    if (addresses != null) {
+                        writeBytesMultiple(epollIn, msgCount, addresses);
 
-                    // We do not break the loop here even if the outbound buffer was flushed completely,
-                    // because a user might have triggered another write and flush when we notify his or her
-                    // listeners.
-                    continue;
+                        // We do not break the loop here even if the outbound buffer was flushed completely,
+                        // because a user might have triggered another write and flush when we notify his or her
+                        // listeners.
+                        continue;
+                    }
+                } else {
+                    NioSocketChannelOutboundBuffer nioIn = (NioSocketChannelOutboundBuffer) in;
+                    // Ensure the pending writes are made of memoryaddresses only.
+                    ByteBuffer[] buffers = nioIn.nioBuffers();
+                    if (buffers != null) {
+                        writeBytesMultiple(nioIn, msgCount, buffers);
+
+                        // We do not break the loop here even if the outbound buffer was flushed completely,
+                        // because a user might have triggered another write and flush when we notify his or her
+                        // listeners.
+                        continue;
+                    }
                 }
             }
 
@@ -299,24 +356,6 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
 
     final class EpollSocketUnsafe extends AbstractEpollUnsafe {
         private RecvByteBufAllocator.Handle allocHandle;
-
-        @Override
-        public void write(Object msg, ChannelPromise promise) {
-            if (msg instanceof ByteBuf) {
-                ByteBuf buf = (ByteBuf) msg;
-                if (!buf.isDirect()) {
-                    // We can only handle direct buffers so we need to copy if a non direct is
-                    // passed to write.
-                    int readable = buf.readableBytes();
-                    ByteBuf dst = alloc().directBuffer(readable);
-                    dst.writeBytes(buf, buf.readerIndex(), readable);
-
-                    buf.release();
-                    msg = dst;
-                }
-            }
-            super.write(msg, promise);
-        }
 
         private void closeOnRead(ChannelPipeline pipeline) {
             inputShutdown = true;
@@ -607,6 +646,16 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
                     });
                 }
             }
+        }
+    }
+
+    @Override
+    protected ChannelOutboundBuffer newOutboundBuffer() {
+        if (PlatformDependent.hasUnsafe()) {
+            // this means we will be able to access the memory addresses directly
+            return EpollChannelOutboundBuffer.newInstance(this);
+        } else {
+            return NioSocketChannelOutboundBuffer.newInstance(this);
         }
     }
 }

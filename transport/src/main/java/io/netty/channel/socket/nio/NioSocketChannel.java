@@ -231,16 +231,16 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
                 super.doWrite(in);
                 return;
             }
-
+            NioSocketChannelOutboundBuffer nioIn = (NioSocketChannelOutboundBuffer) in;
             // Ensure the pending writes are made of ByteBufs only.
-            ByteBuffer[] nioBuffers = in.nioBuffers();
+            ByteBuffer[] nioBuffers = nioIn.nioBuffers();
             if (nioBuffers == null) {
                 super.doWrite(in);
                 return;
             }
 
-            int nioBufferCnt = in.nioBufferCount();
-            long expectedWrittenBytes = in.nioBufferSize();
+            int nioBufferCnt = nioIn.nioBufferCount();
+            long expectedWrittenBytes = nioIn.nioBufferSize();
 
             final SocketChannel ch = javaChannel();
             long writtenBytes = 0;
@@ -263,7 +263,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
             if (done) {
                 // Release all buffers
                 for (int i = msgCount; i > 0; i --) {
-                    in.remove();
+                    nioIn.remove();
                 }
 
                 // Finish the write loop if no new messages were flushed by in.remove().
@@ -281,16 +281,16 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
                     final int readableBytes = buf.writerIndex() - readerIndex;
 
                     if (readableBytes < writtenBytes) {
-                        in.progress(readableBytes);
-                        in.remove();
+                        nioIn.progress(readableBytes);
+                        nioIn.remove();
                         writtenBytes -= readableBytes;
                     } else if (readableBytes > writtenBytes) {
                         buf.readerIndex(readerIndex + (int) writtenBytes);
-                        in.progress(writtenBytes);
+                        nioIn.progress(writtenBytes);
                         break;
                     } else { // readableBytes == writtenBytes
-                        in.progress(readableBytes);
-                        in.remove();
+                        nioIn.progress(readableBytes);
+                        nioIn.remove();
                         break;
                     }
                 }
@@ -299,5 +299,10 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
                 break;
             }
         }
+    }
+
+    @Override
+    protected ChannelOutboundBuffer newOutboundBuffer() {
+        return NioSocketChannelOutboundBuffer.newInstance(this);
     }
 }

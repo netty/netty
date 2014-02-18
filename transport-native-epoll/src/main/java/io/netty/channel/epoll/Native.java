@@ -17,6 +17,7 @@ package io.netty.channel.epoll;
 
 
 import io.netty.channel.DefaultFileRegion;
+import io.netty.channel.epoll.EpollChannelOutboundBuffer.AddressEntry;
 import io.netty.util.internal.NativeLibraryLoader;
 
 import java.io.IOException;
@@ -65,6 +66,9 @@ final class Native {
     public static native int writeAddress(int fd, long address, int pos, int limit) throws IOException;
 
     public static native long writev(int fd, ByteBuffer[] buffers, int offset, int length) throws IOException;
+    public static native long writevAddresses(int fd, AddressEntry[] addresses, int offset, int length)
+            throws IOException;
+
     public static native int read(int fd, ByteBuffer buf, int pos, int limit) throws IOException;
     public static native int readAddress(int fd, long address, int pos, int limit) throws IOException;
 
