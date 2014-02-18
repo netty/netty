@@ -13,10 +13,12 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel;
+package io.netty.channel.socket.nio;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
+import io.netty.channel.AbstractChannel;
+import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import org.junit.Test;
@@ -26,12 +28,12 @@ import java.nio.ByteBuffer;
 import static io.netty.buffer.Unpooled.*;
 import static org.junit.Assert.*;
 
-public class ChannelOutboundBufferTest {
+public class NioSocketChannelOutboundBufferTest {
 
     @Test
     public void testEmptyNioBuffers() {
         AbstractChannel channel = new EmbeddedChannel();
-        ChannelOutboundBuffer buffer = ChannelOutboundBuffer.newInstance(channel);
+        NioSocketChannelOutboundBuffer buffer = NioSocketChannelOutboundBuffer.newInstance(channel);
         assertEquals(0, buffer.nioBufferCount());
         ByteBuffer[] buffers = buffer.nioBuffers();
         assertEquals(32, buffers.length);
@@ -45,7 +47,7 @@ public class ChannelOutboundBufferTest {
     @Test
     public void testNioBuffersSingleBacked() {
         AbstractChannel channel = new EmbeddedChannel();
-        ChannelOutboundBuffer buffer = ChannelOutboundBuffer.newInstance(channel);
+        NioSocketChannelOutboundBuffer buffer = NioSocketChannelOutboundBuffer.newInstance(channel);
         assertEquals(0, buffer.nioBufferCount());
         ByteBuffer[] buffers = buffer.nioBuffers();
         assertEquals(32, buffers.length);
@@ -79,7 +81,7 @@ public class ChannelOutboundBufferTest {
     @Test
     public void testNioBuffersExpand() {
         AbstractChannel channel = new EmbeddedChannel();
-        ChannelOutboundBuffer buffer = ChannelOutboundBuffer.newInstance(channel);
+        NioSocketChannelOutboundBuffer buffer = NioSocketChannelOutboundBuffer.newInstance(channel);
 
         ByteBuf buf = directBuffer().writeBytes("buf1".getBytes(CharsetUtil.US_ASCII));
         for (int i = 0; i < 64; i++) {
@@ -104,7 +106,7 @@ public class ChannelOutboundBufferTest {
     @Test
     public void testNioBuffersExpand2() {
         AbstractChannel channel = new EmbeddedChannel();
-        ChannelOutboundBuffer buffer = ChannelOutboundBuffer.newInstance(channel);
+        NioSocketChannelOutboundBuffer buffer = NioSocketChannelOutboundBuffer.newInstance(channel);
 
         CompositeByteBuf comp = compositeBuffer(256);
         ByteBuf buf = directBuffer().writeBytes("buf1".getBytes(CharsetUtil.US_ASCII));

@@ -55,6 +55,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                 key.interestOps(interestOps & ~readInterestOp);
             }
         }
+
         @Override
         public void read() {
             assert eventLoop().inEventLoop();
