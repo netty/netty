@@ -149,10 +149,6 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
 
     @Test(timeout = 15000)
     public void testSpdyEcho() throws Throwable {
-        version = SpdyVersion.SPDY_3;
-        logger.info("Testing against SPDY v3");
-        run();
-
         version = SpdyVersion.SPDY_3_1;
         logger.info("Testing against SPDY v3.1");
         run();
@@ -162,7 +158,6 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
 
         ByteBuf frames;
         switch (version) {
-        case SPDY_3:
         case SPDY_3_1:
             frames = createFrames(3);
             break;
