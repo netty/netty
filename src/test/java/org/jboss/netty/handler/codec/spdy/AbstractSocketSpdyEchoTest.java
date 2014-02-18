@@ -147,7 +147,6 @@ public abstract class AbstractSocketSpdyEchoTest {
 
     @Test
     public void testSpdyEcho() throws Throwable {
-        testSpdyEcho(SpdyVersion.SPDY_3);
         testSpdyEcho(SpdyVersion.SPDY_3_1);
     }
 

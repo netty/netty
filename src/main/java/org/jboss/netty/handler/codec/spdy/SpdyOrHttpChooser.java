@@ -38,7 +38,6 @@ public abstract class SpdyOrHttpChooser implements ChannelUpstreamHandler {
 
     public enum SelectedProtocol {
         SpdyVersion3_1,
-        SpdyVersion3,
         HttpVersion1_1,
         HttpVersion1_0,
         None
@@ -73,9 +72,6 @@ public abstract class SpdyOrHttpChooser implements ChannelUpstreamHandler {
         case None:
             // Not done with choosing the protocol, so just return here for now,
             return;
-        case SpdyVersion3:
-            addSpdyHandlers(ctx, SpdyVersion.SPDY_3);
-            break;
         case SpdyVersion3_1:
             addSpdyHandlers(ctx, SpdyVersion.SPDY_3_1);
             break;
@@ -126,10 +122,9 @@ public abstract class SpdyOrHttpChooser implements ChannelUpstreamHandler {
 
     /**
      * Create the {@link ChannelUpstreamHandler} that is responsible for handling the {@link HttpRequest}'s
-     * when the {@link SelectedProtocol} was {@link SelectedProtocol#SpdyVersion3} or
-     * {@link SelectedProtocol#SpdyVersion3_1}.
+     * when the {@link SelectedProtocol} was {@link SelectedProtocol#SpdyVersion3_1}.
      *
-     * Bye default this method will just delecate to {@link #createHttpRequestHandlerForHttp()}, but
+     * By default this method will just delecate to {@link #createHttpRequestHandlerForHttp()}, but
      * sub-classes may override this to change the behaviour.
      */
     protected ChannelUpstreamHandler createHttpRequestHandlerForSpdy() {

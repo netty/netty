@@ -200,37 +200,31 @@ public class SpdySessionHandlerTest {
 
     @Test
     public void testSpdyClientSessionHandler() {
-        testSpdySessionHandler(SpdyVersion.SPDY_3, false);
         testSpdySessionHandler(SpdyVersion.SPDY_3_1, false);
     }
 
     @Test
     public void testSpdyClientSessionHandlerPing() {
-        testSpdySessionHandlerPing(SpdyVersion.SPDY_3, false);
         testSpdySessionHandlerPing(SpdyVersion.SPDY_3_1, false);
     }
 
     @Test
     public void testSpdyClientSessionHandlerGoAway() {
-        testSpdySessionHandlerGoAway(SpdyVersion.SPDY_3, false);
         testSpdySessionHandlerGoAway(SpdyVersion.SPDY_3_1, false);
     }
 
     @Test
     public void testSpdyServerSessionHandler() {
-        testSpdySessionHandler(SpdyVersion.SPDY_3, true);
         testSpdySessionHandler(SpdyVersion.SPDY_3_1, true);
     }
 
     @Test
     public void testSpdyServerSessionHandlerPing() {
-        testSpdySessionHandlerPing(SpdyVersion.SPDY_3, true);
         testSpdySessionHandlerPing(SpdyVersion.SPDY_3_1, true);
     }
 
     @Test
     public void testSpdyServerSessionHandlerGoAway() {
-        testSpdySessionHandlerGoAway(SpdyVersion.SPDY_3, true);
         testSpdySessionHandlerGoAway(SpdyVersion.SPDY_3_1, true);
     }
 
