@@ -50,7 +50,6 @@ public class SpdyFrameDecoderTest {
 
     @Test
     public void testTooLargeHeaderNameOnSynStreamRequest() throws Exception {
-        testTooLargeHeaderNameOnSynStreamRequest(SpdyVersion.SPDY_3);
         testTooLargeHeaderNameOnSynStreamRequest(SpdyVersion.SPDY_3_1);
     }
 
@@ -108,7 +107,6 @@ public class SpdyFrameDecoderTest {
 
     @Test
     public void testLargeHeaderNameOnSynStreamRequest() throws Exception {
-        testLargeHeaderNameOnSynStreamRequest(SpdyVersion.SPDY_3);
         testLargeHeaderNameOnSynStreamRequest(SpdyVersion.SPDY_3_1);
     }
 
