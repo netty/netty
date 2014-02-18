@@ -16,17 +16,14 @@
 package org.jboss.netty.handler.codec.spdy;
 
 public enum SpdyVersion {
-    SPDY_3   (3, 0, false),
-    SPDY_3_1 (3, 1, true);
+    SPDY_3_1 (3, 1);
 
     private final int version;
     private final int minorVerison;
-    private final boolean sessionFlowControl;
 
-    private SpdyVersion(int version, int minorVersion, boolean sessionFlowControl) {
+    private SpdyVersion(int version, int minorVersion) {
         this.version = version;
         this.minorVerison = minorVersion;
-        this.sessionFlowControl = sessionFlowControl;
     }
 
     int getVersion() {
@@ -35,9 +32,5 @@ public enum SpdyVersion {
 
     int getMinorVersion() {
         return minorVerison;
-    }
-
-    boolean useSessionFlowControl() {
-        return sessionFlowControl;
     }
 }
