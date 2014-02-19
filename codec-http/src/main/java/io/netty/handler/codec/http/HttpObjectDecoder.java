@@ -455,7 +455,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
 
     private HttpContent invalidChunk(Exception cause) {
         checkpoint(State.BAD_MESSAGE);
-        HttpContent chunk = new DefaultHttpContent(Unpooled.EMPTY_BUFFER);
+        HttpContent chunk = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER);
         chunk.setDecoderResult(DecoderResult.failure(cause));
         return chunk;
     }
