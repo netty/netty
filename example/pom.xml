@@ -21,7 +21,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.0.16.Final-SNAPSHOT</version>
+    <version>4.0.16.Final</version>
   </parent>
 
   <artifactId>netty-example</artifactId>
@@ -136,7 +136,7 @@
               <arguments>
                 <argument>-Xbootclasspath/p:${project.build.directory}/npn/npn-boot-${npn.version}.jar</argument>
                 <argument>-classpath</argument>
-                <classpath/>
+                <classpath />
                 <argument>io.netty.example.spdy.server.SpdyServer</argument>
               </arguments>
               <classpathScope>runtime</classpathScope>
@@ -157,7 +157,7 @@
               <arguments>
                 <argument>-Xbootclasspath/p:${project.build.directory}/npn/npn-boot-${npn.version}.jar</argument>
                 <argument>-classpath</argument>
-                <classpath/>
+                <classpath />
                 <argument>io.netty.example.spdy.client.SpdyClient</argument>
               </arguments>
               <classpathScope>runtime</classpathScope>
