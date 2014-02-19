@@ -27,7 +27,8 @@ import org.junit.Test;
 
 import java.util.List;
 
-import static io.netty.util.ReferenceCountUtil.releaseLater;
+import static io.netty.util.ReferenceCountUtil.*;
+import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
 
 public class HttpObjectAggregatorTest {
@@ -185,5 +186,23 @@ public class HttpObjectAggregatorTest {
         assertEquals(aggratedMessage.headers().get("X-Test"), Boolean.TRUE.toString());
         checkContentBuffer(aggratedMessage);
         assertNull(embedder.readInbound());
+    }
+
+    @Test
+    public void testBadRequest() {
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpRequestDecoder(), new HttpObjectAggregator(1024 * 1024));
+        ch.writeInbound(Unpooled.copiedBuffer("GET / HTTP/1.0 with extra\r\n", CharsetUtil.UTF_8));
+        assertThat(ch.readInbound(), is(instanceOf(FullHttpRequest.class)));
+        assertNull(ch.readInbound());
+        ch.finish();
+    }
+
+    @Test
+    public void testBadResponse() throws Exception {
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder(), new HttpObjectAggregator(1024 * 1024));
+        ch.writeInbound(Unpooled.copiedBuffer("HTTP/1.0 BAD_CODE Bad Server\r\n", CharsetUtil.UTF_8));
+        assertThat(ch.readInbound(), is(instanceOf(FullHttpResponse.class)));
+        assertNull(ch.readInbound());
+        ch.finish();
     }
 }

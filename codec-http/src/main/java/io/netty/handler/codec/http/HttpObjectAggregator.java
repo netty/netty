@@ -25,7 +25,6 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.TooLongFrameException;
-import io.netty.util.ReferenceCountUtil;
 
 import java.util.List;
 
@@ -136,8 +135,8 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
 
             if (!m.getDecoderResult().isSuccess()) {
                 removeTransferEncodingChunked(m);
+                out.add(toFullMessage(m));
                 this.currentMessage = null;
-                out.add(ReferenceCountUtil.retain(m));
                 return;
             }
             if (msg instanceof HttpRequest) {
@@ -246,5 +245,26 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
             currentMessage.release();
             currentMessage = null;
         }
+    }
+
+    private static FullHttpMessage toFullMessage(HttpMessage msg) {
+        if (msg instanceof FullHttpMessage) {
+            return ((FullHttpMessage) msg).retain();
+        }
+
+        FullHttpMessage fullMsg;
+        if (msg instanceof HttpRequest) {
+            HttpRequest req = (HttpRequest) msg;
+            fullMsg = new DefaultFullHttpRequest(
+                    req.getProtocolVersion(), req.getMethod(), req.getUri(), Unpooled.EMPTY_BUFFER, false);
+        } else if (msg instanceof HttpResponse) {
+            HttpResponse res = (HttpResponse) msg;
+            fullMsg = new DefaultFullHttpResponse(
+                    res.getProtocolVersion(), res.getStatus(), Unpooled.EMPTY_BUFFER, false);
+        } else {
+            throw new IllegalStateException();
+        }
+
+        return fullMsg;
     }
 }
