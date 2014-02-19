@@ -101,7 +101,7 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
 
     private void clearEpollOut() {
         if ((flags & Native.EPOLLOUT) != 0) {
-            flags = ~Native.EPOLLOUT;
+            flags &= ~Native.EPOLLOUT;
             ((EpollEventLoop) eventLoop()).modify(this);
         }
     }
@@ -528,7 +528,11 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
 
         @Override
         void epollRdHupReady() {
-            closeOnRead(pipeline());
+            if (isActive()) {
+                epollInReady();
+            } else {
+                closeOnRead(pipeline());
+            }
         }
 
         @Override

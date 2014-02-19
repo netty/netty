@@ -65,6 +65,10 @@ abstract class AbstractEpollChannel extends AbstractChannel {
     @Override
     protected void doClose() throws Exception {
         active = false;
+
+        // deregister from epoll now
+        doDeregister();
+
         int fd = this.fd;
         this.fd = -1;
         Native.close(fd);
@@ -110,7 +114,7 @@ abstract class AbstractEpollChannel extends AbstractChannel {
 
     protected final void clearEpollIn() {
         if ((flags & readFlag) != 0) {
-            flags = ~readFlag;
+            flags &= ~readFlag;
             ((EpollEventLoop) eventLoop()).modify(this);
         }
     }
