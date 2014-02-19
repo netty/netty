@@ -94,7 +94,7 @@ public class HttpInvalidMessageTest {
         HttpRequest req = ch.readInbound();
         assertTrue(req.getDecoderResult().isSuccess());
 
-        HttpContent chunk = ch.readInbound();
+        LastHttpContent chunk = ch.readInbound();
         DecoderResult dr = chunk.getDecoderResult();
         assertFalse(dr.isSuccess());
         assertTrue(dr.isFailure());
