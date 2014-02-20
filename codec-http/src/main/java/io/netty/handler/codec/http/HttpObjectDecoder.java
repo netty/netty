@@ -115,6 +115,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
     private long chunkSize;
     private int headerSize;
     private long contentLength = Long.MIN_VALUE;
+    private volatile boolean resetRequested;
 
     /**
      * The internal state of {@link HttpObjectDecoder}.
@@ -184,6 +185,10 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf buffer, List<Object> out) throws Exception {
+        if (resetRequested) {
+            resetNow();
+        }
+
         switch (state()) {
         case SKIP_CONTROL_CHARS: {
             try {
@@ -223,14 +228,14 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
                 // No content is expected.
                 out.add(message);
                 out.add(LastHttpContent.EMPTY_LAST_CONTENT);
-                reset();
+                resetNow();
                 return;
             }
             long contentLength = contentLength();
             if (contentLength == 0 || contentLength == -1 && isDecodingRequest()) {
                 out.add(message);
                 out.add(LastHttpContent.EMPTY_LAST_CONTENT);
-                reset();
+                resetNow();
                 return;
             }
 
@@ -259,12 +264,12 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
                 } else {
                     // End of connection.
                     out.add(new DefaultLastHttpContent(content, validateHeaders));
-                    reset();
+                    resetNow();
                 }
             } else if (!buffer.isReadable()) {
                 // End of connection.
                 out.add(LastHttpContent.EMPTY_LAST_CONTENT);
-                reset();
+                resetNow();
             }
             return;
         }
@@ -291,7 +296,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
             if (chunkSize == 0) {
                 // Read all content.
                 out.add(new DefaultLastHttpContent(content, validateHeaders));
-                reset();
+                resetNow();
             } else {
                 out.add(new DefaultHttpContent(content));
             }
@@ -350,7 +355,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         case READ_CHUNK_FOOTER: try {
             LastHttpContent trailer = readTrailingHeaders(buffer);
             out.add(trailer);
-            reset();
+            resetNow();
             return;
         } catch (Exception e) {
             out.add(invalidChunk(e));
@@ -393,7 +398,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
                 // connection, so it is perfectly fine.
                 prematureClosure = contentLength() > 0;
             }
-            reset();
+            resetNow();
 
             if (!prematureClosure) {
                 out.add(LastHttpContent.EMPTY_LAST_CONTENT);
@@ -424,7 +429,15 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         return false;
     }
 
-    private void reset() {
+    /**
+     * Resets the state of the decoder so that it is ready to decode a new message.
+     * This method is useful for handling a rejected request with {@code Expect: 100-continue} header.
+     */
+    public void reset() {
+        resetRequested = true;
+    }
+
+    private void resetNow() {
         HttpMessage message = this.message;
         this.message = null;
         contentLength = Long.MIN_VALUE;
