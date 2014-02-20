@@ -20,6 +20,7 @@ import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.util.CharsetUtil;
 import org.easymock.EasyMock;
 import org.junit.Test;
@@ -38,8 +39,7 @@ public class HttpObjectAggregatorTest {
         HttpObjectAggregator aggr = new HttpObjectAggregator(1024 * 1024);
         EmbeddedChannel embedder = new EmbeddedChannel(aggr);
 
-        HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1,
-                HttpMethod.GET, "http://localhost");
+        HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost");
         HttpHeaders.setHeader(message, "X-Test", true);
         HttpContent chunk1 = new DefaultHttpContent(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII));
         HttpContent chunk2 = new DefaultHttpContent(Unpooled.copiedBuffer("test2", CharsetUtil.US_ASCII));
@@ -77,8 +77,7 @@ public class HttpObjectAggregatorTest {
     public void testAggregateWithTrailer() {
         HttpObjectAggregator aggr = new HttpObjectAggregator(1024 * 1024);
         EmbeddedChannel embedder = new EmbeddedChannel(aggr);
-        HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1,
-                HttpMethod.GET, "http://localhost");
+        HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost");
         HttpHeaders.setHeader(message, "X-Test", true);
         HttpHeaders.setTransferEncodingChunked(message);
         HttpContent chunk1 = new DefaultHttpContent(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII));
@@ -105,11 +104,9 @@ public class HttpObjectAggregatorTest {
     }
 
     @Test
-    public void testOversizedMessage() {
-        HttpObjectAggregator aggr = new HttpObjectAggregator(4);
-        EmbeddedChannel embedder = new EmbeddedChannel(aggr);
-        HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1,
-                HttpMethod.GET, "http://localhost");
+    public void testOversizedRequest() {
+        EmbeddedChannel embedder = new EmbeddedChannel(new HttpObjectAggregator(4));
+        HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost");
         HttpContent chunk1 = releaseLater(new DefaultHttpContent(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII)));
         HttpContent chunk2 = releaseLater(new DefaultHttpContent(Unpooled.copiedBuffer("test2", CharsetUtil.US_ASCII)));
         HttpContent chunk3 = LastHttpContent.EMPTY_LAST_CONTENT;
@@ -120,6 +117,7 @@ public class HttpObjectAggregatorTest {
 
         FullHttpResponse response = embedder.readOutbound();
         assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.getStatus());
+        assertEquals("0", response.headers().get(Names.CONTENT_LENGTH));
         assertFalse(embedder.isOpen());
 
         try {
@@ -133,32 +131,26 @@ public class HttpObjectAggregatorTest {
     }
 
     @Test
-    public void testOversizedMessageWithoutKeepAlive() {
+    public void testOversizedRequestWithoutKeepAlive() {
         // send a HTTP/1.0 request with no keep-alive header
-        HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_0,
-                HttpMethod.GET, "http://localhost");
+        HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.GET, "http://localhost");
         HttpHeaders.setContentLength(message, 5);
-
         checkOversizedMessage(message);
     }
 
     @Test
-    public void testOversizedMessageWithContentLength() {
-        HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1,
-                HttpMethod.GET, "http://localhost");
+    public void testOversizedRequestWithContentLength() {
+        HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost");
         HttpHeaders.setContentLength(message, 5);
-
         checkOversizedMessage(message);
     }
 
     @Test
     public void testOversizedMessageWith100Continue() {
-        HttpObjectAggregator aggr = new HttpObjectAggregator(8);
-        EmbeddedChannel embedder = new EmbeddedChannel(aggr);
+        EmbeddedChannel embedder = new EmbeddedChannel(new HttpObjectAggregator(8));
 
         // send an oversized request with 100 continue
-        HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1,
-                HttpMethod.GET, "http://localhost");
+        HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost");
         HttpHeaders.set100ContinueExpected(message);
         HttpHeaders.setContentLength(message, 16);
 
@@ -166,43 +158,46 @@ public class HttpObjectAggregatorTest {
         HttpContent chunk2 = releaseLater(new DefaultHttpContent(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII)));
         HttpContent chunk3 = LastHttpContent.EMPTY_LAST_CONTENT;
 
+        // Send a request with 100-continue + large Content-Length header value.
         assertFalse(embedder.writeInbound(message));
 
-        try {
-            embedder.writeInbound(chunk1);
-            fail();
-        } catch (AssertionError e) {
-            assertTrue(embedder.isWritable());
-        }
-
-        HttpResponse response = embedder.readOutbound();
+        // The agregator should respond with '413 Request Entity Too Large.'
+        FullHttpResponse response = embedder.readOutbound();
         assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.getStatus());
+        assertEquals("0", response.headers().get(Names.CONTENT_LENGTH));
+
+        // An ill-behaving client could continue to send data without a respect, and such data should be discarded.
+        assertFalse(embedder.writeInbound(chunk1));
+
+        // The aggregator should not close the connection because keep-alive is on.
         assertTrue(embedder.isOpen());
 
-        // now send a valid request
-        HttpRequest message2 = new DefaultHttpRequest(HttpVersion.HTTP_1_1,
-                HttpMethod.GET, "http://localhost");
+        // Now send a valid request.
+        HttpRequest message2 = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost");
 
         assertFalse(embedder.writeInbound(message2));
         assertFalse(embedder.writeInbound(chunk2));
         assertTrue(embedder.writeInbound(chunk3));
 
-        FullHttpRequest aggratedMessage = embedder.readInbound();
-        assertNotNull(aggratedMessage);
+        FullHttpRequest fullMsg = embedder.readInbound();
+        assertNotNull(fullMsg);
 
-        assertEquals(chunk2.content().readableBytes() + chunk3.content().readableBytes(),
-                HttpHeaders.getContentLength(aggratedMessage));
+        assertEquals(
+                chunk2.content().readableBytes() + chunk3.content().readableBytes(),
+                HttpHeaders.getContentLength(fullMsg));
+
+        assertEquals(HttpHeaders.getContentLength(fullMsg), fullMsg.content().readableBytes());
 
         assertFalse(embedder.finish());
     }
 
     private static void checkOversizedMessage(HttpMessage message) {
-        HttpObjectAggregator aggr = new HttpObjectAggregator(4);
-        EmbeddedChannel embedder = new EmbeddedChannel(aggr);
+        EmbeddedChannel embedder = new EmbeddedChannel(new HttpObjectAggregator(4));
 
         assertFalse(embedder.writeInbound(message));
         HttpResponse response = embedder.readOutbound();
         assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.getStatus());
+        assertEquals("0", response.headers().get(Names.CONTENT_LENGTH));
         assertFalse(embedder.isOpen());
 
         HttpContent chunk1 = releaseLater(new DefaultHttpContent(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII)));
@@ -241,8 +236,7 @@ public class HttpObjectAggregatorTest {
         HttpObjectAggregator aggr = new HttpObjectAggregator(1024 * 1024);
         EmbeddedChannel embedder = new EmbeddedChannel(aggr);
 
-        HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1,
-                HttpMethod.GET, "http://localhost");
+        HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost");
         HttpHeaders.setHeader(message, "X-Test", true);
         HttpHeaders.setHeader(message, "Transfer-Encoding", "Chunked");
         HttpContent chunk1 = new DefaultHttpContent(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII));
