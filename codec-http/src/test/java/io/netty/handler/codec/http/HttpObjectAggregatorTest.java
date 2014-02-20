@@ -230,15 +230,6 @@ public class HttpObjectAggregatorTest {
         assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.getStatus());
         assertEquals("0", response.headers().get(Names.CONTENT_LENGTH));
         assertFalse(embedder.isOpen());
-
-        HttpContent chunk1 = new DefaultHttpContent(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII));
-
-        try {
-            embedder.writeInbound(chunk1);
-            fail();
-        } catch (Exception e) {
-            assertTrue(e instanceof ClosedChannelException);
-        }
         assertFalse(embedder.finish());
     }
 
