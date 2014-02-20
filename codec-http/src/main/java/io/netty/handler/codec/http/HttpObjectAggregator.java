@@ -51,11 +51,7 @@ import static io.netty.handler.codec.http.HttpHeaders.*;
  */
 public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
 
-    /**
-     * @deprecated Will be removed in the next minor version bump.
-     */
-    @Deprecated
-    public static final int DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS = 1024; // TODO: Make it private in the next bump.
+    private static final int DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS = 1024;
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(HttpObjectAggregator.class);
 
