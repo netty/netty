@@ -46,7 +46,7 @@ public class SpdyServerProvider implements ServerProvider {
 
     @Override
     public List<String> protocols() {
-        return Arrays.asList("spdy/3.1", "spdy/3", "http/1.1");
+        return Arrays.asList("spdy/3.1", "http/1.1");
     }
 
     @Override

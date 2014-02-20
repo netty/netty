@@ -282,48 +282,36 @@ public class SpdySessionHandlerTest {
 
     @Test
     public void testSpdyClientSessionHandler() {
-        logger.info("Running: testSpdyClientSessionHandler v3");
-        testSpdySessionHandler(SpdyVersion.SPDY_3, false);
         logger.info("Running: testSpdyClientSessionHandler v3.1");
         testSpdySessionHandler(SpdyVersion.SPDY_3_1, false);
     }
 
     @Test
     public void testSpdyClientSessionHandlerPing() {
-        logger.info("Running: testSpdyClientSessionHandlerPing v3");
-        testSpdySessionHandlerPing(SpdyVersion.SPDY_3, false);
         logger.info("Running: testSpdyClientSessionHandlerPing v3.1");
         testSpdySessionHandlerPing(SpdyVersion.SPDY_3_1, false);
     }
 
     @Test
     public void testSpdyClientSessionHandlerGoAway() {
-        logger.info("Running: testSpdyClientSessionHandlerGoAway v3");
-        testSpdySessionHandlerGoAway(SpdyVersion.SPDY_3, false);
         logger.info("Running: testSpdyClientSessionHandlerGoAway v3.1");
         testSpdySessionHandlerGoAway(SpdyVersion.SPDY_3_1, false);
     }
 
     @Test
     public void testSpdyServerSessionHandler() {
-        logger.info("Running: testSpdyServerSessionHandler v3");
-        testSpdySessionHandler(SpdyVersion.SPDY_3, true);
         logger.info("Running: testSpdyServerSessionHandler v3.1");
         testSpdySessionHandler(SpdyVersion.SPDY_3_1, true);
     }
 
     @Test
     public void testSpdyServerSessionHandlerPing() {
-        logger.info("Running: testSpdyServerSessionHandlerPing v3");
-        testSpdySessionHandlerPing(SpdyVersion.SPDY_3, true);
         logger.info("Running: testSpdyServerSessionHandlerPing v3.1");
         testSpdySessionHandlerPing(SpdyVersion.SPDY_3_1, true);
     }
 
     @Test
     public void testSpdyServerSessionHandlerGoAway() {
-        logger.info("Running: testSpdyServerSessionHandlerGoAway v3");
-        testSpdySessionHandlerGoAway(SpdyVersion.SPDY_3, true);
         logger.info("Running: testSpdyServerSessionHandlerGoAway v3.1");
         testSpdySessionHandlerGoAway(SpdyVersion.SPDY_3_1, true);
     }
