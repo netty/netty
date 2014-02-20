@@ -238,7 +238,17 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
         try {
             handleOversizedMessage(ctx, msg);
         } finally {
+            // Release the message in case it is a full one.
             ReferenceCountUtil.release(msg);
+
+            if (msg instanceof HttpRequest) {
+                // If an oversized request was handled properly and the connection is still alive
+                // (i.e. rejected 100-continue). the decoder should prepare to handle a new message.
+                HttpObjectDecoder decoder = ctx.pipeline().get(HttpObjectDecoder.class);
+                if (decoder != null) {
+                    decoder.reset();
+                }
+            }
         }
     }
 
