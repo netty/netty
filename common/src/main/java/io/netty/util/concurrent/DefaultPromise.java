@@ -567,9 +567,9 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
                         final GenericFutureListener<? extends Future<V>> l =
                                 (GenericFutureListener<? extends Future<V>>) listeners;
                         notifyListener0(this, l);
-                        this.listeners = null;
                     }
                 } finally {
+                    this.listeners = null;
                     LISTENER_STACK_DEPTH.set(stackDepth);
                 }
                 return;
