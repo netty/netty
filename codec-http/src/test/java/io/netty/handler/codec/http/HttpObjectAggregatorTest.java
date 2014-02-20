@@ -189,6 +189,7 @@ public class HttpObjectAggregatorTest {
 
         assertEquals(HttpHeaders.getContentLength(fullMsg), fullMsg.content().readableBytes());
 
+        fullMsg.release();
         assertFalse(embedder.finish());
     }
 
