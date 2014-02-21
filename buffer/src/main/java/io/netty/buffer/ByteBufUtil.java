@@ -48,7 +48,7 @@ public final class ByteBufUtil {
             HEXDUMP_TABLE[(i << 1) + 1] = DIGITS[i       & 0x0F];
         }
 
-        String allocType = SystemPropertyUtil.get("io.netty.allocator.type", "pooled").toLowerCase(Locale.US).trim();
+        String allocType = SystemPropertyUtil.get("io.netty.allocator.type", "unpooled").toLowerCase(Locale.US).trim();
         ByteBufAllocator alloc;
         if ("unpooled".equals(allocType)) {
             alloc = UnpooledByteBufAllocator.DEFAULT;
@@ -347,7 +347,7 @@ public final class ByteBufUtil {
             if (!cr.isUnderflow()) {
                 cr.throwException();
             }
-            dst.writerIndex(dst.writerIndex() + (dstBuf.position() - pos));
+            dst.writerIndex(dst.writerIndex() + dstBuf.position() - pos);
             release = false;
             return dst;
         } catch (CharacterCodingException x) {
