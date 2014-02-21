@@ -41,7 +41,7 @@ import java.io.File;
 public class AbstractMicrobenchmark {
 
     protected static final int DEFAULT_WARMUP_ITERATIONS = 10;
-    protected static final int DEFAULT_MEASURE_ITERATIONS = 1;
+    protected static final int DEFAULT_MEASURE_ITERATIONS = 10;
     protected static final int DEFAULT_FORKS = 2;
 
     protected static final String[] JVM_ARGS = new String[] {
