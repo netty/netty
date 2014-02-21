@@ -16,12 +16,15 @@
 package io.netty.handler.codec.memcache.binary;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.memcache.AbstractMemcacheObjectDecoder;
 import io.netty.handler.codec.memcache.DefaultLastMemcacheContent;
 import io.netty.handler.codec.memcache.DefaultMemcacheContent;
 import io.netty.handler.codec.memcache.LastMemcacheContent;
 import io.netty.handler.codec.memcache.MemcacheContent;
+import io.netty.handler.codec.memcache.MemcacheMessage;
 import io.netty.util.CharsetUtil;
 
 import java.util.List;
@@ -71,7 +74,7 @@ public abstract class AbstractBinaryMemcacheDecoder
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         switch (state) {
-            case READ_HEADER:
+            case READ_HEADER: try {
                 if (in.readableBytes() < 24) {
                     return;
                 }
@@ -79,7 +82,11 @@ public abstract class AbstractBinaryMemcacheDecoder
 
                 currentHeader = decodeHeader(in);
                 state = State.READ_EXTRAS;
-            case READ_EXTRAS:
+            } catch (Exception e) {
+                out.add(invalidMessage(e));
+                return;
+            }
+            case READ_EXTRAS: try {
                 byte extrasLength = currentHeader.getExtrasLength();
                 if (extrasLength > 0) {
                     if (in.readableBytes() < extrasLength) {
@@ -90,7 +97,11 @@ public abstract class AbstractBinaryMemcacheDecoder
                 }
 
                 state = State.READ_KEY;
-            case READ_KEY:
+            } catch (Exception e) {
+                out.add(invalidMessage(e));
+                return;
+            }
+            case READ_KEY: try {
                 short keyLength = currentHeader.getKeyLength();
                 if (keyLength > 0) {
                     if (in.readableBytes() < keyLength) {
@@ -103,8 +114,12 @@ public abstract class AbstractBinaryMemcacheDecoder
 
                 out.add(buildMessage(currentHeader, currentExtras, currentKey));
                 currentExtras = null;
-                state = State.READ_VALUE;
-            case READ_VALUE:
+                state = State.READ_CONTENT;
+            } catch (Exception e) {
+                out.add(invalidMessage(e));
+                return;
+            }
+            case READ_CONTENT: try {
                 int valueLength = currentHeader.getTotalBodyLength()
                     - currentHeader.getKeyLength()
                     - currentHeader.getExtrasLength();
@@ -142,9 +157,42 @@ public abstract class AbstractBinaryMemcacheDecoder
 
                 state = State.READ_HEADER;
                 return;
+            } catch (Exception e) {
+                out.add(invalidChunk(e));
+                return;
+            }
+            case BAD_MESSAGE:
+                in.skipBytes(actualReadableBytes());
+                return;
             default:
                 throw new Error("Unknown state reached: " + state);
         }
+    }
+
+    /**
+     * Helper method to create a message indicating a invalid decoding result.
+     *
+     * @param cause the cause of the decoding failure.
+     * @return a valid message indicating failure.
+     */
+    private M invalidMessage(Exception cause) {
+        state = State.BAD_MESSAGE;
+        M message = buildInvalidMessage();
+        message.setDecoderResult(DecoderResult.failure(cause));
+        return message;
+    }
+
+    /**
+     * Helper method to create a content chunk indicating a invalid decoding result.
+     *
+     * @param cause the cause of the decoding failure.
+     * @return a valid content chunk indicating failure.
+     */
+    private MemcacheContent invalidChunk(Exception cause) {
+        state = State.BAD_MESSAGE;
+        MemcacheContent chunk = new DefaultLastMemcacheContent(Unpooled.EMPTY_BUFFER);
+        chunk.setDecoderResult(DecoderResult.failure(cause));
+        return chunk;
     }
 
     /**
@@ -193,6 +241,13 @@ public abstract class AbstractBinaryMemcacheDecoder
     protected abstract M buildMessage(H header, ByteBuf extras, String key);
 
     /**
+     * Helper method to create a upstream message when the incoming parsing did fail.
+     *
+     * @return a message indicating a decoding failure.
+     */
+    protected abstract M buildInvalidMessage();
+
+    /**
      * Contains all states this decoder can possibly be in.
      * <p/>
      * Note that most of the states can be optional, the only one required is reading
@@ -218,7 +273,12 @@ public abstract class AbstractBinaryMemcacheDecoder
         /**
          * Currently reading the value chunks (optional).
          */
-        READ_VALUE
+        READ_CONTENT,
+
+        /**
+         * Something went wrong while decoding the message or chunks.
+         */
+        BAD_MESSAGE
     }
 
 }
