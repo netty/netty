@@ -47,9 +47,22 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
         run();
     }
 
+    @Test
+    public void testFixedLengthEchoNotAutoRead() throws Throwable {
+        run();
+    }
+
     public void testFixedLengthEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        final EchoHandler sh = new EchoHandler();
-        final EchoHandler ch = new EchoHandler();
+        testFixedLengthEcho(sb, cb, true);
+    }
+
+    public void testFixedLengthEchoNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        testFixedLengthEcho(sb, cb, false);
+    }
+
+    private static void testFixedLengthEcho(ServerBootstrap sb, Bootstrap cb, boolean autoRead) throws Throwable {
+        final EchoHandler sh = new EchoHandler(autoRead);
+        final EchoHandler ch = new EchoHandler(autoRead);
 
         sb.childHandler(new ChannelInitializer<SocketChannel>() {
             @Override
@@ -124,9 +137,14 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
     }
 
     private static class EchoHandler extends SimpleChannelInboundHandler<ByteBuf> {
+        private final boolean autoRead;
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;
+
+        EchoHandler(boolean autoRead) {
+            this.autoRead = autoRead;
+        }
 
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
@@ -154,7 +172,13 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
 
         @Override
         public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-            ctx.flush();
+            try {
+                ctx.flush();
+            } finally {
+                if (!autoRead) {
+                    ctx.read();
+                }
+            }
         }
 
         @Override

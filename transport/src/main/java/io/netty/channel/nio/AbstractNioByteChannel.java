@@ -83,12 +83,18 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             }
         }
 
-        private void handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf, Throwable cause, boolean close) {
+        private void handleReadException(ChannelPipeline pipeline, ChannelConfig config,
+                                         ByteBuf byteBuf, Throwable cause, boolean close) {
             if (byteBuf != null) {
                 if (byteBuf.isReadable()) {
                     pipeline.fireChannelRead(byteBuf);
                 } else {
                     byteBuf.release();
+                }
+                // This must be triggered before the channelReadComplete() to give the user the chance
+                // to call Channel.read() again.
+                if (!config.isAutoRead()) {
+                    removeReadOp();
                 }
             }
             pipeline.fireChannelReadComplete();
@@ -148,6 +154,12 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                         break;
                     }
                 } while (++ messages < maxMessagesPerRead);
+                // This must be triggered before the channelReadComplete() to give the user the chance
+                // to call Channel.read() again.
+                // See https://github.com/netty/netty/issues/2254
+                if (!config.isAutoRead()) {
+                    removeReadOp();
+                }
 
                 pipeline.fireChannelReadComplete();
                 allocHandle.record(totalReadAmount);
@@ -157,11 +169,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                     close = false;
                 }
             } catch (Throwable t) {
-                handleReadException(pipeline, byteBuf, t, close);
-            } finally {
-                if (!config.isAutoRead()) {
-                    removeReadOp();
-                }
+                handleReadException(pipeline, config, byteBuf, t, close);
             }
         }
     }
