@@ -87,6 +87,7 @@ public final class EpollServerSocketChannel extends AbstractEpollChannel impleme
     }
 
     final class EpollServerSocketUnsafe extends AbstractEpollUnsafe {
+
         @Override
         public void connect(SocketAddress socketAddress, SocketAddress socketAddress2, ChannelPromise channelPromise) {
             // Connect not supported by ServerChannel implementations
@@ -99,35 +100,41 @@ public final class EpollServerSocketChannel extends AbstractEpollChannel impleme
             final ChannelPipeline pipeline = pipeline();
             Throwable exception = null;
             try {
-                for (;;) {
-                    int socketFd = Native.accept(fd);
-                    if (socketFd == -1) {
-                        // this means everything was handled for now
-                        break;
+                try {
+                    for (;;) {
+                        int socketFd = Native.accept(fd);
+                        if (socketFd == -1) {
+                            // this means everything was handled for now
+                            break;
+                        }
+                        try {
+                            readPending = false;
+                            pipeline.fireChannelRead(new EpollSocketChannel(EpollServerSocketChannel.this,
+                                    childEventLoopGroup().next(), socketFd));
+                        } catch (Throwable t) {
+                            // keep on reading as we use epoll ET and need to consume everything from the socket
+                            pipeline.fireChannelReadComplete();
+                            pipeline.fireExceptionCaught(t);
+                        }
                     }
-                    try {
-                        pipeline.fireChannelRead(new EpollSocketChannel(EpollServerSocketChannel.this,
-                                childEventLoopGroup().next(), socketFd));
-                    } catch (Throwable t) {
-                        // keep on reading as we use epoll ET and need to consume everything from the socket
-                        pipeline.fireChannelReadComplete();
-                        pipeline.fireExceptionCaught(t);
-                    }
+                } catch (Throwable t) {
+                    exception = t;
                 }
+                pipeline.fireChannelReadComplete();
 
-            } catch (Throwable t) {
-                exception = t;
-            }
-            // This must be triggered before the channelReadComplete() to give the user the chance
-            // to call Channel.read() again.
-            // See https://github.com/netty/netty/issues/2254
-            if (!config().isAutoRead()) {
-                clearEpollIn();
-            }
-            pipeline.fireChannelReadComplete();
-
-            if (exception != null) {
-                pipeline.fireExceptionCaught(exception);
+                if (exception != null) {
+                    pipeline.fireExceptionCaught(exception);
+                }
+            } finally {
+                // Check if there is a readPending which was not processed yet.
+                // This could be for two reasons:
+                // * The user called Channel.read() or ChannelHandlerContext.read() in channelRead(...) method
+                // * The user called Channel.read() or ChannelHandlerContext.read() in channelReadComplete(...) method
+                //
+                // See https://github.com/netty/netty/issues/2254
+                if (config.isAutoRead() && !readPending) {
+                    clearEpollIn();
+                }
             }
         }
     }

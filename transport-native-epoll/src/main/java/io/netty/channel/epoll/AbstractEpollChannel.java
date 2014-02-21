@@ -129,6 +129,7 @@ abstract class AbstractEpollChannel extends AbstractChannel {
     protected abstract AbstractEpollUnsafe newUnsafe();
 
     protected abstract class AbstractEpollUnsafe extends AbstractUnsafe {
+        protected boolean readPending;
 
         /**
          * Called once EPOLLIN event is ready to be processed
@@ -140,6 +141,13 @@ abstract class AbstractEpollChannel extends AbstractChannel {
          */
         void epollRdHupReady() {
             // NOOP
+        }
+
+        @Override
+        public void beginRead() {
+            // Channel.read() or ChannelHandlerContext.read() was called
+            readPending = true;
+            super.beginRead();
         }
 
         @Override

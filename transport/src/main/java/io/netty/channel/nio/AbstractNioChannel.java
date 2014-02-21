@@ -148,6 +148,30 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
     protected abstract class AbstractNioUnsafe extends AbstractUnsafe implements NioUnsafe {
 
+        protected boolean readPending;
+
+        protected final void removeReadOp() {
+            SelectionKey key = selectionKey();
+            // Check first if the key is still valid as it may be canceled as part of the deregistration
+            // from the EventLoop
+            // See https://github.com/netty/netty/issues/2104
+            if (!key.isValid()) {
+                return;
+            }
+            int interestOps = key.interestOps();
+            if ((interestOps & readInterestOp) != 0) {
+                // only remove readInterestOp if needed
+                key.interestOps(interestOps & ~readInterestOp);
+            }
+        }
+
+        @Override
+        public void beginRead() {
+            // Channel.read() or ChannelHandlerContext.read() was called
+            readPending = true;
+            super.beginRead();
+        }
+
         @Override
         public SelectableChannel ch() {
             return javaChannel();
