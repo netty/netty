@@ -373,6 +373,7 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
         private boolean handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf, Throwable cause, boolean close) {
             if (byteBuf != null) {
                 if (byteBuf.isReadable()) {
+                    readPending = false;
                     pipeline.fireChannelRead(byteBuf);
                 } else {
                     byteBuf.release();
@@ -602,6 +603,7 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
                         close = localReadAmount < 0;
                         break;
                     }
+                    readPending = false;
                     pipeline.fireChannelRead(byteBuf);
                     byteBuf = null;
 
@@ -620,13 +622,6 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
                         break;
                     }
                 }
-                // This must be triggered before the channelReadComplete() to give the user the chance
-                // to call Channel.read() again.
-                // See https://github.com/netty/netty/issues/2254
-                if (!config.isAutoRead()) {
-                    clearEpollIn();
-                }
-
                 pipeline.fireChannelReadComplete();
                 allocHandle.record(totalReadAmount);
 
@@ -645,6 +640,16 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
                             epollInReady();
                         }
                     });
+                }
+            } finally {
+                // Check if there is a readPending which was not processed yet.
+                // This could be for two reasons:
+                // * The user called Channel.read() or ChannelHandlerContext.read() in channelRead(...) method
+                // * The user called Channel.read() or ChannelHandlerContext.read() in channelReadComplete(...) method
+                //
+                // See https://github.com/netty/netty/issues/2254
+                if (config.isAutoRead() && !readPending) {
+                    clearEpollIn();
                 }
             }
         }
