@@ -56,8 +56,21 @@ public class SocketObjectEchoTest extends AbstractSocketTest {
     }
 
     public void testObjectEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        final EchoHandler sh = new EchoHandler();
-        final EchoHandler ch = new EchoHandler();
+        testObjectEcho(sb, cb, true);
+    }
+
+    @Test
+    public void testObjectEchoNotAutoRead() throws Throwable {
+        run();
+    }
+
+    public void testObjectEchoNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        testObjectEcho(sb, cb, false);
+    }
+
+    private static void testObjectEcho(ServerBootstrap sb, Bootstrap cb, boolean autoRead) throws Throwable {
+        final EchoHandler sh = new EchoHandler(autoRead);
+        final EchoHandler ch = new EchoHandler(autoRead);
 
         sb.childHandler(new ChannelInitializer<SocketChannel>() {
             @Override
@@ -134,9 +147,14 @@ public class SocketObjectEchoTest extends AbstractSocketTest {
     }
 
     private static class EchoHandler extends ChannelInboundHandlerAdapter {
+        private final boolean autoRead;
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;
+
+        EchoHandler(boolean autoRead) {
+            this.autoRead = autoRead;
+        }
 
         @Override
         public void channelActive(ChannelHandlerContext ctx)
@@ -157,7 +175,13 @@ public class SocketObjectEchoTest extends AbstractSocketTest {
 
         @Override
         public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-            ctx.flush();
+            try {
+                ctx.flush();
+            } finally {
+                if (!autoRead) {
+                    ctx.read();
+                }
+            }
         }
 
         @Override

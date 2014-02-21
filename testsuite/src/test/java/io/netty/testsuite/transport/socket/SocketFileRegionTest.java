@@ -50,19 +50,38 @@ public class SocketFileRegionTest extends AbstractSocketTest {
     }
 
     @Test
+    public void testFileRegionNotAutoRead() throws Throwable {
+        run();
+    }
+
+    @Test
     public void testFileRegionVoidPromise() throws Throwable {
         run();
     }
 
+    @Test
+    public void testFileRegionVoidPromiseNotAutoRead() throws Throwable {
+        run();
+    }
+
     public void testFileRegion(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testFileRegion0(sb, cb, false);
+        testFileRegion0(sb, cb, false, true);
     }
 
     public void testFileRegionVoidPromise(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testFileRegion0(sb, cb, true);
+        testFileRegion0(sb, cb, true, true);
     }
 
-    private static void testFileRegion0(ServerBootstrap sb, Bootstrap cb, boolean voidPromise) throws Throwable {
+    public void testFileRegionNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        testFileRegion0(sb, cb, false, false);
+    }
+
+    public void testFileRegionVoidPromiseNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        testFileRegion0(sb, cb, true, false);
+    }
+
+    private static void testFileRegion0(
+            ServerBootstrap sb, Bootstrap cb, boolean voidPromise, final boolean autoRead) throws Throwable {
         File file = File.createTempFile("netty-", ".tmp");
         file.deleteOnExit();
 
@@ -72,6 +91,13 @@ public class SocketFileRegionTest extends AbstractSocketTest {
 
         ChannelInboundHandler ch = new SimpleChannelInboundHandler<Object>() {
             @Override
+            public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+                if (!autoRead) {
+                    ctx.read();
+                }
+            }
+
+            @Override
             public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
             }
 
@@ -80,7 +106,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
                 ctx.close();
             }
         };
-        TestHandler sh = new TestHandler();
+        TestHandler sh = new TestHandler(autoRead);
 
         sb.childHandler(sh);
         cb.handler(ch);
@@ -120,9 +146,14 @@ public class SocketFileRegionTest extends AbstractSocketTest {
     }
 
     private static class TestHandler extends SimpleChannelInboundHandler<ByteBuf> {
+        private final boolean autoRead;
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;
+
+        TestHandler(boolean autoRead) {
+            this.autoRead = autoRead;
+        }
 
         @Override
         public void channelActive(ChannelHandlerContext ctx)
@@ -140,6 +171,13 @@ public class SocketFileRegionTest extends AbstractSocketTest {
                 assertEquals(data[i + lastIdx], actual[i]);
             }
             counter += actual.length;
+        }
+
+        @Override
+        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+            if (!autoRead) {
+                ctx.read();
+            }
         }
 
         @Override

@@ -580,6 +580,12 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
                         break;
                     }
                 }
+                // This must be triggered before the channelReadComplete() to give the user the chance
+                // to call Channel.read() again.
+                // See https://github.com/netty/netty/issues/2254
+                if (!config.isAutoRead()) {
+                    clearEpollIn();
+                }
 
                 pipeline.fireChannelReadComplete();
                 allocHandle.record(totalReadAmount);
@@ -599,10 +605,6 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
                             epollInReady();
                         }
                     });
-                }
-            } finally {
-                if (!config.isAutoRead()) {
-                    clearEpollIn();
                 }
             }
         }
