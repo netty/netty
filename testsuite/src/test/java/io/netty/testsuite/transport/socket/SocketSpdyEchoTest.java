@@ -145,16 +145,28 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         return frames;
     }
 
-    private SpdyVersion version;
-
     @Test(timeout = 15000)
     public void testSpdyEcho() throws Throwable {
-        version = SpdyVersion.SPDY_3_1;
-        logger.info("Testing against SPDY v3.1");
         run();
     }
 
     public void testSpdyEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        logger.info("Testing against SPDY v3.1");
+        testSpdyEcho(sb, cb, SpdyVersion.SPDY_3_1, true);
+    }
+
+    @Test(timeout = 15000)
+    public void testSpdyEchoNotAutoRead() throws Throwable {
+        run();
+    }
+
+    public void testSpdyEchoNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        logger.info("Testing against SPDY v3.1");
+        testSpdyEcho(sb, cb, SpdyVersion.SPDY_3_1, false);
+    }
+
+    private static void testSpdyEcho(
+            ServerBootstrap sb, Bootstrap cb, final SpdyVersion version, boolean autoRead) throws Throwable {
 
         ByteBuf frames;
         switch (version) {
@@ -165,8 +177,8 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
             throw new IllegalArgumentException("unknown version");
         }
 
-        final SpdyEchoTestServerHandler sh = new SpdyEchoTestServerHandler();
-        final SpdyEchoTestClientHandler ch = new SpdyEchoTestClientHandler(frames.copy());
+        final SpdyEchoTestServerHandler sh = new SpdyEchoTestServerHandler(autoRead);
+        final SpdyEchoTestClientHandler ch = new SpdyEchoTestClientHandler(frames.copy(), autoRead);
 
         sb.childHandler(new ChannelInitializer<SocketChannel>() {
             @Override
@@ -216,7 +228,12 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
     }
 
     private static class SpdyEchoTestServerHandler extends ChannelHandlerAdapter {
+        private final boolean autoRead;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
+
+        SpdyEchoTestServerHandler(boolean autoRead) {
+            this.autoRead = autoRead;
+        }
 
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
@@ -225,7 +242,13 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
 
         @Override
         public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-            ctx.flush();
+            try {
+                ctx.flush();
+            } finally {
+                if (!autoRead) {
+                    ctx.read();
+                }
+            }
         }
 
         @Override
@@ -237,12 +260,14 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
     }
 
     private static class SpdyEchoTestClientHandler extends SimpleChannelInboundHandler<ByteBuf> {
+        private final boolean autoRead;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         final ByteBuf frames;
         volatile int counter;
 
-        SpdyEchoTestClientHandler(ByteBuf frames) {
+        SpdyEchoTestClientHandler(ByteBuf frames, boolean autoRead) {
             this.frames = frames;
+            this.autoRead = autoRead;
         }
 
         @Override
@@ -262,6 +287,13 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             if (exception.compareAndSet(null, cause)) {
                 ctx.close();
+            }
+        }
+
+        @Override
+        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+            if (!autoRead) {
+                ctx.read();
             }
         }
     }

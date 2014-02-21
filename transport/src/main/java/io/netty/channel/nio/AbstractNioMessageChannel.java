@@ -60,60 +60,62 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
             assert eventLoop().inEventLoop();
             final ChannelConfig config = config();
 
+            final int maxMessagesPerRead = config.getMaxMessagesPerRead();
+            final ChannelPipeline pipeline = pipeline();
+            boolean closed = false;
+            Throwable exception = null;
+
             try {
-                final int maxMessagesPerRead = config.getMaxMessagesPerRead();
-                final ChannelPipeline pipeline = pipeline();
-                boolean closed = false;
-                Throwable exception = null;
-                try {
-                    for (;;) {
-                        int localRead = doReadMessages(readBuf);
-                        if (localRead == 0) {
-                            break;
-                        }
-                        if (localRead < 0) {
-                            closed = true;
-                            break;
-                        }
-
-                        // stop reading and remove op
-                        if (!config.isAutoRead()) {
-                            break;
-                        }
-
-                        if (readBuf.size() >= maxMessagesPerRead) {
-                            break;
-                        }
+                for (;;) {
+                    int localRead = doReadMessages(readBuf);
+                    if (localRead == 0) {
+                        break;
                     }
-                } catch (Throwable t) {
-                    exception = t;
-                }
-
-                int size = readBuf.size();
-                for (int i = 0; i < size; i ++) {
-                    pipeline.fireChannelRead(readBuf.get(i));
-                }
-                readBuf.clear();
-                pipeline.fireChannelReadComplete();
-
-                if (exception != null) {
-                    if (exception instanceof IOException) {
-                        // ServerChannel should not be closed even on IOException because it can often continue
-                        // accepting incoming connections. (e.g. too many open files)
-                        closed = !(AbstractNioMessageChannel.this instanceof ServerChannel);
+                    if (localRead < 0) {
+                        closed = true;
+                        break;
                     }
 
-                    pipeline.fireExceptionCaught(exception);
-                }
+                    // stop reading and remove op
+                    if (!config.isAutoRead()) {
+                        break;
+                    }
 
-                if (closed) {
-                    if (isOpen()) {
-                        close(voidPromise());
+                    if (readBuf.size() >= maxMessagesPerRead) {
+                        break;
                     }
                 }
-            } finally {
-                if (!config().isAutoRead()) {
-                    removeReadOp();
+            } catch (Throwable t) {
+                exception = t;
+            }
+
+            int size = readBuf.size();
+            for (int i = 0; i < size; i ++) {
+                pipeline.fireChannelRead(readBuf.get(i));
+            }
+            // This must be triggered before the channelReadComplete() to give the user the chance
+            // to call Channel.read() again.
+            // See https://github.com/netty/netty/issues/2254
+            if (!config.isAutoRead()) {
+                removeReadOp();
+            }
+
+            readBuf.clear();
+            pipeline.fireChannelReadComplete();
+
+            if (exception != null) {
+                if (exception instanceof IOException) {
+                    // ServerChannel should not be closed even on IOException because it can often continue
+                    // accepting incoming connections. (e.g. too many open files)
+                    closed = !(AbstractNioMessageChannel.this instanceof ServerChannel);
+                }
+
+                pipeline.fireExceptionCaught(exception);
+            }
+
+            if (closed) {
+                if (isOpen()) {
+                    close(voidPromise());
                 }
             }
         }

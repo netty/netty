@@ -96,37 +96,38 @@ public final class EpollServerSocketChannel extends AbstractEpollChannel impleme
         @Override
         void epollInReady() {
             assert eventLoop().inEventLoop();
+            final ChannelPipeline pipeline = pipeline();
+            Throwable exception = null;
             try {
-                final ChannelPipeline pipeline = pipeline();
-                Throwable exception = null;
-                try {
-                    for (;;) {
-                        int socketFd = Native.accept(fd);
-                        if (socketFd == -1) {
-                            // this means everything was handled for now
-                            break;
-                        }
-                        try {
-                            pipeline.fireChannelRead(new EpollSocketChannel(EpollServerSocketChannel.this,
-                                    childEventLoopGroup().next(), socketFd));
-                        } catch (Throwable t) {
-                            // keep on reading as we use epoll ET and need to consume everything from the socket
-                            pipeline.fireChannelReadComplete();
-                            pipeline.fireExceptionCaught(t);
-                        }
+                for (;;) {
+                    int socketFd = Native.accept(fd);
+                    if (socketFd == -1) {
+                        // this means everything was handled for now
+                        break;
                     }
-                } catch (Throwable t) {
-                    exception = t;
+                    try {
+                        pipeline.fireChannelRead(new EpollSocketChannel(EpollServerSocketChannel.this,
+                                childEventLoopGroup().next(), socketFd));
+                    } catch (Throwable t) {
+                        // keep on reading as we use epoll ET and need to consume everything from the socket
+                        pipeline.fireChannelReadComplete();
+                        pipeline.fireExceptionCaught(t);
+                    }
                 }
-                pipeline.fireChannelReadComplete();
 
-                if (exception != null) {
-                    pipeline.fireExceptionCaught(exception);
-                }
-            } finally {
-                if (!config().isAutoRead()) {
-                    clearEpollIn();
-                }
+            } catch (Throwable t) {
+                exception = t;
+            }
+            // This must be triggered before the channelReadComplete() to give the user the chance
+            // to call Channel.read() again.
+            // See https://github.com/netty/netty/issues/2254
+            if (!config().isAutoRead()) {
+                clearEpollIn();
+            }
+            pipeline.fireChannelReadComplete();
+
+            if (exception != null) {
+                pipeline.fireExceptionCaught(exception);
             }
         }
     }

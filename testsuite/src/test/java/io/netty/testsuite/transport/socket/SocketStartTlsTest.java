@@ -32,6 +32,7 @@ import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.testsuite.util.BogusSslContextFactory;
+import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.Future;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -64,12 +65,25 @@ public class SocketStartTlsTest extends AbstractSocketTest {
     }
 
     public void testStartTls(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        final EventLoopGroup executor = SocketStartTlsTest.executor;
+        testStartTls(sb, cb, true);
+    }
+
+    @Test(timeout = 30000)
+    public void testStartTlsNotAutoRead() throws Throwable {
+        run();
+    }
+
+    public void testStartTlsNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        testStartTls(sb, cb, false);
+    }
+
+    private void testStartTls(ServerBootstrap sb, Bootstrap cb, boolean autoRead) throws Throwable {
+        final EventExecutorGroup executor = SocketStartTlsTest.executor;
         final SSLEngine sse = BogusSslContextFactory.getServerContext().createSSLEngine();
         final SSLEngine cse = BogusSslContextFactory.getClientContext().createSSLEngine();
 
-        final StartTlsServerHandler sh = new StartTlsServerHandler(sse);
-        final StartTlsClientHandler ch = new StartTlsClientHandler(cse);
+        final StartTlsServerHandler sh = new StartTlsServerHandler(sse, autoRead);
+        final StartTlsClientHandler ch = new StartTlsClientHandler(cse, autoRead);
 
         sb.childHandler(new ChannelInitializer<SocketChannel>() {
             @Override
@@ -144,12 +158,14 @@ public class SocketStartTlsTest extends AbstractSocketTest {
 
     private class StartTlsClientHandler extends SimpleChannelInboundHandler<String> {
         private final SslHandler sslHandler;
+        private final boolean autoRead;
         private Future<Channel> handshakeFuture;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
 
-        StartTlsClientHandler(SSLEngine engine) {
+        StartTlsClientHandler(SSLEngine engine, boolean autoRead) {
             engine.setUseClientMode(true);
             sslHandler = new SslHandler(engine);
+            this.autoRead = autoRead;
         }
 
         @Override
@@ -174,6 +190,13 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         }
 
         @Override
+        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+            if (!autoRead) {
+                ctx.read();
+            }
+        }
+
+        @Override
         public void exceptionCaught(ChannelHandlerContext ctx,
                 Throwable cause) throws Exception {
             if (logger.isWarnEnabled()) {
@@ -187,12 +210,14 @@ public class SocketStartTlsTest extends AbstractSocketTest {
 
     private class StartTlsServerHandler extends SimpleChannelInboundHandler<String> {
         private final SslHandler sslHandler;
+        private final boolean autoRead;
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
 
-        StartTlsServerHandler(SSLEngine engine) {
+        StartTlsServerHandler(SSLEngine engine, boolean autoRead) {
             engine.setUseClientMode(false);
             sslHandler = new SslHandler(engine, true);
+            this.autoRead = autoRead;
         }
 
         @Override
@@ -210,6 +235,13 @@ public class SocketStartTlsTest extends AbstractSocketTest {
 
             assertEquals("EncryptedRequest", msg);
             ctx.writeAndFlush("EncryptedResponse\n");
+        }
+
+        @Override
+        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+            if (!autoRead) {
+                ctx.read();
+            }
         }
 
         @Override

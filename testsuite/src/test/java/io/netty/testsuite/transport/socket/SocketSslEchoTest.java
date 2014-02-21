@@ -81,8 +81,21 @@ public class SocketSslEchoTest extends AbstractSocketTest {
     }
 
     public void testSslEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        final EchoHandler sh = new EchoHandler(true, useCompositeByteBuf);
-        final EchoHandler ch = new EchoHandler(false, useCompositeByteBuf);
+        testSslEcho(sb, cb, true);
+    }
+
+    @Test
+    public void testSslEchoNotAutoRead() throws Throwable {
+        run();
+    }
+
+    public void testSslEchoNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        testSslEcho(sb, cb, false);
+    }
+
+    private void testSslEcho(ServerBootstrap sb, Bootstrap cb, boolean autoRead) throws Throwable {
+        final EchoHandler sh = new EchoHandler(true, useCompositeByteBuf, autoRead);
+        final EchoHandler ch = new EchoHandler(false, useCompositeByteBuf, autoRead);
 
         final SSLEngine sse = BogusSslContextFactory.getServerContext().createSSLEngine();
         final SSLEngine cse = BogusSslContextFactory.getClientContext().createSSLEngine();
@@ -188,10 +201,12 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         volatile int counter;
         private final boolean server;
         private final boolean composite;
+        private final boolean autoRead;
 
-        EchoHandler(boolean server, boolean composite) {
+        EchoHandler(boolean server, boolean composite, boolean autoRead) {
             this.server = server;
             this.composite = composite;
+            this.autoRead = autoRead;
         }
 
         @Override
@@ -223,7 +238,13 @@ public class SocketSslEchoTest extends AbstractSocketTest {
 
         @Override
         public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-            ctx.flush();
+            try {
+                ctx.flush();
+            } finally {
+                if (!autoRead) {
+                    ctx.read();
+                }
+            }
         }
 
         @Override
