@@ -16,8 +16,6 @@
 package io.netty.channel.socket.nio;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ThreadLocalPooledDirectByteBuf;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.util.Recycler;
@@ -58,21 +56,8 @@ final class NioDatagramChannelOutboundBuffer extends ChannelOutboundBuffer {
             DatagramPacket packet = (DatagramPacket) msg;
             ByteBuf content = packet.content();
             if (!content.isDirect() || content.nioBufferCount() != 1) {
-                ByteBufAllocator alloc = channel.alloc();
-                int readable = content.readableBytes();
-                if (alloc.isDirectBufferPooled()) {
-                    ByteBuf direct = alloc.directBuffer(readable);
-                    direct.writeBytes(content, content.readerIndex(), readable);
-                    DatagramPacket newPacket = new DatagramPacket(direct, packet.recipient(), packet.sender());
-                    safeRelease(msg);
-                    return newPacket;
-                } else if (ThreadLocalPooledDirectByteBuf.threadLocalDirectBufferSize > 0) {
-                    ByteBuf direct = ThreadLocalPooledDirectByteBuf.newInstance();
-                    direct.writeBytes(content, content.readerIndex(), readable);
-                    DatagramPacket newPacket = new DatagramPacket(direct, packet.recipient(), packet.sender());
-                    safeRelease(msg);
-                    return newPacket;
-                }
+                ByteBuf direct = copyToDirectByteBuf(content);
+                return new DatagramPacket(direct, packet.recipient(), packet.sender());
             }
         }
         return msg;

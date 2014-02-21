@@ -17,15 +17,19 @@
  * Written by Josh Bloch of Google Inc. and released to the public domain,
  * as explained at http://creativecommons.org/publicdomain/zero/1.0/.
  */
-package io.netty.buffer;
+package io.netty.channel;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.buffer.UnpooledDirectByteBuf;
+import io.netty.buffer.UnpooledUnsafeDirectByteBuf;
 import io.netty.util.Recycler;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-public final class ThreadLocalPooledDirectByteBuf {
+final class ThreadLocalPooledDirectByteBuf {
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(ThreadLocalPooledDirectByteBuf.class);
     public static final int threadLocalDirectBufferSize;

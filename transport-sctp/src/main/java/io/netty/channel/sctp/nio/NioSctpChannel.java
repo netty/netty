@@ -20,8 +20,6 @@ import com.sun.nio.sctp.MessageInfo;
 import com.sun.nio.sctp.NotificationHandler;
 import com.sun.nio.sctp.SctpChannel;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ThreadLocalPooledDirectByteBuf;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
@@ -397,23 +395,8 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
                 SctpMessage message = (SctpMessage) msg;
                 ByteBuf content = message.content();
                 if (!content.isDirect() || content.nioBufferCount() != 1) {
-                    ByteBufAllocator alloc = channel.alloc();
-                    int readable = content.readableBytes();
-                    if (alloc.isDirectBufferPooled()) {
-                        ByteBuf direct = alloc.directBuffer(readable);
-                        direct.writeBytes(content, content.readerIndex(), readable);
-                        SctpMessage newMessage =
-                                new SctpMessage(message.protocolIdentifier(), message.streamIdentifier(), direct);
-                        safeRelease(msg);
-                        return newMessage;
-                    } else if (ThreadLocalPooledDirectByteBuf.threadLocalDirectBufferSize > 0) {
-                        ByteBuf direct = ThreadLocalPooledDirectByteBuf.newInstance();
-                        direct.writeBytes(content, content.readerIndex(), readable);
-                        SctpMessage newMessage =
-                                new SctpMessage(message.protocolIdentifier(), message.streamIdentifier(), direct);
-                        safeRelease(msg);
-                        return newMessage;
-                    }
+                    ByteBuf direct = copyToDirectByteBuf(content);
+                    return new SctpMessage(message.protocolIdentifier(), message.streamIdentifier(), direct);
                 }
             }
             return msg;

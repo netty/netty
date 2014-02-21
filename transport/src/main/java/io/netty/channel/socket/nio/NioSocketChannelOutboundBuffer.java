@@ -20,8 +20,6 @@
 package io.netty.channel.socket.nio;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ThreadLocalPooledDirectByteBuf;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.util.Recycler;
@@ -70,19 +68,7 @@ public final class NioSocketChannelOutboundBuffer extends ChannelOutboundBuffer 
         if (msg instanceof ByteBuf) {
             ByteBuf buf = (ByteBuf) msg;
             if (!buf.isDirect()) {
-                int readableBytes = buf.readableBytes();
-                ByteBufAllocator alloc = channel.alloc();
-                if (alloc.isDirectBufferPooled()) {
-                    ByteBuf directBuf = alloc.directBuffer(readableBytes);
-                    directBuf.writeBytes(buf, buf.readerIndex(), readableBytes);
-                    safeRelease(buf);
-                    return directBuf;
-                } else if (ThreadLocalPooledDirectByteBuf.threadLocalDirectBufferSize > 0) {
-                    ByteBuf directBuf = ThreadLocalPooledDirectByteBuf.newInstance();
-                    directBuf.writeBytes(buf, buf.readerIndex(), readableBytes);
-                    safeRelease(buf);
-                    return directBuf;
-                }
+                return copyToDirectByteBuf(buf);
             }
         }
         return msg;

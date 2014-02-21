@@ -16,8 +16,6 @@
 package io.netty.channel.epoll;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ThreadLocalPooledDirectByteBuf;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.util.Recycler;
 
@@ -63,19 +61,8 @@ final class EpollChannelOutboundBuffer extends ChannelOutboundBuffer {
         if (msg instanceof ByteBuf) {
             ByteBuf buf = (ByteBuf) msg;
             if (!buf.hasMemoryAddress()) {
-                int readableBytes = buf.readableBytes();
-                ByteBufAllocator alloc = channel.alloc();
-                if (alloc.isDirectBufferPooled() || ThreadLocalPooledDirectByteBuf.threadLocalDirectBufferSize <= 0) {
-                    ByteBuf directBuf = alloc.directBuffer(readableBytes);
-                    directBuf.writeBytes(buf, buf.readerIndex(), readableBytes);
-                    safeRelease(buf);
-                    return directBuf;
-                } else {
-                    ByteBuf directBuf = ThreadLocalPooledDirectByteBuf.newInstance();
-                    directBuf.writeBytes(buf, buf.readerIndex(), readableBytes);
-                    safeRelease(buf);
-                    return directBuf;
-                }
+                ByteBuf direct = copyToDirectByteBuf(buf);
+                return direct;
             }
         }
         return msg;

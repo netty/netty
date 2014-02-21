@@ -20,6 +20,7 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.util.Recycler;
@@ -485,6 +486,7 @@ public class ChannelOutboundBuffer {
      * Recycle this {@link ChannelOutboundBuffer}. After this was called it is disallowed to use it with the previous
      * assigned {@link AbstractChannel}.
      */
+    @SuppressWarnings("unchecked")
     public void recycle() {
         if (buffer.length > INITIAL_CAPACITY) {
             Entry[] e = new Entry[INITIAL_CAPACITY];
@@ -534,6 +536,24 @@ public class ChannelOutboundBuffer {
      */
     protected final int unflushed() {
         return unflushed;
+    }
+
+    protected ByteBuf copyToDirectByteBuf(ByteBuf buf) {
+        int readableBytes = buf.readableBytes();
+        ByteBufAllocator alloc = channel.alloc();
+        if (alloc.isDirectBufferPooled()) {
+            ByteBuf directBuf = alloc.directBuffer(readableBytes);
+            directBuf.writeBytes(buf, buf.readerIndex(), readableBytes);
+            safeRelease(buf);
+            return directBuf;
+        }
+        if (ThreadLocalPooledDirectByteBuf.threadLocalDirectBufferSize > 0) {
+            ByteBuf directBuf = ThreadLocalPooledDirectByteBuf.newInstance();
+            directBuf.writeBytes(buf, buf.readerIndex(), readableBytes);
+            safeRelease(buf);
+            return directBuf;
+        }
+        return buf;
     }
 
     protected static class Entry {
