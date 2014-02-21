@@ -339,17 +339,21 @@ public class ChunkedWriteHandler
 
         void fail(Throwable cause) {
             ReferenceCountUtil.release(msg);
-            if (promise != null) {
-                promise.tryFailure(cause);
-            }
+            promise.tryFailure(cause);
         }
 
         void success() {
+            if (promise.isDone()) {
+                // No need to notify the progress or fulfill the promise because it's done already.
+                return;
+            }
+
             if (promise instanceof ChannelProgressivePromise) {
                 // Now we know what the total is.
                 ((ChannelProgressivePromise) promise).tryProgress(progress, progress);
             }
-            promise.setSuccess();
+
+            promise.trySuccess();
         }
 
         void progress(int amount) {
