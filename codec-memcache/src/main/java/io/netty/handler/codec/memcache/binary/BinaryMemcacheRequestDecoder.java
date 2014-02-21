@@ -16,6 +16,7 @@
 package io.netty.handler.codec.memcache.binary;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 
 /**
  * The decoder part which takes care of decoding the request-specific headers.
@@ -51,4 +52,12 @@ public class BinaryMemcacheRequestDecoder
         return new DefaultBinaryMemcacheRequest(header, key, extras);
     }
 
+    @Override
+    protected BinaryMemcacheRequest buildInvalidMessage() {
+        return new DefaultBinaryMemcacheRequest(
+            new DefaultBinaryMemcacheRequestHeader(),
+            "",
+            Unpooled.EMPTY_BUFFER
+        );
+    }
 }

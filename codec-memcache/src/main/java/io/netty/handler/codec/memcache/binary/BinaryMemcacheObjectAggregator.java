@@ -31,7 +31,10 @@ import io.netty.util.ReferenceCountUtil;
 import java.util.List;
 
 /**
- * A memcache object aggregator for the binary protocol.
+ * An object aggregator for the memcache binary protocol.
+ *
+ * It aggregates {@link BinaryMemcacheMessage}s and {@link MemcacheContent} into {@link FullBinaryMemcacheRequest}s
+ * or {@link FullBinaryMemcacheResponse}s.
  */
 public class BinaryMemcacheObjectAggregator extends AbstractMemcacheObjectAggregator {
 
@@ -50,8 +53,8 @@ public class BinaryMemcacheObjectAggregator extends AbstractMemcacheObjectAggreg
             MemcacheMessage m = (MemcacheMessage) msg;
 
             if (!m.getDecoderResult().isSuccess()) {
+                out.add(toFullMessage(m));
                 this.currentMessage = null;
-                out.add(ReferenceCountUtil.retain(m));
                 return;
             }
 
@@ -109,6 +112,36 @@ public class BinaryMemcacheObjectAggregator extends AbstractMemcacheObjectAggreg
         } else {
             throw new Error();
         }
+    }
+
+    /**
+     * Convert a invalid message into a full message.
+     *
+     * This method makes sure that upstream handlers always get a full message returned, even
+     * when invalid chunks are failing.
+     *
+     * @param msg the message to transform.
+     * @return a full message containing parts of the original message.
+     */
+    private static FullMemcacheMessage toFullMessage(final MemcacheMessage msg) {
+        if (msg instanceof FullMemcacheMessage) {
+            return ((FullMemcacheMessage) msg).retain();
+        }
+
+        FullMemcacheMessage fullMsg;
+        if (msg instanceof BinaryMemcacheRequest) {
+            BinaryMemcacheRequest req = (BinaryMemcacheRequest) msg;
+            fullMsg = new DefaultFullBinaryMemcacheRequest(req.getHeader(), req.getKey(), req.getExtras(),
+                Unpooled.EMPTY_BUFFER);
+        } else if (msg instanceof BinaryMemcacheResponse) {
+            BinaryMemcacheResponse res = (BinaryMemcacheResponse) msg;
+            fullMsg = new DefaultFullBinaryMemcacheResponse(res.getHeader(), res.getKey(), res.getExtras(),
+                Unpooled.EMPTY_BUFFER);
+        } else {
+            throw new IllegalStateException();
+        }
+
+        return fullMsg;
     }
 
 }
