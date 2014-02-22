@@ -153,7 +153,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 // * The user called Channel.read() or ChannelHandlerContext.read() in channelReadComplete(...) method
                 //
                 // See https://github.com/netty/netty/issues/2254
-                if (config.isAutoRead() && !readPending) {
+                if (!config.isAutoRead() && !readPending) {
                     removeReadOp();
                 }
             }
