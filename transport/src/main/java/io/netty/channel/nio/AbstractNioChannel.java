@@ -148,6 +148,8 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
     protected abstract class AbstractNioUnsafe extends AbstractUnsafe implements NioUnsafe {
 
+        protected boolean readPending;
+
         protected final void removeReadOp() {
             SelectionKey key = selectionKey();
             // Check first if the key is still valid as it may be canceled as part of the deregistration
@@ -161,6 +163,13 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                 // only remove readInterestOp if needed
                 key.interestOps(interestOps & ~readInterestOp);
             }
+        }
+
+        @Override
+        public void beginRead() {
+            // Channel.read() or ChannelHandlerContext.read() was called
+            readPending = true;
+            super.beginRead();
         }
 
         @Override

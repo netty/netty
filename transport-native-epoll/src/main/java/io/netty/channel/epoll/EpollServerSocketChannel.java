@@ -79,19 +79,11 @@ public final class EpollServerSocketChannel extends AbstractEpollChannel impleme
     }
 
     final class EpollServerSocketUnsafe extends AbstractEpollUnsafe {
-        private boolean readPending;
 
         @Override
         public void connect(SocketAddress socketAddress, SocketAddress socketAddress2, ChannelPromise channelPromise) {
             // Connect not supported by ServerChannel implementations
             channelPromise.setFailure(new UnsupportedOperationException());
-        }
-
-        @Override
-        public void beginRead() {
-            // Channel.read() or ChannelHandlerContext.read() was called
-            readPending = true;
-            super.beginRead();
         }
 
         @Override
@@ -118,12 +110,6 @@ public final class EpollServerSocketChannel extends AbstractEpollChannel impleme
                     }
                 } catch (Throwable t) {
                     exception = t;
-                }
-                // This must be triggered before the channelReadComplete() to give the user the chance
-                // to call Channel.read() again.
-                // See https://github.com/netty/netty/issues/2254
-                if (!config().isAutoRead()) {
-                    clearEpollIn();
                 }
                 pipeline.fireChannelReadComplete();
 

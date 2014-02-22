@@ -47,14 +47,6 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
     private final class NioMessageUnsafe extends AbstractNioUnsafe {
 
         private final List<Object> readBuf = new ArrayList<Object>();
-        private boolean readPending;
-
-        @Override
-        public void beginRead() {
-            // Channel.read() or ChannelHandlerContext.read() was called
-            readPending = true;
-            super.beginRead();
-        }
 
         @Override
         public void read() {

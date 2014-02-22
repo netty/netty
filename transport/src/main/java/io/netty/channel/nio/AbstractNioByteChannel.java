@@ -54,7 +54,6 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
     private final class NioByteUnsafe extends AbstractNioUnsafe {
         private RecvByteBufAllocator.Handle allocHandle;
-        private boolean readPending;
 
         private void closeOnRead(ChannelPipeline pipeline) {
             SelectionKey key = selectionKey();
@@ -84,13 +83,6 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             if (close || cause instanceof IOException) {
                 closeOnRead(pipeline);
             }
-        }
-
-        @Override
-        public void beginRead() {
-            // Channel.read() or ChannelHandlerContext.read() was called
-            readPending = true;
-            super.beginRead();
         }
 
         @Override

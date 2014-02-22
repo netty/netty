@@ -299,7 +299,6 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
 
     final class EpollSocketUnsafe extends AbstractEpollUnsafe {
         private RecvByteBufAllocator.Handle allocHandle;
-        private boolean readPending;
 
         @Override
         public void write(Object msg, ChannelPromise promise) {
@@ -535,13 +534,6 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
             } else {
                 closeOnRead(pipeline());
             }
-        }
-
-        @Override
-        public void beginRead() {
-            // Channel.read() or ChannelHandlerContext.read() was called
-            readPending = true;
-            super.beginRead();
         }
 
         @Override
