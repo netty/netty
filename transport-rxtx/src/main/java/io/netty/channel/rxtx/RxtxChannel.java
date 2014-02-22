@@ -65,7 +65,7 @@ public class RxtxChannel extends OioByteStreamChannel {
         RxtxDeviceAddress remote = (RxtxDeviceAddress) remoteAddress;
         final CommPortIdentifier cpi = CommPortIdentifier.getPortIdentifier(remote.value());
         final CommPort commPort = cpi.open(getClass().getName(), 1000);
-
+        commPort.enableReceiveTimeout(config().getOption(READ_TIMEOUT));
         deviceAddress = remote;
 
         serialPort = (SerialPort) commPort;
