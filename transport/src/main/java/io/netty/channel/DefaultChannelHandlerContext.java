@@ -23,6 +23,7 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ResourceLeakHint;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorGroup;
+import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.StringUtil;
 
 import java.net.SocketAddress;
@@ -158,7 +159,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         if (executor.inEventLoop()) {
             next.invokeChannelRegistered();
         } else {
-            executor.execute(new Runnable() {
+            executor.execute(new OneTimeTask() {
                 @Override
                 public void run() {
                     next.invokeChannelRegistered();
@@ -183,7 +184,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         if (executor.inEventLoop()) {
             next.invokeChannelUnregistered();
         } else {
-            executor.execute(new Runnable() {
+            executor.execute(new OneTimeTask() {
                 @Override
                 public void run() {
                     next.invokeChannelUnregistered();
@@ -209,7 +210,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         if (executor.inEventLoop()) {
             next.invokeChannelActive();
         } else {
-            executor.execute(new Runnable() {
+            executor.execute(new OneTimeTask() {
                 @Override
                 public void run() {
                     next.invokeChannelActive();
@@ -234,7 +235,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         if (executor.inEventLoop()) {
             next.invokeChannelInactive();
         } else {
-            executor.execute(new Runnable() {
+            executor.execute(new OneTimeTask() {
                 @Override
                 public void run() {
                     next.invokeChannelInactive();
@@ -265,7 +266,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
             next.invokeExceptionCaught(cause);
         } else {
             try {
-                executor.execute(new Runnable() {
+                executor.execute(new OneTimeTask() {
                     @Override
                     public void run() {
                         next.invokeExceptionCaught(cause);
@@ -306,7 +307,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         if (executor.inEventLoop()) {
             next.invokeUserEventTriggered(event);
         } else {
-            executor.execute(new Runnable() {
+            executor.execute(new OneTimeTask() {
                 @Override
                 public void run() {
                     next.invokeUserEventTriggered(event);
@@ -336,7 +337,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         if (executor.inEventLoop()) {
             next.invokeChannelRead(msg);
         } else {
-            executor.execute(new Runnable() {
+            executor.execute(new OneTimeTask() {
                 @Override
                 public void run() {
                     next.invokeChannelRead(msg);
@@ -454,7 +455,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         if (executor.inEventLoop()) {
             next.invokeBind(localAddress, promise);
         } else {
-            safeExecute(executor, new Runnable() {
+            safeExecute(executor, new OneTimeTask() {
                 @Override
                 public void run() {
                     next.invokeBind(localAddress, promise);
@@ -492,7 +493,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         if (executor.inEventLoop()) {
             next.invokeConnect(remoteAddress, localAddress, promise);
         } else {
-            safeExecute(executor, new Runnable() {
+            safeExecute(executor, new OneTimeTask() {
                 @Override
                 public void run() {
                     next.invokeConnect(remoteAddress, localAddress, promise);
@@ -526,7 +527,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
                 next.invokeDisconnect(promise);
             }
         } else {
-            safeExecute(executor, new Runnable() {
+            safeExecute(executor, new OneTimeTask() {
                 @Override
                 public void run() {
                     if (!channel().metadata().hasDisconnect()) {
@@ -558,7 +559,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         if (executor.inEventLoop()) {
             next.invokeClose(promise);
         } else {
-            safeExecute(executor, new Runnable() {
+            safeExecute(executor, new OneTimeTask() {
                 @Override
                 public void run() {
                     next.invokeClose(promise);
@@ -586,7 +587,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         if (executor.inEventLoop()) {
             next.invokeDeregister(promise);
         } else {
-            safeExecute(executor, new Runnable() {
+            safeExecute(executor, new OneTimeTask() {
                 @Override
                 public void run() {
                     next.invokeDeregister(promise);
@@ -883,7 +884,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         }
     }
 
-    abstract static class AbstractWriteTask<T extends AbstractWriteTask<T>> implements Runnable {
+    abstract static class AbstractWriteTask<T> extends OneTimeTask {
         private final Recycler.Handle<T> handle;
 
         private DefaultChannelHandlerContext ctx;
