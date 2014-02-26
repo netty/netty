@@ -32,8 +32,10 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
@@ -266,6 +268,10 @@ public final class PlatformDependent {
         return PlatformDependent0.getObject(object, fieldOffset);
     }
 
+    public static Object getObjectVolatile(Object object, long fieldOffset) {
+        return PlatformDependent0.getObjectVolatile(object, fieldOffset);
+    }
+
     public static int getInt(Object object, long fieldOffset) {
         return PlatformDependent0.getInt(object, fieldOffset);
     }
@@ -288,6 +294,10 @@ public final class PlatformDependent {
 
     public static long getLong(long address) {
         return PlatformDependent0.getLong(address);
+    }
+
+    public static void putOrderedObject(Object object, long address, Object value) {
+        PlatformDependent0.putOrderedObject(object, address, value);
     }
 
     public static void putByte(long address, byte value) {
@@ -367,6 +377,18 @@ public final class PlatformDependent {
             }
         }
         return null;
+    }
+
+    /**
+     * Create a new {@link Queue} which is safe to use for multiple producers (different threads) and a single
+     * consumer (one thread!).
+     */
+    public static Queue<Runnable> newMpscQueue() {
+        if (hasUnsafe()) {
+            return new MpscLinkedQueue();
+        } else {
+            return new ConcurrentLinkedQueue<Runnable>();
+        }
     }
 
     private static boolean isAndroid0() {
