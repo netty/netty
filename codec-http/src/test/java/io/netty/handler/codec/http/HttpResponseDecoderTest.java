@@ -509,4 +509,32 @@ public class HttpResponseDecoderTest {
         ch.finish();
         assertThat(ch.readInbound(), is(nullValue()));
     }
+
+
+    /**
+     * Tests if the decoder produces one and only {@link LastHttpContent} when an invalid chunk is received and
+     * the connection is closed.
+     */
+    @Test
+    public void testGarbageChunk() {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder());
+        String responseWithIllegalChunk =
+                "HTTP/1.1 200 OK\r\n" +
+                "Transfer-Encoding: chunked\r\n\r\n" +
+                "NOT_A_CHUNK_LENGTH\r\n";
+
+        channel.writeInbound(Unpooled.copiedBuffer(responseWithIllegalChunk, CharsetUtil.US_ASCII));
+        assertThat(channel.readInbound(), is(instanceOf(HttpResponse.class)));
+
+        // Ensure that the decoder generates the last chunk with correct decoder result.
+        LastHttpContent invalidChunk = channel.readInbound();
+        assertThat(invalidChunk.getDecoderResult().isFailure(), is(true));
+        invalidChunk.release();
+
+        // And no more messages should be produced by the decoder.
+        assertThat(channel.readInbound(), is(nullValue()));
+
+        // .. even after the connection is closed.
+        assertThat(channel.finish(), is(false));
+    }
 }
