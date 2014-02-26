@@ -32,8 +32,10 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
@@ -367,6 +369,14 @@ public final class PlatformDependent {
             }
         }
         return null;
+    }
+
+    public static Queue<Runnable> newNonBlockingEventLoopQueue() {
+        if (hasUnsafe()) {
+            return new ConcurrentSCMPQueue();
+        } else {
+            return new ConcurrentLinkedQueue<Runnable>();
+        }
     }
 
     private static boolean isAndroid0() {
