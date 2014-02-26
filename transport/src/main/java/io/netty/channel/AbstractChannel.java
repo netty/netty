@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -398,7 +399,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 register0(promise);
             } else {
                 try {
-                    eventLoop.execute(new Runnable() {
+                    eventLoop.execute(new OneTimeTask() {
                         @Override
                         public void run() {
                             register0(promise);
@@ -465,7 +466,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return;
             }
             if (!wasActive && isActive()) {
-                invokeLater(new Runnable() {
+                invokeLater(new OneTimeTask() {
                     @Override
                     public void run() {
                         pipeline.fireChannelActive();
@@ -490,7 +491,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return;
             }
             if (wasActive && !isActive()) {
-                invokeLater(new Runnable() {
+                invokeLater(new OneTimeTask() {
                     @Override
                     public void run() {
                         pipeline.fireChannelInactive();
@@ -508,7 +509,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
 
             if (inFlush0) {
-                invokeLater(new Runnable() {
+                invokeLater(new OneTimeTask() {
                     @Override
                     public void run() {
                         close(promise);
@@ -543,7 +544,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             } finally {
 
                 if (wasActive && !isActive()) {
-                    invokeLater(new Runnable() {
+                    invokeLater(new OneTimeTask() {
                         @Override
                         public void run() {
                             pipeline.fireChannelInactive();
@@ -589,7 +590,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             try {
                 doBeginRead();
             } catch (final Exception e) {
-                invokeLater(new Runnable() {
+                invokeLater(new OneTimeTask() {
                     @Override
                     public void run() {
                         pipeline.fireExceptionCaught(e);

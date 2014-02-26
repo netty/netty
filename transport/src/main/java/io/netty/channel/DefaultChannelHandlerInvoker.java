@@ -19,6 +19,7 @@ package io.netty.channel;
 import io.netty.util.Recycler;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.StringUtil;
 
 import java.net.SocketAddress;
@@ -48,7 +49,7 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
         if (executor.inEventLoop()) {
             invokeChannelRegisteredNow(ctx);
         } else {
-            executor.execute(new Runnable() {
+            executor.execute(new OneTimeTask() {
                 @Override
                 public void run() {
                     invokeChannelRegisteredNow(ctx);
@@ -62,7 +63,7 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
         if (executor.inEventLoop()) {
             invokeChannelActiveNow(ctx);
         } else {
-            executor.execute(new Runnable() {
+            executor.execute(new OneTimeTask() {
                 @Override
                 public void run() {
                     invokeChannelActiveNow(ctx);
@@ -76,7 +77,7 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
         if (executor.inEventLoop()) {
             invokeChannelInactiveNow(ctx);
         } else {
-            executor.execute(new Runnable() {
+            executor.execute(new OneTimeTask() {
                 @Override
                 public void run() {
                     invokeChannelInactiveNow(ctx);
@@ -95,7 +96,7 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
             invokeExceptionCaughtNow(ctx, cause);
         } else {
             try {
-                executor.execute(new Runnable() {
+                executor.execute(new OneTimeTask() {
                     @Override
                     public void run() {
                         invokeExceptionCaughtNow(ctx, cause);
@@ -119,7 +120,7 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
         if (executor.inEventLoop()) {
             invokeUserEventTriggeredNow(ctx, event);
         } else {
-            safeExecuteInbound(new Runnable() {
+            safeExecuteInbound(new OneTimeTask() {
                 @Override
                 public void run() {
                     invokeUserEventTriggeredNow(ctx, event);
@@ -137,7 +138,7 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
         if (executor.inEventLoop()) {
             invokeChannelReadNow(ctx, msg);
         } else {
-            safeExecuteInbound(new Runnable() {
+            safeExecuteInbound(new OneTimeTask() {
                 @Override
                 public void run() {
                     invokeChannelReadNow(ctx, msg);
@@ -195,7 +196,7 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
         if (executor.inEventLoop()) {
             invokeBindNow(ctx, localAddress, promise);
         } else {
-            safeExecuteOutbound(new Runnable() {
+            safeExecuteOutbound(new OneTimeTask() {
                 @Override
                 public void run() {
                     invokeBindNow(ctx, localAddress, promise);
@@ -216,7 +217,7 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
         if (executor.inEventLoop()) {
             invokeConnectNow(ctx, remoteAddress, localAddress, promise);
         } else {
-            safeExecuteOutbound(new Runnable() {
+            safeExecuteOutbound(new OneTimeTask() {
                 @Override
                 public void run() {
                     invokeConnectNow(ctx, remoteAddress, localAddress, promise);
@@ -232,7 +233,7 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
         if (executor.inEventLoop()) {
             invokeDisconnectNow(ctx, promise);
         } else {
-            safeExecuteOutbound(new Runnable() {
+            safeExecuteOutbound(new OneTimeTask() {
                 @Override
                 public void run() {
                     invokeDisconnectNow(ctx, promise);
@@ -248,7 +249,7 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
         if (executor.inEventLoop()) {
             invokeCloseNow(ctx, promise);
         } else {
-            safeExecuteOutbound(new Runnable() {
+            safeExecuteOutbound(new OneTimeTask() {
                 @Override
                 public void run() {
                     invokeCloseNow(ctx, promise);
@@ -383,7 +384,7 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
         }
     }
 
-    static final class WriteTask implements SingleThreadEventLoop.NonWakeupRunnable {
+    static final class WriteTask extends OneTimeTask implements SingleThreadEventLoop.NonWakeupRunnable {
         private ChannelHandlerContext ctx;
         private Object msg;
         private ChannelPromise promise;
