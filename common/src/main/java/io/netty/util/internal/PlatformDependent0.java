@@ -185,6 +185,10 @@ final class PlatformDependent0 {
         return UNSAFE.getObject(object, fieldOffset);
     }
 
+    static Object getObjectVolatile(Object object, long fieldOffset) {
+        return UNSAFE.getObjectVolatile(object, fieldOffset);
+    }
+
     static int getInt(Object object, long fieldOffset) {
         return UNSAFE.getInt(object, fieldOffset);
     }
@@ -249,6 +253,10 @@ final class PlatformDependent0 {
                   ((long) getByte(address + 1) & 0xff) <<  8 |
                    (long) getByte(address) & 0xff;
         }
+    }
+
+    static void putOrderedObject(Object object, long address, Object value) {
+        UNSAFE.putOrderedObject(object, address, value);
     }
 
     static void putByte(long address, byte value) {

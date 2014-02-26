@@ -28,6 +28,7 @@ import io.netty.channel.nio.AbstractNioByteChannel;
 import io.netty.channel.socket.DefaultSocketChannelConfig;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannelConfig;
+import io.netty.util.internal.OneTimeTask;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -140,7 +141,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
                 promise.setFailure(t);
             }
         } else {
-            loop.execute(new Runnable() {
+            loop.execute(new OneTimeTask() {
                 @Override
                 public void run() {
                     shutdownOutput(promise);
