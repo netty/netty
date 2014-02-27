@@ -526,7 +526,7 @@ public class HttpResponseDecoderTest {
         assertThat(channel.readInbound(), is(instanceOf(HttpResponse.class)));
 
         // Ensure that the decoder generates the last chunk with correct decoder result.
-        LastHttpContent invalidChunk = channel.readInbound();
+        LastHttpContent invalidChunk = (LastHttpContent) channel.readInbound();
         assertThat(invalidChunk.getDecoderResult().isFailure(), is(true));
         invalidChunk.release();
 
