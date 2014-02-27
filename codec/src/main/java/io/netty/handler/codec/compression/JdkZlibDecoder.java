@@ -35,7 +35,7 @@ public class JdkZlibDecoder extends ZlibDecoder {
     private static final int FCOMMENT = 0x10;
     private static final int FRESERVED = 0xE0;
 
-    private final Inflater inflater;
+    private Inflater inflater;
     private final byte[] dictionary;
 
     // GZIP related
@@ -57,6 +57,8 @@ public class JdkZlibDecoder extends ZlibDecoder {
     private int xlen = -1;
 
     private volatile boolean finished;
+
+    private boolean decideZlibOrNone;
 
     /**
      * Creates a new instance with the default wrapper ({@link ZlibWrapper#ZLIB}).
@@ -100,6 +102,11 @@ public class JdkZlibDecoder extends ZlibDecoder {
                 inflater = new Inflater();
                 crc = null;
                 break;
+            case ZLIB_OR_NONE:
+                // Postpone the decision until decode(...) is called.
+                decideZlibOrNone = true;
+                crc = null;
+                break;
             default:
                 throw new IllegalArgumentException("Only GZIP or ZLIB is supported, but you used " + wrapper);
         }
@@ -121,6 +128,17 @@ public class JdkZlibDecoder extends ZlibDecoder {
 
         if (!in.isReadable()) {
             return;
+        }
+
+        if (decideZlibOrNone) {
+            // First two bytes are needed to decide if it's a ZLIB stream.
+            if (in.readableBytes() < 2) {
+                return;
+            }
+
+            boolean nowrap = !looksLikeZlib(in.getShort(0));
+            inflater = new Inflater(nowrap);
+            decideZlibOrNone = false;
         }
 
         if (crc != null) {
@@ -214,7 +232,9 @@ public class JdkZlibDecoder extends ZlibDecoder {
     @Override
     protected void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
         super.handlerRemoved0(ctx);
-        inflater.end();
+        if (inflater != null) {
+            inflater.end();
+        }
     }
 
     private boolean readGZIPHeader(ByteBuf in) {
@@ -355,5 +375,17 @@ public class JdkZlibDecoder extends ZlibDecoder {
             throw new CompressionException(
                     "CRC value missmatch. Expected: " + crcValue + ", Got: " + readCrc);
         }
+    }
+
+    /*
+     * Returns true if the cmf_flg parameter (think: first two bytes of a zlib stream)
+     * indicates that this is a zlib stream.
+     * <p>
+     * You can lookup the details in the ZLIB RFC:
+     * <a href="http://tools.ietf.org/html/rfc1950#section-2.2">RFC 1950</a>.
+     */
+    private boolean looksLikeZlib(short cmf_flg) {
+        return (cmf_flg & 0x7800) == 0x7800 &&
+                cmf_flg % 31 == 0;
     }
 }
