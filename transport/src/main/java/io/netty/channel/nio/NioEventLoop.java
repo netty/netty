@@ -165,7 +165,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     @Override
     protected Queue<Runnable> newTaskQueue() {
         // This event loop never calls takeTask()
-        return PlatformDependent.newNonBlockingEventLoopQueue();
+        return PlatformDependent.newMpscQueue();
     }
 
     /**

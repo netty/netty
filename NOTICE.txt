@@ -121,7 +121,7 @@ by Google Inc, which can be obtained at:
     * http://code.google.com/p/snappy/
 
 This product contains a modified version of Roland Kuhn's ASL2
-AbstractNodeQueue , which is based on Dmitriy Vyukov's non-intrusive MPSC queue.
+AbstractNodeQueue, which is based on Dmitriy Vyukov's non-intrusive MPSC queue.
 It can be obtained at:
 
   * LICENSE:

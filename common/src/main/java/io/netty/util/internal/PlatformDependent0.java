@@ -36,7 +36,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 final class PlatformDependent0 {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PlatformDependent0.class);
-    static final Unsafe UNSAFE;
+    private static final Unsafe UNSAFE;
     private static final boolean BIG_ENDIAN = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
     private static final long ADDRESS_FIELD_OFFSET;
 
@@ -185,6 +185,10 @@ final class PlatformDependent0 {
         return UNSAFE.getObject(object, fieldOffset);
     }
 
+    static Object getObjectVolatile(Object object, long fieldOffset) {
+        return UNSAFE.getObjectVolatile(object, fieldOffset);
+    }
+
     static int getInt(Object object, long fieldOffset) {
         return UNSAFE.getInt(object, fieldOffset);
     }
@@ -249,6 +253,10 @@ final class PlatformDependent0 {
                   ((long) getByte(address + 1) & 0xff) <<  8 |
                    (long) getByte(address) & 0xff;
         }
+    }
+
+    static void putOrderedObject(Object object, long address, Object value) {
+        UNSAFE.putOrderedObject(object, address, value);
     }
 
     static void putByte(long address, byte value) {

@@ -18,7 +18,8 @@ package io.netty.util.internal;
 import io.netty.util.concurrent.EventExecutor;
 
 /**
- * {@link java.lang.Runnable} which represent and IO-Task and should be executed by an {@link EventExecutor}.
+ * {@link Runnable} which represent a one time task which may allow the {@link EventExecutor} to reduce the amount of
+ * produced garbage when queue it for execution.
  *
  * <strong>It is important this will not be reused. After submitted it is not allowed to get submitted again!</strong>
  */
@@ -29,7 +30,7 @@ public abstract class OneTimeTask implements Runnable {
     static {
         if (PlatformDependent0.hasUnsafe()) {
             try {
-                nextOffset = PlatformDependent0.UNSAFE.objectFieldOffset(
+                nextOffset = PlatformDependent.objectFieldOffset(
                         OneTimeTask.class.getDeclaredField("tail"));
             } catch (Throwable t) {
                 throw new ExceptionInInitializerError(t);
@@ -42,14 +43,14 @@ public abstract class OneTimeTask implements Runnable {
     @SuppressWarnings("unused")
     private volatile OneTimeTask tail;
 
-    // Only use from ConcurrentSCMPQueue and so we are sure Unsafe is present
+    // Only use from MpscLinkedQueue and so we are sure Unsafe is present
     @SuppressWarnings("unchecked")
     final OneTimeTask next() {
-        return (OneTimeTask) PlatformDependent0.UNSAFE.getObjectVolatile(this, nextOffset);
+        return (OneTimeTask) PlatformDependent.getObjectVolatile(this, nextOffset);
     }
 
-    // Only use from ConcurrentSCMPQueue and so we are sure Unsafe is present
+    // Only use from MpscLinkedQueue and so we are sure Unsafe is present
     final void setNext(final OneTimeTask newNext) {
-        PlatformDependent0.UNSAFE.putOrderedObject(this, nextOffset, newNext);
+        PlatformDependent.putOrderedObject(this, nextOffset, newNext);
     }
 }

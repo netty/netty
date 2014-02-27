@@ -13,7 +13,9 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
+/**
+ * Copyright (C) 2009-2013 Typesafe Inc. <http://www.typesafe.com>
+ */
 package io.netty.util.internal;
 
 
@@ -28,19 +30,22 @@ import java.util.concurrent.atomic.AtomicReference;
  * <strong>It's important is is only used for this as otherwise it is not thread-safe.</strong>
  *
  * This implementation is based on:
- * - https://github.com/akka/akka/blob/wip-2.2.3-for-scala-2.11/akka-actor/src/main/java/akka/dispatch/
- * AbstractNodeQueue.java
+ * <ul>
+ *   <li><a href="https://github.com/akka/akka/blob/wip-2.2.3-for-scala-2.11/akka-actor/src/main/java/akka/dispatch/
+ *   AbstractNodeQueue.java">AbstractNodeQueue</a></li>
+ *   <li><a href="http://www.1024cores.net/home/lock-free-algorithms/
+ *   queues/non-intrusive-mpsc-node-based-queue">Non intrusive MPSC node based queue</a></li>
+ * </ul>
  *
- * - http://www.1024cores.net/home/lock-free-algorithms/queues/non-intrusive-mpsc-node-based-queue
  */
 @SuppressWarnings("serial")
-final class ConcurrentSCMPQueue extends AtomicReference<OneTimeTask> implements Queue<Runnable> {
+final class MpscLinkedQueue extends AtomicReference<OneTimeTask> implements Queue<Runnable> {
     private static final long tailOffset;
 
     static {
         try {
-            tailOffset = PlatformDependent0.UNSAFE.objectFieldOffset(
-                    ConcurrentSCMPQueue.class.getDeclaredField("tail"));
+            tailOffset = PlatformDependent.objectFieldOffset(
+                    MpscLinkedQueue.class.getDeclaredField("tail"));
         } catch (Throwable t) {
             throw new ExceptionInInitializerError(t);
         }
@@ -48,11 +53,11 @@ final class ConcurrentSCMPQueue extends AtomicReference<OneTimeTask> implements 
 
     // Extends AtomicReference for the "head" slot (which is the one that is appended to)
     // since Unsafe does not expose XCHG operation intrinsically
-    @SuppressWarnings("unused")
+    @SuppressWarnings({ "unused", "FieldMayBeFinal" })
     private volatile OneTimeTask tail;
 
-    ConcurrentSCMPQueue() {
-        final OneTimeTask task = new WrappingIoTask(null);
+    MpscLinkedQueue() {
+        final OneTimeTask task = new OneTimeTaskAdapter(null);
         tail = task;
         set(task);
     }
@@ -64,7 +69,7 @@ final class ConcurrentSCMPQueue extends AtomicReference<OneTimeTask> implements 
             node.setNext(null);
             getAndSet(node).setNext(node);
         } else {
-            final OneTimeTask n = new WrappingIoTask(runnable);
+            final OneTimeTask n = new OneTimeTaskAdapter(runnable);
             getAndSet(n).setNext(n);
         }
         return true;
@@ -86,18 +91,18 @@ final class ConcurrentSCMPQueue extends AtomicReference<OneTimeTask> implements 
 
     @Override
     public Runnable poll() {
-        final OneTimeTask next = peakTask();
+        final OneTimeTask next = peekTask();
         if (next == null) {
             return null;
         }
         final OneTimeTask ret = next;
-        PlatformDependent0.UNSAFE.putOrderedObject(this, tailOffset, next);
+        PlatformDependent.putOrderedObject(this, tailOffset, next);
         return unwrapIfNeeded(ret);
     }
 
     @Override
     public Runnable element() {
-        final OneTimeTask next = peakTask();
+        final OneTimeTask next = peekTask();
         if (next == null) {
             throw new NoSuchElementException();
         }
@@ -106,7 +111,7 @@ final class ConcurrentSCMPQueue extends AtomicReference<OneTimeTask> implements 
 
     @Override
     public Runnable peek() {
-        final OneTimeTask next = peakTask();
+        final OneTimeTask next = peekTask();
         if (next == null) {
             return null;
         }
@@ -116,7 +121,7 @@ final class ConcurrentSCMPQueue extends AtomicReference<OneTimeTask> implements 
     @Override
     public int size() {
         int count = 0;
-        OneTimeTask n = peakTask();
+        OneTimeTask n = peekTask();
         for (;;) {
             if (n == null) {
                 break;
@@ -128,9 +133,9 @@ final class ConcurrentSCMPQueue extends AtomicReference<OneTimeTask> implements 
     }
 
     @SuppressWarnings("unchecked")
-    private OneTimeTask peakTask() {
+    private OneTimeTask peekTask() {
         for (;;) {
-            final OneTimeTask tail = (OneTimeTask) PlatformDependent0.UNSAFE.getObjectVolatile(this, tailOffset);
+            final OneTimeTask tail = (OneTimeTask) PlatformDependent.getObjectVolatile(this, tailOffset);
             final OneTimeTask next = tail.next();
             if (next != null || get() == tail) {
                 return next;
@@ -145,7 +150,7 @@ final class ConcurrentSCMPQueue extends AtomicReference<OneTimeTask> implements 
 
     @Override
     public boolean contains(Object o) {
-        OneTimeTask n = peakTask();
+        OneTimeTask n = peekTask();
         for (;;) {
             if (n == null) {
                 break;
@@ -219,16 +224,16 @@ final class ConcurrentSCMPQueue extends AtomicReference<OneTimeTask> implements 
      * Unwrap {@link OneTimeTask} if needed and so return the proper queued task.
      */
     private static Runnable unwrapIfNeeded(OneTimeTask task) {
-        if (task instanceof WrappingIoTask) {
-            return ((WrappingIoTask) task).task;
+        if (task instanceof OneTimeTaskAdapter) {
+            return ((OneTimeTaskAdapter) task).task;
         }
         return task;
     }
 
-    private static final class WrappingIoTask extends OneTimeTask {
+    private static final class OneTimeTaskAdapter extends OneTimeTask {
         private final Runnable task;
 
-        WrappingIoTask(Runnable task) {
+        OneTimeTaskAdapter(Runnable task) {
             this.task = task;
         }
 
