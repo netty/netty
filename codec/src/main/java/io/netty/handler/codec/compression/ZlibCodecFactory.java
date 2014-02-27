@@ -98,15 +98,10 @@ public final class ZlibCodecFactory {
     }
 
     public static ZlibDecoder newZlibDecoder(ZlibWrapper wrapper) {
-        switch (wrapper) {
-            case ZLIB_OR_NONE:
-                return new JZlibDecoder(wrapper);
-            default:
-                if (PlatformDependent.javaVersion() < 7 || noJdkZlibDecoder) {
-                    return new JZlibDecoder(wrapper);
-                } else {
-                    return new JdkZlibDecoder(wrapper);
-                }
+        if (PlatformDependent.javaVersion() < 7 || noJdkZlibDecoder) {
+            return new JZlibDecoder(wrapper);
+        } else {
+            return new JdkZlibDecoder(wrapper);
         }
     }
 
