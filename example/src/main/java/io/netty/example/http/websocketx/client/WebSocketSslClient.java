@@ -18,20 +18,20 @@ package io.netty.example.http.websocketx.client;
 import java.net.URI;
 
 /**
- * This is an example of a WebSocket client.
+ * This is an example of a secure WebSocket client.
  * <p>
- * In order to run this example you need a compatible WebSocket server.
- * Therefore you can either start the WebSocket server from the examples
- * by running {@link io.netty.example.http.websocketx.server.WebSocketServer}
- * or connect to an existing WebSocket server such as
- * <a href="http://www.websocket.org/echo.html">ws://echo.websocket.org</a>.
+ * In order to run this example you need a compatible secure WebSocket server.
+ * Therefore you can either start the secure WebSocket server from the examples
+ * by running {@link io.netty.example.http.websocketx.sslserver.WebSocketSslServer}
+ * or connect to an existing secure WebSocket server such as
+ * <a href="http://www.websocket.org/echo.html">wss://echo.websocket.org</a>.
  * <p>
  * The client will attempt to connect to the URI passed to it as the first argument.
- * You don't have to specify any arguments if you want to connect to the example WebSocket server,
+ * You don't have to specify any arguments if you want to connect to the example secure WebSocket server,
  * as this is the default.
  */
-public final class WebSocketClient {
-    private WebSocketClient() {
+public final class WebSocketSslClient {
+    private WebSocketSslClient() {
     }
 
     public static void main(String... args) throws Exception {
@@ -39,7 +39,7 @@ public final class WebSocketClient {
         if (args.length > 0) {
             uri = new URI(args[0]);
         } else {
-            uri = new URI("ws://localhost:8080/websocket");
+            uri = new URI("wss://localhost:8443/websocket");
         }
 
         new WebSocketClientRunner(uri).run();
