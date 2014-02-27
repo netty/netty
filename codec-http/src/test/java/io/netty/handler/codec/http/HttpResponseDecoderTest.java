@@ -510,7 +510,6 @@ public class HttpResponseDecoderTest {
         assertThat(ch.readInbound(), is(nullValue()));
     }
 
-
     /**
      * Tests if the decoder produces one and only {@link LastHttpContent} when an invalid chunk is received and
      * the connection is closed.
