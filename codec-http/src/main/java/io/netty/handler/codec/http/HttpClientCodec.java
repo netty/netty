@@ -98,7 +98,7 @@ public final class HttpClientCodec
 
         @Override
         protected void encode(
-                ChannelHandlerContext ctx, Object msg, List<Object> out) throws Exception {
+                ChannelHandlerContext ctx, Object msg, ByteBuf out) throws Exception {
             if (msg instanceof HttpRequest && !done) {
                 queue.offer(((HttpRequest) msg).getMethod());
             }

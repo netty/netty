@@ -46,7 +46,7 @@ import io.netty.util.internal.TypeParameterMatcher;
 public abstract class MessageToByteEncoder<I> extends ChannelOutboundHandlerAdapter {
 
     private final TypeParameterMatcher matcher;
-    private final boolean preferDirect;
+    final boolean preferDirect;
 
     /**
      * @see {@link #MessageToByteEncoder(boolean)} with {@code true} as boolean parameter.
