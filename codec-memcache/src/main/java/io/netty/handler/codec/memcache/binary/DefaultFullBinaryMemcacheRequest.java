@@ -29,25 +29,23 @@ public class DefaultFullBinaryMemcacheRequest extends DefaultBinaryMemcacheReque
     /**
      * Create a new {@link DefaultBinaryMemcacheRequest} with the header, key and extras.
      *
-     * @param header the header to use.
      * @param key    the key to use.
      * @param extras the extras to use.
      */
-    public DefaultFullBinaryMemcacheRequest(BinaryMemcacheRequestHeader header, String key, ByteBuf extras) {
-        this(header, key, extras, Unpooled.buffer(0));
+    public DefaultFullBinaryMemcacheRequest(String key, ByteBuf extras) {
+        this(key, extras, Unpooled.buffer(0));
     }
 
     /**
      * Create a new {@link DefaultBinaryMemcacheRequest} with the header, key, extras and content.
      *
-     * @param header  the header to use.
      * @param key     the key to use.
      * @param extras  the extras to use.
      * @param content the content of the full request.
      */
-    public DefaultFullBinaryMemcacheRequest(BinaryMemcacheRequestHeader header, String key, ByteBuf extras,
+    public DefaultFullBinaryMemcacheRequest(String key, ByteBuf extras,
                                             ByteBuf content) {
-        super(header, key, extras);
+        super(key, extras);
         if (content == null) {
             throw new NullPointerException("Supplied content is null.");
         }
@@ -101,11 +99,11 @@ public class DefaultFullBinaryMemcacheRequest extends DefaultBinaryMemcacheReque
 
     @Override
     public FullBinaryMemcacheRequest copy() {
-        return new DefaultFullBinaryMemcacheRequest(getHeader(), getKey(), getExtras(), content().copy());
+        return new DefaultFullBinaryMemcacheRequest(getKey(), getExtras(), content().copy());
     }
 
     @Override
     public FullBinaryMemcacheRequest duplicate() {
-        return new DefaultFullBinaryMemcacheRequest(getHeader(), getKey(), getExtras(), content().duplicate());
+        return new DefaultFullBinaryMemcacheRequest(getKey(), getExtras(), content().duplicate());
     }
 }

@@ -22,7 +22,7 @@ import io.netty.buffer.Unpooled;
  * The decoder which takes care of decoding the response headers.
  */
 public class BinaryMemcacheResponseDecoder
-    extends AbstractBinaryMemcacheDecoder<BinaryMemcacheResponse, BinaryMemcacheResponseHeader> {
+    extends AbstractBinaryMemcacheDecoder<BinaryMemcacheResponse> {
 
     public BinaryMemcacheResponseDecoder() {
         this(DEFAULT_MAX_CHUNK_SIZE);
@@ -33,8 +33,8 @@ public class BinaryMemcacheResponseDecoder
     }
 
     @Override
-    protected BinaryMemcacheResponseHeader decodeHeader(ByteBuf in) {
-        BinaryMemcacheResponseHeader header = new DefaultBinaryMemcacheResponseHeader();
+    protected BinaryMemcacheResponse decodeHeader(ByteBuf in) {
+        BinaryMemcacheResponse header = new DefaultBinaryMemcacheResponse();
         header.setMagic(in.readByte());
         header.setOpcode(in.readByte());
         header.setKeyLength(in.readShort());
@@ -48,16 +48,7 @@ public class BinaryMemcacheResponseDecoder
     }
 
     @Override
-    protected BinaryMemcacheResponse buildMessage(BinaryMemcacheResponseHeader header, ByteBuf extras, String key) {
-        return new DefaultBinaryMemcacheResponse(header, key, extras);
-    }
-
-    @Override
     protected BinaryMemcacheResponse buildInvalidMessage() {
-        return new DefaultBinaryMemcacheResponse(
-            new DefaultBinaryMemcacheResponseHeader(),
-            "",
-            Unpooled.EMPTY_BUFFER
-        );
+        return new DefaultBinaryMemcacheResponse("", Unpooled.EMPTY_BUFFER);
     }
 }

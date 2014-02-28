@@ -20,47 +20,60 @@ import io.netty.buffer.ByteBuf;
 /**
  * The default implementation of the {@link BinaryMemcacheResponse}.
  */
-public class DefaultBinaryMemcacheResponse extends AbstractBinaryMemcacheMessage<BinaryMemcacheResponseHeader>
-    implements BinaryMemcacheResponse {
+public class DefaultBinaryMemcacheResponse extends AbstractBinaryMemcacheMessage implements BinaryMemcacheResponse {
+
+    /**
+     * Default magic byte for a request.
+     */
+    public static final byte RESPONSE_MAGIC_BYTE = (byte) 0x81;
+
+    private short status;
 
     /**
      * Create a new {@link DefaultBinaryMemcacheResponse} with the header only.
-     *
-     * @param header the header to use.
      */
-    public DefaultBinaryMemcacheResponse(BinaryMemcacheResponseHeader header) {
-        this(header, null, null);
+    public DefaultBinaryMemcacheResponse() {
+        this(null, null);
     }
 
     /**
      * Create a new {@link DefaultBinaryMemcacheResponse} with the header and key.
      *
-     * @param header the header to use.
      * @param key    the key to use
      */
-    public DefaultBinaryMemcacheResponse(BinaryMemcacheResponseHeader header, String key) {
-        this(header, key, null);
+    public DefaultBinaryMemcacheResponse(String key) {
+        this(key, null);
     }
 
     /**
      * Create a new {@link DefaultBinaryMemcacheResponse} with the header and extras.
      *
-     * @param header the header to use.
      * @param extras the extras to use.
      */
-    public DefaultBinaryMemcacheResponse(BinaryMemcacheResponseHeader header, ByteBuf extras) {
-        this(header, null, extras);
+    public DefaultBinaryMemcacheResponse(ByteBuf extras) {
+        this(null, extras);
     }
 
     /**
      * Create a new {@link DefaultBinaryMemcacheResponse} with the header, key and extras.
      *
-     * @param header the header to use.
      * @param key    the key to use.
      * @param extras the extras to use.
      */
-    public DefaultBinaryMemcacheResponse(BinaryMemcacheResponseHeader header, String key, ByteBuf extras) {
-        super(header, key, extras);
+    public DefaultBinaryMemcacheResponse(String key, ByteBuf extras) {
+        super(key, extras);
+        setMagic(RESPONSE_MAGIC_BYTE);
+    }
+
+    @Override
+    public short getStatus() {
+        return status;
+    }
+
+    @Override
+    public BinaryMemcacheResponse setStatus(short status) {
+        this.status = status;
+        return this;
     }
 
     @Override

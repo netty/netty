@@ -24,8 +24,7 @@ import io.netty.util.CharsetUtil;
 /**
  * A {@link MessageToByteEncoder} that encodes binary memache messages into bytes.
  */
-public abstract class AbstractBinaryMemcacheEncoder
-        <M extends BinaryMemcacheMessage<H>, H extends BinaryMemcacheMessageHeader>
+public abstract class AbstractBinaryMemcacheEncoder<M extends BinaryMemcacheMessage>
     extends AbstractMemcacheObjectEncoder<M> {
 
     /**
@@ -37,7 +36,7 @@ public abstract class AbstractBinaryMemcacheEncoder
     protected ByteBuf encodeMessage(ChannelHandlerContext ctx, M msg) {
         ByteBuf buf = ctx.alloc().buffer(DEFAULT_BUFFER_SIZE);
 
-        encodeHeader(buf, msg.getHeader());
+        encodeHeader(buf, msg);
         encodeExtras(buf, msg.getExtras());
         encodeKey(buf, msg.getKey());
 
@@ -78,9 +77,9 @@ public abstract class AbstractBinaryMemcacheEncoder
      * This methods needs to be implemented by a sub class because the header is different
      * for both requests and responses.
      *
-     * @param buf    the {@link ByteBuf} to write into.
-     * @param header the header to encode.
+     * @param buf the {@link ByteBuf} to write into.
+     * @param msg the message to encode.
      */
-    protected abstract void encodeHeader(ByteBuf buf, H header);
+    protected abstract void encodeHeader(ByteBuf buf, M msg);
 
 }

@@ -29,25 +29,23 @@ public class DefaultFullBinaryMemcacheResponse extends DefaultBinaryMemcacheResp
     /**
      * Create a new {@link DefaultFullBinaryMemcacheResponse} with the header, key and extras.
      *
-     * @param header the header to use.
      * @param key    the key to use.
      * @param extras the extras to use.
      */
-    public DefaultFullBinaryMemcacheResponse(BinaryMemcacheResponseHeader header, String key, ByteBuf extras) {
-        this(header, key, extras, Unpooled.buffer(0));
+    public DefaultFullBinaryMemcacheResponse(String key, ByteBuf extras) {
+        this(key, extras, Unpooled.buffer(0));
     }
 
     /**
      * Create a new {@link DefaultFullBinaryMemcacheResponse} with the header, key, extras and content.
      *
-     * @param header  the header to use.
      * @param key     the key to use.
      * @param extras  the extras to use.
      * @param content the content of the full request.
      */
-    public DefaultFullBinaryMemcacheResponse(BinaryMemcacheResponseHeader header, String key, ByteBuf extras,
-                                             ByteBuf content) {
-        super(header, key, extras);
+    public DefaultFullBinaryMemcacheResponse(String key, ByteBuf extras,
+        ByteBuf content) {
+        super(key, extras);
         if (content == null) {
             throw new NullPointerException("Supplied content is null.");
         }
@@ -101,11 +99,11 @@ public class DefaultFullBinaryMemcacheResponse extends DefaultBinaryMemcacheResp
 
     @Override
     public FullBinaryMemcacheResponse copy() {
-        return new DefaultFullBinaryMemcacheResponse(getHeader(), getKey(), getExtras(), content().copy());
+        return new DefaultFullBinaryMemcacheResponse(getKey(), getExtras(), content().copy());
     }
 
     @Override
     public FullBinaryMemcacheResponse duplicate() {
-        return new DefaultFullBinaryMemcacheResponse(getHeader(), getKey(), getExtras(), content().duplicate());
+        return new DefaultFullBinaryMemcacheResponse(getKey(), getExtras(), content().duplicate());
     }
 }
