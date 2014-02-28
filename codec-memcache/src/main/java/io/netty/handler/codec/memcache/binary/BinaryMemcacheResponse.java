@@ -18,15 +18,21 @@ package io.netty.handler.codec.memcache.binary;
 /**
  * Represents a full {@link BinaryMemcacheResponse}, which contains the header and optional key and extras.
  */
-public interface BinaryMemcacheResponse extends BinaryMemcacheMessage<BinaryMemcacheResponseHeader> {
+public interface BinaryMemcacheResponse extends BinaryMemcacheMessage {
 
     /**
-     * Returns the {@link BinaryMemcacheResponseHeader} which contains the full required response header.
+     * Returns the status of the response.
      *
-     * @return the required response header.
+     * @return the status of the response.
      */
-    @Override
-    BinaryMemcacheResponseHeader getHeader();
+    short getStatus();
+
+    /**
+     * Sets the status of the response.
+     *
+     * @param status the status to set.
+     */
+    BinaryMemcacheResponse setStatus(short status);
 
     @Override
     BinaryMemcacheResponse retain();
