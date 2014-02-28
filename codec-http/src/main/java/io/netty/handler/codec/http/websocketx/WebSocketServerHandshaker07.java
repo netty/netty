@@ -113,7 +113,7 @@ public class WebSocketServerHandshaker07 extends WebSocketServerHandshaker {
         String accept = WebSocketUtil.base64(sha1);
 
         if (logger.isDebugEnabled()) {
-            logger.debug("WebSocket version 07 server handshake key: {}, response: %s.", key, accept);
+            logger.debug("WebSocket version 07 server handshake key: {}, response: {}.", key, accept);
         }
 
         res.headers().add(Names.UPGRADE, WEBSOCKET);
