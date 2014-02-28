@@ -90,14 +90,12 @@ public class BinaryMemcacheDecoderTest {
         BinaryMemcacheRequest request = channel.readInbound();
 
         assertThat(request, notNullValue());
-        assertThat(request.getHeader(), notNullValue());
         assertThat(request.getKey(), notNullValue());
         assertThat(request.getExtras(), nullValue());
 
-        BinaryMemcacheRequestHeader header = request.getHeader();
-        assertThat(header.getKeyLength(), is((short) 3));
-        assertThat(header.getExtrasLength(), is((byte) 0));
-        assertThat(header.getTotalBodyLength(), is(3));
+        assertThat(request.getKeyLength(), is((short) 3));
+        assertThat(request.getExtrasLength(), is((byte) 0));
+        assertThat(request.getTotalBodyLength(), is(3));
 
         request.release();
         assertThat(channel.readInbound(), instanceOf(LastMemcacheContent.class));
@@ -118,14 +116,12 @@ public class BinaryMemcacheDecoderTest {
         BinaryMemcacheRequest request = channel.readInbound();
 
         assertThat(request, notNullValue());
-        assertThat(request.getHeader(), notNullValue());
         assertThat(request.getKey(), notNullValue());
         assertThat(request.getExtras(), nullValue());
 
-        BinaryMemcacheRequestHeader header = request.getHeader();
-        assertThat(header.getKeyLength(), is((short) 3));
-        assertThat(header.getExtrasLength(), is((byte) 0));
-        assertThat(header.getTotalBodyLength(), is(11));
+        assertThat(request.getKeyLength(), is((short) 3));
+        assertThat(request.getExtrasLength(), is((byte) 0));
+        assertThat(request.getTotalBodyLength(), is(11));
 
         request.release();
 
@@ -157,7 +153,6 @@ public class BinaryMemcacheDecoderTest {
         BinaryMemcacheRequest request = channel.readInbound();
 
         assertThat(request, notNullValue());
-        assertThat(request.getHeader(), notNullValue());
         assertThat(request.getKey(), notNullValue());
         assertThat(request.getExtras(), nullValue());
 
@@ -213,8 +208,8 @@ public class BinaryMemcacheDecoderTest {
 
         // First message
         BinaryMemcacheResponse response = channel.readInbound();
-        assertThat(response.getHeader().getStatus(), is(BinaryMemcacheResponseStatus.KEY_ENOENT));
-        assertThat(response.getHeader().getTotalBodyLength(), is(msgBody.length()));
+        assertThat(response.getStatus(), is(BinaryMemcacheResponseStatus.KEY_ENOENT));
+        assertThat(response.getTotalBodyLength(), is(msgBody.length()));
         response.release();
 
         // First message first content chunk
@@ -225,8 +220,8 @@ public class BinaryMemcacheDecoderTest {
 
         // Second message
         response = channel.readInbound();
-        assertThat(response.getHeader().getStatus(), is(BinaryMemcacheResponseStatus.KEY_ENOENT));
-        assertThat(response.getHeader().getTotalBodyLength(), is(msgBody.length()));
+        assertThat(response.getStatus(), is(BinaryMemcacheResponseStatus.KEY_ENOENT));
+        assertThat(response.getTotalBodyLength(), is(msgBody.length()));
         response.release();
 
         // Second message first content chunk
@@ -243,8 +238,8 @@ public class BinaryMemcacheDecoderTest {
 
         // Third message
         response = channel.readInbound();
-        assertThat(response.getHeader().getStatus(), is(BinaryMemcacheResponseStatus.KEY_ENOENT));
-        assertThat(response.getHeader().getTotalBodyLength(), is(msgBody.length()));
+        assertThat(response.getStatus(), is(BinaryMemcacheResponseStatus.KEY_ENOENT));
+        assertThat(response.getTotalBodyLength(), is(msgBody.length()));
         response.release();
 
         // Third message first content chunk

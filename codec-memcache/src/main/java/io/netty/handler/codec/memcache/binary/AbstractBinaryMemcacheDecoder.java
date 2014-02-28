@@ -36,17 +36,14 @@ import static io.netty.buffer.ByteBufUtil.*;
  * <p/>
  * The difference in the protocols (header) is implemented by the subclasses.
  */
-public abstract class AbstractBinaryMemcacheDecoder
-        <M extends BinaryMemcacheMessage<H>, H extends BinaryMemcacheMessageHeader>
+public abstract class AbstractBinaryMemcacheDecoder<M extends BinaryMemcacheMessage>
     extends AbstractMemcacheObjectDecoder {
 
     public static final int DEFAULT_MAX_CHUNK_SIZE = 8192;
 
     private final int chunkSize;
 
-    private H currentHeader;
-    private ByteBuf currentExtras;
-    private String currentKey;
+    private M currentMessage;
     private int alreadyReadChunkSize;
 
     private State state = State.READ_HEADER;
@@ -80,20 +77,20 @@ public abstract class AbstractBinaryMemcacheDecoder
                 }
                 resetDecoder();
 
-                currentHeader = decodeHeader(in);
+                currentMessage = decodeHeader(in);
                 state = State.READ_EXTRAS;
             } catch (Exception e) {
                 out.add(invalidMessage(e));
                 return;
             }
             case READ_EXTRAS: try {
-                byte extrasLength = currentHeader.getExtrasLength();
+                byte extrasLength = currentMessage.getExtrasLength();
                 if (extrasLength > 0) {
                     if (in.readableBytes() < extrasLength) {
                         return;
                     }
 
-                    currentExtras = readBytes(ctx.alloc(), in, extrasLength);
+                    currentMessage.setExtras(readBytes(ctx.alloc(), in, extrasLength));
                 }
 
                 state = State.READ_KEY;
@@ -102,27 +99,26 @@ public abstract class AbstractBinaryMemcacheDecoder
                 return;
             }
             case READ_KEY: try {
-                short keyLength = currentHeader.getKeyLength();
+                short keyLength = currentMessage.getKeyLength();
                 if (keyLength > 0) {
                     if (in.readableBytes() < keyLength) {
                         return;
                     }
 
-                    currentKey = in.toString(in.readerIndex(), keyLength, CharsetUtil.UTF_8);
+                    currentMessage.setKey(in.toString(in.readerIndex(), keyLength, CharsetUtil.UTF_8));
                     in.skipBytes(keyLength);
                 }
 
-                out.add(buildMessage(currentHeader, currentExtras, currentKey));
-                currentExtras = null;
+                out.add(currentMessage);
                 state = State.READ_CONTENT;
             } catch (Exception e) {
                 out.add(invalidMessage(e));
                 return;
             }
             case READ_CONTENT: try {
-                int valueLength = currentHeader.getTotalBodyLength()
-                    - currentHeader.getKeyLength()
-                    - currentHeader.getExtrasLength();
+                int valueLength = currentMessage.getTotalBodyLength()
+                    - currentMessage.getKeyLength()
+                    - currentMessage.getExtrasLength();
                 int toRead = in.readableBytes();
                 if (valueLength > 0) {
                     if (toRead == 0) {
@@ -205,8 +201,8 @@ public abstract class AbstractBinaryMemcacheDecoder
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         super.channelInactive(ctx);
 
-        if (currentExtras != null) {
-            currentExtras.release();
+        if (currentMessage.getExtras() != null) {
+            currentMessage.getExtras().release();
         }
 
         resetDecoder();
@@ -216,29 +212,17 @@ public abstract class AbstractBinaryMemcacheDecoder
      * Prepare for next decoding iteration.
      */
     protected void resetDecoder() {
-        currentHeader = null;
-        currentExtras = null;
-        currentKey = null;
+        currentMessage = null;
         alreadyReadChunkSize = 0;
     }
 
     /**
-     * Decode and return the parsed {@link BinaryMemcacheMessageHeader}.
+     * Decode and return the parsed {@link BinaryMemcacheMessage}.
      *
      * @param in the incoming buffer.
      * @return the decoded header.
      */
-    protected abstract H decodeHeader(ByteBuf in);
-
-    /**
-     * Build the complete message, based on the information decoded.
-     *
-     * @param header the header of the message.
-     * @param extras possible extras.
-     * @param key    possible key.
-     * @return the decoded message.
-     */
-    protected abstract M buildMessage(H header, ByteBuf extras, String key);
+    protected abstract M decodeHeader(ByteBuf in);
 
     /**
      * Helper method to create a upstream message when the incoming parsing did fail.

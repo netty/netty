@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.memcache.binary;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -59,13 +60,11 @@ public class BinaryMemcacheObjectAggregator extends AbstractMemcacheObjectAggreg
             }
 
             if (msg instanceof BinaryMemcacheRequest) {
-                BinaryMemcacheRequest request = (BinaryMemcacheRequest) msg;
-                this.currentMessage = new DefaultFullBinaryMemcacheRequest(request.getHeader(), request.getKey(),
-                    request.getExtras(), Unpooled.compositeBuffer(getMaxCumulationBufferComponents()));
+                this.currentMessage = toFullRequest((BinaryMemcacheRequest) msg,
+                    Unpooled.compositeBuffer(getMaxCumulationBufferComponents()));
             } else if (msg instanceof BinaryMemcacheResponse) {
-                BinaryMemcacheResponse response = (BinaryMemcacheResponse) msg;
-                this.currentMessage = new DefaultFullBinaryMemcacheResponse(response.getHeader(), response.getKey(),
-                    response.getExtras(), Unpooled.compositeBuffer(getMaxCumulationBufferComponents()));
+                this.currentMessage = toFullResponse((BinaryMemcacheResponse) msg,
+                    Unpooled.compositeBuffer(getMaxCumulationBufferComponents()));
             } else {
                 throw new Error();
             }
@@ -130,18 +129,48 @@ public class BinaryMemcacheObjectAggregator extends AbstractMemcacheObjectAggreg
 
         FullMemcacheMessage fullMsg;
         if (msg instanceof BinaryMemcacheRequest) {
-            BinaryMemcacheRequest req = (BinaryMemcacheRequest) msg;
-            fullMsg = new DefaultFullBinaryMemcacheRequest(req.getHeader(), req.getKey(), req.getExtras(),
-                Unpooled.EMPTY_BUFFER);
+            fullMsg = toFullRequest((BinaryMemcacheRequest) msg, Unpooled.EMPTY_BUFFER);
         } else if (msg instanceof BinaryMemcacheResponse) {
-            BinaryMemcacheResponse res = (BinaryMemcacheResponse) msg;
-            fullMsg = new DefaultFullBinaryMemcacheResponse(res.getHeader(), res.getKey(), res.getExtras(),
-                Unpooled.EMPTY_BUFFER);
+            fullMsg = toFullResponse((BinaryMemcacheResponse) msg, Unpooled.EMPTY_BUFFER);
         } else {
             throw new IllegalStateException();
         }
 
         return fullMsg;
+    }
+
+    private static FullBinaryMemcacheRequest toFullRequest(BinaryMemcacheRequest request, ByteBuf content) {
+        FullBinaryMemcacheRequest fullRequest = new DefaultFullBinaryMemcacheRequest(request.getKey(),
+            request.getExtras(), content);
+
+        fullRequest.setMagic(request.getMagic());
+        fullRequest.setOpcode(request.getOpcode());
+        fullRequest.setKeyLength(request.getKeyLength());
+        fullRequest.setExtrasLength(request.getExtrasLength());
+        fullRequest.setDataType(request.getDataType());
+        fullRequest.setTotalBodyLength(request.getTotalBodyLength());
+        fullRequest.setOpaque(request.getOpaque());
+        fullRequest.setCAS(request.getCAS());
+        fullRequest.setReserved(request.getReserved());
+
+        return fullRequest;
+    }
+
+    private static FullBinaryMemcacheResponse toFullResponse(BinaryMemcacheResponse response, ByteBuf content) {
+        FullBinaryMemcacheResponse fullResponse = new DefaultFullBinaryMemcacheResponse(response.getKey(),
+            response.getExtras(), content);
+
+        fullResponse.setMagic(response.getMagic());
+        fullResponse.setOpcode(response.getOpcode());
+        fullResponse.setKeyLength(response.getKeyLength());
+        fullResponse.setExtrasLength(response.getExtrasLength());
+        fullResponse.setDataType(response.getDataType());
+        fullResponse.setTotalBodyLength(response.getTotalBodyLength());
+        fullResponse.setOpaque(response.getOpaque());
+        fullResponse.setCAS(response.getCAS());
+        fullResponse.setStatus(response.getStatus());
+
+        return fullResponse;
     }
 
 }
