@@ -21,19 +21,19 @@ import io.netty.buffer.ByteBuf;
  * The encoder part which takes care of encoding the request headers.
  */
 public class BinaryMemcacheRequestEncoder
-    extends AbstractBinaryMemcacheEncoder<BinaryMemcacheRequest, BinaryMemcacheRequestHeader> {
+    extends AbstractBinaryMemcacheEncoder<BinaryMemcacheRequest> {
 
     @Override
-    protected void encodeHeader(ByteBuf buf, BinaryMemcacheRequestHeader header) {
-        buf.writeByte(header.getMagic());
-        buf.writeByte(header.getOpcode());
-        buf.writeShort(header.getKeyLength());
-        buf.writeByte(header.getExtrasLength());
-        buf.writeByte(header.getDataType());
-        buf.writeShort(header.getReserved());
-        buf.writeInt(header.getTotalBodyLength());
-        buf.writeInt(header.getOpaque());
-        buf.writeLong(header.getCAS());
+    protected void encodeHeader(ByteBuf buf, BinaryMemcacheRequest msg) {
+        buf.writeByte(msg.getMagic());
+        buf.writeByte(msg.getOpcode());
+        buf.writeShort(msg.getKeyLength());
+        buf.writeByte(msg.getExtrasLength());
+        buf.writeByte(msg.getDataType());
+        buf.writeShort(msg.getReserved());
+        buf.writeInt(msg.getTotalBodyLength());
+        buf.writeInt(msg.getOpaque());
+        buf.writeLong(msg.getCAS());
     }
 
 }
