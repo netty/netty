@@ -23,14 +23,16 @@ import java.nio.ByteBuffer;
 
 abstract class PoolArena<T> {
 
+    static final int numTinySubpagePools = 512 >>> 4;
+
     final PooledByteBufAllocator parent;
 
-    private final int pageSize;
     private final int maxOrder;
-    private final int pageShifts;
-    private final int chunkSize;
-    private final int subpageOverflowMask;
-
+    final int pageSize;
+    final int pageShifts;
+    final int chunkSize;
+    final int subpageOverflowMask;
+    final int numSmallSubpagePools;
     private final PoolSubpage<T>[] tinySubpagePools;
     private final PoolSubpage<T>[] smallSubpagePools;
 
@@ -51,13 +53,13 @@ abstract class PoolArena<T> {
         this.pageShifts = pageShifts;
         this.chunkSize = chunkSize;
         subpageOverflowMask = ~(pageSize - 1);
-
-        tinySubpagePools = newSubpagePoolArray(512 >>> 4);
+        tinySubpagePools = newSubpagePoolArray(numTinySubpagePools);
         for (int i = 0; i < tinySubpagePools.length; i ++) {
             tinySubpagePools[i] = newSubpagePoolHead(pageSize);
         }
 
-        smallSubpagePools = newSubpagePoolArray(pageShifts - 9);
+        numSmallSubpagePools = pageShifts - 9;
+        smallSubpagePools = newSubpagePoolArray(numSmallSubpagePools);
         for (int i = 0; i < smallSubpagePools.length; i ++) {
             smallSubpagePools[i] = newSubpagePoolHead(pageSize);
         }
@@ -89,27 +91,56 @@ abstract class PoolArena<T> {
         return new PoolSubpage[size];
     }
 
+    abstract boolean isDirect();
+
     PooledByteBuf<T> allocate(PoolThreadCache cache, int reqCapacity, int maxCapacity) {
         PooledByteBuf<T> buf = newByteBuf(maxCapacity);
         allocate(cache, buf, reqCapacity);
         return buf;
     }
 
+    static int tinyIdx(int normCapacity) {
+        return normCapacity >>> 4;
+    }
+
+    static int smallIdx(int normCapacity) {
+        int tableIdx = 0;
+        int i = normCapacity >>> 10;
+        while (i != 0) {
+            i >>>= 1;
+            tableIdx ++;
+        }
+        return tableIdx;
+    }
+
+    // capacity < pageSize
+    boolean isTinyOrSmall(int normCapacity) {
+        return (normCapacity & subpageOverflowMask) == 0;
+    }
+
+    // normCapacity < 512
+    static boolean isTiny(int normCapacity) {
+        return (normCapacity & 0xFFFFFE00) == 0;
+    }
+
     private void allocate(PoolThreadCache cache, PooledByteBuf<T> buf, final int reqCapacity) {
         final int normCapacity = normalizeCapacity(reqCapacity);
-        if ((normCapacity & subpageOverflowMask) == 0) { // capacity < pageSize
+        if (isTinyOrSmall(normCapacity)) { // capacity < pageSize
             int tableIdx;
             PoolSubpage<T>[] table;
-            if ((normCapacity & 0xFFFFFE00) == 0) { // < 512
-                tableIdx = normCapacity >>> 4;
+            if (isTiny(normCapacity)) { // < 512
+                if (cache.allocateTiny(this, buf, reqCapacity, normCapacity)) {
+                    // was able to allocate out of the cache so move on
+                    return;
+                }
+                tableIdx = tinyIdx(normCapacity);
                 table = tinySubpagePools;
             } else {
-                tableIdx = 0;
-                int i = normCapacity >>> 10;
-                while (i != 0) {
-                    i >>>= 1;
-                    tableIdx ++;
+                if (cache.allocateSmall(this, buf, reqCapacity, normCapacity)) {
+                    // was able to allocate out of the cache so move on
+                    return;
                 }
+                tableIdx = smallIdx(normCapacity);
                 table = smallSubpagePools;
             }
 
@@ -124,11 +155,16 @@ abstract class PoolArena<T> {
                     return;
                 }
             }
-        } else if (normCapacity > chunkSize) {
+        } else if (normCapacity <= chunkSize) {
+            if (cache.allocateNormal(this, buf, reqCapacity, normCapacity)) {
+                // was able to allocate out of the cache so move on
+                return;
+            }
+        } else {
+            // Huge allocations are never served via the cache so just call allocateHuge
             allocateHuge(buf, reqCapacity);
             return;
         }
-
         allocateNormal(buf, reqCapacity, normCapacity);
     }
 
@@ -151,10 +187,15 @@ abstract class PoolArena<T> {
         buf.initUnpooled(newUnpooledChunk(reqCapacity), reqCapacity);
     }
 
-     void free(PoolChunk<T> chunk, long handle) {
+    void free(PoolChunk<T> chunk, long handle, int normCapacity) {
         if (chunk.unpooled) {
             destroyChunk(chunk);
         } else {
+            PoolThreadCache cache = parent.threadCache.get();
+            if (cache.add(this, chunk, handle, normCapacity)) {
+                // cached so not free it.
+                return;
+            }
             synchronized (this) {
                 chunk.parent.free(chunk, handle);
             }
@@ -164,7 +205,7 @@ abstract class PoolArena<T> {
     PoolSubpage<T> findSubpagePoolHead(int elemSize) {
         int tableIdx;
         PoolSubpage<T>[] table;
-        if ((elemSize & 0xFFFFFE00) == 0) { // < 512
+        if (isTiny(elemSize)) { // < 512
             tableIdx = elemSize >>> 4;
             table = tinySubpagePools;
         } else {
@@ -180,7 +221,7 @@ abstract class PoolArena<T> {
         return table[tableIdx];
     }
 
-    private int normalizeCapacity(int reqCapacity) {
+    int normalizeCapacity(int reqCapacity) {
         if (reqCapacity < 0) {
             throw new IllegalArgumentException("capacity: " + reqCapacity + " (expected: 0+)");
         }
@@ -188,7 +229,7 @@ abstract class PoolArena<T> {
             return reqCapacity;
         }
 
-        if ((reqCapacity & 0xFFFFFE00) != 0) { // >= 512
+        if (!isTiny(reqCapacity)) { // >= 512
             // Doubled
 
             int normalizedCapacity = reqCapacity;
@@ -228,7 +269,7 @@ abstract class PoolArena<T> {
         long oldHandle = buf.handle;
         T oldMemory = buf.memory;
         int oldOffset = buf.offset;
-
+        int oldMaxLength = buf.maxLength;
         int readerIndex = buf.readerIndex();
         int writerIndex = buf.writerIndex();
 
@@ -253,7 +294,7 @@ abstract class PoolArena<T> {
         buf.setIndex(readerIndex, writerIndex);
 
         if (freeOldMemory) {
-            free(oldChunk, oldHandle);
+            free(oldChunk, oldHandle, oldMaxLength);
         }
     }
 
@@ -340,6 +381,11 @@ abstract class PoolArena<T> {
         }
 
         @Override
+        boolean isDirect() {
+            return false;
+        }
+
+        @Override
         protected PoolChunk<byte[]> newChunk(int pageSize, int maxOrder, int pageShifts, int chunkSize) {
             return new PoolChunk<byte[]>(this, new byte[chunkSize], pageSize, maxOrder, pageShifts, chunkSize);
         }
@@ -375,6 +421,11 @@ abstract class PoolArena<T> {
 
         DirectArena(PooledByteBufAllocator parent, int pageSize, int maxOrder, int pageShifts, int chunkSize) {
             super(parent, pageSize, maxOrder, pageShifts, chunkSize);
+        }
+
+        @Override
+        boolean isDirect() {
+            return true;
         }
 
         @Override
