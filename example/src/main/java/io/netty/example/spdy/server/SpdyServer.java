@@ -86,10 +86,12 @@ public class SpdyServer {
         try {
             Class.forName("sun.security.ssl.NextProtoNegoExtension");
         } catch (ClassNotFoundException ignored) {
-            System.err.println("\nCould not locate Next Protocol Negotiation (NPN) implementation.");
+            System.err.println();
+            System.err.println("Could not locate Next Protocol Negotiation (NPN) implementation.");
             System.err.println("The NPN jar should have been made available when building the examples with maven.");
             System.err.println("Please check that your JDK is among those supported by Jetty-NPN:");
-            System.err.println("http://wiki.eclipse.org/Jetty/Feature/NPN#Versions\n");
+            System.err.println("http://wiki.eclipse.org/Jetty/Feature/NPN#Versions");
+            System.err.println();
             throw new IllegalStateException("Could not locate NPN implementation. See console err for details.");
         }
     }
