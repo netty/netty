@@ -33,6 +33,11 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
 
     private static final int DEFAULT_PAGE_SIZE;
     private static final int DEFAULT_MAX_ORDER; // 8192 << 11 = 16 MiB per chunk
+    private static final int DEFAULT_TINY_CACHE_SIZE;
+    private static final int DEFAULT_SMALL_CACHE_SIZE;
+    private static final int DEFAULT_NORMAL_CACHE_SIZE;
+    private static final int DEFAULT_MAX_CACHED_BUFFER_CAPACITY;
+    private static final int DEFAULT_CACHE_TRIM_INTERVAL;
 
     private static final int MIN_PAGE_SIZE = 4096;
     private static final int MAX_CHUNK_SIZE = (int) (((long) Integer.MAX_VALUE + 1) / 2);
@@ -75,6 +80,20 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
                                 runtime.availableProcessors(),
                                 PlatformDependent.maxDirectMemory() / defaultChunkSize / 2 / 3)));
 
+        // cache sizes
+        DEFAULT_TINY_CACHE_SIZE = SystemPropertyUtil.getInt("io.netty.allocator.tinyCacheSize", 512);
+        DEFAULT_SMALL_CACHE_SIZE = SystemPropertyUtil.getInt("io.netty.allocator.smallCacheSize", 256);
+        DEFAULT_NORMAL_CACHE_SIZE = SystemPropertyUtil.getInt("io.netty.allocator.normalCacheSize", 64);
+
+        // 32 kb is the default maximum capacity of the cached buffer. Similar to what is explained in
+        // 'Scalable memory allocation using jemalloc'
+        DEFAULT_MAX_CACHED_BUFFER_CAPACITY = SystemPropertyUtil.getInt(
+                "io.netty.allocator.maxCachedBufferCapacity", 32 * 1024);
+
+        // the number of threshold of allocations when cached entries will be freed up if not frequently used
+        DEFAULT_CACHE_TRIM_INTERVAL = SystemPropertyUtil.getInt(
+                "io.netty.allocator.cacheTrimInterval", 8192);
+
         if (logger.isDebugEnabled()) {
             logger.debug("-Dio.netty.allocator.numHeapArenas: {}", DEFAULT_NUM_HEAP_ARENA);
             logger.debug("-Dio.netty.allocator.numDirectArenas: {}", DEFAULT_NUM_DIRECT_ARENA);
@@ -89,6 +108,12 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
                 logger.debug("-Dio.netty.allocator.maxOrder: {}", DEFAULT_MAX_ORDER, maxOrderFallbackCause);
             }
             logger.debug("-Dio.netty.allocator.chunkSize: {}", DEFAULT_PAGE_SIZE << DEFAULT_MAX_ORDER);
+            logger.debug("-Dio.netty.allocator.tinyCacheSize: {}", DEFAULT_TINY_CACHE_SIZE);
+            logger.debug("-Dio.netty.allocator.smallCacheSize: {}", DEFAULT_SMALL_CACHE_SIZE);
+            logger.debug("-Dio.netty.allocator.normalCacheSize: {}", DEFAULT_NORMAL_CACHE_SIZE);
+            logger.debug("-Dio.netty.allocator.maxCachedBufferCapacity: {}", DEFAULT_MAX_CACHED_BUFFER_CAPACITY);
+            logger.debug("-Dio.netty.allocator.cacheTrimInterval: {}",
+                    DEFAULT_CACHE_TRIM_INTERVAL);
         }
     }
 
@@ -97,30 +122,11 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
 
     private final PoolArena<byte[]>[] heapArenas;
     private final PoolArena<ByteBuffer>[] directArenas;
+    private final int tinyCacheSize;
+    private final int smallCacheSize;
+    private final int normalCacheSize;
 
-    final ThreadLocal<PoolThreadCache> threadCache = new ThreadLocal<PoolThreadCache>() {
-        private final AtomicInteger index = new AtomicInteger();
-        @Override
-        protected PoolThreadCache initialValue() {
-            final int idx = index.getAndIncrement();
-            final PoolArena<byte[]> heapArena;
-            final PoolArena<ByteBuffer> directArena;
-
-            if (heapArenas != null) {
-                heapArena = heapArenas[Math.abs(idx % heapArenas.length)];
-            } else {
-                heapArena = null;
-            }
-
-            if (directArenas != null) {
-                directArena = directArenas[Math.abs(idx % directArenas.length)];
-            } else {
-                directArena = null;
-            }
-
-            return new PoolThreadCache(heapArena, directArena);
-        }
-    };
+    final PoolThreadLocalCache threadCache = new PoolThreadLocalCache();
 
     public PooledByteBufAllocator() {
         this(false);
@@ -135,8 +141,16 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
     }
 
     public PooledByteBufAllocator(boolean preferDirect, int nHeapArena, int nDirectArena, int pageSize, int maxOrder) {
-        super(preferDirect);
+        this(preferDirect, nHeapArena, nDirectArena, pageSize, maxOrder,
+                DEFAULT_TINY_CACHE_SIZE, DEFAULT_SMALL_CACHE_SIZE, DEFAULT_NORMAL_CACHE_SIZE);
+    }
 
+    public PooledByteBufAllocator(boolean preferDirect, int nHeapArena, int nDirectArena, int pageSize, int maxOrder,
+                                  int tinyCacheSize, int smallCacheSize, int normalCacheSize) {
+        super(preferDirect);
+        this.tinyCacheSize = tinyCacheSize;
+        this.smallCacheSize = smallCacheSize;
+        this.normalCacheSize = normalCacheSize;
         final int chunkSize = validateAndCalculateChunkSize(pageSize, maxOrder);
 
         if (nHeapArena < 0) {
@@ -239,6 +253,73 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
     @Override
     public boolean isDirectBufferPooled() {
         return directArenas != null;
+    }
+
+    /**
+     * Returns {@code true} if the calling {@link Thread} has a {@link ThreadLocal} cache for the allocated
+     * buffers.
+     */
+    public boolean hasThreadLocalCache() {
+        return threadCache.exists();
+    }
+
+    /**
+     * Free all cached buffers for the calling {@link Thread}.
+     */
+    public void freeThreadLocalCache() {
+        threadCache.free();
+    }
+
+    final class PoolThreadLocalCache extends ThreadLocal<PoolThreadCache> {
+
+        private final AtomicInteger index = new AtomicInteger();
+
+        @Override
+        public PoolThreadCache get() {
+            PoolThreadCache cache = super.get();
+            if (cache == null) {
+                final int idx = index.getAndIncrement();
+                final PoolArena<byte[]> heapArena;
+                final PoolArena<ByteBuffer> directArena;
+
+                if (heapArenas != null) {
+                    heapArena = heapArenas[Math.abs(idx % heapArenas.length)];
+                } else {
+                    heapArena = null;
+                }
+
+                if (directArenas != null) {
+                    directArena = directArenas[Math.abs(idx % directArenas.length)];
+                } else {
+                    directArena = null;
+                }
+                // If the current Thread is assigned to an EventExecutor we can
+                // easily free the cached stuff again once the EventExecutor completes later.
+                cache = new PoolThreadCache(
+                        heapArena, directArena, tinyCacheSize, smallCacheSize, normalCacheSize,
+                        DEFAULT_MAX_CACHED_BUFFER_CAPACITY, DEFAULT_CACHE_TRIM_INTERVAL);
+                set(cache);
+            }
+            return cache;
+        }
+
+        /**
+         * Returns {@code true} if the calling {@link Thread} has a {@link ThreadLocal} cache for the allocated
+         * buffers.
+         */
+        public boolean exists() {
+            return super.get() != null;
+        }
+
+        /**
+         * Free all cached buffers for the calling {@link Thread}.
+         */
+        public void free() {
+            PoolThreadCache cache = super.get();
+            if (cache != null) {
+                cache.free();
+            }
+        }
     }
 
 //    Too noisy at the moment.

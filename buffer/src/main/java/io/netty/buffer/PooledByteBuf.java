@@ -30,7 +30,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
     protected T memory;
     protected int offset;
     protected int length;
-    private int maxLength;
+    int maxLength;
 
     private ByteBuffer tmpNioBuf;
 
@@ -140,7 +140,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
             final long handle = this.handle;
             this.handle = -1;
             memory = null;
-            chunk.arena.free(chunk, handle);
+            chunk.arena.free(chunk, handle, maxLength);
             recycle();
         }
     }
