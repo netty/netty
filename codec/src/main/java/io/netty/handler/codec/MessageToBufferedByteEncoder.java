@@ -115,7 +115,8 @@ public abstract class MessageToBufferedByteEncoder<I> extends MessageToByteEncod
      *                              {@link ByteBuf}, which is backed by an byte array.
      * @param bufferSize            The size of the buffer when it is allocated.
      */
-    protected MessageToBufferedByteEncoder(Class<? extends I> outboundMessageType, boolean preferDirect, int bufferSize) {
+    protected MessageToBufferedByteEncoder(
+            Class<? extends I> outboundMessageType, boolean preferDirect, int bufferSize) {
         super(outboundMessageType, preferDirect);
         checkSharable();
         notifier = checkBufferSize(bufferSize);
