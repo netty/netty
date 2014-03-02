@@ -56,7 +56,7 @@ import io.netty.util.ReferenceCountUtil;
  */
 public abstract class MessageToBufferedByteEncoder<I> extends MessageToByteEncoder<I> {
     private static final int DEFAULT_BUFFER_SIZE = 1024;
-    private final ChannelFlushPromiseNotifier notifier  = new ChannelFlushPromiseNotifier();
+    private final ChannelFlushPromiseNotifier notifier;
     private final int bufferSize;
     private ByteBuf buffer;
 
@@ -73,8 +73,8 @@ public abstract class MessageToBufferedByteEncoder<I> extends MessageToByteEncod
      * @param bufferSize            The size of the buffer when it is allocated.
      */
     protected MessageToBufferedByteEncoder(int bufferSize) {
-        checkBufferSize(bufferSize);
         checkSharable();
+        notifier = checkBufferSize(bufferSize);
         this.bufferSize = bufferSize;
     }
 
@@ -86,8 +86,8 @@ public abstract class MessageToBufferedByteEncoder<I> extends MessageToByteEncod
      */
     protected MessageToBufferedByteEncoder(Class<? extends I> outboundMessageType, int bufferSize) {
         super(outboundMessageType);
-        checkBufferSize(bufferSize);
         checkSharable();
+        notifier = checkBufferSize(bufferSize);
         this.bufferSize = bufferSize;
     }
 
@@ -101,8 +101,8 @@ public abstract class MessageToBufferedByteEncoder<I> extends MessageToByteEncod
      */
     protected MessageToBufferedByteEncoder(boolean preferDirect, int bufferSize) {
         super(preferDirect);
-        checkBufferSize(bufferSize);
         checkSharable();
+        notifier = checkBufferSize(bufferSize);
         this.bufferSize = bufferSize;
     }
 
@@ -117,17 +117,21 @@ public abstract class MessageToBufferedByteEncoder<I> extends MessageToByteEncod
      */
     protected MessageToBufferedByteEncoder(Class<? extends I> outboundMessageType, boolean preferDirect, int bufferSize) {
         super(outboundMessageType, preferDirect);
-        checkBufferSize(bufferSize);
         checkSharable();
+        notifier = checkBufferSize(bufferSize);
         this.bufferSize = bufferSize;
     }
 
-    private static void checkBufferSize(int bufferSize) {
-        if (bufferSize <= 0) {
+    private static ChannelFlushPromiseNotifier checkBufferSize(int bufferSize) {
+        if (bufferSize < 0) {
             throw new IllegalArgumentException(
-                    "bufferSize must be a positive integer: " +
+                    "bufferSize must be a >= 0: " +
                             bufferSize);
         }
+        if (bufferSize == 0) {
+            return null;
+        }
+        return new ChannelFlushPromiseNotifier();
     }
 
     private void checkSharable() {
@@ -148,10 +152,18 @@ public abstract class MessageToBufferedByteEncoder<I> extends MessageToByteEncod
                 int writerIndex = buffer.writerIndex();
                 try {
                     encode(ctx, cast, buffer);
-                    // check for null as it may be flushed in the encode method
-                    if (buffer != null) {
-                        // add to notifier so the promise will be notified later once we wrote everything
-                        notifier.add(promise, buffer.writerIndex() - writerIndex);
+                    if (bufferSize == 0) {
+                        ByteBuf buf = buffer;
+                        if (buf != null) {
+                            buffer = null;
+                            ctx.write(buf, promise);
+                        }
+                    } else {
+                        // check for null as it may be flushed in the encode method
+                        if (buffer != null) {
+                            // add to notifier so the promise will be notified later once we wrote everything
+                            notifier.add(promise, buffer.writerIndex() - writerIndex);
+                        }
                     }
                 } catch (Throwable e) {
                     // check for null as it may be flushed in the encode method
@@ -164,8 +176,10 @@ public abstract class MessageToBufferedByteEncoder<I> extends MessageToByteEncod
                     ReferenceCountUtil.release(cast);
                 }
             } else {
-                // write buffer data now so we not write stuff out of order
-                writeBufferedData(ctx);
+                if (bufferSize != 0) {
+                    // write buffer data now so we not write stuff out of order
+                    writeBufferedData(ctx);
+                }
                 ctx.write(msg, promise);
             }
         } catch (EncoderException e) {
@@ -222,22 +236,32 @@ public abstract class MessageToBufferedByteEncoder<I> extends MessageToByteEncod
     protected ByteBuf newBuffer(ChannelHandlerContext ctx, @SuppressWarnings("unused") Object msg,
                                 boolean preferDirect, int preferSize) {
         if (preferDirect) {
+            if (preferSize == 0) {
+                return ctx.alloc().ioBuffer();
+            }
             return ctx.alloc().ioBuffer(preferSize);
         } else {
+            if (preferSize == 0) {
+                return ctx.alloc().heapBuffer();
+            }
             return ctx.alloc().heapBuffer(preferSize);
         }
     }
 
     @Override
     public void flush(ChannelHandlerContext ctx) throws Exception {
-        // The user requested a flush so write buffered data in the pipeline and then flush
-        writeBufferedData(ctx);
+        if (bufferSize != 0) {
+            // The user requested a flush so write buffered data in the pipeline and then flush
+            writeBufferedData(ctx);
+        }
         super.flush(ctx);
     }
 
     @Override
     public final void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        writeBufferedData(ctx);
+        if (bufferSize != 0) {
+            writeBufferedData(ctx);
+        }
         handlerRemoved0(ctx);
         super.handlerRemoved(ctx);
     }
