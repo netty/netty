@@ -41,7 +41,7 @@ import java.net.URI;
 
 public final class WebSocketClientRunner {
 
-    private URI uri;
+    private final URI uri;
 
     public WebSocketClientRunner(URI uri) {
         this.uri = uri;
