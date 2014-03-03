@@ -145,8 +145,11 @@ public class DefaultChannelPipelineTest {
         assertSame(pipeline.get("handler3"), handler3);
 
         pipeline.remove(handler1);
+        assertNull(pipeline.get("handler1"));
         pipeline.remove(handler2);
+        assertNull(pipeline.get("handler2"));
         pipeline.remove(handler3);
+        assertNull(pipeline.get("handler3"));
     }
 
     @Test
