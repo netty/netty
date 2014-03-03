@@ -30,24 +30,21 @@ import java.nio.channels.Channels;
 
 /**
  * Enables a {@link ChannelHandler} to interact with its {@link ChannelPipeline}
- * and other handlers.  A handler can notify the next {@link ChannelHandler} in the {@link ChannelPipeline},
- * modify the {@link ChannelPipeline} it belongs to dynamically.
+ * and other handlers. Among other things a handler can notify the next {@link ChannelHandler} in the
+ * {@link ChannelPipeline} as well as modify the {@link ChannelPipeline} it belongs to dynamically.
  *
  * <h3>Notify</h3>
  *
-<<<<<<< HEAD
- * You can notify the closest handler in the same {@link ChannelPipeline} by calling one of the various method.
-=======
  * You can notify the closest handler in the
  * same {@link ChannelPipeline} by calling one of the various methods provided here.
->>>>>>> 7ec70d0... Merge package private interfaces into public ones. Related to [#1989] and [#1991]
+ *
  * Please refer to {@link ChannelPipeline} to understand how an event flows.
  *
  * <h3>Modifying a pipeline</h3>
  *
  * You can get the {@link ChannelPipeline} your handler belongs to by calling
  * {@link #pipeline()}.  A non-trivial application could insert, remove, or
- * replace handlers in the pipeline dynamically in runtime.
+ * replace handlers in the pipeline dynamically at runtime.
  *
  * <h3>Retrieving for later use</h3>
  *
@@ -85,7 +82,7 @@ import java.nio.channels.Channels;
  * {@link ChannelHandlerContext}s if it is added to one or more
  * {@link ChannelPipeline}s more than once.
  * <p>
- * For example, the following handler will have as many independent attachments
+ * For example, the following handler will have as many independent {@link AttributeKey}s
  * as how many times it is added to pipelines, regardless if it is added to the
  * same pipeline multiple times or added to different pipelines multiple times:
  * <pre>
@@ -110,7 +107,7 @@ import java.nio.channels.Channels;
  *
  * // Different context objects are given to "f1", "f2", "f3", and "f4" even if
  * // they refer to the same handler instance.  Because the FactorialHandler
- * // stores its state in a context object (as an attachment), the factorial is
+ * // stores its state in a context object (using an {@link AttributeKey}), the factorial is
  * // calculated correctly 4 times once the two pipelines (p1 and p2) are active.
  * FactorialHandler fh = new FactorialHandler();
  *

@@ -40,7 +40,7 @@ import io.netty.util.internal.TypeParameterMatcher;
  * <h3>Backward compatibility consideration</h3>
  * <p>
  * Since 5.0, {@code channelRead0(ChannelHandlerContext, I)} has been renamed to
- * {@link #messageReceived(ChannelHandlerContext, Object)}.
+ * {@link #messageReceived(ChannelHandlerContext, I)}.
  * </p>
  */
 public abstract class SimpleChannelInboundHandler<I> extends ChannelHandlerAdapter {
