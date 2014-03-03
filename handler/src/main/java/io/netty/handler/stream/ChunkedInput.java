@@ -37,7 +37,7 @@ public interface ChunkedInput<B> {
     /**
      * Fetches a chunked data from the stream. Once this method returns the last chunk
      * and thus the stream has reached at its end, any subsequent {@link #isEndOfInput()}
-     * call must return {@code false}.
+     * call must return {@code true}.
      *
      * @return the fetched chunk.
      *         {@code null} if there is no data left in the stream.
