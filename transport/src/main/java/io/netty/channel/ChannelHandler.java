@@ -53,7 +53,7 @@ import java.lang.annotation.Target;
  * {@link ChannelPipeline} it belongs to via a context object.  Using the
  * context object, the {@link ChannelHandler} can pass events upstream or
  * downstream, modify the pipeline dynamically, or store the information
- * (attachment) which is specific to the handler.
+ *  (using {@link AttributeKey}s) which is specific to the handler.
  *
  * <h3>State management</h3>
  *
@@ -69,7 +69,7 @@ import java.lang.annotation.Target;
  *     <b>private boolean loggedIn;</b>
  *
  *     {@code @Override}
- *     public void channelRead({@link ChannelHandlerContext} ctx, Message message) {
+ *     public void channelRead0({@link ChannelHandlerContext} ctx, Message message) {
  *         {@link Channel} ch = e.getChannel();
  *         if (message instanceof LoginMessage) {
  *             authenticate((LoginMessage) message);
@@ -101,11 +101,11 @@ import java.lang.annotation.Target;
  *
  * </pre>
  *
- * <h4>Using an attachment</h4>
+ * <h4>Using {@link AttributeKey}</h4>
  *
  * Although it's recommended to use member variables to store the state of a
  * handler, for some reason you might not want to create many handler instances.
- * In such a case, you can use an <em>attachment</em> which is provided by
+ * In such a case, you can use {@link AttributeKey}s which is provided by
  * {@link ChannelHandlerContext}:
  * <pre>
  * public interface Message {
@@ -114,17 +114,12 @@ import java.lang.annotation.Target;
  *
  * {@code @Sharable}
  * public class DataServerHandler extends {@link SimpleChannelInboundHandler}&lt;Message&gt; {
- *   private final {@link AttributeKey}&lt{@link Boolean}&gt auth =
+ *     private final {@link AttributeKey}&lt{@link Boolean}&gt auth =
  *           {@link AttributeKey#valueOf(String) AttributeKey.valueOf("auth")};
- *
- *   // This handler will receive a sequence of increasing integers starting
- *   // from 1.
- *   {@code @Override}
- *   public void channelRead({@link ChannelHandlerContext} ctx, {@link Integer} integer) {
- *     {@link Attribute}&lt{@link Boolean}&gt attr = ctx.attr(auth);
  *
  *     {@code @Override}
  *     public void channelRead({@link ChannelHandlerContext} ctx, Message message) {
+ *         {@link Attribute}&lt{@link Boolean}&gt attr = ctx.attr(auth);
  *         {@link Channel} ch = ctx.channel();
  *         if (message instanceof LoginMessage) {
  *             authenticate((LoginMessage) o);
@@ -140,7 +135,7 @@ import java.lang.annotation.Target;
  *     ...
  * }
  * </pre>
- * Now that the state of the handler is stored as an attachment, you can add the
+ * Now that the state of the handler isattached to the {@link ChannelHandlerContext}, you can add the
  * same handler instance to different pipelines:
  * <pre>
  * public class DataServerInitializer extends {@link ChannelInitializer}&lt{@link Channel}&gt {
@@ -157,7 +152,7 @@ import java.lang.annotation.Target;
  *
  * <h4>The {@code @Sharable} annotation</h4>
  * <p>
- * In the examples above which used an attachment,
+ * In the example above which used an {@link AttributeKey},
  * you might have noticed the {@code @Sharable} annotation.
  * <p>
  * If a {@link ChannelHandler} is annotated with the {@code @Sharable}

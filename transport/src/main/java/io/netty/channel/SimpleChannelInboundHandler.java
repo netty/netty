@@ -39,7 +39,7 @@ import io.netty.util.internal.TypeParameterMatcher;
  *
  * <h3>Forward compatibility notice</h3>
  * <p>
- * Please keep in mind that {@link #channelRead0(ChannelHandlerContext, Object)} will be renamed to
+ * Please keep in mind that {@link #channelRead0(ChannelHandlerContext, I)} will be renamed to
  * {@code messageReceived(ChannelHandlerContext, I)} in 5.0.
  * </p>
  */
