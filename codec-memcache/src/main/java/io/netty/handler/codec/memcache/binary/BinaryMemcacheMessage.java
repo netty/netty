@@ -162,6 +162,11 @@ public interface BinaryMemcacheMessage extends MemcacheMessage {
      */
     String getKey();
 
+    /**
+     * Sets the key of the document.
+     *
+     * @param key the key of the message.
+     */
     BinaryMemcacheMessage setKey(String key);
 
     /**
@@ -171,6 +176,11 @@ public interface BinaryMemcacheMessage extends MemcacheMessage {
      */
     ByteBuf getExtras();
 
+    /**
+     * Sets the extras buffer on the message.
+     *
+     * @param extras the extras buffer of the document.
+     */
     BinaryMemcacheMessage setExtras(ByteBuf extras);
 
     /**
