@@ -68,9 +68,9 @@ public class WebSocketServer {
                 @Override
                 public void initChannel(final SocketChannel ch) throws Exception {
                     ch.pipeline().addLast(
+                        new HttpResponseEncoder(),
                         new HttpRequestDecoder(),
                         new HttpObjectAggregator(65536),
-                        new HttpResponseEncoder(),
                         new WebSocketServerProtocolHandler("/websocket"),
                         new CustomTextFrameHandler());
                 }

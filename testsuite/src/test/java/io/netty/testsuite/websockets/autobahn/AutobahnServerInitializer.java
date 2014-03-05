@@ -26,9 +26,9 @@ public class AutobahnServerInitializer extends ChannelInitializer<SocketChannel>
     @Override
     public void initChannel(SocketChannel ch) throws Exception {
         ChannelPipeline pipeline = ch.pipeline();
+        pipeline.addLast("encoder", new HttpResponseEncoder());
         pipeline.addLast("decoder", new HttpRequestDecoder());
         pipeline.addLast("aggregator", new HttpObjectAggregator(65536));
-        pipeline.addLast("encoder", new HttpResponseEncoder());
         pipeline.addLast("handler", new AutobahnServerHandler());
     }
 }

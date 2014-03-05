@@ -35,10 +35,9 @@ public class WebSocketSslServerInitializer extends ChannelInitializer<SocketChan
         SSLEngine engine = WebSocketSslServerSslContext.getInstance().serverContext().createSSLEngine();
         engine.setUseClientMode(false);
         pipeline.addLast("ssl", new SslHandler(engine));
-
+        pipeline.addLast("encoder", new HttpResponseEncoder());
         pipeline.addLast("decoder", new HttpRequestDecoder());
         pipeline.addLast("aggregator", new HttpObjectAggregator(65536));
-        pipeline.addLast("encoder", new HttpResponseEncoder());
         pipeline.addLast("handler", new WebSocketSslServerHandler());
     }
 }
