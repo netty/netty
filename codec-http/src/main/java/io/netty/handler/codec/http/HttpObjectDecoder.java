@@ -712,6 +712,8 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
 
             // Abort decoding if the header part is too large.
             if (headerSize >= maxHeaderSize) {
+                // #2009
+                resetNow();
                 // TODO: Respond with Bad Request and discard the traffic
                 //    or close the connection.
                 //       No need to notify the upstream handlers - just log.
