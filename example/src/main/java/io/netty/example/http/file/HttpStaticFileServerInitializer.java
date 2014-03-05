@@ -34,9 +34,9 @@ public class HttpStaticFileServerInitializer extends ChannelInitializer<SocketCh
         //engine.setUseClientMode(false);
         //pipeline.addLast("ssl", new SslHandler(engine));
 
+        pipeline.addLast("encoder", new HttpResponseEncoder());
         pipeline.addLast("decoder", new HttpRequestDecoder());
         pipeline.addLast("aggregator", new HttpObjectAggregator(65536));
-        pipeline.addLast("encoder", new HttpResponseEncoder());
         pipeline.addLast("chunkedWriter", new ChunkedWriteHandler());
 
         pipeline.addLast("handler", new HttpStaticFileServerHandler(true)); // Specify false if SSL.
