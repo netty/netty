@@ -18,6 +18,9 @@ Please ensure to specify the following:
 ```
 Netty version: 4.0.17.Final
 
+Context:
+I encountered an exception which looks suspicious while load-testing my Netty-based Thrift server implementation.
+
 Steps to reproduce:
 1. ...
 2. ...
