@@ -48,91 +48,109 @@ public abstract class ZlibTest {
         ByteBuf deflatedData = Unpooled.wrappedBuffer(gzip("message"));
 
         EmbeddedChannel chDecoderGZip = new EmbeddedChannel(createDecoder(ZlibWrapper.GZIP));
-        chDecoderGZip.writeInbound(deflatedData.copy());
-        assertTrue(chDecoderGZip.finish());
-        ByteBuf buf = (ByteBuf) chDecoderGZip.readInbound();
-        assertEquals(buf, data);
-        assertNull(chDecoderGZip.readInbound());
-        data.release();
-        deflatedData.release();
-        buf.release();
+        try {
+            chDecoderGZip.writeInbound(deflatedData.copy());
+            assertTrue(chDecoderGZip.finish());
+            ByteBuf buf = (ByteBuf) chDecoderGZip.readInbound();
+            assertEquals(buf, data);
+            assertNull(chDecoderGZip.readInbound());
+            data.release();
+            deflatedData.release();
+            buf.release();
+        } finally {
+            // close channel to prevent any leak even on exception
+            chDecoderGZip.close();
+        }
     }
 
     private void testCompress0(ZlibWrapper encoderWrapper, ZlibWrapper decoderWrapper, ByteBuf data) throws Exception {
         EmbeddedChannel chEncoder = new EmbeddedChannel(createEncoder(encoderWrapper));
-
-        chEncoder.writeOutbound(data.copy());
-        chEncoder.flush();
-
         EmbeddedChannel chDecoderZlib = new EmbeddedChannel(createDecoder(decoderWrapper));
-        for (;;) {
-            ByteBuf deflatedData = (ByteBuf) chEncoder.readOutbound();
-            if (deflatedData == null) {
-                break;
-            }
-            chDecoderZlib.writeInbound(deflatedData);
-        }
 
-        byte[] decompressed = new byte[data.readableBytes()];
-        int offset = 0;
-        for (;;) {
-            ByteBuf buf = (ByteBuf) chDecoderZlib.readInbound();
-            if (buf == null) {
-                break;
-            }
-            int length = buf.readableBytes();
-            buf.readBytes(decompressed, offset, length);
-            offset += length;
-            buf.release();
-            if (offset == decompressed.length) {
-                break;
-            }
-        }
-        assertEquals(data, Unpooled.wrappedBuffer(decompressed));
-        assertNull(chDecoderZlib.readInbound());
+        try {
+            chEncoder.writeOutbound(data.copy());
+            chEncoder.flush();
 
-        // Closing an encoder channel will generate a footer.
-        assertTrue(chEncoder.finish());
-        for (;;) {
-            Object msg = chEncoder.readOutbound();
-            if (msg == null) {
-                break;
+            for (;;) {
+                ByteBuf deflatedData = (ByteBuf) chEncoder.readOutbound();
+                if (deflatedData == null) {
+                    break;
+                }
+                chDecoderZlib.writeInbound(deflatedData);
             }
-            ReferenceCountUtil.release(msg);
-        }
-        // But, the footer will be decoded into nothing. It's only for validation.
-        assertFalse(chDecoderZlib.finish());
 
-        data.release();
+            byte[] decompressed = new byte[data.readableBytes()];
+            int offset = 0;
+            for (;;) {
+                ByteBuf buf = (ByteBuf) chDecoderZlib.readInbound();
+                if (buf == null) {
+                    break;
+                }
+                int length = buf.readableBytes();
+                buf.readBytes(decompressed, offset, length);
+                offset += length;
+                buf.release();
+                if (offset == decompressed.length) {
+                    break;
+                }
+            }
+            assertEquals(data, Unpooled.wrappedBuffer(decompressed));
+            assertNull(chDecoderZlib.readInbound());
+
+            // Closing an encoder channel will generate a footer.
+            assertTrue(chEncoder.finish());
+            for (;;) {
+                Object msg = chEncoder.readOutbound();
+                if (msg == null) {
+                    break;
+                }
+                ReferenceCountUtil.release(msg);
+            }
+            // But, the footer will be decoded into nothing. It's only for validation.
+            assertFalse(chDecoderZlib.finish());
+
+            data.release();
+        } finally {
+            // close channels in all cases to guard against leak when exception was thrown
+            chEncoder.close();
+            chDecoderZlib.close();
+        }
     }
 
     private void testCompressNone(ZlibWrapper encoderWrapper, ZlibWrapper decoderWrapper) throws Exception {
         EmbeddedChannel chEncoder = new EmbeddedChannel(createEncoder(encoderWrapper));
-
-        // Closing an encoder channel without writing anything should generate both header and footer.
-        assertTrue(chEncoder.finish());
-
         EmbeddedChannel chDecoderZlib = new EmbeddedChannel(createDecoder(decoderWrapper));
-        for (;;) {
-            ByteBuf deflatedData = (ByteBuf) chEncoder.readOutbound();
-            if (deflatedData == null) {
-                break;
-            }
-            chDecoderZlib.writeInbound(deflatedData);
-        }
+        try {
+            // Closing an encoder channel without writing anything should generate both header and footer.
+            assertTrue(chEncoder.finish());
 
-        // Decoder should not generate anything at all.
-        for (;;) {
-            ByteBuf buf = (ByteBuf) chDecoderZlib.readInbound();
-            if (buf == null) {
-                break;
+            for (;;) {
+                ByteBuf deflatedData = (ByteBuf) chEncoder.readOutbound();
+                if (deflatedData == null) {
+                    break;
+                }
+                chDecoderZlib.writeInbound(deflatedData);
             }
 
-            buf.release();
-            fail("should decode nothing");
-        }
+            // Decoder should not generate anything at all.
+            boolean decoded = false;
+            for (;;) {
+                ByteBuf buf = (ByteBuf) chDecoderZlib.readInbound();
+                if (buf == null) {
+                    break;
+                }
 
-        assertFalse(chDecoderZlib.finish());
+                buf.release();
+                decoded = true;
+            }
+            assertFalse("should decode nothing", decoded);
+
+            assertFalse(chDecoderZlib.finish());
+        } finally {
+            // close channels in all cases to guard against leak when exception was thrown
+            chEncoder.close();
+            chDecoderZlib.close();
+        }
     }
 
     private void testCompressSmall(ZlibWrapper encoderWrapper, ZlibWrapper decoderWrapper) throws Exception {

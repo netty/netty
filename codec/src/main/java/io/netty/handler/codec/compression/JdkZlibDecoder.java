@@ -385,7 +385,7 @@ public class JdkZlibDecoder extends ZlibDecoder {
      * You can lookup the details in the ZLIB RFC:
      * <a href="http://tools.ietf.org/html/rfc1950#section-2.2">RFC 1950</a>.
      */
-    private boolean looksLikeZlib(short cmf_flg) {
+    private static boolean looksLikeZlib(short cmf_flg) {
         return (cmf_flg & 0x7800) == 0x7800 &&
                 cmf_flg % 31 == 0;
     }
