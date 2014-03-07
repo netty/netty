@@ -98,7 +98,7 @@ public class QueryStringEncoder {
             for (int i = 0; i < params.size(); i++) {
                 Param param = params.get(i);
                 sb.append(encodeComponent(param.name, charset));
-                if (param.value != null && param.value.trim().length() > 0) {
+                if (param.value != null) {
                     sb.append('=');
                     sb.append(encodeComponent(param.value, charset));
                 }
