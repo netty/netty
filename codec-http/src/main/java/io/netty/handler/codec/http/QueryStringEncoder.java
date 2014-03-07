@@ -72,9 +72,6 @@ public class QueryStringEncoder {
         if (name == null) {
             throw new NullPointerException("name");
         }
-        if (value == null) {
-            throw new NullPointerException("value");
-        }
         params.add(new Param(name, value));
     }
 
@@ -101,8 +98,10 @@ public class QueryStringEncoder {
             for (int i = 0; i < params.size(); i++) {
                 Param param = params.get(i);
                 sb.append(encodeComponent(param.name, charset));
-                sb.append('=');
-                sb.append(encodeComponent(param.value, charset));
+                if (param.value != null) {
+                    sb.append('=');
+                    sb.append(encodeComponent(param.value, charset));
+                }
                 if (i != params.size() - 1) {
                     sb.append('&');
                 }
