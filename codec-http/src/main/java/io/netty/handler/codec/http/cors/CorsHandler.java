@@ -15,10 +15,6 @@
  */
 package io.netty.handler.codec.http.cors;
 
-import static io.netty.handler.codec.http.HttpHeaders.Names.*;
-import static io.netty.handler.codec.http.HttpMethod.*;
-import static io.netty.handler.codec.http.HttpResponseStatus.OK;
-
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -30,7 +26,9 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.util.Date;
+import static io.netty.handler.codec.http.HttpHeaders.Names.*;
+import static io.netty.handler.codec.http.HttpMethod.*;
+import static io.netty.handler.codec.http.HttpResponseStatus.*;
 
 /**
  * Handles <a href="http://www.w3.org/TR/cors/">Cross Origin Resource Sharing</a> (CORS) requests.
@@ -64,14 +62,23 @@ public class CorsHandler extends ChannelDuplexHandler {
     private void handlePreflight(final ChannelHandlerContext ctx, final HttpRequest request) {
         final HttpResponse response = new DefaultHttpResponse(request.getProtocolVersion(), OK);
         if (setOrigin(response)) {
-            HttpHeaders.setContentLength(response, 0);
-            HttpHeaders.setDate(response, new Date());
             setAllowMethods(response);
             setAllowHeaders(response);
             setAllowCredentials(response);
             setMaxAge(response);
+            setPreflightHeaders(response);
         }
         ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
+    }
+
+    /**
+     * This is a non CORS specification feature which enables the setting of preflight
+     * response headers that might be required by intermediaries.
+     *
+     * @param response the HttpResponse to which the preflight response headers should be added.
+     */
+    private void setPreflightHeaders(final HttpResponse response) {
+        response.headers().add(config.preflightResponseHeaders());
     }
 
     private boolean setOrigin(final HttpResponse response) {
