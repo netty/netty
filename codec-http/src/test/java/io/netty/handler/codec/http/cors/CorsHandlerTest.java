@@ -15,17 +15,9 @@
  */
 package io.netty.handler.codec.http.cors;
 
-import static io.netty.handler.codec.http.HttpHeaders.Names.*;
-import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
-import static io.netty.handler.codec.http.HttpMethod.GET;
-import static io.netty.handler.codec.http.HttpMethod.OPTIONS;
-import static org.hamcrest.CoreMatchers.*;
-import static org.hamcrest.MatcherAssert.assertThat;
-
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
-
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -33,6 +25,15 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.Test;
+
+import java.util.Arrays;
+import java.util.concurrent.Callable;
+
+import static io.netty.handler.codec.http.HttpHeaders.Names.*;
+import static io.netty.handler.codec.http.HttpMethod.*;
+import static io.netty.handler.codec.http.HttpVersion.*;
+import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.MatcherAssert.*;
 
 public class CorsHandlerTest {
 
@@ -75,6 +76,54 @@ public class CorsHandlerTest {
         assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN), is("http://localhost:8888"));
         assertThat(response.headers().getAll(ACCESS_CONTROL_ALLOW_METHODS), hasItems("OPTIONS", "GET"));
         assertThat(response.headers().getAll(ACCESS_CONTROL_ALLOW_HEADERS), hasItems("content-type", "xheader1"));
+    }
+
+    @Test
+    public void preflightRequestWithDefaultHeaders() {
+        final CorsConfig config = CorsConfig.withOrigin("http://localhost:8888").build();
+        final HttpResponse response = preflightRequest(config, "http://localhost:8888", "content-type, xheader1");
+        assertThat(response.headers().get(CONTENT_LENGTH), is("0"));
+        assertThat(response.headers().get(DATE), is(notNullValue()));
+    }
+
+    @Test
+    public void preflightRequestWithCustomHeader() {
+        final CorsConfig config = CorsConfig.withOrigin("http://localhost:8888")
+                .preflightResponseHeader("CustomHeader", "somevalue")
+                .build();
+        final HttpResponse response = preflightRequest(config, "http://localhost:8888", "content-type, xheader1");
+        assertThat(response.headers().get("CustomHeader"), equalTo("somevalue"));
+    }
+
+    @Test
+    public void preflightRequestWithCustomHeaders() {
+        final CorsConfig config = CorsConfig.withOrigin("http://localhost:8888")
+                .preflightResponseHeader("CustomHeader", "value1", "value2")
+                .build();
+        final HttpResponse response = preflightRequest(config, "http://localhost:8888", "content-type, xheader1");
+        assertThat(response.headers().getAll("CustomHeader"), hasItems("value1", "value2"));
+    }
+
+    @Test
+    public void preflightRequestWithCustomHeadersIterable() {
+        final CorsConfig config = CorsConfig.withOrigin("http://localhost:8888")
+                .preflightResponseHeader("CustomHeader", Arrays.asList("value1", "value2"))
+                .build();
+        final HttpResponse response = preflightRequest(config, "http://localhost:8888", "content-type, xheader1");
+        assertThat(response.headers().getAll("CustomHeader"), hasItems("value1", "value2"));
+    }
+
+    @Test
+    public void preflightRequestWithValueGenerator() {
+        final CorsConfig config = CorsConfig.withOrigin("http://localhost:8888")
+                .preflightResponseHeader("GenHeader", new Callable<String>() {
+                    @Override
+                    public String call() throws Exception {
+                        return "generatedValue";
+                    }
+                }).build();
+        final HttpResponse response = preflightRequest(config, "http://localhost:8888", "content-type, xheader1");
+        assertThat(response.headers().get("GenHeader"), equalTo("generatedValue"));
     }
 
     @Test

@@ -15,14 +15,12 @@
  */
 package io.netty.handler.codec.http.cors;
 
-import static io.netty.handler.codec.http.cors.CorsConfig.withOrigin;
-import static io.netty.handler.codec.http.cors.CorsConfig.anyOrigin;
+import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpMethod;
 import org.junit.Test;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.hasItems;
-import static org.hamcrest.CoreMatchers.is;
+import static io.netty.handler.codec.http.cors.CorsConfig.*;
+import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.*;
 
 public class CorsConfigurationTest {
@@ -73,6 +71,25 @@ public class CorsConfigurationTest {
     public void requestHeaders() {
         final CorsConfig cors = withOrigin("*").allowedRequestHeaders("preflight-header1", "preflight-header2").build();
         assertThat(cors.allowedRequestHeaders(), hasItems("preflight-header1", "preflight-header2"));
+    }
+
+    @Test
+    public void preflightResponseHeadersSingleValue() {
+        final CorsConfig cors = withOrigin("*").preflightResponseHeader("SingleValue", "value").build();
+        assertThat(cors.preflightResponseHeaders().get("SingleValue"), equalTo("value"));
+    }
+
+    @Test
+    public void preflightResponseHeadersMultipleValues() {
+        final CorsConfig cors = withOrigin("*").preflightResponseHeader("MultipleValues", "value1", "value2").build();
+        assertThat(cors.preflightResponseHeaders().getAll("MultipleValues"), hasItems("value1", "value2"));
+    }
+
+    @Test
+    public void defaultPreflightResponseHeaders() {
+        final CorsConfig cors = withOrigin("*").build();
+        assertThat(cors.preflightResponseHeaders().get(Names.DATE), is(notNullValue()));
+        assertThat(cors.preflightResponseHeaders().get(Names.CONTENT_LENGTH), is("0"));
     }
 
 }

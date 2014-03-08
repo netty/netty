@@ -15,13 +15,21 @@
  */
 package io.netty.handler.codec.http.cors;
 
+import io.netty.handler.codec.http.DefaultHttpHeaders;
+import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.util.internal.StringUtil;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.Callable;
 
 /**
  * Configuration for Cross-Origin Resource Sharing (CORS).
@@ -36,6 +44,7 @@ public final class CorsConfig {
     private final Set<HttpMethod> allowedRequestMethods;
     private final Set<String> allowedRequestHeaders;
     private final boolean allowNullOrigin;
+    private final Map<CharSequence, Callable<?>> preflightHeaders;
 
     private CorsConfig(final Builder builder) {
         origin = builder.origin;
@@ -46,6 +55,7 @@ public final class CorsConfig {
         allowedRequestMethods = builder.requestMethods;
         allowedRequestHeaders = builder.requestHeaders;
         allowNullOrigin = builder.allowNullOrigin;
+        preflightHeaders = builder.preflightHeaders;
     }
 
     /**
@@ -153,6 +163,35 @@ public final class CorsConfig {
         return Collections.unmodifiableSet(allowedRequestHeaders);
     }
 
+    /**
+     * Returns HTTP response headers that should be added to a CORS preflight response.
+     *
+     * @return {@code HttpHeaders} the HTTP response headers to be added.
+     */
+    public HttpHeaders preflightResponseHeaders() {
+        final HttpHeaders preflightHeaders = new DefaultHttpHeaders();
+        for (Entry<CharSequence, Callable<?>> entry : this.preflightHeaders.entrySet()) {
+            final Object value = getValue(entry.getValue());
+            if (value instanceof Iterable) {
+                for (Object o : (Iterable) value) {
+                    preflightHeaders.add(entry.getKey(), o);
+                }
+            } else {
+                preflightHeaders.add(entry.getKey(), value);
+            }
+        }
+        return preflightHeaders;
+    }
+
+    private static Object getValue(final Callable<?> callable) {
+        try {
+            return callable.call();
+        } catch (final Exception e) {
+            throw new IllegalStateException("Could not generate value for callable [" + callable + ']', e);
+        }
+    }
+
+    @Override
     public String toString() {
         return StringUtil.simpleClassName(this) + "[enabled=" + enabled +
                 ", origin=" + origin +
@@ -160,7 +199,8 @@ public final class CorsConfig {
                 ", isCredentialsAllowed=" + allowCredentials +
                 ", maxAge=" + maxAge +
                 ", allowedRequestMethods=" + allowedRequestMethods +
-                ", allowedRequestHeaders=" + allowedRequestHeaders + ']';
+                ", allowedRequestHeaders=" + allowedRequestHeaders +
+                ", preflightHeaders=" + preflightHeaders + ']';
     }
 
     public static Builder anyOrigin() {
@@ -181,6 +221,7 @@ public final class CorsConfig {
         private long maxAge;
         private final Set<HttpMethod> requestMethods = new HashSet<HttpMethod>();
         private final Set<String> requestHeaders = new HashSet<String>();
+        private final Map<CharSequence, Callable<?>> preflightHeaders = new HashMap<CharSequence, Callable<?>>();
 
         public Builder(final String origin) {
             this.origin = origin;
@@ -221,8 +262,64 @@ public final class CorsConfig {
             return this;
         }
 
+        public Builder preflightResponseHeader(final CharSequence name, final Object... values) {
+            preflightResponseHeader(name, Arrays.asList(values));
+            return this;
+        }
+
+        public <T> Builder preflightResponseHeader(final CharSequence name, final Iterable<T> value) {
+            preflightHeaders.put(name, new ConstantValueGenerator(value));
+            return this;
+        }
+
+        public <T> Builder preflightResponseHeader(final String name, final Callable<T> valueGenerator) {
+            preflightHeaders.put(name, valueGenerator);
+            return this;
+        }
+
+        public Builder preflightDateResponseHeader() {
+            preflightHeaders.put(Names.DATE, new DateValueGenerator());
+            return this;
+        }
+
         public CorsConfig build() {
+            if (preflightHeaders.isEmpty()) {
+                preflightHeaders.put(Names.DATE, new DateValueGenerator());
+                preflightHeaders.put(Names.CONTENT_LENGTH, new ConstantValueGenerator("0"));
+            }
             return new CorsConfig(this);
+        }
+    }
+
+    /**
+     * This class is used for preflight HTTP response values that do not need to be
+     * generated, but instead the value is "static" in that the same value will be returned
+     * for each call.
+     */
+    public static class ConstantValueGenerator implements Callable<Object> {
+
+        private final Object value;
+
+        public ConstantValueGenerator(final Object value) {
+            this.value = value;
+        }
+
+        @Override
+        public Object call() {
+            return value;
+        }
+    }
+
+    /**
+     * This callable is used for the DATE prefligth HTTP response HTTP header.
+     * It's value must be generated when the response is generated, hence will be
+     * different for every call.
+     */
+    public static class DateValueGenerator implements Callable<Date> {
+
+        @Override
+        public Date call() throws Exception {
+            return new Date();
         }
     }
 
