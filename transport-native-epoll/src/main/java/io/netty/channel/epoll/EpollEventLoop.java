@@ -323,15 +323,15 @@ final class EpollEventLoop extends SingleThreadEventLoop {
                 AbstractEpollChannel ch = ids.get(id);
                 if (ch != null) {
                     AbstractEpollUnsafe unsafe = (AbstractEpollUnsafe) ch.unsafe();
-                    if (write) {
+                    if (write && ch.isOpen()) {
                         // force flush of data as the epoll is writable again
                         unsafe.epollOutReady();
                     }
-                    if (read) {
+                    if (read && ch.isOpen()) {
                         // Something is ready to read, so consume it now
                         unsafe.epollInReady();
                     }
-                    if (close) {
+                    if (close && ch.isOpen()) {
                         unsafe.epollRdHupReady();
                     }
                 }
