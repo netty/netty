@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2014 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -21,8 +21,8 @@ import java.nio.charset.Charset;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class QueryStringEncoderTest
-{
+public class QueryStringEncoderTest {
+
     @Test
     public void testDefaultEncoding() throws Exception {
         QueryStringEncoder e;
@@ -54,9 +54,7 @@ public class QueryStringEncoderTest
 
     @Test
     public void testNonDefaultEncoding() throws Exception {
-        QueryStringEncoder e;
-
-        e = new QueryStringEncoder("/foo/\u00A5", Charset.forName("UTF-16"));
+        QueryStringEncoder e = new QueryStringEncoder("/foo/\u00A5", Charset.forName("UTF-16"));
         e.addParam("a", "\u00A5");
         Assert.assertEquals("/foo/\u00A5?a=%FE%FF%00%A5", e.toString());
         Assert.assertEquals(new URI("/foo/\u00A5?a=%FE%FF%00%A5"), e.toUri());
