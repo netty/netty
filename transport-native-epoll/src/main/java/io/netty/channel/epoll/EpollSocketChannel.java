@@ -445,13 +445,13 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
 
             assert eventLoop().inEventLoop();
 
-            boolean connectFinished = false;
+            boolean connectStillInProgress = false;
             try {
                 boolean wasActive = isActive();
                 if (!doFinishConnect()) {
+                    connectStillInProgress = true;
                     return;
                 }
-                connectFinished = true;
                 fulfillConnectPromise(connectPromise, wasActive);
             } catch (Throwable t) {
                 if (t instanceof ConnectException) {
@@ -462,7 +462,7 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
 
                 fulfillConnectPromise(connectPromise, t);
             } finally {
-                if (connectFinished) {
+                if (!connectStillInProgress) {
                     // Check for null as the connectTimeoutFuture is only created if a connectTimeoutMillis > 0 is used
                     // See https://github.com/netty/netty/issues/1770
                     if (connectTimeoutFuture != null) {
