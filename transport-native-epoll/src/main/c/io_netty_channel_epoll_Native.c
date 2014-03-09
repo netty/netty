@@ -105,7 +105,7 @@ jint epollCtl(JNIEnv * env, jint efd, int op, jint fd, jint flags, jint id) {
 
 jint getOption(JNIEnv *env, jint fd, int level, int optname, const void *optval, socklen_t optlen) {
     int code;
-    code = getsockopt(fd, level, optname, &optval, &optlen);
+    code = getsockopt(fd, level, optname, optval, &optlen);
     if (code == 0) {
         return 0;
     }
@@ -750,14 +750,28 @@ JNIEXPORT jboolean JNICALL Java_io_netty_channel_epoll_Native_connect(JNIEnv * e
     return JNI_TRUE;
 }
 
-JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_finishConnect(JNIEnv * env, jclass clazz, jint fd) {
-    // connect done, check for error
+JNIEXPORT jboolean JNICALL Java_io_netty_channel_epoll_Native_finishConnect(JNIEnv * env, jclass clazz, jint fd) {
+    // connect may be done
+    // return true if connection finished successfully
+    // return false if connection is still in progress
+    // throw exception if connection failed
     int optval;
-    int res =  getOption(env, fd, SOL_SOCKET, SO_ERROR, &optval, sizeof(optval));
-    if (res == 0) {
-        return;
+    int res = getOption(env, fd, SOL_SOCKET, SO_ERROR, &optval, sizeof(optval));
+    if (res != 0) {
+        // getOption failed
+        throwIOException(env, exceptionMessage("finishConnect getOption failed: ", res));
+        return JNI_FALSE;
+    } else if (optval == EINPROGRESS) {
+        // connect still in progress
+        return JNI_FALSE;
+    } else if (optval == 0) {
+        // connect succeeded
+        return JNI_TRUE;
+    } else {
+        // connect failed
+        throwIOException(env, exceptionMessage("Unable to connect to remote host: ", optval));
+        return JNI_FALSE;
     }
-    throwIOException(env, exceptionMessage("Unable to connect to remote host: ", optval));
 }
 
 JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_accept(JNIEnv * env, jclass clazz, jint fd) {
