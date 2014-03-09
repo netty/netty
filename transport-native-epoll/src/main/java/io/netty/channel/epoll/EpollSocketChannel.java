@@ -485,9 +485,13 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
 
             assert eventLoop().inEventLoop();
 
+            boolean connectStillInProgress = false;
             try {
                 boolean wasActive = isActive();
-                doFinishConnect();
+                if (!doFinishConnect()) {
+                    connectStillInProgress = true;
+                    return;
+                }
                 fulfillConnectPromise(connectPromise, wasActive);
             } catch (Throwable t) {
                 if (t instanceof ConnectException) {
@@ -498,12 +502,14 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
 
                 fulfillConnectPromise(connectPromise, t);
             } finally {
-                // Check for null as the connectTimeoutFuture is only created if a connectTimeoutMillis > 0 is used
-                // See https://github.com/netty/netty/issues/1770
-                if (connectTimeoutFuture != null) {
-                    connectTimeoutFuture.cancel(false);
+                if (!connectStillInProgress) {
+                    // Check for null as the connectTimeoutFuture is only created if a connectTimeoutMillis > 0 is used
+                    // See https://github.com/netty/netty/issues/1770
+                    if (connectTimeoutFuture != null) {
+                        connectTimeoutFuture.cancel(false);
+                    }
+                    connectPromise = null;
                 }
-                connectPromise = null;
             }
         }
 
@@ -544,9 +550,14 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
         /**
          * Finish the connect
          */
-        private void doFinishConnect() throws Exception {
-            Native.finishConnect(fd);
-            clearEpollOut();
+        private boolean doFinishConnect() throws Exception {
+            if (Native.finishConnect(fd)) {
+                clearEpollOut();
+                return true;
+            } else {
+                setEpollOut();
+                return false;
+            }
         }
 
         /**

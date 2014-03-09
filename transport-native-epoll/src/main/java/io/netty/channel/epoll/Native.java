@@ -113,7 +113,7 @@ final class Native {
         return connect(fd, address, scopeId, port);
     }
     public static native boolean connect(int fd, byte[] address, int scopeId, int port) throws IOException;
-    public static native void finishConnect(int fd) throws IOException;
+    public static native boolean finishConnect(int fd) throws IOException;
 
     public static native InetSocketAddress remoteAddress(int fd);
     public static native InetSocketAddress localAddress(int fd);
