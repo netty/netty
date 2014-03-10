@@ -100,7 +100,14 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
 
     @Override
     public EventExecutor next() {
-        return children[Math.abs(childIndex.getAndIncrement() % children.length)];
+        // if possible, use bitwise AND instead of modulo for better performance
+        // See https://github.com/netty/netty/issues/2282
+        final boolean isPowerOfTwo = (children.length & children.length - 1) == 0;
+        if (isPowerOfTwo) {
+            return children[childIndex.getAndIncrement() & children.length - 1];
+        } else {
+            return children[Math.abs(childIndex.getAndIncrement() % children.length)];
+        }
     }
 
     @Override
