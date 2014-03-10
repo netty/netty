@@ -34,6 +34,7 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
     private final AtomicInteger childIndex = new AtomicInteger();
     private final AtomicInteger terminatedChildren = new AtomicInteger();
     private final Promise<?> terminationFuture = new DefaultPromise(GlobalEventExecutor.INSTANCE);
+    private final EventExecutorChooser chooser;
 
     /**
      * Create a new instance.
@@ -63,6 +64,12 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
         }
 
         children = new SingleThreadEventExecutor[nThreads];
+        if (isPowerOfTwo(children.length)) {
+            chooser = new PowerOfTwoEventExecutorChooser();
+        } else {
+            chooser = new GenericEventExecutorChooser();
+        }
+
         for (int i = 0; i < nThreads; i ++) {
             boolean success = false;
             try {
@@ -112,7 +119,7 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
 
     @Override
     public EventExecutor next() {
-        return children[Math.abs(childIndex.getAndIncrement() % children.length)];
+        return chooser.next();
     }
 
     @Override
@@ -211,5 +218,27 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
             }
         }
         return isTerminated();
+    }
+
+    private static boolean isPowerOfTwo(int val) {
+        return (val & -val) == val;
+    }
+
+    private interface EventExecutorChooser {
+        EventExecutor next();
+    }
+
+    private final class PowerOfTwoEventExecutorChooser implements EventExecutorChooser {
+        @Override
+        public EventExecutor next() {
+            return children[childIndex.getAndIncrement() & children.length - 1];
+        }
+    }
+
+    private final class GenericEventExecutorChooser implements EventExecutorChooser {
+        @Override
+        public EventExecutor next() {
+            return children[Math.abs(childIndex.getAndIncrement() % children.length)];
+        }
     }
 }
