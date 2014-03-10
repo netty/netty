@@ -53,7 +53,7 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
     private boolean first;
 
     protected ByteToMessageDecoder() {
-        if (getClass().isAnnotationPresent(Sharable.class)) {
+        if (isSharable()) {
             throw new IllegalStateException("@Sharable annotation is not allowed");
         }
     }

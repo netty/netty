@@ -89,7 +89,7 @@ public abstract class ByteToMessageCodec<I> extends ChannelHandlerAdapter {
     }
 
     private void checkForSharableAnnotation() {
-        if (getClass().isAnnotationPresent(Sharable.class)) {
+        if (isSharable()) {
             throw new IllegalStateException("@Sharable annotation is not allowed");
         }
     }
