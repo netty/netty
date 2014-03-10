@@ -23,6 +23,8 @@ import io.netty.channel.socket.DatagramPacket;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.net.InetSocketAddress;
+
 public class DnsResponseTest {
 
     private static final byte[][] packets = {
@@ -44,7 +46,7 @@ public class DnsResponseTest {
         EmbeddedChannel embedder = new EmbeddedChannel(new DnsResponseDecoder());
         for (byte[] p: packets) {
             ByteBuf packet = embedder.alloc().buffer(512).writeBytes(p);
-            embedder.writeInbound(new DatagramPacket(packet, null));
+            embedder.writeInbound(new DatagramPacket(packet, null, new InetSocketAddress(0)));
             DnsResponse decoded = embedder.readInbound();
             packet.retain().readerIndex(0);
             ByteBuf raw = Unpooled.wrappedBuffer(p);

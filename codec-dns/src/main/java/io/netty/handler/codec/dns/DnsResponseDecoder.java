@@ -16,6 +16,7 @@
 package io.netty.handler.codec.dns;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.codec.MessageToMessageDecoder;
@@ -29,6 +30,7 @@ import java.util.List;
  * {@link DnsResponse}. This class also contains methods for decoding parts of
  * DnsResponses such as questions and resource records.
  */
+@ChannelHandler.Sharable
 public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> {
 
     /**

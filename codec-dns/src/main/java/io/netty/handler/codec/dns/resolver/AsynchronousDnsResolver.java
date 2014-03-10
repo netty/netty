@@ -20,6 +20,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPromise;
@@ -293,21 +294,22 @@ public final class AsynchronousDnsResolver {
     }
 
     /**
-     * Returns a {@link Future} which can be used to obtain a {@link List} of domain names as {@link String}s when given
-     * their corresponding IP address.
+     * Returns a {@link Future} which can be used to obtain a domain name as {@link String}s when given
+     * it's corresponding IP address.
      *
      * @param ipAddress
      *            the IP address to perform a reverse lookup on
      */
-    public Future<List<String>> reverse(String ipAddress) {
+    public Future<String> reverse(String ipAddress) {
         String[] octets = REVERSE_PATTERN.split(ipAddress);
         StringBuilder domain = new StringBuilder(ipAddress.length() + IN_ADDR_ARPA.length() + 4);
         for (int i = octets.length - 1; i > -1; i--) {
             domain.append(octets[i]).append('.');
         }
-        return resolve(domain.append(IN_ADDR_ARPA).toString(), nextDnsServer(), DnsEntry.TYPE_PTR);
+        return resolveSingle(domain.append(IN_ADDR_ARPA).toString(), nextDnsServer(), DnsEntry.TYPE_PTR);
     }
 
+    @ChannelHandler.Sharable
     private static final class DnsResponseHandler extends SimpleChannelInboundHandler<DnsResponse> {
         private final Map<Integer, ResolverDnsQuery<?>> queries = PlatformDependent.newConcurrentHashMap();
 
