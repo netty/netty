@@ -15,6 +15,17 @@
  */
 package io.netty.handler.codec.sockjs.util;
 
+import com.fasterxml.jackson.core.JsonGenerationException;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.Version;
+import com.fasterxml.jackson.core.io.CharTypes;
+import com.fasterxml.jackson.core.json.JsonWriteContext;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
@@ -24,18 +35,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-
-import org.codehaus.jackson.JsonGenerationException;
-import org.codehaus.jackson.JsonGenerator;
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.Version;
-import org.codehaus.jackson.impl.JsonWriteContext;
-import org.codehaus.jackson.map.JsonMappingException;
-import org.codehaus.jackson.map.JsonSerializer;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.SerializerProvider;
-import org.codehaus.jackson.map.module.SimpleModule;
-import org.codehaus.jackson.util.CharTypes;
 
 public final class JsonUtil {
 
@@ -48,7 +47,8 @@ public final class JsonUtil {
         MAPPER = new ObjectMapper();
 
         // This code adapted from Vert.x JsonCode.
-        SimpleModule simpleModule = new SimpleModule("simplepush", new Version(0, 0, 8, null));
+        SimpleModule simpleModule = new SimpleModule("simplepush", new Version(0, 0, 8, null, "io.netty",
+                "netty-codec-sockjs"));
         simpleModule.addSerializer(String.class, new JsonSerializer<String>() {
 
             private void writeUnicodeEscape(final JsonGenerator gen, final char c) throws IOException {
@@ -135,7 +135,7 @@ public final class JsonUtil {
             throw new JsonMappingException("content must be a JSON Array but was : " + content);
         }
         final List<String> messages = new ArrayList<String>();
-        final Iterator<JsonNode> elements = root.getElements();
+        final Iterator<JsonNode> elements = root.elements();
         while (elements.hasNext()) {
             final JsonNode field = elements.next();
             if (field.isValueNode()) {

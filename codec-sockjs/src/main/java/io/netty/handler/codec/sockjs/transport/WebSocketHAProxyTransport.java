@@ -16,6 +16,8 @@
 package io.netty.handler.codec.sockjs.transport;
 
 import static io.netty.handler.codec.sockjs.transport.Transports.internalServerErrorResponse;
+
+import com.fasterxml.jackson.core.JsonParseException;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -34,8 +36,6 @@ import io.netty.handler.codec.sockjs.util.JsonUtil;
 import io.netty.util.AttributeKey;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-
-import org.codehaus.jackson.JsonParseException;
 
 /**
  * WebSocketTransport is responsible for the WebSocket handshake and
