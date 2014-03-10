@@ -15,8 +15,8 @@
  */
 package io.netty.handler.codec.sockjs.transport;
 
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.sockjs.protocol.Frame;
@@ -24,7 +24,7 @@ import io.netty.handler.codec.sockjs.protocol.MessageFrame;
 
 import java.util.List;
 
-class RawWebSocketSendHandler extends ChannelOutboundHandlerAdapter {
+class RawWebSocketSendHandler extends ChannelHandlerAdapter {
 
     @Override
     public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise)

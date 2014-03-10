@@ -22,8 +22,8 @@ import static io.netty.handler.codec.http.HttpHeaders.Values.CLOSE;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.sockjs.transport.Transports.CONTENT_TYPE_JAVASCRIPT;
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -45,7 +45,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
  *
  * @see XhrSendTransport
  */
-public class XhrPollingTransport extends ChannelOutboundHandlerAdapter {
+public class XhrPollingTransport extends ChannelHandlerAdapter {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(XhrPollingTransport.class);
 

@@ -71,7 +71,7 @@ public class WebSocketHAProxyHandshakerTest {
     private static FullHttpRequest wsUpgradeRequest() {
         final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, HttpMethod.GET, "/websocket");
         request.headers().set(HOST, "server.test.com");
-        request.headers().set(UPGRADE, WEBSOCKET.toLowerCase());
+        request.headers().set(UPGRADE, WEBSOCKET.toString());
         request.headers().set(CONNECTION, "Upgrade");
         request.headers().set(SEC_WEBSOCKET_KEY1, "4 @1  46546xW%0l 1 5");
         request.headers().set(SEC_WEBSOCKET_KEY2, "12998 5 Y3 1  .P00");

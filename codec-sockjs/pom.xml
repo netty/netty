@@ -20,12 +20,12 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>5.0.0.Alpha1-SNAPSHOT</version>
+    <version>5.0.0.Alpha2-SNAPSHOT</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
   <artifactId>netty-codec-sockjs</artifactId>
-  <packaging>bundle</packaging>
+  <packaging>jar</packaging>
 
   <name>Netty/Codec/SockJS</name>
 

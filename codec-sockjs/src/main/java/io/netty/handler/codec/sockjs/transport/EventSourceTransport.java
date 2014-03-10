@@ -24,8 +24,8 @@ import static io.netty.buffer.Unpooled.unreleasableBuffer;
 import static io.netty.buffer.Unpooled.copiedBuffer;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.DefaultHttpResponse;
@@ -53,7 +53,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * http chunks will contain data that the server whishes to send to the client.
  *
  */
-public class EventSourceTransport extends ChannelOutboundHandlerAdapter {
+public class EventSourceTransport extends ChannelHandlerAdapter {
 
     public static final String CONTENT_TYPE_EVENT_STREAM = "text/event-stream; charset=UTF-8";
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(EventSourceTransport.class);

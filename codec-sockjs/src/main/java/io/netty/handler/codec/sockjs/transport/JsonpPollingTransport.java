@@ -23,7 +23,7 @@ import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.util.CharsetUtil.UTF_8;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelDuplexHandler;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -53,7 +53,7 @@ import java.util.List;
  *
  * @see JsonpSendTransport
  */
-public class JsonpPollingTransport extends ChannelDuplexHandler {
+public class JsonpPollingTransport extends ChannelHandlerAdapter {
 
     private final FullHttpRequest request;
     private final SockJsConfig config;

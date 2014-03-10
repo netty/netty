@@ -15,15 +15,15 @@
  */
 package io.netty.handler.codec.sockjs.handler;
 
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-public class CorsOutboundHandler extends ChannelOutboundHandlerAdapter {
+public class CorsOutboundHandler extends ChannelHandlerAdapter {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(CorsOutboundHandler.class);
 
     @Override

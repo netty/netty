@@ -24,8 +24,8 @@ import static io.netty.handler.codec.http.HttpHeaders.Names.TRANSFER_ENCODING;
 import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
 import static io.netty.util.CharsetUtil.UTF_8;
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultHttpContent;
@@ -61,7 +61,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * write method will write a script to the connection that will invoke the
  * callback.
  */
-public class HtmlFileTransport extends ChannelDuplexHandler {
+public class HtmlFileTransport extends ChannelHandlerAdapter {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(HtmlFileTransport.class);
     private static final ByteBuf HEADER_PART1 = unreleasableBuffer(copiedBuffer(

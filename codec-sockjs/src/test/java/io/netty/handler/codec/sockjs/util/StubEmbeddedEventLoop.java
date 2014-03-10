@@ -17,13 +17,21 @@ package io.netty.handler.codec.sockjs.util;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
+import io.netty.channel.AbstractEventLoop;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelHandlerInvoker;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
-import io.netty.util.concurrent.AbstractEventExecutor;
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ScheduledFuture;
 
+import java.net.SocketAddress;
 import java.util.concurrent.TimeUnit;
+
+import static io.netty.channel.ChannelHandlerInvokerUtil.*;
 
 /**
  * The sole purpose of this class it to work around that the EmbeddedEventLoop of
@@ -35,11 +43,12 @@ import java.util.concurrent.TimeUnit;
  * Note that schuduleAtFixedRate will actually not run the command given to it, but instead
  * just return a ScheduledFuture that is marked as successful.
  */
-public class StubEmbeddedEventLoop extends AbstractEventExecutor implements EventLoop {
+public class StubEmbeddedEventLoop extends AbstractEventLoop implements ChannelHandlerInvoker {
 
     private final EventLoop delegate;
 
     public StubEmbeddedEventLoop(final EventLoop delegate) {
+        super(delegate);
         this.delegate = delegate;
     }
 
@@ -109,7 +118,94 @@ public class StubEmbeddedEventLoop extends AbstractEventExecutor implements Even
     }
 
     @Override
+    public ChannelHandlerInvoker asInvoker() {
+        return this;
+    }
+
+    @Override
     public EventLoopGroup parent() {
         return delegate.parent();
+    }
+
+    @Override
+    public EventExecutor executor() {
+        return this;
+    }
+
+    @Override
+    public void invokeChannelRegistered(ChannelHandlerContext ctx) {
+        invokeChannelRegisteredNow(ctx);
+    }
+
+    @Override
+    public void invokeChannelActive(ChannelHandlerContext ctx) {
+        invokeChannelActiveNow(ctx);
+    }
+
+    @Override
+    public void invokeChannelInactive(ChannelHandlerContext ctx) {
+        invokeChannelInactiveNow(ctx);
+    }
+
+    @Override
+    public void invokeExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+        invokeExceptionCaughtNow(ctx, cause);
+    }
+
+    @Override
+    public void invokeUserEventTriggered(ChannelHandlerContext ctx, Object event) {
+        invokeUserEventTriggeredNow(ctx, event);
+    }
+
+    @Override
+    public void invokeChannelRead(ChannelHandlerContext ctx, Object msg) {
+        invokeChannelReadNow(ctx, msg);
+    }
+
+    @Override
+    public void invokeChannelReadComplete(ChannelHandlerContext ctx) {
+        invokeChannelReadCompleteNow(ctx);
+    }
+
+    @Override
+    public void invokeChannelWritabilityChanged(ChannelHandlerContext ctx) {
+        invokeChannelWritabilityChangedNow(ctx);
+    }
+
+    @Override
+    public void invokeBind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
+        invokeBindNow(ctx, localAddress, promise);
+    }
+
+    @Override
+    public void invokeConnect(
+            ChannelHandlerContext ctx,
+            SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+        invokeConnectNow(ctx, remoteAddress, localAddress, promise);
+    }
+
+    @Override
+    public void invokeDisconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
+        invokeDisconnectNow(ctx, promise);
+    }
+
+    @Override
+    public void invokeClose(ChannelHandlerContext ctx, ChannelPromise promise) {
+        invokeCloseNow(ctx, promise);
+    }
+
+    @Override
+    public void invokeRead(ChannelHandlerContext ctx) {
+        invokeReadNow(ctx);
+    }
+
+    @Override
+    public void invokeWrite(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+        invokeWriteNow(ctx, msg, promise);
+    }
+
+    @Override
+    public void invokeFlush(ChannelHandlerContext ctx) {
+        invokeFlushNow(ctx);
     }
 }

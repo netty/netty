@@ -17,8 +17,8 @@ package io.netty.handler.codec.sockjs.handler;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.sockjs.SockJsSessionContext;
 import io.netty.handler.codec.sockjs.handler.SockJsSession.States;
@@ -39,7 +39,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
  * the type of {@link SessionState} that this session handles will differ.
  *
  */
-public class SessionHandler extends ChannelInboundHandlerAdapter implements SockJsSessionContext {
+public class SessionHandler extends ChannelHandlerAdapter implements SockJsSessionContext {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(SessionHandler.class);
     public enum Events { CLOSE_SESSION, HANDLE_SESSION }

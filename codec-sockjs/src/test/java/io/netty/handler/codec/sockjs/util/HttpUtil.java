@@ -20,8 +20,10 @@ import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
@@ -32,16 +34,27 @@ public final class HttpUtil {
     }
 
     public static HttpResponse decode(final EmbeddedChannel channel) throws Exception {
-        final EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
+        final EmbeddedChannel ch = new EmbeddedChannel(new HttpObjectAggregator(8192), new HttpResponseDecoder());
         ch.writeInbound(channel.readOutbound());
         return (HttpResponse) ch.readInbound();
     }
 
     public static FullHttpResponse decodeFullResponse(final EmbeddedChannel channel) throws Exception {
         final HttpResponse response = decode(channel);
-        final ByteBuf content = (ByteBuf) channel.readOutbound();
+        final ByteBuf content = channel.readOutbound();
         final DefaultFullHttpResponse fullResponse = new DefaultFullHttpResponse(response.getProtocolVersion(),
                     response.getStatus(), content);
+        fullResponse.headers().add(response.headers());
+        return fullResponse;
+    }
+
+    public static FullHttpResponse decodeFullHttpResponse(final EmbeddedChannel channel) throws Exception {
+        final EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
+        ch.writeInbound(channel.readOutbound());
+        final HttpResponse response = ch.readInbound();
+        final HttpContent content = ch.readInbound();
+        final DefaultFullHttpResponse fullResponse = new DefaultFullHttpResponse(response.getProtocolVersion(),
+                response.getStatus(), content.content());
         fullResponse.headers().add(response.headers());
         return fullResponse;
     }
@@ -49,7 +62,7 @@ public final class HttpUtil {
     public static FullHttpRequest webSocketUpgradeRequest(final String path, final WebSocketVersion version) {
         final FullHttpRequest req = new DefaultFullHttpRequest(HTTP_1_1, HttpMethod.GET, path);
         req.headers().set(Names.HOST, "server.test.com");
-        req.headers().set(Names.UPGRADE, WEBSOCKET.toLowerCase());
+        req.headers().set(Names.UPGRADE, WEBSOCKET.toString());
         req.headers().set(Names.CONNECTION, "Upgrade");
         req.headers().set(Names.SEC_WEBSOCKET_KEY, "dGhlIHNhbXBsZSBub25jZQ==");
         req.headers().set(Names.SEC_WEBSOCKET_ORIGIN, "http://test.com");

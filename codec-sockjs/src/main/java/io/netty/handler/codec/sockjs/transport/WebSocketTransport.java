@@ -91,7 +91,7 @@ public class WebSocketTransport extends SimpleChannelInboundHandler<Object> {
         if (connectHeader != null && "keep-alive, upgrade".equals(connectHeader.toLowerCase())) {
             logger.debug("Connection header was not 'keep-alive, upgrade' was: {}", connectHeader);
             req.headers().set(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.UPGRADE);
-            connectHeader = HttpHeaders.Values.UPGRADE;
+            connectHeader = HttpHeaders.Values.UPGRADE.toString();
         }
         if (connectHeader == null || !"upgrade".equals(connectHeader.toLowerCase())) {
             logger.debug("Connection header was not 'upgrade' was: {}", connectHeader);

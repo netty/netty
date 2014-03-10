@@ -88,7 +88,7 @@ public class RawWebSocketTransport extends SimpleChannelInboundHandler<Object> {
         String connectHeader = req.headers().get(HttpHeaders.Names.CONNECTION);
         if (connectHeader != null && "keep-alive".equals(connectHeader.toLowerCase())) {
             req.headers().set(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.UPGRADE);
-            connectHeader = HttpHeaders.Values.UPGRADE;
+            connectHeader = HttpHeaders.Values.UPGRADE.toString();
         }
         if (connectHeader == null || !"upgrade".equals(connectHeader.toLowerCase())) {
             ctx.writeAndFlush(badRequestResponse(req.getProtocolVersion(), "\"Connection\" must be \"Upgrade\"."))

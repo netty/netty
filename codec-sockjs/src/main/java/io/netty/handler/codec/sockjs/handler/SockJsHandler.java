@@ -205,7 +205,7 @@ public class SockJsHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
     private static void writeResponse(final Channel channel, final HttpRequest request,
                                       final FullHttpResponse response) {
         response.headers().set(CONTENT_LENGTH, response.content().readableBytes());
-        boolean hasKeepAliveHeader = KEEP_ALIVE.equalsIgnoreCase(request.headers().get(CONNECTION));
+        boolean hasKeepAliveHeader = HttpHeaders.equalsIgnoreCase(KEEP_ALIVE, request.headers().get(CONNECTION));
         if (!request.getProtocolVersion().isKeepAliveDefault() && hasKeepAliveHeader) {
             response.headers().set(CONNECTION, KEEP_ALIVE);
         }
