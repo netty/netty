@@ -15,18 +15,6 @@
  */
 package io.netty.handler.codec.sockjs.transport;
 
-import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_TYPE;
-import static io.netty.handler.codec.http.HttpMethod.GET;
-import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
-import static io.netty.handler.codec.http.HttpResponseStatus.OK;
-import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
-import static io.netty.handler.codec.sockjs.SockJsTestUtil.verifyNoCacheHeaders;
-import static io.netty.util.CharsetUtil.UTF_8;
-import static org.hamcrest.CoreMatchers.containsString;
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThan;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpRequest;
@@ -36,6 +24,18 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.sockjs.SockJsConfig;
 import io.netty.handler.codec.sockjs.protocol.MessageFrame;
 import io.netty.handler.codec.sockjs.protocol.OpenFrame;
+
+import static io.netty.handler.codec.http.HttpHeaders.Names.*;
+import static io.netty.handler.codec.http.HttpMethod.*;
+import static io.netty.handler.codec.http.HttpResponseStatus.*;
+import static io.netty.handler.codec.http.HttpVersion.*;
+import static io.netty.util.CharsetUtil.*;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.*;
+import static org.hamcrest.Matchers.*;
+import static io.netty.handler.codec.sockjs.SockJsTestUtil.*;
 
 import java.io.IOException;
 
@@ -48,7 +48,7 @@ public class HtmlFileTransportTest {
         final String url = "/test/htmlfile?c=";
         final EmbeddedChannel ch = newHtmlFileChannel(url);
         ch.writeInbound(new DefaultHttpRequest(HTTP_1_1, GET, url));
-        final HttpResponse response = (HttpResponse) ch.readOutbound();
+        final HttpResponse response = ch.readOutbound();
         assertThat(response.getStatus(), equalTo(INTERNAL_SERVER_ERROR));
         assertThat(response.headers().get(CONTENT_TYPE), equalTo(Transports.CONTENT_TYPE_PLAIN));
         verifyNoCacheHeaders(response);
@@ -61,20 +61,20 @@ public class HtmlFileTransportTest {
         ch.writeInbound(new DefaultHttpRequest(HTTP_1_1, GET, url));
         ch.writeOutbound(new OpenFrame());
 
-        final HttpResponse response = (HttpResponse) ch.readOutbound();
+        final HttpResponse response = ch.readOutbound();
         assertThat(response.getStatus(), equalTo(OK));
         assertThat(response.headers().get(CONTENT_TYPE), equalTo(Transports.CONTENT_TYPE_HTML));
         verifyNoCacheHeaders(response);
 
-        final HttpContent headerChunk = (HttpContent) ch.readOutbound();
+        final HttpContent headerChunk = ch.readOutbound();
         assertThat(headerChunk.content().readableBytes(), is(greaterThan(1024)));
         final String header = headerChunk.content().toString(UTF_8);
         assertThat(header, containsString("var c = parent.callback"));
-        final HttpContent chunk = (HttpContent) ch.readOutbound();
+        final HttpContent chunk = ch.readOutbound();
         assertThat(chunk.content().toString(UTF_8), equalTo("<script>\np(\"o\");\n</script>\r\n"));
 
         ch.write(new MessageFrame("x"));
-        final HttpContent messageContent = (HttpContent) ch.readOutbound();
+        final HttpContent messageContent = ch.readOutbound();
         assertThat(messageContent.content().toString(UTF_8), equalTo("<script>\np(\"a[\\\"x\\\"]\");\n</script>\r\n"));
     }
 
@@ -85,8 +85,7 @@ public class HtmlFileTransportTest {
     private static EmbeddedChannel newStreamingChannel(final SockJsConfig config, final String path) {
         final HttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, path);
         final HtmlFileTransport transport = new HtmlFileTransport(config, request);
-        final EmbeddedChannel ch = new EmbeddedChannel(transport);
-        return ch;
+        return new EmbeddedChannel(transport);
     }
 
 }

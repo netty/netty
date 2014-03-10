@@ -113,9 +113,9 @@ public class WebSocketTransportTest {
         ch.writeInbound(new TextWebSocketFrame("[\"x\",\"y\"]"));
         // Discard of the HttpRequest
         ch.readInbound();
-        final String x = (String) ch.readInbound();
+        final String x = ch.readInbound();
         assertThat(x, equalTo("x"));
-        final String y = (String) ch.readInbound();
+        final String y = ch.readInbound();
         assertThat(y, equalTo("y"));
     }
 
@@ -128,7 +128,7 @@ public class WebSocketTransportTest {
         ch.writeInbound(new TextWebSocketFrame("\"x\""));
         // Discard of the HttpRequest
         ch.readInbound();
-        final String message = (String) ch.readInbound();
+        final String message = ch.readInbound();
         assertThat(message, equalTo("x"));
     }
 

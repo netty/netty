@@ -157,8 +157,7 @@ public class HtmlFileTransport extends ChannelHandlerAdapter {
         }
     }
 
-    private void respondCallbackRequired(final ChannelHandlerContext ctx)
-            throws Exception {
+    private void respondCallbackRequired(final ChannelHandlerContext ctx) {
         final FullHttpResponse response = Transports.responseWithContent(request.getProtocolVersion(),
                 INTERNAL_SERVER_ERROR,
                 Transports.CONTENT_TYPE_PLAIN,

@@ -38,7 +38,7 @@ class SockJsSession {
     private final AtomicBoolean inuse = new AtomicBoolean();
     private ChannelHandlerContext ctx;
 
-    public SockJsSession(final String sessionId, final SockJsService service) {
+    protected SockJsSession(final String sessionId, final SockJsService service) {
         this.sessionId = sessionId;
         this.service = service;
     }

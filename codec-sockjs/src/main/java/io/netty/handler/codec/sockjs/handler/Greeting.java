@@ -41,7 +41,7 @@ final class Greeting {
         return path.isEmpty() || "/".equals(path);
     }
 
-    public static FullHttpResponse response(final HttpRequest request) throws Exception {
+    public static FullHttpResponse response(final HttpRequest request) {
         final FullHttpResponse response = new DefaultFullHttpResponse(request.getProtocolVersion(), OK, CONTENT);
         response.headers().set(CONTENT_TYPE, Transports.CONTENT_TYPE_PLAIN);
         return response;

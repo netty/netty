@@ -239,12 +239,12 @@ public class SockJsHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         }
     }
 
-    private static class SessionNotFoundException extends Exception {
+    private static final class SessionNotFoundException extends Exception {
         private static final long serialVersionUID = 1101611486620901143L;
         private final String sessionId;
         private final HttpRequest request;
 
-        public SessionNotFoundException(final String sessionId, final HttpRequest request) {
+        private SessionNotFoundException(final String sessionId, final HttpRequest request) {
             this.sessionId = sessionId;
             this.request = request;
         }

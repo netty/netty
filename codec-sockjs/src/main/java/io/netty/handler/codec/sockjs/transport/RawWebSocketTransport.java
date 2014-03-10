@@ -98,7 +98,7 @@ public class RawWebSocketTransport extends SimpleChannelInboundHandler<Object> {
         return true;
     }
 
-    private void handleHttpRequest(final ChannelHandlerContext ctx, FullHttpRequest req) throws Exception {
+    private void handleHttpRequest(final ChannelHandlerContext ctx, FullHttpRequest req) {
         if (!checkRequestHeaders(ctx, req)) {
             return;
         }
@@ -108,7 +108,7 @@ public class RawWebSocketTransport extends SimpleChannelInboundHandler<Object> {
                 config.webSocketProtocolCSV(), false);
         handshaker = wsFactory.newHandshaker(req);
         if (handshaker == null) {
-            WebSocketServerHandshakerFactory.sendUnsupportedWebSocketVersionResponse(ctx.channel());
+            WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(ctx.channel());
         } else {
             final ChannelFuture handshakeFuture = handshaker.handshake(ctx.channel(), req);
             handshakeFuture.addListener(new ChannelFutureListener() {

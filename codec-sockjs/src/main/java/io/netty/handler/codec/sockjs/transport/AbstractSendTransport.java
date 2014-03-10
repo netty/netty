@@ -108,8 +108,7 @@ public abstract class AbstractSendTransport extends SimpleChannelInboundHandler<
     protected void respond(final ChannelHandlerContext ctx,
             final HttpVersion httpVersion,
             final HttpResponseStatus status,
-            final String message)
-            throws Exception {
+            final String message) {
         final FullHttpResponse response = responseWithContent(httpVersion, status, CONTENT_TYPE_PLAIN, message);
         Transports.setDefaultHeaders(response, config);
         if (ctx.channel().isActive() && ctx.channel().isRegistered()) {

@@ -39,7 +39,7 @@ public class CorsOutboundHandlerTest {
         boolean write = channel.writeOutbound(new DefaultFullHttpResponse(HttpVersion.HTTP_1_0, HttpResponseStatus.OK));
         assertThat(write, is(true));
 
-        final HttpResponse response = (HttpResponse) channel.readOutbound();
+        final HttpResponse response = channel.readOutbound();
         assertThat(response.getProtocolVersion(), equalTo(HttpVersion.HTTP_1_0));
         assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN), equalTo("xyz.com"));
         assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_CREDENTIALS), equalTo("true"));
@@ -53,7 +53,7 @@ public class CorsOutboundHandlerTest {
         channel.attr(CorsInboundHandler.CORS).set(new CorsMetadata());
         channel.writeOutbound(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK));
 
-        final HttpResponse response = (HttpResponse) channel.readOutbound();
+        final HttpResponse response = channel.readOutbound();
         assertThat(response.getProtocolVersion(), equalTo(HttpVersion.HTTP_1_1));
         assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN), equalTo("*"));
         assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_CREDENTIALS), equalTo("true"));

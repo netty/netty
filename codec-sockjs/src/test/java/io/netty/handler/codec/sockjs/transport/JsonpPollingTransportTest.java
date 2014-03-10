@@ -87,7 +87,7 @@ public class JsonpPollingTransportTest {
         final EmbeddedChannel ch = new EmbeddedChannel(jsonpPollingOutbound);
         ch.writeInbound(request);
         ch.writeOutbound(frame);
-        final FullHttpResponse response =  (FullHttpResponse) ch.readOutbound();
+        final FullHttpResponse response =  ch.readOutbound();
         ch.finish();
         return response;
     }

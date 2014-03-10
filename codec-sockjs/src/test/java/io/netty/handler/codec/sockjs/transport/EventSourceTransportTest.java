@@ -40,14 +40,14 @@ public class EventSourceTransportTest {
         final EmbeddedChannel ch = newEventSourceChannel();
         ch.writeOutbound(new OpenFrame());
 
-        final HttpResponse response = (HttpResponse) ch.readOutbound();
+        final HttpResponse response = ch.readOutbound();
         assertThat(response.getStatus(), equalTo(HttpResponseStatus.OK));
         assertThat(response.headers().get(CONTENT_TYPE), equalTo(EventSourceTransport.CONTENT_TYPE_EVENT_STREAM));
         verifyNoCacheHeaders(response);
 
-        final DefaultHttpContent newLinePrelude = (DefaultHttpContent) ch.readOutbound();
+        final DefaultHttpContent newLinePrelude = ch.readOutbound();
         assertThat(newLinePrelude.content().toString(UTF_8), equalTo("\r\n"));
-        final DefaultHttpContent data = (DefaultHttpContent) ch.readOutbound();
+        final DefaultHttpContent data = ch.readOutbound();
         assertThat(data.content().toString(UTF_8), equalTo("data: o\r\n\r\n"));
     }
 
@@ -58,8 +58,7 @@ public class EventSourceTransportTest {
     private static EmbeddedChannel newStreamingChannel(final SockJsConfig config) {
         final HttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, Transports.Type.EVENTSOURCE.path());
         final EventSourceTransport transport = new EventSourceTransport(config, request);
-        final EmbeddedChannel ch = new EmbeddedChannel(transport);
-        return ch;
+        return new EmbeddedChannel(transport);
     }
 
 }

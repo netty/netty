@@ -44,7 +44,7 @@ class PollingSessionState extends AbstractTimersSessionState {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PollingSessionState.class);
     private final ConcurrentMap<String, SockJsSession> sessions;
 
-    public PollingSessionState(final ConcurrentMap<String, SockJsSession> sessions) {
+    protected PollingSessionState(final ConcurrentMap<String, SockJsSession> sessions) {
         super(sessions);
         this.sessions = sessions;
     }

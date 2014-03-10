@@ -39,7 +39,7 @@ import java.util.concurrent.ConcurrentMap;
 class StreamingSessionState extends AbstractTimersSessionState {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(StreamingSessionState.class);
 
-    public StreamingSessionState(final ConcurrentMap<String, SockJsSession> sessions) {
+    protected StreamingSessionState(final ConcurrentMap<String, SockJsSession> sessions) {
         super(sessions);
     }
 

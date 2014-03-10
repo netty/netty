@@ -150,7 +150,7 @@ public final class JsonUtil {
     public static String encode(final String content) throws JsonMappingException {
         try {
             return MAPPER.writeValueAsString(content);
-        } catch (Exception e) {
+        } catch (Exception ignored) {
             throw new JsonMappingException("content must be a JSON Array but was : " + content);
         }
     }

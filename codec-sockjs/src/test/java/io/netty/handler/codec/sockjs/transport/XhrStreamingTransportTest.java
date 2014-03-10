@@ -46,18 +46,18 @@ public class XhrStreamingTransportTest {
         final EmbeddedChannel ch = newStreamingChannel();
         ch.writeOutbound(new OpenFrame());
 
-        final HttpResponse response = (HttpResponse) ch.readOutbound();
+        final HttpResponse response = ch.readOutbound();
         assertThat(response.getStatus(), equalTo(HttpResponseStatus.OK));
         assertThat(response.headers().get(CONTENT_TYPE), equalTo(Transports.CONTENT_TYPE_JAVASCRIPT));
         assertThat(response.headers().get(TRANSFER_ENCODING), equalTo(CHUNKED.toString()));
         assertCORSHeaders(response, "*");
         verifyNoCacheHeaders(response);
 
-        final DefaultHttpContent prelude = (DefaultHttpContent) ch.readOutbound();
+        final DefaultHttpContent prelude = ch.readOutbound();
         assertThat(prelude.content().readableBytes(), is(PRELUDE_SIZE));
         prelude.content().readBytes(Unpooled.buffer(PRELUDE_SIZE));
 
-        final DefaultHttpContent openResponse = (DefaultHttpContent) ch.readOutbound();
+        final DefaultHttpContent openResponse = ch.readOutbound();
         assertThat(openResponse.content().toString(CharsetUtil.UTF_8), equalTo("o\n"));
         ch.finish();
     }
@@ -69,8 +69,7 @@ public class XhrStreamingTransportTest {
     private static EmbeddedChannel newStreamingChannel(final SockJsConfig config) {
         final HttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, "/xhr-streaming");
         final XhrStreamingTransport transport = new XhrStreamingTransport(config, request);
-        final EmbeddedChannel ch = new EmbeddedChannel(transport);
-        return ch;
+        return new EmbeddedChannel(transport);
     }
 
 }

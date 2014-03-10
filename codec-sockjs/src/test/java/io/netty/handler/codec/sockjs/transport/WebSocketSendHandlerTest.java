@@ -32,12 +32,12 @@ public class WebSocketSendHandlerTest {
     public void messageReceived() throws Exception {
         final EmbeddedChannel ch = createWebsocketChannel(SockJsConfig.withPrefix("/echo").build());
         ch.writeOutbound(new MessageFrame("testing"));
-        final TextWebSocketFrame textFrame = (TextWebSocketFrame) ch.readOutbound();
+        final TextWebSocketFrame textFrame = ch.readOutbound();
         assertThat(textFrame.content().toString(CharsetUtil.UTF_8), equalTo("a[\"testing\"]"));
         textFrame.release();
     }
 
-    private static EmbeddedChannel createWebsocketChannel(final SockJsConfig config) throws Exception {
+    private static EmbeddedChannel createWebsocketChannel(final SockJsConfig config) {
         return new EmbeddedChannel(
                 new WebSocket13FrameDecoder(true, false, 2048),
                 new WebSocketTransport(config),

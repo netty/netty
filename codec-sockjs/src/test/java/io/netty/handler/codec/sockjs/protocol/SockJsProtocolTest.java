@@ -93,7 +93,6 @@ import io.netty.handler.codec.sockjs.SockJsConfig;
 import io.netty.handler.codec.sockjs.SockJsService;
 import io.netty.handler.codec.sockjs.SockJsServiceFactory;
 import io.netty.handler.codec.sockjs.SockJsSessionContext;
-import io.netty.handler.codec.sockjs.SockJsTestUtil;
 import io.netty.handler.codec.sockjs.handler.CorsInboundHandler;
 import io.netty.handler.codec.sockjs.handler.CorsOutboundHandler;
 import io.netty.handler.codec.sockjs.handler.SockJsHandler;
@@ -251,7 +250,7 @@ public class SockJsProtocolTest {
         final SockJsServiceFactory factory = echoService();
         final EmbeddedChannel ch = channelForMockService(factory.config());
         ch.writeInbound(httpRequest(factory.config().prefix(), OPTIONS));
-        final HttpResponse response = (HttpResponse) ch.readOutbound();
+        final HttpResponse response = ch.readOutbound();
         assertThat(response.getStatus(), is(HttpResponseStatus.NO_CONTENT));
         assertCORSPreflightResponseHeaders(response);
         assertCORSHeaders(response, "*");
@@ -267,7 +266,7 @@ public class SockJsProtocolTest {
         final FullHttpRequest request = httpRequest(factory.config().prefix() + "/info", OPTIONS);
         request.headers().set(ORIGIN, "null");
         ch.writeInbound(request);
-        final HttpResponse response = (HttpResponse) ch.readOutbound();
+        final HttpResponse response = ch.readOutbound();
         assertThat(response.getStatus(), is(HttpResponseStatus.NO_CONTENT));
         assertCORSPreflightResponseHeaders(response);
         assertCORSHeaders(response, "*");
@@ -335,7 +334,7 @@ public class SockJsProtocolTest {
     @Test
     public void protocolTestSimpleSession() throws Exception {
         final SockJsServiceFactory factory = echoService();
-        final String sessionUrl = factory.config().prefix() + "/111/" + UUID.randomUUID().toString();
+        final String sessionUrl = factory.config().prefix() + "/111/" + UUID.randomUUID();
 
         final FullHttpResponse openSessionResponse = xhrRequest(sessionUrl, factory);
         assertOpenFrameResponse(openSessionResponse);
@@ -356,7 +355,7 @@ public class SockJsProtocolTest {
     @Test
     public void protocolTestCloseSession() throws Exception {
         final SockJsServiceFactory closefactory = closeService();
-        final String sessionUrl = closefactory.config().prefix() + "/222/" + UUID.randomUUID().toString();
+        final String sessionUrl = closefactory.config().prefix() + "/222/" + UUID.randomUUID();
 
         final FullHttpResponse openSessionResponse = xhrRequest(sessionUrl, closefactory);
         assertOpenFrameResponse(openSessionResponse);
@@ -370,7 +369,7 @@ public class SockJsProtocolTest {
     @Test
     public void webSocketHttpErrorsTestHttpMethod() throws Exception {
         final SockJsServiceFactory echoFactory = echoService();
-        final String sessionUrl = echoFactory.config().prefix() + "/222/" + UUID.randomUUID().toString();
+        final String sessionUrl = echoFactory.config().prefix() + "/222/" + UUID.randomUUID();
         final EmbeddedChannel ch = channelForService(echoFactory);
         removeLastInboundMessageHandlers(ch);
 
@@ -387,7 +386,7 @@ public class SockJsProtocolTest {
     @Test
     public void webSocketHttpErrorsTestInvalidConnectionHeader() throws Exception {
         final SockJsServiceFactory echoFactory = echoService();
-        final String sessionUrl = echoFactory.config().prefix() + "/222/" + UUID.randomUUID().toString();
+        final String sessionUrl = echoFactory.config().prefix() + "/222/" + UUID.randomUUID();
         final EmbeddedChannel ch = channelForService(echoFactory);
         removeLastInboundMessageHandlers(ch);
 
@@ -406,7 +405,7 @@ public class SockJsProtocolTest {
     @Test
     public void webSocketHttpErrorsTestInvalidMethod() throws Exception {
         final SockJsServiceFactory echoFactory = echoService();
-        final String sessionUrl = echoFactory.config().prefix() + "/222/" + UUID.randomUUID().toString();
+        final String sessionUrl = echoFactory.config().prefix() + "/222/" + UUID.randomUUID();
         final EmbeddedChannel ch = channelForService(echoFactory);
         removeLastInboundMessageHandlers(ch);
 
@@ -423,10 +422,10 @@ public class SockJsProtocolTest {
     @Test
     public void webSocketHixie76TestTransport() throws Exception {
         final SockJsServiceFactory echoFactory = echoService();
-        final String sessionUrl = echoFactory.config().prefix() + "/222/" + UUID.randomUUID().toString();
+        final String sessionUrl = echoFactory.config().prefix() + "/222/" + UUID.randomUUID();
         final EmbeddedChannel ch = wsChannelForService(echoFactory);
 
-        final FullHttpRequest request = webSocketUpgradeRequest(sessionUrl + "/websocket", WebSocketVersion.V00);
+        final FullHttpRequest request = webSocketUpgradeRequest(sessionUrl + "/websocket", V00);
         ch.writeInbound(request);
 
         final FullHttpResponse upgradeResponse = HttpUtil.decodeFullHttpResponse(ch);
@@ -449,12 +448,12 @@ public class SockJsProtocolTest {
     @Test
     public void webSocketHixie76TestClose() throws Exception {
         final String serviceName = "/close";
-        final String sessionUrl = serviceName + "/222/" + UUID.randomUUID().toString();
+        final String sessionUrl = serviceName + "/222/" + UUID.randomUUID();
         final SockJsConfig config = SockJsConfig.withPrefix(serviceName).build();
         final SockJsServiceFactory service = closeService(config);
         final EmbeddedChannel ch = wsChannelForService(service);
 
-        final FullHttpRequest request = webSocketUpgradeRequest(sessionUrl + "/websocket", WebSocketVersion.V00);
+        final FullHttpRequest request = webSocketUpgradeRequest(sessionUrl + "/websocket", V00);
         ch.writeInbound(request);
 
         final FullHttpResponse upgradeResponse = HttpUtil.decodeFullHttpResponse(ch);
@@ -475,10 +474,10 @@ public class SockJsProtocolTest {
     @Test
     public void webSocketHixie76TestEmptyFrame() throws Exception {
         final SockJsServiceFactory echoFactory = echoService();
-        final String sessionUrl = echoFactory.config().prefix() + "/222/" + UUID.randomUUID().toString();
+        final String sessionUrl = echoFactory.config().prefix() + "/222/" + UUID.randomUUID();
         final EmbeddedChannel ch = wsChannelForService(echoFactory);
 
-        final FullHttpRequest request = webSocketUpgradeRequest(sessionUrl + "/websocket", WebSocketVersion.V00);
+        final FullHttpRequest request = webSocketUpgradeRequest(sessionUrl + "/websocket", V00);
         ch.writeInbound(request);
 
         final FullHttpResponse upgradeResponse = HttpUtil.decodeFullHttpResponse(ch);
@@ -503,15 +502,15 @@ public class SockJsProtocolTest {
     @Test
     public void webSocketHixie76TestReuseSessionId() throws Exception {
         final SockJsServiceFactory echoFactory = echoService();
-        final String sessionUrl = echoFactory.config().prefix() + "/222/" + UUID.randomUUID().toString();
+        final String sessionUrl = echoFactory.config().prefix() + "/222/" + UUID.randomUUID();
         final EmbeddedChannel ch1 = wsChannelForService(echoFactory);
         final EmbeddedChannel ch2 = wsChannelForService(echoFactory);
 
-        ch1.writeInbound(webSocketUpgradeRequest(sessionUrl + "/websocket", WebSocketVersion.V00));
+        ch1.writeInbound(webSocketUpgradeRequest(sessionUrl + "/websocket", V00));
         final FullHttpResponse upgradeResponse = HttpUtil.decodeFullHttpResponse(ch1);
         assertThat(upgradeResponse.content().toString(UTF_8), equalTo("8jKS'y:G*Co,Wxa-"));
 
-        ch2.writeInbound(webSocketUpgradeRequest(sessionUrl + "/websocket", WebSocketVersion.V00));
+        ch2.writeInbound(webSocketUpgradeRequest(sessionUrl + "/websocket", V00));
         final FullHttpResponse upgradeResponse2 = HttpUtil.decodeFullHttpResponse(ch2);
         assertThat(upgradeResponse2.content().toString(UTF_8), equalTo("8jKS'y:G*Co,Wxa-"));
 
@@ -545,7 +544,7 @@ public class SockJsProtocolTest {
     @Test
     public void webSocketHixie76TestHAProxy() throws Exception {
         final SockJsServiceFactory echoFactory = echoService();
-        final String sessionUrl = echoFactory.config().prefix() + "/222/" + UUID.randomUUID().toString();
+        final String sessionUrl = echoFactory.config().prefix() + "/222/" + UUID.randomUUID();
         final EmbeddedChannel ch = wsChannelForService(echoFactory);
 
         final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, sessionUrl + "/websocket");
@@ -585,11 +584,11 @@ public class SockJsProtocolTest {
     @Test
     public void webSocketHixie76TestBrokenJSON() throws Exception {
         final String serviceName = "/close";
-        final String sessionUrl = serviceName + "/222/" + UUID.randomUUID().toString();
+        final String sessionUrl = serviceName + "/222/" + UUID.randomUUID();
         final SockJsConfig config = SockJsConfig.withPrefix(serviceName).build();
         final EmbeddedChannel ch = wsChannelForService(echoService(config));
 
-        final FullHttpRequest request = webSocketUpgradeRequest(sessionUrl + "/websocket", WebSocketVersion.V00);
+        final FullHttpRequest request = webSocketUpgradeRequest(sessionUrl + "/websocket", V00);
         ch.writeInbound(request);
         final FullHttpResponse upgradeResponse = HttpUtil.decodeFullHttpResponse(ch);
         assertThat(upgradeResponse.getStatus(), equalTo(HttpResponseStatus.SWITCHING_PROTOCOLS));
@@ -607,7 +606,7 @@ public class SockJsProtocolTest {
      */
     @Test
     public void webSocketHybi10TestTransport() throws Exception {
-        webSocketTestTransport(WebSocketVersion.V08);
+        webSocketTestTransport(V08);
     }
 
     /*
@@ -615,7 +614,7 @@ public class SockJsProtocolTest {
      */
     @Test
     public void webSocketHybi10TestClose() throws Exception {
-        webSocketTestClose(WebSocketVersion.V08);
+        webSocketTestClose(V08);
     }
 
     /*
@@ -623,8 +622,8 @@ public class SockJsProtocolTest {
      */
     @Test
     public void webSocketHybi10TestHeadersSanity() throws Exception {
-        verifyHeaders(WebSocketVersion.V07);
-        verifyHeaders(WebSocketVersion.V08);
+        verifyHeaders(V07);
+        verifyHeaders(V08);
         verifyHeaders(V13);
     }
 
@@ -633,7 +632,7 @@ public class SockJsProtocolTest {
      */
     @Test
     public void webSocketHybi10TestBrokenJSON() throws Exception {
-        webSocketTestBrokenJSON(WebSocketVersion.V08);
+        webSocketTestBrokenJSON(V08);
     }
 
     /*
@@ -641,7 +640,7 @@ public class SockJsProtocolTest {
      */
     @Test
     public void webSocketHybi17TestTransport() throws Exception {
-        webSocketTestTransport(WebSocketVersion.V13);
+        webSocketTestTransport(V13);
     }
 
     /*
@@ -649,7 +648,7 @@ public class SockJsProtocolTest {
      */
     @Test
     public void webSocketHybi17TestClose() throws Exception {
-        webSocketTestClose(WebSocketVersion.V13);
+        webSocketTestClose(V13);
     }
 
     /*
@@ -657,7 +656,7 @@ public class SockJsProtocolTest {
      */
     @Test
     public void webSocketHybi17TestBrokenJSON() throws Exception {
-        webSocketTestBrokenJSON(WebSocketVersion.V13);
+        webSocketTestBrokenJSON(V13);
     }
 
     /*
@@ -667,7 +666,7 @@ public class SockJsProtocolTest {
     public void webSocketHybi10Firefox602ConnectionHeader() throws Exception {
         final SockJsServiceFactory echoFactory = echoService();
         final EmbeddedChannel ch = ChannelUtil.webSocketChannel(echoFactory.config());
-        final FullHttpRequest request = HttpUtil.webSocketUpgradeRequest("/websocket", WebSocketVersion.V08);
+        final FullHttpRequest request = HttpUtil.webSocketUpgradeRequest("/websocket", V08);
         request.headers().set(CONNECTION, "keep-alive, Upgrade");
         ch.writeInbound(request);
         final HttpResponse response = HttpUtil.decode(ch);
@@ -681,7 +680,7 @@ public class SockJsProtocolTest {
     @Test
     public void xhrPollingTestOptions() throws Exception {
         final SockJsServiceFactory echoFactory = echoService();
-        final String sessionUrl = echoFactory.config().prefix() + "/abc/" + UUID.randomUUID().toString();
+        final String sessionUrl = echoFactory.config().prefix() + "/abc/" + UUID.randomUUID();
         final FullHttpRequest xhrRequest = httpRequest(sessionUrl + "/xhr", OPTIONS);
         final HttpResponse xhrOptionsResponse = xhrRequest(xhrRequest, echoFactory);
         assertCORSPreflightResponseHeaders(xhrOptionsResponse);
@@ -697,7 +696,7 @@ public class SockJsProtocolTest {
     @Test
     public void xhrPollingTestTransport() throws Exception {
         final SockJsServiceFactory echoFactory = echoService();
-        final String sessionUrl = echoFactory.config().prefix() + "/abc/" + UUID.randomUUID().toString();
+        final String sessionUrl = echoFactory.config().prefix() + "/abc/" + UUID.randomUUID();
 
         final FullHttpResponse response = xhrRequest(sessionUrl, echoFactory);
         assertOpenFrameResponse(response);
@@ -718,7 +717,7 @@ public class SockJsProtocolTest {
     @Test
     public void xhrPollingSessionReuse() throws Exception {
         final SockJsServiceFactory echoFactory = singletonEchoService();
-        final String sessionUrl = echoFactory.config().prefix() + "/abc/" + UUID.randomUUID().toString();
+        final String sessionUrl = echoFactory.config().prefix() + "/abc/" + UUID.randomUUID();
         assertOpenFrameResponse(xhrRequest(sessionUrl, echoFactory));
         assertNoContent(xhrSendRequest(sessionUrl, "[\"x\"]", echoFactory));
         assertMessageFrameContent(xhrRequest(sessionUrl, echoFactory), "x");
@@ -733,7 +732,7 @@ public class SockJsProtocolTest {
     @Test
     public void xhrPollingTestInvalidSession() throws Exception {
         final SockJsServiceFactory echoFactory = echoService();
-        final String sessionUrl = echoFactory.config().prefix() + "/abc/" + UUID.randomUUID().toString();
+        final String sessionUrl = echoFactory.config().prefix() + "/abc/" + UUID.randomUUID();
         final FullHttpResponse xhrSendResponse = xhrSendRequest(sessionUrl, "[\"x\"]", echoFactory);
         assertThat(xhrSendResponse.getStatus(), is(HttpResponseStatus.NOT_FOUND));
     }
@@ -744,7 +743,7 @@ public class SockJsProtocolTest {
     @Test
     public void xhrPollingTestInvalidJson() throws Exception {
         final SockJsServiceFactory echoFactory = echoService();
-        final String sessionUrl = echoFactory.config().prefix() + "/abc/" + UUID.randomUUID().toString();
+        final String sessionUrl = echoFactory.config().prefix() + "/abc/" + UUID.randomUUID();
 
         assertOpenFrameResponse(xhrRequest(sessionUrl, echoFactory));
 
@@ -769,7 +768,7 @@ public class SockJsProtocolTest {
     @Test
     public void xhrPollingTestContentTypes() throws Exception {
         final SockJsServiceFactory echoFactory = echoService();
-        final String sessionUrl = echoFactory.config().prefix() + "/abc/" + UUID.randomUUID().toString();
+        final String sessionUrl = echoFactory.config().prefix() + "/abc/" + UUID.randomUUID();
 
         final FullHttpResponse response = xhrRequest(sessionUrl, echoFactory);
         assertThat(response.getStatus(), is(HttpResponseStatus.OK));
@@ -804,7 +803,7 @@ public class SockJsProtocolTest {
     @Test
     public void xhrPollingTestRequestHeadersCors() throws Exception {
         final SockJsServiceFactory echoFactory = echoService();
-        final String sessionUrl = echoFactory.config().prefix() + "/abc/" + UUID.randomUUID().toString();
+        final String sessionUrl = echoFactory.config().prefix() + "/abc/" + UUID.randomUUID();
 
         final FullHttpRequest okRequest = httpRequest(sessionUrl + "/xhr", POST);
         okRequest.headers().set(ACCESS_CONTROL_REQUEST_HEADERS, "a, b, c");
@@ -813,7 +812,7 @@ public class SockJsProtocolTest {
         assertCORSHeaders(response, "*");
         assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_HEADERS), equalTo("a, b, c"));
 
-        final String emptySessionUrl = echoFactory.config().prefix() + "/abc/" + UUID.randomUUID().toString();
+        final String emptySessionUrl = echoFactory.config().prefix() + "/abc/" + UUID.randomUUID();
         final FullHttpRequest emptyHeaderRequest = httpRequest(emptySessionUrl + "/xhr", POST);
         emptyHeaderRequest.headers().set(ACCESS_CONTROL_REQUEST_HEADERS, "");
         final HttpResponse emptyHeaderResponse = xhrRequest(emptyHeaderRequest, echoFactory);
@@ -821,7 +820,7 @@ public class SockJsProtocolTest {
         assertCORSHeaders(response, "*");
         assertThat(emptyHeaderResponse.headers().get(ACCESS_CONTROL_ALLOW_HEADERS), is(nullValue()));
 
-        final String noHeaderSessionUrl = echoFactory.config().prefix() + "/abc/" + UUID.randomUUID().toString();
+        final String noHeaderSessionUrl = echoFactory.config().prefix() + "/abc/" + UUID.randomUUID();
         final FullHttpRequest noHeaderRequest = httpRequest(noHeaderSessionUrl + "/xhr", POST);
         final HttpResponse noHeaderResponse = xhrRequest(noHeaderRequest, echoFactory);
         assertThat(noHeaderResponse.getStatus(), is(HttpResponseStatus.OK));
@@ -835,32 +834,32 @@ public class SockJsProtocolTest {
     @Test
     public void xhrStreamingTestOptions() throws Exception {
         final SockJsServiceFactory serviceFactory = echoService();
-        final String sessionUrl = serviceFactory.config().prefix() + "/222/" + UUID.randomUUID().toString();
+        final String sessionUrl = serviceFactory.config().prefix() + "/222/" + UUID.randomUUID();
         final EmbeddedChannel ch = channelForService(serviceFactory);
         removeLastInboundMessageHandlers(ch);
 
         final FullHttpRequest request = httpRequest(sessionUrl + Transports.Type.XHR_STREAMING.path(), GET);
         ch.writeInbound(request);
 
-        final HttpResponse response =  (HttpResponse) ch.readOutbound();
+        final HttpResponse response = ch.readOutbound();
         assertThat(response.getStatus(), equalTo(HttpResponseStatus.OK));
         assertThat(response.headers().get(CONTENT_TYPE), equalTo(Transports.CONTENT_TYPE_JAVASCRIPT));
         assertCORSHeaders(response, "*");
         verifyNoCacheHeaders(response);
 
-        final DefaultHttpContent prelude = (DefaultHttpContent) ch.readOutbound();
+        final DefaultHttpContent prelude = ch.readOutbound();
         assertThat(prelude.content().readableBytes(), is(PreludeFrame.CONTENT_SIZE + 1));
         final ByteBuf buffer = Unpooled.buffer(PreludeFrame.CONTENT_SIZE + 1);
         prelude.content().readBytes(buffer);
         buffer.release();
 
-        final DefaultHttpContent openResponse = (DefaultHttpContent) ch.readOutbound();
+        final DefaultHttpContent openResponse = ch.readOutbound();
         assertThat(openResponse.content().toString(UTF_8), equalTo("o\n"));
 
         final FullHttpResponse validSend = xhrSendRequest(sessionUrl, "[\"x\"]", serviceFactory);
         assertThat(validSend.getStatus(), is(HttpResponseStatus.NO_CONTENT));
 
-        final DefaultHttpContent chunk = (DefaultHttpContent) ch.readOutbound();
+        final DefaultHttpContent chunk = ch.readOutbound();
         assertThat(chunk.content().toString(UTF_8), equalTo("a[\"x\"]\n"));
     }
 
@@ -871,35 +870,35 @@ public class SockJsProtocolTest {
     public void xhrStreamingTestResponseLimit() throws Exception {
         final SockJsConfig config = SockJsConfig.withPrefix("/echo").maxStreamingBytesSize(4096).build();
         final SockJsServiceFactory echoFactory = echoService(config);
-        final String sessionUrl = echoFactory.config().prefix() + "/222/" + UUID.randomUUID().toString();
+        final String sessionUrl = echoFactory.config().prefix() + "/222/" + UUID.randomUUID();
         final EmbeddedChannel ch = channelForService(echoFactory);
         removeLastInboundMessageHandlers(ch);
 
         final FullHttpRequest request = httpRequest(sessionUrl + Transports.Type.XHR_STREAMING.path(), GET);
         ch.writeInbound(request);
-        final HttpResponse response =  (HttpResponse) ch.readOutbound();
+        final HttpResponse response = ch.readOutbound();
         assertThat(response.getStatus(), equalTo(HttpResponseStatus.OK));
         assertThat(response.headers().get(CONTENT_TYPE), equalTo(Transports.CONTENT_TYPE_JAVASCRIPT));
         assertCORSHeaders(response, "*");
         verifyNoCacheHeaders(response);
 
-        final DefaultHttpContent prelude = (DefaultHttpContent) ch.readOutbound();
+        final DefaultHttpContent prelude = ch.readOutbound();
         assertThat(prelude.content().readableBytes(), is(PreludeFrame.CONTENT_SIZE + 1));
         final ByteBuf buf = Unpooled.buffer(PreludeFrame.CONTENT_SIZE + 1);
         prelude.content().readBytes(buf);
         buf.release();
 
-        final DefaultHttpContent openResponse = (DefaultHttpContent) ch.readOutbound();
+        final DefaultHttpContent openResponse = ch.readOutbound();
         assertThat(openResponse.content().toString(UTF_8), equalTo("o\n"));
 
         final String msg = generateMessage(128);
         for (int i = 0; i < 31; i++) {
             final FullHttpResponse validSend = xhrSendRequest(sessionUrl, "[\"" + msg + "\"]", echoFactory);
             assertThat(validSend.getStatus(), is(HttpResponseStatus.NO_CONTENT));
-            final DefaultHttpContent chunk = (DefaultHttpContent) ch.readOutbound();
+            final DefaultHttpContent chunk = ch.readOutbound();
             assertThat(chunk.content().toString(UTF_8), equalTo("a[\"" + msg + "\"]\n"));
         }
-        final LastHttpContent lastChunk = (LastHttpContent) ch.readOutbound();
+        final LastHttpContent lastChunk = ch.readOutbound();
         assertThat(lastChunk.content().readableBytes(), is(0));
         assertThat(ch.isOpen(), is(false));
     }
@@ -911,7 +910,7 @@ public class SockJsProtocolTest {
     public void eventSourceTestResponseLimit() throws Exception {
         final SockJsConfig config = SockJsConfig.withPrefix("/echo").maxStreamingBytesSize(4096).build();
         final SockJsServiceFactory echoFactory = echoService(config);
-        final String sessionUrl = echoFactory.config().prefix() + "/222/" + UUID.randomUUID().toString();
+        final String sessionUrl = echoFactory.config().prefix() + "/222/" + UUID.randomUUID();
         final EmbeddedChannel ch = channelForService(echoFactory);
         removeLastInboundMessageHandlers(ch);
 
@@ -943,7 +942,7 @@ public class SockJsProtocolTest {
     public void eventSourceTestTransport() throws Exception {
         final SockJsConfig config = SockJsConfig.withPrefix("/echo").maxStreamingBytesSize(4096).build();
         final SockJsServiceFactory echoFactory = echoService(config);
-        final String sessionUrl = echoFactory.config().prefix() + "/222/" + UUID.randomUUID().toString();
+        final String sessionUrl = echoFactory.config().prefix() + "/222/" + UUID.randomUUID();
         final EmbeddedChannel ch = channelForService(echoFactory);
         removeLastInboundMessageHandlers(ch);
 
@@ -973,7 +972,7 @@ public class SockJsProtocolTest {
     @Test
     public void htmlFileTestTransport() throws Exception {
         final String serviceName = "/echo";
-        final String sessionUrl = serviceName + "/222/" + UUID.randomUUID().toString();
+        final String sessionUrl = serviceName + "/222/" + UUID.randomUUID();
         final SockJsConfig config = SockJsConfig.withPrefix(serviceName).maxStreamingBytesSize(4096).build();
         final SockJsServiceFactory service = echoService(config);
         final EmbeddedChannel ch = channelForService(service);
@@ -1006,7 +1005,7 @@ public class SockJsProtocolTest {
     @Test
     public void htmlFileTestNoCallback() throws Exception {
         final String serviceName = "/echo";
-        final String sessionUrl = serviceName + "/222/" + UUID.randomUUID().toString();
+        final String sessionUrl = serviceName + "/222/" + UUID.randomUUID();
         final SockJsConfig config = SockJsConfig.withPrefix(serviceName).maxStreamingBytesSize(4096).build();
         final SockJsServiceFactory service = echoService(config);
         final EmbeddedChannel ch = channelForService(service);
@@ -1025,7 +1024,7 @@ public class SockJsProtocolTest {
     @Test
     public void htmlFileTestResponseLimit() throws Exception {
         final String serviceName = "/echo";
-        final String sessionUrl = serviceName + "/222/" + UUID.randomUUID().toString();
+        final String sessionUrl = serviceName + "/222/" + UUID.randomUUID();
         final SockJsConfig config = SockJsConfig.withPrefix(serviceName).maxStreamingBytesSize(4096).build();
         final SockJsServiceFactory service = echoService(config);
         final EmbeddedChannel ch = channelForService(service);
@@ -1056,7 +1055,7 @@ public class SockJsProtocolTest {
     @Test
     public void jsonpPollingTestTransport() throws Exception {
         final String serviceName = "/echo";
-        final String sessionUrl = serviceName + "/222/" + UUID.randomUUID().toString();
+        final String sessionUrl = serviceName + "/222/" + UUID.randomUUID();
         final SockJsServiceFactory echoService = echoService();
 
         final FullHttpResponse response = jsonpRequest(sessionUrl + "/jsonp?c=%63allback", echoService);
@@ -1096,7 +1095,7 @@ public class SockJsProtocolTest {
     @Test
     public void jsonpPollingTestInvalidJson() throws Exception {
         final String serviceName = "/echo";
-        final String sessionUrl = serviceName + "/222/" + UUID.randomUUID().toString();
+        final String sessionUrl = serviceName + "/222/" + UUID.randomUUID();
         final SockJsServiceFactory echoService = echoService();
 
         final FullHttpResponse response = jsonpRequest(sessionUrl + "/jsonp?c=x", echoService);
@@ -1122,7 +1121,7 @@ public class SockJsProtocolTest {
     @Test
     public void jsonpPollingTestContentTypes() throws Exception {
         final String serviceName = "/echo";
-        final String sessionUrl = serviceName + "/222/" + UUID.randomUUID().toString();
+        final String sessionUrl = serviceName + "/222/" + UUID.randomUUID();
         final SockJsServiceFactory echoService = echoService();
         final FullHttpResponse response = jsonpRequest(sessionUrl + "/jsonp?c=x", echoService);
         assertThat(response.content().toString(UTF_8), equalTo("x(\"o\");\r\n"));
@@ -1150,7 +1149,7 @@ public class SockJsProtocolTest {
     @Test
     public void jsonpPollingTestClose() throws Exception {
         final String serviceName = "/close";
-        final String sessionUrl = serviceName + "/222/" + UUID.randomUUID().toString();
+        final String sessionUrl = serviceName + "/222/" + UUID.randomUUID();
         final SockJsServiceFactory service = closeService();
         final FullHttpResponse response = jsonpRequest(sessionUrl + "/jsonp?c=x", service);
         assertThat(response.content().toString(UTF_8), equalTo("x(\"o\");\r\n"));
@@ -1186,7 +1185,7 @@ public class SockJsProtocolTest {
         final SockJsConfig config = SockJsConfig.withPrefix(serviceName).cookiesNeeded().build();
         final EmbeddedChannel ch = channelForService(echoService(config));
         removeLastInboundMessageHandlers(ch);
-        final String sessionUrl = serviceName + "/abc/" + UUID.randomUUID().toString();
+        final String sessionUrl = serviceName + "/abc/" + UUID.randomUUID();
         final FullHttpRequest request = httpRequest(sessionUrl + Transports.Type.XHR.path(), GET);
         request.headers().set("Cookie", ClientCookieEncoder.encode("JSESSIONID", "abcdef"));
         ch.writeInbound(request);
@@ -1260,7 +1259,7 @@ public class SockJsProtocolTest {
     @Test
     public void webSocketCloseSession() throws Exception {
         final String serviceName = "/closesession";
-        final String sessionUrl = serviceName + "/222/" + UUID.randomUUID().toString();
+        final String sessionUrl = serviceName + "/222/" + UUID.randomUUID();
         final SockJsConfig config = SockJsConfig.withPrefix(serviceName).build();
         final SockJsService sockJsService = mock(SockJsService.class);
         final EmbeddedChannel ch = wsChannelForService(factoryFor(sockJsService, config));
@@ -1272,10 +1271,10 @@ public class SockJsProtocolTest {
         // as we have a HttpEncoder in the pipeline to start with.
         ch.readOutbound();
 
-        assertThat(((TextWebSocketFrame) readOutboundDiscardEmpty(ch)).content().toString(UTF_8), equalTo("o"));
+        assertThat(((ByteBufHolder) readOutboundDiscardEmpty(ch)).content().toString(UTF_8), equalTo("o"));
 
         ch.writeInbound(new CloseWebSocketFrame(1000, "Normal close"));
-        final CloseWebSocketFrame closeFrame = (CloseWebSocketFrame) ch.readOutbound();
+        final CloseWebSocketFrame closeFrame = ch.readOutbound();
         assertThat(closeFrame.statusCode(), is(1000));
         assertThat(closeFrame.reasonText(), equalTo("Normal close"));
         verify(sockJsService).onOpen(any(SockJsSessionContext.class));
@@ -1288,7 +1287,7 @@ public class SockJsProtocolTest {
     @Test
     public void jsonEncodingTestXhrServerEncodes() throws Exception {
         final SockJsServiceFactory echoFactory = echoService();
-        final String sessionUrl = echoFactory.config().prefix() + "/abc/" + UUID.randomUUID().toString();
+        final String sessionUrl = echoFactory.config().prefix() + "/abc/" + UUID.randomUUID();
 
         final FullHttpResponse response = xhrRequest(sessionUrl, echoFactory);
         assertOpenFrameResponse(response);
@@ -1306,7 +1305,7 @@ public class SockJsProtocolTest {
     @Test
     public void jsonEncodingTestXhrServerDecodes() throws Exception {
         final SockJsServiceFactory echoFactory = echoService();
-        final String sessionUrl = echoFactory.config().prefix() + "/abc/" + UUID.randomUUID().toString();
+        final String sessionUrl = echoFactory.config().prefix() + "/abc/" + UUID.randomUUID();
 
         final FullHttpResponse response = xhrRequest(sessionUrl, echoFactory);
         assertThat(response.getStatus(), is(HttpResponseStatus.OK));
@@ -1332,7 +1331,7 @@ public class SockJsProtocolTest {
     @Test
     public void handlingCloseTestCloseFrame() throws Exception {
         final SockJsServiceFactory serviceFactory = closeService();
-        final String sessionUrl = serviceFactory.config().prefix() + "/222/" + UUID.randomUUID().toString();
+        final String sessionUrl = serviceFactory.config().prefix() + "/222/" + UUID.randomUUID();
         final EmbeddedChannel ch = channelForService(serviceFactory);
         removeLastInboundMessageHandlers(ch);
         final FullHttpRequest request = httpRequest(sessionUrl + Transports.Type.XHR_STREAMING.path(), GET);
@@ -1371,7 +1370,7 @@ public class SockJsProtocolTest {
     @Test
     public void handlingCloseTestCloseRequest() throws Exception {
         final SockJsServiceFactory serviceFactory = echoService();
-        final String sessionUrl = serviceFactory.config().prefix() + "/222/" + UUID.randomUUID().toString();
+        final String sessionUrl = serviceFactory.config().prefix() + "/222/" + UUID.randomUUID();
         final EmbeddedChannel ch = channelForService(serviceFactory);
         removeLastInboundMessageHandlers(ch);
         final FullHttpRequest request = httpRequest(sessionUrl + Transports.Type.XHR_STREAMING.path(), POST);
@@ -1406,7 +1405,7 @@ public class SockJsProtocolTest {
     @Test
     public void handlingCloseTestAbortXhrStreaming() throws Exception {
         final SockJsServiceFactory echoFactory = echoService();
-        final String sessionUrl = echoFactory.config().prefix() + "/222/" + UUID.randomUUID().toString();
+        final String sessionUrl = echoFactory.config().prefix() + "/222/" + UUID.randomUUID();
         final EmbeddedChannel ch = channelForService(echoFactory);
         removeLastInboundMessageHandlers(ch);
         final FullHttpRequest request = httpRequest(sessionUrl + Transports.Type.XHR_STREAMING.path(), GET);
@@ -1458,7 +1457,7 @@ public class SockJsProtocolTest {
     @Test
     public void handlingCloseTestAbortXhrPolling() throws Exception {
         final SockJsServiceFactory echoFactory = echoService();
-        final String sessionUrl = echoFactory.config().prefix() + "/000/" + UUID.randomUUID().toString();
+        final String sessionUrl = echoFactory.config().prefix() + "/000/" + UUID.randomUUID();
 
         final EmbeddedChannel ch = channelForService(echoFactory);
         removeLastInboundMessageHandlers(ch);
@@ -1522,7 +1521,7 @@ public class SockJsProtocolTest {
     @Test
     public void http10TestStreaming() throws Exception {
         final SockJsServiceFactory closeFactory = closeService();
-        final String sessionUrl = closeFactory.config().prefix() + "/222/" + UUID.randomUUID().toString();
+        final String sessionUrl = closeFactory.config().prefix() + "/222/" + UUID.randomUUID();
         final EmbeddedChannel ch = channelForService(closeFactory);
         removeLastInboundMessageHandlers(ch);
         final FullHttpRequest request = httpPostRequest(sessionUrl + Transports.Type.XHR_STREAMING.path(), HTTP_1_0);
@@ -1588,7 +1587,7 @@ public class SockJsProtocolTest {
     @Test
     public void http11TestStreaming() throws Exception {
         final SockJsServiceFactory closeFactory = closeService();
-        final String sessionUrl = closeFactory.config().prefix() + "/222/" + UUID.randomUUID().toString();
+        final String sessionUrl = closeFactory.config().prefix() + "/222/" + UUID.randomUUID();
         final EmbeddedChannel ch = channelForService(closeFactory);
         removeLastInboundMessageHandlers(ch);
         final FullHttpRequest request = httpPostRequest(sessionUrl + Transports.Type.XHR_STREAMING.path(), HTTP_1_1);
@@ -1742,9 +1741,9 @@ public class SockJsProtocolTest {
                "\\ufffe\\uffff";
     }
 
-    private static void assertSetCookie(final String transportPath) throws Exception {
+    private static void assertSetCookie(final String transportPath) {
         final String serviceName = "/cookie_needed_echo";
-        final String sessionUrl = serviceName + "/abc/" + UUID.randomUUID().toString();
+        final String sessionUrl = serviceName + "/abc/" + UUID.randomUUID();
         final SockJsConfig config = SockJsConfig.withPrefix(serviceName).cookiesNeeded().build();
         final EmbeddedChannel ch = channelForService(echoService(config));
         removeLastInboundMessageHandlers(ch);
@@ -1790,7 +1789,7 @@ public class SockJsProtocolTest {
         req.headers().set(UPGRADE, WEBSOCKET.toString());
         req.headers().set(CONNECTION, "Upgrade");
 
-        if (version == WebSocketVersion.V00) {
+        if (version == V00) {
             req.headers().set(CONNECTION, "Upgrade");
             req.headers().set(SEC_WEBSOCKET_KEY1, "4 @1  46546xW%0l 1 5");
             req.headers().set(SEC_WEBSOCKET_KEY2, "12998 5 Y3 1  .P00");
@@ -1856,9 +1855,9 @@ public class SockJsProtocolTest {
         };
     }
 
-    private static void webSocketTestTransport(final WebSocketVersion version) throws Exception {
+    private static void webSocketTestTransport(final WebSocketVersion version) {
         final String serviceName = "/echo";
-        final String sessionUrl = serviceName + "/222/" + UUID.randomUUID().toString();
+        final String sessionUrl = serviceName + "/222/" + UUID.randomUUID();
         final SockJsConfig config = SockJsConfig.withPrefix(serviceName).build();
         final SockJsServiceFactory service = echoService(config);
         final EmbeddedChannel ch = wsChannelForService(service);
@@ -1880,9 +1879,9 @@ public class SockJsProtocolTest {
         assertThat(textFrame.content().toString(UTF_8), equalTo("a[\"a\"]"));
     }
 
-    private static void webSocketTestClose(final WebSocketVersion version) throws Exception {
+    private static void webSocketTestClose(final WebSocketVersion version) {
         final String serviceName = "/close";
-        final String sessionUrl = serviceName + "/222/" + UUID.randomUUID().toString();
+        final String sessionUrl = serviceName + "/222/" + UUID.randomUUID();
         final SockJsConfig config = SockJsConfig.withPrefix(serviceName).build();
         final SockJsServiceFactory service = closeService(config);
         final EmbeddedChannel ch = wsChannelForService(service);
@@ -1902,9 +1901,9 @@ public class SockJsProtocolTest {
         assertThat(ch.isActive(), is(false));
     }
 
-    private static void webSocketTestBrokenJSON(final WebSocketVersion version) throws Exception {
+    private static void webSocketTestBrokenJSON(final WebSocketVersion version) {
         final String serviceName = "/close";
-        final String sessionUrl = serviceName + "/222/" + UUID.randomUUID().toString();
+        final String sessionUrl = serviceName + "/222/" + UUID.randomUUID();
         final SockJsConfig config = SockJsConfig.withPrefix(serviceName).build();
         final EmbeddedChannel ch = wsChannelForService(echoService(config));
 
@@ -2246,24 +2245,24 @@ public class SockJsProtocolTest {
                 + "</html>";
     }
 
-    private static class TestEmbeddedChannel extends EmbeddedChannel {
+    private static final class TestEmbeddedChannel extends EmbeddedChannel {
 
-        public TestEmbeddedChannel(final ChannelHandler... handlers) {
+        private TestEmbeddedChannel(final ChannelHandler... handlers) {
             super(handlers);
         }
 
         @Override
         public Unsafe unsafe() {
-            final AbstractUnsafe delegate = super.newUnsafe();
-            return new TestUnsafe(delegate, new StubEmbeddedEventLoop(super.eventLoop()));
+            final AbstractUnsafe delegate = newUnsafe();
+            return new TestUnsafe(delegate, new StubEmbeddedEventLoop(eventLoop()));
         }
 
-        private class TestUnsafe implements Unsafe {
+        private static final class TestUnsafe implements Unsafe {
 
             private final Unsafe delegate;
             private final ChannelHandlerInvoker invoker;
 
-            public TestUnsafe(final Unsafe delegate, final ChannelHandlerInvoker invoker) {
+            private TestUnsafe(final Unsafe delegate, final ChannelHandlerInvoker invoker) {
                 this.delegate = delegate;
                 this.invoker = invoker;
             }

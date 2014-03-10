@@ -61,7 +61,7 @@ public class WebSocketHAProxyTransport extends SimpleChannelInboundHandler<Objec
         ctx.fireUserEventTriggered(SessionHandler.Events.HANDLE_SESSION);
     }
 
-    private void handleContent(final ChannelHandlerContext ctx, final ByteBuf nounce) throws Exception {
+    private void handleContent(final ChannelHandlerContext ctx, final ByteBuf nounce) {
         final ByteBuf key = haHandshaker.calculateLastKey(nounce);
         final ChannelFuture channelFuture = ctx.write(key);
         haHandshaker.addWsCodec(channelFuture);

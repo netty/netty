@@ -310,14 +310,13 @@ public final class Transports {
      * @param contentType the value for the 'Content-Type' HTTP response header.
      * @param content the content that will become the body of the HTTP response.
      * @param promise the {@link ChannelPromise}
-     * @throws Exception if an error occurs while trying to send the response.
      */
     public static void respond(final ChannelHandlerContext ctx,
             final HttpVersion version,
             final HttpResponseStatus status,
             final String contentType,
             final String content,
-            final ChannelPromise promise) throws Exception {
+            final ChannelPromise promise) {
         final FullHttpResponse response = responseWithContent(version, status, contentType, content);
         writeResponse(ctx, response);
     }
@@ -330,13 +329,12 @@ public final class Transports {
      * @param status the status of the HTTP response
      * @param contentType the value for the 'Content-Type' HTTP response header.
      * @param content the content that will become the body of the HTTP response.
-     * @throws Exception if an error occurs while trying to send the response.
      */
     public static void respond(final ChannelHandlerContext ctx,
             final HttpVersion version,
             final HttpResponseStatus status,
             final String contentType,
-            final String content) throws Exception {
+            final String content) {
         final FullHttpResponse response = responseWithContent(version, status, contentType, content);
         writeResponse(ctx, response);
     }

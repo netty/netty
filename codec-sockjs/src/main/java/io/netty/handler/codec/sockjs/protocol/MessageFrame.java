@@ -88,7 +88,7 @@ public class MessageFrame extends DefaultByteBufHolder implements Frame {
             content.writeByte('"');
             final String element = messages.get(i);
             if (element == null) {
-                messages.removeAll(messages.subList(i, size));
+                messages.subList(i, size).clear();
                 break;
             }
             final String escaped = escapeCharacters(jsonEndocder.quoteAsString(element));

@@ -90,7 +90,7 @@ public class JsonpSendTransportTest {
                 .cookiesNeeded().build());
         final EmbeddedChannel channel = new EmbeddedChannel(transport);
         channel.writeInbound(request);
-        final FullHttpResponse response = (FullHttpResponse) channel.readOutbound();
+        final FullHttpResponse response = channel.readOutbound();
         channel.finish();
         return response;
     }
