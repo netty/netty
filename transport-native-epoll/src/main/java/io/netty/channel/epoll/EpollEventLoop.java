@@ -289,17 +289,11 @@ final class EpollEventLoop extends SingleThreadEventLoop {
     }
 
     private void closeAll() {
-        int ready = Native.epollWait(epollFd, events, 0);
-        Collection<AbstractEpollChannel> channels = new ArrayList<AbstractEpollChannel>(ready);
+        Native.epollWait(epollFd, events, 0);
+        Collection<AbstractEpollChannel> channels = new ArrayList<AbstractEpollChannel>(ids.size());
 
-        for (int i = 0; i < ready; i++) {
-            final long ev = events[i];
-
-            int id = (int) (ev >> 32L);
-            AbstractEpollChannel ch = ids.get(id);
-            if (ch != null) {
-                channels.add(ids.get(id));
-            }
+        for (AbstractEpollChannel ch: ids.values()) {
+            channels.add(ch);
         }
 
         for (AbstractEpollChannel ch: channels) {
