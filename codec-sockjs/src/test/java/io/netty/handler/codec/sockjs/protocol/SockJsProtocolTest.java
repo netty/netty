@@ -46,6 +46,7 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_0;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import static io.netty.handler.codec.sockjs.SockJsTestUtil.assertCORSHeaders;
 import static io.netty.handler.codec.sockjs.SockJsTestUtil.verifyNoCacheHeaders;
+import static io.netty.handler.codec.http.websocketx.WebSocketVersion.*;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -54,8 +55,7 @@ import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -83,6 +83,7 @@ import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 import io.netty.handler.codec.sockjs.AbstractSockJsServiceFactory;
@@ -91,6 +92,8 @@ import io.netty.handler.codec.sockjs.EchoService;
 import io.netty.handler.codec.sockjs.SockJsConfig;
 import io.netty.handler.codec.sockjs.SockJsService;
 import io.netty.handler.codec.sockjs.SockJsServiceFactory;
+import io.netty.handler.codec.sockjs.SockJsSessionContext;
+import io.netty.handler.codec.sockjs.SockJsTestUtil;
 import io.netty.handler.codec.sockjs.handler.CorsInboundHandler;
 import io.netty.handler.codec.sockjs.handler.CorsOutboundHandler;
 import io.netty.handler.codec.sockjs.handler.SockJsHandler;
@@ -463,7 +466,7 @@ public class SockJsProtocolTest {
         final TextWebSocketFrame closeFrame = ch.readOutbound();
         assertThat(closeFrame.content().toString(UTF_8), equalTo("c[3000,\"Go away!\"]"));
         assertThat(ch.isActive(), is(false));
-        webSocketTestClose(WebSocketVersion.V13);
+        webSocketTestClose(V13);
     }
 
     /*
@@ -596,7 +599,7 @@ public class SockJsProtocolTest {
         final TextWebSocketFrame webSocketFrame = new TextWebSocketFrame("[\"a\"");
         ch.writeInbound(webSocketFrame);
         assertThat(ch.isActive(), is(false));
-        webSocketTestBrokenJSON(WebSocketVersion.V13);
+        webSocketTestBrokenJSON(V13);
     }
 
     /*
@@ -622,7 +625,7 @@ public class SockJsProtocolTest {
     public void webSocketHybi10TestHeadersSanity() throws Exception {
         verifyHeaders(WebSocketVersion.V07);
         verifyHeaders(WebSocketVersion.V08);
-        verifyHeaders(WebSocketVersion.V13);
+        verifyHeaders(V13);
     }
 
     /*
@@ -1252,6 +1255,31 @@ public class SockJsProtocolTest {
         ch.writeInbound(webSocketUpgradeRequest(closeFactory.config().prefix() + "/websocket"));
         assertThat(ch.isActive(), is(false));
         ch.finish();
+    }
+
+    @Test
+    public void webSocketCloseSession() throws Exception {
+        final String serviceName = "/closesession";
+        final String sessionUrl = serviceName + "/222/" + UUID.randomUUID().toString();
+        final SockJsConfig config = SockJsConfig.withPrefix(serviceName).build();
+        final SockJsService sockJsService = mock(SockJsService.class);
+        final EmbeddedChannel ch = wsChannelForService(factoryFor(sockJsService, config));
+
+        final FullHttpRequest request = webSocketUpgradeRequest(sessionUrl + "/websocket", V13.toHttpHeaderValue());
+        ch.writeInbound(request);
+
+        // read and discard the HTTP Response (this will be a ByteBuf and not an object
+        // as we have a HttpEncoder in the pipeline to start with.
+        ch.readOutbound();
+
+        assertThat(((TextWebSocketFrame) readOutboundDiscardEmpty(ch)).content().toString(UTF_8), equalTo("o"));
+
+        ch.writeInbound(new CloseWebSocketFrame(1000, "Normal close"));
+        final CloseWebSocketFrame closeFrame = (CloseWebSocketFrame) ch.readOutbound();
+        assertThat(closeFrame.statusCode(), is(1000));
+        assertThat(closeFrame.reasonText(), equalTo("Normal close"));
+        verify(sockJsService).onOpen(any(SockJsSessionContext.class));
+        verify(sockJsService).onClose();
     }
 
     /*
@@ -2133,12 +2161,16 @@ public class SockJsProtocolTest {
     }
 
     private static EmbeddedChannel channelForMockService(final SockJsConfig config) {
-        final SockJsServiceFactory factory = mock(SockJsServiceFactory.class);
         final SockJsService service = mock(SockJsService.class);
+        return channelForService(factoryFor(service, config));
+    }
+
+    private static SockJsServiceFactory factoryFor(final SockJsService service, final SockJsConfig config) {
+        final SockJsServiceFactory factory = mock(SockJsServiceFactory.class);
         when(service.config()).thenReturn(config);
         when(factory.config()).thenReturn(config);
         when(factory.create()).thenReturn(service);
-        return channelForService(factory);
+        return factory;
     }
 
     private static EmbeddedChannel channelForService(final SockJsServiceFactory service) {

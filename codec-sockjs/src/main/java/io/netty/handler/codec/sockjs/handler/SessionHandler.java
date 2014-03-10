@@ -146,6 +146,7 @@ public class SessionHandler extends ChannelHandlerAdapter implements SockJsSessi
     @Override
     public void userEventTriggered(final ChannelHandlerContext ctx, final Object event) throws Exception {
         if (event == Events.CLOSE_SESSION) {
+            session.onClose();
             sessionState.onSockJSServerInitiatedClose(session);
         } else if (event == Events.HANDLE_SESSION) {
             handleSession(ctx);
