@@ -58,8 +58,7 @@ public abstract class ZlibTest {
             deflatedData.release();
             buf.release();
         } finally {
-            // close channel to prevent any leak even on exception
-            chDecoderGZip.close();
+            dispose(chDecoderGZip);
         }
     }
 
@@ -111,9 +110,8 @@ public abstract class ZlibTest {
 
             data.release();
         } finally {
-            // close channels in all cases to guard against leak when exception was thrown
-            chEncoder.close();
-            chDecoderZlib.close();
+            dispose(chEncoder);
+            dispose(chDecoderZlib);
         }
     }
 
@@ -147,12 +145,29 @@ public abstract class ZlibTest {
 
             assertFalse(chDecoderZlib.finish());
         } finally {
-            // close channels in all cases to guard against leak when exception was thrown
-            chEncoder.close();
-            chDecoderZlib.close();
+            dispose(chEncoder);
+            dispose(chDecoderZlib);
         }
     }
 
+    private static void dispose(EmbeddedChannel ch) {
+        if (ch.finish()) {
+            for (;;) {
+                Object msg = ch.readInbound();
+                if (msg == null) {
+                    break;
+                }
+                ReferenceCountUtil.release(msg);
+            }
+            for (;;) {
+                Object msg = ch.readOutbound();
+                if (msg == null) {
+                    break;
+                }
+                ReferenceCountUtil.release(msg);
+            }
+        }
+    }
     private void testCompressSmall(ZlibWrapper encoderWrapper, ZlibWrapper decoderWrapper) throws Exception {
         testCompress0(encoderWrapper, decoderWrapper, Unpooled.wrappedBuffer(BYTES_SMALL));
         testCompress0(encoderWrapper, decoderWrapper,
