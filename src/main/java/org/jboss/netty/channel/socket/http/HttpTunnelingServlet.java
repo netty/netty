@@ -57,11 +57,15 @@ public class HttpTunnelingServlet extends HttpServlet {
     private static final long serialVersionUID = 4259910275899756070L;
 
     private static final String ENDPOINT = "endpoint";
+    private static final String CONNECT_ATTEMPTS = "connectAttempts";
+    private static final String RETRY_DELAY = "retryDelay";
 
     static final InternalLogger logger = InternalLoggerFactory.getInstance(HttpTunnelingServlet.class);
 
     private volatile SocketAddress remoteAddress;
     private volatile ChannelFactory channelFactory;
+    private volatile long connectAttempts = 1;
+    private volatile long retryDelay;
 
     @Override
     public void init() throws ServletException {
@@ -85,6 +89,34 @@ public class HttpTunnelingServlet extends HttpServlet {
             throw e;
         } catch (Exception e) {
             throw new ServletException("Failed to create a channel factory.", e);
+        }
+
+        String temp = config.getInitParameter(CONNECT_ATTEMPTS);
+        if (temp != null) {
+            try {
+                connectAttempts = Long.parseLong(temp);
+            } catch (NumberFormatException e) {
+                throw new ServletException(
+                   "init-param '" + CONNECT_ATTEMPTS + "' is not a valid number. Actual value: " + temp);
+            }
+            if (connectAttempts < 1) {
+                throw new ServletException(
+                   "init-param '" + CONNECT_ATTEMPTS + "' must be >= 1. Actual value: " + connectAttempts);
+            }
+        }
+
+        temp = config.getInitParameter(RETRY_DELAY);
+        if (temp != null) {
+            try {
+                retryDelay = Long.parseLong(temp);
+            } catch (NumberFormatException e) {
+                throw new ServletException(
+                   "init-param '" + RETRY_DELAY + "' is not a valid number. Actual value: " + temp);
+            }
+            if (retryDelay < 0) {
+                throw new ServletException(
+                   "init-param '" + RETRY_DELAY + "' must be >= 0. Actual value: " + retryDelay);
+            }
         }
 
         // Stuff for testing purpose
@@ -145,7 +177,23 @@ public class HttpTunnelingServlet extends HttpServlet {
         pipeline.addLast("handler", handler);
 
         Channel channel = channelFactory.newChannel(pipeline);
-        ChannelFuture future = channel.connect(remoteAddress).awaitUninterruptibly();
+        int tries = 0;
+        ChannelFuture future = null;
+
+        while (tries < connectAttempts) {
+            future = channel.connect(remoteAddress).awaitUninterruptibly();
+            if (!future.isSuccess()) {
+                tries++;
+                try {
+                    Thread.sleep(retryDelay);
+                } catch (InterruptedException e) {
+                    // ignore
+                }
+            } else {
+                break;
+            }
+        }
+
         if (!future.isSuccess()) {
             if (logger.isWarnEnabled()) {
                 Throwable cause = future.getCause();
