@@ -42,7 +42,10 @@ final class Greeting {
     }
 
     public static FullHttpResponse response(final HttpRequest request) {
-        final FullHttpResponse response = new DefaultFullHttpResponse(request.getProtocolVersion(), OK, CONTENT);
+        final FullHttpResponse response = new DefaultFullHttpResponse(
+                request.getProtocolVersion(),
+                OK,
+                CONTENT.duplicate());
         response.headers().set(CONTENT_TYPE, Transports.CONTENT_TYPE_PLAIN);
         return response;
     }
