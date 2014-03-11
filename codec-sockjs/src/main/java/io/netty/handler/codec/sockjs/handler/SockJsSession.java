@@ -36,21 +36,37 @@ class SockJsSession {
     private final LinkedList<String> messages = new LinkedList<String>();
     private final AtomicLong timestamp = new AtomicLong();
     private final AtomicBoolean inuse = new AtomicBoolean();
-    private ChannelHandlerContext ctx;
+    private ChannelHandlerContext connectionContext;
+    private ChannelHandlerContext currentContext;
+    private ChannelHandlerContext openContext;
 
     protected SockJsSession(final String sessionId, final SockJsService service) {
         this.sessionId = sessionId;
         this.service = service;
     }
 
-    public synchronized ChannelHandlerContext context() {
-        return ctx;
+    public synchronized ChannelHandlerContext connectionContext() {
+        return connectionContext;
     }
 
-    public synchronized void setContext(final ChannelHandlerContext ctx) {
-        if (this.ctx == null) {
-            this.ctx = ctx;
-        }
+    public synchronized void setConnectionContext(final ChannelHandlerContext ctx) {
+        connectionContext = ctx;
+    }
+
+    public synchronized ChannelHandlerContext openContext() {
+        return openContext;
+    }
+
+    public synchronized void setOpenContext(final ChannelHandlerContext ctx) {
+        openContext = ctx;
+    }
+
+    public synchronized ChannelHandlerContext currentContext() {
+        return currentContext;
+    }
+
+    public synchronized void setCurrentContext(final ChannelHandlerContext ctx) {
+        currentContext = ctx;
     }
 
     public synchronized void setState(States state) {

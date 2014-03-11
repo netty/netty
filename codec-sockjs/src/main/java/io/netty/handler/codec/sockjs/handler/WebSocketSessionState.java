@@ -65,8 +65,13 @@ class WebSocketSessionState implements SessionState {
     }
 
     @Override
+    public ChannelHandlerContext getSendingContext(SockJsSession session) {
+        return session.connectionContext();
+    }
+
+    @Override
     public boolean isInUse(final SockJsSession session) {
-        return session.context().channel().isActive();
+        return session.connectionContext().channel().isActive();
     }
 
     @Override

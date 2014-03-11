@@ -46,6 +46,16 @@ interface SessionState {
     void onOpen(SockJsSession session, ChannelHandlerContext ctx);
 
     /**
+     * Returns the ChannelHandlerContext that should be used to communicate with the client.
+     * This may be different for different transports. For some transports this will be the
+     * context that opened the connection and others it will be the current context.
+     *
+     * @param session the {@link SockJsSession}.
+     * @return {@code ChannelHandlerContext} the context to be used for sending.
+     */
+    ChannelHandlerContext getSendingContext(SockJsSession session);
+
+    /**
      * Called after the {@link SockJsSession#onClose()} method has been called enabling
      * this SessionState to perform any clean up actions requried.
      */

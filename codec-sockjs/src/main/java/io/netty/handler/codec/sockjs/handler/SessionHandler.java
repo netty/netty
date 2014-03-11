@@ -74,7 +74,7 @@ public class SessionHandler extends ChannelHandlerAdapter implements SockJsSessi
         case CONNECTING:
             logger.debug("State.CONNECTING sending open frame");
             ctx.channel().writeAndFlush(new OpenFrame());
-            session.setContext(ctx);
+            session.setConnectionContext(ctx);
             session.onOpen(this);
             sessionState.onConnect(session, ctx);
             break;
@@ -87,6 +87,7 @@ public class SessionHandler extends ChannelHandlerAdapter implements SockJsSessi
                 session.setState(States.INTERRUPTED);
             } else {
                 session.setInuse();
+                session.setOpenContext(ctx);
                 sessionState.onOpen(session, ctx);
             }
             break;
@@ -115,7 +116,7 @@ public class SessionHandler extends ChannelHandlerAdapter implements SockJsSessi
     }
 
     private Channel getActiveChannel() {
-        final Channel sessionChannel = session.context().channel();
+        final Channel sessionChannel = session.connectionContext().channel();
         return sessionChannel.isActive() && sessionChannel.isRegistered() ? sessionChannel : currentContext.channel();
     }
 

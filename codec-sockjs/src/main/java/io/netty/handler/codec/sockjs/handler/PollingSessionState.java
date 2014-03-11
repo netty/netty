@@ -44,7 +44,7 @@ class PollingSessionState extends AbstractTimersSessionState {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PollingSessionState.class);
     private final ConcurrentMap<String, SockJsSession> sessions;
 
-    protected PollingSessionState(final ConcurrentMap<String, SockJsSession> sessions) {
+    PollingSessionState(final ConcurrentMap<String, SockJsSession> sessions) {
         super(sessions);
         this.sessions = sessions;
     }
@@ -52,6 +52,12 @@ class PollingSessionState extends AbstractTimersSessionState {
     @Override
     public void onOpen(final SockJsSession session, final ChannelHandlerContext ctx) {
         flushMessages(ctx, session);
+    }
+
+    @Override
+    public ChannelHandlerContext getSendingContext(final SockJsSession session) {
+        final ChannelHandlerContext openContext = session.openContext();
+        return openContext == null ? session.connectionContext() : openContext;
     }
 
     private static void flushMessages(final ChannelHandlerContext ctx, final SockJsSession session) {
@@ -72,15 +78,15 @@ class PollingSessionState extends AbstractTimersSessionState {
 
     @Override
     public boolean isInUse(final SockJsSession session) {
-        return session.context().channel().isActive() || session.inuse();
+        return session.connectionContext().channel().isActive() || session.inuse();
     }
 
     @Override
     public void onSockJSServerInitiatedClose(final SockJsSession session) {
-        final ChannelHandlerContext context = session.context();
+        final ChannelHandlerContext context = session.connectionContext();
         if (context != null) { //could be null if the request is aborted, for example due to missing callback.
             if (logger.isDebugEnabled()) {
-                logger.debug("Will close session context {}", session.context());
+                logger.debug("Will close session connectionContext {}", session.connectionContext());
             }
             context.close();
         }
