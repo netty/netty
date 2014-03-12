@@ -16,6 +16,10 @@
 
 package io.netty.util;
 
+import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
+
 import java.util.IdentityHashMap;
 import java.util.Map;
 
@@ -26,12 +30,49 @@ import java.util.Map;
  */
 public abstract class Recycler<T> {
 
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(Recycler.class);
+
+    private static final int DEFAULT_MAX_CAPACITY;
+    private static final int INITIAL_CAPACITY;
+
+
+    static {
+        // In the future, we might have different maxCapacity for different object types.
+        // e.g. io.netty.recycler.maxCapacity.writeTask
+        //      io.netty.recycler.maxCapacity.outboundBuffer
+        int maxCapacity = SystemPropertyUtil.getInt("io.netty.recycler.maxCapacity.default", 0);
+        if (maxCapacity <= 0) {
+            // TODO: Some arbitrary large number - should adjust as we get more production experience.
+            maxCapacity = 262144;
+        }
+
+        DEFAULT_MAX_CAPACITY = maxCapacity;
+        if (logger.isDebugEnabled()) {
+            logger.debug("-Dio.netty.recycler.maxCapacity.default: {}", DEFAULT_MAX_CAPACITY);
+        }
+
+        INITIAL_CAPACITY = Math.min(DEFAULT_MAX_CAPACITY, 256);
+    }
+
+    private final int maxCapacity;
+
     private final ThreadLocal<Stack<T>> threadLocal = new ThreadLocal<Stack<T>>() {
         @Override
         protected Stack<T> initialValue() {
-            return new Stack<T>(Recycler.this, Thread.currentThread());
+            return new Stack<T>(Recycler.this, Thread.currentThread(), maxCapacity);
         }
     };
+
+    protected Recycler() {
+        this(DEFAULT_MAX_CAPACITY);
+    }
+
+    protected Recycler(int maxCapacity) {
+        if (maxCapacity <= 0) {
+            maxCapacity = 0;
+        }
+        this.maxCapacity = maxCapacity;
+    }
 
     public final T get() {
         Stack<T> stack = threadLocal.get();
@@ -63,19 +104,32 @@ public abstract class Recycler<T> {
 
     static final class Stack<T> implements Handle {
 
-        private static final int INITIAL_CAPACITY = 256;
+        private T[] elements;
+        private int size;
+        private final int maxCapacity;
+
+        private final Map<T, Boolean> map;
 
         final Recycler<T> parent;
         final Thread thread;
-        private T[] elements;
-        private int size;
-        private final Map<T, Boolean> map = new IdentityHashMap<T, Boolean>(INITIAL_CAPACITY);
 
-        @SuppressWarnings({ "unchecked", "SuspiciousArrayCast" })
-        Stack(Recycler<T> parent, Thread thread) {
+        @SuppressWarnings("AssertWithSideEffects")
+        Stack(Recycler<T> parent, Thread thread, int maxCapacity) {
             this.parent = parent;
             this.thread = thread;
+            this.maxCapacity = maxCapacity;
             elements = newArray(INITIAL_CAPACITY);
+
+            // *assigns* true if assertions are on.
+            @SuppressWarnings("UnusedAssignment")
+            boolean assertionEnabled = false;
+            assert assertionEnabled = true;
+
+            if (assertionEnabled) {
+                map = new IdentityHashMap<T, Boolean>(INITIAL_CAPACITY);
+            } else {
+                map = null;
+            }
         }
 
         T pop() {
@@ -86,19 +140,22 @@ public abstract class Recycler<T> {
             size --;
             T ret = elements[size];
             elements[size] = null;
-            map.remove(ret);
+            assert map == null || map.remove(ret) != null;
             this.size = size;
             return ret;
         }
 
         void push(T o) {
-            if (map.put(o, Boolean.TRUE) != null) {
-                throw new IllegalStateException("recycled already");
-            }
+            assert map == null || map.put(o, Boolean.TRUE) == null: "recycled already";
 
             int size = this.size;
             if (size == elements.length) {
-                T[] newElements = newArray(size << 1);
+                if (size == maxCapacity) {
+                    // Hit the maximum capacity - drop the possibly youngest object.
+                    return;
+                }
+
+                T[] newElements = newArray(Math.min(maxCapacity, size << 1));
                 System.arraycopy(elements, 0, newElements, 0, size);
                 elements = newElements;
             }
