@@ -23,10 +23,11 @@ import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 
 /**
- * Use this class to create rules for {@link IpFilterRuleHandler} that group IP addresses into subnets.
+ * Use this class to create rules for {@link RuleBasedIpFilter} that group IP addresses into subnets.
  * Supports both, IPv4 and IPv6.
  */
 public final class IpSubnetFilterRule implements IpFilterRule {
+
     private final IpFilterRule filterRule;
 
     public IpSubnetFilterRule(String ipAddress, int cidrPrefix, IpFilterRuleType ruleType) {
@@ -60,8 +61,8 @@ public final class IpSubnetFilterRule implements IpFilterRule {
     }
 
     @Override
-    public boolean matches(InetSocketAddress ipAndPort) {
-        return filterRule.matches(ipAndPort);
+    public boolean matches(InetSocketAddress remoteAddress) {
+        return filterRule.matches(remoteAddress);
     }
 
     @Override
@@ -87,8 +88,8 @@ public final class IpSubnetFilterRule implements IpFilterRule {
         }
 
         @Override
-        public boolean matches(InetSocketAddress ipAndPort) {
-            int ipAddress = ipToInt((Inet4Address) ipAndPort.getAddress());
+        public boolean matches(InetSocketAddress remoteAddress) {
+            int ipAddress = ipToInt((Inet4Address) remoteAddress.getAddress());
 
             return (ipAddress & subnetMask) == networkAddress;
         }
@@ -133,8 +134,8 @@ public final class IpSubnetFilterRule implements IpFilterRule {
         }
 
         @Override
-        public boolean matches(InetSocketAddress ipAndPort) {
-            BigInteger ipAddress = ipToInt((Inet6Address) ipAndPort.getAddress());
+        public boolean matches(InetSocketAddress remoteAddress) {
+            BigInteger ipAddress = ipToInt((Inet6Address) remoteAddress.getAddress());
 
             return ipAddress.and(subnetMask).equals(networkAddress);
         }
