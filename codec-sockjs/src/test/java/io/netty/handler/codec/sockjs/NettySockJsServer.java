@@ -103,7 +103,7 @@ public class NettySockJsServer {
     }
 
     public static void main(final String[] args) throws Exception {
-        final int port = args.length > 0 ? Integer.parseInt(args[0]) : 8090;
+        final int port = args.length > 0 ? Integer.parseInt(args[0]) : 8081;
         new NettySockJsServer(port).run();
     }
 

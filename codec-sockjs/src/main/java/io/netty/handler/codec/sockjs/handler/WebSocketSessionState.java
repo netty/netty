@@ -18,6 +18,7 @@ package io.netty.handler.codec.sockjs.handler;
 import java.util.concurrent.TimeUnit;
 
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.sockjs.SockJsSessionContext;
 import io.netty.handler.codec.sockjs.protocol.HeartbeatFrame;
 import io.netty.util.concurrent.ScheduledFuture;
 import io.netty.util.internal.StringUtil;
@@ -32,11 +33,28 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
  */
 class WebSocketSessionState implements SessionState {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketSessionState.class);
+    private final SockJsSession session;
 
     private ScheduledFuture<?> heartbeatFuture;
 
+    WebSocketSessionState(final SockJsSession session) {
+        this.session = session;
+    }
+
     @Override
-    public void onConnect(final SockJsSession session, final ChannelHandlerContext ctx) {
+    public State getState() {
+        return session.getState();
+    }
+
+    @Override
+    public void setState(final State state) {
+        session.setState(state);
+    }
+
+    @Override
+    public void onConnect(final ChannelHandlerContext ctx, final SockJsSessionContext sockJsSessionContext) {
+        session.setConnectionContext(ctx);
+        session.onOpen(sockJsSessionContext);
         startHeartbeatTimer(ctx, session);
     }
 
@@ -61,21 +79,42 @@ class WebSocketSessionState implements SessionState {
     }
 
     @Override
-    public void onOpen(final SockJsSession session, final ChannelHandlerContext ctx) {
+    public void onOpen(final ChannelHandlerContext ctx) {
+        session.setInuse();
     }
 
     @Override
-    public ChannelHandlerContext getSendingContext(SockJsSession session) {
+    public void onMessage(String message) throws Exception {
+        session.onMessage(message);
+    }
+
+    @Override
+    public void storeMessage(String message) {
+        session.addMessage(message);
+    }
+
+    @Override
+    public ChannelHandlerContext getSendingContext() {
         return session.connectionContext();
     }
 
     @Override
-    public boolean isInUse(final SockJsSession session) {
+    public boolean isInUse() {
         return session.connectionContext().channel().isActive();
     }
 
     @Override
-    public void onSockJSServerInitiatedClose(final SockJsSession session) {
+    public void setInuse() {
+        // NoOp
+    }
+
+    @Override
+    public void resetInuse() {
+        // NoOp
+    }
+
+    @Override
+    public void onSockJSServerInitiatedClose() {
         shutdownHearbeat();
     }
 
@@ -86,6 +125,8 @@ class WebSocketSessionState implements SessionState {
 
     @Override
     public void onClose() {
+        session.onClose();
+        session.resetInuse();
         shutdownHearbeat();
     }
 

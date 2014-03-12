@@ -19,25 +19,25 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.sockjs.SockJsConfig;
 import io.netty.handler.codec.sockjs.SockJsSessionContext;
 import io.netty.handler.codec.sockjs.SockJsService;
+import io.netty.handler.codec.sockjs.handler.SessionState.State;
 import io.netty.util.internal.StringUtil;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 class SockJsSession {
 
-    enum States { CONNECTING, OPEN, CLOSED, INTERRUPTED }
-
-    private States state = States.CONNECTING;
+    private State state = State.CONNECTING;
     private final String sessionId;
     private final SockJsService service;
-    private final LinkedList<String> messages = new LinkedList<String>();
+    private final List<String> messages = new ArrayList<String>();
     private final AtomicLong timestamp = new AtomicLong();
     private final AtomicBoolean inuse = new AtomicBoolean();
     private ChannelHandlerContext connectionContext;
-    private ChannelHandlerContext currentContext;
     private ChannelHandlerContext openContext;
 
     protected SockJsSession(final String sessionId, final SockJsService service) {
@@ -45,35 +45,47 @@ class SockJsSession {
         this.service = service;
     }
 
+    /**
+     * Returns the ChannelHandlerContext used to initially connect.
+     *
+     * @return {@code ChannelHandlerContext} the ChannelHandlerContext used establishing a connection.
+     */
     public synchronized ChannelHandlerContext connectionContext() {
         return connectionContext;
     }
 
+    /**
+     * Sets the ChannelHandlerContext used to initially connect.
+     *
+     * @param ctx the ChannelHandlerContext used establishing a connection.
+     */
     public synchronized void setConnectionContext(final ChannelHandlerContext ctx) {
         connectionContext = ctx;
     }
 
+    /**
+     * Returns the ChannelHandlerContext used on an open session.
+     *
+     * @return {@code ChannelHandlerContext} the ChannelHandlerContext used establishing a connection.
+     */
     public synchronized ChannelHandlerContext openContext() {
         return openContext;
     }
 
+    /**
+     * Sets the ChannelHandlerContext used to initially connect.
+     *
+     * @param ctx the ChannelHandlerContext used when the session is open.
+     */
     public synchronized void setOpenContext(final ChannelHandlerContext ctx) {
         openContext = ctx;
     }
 
-    public synchronized ChannelHandlerContext currentContext() {
-        return currentContext;
-    }
-
-    public synchronized void setCurrentContext(final ChannelHandlerContext ctx) {
-        currentContext = ctx;
-    }
-
-    public synchronized void setState(States state) {
+    public synchronized void setState(State state) {
         this.state = state;
     }
 
-    public synchronized States getState() {
+    public synchronized State getState() {
         return state;
     }
 
@@ -103,13 +115,13 @@ class SockJsSession {
     }
 
     public synchronized void onOpen(final SockJsSessionContext session) {
-        setState(States.OPEN);
+        setState(State.OPEN);
         service.onOpen(session);
         updateTimestamp();
     }
 
     public synchronized void onClose() {
-        setState(States.CLOSED);
+        setState(State.CLOSED);
         service.onClose();
     }
 

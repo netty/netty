@@ -40,7 +40,7 @@ import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory;
 import io.netty.handler.codec.sockjs.SockJsConfig;
 import io.netty.handler.codec.sockjs.handler.CorsInboundHandler;
 import io.netty.handler.codec.sockjs.handler.CorsOutboundHandler;
-import io.netty.handler.codec.sockjs.handler.SessionHandler.Events;
+import io.netty.handler.codec.sockjs.handler.SessionHandler.Event;
 import io.netty.handler.codec.sockjs.handler.SockJsHandler;
 import io.netty.handler.codec.sockjs.util.JsonUtil;
 import io.netty.util.AttributeKey;
@@ -168,7 +168,7 @@ public class WebSocketTransport extends SimpleChannelInboundHandler<Object> {
             wsFrame.retain();
             logger.debug("CloseWebSocketFrame received");
             handshaker.close(ctx.channel(), (CloseWebSocketFrame) wsFrame);
-            ctx.fireUserEventTriggered(Events.CLOSE_SESSION);
+            ctx.fireUserEventTriggered(Event.CLOSE_SESSION);
             return;
         }
         if (wsFrame instanceof PingWebSocketFrame) {

@@ -44,24 +44,25 @@ class PollingSessionState extends AbstractTimersSessionState {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PollingSessionState.class);
     private final ConcurrentMap<String, SockJsSession> sessions;
 
-    PollingSessionState(final ConcurrentMap<String, SockJsSession> sessions) {
-        super(sessions);
+    PollingSessionState(final ConcurrentMap<String, SockJsSession> sessions, final SockJsSession session) {
+        super(sessions, session);
         this.sessions = sessions;
     }
 
     @Override
-    public void onOpen(final SockJsSession session, final ChannelHandlerContext ctx) {
-        flushMessages(ctx, session);
+    public void onOpen(final ChannelHandlerContext ctx) {
+        super.onOpen(ctx);
+        flushMessages(ctx);
     }
 
     @Override
-    public ChannelHandlerContext getSendingContext(final SockJsSession session) {
-        final ChannelHandlerContext openContext = session.openContext();
-        return openContext == null ? session.connectionContext() : openContext;
+    public ChannelHandlerContext getSendingContext() {
+        final ChannelHandlerContext openContext = getSockJsSession().openContext();
+        return openContext == null ? getSockJsSession().connectionContext() : openContext;
     }
 
-    private static void flushMessages(final ChannelHandlerContext ctx, final SockJsSession session) {
-        final String[] allMessages = session.getAllMessages();
+    private void flushMessages(final ChannelHandlerContext ctx) {
+        final String[] allMessages = getSockJsSession().getAllMessages();
         if (allMessages.length == 0) {
             return;
         }
@@ -70,36 +71,32 @@ class PollingSessionState extends AbstractTimersSessionState {
             @Override
             public void operationComplete(final ChannelFuture future) throws Exception {
                 if (!future.isSuccess()) {
-                    session.addMessages(allMessages);
+                    getSockJsSession().addMessages(allMessages);
                 }
             }
-        });
+        }).addListener(ChannelFutureListener.CLOSE);
     }
 
     @Override
-    public boolean isInUse(final SockJsSession session) {
-        return session.connectionContext().channel().isActive() || session.inuse();
+    public boolean isInUse() {
+        return getSockJsSession().connectionContext().channel().isActive() || getSockJsSession().inuse();
     }
 
     @Override
-    public void onSockJSServerInitiatedClose(final SockJsSession session) {
-        final ChannelHandlerContext context = session.connectionContext();
+    public void onSockJSServerInitiatedClose() {
+        final ChannelHandlerContext context = getSockJsSession().connectionContext();
         if (context != null) { //could be null if the request is aborted, for example due to missing callback.
             if (logger.isDebugEnabled()) {
-                logger.debug("Will close session connectionContext {}", session.connectionContext());
+                logger.debug("Will close session connectionContext {}", getSockJsSession().connectionContext());
             }
             context.close();
         }
-        sessions.remove(session.sessionId());
+        sessions.remove(getSockJsSession().sessionId());
     }
 
     @Override
     public String toString() {
         return StringUtil.simpleClassName(this);
-    }
-
-    @Override
-    public void onClose() {
     }
 
 }

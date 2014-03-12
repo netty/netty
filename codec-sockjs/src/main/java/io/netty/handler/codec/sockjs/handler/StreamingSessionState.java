@@ -39,24 +39,26 @@ import java.util.concurrent.ConcurrentMap;
 class StreamingSessionState extends AbstractTimersSessionState {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(StreamingSessionState.class);
 
-    StreamingSessionState(final ConcurrentMap<String, SockJsSession> sessions) {
-        super(sessions);
+    StreamingSessionState(final ConcurrentMap<String, SockJsSession> sessions,
+                          final SockJsSession session) {
+        super(sessions, session);
     }
 
     @Override
-    public void onOpen(final SockJsSession session, final ChannelHandlerContext ctx) {
-        flushMessages(ctx, session);
+    public void onOpen(final ChannelHandlerContext ctx) {
+        super.onOpen(ctx);
+        flushMessages();
     }
 
     @Override
-    public ChannelHandlerContext getSendingContext(SockJsSession session) {
-        return session.connectionContext();
+    public ChannelHandlerContext getSendingContext() {
+        return getSockJsSession().connectionContext();
     }
 
-    private static void flushMessages(final ChannelHandlerContext ignored, final SockJsSession session) {
-        final Channel channel = session.connectionContext().channel();
+    private void flushMessages() {
+        final Channel channel = getSockJsSession().connectionContext().channel();
         if (channel.isActive() && channel.isRegistered()) {
-            final String[] allMessages = session.getAllMessages();
+            final String[] allMessages = getSockJsSession().getAllMessages();
             if (allMessages.length == 0) {
                 return;
             }
@@ -67,7 +69,7 @@ class StreamingSessionState extends AbstractTimersSessionState {
                 @Override
                 public void operationComplete(final ChannelFuture future) throws Exception {
                     if (!future.isSuccess()) {
-                        session.addMessages(allMessages);
+                        getSockJsSession().addMessages(allMessages);
                     }
                 }
             });
@@ -75,26 +77,22 @@ class StreamingSessionState extends AbstractTimersSessionState {
     }
 
     @Override
-    public void onSockJSServerInitiatedClose(final SockJsSession session) {
-        final ChannelHandlerContext context = session.connectionContext();
+    public void onSockJSServerInitiatedClose() {
+        final ChannelHandlerContext context = getSockJsSession().connectionContext();
         if (context != null) { //could be null if the request is aborted, for example due to missing callback.
-            logger.debug("Will close session connectionContext " + session.connectionContext());
+            logger.debug("Will close session connectionContext " + getSockJsSession().connectionContext());
             context.close();
         }
     }
 
     @Override
-    public boolean isInUse(final SockJsSession session) {
-        return session.connectionContext().channel().isActive();
+    public boolean isInUse() {
+        return getSockJsSession().connectionContext().channel().isActive();
     }
 
     @Override
     public String toString() {
         return StringUtil.simpleClassName(this);
-    }
-
-    @Override
-    public void onClose() {
     }
 
 }

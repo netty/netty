@@ -39,7 +39,7 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.handler.codec.sockjs.SockJsConfig;
-import io.netty.handler.codec.sockjs.handler.SessionHandler.Events;
+import io.netty.handler.codec.sockjs.handler.SessionHandler.Event;
 import io.netty.handler.codec.sockjs.protocol.Frame;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -100,7 +100,7 @@ public class HtmlFileTransport extends ChannelHandlerAdapter {
             final String c = getCallbackFromRequest((HttpRequest) msg);
             if (c.isEmpty()) {
                 respondCallbackRequired(ctx);
-                ctx.fireUserEventTriggered(Events.CLOSE_SESSION);
+                ctx.fireUserEventTriggered(Event.CLOSE_SESSION);
                 return;
             } else {
                 callback = c;

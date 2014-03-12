@@ -15,15 +15,16 @@
  */
 package io.netty.handler.codec.sockjs.handler;
 
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.TimeUnit;
-
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.sockjs.SockJsSessionContext;
 import io.netty.handler.codec.sockjs.protocol.HeartbeatFrame;
 import io.netty.handler.codec.sockjs.util.ArgumentUtil;
 import io.netty.util.concurrent.ScheduledFuture;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Base class for SessionState implementations that require timers.
@@ -36,16 +37,40 @@ abstract class AbstractTimersSessionState implements SessionState {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractTimersSessionState.class);
 
     private final ConcurrentMap<String, SockJsSession> sessions;
+    private final SockJsSession session;
     private ScheduledFuture<?> heartbeatFuture;
     private ScheduledFuture<?> sessionTimer;
 
-    protected AbstractTimersSessionState(final ConcurrentMap<String, SockJsSession> sessions) {
+    protected AbstractTimersSessionState(final ConcurrentMap<String, SockJsSession> sessions,
+                                         final SockJsSession session) {
         ArgumentUtil.checkNotNull(sessions, "sessions");
         this.sessions = sessions;
+        this.session = session;
+    }
+
+    protected SockJsSession getSockJsSession() {
+        return session;
     }
 
     @Override
-    public void onConnect(final SockJsSession session, final ChannelHandlerContext ctx) {
+    public State getState() {
+        return session.getState();
+    }
+
+    @Override
+    public void setState(final State state) {
+        session.setState(state);
+    }
+
+    @Override
+    public void onOpen(ChannelHandlerContext ctx) {
+        session.setInuse();
+    }
+
+    @Override
+    public void onConnect(final ChannelHandlerContext ctx, final SockJsSessionContext sockJsSessionContext) {
+        session.setConnectionContext(ctx);
+        session.onOpen(sockJsSessionContext);
         startSessionTimer(ctx, session);
         startHeartbeatTimer(ctx, session);
     }
@@ -56,7 +81,7 @@ abstract class AbstractTimersSessionState implements SessionState {
                 @Override
                 public void run() {
                     final long now = TimeUnit.NANOSECONDS.toMillis(System.nanoTime());
-                    if (isInUse(session)) {
+                    if (isInUse()) {
                         return;
                     }
                     if (session.timestamp() + session.config().sessionTimeout() < now) {
@@ -90,4 +115,29 @@ abstract class AbstractTimersSessionState implements SessionState {
         TimeUnit.MILLISECONDS);
     }
 
+    @Override
+    public void onClose() {
+        session.onClose();
+        session.resetInuse();
+    }
+
+    @Override
+    public void onMessage(String message) throws Exception {
+        session.onMessage(message);
+    }
+
+    @Override
+    public void setInuse() {
+        session.setInuse();
+    }
+
+    @Override
+    public void resetInuse() {
+        session.resetInuse();
+    }
+
+    @Override
+    public void storeMessage(String message) {
+        session.addMessage(message);
+    }
 }

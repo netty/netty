@@ -20,109 +20,105 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.util.ReferenceCountUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 import io.netty.handler.codec.sockjs.SockJsSessionContext;
-import io.netty.handler.codec.sockjs.handler.SockJsSession.States;
+import io.netty.handler.codec.sockjs.handler.SessionState.State;
 import io.netty.handler.codec.sockjs.protocol.CloseFrame;
 import io.netty.handler.codec.sockjs.protocol.MessageFrame;
 import io.netty.handler.codec.sockjs.protocol.OpenFrame;
 import io.netty.handler.codec.sockjs.util.ArgumentUtil;
-import io.netty.util.ReferenceCountUtil;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
 
 /**
- * A Handler that manages SockJS sessions.
+ * A ChannelHandler that manages SockJS sessions.
  *
- * For every connection received a new SessionHandler will be created
- * and added to the pipeline
+ * For every connection received a new SessionHandler will be created and added to
+ * the pipeline.
+ *
  * Depending on the type of connection (polling, streaming, send, or websocket)
  * the type of {@link SessionState} that this session handles will differ.
  *
  */
-public class SessionHandler extends ChannelHandlerAdapter implements SockJsSessionContext {
+public class SessionHandler extends ChannelHandlerAdapter {
+
+    public enum Event { CLOSE_SESSION, HANDLE_SESSION }
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(SessionHandler.class);
-    public enum Events { CLOSE_SESSION, HANDLE_SESSION }
 
     private final SessionState sessionState;
-    private final SockJsSession session;
-    private ChannelHandlerContext currentContext;
 
-    public SessionHandler(final SessionState sessionState, final SockJsSession session) {
+    public SessionHandler(final SessionState sessionState) {
         ArgumentUtil.checkNotNull(sessionState, "sessionState");
         this.sessionState = sessionState;
-        this.session = session;
     }
 
     @Override
     public void channelRead(final ChannelHandlerContext ctx, final Object msg) throws Exception {
         if (msg instanceof HttpRequest) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Handle session : {}", sessionState);
+            }
+            ReferenceCountUtil.release(msg);
             handleSession(ctx);
         } else if (msg instanceof String) {
             handleMessage((String) msg);
         } else {
-            ctx.fireChannelRead(ReferenceCountUtil.retain(msg));
+            ctx.fireChannelRead(msg);
         }
     }
 
     private void handleSession(final ChannelHandlerContext ctx) throws Exception {
-        currentContext = ctx;
-        if (logger.isDebugEnabled()) {
-            logger.debug("handleSession {}", sessionState);
-        }
-        switch (session.getState()) {
+        switch (sessionState.getState()) {
         case CONNECTING:
-            logger.debug("State.CONNECTING sending open frame");
-            ctx.channel().writeAndFlush(new OpenFrame());
-            session.setConnectionContext(ctx);
-            session.onOpen(this);
-            sessionState.onConnect(session, ctx);
+            sessionConnecting(ctx);
             break;
         case OPEN:
-            if (sessionState.isInUse(session)) {
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Another connection still in open for [{}]", session.sessionId());
-                }
-                ctx.writeAndFlush(new CloseFrame(2010, "Another connection still open"));
-                session.setState(States.INTERRUPTED);
-            } else {
-                session.setInuse();
-                session.setOpenContext(ctx);
-                sessionState.onOpen(session, ctx);
-            }
+            sessionOpen(ctx);
             break;
         case INTERRUPTED:
-            ctx.writeAndFlush(new CloseFrame(1002, "Connection interrupted"));
+            sessionInterrupted(ctx);
             break;
         case CLOSED:
-            ctx.writeAndFlush(new CloseFrame(3000, "Go away!"));
-            session.resetInuse();
+            sessionClosed(ctx);
             break;
         }
+    }
+
+    private void sessionConnecting(final ChannelHandlerContext ctx) {
+        logger.debug("State.CONNECTING sending open frame");
+        writeOpenFrame(ctx);
+        sessionState.onConnect(ctx, new DefaultSockJsSessionContext());
+    }
+
+    private void sessionOpen(ChannelHandlerContext ctx) {
+        if (sessionState.isInUse()) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Another connection still in open for {}", sessionState);
+            }
+            writeCloseFrame(ctx, 2010, "Another connection still open");
+            sessionState.setState(State.INTERRUPTED);
+        } else {
+            sessionState.onOpen(ctx);
+        }
+    }
+
+    private static void sessionInterrupted(ChannelHandlerContext ctx) {
+        writeCloseFrame(ctx, 1002, "Connection interrupted");
+    }
+
+    private void sessionClosed(ChannelHandlerContext ctx) {
+        writeCloseFrame(ctx, 3000, "Go away!");
+        sessionState.onClose();
     }
 
     private void handleMessage(final String message) throws Exception {
-        session.onMessage(message);
-    }
-
-    @Override
-    public void send(String message) {
-        final Channel channel = getActiveChannel();
-        if (isWritable(channel)) {
-            channel.writeAndFlush(new MessageFrame(message));
-        } else {
-            session.addMessage(message);
-        }
-    }
-
-    private Channel getActiveChannel() {
-        final Channel sessionChannel = session.connectionContext().channel();
-        return sessionChannel.isActive() && sessionChannel.isRegistered() ? sessionChannel : currentContext.channel();
+        sessionState.onMessage(message);
     }
 
     @Override
     public void channelInactive(final ChannelHandlerContext ctx) throws Exception {
-        session.resetInuse();
+        sessionState.resetInuse();
         ctx.fireChannelInactive();
     }
 
@@ -131,32 +127,52 @@ public class SessionHandler extends ChannelHandlerAdapter implements SockJsSessi
     }
 
     @Override
-    public void close() {
-        session.onClose();
-        sessionState.onClose();
-        final Channel channel = getActiveChannel();
-        if (isWritable(channel)) {
-            final CloseFrame closeFrame = new CloseFrame(3000, "Go away!");
-            if (logger.isDebugEnabled()) {
-                logger.debug("Writing {}", closeFrame);
-            }
-            channel.writeAndFlush(closeFrame).addListener(ChannelFutureListener.CLOSE);
-        }
-    }
-
-    @Override
     public void userEventTriggered(final ChannelHandlerContext ctx, final Object event) throws Exception {
-        if (event == Events.CLOSE_SESSION) {
-            session.onClose();
-            sessionState.onSockJSServerInitiatedClose(session);
-        } else if (event == Events.HANDLE_SESSION) {
+        if (event == Event.CLOSE_SESSION) {
+            sessionState.onClose();
+            sessionState.onSockJSServerInitiatedClose();
+        } else if (event == Event.HANDLE_SESSION) {
             handleSession(ctx);
         }
     }
 
-    @Override
-    public ChannelHandlerContext getContext() {
-        return currentContext;
+    private static void writeCloseFrame(final ChannelHandlerContext ctx, final int code, final String message) {
+        ctx.channel().writeAndFlush(new CloseFrame(code, message));
+    }
+
+    private static void writeOpenFrame(final ChannelHandlerContext ctx) {
+        ctx.channel().writeAndFlush(new OpenFrame());
+    }
+
+    public class DefaultSockJsSessionContext implements SockJsSessionContext {
+
+        @Override
+        public void send(String message) {
+            final Channel channel = sessionState.getSendingContext().channel();
+            if (isWritable(channel)) {
+                channel.writeAndFlush(new MessageFrame(message));
+            } else {
+                sessionState.storeMessage(message);
+            }
+        }
+
+        @Override
+        public void close() {
+            sessionState.onClose();
+            final Channel channel = sessionState.getSendingContext().channel();
+            if (isWritable(channel)) {
+                final CloseFrame closeFrame = new CloseFrame(3000, "Go away!");
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Writing {}", closeFrame);
+                }
+                channel.writeAndFlush(closeFrame).addListener(ChannelFutureListener.CLOSE);
+            }
+        }
+
+        @Override
+        public ChannelHandlerContext getContext() {
+            return sessionState.getSendingContext();
+        }
     }
 
 }

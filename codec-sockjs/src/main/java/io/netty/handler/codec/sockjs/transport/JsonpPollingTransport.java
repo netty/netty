@@ -35,7 +35,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.handler.codec.sockjs.SockJsConfig;
-import io.netty.handler.codec.sockjs.handler.SessionHandler.Events;
+import io.netty.handler.codec.sockjs.handler.SessionHandler.Event;
 import io.netty.handler.codec.sockjs.protocol.Frame;
 import io.netty.util.ReferenceCountUtil;
 
@@ -72,7 +72,7 @@ public class JsonpPollingTransport extends ChannelHandlerAdapter {
             final List<String> c = qsd.parameters().get("c");
             if (c == null) {
                 respond(ctx, request.getProtocolVersion(), INTERNAL_SERVER_ERROR, "\"callback\" parameter required");
-                ctx.fireUserEventTriggered(Events.CLOSE_SESSION);
+                ctx.fireUserEventTriggered(Event.CLOSE_SESSION);
                 return;
             } else {
                 callback = c.get(0);

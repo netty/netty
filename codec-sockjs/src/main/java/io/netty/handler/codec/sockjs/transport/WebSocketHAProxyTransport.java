@@ -31,7 +31,7 @@ import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketHandshakeException;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshaker;
-import io.netty.handler.codec.sockjs.handler.SessionHandler;
+import io.netty.handler.codec.sockjs.handler.SessionHandler.Event;
 import io.netty.handler.codec.sockjs.util.JsonUtil;
 import io.netty.util.AttributeKey;
 import io.netty.util.internal.logging.InternalLogger;
@@ -58,7 +58,7 @@ public class WebSocketHAProxyTransport extends SimpleChannelInboundHandler<Objec
         } else if (msg instanceof WebSocketFrame) {
             handleWebSocketFrame(ctx, (WebSocketFrame) msg);
         }
-        ctx.fireUserEventTriggered(SessionHandler.Events.HANDLE_SESSION);
+        ctx.fireUserEventTriggered(Event.HANDLE_SESSION);
     }
 
     private void handleContent(final ChannelHandlerContext ctx, final ByteBuf nounce) {

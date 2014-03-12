@@ -46,7 +46,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * EventSource transport is an streaming transport in that is maintains a persistent
  * connection from the server to the client over which the server can send messages.
- * This is often refered to a Server Side Events (SSE) and the client side.
+ * This is often refered to a Server Side Event (SSE) and the client side.
  *
  * The response for opening such a unidirection channel is done with a simple
  * plain response with a 'Content-Type' of 'text/event-stream'. Subsequent

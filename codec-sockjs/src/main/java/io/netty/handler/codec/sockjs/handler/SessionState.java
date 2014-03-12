@@ -16,6 +16,7 @@
 package io.netty.handler.codec.sockjs.handler;
 
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.sockjs.SockJsSessionContext;
 
 /**
  * A SessionState represents differences in the types of sessions possible with SockJS.
@@ -27,33 +28,65 @@ import io.netty.channel.ChannelHandlerContext;
  */
 interface SessionState {
 
+    enum State {
+        CONNECTING,
+        OPEN,
+        CLOSED,
+        INTERRUPTED }
+
+    /**
+     * Returns the current session state.
+     *
+     * @return {@code State} the {@link State} of the session
+     */
+    State getState();
+
+    /**
+     * Sets this session state.
+     *
+     * @param state the new state for this session
+     */
+    void setState(State state);
+
     /**
      * Called when a new session is connecting.
      *
-     * @param session the {@link SockJsSession}.
      * @param ctx the {@link ChannelHandlerContext} for the current connection/channel
+     * @param sockJsSessionContext the {@link SockJsSessionContext} for the current connection/channel
      */
-    void onConnect(SockJsSession session, ChannelHandlerContext ctx);
+    void onConnect(ChannelHandlerContext ctx, SockJsSessionContext sockJsSessionContext);
 
     /**
      * Called when a request for a connected session is received.
      *
-     * @param session the {@link SockJsSession}.
      * @param ctx the {@link ChannelHandlerContext} for the current connection/channel. Note
      *            that this ChannelHandlerContext is different from the one that opened the
      *            the sesssion and was passed to the onConnect method.
      */
-    void onOpen(SockJsSession session, ChannelHandlerContext ctx);
+    void onOpen(ChannelHandlerContext ctx);
+
+    /**
+     * Called when a message is to be sent to the SockJS service.
+     *
+     * @param message the message.
+     */
+    void onMessage(String message) throws Exception;
+
+    /**
+     * Stores the message in the session for later delivery to when a client is
+     * connected.
+     *
+     */
+    void storeMessage(String message);
 
     /**
      * Returns the ChannelHandlerContext that should be used to communicate with the client.
      * This may be different for different transports. For some transports this will be the
      * context that opened the connection and others it will be the current context.
      *
-     * @param session the {@link SockJsSession}.
      * @return {@code ChannelHandlerContext} the context to be used for sending.
      */
-    ChannelHandlerContext getSendingContext(SockJsSession session);
+    ChannelHandlerContext getSendingContext();
 
     /**
      * Called after the {@link SockJsSession#onClose()} method has been called enabling
@@ -64,13 +97,23 @@ interface SessionState {
     /**
      * Called when the SockJS server has initiated a close of the session.
      */
-    void onSockJSServerInitiatedClose(SockJsSession session);
+    void onSockJSServerInitiatedClose();
 
     /**
-     * Indicates if this session is in use.
+     * Indicates if the underlying session is in use.
      *
      * @return {@code true} if the session is in use.
      */
-    boolean isInUse(SockJsSession session);
+    boolean isInUse();
+
+    /**
+     * Sets the underlying session as inuse.
+     */
+    void setInuse();
+
+    /**
+     * Resets the underlyig session as no longer inuse.
+     */
+    void resetInuse();
 
 }
