@@ -15,11 +15,12 @@
  */
 package io.netty.handler.ipfilter;
 
-import io.netty.channel.ChannelFuture;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.Channel;
+
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 
 /**
  * This class allows one to filter new {@link Channel}s based on the
@@ -27,36 +28,33 @@ import java.net.InetSocketAddress;
  * will be accepted.
  *
  * If you would like to explicitly take action on rejected {@link Channel}s, you should override
- * {@link #rejected(ChannelHandlerContext, InetSocketAddress)}.
+ * {@link #channelRejected(ChannelHandlerContext, SocketAddress)}.
  */
 @Sharable
-public class IpFilterRuleHandler extends AbstractIpFilterHandler {
+public class RuleBasedIpFilter extends AbstractRemoteAddressFilter<InetSocketAddress> {
+
     private final IpFilterRule[] rules;
 
-    public IpFilterRuleHandler(IpFilterRule... rules) {
+    public RuleBasedIpFilter(IpFilterRule... rules) {
         if (rules == null) {
             throw new NullPointerException("rules");
-        }
-
-        if (rules.length == 0) {
-            throw new IllegalArgumentException("You have to provide at least one rule.");
         }
 
         this.rules = rules;
     }
 
     @Override
-    protected boolean accept(InetSocketAddress ipAndPort) throws Exception {
+    protected boolean accept(ChannelHandlerContext ctx, InetSocketAddress remoteAddress) throws Exception {
         for (IpFilterRule rule : rules) {
-            if (rule.matches(ipAndPort)) {
-                return rule.ruleType() == IpFilterRuleType.ALLOW;
+            if (rule == null) {
+                break;
+            }
+
+            if (rule.matches(remoteAddress)) {
+                return rule.ruleType() == IpFilterRuleType.ACCEPT;
             }
         }
-        return true;
-    }
 
-    @Override
-    protected ChannelFuture rejected(ChannelHandlerContext ctx, InetSocketAddress ipAndPort) {
-        return null;
+        return true;
     }
 }
