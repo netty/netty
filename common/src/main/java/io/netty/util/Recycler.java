@@ -35,7 +35,6 @@ public abstract class Recycler<T> {
     private static final int DEFAULT_MAX_CAPACITY;
     private static final int INITIAL_CAPACITY;
 
-
     static {
         // In the future, we might have different maxCapacity for different object types.
         // e.g. io.netty.recycler.maxCapacity.writeTask
