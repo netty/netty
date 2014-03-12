@@ -40,12 +40,7 @@ Linux infinity 3.10.32-1-lts #1 SMP Sun Feb 23 09:44:24 CET 2014 x86_64 GNU/Linu
 My system has IPv6 disabled.
 ```
 
-## How to submit a pull request
+## How to contribute your work
 
-Pull requests should be targeted at the branch for the latest stable releases.  If the pull request is for fixing a bug which also affects an old branch like `3.x`, we recommend you to submit another pull request for that branch, too.
+Before submitting a pull request or push a commit, please read [our developer guide](http://netty.io/wiki/developer-guide.html).
 
-1. [Rebase](http://git-scm.com/book/en/Git-Branching-Rebasing) your changes against the upstream branch.  Resolve any conflicts that arise.
-1. Write JUnit test cases if possible. If not sure about how to write one, ask to write one before it's merged.
-1. Run `mvn test` before the initial submission or the subsequent pushes, and ensure the build succeeds.
-
-For more information on developing Netty, please refer to [the developer guide](http://netty.io/wiki/developer-guide.html).
