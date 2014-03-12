@@ -31,13 +31,13 @@ public class IpSubnetFilterTest {
 
     @Test
     public void testIp4SubnetFilterRule() throws Exception {
-        IpSubnetFilterRule rule = new IpSubnetFilterRule("192.168.56.1", 24, IpFilterRuleType.ALLOW);
+        IpSubnetFilterRule rule = new IpSubnetFilterRule("192.168.56.1", 24, IpFilterRuleType.ACCEPT);
         for (int i = 0; i <= 255; i++) {
             Assert.assertTrue(rule.matches(newSockAddress(String.format("192.168.56.%d", i))));
         }
         Assert.assertFalse(rule.matches(newSockAddress("192.168.57.1")));
 
-        rule = new IpSubnetFilterRule("91.114.240.1", 23, IpFilterRuleType.ALLOW);
+        rule = new IpSubnetFilterRule("91.114.240.1", 23, IpFilterRuleType.ACCEPT);
         Assert.assertTrue(rule.matches(newSockAddress("91.114.240.43")));
         Assert.assertTrue(rule.matches(newSockAddress("91.114.240.255")));
         Assert.assertTrue(rule.matches(newSockAddress("91.114.241.193")));
@@ -49,7 +49,7 @@ public class IpSubnetFilterTest {
     public void testIp6SubnetFilterRule() {
         IpSubnetFilterRule rule;
 
-        rule = new IpSubnetFilterRule("2001:db8:abcd:0000::", 52, IpFilterRuleType.ALLOW);
+        rule = new IpSubnetFilterRule("2001:db8:abcd:0000::", 52, IpFilterRuleType.ACCEPT);
         Assert.assertTrue(rule.matches(newSockAddress("2001:db8:abcd:0000::1")));
         Assert.assertTrue(rule.matches(newSockAddress("2001:db8:abcd:0fff:ffff:ffff:ffff:ffff")));
         Assert.assertFalse(rule.matches(newSockAddress("2001:db8:abcd:1000::")));
@@ -59,24 +59,24 @@ public class IpSubnetFilterTest {
     public void testIpFilterRuleHandler() throws Exception {
         IpFilterRule filter0 = new IpFilterRule() {
             @Override
-            public boolean matches(InetSocketAddress ipAndPort) {
-                return "192.168.57.1".equals(ipAndPort.getHostName());
+            public boolean matches(InetSocketAddress remoteAddress) {
+                return "192.168.57.1".equals(remoteAddress.getHostName());
             }
 
             @Override
             public IpFilterRuleType ruleType() {
-                return IpFilterRuleType.DENY;
+                return IpFilterRuleType.REJECT;
             }
         };
 
-        IpFilterRuleHandler denyHandler = new IpFilterRuleHandler(filter0) {
+        RuleBasedIpFilter denyHandler = new RuleBasedIpFilter(filter0) {
             private final byte[] message = {1, 2, 3, 4, 5, 6, 7};
 
             @Override
-            protected ChannelFuture rejected(ChannelHandlerContext ctx, InetSocketAddress ipAndPort) {
+            protected ChannelFuture channelRejected(ChannelHandlerContext ctx, InetSocketAddress remoteAddress) {
                 Assert.assertTrue(ctx.channel().isActive());
                 Assert.assertTrue(ctx.channel().isWritable());
-                Assert.assertEquals("192.168.57.1", ipAndPort.getHostName());
+                Assert.assertEquals("192.168.57.1", remoteAddress.getHostName());
 
                 return ctx.writeAndFlush(Unpooled.wrappedBuffer(message));
             }
@@ -90,9 +90,9 @@ public class IpSubnetFilterTest {
         Assert.assertFalse(chDeny.isActive());
         Assert.assertFalse(chDeny.isOpen());
 
-        IpFilterRuleHandler allowHandler = new IpFilterRuleHandler(filter0) {
+        RuleBasedIpFilter allowHandler = new RuleBasedIpFilter(filter0) {
             @Override
-            protected ChannelFuture rejected(ChannelHandlerContext ctx, InetSocketAddress ipAndPort) {
+            protected ChannelFuture channelRejected(ChannelHandlerContext ctx, InetSocketAddress remoteAddress) {
                 Assert.fail();
                 return null;
             }
@@ -104,7 +104,7 @@ public class IpSubnetFilterTest {
 
     @Test
     public void testUniqueIpFilterHandler() {
-        UniqueIpFilterHandler handler = new UniqueIpFilterHandler();
+        UniqueIpFilter handler = new UniqueIpFilter();
 
         EmbeddedChannel ch1 = newEmbeddedInetChannel("91.92.93.1", handler);
         Assert.assertTrue(ch1.isActive());

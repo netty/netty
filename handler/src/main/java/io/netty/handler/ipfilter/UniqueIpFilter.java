@@ -15,11 +15,12 @@
  */
 package io.netty.handler.ipfilter;
 
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.internal.ConcurrentSet;
-import io.netty.channel.Channel;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -30,30 +31,24 @@ import java.util.Set;
  * {@link Channel} connected to the server.
  */
 @ChannelHandler.Sharable
-public class UniqueIpFilterHandler extends AbstractIpFilterHandler {
+public class UniqueIpFilter extends AbstractRemoteAddressFilter<InetSocketAddress> {
+
     private final Set<InetAddress> connected = new ConcurrentSet<InetAddress>();
 
     @Override
-    protected boolean accept(InetSocketAddress ipAndPort) throws Exception {
-        InetAddress ipAddress = ipAndPort.getAddress();
-        if (connected.contains(ipAddress)) {
+    protected boolean accept(ChannelHandlerContext ctx, InetSocketAddress remoteAddress) throws Exception {
+        final InetAddress remoteIp = remoteAddress.getAddress();
+        if (connected.contains(remoteIp)) {
             return false;
         } else {
-            connected.add(ipAddress);
+            connected.add(remoteIp);
+            ctx.channel().closeFuture().addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    connected.remove(remoteIp);
+                }
+            });
             return true;
         }
-    }
-
-    @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        InetAddress ipAddress = ((InetSocketAddress) ctx.channel().remoteAddress()).getAddress();
-        connected.remove(ipAddress);
-
-        super.channelInactive(ctx);
-    }
-
-    @Override
-    protected ChannelFuture rejected(ChannelHandlerContext ctx, InetSocketAddress ipAndPort) {
-        return null;
     }
 }
