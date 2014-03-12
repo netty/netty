@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty</artifactId>
   <packaging>bundle</packaging>
-  <version>3.6.8.Final</version>
+  <version>3.6.9.Final-SNAPSHOT</version>
 
   <name>The Netty Project</name>
   <url>http://netty.io/</url>
