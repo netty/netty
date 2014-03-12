@@ -39,20 +39,15 @@ public abstract class AbstractRemoteAddressFilter<T extends SocketAddress> exten
 
     @Override
     public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
-        try {
-            handleNewChannel(ctx);
-        } finally {
-            ctx.fireChannelRegistered();
-        }
+        handleNewChannel(ctx);
+        ctx.fireChannelRegistered();
     }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        try {
-            if (!handleNewChannel(ctx)) {
-                throw new IllegalStateException("cannot determine to accept or reject a channel: " + ctx.channel());
-            }
-        } finally {
+        if (!handleNewChannel(ctx)) {
+            throw new IllegalStateException("cannot determine to accept or reject a channel: " + ctx.channel());
+        } else {
             ctx.fireChannelActive();
         }
     }
