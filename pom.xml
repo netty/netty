@@ -434,16 +434,6 @@
             <ignore>java.nio.channels.MembershipKey</ignore>
             <ignore>java.net.StandardProtocolFamily</ignore>
             <ignore>java.nio.channels.spi.SelectorProvider</ignore>
-
-            <!-- Used for NIO. 2 -->
-            <ignore>java.nio.channels.AsynchronousChannel</ignore>
-            <ignore>java.nio.channels.AsynchronousSocketChannel</ignore>
-            <ignore>java.nio.channels.AsynchronousServerSocketChannel</ignore>
-            <ignore>java.nio.channels.AsynchronousChannelGroup</ignore>
-            <ignore>java.nio.channels.NetworkChannel</ignore>
-            <ignore>java.nio.channels.InterruptedByTimeoutException</ignore>
-            <ignore>java.net.StandardSocketOptions</ignore>
-            <ignore>java.net.SocketOption</ignore>
           </ignores>
         </configuration>
         <executions>
