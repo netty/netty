@@ -204,6 +204,7 @@ public class ReadOnlyDirectByteBufferBufTest {
         
         ByteBuffer nioBuffer = buf.nioBuffer();
         
+        // Ensure this can be accessed without throwing a BufferUnderflowException
         Assert.assertEquals(2, nioBuffer.getInt());
     }
 }
