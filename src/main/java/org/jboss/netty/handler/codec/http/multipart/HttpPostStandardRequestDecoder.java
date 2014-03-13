@@ -353,7 +353,8 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
                 }
                 undecodedChunk.readerIndex(firstpos);
             } else {
-                // end of line so keep index
+                // end of line or end of block so keep index to last valid position
+                undecodedChunk.readerIndex(firstpos);
             }
         } catch (ErrorDataDecoderException e) {
             // error while decoding
@@ -488,7 +489,8 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
                 }
                 undecodedChunk.readerIndex(firstpos);
             } else {
-                // end of line so keep index
+                // end of line or end of block so keep index to last valid position
+                undecodedChunk.readerIndex(firstpos);
             }
         } catch (ErrorDataDecoderException e) {
             // error while decoding
