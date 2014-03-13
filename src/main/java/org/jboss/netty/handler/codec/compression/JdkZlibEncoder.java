@@ -15,10 +15,6 @@
  */
 package org.jboss.netty.handler.codec.compression;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.zip.CRC32;
-import java.util.zip.Deflater;
-
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
@@ -30,6 +26,10 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.LifeCycleAwareChannelHandler;
 import org.jboss.netty.handler.codec.oneone.OneToOneStrictEncoder;
+
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.zip.CRC32;
+import java.util.zip.Deflater;
 
 
 /**
@@ -233,6 +233,12 @@ public class JdkZlibEncoder extends OneToOneStrictEncoder implements LifeCycleAw
 
         ChannelBuffer footer = ChannelBuffers.dynamicBuffer(ctx.getChannel().getConfig().getBufferFactory());
         synchronized (deflater) {
+            if (gzip && writeHeader) {
+                // Write the GZIP header first if not written yet. (i.e. user wrote nothing.)
+                writeHeader = false;
+                footer.writeBytes(gzipHeader);
+            }
+
             deflater.finish();
             while (!deflater.finished()) {
                 int numBytes = deflater.deflate(out, 0, out.length);
