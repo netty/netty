@@ -33,6 +33,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Abstract base class for {@link EventExecutor}'s that execute all its submitted tasks in a single thread.
@@ -61,13 +62,12 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
     final Queue<ScheduledFutureTask<?>> delayedTaskQueue = new PriorityQueue<ScheduledFutureTask<?>>();
 
     private final Thread thread;
-    private final Object stateLock = new Object();
     private final Semaphore threadLock = new Semaphore(0);
     private final Set<Runnable> shutdownHooks = new LinkedHashSet<Runnable>();
     private final boolean addTaskWakesUp;
 
     private long lastExecutionTime;
-    private volatile int state = ST_NOT_STARTED;
+    private final AtomicInteger state = new AtomicInteger(ST_NOT_STARTED);
     private volatile long gracefulShutdownQuietPeriod;
     private volatile long gracefulShutdownTimeout;
     private long gracefulShutdownStartTime;
@@ -103,8 +103,9 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
                 } catch (Throwable t) {
                     logger.warn("Unexpected exception from an event executor: ", t);
                 } finally {
-                    if (state < ST_SHUTTING_DOWN) {
-                        state = ST_SHUTTING_DOWN;
+                    // TODO: Maybe compareAndSet ?
+                    if (state.get() < ST_SHUTTING_DOWN) {
+                        state.set(ST_SHUTTING_DOWN);
                     }
 
                     // Check if confirmShutdown() was called at the end of the loop.
@@ -126,9 +127,7 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
                         try {
                             cleanup();
                         } finally {
-                            synchronized (stateLock) {
-                                state = ST_TERMINATED;
-                            }
+                            state.set(ST_TERMINATED);
                             threadLock.release();
                             if (!taskQueue.isEmpty()) {
                                 logger.warn(
@@ -414,7 +413,7 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
     }
 
     protected void wakeup(boolean inEventLoop) {
-        if (!inEventLoop || state == ST_SHUTTING_DOWN) {
+        if (!inEventLoop || state.get() == ST_SHUTTING_DOWN) {
             taskQueue.add(WAKEUP_TASK);
         }
     }
@@ -498,32 +497,39 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
         }
 
         boolean inEventLoop = inEventLoop();
-        boolean wakeup = true;
-
-        synchronized (stateLock) {
+        boolean wakeup;
+        int oldState;
+        for (;;) {
             if (isShuttingDown()) {
                 return terminationFuture();
             }
-
-            gracefulShutdownQuietPeriod = unit.toNanos(quietPeriod);
-            gracefulShutdownTimeout = unit.toNanos(timeout);
-
+            int newState;
+            wakeup = true;
+            oldState = state.get();
             if (inEventLoop) {
-                assert state == ST_STARTED;
-                state = ST_SHUTTING_DOWN;
+                newState = ST_SHUTTING_DOWN;
             } else {
-                switch (state) {
+                switch (oldState) {
                     case ST_NOT_STARTED:
-                        state = ST_SHUTTING_DOWN;
-                        thread.start();
+                        newState = ST_SHUTTING_DOWN;
                         break;
                     case ST_STARTED:
-                        state = ST_SHUTTING_DOWN;
+                        newState = ST_SHUTTING_DOWN;
                         break;
                     default:
+                        newState = oldState;
                         wakeup = false;
                 }
             }
+            if (state.compareAndSet(oldState, newState)) {
+                break;
+            }
+        }
+        gracefulShutdownQuietPeriod = unit.toNanos(quietPeriod);
+        gracefulShutdownTimeout = unit.toNanos(timeout);
+
+        if (oldState == ST_NOT_STARTED) {
+            thread.start();
         }
 
         if (wakeup) {
@@ -546,30 +552,38 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
         }
 
         boolean inEventLoop = inEventLoop();
-        boolean wakeup = true;
-
-        synchronized (stateLock) {
-            if (isShutdown()) {
+        boolean wakeup;
+        int oldState;
+        for (;;) {
+            if (isShuttingDown()) {
                 return;
             }
-
+            int newState;
+            wakeup = true;
+            oldState = state.get();
             if (inEventLoop) {
-                assert state == ST_STARTED || state == ST_SHUTTING_DOWN;
-                state = ST_SHUTDOWN;
+                newState = ST_SHUTDOWN;
             } else {
-                switch (state) {
-                case ST_NOT_STARTED:
-                    state = ST_SHUTDOWN;
-                    thread.start();
-                    break;
-                case ST_STARTED:
-                case ST_SHUTTING_DOWN:
-                    state = ST_SHUTDOWN;
-                    break;
-                default:
-                    wakeup = false;
+                switch (oldState) {
+                    case ST_NOT_STARTED:
+                        newState = ST_SHUTDOWN;
+                        break;
+                    case ST_STARTED:
+                    case ST_SHUTTING_DOWN:
+                        newState = ST_SHUTDOWN;
+                        break;
+                    default:
+                        newState = oldState;
+                        wakeup = false;
                 }
             }
+            if (state.compareAndSet(oldState, newState)) {
+                break;
+            }
+        }
+
+        if (oldState == ST_NOT_STARTED) {
+            thread.start();
         }
 
         if (wakeup) {
@@ -579,17 +593,17 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
 
     @Override
     public boolean isShuttingDown() {
-        return state >= ST_SHUTTING_DOWN;
+        return state.get() >= ST_SHUTTING_DOWN;
     }
 
     @Override
     public boolean isShutdown() {
-        return state >= ST_SHUTDOWN;
+        return state.get() >= ST_SHUTDOWN;
     }
 
     @Override
     public boolean isTerminated() {
-        return state == ST_TERMINATED;
+        return state.get() == ST_TERMINATED;
     }
 
     /**
@@ -808,9 +822,8 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
     }
 
     private void startThread() {
-        synchronized (stateLock) {
-            if (state == ST_NOT_STARTED) {
-                state = ST_STARTED;
+        if (state.get() == ST_NOT_STARTED) {
+            if (state.compareAndSet(ST_NOT_STARTED, ST_STARTED)) {
                 delayedTaskQueue.add(new ScheduledFutureTask<Void>(
                         this, delayedTaskQueue, Executors.<Void>callable(new PurgeTask(), null),
                         ScheduledFutureTask.deadlineNanos(SCHEDULE_PURGE_INTERVAL), -SCHEDULE_PURGE_INTERVAL));
