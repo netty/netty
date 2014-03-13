@@ -23,6 +23,7 @@ import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.DefaultHttpRequest;
+import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
@@ -185,5 +186,30 @@ public class HttpPostRequestDecoderTest {
 
         aDecodedData.release();
         aDecoder.destroy();
+    }
+    
+    // See https://github.com/netty/netty/issues/2305
+    @Test
+    public void testChunkCorrect() throws Exception {
+    	String payload = "town=794649819&town=784444184&town=794649672&town=794657800&town=794655734&town=794649377&town=794652136&town=789936338&town=789948986&town=789949643&town=786358677&town=794655880&town=786398977&town=789901165&town=789913325&town=789903418&town=789903579&town=794645251&town=794694126&town=794694831&town=794655274&town=789913656&town=794653956&town=794665634&town=789936598&town=789904658&town=789899210&town=799696252&town=794657521&town=789904837&town=789961286&town=789958704&town=789948839&town=789933899&town=793060398&town=794659180&town=794659365&town=799724096&town=794696332&town=789953438&town=786398499&town=794693372&town=789935439&town=794658041&town=789917595&town=794655427&town=791930372&town=794652891&town=794656365&town=789960339&town=794645586&town=794657688&town=794697211&town=789937427&town=789902813&town=789941130&town=794696907&town=789904328&town=789955151&town=789911570&town=794655074&town=789939531&town=789935242&town=789903835&town=789953800&town=794649962&town=789939841&town=789934819&town=789959672&town=794659043&town=794657035&town=794658938&town=794651746&town=794653732&town=794653881&town=786397909&town=794695736&town=799724044&town=794695926&town=789912270&town=794649030&town=794657946&town=794655370&town=794659660&town=794694617&town=799149862&town=789953234&town=789900476&town=794654995&town=794671126&town=789908868&town=794652942&town=789955605&town=789901934&town=789950015&town=789937922&town=789962576&town=786360170&town=789954264&town=789911738&town=789955416&town=799724187&town=789911879&town=794657462&town=789912561&town=789913167&town=794655195&town=789938266&town=789952099&town=794657160&town=789949414&town=794691293&town=794698153&town=789935636&town=789956374&town=789934635&town=789935475&town=789935085&town=794651425&town=794654936&town=794655680&town=789908669&town=794652031&town=789951298&town=789938382&town=794651503&town=794653330&town=817675037&town=789951623&town=789958999&town=789961555&town=794694050&town=794650241&town=794656286&town=794692081&town=794660090&town=794665227&town=794665136&town=794669931&town=789901535&town=789934658&town=789913008&town=789938639&town=794658111&town=794652208&town=794668437&town=784443522&town=794648849&town=794696712&town=789956057&town=786397708&town=789954584&town=789912591&town=794659505&town=789951926&town=789952726&town=794657303&town=789964725&town=794660000&town=789960703&town=794662118&town=789946541&town=789951786&town=789950735&town=794651000&town=794651057&town=794661993&town=789939218&town=789959951&town=789953072&town=794655608&town=789911437&town=794657890&town=799723966&town=794656187&town=789938088&town=789935810&town=794659567&town=741566824&town=752599399&town=752598927&town=752597894&town=756254191&town=756255878&town=756256438&town=756257071&town=819246980&town=819248327&town=819248394&town=819249952&town=819250441&town=819251443&town=819251741&town=819251848&town=819250177&town=819251967&town=819254509&town=819255649&town=819260198&town=819264004&town=819261267&town=819261579&town=819259965&town=819261918&town=819262604&town=819262036&town=819263588&town=819265244&town=819264702&town=819264812&town=819265309&town=819266688&town=819265690&town=819266790&town=819266938&town=819267708&town=819269431&town=819272098&town=819271957&town=819272497&town=819268897&town=819273363&town=819276350&town=819275741&town=819338606&town=819321451&town=819341421&town=819340613&town=819348317&town=819349745&town=819350337&town=819350736&town=819284356&town=819317244&town=819318798&town=819320489&town=819321192&town=819281942&town=819329617&town=819354124&town=819354639&town=819354789&town=819355107&town=819356683&town=819355634&town=819361298&town=819363859&town=819363592&town=819364497&town=819364705&town=819364796&town=819259040&town=819257197&town=819262703&town=819328480&town=819319300&town=819328923&town=819329088&town=819354383&town=819351385&town=819316541&town=823524431&town=823526340&branch=741571302&tag=174&token=4geo_dev_token&docType=organization_shortest&limit=1000"; 
+            DefaultHttpRequest defaultHttpRequest = 
+                    new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
+
+            HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(defaultHttpRequest);
+
+            int firstChunk = 850;
+            int middleChunk = 1024;
+
+            HttpContent part1 = new DefaultHttpContent(Unpooled.wrappedBuffer(payload.substring(0, firstChunk).getBytes()));
+            HttpContent part2 = new DefaultHttpContent(Unpooled.wrappedBuffer(payload.substring(firstChunk, firstChunk + middleChunk).getBytes()));
+            HttpContent part3 = new DefaultHttpContent(Unpooled.wrappedBuffer(payload.substring(firstChunk + middleChunk, firstChunk + middleChunk * 2).getBytes()));
+            HttpContent part4 = new DefaultHttpContent(Unpooled.wrappedBuffer(payload.substring(firstChunk + middleChunk * 2, firstChunk + middleChunk * 3).getBytes()));
+            HttpContent part5 = new DefaultHttpContent(Unpooled.wrappedBuffer(payload.substring(firstChunk + middleChunk * 3).getBytes()));
+
+            decoder.offer(part1);
+            decoder.offer(part2);
+            decoder.offer(part3);
+            decoder.offer(part4);
+            decoder.offer(part5);
     }
 }
