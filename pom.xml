@@ -433,6 +433,7 @@
             <ignore>java.nio.channels.DatagramChannel</ignore>
             <ignore>java.nio.channels.MembershipKey</ignore>
             <ignore>java.net.StandardProtocolFamily</ignore>
+            <ignore>java.nio.channels.spi.SelectorProvider</ignore>
 
             <!-- Used for NIO. 2 -->
             <ignore>java.nio.channels.AsynchronousChannel</ignore>
