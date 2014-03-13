@@ -15,12 +15,6 @@
  */
 package io.netty.handler.codec.sockjs.transport;
 
-import static io.netty.handler.codec.http.HttpHeaders.Names.CONNECTION;
-import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_LENGTH;
-import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_TYPE;
-import static io.netty.handler.codec.http.HttpHeaders.Values.CLOSE;
-import static io.netty.handler.codec.http.HttpResponseStatus.OK;
-import static io.netty.handler.codec.sockjs.transport.Transports.CONTENT_TYPE_JAVASCRIPT;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
@@ -34,6 +28,11 @@ import io.netty.handler.codec.sockjs.util.ArgumentUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+
+import static io.netty.handler.codec.http.HttpHeaders.Names.*;
+import static io.netty.handler.codec.http.HttpHeaders.Values.*;
+import static io.netty.handler.codec.http.HttpResponseStatus.*;
+import static io.netty.handler.codec.sockjs.transport.Transports.*;
 
 /**
  * XMLHttpRequest (XHR) Polling is a transport where there is no open connection between
@@ -63,7 +62,6 @@ public class XhrPollingTransport extends ChannelHandlerAdapter {
         ArgumentUtil.checkNotNull(request, "request");
         this.config = config;
         this.request = request;
-        this.request.retain();
     }
 
     @Override

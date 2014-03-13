@@ -68,6 +68,12 @@
                     <!-- Port -->
                     <argument>8081</argument>
                 </arguments>
+                <systemProperties>
+                  <systemProperty>
+                    <key>io.netty.leakDetectionLevel</key>
+                    <value>none</value>
+                  </systemProperty>
+                </systemProperties>
             </configuration>
         </plugin>
     </plugins>

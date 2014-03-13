@@ -64,7 +64,7 @@ public class SessionHandler extends ChannelHandlerAdapter {
         } else if (msg instanceof String) {
             handleMessage((String) msg);
         } else {
-            ctx.fireChannelRead(msg);
+            ctx.fireChannelRead(ReferenceCountUtil.retain(msg));
         }
     }
 

@@ -93,6 +93,7 @@ public class XhrStreamingTransport extends ChannelHandlerAdapter {
                 logger.debug("max bytesSize limit reached [{}]", config.maxStreamingBytesSize());
                 ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT).addListener(ChannelFutureListener.CLOSE);
             }
+            frame.release();
         } else {
             ctx.writeAndFlush(ReferenceCountUtil.retain(msg), promise);
         }

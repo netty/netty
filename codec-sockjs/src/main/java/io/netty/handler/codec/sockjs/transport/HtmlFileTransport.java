@@ -99,6 +99,7 @@ public class HtmlFileTransport extends ChannelHandlerAdapter {
         if (msg instanceof HttpRequest) {
             final String c = getCallbackFromRequest((HttpRequest) msg);
             if (c.isEmpty()) {
+                ReferenceCountUtil.release(msg);
                 respondCallbackRequired(ctx);
                 ctx.fireUserEventTriggered(Event.CLOSE_SESSION);
                 return;
@@ -131,6 +132,7 @@ public class HtmlFileTransport extends ChannelHandlerAdapter {
                 final int spaces = 1024 * header.readableBytes();
                 final ByteBuf paddedBuffer = ctx.alloc().buffer(1024 + 50);
                 paddedBuffer.writeBytes(header);
+                header.release();
                 for (int s = 0; s < spaces + 20; s++) {
                     paddedBuffer.writeByte(' ');
                 }
@@ -142,6 +144,7 @@ public class HtmlFileTransport extends ChannelHandlerAdapter {
             final ByteBuf data = ctx.alloc().buffer();
             data.writeBytes(PREFIX.duplicate());
             data.writeBytes(Transports.escapeJson(frame.content(), data));
+            frame.content().release();
             data.writeBytes(POSTFIX.duplicate());
             final int dataSize = data.readableBytes();
             ctx.writeAndFlush(new DefaultHttpContent(data));
