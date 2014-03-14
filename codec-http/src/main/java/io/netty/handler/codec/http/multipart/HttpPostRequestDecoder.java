@@ -581,6 +581,7 @@ public class HttpPostRequestDecoder {
                 }
                 firstpos = currentpos;
                 currentStatus = MultiPartStatus.EPILOGUE;
+                undecodedChunk.readerIndex(firstpos);
                 return;
             }
             if (contRead && currentAttribute != null) {
@@ -712,6 +713,7 @@ public class HttpPostRequestDecoder {
                 }
                 firstpos = currentpos;
                 currentStatus = MultiPartStatus.EPILOGUE;
+                undecodedChunk.readerIndex(firstpos);
                 return;
             }
             if (contRead && currentAttribute != null) {
