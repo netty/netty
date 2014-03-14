@@ -65,8 +65,9 @@ import java.util.concurrent.TimeUnit;
  * @see IdleStateHandler
  */
 public class WriteTimeoutHandler extends ChannelOutboundHandlerAdapter {
+    private static final long MIN_TIMEOUT_NANOS = TimeUnit.MILLISECONDS.toNanos(1);
 
-    private final long timeoutMillis;
+    private final long timeoutNanos;
 
     private boolean closed;
 
@@ -94,9 +95,9 @@ public class WriteTimeoutHandler extends ChannelOutboundHandlerAdapter {
         }
 
         if (timeout <= 0) {
-            timeoutMillis = 0;
+            timeoutNanos = 0;
         } else {
-            timeoutMillis = Math.max(unit.toMillis(timeout), 1);
+            timeoutNanos = Math.max(unit.toNanos(timeout), MIN_TIMEOUT_NANOS);
         }
     }
 
@@ -107,7 +108,7 @@ public class WriteTimeoutHandler extends ChannelOutboundHandlerAdapter {
     }
 
     private void scheduleTimeout(final ChannelHandlerContext ctx, final ChannelPromise future) {
-        if (timeoutMillis > 0) {
+        if (timeoutNanos > 0) {
             // Schedule a timeout.
             final ScheduledFuture<?> sf = ctx.executor().schedule(new Runnable() {
                 @Override
@@ -123,7 +124,7 @@ public class WriteTimeoutHandler extends ChannelOutboundHandlerAdapter {
                         }
                     }
                 }
-            }, timeoutMillis, TimeUnit.MILLISECONDS);
+            }, timeoutNanos, TimeUnit.NANOSECONDS);
 
             // Cancel the scheduled timeout if the flush future is complete.
             future.addListener(new ChannelFutureListener() {

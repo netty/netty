@@ -62,8 +62,9 @@ import java.util.concurrent.TimeUnit;
  * @see IdleStateHandler
  */
 public class ReadTimeoutHandler extends ChannelInboundHandlerAdapter {
+    private static final long MIN_TIMEOUT_NANOS = TimeUnit.MILLISECONDS.toNanos(1);
 
-    private final long timeoutMillis;
+    private final long timeoutNanos;
 
     private volatile ScheduledFuture<?> timeout;
     private volatile long lastReadTime;
@@ -96,9 +97,9 @@ public class ReadTimeoutHandler extends ChannelInboundHandlerAdapter {
         }
 
         if (timeout <= 0) {
-            timeoutMillis = 0;
+            timeoutNanos = 0;
         } else {
-            timeoutMillis = Math.max(unit.toMillis(timeout), 1);
+            timeoutNanos = Math.max(unit.toNanos(timeout), MIN_TIMEOUT_NANOS);
         }
     }
 
@@ -145,7 +146,7 @@ public class ReadTimeoutHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        lastReadTime = System.currentTimeMillis();
+        lastReadTime = System.nanoTime();
         ctx.fireChannelRead(msg);
     }
 
@@ -160,11 +161,11 @@ public class ReadTimeoutHandler extends ChannelInboundHandlerAdapter {
 
         state = 1;
 
-        lastReadTime = System.currentTimeMillis();
-        if (timeoutMillis > 0) {
+        lastReadTime = System.nanoTime();
+        if (timeoutNanos > 0) {
             timeout = ctx.executor().schedule(
                     new ReadTimeoutTask(ctx),
-                    timeoutMillis, TimeUnit.MILLISECONDS);
+                    timeoutNanos, TimeUnit.NANOSECONDS);
         }
     }
 
@@ -202,11 +203,11 @@ public class ReadTimeoutHandler extends ChannelInboundHandlerAdapter {
                 return;
             }
 
-            long currentTime = System.currentTimeMillis();
-            long nextDelay = timeoutMillis - (currentTime - lastReadTime);
+            long currentTime = System.nanoTime();
+            long nextDelay = timeoutNanos - (currentTime - lastReadTime);
             if (nextDelay <= 0) {
                 // Read timed out - set a new timeout and notify the callback.
-                timeout = ctx.executor().schedule(this, timeoutMillis, TimeUnit.MILLISECONDS);
+                timeout = ctx.executor().schedule(this, timeoutNanos, TimeUnit.NANOSECONDS);
                 try {
                     readTimedOut(ctx);
                 } catch (Throwable t) {
@@ -214,7 +215,7 @@ public class ReadTimeoutHandler extends ChannelInboundHandlerAdapter {
                 }
             } else {
                 // Read occurred before the timeout - set a new timeout with shorter delay.
-                timeout = ctx.executor().schedule(this, nextDelay, TimeUnit.MILLISECONDS);
+                timeout = ctx.executor().schedule(this, nextDelay, TimeUnit.NANOSECONDS);
             }
         }
     }
