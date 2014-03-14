@@ -341,6 +341,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
                 }
                 firstpos = currentpos;
                 currentStatus = MultiPartStatus.EPILOGUE;
+                undecodedChunk.readerIndex(firstpos);
                 return;
             }
             if (contRead && currentAttribute != null) {
@@ -477,6 +478,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
                 }
                 firstpos = currentpos;
                 currentStatus = MultiPartStatus.EPILOGUE;
+                undecodedChunk.readerIndex(firstpos);
                 return;
             }
             if (contRead && currentAttribute != null) {
