@@ -105,6 +105,7 @@ public class HttpPostRequestDecoderTest {
                 "794692081&town=794660090&town=794665227&town=794665136&town=794669931";
         DefaultHttpRequest defaultHttpRequest =
                     new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
+        defaultHttpRequest.setChunked(true);
 
         HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(defaultHttpRequest);
 
@@ -124,5 +125,6 @@ public class HttpPostRequestDecoderTest {
         decoder.offer(part2);
         decoder.offer(part3);
         decoder.offer(part4);
+        decoder.offer(HttpChunk.LAST_CHUNK);
     }
 }
