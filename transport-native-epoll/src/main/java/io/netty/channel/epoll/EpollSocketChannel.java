@@ -38,6 +38,7 @@ import java.io.IOException;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -488,11 +489,13 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
          */
         private boolean doConnect(InetSocketAddress remoteAddress, InetSocketAddress localAddress) throws Exception {
             if (localAddress != null) {
+                checkResolvable(localAddress);
                 Native.bind(fd, localAddress.getAddress(), localAddress.getPort());
             }
 
             boolean success = false;
             try {
+                checkResolvable(remoteAddress);
                 boolean connected = Native.connect(fd, remoteAddress.getAddress(),
                         remoteAddress.getPort());
                 if (!connected) {
