@@ -68,7 +68,14 @@ public class NioServerSocketChannel extends AbstractNioMessageServerChannel
      * Create a new instance
      */
     public NioServerSocketChannel(EventLoop eventLoop, EventLoopGroup childGroup) {
-        super(null, eventLoop, childGroup, newSocket(), SelectionKey.OP_ACCEPT);
+        this(eventLoop, childGroup, newSocket());
+    }
+
+    /**
+     * Create a new instance using the given {@link ServerSocketChannel}.
+     */
+    public NioServerSocketChannel(EventLoop eventLoop, EventLoopGroup childGroup, ServerSocketChannel channel) {
+        super(null, eventLoop, childGroup, channel, SelectionKey.OP_ACCEPT);
         config = new DefaultServerSocketChannelConfig(this, javaChannel().socket());
     }
 
