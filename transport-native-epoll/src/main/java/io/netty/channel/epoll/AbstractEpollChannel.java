@@ -23,7 +23,7 @@ import io.netty.channel.EventLoop;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
+import java.nio.channels.UnresolvedAddressException;
 
 abstract class AbstractEpollChannel extends AbstractChannel {
     private static final ChannelMetadata DATA = new ChannelMetadata(false);
@@ -129,9 +129,9 @@ abstract class AbstractEpollChannel extends AbstractChannel {
     @Override
     protected abstract AbstractEpollUnsafe newUnsafe();
 
-    protected static void checkResolvable(InetSocketAddress addr) throws UnknownHostException {
+    protected static void checkResolvable(InetSocketAddress addr) {
         if (addr.isUnresolved()) {
-            throw new UnknownHostException("Unable to resolve addr " + addr);
+            throw new UnresolvedAddressException();
         }
     }
 
