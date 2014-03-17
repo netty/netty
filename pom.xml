@@ -81,6 +81,7 @@
           -XX:+OptimizeStringConcat
           -XX:+HeapDumpOnOutOfMemoryError
           -Dio.netty.leakDetectionLevel=3
+          -verbose:gc
         </test.jvm.argLine>
       </properties>
     </profile>
@@ -147,6 +148,7 @@
       -XX:+UseFastAccessorMethods
       -XX:+OptimizeStringConcat
       -XX:+HeapDumpOnOutOfMemoryError
+      -verbose:gc
     </test.jvm.argLine>
   </properties>
 
