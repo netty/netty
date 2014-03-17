@@ -174,26 +174,15 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
 
     private static int validateAndCalculatePageShifts(int pageSize) {
         if (pageSize < MIN_PAGE_SIZE) {
-            throw new IllegalArgumentException("pageSize: " + pageSize + " (expected: 4096+)");
+            throw new IllegalArgumentException("pageSize: " + pageSize + " (expected: " + MIN_PAGE_SIZE + "+)");
         }
 
-        // Ensure pageSize is power of 2.
-        boolean found1 = false;
-        int pageShifts = 0;
-        for (int i = pageSize; i != 0 ; i >>= 1) {
-            if ((i & 1) != 0) {
-                if (!found1) {
-                    found1 = true;
-                } else {
-                    throw new IllegalArgumentException("pageSize: " + pageSize + " (expected: power of 2");
-                }
-            } else {
-                if (!found1) {
-                    pageShifts ++;
-                }
-            }
+        if ((pageSize & pageSize - 1) != 0) {
+            throw new IllegalArgumentException("pageSize: " + pageSize + " (expected: power of 2)");
         }
-        return pageShifts;
+
+        // Logarithm base 2. At this point we know that pageSize is a power of two.
+        return Integer.SIZE - 1 - Integer.numberOfLeadingZeros(pageSize);
     }
 
     private static int validateAndCalculateChunkSize(int pageSize, int maxOrder) {
