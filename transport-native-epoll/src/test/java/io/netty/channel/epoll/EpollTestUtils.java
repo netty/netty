@@ -18,7 +18,6 @@ package io.netty.channel.epoll;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.util.concurrent.DefaultThreadFactory;
 
@@ -31,9 +30,9 @@ final class EpollTestUtils {
     private static final int WORKERS = 3;
 
     private static final EventLoopGroup epollBossGroup =
-            new NioEventLoopGroup(BOSSES, new DefaultThreadFactory("testsuite-epoll-boss", true));
+            new EpollEventLoopGroup(BOSSES, new DefaultThreadFactory("testsuite-epoll-boss", true));
     private static final EventLoopGroup epollWorkerGroup =
-            new NioEventLoopGroup(WORKERS, new DefaultThreadFactory("testsuite-epoll-worker", true));
+            new EpollEventLoopGroup(WORKERS, new DefaultThreadFactory("testsuite-epoll-worker", true));
 
     static List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
         return Collections.<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>>singletonList(
