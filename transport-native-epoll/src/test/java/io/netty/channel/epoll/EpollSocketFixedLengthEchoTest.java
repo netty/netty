@@ -26,6 +26,6 @@ public class EpollSocketFixedLengthEchoTest extends SocketFixedLengthEchoTest {
 
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
-        return EpollTestUtils.newFactories();
+        return EpollSocketTestPermutation.INSTANCE.socket();
     }
 }
