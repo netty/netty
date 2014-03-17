@@ -85,7 +85,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         this.useCompositeByteBuf = useCompositeByteBuf;
     }
 
-    @Test
+    @Test(timeout = 30000)
     public void testSslEcho() throws Throwable {
         run();
     }
@@ -94,7 +94,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         testSslEcho(sb, cb, true);
     }
 
-    @Test
+    @Test(timeout = 30000)
     public void testSslEchoNotAutoRead() throws Throwable {
         run();
     }
