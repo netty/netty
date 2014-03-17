@@ -26,6 +26,6 @@ public class EpollSocketStartTlsTest extends SocketStartTlsTest {
 
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
-        return EpollTestUtils.newFactories();
+        return EpollSocketTestPermutation.INSTANCE.socket();
     }
 }
