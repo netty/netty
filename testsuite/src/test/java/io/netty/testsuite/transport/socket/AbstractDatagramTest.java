@@ -36,7 +36,7 @@ public abstract class AbstractDatagramTest extends AbstractComboTestsuiteTest<Bo
 
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> newFactories() {
-        return SocketTestPermutation.datagram();
+        return SocketTestPermutation.INSTANCE.datagram();
     }
 
     @Override
