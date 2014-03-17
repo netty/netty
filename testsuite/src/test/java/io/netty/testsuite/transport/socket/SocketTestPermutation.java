@@ -20,6 +20,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ChannelFactory;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.oio.OioEventLoopGroup;
@@ -44,6 +45,8 @@ public class SocketTestPermutation {
 
     protected static final int BOSSES = 2;
     protected static final int WORKERS = 3;
+
+    protected static final int OIO_SO_TIMEOUT = 10;  // Use short timeout for faster runs.
 
     protected final EventLoopGroup nioBossGroup =
             new NioEventLoopGroup(BOSSES, new DefaultThreadFactory("testsuite-nio-boss", true));
@@ -141,7 +144,8 @@ public class SocketTestPermutation {
                     @Override
                     public ServerBootstrap newInstance() {
                         return new ServerBootstrap().group(oioBossGroup, oioWorkerGroup)
-                                .channel(OioServerSocketChannel.class);
+                                .channel(OioServerSocketChannel.class)
+                                .option(ChannelOption.SO_TIMEOUT, OIO_SO_TIMEOUT);
                     }
                 }
         );
@@ -158,7 +162,8 @@ public class SocketTestPermutation {
                 new BootstrapFactory<Bootstrap>() {
                     @Override
                     public Bootstrap newInstance() {
-                        return new Bootstrap().group(oioWorkerGroup).channel(OioSocketChannel.class);
+                        return new Bootstrap().group(oioWorkerGroup).channel(OioSocketChannel.class)
+                                .option(ChannelOption.SO_TIMEOUT, OIO_SO_TIMEOUT);
                     }
                 }
         );
