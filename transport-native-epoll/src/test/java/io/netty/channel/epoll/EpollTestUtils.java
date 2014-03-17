@@ -18,24 +18,35 @@ package io.netty.channel.epoll;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.testsuite.transport.TestsuitePermutation;
+import io.netty.util.concurrent.DefaultThreadFactory;
 
 import java.util.Collections;
 import java.util.List;
 
 final class EpollTestUtils {
-    private static final EventLoopGroup GROUP = new EpollEventLoopGroup();
+
+    private static final int BOSSES = 2;
+    private static final int WORKERS = 3;
+
+    private static final EventLoopGroup epollBossGroup =
+            new NioEventLoopGroup(BOSSES, new DefaultThreadFactory("testsuite-epoll-boss", true));
+    private static final EventLoopGroup epollWorkerGroup =
+            new NioEventLoopGroup(WORKERS, new DefaultThreadFactory("testsuite-epoll-worker", true));
+
     static List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
         return Collections.<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>>singletonList(
                 new TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>() {
             @Override
             public ServerBootstrap newServerInstance() {
-                return new ServerBootstrap().group(GROUP).channel(EpollServerSocketChannel.class);
+                return new ServerBootstrap().group(
+                        epollBossGroup, epollWorkerGroup).channel(EpollServerSocketChannel.class);
             }
 
             @Override
             public Bootstrap newClientInstance() {
-                return new Bootstrap().group(GROUP).channel(EpollSocketChannel.class);
+                return new Bootstrap().group(epollWorkerGroup).channel(EpollSocketChannel.class);
             }
         });
     }
