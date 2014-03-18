@@ -23,24 +23,41 @@ import io.netty.handler.codec.sockjs.handler.SessionState.State;
 import io.netty.util.internal.StringUtil;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
-class SockJsSession {
+/**
+ * Represents the state of a SockJS session.
+ *
+ * Every session has a timestamp which is updated when the session is used, enabling
+ * sessions to be timed out which is a requirement of the SockJS specification.
+ *
+ * Every session also has a message queue which is used to store messages for session
+ * that at that point in time do not have an active receiver for the messages. For example,
+ * a polling transport might not currently have a connected polling request and the message
+ * would be stored until such a request is recieved.
+ *
+ * A SockJS session must be able to support concurrent interactions as
+ * some transports will have multiple connections accessing the same session. Taking a
+ * polling transport as an example again, it can have a long polling request and also a
+ * xhr-send request at the same time, both accessing the same session.
+ *
+ */
+final class SockJsSession {
 
-    private State state = State.CONNECTING;
     private final String sessionId;
     private final SockJsService service;
-    private final List<String> messages = new ArrayList<String>();
     private final AtomicLong timestamp = new AtomicLong();
     private final AtomicBoolean inuse = new AtomicBoolean();
-    private ChannelHandlerContext connectionContext;
-    private ChannelHandlerContext openContext;
+    private final ConcurrentLinkedQueue<String> messageQueue = new ConcurrentLinkedQueue<String>();
+    private final AtomicReference<State> state = new AtomicReference<State>(State.CONNECTING);
+    private final AtomicReference<ChannelHandlerContext> connectionCtx = new AtomicReference<ChannelHandlerContext>();
+    private final AtomicReference<ChannelHandlerContext> openCtx = new AtomicReference<ChannelHandlerContext>();
 
-    protected SockJsSession(final String sessionId, final SockJsService service) {
+    SockJsSession(final String sessionId, final SockJsService service) {
         this.sessionId = sessionId;
         this.service = service;
     }
@@ -50,8 +67,8 @@ class SockJsSession {
      *
      * @return {@code ChannelHandlerContext} the ChannelHandlerContext used establishing a connection.
      */
-    public synchronized ChannelHandlerContext connectionContext() {
-        return connectionContext;
+    public ChannelHandlerContext connectionContext() {
+        return connectionCtx.get();
     }
 
     /**
@@ -59,8 +76,13 @@ class SockJsSession {
      *
      * @param ctx the ChannelHandlerContext used establishing a connection.
      */
-    public synchronized void setConnectionContext(final ChannelHandlerContext ctx) {
-        connectionContext = ctx;
+    public void setConnectionContext(final ChannelHandlerContext ctx) {
+        while (true) {
+            final ChannelHandlerContext oldCtx = connectionCtx.get();
+            if (connectionCtx.compareAndSet(oldCtx, ctx)) {
+                return;
+            }
+        }
     }
 
     /**
@@ -68,8 +90,8 @@ class SockJsSession {
      *
      * @return {@code ChannelHandlerContext} the ChannelHandlerContext used establishing a connection.
      */
-    public synchronized ChannelHandlerContext openContext() {
-        return openContext;
+    public ChannelHandlerContext openContext() {
+        return openCtx.get();
     }
 
     /**
@@ -77,28 +99,39 @@ class SockJsSession {
      *
      * @param ctx the ChannelHandlerContext used when the session is open.
      */
-    public synchronized void setOpenContext(final ChannelHandlerContext ctx) {
-        openContext = ctx;
+    public void setOpenContext(final ChannelHandlerContext ctx) {
+        while (true) {
+            final ChannelHandlerContext oldCtx = openCtx.get();
+            if (openCtx.compareAndSet(oldCtx, ctx)) {
+                return;
+            }
+        }
     }
 
-    public synchronized void setState(State state) {
-        this.state = state;
+    /**
+     * Sets the {@link State} of this session.
+     *
+     * @param newState the state to which this session should be set.
+     */
+    public void setState(State newState) {
+        while (true) {
+            final State oldState = state.get();
+            if (state.compareAndSet(oldState, newState)) {
+                return;
+            }
+        }
     }
 
-    public synchronized State getState() {
-        return state;
+    public State getState() {
+        return state.get();
     }
 
     public boolean inuse() {
         return inuse.get();
     }
 
-    public void setInuse() {
-        inuse.set(true);
-    }
-
-    public void resetInuse() {
-        inuse.set(false);
+    public void setInuse(final boolean use) {
+        inuse.set(use);
     }
 
     public SockJsConfig config() {
@@ -109,45 +142,58 @@ class SockJsSession {
         return sessionId;
     }
 
-    public synchronized void onMessage(final String message) throws Exception {
+    public void onMessage(final String message) throws Exception {
         service.onMessage(message);
         updateTimestamp();
     }
 
-    public synchronized void onOpen(final SockJsSessionContext session) {
+    public void onOpen(final SockJsSessionContext session) {
         setState(State.OPEN);
         service.onOpen(session);
         updateTimestamp();
     }
 
-    public synchronized void onClose() {
+    public void onClose() {
         setState(State.CLOSED);
         service.onClose();
     }
 
-    public synchronized void addMessage(final String message) {
-        messages.add(message);
+    public void addMessage(final String message) {
+        messageQueue.add(message);
         updateTimestamp();
     }
 
-    public synchronized void clearMessagees() {
-        messages.clear();
+    /**
+     * Returns all messages that have been stored in the session.
+     * The messages returned, if any, will be removed from this session.
+     *
+     * @return {@code List} the messages that have been stored in this session.
+     */
+    public List<String> getAllMessages() {
+        final List<String> all = new ArrayList<String>();
+        for (String msg; (msg = messageQueue.poll()) != null;) {
+            all.add(msg);
+        }
+        return all;
     }
 
-    public synchronized String[] getAllMessages() {
-        final String[] array = messages.toArray(new String[messages.size()]);
-        messages.clear();
-        return array;
-    }
-
-    public synchronized void addMessages(final String[] messages) {
-        this.messages.addAll(Arrays.asList(messages));
+    @SuppressWarnings("ManualArrayToCollectionCopy")
+    public void addMessages(final String[] messages) {
+        for (String msg: messages) {
+            messageQueue.add(msg);
+        }
     }
 
     private void updateTimestamp() {
         timestamp.set(System.currentTimeMillis());
     }
 
+    /**
+     * Returns the timestamp for when this session was last interacted with.
+     * The intended usage of this timestamp if to determine when a session should be discarded/closed.
+     *
+     * @return {@code long} the timestamp which was the last time this session was used.
+     */
     public long timestamp() {
         return timestamp.get();
     }

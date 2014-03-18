@@ -64,7 +64,8 @@ abstract class AbstractTimersSessionState implements SessionState {
 
     @Override
     public void onOpen(ChannelHandlerContext ctx) {
-        session.setInuse();
+        session.setInuse(true);
+        session.setOpenContext(ctx);
     }
 
     @Override
@@ -118,7 +119,7 @@ abstract class AbstractTimersSessionState implements SessionState {
     @Override
     public void onClose() {
         session.onClose();
-        session.resetInuse();
+        session.setInuse(false);
     }
 
     @Override
@@ -128,12 +129,12 @@ abstract class AbstractTimersSessionState implements SessionState {
 
     @Override
     public void setInuse() {
-        session.setInuse();
+        session.setInuse(true);
     }
 
     @Override
     public void resetInuse() {
-        session.resetInuse();
+        session.setInuse(false);
     }
 
     @Override

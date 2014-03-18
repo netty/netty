@@ -23,6 +23,7 @@ import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 
 /**
@@ -62,8 +63,8 @@ class PollingSessionState extends AbstractTimersSessionState {
     }
 
     private void flushMessages(final ChannelHandlerContext ctx) {
-        final String[] allMessages = getSockJsSession().getAllMessages();
-        if (allMessages.length == 0) {
+        final List<String> allMessages = getSockJsSession().getAllMessages();
+        if (allMessages.isEmpty()) {
             return;
         }
         final MessageFrame messageFrame = new MessageFrame(allMessages);
@@ -71,8 +72,11 @@ class PollingSessionState extends AbstractTimersSessionState {
             @Override
             public void operationComplete(final ChannelFuture future) throws Exception {
                 if (!future.isSuccess()) {
-                    getSockJsSession().addMessages(allMessages);
-                }
+                    final SockJsSession sockJsSession = getSockJsSession();
+                    for (String msg : allMessages) {
+                        sockJsSession.addMessage(msg);
+                    }
+               }
             }
         }).addListener(ChannelFutureListener.CLOSE);
     }

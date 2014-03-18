@@ -80,7 +80,7 @@ class WebSocketSessionState implements SessionState {
 
     @Override
     public void onOpen(final ChannelHandlerContext ctx) {
-        session.setInuse();
+        session.setInuse(true);
     }
 
     @Override
@@ -126,7 +126,7 @@ class WebSocketSessionState implements SessionState {
     @Override
     public void onClose() {
         session.onClose();
-        session.resetInuse();
+        session.setInuse(false);
         shutdownHearbeat();
     }
 
