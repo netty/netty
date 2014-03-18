@@ -183,7 +183,7 @@ public final class CorsConfig {
         return preflightHeaders;
     }
 
-    private static Object getValue(final Callable<?> callable) {
+    private static <T> T getValue(final Callable<T> callable) {
         try {
             return callable.call();
         } catch (final Exception e) {
