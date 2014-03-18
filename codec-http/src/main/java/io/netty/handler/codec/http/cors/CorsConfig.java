@@ -296,7 +296,7 @@ public final class CorsConfig {
      * generated, but instead the value is "static" in that the same value will be returned
      * for each call.
      */
-    public static class ConstantValueGenerator implements Callable<Object> {
+    public static final class ConstantValueGenerator implements Callable<Object> {
 
         private final Object value;
 
@@ -315,7 +315,7 @@ public final class CorsConfig {
      * It's value must be generated when the response is generated, hence will be
      * different for every call.
      */
-    public static class DateValueGenerator implements Callable<Date> {
+    public static final class DateValueGenerator implements Callable<Date> {
 
         @Override
         public Date call() throws Exception {
