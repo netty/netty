@@ -39,7 +39,7 @@ public abstract class Recycler<T> {
         // In the future, we might have different maxCapacity for different object types.
         // e.g. io.netty.recycler.maxCapacity.writeTask
         //      io.netty.recycler.maxCapacity.outboundBuffer
-        int maxCapacity = SystemPropertyUtil.getInt("io.netty.recycler.maxCapacity.default", 0);
+        int maxCapacity = SystemPropertyUtil.getInt("io.netty.recycler.maxCapacity", 0);
         if (maxCapacity <= 0) {
             // TODO: Some arbitrary large number - should adjust as we get more production experience.
             maxCapacity = 262144;
@@ -47,7 +47,7 @@ public abstract class Recycler<T> {
 
         DEFAULT_MAX_CAPACITY = maxCapacity;
         if (logger.isDebugEnabled()) {
-            logger.debug("-Dio.netty.recycler.maxCapacity.default: {}", DEFAULT_MAX_CAPACITY);
+            logger.debug("-Dio.netty.recycler.maxCapacity: {}", DEFAULT_MAX_CAPACITY);
         }
 
         INITIAL_CAPACITY = Math.min(DEFAULT_MAX_CAPACITY, 256);
