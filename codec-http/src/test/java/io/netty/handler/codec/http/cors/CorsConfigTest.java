@@ -24,7 +24,7 @@ import static io.netty.handler.codec.http.cors.CorsConfig.*;
 import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.*;
 
-public class CorsConfigurationTest {
+public class CorsConfigTest {
 
     @Test
     public void disabled() {
