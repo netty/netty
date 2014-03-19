@@ -169,6 +169,9 @@ public final class CorsConfig {
      * @return {@code HttpHeaders} the HTTP response headers to be added.
      */
     public HttpHeaders preflightResponseHeaders() {
+        if (preflightHeaders.isEmpty()) {
+            return HttpHeaders.EMPTY_HEADERS;
+        }
         final HttpHeaders preflightHeaders = new DefaultHttpHeaders();
         for (Entry<CharSequence, Callable<?>> entry : this.preflightHeaders.entrySet()) {
             final Object value = getValue(entry.getValue());
@@ -222,6 +225,7 @@ public final class CorsConfig {
         private final Set<HttpMethod> requestMethods = new HashSet<HttpMethod>();
         private final Set<String> requestHeaders = new HashSet<String>();
         private final Map<CharSequence, Callable<?>> preflightHeaders = new HashMap<CharSequence, Callable<?>>();
+        private boolean noPreflightHeaders;
 
         public Builder(final String origin) {
             this.origin = origin;
@@ -282,8 +286,13 @@ public final class CorsConfig {
             return this;
         }
 
+        public Builder noPreflightResponseHeaders() {
+            noPreflightHeaders = true;
+            return this;
+        }
+
         public CorsConfig build() {
-            if (preflightHeaders.isEmpty()) {
+            if (preflightHeaders.isEmpty() && !noPreflightHeaders) {
                 preflightHeaders.put(Names.DATE, new DateValueGenerator());
                 preflightHeaders.put(Names.CONTENT_LENGTH, new ConstantValueGenerator("0"));
             }
