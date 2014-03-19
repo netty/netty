@@ -310,6 +310,9 @@ public final class CorsConfig {
         private final Object value;
 
         public ConstantValueGenerator(final Object value) {
+            if (value == null) {
+                throw new IllegalArgumentException("value must not be null");
+            }
             this.value = value;
         }
 

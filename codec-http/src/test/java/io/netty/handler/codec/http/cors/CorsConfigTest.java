@@ -99,4 +99,9 @@ public class CorsConfigTest {
         assertThat(cors.preflightResponseHeaders(), equalTo(HttpHeaders.EMPTY_HEADERS));
     }
 
+    @Test (expected = IllegalArgumentException.class)
+    public void shouldThrowIfValueIsNull() {
+        new ConstantValueGenerator(null);
+    }
+
 }
