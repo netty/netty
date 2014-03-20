@@ -386,7 +386,11 @@ public final class CorsConfig {
          * @return {@link Builder} to support method chaining.
          */
         public Builder preflightResponseHeader(final CharSequence name, final Object... values) {
-            preflightResponseHeader(name, Arrays.asList(values));
+            if (values.length == 1) {
+                preflightHeaders.put(name, new ConstantValueGenerator(values[0]));
+            } else {
+                preflightResponseHeader(name, Arrays.asList(values));
+            }
             return this;
         }
 
@@ -455,7 +459,7 @@ public final class CorsConfig {
      * generated, but instead the value is "static" in that the same value will be returned
      * for each call.
      */
-    public static final class ConstantValueGenerator implements Callable<Object> {
+    private static final class ConstantValueGenerator implements Callable<Object> {
 
         private final Object value;
 
@@ -464,7 +468,7 @@ public final class CorsConfig {
          *
          * @param value the value that will be returned when the call method is invoked.
          */
-        public ConstantValueGenerator(final Object value) {
+        private ConstantValueGenerator(final Object value) {
             if (value == null) {
                 throw new IllegalArgumentException("value must not be null");
             }
