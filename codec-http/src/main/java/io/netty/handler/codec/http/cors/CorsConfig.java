@@ -166,7 +166,7 @@ public final class CorsConfig {
      * The header names returned from this method will be used to set the CORS
      * 'Access-Control-Allow-Headers' response header.
      *
-     * @return {@code Set} of strings that represent the allowed Request Headers.
+     * @return {@code Set<String>} of strings that represent the allowed Request Headers.
      */
     public Set<String> allowedRequestHeaders() {
         return Collections.unmodifiableSet(allowedRequestHeaders);
@@ -175,7 +175,7 @@ public final class CorsConfig {
     /**
      * Returns HTTP response headers that should be added to a CORS preflight response.
      *
-     * @return {@code HttpHeaders} the HTTP response headers to be added.
+     * @return {@link HttpHeaders} the HTTP response headers to be added.
      */
     public HttpHeaders preflightResponseHeaders() {
         if (preflightHeaders.isEmpty()) {
@@ -223,9 +223,9 @@ public final class CorsConfig {
     }
 
     /**
-     * Creates a Builder instance with the specified origin.
+     * Creates a {@link Builder} instance with the specified origin.
      *
-     * @return Builder to support method chaining.
+     * @return {@link Builder} to support method chaining.
      */
     public static Builder withOrigin(final String origin) {
         return new Builder(origin);
@@ -261,7 +261,7 @@ public final class CorsConfig {
          * from the local file system. Calling this method will enable a successful CORS response
          * with a wildcard for the the CORS response header 'Access-Control-Allow-Origin'.
          *
-         * @return {@code Builder} to support method chaining.
+         * @return {@link Builder} to support method chaining.
          */
         public Builder allowNullOrigin() {
             allowNullOrigin = true;
@@ -271,7 +271,7 @@ public final class CorsConfig {
         /**
          * Disables CORS support.
          *
-         * @return {@code Builder} to support method chaining.
+         * @return {@link Builder} to support method chaining.
          */
         public Builder disable() {
             enabled = false;
@@ -301,7 +301,7 @@ public final class CorsConfig {
          * adding the headers to the CORS 'Access-Control-Expose-Headers' response header.
          *
          * @param headers the values to be added to the 'Access-Control-Expose-Headers' response header
-         * @return {@code Builder} to support method chaining.
+         * @return {@link Builder} to support method chaining.
          */
         public Builder exposeHeaders(final String... headers) {
             exposeHeaders.addAll(Arrays.asList(headers));
@@ -321,7 +321,7 @@ public final class CorsConfig {
          * The default value for 'withCredentials' is false in which case no cookies are sent.
          * Settning this to true will included cookies in cross origin requests.
          *
-         * @return {@code Builder} to support method chaining.
+         * @return {@link Builder} to support method chaining.
          */
         public Builder allowCredentials() {
             allowCredentials = true;
@@ -335,7 +335,7 @@ public final class CorsConfig {
          * request will be made.
          *
          * @param max the maximum time, in seconds, that the preflight response may be cached.
-         * @return {@code Builder} to support method chaining.
+         * @return {@link Builder} to support method chaining.
          */
         public Builder maxAge(final long max) {
             maxAge = max;
@@ -346,8 +346,8 @@ public final class CorsConfig {
          * Specifies the allowed set of HTTP Request Methods that should be returned in the
          * CORS 'Access-Control-Request-Method' response header.
          *
-         * @param methods the HTTP methods that should be allowed.
-         * @return {@code Builder} to support method chaining.
+         * @param methods the {@link HttpMethod}s that should be allowed.
+         * @return {@link Builder} to support method chaining.
          */
         public Builder allowedRequestMethods(final HttpMethod... methods) {
             requestMethods.addAll(Arrays.asList(methods));
@@ -368,7 +368,7 @@ public final class CorsConfig {
          * if it allow a request).
          *
          * @param headers the headers to be added to the preflight 'Access-Control-Allow-Headers' response header.
-         * @return {@code Builder} to support method chaining.
+         * @return {@link Builder} to support method chaining.
          */
         public Builder allowedRequestHeaders(final String... headers) {
             requestHeaders.addAll(Arrays.asList(headers));
@@ -383,7 +383,7 @@ public final class CorsConfig {
          *
          * @param name the name of the HTTP header.
          * @param values the values for the HTTP header.
-         * @return {@code Builder} to support method chaining.
+         * @return {@link Builder} to support method chaining.
          */
         public Builder preflightResponseHeader(final CharSequence name, final Object... values) {
             preflightResponseHeader(name, Arrays.asList(values));
@@ -399,7 +399,7 @@ public final class CorsConfig {
          * @param name the name of the HTTP header.
          * @param value the values for the HTTP header.
          * @param <T> the type of values that the Iterable contains.
-         * @return {@code Builder} to support method chaining.
+         * @return {@link Builder} to support method chaining.
          */
         public <T> Builder preflightResponseHeader(final CharSequence name, final Iterable<T> value) {
             preflightHeaders.put(name, new ConstantValueGenerator(value));
@@ -419,7 +419,7 @@ public final class CorsConfig {
          * @param name the name of the HTTP header.
          * @param valueGenerator a Callable which will be invoked at HTTP response creation.
          * @param <T> the type of the value that the Callable can return.
-         * @return {@code Builder} to support method chaining.
+         * @return {@link Builder} to support method chaining.
          */
         public <T> Builder preflightResponseHeader(final String name, final Callable<T> valueGenerator) {
             preflightHeaders.put(name, valueGenerator);
@@ -429,7 +429,7 @@ public final class CorsConfig {
         /**
          * Specifies that no preflight response headers should be added to a preflight response.
          *
-         * @return {@code Builder} to support method chaining.
+         * @return {@link Builder} to support method chaining.
          */
         public Builder noPreflightResponseHeaders() {
             noPreflightHeaders = true;
@@ -437,9 +437,9 @@ public final class CorsConfig {
         }
 
         /**
-         * Builds a CorsConfig with settings specified by previous method calls.
+         * Builds a {@link CorsConfig} with settings specified by previous method calls.
          *
-         * @return {@code CorsConfig} the configured CorsConfig instance.
+         * @return {@link CorsConfig} the configured CorsConfig instance.
          */
         public CorsConfig build() {
             if (preflightHeaders.isEmpty() && !noPreflightHeaders) {
@@ -478,7 +478,7 @@ public final class CorsConfig {
     }
 
     /**
-     * This callable is used for the DATE prefligth HTTP response HTTP header.
+     * This callable is used for the DATE preflight HTTP response HTTP header.
      * It's value must be generated when the response is generated, hence will be
      * different for every call.
      */
