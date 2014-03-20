@@ -48,39 +48,40 @@ final class PlatformDependent0 {
     private static final boolean UNALIGNED;
 
     static {
-        ByteBuffer direct = ByteBuffer.allocateDirect(1);
-        Field cleanerField;
+        boolean directBufferFreeable = false;
         try {
-            cleanerField = direct.getClass().getDeclaredField("cleaner");
-            cleanerField.setAccessible(true);
-            Cleaner cleaner = (Cleaner) cleanerField.get(direct);
-            cleaner.clean();
+            Class<?> cls = Class.forName("sun.nio.ch.DirectBuffer", false, PlatformDependent0.class.getClassLoader());
+            Method method = cls.getMethod("cleaner");
+            if ("sun.misc.Cleaner".equals(method.getReturnType().getName())) {
+                directBufferFreeable = true;
+            }
         } catch (Throwable t) {
-            cleanerField = null;
+            // We don't have sun.nio.ch.DirectBuffer.cleaner().
         }
-        logger.debug("java.nio.ByteBuffer.cleaner: {}", cleanerField != null? "available" : "unavailable");
+        logger.debug("sun.nio.ch.DirectBuffer.cleaner(): {}", directBufferFreeable? "available" : "unavailable");
 
         Field addressField;
         try {
             addressField = Buffer.class.getDeclaredField("address");
             addressField.setAccessible(true);
             if (addressField.getLong(ByteBuffer.allocate(1)) != 0) {
+                // A heap buffer must have 0 address.
                 addressField = null;
             } else {
-                direct = ByteBuffer.allocateDirect(1);
+                ByteBuffer direct = ByteBuffer.allocateDirect(1);
                 if (addressField.getLong(direct) == 0) {
+                    // A direct buffer must have non-zero address.
                     addressField = null;
                 }
-                Cleaner cleaner = (Cleaner) cleanerField.get(direct);
-                cleaner.clean();
             }
         } catch (Throwable t) {
+            // Failed to access the address field.
             addressField = null;
         }
         logger.debug("java.nio.Buffer.address: {}", addressField != null? "available" : "unavailable");
 
         Unsafe unsafe;
-        if (addressField != null && cleanerField != null) {
+        if (addressField != null && directBufferFreeable) {
             try {
                 Field unsafeField = Unsafe.class.getDeclaredField("theUnsafe");
                 unsafeField.setAccessible(true);
@@ -104,6 +105,7 @@ final class PlatformDependent0 {
                     throw e;
                 }
             } catch (Throwable cause) {
+                // Unsafe.copyMemory(Object, long, Object, long, long) unavailable.
                 unsafe = null;
             }
         } else {
@@ -111,6 +113,7 @@ final class PlatformDependent0 {
             // Let's just pretend unsafe is unavailable for overall simplicity.
             unsafe = null;
         }
+
         UNSAFE = unsafe;
 
         if (unsafe == null) {
@@ -142,19 +145,6 @@ final class PlatformDependent0 {
 
     static void throwException(Throwable t) {
         UNSAFE.throwException(t);
-    }
-
-    static void freeDirectBufferUnsafe(ByteBuffer buffer) {
-        try {
-            Cleaner cleaner = ((DirectBuffer) buffer).cleaner();
-            if (cleaner == null) {
-                throw new IllegalArgumentException(
-                        "attempted to deallocate the buffer which was allocated via JNIEnv->NewDirectByteBuffer()");
-            }
-            cleaner.clean();
-        } catch (Throwable t) {
-            // Nothing we can do here.
-        }
     }
 
     static void freeDirectBuffer(ByteBuffer buffer) {
