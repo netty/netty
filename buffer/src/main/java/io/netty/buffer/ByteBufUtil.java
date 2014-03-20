@@ -16,6 +16,7 @@
 package io.netty.buffer;
 
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -48,7 +49,10 @@ public final class ByteBufUtil {
             HEXDUMP_TABLE[(i << 1) + 1] = DIGITS[i       & 0x0F];
         }
 
-        String allocType = SystemPropertyUtil.get("io.netty.allocator.type", "pooled").toLowerCase(Locale.US).trim();
+        String allocType = SystemPropertyUtil.get(
+                "io.netty.allocator.type", PlatformDependent.isAndroid() ? "unpooled" : "pooled");
+        allocType = allocType.toLowerCase(Locale.US).trim();
+
         ByteBufAllocator alloc;
         if ("unpooled".equals(allocType)) {
             alloc = UnpooledByteBufAllocator.DEFAULT;
