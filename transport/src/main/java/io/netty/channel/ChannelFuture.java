@@ -50,8 +50,8 @@ import java.util.concurrent.TimeUnit;
  * +--------------------------+    |    | Completed with failure    |
  * |      isDone() = <b>false</b>    |    |    +---------------------------+
  * |   isSuccess() = false    |----+---->   isDone() = <b>true</b>         |
- * | isCancelled() = false    |    |    | cause() = <b>non-null</b>     |
- * |    cause() = null     |    |    +===========================+
+ * | isCancelled() = false    |    |    |    cause() = <b>non-null</b>     |
+ * |       cause() = null     |    |    +===========================+
  * +--------------------------+    |    | Completed by cancellation |
  *                                 |    +---------------------------+
  *                                 +---->      isDone() = <b>true</b>      |
