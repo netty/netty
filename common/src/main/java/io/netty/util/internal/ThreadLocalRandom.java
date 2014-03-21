@@ -82,12 +82,12 @@ public class ThreadLocalRandom extends Random {
         if (initialSeedUniquifier == 0) {
             // Try to generate a real random number from /dev/random.
             // Get from a different thread to avoid blocking indefinitely on a machine without much entrophy.
-            final BlockingQueue<Long> queue = new LinkedBlockingQueue<Long>();
+            final BlockingQueue<byte[]> queue = new LinkedBlockingQueue<byte[]>();
             Thread generatorThread = new Thread("initialSeedUniquifierGenerator") {
                 @Override
                 public void run() {
                     SecureRandom random = new SecureRandom(); // Get the real random seed from /dev/random
-                    queue.add(random.nextLong());
+                    queue.add(random.generateSeed(8));
                 }
             };
             generatorThread.start();
@@ -99,15 +99,23 @@ public class ThreadLocalRandom extends Random {
                 long waitTime = deadLine - System.nanoTime();
                 if (waitTime <= 0) {
                     logger.warn(
-                            "Failed to get the secure random number from SecureRandom within {} seconds. " +
+                            "Failed to generate a seed from SecureRandom within {} seconds. " +
                             "Not enough entrophy?", timeoutSeconds);
                     break;
                 }
 
                 try {
-                    Long result = queue.poll(waitTime, TimeUnit.NANOSECONDS);
-                    if (result != null) {
-                        initialSeedUniquifier = result;
+                    byte[] seed = queue.poll(waitTime, TimeUnit.NANOSECONDS);
+                    if (seed != null) {
+                        initialSeedUniquifier =
+                                ((long) seed[0] & 0xff) << 56 |
+                                ((long) seed[1] & 0xff) << 48 |
+                                ((long) seed[2] & 0xff) << 40 |
+                                ((long) seed[3] & 0xff) << 32 |
+                                ((long) seed[4] & 0xff) << 24 |
+                                ((long) seed[5] & 0xff) << 16 |
+                                ((long) seed[6] & 0xff) <<  8 |
+                                 (long) seed[7] & 0xff;
                         break;
                     }
                 } catch (InterruptedException e) {
