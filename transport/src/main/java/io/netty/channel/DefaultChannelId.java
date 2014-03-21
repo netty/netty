@@ -23,10 +23,13 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.lang.reflect.Method;
+import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
@@ -123,36 +126,36 @@ final class DefaultChannelId implements ChannelId {
         final byte[] NOT_FOUND = { -1 };
         byte[] bestMacAddr = NOT_FOUND;
 
-        Enumeration<NetworkInterface> ifaces = null;
+        // Retrieve the list of available network interfaces.
+        List<NetworkInterface> ifaces = new ArrayList<NetworkInterface>();
         try {
-            ifaces = NetworkInterface.getNetworkInterfaces();
+            for (Enumeration<NetworkInterface> i = NetworkInterface.getNetworkInterfaces(); i.hasMoreElements();) {
+                NetworkInterface iface = i.nextElement();
+                // Use the interface with proper INET addresses only.
+                Enumeration<InetAddress> addrs = iface.getInetAddresses();
+                if (addrs.hasMoreElements() && !addrs.nextElement().isLoopbackAddress()) {
+                    ifaces.add(iface);
+                }
+            }
         } catch (SocketException e) {
-            logger.warn("Failed to find the loopback interface", e);
+            logger.warn("Failed to retrieve the list of available network interfaces", e);
         }
 
-        if (ifaces != null) {
-            while (ifaces.hasMoreElements()) {
-                NetworkInterface iface = ifaces.nextElement();
-                try {
-                    if (iface.isLoopback() || iface.isPointToPoint() || iface.isVirtual()) {
-                        continue;
-                    }
-                } catch (SocketException e) {
-                    logger.debug("Failed to determine the type of a network interface: {}", iface, e);
-                    continue;
-                }
+        for (NetworkInterface iface: ifaces) {
+            if (iface.isVirtual()) {
+                continue;
+            }
 
-                byte[] macAddr;
-                try {
-                    macAddr = iface.getHardwareAddress();
-                } catch (SocketException e) {
-                    logger.debug("Failed to get the hardware address of a network interface: {}", iface, e);
-                    continue;
-                }
+            byte[] macAddr;
+            try {
+                macAddr = iface.getHardwareAddress();
+            } catch (SocketException e) {
+                logger.debug("Failed to get the hardware address of a network interface: {}", iface, e);
+                continue;
+            }
 
-                if (isBetterAddress(bestMacAddr, macAddr)) {
-                    bestMacAddr = macAddr;
-                }
+            if (isBetterAddress(bestMacAddr, macAddr)) {
+                bestMacAddr = macAddr;
             }
         }
 
@@ -164,8 +167,17 @@ final class DefaultChannelId implements ChannelId {
                     formatAddress(bestMacAddr));
         }
 
-        if (bestMacAddr.length != MACHINE_ID_LEN) {
-            bestMacAddr = Arrays.copyOf(bestMacAddr, MACHINE_ID_LEN);
+        switch (bestMacAddr.length) {
+            case 6: // EUI-48 - convert to EUI-64
+                byte[] newAddr = new byte[MACHINE_ID_LEN];
+                System.arraycopy(bestMacAddr, 0, newAddr, 0, 3);
+                newAddr[3] = (byte) 0xFF;
+                newAddr[4] = (byte) 0xFE;
+                System.arraycopy(bestMacAddr, 3, newAddr, 5, 3);
+                bestMacAddr = newAddr;
+                break;
+            default: // Unknown
+                bestMacAddr = Arrays.copyOf(bestMacAddr, MACHINE_ID_LEN);
         }
 
         return bestMacAddr;
@@ -181,20 +193,16 @@ final class DefaultChannelId implements ChannelId {
             return false;
         }
 
-        // Must not be filled with only 0 or 1.
-        boolean onlyZero = true;
-        boolean onlyOne = true;
+        // Must not be filled with only 0 and 1.
+        boolean onlyZeroAndOne = true;
         for (byte b: candidate) {
-            if (b != 0) {
-                onlyZero = false;
-            }
-
-            if (b != -1) {
-                onlyOne = false;
+            if (b != 0 && b != 1) {
+                onlyZeroAndOne = false;
+                break;
             }
         }
 
-        if (onlyZero || onlyOne) {
+        if (onlyZeroAndOne) {
             return false;
         }
 
