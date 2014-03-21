@@ -17,6 +17,7 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBufUtil;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThreadLocalRandom;
 import io.netty.util.internal.logging.InternalLogger;
@@ -26,10 +27,12 @@ import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
-import java.util.ArrayList;
+import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.Enumeration;
-import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
@@ -125,23 +128,35 @@ final class DefaultChannelId implements ChannelId {
         // Find the best MAC address available.
         final byte[] NOT_FOUND = { -1 };
         byte[] bestMacAddr = NOT_FOUND;
+        InetAddress bestInetAddr = null;
+        try {
+            bestInetAddr = InetAddress.getByAddress(new byte[] { 127, 0, 0, 1 });
+        } catch (UnknownHostException e) {
+            // Never happens.
+            PlatformDependent.throwException(e);
+        }
 
         // Retrieve the list of available network interfaces.
-        List<NetworkInterface> ifaces = new ArrayList<NetworkInterface>();
+        Map<NetworkInterface, InetAddress> ifaces = new LinkedHashMap<NetworkInterface, InetAddress>();
         try {
             for (Enumeration<NetworkInterface> i = NetworkInterface.getNetworkInterfaces(); i.hasMoreElements();) {
                 NetworkInterface iface = i.nextElement();
                 // Use the interface with proper INET addresses only.
                 Enumeration<InetAddress> addrs = iface.getInetAddresses();
-                if (addrs.hasMoreElements() && !addrs.nextElement().isLoopbackAddress()) {
-                    ifaces.add(iface);
+                if (addrs.hasMoreElements()) {
+                    InetAddress a = addrs.nextElement();
+                    if (!a.isLoopbackAddress()) {
+                        ifaces.put(iface, a);
+                    }
                 }
             }
         } catch (SocketException e) {
             logger.warn("Failed to retrieve the list of available network interfaces", e);
         }
 
-        for (NetworkInterface iface: ifaces) {
+        for (Entry<NetworkInterface, InetAddress> entry: ifaces.entrySet()) {
+            NetworkInterface iface = entry.getKey();
+            InetAddress inetAddr = entry.getValue();
             if (iface.isVirtual()) {
                 continue;
             }
@@ -154,8 +169,15 @@ final class DefaultChannelId implements ChannelId {
                 continue;
             }
 
-            if (isBetterAddress(bestMacAddr, macAddr)) {
+            int res = compareAddresses(bestMacAddr, macAddr);
+            if (res < 0) {
                 bestMacAddr = macAddr;
+                bestInetAddr = inetAddr;
+            } else if (res == 0) {
+                if (compareAddresses(bestInetAddr, inetAddr) < 0) {
+                    bestMacAddr = macAddr;
+                    bestInetAddr = inetAddr;
+                }
             }
         }
 
@@ -183,14 +205,17 @@ final class DefaultChannelId implements ChannelId {
         return bestMacAddr;
     }
 
-    private static boolean isBetterAddress(byte[] current, byte[] candidate) {
+    /**
+     * @return positive - current is better, 0 - cannot tell from MAC addr, negative - candidate is better.
+     */
+    private static int compareAddresses(byte[] current, byte[] candidate) {
         if (candidate == null) {
-            return false;
+            return 1;
         }
 
         // Must be EUI-48 or longer.
         if (candidate.length < 6) {
-            return false;
+            return 1;
         }
 
         // Must not be filled with only 0 and 1.
@@ -203,28 +228,52 @@ final class DefaultChannelId implements ChannelId {
         }
 
         if (onlyZeroAndOne) {
-            return false;
+            return 1;
         }
 
         // Must not be a multicast address
         if ((candidate[0] & 1) != 0) {
-            return false;
+            return 1;
         }
 
         // Prefer longer globally unique addresses.
         if ((current[0] & 2) == 0) {
             if ((candidate[0] & 2) == 0) {
-                return candidate.length > current.length;
+                return current.length - candidate.length;
             } else {
-                return false;
+                return 1;
             }
         } else {
             if ((candidate[0] & 2) == 0) {
-                return true;
+                return -1;
             } else {
-                return candidate.length > current.length;
+                return current.length - candidate.length;
             }
         }
+    }
+
+    /**
+     * @return positive - current is better, 0 - cannot tell, negative - candidate is better
+     */
+    private static int compareAddresses(InetAddress current, InetAddress candidate) {
+        return scoreAddress(current) - scoreAddress(candidate);
+    }
+
+    private static int scoreAddress(InetAddress addr) {
+        if (addr.isAnyLocalAddress()) {
+            return 0;
+        }
+        if (addr.isMulticastAddress()) {
+            return 1;
+        }
+        if (addr.isLinkLocalAddress()) {
+            return 2;
+        }
+        if (addr.isSiteLocalAddress()) {
+            return 3;
+        }
+
+        return 4;
     }
 
     private static String formatAddress(byte[] addr) {
