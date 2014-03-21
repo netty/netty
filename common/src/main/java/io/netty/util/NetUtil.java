@@ -28,6 +28,7 @@ import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.List;
 import java.util.StringTokenizer;
 
 /**
@@ -56,7 +57,7 @@ public final class NetUtil {
     public static final InetAddress LOCALHOST;
 
     /**
-     * The loopback {@link NetworkInterface} on the current machine
+     * The loopback {@link NetworkInterface} of the current machine
      */
     public static final NetworkInterface LOOPBACK_IF;
 
@@ -72,48 +73,13 @@ public final class NetUtil {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NetUtil.class);
 
     static {
-        // Find the first loopback interface available.
-        NetworkInterface loopbackIface = null;
-        try {
-            for (Enumeration<NetworkInterface> ifaces = NetworkInterface.getNetworkInterfaces();
-                 ifaces.hasMoreElements();) {
-
-                NetworkInterface iface = ifaces.nextElement();
-                if (iface.isLoopback()) {
-                    // Found
-                    loopbackIface = iface;
-                    break;
-                }
-            }
-            if (loopbackIface == null) {
-                logger.warn("Failed to find the loopback interface");
-            }
-        } catch (SocketException e) {
-            logger.warn("Failed to find the loopback interface", e);
-        }
-
-        LOOPBACK_IF = loopbackIface;
-
-        // Find the localhost address
-        InetAddress localhost = null;
-        if (LOOPBACK_IF != null) {
-            logger.debug("Loopback interface: {}", LOOPBACK_IF.getDisplayName());
-            for (Enumeration<InetAddress> addrs = LOOPBACK_IF.getInetAddresses();
-                 addrs.hasMoreElements();) {
-                InetAddress a = addrs.nextElement();
-                if (localhost == null) {
-                    logger.debug("Loopback address: {} (primary)", a);
-                    localhost = a;
-                } else {
-                    logger.debug("Loopback address: {}", a);
-                }
-            }
-        }
+        byte[] LOCALHOST4_BYTES = {127, 0, 0, 1};
+        byte[] LOCALHOST6_BYTES = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
 
         // Create IPv4 loopback address.
         Inet4Address localhost4 = null;
         try {
-            localhost4 = (Inet4Address) InetAddress.getByAddress(new byte[]{127, 0, 0, 1});
+            localhost4 = (Inet4Address) InetAddress.getByAddress(LOCALHOST4_BYTES);
         } catch (Exception e) {
             // We should not get here as long as the length of the address is correct.
             PlatformDependent.throwException(e);
@@ -123,33 +89,96 @@ public final class NetUtil {
         // Create IPv6 loopback address.
         Inet6Address localhost6 = null;
         try {
-            localhost6 = (Inet6Address) InetAddress.getByAddress(
-                    new byte[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1});
+            localhost6 = (Inet6Address) InetAddress.getByAddress(LOCALHOST6_BYTES);
         } catch (Exception e) {
             // We should not get here as long as the length of the address is correct.
             PlatformDependent.throwException(e);
         }
         LOCALHOST6 = localhost6;
 
-        // Try to determine the default loopback address if we couldn't yet.
-        if (localhost == null) {
-            try {
-                if (NetworkInterface.getByInetAddress(LOCALHOST6) != null) {
-                    logger.debug("Using hard-coded IPv6 localhost address: {}", localhost6);
-                    localhost = localhost6;
+        // Retrieve the list of available network interfaces.
+        List<NetworkInterface> ifaces = new ArrayList<NetworkInterface>();
+        try {
+            for (Enumeration<NetworkInterface> i = NetworkInterface.getNetworkInterfaces(); i.hasMoreElements();) {
+                NetworkInterface iface = i.nextElement();
+                // Use the interface with proper INET addresses only.
+                if (iface.getInetAddresses().hasMoreElements()) {
+                    ifaces.add(iface);
                 }
-            } catch (Exception e) {
-                // Ignore
-            } finally {
-                if (localhost == null) {
-                    logger.debug("Using hard-coded IPv4 localhost address: {}", localhost4);
-                    localhost = localhost4;
+            }
+        } catch (SocketException e) {
+            logger.warn("Failed to retrieve the list of available network interfaces", e);
+        }
+
+        // Find the first loopback interface available from its INET address (127.0.0.1 or ::1)
+        // Note that we do not use NetworkInterface.isLoopback() in the first place because it takes long time
+        // on a certain environment. (e.g. Windows with -Djava.net.preferIPv4Stack=true)
+        NetworkInterface loopbackIface = null;
+        InetAddress loopbackAddr = null;
+        loop: for (NetworkInterface iface: ifaces) {
+            for (Enumeration<InetAddress> i = iface.getInetAddresses(); i.hasMoreElements();) {
+                InetAddress addr = i.nextElement();
+                if (addr.isLoopbackAddress()) {
+                    // Found
+                    loopbackIface = iface;
+                    loopbackAddr = addr;
+                    break loop;
                 }
             }
         }
 
-        LOCALHOST = localhost;
+        // If failed to find the loopback interface from its INET address, fall back to isLoopback().
+        if (loopbackIface == null) {
+            try {
+                for (NetworkInterface iface: ifaces) {
+                    if (iface.isLoopback()) {
+                        Enumeration<InetAddress> i = iface.getInetAddresses();
+                        if (i.hasMoreElements()) {
+                            // Found the one with INET address.
+                            loopbackIface = iface;
+                            loopbackAddr = i.nextElement();
+                            break;
+                        }
+                    }
+                }
 
+                if (loopbackIface == null) {
+                    logger.warn("Failed to find the loopback interface");
+                }
+            } catch (SocketException e) {
+                logger.warn("Failed to find the loopback interface", e);
+            }
+        }
+
+        if (loopbackIface != null) {
+            // Found the loopback interface with an INET address.
+            logger.debug(
+                    "Loopback interface: {} ({}, {})",
+                    loopbackIface.getName(), loopbackIface.getDisplayName(), loopbackAddr.getHostAddress());
+        } else {
+            // Could not find the loopback interface, but we can't leave LOCALHOST as null.
+            // Use LOCALHOST6 or LOCALHOST4, preferably the IPv6 one.
+            if (loopbackAddr == null) {
+                try {
+                    if (NetworkInterface.getByInetAddress(LOCALHOST6) != null) {
+                        logger.debug("Using hard-coded IPv6 localhost address: {}", localhost6);
+                        loopbackAddr = localhost6;
+                    }
+                } catch (Exception e) {
+                    // Ignore
+                } finally {
+                    if (loopbackAddr == null) {
+                        logger.debug("Using hard-coded IPv4 localhost address: {}", localhost4);
+                        loopbackAddr = localhost4;
+                    }
+                }
+            }
+        }
+
+        LOOPBACK_IF = loopbackIface;
+        LOCALHOST = loopbackAddr;
+
+        // Determine the default somaxconn (server socket backlog) value of the platform.
         int somaxconn = 3072;
         BufferedReader in = null;
         try {
@@ -446,7 +475,9 @@ public final class NetUtil {
                         return false;
                     }
                     try {
-                        Integer.parseInt(ipAddress.substring(i + 1));
+                        if (Integer.parseInt(ipAddress.substring(i + 1)) < 0) {
+                            return false;
+                        }
                     } catch (NumberFormatException e) {
                         // right now we just support an integer after the % so if
                         // this is not
@@ -506,10 +537,7 @@ public final class NetUtil {
                 return false;
             }
         }
-        if (Integer.parseInt(word) > 255) {
-            return false;
-        }
-        return true;
+        return Integer.parseInt(word) <= 255;
     }
 
     static boolean isValidHexChar(char c) {
@@ -560,10 +588,8 @@ public final class NetUtil {
         if (word.length() == 0 || Integer.parseInt(word.toString()) > 255) {
             return false;
         }
-        if (periods != 3) {
-            return false;
-        }
-        return true;
+
+        return periods == 3;
     }
 
     /**
