@@ -169,15 +169,28 @@ final class DefaultChannelId implements ChannelId {
                 continue;
             }
 
+            boolean replace = false;
             int res = compareAddresses(bestMacAddr, macAddr);
             if (res < 0) {
+                // Found a better MAC address.
+                replace = true;
+            } else if (res == 0) {
+                // Two MAC addresses are of pretty much same quality.
+                res = compareAddresses(bestInetAddr, inetAddr);
+                if (res < 0) {
+                    // Found a MAC address with better INET address.
+                    replace = true;
+                } else if (res == 0) {
+                    // Cannot tell the difference.  Choose the longer one.
+                    if (bestMacAddr.length < macAddr.length) {
+                        replace = true;
+                    }
+                }
+            }
+
+            if (replace) {
                 bestMacAddr = macAddr;
                 bestInetAddr = inetAddr;
-            } else if (res == 0) {
-                if (compareAddresses(bestInetAddr, inetAddr) < 0) {
-                    bestMacAddr = macAddr;
-                    bestInetAddr = inetAddr;
-                }
             }
         }
 
@@ -236,18 +249,22 @@ final class DefaultChannelId implements ChannelId {
             return 1;
         }
 
-        // Prefer longer globally unique addresses.
+        // Prefer globally unique address.
         if ((current[0] & 2) == 0) {
             if ((candidate[0] & 2) == 0) {
-                return current.length - candidate.length;
+                // Both current and candidate are globally unique addresses.
+                return 0;
             } else {
+                // Only current is globally unique.
                 return 1;
             }
         } else {
             if ((candidate[0] & 2) == 0) {
+                // Only candidate is globally unique.
                 return -1;
             } else {
-                return current.length - candidate.length;
+                // Both current and candidate are non-unique.
+                return 0;
             }
         }
     }
