@@ -20,6 +20,7 @@ import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.handler.codec.http.multipart.HttpPostBodyUtil.SeekAheadNoBackArrayException;
 import io.netty.handler.codec.http.multipart.HttpPostBodyUtil.SeekAheadOptimize;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.EndOfDataDecoderException;
@@ -28,8 +29,6 @@ import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.MultiPartSta
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.NotEnoughDataDecoderException;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.net.URLDecoder;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
@@ -646,13 +645,8 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
      * @return the decoded component
      */
     private static String decodeAttribute(String s, Charset charset) {
-        if (s == null) {
-            return "";
-        }
         try {
-            return URLDecoder.decode(s, charset.name());
-        } catch (UnsupportedEncodingException e) {
-            throw new ErrorDataDecoderException(charset.toString(), e);
+            return QueryStringDecoder.decodeComponent(s, charset);
         } catch (IllegalArgumentException e) {
             throw new ErrorDataDecoderException("Bad string: '" + s + '\'', e);
         }
