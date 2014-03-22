@@ -52,7 +52,7 @@ public final class EpollServerSocketChannel extends AbstractEpollChannel impleme
         InetSocketAddress addr = (InetSocketAddress) localAddress;
         checkResolvable(addr);
         Native.bind(fd, addr.getAddress(), addr.getPort());
-        local = addr;
+        local = Native.localAddress(fd);
         Native.listen(fd, config.getBacklog());
         active = true;
     }

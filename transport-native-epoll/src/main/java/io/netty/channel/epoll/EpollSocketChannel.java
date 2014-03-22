@@ -41,7 +41,6 @@ import java.io.IOException;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -62,6 +61,8 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
     private ScheduledFuture<?> connectTimeoutFuture;
     private SocketAddress requestedRemoteAddress;
 
+    private volatile InetSocketAddress local;
+    private volatile InetSocketAddress remote;
     private volatile boolean inputShutdown;
     private volatile boolean outputShutdown;
 
@@ -82,18 +83,19 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
 
     @Override
     protected SocketAddress localAddress0() {
-        return Native.localAddress(fd);
+        return local;
     }
 
     @Override
     protected SocketAddress remoteAddress0() {
-        return Native.remoteAddress(fd);
+        return remote;
     }
 
     @Override
     protected void doBind(SocketAddress local) throws Exception {
         InetSocketAddress localAddress = (InetSocketAddress) local;
         Native.bind(fd, localAddress.getAddress(), localAddress.getPort());
+        this.local = Native.localAddress(fd);
     }
 
     private void setEpollOut() {
@@ -538,6 +540,8 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
                 checkResolvable(remoteAddress);
                 boolean connected = Native.connect(fd, remoteAddress.getAddress(),
                         remoteAddress.getPort());
+                remote = remoteAddress;
+                local = Native.localAddress(fd);
                 if (!connected) {
                     setEpollOut();
                 }
