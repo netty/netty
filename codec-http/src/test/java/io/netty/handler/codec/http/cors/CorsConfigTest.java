@@ -101,7 +101,7 @@ public class CorsConfigTest {
 
     @Test (expected = IllegalArgumentException.class)
     public void shouldThrowIfValueIsNull() {
-        withOrigin("*").preflightResponseHeader("HeaderName", null).build();
+        withOrigin("*").preflightResponseHeader("HeaderName", new Object[]{null}).build();
     }
 
 }
