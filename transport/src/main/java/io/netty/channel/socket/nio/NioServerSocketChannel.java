@@ -43,11 +43,11 @@ public class NioServerSocketChannel extends AbstractNioMessageServerChannel
                                  implements io.netty.channel.socket.ServerSocketChannel {
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
-    private static final SelectorProvider SELECTOR_PROVIDER = SelectorProvider.provider();
+    private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioServerSocketChannel.class);
 
-    private static ServerSocketChannel newSocket() {
+    private static ServerSocketChannel newSocket(SelectorProvider provider) {
         try {
             /**
              *  Use the {@link SelectorProvider} to open {@link SocketChannel} and so remove condition in
@@ -55,7 +55,7 @@ public class NioServerSocketChannel extends AbstractNioMessageServerChannel
              *
              *  See <a href="See https://github.com/netty/netty/issues/2308">#2308</a>.
              */
-            return SELECTOR_PROVIDER.openServerSocketChannel();
+            return provider.openServerSocketChannel();
         } catch (IOException e) {
             throw new ChannelException(
                     "Failed to open a server socket.", e);
@@ -68,7 +68,14 @@ public class NioServerSocketChannel extends AbstractNioMessageServerChannel
      * Create a new instance
      */
     public NioServerSocketChannel(EventLoop eventLoop, EventLoopGroup childGroup) {
-        this(eventLoop, childGroup, newSocket());
+        this(eventLoop, childGroup, newSocket(DEFAULT_SELECTOR_PROVIDER));
+    }
+
+    /**
+     * Create a new instance using the given {@link SelectorProvider}.
+     */
+    public NioServerSocketChannel(EventLoop eventLoop, EventLoopGroup childGroup, SelectorProvider provider) {
+        this(eventLoop, childGroup, newSocket(provider));
     }
 
     /**
