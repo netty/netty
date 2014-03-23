@@ -67,14 +67,14 @@ public interface EventExecutor extends EventExecutorGroup {
     <V> ProgressivePromise<V> newProgressivePromise();
 
     /**
-     * Create a new {@link Future} which is marked as successes already. So {@link Future#isSuccess()}
+     * Create a new {@link Future} which is marked as succeeded already. So {@link Future#isSuccess()}
      * will return {@code true}. All {@link FutureListener} added to it will be notified directly. Also
      * every call of blocking methods will just return without blocking.
      */
     <V> Future<V> newSucceededFuture(V result);
 
     /**
-     * Create a new {@link Future} which is marked as fakued already. So {@link Future#isSuccess()}
+     * Create a new {@link Future} which is marked as failed already. So {@link Future#isSuccess()}
      * will return {@code false}. All {@link FutureListener} added to it will be notified directly. Also
      * every call of blocking methods will just return without blocking.
      */
