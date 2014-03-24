@@ -15,6 +15,7 @@
  */
 package io.netty.channel.epoll;
 
+import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.util.concurrent.EventExecutor;
@@ -68,7 +69,7 @@ public final class EpollEventLoopGroup extends MultithreadEventLoopGroup {
     }
 
     @Override
-    protected EventExecutor newChild(Executor executor, Object... args) throws Exception {
+    protected EventLoop newChild(Executor executor, Object... args) throws Exception {
         return new EpollEventLoop(this, executor, (Integer) args[0]);
     }
 }

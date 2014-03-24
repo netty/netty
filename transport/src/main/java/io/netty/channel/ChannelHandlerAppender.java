@@ -192,7 +192,7 @@ public class ChannelHandlerAppender extends ChannelInboundHandlerAdapter {
                 } else {
                     name = e.name;
                 }
-                pipeline.addAfter(dctx.executor, oldName, name, e.handler);
+                pipeline.addAfter(dctx.invoker, oldName, name, e.handler);
             }
         } finally {
             if (selfRemoval) {
