@@ -31,11 +31,6 @@ public final class ImmediateEventExecutor extends AbstractEventExecutor {
     }
 
     @Override
-    public EventExecutorGroup parent() {
-        return null;
-    }
-
-    @Override
     public boolean inEventLoop() {
         return true;
     }

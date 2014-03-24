@@ -64,11 +64,6 @@ public final class GlobalEventExecutor extends AbstractEventExecutor {
         delayedTaskQueue.add(purgeTask);
     }
 
-    @Override
-    public EventExecutorGroup parent() {
-        return null;
-    }
-
     /**
      * Take the next {@link Runnable} from the task queue and so will block if no task is currently present.
      *
@@ -93,6 +88,7 @@ public final class GlobalEventExecutor extends AbstractEventExecutor {
                     try {
                         task = taskQueue.poll(delayNanos, TimeUnit.NANOSECONDS);
                     } catch (InterruptedException e) {
+                        // Waken up.
                         return null;
                     }
                 } else {
