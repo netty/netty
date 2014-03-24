@@ -29,6 +29,9 @@ import java.util.concurrent.TimeUnit;
  */
 public abstract class AbstractEventExecutor extends AbstractExecutorService implements EventExecutor {
 
+    static final long DEFAULT_SHUTDOWN_QUIET_PERIOD = 2;
+    static final long DEFAULT_SHUTDOWN_TIMEOUT = 15;
+
     private final EventExecutorGroup parent;
 
     protected AbstractEventExecutor() {
@@ -61,7 +64,7 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
 
     @Override
     public Future<?> shutdownGracefully() {
-        return shutdownGracefully(2, 15, TimeUnit.SECONDS);
+        return shutdownGracefully(DEFAULT_SHUTDOWN_QUIET_PERIOD, DEFAULT_SHUTDOWN_TIMEOUT, TimeUnit.SECONDS);
     }
 
     /**
