@@ -15,20 +15,19 @@
  */
 package io.netty.channel.embedded;
 
+import io.netty.channel.AbstractEventLoop;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
 import io.netty.channel.EventLoop;
-import io.netty.channel.EventLoopGroup;
-import io.netty.util.concurrent.AbstractEventExecutor;
 import io.netty.util.concurrent.Future;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.TimeUnit;
 
-final class EmbeddedEventLoop extends AbstractEventExecutor implements EventLoop {
+final class EmbeddedEventLoop extends AbstractEventLoop {
 
     private final Queue<Runnable> tasks = new ArrayDeque<Runnable>(2);
 
@@ -112,11 +111,6 @@ final class EmbeddedEventLoop extends AbstractEventExecutor implements EventLoop
 
     @Override
     public EventLoop next() {
-        return this;
-    }
-
-    @Override
-    public EventLoopGroup parent() {
         return this;
     }
 }

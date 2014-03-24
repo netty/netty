@@ -29,6 +29,21 @@ import java.util.concurrent.TimeUnit;
  */
 public abstract class AbstractEventExecutor extends AbstractExecutorService implements EventExecutor {
 
+    private final EventExecutorGroup parent;
+
+    protected AbstractEventExecutor() {
+        this(null);
+    }
+
+    protected AbstractEventExecutor(EventExecutorGroup parent) {
+        this.parent = parent;
+    }
+
+    @Override
+    public EventExecutorGroup parent() {
+        return parent;
+    }
+
     @Override
     public EventExecutor next() {
         return this;
