@@ -26,6 +26,8 @@ import java.util.concurrent.ThreadFactory;
  */
 public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor implements EventLoop {
 
+    private final ChannelHandlerInvoker invoker = new DefaultChannelHandlerInvoker(this);
+
     protected SingleThreadEventLoop(EventLoopGroup parent, ThreadFactory threadFactory, boolean addTaskWakesUp) {
         super(parent, threadFactory, addTaskWakesUp);
     }
@@ -42,6 +44,11 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
     @Override
     public EventLoop next() {
         return (EventLoop) super.next();
+    }
+
+    @Override
+    public ChannelHandlerInvoker asInvoker() {
+        return invoker;
     }
 
     @Override
