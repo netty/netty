@@ -47,9 +47,10 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
     private final Object[] childArgs;
     private final int maxChannels;
     final Executor executor;
-    final Set<ThreadPerChannelEventLoop> activeChildren =
-            Collections.newSetFromMap(PlatformDependent.<ThreadPerChannelEventLoop, Boolean>newConcurrentHashMap());
-    final Queue<ThreadPerChannelEventLoop> idleChildren = new ConcurrentLinkedQueue<ThreadPerChannelEventLoop>();
+    final Set<EventLoop> activeChildren =
+            Collections.newSetFromMap(PlatformDependent.<EventLoop, Boolean>newConcurrentHashMap());
+    private final Set<EventLoop> readOnlyActiveChildren = Collections.unmodifiableSet(activeChildren);
+    final Queue<EventLoop> idleChildren = new ConcurrentLinkedQueue<EventLoop>();
     private final ChannelException tooManyChannels;
 
     private volatile boolean shuttingDown;
@@ -76,7 +77,7 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
      *
      * @param maxChannels       the maximum number of channels to handle with this instance. Once you try to register
      *                          a new {@link Channel} and the maximum is exceed it will throw an
-     *                          {@link ChannelException} on the {@link #register(Channel)} and
+     *                          {@link ChannelException}. on the {@link #register(Channel)} and
      *                          {@link #register(Channel, ChannelPromise)} method.
      *                          Use {@code 0} to use no limit
      */
@@ -137,14 +138,19 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
     /**
      * Creates a new {@link EventLoop}.  The default implementation creates a new {@link ThreadPerChannelEventLoop}.
      */
-    protected ThreadPerChannelEventLoop newChild(
-            @SuppressWarnings("UnusedParameters") Object... args) throws Exception {
+    protected EventLoop newChild(@SuppressWarnings("UnusedParameters") Object... args) throws Exception {
         return new ThreadPerChannelEventLoop(this);
     }
 
     @Override
     public Iterator<EventExecutor> iterator() {
         return new ReadOnlyIterator<EventExecutor>(activeChildren.iterator());
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <E extends EventExecutor> Set<E> children() {
+        return (Set<E>) readOnlyActiveChildren;
     }
 
     @Override
@@ -299,7 +305,7 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
             throw new RejectedExecutionException("shutting down");
         }
 
-        ThreadPerChannelEventLoop loop = idleChildren.poll();
+        EventLoop loop = idleChildren.poll();
         if (loop == null) {
             if (maxChannels > 0 && activeChildren.size() >= maxChannels) {
                 throw tooManyChannels;
