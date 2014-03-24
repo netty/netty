@@ -35,8 +35,7 @@ import java.nio.channels.Channels;
  *
  * <h3>Notify</h3>
  *
- * You can notify the closest handler in the
- * same {@link ChannelPipeline} by calling one of the various methods provided here.
+ * You can notify the closest handler in the same {@link ChannelPipeline} by calling one of the various method.
  * Please refer to {@link ChannelPipeline} to understand how an event flows.
  *
  * <h3>Modifying a pipeline</h3>
@@ -127,8 +126,7 @@ import java.nio.channels.Channels;
  * what fundamental differences they have, how they flow in a  pipeline,  and how to handle
  * the operation in your application.
  */
-public interface ChannelHandlerContext
-         extends AttributeMap {
+public interface ChannelHandlerContext extends AttributeMap {
 
     /**
      * Return the {@link Channel} which is bound to the {@link ChannelHandlerContext}.
@@ -136,9 +134,7 @@ public interface ChannelHandlerContext
     Channel channel();
 
     /**
-     * The {@link EventExecutor} that is used to dispatch the events. This can also be used to directly
-     * submit tasks that get executed in the event loop. For more information please refer to the
-     * {@link EventExecutor} javadoc.
+     * Returns the {@link EventExecutor} which is used to execute an arbitrary task.
      */
     EventExecutor executor();
 
