@@ -15,6 +15,8 @@
  */
 package io.netty.util.concurrent;
 
+import java.util.Set;
+
 /**
  * The {@link EventExecutor} is a special {@link EventExecutorGroup} which comes
  * with some handy methods to see if a {@link Thread} is executed in a event loop.
@@ -29,6 +31,12 @@ public interface EventExecutor extends EventExecutorGroup {
      */
     @Override
     EventExecutor next();
+
+    /**
+     * Returns an unmodifiable singleton set which contains itself.
+     */
+    @Override
+    <E extends EventExecutor> Set<E> children();
 
     /**
      * Return the {@link EventExecutorGroup} which is the parent of this {@link EventExecutor},
