@@ -23,6 +23,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import static io.netty.util.concurrent.AbstractEventExecutor.*;
+
 
 /**
  * Abstract base class for {@link EventExecutorGroup} implementations.
@@ -66,7 +68,7 @@ public abstract class AbstractEventExecutorGroup implements EventExecutorGroup {
 
     @Override
     public Future<?> shutdownGracefully() {
-        return shutdownGracefully(2, 15, TimeUnit.SECONDS);
+        return shutdownGracefully(DEFAULT_SHUTDOWN_QUIET_PERIOD, DEFAULT_SHUTDOWN_TIMEOUT, TimeUnit.SECONDS);
     }
 
     /**
