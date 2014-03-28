@@ -202,7 +202,6 @@ public class ChunkedWriteHandler extends ChannelHandlerAdapter {
             discard(null);
             return;
         }
-        boolean needsFlush;
         while (channel.isWritable()) {
             if (currentWrite == null) {
                 currentWrite = queue.poll();
@@ -211,7 +210,6 @@ public class ChunkedWriteHandler extends ChannelHandlerAdapter {
             if (currentWrite == null) {
                 break;
             }
-            needsFlush = true;
             final PendingWrite currentWrite = this.currentWrite;
             final Object pendingMessage = currentWrite.msg;
 
@@ -306,9 +304,9 @@ public class ChunkedWriteHandler extends ChannelHandlerAdapter {
                 this.currentWrite = null;
             }
 
-            if (needsFlush) {
-                ctx.flush();
-            }
+            // Always need to flush
+            ctx.flush();
+
             if (!channel.isActive()) {
                 discard(new ClosedChannelException());
                 return;
