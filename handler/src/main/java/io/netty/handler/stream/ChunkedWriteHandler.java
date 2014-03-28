@@ -203,7 +203,6 @@ public class ChunkedWriteHandler
             discard(null);
             return;
         }
-        boolean needsFlush;
         while (channel.isWritable()) {
             if (currentWrite == null) {
                 currentWrite = queue.poll();
@@ -212,7 +211,6 @@ public class ChunkedWriteHandler
             if (currentWrite == null) {
                 break;
             }
-            needsFlush = true;
             final PendingWrite currentWrite = this.currentWrite;
             final Object pendingMessage = currentWrite.msg;
 
@@ -307,9 +305,9 @@ public class ChunkedWriteHandler
                 this.currentWrite = null;
             }
 
-            if (needsFlush) {
-                ctx.flush();
-            }
+            // Always need to flush
+            ctx.flush();
+
             if (!channel.isActive()) {
                 discard(new ClosedChannelException());
                 return;
