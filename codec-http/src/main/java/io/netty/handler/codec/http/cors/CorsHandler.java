@@ -85,13 +85,24 @@ public class CorsHandler extends ChannelDuplexHandler {
         final String origin = request.headers().get(ORIGIN);
         if (origin != null) {
             if ("null".equals(origin) && config.isNullOriginAllowed()) {
-                response.headers().set(ACCESS_CONTROL_ALLOW_ORIGIN, "*");
-            } else {
-                response.headers().set(ACCESS_CONTROL_ALLOW_ORIGIN, config.origin());
+                setAnyOrigin(response);
+                return true;
             }
-            return true;
+            if (config.isAnyOriginSupported()) {
+                setAnyOrigin(response);
+                return true;
+            }
+            if (config.origins().contains(origin)) {
+                response.headers().set(ACCESS_CONTROL_ALLOW_ORIGIN, origin);
+                return true;
+            }
+            logger.debug("Request origin [" + origin + "] was not among the configured origins " + config.origins());
         }
         return false;
+    }
+
+    private static void setAnyOrigin(final HttpResponse response) {
+        response.headers().set(ACCESS_CONTROL_ALLOW_ORIGIN, "*");
     }
 
     private void setAllowCredentials(final HttpResponse response) {
