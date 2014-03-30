@@ -39,13 +39,13 @@ public class CorsHandlerTest {
 
     @Test
     public void nonCorsRequest() {
-        final HttpResponse response = simpleRequest(CorsConfig.anyOrigin().build(), null);
+        final HttpResponse response = simpleRequest(CorsConfig.withAnyOrigin().build(), null);
         assertThat(response.headers().contains(ACCESS_CONTROL_ALLOW_ORIGIN), is(false));
     }
 
     @Test
     public void simpleRequestWithAnyOrigin() {
-        final HttpResponse response = simpleRequest(CorsConfig.anyOrigin().build(), "http://localhost:7777");
+        final HttpResponse response = simpleRequest(CorsConfig.withAnyOrigin().build(), "http://localhost:7777");
         assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN), is("*"));
     }
 
@@ -54,6 +54,24 @@ public class CorsHandlerTest {
         final String origin = "http://localhost:8888";
         final HttpResponse response = simpleRequest(CorsConfig.withOrigin(origin).build(), origin);
         assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN), is(origin));
+    }
+
+    @Test
+    public void simpleRequestWithOrigins() {
+        final String origin1 = "http://localhost:8888";
+        final String origin2 = "https://localhost:8888";
+        final String[] origins = {origin1, origin2};
+        final HttpResponse response1 = simpleRequest(CorsConfig.withOrigins(origins).build(), origin1);
+        assertThat(response1.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN), is(origin1));
+        final HttpResponse response2 = simpleRequest(CorsConfig.withOrigins(origins).build(), origin2);
+        assertThat(response2.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN), is(origin2));
+    }
+
+    @Test
+    public void simpleRequestWithNoMatchingOrigin() {
+        final String origin = "http://localhost:8888";
+        final HttpResponse response = simpleRequest(CorsConfig.withOrigins("https://localhost:8888").build(), origin);
+        assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN), is(nullValue()));
     }
 
     @Test
@@ -152,7 +170,7 @@ public class CorsHandlerTest {
 
     @Test
     public void simpleRequestCustomHeaders() {
-        final CorsConfig config = CorsConfig.anyOrigin().exposeHeaders("custom1", "custom2").build();
+        final CorsConfig config = CorsConfig.withAnyOrigin().exposeHeaders("custom1", "custom2").build();
         final HttpResponse response = simpleRequest(config, "http://localhost:7777", "");
         assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN), equalTo("*"));
         assertThat(response.headers().getAll(ACCESS_CONTROL_EXPOSE_HEADERS), hasItems("custom1", "custom1"));
@@ -160,21 +178,21 @@ public class CorsHandlerTest {
 
     @Test
     public void simpleRequestAllowCredentials() {
-        final CorsConfig config = CorsConfig.anyOrigin().allowCredentials().build();
+        final CorsConfig config = CorsConfig.withAnyOrigin().allowCredentials().build();
         final HttpResponse response = simpleRequest(config, "http://localhost:7777", "");
         assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_CREDENTIALS), equalTo("true"));
     }
 
     @Test
     public void simpleRequestDoNotAllowCredentials() {
-        final CorsConfig config = CorsConfig.anyOrigin().build();
+        final CorsConfig config = CorsConfig.withAnyOrigin().build();
         final HttpResponse response = simpleRequest(config, "http://localhost:7777", "");
         assertThat(response.headers().contains(ACCESS_CONTROL_ALLOW_CREDENTIALS), is(false));
     }
 
     @Test
     public void simpleRequestExposeHeaders() {
-        final CorsConfig config = CorsConfig.anyOrigin().exposeHeaders("one", "two").build();
+        final CorsConfig config = CorsConfig.withAnyOrigin().exposeHeaders("one", "two").build();
         final HttpResponse response = simpleRequest(config, "http://localhost:7777", "");
         assertThat(response.headers().getAll(ACCESS_CONTROL_EXPOSE_HEADERS), hasItems("one", "two"));
     }
