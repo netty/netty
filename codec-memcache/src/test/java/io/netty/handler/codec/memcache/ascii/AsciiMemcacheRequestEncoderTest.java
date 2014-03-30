@@ -1,7 +1,10 @@
 package io.netty.handler.codec.memcache.ascii;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.memcache.DefaultLastMemcacheContent;
+import io.netty.handler.codec.memcache.MemcacheContent;
 import io.netty.handler.codec.memcache.ascii.request.AsciiMemcacheArithmeticRequest;
 import io.netty.handler.codec.memcache.ascii.request.AsciiMemcacheDeleteRequest;
 import io.netty.handler.codec.memcache.ascii.request.AsciiMemcacheFlushRequest;
@@ -76,6 +79,29 @@ public class AsciiMemcacheRequestEncoderTest {
             .setNoreply(true);
 
         writeAndAssertOutbound(request, "cas foobar 34 20 50 12345 noreply");
+    }
+
+    @Test
+    public void shouldEncodeStoreWithPayload() {
+        String payload = "Hello netty!";
+        ByteBuf payloadBuf = Unpooled.copiedBuffer(payload, CharsetUtil.UTF_8);
+        MemcacheContent content = new DefaultLastMemcacheContent(payloadBuf);
+        AsciiMemcacheStoreRequest request = new AsciiMemcacheStoreRequest(
+            AsciiMemcacheStoreRequest.StorageCommand.SET,
+            "foobar",
+            payloadBuf.readableBytes()
+        );
+
+        assertThat(channel.writeOutbound(request), is(true));
+        assertThat(channel.writeOutbound(content), is(true));
+        assertEquals(3, channel.outboundMessages().size());
+
+        ByteBuf written = channel.readOutbound();
+        assertEquals("set foobar 0 0 12\r\n", written.toString(CharsetUtil.UTF_8));
+        written = channel.readOutbound();
+        assertEquals(payload, written.toString(CharsetUtil.UTF_8));
+        byte[] lastWritten = channel.readOutbound();
+        assertEquals("\r\n", new String(lastWritten));
     }
 
     @Test
@@ -166,7 +192,7 @@ public class AsciiMemcacheRequestEncoderTest {
         boolean result = channel.writeOutbound(req);
         assertThat(result, is(true));
 
-        ByteBuf written = (ByteBuf) channel.readOutbound();
+        ByteBuf written = channel.readOutbound();
         assertThat(written.toString(CharsetUtil.UTF_8), is(expected + "\r\n"));
         written.release();
     }

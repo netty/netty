@@ -2,7 +2,10 @@ package io.netty.handler.codec.memcache.ascii;
 
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.memcache.DefaultLastMemcacheContent;
+import io.netty.handler.codec.memcache.MemcacheContent;
 import io.netty.handler.codec.memcache.ascii.response.AsciiMemcacheArithmeticResponse;
 import io.netty.handler.codec.memcache.ascii.response.AsciiMemcacheDeleteResponse;
 import io.netty.handler.codec.memcache.ascii.response.AsciiMemcacheErrorResponse;
@@ -22,6 +25,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 
 public class AsciiMemcacheResponseEncoderTest {
@@ -61,10 +65,19 @@ public class AsciiMemcacheResponseEncoderTest {
 
     @Test
     public void shouldEncodeRetrieveResponse() {
+        String payload = "Hello netty!";
+        ByteBuf payloadBuf = Unpooled.copiedBuffer(payload, CharsetUtil.UTF_8);
+        MemcacheContent content = new DefaultLastMemcacheContent(payloadBuf);
+
         AsciiMemcacheRetrieveResponse response = new AsciiMemcacheRetrieveResponse(
-          "foo", 100, 0
+          "foo", payloadBuf.readableBytes(), 0
         );
-        writeAndAssertOutbound(response, "VALUE foo 0 100");
+        writeAndAssertOutbound(response, "VALUE foo 0 12");
+        channel.writeOutbound(content);
+        assertEquals(payload, ((ByteBuf) channel.readOutbound()).toString(CharsetUtil.UTF_8));
+        assertEquals("\r\n", new String((byte[]) channel.readOutbound()));
+        assertEquals("END", new String((byte[]) channel.readOutbound()));
+        assertEquals("\r\n", new String((byte[]) channel.readOutbound()));
     }
 
     @Test

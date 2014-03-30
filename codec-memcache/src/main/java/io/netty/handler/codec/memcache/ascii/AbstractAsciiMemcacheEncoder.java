@@ -20,7 +20,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.memcache.AbstractMemcacheObjectEncoder;
 import io.netty.handler.codec.memcache.LastMemcacheContent;
 import io.netty.handler.codec.memcache.ascii.response.AsciiMemcacheRetrieveResponse;
-import io.netty.handler.codec.memcache.ascii.response.AsciiMemcacheStatsResponse;
 import io.netty.util.CharsetUtil;
 
 import java.nio.charset.Charset;
@@ -47,7 +46,9 @@ public abstract class AbstractAsciiMemcacheEncoder<M extends AsciiMemcacheMessag
 
     @Override
     protected ByteBuf encodeMessage(ChannelHandlerContext ctx, M msg) {
-        needsFinalEnd = msg instanceof AsciiMemcacheRetrieveResponse;
+        if (msg instanceof AsciiMemcacheMessage) {
+            needsFinalEnd = msg instanceof AsciiMemcacheRetrieveResponse;
+        }
         return encodeMessage0(ctx, msg).writeBytes(CRLF);
     }
 
