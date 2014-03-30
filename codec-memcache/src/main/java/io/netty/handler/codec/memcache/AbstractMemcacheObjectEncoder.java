@@ -47,6 +47,10 @@ public abstract class AbstractMemcacheObjectEncoder<M extends MemcacheMessage> e
             out.add(encodeMessage(ctx, m));
         }
 
+        encodeContent(msg, out);
+    }
+
+    protected void encodeContent(Object msg, List<Object> out) {
         if (msg instanceof MemcacheContent || msg instanceof ByteBuf || msg instanceof FileRegion) {
             int contentLength = contentLength(msg);
             if (contentLength > 0) {
