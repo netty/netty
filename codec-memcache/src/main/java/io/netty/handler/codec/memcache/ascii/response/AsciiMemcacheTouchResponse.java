@@ -5,28 +5,13 @@ import io.netty.handler.codec.memcache.ascii.AsciiMemcacheResponse;
 
 public class AsciiMemcacheTouchResponse extends AbstractAsciiMemcacheMessage implements AsciiMemcacheResponse {
 
-    private final TouchResponse response;
+    private final AsciiMemcacheResponseStatus status;
 
-    public AsciiMemcacheTouchResponse(final TouchResponse response) {
-        this.response = response;
+    public AsciiMemcacheTouchResponse(final AsciiMemcacheResponseStatus status) {
+        this.status = status;
     }
 
-    public TouchResponse getResponse() {
-        return response;
-    }
-
-    public static enum TouchResponse {
-        TOUCHED("TOUCHED"),
-        NOT_FOUND("NOT_FOUND");
-
-        private final String value;
-
-        TouchResponse(String value) {
-            this.value = value;
-        }
-
-        public String getValue() {
-            return value;
-        }
+    public AsciiMemcacheResponseStatus getStatus() {
+        return status;
     }
 }

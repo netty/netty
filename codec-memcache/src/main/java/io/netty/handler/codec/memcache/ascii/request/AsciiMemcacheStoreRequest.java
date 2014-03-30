@@ -16,9 +16,10 @@
 package io.netty.handler.codec.memcache.ascii.request;
 
 import io.netty.handler.codec.memcache.ascii.AbstractAsciiMemcacheMessage;
+import io.netty.handler.codec.memcache.ascii.AbstractAsciiMemcacheRequest;
 import io.netty.handler.codec.memcache.ascii.AsciiMemcacheRequest;
 
-public class AsciiMemcacheStoreRequest extends AbstractAsciiMemcacheMessage implements AsciiMemcacheRequest {
+public class AsciiMemcacheStoreRequest extends AbstractAsciiMemcacheRequest {
 
     private final StorageCommand cmd;
     private final String key;
@@ -26,7 +27,6 @@ public class AsciiMemcacheStoreRequest extends AbstractAsciiMemcacheMessage impl
 
     private int flags;
     private int expiration;
-    private boolean noreply;
     private long cas;
 
     public AsciiMemcacheStoreRequest(final StorageCommand cmd, final String key, final int length) {
@@ -37,7 +37,6 @@ public class AsciiMemcacheStoreRequest extends AbstractAsciiMemcacheMessage impl
         flags = 0;
         expiration = 0;
         cas = 0;
-        noreply = false;
     }
 
     public AsciiMemcacheStoreRequest setFlags(int flags) {
@@ -47,11 +46,6 @@ public class AsciiMemcacheStoreRequest extends AbstractAsciiMemcacheMessage impl
 
     public AsciiMemcacheStoreRequest setExpiration(int expiration) {
         this.expiration = expiration;
-        return this;
-    }
-
-    public AsciiMemcacheStoreRequest setNoreply(boolean noreply) {
-        this.noreply = noreply;
         return this;
     }
 
@@ -78,10 +72,6 @@ public class AsciiMemcacheStoreRequest extends AbstractAsciiMemcacheMessage impl
 
     public int getExpiration() {
         return expiration;
-    }
-
-    public boolean getNoreply() {
-        return noreply;
     }
 
     public long getCas() {

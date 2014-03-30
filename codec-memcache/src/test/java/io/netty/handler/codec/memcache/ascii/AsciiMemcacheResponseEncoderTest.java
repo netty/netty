@@ -7,6 +7,7 @@ import io.netty.handler.codec.memcache.ascii.response.AsciiMemcacheArithmeticRes
 import io.netty.handler.codec.memcache.ascii.response.AsciiMemcacheDeleteResponse;
 import io.netty.handler.codec.memcache.ascii.response.AsciiMemcacheErrorResponse;
 import io.netty.handler.codec.memcache.ascii.response.AsciiMemcacheFlushResponse;
+import io.netty.handler.codec.memcache.ascii.response.AsciiMemcacheResponseStatus;
 import io.netty.handler.codec.memcache.ascii.response.AsciiMemcacheRetrieveResponse;
 import io.netty.handler.codec.memcache.ascii.response.AsciiMemcacheStatsResponse;
 import io.netty.handler.codec.memcache.ascii.response.AsciiMemcacheStoreResponse;
@@ -35,7 +36,7 @@ public class AsciiMemcacheResponseEncoderTest {
     @Test
     public void shouldEncodeStoreOperation() {
         AsciiMemcacheStoreResponse response = new AsciiMemcacheStoreResponse(
-                AsciiMemcacheStoreResponse.StorageResponse.EXISTS
+            AsciiMemcacheResponseStatus.exists()
         );
         writeAndAssertOutbound(response, "EXISTS");
     }
@@ -43,7 +44,7 @@ public class AsciiMemcacheResponseEncoderTest {
     @Test
     public void shouldEncodeErrorResponse() {
         AsciiMemcacheErrorResponse response = new AsciiMemcacheErrorResponse(
-                AsciiMemcacheErrorResponse.ErrorResponse.ERROR
+            AsciiMemcacheResponseStatus.error()
         );
         writeAndAssertOutbound(response, "ERROR");
     }
@@ -51,10 +52,10 @@ public class AsciiMemcacheResponseEncoderTest {
     @Test
     public void shouldEncodeErrorWithMessageResponse() {
         String msg = "You did something wrong, boy.";
-        AsciiMemcacheErrorResponse response = new AsciiMemcacheErrorResponse(
-                AsciiMemcacheErrorResponse.ErrorResponse.CLIENT_ERROR,
-                msg
-        );
+        AsciiMemcacheResponseStatus status = AsciiMemcacheResponseStatus.clientError();
+        status.setDescription(msg);
+
+        AsciiMemcacheErrorResponse response = new AsciiMemcacheErrorResponse(status);
         writeAndAssertOutbound(response, "CLIENT_ERROR " + msg);
     }
 
@@ -69,7 +70,7 @@ public class AsciiMemcacheResponseEncoderTest {
     @Test
     public void shouldEncodeDeleteResponse() {
         AsciiMemcacheDeleteResponse response = new AsciiMemcacheDeleteResponse(
-            AsciiMemcacheDeleteResponse.DeleteResponse.DELETED
+            AsciiMemcacheResponseStatus.deleted()
         );
         writeAndAssertOutbound(response, "DELETED");
     }
@@ -91,7 +92,7 @@ public class AsciiMemcacheResponseEncoderTest {
     @Test
     public void shouldEncodeTouchResponse() {
         AsciiMemcacheTouchResponse response = new AsciiMemcacheTouchResponse(
-            AsciiMemcacheTouchResponse.TouchResponse.TOUCHED
+            AsciiMemcacheResponseStatus.touched()
         );
         writeAndAssertOutbound(response, "TOUCHED");
     }
@@ -106,7 +107,7 @@ public class AsciiMemcacheResponseEncoderTest {
 
     @Test
     public void shouldEncodeFlushResponse() {
-        AsciiMemcacheFlushResponse response = new AsciiMemcacheFlushResponse();
+        AsciiMemcacheFlushResponse response = AsciiMemcacheFlushResponse.INSTANCE;
         writeAndAssertOutbound(response, "OK");
     }
 

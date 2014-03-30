@@ -107,7 +107,8 @@ public class AsciiMemcacheRequestEncoderTest {
 
     @Test
     public void shouldEncodeDeleteRequest() {
-        AsciiMemcacheDeleteRequest request = new AsciiMemcacheDeleteRequest("foo", true);
+        AsciiMemcacheDeleteRequest request = new AsciiMemcacheDeleteRequest("foo");
+        request.setNoreply(true);
         writeAndAssertOutbound(request, "delete foo noreply");
     }
 
@@ -123,17 +124,14 @@ public class AsciiMemcacheRequestEncoderTest {
 
     @Test
     public void shouldEncodeTouchRequest() {
-        AsciiMemcacheTouchRequest request = new AsciiMemcacheTouchRequest(
-            "foo",
-            10,
-            true
-        );
+        AsciiMemcacheTouchRequest request = new AsciiMemcacheTouchRequest("foo", 10);
+        request.setNoreply(true);
         writeAndAssertOutbound(request, "touch foo 10 noreply");
     }
 
     @Test
     public void shouldEncodeVersionRequest() {
-        AsciiMemcacheVersionRequest request = new AsciiMemcacheVersionRequest();
+        AsciiMemcacheVersionRequest request = AsciiMemcacheVersionRequest.INSTANCE;
         writeAndAssertOutbound(request, "version");
     }
 
@@ -145,7 +143,7 @@ public class AsciiMemcacheRequestEncoderTest {
 
     @Test
     public void shouldEncodeQuitRequest() {
-        AsciiMemcacheQuitRequest request = new AsciiMemcacheQuitRequest();
+        AsciiMemcacheQuitRequest request = AsciiMemcacheQuitRequest.INSTANCE;
         writeAndAssertOutbound(request, "quit");
     }
 

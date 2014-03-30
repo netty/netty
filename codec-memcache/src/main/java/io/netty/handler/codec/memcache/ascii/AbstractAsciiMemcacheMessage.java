@@ -24,27 +24,27 @@ public abstract class AbstractAsciiMemcacheMessage extends AbstractMemcacheObjec
 
     @Override
     public AsciiMemcacheMessage retain() {
-        return null;
+        return this;
     }
 
     @Override
     public AsciiMemcacheMessage retain(int increment) {
-        return null;
+        return this;
     }
 
     @Override
     public AsciiMemcacheMessage touch() {
-        return null;
+        return this;
     }
 
     @Override
     public AsciiMemcacheMessage touch(Object hint) {
-        return null;
+        return this;
     }
 
     @Override
     public int refCnt() {
-        return 0;
+        return 1;
     }
 
     @Override

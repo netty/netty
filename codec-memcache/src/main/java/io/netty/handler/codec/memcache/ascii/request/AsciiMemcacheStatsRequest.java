@@ -1,12 +1,13 @@
 package io.netty.handler.codec.memcache.ascii.request;
 
 import io.netty.handler.codec.memcache.ascii.AbstractAsciiMemcacheMessage;
+import io.netty.handler.codec.memcache.ascii.AbstractAsciiMemcacheRequest;
 import io.netty.handler.codec.memcache.ascii.AsciiMemcacheRequest;
 
 import java.util.Collection;
 
 
-public class AsciiMemcacheStatsRequest extends AbstractAsciiMemcacheMessage implements AsciiMemcacheRequest {
+public class AsciiMemcacheStatsRequest extends AbstractAsciiMemcacheRequest {
 
     private final String[] stats;
 
@@ -24,5 +25,10 @@ public class AsciiMemcacheStatsRequest extends AbstractAsciiMemcacheMessage impl
 
     public String[] getStats() {
         return stats;
+    }
+
+    @Override
+    public AsciiMemcacheStatsRequest setNoreply(boolean noreply) {
+        throw new IllegalStateException("noreply is not supported on the stats request.");
     }
 }

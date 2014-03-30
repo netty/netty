@@ -19,4 +19,8 @@ package io.netty.handler.codec.memcache.ascii;
  * Marker interface for all ascii requests.
  */
 public interface AsciiMemcacheRequest extends AsciiMemcacheMessage {
+
+    boolean getNoreply();
+
+    AsciiMemcacheRequest setNoreply(boolean noreply);
 }

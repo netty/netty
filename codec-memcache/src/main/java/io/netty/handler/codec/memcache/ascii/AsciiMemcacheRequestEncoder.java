@@ -26,7 +26,6 @@ import io.netty.handler.codec.memcache.ascii.request.AsciiMemcacheStatsRequest;
 import io.netty.handler.codec.memcache.ascii.request.AsciiMemcacheStoreRequest;
 import io.netty.handler.codec.memcache.ascii.request.AsciiMemcacheTouchRequest;
 import io.netty.handler.codec.memcache.ascii.request.AsciiMemcacheVersionRequest;
-import io.netty.handler.codec.memcache.ascii.response.AsciiMemcacheStatsResponse;
 import io.netty.util.internal.AppendableCharSequence;
 
 
@@ -37,6 +36,7 @@ public class AsciiMemcacheRequestEncoder extends AbstractAsciiMemcacheEncoder<As
     @Override
     protected ByteBuf encodeMessage0(final ChannelHandlerContext ctx, final AsciiMemcacheRequest msg) {
         ByteBuf buffer = ctx.alloc().buffer();
+        this.seq.reset();
 
         if (msg instanceof AsciiMemcacheStoreRequest) {
             encodeStoreRequest(buffer, (AsciiMemcacheStoreRequest) msg);
@@ -66,7 +66,6 @@ public class AsciiMemcacheRequestEncoder extends AbstractAsciiMemcacheEncoder<As
 
     private void encodeStoreRequest(final ByteBuf buffer, final AsciiMemcacheStoreRequest msg) {
         AppendableCharSequence seq = this.seq;
-        seq.reset();
 
         seq.append(msg.getCmd().getValue());
         seq.append(" ");
@@ -91,7 +90,6 @@ public class AsciiMemcacheRequestEncoder extends AbstractAsciiMemcacheEncoder<As
 
     private void encodeRetrieveRequest(final ByteBuf buffer, final AsciiMemcacheRetrieveRequest msg) {
         AppendableCharSequence seq = this.seq;
-        seq.reset();
 
         seq.append(msg.getCommand().getValue());
         seq.append(" ");
@@ -110,7 +108,6 @@ public class AsciiMemcacheRequestEncoder extends AbstractAsciiMemcacheEncoder<As
 
     private void encodeDeleteRequest(final ByteBuf buffer, final AsciiMemcacheDeleteRequest msg) {
         AppendableCharSequence seq = this.seq;
-        seq.reset();
 
         seq.append("delete ");
         seq.append(msg.getKey());
@@ -123,7 +120,6 @@ public class AsciiMemcacheRequestEncoder extends AbstractAsciiMemcacheEncoder<As
 
     private void encodeArithmeticRequest(final ByteBuf buffer, final AsciiMemcacheArithmeticRequest msg) {
         AppendableCharSequence seq = this.seq;
-        seq.reset();
 
         seq.append(msg.getCommand().getValue());
         seq.append(" ");
@@ -140,7 +136,6 @@ public class AsciiMemcacheRequestEncoder extends AbstractAsciiMemcacheEncoder<As
 
     private void encodeTouchRequest(final ByteBuf buffer, final AsciiMemcacheTouchRequest msg) {
         AppendableCharSequence seq = this.seq;
-        seq.reset();
 
         seq.append("touch ");
         seq.append(msg.getKey());
@@ -160,7 +155,6 @@ public class AsciiMemcacheRequestEncoder extends AbstractAsciiMemcacheEncoder<As
 
     private void encodeFlushRequest(final ByteBuf buffer, final AsciiMemcacheFlushRequest msg) {
         AppendableCharSequence seq = this.seq;
-        seq.reset();
 
         seq.append("flush_all");
 
@@ -177,7 +171,6 @@ public class AsciiMemcacheRequestEncoder extends AbstractAsciiMemcacheEncoder<As
 
     private void encodeStatsRequest(final ByteBuf buffer, final AsciiMemcacheStatsRequest msg) {
         AppendableCharSequence seq = this.seq;
-        seq.reset();
 
         seq.append("stats ");
 

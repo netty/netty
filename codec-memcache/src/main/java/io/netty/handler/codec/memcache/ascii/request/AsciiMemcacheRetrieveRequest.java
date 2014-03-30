@@ -1,14 +1,12 @@
 package io.netty.handler.codec.memcache.ascii.request;
 
 import io.netty.handler.codec.memcache.ascii.AbstractAsciiMemcacheMessage;
+import io.netty.handler.codec.memcache.ascii.AbstractAsciiMemcacheRequest;
 import io.netty.handler.codec.memcache.ascii.AsciiMemcacheRequest;
 
 import java.util.Collection;
 
-/**
- * Created by michael on 03/02/14.
- */
-public class AsciiMemcacheRetrieveRequest extends AbstractAsciiMemcacheMessage implements AsciiMemcacheRequest {
+public class AsciiMemcacheRetrieveRequest extends AbstractAsciiMemcacheRequest {
 
     private final String[] keys;
     private final RetrieveCommand command;
@@ -32,6 +30,11 @@ public class AsciiMemcacheRetrieveRequest extends AbstractAsciiMemcacheMessage i
 
     public RetrieveCommand getCommand() {
         return command;
+    }
+
+    @Override
+    public AsciiMemcacheRetrieveRequest setNoreply(boolean noreply) {
+        throw new IllegalStateException("noreply is not supported on the retrieve request.");
     }
 
     public static enum RetrieveCommand {

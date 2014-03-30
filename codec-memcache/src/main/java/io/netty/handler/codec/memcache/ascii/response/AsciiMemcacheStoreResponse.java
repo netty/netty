@@ -20,30 +20,14 @@ import io.netty.handler.codec.memcache.ascii.AsciiMemcacheResponse;
 
 public class AsciiMemcacheStoreResponse extends AbstractAsciiMemcacheMessage implements AsciiMemcacheResponse {
 
-    private final StorageResponse response;
+    private final AsciiMemcacheResponseStatus status;
 
-    public AsciiMemcacheStoreResponse(final StorageResponse response) {
-        this.response = response;
+    public AsciiMemcacheStoreResponse(final AsciiMemcacheResponseStatus status) {
+        this.status = status;
     }
 
-    public StorageResponse getResponse() {
-        return response;
+    public AsciiMemcacheResponseStatus getStatus() {
+        return status;
     }
 
-    public static enum StorageResponse {
-        STORED("STORED"),
-        NOT_STORED("NOT_STORED"),
-        EXISTS("EXISTS"),
-        NOT_FOUND("NOT_FOUND");
-
-        private final String value;
-
-        StorageResponse(String value) {
-            this.value = value;
-        }
-
-        public String getValue() {
-            return value;
-        }
-    }
 }

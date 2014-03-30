@@ -37,6 +37,7 @@ public class AsciiMemcacheResponseEncoder extends AbstractAsciiMemcacheEncoder<A
     @Override
     protected ByteBuf encodeMessage0(final ChannelHandlerContext ctx, final AsciiMemcacheResponse msg) {
         ByteBuf buffer = ctx.alloc().buffer();
+        this.seq.reset();
 
         if (msg instanceof AsciiMemcacheStoreResponse) {
             encodeStoreResponse(buffer, (AsciiMemcacheStoreResponse) msg);
@@ -65,22 +66,21 @@ public class AsciiMemcacheResponseEncoder extends AbstractAsciiMemcacheEncoder<A
     }
 
     private void encodeStoreResponse(final ByteBuf buffer, final AsciiMemcacheStoreResponse msg) {
-        buffer.writeBytes(msg.getResponse().getValue().getBytes(CHARSET));
+        buffer.writeBytes(msg.getStatus().getMsg().getBytes(CHARSET));
     }
 
     private void encodeErrorResponse(final ByteBuf buffer, final AsciiMemcacheErrorResponse msg) {
-        buffer.writeBytes(msg.getResponse().getValue().getBytes(CHARSET));
+        buffer.writeBytes(msg.getStatus().getMsg().getBytes(CHARSET));
 
-        String message = msg.getMessage();
-        if (message != null && !message.isEmpty()) {
-            message  = " " + message;
-            buffer.writeBytes(message.getBytes(CHARSET));
+        String description = msg.getStatus().getDescription();
+        if (description != null && !description.isEmpty()) {
+            description  = " " + description;
+            buffer.writeBytes(description.getBytes(CHARSET));
         }
     }
 
     private void encodeRetrieveResponse(final ByteBuf buffer, final AsciiMemcacheRetrieveResponse msg) {
         AppendableCharSequence seq = this.seq;
-        seq.reset();
 
         seq.append("VALUE ");
         seq.append(msg.getKey());
@@ -98,7 +98,7 @@ public class AsciiMemcacheResponseEncoder extends AbstractAsciiMemcacheEncoder<A
     }
 
     private void encodeDeleteResponse(final ByteBuf buffer, final AsciiMemcacheDeleteResponse msg) {
-        buffer.writeBytes(msg.getResponse().getValue().getBytes(CHARSET));
+        buffer.writeBytes(msg.getStatus().getMsg().getBytes(CHARSET));
     }
 
     private void encodeArithmeticResponse(final ByteBuf buffer, final AsciiMemcacheArithmeticResponse msg) {
@@ -110,12 +110,11 @@ public class AsciiMemcacheResponseEncoder extends AbstractAsciiMemcacheEncoder<A
     }
 
     private void encodeTouchResponse(final ByteBuf buffer, final AsciiMemcacheTouchResponse msg) {
-        buffer.writeBytes(msg.getResponse().getValue().getBytes(CHARSET));
+        buffer.writeBytes(msg.getStatus().getMsg().getBytes(CHARSET));
     }
 
     private void encodeVersionResponse(final ByteBuf buffer, final AsciiMemcacheVersionResponse msg) {
         AppendableCharSequence seq = this.seq;
-        seq.reset();
 
         seq.append("VERSION ");
         seq.append(msg.getVersion());
