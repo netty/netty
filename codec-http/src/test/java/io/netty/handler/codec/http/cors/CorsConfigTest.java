@@ -40,9 +40,12 @@ public class CorsConfigTest {
         assertThat(cors.origins().isEmpty(), is(true));
     }
 
-    @Test (expected = IllegalArgumentException.class)
-    public void shouldThrowIfWildcardOriginIsSpecified() {
-        withOrigin("*").build();
+    @Test
+    public void wildcardOrigin() {
+        final CorsConfig cors = withOrigin("*").build();
+        assertThat(cors.isAnyOriginSupported(), is(true));
+        assertThat(cors.origin(), equalTo("*"));
+        assertThat(cors.origins().isEmpty(), is(true));
     }
 
     @Test

@@ -251,7 +251,7 @@ public final class CorsConfig {
      */
     public static Builder withOrigin(final String origin) {
         if (origin.equals("*")) {
-            throw new IllegalArgumentException("Please use withAnyOrigin() to specify a wildcard, '*', origin ");
+            return new Builder();
         }
         return new Builder(origin);
     }
