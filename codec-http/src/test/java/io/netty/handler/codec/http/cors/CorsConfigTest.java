@@ -28,74 +28,90 @@ public class CorsConfigTest {
 
     @Test
     public void disabled() {
-        final CorsConfig cors = withOrigin("*").disable().build();
+        final CorsConfig cors = withAnyOrigin().disable().build();
         assertThat(cors.isCorsSupportEnabled(), is(false));
     }
 
     @Test
-    public void wildcardOrigin() {
-        final CorsConfig cors = anyOrigin().build();
-        assertThat(cors.origin(), is(equalTo("*")));
+    public void anyOrigin() {
+        final CorsConfig cors = withAnyOrigin().build();
+        assertThat(cors.isAnyOriginSupported(), is(true));
+        assertThat(cors.origin(), is("*"));
+        assertThat(cors.origins().isEmpty(), is(true));
+    }
+
+    @Test (expected = IllegalArgumentException.class)
+    public void shouldThrowIfWildcardOriginIsSpecified() {
+        withOrigin("*").build();
     }
 
     @Test
     public void origin() {
         final CorsConfig cors = withOrigin("http://localhost:7888").build();
         assertThat(cors.origin(), is(equalTo("http://localhost:7888")));
+        assertThat(cors.isAnyOriginSupported(), is(false));
+    }
+
+    @Test
+    public void origins() {
+        final String[] origins = {"http://localhost:7888", "https://localhost:7888"};
+        final CorsConfig cors = withOrigins(origins).build();
+        assertThat(cors.origins(), hasItems(origins));
+        assertThat(cors.isAnyOriginSupported(), is(false));
     }
 
     @Test
     public void exposeHeaders() {
-        final CorsConfig cors = withOrigin("*").exposeHeaders("custom-header1", "custom-header2").build();
+        final CorsConfig cors = withAnyOrigin().exposeHeaders("custom-header1", "custom-header2").build();
         assertThat(cors.exposedHeaders(), hasItems("custom-header1", "custom-header2"));
     }
 
     @Test
     public void allowCredentials() {
-        final CorsConfig cors = withOrigin("*").allowCredentials().build();
+        final CorsConfig cors = withAnyOrigin().allowCredentials().build();
         assertThat(cors.isCredentialsAllowed(), is(true));
     }
 
     @Test
     public void maxAge() {
-        final CorsConfig cors = withOrigin("*").maxAge(3000).build();
+        final CorsConfig cors = withAnyOrigin().maxAge(3000).build();
         assertThat(cors.maxAge(), is(3000L));
     }
 
     @Test
     public void requestMethods() {
-        final CorsConfig cors = withOrigin("*").allowedRequestMethods(HttpMethod.POST, HttpMethod.GET).build();
+        final CorsConfig cors = withAnyOrigin().allowedRequestMethods(HttpMethod.POST, HttpMethod.GET).build();
         assertThat(cors.allowedRequestMethods(), hasItems(HttpMethod.POST, HttpMethod.GET));
     }
 
     @Test
     public void requestHeaders() {
-        final CorsConfig cors = withOrigin("*").allowedRequestHeaders("preflight-header1", "preflight-header2").build();
+        final CorsConfig cors = withAnyOrigin().allowedRequestHeaders("preflight-header1", "preflight-header2").build();
         assertThat(cors.allowedRequestHeaders(), hasItems("preflight-header1", "preflight-header2"));
     }
 
     @Test
     public void preflightResponseHeadersSingleValue() {
-        final CorsConfig cors = withOrigin("*").preflightResponseHeader("SingleValue", "value").build();
+        final CorsConfig cors = withAnyOrigin().preflightResponseHeader("SingleValue", "value").build();
         assertThat(cors.preflightResponseHeaders().get("SingleValue"), equalTo("value"));
     }
 
     @Test
     public void preflightResponseHeadersMultipleValues() {
-        final CorsConfig cors = withOrigin("*").preflightResponseHeader("MultipleValues", "value1", "value2").build();
+        final CorsConfig cors = withAnyOrigin().preflightResponseHeader("MultipleValues", "value1", "value2").build();
         assertThat(cors.preflightResponseHeaders().getAll("MultipleValues"), hasItems("value1", "value2"));
     }
 
     @Test
     public void defaultPreflightResponseHeaders() {
-        final CorsConfig cors = withOrigin("*").build();
+        final CorsConfig cors = withAnyOrigin().build();
         assertThat(cors.preflightResponseHeaders().get(Names.DATE), is(notNullValue()));
         assertThat(cors.preflightResponseHeaders().get(Names.CONTENT_LENGTH), is("0"));
     }
 
     @Test
     public void emptyPreflightResponseHeaders() {
-        final CorsConfig cors = withOrigin("*").noPreflightResponseHeaders().build();
+        final CorsConfig cors = withAnyOrigin().noPreflightResponseHeaders().build();
         assertThat(cors.preflightResponseHeaders(), equalTo(HttpHeaders.EMPTY_HEADERS));
     }
 
