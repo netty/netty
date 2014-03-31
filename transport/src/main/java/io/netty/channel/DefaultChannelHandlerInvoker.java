@@ -205,7 +205,10 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
         if (localAddress == null) {
             throw new NullPointerException("localAddress");
         }
-        validatePromise(ctx, promise, false);
+        if (!validatePromise(ctx, promise, false)) {
+            // promise cancelled
+            return;
+        }
 
         if (executor.inEventLoop()) {
             invokeBindNow(ctx, localAddress, promise);
@@ -226,7 +229,10 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
         if (remoteAddress == null) {
             throw new NullPointerException("remoteAddress");
         }
-        validatePromise(ctx, promise, false);
+        if (!validatePromise(ctx, promise, false)) {
+            // promise cancelled
+            return;
+        }
 
         if (executor.inEventLoop()) {
             invokeConnectNow(ctx, remoteAddress, localAddress, promise);
@@ -242,7 +248,10 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
 
     @Override
     public void invokeDisconnect(final ChannelHandlerContext ctx, final ChannelPromise promise) {
-        validatePromise(ctx, promise, false);
+        if (!validatePromise(ctx, promise, false)) {
+            // promise cancelled
+            return;
+        }
 
         if (executor.inEventLoop()) {
             invokeDisconnectNow(ctx, promise);
@@ -258,7 +267,10 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
 
     @Override
     public void invokeClose(final ChannelHandlerContext ctx, final ChannelPromise promise) {
-        validatePromise(ctx, promise, false);
+        if (!validatePromise(ctx, promise, false)) {
+            // promise cancelled
+            return;
+        }
 
         if (executor.inEventLoop()) {
             invokeCloseNow(ctx, promise);
@@ -274,7 +286,10 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
 
     @Override
     public void invokeDeregister(final ChannelHandlerContext ctx, final ChannelPromise promise) {
-        validatePromise(ctx, promise, false);
+        if (!validatePromise(ctx, promise, false)) {
+            // promise cancelled
+            return;
+        }
 
         if (executor.inEventLoop()) {
             invokeDeregisterNow(ctx, promise);
@@ -313,7 +328,12 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
             throw new NullPointerException("msg");
         }
 
-        validatePromise(ctx, promise, true);
+        if (!validatePromise(ctx, promise, true)) {
+            // promise cancelled
+            ReferenceCountUtil.release(msg);
+            return;
+        }
+
         invokeWrite(ctx, msg, false, promise);
     }
 
@@ -368,12 +388,17 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
             throw new NullPointerException("msg");
         }
 
-        validatePromise(ctx, promise, true);
+        if (!validatePromise(ctx, promise, true)) {
+            // promise cancelled
+            ReferenceCountUtil.release(msg);
+            return;
+        }
 
         invokeWrite(ctx, msg, true, promise);
     }
 
-    private static void validatePromise(ChannelHandlerContext ctx, ChannelPromise promise, boolean allowVoidPromise) {
+    private static boolean validatePromise(
+            ChannelHandlerContext ctx, ChannelPromise promise, boolean allowVoidPromise) {
         if (ctx == null) {
             throw new NullPointerException("ctx");
         }
@@ -383,6 +408,9 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
         }
 
         if (promise.isDone()) {
+            if (promise.isCancelled()) {
+                return false;
+            }
             throw new IllegalArgumentException("promise already done: " + promise);
         }
 
@@ -392,7 +420,7 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
         }
 
         if (promise.getClass() == DefaultChannelPromise.class) {
-            return;
+            return true;
         }
 
         if (!allowVoidPromise && promise instanceof VoidChannelPromise) {
@@ -404,6 +432,7 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
             throw new IllegalArgumentException(
                     StringUtil.simpleClassName(AbstractChannel.CloseFuture.class) + " not allowed in a pipeline");
         }
+        return true;
     }
 
     private void safeExecuteInbound(Runnable task, Object msg) {
