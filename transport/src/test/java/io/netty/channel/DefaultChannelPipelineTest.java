@@ -18,6 +18,8 @@ package io.netty.channel;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
@@ -432,6 +434,81 @@ public class DefaultChannelPipelineTest {
                 assertEquals(8, handler1.outboundBuffer.peek());
             }
         }).sync();
+    }
+
+    // Tests for https://github.com/netty/netty/issues/2349
+    @Test
+    public void testCancelBind() throws Exception {
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+
+        ChannelPromise promise = pipeline.channel().newPromise();
+        assertTrue(promise.cancel(false));
+        ChannelFuture future = pipeline.bind(new LocalAddress("test"), promise);
+        assertTrue(future.isCancelled());
+    }
+
+    @Test
+    public void testCancelConnect() throws Exception {
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+
+        ChannelPromise promise = pipeline.channel().newPromise();
+        assertTrue(promise.cancel(false));
+        ChannelFuture future = pipeline.connect(new LocalAddress("test"), promise);
+        assertTrue(future.isCancelled());
+    }
+
+    @Test
+    public void testCancelDisconnect() throws Exception {
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+
+        ChannelPromise promise = pipeline.channel().newPromise();
+        assertTrue(promise.cancel(false));
+        ChannelFuture future = pipeline.disconnect(promise);
+        assertTrue(future.isCancelled());
+    }
+
+    @Test
+    public void testCancelClose() throws Exception {
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+
+        ChannelPromise promise = pipeline.channel().newPromise();
+        assertTrue(promise.cancel(false));
+        ChannelFuture future = pipeline.close(promise);
+        assertTrue(future.isCancelled());
+    }
+
+    @Test
+    public void testCancelDeregister() throws Exception {
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+
+        ChannelPromise promise = pipeline.channel().newPromise();
+        assertTrue(promise.cancel(false));
+        ChannelFuture future = pipeline.deregister(promise);
+        assertTrue(future.isCancelled());
+    }
+
+    @Test
+    public void testCancelWrite() throws Exception {
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        ChannelPromise promise = pipeline.channel().newPromise();
+        assertTrue(promise.cancel(false));
+        ByteBuf buffer = Unpooled.buffer();
+        assertEquals(1, buffer.refCnt());
+        ChannelFuture future = pipeline.write(buffer, promise);
+        assertTrue(future.isCancelled());
+        assertEquals(0, buffer.refCnt());
+    }
+
+    @Test
+    public void testCancelWriteAndFlush() throws Exception {
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        ChannelPromise promise = pipeline.channel().newPromise();
+        assertTrue(promise.cancel(false));
+        ByteBuf buffer = Unpooled.buffer();
+        assertEquals(1, buffer.refCnt());
+        ChannelFuture future = pipeline.writeAndFlush(buffer, promise);
+        assertTrue(future.isCancelled());
+        assertEquals(0, buffer.refCnt());
     }
 
     private static int next(DefaultChannelHandlerContext ctx) {
