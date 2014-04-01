@@ -17,7 +17,9 @@ package io.netty.example.securechat;
 
 import io.netty.handler.ssl.SslHandler;
 
+import java.security.AccessController;
 import java.security.KeyStore;
+import java.security.PrivilegedAction;
 import java.security.SecureRandom;
 import java.security.Security;
 
@@ -57,7 +59,7 @@ public final class SecureChatSslContextFactory {
     private static final SSLContext CLIENT_CONTEXT;
 
     static {
-        String algorithm = Security.getProperty("ssl.KeyManagerFactory.algorithm");
+        String algorithm = getSystemProperty("ssl.KeyManagerFactory.algorithm", null);
         if (algorithm == null) {
             algorithm = "SunX509";
         }
@@ -103,5 +105,20 @@ public final class SecureChatSslContextFactory {
 
     private SecureChatSslContextFactory() {
         // Unused
+    }
+
+    /**
+     * Get the system property
+     * @param propertyName the name of the system property
+     * @param defaultValue default value to be used in the absence of a system property
+     * @return
+     */
+    private static String getSystemProperty(final String propertyName, final String defaultValue) {
+        return AccessController.doPrivileged(new PrivilegedAction<String>() {
+            @Override
+            public String run() {
+                return System.getProperty(propertyName, defaultValue);
+            }
+        });
     }
 }

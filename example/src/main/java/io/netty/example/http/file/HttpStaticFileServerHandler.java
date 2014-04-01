@@ -41,6 +41,8 @@ import java.io.FileNotFoundException;
 import java.io.RandomAccessFile;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
@@ -264,7 +266,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         }
 
         // Convert to absolute path.
-        return System.getProperty("user.dir") + File.separator + uri;
+        return getSystemProperty("user.dir", null) + File.separator + uri;
     }
 
     private static final Pattern ALLOWED_FILE_NAME = Pattern.compile("[A-Za-z0-9][-_A-Za-z0-9\\.]*");
@@ -395,6 +397,21 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
     private static void setContentTypeHeader(HttpResponse response, File file) {
         MimetypesFileTypeMap mimeTypesMap = new MimetypesFileTypeMap();
         response.headers().set(CONTENT_TYPE, mimeTypesMap.getContentType(file.getPath()));
+    }
+
+    /**
+     * Get the system property
+     * @param propertyName the name of the system property
+     * @param defaultValue default value to be used in the absence of a system property
+     * @return
+     */
+    private static String getSystemProperty(final String propertyName, final String defaultValue) {
+        return AccessController.doPrivileged(new PrivilegedAction<String>() {
+            @Override
+            public String run() {
+                return System.getProperty(propertyName, defaultValue);
+            }
+        });
     }
 
 }
