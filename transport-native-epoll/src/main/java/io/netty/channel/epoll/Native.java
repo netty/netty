@@ -25,6 +25,8 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.Locale;
 
 /**
@@ -37,11 +39,11 @@ final class Native {
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, (byte) 0xff, (byte) 0xff };
 
     static {
-        String name = System.getProperty("os.name").toLowerCase(Locale.UK).trim();
+        String name = getSystemProperty("os.name").toLowerCase(Locale.UK).trim();
         if (!name.startsWith("linux")) {
             throw new IllegalStateException("Only supported on Linux");
         }
-        NativeLibraryLoader.load("netty-transport-native-epoll", Native.class.getClassLoader());
+        NativeLibraryLoader.load("netty-transport-native-epoll", getClassLoader(Native.class));
     }
 
     // EventLoop operations and constants
@@ -141,5 +143,41 @@ final class Native {
 
     private Native() {
         // utility
+    }
+    /**
+     * Get the system property
+     * @param propertyName the name of the system property
+     * @return
+     */
+    private static String getSystemProperty(final String propertyName) {
+        SecurityManager securityManager = System.getSecurityManager();
+        if (securityManager == null) {
+            return System.getProperty(propertyName);
+        } else {
+            return AccessController.doPrivileged(new PrivilegedAction<String>() {
+                @Override
+                public String run() {
+                    return System.getProperty(propertyName);
+                }
+            });
+        }
+    }
+    /**
+     * Get {@link java.lang.ClassLoader} for a {@link java.lang.Class}
+     * @param klass the {@link java.lang.Class} whose {@link java.lang.ClassLoader} is needed
+     * @return the {@link java.lang.ClassLoader}
+     */
+    private static ClassLoader getClassLoader(final Class<?> klass) {
+        SecurityManager securityManager = System.getSecurityManager();
+        if (securityManager == null) {
+            return klass.getClassLoader();
+        } else {
+            return AccessController.doPrivileged(new PrivilegedAction<ClassLoader>() {
+                @Override
+                public ClassLoader run() {
+                    return klass.getClassLoader();
+                }
+            });
+        }
     }
 }

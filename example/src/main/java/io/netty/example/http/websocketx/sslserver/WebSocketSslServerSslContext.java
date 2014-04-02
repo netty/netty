@@ -58,15 +58,15 @@ public final class WebSocketSslServerSslContext {
         SSLContext serverContext = null;
         try {
             // Key store (Server side certificate)
-            String algorithm = getSystemProperty("ssl.KeyManagerFactory.algorithm", null);
+            String algorithm = getSystemProperty("ssl.KeyManagerFactory.algorithm");
 
             if (algorithm == null) {
                 algorithm = "SunX509";
             }
 
             try {
-                String keyStoreFilePath = getSystemProperty("keystore.file.path", null);
-                String keyStoreFilePassword = getSystemProperty("keystore.file.password", null);
+                String keyStoreFilePath = getSystemProperty("keystore.file.path");
+                String keyStoreFilePassword = getSystemProperty("keystore.file.password");
 
                 KeyStore ks = KeyStore.getInstance("JKS");
                 FileInputStream fin = new FileInputStream(keyStoreFilePath);
@@ -102,15 +102,19 @@ public final class WebSocketSslServerSslContext {
     /**
      * Get the system property
      * @param propertyName the name of the system property
-     * @param defaultValue default value to be used in the absence of a system property
      * @return
      */
-    private String getSystemProperty(final String propertyName, final String defaultValue) {
-        return AccessController.doPrivileged(new PrivilegedAction<String>() {
-            @Override
-            public String run() {
-                return System.getProperty(propertyName, defaultValue);
-            }
-        });
+    private static String getSystemProperty(final String propertyName) {
+        SecurityManager securityManager = System.getSecurityManager();
+        if (securityManager == null) {
+            return System.getProperty(propertyName);
+        } else {
+            return AccessController.doPrivileged(new PrivilegedAction<String>() {
+                @Override
+                public String run() {
+                    return System.getProperty(propertyName);
+                }
+            });
+        }
     }
 }

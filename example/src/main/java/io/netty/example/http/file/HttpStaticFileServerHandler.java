@@ -266,7 +266,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         }
 
         // Convert to absolute path.
-        return getSystemProperty("user.dir", null) + File.separator + uri;
+        return getSystemProperty("user.dir") + File.separator + uri;
     }
 
     private static final Pattern ALLOWED_FILE_NAME = Pattern.compile("[A-Za-z0-9][-_A-Za-z0-9\\.]*");
@@ -402,16 +402,19 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
     /**
      * Get the system property
      * @param propertyName the name of the system property
-     * @param defaultValue default value to be used in the absence of a system property
      * @return
      */
-    private static String getSystemProperty(final String propertyName, final String defaultValue) {
-        return AccessController.doPrivileged(new PrivilegedAction<String>() {
-            @Override
-            public String run() {
-                return System.getProperty(propertyName, defaultValue);
-            }
-        });
+    private static String getSystemProperty(final String propertyName) {
+        SecurityManager securityManager = System.getSecurityManager();
+        if (securityManager == null) {
+            return System.getProperty(propertyName);
+        } else {
+            return AccessController.doPrivileged(new PrivilegedAction<String>() {
+                @Override
+                public String run() {
+                    return System.getProperty(propertyName);
+                }
+            });
+        }
     }
-
 }

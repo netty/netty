@@ -26,6 +26,8 @@ import java.lang.reflect.Method;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -50,7 +52,7 @@ final class PlatformDependent0 {
     static {
         boolean directBufferFreeable = false;
         try {
-            Class<?> cls = Class.forName("sun.nio.ch.DirectBuffer", false, PlatformDependent0.class.getClassLoader());
+            Class<?> cls = Class.forName("sun.nio.ch.DirectBuffer", false, getClassLoader(PlatformDependent0.class));
             Method method = cls.getMethod("cleaner");
             if ("sun.misc.Cleaner".equals(method.getReturnType().getName())) {
                 directBufferFreeable = true;
@@ -330,5 +332,22 @@ final class PlatformDependent0 {
 
     private PlatformDependent0() {
     }
-
+    /**
+     * Get {@link java.lang.ClassLoader} for a {@link java.lang.Class}
+     * @param klass the {@link java.lang.Class} whose {@link java.lang.ClassLoader} is needed
+     * @return the {@link java.lang.ClassLoader}
+     */
+    private static ClassLoader getClassLoader(final Class<?> klass) {
+        SecurityManager securityManager = System.getSecurityManager();
+        if (securityManager == null) {
+            return klass.getClassLoader();
+        } else {
+            return AccessController.doPrivileged(new PrivilegedAction<ClassLoader>() {
+                @Override
+                public ClassLoader run() {
+                    return klass.getClassLoader();
+                }
+            });
+        }
+    }
 }
