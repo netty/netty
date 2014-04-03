@@ -1090,9 +1090,9 @@ public class SslHandler extends ByteToMessageDecoder {
                 if (timeoutFuture != null) {
                     timeoutFuture.cancel(false);
                 }
-                if (ctx.channel().isActive()) {
-                    ctx.close(promise);
-                }
+                // Trigger the close in all cases to make sure the promise is notified
+                // See https://github.com/netty/netty/issues/2358
+                ctx.close(promise);
             }
         });
     }
