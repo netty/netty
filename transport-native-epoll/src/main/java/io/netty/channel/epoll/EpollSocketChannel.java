@@ -69,6 +69,10 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
     EpollSocketChannel(Channel parent, EventLoop eventLoop, int fd) {
         super(parent, eventLoop, fd, Native.EPOLLIN, true);
         config = new EpollSocketChannelConfig(this);
+        // Directly cache the remote and local addresses
+        // See https://github.com/netty/netty/issues/2359
+        remote = Native.remoteAddress(fd);
+        local = Native.localAddress(fd);
     }
 
     public EpollSocketChannel(EventLoop eventLoop) {
