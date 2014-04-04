@@ -66,9 +66,13 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
     private volatile boolean inputShutdown;
     private volatile boolean outputShutdown;
 
-    EpollSocketChannel(Channel parent, int fd) {
+    EpollSocketChannel(Channel parent, int fd) throws IOException {
         super(parent, fd, Native.EPOLLIN, true);
         config = new EpollSocketChannelConfig(this);
+        // Directly cache the remote and local addresses
+        // See https://github.com/netty/netty/issues/2359
+        remote = Native.remoteAddress(fd);
+        local = Native.localAddress(fd);
     }
 
     public EpollSocketChannel() {
