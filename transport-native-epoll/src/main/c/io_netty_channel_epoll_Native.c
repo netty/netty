@@ -32,6 +32,7 @@
 
 // optional
 extern int accept4(int sockFd, struct sockaddr *addr, socklen_t *addrlen, int flags) __attribute__((weak));
+extern int epoll_create1(int flags) __attribute__((weak));
 
 // Those are initialized in the init(...) method and cached for performance reasons
 jmethodID updatePosId = NULL;
@@ -401,10 +402,24 @@ JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_eventFdRead(JNIEnv * e
 }
 
 JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_epollCreate(JNIEnv * env, jclass clazz) {
-    jint efd = epoll_create1(EPOLL_CLOEXEC);
+    jint efd;
+    if (epoll_create1) {
+        efd = epoll_create1(EPOLL_CLOEXEC);
+    } else {
+        // size will be ignored anyway but must be positive
+        efd = epoll_create(126);
+    }
     if (efd < 0) {
         int err = errno;
         throwRuntimeException(env, exceptionMessage("Error during epoll_create(...): ", err));
+    }
+    if (!epoll_create1) {
+        if (fcntl(efd, F_SETFD, FD_CLOEXEC) < 0) {
+            int err = errno;
+            close(efd);
+            throwRuntimeException(env, exceptionMessage("Error during fcntl(...): ", err));
+            return err;
+        }
     }
     return efd;
 }
