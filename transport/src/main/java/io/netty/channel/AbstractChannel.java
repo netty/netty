@@ -638,18 +638,18 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public void write(Object msg, ChannelPromise promise) {
-            if (!isActive()) {
-                // Mark the write request as failure if the channel is inactive.
-                if (isOpen()) {
-                    safeSetFailure(promise, NOT_YET_CONNECTED_EXCEPTION);
-                } else {
-                    safeSetFailure(promise, CLOSED_CHANNEL_EXCEPTION);
-                }
+            ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
+            if (outboundBuffer == null) {
+                // If the outboundBuffer is null we know the channel was closed and so
+                // need to fail the future right away. If it is not null the handling of the rest
+                // will be done in flush0()
+                // See https://github.com/netty/netty/issues/2362
+                safeSetFailure(promise, CLOSED_CHANNEL_EXCEPTION);
                 // release message now to prevent resource-leak
                 ReferenceCountUtil.release(msg);
-            } else {
-                outboundBuffer.addMessage(msg, promise);
+                return;
             }
+            outboundBuffer.addMessage(msg, promise);
         }
 
         @Override
