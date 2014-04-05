@@ -28,6 +28,7 @@ import io.netty.handler.codec.http2.draft10.frame.DefaultHttp2PushPromiseFrame;
 import io.netty.handler.codec.http2.draft10.frame.Http2Flags;
 import io.netty.handler.codec.http2.draft10.frame.Http2Frame;
 import io.netty.handler.codec.http2.draft10.frame.Http2FrameHeader;
+import io.netty.handler.codec.http2.draft10.frame.Http2PushPromiseFrame;
 
 import com.google.common.base.Preconditions;
 

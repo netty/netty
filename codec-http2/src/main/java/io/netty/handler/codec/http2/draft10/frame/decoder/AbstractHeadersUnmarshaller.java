@@ -32,7 +32,7 @@ public abstract class AbstractHeadersUnmarshaller extends AbstractHttp2FrameUnma
     /**
      * A builder for a headers/push_promise frame.
      */
-    protected abstract class FrameBuilder {
+    protected abstract static class FrameBuilder {
         protected ByteBuf headerBlock;
 
         abstract int getStreamId();

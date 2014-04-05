@@ -25,6 +25,7 @@ import io.netty.handler.codec.http2.draft10.Http2Exception;
 import io.netty.handler.codec.http2.draft10.frame.DefaultHttp2PingFrame;
 import io.netty.handler.codec.http2.draft10.frame.Http2Frame;
 import io.netty.handler.codec.http2.draft10.frame.Http2FrameHeader;
+import io.netty.handler.codec.http2.draft10.frame.Http2PingFrame;
 
 /**
  * An unmarshaller for {@link Http2PingFrame} instances. The buffer contained in the frames is a

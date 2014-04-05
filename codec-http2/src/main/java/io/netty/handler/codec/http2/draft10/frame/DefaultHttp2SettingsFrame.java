@@ -27,11 +27,11 @@ public final class DefaultHttp2SettingsFrame implements Http2SettingsFrame {
     private final Integer initialWindowSize;
 
     private DefaultHttp2SettingsFrame(Builder builder) {
-        this.ack = builder.ack;
-        this.headerTableSize = builder.headerTableSize;
-        this.pushEnabled = builder.pushEnabled;
-        this.maxConcurrentStreams = builder.maxConcurrentStreams;
-        this.initialWindowSize = builder.initialWindowSize;
+        ack = builder.ack;
+        headerTableSize = builder.headerTableSize;
+        pushEnabled = builder.pushEnabled;
+        maxConcurrentStreams = builder.maxConcurrentStreams;
+        initialWindowSize = builder.initialWindowSize;
     }
 
     @Override

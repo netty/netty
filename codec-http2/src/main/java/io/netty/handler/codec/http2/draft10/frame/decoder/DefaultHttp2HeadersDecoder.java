@@ -34,7 +34,7 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder {
     private final Decoder decoder;
 
     public DefaultHttp2HeadersDecoder() {
-        this.decoder = new Decoder(DEFAULT_MAX_HEADER_SIZE, DEFAULT_HEADER_TABLE_SIZE);
+        decoder = new Decoder(DEFAULT_MAX_HEADER_SIZE, DEFAULT_HEADER_TABLE_SIZE);
     }
 
     @Override

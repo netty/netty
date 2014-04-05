@@ -157,7 +157,6 @@ public class Http2ConnectionHandler extends ChannelHandlerAdapter {
                 handleOutboundSettings(ctx, (Http2SettingsFrame) msg, promise);
             } else {
                 ctx.write(msg, promise);
-                return;
             }
 
         } catch (Throwable e) {
@@ -328,7 +327,7 @@ public class Http2ConnectionHandler extends ChannelHandlerAdapter {
         ctx.fireChannelRead(frame);
     }
 
-    private void handleInboundPing(ChannelHandlerContext ctx, Http2PingFrame frame) {
+    private static void handleInboundPing(ChannelHandlerContext ctx, Http2PingFrame frame) {
         if (frame.isAck()) {
             // The remote enpoint is responding to an Ack that we sent.
             ctx.fireChannelRead(frame);
@@ -510,13 +509,13 @@ public class Http2ConnectionHandler extends ChannelHandlerAdapter {
         ctx.writeAndFlush(frame, promise);
     }
 
-    private void handleOutboundGoAway() throws Http2Exception {
+    private static void handleOutboundGoAway() throws Http2Exception {
         // Why is this being sent? Intercept it and fail the write.
         // Should have sent a CLOSE ChannelStateEvent
         throw format(PROTOCOL_ERROR, "Another handler attempted to send GoAway.");
     }
 
-    private void handleOutboundWindowUpdate() throws Http2Exception {
+    private static void handleOutboundWindowUpdate() throws Http2Exception {
         // Why is this being sent? Intercept it and fail the write.
         throw format(PROTOCOL_ERROR, "Another handler attempted to send window update.");
     }

@@ -26,10 +26,10 @@ public final class Http2FrameHeader {
     private final int streamId;
 
     private Http2FrameHeader(Builder builder) {
-        this.payloadLength = builder.payloadLength;
-        this.type = builder.type;
-        this.flags = builder.flags;
-        this.streamId = builder.streamId;
+        payloadLength = builder.payloadLength;
+        type = builder.type;
+        flags = builder.flags;
+        streamId = builder.streamId;
     }
 
     public int getPayloadLength() {

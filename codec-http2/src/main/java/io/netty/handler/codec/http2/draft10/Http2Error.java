@@ -35,11 +35,11 @@ public enum Http2Error {
 
     private final int code;
 
-    private Http2Error(int code) {
+    Http2Error(int code) {
         this.code = code;
     }
 
     public int getCode() {
-        return this.code;
+        return code;
     }
 }

@@ -29,6 +29,7 @@ import io.netty.handler.codec.http2.draft10.Http2Exception;
 import io.netty.handler.codec.http2.draft10.frame.DefaultHttp2SettingsFrame;
 import io.netty.handler.codec.http2.draft10.frame.Http2Frame;
 import io.netty.handler.codec.http2.draft10.frame.Http2FrameHeader;
+import io.netty.handler.codec.http2.draft10.frame.Http2SettingsFrame;
 
 /**
  * An unmarshaller for {@link Http2SettingsFrame} instances.

@@ -56,7 +56,7 @@ public class Http2DataFrameMarshaller extends AbstractHttp2FrameMarshaller<Http2
         out.writeZero(frame.getPaddingLength());
     }
 
-    private Http2Flags getFlags(Http2DataFrame frame) {
+    private static Http2Flags getFlags(Http2DataFrame frame) {
         short flags = 0;
         if (frame.isEndOfStream()) {
             flags |= FLAG_END_STREAM;

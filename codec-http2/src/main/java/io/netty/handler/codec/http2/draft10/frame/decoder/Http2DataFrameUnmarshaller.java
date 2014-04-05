@@ -24,6 +24,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.codec.http2.draft10.Http2Exception;
 import io.netty.handler.codec.http2.draft10.frame.DefaultHttp2DataFrame;
+import io.netty.handler.codec.http2.draft10.frame.Http2DataFrame;
 import io.netty.handler.codec.http2.draft10.frame.Http2Flags;
 import io.netty.handler.codec.http2.draft10.frame.Http2Frame;
 import io.netty.handler.codec.http2.draft10.frame.Http2FrameHeader;

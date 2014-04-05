@@ -33,9 +33,9 @@ public final class DefaultHttp2DataFrame extends DefaultByteBufHolder implements
 
     private DefaultHttp2DataFrame(Builder builder) {
         super(builder.content);
-        this.streamId = builder.streamId;
-        this.endOfStream = builder.endOfStream;
-        this.paddingLength = builder.paddingLength;
+        streamId = builder.streamId;
+        endOfStream = builder.endOfStream;
+        paddingLength = builder.paddingLength;
     }
 
     @Override
@@ -180,7 +180,7 @@ public final class DefaultHttp2DataFrame extends DefaultByteBufHolder implements
             return new DefaultHttp2DataFrame(this);
         }
 
-        private void verifyLength(int paddingLength, ByteBuf data) {
+        private static void verifyLength(int paddingLength, ByteBuf data) {
             int maxLength = MAX_FRAME_PAYLOAD_LENGTH;
             maxLength -= paddingLength;
             if (data.readableBytes() > maxLength) {

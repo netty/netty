@@ -25,6 +25,7 @@ import io.netty.handler.codec.http2.draft10.Http2Exception;
 import io.netty.handler.codec.http2.draft10.frame.DefaultHttp2RstStreamFrame;
 import io.netty.handler.codec.http2.draft10.frame.Http2Frame;
 import io.netty.handler.codec.http2.draft10.frame.Http2FrameHeader;
+import io.netty.handler.codec.http2.draft10.frame.Http2RstStreamFrame;
 
 /**
  * An unmarshaller for {@link Http2RstStreamFrame} instances.

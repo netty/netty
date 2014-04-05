@@ -35,7 +35,7 @@ import com.google.common.collect.Maps;
 public class DefaultInboundFlowController implements InboundFlowController {
 
     private int initialWindowSize = DEFAULT_FLOW_CONTROL_WINDOW_SIZE;
-    private StreamWindow connectionWindow = new StreamWindow(CONNECTION_STREAM_ID);
+    private final StreamWindow connectionWindow = new StreamWindow(CONNECTION_STREAM_ID);
     private final Map<Integer, StreamWindow> streamWindows = Maps.newHashMap();
 
     public DefaultInboundFlowController(Http2Connection connection) {
@@ -134,7 +134,7 @@ public class DefaultInboundFlowController implements InboundFlowController {
 
         public StreamWindow(int streamId) {
             this.streamId = streamId;
-            this.windowSize = initialWindowSize;
+            windowSize = initialWindowSize;
         }
 
         public int getSize() {

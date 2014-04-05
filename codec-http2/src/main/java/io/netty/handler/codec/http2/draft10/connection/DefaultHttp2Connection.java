@@ -56,8 +56,8 @@ public class DefaultHttp2Connection implements Http2Connection {
     private ChannelFutureListener closeListener;
 
     public DefaultHttp2Connection(boolean server) {
-        this.localEndpoint = new DefaultEndpoint(server);
-        this.remoteEndpoint = new DefaultEndpoint(!server);
+        localEndpoint = new DefaultEndpoint(server);
+        remoteEndpoint = new DefaultEndpoint(!server);
     }
 
     @Override
@@ -158,18 +158,6 @@ public class DefaultHttp2Connection implements Http2Connection {
         return closeListener;
     }
 
-    private void notifyStreamClosed(int id) {
-        for (Listener listener : listeners) {
-            listener.streamClosed(id);
-        }
-    }
-
-    private void notifyStreamCreated(int id) {
-        for (Listener listener : listeners) {
-            listener.streamCreated(id);
-        }
-    }
-
     /**
      * Simple stream implementation. Streams can be compared to each other by priority.
      */
@@ -180,7 +168,7 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         public DefaultStream(int id) {
             this.id = id;
-            this.priority = DEFAULT_STREAM_PRIORITY;
+            priority = DEFAULT_STREAM_PRIORITY;
         }
 
         @Override
@@ -331,6 +319,12 @@ public class DefaultHttp2Connection implements Http2Connection {
                     return false;
             }
         }
+
+        private void notifyStreamClosed(int id) {
+            for (Listener listener : listeners) {
+                listener.streamClosed(id);
+            }
+        }
     }
 
     /**
@@ -406,7 +400,7 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         @Override
         public void setPushToAllowed(boolean allow) {
-            this.pushToAllowed = allow;
+            pushToAllowed = allow;
         }
 
         @Override
@@ -452,6 +446,12 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         private boolean isLocal() {
             return this == localEndpoint;
+        }
+
+        private void notifyStreamCreated(int id) {
+            for (Listener listener : listeners) {
+                listener.streamCreated(id);
+            }
         }
     }
 }

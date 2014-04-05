@@ -29,7 +29,7 @@ public interface Http2Stream extends Comparable<Http2Stream> {
      * The allowed states of an HTTP2 stream.
      */
     enum State {
-        IDLE, RESERVED_LOCAL, RESERVED_REMOTE, OPEN, HALF_CLOSED_LOCAL, HALF_CLOSED_REMOTE, CLOSED;
+        IDLE, RESERVED_LOCAL, RESERVED_REMOTE, OPEN, HALF_CLOSED_LOCAL, HALF_CLOSED_REMOTE, CLOSED
     }
 
     /**

@@ -29,7 +29,7 @@ public final class DefaultHttp2PingFrame extends DefaultByteBufHolder implements
 
     private DefaultHttp2PingFrame(Builder builder) {
         super(builder.data);
-        this.ack = builder.ack;
+        ack = builder.ack;
     }
 
     @Override

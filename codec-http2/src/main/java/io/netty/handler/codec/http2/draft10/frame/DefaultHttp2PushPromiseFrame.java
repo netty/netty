@@ -24,9 +24,9 @@ public final class DefaultHttp2PushPromiseFrame implements Http2PushPromiseFrame
     private final Http2Headers headers;
 
     private DefaultHttp2PushPromiseFrame(Builder builder) {
-        this.streamId = builder.streamId;
-        this.promisedStreamId = builder.promisedStreamId;
-        this.headers = builder.headers;
+        streamId = builder.streamId;
+        promisedStreamId = builder.promisedStreamId;
+        headers = builder.headers;
     }
 
     @Override
@@ -90,7 +90,7 @@ public final class DefaultHttp2PushPromiseFrame implements Http2PushPromiseFrame
     @Override
     public String toString() {
         return "DefaultHttp2PushPromiseFrame [streamId=" + streamId + ", promisedStreamId="
-                + promisedStreamId + ", headers=" + headers + "]";
+                + promisedStreamId + ", headers=" + headers + ']';
     }
 
     public static class Builder {

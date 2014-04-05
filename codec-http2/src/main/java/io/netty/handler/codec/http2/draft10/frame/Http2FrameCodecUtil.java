@@ -62,7 +62,7 @@ public final class Http2FrameCodecUtil {
      */
     public static int readUnsignedInt(ByteBuf buf) {
         int offset = buf.readerIndex();
-        int value = (buf.getByte(offset + 0) & 0x7F) << 24 | (buf.getByte(offset + 1) & 0xFF) << 16
+        int value = (buf.getByte(offset) & 0x7F) << 24 | (buf.getByte(offset + 1) & 0xFF) << 16
                 | (buf.getByte(offset + 2) & 0xFF) << 8 | buf.getByte(offset + 3) & 0xFF;
         buf.skipBytes(4);
         return value;
@@ -98,10 +98,10 @@ public final class Http2FrameCodecUtil {
      */
     public static short setPaddingFlags(short flags, int paddingLength) {
         if (paddingLength > 255) {
-            flags |= Http2FrameCodecUtil.FLAG_PAD_HIGH;
+            flags |= FLAG_PAD_HIGH;
         }
         if (paddingLength > 0) {
-            flags |= Http2FrameCodecUtil.FLAG_PAD_LOW;
+            flags |= FLAG_PAD_LOW;
         }
         return flags;
     }

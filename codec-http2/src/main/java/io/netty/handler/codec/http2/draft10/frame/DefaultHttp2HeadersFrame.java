@@ -27,10 +27,10 @@ public final class DefaultHttp2HeadersFrame implements Http2HeadersFrame {
     private final Http2Headers headers;
 
     private DefaultHttp2HeadersFrame(Builder builder) {
-        this.streamId = builder.streamId;
-        this.priority = builder.priority;
-        this.headers = builder.headersBuilder.build();
-        this.endOfStream = builder.endOfStream;
+        streamId = builder.streamId;
+        priority = builder.priority;
+        headers = builder.headersBuilder.build();
+        endOfStream = builder.endOfStream;
     }
 
     @Override
@@ -98,13 +98,13 @@ public final class DefaultHttp2HeadersFrame implements Http2HeadersFrame {
     @Override
     public String toString() {
         return "DefaultHttp2HeadersFrame [streamId=" + streamId + ", priority=" + priority
-                + ", endOfStream=" + endOfStream + ", headers=" + headers + "]";
+                + ", endOfStream=" + endOfStream + ", headers=" + headers + ']';
     }
 
     public static class Builder {
         private int streamId;
         private int priority = DEFAULT_STREAM_PRIORITY;
-        private Http2Headers.Builder headersBuilder = new Http2Headers.Builder();
+        private final Http2Headers.Builder headersBuilder = new Http2Headers.Builder();
         private boolean endOfStream;
 
         public Builder setStreamId(int streamId) {
@@ -133,7 +133,7 @@ public final class DefaultHttp2HeadersFrame implements Http2HeadersFrame {
         }
 
         public Builder setHeaders(Http2Headers headers) {
-            this.headersBuilder.addHeaders(headers);
+            headersBuilder.addHeaders(headers);
             return this;
         }
 

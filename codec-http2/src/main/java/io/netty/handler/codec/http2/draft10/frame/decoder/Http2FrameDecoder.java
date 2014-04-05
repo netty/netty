@@ -45,8 +45,8 @@ public class Http2FrameDecoder extends ByteToMessageDecoder {
         ERROR
     }
 
+    private final Http2FrameUnmarshaller frameUnmarshaller;
     private State state;
-    private Http2FrameUnmarshaller frameUnmarshaller;
     private int payloadLength;
 
     public Http2FrameDecoder() {
@@ -55,7 +55,7 @@ public class Http2FrameDecoder extends ByteToMessageDecoder {
 
     public Http2FrameDecoder(Http2FrameUnmarshaller frameUnmarshaller) {
         this.frameUnmarshaller = frameUnmarshaller;
-        this.state = State.FRAME_HEADER;
+        state = State.FRAME_HEADER;
     }
 
     @Override

@@ -25,8 +25,8 @@ public final class DefaultHttp2RstStreamFrame implements Http2RstStreamFrame {
     private final long errorCode;
 
     private DefaultHttp2RstStreamFrame(Builder builder) {
-        this.streamId = builder.streamId;
-        this.errorCode = builder.errorCode;
+        streamId = builder.streamId;
+        errorCode = builder.errorCode;
     }
 
     @Override

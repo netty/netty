@@ -37,7 +37,7 @@ public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder {
     private final Encoder encoder;
 
     public DefaultHttp2HeadersEncoder() {
-        this.encoder = new Encoder(DEFAULT_HEADER_TABLE_SIZE);
+        encoder = new Encoder(DEFAULT_HEADER_TABLE_SIZE);
     }
 
     @Override

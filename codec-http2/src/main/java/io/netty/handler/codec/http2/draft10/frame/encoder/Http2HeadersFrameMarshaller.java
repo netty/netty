@@ -100,7 +100,7 @@ public class Http2HeadersFrameMarshaller extends AbstractHttp2FrameMarshaller<Ht
     /**
      * Writes a single continuation frame with a fragment of the header block to the output buffer.
      */
-    private void writeContinuationFrame(int streamId, ByteBuf headerBlock, ByteBuf out) {
+    private static void writeContinuationFrame(int streamId, ByteBuf headerBlock, ByteBuf out) {
         ByteBuf fragment =
                 headerBlock.readSlice(Math.min(headerBlock.readableBytes(), MAX_FRAME_PAYLOAD_LENGTH));
 

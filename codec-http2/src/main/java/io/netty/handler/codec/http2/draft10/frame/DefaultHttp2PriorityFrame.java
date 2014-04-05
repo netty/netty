@@ -24,8 +24,8 @@ public final class DefaultHttp2PriorityFrame implements Http2PriorityFrame {
     private final int priority;
 
     private DefaultHttp2PriorityFrame(Builder builder) {
-        this.streamId = builder.streamId;
-        this.priority = builder.priority;
+        streamId = builder.streamId;
+        priority = builder.priority;
     }
 
     @Override

@@ -26,6 +26,7 @@ import io.netty.handler.codec.http2.draft10.Http2Exception;
 import io.netty.handler.codec.http2.draft10.frame.DefaultHttp2PriorityFrame;
 import io.netty.handler.codec.http2.draft10.frame.Http2Frame;
 import io.netty.handler.codec.http2.draft10.frame.Http2FrameHeader;
+import io.netty.handler.codec.http2.draft10.frame.Http2PriorityFrame;
 
 /**
  * An unmarshaller for {@link Http2PriorityFrame} instances.

@@ -30,8 +30,17 @@ import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.FRA
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.codec.http2.draft10.Http2Exception;
+import io.netty.handler.codec.http2.draft10.frame.Http2DataFrame;
 import io.netty.handler.codec.http2.draft10.frame.Http2Frame;
 import io.netty.handler.codec.http2.draft10.frame.Http2FrameHeader;
+import io.netty.handler.codec.http2.draft10.frame.Http2GoAwayFrame;
+import io.netty.handler.codec.http2.draft10.frame.Http2HeadersFrame;
+import io.netty.handler.codec.http2.draft10.frame.Http2PingFrame;
+import io.netty.handler.codec.http2.draft10.frame.Http2PriorityFrame;
+import io.netty.handler.codec.http2.draft10.frame.Http2PushPromiseFrame;
+import io.netty.handler.codec.http2.draft10.frame.Http2RstStreamFrame;
+import io.netty.handler.codec.http2.draft10.frame.Http2SettingsFrame;
+import io.netty.handler.codec.http2.draft10.frame.Http2WindowUpdateFrame;
 
 /**
  * A composite {@link Http2FrameUnmarshaller} that supports all frames identified by the HTTP2 spec.
@@ -68,16 +77,16 @@ public class Http2StandardFrameUnmarshaller implements Http2FrameUnmarshaller {
         unmarshallers[FRAME_TYPE_GO_AWAY] = new Http2GoAwayFrameUnmarshaller();
         unmarshallers[FRAME_TYPE_WINDOW_UPDATE] = new Http2WindowUpdateFrameUnmarshaller();
         unmarshallers[FRAME_TYPE_CONTINUATION] = new Http2FrameUnmarshaller() {
-            private String msg = "Received continuation without headers or push_promise";
+            private static final String MSG = "Received continuation without headers or push_promise";
 
             @Override
             public Http2FrameUnmarshaller unmarshall(Http2FrameHeader header) throws Http2Exception {
-                throw protocolError(msg);
+                throw protocolError(MSG);
             }
 
             @Override
             public Http2Frame from(ByteBuf payload, ByteBufAllocator alloc) throws Http2Exception {
-                throw protocolError(msg);
+                throw protocolError(MSG);
             }
         };
     }

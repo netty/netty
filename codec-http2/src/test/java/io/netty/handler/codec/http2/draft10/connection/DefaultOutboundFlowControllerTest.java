@@ -236,7 +236,7 @@ public class DefaultOutboundFlowControllerTest {
     frame.release(2);
   }
 
-  private Http2DataFrame frame(int payloadLength) {
+  private static Http2DataFrame frame(int payloadLength) {
     ByteBuf buffer = Unpooled.buffer(payloadLength);
     buffer.writerIndex(payloadLength);
     return new DefaultHttp2DataFrame.Builder().setStreamId(STREAM_ID).setContent(buffer).build();

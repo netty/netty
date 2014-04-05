@@ -43,8 +43,6 @@ public interface Http2SettingsFrame extends Http2Frame {
 
     /**
      * Gets the sender's initial flow control window in bytes, or {@code null} if not set.
-     *
-     * @return
      */
     Integer getInitialWindowSize();
 }

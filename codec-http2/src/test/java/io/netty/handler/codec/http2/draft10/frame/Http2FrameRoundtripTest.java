@@ -256,7 +256,7 @@ public class Http2FrameRoundtripTest {
         captureHandler.release();
     }
 
-    private void assertAndReleaseFrames(Http2Frame in, Http2Frame out) {
+    private static void assertAndReleaseFrames(Http2Frame in, Http2Frame out) {
         assertEquals(in, out);
         if (in instanceof ByteBufHolder) {
             assertEquals(1, ((ByteBufHolder) in).refCnt());
@@ -298,7 +298,7 @@ public class Http2FrameRoundtripTest {
                 holder.release();
             }
 
-            this.frame = (Http2Frame) msg;
+            frame = (Http2Frame) msg;
             count++;
         }
 

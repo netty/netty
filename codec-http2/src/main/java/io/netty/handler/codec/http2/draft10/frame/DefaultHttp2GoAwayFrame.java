@@ -32,8 +32,8 @@ public final class DefaultHttp2GoAwayFrame extends DefaultByteBufHolder implemen
 
     private DefaultHttp2GoAwayFrame(Builder builder) {
         super(builder.debugData);
-        this.lastStreamId = builder.lastStreamId;
-        this.errorCode = builder.errorCode;
+        lastStreamId = builder.lastStreamId;
+        errorCode = builder.errorCode;
     }
 
     @Override

@@ -79,7 +79,7 @@ public class DefaultOutboundFlowController implements OutboundFlowController {
 
     @Override
     public void updateOutboundWindowSize(int streamId, int delta) throws Http2Exception {
-        StreamState streamWindow = null;
+        StreamState streamWindow;
         if (streamId == CONNECTION_STREAM_ID) {
             // Update the connection window and write any pending frames for all streams.
             addAndGetConnectionWindowSize(delta);
@@ -146,7 +146,7 @@ public class DefaultOutboundFlowController implements OutboundFlowController {
      * bytes. The reader index on the input frame is then advanced by the number of bytes. The
      * returned frame will not have end-of-stream set.
      */
-    private Http2DataFrame readPartialFrame(Http2DataFrame frame, int numBytes) {
+    private static Http2DataFrame readPartialFrame(Http2DataFrame frame, int numBytes) {
         return new DefaultHttp2DataFrame.Builder().setStreamId(frame.getStreamId())
                 .setContent(frame.content().readSlice(numBytes).retain()).build();
     }
@@ -154,7 +154,7 @@ public class DefaultOutboundFlowController implements OutboundFlowController {
     /**
      * Indicates whether applying the delta to the given value will cause an integer overflow.
      */
-    private boolean isIntegerOverflow(int previousValue, int delta) {
+    private static boolean isIntegerOverflow(int previousValue, int delta) {
         return delta > 0 && (Integer.MAX_VALUE - delta) < previousValue;
     }
 
@@ -263,7 +263,7 @@ public class DefaultOutboundFlowController implements OutboundFlowController {
     /**
      * Pending write for a single data frame.
      */
-    private class PendingWrite {
+    private static class PendingWrite {
         private final Http2DataFrame frame;
         private final FrameWriter writer;
 

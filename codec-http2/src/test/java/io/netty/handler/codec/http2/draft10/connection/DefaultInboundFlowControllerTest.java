@@ -133,7 +133,7 @@ public class DefaultInboundFlowControllerTest {
         verify(frameWriter).writeFrame(eq(windowUpdate(STREAM_ID, delta)));
     }
 
-    private int getWindowDelta(int initialSize, int windowSize, int dataSize) {
+    private static int getWindowDelta(int initialSize, int windowSize, int dataSize) {
         int newWindowSize = windowSize - dataSize;
         return initialSize - newWindowSize;
     }
@@ -151,7 +151,7 @@ public class DefaultInboundFlowControllerTest {
         verify(frameWriter, never()).writeFrame(any(Http2WindowUpdateFrame.class));
     }
 
-    private Http2WindowUpdateFrame windowUpdate(int streamId, int delta) {
+    private static Http2WindowUpdateFrame windowUpdate(int streamId, int delta) {
         return new DefaultHttp2WindowUpdateFrame.Builder().setStreamId(streamId)
                 .setWindowSizeIncrement(delta).build();
     }

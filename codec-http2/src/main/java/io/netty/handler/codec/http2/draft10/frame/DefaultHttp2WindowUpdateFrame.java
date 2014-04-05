@@ -24,8 +24,8 @@ public final class DefaultHttp2WindowUpdateFrame implements Http2WindowUpdateFra
     private final int windowSizeIncrement;
 
     private DefaultHttp2WindowUpdateFrame(Builder builder) {
-        this.streamId = builder.streamId;
-        this.windowSizeIncrement = builder.windowSizeIncrement;
+        streamId = builder.streamId;
+        windowSizeIncrement = builder.windowSizeIncrement;
     }
 
     @Override
