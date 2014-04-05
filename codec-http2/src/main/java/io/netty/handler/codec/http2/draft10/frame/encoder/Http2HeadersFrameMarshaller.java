@@ -29,15 +29,16 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.codec.http2.draft10.Http2Exception;
 import io.netty.handler.codec.http2.draft10.frame.Http2HeadersFrame;
 
-import com.google.common.base.Preconditions;
-
 public class Http2HeadersFrameMarshaller extends AbstractHttp2FrameMarshaller<Http2HeadersFrame> {
 
     private final Http2HeadersEncoder headersEncoder;
 
     public Http2HeadersFrameMarshaller(Http2HeadersEncoder headersEncoder) {
         super(Http2HeadersFrame.class);
-        this.headersEncoder = Preconditions.checkNotNull(headersEncoder, "headersEncoder");
+        if (headersEncoder == null) {
+            throw new IllegalArgumentException("headersEncoder must not be null.");
+        }
+        this.headersEncoder = headersEncoder;
     }
 
     @Override

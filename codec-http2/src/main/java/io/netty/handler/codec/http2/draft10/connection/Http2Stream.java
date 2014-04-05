@@ -23,7 +23,7 @@ import io.netty.handler.codec.http2.draft10.Http2Exception;
 /**
  * A single stream within an HTTP2 connection. Streams are compared to each other by priority.
  */
-public interface Http2Stream extends Comparable<Http2Stream> {
+public interface Http2Stream {
 
     /**
      * The allowed states of an HTTP2 stream.

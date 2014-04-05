@@ -52,13 +52,12 @@ import io.netty.handler.codec.http2.draft10.frame.Http2PingFrame;
 import io.netty.handler.codec.http2.draft10.frame.Http2SettingsFrame;
 
 import java.nio.charset.Charset;
+import java.util.Arrays;
 
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-
-import com.google.common.collect.ImmutableList;
 
 /**
  * Tests for {@link Http2ConnectionHandler}.
@@ -111,7 +110,7 @@ public class Http2ConnectionHandlerTest {
         when(channel.isActive()).thenReturn(true);
         when(stream.getId()).thenReturn(STREAM_ID);
         when(pushStream.getId()).thenReturn(PUSH_STREAM_ID);
-        when(connection.getActiveStreams()).thenReturn(ImmutableList.of(stream));
+        when(connection.getActiveStreams()).thenReturn(Arrays.asList(stream));
         when(connection.getStream(STREAM_ID)).thenReturn(stream);
         when(connection.getStreamOrFail(STREAM_ID)).thenReturn(stream);
         when(connection.local()).thenReturn(local);

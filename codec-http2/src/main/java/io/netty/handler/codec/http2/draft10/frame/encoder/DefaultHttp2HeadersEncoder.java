@@ -28,11 +28,10 @@ import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.util.Map.Entry;
 
-import com.google.common.base.Charsets;
 import com.twitter.hpack.Encoder;
 
 public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder {
-    private static final Charset DEFAULT_CHARSET = Charsets.UTF_8;
+    private static final Charset DEFAULT_CHARSET = Charset.forName("UTF-8");
 
     private final Encoder encoder;
 

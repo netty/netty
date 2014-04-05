@@ -26,8 +26,6 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.codec.http2.draft10.Http2Exception;
 import io.netty.handler.codec.http2.draft10.frame.Http2PushPromiseFrame;
 
-import com.google.common.base.Preconditions;
-
 public class Http2PushPromiseFrameMarshaller extends
         AbstractHttp2FrameMarshaller<Http2PushPromiseFrame> {
 
@@ -35,7 +33,10 @@ public class Http2PushPromiseFrameMarshaller extends
 
     public Http2PushPromiseFrameMarshaller(Http2HeadersEncoder headersEncoder) {
         super(Http2PushPromiseFrame.class);
-        this.headersEncoder = Preconditions.checkNotNull(headersEncoder, "headersEncoder");
+        if (headersEncoder == null) {
+            throw new IllegalArgumentException("headersEncoder must not be null.");
+        }
+        this.headersEncoder = headersEncoder;
     }
 
     @Override

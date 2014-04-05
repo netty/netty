@@ -20,7 +20,6 @@ import static io.netty.handler.codec.http2.draft10.Http2Exception.format;
 import static io.netty.handler.codec.http2.draft10.Http2Exception.protocolError;
 import static io.netty.handler.codec.http2.draft10.connection.Http2ConnectionUtil.toByteBuf;
 import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.DEFAULT_STREAM_PRIORITY;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -32,23 +31,38 @@ import io.netty.handler.codec.http2.draft10.connection.Http2Stream.State;
 import io.netty.handler.codec.http2.draft10.frame.DefaultHttp2GoAwayFrame;
 import io.netty.handler.codec.http2.draft10.frame.Http2GoAwayFrame;
 
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Multiset;
-import com.google.common.collect.TreeMultiset;
+import java.util.Set;
+import java.util.TreeSet;
 
 public class DefaultHttp2Connection implements Http2Connection {
+    /**
+     * Used to sort streams in the activeStreams set. Sort by priority first, then by stream ID.
+     * Streams with the same ID are considered equal.
+     */
+    private static final Comparator<Http2Stream> STREAM_COMPARATOR = new Comparator<Http2Stream>() {
+        @Override
+        public int compare(Http2Stream s1, Http2Stream s2) {
+            int p1 = s1.getPriority();
+            int p2 = s2.getPriority();
 
-    private final List<Listener> listeners = Lists.newArrayList();
-    private final Map<Integer, Http2Stream> streamMap = Maps.newHashMap();
-    private final Multiset<Http2Stream> activeStreams = TreeMultiset.create();
+            // Sort streams with the same priority by their ID.
+            if (p1 == p2) {
+                return s1.getId() - s2.getId();
+            }
+            return p1 - p2;
+        }
+    };
+
+    private final List<Listener> listeners = new ArrayList<Listener>();
+    private final Map<Integer, Http2Stream> streamMap = new HashMap<Integer, Http2Stream>();
+    private final Set<Http2Stream> activeStreams = new TreeSet<Http2Stream>(STREAM_COMPARATOR);
     private final DefaultEndpoint localEndpoint;
     private final DefaultEndpoint remoteEndpoint;
     private boolean goAwaySent;
@@ -85,10 +99,10 @@ public class DefaultHttp2Connection implements Http2Connection {
     }
 
     @Override
-    public List<Http2Stream> getActiveStreams() {
+    public Collection<Http2Stream> getActiveStreams() {
         // Copy the list in case any operation on the returned streams causes the activeStreams set
         // to change.
-        return ImmutableList.copyOf(activeStreams);
+        return Collections.unmodifiableCollection(activeStreams);
     }
 
     @Override
@@ -182,20 +196,13 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         @Override
-        public int compareTo(Http2Stream other) {
-            // Sort streams with the same priority by their ID.
-            if (priority == other.getPriority()) {
-                return id - other.getId();
-            }
-            return priority - other.getPriority();
-        }
-
-        @Override
         public void verifyState(Http2Error error, State... allowedStates) throws Http2Exception {
-            Predicate<State> predicate = Predicates.in(Arrays.asList(allowedStates));
-            if (!predicate.apply(state)) {
-                throw format(error, "Stream %d in unexpected state: %s", id, state);
+            for (State allowedState : allowedStates) {
+                if (state == allowedState) {
+                    return;
+                }
             }
+            throw format(error, "Stream %d in unexpected state: %s", id, state);
         }
 
         @Override

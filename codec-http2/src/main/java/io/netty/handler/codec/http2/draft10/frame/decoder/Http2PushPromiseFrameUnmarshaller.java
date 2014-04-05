@@ -30,8 +30,6 @@ import io.netty.handler.codec.http2.draft10.frame.Http2Frame;
 import io.netty.handler.codec.http2.draft10.frame.Http2FrameHeader;
 import io.netty.handler.codec.http2.draft10.frame.Http2PushPromiseFrame;
 
-import com.google.common.base.Preconditions;
-
 /**
  * An unmarshaller for {@link Http2PushPromiseFrame} instances.
  */
@@ -40,7 +38,10 @@ public class Http2PushPromiseFrameUnmarshaller extends AbstractHeadersUnmarshall
     private final Http2HeadersDecoder headersDecoder;
 
     public Http2PushPromiseFrameUnmarshaller(Http2HeadersDecoder headersDecoder) {
-        this.headersDecoder = Preconditions.checkNotNull(headersDecoder, "headersDecoder");
+        if (headersDecoder == null) {
+            throw new IllegalArgumentException("headersDecoder must not be null.");
+        }
+        this.headersDecoder = headersDecoder;
     }
 
     @Override

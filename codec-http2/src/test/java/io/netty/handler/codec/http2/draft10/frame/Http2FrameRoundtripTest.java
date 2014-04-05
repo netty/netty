@@ -38,13 +38,12 @@ import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
 
 import java.net.InetSocketAddress;
+import java.nio.charset.Charset;
 
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
-
-import com.google.common.base.Charsets;
 
 /**
  * Tests encoding/decoding each HTTP2 frame type.
@@ -158,7 +157,7 @@ public class Http2FrameRoundtripTest {
 
     @Test
     public void pingFrameShouldMatch() throws Exception {
-        ByteBuf buf = Unpooled.copiedBuffer("01234567", Charsets.UTF_8);
+        ByteBuf buf = Unpooled.copiedBuffer("01234567", Charset.forName("UTF-8"));
 
         Http2PingFrame in =
                 new DefaultHttp2PingFrame.Builder().setAck(true).setData(buf).build().retain();

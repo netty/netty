@@ -15,14 +15,23 @@
 
 package io.netty.handler.codec.http2.draft10;
 
+import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 
-import com.google.common.base.Charsets;
-import com.google.common.collect.ImmutableCollection;
-import com.google.common.collect.ImmutableMultimap;
-
+/**
+ * An immutable collection of headers sent or received via HTTP/2.
+ */
 public final class Http2Headers implements Iterable<Entry<String, String>> {
+    private static final Charset DEFAULT_CHARSET = Charset.forName("UTF-8");
+    private static final Iterator<String> EMPTY_ITERATOR =
+            Collections.<String>emptyList().iterator();
 
     /**
      * HTTP2 header names.
@@ -64,19 +73,20 @@ public final class Http2Headers implements Iterable<Entry<String, String>> {
         }
     }
 
-    private final ImmutableMultimap<String, String> headers;
+    private final Map<String, List<String>> headers;
 
     private Http2Headers(Builder builder) {
-        this.headers = builder.map.build();
+        // Assume ownership of the builder's map.
+        this.headers = builder.map;
     }
 
     public String getHeader(String name) {
-        ImmutableCollection<String> col = getHeaders(name);
-        return col.isEmpty() ? null : col.iterator().next();
+        List<String> col = headers.get(name);
+        return col.isEmpty() ? null : col.get(0);
     }
 
-    public ImmutableCollection<String> getHeaders(String name) {
-        return headers.get(name);
+    public Collection<String> getHeaders(String name) {
+        return Collections.unmodifiableCollection(headers.get(name));
     }
 
     public String getMethod() {
@@ -101,7 +111,7 @@ public final class Http2Headers implements Iterable<Entry<String, String>> {
 
     @Override
     public Iterator<Entry<String, String>> iterator() {
-        return headers.entries().iterator();
+        return new HeadersIterator();
     }
 
     @Override
@@ -139,11 +149,23 @@ public final class Http2Headers implements Iterable<Entry<String, String>> {
         return headers.toString();
     }
 
+    /**
+     * Short cut for {@code new Http2Headers.Builder()}.
+     */
+    public static Builder newBuilder() {
+        return new Builder();
+    }
+
+    /**
+     * Builds instances of {@link Http2Headers}. This class is not thread-safe.
+     */
     public static class Builder {
-        private ImmutableMultimap.Builder<String, String> map = ImmutableMultimap.builder();
+        private Map<String, List<String>> map = new HashMap<String, List<String>>();
+        private boolean needToCopy;
 
         public Builder clear() {
-            map = ImmutableMultimap.builder();
+            copyIfNeeded();
+            map.clear();
             return this;
         }
 
@@ -151,18 +173,21 @@ public final class Http2Headers implements Iterable<Entry<String, String>> {
             if (headers == null) {
                 throw new IllegalArgumentException("headers must not be null.");
             }
-            map.putAll(headers.headers);
+            copyIfNeeded();
+            for (Map.Entry<String, List<String>> entry : headers.headers.entrySet()) {
+                getOrCreateValues(entry.getKey()).addAll(entry.getValue());
+            }
             return this;
         }
 
         public Builder addHeader(String name, String value) {
-            // Use interning on the header name to save space.
-            map.put(name.intern(), value);
+            copyIfNeeded();
+            getOrCreateValues(name).add(value);
             return this;
         }
 
         public Builder addHeader(byte[] name, byte[] value) {
-            addHeader(new String(name, Charsets.UTF_8), new String(value, Charsets.UTF_8));
+            addHeader(new String(name, DEFAULT_CHARSET), new String(value, DEFAULT_CHARSET));
             return this;
         }
 
@@ -187,7 +212,109 @@ public final class Http2Headers implements Iterable<Entry<String, String>> {
         }
 
         public Http2Headers build() {
+            // We're giving the map over to the headers object. Future mutations
+            // to the builder will require a copy.
+            needToCopy = true;
             return new Http2Headers(this);
+        }
+
+        private void copyIfNeeded() {
+            if (needToCopy) {
+                needToCopy = false;
+
+                // Copy the map.
+                Map<String, List<String>> oldMap = map;
+                map = new HashMap<String, List<String>>();
+                for (Map.Entry<String, List<String>> entry : oldMap.entrySet()) {
+                    map.put(entry.getKey(), new ArrayList<String>(entry.getValue()));
+                }
+            }
+        }
+
+        private List<String> getOrCreateValues(String key) {
+            List<String> values = map.get(key);
+            if (values == null) {
+                values = new ArrayList<String>();
+                map.put(key, values);
+            }
+            return values;
+        }
+    }
+
+    /**
+     * A facade to allow iterating over the headers map as though it's a simple collection of
+     * header values.
+     */
+    private final class HeadersIterator implements Iterator<Entry<String, String>> {
+        private Iterator<Entry<String, List<String>>> keyIterator;
+        private String key;
+        private Iterator<String> valueIterator = EMPTY_ITERATOR;
+
+        private HeadersIterator() {
+            keyIterator = headers.entrySet().iterator();
+            if (keyIterator.hasNext()) {
+                // Initialize the value iterator to point at the first list of values.
+                nextKey();
+            }
+        }
+
+        @Override
+        public boolean hasNext() {
+            return valueIterator.hasNext() || keyIterator.hasNext();
+        }
+
+        @Override
+        public Entry<String, String> next() {
+            if (valueIterator.hasNext()) {
+                return new ImmutableEntry(key, valueIterator.next());
+            }
+
+            // Nothing left in the current values list. Advance to the next key in the map.
+            // This will either locate the next list or throw if no collections remain.
+            nextKey();
+
+            // Recurse. The recursion should terminate after one call since either it will find
+            // the next header or the end of the list is reached.
+            return next();
+        }
+
+        @Override
+        public void remove() {
+            throw new UnsupportedOperationException();
+        }
+
+        private void nextKey() {
+            Map.Entry<String, List<String>> entry = keyIterator.next();
+            key = entry.getKey();
+            valueIterator = entry.getValue().iterator();
+        }
+    }
+
+    /**
+     * Not using the JDK implementation in order to stay compatible with Java 5.
+     */
+    private static final class ImmutableEntry implements Map.Entry<String, String> {
+        private final String key;
+        private final String value;
+
+        public ImmutableEntry(String key, String value) {
+            this.key = key;
+            this.value = value;
+        }
+
+        @Override
+        public String getKey() {
+            return key;
+        }
+
+        @Override
+        public String getValue() {
+            return value;
+        }
+
+        @Override
+        public String setValue(String value) {
+            throw new UnsupportedOperationException();
         }
     }
 }
