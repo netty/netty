@@ -454,6 +454,9 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             if (k == null) {
                 break;
             }
+            // null out entry in the array to allow to have it GC'ed once the Channel close
+            // See https://github.com/netty/netty/issues/2363
+            selectedKeys[i] = null;
 
             final Object a = k.attachment();
 
@@ -466,6 +469,16 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             }
 
             if (needsToSelectAgain) {
+                // null out entrys in the array to allow to have it GC'ed once the Channel close
+                // See https://github.com/netty/netty/issues/2363
+                for (;;) {
+                    if (selectedKeys[i] == null) {
+                        break;
+                    }
+                    selectedKeys[i] = null;
+                    i++;
+                }
+
                 selectAgain();
                 // Need to flip the optimized selectedKeys to get the right reference to the array
                 // and reset the index to -1 which will then set to 0 on the for loop
