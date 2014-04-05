@@ -21,17 +21,15 @@ import static io.netty.handler.codec.http2.draft10.Http2Exception.format;
 import static io.netty.handler.codec.http2.draft10.Http2Exception.protocolError;
 import static io.netty.handler.codec.http2.draft10.connection.Http2ConnectionUtil.DEFAULT_FLOW_CONTROL_WINDOW_SIZE;
 import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.CONNECTION_STREAM_ID;
-
 import io.netty.handler.codec.http2.draft10.Http2Exception;
 import io.netty.handler.codec.http2.draft10.Http2StreamException;
 import io.netty.handler.codec.http2.draft10.frame.DefaultHttp2DataFrame;
 import io.netty.handler.codec.http2.draft10.frame.Http2DataFrame;
 
+import java.util.ArrayDeque;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Queue;
-
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 
 /**
  * Basic implementation of {@link OutboundFlowController}.
@@ -39,7 +37,7 @@ import com.google.common.collect.Maps;
 public class DefaultOutboundFlowController implements OutboundFlowController {
 
     private final Http2Connection connection;
-    private final Map<Integer, StreamState> streamStates = Maps.newHashMap();
+    private final Map<Integer, StreamState> streamStates = new HashMap<Integer, StreamState>();
     private int initialWindowSize = DEFAULT_FLOW_CONTROL_WINDOW_SIZE;
     private int connectionWindowSize = DEFAULT_FLOW_CONTROL_WINDOW_SIZE;
 
@@ -185,7 +183,7 @@ public class DefaultOutboundFlowController implements OutboundFlowController {
      */
     private class StreamState {
         private final int streamId;
-        private final Queue<PendingWrite> pendingWriteQueue = Lists.newLinkedList();
+        private final Queue<PendingWrite> pendingWriteQueue = new ArrayDeque<PendingWrite>();
         private int windowSize = initialWindowSize;
 
         public StreamState(int streamId) {

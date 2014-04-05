@@ -19,7 +19,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http2.draft10.Http2Exception;
 
-import java.util.List;
+import java.util.Collection;
 
 public interface Http2Connection {
 
@@ -132,7 +132,7 @@ public interface Http2Connection {
      * Gets all streams that are currently either open or half-closed. The returned collection is
      * sorted by priority.
      */
-    List<Http2Stream> getActiveStreams();
+    Collection<Http2Stream> getActiveStreams();
 
     /**
      * Gets a view of this connection from the local {@link Endpoint}.

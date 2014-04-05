@@ -19,15 +19,13 @@ import static io.netty.handler.codec.http2.draft10.Http2Exception.flowControlErr
 import static io.netty.handler.codec.http2.draft10.Http2Exception.protocolError;
 import static io.netty.handler.codec.http2.draft10.connection.Http2ConnectionUtil.DEFAULT_FLOW_CONTROL_WINDOW_SIZE;
 import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.CONNECTION_STREAM_ID;
-
 import io.netty.handler.codec.http2.draft10.Http2Exception;
 import io.netty.handler.codec.http2.draft10.frame.DefaultHttp2WindowUpdateFrame;
 import io.netty.handler.codec.http2.draft10.frame.Http2DataFrame;
 import io.netty.handler.codec.http2.draft10.frame.Http2WindowUpdateFrame;
 
+import java.util.HashMap;
 import java.util.Map;
-
-import com.google.common.collect.Maps;
 
 /**
  * Basic implementation of {@link InboundFlowController}.
@@ -36,7 +34,7 @@ public class DefaultInboundFlowController implements InboundFlowController {
 
     private int initialWindowSize = DEFAULT_FLOW_CONTROL_WINDOW_SIZE;
     private final StreamWindow connectionWindow = new StreamWindow(CONNECTION_STREAM_ID);
-    private final Map<Integer, StreamWindow> streamWindows = Maps.newHashMap();
+    private final Map<Integer, StreamWindow> streamWindows = new HashMap<Integer, StreamWindow>();
 
     public DefaultInboundFlowController(Http2Connection connection) {
         connection.addListener(new Http2Connection.Listener() {

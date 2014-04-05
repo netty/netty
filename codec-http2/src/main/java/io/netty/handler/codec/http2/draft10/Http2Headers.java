@@ -15,14 +15,57 @@
 
 package io.netty.handler.codec.http2.draft10;
 
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeSet;
 import java.util.Map.Entry;
+import java.util.Set;
 
-import com.google.common.base.Charsets;
-import com.google.common.collect.ImmutableCollection;
-import com.google.common.collect.ImmutableMultimap;
+/**
+ * An immutable collection of headers sent or received via HTTP/2.
+ */
+public abstract class Http2Headers implements Iterable<Entry<String, String>> {
 
-public final class Http2Headers implements Iterable<Entry<String, String>> {
+    public static final Http2Headers EMPTY_HEADERS = new Http2Headers() {
+
+        @Override
+        public String get(String name) {
+            return null;
+        }
+
+        @Override
+        public List<String> getAll(String name) {
+            return Collections.emptyList();
+        }
+
+        @Override
+        public List<Entry<String, String>> entries() {
+            return Collections.emptyList();
+        }
+
+        @Override
+        public boolean contains(String name) {
+            return false;
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return true;
+        }
+
+        @Override
+        public Set<String> names() {
+            return Collections.emptySet();
+        }
+
+        @Override
+        public Iterator<Entry<String, String>> iterator() {
+            return entries().iterator();
+        }
+    };
 
     /**
      * HTTP2 header names.
@@ -64,130 +107,136 @@ public final class Http2Headers implements Iterable<Entry<String, String>> {
         }
     }
 
-    private final ImmutableMultimap<String, String> headers;
+    /**
+     * Returns the {@link Set} of all header names.
+     */
+    public abstract Set<String> names();
 
-    private Http2Headers(Builder builder) {
-        this.headers = builder.map.build();
+    /**
+     * Returns the header value with the specified header name.  If there is
+     * more than one header value for the specified header name, the first
+     * value is returned.
+     *
+     * @return the header value or {@code null} if there is no such header
+     */
+    public abstract String get(String name);
+
+    /**
+     * Returns the header values with the specified header name.
+     *
+     * @return the {@link List} of header values.  An empty list if there is no
+     *         such header.
+     */
+    public abstract List<String> getAll(String name);
+
+    /**
+     * Returns all header names and values that this frame contains.
+     *
+     * @return the {@link List} of the header name-value pairs.  An empty list
+     *         if there is no header in this message.
+     */
+    public abstract List<Map.Entry<String, String>> entries();
+
+    /**
+     * Returns {@code true} if and only if there is a header with the specified
+     * header name.
+     */
+    public abstract boolean contains(String name);
+
+    /**
+     * Checks if no header exists.
+     */
+    public abstract boolean isEmpty();
+
+    /**
+     * Gets the {@link HttpName#METHOD} header.
+     *
+     * @return the header value or {@code null} if there is no such header
+     */
+    public final String getMethod() {
+        return get(HttpName.METHOD.value());
     }
 
-    public String getHeader(String name) {
-        ImmutableCollection<String> col = getHeaders(name);
-        return col.isEmpty() ? null : col.iterator().next();
+    /**
+     * Gets the {@link HttpName#SCHEME} header.
+     *
+     * @return the header value or {@code null} if there is no such header
+     */
+    public final String getScheme() {
+        return get(HttpName.SCHEME.value());
     }
 
-    public ImmutableCollection<String> getHeaders(String name) {
-        return headers.get(name);
+    /**
+     * Gets the {@link HttpName#AUTHORITY} header.
+     *
+     * @return the header value or {@code null} if there is no such header
+     */
+    public final String getAuthority() {
+        return get(HttpName.AUTHORITY.value());
     }
 
-    public String getMethod() {
-        return getHeader(HttpName.METHOD.value());
+    /**
+     * Gets the {@link HttpName#PATH} header.
+     *
+     * @return the header value or {@code null} if there is no such header
+     */
+    public final String getPath() {
+        return get(HttpName.PATH.value());
     }
 
-    public String getScheme() {
-        return getHeader(HttpName.SCHEME.value());
-    }
-
-    public String getAuthority() {
-        return getHeader(HttpName.AUTHORITY.value());
-    }
-
-    public String getPath() {
-        return getHeader(HttpName.PATH.value());
-    }
-
-    public String getStatus() {
-        return getHeader(HttpName.STATUS.value());
-    }
-
-    @Override
-    public Iterator<Entry<String, String>> iterator() {
-        return headers.entries().iterator();
+    /**
+     * Gets the {@link HttpName#STATUS} header.
+     *
+     * @return the header value or {@code null} if there is no such header
+     */
+    public final String getStatus() {
+        return get(HttpName.STATUS.value());
     }
 
     @Override
     public int hashCode() {
         final int prime = 31;
         int result = 1;
-        result = prime * result + ((headers == null) ? 0 : headers.hashCode());
+        for (String name : names()) {
+            result = prime * result + name.hashCode();
+            Set<String> values = new TreeSet<String>(getAll(name));
+            for (String value : values) {
+                result = prime * result + value.hashCode();
+            }
+        }
         return result;
     }
 
     @Override
-    public boolean equals(Object obj) {
-        if (this == obj) {
-            return true;
-        }
-        if (obj == null) {
+    public boolean equals(Object o) {
+        if (!(o instanceof Http2Headers)) {
             return false;
         }
-        if (getClass() != obj.getClass()) {
+        Http2Headers other = (Http2Headers) o;
+
+        // First, check that the set of names match.
+        Set<String> names = names();
+        if (!names.equals(other.names())) {
             return false;
         }
-        Http2Headers other = (Http2Headers) obj;
-        if (headers == null) {
-            if (other.headers != null) {
+
+        // Compare the values for each name.
+        for (String name : names) {
+            List<String> values = getAll(name);
+            List<String> otherValues = other.getAll(name);
+            if (values.size() != otherValues.size()) {
                 return false;
             }
-        } else if (!headers.equals(other.headers)) {
-            return false;
-        }
-        return true;
-    }
-
-    @Override
-    public String toString() {
-        return headers.toString();
-    }
-
-    public static class Builder {
-        private ImmutableMultimap.Builder<String, String> map = ImmutableMultimap.builder();
-
-        public Builder clear() {
-            map = ImmutableMultimap.builder();
-            return this;
-        }
-
-        public Builder addHeaders(Http2Headers headers) {
-            if (headers == null) {
-                throw new IllegalArgumentException("headers must not be null.");
+            // Convert the values to a set and remove values from the other object to see if
+            // they match.
+            Set<String> valueSet = new HashSet<String>(values);
+            valueSet.removeAll(otherValues);
+            if (!valueSet.isEmpty()) {
+                return false;
             }
-            map.putAll(headers.headers);
-            return this;
         }
 
-        public Builder addHeader(String name, String value) {
-            // Use interning on the header name to save space.
-            map.put(name.intern(), value);
-            return this;
-        }
-
-        public Builder addHeader(byte[] name, byte[] value) {
-            addHeader(new String(name, Charsets.UTF_8), new String(value, Charsets.UTF_8));
-            return this;
-        }
-
-        public Builder setMethod(String value) {
-            return addHeader(HttpName.METHOD.value(), value);
-        }
-
-        public Builder setScheme(String value) {
-            return addHeader(HttpName.SCHEME.value(), value);
-        }
-
-        public Builder setAuthority(String value) {
-            return addHeader(HttpName.AUTHORITY.value(), value);
-        }
-
-        public Builder setPath(String value) {
-            return addHeader(HttpName.PATH.value(), value);
-        }
-
-        public Builder setStatus(String value) {
-            return addHeader(HttpName.STATUS.value(), value);
-        }
-
-        public Http2Headers build() {
-            return new Http2Headers(this);
-        }
+        // They match.
+        return true;
     }
 }

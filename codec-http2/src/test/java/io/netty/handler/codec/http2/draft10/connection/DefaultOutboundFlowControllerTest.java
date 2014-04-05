@@ -23,6 +23,9 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import java.util.Arrays;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http2.draft10.Http2Exception;
@@ -38,8 +41,6 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
-
-import com.google.common.collect.ImmutableList;
 
 /**
  * Tests for {@link DefaultOutboundFlowController}.
@@ -74,7 +75,7 @@ public class DefaultOutboundFlowControllerTest {
             return null;
           }
         }).when(connection).addListener(any(Listener.class));
-    when(connection.getActiveStreams()).thenReturn(ImmutableList.of(stream));
+    when(connection.getActiveStreams()).thenReturn(Arrays.asList(stream));
     when(stream.getId()).thenReturn(STREAM_ID);
 
     controller = new DefaultOutboundFlowController(connection);

@@ -16,7 +16,7 @@
 package io.netty.handler.codec.http2.draft10.frame.encoder;
 
 import static io.netty.handler.codec.http2.draft10.connection.Http2ConnectionUtil.DEFAULT_HEADER_TABLE_SIZE;
-
+import static io.netty.util.CharsetUtil.UTF_8;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.handler.codec.http2.draft10.Http2Error;
@@ -25,14 +25,11 @@ import io.netty.handler.codec.http2.draft10.Http2Headers;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.charset.Charset;
 import java.util.Map.Entry;
 
-import com.google.common.base.Charsets;
 import com.twitter.hpack.Encoder;
 
 public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder {
-    private static final Charset DEFAULT_CHARSET = Charsets.UTF_8;
 
     private final Encoder encoder;
 
@@ -45,8 +42,8 @@ public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder {
         try {
             OutputStream stream = new ByteBufOutputStream(buffer);
             for (Entry<String, String> header : headers) {
-                byte[] key = header.getKey().getBytes(DEFAULT_CHARSET);
-                byte[] value = header.getValue().getBytes(DEFAULT_CHARSET);
+                byte[] key = header.getKey().getBytes(UTF_8);
+                byte[] value = header.getValue().getBytes(UTF_8);
                 encoder.encodeHeader(stream, key, value);
             }
             encoder.endHeaders(stream);

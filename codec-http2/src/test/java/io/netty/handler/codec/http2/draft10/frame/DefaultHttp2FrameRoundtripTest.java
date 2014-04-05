@@ -15,6 +15,7 @@
 
 package io.netty.handler.codec.http2.draft10.frame;
 
+import static io.netty.util.CharsetUtil.UTF_8;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -33,6 +34,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.http2.draft10.DefaultHttp2Headers;
 import io.netty.handler.codec.http2.draft10.Http2Headers;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
@@ -44,12 +46,10 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.common.base.Charsets;
-
 /**
  * Tests encoding/decoding each HTTP2 frame type.
  */
-public class Http2FrameRoundtripTest {
+public class DefaultHttp2FrameRoundtripTest {
 
     private static final EventLoopGroup group = new NioEventLoopGroup();
 
@@ -121,7 +121,7 @@ public class Http2FrameRoundtripTest {
     @Test
     public void headersFrameWithoutPriorityShouldMatch() throws Exception {
         Http2Headers headers =
-                new Http2Headers.Builder().setMethod("GET").setScheme("https")
+                new DefaultHttp2Headers.Builder().setMethod("GET").setScheme("https")
                         .setAuthority("example.org").setPath("/some/path/resource2").build();
         Http2HeadersFrame in =
                 new DefaultHttp2HeadersFrame.Builder().setHeaders(headers).setEndOfStream(true)
@@ -134,7 +134,7 @@ public class Http2FrameRoundtripTest {
     @Test
     public void headersFrameWithPriorityShouldMatch() throws Exception {
         Http2Headers headers =
-                new Http2Headers.Builder().setMethod("GET").setScheme("https")
+                new DefaultHttp2Headers.Builder().setMethod("GET").setScheme("https")
                         .setAuthority("example.org").setPath("/some/path/resource2").build();
         Http2HeadersFrame in =
                 new DefaultHttp2HeadersFrame.Builder().setHeaders(headers).setEndOfStream(true)
@@ -158,7 +158,7 @@ public class Http2FrameRoundtripTest {
 
     @Test
     public void pingFrameShouldMatch() throws Exception {
-        ByteBuf buf = Unpooled.copiedBuffer("01234567", Charsets.UTF_8);
+        ByteBuf buf = Unpooled.copiedBuffer("01234567", UTF_8);
 
         Http2PingFrame in =
                 new DefaultHttp2PingFrame.Builder().setAck(true).setData(buf).build().retain();
@@ -180,7 +180,7 @@ public class Http2FrameRoundtripTest {
     @Test
     public void pushPromiseFrameShouldMatch() throws Exception {
         Http2Headers headers =
-                new Http2Headers.Builder().setMethod("GET").setScheme("https")
+                new DefaultHttp2Headers.Builder().setMethod("GET").setScheme("https")
                         .setAuthority("example.org").setPath("/some/path/resource2").build();
         Http2PushPromiseFrame in =
                 new DefaultHttp2PushPromiseFrame.Builder().setHeaders(headers)
@@ -224,7 +224,7 @@ public class Http2FrameRoundtripTest {
     @Test
     public void stressTest() throws Exception {
         Http2Headers headers =
-                new Http2Headers.Builder().setMethod("GET").setScheme("https")
+                new DefaultHttp2Headers.Builder().setMethod("GET").setScheme("https")
                         .setAuthority("example.org").setPath("/some/path/resource2").build();
         String text = "hello world";
         int numStreams = 1000;

@@ -32,6 +32,7 @@ import io.netty.handler.codec.http2.draft10.Http2Exception;
 import io.netty.handler.codec.http2.draft10.connection.Http2Connection.Listener;
 import io.netty.handler.codec.http2.draft10.connection.Http2Stream.State;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.Before;
@@ -225,7 +226,7 @@ public class DefaultHttp2ConnectionTest {
         server.local().createStream(4, 256, true);
         server.remote().createStream(3, Integer.MAX_VALUE, true);
         server.remote().createStream(5, 1, false);
-        List<Http2Stream> activeStreams = server.getActiveStreams();
+        List<Http2Stream> activeStreams = activeStreams();
         assertEquals(2, activeStreams.get(0).getId());
         assertEquals(5, activeStreams.get(1).getId());
         assertEquals(4, activeStreams.get(2).getId());
@@ -244,7 +245,7 @@ public class DefaultHttp2ConnectionTest {
         // Make this this highest priority.
         stream7.setPriority(0);
 
-        List<Http2Stream> activeStreams = server.getActiveStreams();
+        List<Http2Stream> activeStreams = activeStreams();
         assertEquals(7, activeStreams.get(0).getId());
         assertEquals(2, activeStreams.get(1).getId());
         assertEquals(5, activeStreams.get(2).getId());
@@ -304,5 +305,9 @@ public class DefaultHttp2ConnectionTest {
         // Now close the stream and verify that the context was closed too.
         stream.close(ctx, future);
         verify(ctx).close(promise);
+    }
+
+    private List<Http2Stream> activeStreams() {
+        return new ArrayList<Http2Stream>(server.getActiveStreams());
     }
 }

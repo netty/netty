@@ -31,8 +31,6 @@ import io.netty.handler.codec.http2.draft10.frame.Http2Frame;
 import io.netty.handler.codec.http2.draft10.frame.Http2FrameHeader;
 import io.netty.handler.codec.http2.draft10.frame.Http2HeadersFrame;
 
-import com.google.common.base.Preconditions;
-
 /**
  * An unmarshaller for {@link Http2HeadersFrame} instances.
  */
@@ -41,7 +39,10 @@ public class Http2HeadersFrameUnmarshaller extends AbstractHeadersUnmarshaller {
     private final Http2HeadersDecoder headersDecoder;
 
     public Http2HeadersFrameUnmarshaller(Http2HeadersDecoder headersDecoder) {
-        this.headersDecoder = Preconditions.checkNotNull(headersDecoder, "headersDecoder");
+        if (headersDecoder == null) {
+            throw new IllegalArgumentException("headersDecoder must not be null.");
+        }
+        this.headersDecoder = headersDecoder;
     }
 
     @Override

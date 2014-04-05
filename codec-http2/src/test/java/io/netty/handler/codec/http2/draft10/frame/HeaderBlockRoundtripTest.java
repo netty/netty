@@ -19,6 +19,7 @@ package io.netty.handler.codec.http2.draft10.frame;
 import static org.junit.Assert.assertEquals;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http2.draft10.DefaultHttp2Headers;
 import io.netty.handler.codec.http2.draft10.Http2Exception;
 import io.netty.handler.codec.http2.draft10.Http2Headers;
 import io.netty.handler.codec.http2.draft10.frame.decoder.DefaultHttp2HeadersDecoder;
@@ -52,33 +53,33 @@ public class HeaderBlockRoundtripTest {
     @Test
     public void roundtripShouldBeSuccessful() throws Http2Exception {
         Http2Headers in =
-                new Http2Headers.Builder().setMethod("GET").setScheme("https")
+                new DefaultHttp2Headers.Builder().setMethod("GET").setScheme("https")
                         .setAuthority("example.org").setPath("/some/path/resource2")
-                        .addHeader("accept", "image/png").addHeader("cache-control", "no-cache")
-                        .addHeader("custom", "value1").addHeader("custom", "value2")
-                        .addHeader("custom", "value3").addHeader("custom", "custom4").build();
+                        .add("accept", "image/png").add("cache-control", "no-cache")
+                        .add("custom", "value1").add("custom", "value2")
+                        .add("custom", "value3").add("custom", "custom4").build();
         assertRoundtripSuccessful(in);
     }
 
     @Test
     public void successiveCallsShouldSucceed() throws Http2Exception {
         Http2Headers in =
-                new Http2Headers.Builder().setMethod("GET").setScheme("https")
+                new DefaultHttp2Headers.Builder().setMethod("GET").setScheme("https")
                         .setAuthority("example.org").setPath("/some/path")
-                        .addHeader("accept", "*/*").build();
+                        .add("accept", "*/*").build();
         assertRoundtripSuccessful(in);
 
         in =
-                new Http2Headers.Builder().setMethod("GET").setScheme("https")
+                new DefaultHttp2Headers.Builder().setMethod("GET").setScheme("https")
                         .setAuthority("example.org").setPath("/some/path/resource1")
-                        .addHeader("accept", "image/jpeg").addHeader("cache-control", "no-cache")
+                        .add("accept", "image/jpeg").add("cache-control", "no-cache")
                         .build();
         assertRoundtripSuccessful(in);
 
         in =
-                new Http2Headers.Builder().setMethod("GET").setScheme("https")
+                new DefaultHttp2Headers.Builder().setMethod("GET").setScheme("https")
                         .setAuthority("example.org").setPath("/some/path/resource2")
-                        .addHeader("accept", "image/png").addHeader("cache-control", "no-cache")
+                        .add("accept", "image/png").add("cache-control", "no-cache")
                         .build();
         assertRoundtripSuccessful(in);
     }
