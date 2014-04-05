@@ -18,28 +18,29 @@ package io.netty.handler.codec.http2.draft10.frame.encoder;
 import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.FRAME_HEADER_LENGTH;
 import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.FRAME_TYPE_RST_STREAM;
 import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.writeUnsignedInt;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.codec.http2.draft10.frame.Http2RstStreamFrame;
 
 public class Http2RstStreamFrameMarshaller extends
-    AbstractHttp2FrameMarshaller<Http2RstStreamFrame> {
+        AbstractHttp2FrameMarshaller<Http2RstStreamFrame> {
 
-  public Http2RstStreamFrameMarshaller() {
-    super(Http2RstStreamFrame.class);
-  }
+    public Http2RstStreamFrameMarshaller() {
+        super(Http2RstStreamFrame.class);
+    }
 
-  @Override
-  protected void doMarshall(Http2RstStreamFrame frame, ByteBuf out, ByteBufAllocator alloc) {
+    @Override
+    protected void doMarshall(Http2RstStreamFrame frame, ByteBuf out, ByteBufAllocator alloc) {
 
-    // Write the frame header.
-    int payloadLength = 4;
-    out.ensureWritable(FRAME_HEADER_LENGTH + payloadLength);
-    out.writeShort(payloadLength);
-    out.writeByte(FRAME_TYPE_RST_STREAM);
-    out.writeByte(0);
-    out.writeInt(frame.getStreamId());
+        // Write the frame header.
+        int payloadLength = 4;
+        out.ensureWritable(FRAME_HEADER_LENGTH + payloadLength);
+        out.writeShort(payloadLength);
+        out.writeByte(FRAME_TYPE_RST_STREAM);
+        out.writeByte(0);
+        out.writeInt(frame.getStreamId());
 
-    writeUnsignedInt(frame.getErrorCode(), out);
-  }
+        writeUnsignedInt(frame.getErrorCode(), out);
+    }
 }

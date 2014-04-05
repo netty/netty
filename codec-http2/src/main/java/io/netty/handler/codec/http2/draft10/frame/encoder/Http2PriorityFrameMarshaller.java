@@ -17,28 +17,29 @@ package io.netty.handler.codec.http2.draft10.frame.encoder;
 
 import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.FRAME_HEADER_LENGTH;
 import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.FRAME_TYPE_PRIORITY;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.codec.http2.draft10.frame.Http2PriorityFrame;
 
 public class Http2PriorityFrameMarshaller extends AbstractHttp2FrameMarshaller<Http2PriorityFrame> {
 
-  public Http2PriorityFrameMarshaller() {
-    super(Http2PriorityFrame.class);
-  }
+    public Http2PriorityFrameMarshaller() {
+        super(Http2PriorityFrame.class);
+    }
 
-  @Override
-  protected void doMarshall(Http2PriorityFrame frame, ByteBuf out, ByteBufAllocator alloc) {
+    @Override
+    protected void doMarshall(Http2PriorityFrame frame, ByteBuf out, ByteBufAllocator alloc) {
 
-    // Write the frame header.
-    int payloadLength = 4;
-    out.ensureWritable(FRAME_HEADER_LENGTH + payloadLength);
-    out.writeShort(payloadLength);
-    out.writeByte(FRAME_TYPE_PRIORITY);
-    out.writeByte(0);
-    out.writeInt(frame.getStreamId());
+        // Write the frame header.
+        int payloadLength = 4;
+        out.ensureWritable(FRAME_HEADER_LENGTH + payloadLength);
+        out.writeShort(payloadLength);
+        out.writeByte(FRAME_TYPE_PRIORITY);
+        out.writeByte(0);
+        out.writeInt(frame.getStreamId());
 
-    // Write out the priority if it's present.
-    out.writeInt(frame.getPriority());
-  }
+        // Write out the priority if it's present.
+        out.writeInt(frame.getPriority());
+    }
 }

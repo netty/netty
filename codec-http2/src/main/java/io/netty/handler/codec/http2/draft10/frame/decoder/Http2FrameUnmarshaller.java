@@ -27,24 +27,24 @@ import io.netty.handler.codec.http2.draft10.frame.Http2FrameHeader;
  */
 public interface Http2FrameUnmarshaller {
 
-  /**
-   * Prepares the unmarshaller for the next frame.
-   *
-   * @param header the header providing the detais of the frame to be unmarshalled.
-   * @return this unmarshaller
-   * @throws Http2Exception thrown if any of the information of the header violates the protocol.
-   */
-  Http2FrameUnmarshaller unmarshall(Http2FrameHeader header) throws Http2Exception;
+    /**
+     * Prepares the unmarshaller for the next frame.
+     *
+     * @param header the header providing the detais of the frame to be unmarshalled.
+     * @return this unmarshaller
+     * @throws Http2Exception thrown if any of the information of the header violates the protocol.
+     */
+    Http2FrameUnmarshaller unmarshall(Http2FrameHeader header) throws Http2Exception;
 
-  /**
-   * Unmarshalls the frame from the payload.
-   *
-   * @param payload the payload from which the frame is to be unmarshalled.
-   * @param alloc the allocator for any new buffers required by the unmarshaller.
-   * @return the frame or {@code null} if the unmarshall operation is processing is incomplete and
-   *         requires additional data.
-   * @throws Http2Exception thrown if any protocol error was encountered while unmarshalling the
-   *         frame.
-   */
-  Http2Frame from(ByteBuf payload, ByteBufAllocator alloc) throws Http2Exception;
+    /**
+     * Unmarshalls the frame from the payload.
+     *
+     * @param payload the payload from which the frame is to be unmarshalled.
+     * @param alloc   the allocator for any new buffers required by the unmarshaller.
+     * @return the frame or {@code null} if the unmarshall operation is processing is incomplete and
+     * requires additional data.
+     * @throws Http2Exception thrown if any protocol error was encountered while unmarshalling the
+     *                        frame.
+     */
+    Http2Frame from(ByteBuf payload, ByteBufAllocator alloc) throws Http2Exception;
 }

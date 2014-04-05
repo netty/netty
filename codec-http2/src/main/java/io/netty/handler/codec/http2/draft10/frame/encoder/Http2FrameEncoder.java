@@ -29,22 +29,22 @@ import io.netty.handler.codec.http2.draft10.frame.Http2Frame;
  */
 public class Http2FrameEncoder extends MessageToByteEncoder<Http2Frame> {
 
-  private final Http2FrameMarshaller frameMarshaller;
+    private final Http2FrameMarshaller frameMarshaller;
 
-  public Http2FrameEncoder() {
-    this(new Http2StandardFrameMarshaller());
-  }
-
-  public Http2FrameEncoder(Http2FrameMarshaller frameMarshaller) {
-    this.frameMarshaller = frameMarshaller;
-  }
-
-  @Override
-  protected void encode(ChannelHandlerContext ctx, Http2Frame frame, ByteBuf out) throws Exception {
-    try {
-      frameMarshaller.marshall(frame, out, ctx.alloc());
-    } catch (Throwable t) {
-      ctx.fireExceptionCaught(t);
+    public Http2FrameEncoder() {
+        this(new Http2StandardFrameMarshaller());
     }
-  }
+
+    public Http2FrameEncoder(Http2FrameMarshaller frameMarshaller) {
+        this.frameMarshaller = frameMarshaller;
+    }
+
+    @Override
+    protected void encode(ChannelHandlerContext ctx, Http2Frame frame, ByteBuf out) throws Exception {
+        try {
+            frameMarshaller.marshall(frame, out, ctx.alloc());
+        } catch (Throwable t) {
+            ctx.fireExceptionCaught(t);
+        }
+    }
 }

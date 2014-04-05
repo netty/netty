@@ -22,32 +22,32 @@ import io.netty.buffer.ByteBufHolder;
  * An HTTP2 connection PING frame.
  */
 public interface Http2PingFrame extends Http2Frame, ByteBufHolder {
-  /**
-   * Indicates whether this frame is an acknowledgment of a PING sent by the peer.
-   */
-  boolean isAck();
+    /**
+     * Indicates whether this frame is an acknowledgment of a PING sent by the peer.
+     */
+    boolean isAck();
 
-  /**
-   * Returns the opaque data of this frame.
-   */
-  @Override
-  ByteBuf content();
+    /**
+     * Returns the opaque data of this frame.
+     */
+    @Override
+    ByteBuf content();
 
-  @Override
-  Http2PingFrame copy();
+    @Override
+    Http2PingFrame copy();
 
-  @Override
-  Http2PingFrame duplicate();
+    @Override
+    Http2PingFrame duplicate();
 
-  @Override
-  Http2PingFrame retain();
+    @Override
+    Http2PingFrame retain();
 
-  @Override
-  Http2PingFrame retain(int increment);
+    @Override
+    Http2PingFrame retain(int increment);
 
-  @Override
-  Http2PingFrame touch();
+    @Override
+    Http2PingFrame touch();
 
-  @Override
-  Http2PingFrame touch(Object hint);
+    @Override
+    Http2PingFrame touch(Object hint);
 }

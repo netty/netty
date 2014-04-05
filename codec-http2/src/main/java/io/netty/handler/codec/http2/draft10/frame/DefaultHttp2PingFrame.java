@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http2.draft10.frame;
 
 import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.PING_FRAME_PAYLOAD_LENGTH;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.DefaultByteBufHolder;
 

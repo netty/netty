@@ -24,16 +24,16 @@ import io.netty.handler.codec.http2.draft10.Http2Headers;
  */
 public interface Http2HeadersEncoder {
 
-  /**
-   * Encodes the given headers and writes the output headers block to the given output buffer.
-   *
-   * @param headers the headers to be encoded.
-   * @param buffer the buffer to write the headers to.
-   */
-  void encodeHeaders(Http2Headers headers, ByteBuf buffer) throws Http2Exception;
+    /**
+     * Encodes the given headers and writes the output headers block to the given output buffer.
+     *
+     * @param headers the headers to be encoded.
+     * @param buffer  the buffer to write the headers to.
+     */
+    void encodeHeaders(Http2Headers headers, ByteBuf buffer) throws Http2Exception;
 
-  /**
-   * Updates the maximum header table size for this encoder.
-   */
-  void setHeaderTableSize(int size) throws Http2Exception;
+    /**
+     * Updates the maximum header table size for this encoder.
+     */
+    void setHeaderTableSize(int size) throws Http2Exception;
 }

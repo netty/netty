@@ -18,6 +18,7 @@ package io.netty.handler.codec.http2.draft10.frame.decoder;
 import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.FRAME_HEADER_LENGTH;
 import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.FRAME_LENGTH_MASK;
 import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.readUnsignedInt;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
@@ -61,24 +62,24 @@ public class Http2FrameDecoder extends ByteToMessageDecoder {
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         try {
             switch (state) {
-            case FRAME_HEADER:
-                processFrameHeader(in);
-                if (state == State.FRAME_HEADER) {
-                    // Still haven't read the entire frame header yet.
+                case FRAME_HEADER:
+                    processFrameHeader(in);
+                    if (state == State.FRAME_HEADER) {
+                        // Still haven't read the entire frame header yet.
+                        break;
+                    }
+
+                    // If we successfully read the entire frame header, drop down and start processing
+                    // the payload now.
+
+                case FRAME_PAYLOAD:
+                    processFramePayload(ctx, in, out);
                     break;
-                }
-
-                // If we successfully read the entire frame header, drop down and start processing
-                // the payload now.
-
-            case FRAME_PAYLOAD:
-                processFramePayload(ctx, in, out);
-                break;
-            case ERROR:
-                in.skipBytes(in.readableBytes());
-                break;
-            default:
-                throw new IllegalStateException("Should never get here");
+                case ERROR:
+                    in.skipBytes(in.readableBytes());
+                    break;
+                default:
+                    throw new IllegalStateException("Should never get here");
             }
         } catch (Throwable t) {
             ctx.fireExceptionCaught(t);

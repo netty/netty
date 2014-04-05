@@ -17,28 +17,29 @@ package io.netty.handler.codec.http2.draft10.frame.encoder;
 
 import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.FRAME_HEADER_LENGTH;
 import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.FRAME_TYPE_WINDOW_UPDATE;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.codec.http2.draft10.frame.Http2WindowUpdateFrame;
 
 public class Http2WindowUpdateFrameMarshaller extends
-    AbstractHttp2FrameMarshaller<Http2WindowUpdateFrame> {
+        AbstractHttp2FrameMarshaller<Http2WindowUpdateFrame> {
 
-  public Http2WindowUpdateFrameMarshaller() {
-    super(Http2WindowUpdateFrame.class);
-  }
+    public Http2WindowUpdateFrameMarshaller() {
+        super(Http2WindowUpdateFrame.class);
+    }
 
-  @Override
-  protected void doMarshall(Http2WindowUpdateFrame frame, ByteBuf out, ByteBufAllocator alloc) {
+    @Override
+    protected void doMarshall(Http2WindowUpdateFrame frame, ByteBuf out, ByteBufAllocator alloc) {
 
-    // Write the frame header.
-    int payloadLength = 4;
-    out.ensureWritable(FRAME_HEADER_LENGTH + payloadLength);
-    out.writeShort(payloadLength);
-    out.writeByte(FRAME_TYPE_WINDOW_UPDATE);
-    out.writeByte(0);
-    out.writeInt(frame.getStreamId());
+        // Write the frame header.
+        int payloadLength = 4;
+        out.ensureWritable(FRAME_HEADER_LENGTH + payloadLength);
+        out.writeShort(payloadLength);
+        out.writeByte(FRAME_TYPE_WINDOW_UPDATE);
+        out.writeByte(0);
+        out.writeInt(frame.getStreamId());
 
-    out.writeInt(frame.getWindowSizeIncrement());
-  }
+        out.writeInt(frame.getWindowSizeIncrement());
+    }
 }

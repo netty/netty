@@ -22,13 +22,13 @@ import io.netty.handler.codec.http2.draft10.Http2Headers;
  */
 public interface Http2PushPromiseFrame extends Http2StreamFrame {
 
-  /**
-   * The ID of the stream that the endpoint intends to start sending frames for.
-   */
-  int getPromisedStreamId();
+    /**
+     * The ID of the stream that the endpoint intends to start sending frames for.
+     */
+    int getPromisedStreamId();
 
-  /**
-   * Gets the decoded HTTP headers.
-   */
-  Http2Headers getHeaders();
+    /**
+     * Gets the decoded HTTP headers.
+     */
+    Http2Headers getHeaders();
 }

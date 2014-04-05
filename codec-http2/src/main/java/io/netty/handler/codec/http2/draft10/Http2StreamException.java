@@ -17,20 +17,20 @@ package io.netty.handler.codec.http2.draft10;
 
 public class Http2StreamException extends Http2Exception {
 
-  private static final long serialVersionUID = -7658235659648480024L;
-  private final int streamId;
+    private static final long serialVersionUID = -7658235659648480024L;
+    private final int streamId;
 
-  public Http2StreamException(int streamId, Http2Error error, String message) {
-    super(error, message);
-    this.streamId = streamId;
-  }
+    public Http2StreamException(int streamId, Http2Error error, String message) {
+        super(error, message);
+        this.streamId = streamId;
+    }
 
-  public Http2StreamException(int streamId, Http2Error error) {
-    super(error);
-    this.streamId = streamId;
-  }
+    public Http2StreamException(int streamId, Http2Error error) {
+        super(error);
+        this.streamId = streamId;
+    }
 
-  public int getStreamId() {
-    return streamId;
-  }
+    public int getStreamId() {
+        return streamId;
+    }
 }

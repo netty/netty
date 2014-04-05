@@ -24,13 +24,13 @@ import io.netty.handler.codec.http2.draft10.Http2Headers;
  */
 public interface Http2HeadersDecoder {
 
-  /**
-   * Decodes the given headers block and returns the headers.
-   */
-  Http2Headers decodeHeaders(ByteBuf headerBlock) throws Http2Exception;
+    /**
+     * Decodes the given headers block and returns the headers.
+     */
+    Http2Headers decodeHeaders(ByteBuf headerBlock) throws Http2Exception;
 
-  /**
-   * Sets the new max header table size for this decoder.
-   */
-  void setHeaderTableSize(int size) throws Http2Exception;
+    /**
+     * Sets the new max header table size for this decoder.
+     */
+    void setHeaderTableSize(int size) throws Http2Exception;
 }

@@ -25,14 +25,14 @@ import io.netty.handler.codec.http2.draft10.frame.Http2Frame;
  */
 public interface Http2FrameMarshaller {
 
-  /**
-   * Marshalls the given frame to the output buffer.
-   *
-   * @param frame the frame to be marshalled.
-   * @param out the buffer to marshall the frame to.
-   * @param alloc an allocator that this marshaller may use for creating intermediate buffers as
-   *        needed.
-   * @throws Http2Exception thrown if the given fram is not supported by this marshaller.
-   */
-  void marshall(Http2Frame frame, ByteBuf out, ByteBufAllocator alloc) throws Http2Exception;
+    /**
+     * Marshalls the given frame to the output buffer.
+     *
+     * @param frame the frame to be marshalled.
+     * @param out   the buffer to marshall the frame to.
+     * @param alloc an allocator that this marshaller may use for creating intermediate buffers as
+     *              needed.
+     * @throws Http2Exception thrown if the given fram is not supported by this marshaller.
+     */
+    void marshall(Http2Frame frame, ByteBuf out, ByteBufAllocator alloc) throws Http2Exception;
 }

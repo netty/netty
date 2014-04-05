@@ -24,33 +24,33 @@ import io.netty.handler.codec.http2.draft10.frame.Http2WindowUpdateFrame;
  */
 public interface InboundFlowController {
 
-  /**
-   * A writer of window update frames.
-   */
-  interface FrameWriter {
+    /**
+     * A writer of window update frames.
+     */
+    interface FrameWriter {
+
+        /**
+         * Writes a window update frame to the remote endpoint.
+         */
+        void writeFrame(Http2WindowUpdateFrame frame);
+    }
 
     /**
-     * Writes a window update frame to the remote endpoint.
+     * Sets the initial inbound flow control window size and updates all stream window sizes by the
+     * delta. This is called as part of the processing for an outbound SETTINGS frame.
+     *
+     * @param newWindowSize the new initial window size.
+     * @throws Http2Exception thrown if any protocol-related error occurred.
      */
-    void writeFrame(Http2WindowUpdateFrame frame);
-  }
+    void setInitialInboundWindowSize(int newWindowSize) throws Http2Exception;
 
-  /**
-   * Sets the initial inbound flow control window size and updates all stream window sizes by the
-   * delta. This is called as part of the processing for an outbound SETTINGS frame.
-   *
-   * @param newWindowSize the new initial window size.
-   * @throws Http2Exception thrown if any protocol-related error occurred.
-   */
-  void setInitialInboundWindowSize(int newWindowSize) throws Http2Exception;
-
-  /**
-   * Applies flow control for the received data frame.
-   *
-   * @param dataFrame the flow controlled frame
-   * @param frameWriter allows this flow controller to send window updates to the remote endpoint.
-   * @throws Http2Exception thrown if any protocol-related error occurred.
-   */
-  void applyInboundFlowControl(Http2DataFrame dataFrame, FrameWriter frameWriter)
-      throws Http2Exception;
+    /**
+     * Applies flow control for the received data frame.
+     *
+     * @param dataFrame   the flow controlled frame
+     * @param frameWriter allows this flow controller to send window updates to the remote endpoint.
+     * @throws Http2Exception thrown if any protocol-related error occurred.
+     */
+    void applyInboundFlowControl(Http2DataFrame dataFrame, FrameWriter frameWriter)
+            throws Http2Exception;
 }

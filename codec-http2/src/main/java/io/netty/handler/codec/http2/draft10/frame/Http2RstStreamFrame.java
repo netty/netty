@@ -19,8 +19,8 @@ package io.netty.handler.codec.http2.draft10.frame;
  * HTTP2 RST_STREAM frame that indicates abnormal termination of a stream.
  */
 public interface Http2RstStreamFrame extends Http2StreamFrame {
-  /**
-   * The error code containing the reason for the stream being terminated.
-   */
-  long getErrorCode();
+    /**
+     * The error code containing the reason for the stream being terminated.
+     */
+    long getErrorCode();
 }

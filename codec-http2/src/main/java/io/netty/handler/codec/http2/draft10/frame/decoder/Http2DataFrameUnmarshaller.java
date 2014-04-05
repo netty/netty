@@ -19,6 +19,7 @@ import static io.netty.handler.codec.http2.draft10.Http2Exception.protocolError;
 import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.FRAME_TYPE_DATA;
 import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.MAX_FRAME_PAYLOAD_LENGTH;
 import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.readPaddingLength;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.codec.http2.draft10.Http2Exception;
@@ -33,54 +34,54 @@ import io.netty.handler.codec.http2.draft10.frame.Http2FrameHeader;
  */
 public class Http2DataFrameUnmarshaller extends AbstractHttp2FrameUnmarshaller {
 
-  @Override
-  protected void validate(Http2FrameHeader frameHeader) throws Http2Exception {
-    if (frameHeader.getType() != FRAME_TYPE_DATA) {
-      throw protocolError("Unsupported frame type: %d.", frameHeader.getType());
-    }
-    if (frameHeader.getStreamId() <= 0) {
-      throw protocolError("A stream ID must be > 0.");
-    }
-    Http2Flags flags = frameHeader.getFlags();
-    if (!flags.isPaddingLengthValid()) {
-      throw protocolError("Pad high is set but pad low is not");
-    }
-    if (frameHeader.getPayloadLength() < flags.getNumPaddingLengthBytes()) {
-      throw protocolError("Frame length %d too small.", frameHeader.getPayloadLength());
-    }
-    if (frameHeader.getPayloadLength() > MAX_FRAME_PAYLOAD_LENGTH) {
-      throw protocolError("Frame length %d too big.", frameHeader.getPayloadLength());
-    }
-  }
-
-  @Override
-  protected Http2Frame doUnmarshall(Http2FrameHeader header, ByteBuf payload,
-      ByteBufAllocator alloc) throws Http2Exception {
-    DefaultHttp2DataFrame.Builder builder = new DefaultHttp2DataFrame.Builder();
-    builder.setStreamId(header.getStreamId());
-
-    Http2Flags flags = header.getFlags();
-    builder.setEndOfStream(flags.isEndOfStream());
-
-    // Read the padding length.
-    int paddingLength = readPaddingLength(flags, payload);
-    builder.setPaddingLength(paddingLength);
-
-    // Determine how much data there is to read by removing the trailing
-    // padding.
-    int dataLength = payload.readableBytes() - paddingLength;
-    if (dataLength < 0) {
-      throw protocolError("Frame payload too small for padding.");
+    @Override
+    protected void validate(Http2FrameHeader frameHeader) throws Http2Exception {
+        if (frameHeader.getType() != FRAME_TYPE_DATA) {
+            throw protocolError("Unsupported frame type: %d.", frameHeader.getType());
+        }
+        if (frameHeader.getStreamId() <= 0) {
+            throw protocolError("A stream ID must be > 0.");
+        }
+        Http2Flags flags = frameHeader.getFlags();
+        if (!flags.isPaddingLengthValid()) {
+            throw protocolError("Pad high is set but pad low is not");
+        }
+        if (frameHeader.getPayloadLength() < flags.getNumPaddingLengthBytes()) {
+            throw protocolError("Frame length %d too small.", frameHeader.getPayloadLength());
+        }
+        if (frameHeader.getPayloadLength() > MAX_FRAME_PAYLOAD_LENGTH) {
+            throw protocolError("Frame length %d too big.", frameHeader.getPayloadLength());
+        }
     }
 
-    // Copy the remaining data into the frame.
-    ByteBuf data = payload.slice(payload.readerIndex(), dataLength).retain();
-    builder.setContent(data);
+    @Override
+    protected Http2Frame doUnmarshall(Http2FrameHeader header, ByteBuf payload,
+                                      ByteBufAllocator alloc) throws Http2Exception {
+        DefaultHttp2DataFrame.Builder builder = new DefaultHttp2DataFrame.Builder();
+        builder.setStreamId(header.getStreamId());
 
-    // Skip the rest of the bytes in the payload.
-    payload.skipBytes(payload.readableBytes());
+        Http2Flags flags = header.getFlags();
+        builder.setEndOfStream(flags.isEndOfStream());
 
-    return builder.build();
-  }
+        // Read the padding length.
+        int paddingLength = readPaddingLength(flags, payload);
+        builder.setPaddingLength(paddingLength);
+
+        // Determine how much data there is to read by removing the trailing
+        // padding.
+        int dataLength = payload.readableBytes() - paddingLength;
+        if (dataLength < 0) {
+            throw protocolError("Frame payload too small for padding.");
+        }
+
+        // Copy the remaining data into the frame.
+        ByteBuf data = payload.slice(payload.readerIndex(), dataLength).retain();
+        builder.setContent(data);
+
+        // Skip the rest of the bytes in the payload.
+        payload.skipBytes(payload.readableBytes());
+
+        return builder.build();
+    }
 
 }

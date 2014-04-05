@@ -20,65 +20,65 @@ package io.netty.handler.codec.http2.draft10.frame;
  * Encapsulates the content of an HTTP2 frame header.
  */
 public final class Http2FrameHeader {
-  private final int payloadLength;
-  private final int type;
-  private final Http2Flags flags;
-  private final int streamId;
+    private final int payloadLength;
+    private final int type;
+    private final Http2Flags flags;
+    private final int streamId;
 
-  private Http2FrameHeader(Builder builder) {
-    this.payloadLength = builder.payloadLength;
-    this.type = builder.type;
-    this.flags = builder.flags;
-    this.streamId = builder.streamId;
-  }
-
-  public int getPayloadLength() {
-    return payloadLength;
-  }
-
-  public int getType() {
-    return type;
-  }
-
-  public Http2Flags getFlags() {
-    return flags;
-  }
-
-  public int getStreamId() {
-    return streamId;
-  }
-
-  /**
-   * Builds instances of {@link Http2FrameHeader}.
-   */
-  public static class Builder {
-    private int payloadLength;
-    private int type;
-    private Http2Flags flags = new Http2Flags((short) 0);
-    private int streamId;
-
-    public Builder setPayloadLength(int payloadLength) {
-      this.payloadLength = payloadLength;
-      return this;
+    private Http2FrameHeader(Builder builder) {
+        this.payloadLength = builder.payloadLength;
+        this.type = builder.type;
+        this.flags = builder.flags;
+        this.streamId = builder.streamId;
     }
 
-    public Builder setType(int type) {
-      this.type = type;
-      return this;
+    public int getPayloadLength() {
+        return payloadLength;
     }
 
-    public Builder setFlags(Http2Flags flags) {
-      this.flags = flags;
-      return this;
+    public int getType() {
+        return type;
     }
 
-    public Builder setStreamId(int streamId) {
-      this.streamId = streamId;
-      return this;
+    public Http2Flags getFlags() {
+        return flags;
     }
 
-    public Http2FrameHeader build() {
-      return new Http2FrameHeader(this);
+    public int getStreamId() {
+        return streamId;
     }
-  }
+
+    /**
+     * Builds instances of {@link Http2FrameHeader}.
+     */
+    public static class Builder {
+        private int payloadLength;
+        private int type;
+        private Http2Flags flags = new Http2Flags((short) 0);
+        private int streamId;
+
+        public Builder setPayloadLength(int payloadLength) {
+            this.payloadLength = payloadLength;
+            return this;
+        }
+
+        public Builder setType(int type) {
+            this.type = type;
+            return this;
+        }
+
+        public Builder setFlags(Http2Flags flags) {
+            this.flags = flags;
+            return this;
+        }
+
+        public Builder setStreamId(int streamId) {
+            this.streamId = streamId;
+            return this;
+        }
+
+        public Http2FrameHeader build() {
+            return new Http2FrameHeader(this);
+        }
+    }
 }

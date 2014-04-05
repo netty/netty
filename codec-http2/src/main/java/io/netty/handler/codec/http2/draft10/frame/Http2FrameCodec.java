@@ -26,12 +26,12 @@ import io.netty.handler.codec.http2.draft10.frame.encoder.Http2FrameMarshaller;
  */
 public class Http2FrameCodec extends ChannelHandlerAppender {
 
-  public Http2FrameCodec(Http2FrameMarshaller frameMarshaller,
-      Http2FrameUnmarshaller frameUnmarshaller) {
-    super(new Http2FrameEncoder(frameMarshaller), new Http2FrameDecoder(frameUnmarshaller));
-  }
+    public Http2FrameCodec(Http2FrameMarshaller frameMarshaller,
+                           Http2FrameUnmarshaller frameUnmarshaller) {
+        super(new Http2FrameEncoder(frameMarshaller), new Http2FrameDecoder(frameUnmarshaller));
+    }
 
-  public Http2FrameCodec() {
-    super(new Http2FrameEncoder(), new Http2FrameDecoder());
-  }
+    public Http2FrameCodec() {
+        super(new Http2FrameEncoder(), new Http2FrameDecoder());
+    }
 }

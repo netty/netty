@@ -23,38 +23,38 @@ import io.netty.buffer.ByteBufHolder;
  * connection.
  */
 public interface Http2GoAwayFrame extends Http2Frame, ByteBufHolder {
-  /**
-   * The highest numbered stream identifier for which the sender of the GOAWAY frame has received
-   * frames on and might have taken some action on.
-   */
-  int getLastStreamId();
+    /**
+     * The highest numbered stream identifier for which the sender of the GOAWAY frame has received
+     * frames on and might have taken some action on.
+     */
+    int getLastStreamId();
 
-  /**
-   * The error code containing the reason for closing the connection.
-   */
-  long getErrorCode();
+    /**
+     * The error code containing the reason for closing the connection.
+     */
+    long getErrorCode();
 
-  /**
-   * Returns the debug data.
-   */
-  @Override
-  ByteBuf content();
+    /**
+     * Returns the debug data.
+     */
+    @Override
+    ByteBuf content();
 
-  @Override
-  Http2GoAwayFrame copy();
+    @Override
+    Http2GoAwayFrame copy();
 
-  @Override
-  Http2GoAwayFrame duplicate();
+    @Override
+    Http2GoAwayFrame duplicate();
 
-  @Override
-  Http2GoAwayFrame retain();
+    @Override
+    Http2GoAwayFrame retain();
 
-  @Override
-  Http2GoAwayFrame retain(int increment);
+    @Override
+    Http2GoAwayFrame retain(int increment);
 
-  @Override
-  Http2GoAwayFrame touch();
+    @Override
+    Http2GoAwayFrame touch();
 
-  @Override
-  Http2GoAwayFrame touch(Object hint);
+    @Override
+    Http2GoAwayFrame touch(Object hint);
 }

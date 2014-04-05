@@ -23,32 +23,32 @@ import io.netty.buffer.ByteBufHolder;
  */
 public interface Http2DataFrame extends Http2StreamFrame, ByteBufHolder {
 
-  /**
-   * The amount of padding to follow the header data in the frame.
-   */
-  int getPaddingLength();
+    /**
+     * The amount of padding to follow the header data in the frame.
+     */
+    int getPaddingLength();
 
-  /**
-   * Returns the data payload of this frame.
-   */
-  @Override
-  ByteBuf content();
+    /**
+     * Returns the data payload of this frame.
+     */
+    @Override
+    ByteBuf content();
 
-  @Override
-  Http2DataFrame copy();
+    @Override
+    Http2DataFrame copy();
 
-  @Override
-  Http2DataFrame duplicate();
+    @Override
+    Http2DataFrame duplicate();
 
-  @Override
-  Http2DataFrame retain();
+    @Override
+    Http2DataFrame retain();
 
-  @Override
-  Http2DataFrame retain(int increment);
+    @Override
+    Http2DataFrame retain(int increment);
 
-  @Override
-  Http2DataFrame touch();
+    @Override
+    Http2DataFrame touch();
 
-  @Override
-  Http2DataFrame touch(Object hint);
+    @Override
+    Http2DataFrame touch(Object hint);
 }

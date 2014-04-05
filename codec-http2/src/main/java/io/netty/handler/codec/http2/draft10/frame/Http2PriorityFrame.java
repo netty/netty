@@ -19,8 +19,8 @@ package io.netty.handler.codec.http2.draft10.frame;
  * An HTTP2 priority frame indicating the sender-advised priority for the stream.
  */
 public interface Http2PriorityFrame extends Http2StreamFrame {
-  /**
-   * The advised priority for the stream.
-   */
-  int getPriority();
+    /**
+     * The advised priority for the stream.
+     */
+    int getPriority();
 }

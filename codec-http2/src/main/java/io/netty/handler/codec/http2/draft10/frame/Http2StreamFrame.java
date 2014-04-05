@@ -19,13 +19,13 @@ package io.netty.handler.codec.http2.draft10.frame;
  * Base interface for all frames that are associated to a stream.
  */
 public interface Http2StreamFrame extends Http2Frame {
-  /**
-   * Gets the identifier of the associated stream.
-   */
-  int getStreamId();
+    /**
+     * Gets the identifier of the associated stream.
+     */
+    int getStreamId();
 
-  /**
-   * Indicates whether this frame represents the last frame for the stream.
-   */
-  boolean isEndOfStream();
+    /**
+     * Indicates whether this frame represents the last frame for the stream.
+     */
+    boolean isEndOfStream();
 }

@@ -21,90 +21,90 @@ import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.MAX
  * Default implementation of {@link Http2RstStreamFrame}.
  */
 public final class DefaultHttp2RstStreamFrame implements Http2RstStreamFrame {
-  private final int streamId;
-  private final long errorCode;
+    private final int streamId;
+    private final long errorCode;
 
-  private DefaultHttp2RstStreamFrame(Builder builder) {
-    this.streamId = builder.streamId;
-    this.errorCode = builder.errorCode;
-  }
-
-  @Override
-  public int getStreamId() {
-    return streamId;
-  }
-
-  @Override
-  public long getErrorCode() {
-    return errorCode;
-  }
-
-  @Override
-  public boolean isEndOfStream() {
-    return false;
-  }
-
-  @Override
-  public int hashCode() {
-    final int prime = 31;
-    int result = 1;
-    result = prime * result + (int) (errorCode ^ (errorCode >>> 32));
-    result = prime * result + streamId;
-    return result;
-  }
-
-  @Override
-  public boolean equals(Object obj) {
-    if (this == obj) {
-      return true;
-    }
-    if (obj == null) {
-      return false;
-    }
-    if (getClass() != obj.getClass()) {
-      return false;
-    }
-    DefaultHttp2RstStreamFrame other = (DefaultHttp2RstStreamFrame) obj;
-    if (errorCode != other.errorCode) {
-      return false;
-    }
-    if (streamId != other.streamId) {
-      return false;
-    }
-    return true;
-  }
-
-  /**
-   * Builds instances of {@link DefaultHttp2RstStreamFrame}.
-   */
-  public static class Builder {
-    private int streamId;
-    private long errorCode = -1L;
-
-    public Builder setStreamId(int streamId) {
-      if (streamId <= 0) {
-        throw new IllegalArgumentException("StreamId must be > 0.");
-      }
-      this.streamId = streamId;
-      return this;
+    private DefaultHttp2RstStreamFrame(Builder builder) {
+        this.streamId = builder.streamId;
+        this.errorCode = builder.errorCode;
     }
 
-    public Builder setErrorCode(long errorCode) {
-      if (errorCode < 0 || errorCode > MAX_UNSIGNED_INT) {
-        throw new IllegalArgumentException("Invalid errorCode value.");
-      }
-      this.errorCode = errorCode;
-      return this;
+    @Override
+    public int getStreamId() {
+        return streamId;
     }
 
-    public DefaultHttp2RstStreamFrame build() {
-      if (streamId <= 0) {
-        throw new IllegalArgumentException("StreamId must be set.");
-      }
-      if (errorCode < 0L) {
-        throw new IllegalArgumentException("ErrorCode must be set.");
-      }
-      return new DefaultHttp2RstStreamFrame(this);
+    @Override
+    public long getErrorCode() {
+        return errorCode;
     }
-  }
+
+    @Override
+    public boolean isEndOfStream() {
+        return false;
+    }
+
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + (int) (errorCode ^ (errorCode >>> 32));
+        result = prime * result + streamId;
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        DefaultHttp2RstStreamFrame other = (DefaultHttp2RstStreamFrame) obj;
+        if (errorCode != other.errorCode) {
+            return false;
+        }
+        if (streamId != other.streamId) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Builds instances of {@link DefaultHttp2RstStreamFrame}.
+     */
+    public static class Builder {
+        private int streamId;
+        private long errorCode = -1L;
+
+        public Builder setStreamId(int streamId) {
+            if (streamId <= 0) {
+                throw new IllegalArgumentException("StreamId must be > 0.");
+            }
+            this.streamId = streamId;
+            return this;
+        }
+
+        public Builder setErrorCode(long errorCode) {
+            if (errorCode < 0 || errorCode > MAX_UNSIGNED_INT) {
+                throw new IllegalArgumentException("Invalid errorCode value.");
+            }
+            this.errorCode = errorCode;
+            return this;
+        }
+
+        public DefaultHttp2RstStreamFrame build() {
+            if (streamId <= 0) {
+                throw new IllegalArgumentException("StreamId must be set.");
+            }
+            if (errorCode < 0L) {
+                throw new IllegalArgumentException("ErrorCode must be set.");
+            }
+            return new DefaultHttp2RstStreamFrame(this);
+        }
+    }
 }

@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http2.draft10.frame;
 
 import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.DEFAULT_STREAM_PRIORITY;
+
 import io.netty.handler.codec.http2.draft10.Http2Headers;
 
 public final class DefaultHttp2HeadersFrame implements Http2HeadersFrame {

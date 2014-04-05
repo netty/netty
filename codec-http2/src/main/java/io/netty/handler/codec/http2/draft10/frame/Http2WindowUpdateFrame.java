@@ -19,9 +19,9 @@ package io.netty.handler.codec.http2.draft10.frame;
  * HTTP2 WINDOW_UPDATE frame used to implement flow control.
  */
 public interface Http2WindowUpdateFrame extends Http2StreamFrame {
-  /**
-   * Gets the number of bytes that the sender can transmit in addition to the existing flow control
-   * window.
-   */
-  int getWindowSizeIncrement();
+    /**
+     * Gets the number of bytes that the sender can transmit in addition to the existing flow control
+     * window.
+     */
+    int getWindowSizeIncrement();
 }

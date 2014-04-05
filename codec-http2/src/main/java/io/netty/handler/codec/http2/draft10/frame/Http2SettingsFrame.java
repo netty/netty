@@ -17,35 +17,34 @@ package io.netty.handler.codec.http2.draft10.frame;
 
 /**
  * HTTP2 SETTINGS frame providing configuration parameters that affect how endpoints communicate.
- *
  */
 public interface Http2SettingsFrame extends Http2Frame {
 
-  /**
-   * Indicates whether this is an acknowledgment of the settings sent by the peer.
-   */
-  boolean isAck();
+    /**
+     * Indicates whether this is an acknowledgment of the settings sent by the peer.
+     */
+    boolean isAck();
 
-  /**
-   * Gets the sender's header compression table size, or {@code null} if not set.
-   */
-  Integer getHeaderTableSize();
+    /**
+     * Gets the sender's header compression table size, or {@code null} if not set.
+     */
+    Integer getHeaderTableSize();
 
-  /**
-   * Gets whether or not the sender allows server push, or {@code null} if not set.
-   */
-  Boolean getPushEnabled();
+    /**
+     * Gets whether or not the sender allows server push, or {@code null} if not set.
+     */
+    Boolean getPushEnabled();
 
-  /**
-   * Gets the maximum number of streams the receiver is allowed to create, or {@code null} if not
-   * set.
-   */
-  Long getMaxConcurrentStreams();
+    /**
+     * Gets the maximum number of streams the receiver is allowed to create, or {@code null} if not
+     * set.
+     */
+    Long getMaxConcurrentStreams();
 
-  /**
-   * Gets the sender's initial flow control window in bytes, or {@code null} if not set.
-   *
-   * @return
-   */
-  Integer getInitialWindowSize();
+    /**
+     * Gets the sender's initial flow control window in bytes, or {@code null} if not set.
+     *
+     * @return
+     */
+    Integer getInitialWindowSize();
 }

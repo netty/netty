@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http2.draft10.frame.encoder;
 
 import static io.netty.handler.codec.http2.draft10.connection.Http2ConnectionUtil.DEFAULT_HEADER_TABLE_SIZE;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.handler.codec.http2.draft10.Http2Error;
@@ -31,33 +32,33 @@ import com.google.common.base.Charsets;
 import com.twitter.hpack.Encoder;
 
 public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder {
-  private static final Charset DEFAULT_CHARSET = Charsets.UTF_8;
+    private static final Charset DEFAULT_CHARSET = Charsets.UTF_8;
 
-  private final Encoder encoder;
+    private final Encoder encoder;
 
-  public DefaultHttp2HeadersEncoder() {
-    this.encoder = new Encoder(DEFAULT_HEADER_TABLE_SIZE);
-  }
-
-  @Override
-  public void encodeHeaders(Http2Headers headers, ByteBuf buffer) throws Http2Exception {
-    try {
-      OutputStream stream = new ByteBufOutputStream(buffer);
-      for (Entry<String, String> header : headers) {
-        byte[] key = header.getKey().getBytes(DEFAULT_CHARSET);
-        byte[] value = header.getValue().getBytes(DEFAULT_CHARSET);
-        encoder.encodeHeader(stream, key, value);
-      }
-      encoder.endHeaders(stream);
-    } catch (IOException e) {
-      throw Http2Exception.format(Http2Error.COMPRESSION_ERROR, "Failed encoding headers block: %s",
-          e.getMessage());
+    public DefaultHttp2HeadersEncoder() {
+        this.encoder = new Encoder(DEFAULT_HEADER_TABLE_SIZE);
     }
-  }
 
-  @Override
-  public void setHeaderTableSize(int size) throws Http2Exception {
-    // TODO: can we throw away the encoder and create a new one?
-  }
+    @Override
+    public void encodeHeaders(Http2Headers headers, ByteBuf buffer) throws Http2Exception {
+        try {
+            OutputStream stream = new ByteBufOutputStream(buffer);
+            for (Entry<String, String> header : headers) {
+                byte[] key = header.getKey().getBytes(DEFAULT_CHARSET);
+                byte[] value = header.getValue().getBytes(DEFAULT_CHARSET);
+                encoder.encodeHeader(stream, key, value);
+            }
+            encoder.endHeaders(stream);
+        } catch (IOException e) {
+            throw Http2Exception.format(Http2Error.COMPRESSION_ERROR, "Failed encoding headers block: %s",
+                    e.getMessage());
+        }
+    }
+
+    @Override
+    public void setHeaderTableSize(int size) throws Http2Exception {
+        // TODO: can we throw away the encoder and create a new one?
+    }
 
 }

@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http2.draft10.frame.encoder;
 
 import static io.netty.handler.codec.http2.draft10.Http2Exception.protocolError;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.codec.http2.draft10.Http2Exception;
@@ -33,7 +34,7 @@ import io.netty.handler.codec.http2.draft10.frame.Http2WindowUpdateFrame;
 /**
  * A composite {@link Http2FrameMarshaller} that supports all frames identified by the HTTP2 spec.
  * This handles marshalling for the following frame types:
- * <p>
+ * <p/>
  * {@link Http2DataFrame} <br>
  * {@link Http2GoAwayFrame} <br>
  * {@link Http2HeadersFrame} <br>
@@ -46,65 +47,65 @@ import io.netty.handler.codec.http2.draft10.frame.Http2WindowUpdateFrame;
  */
 public class Http2StandardFrameMarshaller implements Http2FrameMarshaller {
 
-  private final Http2FrameMarshaller dataMarshaller;
-  private final Http2FrameMarshaller headersMarshaller;
-  private final Http2FrameMarshaller goAwayMarshaller;
-  private final Http2FrameMarshaller pingMarshaller;
-  private final Http2FrameMarshaller priorityMarshaller;
-  private final Http2FrameMarshaller pushPromiseMarshaller;
-  private final Http2FrameMarshaller rstStreamMarshaller;
-  private final Http2FrameMarshaller settingsMarshaller;
-  private final Http2FrameMarshaller windowUpdateMarshaller;
+    private final Http2FrameMarshaller dataMarshaller;
+    private final Http2FrameMarshaller headersMarshaller;
+    private final Http2FrameMarshaller goAwayMarshaller;
+    private final Http2FrameMarshaller pingMarshaller;
+    private final Http2FrameMarshaller priorityMarshaller;
+    private final Http2FrameMarshaller pushPromiseMarshaller;
+    private final Http2FrameMarshaller rstStreamMarshaller;
+    private final Http2FrameMarshaller settingsMarshaller;
+    private final Http2FrameMarshaller windowUpdateMarshaller;
 
-  public Http2StandardFrameMarshaller() {
-    this(new DefaultHttp2HeadersEncoder());
-  }
-
-  public Http2StandardFrameMarshaller(Http2HeadersEncoder headersEncoder) {
-    dataMarshaller = new Http2DataFrameMarshaller();
-    headersMarshaller = new Http2HeadersFrameMarshaller(headersEncoder);
-    goAwayMarshaller = new Http2GoAwayFrameMarshaller();
-    pingMarshaller = new Http2PingFrameMarshaller();
-    priorityMarshaller = new Http2PriorityFrameMarshaller();
-    pushPromiseMarshaller = new Http2PushPromiseFrameMarshaller(headersEncoder);
-    rstStreamMarshaller = new Http2RstStreamFrameMarshaller();
-    settingsMarshaller = new Http2SettingsFrameMarshaller();
-    windowUpdateMarshaller = new Http2WindowUpdateFrameMarshaller();
-  }
-
-  @Override
-  public void marshall(Http2Frame frame, ByteBuf out, ByteBufAllocator alloc)
-      throws Http2Exception {
-    Http2FrameMarshaller marshaller = null;
-
-    if (frame == null) {
-      throw new IllegalArgumentException("frame must be non-null");
+    public Http2StandardFrameMarshaller() {
+        this(new DefaultHttp2HeadersEncoder());
     }
 
-    if (frame instanceof Http2DataFrame) {
-      marshaller = dataMarshaller;
-    } else if (frame instanceof Http2HeadersFrame) {
-      marshaller = headersMarshaller;
-    } else if (frame instanceof Http2GoAwayFrame) {
-      marshaller = goAwayMarshaller;
-    } else if (frame instanceof Http2PingFrame) {
-      marshaller = pingMarshaller;
-    } else if (frame instanceof Http2PriorityFrame) {
-      marshaller = priorityMarshaller;
-    } else if (frame instanceof Http2PushPromiseFrame) {
-      marshaller = pushPromiseMarshaller;
-    } else if (frame instanceof Http2RstStreamFrame) {
-      marshaller = rstStreamMarshaller;
-    } else if (frame instanceof Http2SettingsFrame) {
-      marshaller = settingsMarshaller;
-    } else if (frame instanceof Http2WindowUpdateFrame) {
-      marshaller = windowUpdateMarshaller;
+    public Http2StandardFrameMarshaller(Http2HeadersEncoder headersEncoder) {
+        dataMarshaller = new Http2DataFrameMarshaller();
+        headersMarshaller = new Http2HeadersFrameMarshaller(headersEncoder);
+        goAwayMarshaller = new Http2GoAwayFrameMarshaller();
+        pingMarshaller = new Http2PingFrameMarshaller();
+        priorityMarshaller = new Http2PriorityFrameMarshaller();
+        pushPromiseMarshaller = new Http2PushPromiseFrameMarshaller(headersEncoder);
+        rstStreamMarshaller = new Http2RstStreamFrameMarshaller();
+        settingsMarshaller = new Http2SettingsFrameMarshaller();
+        windowUpdateMarshaller = new Http2WindowUpdateFrameMarshaller();
     }
 
-    if (marshaller == null) {
-      throw protocolError("Unsupported frame type: %s", frame.getClass().getName());
-    }
+    @Override
+    public void marshall(Http2Frame frame, ByteBuf out, ByteBufAllocator alloc)
+            throws Http2Exception {
+        Http2FrameMarshaller marshaller = null;
 
-    marshaller.marshall(frame, out, alloc);
-  }
+        if (frame == null) {
+            throw new IllegalArgumentException("frame must be non-null");
+        }
+
+        if (frame instanceof Http2DataFrame) {
+            marshaller = dataMarshaller;
+        } else if (frame instanceof Http2HeadersFrame) {
+            marshaller = headersMarshaller;
+        } else if (frame instanceof Http2GoAwayFrame) {
+            marshaller = goAwayMarshaller;
+        } else if (frame instanceof Http2PingFrame) {
+            marshaller = pingMarshaller;
+        } else if (frame instanceof Http2PriorityFrame) {
+            marshaller = priorityMarshaller;
+        } else if (frame instanceof Http2PushPromiseFrame) {
+            marshaller = pushPromiseMarshaller;
+        } else if (frame instanceof Http2RstStreamFrame) {
+            marshaller = rstStreamMarshaller;
+        } else if (frame instanceof Http2SettingsFrame) {
+            marshaller = settingsMarshaller;
+        } else if (frame instanceof Http2WindowUpdateFrame) {
+            marshaller = windowUpdateMarshaller;
+        }
+
+        if (marshaller == null) {
+            throw protocolError("Unsupported frame type: %s", frame.getClass().getName());
+        }
+
+        marshaller.marshall(frame, out, alloc);
+    }
 }

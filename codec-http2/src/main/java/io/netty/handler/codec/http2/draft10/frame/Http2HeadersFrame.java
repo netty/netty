@@ -22,13 +22,13 @@ import io.netty.handler.codec.http2.draft10.Http2Headers;
  */
 public interface Http2HeadersFrame extends Http2StreamFrame {
 
-  /**
-   * Gets the priority of the stream being created.
-   */
-  int getPriority();
+    /**
+     * Gets the priority of the stream being created.
+     */
+    int getPriority();
 
-  /**
-   * Gets the decoded HTTP headers.
-   */
-  Http2Headers getHeaders();
+    /**
+     * Gets the decoded HTTP headers.
+     */
+    Http2Headers getHeaders();
 }

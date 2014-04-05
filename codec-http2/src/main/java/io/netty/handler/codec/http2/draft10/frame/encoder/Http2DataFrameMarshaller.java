@@ -20,6 +20,7 @@ import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.FRA
 import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.FRAME_TYPE_DATA;
 import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.setPaddingFlags;
 import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.writePaddingLength;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.codec.http2.draft10.frame.Http2DataFrame;
@@ -27,41 +28,41 @@ import io.netty.handler.codec.http2.draft10.frame.Http2Flags;
 
 public class Http2DataFrameMarshaller extends AbstractHttp2FrameMarshaller<Http2DataFrame> {
 
-  public Http2DataFrameMarshaller() {
-    super(Http2DataFrame.class);
-  }
-
-  @Override
-  protected void doMarshall(Http2DataFrame frame, ByteBuf out, ByteBufAllocator alloc) {
-    ByteBuf data = frame.content();
-
-    Http2Flags flags = getFlags(frame);
-
-    // Write the frame header.
-    int payloadLength = data.readableBytes() + frame.getPaddingLength()
-        + (flags.isPadHighPresent() ? 1 : 0) + (flags.isPadLowPresent() ? 1 : 0);
-    out.ensureWritable(FRAME_HEADER_LENGTH + payloadLength);
-    out.writeShort(payloadLength);
-    out.writeByte(FRAME_TYPE_DATA);
-    out.writeByte(flags.getValue());
-    out.writeInt(frame.getStreamId());
-
-    writePaddingLength(frame.getPaddingLength(), out);
-
-    // Write the data.
-    out.writeBytes(data, data.readerIndex(), data.readableBytes());
-
-    // Write the required padding.
-    out.writeZero(frame.getPaddingLength());
-  }
-
-  private Http2Flags getFlags(Http2DataFrame frame) {
-    short flags = 0;
-    if (frame.isEndOfStream()) {
-      flags |= FLAG_END_STREAM;
+    public Http2DataFrameMarshaller() {
+        super(Http2DataFrame.class);
     }
 
-    flags = setPaddingFlags(flags, frame.getPaddingLength());
-    return new Http2Flags(flags);
-  }
+    @Override
+    protected void doMarshall(Http2DataFrame frame, ByteBuf out, ByteBufAllocator alloc) {
+        ByteBuf data = frame.content();
+
+        Http2Flags flags = getFlags(frame);
+
+        // Write the frame header.
+        int payloadLength = data.readableBytes() + frame.getPaddingLength()
+                + (flags.isPadHighPresent() ? 1 : 0) + (flags.isPadLowPresent() ? 1 : 0);
+        out.ensureWritable(FRAME_HEADER_LENGTH + payloadLength);
+        out.writeShort(payloadLength);
+        out.writeByte(FRAME_TYPE_DATA);
+        out.writeByte(flags.getValue());
+        out.writeInt(frame.getStreamId());
+
+        writePaddingLength(frame.getPaddingLength(), out);
+
+        // Write the data.
+        out.writeBytes(data, data.readerIndex(), data.readableBytes());
+
+        // Write the required padding.
+        out.writeZero(frame.getPaddingLength());
+    }
+
+    private Http2Flags getFlags(Http2DataFrame frame) {
+        short flags = 0;
+        if (frame.isEndOfStream()) {
+            flags |= FLAG_END_STREAM;
+        }
+
+        flags = setPaddingFlags(flags, frame.getPaddingLength());
+        return new Http2Flags(flags);
+    }
 }
