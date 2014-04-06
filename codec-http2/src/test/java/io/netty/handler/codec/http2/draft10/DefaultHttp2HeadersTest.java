@@ -20,9 +20,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -31,26 +31,26 @@ import org.junit.Test;
 
 
 /**
- * Tests for {@link Http2Headers}.
+ * Tests for {@link DefaultHttp2Headers}.
  */
-public class Http2HeadersTest {
+public class DefaultHttp2HeadersTest {
 
     @Test
     public void duplicateKeysShouldStoreAllValues() {
-        Http2Headers headers =
-                Http2Headers.newBuilder().addHeader("a", "1").addHeader("a", "2")
-                        .addHeader("a", "3").build();
-        Collection<String> aValues = headers.getHeaders("a");
+        DefaultHttp2Headers headers =
+                DefaultHttp2Headers.newBuilder().add("a", "1").add("a", "2")
+                        .add("a", "3").build();
+        List<String> aValues = headers.getAll("a");
         assertEquals(3, aValues.size());
-        Iterator<String> aValue = aValues.iterator();
-        assertEquals("1", aValue.next());
-        assertEquals("2", aValue.next());
-        assertEquals("3", aValue.next());
+        assertEquals("1", aValues.get(0));
+        assertEquals("2", aValues.get(1));
+        assertEquals("3", aValues.get(2));
     }
 
     @Test(expected = NoSuchElementException.class)
     public void iterateEmptyHeadersShouldThrow() {
-        Iterator<Map.Entry<String, String>> iterator = Http2Headers.newBuilder().build().iterator();
+        Iterator<Map.Entry<String, String>> iterator =
+                DefaultHttp2Headers.newBuilder().build().iterator();
         assertFalse(iterator.hasNext());
         iterator.next();
     }
@@ -66,10 +66,10 @@ public class Http2HeadersTest {
         headers.add("c:1");
 
         // Build the headers from the input set.
-        Http2Headers.Builder builder = Http2Headers.newBuilder();
+        DefaultHttp2Headers.Builder builder = DefaultHttp2Headers.newBuilder();
         for (String header : headers) {
             String[] parts = header.split(":");
-            builder.addHeader(parts[0], parts[1]);
+            builder.add(parts[0], parts[1]);
         }
 
         // Now iterate through the headers, removing them from the original set.

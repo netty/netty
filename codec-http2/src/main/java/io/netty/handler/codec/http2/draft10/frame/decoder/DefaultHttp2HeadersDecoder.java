@@ -17,12 +17,13 @@ package io.netty.handler.codec.http2.draft10.frame.decoder;
 
 import static io.netty.handler.codec.http2.draft10.connection.Http2ConnectionUtil.DEFAULT_HEADER_TABLE_SIZE;
 import static io.netty.handler.codec.http2.draft10.connection.Http2ConnectionUtil.DEFAULT_MAX_HEADER_SIZE;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
+import io.netty.handler.codec.http2.draft10.DefaultHttp2Headers;
 import io.netty.handler.codec.http2.draft10.Http2Error;
 import io.netty.handler.codec.http2.draft10.Http2Exception;
 import io.netty.handler.codec.http2.draft10.Http2Headers;
+import io.netty.util.CharsetUtil;
 
 import java.io.IOException;
 
@@ -45,11 +46,12 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder {
     @Override
     public Http2Headers decodeHeaders(ByteBuf headerBlock) throws Http2Exception {
         try {
-            final Http2Headers.Builder headersBuilder = new Http2Headers.Builder();
+            final DefaultHttp2Headers.Builder headersBuilder = new DefaultHttp2Headers.Builder();
             HeaderListener listener = new HeaderListener() {
                 @Override
                 public void emitHeader(byte[] key, byte[] value) {
-                    headersBuilder.addHeader(key, value);
+                    headersBuilder.add(new String(key, CharsetUtil.UTF_8), new String(value,
+                            CharsetUtil.UTF_8));
                 }
             };
 

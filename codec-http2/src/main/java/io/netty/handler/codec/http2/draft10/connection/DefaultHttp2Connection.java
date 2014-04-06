@@ -32,7 +32,6 @@ import io.netty.handler.codec.http2.draft10.frame.DefaultHttp2GoAwayFrame;
 import io.netty.handler.codec.http2.draft10.frame.Http2GoAwayFrame;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -99,10 +98,10 @@ public class DefaultHttp2Connection implements Http2Connection {
     }
 
     @Override
-    public Collection<Http2Stream> getActiveStreams() {
+    public Set<Http2Stream> getActiveStreams() {
         // Copy the list in case any operation on the returned streams causes the activeStreams set
         // to change.
-        return Collections.unmodifiableCollection(activeStreams);
+        return Collections.unmodifiableSet(activeStreams);
     }
 
     @Override

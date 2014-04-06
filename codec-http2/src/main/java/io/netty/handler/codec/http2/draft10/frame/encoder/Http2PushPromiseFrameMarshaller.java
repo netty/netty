@@ -34,7 +34,7 @@ public class Http2PushPromiseFrameMarshaller extends
     public Http2PushPromiseFrameMarshaller(Http2HeadersEncoder headersEncoder) {
         super(Http2PushPromiseFrame.class);
         if (headersEncoder == null) {
-            throw new IllegalArgumentException("headersEncoder must not be null.");
+            throw new NullPointerException("headersEncoder must not be null.");
         }
         this.headersEncoder = headersEncoder;
     }

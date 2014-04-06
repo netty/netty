@@ -26,8 +26,8 @@ import io.netty.handler.codec.http2.draft10.Http2StreamException;
 import io.netty.handler.codec.http2.draft10.frame.DefaultHttp2DataFrame;
 import io.netty.handler.codec.http2.draft10.frame.Http2DataFrame;
 
+import java.util.ArrayDeque;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
 
@@ -183,7 +183,7 @@ public class DefaultOutboundFlowController implements OutboundFlowController {
      */
     private class StreamState {
         private final int streamId;
-        private final Queue<PendingWrite> pendingWriteQueue = new LinkedList<PendingWrite>();
+        private final Queue<PendingWrite> pendingWriteQueue = new ArrayDeque<PendingWrite>();
         private int windowSize = initialWindowSize;
 
         public StreamState(int streamId) {

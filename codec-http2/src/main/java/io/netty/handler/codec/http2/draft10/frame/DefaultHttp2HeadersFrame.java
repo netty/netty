@@ -16,7 +16,7 @@
 package io.netty.handler.codec.http2.draft10.frame;
 
 import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.DEFAULT_STREAM_PRIORITY;
-
+import io.netty.handler.codec.http2.draft10.DefaultHttp2Headers;
 import io.netty.handler.codec.http2.draft10.Http2Headers;
 
 public final class DefaultHttp2HeadersFrame implements Http2HeadersFrame {
@@ -104,7 +104,7 @@ public final class DefaultHttp2HeadersFrame implements Http2HeadersFrame {
     public static class Builder {
         private int streamId;
         private int priority = DEFAULT_STREAM_PRIORITY;
-        private final Http2Headers.Builder headersBuilder = new Http2Headers.Builder();
+        private final DefaultHttp2Headers.Builder headersBuilder = new DefaultHttp2Headers.Builder();
         private boolean endOfStream;
 
         public Builder setStreamId(int streamId) {
@@ -128,12 +128,12 @@ public final class DefaultHttp2HeadersFrame implements Http2HeadersFrame {
             return this;
         }
 
-        public Http2Headers.Builder headers() {
+        public DefaultHttp2Headers.Builder headers() {
             return headersBuilder;
         }
 
         public Builder setHeaders(Http2Headers headers) {
-            headersBuilder.addHeaders(headers);
+            headersBuilder.set(headers);
             return this;
         }
 

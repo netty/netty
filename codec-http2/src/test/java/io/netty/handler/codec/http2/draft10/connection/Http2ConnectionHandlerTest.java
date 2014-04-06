@@ -17,6 +17,7 @@ package io.netty.handler.codec.http2.draft10.connection;
 
 import static io.netty.handler.codec.http2.draft10.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.PING_FRAME_PAYLOAD_LENGTH;
+import static io.netty.util.CharsetUtil.UTF_8;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
@@ -51,7 +52,6 @@ import io.netty.handler.codec.http2.draft10.frame.Http2Frame;
 import io.netty.handler.codec.http2.draft10.frame.Http2PingFrame;
 import io.netty.handler.codec.http2.draft10.frame.Http2SettingsFrame;
 
-import java.nio.charset.Charset;
 import java.util.Arrays;
 
 import org.junit.Before;
@@ -156,7 +156,7 @@ public class Http2ConnectionHandlerTest {
     @Test
     public void inboundDataAfterGoAwayShouldApplyFlowControl() throws Exception {
         when(connection.isGoAwaySent()).thenReturn(true);
-        ByteBuf data = Unpooled.copiedBuffer("Hello", Charset.defaultCharset());
+        ByteBuf data = Unpooled.copiedBuffer("Hello", UTF_8);
         Http2DataFrame frame =
                 new DefaultHttp2DataFrame.Builder().setStreamId(STREAM_ID).setContent(data).build();
         handler.channelRead(ctx, frame);
@@ -167,7 +167,7 @@ public class Http2ConnectionHandlerTest {
 
     @Test
     public void inboundDataWithEndOfStreamShouldCloseRemoteSide() throws Exception {
-        ByteBuf data = Unpooled.copiedBuffer("Hello", Charset.defaultCharset());
+        ByteBuf data = Unpooled.copiedBuffer("Hello", UTF_8);
         Http2DataFrame frame =
                 new DefaultHttp2DataFrame.Builder().setStreamId(STREAM_ID).setEndOfStream(true)
                         .setContent(data).build();
@@ -181,7 +181,7 @@ public class Http2ConnectionHandlerTest {
 
     @Test
     public void inboundDataShouldSucceed() throws Exception {
-        ByteBuf data = Unpooled.copiedBuffer("Hello", Charset.defaultCharset());
+        ByteBuf data = Unpooled.copiedBuffer("Hello", UTF_8);
         Http2DataFrame frame =
                 new DefaultHttp2DataFrame.Builder().setStreamId(STREAM_ID).setContent(data).build();
         handler.channelRead(ctx, frame);
@@ -197,7 +197,7 @@ public class Http2ConnectionHandlerTest {
         when(connection.isGoAwaySent()).thenReturn(true);
         Http2Frame frame =
                 new DefaultHttp2HeadersFrame.Builder().setStreamId(STREAM_ID).setPriority(1)
-                        .setHeaders(new Http2Headers.Builder().build()).build();
+                        .setHeaders(Http2Headers.EMPTY_HEADERS).build();
         handler.channelRead(ctx, frame);
         verify(remote, never()).createStream(eq(STREAM_ID), eq(1), eq(false));
         verify(ctx, never()).fireChannelRead(frame);
@@ -208,7 +208,7 @@ public class Http2ConnectionHandlerTest {
         int newStreamId = 5;
         Http2Frame frame =
                 new DefaultHttp2HeadersFrame.Builder().setStreamId(newStreamId).setPriority(1)
-                        .setHeaders(new Http2Headers.Builder().build()).build();
+                        .setHeaders(Http2Headers.EMPTY_HEADERS).build();
         handler.channelRead(ctx, frame);
         verify(remote).createStream(eq(newStreamId), eq(1), eq(false));
         verify(ctx).fireChannelRead(frame);
@@ -219,7 +219,7 @@ public class Http2ConnectionHandlerTest {
         int newStreamId = 5;
         Http2Frame frame =
                 new DefaultHttp2HeadersFrame.Builder().setStreamId(newStreamId).setPriority(1)
-                        .setEndOfStream(true).setHeaders(new Http2Headers.Builder().build())
+                        .setEndOfStream(true).setHeaders(Http2Headers.EMPTY_HEADERS)
                         .build();
         handler.channelRead(ctx, frame);
         verify(remote).createStream(eq(newStreamId), eq(1), eq(true));
@@ -230,7 +230,7 @@ public class Http2ConnectionHandlerTest {
     public void inboundHeadersWithForPromisedStreamShouldHalfOpenStream() throws Exception {
         Http2Frame frame =
                 new DefaultHttp2HeadersFrame.Builder().setStreamId(STREAM_ID).setPriority(1)
-                        .setHeaders(new Http2Headers.Builder().build()).build();
+                        .setHeaders(Http2Headers.EMPTY_HEADERS).build();
         handler.channelRead(ctx, frame);
         verify(stream).openForPush();
         verify(ctx).fireChannelRead(frame);
@@ -240,7 +240,7 @@ public class Http2ConnectionHandlerTest {
     public void inboundHeadersWithForPromisedStreamShouldCloseStream() throws Exception {
         Http2Frame frame =
                 new DefaultHttp2HeadersFrame.Builder().setStreamId(STREAM_ID).setPriority(1)
-                        .setEndOfStream(true).setHeaders(new Http2Headers.Builder().build())
+                        .setEndOfStream(true).setHeaders(Http2Headers.EMPTY_HEADERS)
                         .build();
         handler.channelRead(ctx, frame);
         verify(stream).openForPush();
@@ -254,7 +254,7 @@ public class Http2ConnectionHandlerTest {
         Http2Frame frame =
                 new DefaultHttp2PushPromiseFrame.Builder().setStreamId(STREAM_ID)
                         .setPromisedStreamId(PUSH_STREAM_ID)
-                        .setHeaders(new Http2Headers.Builder().build()).build();
+                        .setHeaders(Http2Headers.EMPTY_HEADERS).build();
         handler.channelRead(ctx, frame);
         verify(remote, never()).reservePushStream(eq(PUSH_STREAM_ID), eq(stream));
         verify(ctx, never()).fireChannelRead(frame);
@@ -265,7 +265,7 @@ public class Http2ConnectionHandlerTest {
         Http2Frame frame =
                 new DefaultHttp2PushPromiseFrame.Builder().setStreamId(STREAM_ID)
                         .setPromisedStreamId(PUSH_STREAM_ID)
-                        .setHeaders(new Http2Headers.Builder().build()).build();
+                        .setHeaders(Http2Headers.EMPTY_HEADERS).build();
         handler.channelRead(ctx, frame);
         verify(remote).reservePushStream(eq(PUSH_STREAM_ID), eq(stream));
         verify(ctx).fireChannelRead(frame);
@@ -418,7 +418,7 @@ public class Http2ConnectionHandlerTest {
     @Test
     public void outboundDataAfterGoAwayShouldFail() throws Exception {
         when(connection.isGoAway()).thenReturn(true);
-        ByteBuf data = Unpooled.copiedBuffer("Hello", Charset.defaultCharset());
+        ByteBuf data = Unpooled.copiedBuffer("Hello", UTF_8);
         Http2DataFrame frame =
                 new DefaultHttp2DataFrame.Builder().setStreamId(STREAM_ID).setContent(data).build();
         handler.write(ctx, frame, promise);
@@ -430,7 +430,7 @@ public class Http2ConnectionHandlerTest {
 
     @Test
     public void outboundDataShouldApplyFlowControl() throws Exception {
-        ByteBuf data = Unpooled.copiedBuffer("Hello", Charset.defaultCharset());
+        ByteBuf data = Unpooled.copiedBuffer("Hello", UTF_8);
         Http2DataFrame frame =
                 new DefaultHttp2DataFrame.Builder().setStreamId(STREAM_ID).setContent(data).build();
         handler.write(ctx, frame, promise);
@@ -446,7 +446,7 @@ public class Http2ConnectionHandlerTest {
         when(connection.isGoAway()).thenReturn(true);
         Http2Frame frame =
                 new DefaultHttp2HeadersFrame.Builder().setStreamId(STREAM_ID).setPriority(1)
-                        .setHeaders(new Http2Headers.Builder().build()).build();
+                        .setHeaders(Http2Headers.EMPTY_HEADERS).build();
         handler.write(ctx, frame, promise);
         verify(promise).setFailure(any(Http2Exception.class));
         verify(ctx, never()).writeAndFlush(frame, promise);
@@ -457,7 +457,7 @@ public class Http2ConnectionHandlerTest {
         int newStreamId = 5;
         Http2Frame frame =
                 new DefaultHttp2HeadersFrame.Builder().setStreamId(newStreamId).setPriority(1)
-                        .setHeaders(new Http2Headers.Builder().build()).build();
+                        .setHeaders(Http2Headers.EMPTY_HEADERS).build();
         handler.write(ctx, frame, promise);
         verify(local).createStream(eq(newStreamId), eq(1), eq(false));
         verify(promise, never()).setFailure(any(Http2Exception.class));
@@ -469,7 +469,7 @@ public class Http2ConnectionHandlerTest {
         int newStreamId = 5;
         Http2Frame frame =
                 new DefaultHttp2HeadersFrame.Builder().setStreamId(newStreamId).setPriority(1)
-                        .setEndOfStream(true).setHeaders(new Http2Headers.Builder().build())
+                        .setEndOfStream(true).setHeaders(Http2Headers.EMPTY_HEADERS)
                         .build();
         handler.write(ctx, frame, promise);
         verify(local).createStream(eq(newStreamId), eq(1), eq(true));
@@ -481,7 +481,7 @@ public class Http2ConnectionHandlerTest {
     public void outboundHeadersShouldOpenStreamForPush() throws Exception {
         Http2Frame frame =
                 new DefaultHttp2HeadersFrame.Builder().setStreamId(STREAM_ID).setPriority(1)
-                        .setHeaders(new Http2Headers.Builder().build()).build();
+                        .setHeaders(Http2Headers.EMPTY_HEADERS).build();
         handler.write(ctx, frame, promise);
         verify(stream).openForPush();
         verify(stream, never()).closeLocalSide(eq(ctx), eq(future));
@@ -493,7 +493,7 @@ public class Http2ConnectionHandlerTest {
     public void outboundHeadersShouldClosePushStream() throws Exception {
         Http2Frame frame =
                 new DefaultHttp2HeadersFrame.Builder().setStreamId(STREAM_ID).setPriority(1)
-                        .setEndOfStream(true).setHeaders(new Http2Headers.Builder().build())
+                        .setEndOfStream(true).setHeaders(Http2Headers.EMPTY_HEADERS)
                         .build();
         handler.write(ctx, frame, promise);
         verify(stream).openForPush();
@@ -508,7 +508,7 @@ public class Http2ConnectionHandlerTest {
         Http2Frame frame =
                 new DefaultHttp2PushPromiseFrame.Builder().setStreamId(STREAM_ID)
                         .setPromisedStreamId(PUSH_STREAM_ID)
-                        .setHeaders(new Http2Headers.Builder().build()).build();
+                        .setHeaders(Http2Headers.EMPTY_HEADERS).build();
         handler.write(ctx, frame, promise);
         verify(promise).setFailure(any(Http2Exception.class));
         verify(local, never()).reservePushStream(eq(PUSH_STREAM_ID), eq(stream));
@@ -520,7 +520,7 @@ public class Http2ConnectionHandlerTest {
         Http2Frame frame =
                 new DefaultHttp2PushPromiseFrame.Builder().setStreamId(STREAM_ID)
                         .setPromisedStreamId(PUSH_STREAM_ID)
-                        .setHeaders(new Http2Headers.Builder().build()).build();
+                        .setHeaders(Http2Headers.EMPTY_HEADERS).build();
         handler.write(ctx, frame, promise);
         verify(promise, never()).setFailure(any(Http2Exception.class));
         verify(local).reservePushStream(eq(PUSH_STREAM_ID), eq(stream));
