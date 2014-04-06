@@ -122,6 +122,11 @@ public interface ByteBufAllocator {
     CompositeByteBuf compositeDirectBuffer(int maxNumComponents);
 
     /**
+     * Allocate a {@link BipartiteByteBuf}.
+     */
+    BipartiteByteBuf bipartiteBuffer();
+
+    /**
      * Returns {@code true} if direct {@link ByteBuf}'s are pooled
      */
     boolean isDirectBufferPooled();

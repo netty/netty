@@ -191,6 +191,15 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
         return new CompositeByteBuf(this, true, maxNumComponents);
     }
 
+    @Override
+    public BipartiteByteBuf bipartiteBuffer() {
+        if (directByDefault) {
+            return new BipartiteByteBuf(this, true);
+        }
+
+        return new BipartiteByteBuf(this, false);
+    }
+
     private static void validate(int initialCapacity, int maxCapacity) {
         if (initialCapacity < 0) {
             throw new IllegalArgumentException("initialCapacity: " + initialCapacity + " (expectd: 0+)");
