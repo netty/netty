@@ -42,6 +42,9 @@ public class DefaultOutboundFlowController implements OutboundFlowController {
     private int connectionWindowSize = DEFAULT_FLOW_CONTROL_WINDOW_SIZE;
 
     public DefaultOutboundFlowController(Http2Connection connection) {
+        if (connection == null) {
+            throw new NullPointerException("connection");
+        }
         this.connection = connection;
         connection.addListener(new Http2Connection.Listener() {
             @Override

@@ -37,6 +37,9 @@ public class DefaultInboundFlowController implements InboundFlowController {
     private final Map<Integer, StreamWindow> streamWindows = new HashMap<Integer, StreamWindow>();
 
     public DefaultInboundFlowController(Http2Connection connection) {
+        if (connection == null) {
+            throw new NullPointerException("connecton");
+        }
         connection.addListener(new Http2Connection.Listener() {
             @Override
             public void streamCreated(int streamId) {

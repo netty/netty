@@ -54,6 +54,9 @@ public class Http2FrameDecoder extends ByteToMessageDecoder {
     }
 
     public Http2FrameDecoder(Http2FrameUnmarshaller frameUnmarshaller) {
+        if (frameUnmarshaller == null) {
+            throw new NullPointerException("frameUnmarshaller");
+        }
         this.frameUnmarshaller = frameUnmarshaller;
         state = State.FRAME_HEADER;
     }

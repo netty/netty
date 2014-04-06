@@ -40,7 +40,7 @@ public class Http2HeadersFrameUnmarshaller extends AbstractHeadersUnmarshaller {
 
     public Http2HeadersFrameUnmarshaller(Http2HeadersDecoder headersDecoder) {
         if (headersDecoder == null) {
-            throw new IllegalArgumentException("headersDecoder must not be null.");
+            throw new NullPointerException("headersDecoder");
         }
         this.headersDecoder = headersDecoder;
     }

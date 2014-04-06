@@ -65,6 +65,15 @@ public class Http2ConnectionHandler extends ChannelHandlerAdapter {
 
     public Http2ConnectionHandler(final Http2Connection connection,
                                   final InboundFlowController inboundFlow, final OutboundFlowController outboundFlow) {
+        if (connection == null) {
+            throw new NullPointerException("connection");
+        }
+        if (inboundFlow == null) {
+            throw new NullPointerException("inboundFlow");
+        }
+        if (outboundFlow == null) {
+            throw new NullPointerException("outboundFlow");
+        }
         this.connection = connection;
         this.inboundFlow = inboundFlow;
         this.outboundFlow = outboundFlow;

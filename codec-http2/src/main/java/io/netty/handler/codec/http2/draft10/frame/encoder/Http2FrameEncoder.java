@@ -36,6 +36,9 @@ public class Http2FrameEncoder extends MessageToByteEncoder<Http2Frame> {
     }
 
     public Http2FrameEncoder(Http2FrameMarshaller frameMarshaller) {
+        if (frameMarshaller == null) {
+            throw new NullPointerException("frameMarshaller");
+        }
         this.frameMarshaller = frameMarshaller;
     }
 

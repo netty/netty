@@ -32,7 +32,7 @@ public abstract class AbstractHttp2FrameMarshaller<T extends Http2Frame> impleme
 
     protected AbstractHttp2FrameMarshaller(Class<T> frameType) {
         if (frameType == null) {
-            throw new IllegalArgumentException("frameType must be non-null.");
+            throw new NullPointerException("frameType");
         }
         this.frameType = frameType;
     }
@@ -41,7 +41,7 @@ public abstract class AbstractHttp2FrameMarshaller<T extends Http2Frame> impleme
     public final void marshall(Http2Frame frame, ByteBuf out, ByteBufAllocator alloc)
             throws Http2Exception {
         if (frame == null) {
-            throw new IllegalArgumentException("frame must be non-null.");
+            throw new NullPointerException("frame");
         }
 
         if (!frameType.isAssignableFrom(frame.getClass())) {

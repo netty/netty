@@ -98,12 +98,12 @@ public abstract class Http2Headers implements Iterable<Entry<String, String>> {
 
         private final String value;
 
-        private HttpName(String value) {
+        HttpName(String value) {
             this.value = value;
         }
 
         public String value() {
-            return this.value;
+            return value;
         }
     }
 

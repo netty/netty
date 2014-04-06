@@ -30,7 +30,7 @@ public abstract class AbstractHttp2FrameUnmarshaller implements Http2FrameUnmars
     @Override
     public final Http2FrameUnmarshaller unmarshall(Http2FrameHeader header) throws Http2Exception {
         if (header == null) {
-            throw new IllegalArgumentException("header must be non-null.");
+            throw new NullPointerException("header");
         }
 
         validate(header);

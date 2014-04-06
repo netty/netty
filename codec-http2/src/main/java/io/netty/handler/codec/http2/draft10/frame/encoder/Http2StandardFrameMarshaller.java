@@ -79,7 +79,7 @@ public class Http2StandardFrameMarshaller implements Http2FrameMarshaller {
         Http2FrameMarshaller marshaller = null;
 
         if (frame == null) {
-            throw new IllegalArgumentException("frame must be non-null");
+            throw new NullPointerException("frame");
         }
 
         if (frame instanceof Http2DataFrame) {

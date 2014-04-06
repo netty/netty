@@ -39,7 +39,7 @@ public class Http2PushPromiseFrameUnmarshaller extends AbstractHeadersUnmarshall
 
     public Http2PushPromiseFrameUnmarshaller(Http2HeadersDecoder headersDecoder) {
         if (headersDecoder == null) {
-            throw new IllegalArgumentException("headersDecoder must not be null.");
+            throw new NullPointerException("headersDecoder");
         }
         this.headersDecoder = headersDecoder;
     }

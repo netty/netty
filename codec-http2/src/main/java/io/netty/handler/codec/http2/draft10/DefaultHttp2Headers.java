@@ -35,8 +35,8 @@ public final class DefaultHttp2Headers extends Http2Headers {
     private final HeaderEntry head;
 
     private DefaultHttp2Headers(Builder builder) {
-        this.entries = builder.entries;
-        this.head = builder.head;
+        entries = builder.entries;
+        head = builder.head;
     }
 
     @Override
@@ -126,7 +126,7 @@ public final class DefaultHttp2Headers extends Http2Headers {
     }
 
     /**
-     * Builds instances of {@link DefaultHttp2Header}.
+     * Builds instances of {@link DefaultHttp2Headers}.
      */
     public static class Builder {
         private HeaderEntry[] entries;
@@ -344,6 +344,52 @@ public final class DefaultHttp2Headers extends Http2Headers {
             }
             return value.toString();
         }
+
+        /**
+         * Validate a HTTP2 header value. Does not validate max length.
+         */
+        private static void validateHeaderValue(String value) {
+            if (value == null) {
+                throw new NullPointerException("value");
+            }
+            for (int i = 0; i < value.length(); i ++) {
+                char c = value.charAt(i);
+                if (c == 0) {
+                    throw new IllegalArgumentException(
+                            "value contains null character: " + value);
+                }
+            }
+        }
+
+        /**
+         * Validate a HTTP2 header name.
+         */
+        private static void validateHeaderName(String name) {
+            if (name == null) {
+                throw new NullPointerException("name");
+            }
+            if (name.isEmpty()) {
+                throw new IllegalArgumentException(
+                        "name cannot be length zero");
+            }
+            // Since name may only contain ascii characters, for valid names
+            // name.length() returns the number of bytes when UTF-8 encoded.
+            if (name.length() > MAX_VALUE_LENGTH) {
+                throw new IllegalArgumentException(
+                        "name exceeds allowable length: " + name);
+            }
+            for (int i = 0; i < name.length(); i ++) {
+                char c = name.charAt(i);
+                if (c == 0) {
+                    throw new IllegalArgumentException(
+                            "name contains null character: " + name);
+                }
+                if (c > 127) {
+                    throw new IllegalArgumentException(
+                            "name contains non-ascii character: " + name);
+                }
+            }
+        }
     }
 
     private static int hash(String name) {
@@ -391,52 +437,6 @@ public final class DefaultHttp2Headers extends Http2Headers {
 
     private static int index(int hash) {
         return hash % BUCKET_SIZE;
-    }
-
-    /**
-     * Validate a HTTP2 header name.
-     */
-    private static void validateHeaderName(String name) {
-        if (name == null) {
-            throw new NullPointerException("name");
-        }
-        if (name.isEmpty()) {
-            throw new IllegalArgumentException(
-                    "name cannot be length zero");
-        }
-        // Since name may only contain ascii characters, for valid names
-        // name.length() returns the number of bytes when UTF-8 encoded.
-        if (name.length() > MAX_VALUE_LENGTH) {
-            throw new IllegalArgumentException(
-                    "name exceeds allowable length: " + name);
-        }
-        for (int i = 0; i < name.length(); i ++) {
-            char c = name.charAt(i);
-            if (c == 0) {
-                throw new IllegalArgumentException(
-                        "name contains null character: " + name);
-            }
-            if (c > 127) {
-                throw new IllegalArgumentException(
-                        "name contains non-ascii character: " + name);
-            }
-        }
-    }
-
-    /**
-     * Validate a HTTP2 header value. Does not validate max length.
-     */
-    private static void validateHeaderValue(String value) {
-        if (value == null) {
-            throw new NullPointerException("value");
-        }
-        for (int i = 0; i < value.length(); i ++) {
-            char c = value.charAt(i);
-            if (c == 0) {
-                throw new IllegalArgumentException(
-                        "value contains null character: " + value);
-            }
-        }
     }
 
     private final class HeaderIterator implements Iterator<Map.Entry<String, String>> {

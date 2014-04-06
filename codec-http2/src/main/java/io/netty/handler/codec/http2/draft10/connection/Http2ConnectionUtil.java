@@ -22,6 +22,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.draft10.Http2Exception;
+import io.netty.util.CharsetUtil;
 
 /**
  * Constants and utility method used for encoding/decoding HTTP2 frames.
@@ -51,7 +52,7 @@ public final class Http2ConnectionUtil {
         ByteBuf debugData = Unpooled.EMPTY_BUFFER;
         if (cause != null) {
             // Create the debug message.
-            byte[] msg = cause.getMessage().getBytes();
+            byte[] msg = cause.getMessage().getBytes(CharsetUtil.UTF_8);
             debugData = ctx.alloc().buffer(msg.length);
             debugData.writeBytes(msg);
         }

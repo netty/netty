@@ -36,7 +36,7 @@ public class Http2HeadersFrameMarshaller extends AbstractHttp2FrameMarshaller<Ht
     public Http2HeadersFrameMarshaller(Http2HeadersEncoder headersEncoder) {
         super(Http2HeadersFrame.class);
         if (headersEncoder == null) {
-            throw new NullPointerException("headersEncoder must not be null.");
+            throw new NullPointerException("headersEncoder");
         }
         this.headersEncoder = headersEncoder;
     }
