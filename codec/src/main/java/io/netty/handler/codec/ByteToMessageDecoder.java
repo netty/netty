@@ -132,7 +132,15 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                 if (first) {
                     cumulation = data;
                 } else {
-                    if (cumulation.writerIndex() > cumulation.maxCapacity() - data.readableBytes()) {
+                    if (cumulation.writerIndex() > cumulation.maxCapacity() - data.readableBytes()
+                            || cumulation.refCnt() > 1) {
+                        // Expand cumulation (by replace it) when either there is not more room in the buffer
+                        // or if the refCnt is greater then 1 which may happen when the user use slice().retain() or
+                        // duplicate().retain().
+                        //
+                        // See:
+                        // - https://github.com/netty/netty/issues/2327
+                        // - https://github.com/netty/netty/issues/1764
                         expandCumulation(ctx, data.readableBytes());
                     }
                     cumulation.writeBytes(data);
@@ -170,9 +178,14 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
 
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-        if (cumulation != null && !first) {
+        if (cumulation != null && !first && cumulation.refCnt() == 1) {
             // discard some bytes if possible to make more room in the
-            // buffer
+            // buffer but only if the refCnt == 1  as otherwise the user may have
+            // used slice().retain() or duplicate().retain().
+            //
+            // See:
+            // - https://github.com/netty/netty/issues/2327
+            // - https://github.com/netty/netty/issues/1764
             cumulation.discardSomeReadBytes();
         }
         if (decodeWasNull) {
