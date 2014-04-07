@@ -132,6 +132,35 @@ public class Http2Flags {
         return true;
     }
 
+    @Override
+    public String toString() {
+        StringBuilder builder = new StringBuilder();
+        builder.append("value = ").append(value).append(" (");
+        if (isAck()) {
+            builder.append("ACK,");
+        }
+        if (isEndOfHeaders()) {
+            builder.append("END_OF_HEADERS,");
+        }
+        if (isEndOfStream()) {
+            builder.append("END_OF_STREAM,");
+        }
+        if (isPriorityPresent()) {
+            builder.append("PRIORITY_PRESENT,");
+        }
+        if (isEndOfSegment()) {
+            builder.append("END_OF_SEGMENT,");
+        }
+        if (isPadHighPresent()) {
+            builder.append("PAD_HIGH,");
+        }
+        if (isPadLowPresent()) {
+            builder.append("PAD_LOW,");
+        }
+        builder.append(")");
+        return builder.toString();
+    }
+
     private boolean isSet(short mask) {
         return (value & mask) != 0;
     }

@@ -247,10 +247,16 @@ public class Http2ConnectionHandler extends ChannelHandlerAdapter {
             connection.remote().createStream(frame.getStreamId(), frame.getPriority(),
                     frame.isEndOfStream());
         } else {
-            // If the stream already exists, it must be a reserved push stream. If so, open
-            // it for push to the local endpoint.
-            stream.verifyState(PROTOCOL_ERROR, RESERVED_REMOTE);
-            stream.openForPush();
+            if (stream.getState() == RESERVED_REMOTE) {
+                // Received headers for a reserved push stream ... open it for push to the
+                // local endpoint.
+                stream.verifyState(PROTOCOL_ERROR, RESERVED_REMOTE);
+                stream.openForPush();
+            } else {
+                // Receiving headers on an existing stream. Make sure the stream is in an allowed
+                // state.
+                stream.verifyState(PROTOCOL_ERROR, OPEN, HALF_CLOSED_LOCAL);
+            }
 
             // If the headers completes this stream, close it.
             if (frame.isEndOfStream()) {
@@ -450,17 +456,20 @@ public class Http2ConnectionHandler extends ChannelHandlerAdapter {
             stream = connection.local().createStream(frame.getStreamId(), frame.getPriority(),
                     frame.isEndOfStream());
         } else {
-            // If the stream already exists, it must be a reserved push stream. If so, open
-            // it for push to the remote endpoint.
-            stream.verifyState(PROTOCOL_ERROR, RESERVED_LOCAL);
-            stream.openForPush();
+            if (stream.getState() == RESERVED_LOCAL) {
+                // Sending headers on a reserved push stream ... open it for push to the remote
+                // endpoint.
+                stream.openForPush();
+            } else {
+                // The stream already exists, make sure it's in an allowed state.
+                stream.verifyState(PROTOCOL_ERROR, OPEN, HALF_CLOSED_REMOTE);
+            }
 
             // If the headers are the end of the stream, close it now.
             if (frame.isEndOfStream()) {
                 stream.closeLocalSide(ctx, promise);
             }
         }
-
         // Flush to send all of the frames.
         ctx.writeAndFlush(frame, promise);
     }

@@ -89,8 +89,12 @@ public final class DefaultHttp2PushPromiseFrame implements Http2PushPromiseFrame
 
     @Override
     public String toString() {
-        return "DefaultHttp2PushPromiseFrame [streamId=" + streamId + ", promisedStreamId="
-                + promisedStreamId + ", headers=" + headers + ']';
+        StringBuilder builder = new StringBuilder(getClass().getSimpleName()).append("[");
+        builder.append("streamId=").append(streamId);
+        builder.append(", promisedStreamId=").append(promisedStreamId);
+        builder.append(", headers=").append(headers);
+        builder.append("]");
+        return builder.toString();
     }
 
     public static class Builder {

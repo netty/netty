@@ -73,6 +73,15 @@ public final class DefaultHttp2WindowUpdateFrame implements Http2WindowUpdateFra
         return true;
     }
 
+    @Override
+    public String toString() {
+        StringBuilder builder = new StringBuilder(getClass().getSimpleName()).append("[");
+        builder.append("streamId=").append(streamId);
+        builder.append(", windowSizeIncrement=").append(windowSizeIncrement);
+        builder.append("]");
+        return builder.toString();
+    }
+
     /**
      * Builds instances of {@link DefaultHttp2WindowUpdateFrame}.
      */

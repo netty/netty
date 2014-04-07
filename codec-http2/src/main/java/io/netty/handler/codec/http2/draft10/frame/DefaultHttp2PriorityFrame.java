@@ -73,6 +73,14 @@ public final class DefaultHttp2PriorityFrame implements Http2PriorityFrame {
         return true;
     }
 
+    @Override
+    public String toString() {
+        StringBuilder builder = new StringBuilder(getClass().getSimpleName()).append("[");
+        builder.append("streamId=").append(streamId);
+        builder.append(", priority=").append(priority);
+        builder.append("]");
+        return builder.toString();
+    }
     /**
      * Builds instances of {@link DefaultHttp2PriorityFrame}.
      */

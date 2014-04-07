@@ -16,6 +16,8 @@
 package io.netty.handler.codec.http2.draft10.connection;
 
 import static io.netty.handler.codec.http2.draft10.Http2Error.PROTOCOL_ERROR;
+import static io.netty.handler.codec.http2.draft10.connection.Http2Stream.State.RESERVED_LOCAL;
+import static io.netty.handler.codec.http2.draft10.connection.Http2Stream.State.RESERVED_REMOTE;
 import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.PING_FRAME_PAYLOAD_LENGTH;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static org.junit.Assert.assertEquals;
@@ -227,7 +229,8 @@ public class Http2ConnectionHandlerTest {
     }
 
     @Test
-    public void inboundHeadersWithForPromisedStreamShouldHalfOpenStream() throws Exception {
+    public void inboundHeadersForPromisedStreamShouldHalfOpenStream() throws Exception {
+        when(stream.getState()).thenReturn(RESERVED_REMOTE);
         Http2Frame frame =
                 new DefaultHttp2HeadersFrame.Builder().setStreamId(STREAM_ID).setPriority(1)
                         .setHeaders(Http2Headers.EMPTY_HEADERS).build();
@@ -237,7 +240,8 @@ public class Http2ConnectionHandlerTest {
     }
 
     @Test
-    public void inboundHeadersWithForPromisedStreamShouldCloseStream() throws Exception {
+    public void inboundHeadersForPromisedStreamShouldCloseStream() throws Exception {
+        when(stream.getState()).thenReturn(RESERVED_REMOTE);
         Http2Frame frame =
                 new DefaultHttp2HeadersFrame.Builder().setStreamId(STREAM_ID).setPriority(1)
                         .setEndOfStream(true).setHeaders(Http2Headers.EMPTY_HEADERS)
@@ -479,6 +483,7 @@ public class Http2ConnectionHandlerTest {
 
     @Test
     public void outboundHeadersShouldOpenStreamForPush() throws Exception {
+        when(stream.getState()).thenReturn(RESERVED_LOCAL);
         Http2Frame frame =
                 new DefaultHttp2HeadersFrame.Builder().setStreamId(STREAM_ID).setPriority(1)
                         .setHeaders(Http2Headers.EMPTY_HEADERS).build();
@@ -491,6 +496,7 @@ public class Http2ConnectionHandlerTest {
 
     @Test
     public void outboundHeadersShouldClosePushStream() throws Exception {
+        when(stream.getState()).thenReturn(RESERVED_LOCAL);
         Http2Frame frame =
                 new DefaultHttp2HeadersFrame.Builder().setStreamId(STREAM_ID).setPriority(1)
                         .setEndOfStream(true).setHeaders(Http2Headers.EMPTY_HEADERS)

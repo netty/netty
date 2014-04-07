@@ -74,6 +74,15 @@ public final class DefaultHttp2RstStreamFrame implements Http2RstStreamFrame {
         return true;
     }
 
+    @Override
+    public String toString() {
+        StringBuilder builder = new StringBuilder(getClass().getSimpleName()).append("[");
+        builder.append("streamId=").append(streamId);
+        builder.append(", errorCode=").append(errorCode);
+        builder.append("]");
+        return builder.toString();
+    }
+
     /**
      * Builds instances of {@link DefaultHttp2RstStreamFrame}.
      */
