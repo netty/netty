@@ -16,7 +16,6 @@
 package io.netty.handler.codec.http2.draft10.frame;
 
 import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.PING_FRAME_PAYLOAD_LENGTH;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.DefaultByteBufHolder;
 
@@ -98,6 +97,14 @@ public final class DefaultHttp2PingFrame extends DefaultByteBufHolder implements
             return false;
         }
         return true;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder builder = new StringBuilder(getClass().getSimpleName()).append("[");
+        builder.append("ack=").append(ack);
+        builder.append("]");
+        return builder.toString();
     }
 
     /**

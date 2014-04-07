@@ -17,7 +17,6 @@ package io.netty.handler.codec.http2.draft10.frame;
 
 import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.MAX_FRAME_PAYLOAD_LENGTH;
 import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.MAX_UNSIGNED_INT;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.DefaultByteBufHolder;
 import io.netty.buffer.Unpooled;
@@ -108,6 +107,15 @@ public final class DefaultHttp2GoAwayFrame extends DefaultByteBufHolder implemen
             return false;
         }
         return true;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder builder = new StringBuilder(getClass().getSimpleName()).append("[");
+        builder.append("lastStreamId=").append(lastStreamId);
+        builder.append(", errorCode=").append(errorCode);
+        builder.append("]");
+        return builder.toString();
     }
 
     private Builder copyBuilder() {

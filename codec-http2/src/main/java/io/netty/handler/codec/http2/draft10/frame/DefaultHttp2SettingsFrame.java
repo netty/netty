@@ -118,6 +118,26 @@ public final class DefaultHttp2SettingsFrame implements Http2SettingsFrame {
         return true;
     }
 
+    @Override
+    public String toString() {
+        StringBuilder builder = new StringBuilder(getClass().getSimpleName()).append("[");
+        builder.append("ack=").append(ack);
+        if (headerTableSize != null) {
+            builder.append(", headerTableSize=").append(headerTableSize);
+        }
+        if (pushEnabled != null) {
+            builder.append(", pushEnabled=").append(pushEnabled);
+        }
+        if (maxConcurrentStreams != null) {
+            builder.append(", maxConcurrentStreams=").append(maxConcurrentStreams);
+        }
+        if (initialWindowSize != null) {
+            builder.append(", initialWindowSize=").append(initialWindowSize);
+        }
+        builder.append("]");
+        return builder.toString();
+    }
+
     /**
      * Builds instances of {@link DefaultHttp2SettingsFrame}.
      */

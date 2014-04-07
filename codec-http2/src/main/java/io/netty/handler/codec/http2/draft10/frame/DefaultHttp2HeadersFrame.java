@@ -97,8 +97,13 @@ public final class DefaultHttp2HeadersFrame implements Http2HeadersFrame {
 
     @Override
     public String toString() {
-        return "DefaultHttp2HeadersFrame [streamId=" + streamId + ", priority=" + priority
-                + ", endOfStream=" + endOfStream + ", headers=" + headers + ']';
+        StringBuilder builder = new StringBuilder(getClass().getSimpleName()).append("[");
+        builder.append("streamId=").append(streamId);
+        builder.append(", priority=").append(priority);
+        builder.append(", endOfStream=").append(endOfStream);
+        builder.append(", headers=").append(headers);
+        builder.append("]");
+        return builder.toString();
     }
 
     public static class Builder {
