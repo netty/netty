@@ -302,7 +302,7 @@ final class DefaultChannelId implements ChannelId {
     }
 
     private static int defaultProcessId() {
-        final ClassLoader loader = ClassLoader.getSystemClassLoader();
+        final ClassLoader loader = PlatformDependent.getSystemClassLoader();
         String value;
         try {
             // Invoke java.lang.management.ManagementFactory.getRuntimeMXBean().getName()

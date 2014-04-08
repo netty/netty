@@ -16,6 +16,7 @@
 package io.netty.example.securechat;
 
 import io.netty.handler.ssl.SslHandler;
+import io.netty.util.internal.SystemPropertyUtil;
 
 import java.security.KeyStore;
 import java.security.SecureRandom;
@@ -57,7 +58,7 @@ public final class SecureChatSslContextFactory {
     private static final SSLContext CLIENT_CONTEXT;
 
     static {
-        String algorithm = Security.getProperty("ssl.KeyManagerFactory.algorithm");
+        String algorithm = SystemPropertyUtil.get("ssl.KeyManagerFactory.algorithm");
         if (algorithm == null) {
             algorithm = "SunX509";
         }

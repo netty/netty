@@ -26,6 +26,8 @@ import java.lang.reflect.Method;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -50,7 +52,7 @@ final class PlatformDependent0 {
     static {
         boolean directBufferFreeable = false;
         try {
-            Class<?> cls = Class.forName("sun.nio.ch.DirectBuffer", false, PlatformDependent0.class.getClassLoader());
+            Class<?> cls = Class.forName("sun.nio.ch.DirectBuffer", false, getClassLoader(PlatformDependent0.class));
             Method method = cls.getMethod("cleaner");
             if ("sun.misc.Cleaner".equals(method.getReturnType().getName())) {
                 directBufferFreeable = true;
@@ -326,6 +328,45 @@ final class PlatformDependent0 {
     static <T> AtomicLongFieldUpdater<T> newAtomicLongFieldUpdater(
             Class<?> tclass, String fieldName) throws Exception {
         return new UnsafeAtomicLongFieldUpdater<T>(UNSAFE, tclass, fieldName);
+    }
+
+    static ClassLoader getClassLoader(final Class<?> clazz) {
+        if (System.getSecurityManager() == null) {
+            return clazz.getClassLoader();
+        } else {
+            return AccessController.doPrivileged(new PrivilegedAction<ClassLoader>() {
+                @Override
+                public ClassLoader run() {
+                    return clazz.getClassLoader();
+                }
+            });
+        }
+    }
+
+    static ClassLoader getContextClassLoader() {
+        if (System.getSecurityManager() == null) {
+            return Thread.currentThread().getContextClassLoader();
+        } else {
+            return AccessController.doPrivileged(new PrivilegedAction<ClassLoader>() {
+                @Override
+                public ClassLoader run() {
+                    return Thread.currentThread().getContextClassLoader();
+                }
+            });
+        }
+    }
+
+    static ClassLoader getSystemClassLoader() {
+        if (System.getSecurityManager() == null) {
+            return ClassLoader.getSystemClassLoader();
+        } else {
+            return AccessController.doPrivileged(new PrivilegedAction<ClassLoader>() {
+                @Override
+                public ClassLoader run() {
+                    return ClassLoader.getSystemClassLoader();
+                }
+            });
+        }
     }
 
     private PlatformDependent0() {
