@@ -67,7 +67,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     static {
         String key = "sun.nio.ch.bugLevel";
         try {
-            String buglevel = System.getProperty(key);
+            String buglevel = SystemPropertyUtil.get(key);
             if (buglevel == null) {
                 System.setProperty(key, "");
             }
@@ -136,7 +136,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             SelectedSelectionKeySet selectedKeySet = new SelectedSelectionKeySet();
 
             Class<?> selectorImplClass =
-                    Class.forName("sun.nio.ch.SelectorImpl", false, ClassLoader.getSystemClassLoader());
+                    Class.forName("sun.nio.ch.SelectorImpl", false, PlatformDependent.getSystemClassLoader());
 
             // Ensure the current selector implementation is what we can instrument.
             if (!selectorImplClass.isAssignableFrom(selector.getClass())) {

@@ -90,12 +90,12 @@ public final class ClassResolvers {
             return classLoader;
         }
 
-        final ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
+        final ClassLoader contextClassLoader = PlatformDependent.getContextClassLoader();
         if (contextClassLoader != null) {
             return contextClassLoader;
         }
 
-        return ClassResolvers.class.getClassLoader();
+        return PlatformDependent.getClassLoader(ClassResolvers.class);
     }
 
     private ClassResolvers() {
