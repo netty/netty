@@ -19,6 +19,8 @@ package io.netty.channel.epoll;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.epoll.EpollChannelOutboundBuffer.AddressEntry;
 import io.netty.util.internal.NativeLibraryLoader;
+import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SystemPropertyUtil;
 
 import java.io.IOException;
 import java.net.Inet6Address;
@@ -37,11 +39,11 @@ final class Native {
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, (byte) 0xff, (byte) 0xff };
 
     static {
-        String name = System.getProperty("os.name").toLowerCase(Locale.UK).trim();
+        String name = SystemPropertyUtil.get("os.name").toLowerCase(Locale.UK).trim();
         if (!name.startsWith("linux")) {
             throw new IllegalStateException("Only supported on Linux");
         }
-        NativeLibraryLoader.load("netty-transport-native-epoll", Native.class.getClassLoader());
+        NativeLibraryLoader.load("netty-transport-native-epoll", PlatformDependent.getClassLoader(Native.class));
     }
 
     // EventLoop operations and constants
