@@ -26,6 +26,8 @@ import javassist.Modifier;
 import javassist.NotFoundException;
 
 import java.lang.reflect.Method;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 
 public final class JavassistTypeParameterMatcherGenerator {
 
@@ -51,9 +53,9 @@ public final class JavassistTypeParameterMatcherGenerator {
     }
 
     public static TypeParameterMatcher generate(Class<?> type) {
-        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+        ClassLoader classLoader = getContextClassLoader();
         if (classLoader == null) {
-            classLoader = ClassLoader.getSystemClassLoader();
+            classLoader = getSystemClassLoader();
         }
         return generate(type, classLoader);
     }
@@ -100,4 +102,38 @@ public final class JavassistTypeParameterMatcherGenerator {
     }
 
     private JavassistTypeParameterMatcherGenerator() { }
+    /**
+     * Get the thread context {@link java.lang.ClassLoader}
+     * @return the thread context {@link java.lang.ClassLoader}
+     */
+    private static ClassLoader getContextClassLoader() {
+        SecurityManager securityManager = System.getSecurityManager();
+        if (securityManager == null) {
+            return Thread.currentThread().getContextClassLoader();
+        } else {
+            return AccessController.doPrivileged(new PrivilegedAction<ClassLoader>() {
+                @Override
+                public ClassLoader run() {
+                    return Thread.currentThread().getContextClassLoader();
+                }
+            });
+        }
+    }
+    /**
+     * Get the system {@link java.lang.ClassLoader}
+     * @return the system {@link java.lang.ClassLoader}
+     */
+    private static ClassLoader getSystemClassLoader() {
+        SecurityManager securityManager = System.getSecurityManager();
+        if (securityManager == null) {
+            return ClassLoader.getSystemClassLoader();
+        } else {
+            return AccessController.doPrivileged(new PrivilegedAction<ClassLoader>() {
+                @Override
+                public ClassLoader run() {
+                    return ClassLoader.getSystemClassLoader();
+                }
+            });
+        }
+    }
 }

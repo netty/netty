@@ -29,6 +29,8 @@ import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.nio.ByteBuffer;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -390,7 +392,7 @@ public final class PlatformDependent {
     private static boolean isAndroid0() {
         boolean android;
         try {
-            Class.forName("android.app.Application", false, ClassLoader.getSystemClassLoader());
+            Class.forName("android.app.Application", false, getSystemClassLoader());
             android = true;
         } catch (Exception e) {
             // Failed to load the class uniquely available in Android.
@@ -517,7 +519,7 @@ public final class PlatformDependent {
             }
 
             try {
-                Class.forName("java.time.Clock", false, Object.class.getClassLoader());
+                Class.forName("java.time.Clock", false, getClassLoader(Object.class));
                 javaVersion = 8;
                 break;
             } catch (Exception e) {
@@ -525,7 +527,7 @@ public final class PlatformDependent {
             }
 
             try {
-                Class.forName("java.util.concurrent.LinkedTransferQueue", false, BlockingQueue.class.getClassLoader());
+                Class.forName("java.util.concurrent.LinkedTransferQueue", false, getClassLoader(BlockingQueue.class));
                 javaVersion = 7;
                 break;
             } catch (Exception e) {
@@ -591,7 +593,7 @@ public final class PlatformDependent {
         long maxDirectMemory = 0;
         try {
             // Try to get from sun.misc.VM.maxDirectMemory() which should be most accurate.
-            Class<?> vmClass = Class.forName("sun.misc.VM", true, ClassLoader.getSystemClassLoader());
+            Class<?> vmClass = Class.forName("sun.misc.VM", true, getSystemClassLoader());
             Method m = vmClass.getDeclaredMethod("maxDirectMemory");
             maxDirectMemory = ((Number) m.invoke(null)).longValue();
         } catch (Throwable t) {
@@ -606,9 +608,9 @@ public final class PlatformDependent {
             // Now try to get the JVM option (-XX:MaxDirectMemorySize) and parse it.
             // Note that we are using reflection because Android doesn't have these classes.
             Class<?> mgmtFactoryClass = Class.forName(
-                    "java.lang.management.ManagementFactory", true, ClassLoader.getSystemClassLoader());
+                    "java.lang.management.ManagementFactory", true, getSystemClassLoader());
             Class<?> runtimeClass = Class.forName(
-                    "java.lang.management.RuntimeMXBean", true, ClassLoader.getSystemClassLoader());
+                    "java.lang.management.RuntimeMXBean", true, getSystemClassLoader());
 
             Object runtime = mgmtFactoryClass.getDeclaredMethod("getRuntimeMXBean").invoke(null);
 
@@ -662,7 +664,7 @@ public final class PlatformDependent {
         }
 
         try {
-            JavassistTypeParameterMatcherGenerator.generate(Object.class, PlatformDependent.class.getClassLoader());
+            JavassistTypeParameterMatcherGenerator.generate(Object.class, getClassLoader(PlatformDependent.class));
             logger.debug("Javassist: available");
             return true;
         } catch (Throwable t) {
@@ -801,5 +803,40 @@ public final class PlatformDependent {
 
     private PlatformDependent() {
         // only static method supported
+    }
+    /**
+     * Get {@link java.lang.ClassLoader} for a {@link java.lang.Class}
+     * @param klass the {@link java.lang.Class} whose {@link java.lang.ClassLoader} is needed
+     * @return the {@link java.lang.ClassLoader}
+     */
+    private static ClassLoader getClassLoader(final Class<?> klass) {
+        SecurityManager securityManager = System.getSecurityManager();
+        if (securityManager == null) {
+            return klass.getClassLoader();
+        } else {
+            return AccessController.doPrivileged(new PrivilegedAction<ClassLoader>() {
+                @Override
+                public ClassLoader run() {
+                    return klass.getClassLoader();
+                }
+            });
+        }
+    }
+    /**
+     * Get the system {@link java.lang.ClassLoader}
+     * @return the system {@link java.lang.ClassLoader}
+     */
+    private static ClassLoader getSystemClassLoader() {
+        SecurityManager securityManager = System.getSecurityManager();
+        if (securityManager == null) {
+            return ClassLoader.getSystemClassLoader();
+        } else {
+            return AccessController.doPrivileged(new PrivilegedAction<ClassLoader>() {
+                @Override
+                public ClassLoader run() {
+                    return ClassLoader.getSystemClassLoader();
+                }
+            });
+        }
     }
 }

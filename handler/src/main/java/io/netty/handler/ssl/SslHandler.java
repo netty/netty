@@ -49,6 +49,8 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.SocketChannel;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
@@ -625,7 +627,7 @@ public class SslHandler extends ByteToMessageDecoder {
                     // No match by now.. Try to load the class via classloader and inspect it.
                     // This is mainly done as other JDK implementations may differ in name of
                     // the impl.
-                    Class<?> clazz = getClass().getClassLoader().loadClass(classname);
+                    Class<?> clazz = getClassLoader(getClass()).loadClass(classname);
 
                     if (SocketChannel.class.isAssignableFrom(clazz)
                             || DatagramChannel.class.isAssignableFrom(clazz)) {
@@ -1105,6 +1107,24 @@ public class SslHandler extends ByteToMessageDecoder {
                 throw new IllegalStateException();
             }
             return ctx.executor();
+        }
+    }
+    /**
+     * Get {@link java.lang.ClassLoader} for a {@link java.lang.Class}
+     * @param klass the {@link java.lang.Class} whose {@link java.lang.ClassLoader} is needed
+     * @return the {@link java.lang.ClassLoader}
+     */
+    private static ClassLoader getClassLoader(final Class<?> klass) {
+        SecurityManager securityManager = System.getSecurityManager();
+        if (securityManager == null) {
+            return klass.getClassLoader();
+        } else {
+            return AccessController.doPrivileged(new PrivilegedAction<ClassLoader>() {
+                @Override
+                public ClassLoader run() {
+                    return klass.getClassLoader();
+                }
+            });
         }
     }
 }

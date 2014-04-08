@@ -25,6 +25,8 @@ package io.netty.util.internal.chmv8;
 import io.netty.util.internal.ThreadLocalRandom;
 
 import java.lang.Thread.UncaughtExceptionHandler;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -3301,11 +3303,11 @@ public class ForkJoinPool extends AbstractExecutorService {
                 = defaultForkJoinWorkerThreadFactory;
         UncaughtExceptionHandler handler = null;
         try {  // ignore exceptions in accessing/parsing properties
-            String pp = System.getProperty
+            String pp = getSystemProperty
                     ("java.util.concurrent.ForkJoinPool.common.parallelism");
-            String fp = System.getProperty
+            String fp = getSystemProperty
                     ("java.util.concurrent.ForkJoinPool.common.threadFactory");
-            String hp = System.getProperty
+            String hp = getSystemProperty
                     ("java.util.concurrent.ForkJoinPool.common.exceptionHandler");
             if (pp != null)
                 parallelism = Integer.parseInt(pp);
@@ -3354,6 +3356,25 @@ public class ForkJoinPool extends AbstractExecutorService {
         } catch (java.security.PrivilegedActionException e) {
             throw new RuntimeException("Could not initialize intrinsics",
                     e.getCause());
+        }
+    }
+
+    /**
+     * Get the system property
+     * @param propertyName the name of the system property
+     * @return
+     */
+    private static String getSystemProperty(final String propertyName){
+        SecurityManager securityManager = System.getSecurityManager();
+        if(securityManager == null) {
+            return System.getProperty(propertyName);
+        } else {
+            return AccessController.doPrivileged(new PrivilegedAction<String>() {
+                @Override
+                public String run() {
+                    return System.getProperty(propertyName);
+                }
+            });
         }
     }
 }

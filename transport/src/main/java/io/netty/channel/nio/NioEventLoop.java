@@ -33,6 +33,8 @@ import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.spi.SelectorProvider;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.ConcurrentModificationException;
@@ -67,7 +69,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     static {
         String key = "sun.nio.ch.bugLevel";
         try {
-            String buglevel = System.getProperty(key);
+            String buglevel = getSystemProperty(key);
             if (buglevel == null) {
                 System.setProperty(key, "");
             }
@@ -136,7 +138,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             SelectedSelectionKeySet selectedKeySet = new SelectedSelectionKeySet();
 
             Class<?> selectorImplClass =
-                    Class.forName("sun.nio.ch.SelectorImpl", false, ClassLoader.getSystemClassLoader());
+                    Class.forName("sun.nio.ch.SelectorImpl", false, getSystemClassLoader());
 
             // Ensure the current selector implementation is what we can instrument.
             if (!selectorImplClass.isAssignableFrom(selector.getClass())) {
@@ -664,6 +666,41 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             selector.selectNow();
         } catch (Throwable t) {
             logger.warn("Failed to update SelectionKeys.", t);
+        }
+    }
+    /**
+     * Get the system property
+     * @param propertyName the name of the system property
+     * @return
+     */
+    private static String getSystemProperty(final String propertyName) {
+        SecurityManager securityManager = System.getSecurityManager();
+        if (securityManager == null) {
+            return System.getProperty(propertyName);
+        } else {
+            return AccessController.doPrivileged(new PrivilegedAction<String>() {
+                @Override
+                public String run() {
+                    return System.getProperty(propertyName);
+                }
+            });
+        }
+    }
+    /**
+     * Get the system {@link java.lang.ClassLoader}
+     * @return the system {@link java.lang.ClassLoader}
+     */
+    private static ClassLoader getSystemClassLoader() {
+        SecurityManager securityManager = System.getSecurityManager();
+        if (securityManager == null) {
+            return ClassLoader.getSystemClassLoader();
+        } else {
+            return AccessController.doPrivileged(new PrivilegedAction<ClassLoader>() {
+                @Override
+                public ClassLoader run() {
+                    return ClassLoader.getSystemClassLoader();
+                }
+            });
         }
     }
 }

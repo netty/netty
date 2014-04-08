@@ -18,7 +18,9 @@ package io.netty.example.http.websocketx.sslserver;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import java.io.FileInputStream;
+import java.security.AccessController;
 import java.security.KeyStore;
+import java.security.PrivilegedAction;
 import java.security.Security;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -56,14 +58,15 @@ public final class WebSocketSslServerSslContext {
         SSLContext serverContext = null;
         try {
             // Key store (Server side certificate)
-            String algorithm = Security.getProperty("ssl.KeyManagerFactory.algorithm");
+            String algorithm = getSystemProperty("ssl.KeyManagerFactory.algorithm");
+
             if (algorithm == null) {
                 algorithm = "SunX509";
             }
 
             try {
-                String keyStoreFilePath = System.getProperty("keystore.file.path");
-                String keyStoreFilePassword = System.getProperty("keystore.file.password");
+                String keyStoreFilePath = getSystemProperty("keystore.file.path");
+                String keyStoreFilePassword = getSystemProperty("keystore.file.password");
 
                 KeyStore ks = KeyStore.getInstance("JKS");
                 FileInputStream fin = new FileInputStream(keyStoreFilePath);
@@ -96,4 +99,22 @@ public final class WebSocketSslServerSslContext {
         return _serverContext;
     }
 
+    /**
+     * Get the system property
+     * @param propertyName the name of the system property
+     * @return
+     */
+    private static String getSystemProperty(final String propertyName) {
+        SecurityManager securityManager = System.getSecurityManager();
+        if (securityManager == null) {
+            return System.getProperty(propertyName);
+        } else {
+            return AccessController.doPrivileged(new PrivilegedAction<String>() {
+                @Override
+                public String run() {
+                    return System.getProperty(propertyName);
+                }
+            });
+        }
+    }
 }

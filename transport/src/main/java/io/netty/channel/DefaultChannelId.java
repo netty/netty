@@ -28,6 +28,8 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.LinkedHashMap;
@@ -302,7 +304,7 @@ final class DefaultChannelId implements ChannelId {
     }
 
     private static int defaultProcessId() {
-        final ClassLoader loader = ClassLoader.getSystemClassLoader();
+        final ClassLoader loader = getSystemClassLoader();
         String value;
         try {
             // Invoke java.lang.management.ManagementFactory.getRuntimeMXBean().getName()
@@ -467,5 +469,22 @@ final class DefaultChannelId implements ChannelId {
     @Override
     public String toString() {
         return asShortText();
+    }
+    /**
+     * Get the system {@link java.lang.ClassLoader}
+     * @return the system {@link java.lang.ClassLoader}
+     */
+    private static ClassLoader getSystemClassLoader() {
+        SecurityManager securityManager = System.getSecurityManager();
+        if (securityManager == null) {
+            return ClassLoader.getSystemClassLoader();
+        } else {
+            return AccessController.doPrivileged(new PrivilegedAction<ClassLoader>() {
+                @Override
+                public ClassLoader run() {
+                    return ClassLoader.getSystemClassLoader();
+                }
+            });
+        }
     }
 }

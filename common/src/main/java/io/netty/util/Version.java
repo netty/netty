@@ -18,6 +18,8 @@ package io.netty.util;
 
 import java.io.InputStream;
 import java.net.URL;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Enumeration;
@@ -61,7 +63,7 @@ public final class Version {
      */
     public static Map<String, Version> identify(ClassLoader classLoader) {
         if (classLoader == null) {
-            classLoader = Thread.currentThread().getContextClassLoader();
+            classLoader = getContextClassLoader();
         }
 
         // Collect all properties.
@@ -197,5 +199,22 @@ public final class Version {
     public String toString() {
         return artifactId + '-' + artifactVersion + '.' + shortCommitHash +
                ("clean".equals(repositoryStatus)? "" : " (repository: " + repositoryStatus + ')');
+    }
+    /**
+     * Get the thread context {@link java.lang.ClassLoader}
+     * @return the thread context {@link java.lang.ClassLoader}
+     */
+    private static ClassLoader getContextClassLoader() {
+        SecurityManager securityManager = System.getSecurityManager();
+        if(securityManager == null) {
+            return Thread.currentThread().getContextClassLoader();
+        } else {
+            return AccessController.doPrivileged(new PrivilegedAction<ClassLoader>() {
+                @Override
+                public ClassLoader run() {
+                    return Thread.currentThread().getContextClassLoader();
+                }
+            });
+        }
     }
 }

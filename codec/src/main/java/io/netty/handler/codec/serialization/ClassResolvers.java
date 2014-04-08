@@ -18,6 +18,8 @@ package io.netty.handler.codec.serialization;
 import io.netty.util.internal.PlatformDependent;
 
 import java.lang.ref.Reference;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.HashMap;
 
 public final class ClassResolvers {
@@ -90,15 +92,52 @@ public final class ClassResolvers {
             return classLoader;
         }
 
-        final ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
+        final ClassLoader contextClassLoader = getContextClassLoader();
         if (contextClassLoader != null) {
             return contextClassLoader;
         }
 
-        return ClassResolvers.class.getClassLoader();
+        return getClassLoader(ClassResolvers.class);
     }
 
     private ClassResolvers() {
         // Unused
+    }
+
+    /**
+     * Get {@link java.lang.ClassLoader} for a {@link java.lang.Class}
+     * @param klass the {@link java.lang.Class} whose {@link java.lang.ClassLoader} is needed
+     * @return the {@link java.lang.ClassLoader}
+     */
+    private static ClassLoader getClassLoader(final Class<?> klass) {
+        SecurityManager securityManager = System.getSecurityManager();
+        if (securityManager == null) {
+            return klass.getClassLoader();
+        } else {
+            return AccessController.doPrivileged(new PrivilegedAction<ClassLoader>() {
+                @Override
+                public ClassLoader run() {
+                    return klass.getClassLoader();
+                }
+            });
+        }
+    }
+
+    /**
+     * Get the thread context {@link java.lang.ClassLoader}
+     * @return the thread context {@link java.lang.ClassLoader}
+     */
+    private static ClassLoader getContextClassLoader() {
+        SecurityManager securityManager = System.getSecurityManager();
+        if (securityManager == null) {
+            return Thread.currentThread().getContextClassLoader();
+        } else {
+            return AccessController.doPrivileged(new PrivilegedAction<ClassLoader>() {
+                @Override
+                public ClassLoader run() {
+                    return Thread.currentThread().getContextClassLoader();
+                }
+            });
+        }
     }
 }

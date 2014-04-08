@@ -26,6 +26,8 @@ import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.NetworkChannel;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.Enumeration;
 
 /**
@@ -40,7 +42,7 @@ class NioDatagramChannelConfig extends DefaultDatagramChannelConfig {
     private static final Method SET_OPTION;
 
     static {
-        ClassLoader classLoader = DatagramChannel.class.getClassLoader();
+        ClassLoader classLoader = getClassLoader(DatagramChannel.class);
         Class<?> socketOptionType = null;
         try {
             socketOptionType = Class.forName("java.net.SocketOption", true, classLoader);
@@ -182,6 +184,24 @@ class NioDatagramChannelConfig extends DefaultDatagramChannelConfig {
             } catch (Exception e) {
                 throw new ChannelException(e);
             }
+        }
+    }
+    /**
+     * Get {@link java.lang.ClassLoader} for a {@link java.lang.Class}
+     * @param klass the {@link java.lang.Class} whose {@link java.lang.ClassLoader} is needed
+     * @return the {@link java.lang.ClassLoader}
+     */
+    private static ClassLoader getClassLoader(final Class<?> klass) {
+        SecurityManager securityManager = System.getSecurityManager();
+        if (securityManager == null) {
+            return klass.getClassLoader();
+        } else {
+            return AccessController.doPrivileged(new PrivilegedAction<ClassLoader>() {
+                @Override
+                public ClassLoader run() {
+                    return klass.getClassLoader();
+                }
+            });
         }
     }
 

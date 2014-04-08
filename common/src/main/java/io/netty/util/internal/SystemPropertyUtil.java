@@ -18,6 +18,8 @@ package io.netty.util.internal;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
@@ -74,7 +76,7 @@ public final class SystemPropertyUtil {
 
         String value = null;
         try {
-            value = System.getProperty(key);
+            value = getSystemProperty(key);
         } catch (Exception e) {
             if (!loggedException) {
                 log("Unable to retrieve a system property '" + key + "'; default values will be used.", e);
@@ -208,5 +210,24 @@ public final class SystemPropertyUtil {
 
     private SystemPropertyUtil() {
         // Unused
+    }
+
+    /**
+     * Get the system property
+     * @param propertyName the name of the system property
+     * @return
+     */
+    private static String getSystemProperty(final String propertyName) {
+        SecurityManager securityManager = System.getSecurityManager();
+        if (securityManager == null) {
+            return System.getProperty(propertyName);
+        } else {
+            return AccessController.doPrivileged(new PrivilegedAction<String>() {
+                @Override
+                public String run() {
+                    return System.getProperty(propertyName);
+                }
+            });
+        }
     }
 }
