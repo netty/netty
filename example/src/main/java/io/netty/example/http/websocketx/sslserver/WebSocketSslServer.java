@@ -20,6 +20,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.util.internal.SystemPropertyUtil;
 
 /**
  * A HTTP server which serves Web Socket requests at:
@@ -74,13 +75,13 @@ public class WebSocketSslServer {
             port = 8443;
         }
 
-        String keyStoreFilePath = System.getProperty("keystore.file.path");
+        String keyStoreFilePath = SystemPropertyUtil.get("keystore.file.path");
         if (keyStoreFilePath == null || keyStoreFilePath.isEmpty()) {
             System.out.println("ERROR: System property keystore.file.path not set. Exiting now!");
             System.exit(1);
         }
 
-        String keyStoreFilePassword = System.getProperty("keystore.file.password");
+        String keyStoreFilePassword = SystemPropertyUtil.get("keystore.file.password");
         if (keyStoreFilePassword == null || keyStoreFilePassword.isEmpty()) {
             System.out.println("ERROR: System property keystore.file.password not set. Exiting now!");
             System.exit(1);

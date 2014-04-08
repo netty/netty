@@ -40,7 +40,7 @@ class NioDatagramChannelConfig extends DefaultDatagramChannelConfig {
     private static final Method SET_OPTION;
 
     static {
-        ClassLoader classLoader = DatagramChannel.class.getClassLoader();
+        ClassLoader classLoader = PlatformDependent.getClassLoader(DatagramChannel.class);
         Class<?> socketOptionType = null;
         try {
             socketOptionType = Class.forName("java.net.SocketOption", true, classLoader);

@@ -15,6 +15,8 @@
  */
 package io.netty.example.http.websocketx.sslserver;
 
+import io.netty.util.internal.SystemPropertyUtil;
+
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import java.io.FileInputStream;
@@ -56,14 +58,14 @@ public final class WebSocketSslServerSslContext {
         SSLContext serverContext = null;
         try {
             // Key store (Server side certificate)
-            String algorithm = Security.getProperty("ssl.KeyManagerFactory.algorithm");
+            String algorithm = SystemPropertyUtil.get("ssl.KeyManagerFactory.algorithm");
             if (algorithm == null) {
                 algorithm = "SunX509";
             }
 
             try {
-                String keyStoreFilePath = System.getProperty("keystore.file.path");
-                String keyStoreFilePassword = System.getProperty("keystore.file.password");
+                String keyStoreFilePath = SystemPropertyUtil.get("keystore.file.path");
+                String keyStoreFilePassword = SystemPropertyUtil.get("keystore.file.password");
 
                 KeyStore ks = KeyStore.getInstance("JKS");
                 FileInputStream fin = new FileInputStream(keyStoreFilePath);
