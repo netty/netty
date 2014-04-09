@@ -124,8 +124,8 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             logger.debug("-Dio.netty.allocator.maxCachedBufferCapacity: {}", DEFAULT_MAX_CACHED_BUFFER_CAPACITY);
             logger.debug("-Dio.netty.allocator.cacheTrimInterval: {}",
                     DEFAULT_CACHE_TRIM_INTERVAL);
-            logger.debug("-Dio.netty.allocator.cacheThreadAliveCheckInterval: {}",
-                    DEFAULT_CACHE_TRIM_INTERVAL);
+            logger.debug("-Dio.netty.allocator.cacheThreadAliveCheckInterval: {} ms",
+                    DEFAULT_CACHE_THREAD_ALIVE_CHECK_INTERVAL);
         }
     }
 
