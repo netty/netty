@@ -530,7 +530,14 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_write(JNIEnv * env, jc
         throwRuntimeException(env, "Unable to access address of buffer");
         return -1;
     }
-    return write0(env, clazz, fd, buffer, pos, limit);
+    jint res = write0(env, clazz, fd, buffer, pos, limit);
+    if (res > 0) {
+        // Increment the pos of the ByteBuffer as it may be only partial written to prevent data-corruption later once we
+        // try to write the remaining data.
+        // See https://github.com/netty/netty/issues/2371
+        incrementPosition(env, jbuffer, res);
+    }
+    return res;
 }
 
 JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_writeAddress(JNIEnv * env, jclass clazz, jint fd, jlong address, jint pos, jint limit) {
