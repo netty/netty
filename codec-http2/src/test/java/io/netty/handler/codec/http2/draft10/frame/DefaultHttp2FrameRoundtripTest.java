@@ -72,6 +72,7 @@ public class DefaultHttp2FrameRoundtripTest {
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
                 p.addLast("codec", new Http2FrameCodec());
+                p.addLast("ignorePreface", new IgnorePrefaceHandler());
                 p.addLast("handler", captureHandler);
             }
         });
@@ -83,6 +84,7 @@ public class DefaultHttp2FrameRoundtripTest {
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
                 p.addLast("codec", new Http2FrameCodec());
+                p.addLast("ignorePreface", new IgnorePrefaceHandler());
             }
         });
 
@@ -280,6 +282,17 @@ public class DefaultHttp2FrameRoundtripTest {
         }
         assertNotNull("not null frame", captureHandler.frame);
         return captureHandler.frame;
+    }
+
+    private static class IgnorePrefaceHandler extends ChannelHandlerAdapter {
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            if (msg == Http2FrameCodecUtil.CONNECTION_PREFACE) {
+                return;
+            } else {
+                super.channelRead(ctx, msg);
+            }
+        }
     }
 
     private static class CaptureHandler extends ChannelHandlerAdapter {

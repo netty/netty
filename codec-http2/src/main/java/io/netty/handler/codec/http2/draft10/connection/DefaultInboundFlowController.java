@@ -66,6 +66,11 @@ public class DefaultInboundFlowController implements InboundFlowController {
     }
 
     @Override
+    public int getInitialInboundWindowSize() {
+        return initialWindowSize;
+    }
+
+    @Override
     public void applyInboundFlowControl(Http2DataFrame dataFrame, FrameWriter frameWriter)
             throws Http2Exception {
         applyConnectionFlowControl(dataFrame, frameWriter);

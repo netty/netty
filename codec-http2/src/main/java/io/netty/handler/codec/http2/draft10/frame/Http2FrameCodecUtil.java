@@ -16,12 +16,28 @@
 package io.netty.handler.codec.http2.draft10.frame;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.util.CharsetUtil;
 
 /**
  * Constants and utility method used for encoding/decoding HTTP2 frames.
  */
 public final class Http2FrameCodecUtil {
     public static final int CONNECTION_STREAM_ID = 0;
+
+    public static final String CONNECTION_PREFACE = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
+
+    private static final ByteBuf CONNECTION_PREFACE_BUF = Unpooled.unmodifiableBuffer(Unpooled
+            .copiedBuffer(CONNECTION_PREFACE, CharsetUtil.UTF_8));
+
+    /**
+     * Returns a buffer containing the the {@link #CONNECTION_PREFACE}.
+     */
+    public static ByteBuf connectionPrefaceBuf() {
+        // Return a duplicate so that modifications to the reader index will not affect the original
+        // buffer.
+        return CONNECTION_PREFACE_BUF.duplicate().retain();
+    }
 
     public static final int DEFAULT_STREAM_PRIORITY = 0x40000000; // 2^30
 
