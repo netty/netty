@@ -164,7 +164,9 @@ public class DefaultHttp2Connection implements Http2Connection {
             closeListener = new ChannelFutureListener() {
                 @Override
                 public void operationComplete(ChannelFuture future) throws Exception {
-                    ctx.close(promise);
+                    if (!promise.isDone()) {
+                        ctx.close(promise);
+                    }
                 }
             };
         }

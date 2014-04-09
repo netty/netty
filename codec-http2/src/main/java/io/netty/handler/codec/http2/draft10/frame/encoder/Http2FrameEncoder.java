@@ -15,10 +15,12 @@
 
 package io.netty.handler.codec.http2.draft10.frame.encoder;
 
+import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.CONNECTION_PREFACE;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.handler.codec.http2.draft10.frame.Http2Frame;
+import io.netty.util.CharsetUtil;
 
 /**
  * Encodes {@link Http2Frame} objects and writes them to an output {@link ByteBuf}. The set of frame
@@ -30,6 +32,7 @@ import io.netty.handler.codec.http2.draft10.frame.Http2Frame;
 public class Http2FrameEncoder extends MessageToByteEncoder<Http2Frame> {
 
     private final Http2FrameMarshaller frameMarshaller;
+    private boolean prefaceWritten;
 
     public Http2FrameEncoder() {
         this(new Http2StandardFrameMarshaller());
@@ -43,11 +46,41 @@ public class Http2FrameEncoder extends MessageToByteEncoder<Http2Frame> {
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, Http2Frame frame, ByteBuf out) throws Exception {
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        // The channel just became active - send the HTTP2 connection preface to the remote
+        // endpoint.
+        sendPreface(ctx);
+
+        super.channelActive(ctx);
+    }
+
+    @Override
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        // This handler was just added to the context. In case it was handled after
+        // the connection became active, send the HTTP2 connection preface now.
+        sendPreface(ctx);
+    }
+
+    @Override
+    protected void encode(ChannelHandlerContext ctx, Http2Frame frame, ByteBuf out)
+            throws Exception {
         try {
             frameMarshaller.marshall(frame, out, ctx.alloc());
         } catch (Throwable t) {
             ctx.fireExceptionCaught(t);
+        }
+    }
+
+    /**
+     * Sends the HTTP2 connection preface to the remote endpoint, if not already sent.
+     */
+    private void sendPreface(ChannelHandlerContext ctx) {
+        if (!prefaceWritten && ctx.channel().isActive()) {
+            ByteBuf preface = ctx.alloc().buffer(CONNECTION_PREFACE.length());
+            preface.writeBytes(CONNECTION_PREFACE.getBytes(CharsetUtil.UTF_8));
+
+            ctx.writeAndFlush(preface);
+            prefaceWritten = true;
         }
     }
 }

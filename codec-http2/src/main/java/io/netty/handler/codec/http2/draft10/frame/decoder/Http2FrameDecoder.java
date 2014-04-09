@@ -15,10 +15,12 @@
 
 package io.netty.handler.codec.http2.draft10.frame.decoder;
 
+import static io.netty.handler.codec.http2.draft10.Http2Error.PROTOCOL_ERROR;
+import static io.netty.handler.codec.http2.draft10.Http2Exception.format;
+import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.CONNECTION_PREFACE;
 import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.FRAME_HEADER_LENGTH;
 import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.FRAME_LENGTH_MASK;
 import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.readUnsignedInt;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
@@ -40,6 +42,7 @@ import java.util.List;
 public class Http2FrameDecoder extends ByteToMessageDecoder {
 
     private enum State {
+        PREFACE,
         FRAME_HEADER,
         FRAME_PAYLOAD,
         ERROR
@@ -58,36 +61,70 @@ public class Http2FrameDecoder extends ByteToMessageDecoder {
             throw new NullPointerException("frameUnmarshaller");
         }
         this.frameUnmarshaller = frameUnmarshaller;
-        state = State.FRAME_HEADER;
+        state = State.PREFACE;
     }
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         try {
             switch (state) {
-                case FRAME_HEADER:
-                    processFrameHeader(in);
-                    if (state == State.FRAME_HEADER) {
-                        // Still haven't read the entire frame header yet.
-                        break;
-                    }
-
-                    // If we successfully read the entire frame header, drop down and start processing
-                    // the payload now.
-
-                case FRAME_PAYLOAD:
-                    processFramePayload(ctx, in, out);
+            case PREFACE:
+                processHttp2Preface(ctx, in);
+                if (state == State.PREFACE) {
+                    // Still processing the preface.
                     break;
-                case ERROR:
-                    in.skipBytes(in.readableBytes());
+                }
+
+                // Successfully processed the HTTP2 preface.
+
+            case FRAME_HEADER:
+                processFrameHeader(in);
+                if (state == State.FRAME_HEADER) {
+                    // Still haven't read the entire frame header yet.
                     break;
-                default:
-                    throw new IllegalStateException("Should never get here");
+                }
+
+                // If we successfully read the entire frame header, drop down and start processing
+                // the payload now.
+
+            case FRAME_PAYLOAD:
+                processFramePayload(ctx, in, out);
+                break;
+            case ERROR:
+                in.skipBytes(in.readableBytes());
+                break;
+            default:
+                throw new IllegalStateException("Should never get here");
             }
         } catch (Throwable t) {
             ctx.fireExceptionCaught(t);
             state = State.ERROR;
         }
+    }
+
+    private void processHttp2Preface(ChannelHandlerContext ctx, ByteBuf in) throws Http2Exception {
+        // Check the part of the preface received so far.
+        int numBytes = Math.min(in.readableBytes(), CONNECTION_PREFACE.length());
+        for (int i = 0; i < numBytes; ++i) {
+            if (in.getByte(i) != CONNECTION_PREFACE.charAt(i)) {
+                throw format(PROTOCOL_ERROR, "Invalid HTTP2 preface");
+            }
+        }
+
+        if (numBytes < CONNECTION_PREFACE.length()) {
+            // Wait until the entire preface has arrived.
+            return;
+        }
+
+        // Read past the preface.
+        in.readerIndex(in.readerIndex() + CONNECTION_PREFACE.length());
+
+        // Fire the connection preface to notify the connection handler that it should send the
+        // initial settings frame.
+        ctx.fireChannelRead(CONNECTION_PREFACE);
+
+        // Start processing the first header.
+        state = State.FRAME_HEADER;
     }
 
     private void processFrameHeader(ByteBuf in) throws Http2Exception {
@@ -98,6 +135,7 @@ public class Http2FrameDecoder extends ByteToMessageDecoder {
 
         // Read the header and prepare the unmarshaller to read the frame.
         Http2FrameHeader frameHeader = readFrameHeader(in);
+
         payloadLength = frameHeader.getPayloadLength();
         frameUnmarshaller.unmarshall(frameHeader);
 

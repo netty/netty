@@ -51,6 +51,11 @@ public interface OutboundFlowController {
     void setInitialOutboundWindowSize(int newWindowSize) throws Http2Exception;
 
     /**
+     * Gets the initial size of the connection's outbound flow control window.
+     */
+    int getInitialOutboundWindowSize();
+
+    /**
      * Updates the size of the stream's outbound flow control window. This is called upon receiving a
      * WINDOW_UPDATE frame from the remote endpoint.
      *

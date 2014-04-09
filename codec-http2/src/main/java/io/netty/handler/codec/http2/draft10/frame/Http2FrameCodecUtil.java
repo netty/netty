@@ -23,6 +23,8 @@ import io.netty.buffer.ByteBuf;
 public final class Http2FrameCodecUtil {
     public static final int CONNECTION_STREAM_ID = 0;
 
+    public static final String CONNECTION_PREFACE = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
+
     public static final int DEFAULT_STREAM_PRIORITY = 0x40000000; // 2^30
 
     public static final int MAX_FRAME_PAYLOAD_LENGTH = 16383;
