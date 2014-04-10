@@ -18,6 +18,7 @@ package io.netty.handler.codec.http2.draft10.connection;
 import static io.netty.handler.codec.http2.draft10.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.draft10.connection.Http2Stream.State.RESERVED_LOCAL;
 import static io.netty.handler.codec.http2.draft10.connection.Http2Stream.State.RESERVED_REMOTE;
+import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.CONNECTION_PREFACE;
 import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.PING_FRAME_PAYLOAD_LENGTH;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static org.junit.Assert.assertEquals;
@@ -59,6 +60,7 @@ import java.util.Arrays;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 /**
@@ -106,9 +108,6 @@ public class Http2ConnectionHandlerTest {
     @Before
     public void setup() throws Exception {
         MockitoAnnotations.initMocks(this);
-        when(ctx.channel()).thenReturn(channel);
-        when(ctx.newSucceededFuture()).thenReturn(future);
-        when(ctx.newPromise()).thenReturn(promise);
         when(channel.isActive()).thenReturn(true);
         when(stream.getId()).thenReturn(STREAM_ID);
         when(pushStream.getId()).thenReturn(PUSH_STREAM_ID);
@@ -121,8 +120,17 @@ public class Http2ConnectionHandlerTest {
         when(local.reservePushStream(eq(PUSH_STREAM_ID), eq(stream))).thenReturn(pushStream);
         when(remote.createStream(eq(STREAM_ID), anyInt(), anyBoolean())).thenReturn(stream);
         when(remote.reservePushStream(eq(PUSH_STREAM_ID), eq(stream))).thenReturn(pushStream);
+        mockContext();
 
         handler = new Http2ConnectionHandler(connection, inboundFlow, outboundFlow);
+
+        // Send the connection preface followed by an empty settings frame. This is required
+        // before the handler will accept other frames.
+        handler.channelRead(ctx, CONNECTION_PREFACE);
+        handler.channelRead(ctx, new DefaultHttp2SettingsFrame.Builder().build());
+
+        // Re-mock the context so no calls are registered.
+        mockContext();
     }
 
     @Test
@@ -406,7 +414,7 @@ public class Http2ConnectionHandlerTest {
         verify(remote).setPushToAllowed(true);
         verify(local).setMaxStreams(10);
         verify(outboundFlow).setInitialOutboundWindowSize(20);
-        verify(ctx, never()).fireChannelRead(frame);
+        verify(ctx).fireChannelRead(frame);
         verify(ctx).writeAndFlush(eq(new DefaultHttp2SettingsFrame.Builder().setAck(true).build()));
     }
 
@@ -665,5 +673,13 @@ public class Http2ConnectionHandlerTest {
     private DefaultHttp2RstStreamFrame createRstStreamFrame(int streamId, Http2Error error) {
         return new DefaultHttp2RstStreamFrame.Builder().setStreamId(streamId)
                 .setErrorCode(error.getCode()).build();
+    }
+
+    private void mockContext() {
+        Mockito.reset(ctx);
+        when(ctx.channel()).thenReturn(channel);
+        when(ctx.newSucceededFuture()).thenReturn(future);
+        when(ctx.newPromise()).thenReturn(promise);
+        when(ctx.writeAndFlush(any())).thenReturn(future);
     }
 }

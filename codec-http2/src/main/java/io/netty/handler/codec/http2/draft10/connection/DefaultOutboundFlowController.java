@@ -79,6 +79,11 @@ public class DefaultOutboundFlowController implements OutboundFlowController {
     }
 
     @Override
+    public int getInitialOutboundWindowSize() {
+        return initialWindowSize;
+    }
+
+    @Override
     public void updateOutboundWindowSize(int streamId, int delta) throws Http2Exception {
         StreamState streamWindow;
         if (streamId == CONNECTION_STREAM_ID) {

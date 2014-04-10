@@ -18,13 +18,14 @@ package io.netty.handler.codec.http2.draft10.connection;
 import static io.netty.handler.codec.http2.draft10.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.draft10.Http2Error.STREAM_CLOSED;
 import static io.netty.handler.codec.http2.draft10.Http2Exception.format;
+import static io.netty.handler.codec.http2.draft10.Http2Exception.protocolError;
 import static io.netty.handler.codec.http2.draft10.connection.Http2ConnectionUtil.toHttp2Exception;
 import static io.netty.handler.codec.http2.draft10.connection.Http2Stream.State.HALF_CLOSED_LOCAL;
 import static io.netty.handler.codec.http2.draft10.connection.Http2Stream.State.HALF_CLOSED_REMOTE;
 import static io.netty.handler.codec.http2.draft10.connection.Http2Stream.State.OPEN;
 import static io.netty.handler.codec.http2.draft10.connection.Http2Stream.State.RESERVED_LOCAL;
 import static io.netty.handler.codec.http2.draft10.connection.Http2Stream.State.RESERVED_REMOTE;
-
+import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.CONNECTION_PREFACE;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerAdapter;
@@ -48,11 +49,41 @@ import io.netty.handler.codec.http2.draft10.frame.Http2StreamFrame;
 import io.netty.handler.codec.http2.draft10.frame.Http2WindowUpdateFrame;
 import io.netty.util.ReferenceCountUtil;
 
+/**
+ * Handler for HTTP/2 connection state. Manages inbound and outbound flow control for data frames.
+ * Handles error conditions as defined by the HTTP/2 spec and controls appropriate shutdown of the
+ * connection.
+ * <p>
+ * Propagates the following inbound frames to downstream handlers:<br>
+ * {@link Http2DataFrame}<br>
+ * {@link Http2HeadersFrame}<br>
+ * {@link Http2PushPromiseFrame}<br>
+ * {@link Http2PriorityFrame}<br>
+ * {@link Http2RstStreamFrame}<br>
+ * {@link Http2GoAwayFrame}<br>
+ * {@link Http2WindowUpdateFrame}<br>
+ * {@link Http2SettingsFrame}<br>
+ * <p>
+ * The following outbound frames are allowed from downstream handlers:<br>
+ * {@link Http2DataFrame}<br>
+ * {@link Http2HeadersFrame}<br>
+ * {@link Http2PushPromiseFrame}<br>
+ * {@link Http2PriorityFrame}<br>
+ * {@link Http2RstStreamFrame}<br>
+ * {@link Http2PingFrame} (non-ack)<br>
+ * {@link Http2SettingsFrame} (non-ack)<br>
+ * <p>
+ * All outbound frames are disallowed after a connection shutdown has begun by sending a goAway
+ * frame to the remote endpoint. In addition, no outbound frames are allowed until the first non-ack
+ * settings frame is received from the remote endpoint.
+ */
 public class Http2ConnectionHandler extends ChannelHandlerAdapter {
 
     private final Http2Connection connection;
     private final InboundFlowController inboundFlow;
     private final OutboundFlowController outboundFlow;
+    private boolean initialSettingsSent;
+    private boolean initialSettingsReceived;
 
     public Http2ConnectionHandler(boolean server) {
         this(new DefaultHttp2Connection(server));
@@ -114,7 +145,11 @@ public class Http2ConnectionHandler extends ChannelHandlerAdapter {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object inMsg) throws Exception {
         try {
-            if (inMsg instanceof Http2DataFrame) {
+            if (inMsg == CONNECTION_PREFACE) {
+                // The connection preface has been received from the remote endpoint, we're
+                // beginning an HTTP2 connection. Send the initial settings to the remote endpoint.
+                sendInitialSettings(ctx);
+            } else if (inMsg instanceof Http2DataFrame) {
                 handleInboundData(ctx, (Http2DataFrame) inMsg);
             } else if (inMsg instanceof Http2HeadersFrame) {
                 handleInboundHeaders(ctx, (Http2HeadersFrame) inMsg);
@@ -146,6 +181,12 @@ public class Http2ConnectionHandler extends ChannelHandlerAdapter {
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise)
             throws Exception {
         try {
+            if (!initialSettingsReceived) {
+                throw protocolError(
+                        "Attempting to send frame (%s) before initial settings received", msg
+                                .getClass().getName());
+            }
+
             if (msg instanceof Http2DataFrame) {
                 handleOutboundData(ctx, (Http2DataFrame) msg, promise);
             } else if (msg instanceof Http2HeadersFrame) {
@@ -207,6 +248,7 @@ public class Http2ConnectionHandler extends ChannelHandlerAdapter {
 
     private void handleInboundData(final ChannelHandlerContext ctx, Http2DataFrame frame)
             throws Http2Exception {
+        verifyInitialSettingsReceived();
 
         // Check if we received a data frame for a stream which is half-closed
         Http2Stream stream = connection.getStreamOrFail(frame.getStreamId());
@@ -236,6 +278,8 @@ public class Http2ConnectionHandler extends ChannelHandlerAdapter {
 
     private void handleInboundHeaders(ChannelHandlerContext ctx, Http2HeadersFrame frame)
             throws Http2Exception {
+        verifyInitialSettingsReceived();
+
         if (isInboundStreamAfterGoAway(frame)) {
             return;
         }
@@ -269,6 +313,8 @@ public class Http2ConnectionHandler extends ChannelHandlerAdapter {
 
     private void handleInboundPushPromise(ChannelHandlerContext ctx, Http2PushPromiseFrame frame)
             throws Http2Exception {
+        verifyInitialSettingsReceived();
+
         if (isInboundStreamAfterGoAway(frame)) {
             // Ignore frames for any stream created after we sent a go-away.
             return;
@@ -283,6 +329,8 @@ public class Http2ConnectionHandler extends ChannelHandlerAdapter {
 
     private void handleInboundPriority(ChannelHandlerContext ctx, Http2PriorityFrame frame)
             throws Http2Exception {
+        verifyInitialSettingsReceived();
+
         if (isInboundStreamAfterGoAway(frame)) {
             // Ignore frames for any stream created after we sent a go-away.
             return;
@@ -304,6 +352,8 @@ public class Http2ConnectionHandler extends ChannelHandlerAdapter {
 
     private void handleInboundWindowUpdate(ChannelHandlerContext ctx, Http2WindowUpdateFrame frame)
             throws Http2Exception {
+        verifyInitialSettingsReceived();
+
         if (isInboundStreamAfterGoAway(frame)) {
             // Ignore frames for any stream created after we sent a go-away.
             return;
@@ -325,7 +375,10 @@ public class Http2ConnectionHandler extends ChannelHandlerAdapter {
         ctx.fireChannelRead(frame);
     }
 
-    private void handleInboundRstStream(ChannelHandlerContext ctx, Http2RstStreamFrame frame) {
+    private void handleInboundRstStream(ChannelHandlerContext ctx, Http2RstStreamFrame frame)
+            throws Http2Exception {
+        verifyInitialSettingsReceived();
+
         if (isInboundStreamAfterGoAway(frame)) {
             // Ignore frames for any stream created after we sent a go-away.
             return;
@@ -342,7 +395,10 @@ public class Http2ConnectionHandler extends ChannelHandlerAdapter {
         ctx.fireChannelRead(frame);
     }
 
-    private static void handleInboundPing(ChannelHandlerContext ctx, Http2PingFrame frame) {
+    private void handleInboundPing(ChannelHandlerContext ctx, Http2PingFrame frame)
+            throws Http2Exception {
+        verifyInitialSettingsReceived();
+
         if (frame.isAck()) {
             // The remote enpoint is responding to an Ack that we sent.
             ctx.fireChannelRead(frame);
@@ -358,6 +414,10 @@ public class Http2ConnectionHandler extends ChannelHandlerAdapter {
     private void handleInboundSettings(ChannelHandlerContext ctx, Http2SettingsFrame frame)
             throws Http2Exception {
         if (frame.isAck()) {
+            // Should not get an ack before receiving the initial settings from the remote
+            // endpoint.
+            verifyInitialSettingsReceived();
+
             // The remote endpoint is acknowledging the settings - fire this up to the next
             // handler.
             ctx.fireChannelRead(frame);
@@ -386,6 +446,10 @@ public class Http2ConnectionHandler extends ChannelHandlerAdapter {
         // Acknowledge receipt of the settings.
         Http2Frame ack = new DefaultHttp2SettingsFrame.Builder().setAck(true).build();
         ctx.writeAndFlush(ack);
+
+        // We've received at least one non-ack settings frame from the remote endpoint.
+        initialSettingsReceived = true;
+        ctx.fireChannelRead(frame);
     }
 
     private void handleInboundGoAway(ChannelHandlerContext ctx, Http2GoAwayFrame frame) {
@@ -574,5 +638,36 @@ public class Http2ConnectionHandler extends ChannelHandlerAdapter {
             inboundFlow.setInitialInboundWindowSize(frame.getInitialWindowSize());
         }
         ctx.writeAndFlush(frame, promise);
+    }
+
+    private void verifyInitialSettingsReceived() throws Http2Exception {
+        if (!initialSettingsReceived) {
+            throw protocolError("Received non-SETTINGS as first frame.");
+        }
+    }
+
+    /**
+     * Sends the initial settings frame upon establishment of the connection, if not already sent.
+     */
+    private void sendInitialSettings(ChannelHandlerContext ctx) throws Http2Exception {
+        if (initialSettingsSent) {
+            throw protocolError("Already sent initial settings.");
+        }
+
+        // Create and send the frame to the remote endpoint.
+        DefaultHttp2SettingsFrame frame =
+                new DefaultHttp2SettingsFrame.Builder()
+                        .setInitialWindowSize(inboundFlow.getInitialInboundWindowSize())
+                        .setMaxConcurrentStreams(connection.remote().getMaxStreams())
+                        .setPushEnabled(connection.local().isPushToAllowed()).build();
+
+        ctx.writeAndFlush(frame).addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) throws Exception {
+                if (future.isSuccess()) {
+                    initialSettingsSent = true;
+                }
+            }
+        });
     }
 }

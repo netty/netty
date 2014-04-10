@@ -45,6 +45,11 @@ public interface InboundFlowController {
     void setInitialInboundWindowSize(int newWindowSize) throws Http2Exception;
 
     /**
+     * Gets the initial inbound flow control window size.
+     */
+    int getInitialInboundWindowSize();
+
+    /**
      * Applies flow control for the received data frame.
      *
      * @param dataFrame   the flow controlled frame
