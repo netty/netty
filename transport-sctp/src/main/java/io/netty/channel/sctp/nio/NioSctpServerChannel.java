@@ -64,7 +64,7 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
      */
     public NioSctpServerChannel() {
         super(null, newSocket(), SelectionKey.OP_ACCEPT);
-        config = new DefaultSctpServerChannelConfig(this, javaChannel());
+        config = new NioSctpServerChannelConfig(this, javaChannel());
     }
 
     @Override
@@ -219,5 +219,16 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
     @Override
     protected boolean doWriteMessage(Object msg, ChannelOutboundBuffer in) throws Exception {
         throw new UnsupportedOperationException();
+    }
+
+    private final class NioSctpServerChannelConfig extends DefaultSctpServerChannelConfig {
+        private NioSctpServerChannelConfig(NioSctpServerChannel channel, SctpServerChannel javaChannel) {
+            super(channel, javaChannel);
+        }
+
+        @Override
+        protected void autoReadCleared() {
+            setReadPending(false);
+        }
     }
 }

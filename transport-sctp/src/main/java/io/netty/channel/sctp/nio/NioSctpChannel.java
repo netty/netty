@@ -103,7 +103,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
         super(parent, sctpChannel, SelectionKey.OP_READ);
         try {
             sctpChannel.configureBlocking(false);
-            config = new DefaultSctpChannelConfig(this, sctpChannel);
+            config = new NioSctpChannelConfig(this, sctpChannel);
             notificationHandler = new SctpNotificationHandler(this);
         } catch (IOException e) {
             try {
@@ -373,11 +373,11 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     private static final class NioSctpChannelOutboundBuffer extends ChannelOutboundBuffer {
         private static final Recycler<NioSctpChannelOutboundBuffer> RECYCLER =
                 new Recycler<NioSctpChannelOutboundBuffer>() {
-            @Override
-            protected NioSctpChannelOutboundBuffer newObject(Handle<NioSctpChannelOutboundBuffer> handle) {
-                return new NioSctpChannelOutboundBuffer(handle);
-            }
-        };
+                    @Override
+                    protected NioSctpChannelOutboundBuffer newObject(Handle<NioSctpChannelOutboundBuffer> handle) {
+                        return new NioSctpChannelOutboundBuffer(handle);
+                    }
+                };
 
         static NioSctpChannelOutboundBuffer newInstance(AbstractChannel channel) {
             NioSctpChannelOutboundBuffer buffer = RECYCLER.get();
@@ -400,6 +400,17 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
                 }
             }
             return msg;
+        }
+    }
+
+    private final class NioSctpChannelConfig extends DefaultSctpChannelConfig {
+        private NioSctpChannelConfig(NioSctpChannel channel, SctpChannel javaChannel) {
+            super(channel, javaChannel);
+        }
+
+        @Override
+        protected void autoReadCleared() {
+            setReadPending(false);
         }
     }
 }

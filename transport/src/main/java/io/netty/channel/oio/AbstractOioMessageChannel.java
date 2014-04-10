@@ -36,15 +36,16 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
 
     @Override
     protected void doRead() {
+        final ChannelConfig config = config();
         final ChannelPipeline pipeline = pipeline();
         boolean closed = false;
-        final ChannelConfig config = config();
         final int maxMessagesPerRead = config.getMaxMessagesPerRead();
 
         Throwable exception = null;
+        int localRead = 0;
         try {
             for (;;) {
-                int localRead = doReadMessages(readBuf);
+                localRead = doReadMessages(readBuf);
                 if (localRead == 0) {
                     break;
                 }
@@ -80,6 +81,14 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
             if (isOpen()) {
                 unsafe().close(unsafe().voidPromise());
             }
+        } else if (localRead == 0 && isActive()) {
+            // If the read amount was 0 and the channel is still active we need to trigger a new read()
+            // as otherwise we will never try to read again and the user will never know.
+            // Just call read() is ok here as it will be submitted to the EventLoop as a task and so we are
+            // able to process the rest of the tasks in the queue first.
+            //
+            // See https://github.com/netty/netty/issues/2404
+            read();
         }
     }
 
