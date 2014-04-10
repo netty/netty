@@ -566,4 +566,9 @@ public final class NioDatagramChannel
         }
         return promise;
     }
+
+    @Override
+    protected void setReadPending(boolean readPending) {
+        super.setReadPending(readPending);
+    }
 }
