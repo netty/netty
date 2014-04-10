@@ -680,5 +680,6 @@ public class Http2ConnectionHandlerTest {
         when(ctx.channel()).thenReturn(channel);
         when(ctx.newSucceededFuture()).thenReturn(future);
         when(ctx.newPromise()).thenReturn(promise);
+        when(ctx.writeAndFlush(any())).thenReturn(future);
     }
 }

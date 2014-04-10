@@ -25,6 +25,7 @@ import static io.netty.handler.codec.http2.draft10.connection.Http2Stream.State.
 import static io.netty.handler.codec.http2.draft10.connection.Http2Stream.State.OPEN;
 import static io.netty.handler.codec.http2.draft10.connection.Http2Stream.State.RESERVED_LOCAL;
 import static io.netty.handler.codec.http2.draft10.connection.Http2Stream.State.RESERVED_REMOTE;
+import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.CONNECTION_PREFACE;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerAdapter;
@@ -37,7 +38,6 @@ import io.netty.handler.codec.http2.draft10.frame.DefaultHttp2RstStreamFrame;
 import io.netty.handler.codec.http2.draft10.frame.DefaultHttp2SettingsFrame;
 import io.netty.handler.codec.http2.draft10.frame.Http2DataFrame;
 import io.netty.handler.codec.http2.draft10.frame.Http2Frame;
-import io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil;
 import io.netty.handler.codec.http2.draft10.frame.Http2GoAwayFrame;
 import io.netty.handler.codec.http2.draft10.frame.Http2HeadersFrame;
 import io.netty.handler.codec.http2.draft10.frame.Http2PingFrame;
@@ -49,6 +49,34 @@ import io.netty.handler.codec.http2.draft10.frame.Http2StreamFrame;
 import io.netty.handler.codec.http2.draft10.frame.Http2WindowUpdateFrame;
 import io.netty.util.ReferenceCountUtil;
 
+/**
+ * Handler for HTTP/2 connection state. Manages inbound and outbound flow control for data frames.
+ * Handles error conditions as defined by the HTTP/2 spec and controls appropriate shutdown of the
+ * connection.
+ * <p>
+ * Propagates the following inbound frames to downstream handlers:<br>
+ * {@link Http2DataFrame}<br>
+ * {@link Http2HeadersFrame}<br>
+ * {@link Http2PushPromiseFrame}<br>
+ * {@link Http2PriorityFrame}<br>
+ * {@link Http2RstStreamFrame}<br>
+ * {@link Http2GoAwayFrame}<br>
+ * {@link Http2WindowUpdateFrame}<br>
+ * {@link Http2SettingsFrame}<br>
+ * <p>
+ * The following outbound frames are allowed from downstream handlers:<br>
+ * {@link Http2DataFrame}<br>
+ * {@link Http2HeadersFrame}<br>
+ * {@link Http2PushPromiseFrame}<br>
+ * {@link Http2PriorityFrame}<br>
+ * {@link Http2RstStreamFrame}<br>
+ * {@link Http2PingFrame} (non-ack)<br>
+ * {@link Http2SettingsFrame} (non-ack)<br>
+ * <p>
+ * All outbound frames are disallowed after a connection shutdown has begun by sending a goAway
+ * frame to the remote endpoint. In addition, no outbound frames are allowed until the first non-ack
+ * settings frame is received from the remote endpoint.
+ */
 public class Http2ConnectionHandler extends ChannelHandlerAdapter {
 
     private final Http2Connection connection;
@@ -117,7 +145,7 @@ public class Http2ConnectionHandler extends ChannelHandlerAdapter {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object inMsg) throws Exception {
         try {
-            if (inMsg == Http2FrameCodecUtil.CONNECTION_PREFACE) {
+            if (inMsg == CONNECTION_PREFACE) {
                 // The connection preface has been received from the remote endpoint, we're
                 // beginning an HTTP2 connection. Send the initial settings to the remote endpoint.
                 sendInitialSettings(ctx);
@@ -153,6 +181,12 @@ public class Http2ConnectionHandler extends ChannelHandlerAdapter {
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise)
             throws Exception {
         try {
+            if (!initialSettingsReceived) {
+                throw protocolError(
+                        "Attempting to send frame (%s) before initial settings received", msg
+                                .getClass().getName());
+            }
+
             if (msg instanceof Http2DataFrame) {
                 handleOutboundData(ctx, (Http2DataFrame) msg, promise);
             } else if (msg instanceof Http2HeadersFrame) {
@@ -626,8 +660,14 @@ public class Http2ConnectionHandler extends ChannelHandlerAdapter {
                         .setInitialWindowSize(inboundFlow.getInitialInboundWindowSize())
                         .setMaxConcurrentStreams(connection.remote().getMaxStreams())
                         .setPushEnabled(connection.local().isPushToAllowed()).build();
-        ctx.writeAndFlush(frame);
 
-        initialSettingsSent = true;
+        ctx.writeAndFlush(frame).addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) throws Exception {
+                if (future.isSuccess()) {
+                    initialSettingsSent = true;
+                }
+            }
+        });
     }
 }

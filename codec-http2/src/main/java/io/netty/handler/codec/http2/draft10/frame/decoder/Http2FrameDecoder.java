@@ -20,6 +20,7 @@ import static io.netty.handler.codec.http2.draft10.Http2Exception.format;
 import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.CONNECTION_PREFACE;
 import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.FRAME_HEADER_LENGTH;
 import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.FRAME_LENGTH_MASK;
+import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.connectionPrefaceBuf;
 import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.readUnsignedInt;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -49,6 +50,7 @@ public class Http2FrameDecoder extends ByteToMessageDecoder {
     }
 
     private final Http2FrameUnmarshaller frameUnmarshaller;
+    private final ByteBuf preface;
     private State state;
     private int payloadLength;
 
@@ -61,6 +63,7 @@ public class Http2FrameDecoder extends ByteToMessageDecoder {
             throw new NullPointerException("frameUnmarshaller");
         }
         this.frameUnmarshaller = frameUnmarshaller;
+        preface = connectionPrefaceBuf();
         state = State.PREFACE;
     }
 
@@ -103,21 +106,24 @@ public class Http2FrameDecoder extends ByteToMessageDecoder {
     }
 
     private void processHttp2Preface(ChannelHandlerContext ctx, ByteBuf in) throws Http2Exception {
-        // Check the part of the preface received so far.
-        int numBytes = Math.min(in.readableBytes(), CONNECTION_PREFACE.length());
-        for (int i = 0; i < numBytes; ++i) {
-            if (in.getByte(i) != CONNECTION_PREFACE.charAt(i)) {
-                throw format(PROTOCOL_ERROR, "Invalid HTTP2 preface");
-            }
+        int prefaceRemaining = preface.readableBytes();
+        int bytesRead = Math.min(in.readableBytes(), prefaceRemaining);
+
+        // Read the portion of the input up to the length of the preface, if reached.
+        ByteBuf sourceSlice = in.readSlice(bytesRead);
+
+        // Read the same number of bytes from the preface buffer.
+        ByteBuf prefaceSlice = preface.readSlice(bytesRead);
+
+        // If the input so far doesn't match the preface, break the connection.
+        if (bytesRead == 0 || !prefaceSlice.equals(sourceSlice)) {
+            throw format(PROTOCOL_ERROR, "Invalid HTTP2 preface");
         }
 
-        if (numBytes < CONNECTION_PREFACE.length()) {
+        if ((prefaceRemaining - bytesRead) > 0) {
             // Wait until the entire preface has arrived.
             return;
         }
-
-        // Read past the preface.
-        in.readerIndex(in.readerIndex() + CONNECTION_PREFACE.length());
 
         // Fire the connection preface to notify the connection handler that it should send the
         // initial settings frame.
