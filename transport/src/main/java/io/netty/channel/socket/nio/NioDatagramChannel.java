@@ -540,4 +540,9 @@ public final class NioDatagramChannel
     protected ChannelOutboundBuffer newOutboundBuffer() {
         return NioDatagramChannelOutboundBuffer.newInstance(this);
     }
+
+    @Override
+    protected void setReadPending(boolean readPending) {
+        super.setReadPending(readPending);
+    }
 }

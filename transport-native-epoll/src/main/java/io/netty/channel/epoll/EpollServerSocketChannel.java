@@ -124,7 +124,7 @@ public final class EpollServerSocketChannel extends AbstractEpollChannel impleme
                 //
                 // See https://github.com/netty/netty/issues/2254
                 if (!config.isAutoRead() && !readPending) {
-                    clearEpollIn();
+                    clearEpollIn0();
                 }
             }
         }
