@@ -48,6 +48,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     protected final int readInterestOp;
     private volatile SelectionKey selectionKey;
     private volatile boolean inputShutdown;
+    private volatile boolean readPending;
 
     /**
      * The future of the current connection attempt.  If not null, subsequent
@@ -111,6 +112,14 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         return selectionKey;
     }
 
+    protected boolean isReadPending() {
+        return readPending;
+    }
+
+    protected void setReadPending(boolean readPending) {
+        this.readPending = readPending;
+    }
+
     /**
      * Return {@code true} if the input of this {@link Channel} is shutdown
      */
@@ -148,8 +157,6 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     }
 
     protected abstract class AbstractNioUnsafe extends AbstractUnsafe implements NioUnsafe {
-
-        protected boolean readPending;
 
         protected final void removeReadOp() {
             SelectionKey key = selectionKey();

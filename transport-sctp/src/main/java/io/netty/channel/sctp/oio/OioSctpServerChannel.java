@@ -93,7 +93,7 @@ public class OioSctpServerChannel extends AbstractOioMessageServerChannel
             sch.configureBlocking(false);
             selector = Selector.open();
             sch.register(selector, SelectionKey.OP_ACCEPT);
-            config = new DefaultSctpServerChannelConfig(this, sch);
+            config = new OioSctpServerChannelConfig(this, sch);
             success = true;
         } catch (Exception e) {
             throw new ChannelException("failed to initialize a sctp server channel", e);
@@ -290,5 +290,16 @@ public class OioSctpServerChannel extends AbstractOioMessageServerChannel
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
         throw new UnsupportedOperationException();
+    }
+
+    private final class OioSctpServerChannelConfig extends DefaultSctpServerChannelConfig {
+        private OioSctpServerChannelConfig(OioSctpServerChannel channel, SctpServerChannel javaChannel) {
+            super(channel, javaChannel);
+        }
+
+        @Override
+        protected void autoReadCleared() {
+            setReadPending(false);
+        }
     }
 }

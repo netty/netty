@@ -51,6 +51,11 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
         public void read() {
             assert eventLoop().inEventLoop();
             final ChannelConfig config = config();
+            if (!config.isAutoRead() && !isReadPending()) {
+                // ChannelConfig.setAutoRead(false) was called in the meantime
+                removeReadOp();
+                return;
+            }
 
             final int maxMessagesPerRead = config.getMaxMessagesPerRead();
             final ChannelPipeline pipeline = pipeline();
@@ -80,7 +85,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                 } catch (Throwable t) {
                     exception = t;
                 }
-                readPending = false;
+                setReadPending(false);
                 int size = readBuf.size();
                 for (int i = 0; i < size; i ++) {
                     pipeline.fireChannelRead(readBuf.get(i));
@@ -111,7 +116,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                 // * The user called Channel.read() or ChannelHandlerContext.read() in channelReadComplete(...) method
                 //
                 // See https://github.com/netty/netty/issues/2254
-                if (!config.isAutoRead() && !readPending) {
+                if (!config.isAutoRead() && !isReadPending()) {
                     removeReadOp();
                 }
             }

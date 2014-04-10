@@ -28,6 +28,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.ServerSocket;
 import java.net.SocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
@@ -83,7 +84,7 @@ public class NioServerSocketChannel extends AbstractNioMessageServerChannel
      */
     public NioServerSocketChannel(EventLoop eventLoop, EventLoopGroup childGroup, ServerSocketChannel channel) {
         super(null, eventLoop, childGroup, channel, SelectionKey.OP_ACCEPT);
-        config = new DefaultServerSocketChannelConfig(this, javaChannel().socket());
+        config = new NioServerSocketChannelConfig(this, javaChannel().socket());
     }
 
     @Override
@@ -178,5 +179,16 @@ public class NioServerSocketChannel extends AbstractNioMessageServerChannel
     @Override
     protected boolean doWriteMessage(Object msg, ChannelOutboundBuffer in) throws Exception {
         throw new UnsupportedOperationException();
+    }
+
+    private final class NioServerSocketChannelConfig  extends DefaultServerSocketChannelConfig {
+        private NioServerSocketChannelConfig(NioServerSocketChannel channel, ServerSocket javaSocket) {
+            super(channel, javaSocket);
+        }
+
+        @Override
+        protected void autoReadCleared() {
+            setReadPending(false);
+        }
     }
 }

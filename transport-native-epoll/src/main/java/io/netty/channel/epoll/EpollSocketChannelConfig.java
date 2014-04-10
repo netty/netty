@@ -271,4 +271,9 @@ public final class EpollSocketChannelConfig extends DefaultChannelConfig
         super.setMessageSizeEstimator(estimator);
         return this;
     }
+
+    @Override
+    protected void autoReadCleared() {
+        channel.clearEpollIn();
+    }
 }

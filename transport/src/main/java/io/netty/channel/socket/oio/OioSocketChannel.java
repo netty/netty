@@ -232,4 +232,9 @@ public class OioSocketChannel extends OioByteStreamChannel
         }
         return false;
     }
+
+    @Override
+    protected void setReadPending(boolean readPending) {
+        super.setReadPending(readPending);
+    }
 }

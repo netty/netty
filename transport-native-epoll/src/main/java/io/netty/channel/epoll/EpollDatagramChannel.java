@@ -302,7 +302,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
         }
 
         if (remoteAddress == null) {
-            remoteAddress = this.remote;
+            remoteAddress = remote;
             if (remoteAddress == null) {
                 throw new NotYetConnectedException();
             }
