@@ -35,7 +35,12 @@ import static io.netty.channel.ChannelOption.*;
 public class DefaultOioServerSocketChannelConfig extends DefaultServerSocketChannelConfig implements
         OioServerSocketChannelConfig {
 
+    @Deprecated
     public DefaultOioServerSocketChannelConfig(ServerSocketChannel channel, ServerSocket javaSocket) {
+        super(channel, javaSocket);
+    }
+
+    DefaultOioServerSocketChannelConfig(OioServerSocketChannel channel, ServerSocket javaSocket) {
         super(channel, javaSocket);
     }
 
@@ -142,6 +147,9 @@ public class DefaultOioServerSocketChannelConfig extends DefaultServerSocketChan
     @Override
     public OioServerSocketChannelConfig setAutoRead(boolean autoRead) {
         super.setAutoRead(autoRead);
+        if (!autoRead && channel instanceof OioServerSocketChannel) {
+            ((OioServerSocketChannel) channel).setReadPending(false);
+        }
         return this;
     }
 

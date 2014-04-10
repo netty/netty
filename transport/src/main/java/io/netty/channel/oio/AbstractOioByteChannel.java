@@ -17,6 +17,7 @@ package io.netty.channel.oio;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
@@ -72,7 +73,7 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
         if (checkInputShutdown()) {
             return;
         }
-
+        final ChannelConfig config = config();
         final ChannelPipeline pipeline = pipeline();
 
         // TODO: calculate size as in 3.x
@@ -112,7 +113,7 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
                         }
                     }
                 }
-                if (!config().isAutoRead()) {
+                if (!config.isAutoRead()) {
                     // stop reading until next Channel.read() call
                     // See https://github.com/netty/netty/issues/1363
                     break;
