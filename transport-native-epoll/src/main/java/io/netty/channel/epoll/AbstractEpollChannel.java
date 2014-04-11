@@ -197,7 +197,6 @@ abstract class AbstractEpollChannel extends AbstractChannel {
             return (flags & Native.EPOLLOUT) != 0;
         }
 
-
         protected final void clearEpollIn0() {
             if ((flags & readFlag) != 0) {
                 flags &= ~readFlag;

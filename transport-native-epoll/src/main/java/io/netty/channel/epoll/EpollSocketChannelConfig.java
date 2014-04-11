@@ -21,7 +21,6 @@ import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.SocketChannelConfig;
-import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.PlatformDependent;
 
 import java.util.Map;
@@ -253,17 +252,7 @@ public final class EpollSocketChannelConfig extends DefaultChannelConfig
     public EpollSocketChannelConfig setAutoRead(boolean autoRead) {
         super.setAutoRead(autoRead);
         if (!autoRead) {
-            if (channel.eventLoop().inEventLoop()) {
-                channel.clearEpollIn();
-            } else {
-                // execute if via the EventLoop
-                channel.eventLoop().execute(new OneTimeTask() {
-                    @Override
-                    public void run() {
-                        channel.clearEpollIn();
-                    }
-                });
-            }
+            channel.clearEpollIn();
         }
         return this;
     }
