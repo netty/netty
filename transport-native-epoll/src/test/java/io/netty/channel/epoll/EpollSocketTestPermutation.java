@@ -16,8 +16,12 @@
 package io.netty.channel.epoll;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ChannelFactory;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.socket.InternetProtocolFamily;
+import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.testsuite.transport.TestsuitePermutation;
@@ -84,5 +88,35 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
                     }
                 }
         );
+    }
+
+    @Override
+    public List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> datagram() {
+        // Make the list of Bootstrap factories.
+        List<BootstrapFactory<Bootstrap>> bfs = Arrays.asList(
+                new BootstrapFactory<Bootstrap>() {
+                    @Override
+                    public Bootstrap newInstance() {
+                        return new Bootstrap().group(nioWorkerGroup).channelFactory(new ChannelFactory<Channel>() {
+                            @Override
+                            public Channel newChannel() {
+                                return new NioDatagramChannel(InternetProtocolFamily.IPv4);
+                            }
+
+                            @Override
+                            public String toString() {
+                                return NioDatagramChannel.class.getSimpleName() + ".class";
+                            }
+                        });
+                    }
+                },
+                new BootstrapFactory<Bootstrap>() {
+                    @Override
+                    public Bootstrap newInstance() {
+                        return new Bootstrap().group(epollWorkerGroup).channel(EpollDatagramChannel.class);
+                    }
+                }
+        );
+        return combo(bfs, bfs);
     }
 }
