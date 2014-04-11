@@ -29,7 +29,7 @@ import static io.netty.channel.ChannelOption.SO_BACKLOG;
 import static io.netty.channel.ChannelOption.SO_RCVBUF;
 import static io.netty.channel.ChannelOption.SO_REUSEADDR;
 
-final class EpollServerSocketChannelConfig extends DefaultChannelConfig
+public final class EpollServerSocketChannelConfig extends DefaultChannelConfig
         implements ServerSocketChannelConfig {
 
     private final EpollServerSocketChannel channel;
@@ -42,7 +42,7 @@ final class EpollServerSocketChannelConfig extends DefaultChannelConfig
 
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
-        return getOptions(super.getOptions(), SO_RCVBUF, SO_REUSEADDR, SO_BACKLOG);
+        return getOptions(super.getOptions(), SO_RCVBUF, SO_REUSEADDR, SO_BACKLOG, EpollChannelOption.SO_REUSEPORT);
     }
 
     @SuppressWarnings("unchecked")
@@ -57,7 +57,9 @@ final class EpollServerSocketChannelConfig extends DefaultChannelConfig
         if (option == SO_BACKLOG) {
             return (T) Integer.valueOf(getBacklog());
         }
-
+        if (option == EpollChannelOption.SO_REUSEPORT) {
+            return (T) Boolean.valueOf(isReusePort());
+        }
         return super.getOption(option);
     }
 
@@ -71,6 +73,8 @@ final class EpollServerSocketChannelConfig extends DefaultChannelConfig
             setReuseAddress((Boolean) value);
         } else if (option == SO_BACKLOG) {
             setBacklog((Integer) value);
+        } else if (option == EpollChannelOption.SO_REUSEPORT) {
+            setReusePort((Boolean) value);
         } else {
             return super.setOption(option, value);
         }
@@ -84,7 +88,7 @@ final class EpollServerSocketChannelConfig extends DefaultChannelConfig
     }
 
     @Override
-    public ServerSocketChannelConfig setReuseAddress(boolean reuseAddress) {
+    public EpollServerSocketChannelConfig setReuseAddress(boolean reuseAddress) {
         Native.setReuseAddress(channel.fd, reuseAddress ? 1 : 0);
         return this;
     }
@@ -95,14 +99,14 @@ final class EpollServerSocketChannelConfig extends DefaultChannelConfig
     }
 
     @Override
-    public ServerSocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
+    public EpollServerSocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
         Native.setReceiveBufferSize(channel.fd, receiveBufferSize);
 
         return this;
     }
 
     @Override
-    public ServerSocketChannelConfig setPerformancePreferences(int connectionTime, int latency, int bandwidth) {
+    public EpollServerSocketChannelConfig setPerformancePreferences(int connectionTime, int latency, int bandwidth) {
         return this;
     }
 
@@ -112,7 +116,7 @@ final class EpollServerSocketChannelConfig extends DefaultChannelConfig
     }
 
     @Override
-    public ServerSocketChannelConfig setBacklog(int backlog) {
+    public EpollServerSocketChannelConfig setBacklog(int backlog) {
         if (backlog < 0) {
             throw new IllegalArgumentException("backlog: " + backlog);
         }
@@ -121,56 +125,76 @@ final class EpollServerSocketChannelConfig extends DefaultChannelConfig
     }
 
     @Override
-    public ServerSocketChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
+    public EpollServerSocketChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
         super.setConnectTimeoutMillis(connectTimeoutMillis);
         return this;
     }
 
     @Override
-    public ServerSocketChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
+    public EpollServerSocketChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
         super.setMaxMessagesPerRead(maxMessagesPerRead);
         return this;
     }
 
     @Override
-    public ServerSocketChannelConfig setWriteSpinCount(int writeSpinCount) {
+    public EpollServerSocketChannelConfig setWriteSpinCount(int writeSpinCount) {
         super.setWriteSpinCount(writeSpinCount);
         return this;
     }
 
     @Override
-    public ServerSocketChannelConfig setAllocator(ByteBufAllocator allocator) {
+    public EpollServerSocketChannelConfig setAllocator(ByteBufAllocator allocator) {
         super.setAllocator(allocator);
         return this;
     }
 
     @Override
-    public ServerSocketChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
+    public EpollServerSocketChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
         super.setRecvByteBufAllocator(allocator);
         return this;
     }
 
     @Override
-    public ServerSocketChannelConfig setAutoRead(boolean autoRead) {
+    public EpollServerSocketChannelConfig setAutoRead(boolean autoRead) {
         super.setAutoRead(autoRead);
         return this;
     }
 
     @Override
-    public ServerSocketChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
+    public EpollServerSocketChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
         super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
         return this;
     }
 
     @Override
-    public ServerSocketChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
+    public EpollServerSocketChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
         super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
         return this;
     }
 
     @Override
-    public ServerSocketChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
+    public EpollServerSocketChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
         super.setMessageSizeEstimator(estimator);
         return this;
     }
+
+    /**
+     * Returns {@code true} if the SO_REUSEPORT option is set.
+     */
+    public boolean isReusePort() {
+        return Native.isReusePort(channel.fd) == 1;
+    }
+
+    /**
+     * Set the SO_REUSEPORT option on the underlying Channel. This will allow to bind multiple
+     * {@link EpollSocketChannel}s to the same port and so accept connections with multiple threads.
+     *
+     * Be aware this method needs be called before {@link EpollSocketChannel#bind(java.net.SocketAddress)} to have
+     * any affect.
+     */
+    public EpollServerSocketChannelConfig setReusePort(boolean reusePort) {
+        Native.setReusePort(channel.fd, reusePort ? 1 : 0);
+        return this;
+    }
+
 }
