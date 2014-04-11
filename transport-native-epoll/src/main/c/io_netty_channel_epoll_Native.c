@@ -27,6 +27,7 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <fcntl.h>
+#include <sys/utsname.h>
 #include "io_netty_channel_epoll_Native.h"
 
 
@@ -845,6 +846,10 @@ JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_setReuseAddress(JNIEnv
     setOption(env, fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
 }
 
+JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_setReusePort(JNIEnv * env, jclass clazz, jint fd, jint optval) {
+    setOption(env, fd, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval));
+}
+
 JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_setTcpNoDelay(JNIEnv *env, jclass clazz, jint fd, jint optval) {
     setOption(env, fd, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval));
 }
@@ -884,6 +889,14 @@ JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_setTrafficClass(JNIEnv
 JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_isReuseAddresss(JNIEnv *env, jclass clazz, jint fd) {
     int optval;
     if (getOption(env, fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) == -1) {
+        return -1;
+    }
+    return optval;
+}
+
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_isReusePort(JNIEnv *env, jclass clazz, jint fd) {
+    int optval;
+    if (getOption(env, fd, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval)) == -1) {
         return -1;
     }
     return optval;
@@ -939,4 +952,17 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_getTrafficClass(JNIEnv
         return -1;
     }
     return optval;
+}
+
+JNIEXPORT jstring JNICALL Java_io_netty_channel_epoll_Native_kernelVersion(JNIEnv *env, jclass clazz) {
+    struct utsname name;
+
+    int res = uname(&name);
+    if (res == 0) {
+        return (*env)->NewStringUTF(env, name.release);
+    }
+    int err = errno;
+    throwRuntimeException(env, exceptionMessage("Error during uname(...): ", err));
+    return NULL;
+
 }
