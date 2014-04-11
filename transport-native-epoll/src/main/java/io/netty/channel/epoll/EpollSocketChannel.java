@@ -122,12 +122,8 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
         int readerIndex = buf.readerIndex();
         int localFlushedAmount;
         if (buf.nioBufferCount() == 1) {
-            if (buf.hasMemoryAddress()) {
-                localFlushedAmount = Native.writeAddress(fd, buf.memoryAddress(), readerIndex, buf.writerIndex());
-            } else {
-                ByteBuffer nioBuf = buf.internalNioBuffer(readerIndex, readable);
-                localFlushedAmount = Native.write(fd, nioBuf, nioBuf.position(), nioBuf.limit());
-            }
+            ByteBuffer nioBuf = buf.internalNioBuffer(readerIndex, readable);
+            localFlushedAmount = Native.write(fd, nioBuf, nioBuf.position(), nioBuf.limit());
         } else {
             // backed by more then one buffer, do a gathering write...
             ByteBuffer[] nioBufs = buf.nioBuffers();
