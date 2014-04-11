@@ -311,7 +311,7 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
             inputShutdown = true;
             if (isOpen()) {
                 if (Boolean.TRUE.equals(config().getOption(ChannelOption.ALLOW_HALF_CLOSURE))) {
-                    clearEpollIn();
+                    clearEpollIn0();
                     pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
                 } else {
                     close(voidPromise());
@@ -613,7 +613,7 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
                 //
                 // See https://github.com/netty/netty/issues/2254
                 if (!config.isAutoRead() && !readPending) {
-                    clearEpollIn();
+                    clearEpollIn0();
                 }
             }
         }
