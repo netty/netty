@@ -20,7 +20,6 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.socket.ServerSocketChannel;
-import io.netty.channel.socket.ServerSocketChannelConfig;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -55,7 +54,7 @@ public final class EpollServerSocketChannel extends AbstractEpollChannel impleme
     }
 
     @Override
-    public ServerSocketChannelConfig config() {
+    public EpollServerSocketChannelConfig config() {
         return config;
     }
 
