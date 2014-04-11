@@ -34,7 +34,7 @@ public final class EpollServerSocketChannel extends AbstractEpollChannel impleme
     private volatile InetSocketAddress local;
 
     public EpollServerSocketChannel() {
-        super(Native.EPOLLACCEPT);
+        super(Native.socketStreamFd(), Native.EPOLLACCEPT);
         config = new EpollServerSocketChannelConfig(this);
     }
 

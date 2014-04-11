@@ -16,6 +16,7 @@
 package io.netty.channel.epoll;
 
 
+import io.netty.channel.ChannelException;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.util.internal.NativeLibraryLoader;
 import io.netty.util.internal.PlatformDependent;
@@ -72,9 +73,10 @@ final class Native {
 
     public static native long sendfile(int dest, DefaultFileRegion src, long offset, long length) throws IOException;
 
-    // socket operations
-    public static native int socket() throws IOException;
-    public static void bind(int fd, InetAddress addr, int port) throws IOException {
+    public static int sendTo(
+            int fd, ByteBuffer buf, int pos, int limit, InetAddress addr, int port) throws IOException {
+        // just duplicate the toNativeInetAddress code here to minimize object creation as this method is expected
+        // to be called frequently
         byte[] address;
         int scopeId;
         if (addr instanceof Inet6Address) {
@@ -85,7 +87,60 @@ final class Native {
             scopeId = 0;
             address = ipv4MappedIpv6Address(addr.getAddress());
         }
-        bind(fd, address, scopeId, port);
+        return sendTo(fd, buf, pos, limit, address, scopeId, port);
+    }
+
+    private static native int sendTo(
+            int fd, ByteBuffer buf, int pos, int limit, byte[] address, int scopeId, int port) throws IOException;
+
+    public static int sendToAddress(
+            int fd, long memoryAddress, int pos, int limit, InetAddress addr, int port) throws IOException {
+        // just duplicate the toNativeInetAddress code here to minimize object creation as this method is expected
+        // to be called frequently
+        byte[] address;
+        int scopeId;
+        if (addr instanceof Inet6Address) {
+            address = addr.getAddress();
+            scopeId = ((Inet6Address) addr).getScopeId();
+        } else {
+            // convert to ipv4 mapped ipv6 address;
+            scopeId = 0;
+            address = ipv4MappedIpv6Address(addr.getAddress());
+        }
+        return sendToAddress(fd, memoryAddress, pos, limit, address, scopeId, port);
+    }
+
+    private static native int sendToAddress(
+            int fd, long memoryAddress, int pos, int limit, byte[] address, int scopeId, int port) throws IOException;
+
+    public static native EpollDatagramChannel.DatagramSocketAddress recvFrom(
+            int fd, ByteBuffer buf, int pos, int limit) throws IOException;
+
+    public static native EpollDatagramChannel.DatagramSocketAddress recvFromAddress(
+            int fd, long memoryAddress, int pos, int limit) throws IOException;
+
+    // socket operations
+    public static int socketStreamFd() {
+        try {
+            return socketStream();
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    public static int socketDgramFd() {
+        try {
+            return socketDgram();
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+    private static native int socketStream() throws IOException;
+    private static native int socketDgram() throws IOException;
+
+    public static void bind(int fd, InetAddress addr, int port) throws IOException {
+        NativeInetAddress address = toNativeInetAddress(addr);
+        bind(fd, address.address, address.scopeId, port);
     }
 
     private static byte[] ipv4MappedIpv6Address(byte[] ipv4) {
@@ -98,17 +153,8 @@ final class Native {
     public static native void bind(int fd, byte[] address, int scopeId, int port) throws IOException;
     public static native void listen(int fd, int backlog) throws IOException;
     public static boolean connect(int fd, InetAddress addr, int port) throws IOException {
-        byte[] address;
-        int scopeId;
-        if (addr instanceof Inet6Address) {
-            address = addr.getAddress();
-            scopeId = ((Inet6Address) addr).getScopeId();
-        } else {
-            // convert to ipv4 mapped ipv6 address;
-            scopeId = 0;
-            address = ipv4MappedIpv6Address(addr.getAddress());
-        }
-        return connect(fd, address, scopeId, port);
+        NativeInetAddress address = toNativeInetAddress(addr);
+        return connect(fd, address.address, address.scopeId, port);
     }
     public static native boolean connect(int fd, byte[] address, int scopeId, int port) throws IOException;
     public static native boolean finishConnect(int fd) throws IOException;
@@ -128,6 +174,7 @@ final class Native {
     public static native int isTcpCork(int fd);
     public static native int getSoLinger(int fd);
     public static native int getTrafficClass(int fd);
+    public static native int isBroadcast(int fd);
 
     public static native void setKeepAlive(int fd, int keepAlive);
     public static native void setReceiveBufferSize(int fd, int receiveBufferSize);
@@ -138,6 +185,31 @@ final class Native {
     public static native void setTcpCork(int fd, int tcpCork);
     public static native void setSoLinger(int fd, int soLinger);
     public static native void setTrafficClass(int fd, int tcpNoDelay);
+    public static native void setBroadcast(int fd, int broadcast);
+
+    private static NativeInetAddress toNativeInetAddress(InetAddress addr) {
+        byte[] bytes = addr.getAddress();
+        if (addr instanceof Inet6Address) {
+            return new NativeInetAddress(bytes, ((Inet6Address) addr).getScopeId());
+        } else {
+            // convert to ipv4 mapped ipv6 address;
+            return new NativeInetAddress(ipv4MappedIpv6Address(bytes));
+        }
+    }
+
+    private static class NativeInetAddress {
+        final byte[] address;
+        final int scopeId;
+
+        NativeInetAddress(byte[] address, int scopeId) {
+            this.address = address;
+            this.scopeId = scopeId;
+        }
+
+        NativeInetAddress(byte[] address) {
+            this(address, 0);
+        }
+    }
 
     public static native String kernelVersion();
     private Native() {
