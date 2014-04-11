@@ -32,9 +32,9 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
 
     static final SocketTestPermutation INSTANCE = new EpollSocketTestPermutation();
 
-    private final EventLoopGroup epollBossGroup =
+    static final EventLoopGroup EPOLL_BOSS_GROUP =
             new EpollEventLoopGroup(BOSSES, new DefaultThreadFactory("testsuite-epoll-boss", true));
-    private final EventLoopGroup epollWorkerGroup =
+    static final EventLoopGroup EPOLL_WORKER_GROUP =
             new EpollEventLoopGroup(WORKERS, new DefaultThreadFactory("testsuite-epoll-worker", true));
 
     @Override
@@ -54,7 +54,7 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
                 new BootstrapFactory<ServerBootstrap>() {
                     @Override
                     public ServerBootstrap newInstance() {
-                        return new ServerBootstrap().group(epollBossGroup, epollWorkerGroup)
+                        return new ServerBootstrap().group(EPOLL_BOSS_GROUP, EPOLL_WORKER_GROUP)
                                 .channel(EpollServerSocketChannel.class);
                     }
                 },
@@ -74,7 +74,7 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
                 new BootstrapFactory<Bootstrap>() {
                     @Override
                     public Bootstrap newInstance() {
-                        return new Bootstrap().group(epollWorkerGroup).channel(EpollSocketChannel.class);
+                        return new Bootstrap().group(EPOLL_WORKER_GROUP).channel(EpollSocketChannel.class);
                     }
                 },
                 new BootstrapFactory<Bootstrap>() {
