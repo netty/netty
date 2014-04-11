@@ -76,7 +76,7 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
     }
 
     public EpollSocketChannel(EventLoop eventLoop) {
-        super(eventLoop, Native.EPOLLIN);
+        super(eventLoop, Native.socketStreamFd(), Native.EPOLLIN);
         config = new EpollSocketChannelConfig(this);
     }
 
@@ -100,20 +100,6 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
         InetSocketAddress localAddress = (InetSocketAddress) local;
         Native.bind(fd, localAddress.getAddress(), localAddress.getPort());
         this.local = Native.localAddress(fd);
-    }
-
-    private void setEpollOut() {
-        if ((flags & Native.EPOLLOUT) == 0) {
-            flags |= Native.EPOLLOUT;
-            ((EpollEventLoop) eventLoop()).modify(this);
-        }
-    }
-
-    private void clearEpollOut() {
-        if ((flags & Native.EPOLLOUT) != 0) {
-            flags &= ~Native.EPOLLOUT;
-            ((EpollEventLoop) eventLoop()).modify(this);
-        }
     }
 
     /**

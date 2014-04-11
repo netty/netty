@@ -17,11 +17,9 @@ package io.netty.channel.epoll;
 
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.EventLoop;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.UnresolvedAddressException;
 
@@ -33,8 +31,8 @@ abstract class AbstractEpollChannel extends AbstractChannel {
     volatile int fd;
     int id;
 
-    AbstractEpollChannel(EventLoop eventLoop, int flag) {
-        this(null, eventLoop, socketFd(), flag, false);
+    AbstractEpollChannel(EventLoop eventLoop, int fd, int flag) {
+        this(null, eventLoop, fd, flag, false);
     }
 
     AbstractEpollChannel(Channel parent, EventLoop eventLoop, int fd, int flag, boolean active) {
@@ -43,14 +41,6 @@ abstract class AbstractEpollChannel extends AbstractChannel {
         readFlag = flag;
         flags |= flag;
         this.active = active;
-    }
-
-    private static int socketFd() {
-        try {
-            return Native.socket();
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
     }
 
     @Override
@@ -116,6 +106,20 @@ abstract class AbstractEpollChannel extends AbstractChannel {
     protected final void clearEpollIn() {
         if ((flags & readFlag) != 0) {
             flags &= ~readFlag;
+            ((EpollEventLoop) eventLoop()).modify(this);
+        }
+    }
+
+    protected final void setEpollOut() {
+        if ((flags & Native.EPOLLOUT) == 0) {
+            flags |= Native.EPOLLOUT;
+            ((EpollEventLoop) eventLoop()).modify(this);
+        }
+    }
+
+    protected final void clearEpollOut() {
+        if ((flags & Native.EPOLLOUT) != 0) {
+            flags &= ~Native.EPOLLOUT;
             ((EpollEventLoop) eventLoop()).modify(this);
         }
     }

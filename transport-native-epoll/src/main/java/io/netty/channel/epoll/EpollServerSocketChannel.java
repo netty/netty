@@ -36,7 +36,7 @@ public final class EpollServerSocketChannel extends AbstractEpollChannel impleme
     private volatile InetSocketAddress local;
 
     public EpollServerSocketChannel(EventLoop eventLoop, EventLoopGroup childGroup) {
-        super(eventLoop, Native.EPOLLACCEPT);
+        super(eventLoop, Native.socketStreamFd(), Native.EPOLLACCEPT);
         config = new EpollServerSocketChannelConfig(this);
         this.childGroup = childGroup;
     }
