@@ -29,7 +29,6 @@ import io.netty.util.CharsetUtil;
 
 public class MemcacheClientHandler extends ChannelDuplexHandler {
 
-
     /**
      * Transforms basic string requests to binary memcache requests
      */
