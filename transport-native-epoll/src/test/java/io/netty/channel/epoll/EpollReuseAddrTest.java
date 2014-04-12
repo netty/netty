@@ -17,7 +17,10 @@ package io.netty.channel.epoll;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.testsuite.util.TestUtils;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -25,6 +28,8 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class EpollReuseAddrTest {
     private static final int MAJOR;
@@ -60,14 +65,25 @@ public class EpollReuseAddrTest {
         future.channel().close().syncUninterruptibly();
     }
 
-    @Test
-    public void testMultipleBind() {
+    @Test(timeout = 10000)
+    public void testMultipleBind() throws Exception {
         Assume.assumeTrue(versionEqOrGt(3, 9, 0));
         ServerBootstrap bootstrap = createBootstrap();
         bootstrap.option(EpollChannelOption.SO_REUSEPORT, true);
+        final AtomicBoolean accepted1 = new AtomicBoolean();
+        bootstrap.childHandler(new TestHandler(accepted1));
         ChannelFuture future = bootstrap.bind().syncUninterruptibly();
-        ChannelFuture future2 = bootstrap.bind().syncUninterruptibly();
 
+        final AtomicBoolean accepted2 = new AtomicBoolean();
+        bootstrap.childHandler(new TestHandler(accepted2));
+        ChannelFuture future2 = bootstrap.bind().syncUninterruptibly();
+        InetSocketAddress address = (InetSocketAddress) future2.channel().localAddress();
+
+        while (!accepted1.get() || !accepted2.get()) {
+            Socket socket = new Socket(address.getAddress(), address.getPort());
+            socket.setReuseAddress(true);
+            socket.close();
+        }
         future.channel().close().syncUninterruptibly();
         future2.channel().close().syncUninterruptibly();
     }
@@ -85,5 +101,20 @@ public class EpollReuseAddrTest {
 
     private static boolean versionEqOrGt(int major, int minor, int bugfix)  {
         return major > MAJOR || minor > MINOR || bugfix >= BUGFIX;
+    }
+
+    @ChannelHandler.Sharable
+    private static class TestHandler extends ChannelInboundHandlerAdapter {
+        private final AtomicBoolean accepted;
+
+        TestHandler(AtomicBoolean accepted) {
+            this.accepted = accepted;
+        }
+
+        @Override
+        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+            accepted.set(true);
+            ctx.close();
+        }
     }
 }
