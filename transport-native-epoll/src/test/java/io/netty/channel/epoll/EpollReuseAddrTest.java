@@ -100,7 +100,18 @@ public class EpollReuseAddrTest {
     }
 
     private static boolean versionEqOrGt(int major, int minor, int bugfix)  {
-        return major > MAJOR || minor > MINOR || bugfix >= BUGFIX;
+        if (MAJOR > major) {
+            return true;
+        } else if (MAJOR == major) {
+            if (MINOR > minor) {
+                return true;
+            } else if (MINOR == minor) {
+                if (BUGFIX >= bugfix) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     @ChannelHandler.Sharable
