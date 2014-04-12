@@ -93,13 +93,12 @@ public abstract class SpdyOrHttpChooser implements ChannelUpstreamHandler {
      */
     protected void addSpdyHandlers(ChannelHandlerContext ctx, SpdyVersion version) {
         ChannelPipeline pipeline = ctx.getPipeline();
-        pipeline.addLast("spdyDecoder", new SpdyFrameDecoder(version));
-        pipeline.addLast("spdyEncoder", new SpdyFrameEncoder(version));
+        pipeline.addLast("spdyFrameCodec", new SpdyFrameCodec(version));
         pipeline.addLast("spdySessionHandler", new SpdySessionHandler(version, true));
         pipeline.addLast("spdyHttpEncoder", new SpdyHttpEncoder(version));
         pipeline.addLast("spdyHttpDecoder", new SpdyHttpDecoder(version, maxSpdyContentLength));
         pipeline.addLast("spdyStreamIdHandler", new SpdyHttpResponseStreamIdHandler());
-        pipeline.addLast("httpRquestHandler", createHttpRequestHandlerForSpdy());
+        pipeline.addLast("httpRequestHandler", createHttpRequestHandlerForSpdy());
     }
 
     /**
@@ -107,10 +106,10 @@ public abstract class SpdyOrHttpChooser implements ChannelUpstreamHandler {
      */
     protected void addHttpHandlers(ChannelHandlerContext ctx) {
         ChannelPipeline pipeline = ctx.getPipeline();
-        pipeline.addLast("httpRquestDecoder", new HttpRequestDecoder());
+        pipeline.addLast("httpRequestDecoder", new HttpRequestDecoder());
         pipeline.addLast("httpResponseEncoder", new HttpResponseEncoder());
         pipeline.addLast("httpChunkAggregator", new HttpChunkAggregator(maxHttpContentLength));
-        pipeline.addLast("httpRquestHandler", createHttpRequestHandlerForHttp());
+        pipeline.addLast("httpRequestHandler", createHttpRequestHandlerForHttp());
     }
 
     /**

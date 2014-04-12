@@ -159,8 +159,7 @@ public abstract class AbstractSocketSpdyEchoTest {
         EchoHandler sh = new EchoHandler(frames, true);
         EchoHandler ch = new EchoHandler(frames, false);
 
-        sb.getPipeline().addLast("decoder", new SpdyFrameDecoder(version));
-        sb.getPipeline().addLast("encoder", new SpdyFrameEncoder(version));
+        sb.getPipeline().addLast("codec", new SpdyFrameCodec(version));
         sb.getPipeline().addLast("handler", sh);
 
         cb.getPipeline().addLast("handler", ch);
