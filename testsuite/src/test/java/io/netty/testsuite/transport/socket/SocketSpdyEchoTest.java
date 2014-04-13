@@ -25,8 +25,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.handler.codec.spdy.SpdyFrameDecoder;
-import io.netty.handler.codec.spdy.SpdyFrameEncoder;
+import io.netty.handler.codec.spdy.SpdyFrameCodec;
 import io.netty.handler.codec.spdy.SpdyVersion;
 import io.netty.util.NetUtil;
 import org.junit.Test;
@@ -184,8 +183,7 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
             @Override
             public void initChannel(SocketChannel channel) throws Exception {
                 channel.pipeline().addLast(
-                        new SpdyFrameDecoder(version),
-                        new SpdyFrameEncoder(version),
+                        new SpdyFrameCodec(version),
                         sh);
             }
         });
