@@ -142,8 +142,7 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
 
             // Handle the 'Expect: 100-continue' header if necessary.
             if (is100ContinueExpected(m)) {
-                ChannelHandlerContext lastCtx = ctx.pipeline().lastContext();
-                lastCtx.writeAndFlush(CONTINUE).addListener(new ChannelFutureListener() {
+                ctx.pipeline().writeAndFlush(CONTINUE).addListener(new ChannelFutureListener() {
                     @Override
                     public void operationComplete(ChannelFuture future) throws Exception {
                         if (!future.isSuccess()) {
