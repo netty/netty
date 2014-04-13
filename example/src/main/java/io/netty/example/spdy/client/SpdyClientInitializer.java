@@ -19,8 +19,7 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.example.securechat.SecureChatSslContextFactory;
-import io.netty.handler.codec.spdy.SpdyFrameDecoder;
-import io.netty.handler.codec.spdy.SpdyFrameEncoder;
+import io.netty.handler.codec.spdy.SpdyFrameCodec;
 import io.netty.handler.codec.spdy.SpdyHttpDecoder;
 import io.netty.handler.codec.spdy.SpdyHttpEncoder;
 import io.netty.handler.codec.spdy.SpdySessionHandler;
@@ -52,8 +51,7 @@ public class SpdyClientInitializer extends ChannelInitializer<SocketChannel> {
         ChannelPipeline pipeline = ch.pipeline();
 
         pipeline.addLast("ssl", new SslHandler(engine));
-        pipeline.addLast("spdyEncoder", new SpdyFrameEncoder(SPDY_3_1));
-        pipeline.addLast("spdyDecoder", new SpdyFrameDecoder(SPDY_3_1));
+        pipeline.addLast("spdyFrameCodec", new SpdyFrameCodec(SPDY_3_1));
         pipeline.addLast("spdyFrameLogger", new SpdyFrameLogger(INFO));
         pipeline.addLast("spdySessionHandler", new SpdySessionHandler(SPDY_3_1, false));
         pipeline.addLast("spdyHttpEncoder", new SpdyHttpEncoder(SPDY_3_1));

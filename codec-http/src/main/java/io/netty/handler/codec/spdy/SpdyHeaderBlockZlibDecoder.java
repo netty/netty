@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 The Netty Project
+ * Copyright 2014 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -26,6 +26,8 @@ import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 final class SpdyHeaderBlockZlibDecoder extends SpdyHeaderBlockRawDecoder {
 
     private static final int DEFAULT_BUFFER_CAPACITY = 4096;
+    private static final SpdyProtocolException INVALID_HEADER_BLOCK =
+            new SpdyProtocolException("Invalid Header Block");
 
     private final Inflater decompressor = new Inflater();
 
@@ -36,19 +38,22 @@ final class SpdyHeaderBlockZlibDecoder extends SpdyHeaderBlockRawDecoder {
     }
 
     @Override
-    void decode(ByteBuf encoded, SpdyHeadersFrame frame) throws Exception {
-        int len = setInput(encoded);
+    void decode(ByteBuf headerBlock, SpdyHeadersFrame frame) throws Exception {
+        int len = setInput(headerBlock);
 
         int numBytes;
         do {
-            numBytes = decompress(encoded.alloc(), frame);
+            numBytes = decompress(headerBlock.alloc(), frame);
         } while (numBytes > 0);
 
+        // z_stream has an internal 64-bit hold buffer
+        // it is always capable of consuming the entire input
         if (decompressor.getRemaining() != 0) {
-            throw new SpdyProtocolException("client sent extra data beyond headers");
+            // we reached the end of the deflate stream
+            throw INVALID_HEADER_BLOCK;
         }
 
-        encoded.skipBytes(len);
+        headerBlock.skipBytes(len);
     }
 
     private int setInput(ByteBuf compressed) {
@@ -72,7 +77,11 @@ final class SpdyHeaderBlockZlibDecoder extends SpdyHeaderBlockRawDecoder {
         try {
             int numBytes = decompressor.inflate(out, off, decompressed.writableBytes());
             if (numBytes == 0 && decompressor.needsDictionary()) {
-                decompressor.setDictionary(SPDY_DICT);
+                try {
+                    decompressor.setDictionary(SPDY_DICT);
+                } catch (IllegalArgumentException e) {
+                    throw INVALID_HEADER_BLOCK;
+                }
                 numBytes = decompressor.inflate(out, off, decompressed.writableBytes());
             }
             if (frame != null) {
@@ -95,16 +104,16 @@ final class SpdyHeaderBlockZlibDecoder extends SpdyHeaderBlockRawDecoder {
     }
 
     @Override
-    void reset() {
+    void endHeaderBlock(SpdyHeadersFrame frame) throws Exception {
+        super.endHeaderBlock(frame);
         releaseBuffer();
-        super.reset();
     }
 
     @Override
     public void end() {
+        super.end();
         releaseBuffer();
         decompressor.end();
-        super.end();
     }
 
     private void releaseBuffer() {

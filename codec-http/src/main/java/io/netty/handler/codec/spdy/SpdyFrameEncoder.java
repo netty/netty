@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 The Netty Project
+ * Copyright 2014 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,12 +16,9 @@
 package io.netty.handler.codec.spdy;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.MessageToByteEncoder;
-import io.netty.handler.codec.UnsupportedMessageTypeException;
+import io.netty.buffer.ByteBufAllocator;
 
+import java.nio.ByteOrder;
 import java.util.Set;
 
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
@@ -29,188 +26,138 @@ import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 /**
  * Encodes a SPDY Frame into a {@link ByteBuf}.
  */
-public class SpdyFrameEncoder extends MessageToByteEncoder<SpdyFrame> {
+public class SpdyFrameEncoder {
 
     private final int version;
-    private final SpdyHeaderBlockEncoder headerBlockEncoder;
 
     /**
-     * Creates a new instance with the specified {@code version} and the
-     * default {@code compressionLevel (6)}, {@code windowBits (15)},
-     * and {@code memLevel (8)}.
+     * Creates a new instance with the specified {@code spdyVersion}.
      */
-    public SpdyFrameEncoder(SpdyVersion version) {
-        this(version, 6, 15, 8);
-    }
-
-    /**
-     * Creates a new instance with the specified parameters.
-     */
-    public SpdyFrameEncoder(SpdyVersion version, int compressionLevel, int windowBits, int memLevel) {
-        this(version, SpdyHeaderBlockEncoder.newInstance(
-                    version, compressionLevel, windowBits, memLevel));
-    }
-
-    protected SpdyFrameEncoder(SpdyVersion version, SpdyHeaderBlockEncoder headerBlockEncoder) {
-        if (version == null) {
-            throw new NullPointerException("version");
+    public SpdyFrameEncoder(SpdyVersion spdyVersion) {
+        if (spdyVersion == null) {
+            throw new NullPointerException("spdyVersion");
         }
-        this.version = version.getVersion();
-        this.headerBlockEncoder = headerBlockEncoder;
+        version = spdyVersion.getVersion();
     }
 
-    @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        ctx.channel().closeFuture().addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
-                headerBlockEncoder.end();
-            }
-        });
+    private void writeControlFrameHeader(ByteBuf buffer, int type, byte flags, int length) {
+        buffer.writeShort(version | 0x8000);
+        buffer.writeShort(type);
+        buffer.writeByte(flags);
+        buffer.writeMedium(length);
     }
 
-    @Override
-    protected void encode(ChannelHandlerContext ctx, SpdyFrame msg, ByteBuf out) throws Exception {
-        if (msg instanceof SpdyDataFrame) {
+    public ByteBuf encodeDataFrame(ByteBufAllocator allocator, int streamId, boolean last, ByteBuf data) {
+        byte flags = last ? SPDY_DATA_FLAG_FIN : 0;
+        int length = data.readableBytes();
+        ByteBuf frame = allocator.ioBuffer(SPDY_HEADER_SIZE + length).order(ByteOrder.BIG_ENDIAN);
+        frame.writeInt(streamId & 0x7FFFFFFF);
+        frame.writeByte(flags);
+        frame.writeMedium(length);
+        frame.writeBytes(data, data.readerIndex(), length);
+        return frame;
+    }
 
-            SpdyDataFrame spdyDataFrame = (SpdyDataFrame) msg;
-            ByteBuf data = spdyDataFrame.content();
-            byte flags = spdyDataFrame.isLast() ? SPDY_DATA_FLAG_FIN : 0;
-            out.ensureWritable(SPDY_HEADER_SIZE + data.readableBytes());
-            out.writeInt(spdyDataFrame.getStreamId() & 0x7FFFFFFF);
-            out.writeByte(flags);
-            out.writeMedium(data.readableBytes());
-            out.writeBytes(data, data.readerIndex(), data.readableBytes());
+    public ByteBuf encodeSynStreamFrame(ByteBufAllocator allocator,  int streamId, int associatedToStreamId,
+            byte priority, boolean last, boolean unidirectional, ByteBuf headerBlock) {
+        int headerBlockLength = headerBlock.readableBytes();
+        byte flags = last ? SPDY_FLAG_FIN : 0;
+        if (unidirectional) {
+            flags |= SPDY_FLAG_UNIDIRECTIONAL;
+        }
+        int length = 10 + headerBlockLength;
+        ByteBuf frame = allocator.ioBuffer(SPDY_HEADER_SIZE + length).order(ByteOrder.BIG_ENDIAN);
+        writeControlFrameHeader(frame, SPDY_SYN_STREAM_FRAME, flags, length);
+        frame.writeInt(streamId);
+        frame.writeInt(associatedToStreamId);
+        frame.writeShort((priority & 0xFF) << 13);
+        frame.writeBytes(headerBlock, headerBlock.readerIndex(), headerBlockLength);
+        return frame;
+    }
 
-        } else if (msg instanceof SpdySynStreamFrame) {
+    public ByteBuf encodeSynReplyFrame(ByteBufAllocator allocator, int streamId, boolean last, ByteBuf headerBlock) {
+        int headerBlockLength = headerBlock.readableBytes();
+        byte flags = last ? SPDY_FLAG_FIN : 0;
+        int length = 4 + headerBlockLength;
+        ByteBuf frame = allocator.ioBuffer(SPDY_HEADER_SIZE + length).order(ByteOrder.BIG_ENDIAN);
+        writeControlFrameHeader(frame, SPDY_SYN_REPLY_FRAME, flags, length);
+        frame.writeInt(streamId);
+        frame.writeBytes(headerBlock, headerBlock.readerIndex(), headerBlockLength);
+        return frame;
+    }
 
-            SpdySynStreamFrame spdySynStreamFrame = (SpdySynStreamFrame) msg;
-            ByteBuf data = headerBlockEncoder.encode(spdySynStreamFrame);
-            try {
-                byte flags = spdySynStreamFrame.isLast() ? SPDY_FLAG_FIN : 0;
-                if (spdySynStreamFrame.isUnidirectional()) {
-                    flags |= SPDY_FLAG_UNIDIRECTIONAL;
-                }
-                int headerBlockLength = data.readableBytes();
-                int length = 10 + headerBlockLength;
-                out.ensureWritable(SPDY_HEADER_SIZE + length);
-                out.writeShort(version | 0x8000);
-                out.writeShort(SPDY_SYN_STREAM_FRAME);
-                out.writeByte(flags);
-                out.writeMedium(length);
-                out.writeInt(spdySynStreamFrame.getStreamId());
-                out.writeInt(spdySynStreamFrame.getAssociatedToStreamId());
-                out.writeShort((spdySynStreamFrame.getPriority() & 0xFF) << 13);
-                out.writeBytes(data, data.readerIndex(), headerBlockLength);
-            } finally {
-                data.release();
-            }
+    public ByteBuf encodeRstStreamFrame(ByteBufAllocator allocator, int streamId, int statusCode) {
+        byte flags = 0;
+        int length = 8;
+        ByteBuf frame = allocator.ioBuffer(SPDY_HEADER_SIZE + length).order(ByteOrder.BIG_ENDIAN);
+        writeControlFrameHeader(frame, SPDY_RST_STREAM_FRAME, flags, length);
+        frame.writeInt(streamId);
+        frame.writeInt(statusCode);
+        return frame;
+    }
 
-        } else if (msg instanceof SpdySynReplyFrame) {
+    public ByteBuf encodeSettingsFrame(ByteBufAllocator allocator, SpdySettingsFrame spdySettingsFrame) {
+        Set<Integer> ids = spdySettingsFrame.getIds();
+        int numSettings = ids.size();
 
-            SpdySynReplyFrame spdySynReplyFrame = (SpdySynReplyFrame) msg;
-            ByteBuf data = headerBlockEncoder.encode(spdySynReplyFrame);
-            try {
-                byte flags = spdySynReplyFrame.isLast() ? SPDY_FLAG_FIN : 0;
-                int headerBlockLength = data.readableBytes();
-                int length = 4 + headerBlockLength;
-                out.ensureWritable(SPDY_HEADER_SIZE + length);
-                out.writeShort(version | 0x8000);
-                out.writeShort(SPDY_SYN_REPLY_FRAME);
-                out.writeByte(flags);
-                out.writeMedium(length);
-                out.writeInt(spdySynReplyFrame.getStreamId());
-                out.writeBytes(data, data.readerIndex(), headerBlockLength);
-            } finally {
-                data.release();
-            }
-
-        } else if (msg instanceof SpdyRstStreamFrame) {
-
-            SpdyRstStreamFrame spdyRstStreamFrame = (SpdyRstStreamFrame) msg;
-            out.ensureWritable(SPDY_HEADER_SIZE + 8);
-            out.writeShort(version | 0x8000);
-            out.writeShort(SPDY_RST_STREAM_FRAME);
-            out.writeInt(8);
-            out.writeInt(spdyRstStreamFrame.getStreamId());
-            out.writeInt(spdyRstStreamFrame.getStatus().getCode());
-
-        } else if (msg instanceof SpdySettingsFrame) {
-
-            SpdySettingsFrame spdySettingsFrame = (SpdySettingsFrame) msg;
-            byte flags = spdySettingsFrame.clearPreviouslyPersistedSettings() ?
+        byte flags = spdySettingsFrame.clearPreviouslyPersistedSettings() ?
                 SPDY_SETTINGS_CLEAR : 0;
-            Set<Integer> IDs = spdySettingsFrame.getIds();
-            int numEntries = IDs.size();
-            int length = 4 + numEntries * 8;
-            out.ensureWritable(SPDY_HEADER_SIZE + length);
-            out.writeShort(version | 0x8000);
-            out.writeShort(SPDY_SETTINGS_FRAME);
-            out.writeByte(flags);
-            out.writeMedium(length);
-            out.writeInt(numEntries);
-            for (Integer id: IDs) {
-                byte ID_flags = 0;
-                if (spdySettingsFrame.isPersistValue(id)) {
-                    ID_flags |= SPDY_SETTINGS_PERSIST_VALUE;
-                }
-                if (spdySettingsFrame.isPersisted(id)) {
-                    ID_flags |= SPDY_SETTINGS_PERSISTED;
-                }
-                out.writeByte(ID_flags);
-                out.writeMedium(id);
-                out.writeInt(spdySettingsFrame.getValue(id));
+        int length = 4 + 8 * numSettings;
+        ByteBuf frame = allocator.ioBuffer(SPDY_HEADER_SIZE + length).order(ByteOrder.BIG_ENDIAN);
+        writeControlFrameHeader(frame, SPDY_SETTINGS_FRAME, flags, length);
+        frame.writeInt(numSettings);
+        for (Integer id : ids) {
+            flags = 0;
+            if (spdySettingsFrame.isPersistValue(id)) {
+                flags |= SPDY_SETTINGS_PERSIST_VALUE;
             }
-
-        } else if (msg instanceof SpdyPingFrame) {
-
-            SpdyPingFrame spdyPingFrame = (SpdyPingFrame) msg;
-            out.ensureWritable(SPDY_HEADER_SIZE + 4);
-            out.writeShort(version | 0x8000);
-            out.writeShort(SPDY_PING_FRAME);
-            out.writeInt(4);
-            out.writeInt(spdyPingFrame.getId());
-
-        } else if (msg instanceof SpdyGoAwayFrame) {
-
-            SpdyGoAwayFrame spdyGoAwayFrame = (SpdyGoAwayFrame) msg;
-            out.ensureWritable(SPDY_HEADER_SIZE + 8);
-            out.writeShort(version | 0x8000);
-            out.writeShort(SPDY_GOAWAY_FRAME);
-            out.writeInt(8);
-            out.writeInt(spdyGoAwayFrame.getLastGoodStreamId());
-            out.writeInt(spdyGoAwayFrame.getStatus().getCode());
-
-        } else if (msg instanceof SpdyHeadersFrame) {
-
-            SpdyHeadersFrame spdyHeadersFrame = (SpdyHeadersFrame) msg;
-            ByteBuf data = headerBlockEncoder.encode(spdyHeadersFrame);
-            try {
-                byte flags = spdyHeadersFrame.isLast() ? SPDY_FLAG_FIN : 0;
-                int headerBlockLength = data.readableBytes();
-                int length = 4 + headerBlockLength;
-                out.ensureWritable(SPDY_HEADER_SIZE + length);
-                out.writeShort(version | 0x8000);
-                out.writeShort(SPDY_HEADERS_FRAME);
-                out.writeByte(flags);
-                out.writeMedium(length);
-                out.writeInt(spdyHeadersFrame.getStreamId());
-                out.writeBytes(data, data.readerIndex(), headerBlockLength);
-            } finally {
-                data.release();
+            if (spdySettingsFrame.isPersisted(id)) {
+                flags |= SPDY_SETTINGS_PERSISTED;
             }
-
-        } else if (msg instanceof SpdyWindowUpdateFrame) {
-
-            SpdyWindowUpdateFrame spdyWindowUpdateFrame = (SpdyWindowUpdateFrame) msg;
-            out.ensureWritable(SPDY_HEADER_SIZE + 8);
-            out.writeShort(version | 0x8000);
-            out.writeShort(SPDY_WINDOW_UPDATE_FRAME);
-            out.writeInt(8);
-            out.writeInt(spdyWindowUpdateFrame.getStreamId());
-            out.writeInt(spdyWindowUpdateFrame.getDeltaWindowSize());
-        } else {
-            throw new UnsupportedMessageTypeException(msg);
+            frame.writeByte(flags);
+            frame.writeMedium(id);
+            frame.writeInt(spdySettingsFrame.getValue(id));
         }
+        return frame;
+    }
+
+    public ByteBuf encodePingFrame(ByteBufAllocator allocator, int id) {
+        byte flags = 0;
+        int length = 4;
+        ByteBuf frame = allocator.ioBuffer(SPDY_HEADER_SIZE + length).order(ByteOrder.BIG_ENDIAN);
+        writeControlFrameHeader(frame, SPDY_PING_FRAME, flags, length);
+        frame.writeInt(id);
+        return frame;
+    }
+
+    public ByteBuf encodeGoAwayFrame(ByteBufAllocator allocator, int lastGoodStreamId, int statusCode) {
+        byte flags = 0;
+        int length = 8;
+        ByteBuf frame = allocator.ioBuffer(SPDY_HEADER_SIZE + length).order(ByteOrder.BIG_ENDIAN);
+        writeControlFrameHeader(frame, SPDY_GOAWAY_FRAME, flags, length);
+        frame.writeInt(lastGoodStreamId);
+        frame.writeInt(statusCode);
+        return frame;
+    }
+
+    public ByteBuf encodeHeadersFrame(ByteBufAllocator allocator, int streamId, boolean last, ByteBuf headerBlock) {
+        int headerBlockLength = headerBlock.readableBytes();
+        byte flags = last ? SPDY_FLAG_FIN : 0;
+        int length = 4 + headerBlockLength;
+        ByteBuf frame = allocator.ioBuffer(SPDY_HEADER_SIZE + length).order(ByteOrder.BIG_ENDIAN);
+        writeControlFrameHeader(frame, SPDY_HEADERS_FRAME, flags, length);
+        frame.writeInt(streamId);
+        frame.writeBytes(headerBlock, headerBlock.readerIndex(), headerBlockLength);
+        return frame;
+    }
+
+    public ByteBuf encodeWindowUpdateFrame(ByteBufAllocator allocator, int streamId, int deltaWindowSize) {
+        byte flags = 0;
+        int length = 8;
+        ByteBuf frame = allocator.ioBuffer(SPDY_HEADER_SIZE + length).order(ByteOrder.BIG_ENDIAN);
+        writeControlFrameHeader(frame, SPDY_WINDOW_UPDATE_FRAME, flags, length);
+        frame.writeInt(streamId);
+        frame.writeInt(deltaWindowSize);
+        return frame;
     }
 }

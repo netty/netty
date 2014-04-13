@@ -43,8 +43,8 @@ public class SpdySessionHandlerTest {
         assertNotNull(msg);
         assertTrue(msg instanceof SpdyDataFrame);
         SpdyDataFrame spdyDataFrame = (SpdyDataFrame) msg;
-        assertEquals(spdyDataFrame.getStreamId(), streamId);
-        assertEquals(spdyDataFrame.isLast(), last);
+        assertEquals(streamId, spdyDataFrame.getStreamId());
+        assertEquals(last, spdyDataFrame.isLast());
     }
 
     private static void assertSynReply(Object msg, int streamId, boolean last, SpdyHeaders headers) {
@@ -57,30 +57,30 @@ public class SpdySessionHandlerTest {
         assertNotNull(msg);
         assertTrue(msg instanceof SpdyRstStreamFrame);
         SpdyRstStreamFrame spdyRstStreamFrame = (SpdyRstStreamFrame) msg;
-        assertEquals(spdyRstStreamFrame.getStreamId(), streamId);
-        assertEquals(spdyRstStreamFrame.getStatus(), status);
+        assertEquals(streamId, spdyRstStreamFrame.getStreamId());
+        assertEquals(status, spdyRstStreamFrame.getStatus());
     }
 
     private static void assertPing(Object msg, int id) {
         assertNotNull(msg);
         assertTrue(msg instanceof SpdyPingFrame);
         SpdyPingFrame spdyPingFrame = (SpdyPingFrame) msg;
-        assertEquals(spdyPingFrame.getId(), id);
+        assertEquals(id, spdyPingFrame.getId());
     }
 
     private static void assertGoAway(Object msg, int lastGoodStreamId) {
         assertNotNull(msg);
         assertTrue(msg instanceof SpdyGoAwayFrame);
         SpdyGoAwayFrame spdyGoAwayFrame = (SpdyGoAwayFrame) msg;
-        assertEquals(spdyGoAwayFrame.getLastGoodStreamId(), lastGoodStreamId);
+        assertEquals(lastGoodStreamId, spdyGoAwayFrame.getLastGoodStreamId());
     }
 
     private static void assertHeaders(Object msg, int streamId, boolean last, SpdyHeaders headers) {
         assertNotNull(msg);
         assertTrue(msg instanceof SpdyHeadersFrame);
         SpdyHeadersFrame spdyHeadersFrame = (SpdyHeadersFrame) msg;
-        assertEquals(spdyHeadersFrame.getStreamId(), streamId);
-        assertEquals(spdyHeadersFrame.isLast(), last);
+        assertEquals(streamId, spdyHeadersFrame.getStreamId());
+        assertEquals(last, spdyHeadersFrame.isLast());
         for (String name: headers.names()) {
             List<String> expectedValues = headers.getAll(name);
             List<String> receivedValues = spdyHeadersFrame.headers().getAll(name);
