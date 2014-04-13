@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2014 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -129,8 +129,7 @@ public abstract class SpdyOrHttpChooser extends ByteToMessageDecoder {
      */
     protected void addSpdyHandlers(ChannelHandlerContext ctx, SpdyVersion version) {
         ChannelPipeline pipeline = ctx.pipeline();
-        pipeline.addLast("spdyDecoder", new SpdyFrameDecoder(version));
-        pipeline.addLast("spdyEncoder", new SpdyFrameEncoder(version));
+        pipeline.addLast("spdyFrameCodec", new SpdyFrameCodec(version));
         pipeline.addLast("spdySessionHandler", new SpdySessionHandler(version, true));
         pipeline.addLast("spdyHttpEncoder", new SpdyHttpEncoder(version));
         pipeline.addLast("spdyHttpDecoder", new SpdyHttpDecoder(version, maxSpdyContentLength));

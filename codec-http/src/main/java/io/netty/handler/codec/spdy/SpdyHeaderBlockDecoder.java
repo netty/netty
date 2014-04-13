@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 The Netty Project
+ * Copyright 2014 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -19,11 +19,24 @@ import io.netty.buffer.ByteBuf;
 
 abstract class SpdyHeaderBlockDecoder {
 
-    static SpdyHeaderBlockDecoder newInstance(SpdyVersion version, int maxHeaderSize) {
-        return new SpdyHeaderBlockZlibDecoder(version, maxHeaderSize);
+    static SpdyHeaderBlockDecoder newInstance(SpdyVersion spdyVersion, int maxHeaderSize) {
+        return new SpdyHeaderBlockZlibDecoder(spdyVersion, maxHeaderSize);
     }
 
-    abstract void decode(ByteBuf encoded, SpdyHeadersFrame frame) throws Exception;
-    abstract void reset();
+    /**
+     * Decodes a SPDY Header Block, adding the Name/Value pairs to the given Headers frame.
+     * If the header block is malformed, the Headers frame will be marked as invalid.
+     * A stream error with status code PROTOCOL_ERROR must be issued in response to an invalid frame.
+     *
+     * @param headerBlock the HeaderBlock to decode
+     * @param frame the Headers frame that receives the Name/Value pairs
+     * @throws Exception If the header block is malformed in a way that prevents any future
+     *                   decoding of any other header blocks, an exception will be thrown.
+     *                   A session error with status code PROTOCOL_ERROR must be issued.
+     */
+    abstract void decode(ByteBuf headerBlock, SpdyHeadersFrame frame) throws Exception;
+
+    abstract void endHeaderBlock(SpdyHeadersFrame frame) throws Exception;
+
     abstract void end();
 }

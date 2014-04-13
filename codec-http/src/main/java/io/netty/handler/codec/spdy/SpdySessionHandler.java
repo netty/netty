@@ -43,6 +43,7 @@ public class SpdySessionHandler
     private static final int DEFAULT_WINDOW_SIZE = 64 * 1024; // 64 KB default initial window size
     private int initialSendWindowSize    = DEFAULT_WINDOW_SIZE;
     private int initialReceiveWindowSize = DEFAULT_WINDOW_SIZE;
+    private volatile int initialSessionReceiveWindowSize = DEFAULT_WINDOW_SIZE;
 
     private final SpdySession spdySession = new SpdySession(initialSendWindowSize, initialReceiveWindowSize);
     private int lastGoodStreamId;
@@ -78,6 +79,19 @@ public class SpdySessionHandler
         }
         this.server = server;
         minorVersion = version.getMinorVersion();
+    }
+
+    public void setSessionReceiveWindowSize(int sessionReceiveWindowSize) {
+      if (sessionReceiveWindowSize < 0) {
+        throw new IllegalArgumentException("sessionReceiveWindowSize");
+      }
+      // This will not send a window update frame immediately.
+      // If this value increases the allowed receive window size,
+      // a WINDOW_UPDATE frame will be sent when only half of the
+      // session window size remains during data frame processing.
+      // If this value decreases the allowed receive window size,
+      // the window will be reduced as data frames are processed.
+      initialSessionReceiveWindowSize = sessionReceiveWindowSize;
     }
 
     @Override
@@ -120,8 +134,8 @@ public class SpdySessionHandler
             }
 
             // Send a WINDOW_UPDATE frame if less than half the session window size remains
-            if (newSessionWindowSize <= initialReceiveWindowSize / 2) {
-                int sessionDeltaWindowSize = initialReceiveWindowSize - newSessionWindowSize;
+            if (newSessionWindowSize <= initialSessionReceiveWindowSize / 2) {
+                int sessionDeltaWindowSize = initialSessionReceiveWindowSize - newSessionWindowSize;
                 spdySession.updateReceiveWindowSize(SPDY_SESSION_STREAM_ID, sessionDeltaWindowSize);
                 SpdyWindowUpdateFrame spdyWindowUpdateFrame =
                     new DefaultSpdyWindowUpdateFrame(SPDY_SESSION_STREAM_ID, sessionDeltaWindowSize);
