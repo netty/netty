@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 The Netty Project
+ * Copyright 2014 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -23,20 +23,33 @@ public class SpdyHeaderBlockRawDecoder extends SpdyHeaderBlockDecoder {
 
     private static final int LENGTH_FIELD_SIZE = 4;
 
-    private final int version;
     private final int maxHeaderSize;
 
-    // Header block decoding fields
+    private State state;
+
     private int headerSize;
-    private int numHeaders = -1;
+    private int numHeaders;
+    private int length;
+    private String name;
+
+    private enum State {
+        READ_NUM_HEADERS,
+        READ_NAME_LENGTH,
+        READ_NAME,
+        SKIP_NAME,
+        READ_VALUE_LENGTH,
+        READ_VALUE,
+        SKIP_VALUE,
+        END_HEADER_BLOCK,
+        ERROR
+    }
 
     public SpdyHeaderBlockRawDecoder(SpdyVersion spdyVersion, int maxHeaderSize) {
         if (spdyVersion == null) {
             throw new NullPointerException("spdyVersion");
         }
-
-        version = spdyVersion.getVersion();
         this.maxHeaderSize = maxHeaderSize;
+        this.state = State.READ_NUM_HEADERS;
     }
 
     private static int readLengthField(ByteBuf buffer) {
@@ -46,133 +59,218 @@ public class SpdyHeaderBlockRawDecoder extends SpdyHeaderBlockDecoder {
     }
 
     @Override
-    void decode(ByteBuf encoded, SpdyHeadersFrame frame) throws Exception {
-        if (encoded == null) {
-            throw new NullPointerException("encoded");
+    void decode(ByteBuf headerBlock, SpdyHeadersFrame frame) throws Exception {
+        if (headerBlock == null) {
+            throw new NullPointerException("headerBlock");
         }
         if (frame == null) {
             throw new NullPointerException("frame");
         }
 
-        if (numHeaders == -1) {
-            // Read number of Name/Value pairs
-            if (encoded.readableBytes() < LENGTH_FIELD_SIZE) {
-                return;
-            }
-            numHeaders = readLengthField(encoded);
-            if (numHeaders < 0) {
-                frame.setInvalid();
-                return;
-            }
-        }
+        int skipLength;
+        while (headerBlock.isReadable()) {
+            switch(state) {
+                case READ_NUM_HEADERS:
+                    if (headerBlock.readableBytes() < LENGTH_FIELD_SIZE) {
+                        return;
+                    }
 
-        while (numHeaders > 0) {
-            int headerSize = this.headerSize;
-            encoded.markReaderIndex();
+                    numHeaders = readLengthField(headerBlock);
 
-            // Try to read length of name
-            if (encoded.readableBytes() < LENGTH_FIELD_SIZE) {
-                encoded.resetReaderIndex();
-                return;
-            }
-            int nameLength = readLengthField(encoded);
+                    if (numHeaders < 0) {
+                        state = State.ERROR;
+                        frame.setInvalid();
+                    } else if (numHeaders == 0) {
+                        state = State.END_HEADER_BLOCK;
+                    } else {
+                        state = State.READ_NAME_LENGTH;
+                    }
+                    break;
 
-            // Recipients of a zero-length name must issue a stream error
-            if (nameLength <= 0) {
-                frame.setInvalid();
-                return;
-            }
-            headerSize += nameLength;
-            if (headerSize > maxHeaderSize) {
-                frame.setTruncated();
-                return;
-            }
+                case READ_NAME_LENGTH:
+                    if (headerBlock.readableBytes() < LENGTH_FIELD_SIZE) {
+                        return;
+                    }
 
-            // Try to read name
-            if (encoded.readableBytes() < nameLength) {
-                encoded.resetReaderIndex();
-                return;
-            }
-            byte[] nameBytes = new byte[nameLength];
-            encoded.readBytes(nameBytes);
-            String name = new String(nameBytes, "UTF-8");
+                    length = readLengthField(headerBlock);
 
-            // Check for identically named headers
-            if (frame.headers().contains(name)) {
-                frame.setInvalid();
-                return;
-            }
+                    // Recipients of a zero-length name must issue a stream error
+                    if (length <= 0) {
+                        state = State.ERROR;
+                        frame.setInvalid();
+                    } else if (length > maxHeaderSize || headerSize > maxHeaderSize - length) {
+                        headerSize = maxHeaderSize + 1;
+                        state = State.SKIP_NAME;
+                        frame.setTruncated();
+                    } else {
+                        headerSize += length;
+                        state = State.READ_NAME;
+                    }
+                    break;
 
-            // Try to read length of value
-            if (encoded.readableBytes() < LENGTH_FIELD_SIZE) {
-                encoded.resetReaderIndex();
-                return;
-            }
-            int valueLength = readLengthField(encoded);
+                case READ_NAME:
+                    if (headerBlock.readableBytes() < length) {
+                        return;
+                    }
 
-            // Recipients of illegal value fields must issue a stream error
-            if (valueLength < 0) {
-                frame.setInvalid();
-                return;
-            }
+                    byte[] nameBytes = new byte[length];
+                    headerBlock.readBytes(nameBytes);
+                    name = new String(nameBytes, "UTF-8");
 
-            // SPDY/3 allows zero-length (empty) header values
-            if (valueLength == 0) {
-                frame.headers().add(name, "");
-                numHeaders --;
-                this.headerSize = headerSize;
-                continue;
-            }
+                    // Check for identically named headers
+                    if (frame.headers().contains(name)) {
+                        state = State.ERROR;
+                        frame.setInvalid();
+                    } else {
+                        state = State.READ_VALUE_LENGTH;
+                    }
+                    break;
 
-            headerSize += valueLength;
-            if (headerSize > maxHeaderSize) {
-                frame.setTruncated();
-                return;
-            }
+                case SKIP_NAME:
+                    skipLength = Math.min(headerBlock.readableBytes(), length);
+                    headerBlock.skipBytes(skipLength);
+                    length -= skipLength;
 
-            // Try to read value
-            if (encoded.readableBytes() < valueLength) {
-                encoded.resetReaderIndex();
-                return;
-            }
-            byte[] valueBytes = new byte[valueLength];
-            encoded.readBytes(valueBytes);
+                    if (length == 0) {
+                        state = State.READ_VALUE_LENGTH;
+                    }
+                    break;
 
-            // Add Name/Value pair to headers
-            int index = 0;
-            int offset = 0;
-            while (index < valueLength) {
-                while (index < valueBytes.length && valueBytes[index] != (byte) 0) {
-                    index ++;
-                }
-                if (index < valueBytes.length && valueBytes[index + 1] == (byte) 0) {
-                    // Received multiple, in-sequence NULL characters
+                case READ_VALUE_LENGTH:
+                    if (headerBlock.readableBytes() < LENGTH_FIELD_SIZE) {
+                        return;
+                    }
+
+                    length = readLengthField(headerBlock);
+
                     // Recipients of illegal value fields must issue a stream error
-                    frame.setInvalid();
-                    return;
-                }
-                String value = new String(valueBytes, offset, index - offset, "UTF-8");
+                    if (length < 0) {
+                        state = State.ERROR;
+                        frame.setInvalid();
+                    } else if (length == 0) {
+                        if (!frame.isTruncated()) {
+                            // SPDY/3 allows zero-length (empty) header values
+                            frame.headers().add(name, "");
+                        }
 
-                try {
-                    frame.headers().add(name, value);
-                } catch (IllegalArgumentException e) {
-                    // Name contains NULL or non-ascii characters
+                        name = null;
+                        if (--numHeaders == 0) {
+                            state = State.END_HEADER_BLOCK;
+                        } else {
+                            state = State.READ_NAME_LENGTH;
+                        }
+
+                    } else if (length > maxHeaderSize || headerSize > maxHeaderSize - length) {
+                        headerSize = maxHeaderSize + 1;
+                        name = null;
+                        state = State.SKIP_VALUE;
+                        frame.setTruncated();
+                    } else {
+                        headerSize += length;
+                        state = State.READ_VALUE;
+                    }
+                    break;
+
+                case READ_VALUE:
+                    if (headerBlock.readableBytes() < length) {
+                        return;
+                    }
+
+                    byte[] valueBytes = new byte[length];
+                    headerBlock.readBytes(valueBytes);
+
+                    // Add Name/Value pair to headers
+                    int index = 0;
+                    int offset = 0;
+
+                    // Value must not start with a NULL character
+                    if (valueBytes[0] == (byte) 0) {
+                        state = State.ERROR;
+                        frame.setInvalid();
+                        break;
+                    }
+
+                    while (index < length) {
+                        while (index < valueBytes.length && valueBytes[index] != (byte) 0) {
+                            index ++;
+                        }
+                        if (index < valueBytes.length) {
+                            // Received NULL character
+                            if (index + 1 == valueBytes.length || valueBytes[index + 1] == (byte) 0) {
+                                // Value field ended with a NULL character or
+                                // received multiple, in-sequence NULL characters.
+                                // Recipients of illegal value fields must issue a stream error
+                                state = State.ERROR;
+                                frame.setInvalid();
+                                break;
+                            }
+                        }
+                        String value = new String(valueBytes, offset, index - offset, "UTF-8");
+
+                        try {
+                            frame.headers().add(name, value);
+                        } catch (IllegalArgumentException e) {
+                            // Name contains NULL or non-ascii characters
+                            state = State.ERROR;
+                            frame.setInvalid();
+                            break;
+                        }
+                        index ++;
+                        offset = index;
+                    }
+
+                    name = null;
+
+                    // If we broke out of the add header loop, break here
+                    if (state == State.ERROR) {
+                        break;
+                    }
+
+                    if (--numHeaders == 0) {
+                        state = State.END_HEADER_BLOCK;
+                    } else {
+                        state = State.READ_NAME_LENGTH;
+                    }
+                    break;
+
+                case SKIP_VALUE:
+                    skipLength = Math.min(headerBlock.readableBytes(), length);
+                    headerBlock.skipBytes(skipLength);
+                    length -= skipLength;
+
+                    if (length == 0) {
+                        if (--numHeaders == 0) {
+                            state = State.END_HEADER_BLOCK;
+                        } else {
+                            state = State.READ_NAME_LENGTH;
+                        }
+                    }
+                    break;
+
+                case END_HEADER_BLOCK:
+                    state = State.ERROR;
                     frame.setInvalid();
+                    break;
+
+                case ERROR:
+                    headerBlock.skipBytes(headerBlock.readableBytes());
                     return;
-                }
-                index ++;
-                offset = index;
+
+                default:
+                    throw new Error("Shouldn't reach here.");
             }
-            numHeaders --;
-            this.headerSize = headerSize;
         }
     }
 
     @Override
-    void reset() {
+    void endHeaderBlock(SpdyHeadersFrame frame) throws Exception {
+        if (state != State.END_HEADER_BLOCK) {
+            frame.setInvalid();
+        }
         // Initialize header block decoding fields
         headerSize = 0;
-        numHeaders = -1;
+        name = null;
+        state = State.READ_NUM_HEADERS;
     }
 
     @Override

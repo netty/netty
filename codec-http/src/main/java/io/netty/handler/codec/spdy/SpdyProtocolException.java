@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2014 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,10 +15,6 @@
  */
 package io.netty.handler.codec.spdy;
 
-/**
- * An {@link Exception} which is thrown when the received frame cannot
- * be decoded by the {@link SpdyFrameDecoder}.
- */
 public class SpdyProtocolException extends Exception {
 
     private static final long serialVersionUID = 7870000537743847264L;
