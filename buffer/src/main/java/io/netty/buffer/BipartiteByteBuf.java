@@ -242,7 +242,7 @@ public class BipartiteByteBuf extends AbstractReferenceCountedByteBuf {
             ByteBuf padding = allocBuffer(paddingLen);
             padding.setIndex(0, paddingLen);
 
-            BipartiteByteBuf newPart2 = Unpooled.bipartiteBuffer(part2, padding);
+            BipartiteByteBuf newPart2 = new BipartiteByteBuf(alloc, directByDefault, part2, padding);
             newPart2.setIndex(0, part2Len + paddingLen);
             part2(newPart2);
         } else if (newCapacity < capacity) {
