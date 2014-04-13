@@ -18,7 +18,7 @@ package io.netty.buffer;
 
 import static org.junit.Assert.*;
 
-import org.junit.Assert;
+
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -26,43 +26,10 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.ScatteringByteChannel;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Random;
 
 public class BipartiteByteBufTest extends AbstractByteBufTest {
     private BipartiteByteBuf buffer;
-
-    @Test
-    public void testPartGetterSetter() {
-        BipartiteByteBuf bbuf = UnpooledByteBufAllocator.DEFAULT.bipartiteBuffer();
-
-        ByteBuf buf1 = UnpooledByteBufAllocator.DEFAULT.buffer();
-        ByteBuf buf2 = UnpooledByteBufAllocator.DEFAULT.buffer();
-
-        try {
-            bbuf.part2(buf1);
-            fail();
-        } catch (IllegalStateException e) {
-            // avoid checkstyle complaints
-            assertTrue(true);
-        }
-
-        assertNull(bbuf.part1());
-        assertNull(bbuf.part2());
-
-        bbuf.part1(buf1)
-            .part2(buf2);
-
-        assertEquals(buf1, bbuf.part1());
-        assertEquals(buf2, bbuf.part2());
-
-        bbuf.part1(buf2)
-            .part2(buf1);
-
-        assertEquals(buf1, bbuf.part2());
-        assertEquals(buf2, bbuf.part1());
-    }
 
     @Test
     public void testGetByte() {
@@ -154,40 +121,34 @@ public class BipartiteByteBufTest extends AbstractByteBufTest {
         assertEquals(513, bbuf.getShort(15));
     }
 
-    @Ignore (value = "https://github.com/netty/netty/issues/2373")
+    @Ignore ("https://github.com/netty/netty/issues/2373")
     @Test
     public void testIsDirect() {
-        BipartiteByteBuf bbuf = UnpooledByteBufAllocator.DEFAULT.bipartiteBuffer();
-        assertFalse(bbuf.isDirect());
-        bbuf.part1(UnpooledByteBufAllocator.DEFAULT.directBuffer(8));
+        BipartiteByteBuf bbuf = Unpooled.bipartiteBuffer(Unpooled.directBuffer(8), Unpooled.directBuffer(8));
         assertTrue(bbuf.isDirect());
-        bbuf.part2(UnpooledByteBufAllocator.DEFAULT.heapBuffer(8));
-        assertFalse(bbuf.isDirect());
     }
 
     @Test
     public void testCapacity() {
-        BipartiteByteBuf bbuf = UnpooledByteBufAllocator.DEFAULT.bipartiteBuffer();
-        assertEquals(0, bbuf.capacity());
-
-        ByteBuf buf1 = UnpooledByteBufAllocator.DEFAULT.buffer(1024);
-        bbuf.part1(buf1);
+        ByteBuf buf1 = Unpooled.buffer(1024);
+        ByteBuf buf2 = Unpooled.buffer(1024);
+        BipartiteByteBuf bbuf = Unpooled.bipartiteBuffer(buf1, buf2);
         assertEquals(0, bbuf.capacity());
         buf1.setIndex(0, 100);
         assertEquals(0, bbuf.capacity());
-        bbuf.part1(buf1);
+        bbuf = Unpooled.bipartiteBuffer(buf1, buf2);
         assertEquals(100, bbuf.capacity());
-        buf1.setIndex(0, 10);
-        bbuf.part2(buf1);
-        assertEquals(110, bbuf.capacity());
+        buf1.setIndex(50, 500);
+        buf2.setIndex(100, 1000);
+        bbuf = Unpooled.bipartiteBuffer(buf1, buf2);
+        assertEquals(1350, bbuf.capacity());
     }
 
     @Test
     public void testSetBytesScatteringByteChannel() throws IOException {
-        BipartiteByteBuf bbuf = UnpooledByteBufAllocator.DEFAULT.bipartiteBuffer();
-        ByteBuf buf1 = UnpooledByteBufAllocator.DEFAULT.buffer(1024).setIndex(0, 1024);
-        ByteBuf buf2 = UnpooledByteBufAllocator.DEFAULT.buffer(2048).setIndex(0, 2048);
-        bbuf.part1(buf1).part2(buf2);
+        ByteBuf buf1 = Unpooled.buffer(1024).setIndex(0, 1024);
+        ByteBuf buf2 = Unpooled.buffer(2048).setIndex(0, 2048);
+        BipartiteByteBuf bbuf = Unpooled.bipartiteBuffer(buf1, buf2);
 
         byte[] data = new byte[3072];
         new Random().nextBytes(data);
@@ -202,10 +163,18 @@ public class BipartiteByteBufTest extends AbstractByteBufTest {
 
     @Test
     public void testCapacityResize() {
-        BipartiteByteBuf bbuf = UnpooledByteBufAllocator.DEFAULT.bipartiteBuffer();
-        assertEquals(0, bbuf.capacity());
-        bbuf.capacity(0);
-        assertEquals(0, bbuf.capacity());
+        ByteBuf buf1 = Unpooled.buffer(100).setIndex(0, 100);
+        ByteBuf buf2 = Unpooled.buffer(300).setIndex(0, 300);
+        BipartiteByteBuf bbuf = Unpooled.bipartiteBuffer(buf1, buf2);
+        assertEquals(400, bbuf.capacity());
+        try {
+            bbuf.capacity(0);
+            fail();
+        } catch (IllegalArgumentException e) {
+            // TODO lookup checkstyle ignore syntax
+            assertTrue(true);
+        }
+
         // Increase capacity
         bbuf.capacity(4096);
         assertEquals(4096, bbuf.capacity());
@@ -216,9 +185,6 @@ public class BipartiteByteBufTest extends AbstractByteBufTest {
             assertEquals(i, bbuf.readInt());
         }
 
-        assertNotNull(bbuf.part1());
-        assertNull(bbuf.part2());
-
         bbuf.capacity(8192);
         for (int i = 0; i < 1024; i++) {
             bbuf.writeInt(1024 + i);
@@ -227,9 +193,6 @@ public class BipartiteByteBufTest extends AbstractByteBufTest {
         for (int i = 0; i < 2048; i++) {
             assertEquals(i, bbuf.readInt());
         }
-
-        assertNotNull(bbuf.part1());
-        assertNotNull(bbuf.part2());
 
         bbuf.capacity(12288);
         for (int i = 0; i < 1024; i++) {
@@ -240,52 +203,38 @@ public class BipartiteByteBufTest extends AbstractByteBufTest {
             assertEquals(i, bbuf.readInt());
         }
 
+        // Same capacity
+        assertEquals(12288, bbuf.capacity());
+        bbuf.capacity(12288);
+        assertEquals(12288, bbuf.capacity());
+
         // Decrease capacity
-        bbuf.capacity(7168);
-        assertEquals(7168, bbuf.capacity());
-        assertEquals(7168, bbuf.readerIndex());
-        assertEquals(7168, bbuf.writerIndex());
-        bbuf.resetReaderIndex();
-        for (int i = 0; i < 7168 / 4; i++) {
-            assertEquals(i, bbuf.readInt());
+        try {
+            bbuf.capacity(400);
+            fail();
+        } catch (IllegalArgumentException e) {
+            assertTrue(true);
         }
-
-        bbuf.capacity(1024);
-        assertEquals(1024, bbuf.capacity());
-        assertEquals(1024, bbuf.readerIndex());
-        assertEquals(1024, bbuf.writerIndex());
-        assertNull(bbuf.part2());
-        bbuf.resetReaderIndex();
-        for (int i = 0; i < 256; i++) {
-            assertEquals(i, bbuf.readInt());
-        }
-
-        bbuf.capacity(0);
-        assertEquals(0, bbuf.capacity());
-        assertNull(bbuf.part1());
     }
 
-    private BipartiteByteBuf newBuf1to25() {
-        BipartiteByteBuf bbuf = UnpooledByteBufAllocator.DEFAULT.bipartiteBuffer();
-        ByteBuf buf1 = UnpooledByteBufAllocator.DEFAULT.buffer(16);
+    private static BipartiteByteBuf newBuf1to25() {
+        ByteBuf buf1 = Unpooled.buffer(16);
         buf1.writeBytes(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16});
-        ByteBuf buf2 = UnpooledByteBufAllocator.DEFAULT.buffer(9);
+        ByteBuf buf2 = Unpooled.buffer(9);
         buf2.writeBytes(new byte[] {17, 18, 19, 20, 21, 22, 23, 24, 25});
-        return bbuf.part1(buf1).part2(buf2);
+        return Unpooled.bipartiteBuffer(buf1, buf2);
     }
 
-    private BipartiteByteBuf newBufZeroed25() {
-        BipartiteByteBuf bbuf = UnpooledByteBufAllocator.DEFAULT.bipartiteBuffer();
-        ByteBuf buf1 = UnpooledByteBufAllocator.DEFAULT.buffer(16);
+    private static BipartiteByteBuf newBufZeroed25() {
+        ByteBuf buf1 = Unpooled.buffer(16);
         buf1.writeLong(0).writeLong(0);
-        ByteBuf buf2 = UnpooledByteBufAllocator.DEFAULT.buffer(9);
+        ByteBuf buf2 = Unpooled.buffer(9);
         buf2.writeLong(0).writeByte(0);
-        return bbuf.part1(buf1).part2(buf2);
+        return Unpooled.bipartiteBuffer(buf1, buf2);
     }
 
     @Override
     protected ByteBuf newBuffer(int capacity) {
-        buffer = UnpooledByteBufAllocator.DEFAULT.bipartiteBuffer();
         int part1Len = capacity / 2;
         int part2Len = (int) Math.ceil(capacity / 2.0);
 
@@ -297,7 +246,7 @@ public class BipartiteByteBufTest extends AbstractByteBufTest {
         for (int i = 0; i < part2Len; i++) {
             buf2.writeByte(0);
         }
-        buffer.part1(buf1).part2(buf2);
+        buffer = Unpooled.bipartiteBuffer(buf1, buf2);
         assertEquals(capacity, buffer.capacity());
 
         return buffer;
@@ -317,7 +266,7 @@ public class BipartiteByteBufTest extends AbstractByteBufTest {
         }
 
         @Override
-        public long read(ByteBuffer[] dsts, int offset, int length) throws IOException {
+        public long read(ByteBuffer[] dsts, int offset, int length) {
             long bytesRead = 0;
             for (int i = offset; i < length; i++) {
                 for (; index < data.length && dsts[i].hasRemaining(); index++) {
@@ -329,12 +278,12 @@ public class BipartiteByteBufTest extends AbstractByteBufTest {
         }
 
         @Override
-        public long read(ByteBuffer[] dsts) throws IOException {
+        public long read(ByteBuffer[] dsts) {
             return read(dsts, 0, dsts.length);
         }
 
         @Override
-        public int read(ByteBuffer dst) throws IOException {
+        public int read(ByteBuffer dst) {
             return (int) Math.min(read(new ByteBuffer[] {dst}, 0, 1), Integer.MAX_VALUE);
         }
 

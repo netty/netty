@@ -32,24 +32,11 @@ public class BipartiteByteBuf extends AbstractReferenceCountedByteBuf {
     private int part2Len;
     private ByteBuf part1;
     private ByteBuf part2;
-    private boolean hasOnlyPart1;
     private boolean freed;
     private final ByteBufAllocator alloc;
     private final boolean directByDefault;
     private final ResourceLeak leak;
     private static final ByteBuffer FULL_BYTEBUFFER = (ByteBuffer) ByteBuffer.allocate(1).position(1);
-
-    public BipartiteByteBuf(ByteBufAllocator alloc, boolean directByDefault) {
-        super(Integer.MAX_VALUE);
-
-        if (alloc == null) {
-            throw new NullPointerException("alloc");
-        }
-
-        this.alloc = alloc;
-        this.directByDefault = directByDefault;
-        leak = leakDetector.open(this);
-    }
 
     public BipartiteByteBuf(ByteBufAllocator alloc, boolean directByDefault, ByteBuf part1, ByteBuf part2) {
         super(Integer.MAX_VALUE);
@@ -58,70 +45,45 @@ public class BipartiteByteBuf extends AbstractReferenceCountedByteBuf {
             throw new NullPointerException("alloc");
         }
 
+        if (part1 == null) {
+            throw new NullPointerException("part1");
+        }
+
+        if (part2 == null) {
+            throw new NullPointerException("part2");
+        }
+
         this.alloc = alloc;
         this.directByDefault = directByDefault;
         leak = leakDetector.open(this);
+
         part1(part1);
         part2(part2);
     }
 
-    public BipartiteByteBuf part1(ByteBuf buffer) {
-        if (buffer == null) {
-            if (part2 != null) {
-                throw new IllegalStateException("Must set part2 to null before part1");
-            }
-            part1 = null;
-            part1Len = 0;
-            hasOnlyPart1 = false;
-        } else {
-            part1 = buffer.order(ByteOrder.BIG_ENDIAN).slice();
-            part1Len = buffer.readableBytes();
-            hasOnlyPart1 = part2 == null;
-        }
-        return this;
+    private void part1(ByteBuf buffer) {
+        part1 = buffer.order(ByteOrder.BIG_ENDIAN).slice();
+        part1Len = buffer.readableBytes();
     }
 
     public ByteBuf part1() {
-        if (part1 != null) {
-            return part1.duplicate();
-        }
-        return null;
+        return part1.duplicate();
     }
 
-    public BipartiteByteBuf part2(ByteBuf buffer) {
-        if (buffer == null) {
-            part2 = null;
-            part2Len = 0;
-            hasOnlyPart1 = part1 != null;
-        } else {
-            if (part1 == null) {
-                throw new IllegalStateException("Must set part1 before part2");
-            }
-            part2 = buffer.order(ByteOrder.BIG_ENDIAN).slice();
-            part2Len = buffer.readableBytes();
-            hasOnlyPart1 = false;
-        }
-        return this;
+    private void part2(ByteBuf buffer) {
+        part2 = buffer.order(ByteOrder.BIG_ENDIAN).slice();
+        part2Len = buffer.readableBytes();
     }
 
     public ByteBuf part2() {
-        if (part2 != null) {
-            return part2.duplicate();
-        }
-        return null;
+        return part2.duplicate();
     }
 
     @Override
     protected void deallocate() {
         if (!freed) {
-            if (part1 != null) {
-                part1.release();
-            }
-
-            if (part2 != null) {
-                part2.release();
-            }
-
+            part1.release();
+            part2.release();
             freed = true;
         }
     }
@@ -213,7 +175,7 @@ public class BipartiteByteBuf extends AbstractReferenceCountedByteBuf {
         } else if (index >= part1Len) {
             part2.setShort(index - part1Len, value);
         } else {
-            part1.setByte(index, (value >>> 8) & 0xff);
+            part1.setByte(index, value >>> 8 & 0xff);
             part2.setByte(0, value & 0xff);
         }
     }
@@ -228,7 +190,7 @@ public class BipartiteByteBuf extends AbstractReferenceCountedByteBuf {
         } else if (index >= part1Len) {
             part2.setMedium(index - part1Len, value);
         } else {
-            _setShort(index, (value >>> 8) & 0xffff);
+            _setShort(index, value >>> 8 & 0xffff);
             _setByte(index + 2, value & 0xff);
         }
     }
@@ -243,7 +205,7 @@ public class BipartiteByteBuf extends AbstractReferenceCountedByteBuf {
         } else if (index >= part1Len) {
             part2.setInt(index - part1Len, value);
         } else {
-            _setShort(index, (value >>> 16) & 0xffff);
+            _setShort(index, value >>> 16 & 0xffff);
             _setShort(index + 2, value & 0xffff);
         }
     }
@@ -265,63 +227,29 @@ public class BipartiteByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public int capacity() {
-        return part1 != null
-                ? part1Len + (part2 != null ? part2Len : 0)
-                : 0;
+        return part1Len + part2Len;
     }
 
     @Override
     public BipartiteByteBuf capacity(int newCapacity) {
+        final int capacity = capacity();
         if (newCapacity < 0 || newCapacity > maxCapacity()) {
             throw new IllegalArgumentException("newCapacity: " + newCapacity);
         }
 
-        final int capacity = capacity();
         if (newCapacity > capacity) {
             final int paddingLen = newCapacity - capacity;
             ByteBuf padding = allocBuffer(paddingLen);
             padding.setIndex(0, paddingLen);
-            if (part2 != null) {
-                BipartiteByteBuf newPart2 = alloc.bipartiteBuffer();
-                newPart2.part1(part2)
-                        .part2(padding)
-                        .setIndex(0, part2Len + paddingLen);
-                part2(newPart2);
-            } else if (part1 != null) {
-                part2(padding);
-            } else {
-                part1(padding);
-            }
-        } else if (newCapacity < capacity) {
-            int trimLen = capacity - newCapacity;
-            while (trimLen > 0) {
-                if (part2 != null) {
-                    if (trimLen >= part2Len) {
-                        trimLen -= part2Len;
-                        part2(null);
-                    } else {
-                        part2(part2.slice(0, part2Len - trimLen));
-                        trimLen = 0;
-                    }
-                } else if (part1 != null) {
-                    if (trimLen == part1Len) {
-                        part1(null);
-                    } else {
-                        part1(part1.slice(0, part1Len - trimLen));
-                    }
-                    trimLen = 0;
-                } else {
-                    // this line must not be reached
-                    throw new Error();
-                }
-            }
 
-            if (readerIndex() > newCapacity) {
-                setIndex(newCapacity, newCapacity);
-            } else if (writerIndex() > newCapacity) {
-                writerIndex(newCapacity);
-            }
+            BipartiteByteBuf newPart2 = Unpooled.bipartiteBuffer(part2, padding);
+            newPart2.setIndex(0, part2Len + paddingLen);
+            part2(newPart2);
+        } else if (newCapacity < capacity) {
+            throw new IllegalArgumentException("Downsizing is not supported. (newCapacity: " + newCapacity +
+                    ", capacity: " + capacity + ')');
         }
+
         return this;
     }
 
@@ -342,9 +270,7 @@ public class BipartiteByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public boolean isDirect() {
-        return part2 != null
-                ? part1.isDirect() && part2.isDirect()
-                : part1 != null && part1.isDirect();
+        return part1.isDirect() && part2.isDirect();
     }
 
     @Override
@@ -511,7 +437,9 @@ public class BipartiteByteBuf extends AbstractReferenceCountedByteBuf {
 
             if (localWrittenBytes == 0) {
                 return writtenBytes;
-            } else if (localWrittenBytes < 0) {
+            }
+
+            if (localWrittenBytes < 0) {
                 if (writtenBytes == 0) {
                     return -1;
                 } else {
@@ -545,7 +473,9 @@ public class BipartiteByteBuf extends AbstractReferenceCountedByteBuf {
 
             if (localWrittenBytes == 0) {
                 return writtenBytes;
-            } else if (localWrittenBytes < 0) {
+            }
+
+            if (localWrittenBytes < 0) {
                 if (writtenBytes == 0) {
                     return -1;
                 } else {
@@ -573,37 +503,25 @@ public class BipartiteByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public int nioBufferCount() {
-        if (part2 != null) {
-            return part1.nioBufferCount() + part2.nioBufferCount();
-        } else if (part1 != null) {
-            return part1.nioBufferCount();
-        }
-        return 0;
+        return part1.nioBufferCount() + part2.nioBufferCount();
     }
 
     @Override
     public ByteBuffer nioBuffer(int index, int length) {
         checkIndex(index, length);
-        if (hasOnlyPart1 && part1.nioBufferCount() == 1) {
-            return part1.nioBuffer(index, length);
-        } else {
-            ByteBuffer merged = ByteBuffer.allocate(length).order(order());
-            ByteBuffer[] buffers = nioBuffers(index, length);
+        ByteBuffer merged = ByteBuffer.allocate(length).order(order());
+        ByteBuffer[] buffers = nioBuffers(index, length);
 
-            for (ByteBuffer buffer : buffers) {
-                merged.put(buffer);
-            }
-            merged.flip();
-
-            return merged;
+        for (ByteBuffer buffer : buffers) {
+            merged.put(buffer);
         }
+        merged.flip();
+
+        return merged;
     }
 
     @Override
     public ByteBuffer internalNioBuffer(int index, int length) {
-        if (hasOnlyPart1) {
-            return part1.internalNioBuffer(index, length);
-        }
         throw new UnsupportedOperationException();
     }
 
@@ -652,35 +570,26 @@ public class BipartiteByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public boolean hasArray() {
-        return hasOnlyPart1 && part1.hasArray();
+        return false;
     }
 
     @Override
     public byte[] array() {
-        if (hasOnlyPart1) {
-            return part1.array();
-        }
         throw new UnsupportedOperationException();
     }
 
     @Override
     public int arrayOffset() {
-        if (hasOnlyPart1) {
-            return part1.arrayOffset();
-        }
         throw new UnsupportedOperationException();
     }
 
     @Override
     public boolean hasMemoryAddress() {
-        return hasOnlyPart1 && part1.hasMemoryAddress();
+        return false;
     }
 
     @Override
     public long memoryAddress() {
-        if (hasOnlyPart1) {
-            return part1.memoryAddress();
-        }
         throw new UnsupportedOperationException();
     }
 
@@ -712,9 +621,7 @@ public class BipartiteByteBuf extends AbstractReferenceCountedByteBuf {
         String result = super.toString();
         result = result.substring(0, result.length() - 1);
         result += String.format(", part1=%s, part2=%s, part1Len=%d, part2Len=%d, directByDefault=%b)",
-                part1 != null ? part1.toString() : null,
-                part2 != null ? part2.toString() : null,
-                part1Len, part2Len, directByDefault);
+                part1.toString(), part2.toString(), part1Len, part2Len, directByDefault);
         return result;
     }
 
