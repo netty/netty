@@ -344,7 +344,8 @@ public class TrafficCounter {
             }
         }
         sum += lastReadBytes;
-        long time = (sum * 1000 / limitTraffic - interval - getCheckInterval()) / 10 * 10;
+        long time = (sum * 1000 / limitTraffic - interval - getCheckInterval())
+                / 10 * 10;
         if (time > 10) {
             return time > maxTime ? maxTime : time;
         }
@@ -366,7 +367,8 @@ public class TrafficCounter {
             }
         }
         sum += lastWrittenBytes;
-        long time = (sum * 1000 / limitTraffic - interval - getCheckInterval()) / 10 * 10;
+        long time = (sum * 1000 / limitTraffic - interval - getCheckInterval())
+                / 10 * 10;
         if (time > 10) {
             return time > maxTime ? maxTime : time;
         }

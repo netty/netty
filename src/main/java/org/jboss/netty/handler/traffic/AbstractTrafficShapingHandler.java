@@ -69,7 +69,8 @@ public abstract class AbstractTrafficShapingHandler extends
      */
     public static final long DEFAULT_CHECK_INTERVAL = 1000;
     /**
-     * Default max delay in case of traffic shaping (during which no communication will occur).
+     * Default max delay in case of traffic shaping
+     * (during which no communication will occur).
      * Shall be less than TIMEOUT. Here half of "standard" 30s
      */
     public static final long DEFAULT_MAX_TIME = 15000;
@@ -145,8 +146,9 @@ public abstract class AbstractTrafficShapingHandler extends
     }
 
     /**
-     * 
-     * @param maxTime Max delay in wait, shall be less than TIME OUT in related protocol
+     *
+     * @param maxTime
+     *    Max delay in wait, shall be less than TIME OUT in related protocol
      */
     public void setMaxTimeWait(long maxTime) {
         this.maxTime = maxTime;
