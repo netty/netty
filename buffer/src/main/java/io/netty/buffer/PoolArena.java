@@ -233,6 +233,7 @@ abstract class PoolArena<T> {
             // Doubled
 
             int normalizedCapacity = reqCapacity;
+            normalizedCapacity --;
             normalizedCapacity |= normalizedCapacity >>>  1;
             normalizedCapacity |= normalizedCapacity >>>  2;
             normalizedCapacity |= normalizedCapacity >>>  4;
