@@ -68,6 +68,11 @@ public abstract class AbstractTrafficShapingHandler extends
      * Default delay between two checks: 1s
      */
     public static final long DEFAULT_CHECK_INTERVAL = 1000;
+    /**
+     * Default max delay in case of traffic shaping (during which no communication will occur).
+     * Shall be less than TIMEOUT. Here half of "standard" 30s
+     */
+    public static final long DEFAULT_MAX_TIME = 15000;
 
     /**
      * Default minimal time to wait
@@ -108,6 +113,10 @@ public abstract class AbstractTrafficShapingHandler extends
      * Delay between two performance snapshots
      */
     protected long checkInterval = DEFAULT_CHECK_INTERVAL; // default 1 s
+    /**
+     * Max delay in wait
+     */
+    protected long maxTime = DEFAULT_MAX_TIME; // default 15 s
 
     /**
      * Boolean associated with the release of this TrafficShapingHandler.
@@ -133,6 +142,14 @@ public abstract class AbstractTrafficShapingHandler extends
      */
     void setTrafficCounter(TrafficCounter newTrafficCounter) {
         trafficCounter = newTrafficCounter;
+    }
+
+    /**
+     * 
+     * @param maxTime Max delay in wait, shall be less than TIME OUT in related protocol
+     */
+    public void setMaxTimeWait(long maxTime) {
+        this.maxTime = maxTime;
     }
 
     /**
@@ -333,23 +350,10 @@ public abstract class AbstractTrafficShapingHandler extends
         }
     }
 
-    /**
-     * @return the time that should be necessary to wait to respect limit. Can be negative time
-     */
-    private static long getTimeToWait(long limit, long bytes, long lastTime, long curtime) {
-        long interval = curtime - lastTime;
-        if (interval <= 0) {
-            // Time is too short, so just lets continue
-            return 0;
-        }
-        return (bytes * 1000 / limit - interval) / 10 * 10;
-    }
-
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent evt)
             throws Exception {
         try {
-            long curtime = System.currentTimeMillis();
             long size = objectSizeEstimator.estimateSize(evt.getMessage());
             if (trafficCounter != null) {
                 trafficCounter.bytesRecvFlowControl(size);
@@ -358,9 +362,7 @@ public abstract class AbstractTrafficShapingHandler extends
                     return;
                 }
                 // compute the number of ms to wait before reopening the channel
-                long wait = getTimeToWait(readLimit,
-                        trafficCounter.getCurrentReadBytes(),
-                        trafficCounter.getLastTime(), curtime);
+                long wait = trafficCounter.getReadTimeToWait(readLimit, maxTime);
                 if (wait >= MINIMAL_WAIT) { // At least 10ms seems a minimal
                                             // time in order to
                     Channel channel = ctx.getChannel();
@@ -413,7 +415,6 @@ public abstract class AbstractTrafficShapingHandler extends
     public void writeRequested(ChannelHandlerContext ctx, MessageEvent evt)
             throws Exception {
         try {
-            long curtime = System.currentTimeMillis();
             long size = objectSizeEstimator.estimateSize(evt.getMessage());
             if (trafficCounter != null) {
                 trafficCounter.bytesWriteFlowControl(size);
@@ -422,9 +423,7 @@ public abstract class AbstractTrafficShapingHandler extends
                 }
                 // compute the number of ms to wait before continue with the
                 // channel
-                long wait = getTimeToWait(writeLimit,
-                        trafficCounter.getCurrentWrittenBytes(),
-                        trafficCounter.getLastTime(), curtime);
+                long wait = trafficCounter.getWriteTimeToWait(writeLimit, maxTime);
                 if (wait >= MINIMAL_WAIT) {
                     // Global or Channel
                     if (release.get()) {
