@@ -19,6 +19,7 @@ import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http2.draft10.frame.Http2Frame;
+import io.netty.handler.codec.http2.draft10.frame.Http2SettingsFrame;
 import io.netty.util.internal.logging.InternalLogLevel;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -55,6 +56,9 @@ public class Http2FrameLogger extends ChannelHandlerAdapter {
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         if (acceptMessage(msg)) {
+            if (msg instanceof Http2SettingsFrame) {
+              Thread.sleep(100);
+            }
             log((Http2Frame) msg, Direction.OUTBOUND);
         }
         super.write(ctx, msg, promise);

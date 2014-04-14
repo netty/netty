@@ -16,9 +16,11 @@
 
 package io.netty.example.http2.server;
 
+import static io.netty.util.internal.logging.InternalLogLevel.INFO;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.example.http2.client.Http2FrameLogger;
 import io.netty.handler.codec.http2.draft10.connection.Http2ConnectionHandler;
 import io.netty.handler.codec.http2.draft10.frame.Http2FrameCodec;
 
@@ -31,6 +33,7 @@ public class Http2ServerInitializer extends ChannelInitializer<SocketChannel> {
         ChannelPipeline p = ch.pipeline();
 
         p.addLast("http2FrameCodec", new Http2FrameCodec());
+        p.addLast("http2FrameLogger", new Http2FrameLogger(INFO));
         p.addLast("http2ConnectionHandler", new Http2ConnectionHandler(true));
         p.addLast("helloWorldHandler", new HelloWorldHandler());
     }
