@@ -15,7 +15,6 @@
 
 package io.netty.handler.codec.http2.draft10.frame.encoder;
 
-import static io.netty.handler.codec.http2.draft10.Http2Exception.protocolError;
 import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.connectionPrefaceBuf;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
@@ -34,7 +33,6 @@ import io.netty.handler.codec.http2.draft10.frame.Http2Frame;
 public class Http2FrameEncoder extends MessageToByteEncoder<Http2Frame> {
 
     private final Http2FrameMarshaller frameMarshaller;
-    private ChannelFutureListener prefaceWriteListener;
     private boolean prefaceWritten;
 
     public Http2FrameEncoder() {
@@ -68,12 +66,6 @@ public class Http2FrameEncoder extends MessageToByteEncoder<Http2Frame> {
     protected void encode(ChannelHandlerContext ctx, Http2Frame frame, ByteBuf out)
             throws Exception {
         try {
-            if (!prefaceWritten) {
-                throw protocolError(
-                        "Attempting to send frame before connection preface written: %s", frame
-                                .getClass().getName());
-            }
-
             frameMarshaller.marshall(frame, out, ctx.alloc());
         } catch (Throwable t) {
             ctx.fireExceptionCaught(t);
@@ -84,20 +76,17 @@ public class Http2FrameEncoder extends MessageToByteEncoder<Http2Frame> {
      * Sends the HTTP2 connection preface to the remote endpoint, if not already sent.
      */
     private void sendPreface(final ChannelHandlerContext ctx) {
-        if (!prefaceWritten && prefaceWriteListener == null && ctx.channel().isActive()) {
-            prefaceWriteListener = new ChannelFutureListener() {
+        if (!prefaceWritten && ctx.channel().isActive()) {
+            prefaceWritten = true;
+            ctx.writeAndFlush(connectionPrefaceBuf()).addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(ChannelFuture future) throws Exception {
-                    if (future.isSuccess()) {
-                        prefaceWritten = true;
-                        prefaceWriteListener = null;
-                    } else if (ctx.channel().isOpen()) {
+                    if (!future.isSuccess() && ctx.channel().isOpen()) {
                         // The write failed, close the connection.
                         ctx.close();
                     }
                 }
-            };
-            ctx.writeAndFlush(connectionPrefaceBuf()).addListener(prefaceWriteListener);
+            });
         }
     }
 }
