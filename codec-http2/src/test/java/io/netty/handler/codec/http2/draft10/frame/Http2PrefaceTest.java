@@ -15,7 +15,6 @@
 
 package io.netty.handler.codec.http2.draft10.frame;
 
-import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.CONNECTION_PREFACE;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static org.junit.Assert.assertTrue;
 import io.netty.bootstrap.Bootstrap;
@@ -114,8 +113,8 @@ public class Http2PrefaceTest {
         });
 
         // Wait a bit and verify that the connection was closed.
-        assertTrue(serverHandler.awaitClose());
-        assertTrue(clientHandler.awaitClose());
+        serverHandler.awaitClose();
+        clientHandler.awaitClose();
     }
 
     @Test
@@ -127,15 +126,12 @@ public class Http2PrefaceTest {
                 p.addLast("codec", new Http2FrameCodec());
                 p.addLast("wrongFrameGenerator", new ChannelHandlerAdapter() {
                     @Override
-                    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                        if (msg == CONNECTION_PREFACE) {
-                            ByteBuf buf = Unpooled.copiedBuffer("01234567", UTF_8);
-                            Http2PingFrame frame =
-                                    new DefaultHttp2PingFrame.Builder().setData(buf).build();
-                            ctx.writeAndFlush(frame);
-                        } else {
-                            super.channelRead(ctx, msg);
-                        }
+                    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                        ByteBuf buf = Unpooled.copiedBuffer("01234567", UTF_8);
+                        Http2PingFrame frame =
+                                new DefaultHttp2PingFrame.Builder().setData(buf).build();
+                        ctx.writeAndFlush(frame);
+                        super.channelActive(ctx);
                     }
                 });
                 p.addLast("handler", clientHandler);
@@ -143,8 +139,8 @@ public class Http2PrefaceTest {
         });
 
         // Wait a bit and verify that the connection was closed.
-        assertTrue(serverHandler.awaitClose());
-        assertTrue(clientHandler.awaitClose());
+        serverHandler.awaitClose();
+        clientHandler.awaitClose();
     }
 
     @Test
@@ -181,29 +177,23 @@ public class Http2PrefaceTest {
     private static class CaptureHandler extends ChannelHandlerAdapter {
         final DefaultPromise<Http2SettingsFrame> settings;
         final DefaultPromise<Http2SettingsFrame> settingsAck;
-        final DefaultPromise<Void> initFuture;
-        Channel channel;
+        final DefaultPromise<Void> closeFuture;
+        //Channel channel;
 
         CaptureHandler(EventExecutor executor) {
             settings = new DefaultPromise<Http2SettingsFrame>(executor);
             settingsAck = new DefaultPromise<Http2SettingsFrame>(executor);
-            initFuture = new DefaultPromise<Void>(executor);
+            closeFuture = new DefaultPromise<Void>(executor);
         }
 
-        public boolean awaitClose() throws Exception {
-            initFuture.await();
-            for (int i = 0; channel.isOpen() && i < 5; ++i) {
-                Thread.sleep(10);
-            }
-            return !channel.isOpen();
+        public void awaitClose() throws Exception {
+            closeFuture.await(5000);
         }
 
         @Override
-        public void channelActive(ChannelHandlerContext ctx) throws Exception {
-            channel = ctx.channel();
-            initFuture.setSuccess(null);
-
-            super.channelActive(ctx);
+        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+            closeFuture.setSuccess(null);
+            super.channelInactive(ctx);
         }
 
         @Override

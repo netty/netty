@@ -25,7 +25,6 @@ import static io.netty.handler.codec.http2.draft10.connection.Http2Stream.State.
 import static io.netty.handler.codec.http2.draft10.connection.Http2Stream.State.OPEN;
 import static io.netty.handler.codec.http2.draft10.connection.Http2Stream.State.RESERVED_LOCAL;
 import static io.netty.handler.codec.http2.draft10.connection.Http2Stream.State.RESERVED_REMOTE;
-import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.CONNECTION_PREFACE;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerAdapter;
@@ -84,6 +83,7 @@ public class Http2ConnectionHandler extends ChannelHandlerAdapter {
     private final OutboundFlowController outboundFlow;
     private boolean initialSettingsSent;
     private boolean initialSettingsReceived;
+    private ChannelFutureListener initialSettingsListener;
 
     public Http2ConnectionHandler(boolean server) {
         this(new DefaultHttp2Connection(server));
@@ -108,6 +108,21 @@ public class Http2ConnectionHandler extends ChannelHandlerAdapter {
         this.connection = connection;
         this.inboundFlow = inboundFlow;
         this.outboundFlow = outboundFlow;
+    }
+
+    @Override
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        // The channel just became active - send the initial settings frame to the remote
+        // endpoint.
+        sendInitialSettings(ctx);
+        super.handlerAdded(ctx);
+    }
+
+    @Override
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        // This handler was just added to the context. In case it was handled after
+        // the connection became active, send the initial settings frame now.
+        sendInitialSettings(ctx);
     }
 
     @Override
@@ -145,11 +160,7 @@ public class Http2ConnectionHandler extends ChannelHandlerAdapter {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object inMsg) throws Exception {
         try {
-            if (inMsg == CONNECTION_PREFACE) {
-                // The connection preface has been received from the remote endpoint, we're
-                // beginning an HTTP2 connection. Send the initial settings to the remote endpoint.
-                sendInitialSettings(ctx);
-            } else if (inMsg instanceof Http2DataFrame) {
+            if (inMsg instanceof Http2DataFrame) {
                 handleInboundData(ctx, (Http2DataFrame) inMsg);
             } else if (inMsg instanceof Http2HeadersFrame) {
                 handleInboundHeaders(ctx, (Http2HeadersFrame) inMsg);
@@ -181,12 +192,6 @@ public class Http2ConnectionHandler extends ChannelHandlerAdapter {
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise)
             throws Exception {
         try {
-            if (!initialSettingsReceived) {
-                throw protocolError(
-                        "Attempting to send frame (%s) before initial settings received", msg
-                                .getClass().getName());
-            }
-
             if (msg instanceof Http2DataFrame) {
                 handleOutboundData(ctx, (Http2DataFrame) msg, promise);
             } else if (msg instanceof Http2HeadersFrame) {
@@ -649,25 +654,27 @@ public class Http2ConnectionHandler extends ChannelHandlerAdapter {
     /**
      * Sends the initial settings frame upon establishment of the connection, if not already sent.
      */
-    private void sendInitialSettings(ChannelHandlerContext ctx) throws Http2Exception {
-        if (initialSettingsSent) {
-            throw protocolError("Already sent initial settings.");
-        }
-
-        // Create and send the frame to the remote endpoint.
-        DefaultHttp2SettingsFrame frame =
-                new DefaultHttp2SettingsFrame.Builder()
-                        .setInitialWindowSize(inboundFlow.getInitialInboundWindowSize())
-                        .setMaxConcurrentStreams(connection.remote().getMaxStreams())
-                        .setPushEnabled(connection.local().isPushToAllowed()).build();
-
-        ctx.writeAndFlush(frame).addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
-                if (future.isSuccess()) {
-                    initialSettingsSent = true;
+    private void sendInitialSettings(final ChannelHandlerContext ctx) throws Http2Exception {
+        if (!initialSettingsSent && initialSettingsListener == null && ctx.channel().isActive()) {
+            initialSettingsListener = new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    if (future.isSuccess()) {
+                        initialSettingsSent = true;
+                        initialSettingsListener = null;
+                    } else if (ctx.channel().isOpen()) {
+                        // The write failed, close the connection.
+                        ctx.close();
+                    }
                 }
-            }
-        });
+            };
+            // Create and send the frame to the remote endpoint.
+            DefaultHttp2SettingsFrame frame =
+                    new DefaultHttp2SettingsFrame.Builder()
+                            .setInitialWindowSize(inboundFlow.getInitialInboundWindowSize())
+                            .setMaxConcurrentStreams(connection.remote().getMaxStreams())
+                            .setPushEnabled(connection.local().isPushToAllowed()).build();
+            ctx.writeAndFlush(frame).addListener(initialSettingsListener);
+        }
     }
 }

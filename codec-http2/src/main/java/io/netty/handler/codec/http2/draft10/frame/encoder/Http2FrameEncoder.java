@@ -15,7 +15,6 @@
 
 package io.netty.handler.codec.http2.draft10.frame.encoder;
 
-import static io.netty.handler.codec.http2.draft10.Http2Exception.protocolError;
 import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.connectionPrefaceBuf;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
@@ -68,12 +67,6 @@ public class Http2FrameEncoder extends MessageToByteEncoder<Http2Frame> {
     protected void encode(ChannelHandlerContext ctx, Http2Frame frame, ByteBuf out)
             throws Exception {
         try {
-            if (!prefaceWritten) {
-                throw protocolError(
-                        "Attempting to send frame before connection preface written: %s", frame
-                                .getClass().getName());
-            }
-
             frameMarshaller.marshall(frame, out, ctx.alloc());
         } catch (Throwable t) {
             ctx.fireExceptionCaught(t);

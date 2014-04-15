@@ -17,7 +17,6 @@ package io.netty.handler.codec.http2.draft10.frame.decoder;
 
 import static io.netty.handler.codec.http2.draft10.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.draft10.Http2Exception.format;
-import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.CONNECTION_PREFACE;
 import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.FRAME_HEADER_LENGTH;
 import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.FRAME_LENGTH_MASK;
 import static io.netty.handler.codec.http2.draft10.frame.Http2FrameCodecUtil.connectionPrefaceBuf;
@@ -124,10 +123,6 @@ public class Http2FrameDecoder extends ByteToMessageDecoder {
             // Wait until the entire preface has arrived.
             return;
         }
-
-        // Fire the connection preface to notify the connection handler that it should send the
-        // initial settings frame.
-        ctx.fireChannelRead(CONNECTION_PREFACE);
 
         // Start processing the first header.
         state = State.FRAME_HEADER;
