@@ -78,7 +78,7 @@ public abstract class AbstractTrafficShapingHandler extends
     /**
      * Default minimal time to wait
      */
-    private static final long MINIMAL_WAIT = 10;
+    static final long MINIMAL_WAIT = 10;
 
     /**
      * Traffic Counter
@@ -128,12 +128,13 @@ public abstract class AbstractTrafficShapingHandler extends
 
      private void init(ObjectSizeEstimator newObjectSizeEstimator,
              Timer newTimer, long newWriteLimit, long newReadLimit,
-             long newCheckInterval) {
+             long newCheckInterval, long newMaxTime) {
          objectSizeEstimator = newObjectSizeEstimator;
          timer = newTimer;
          writeLimit = newWriteLimit;
          readLimit = newReadLimit;
          checkInterval = newCheckInterval;
+         maxTime = newMaxTime;
          //logger.warn("TSH: "+writeLimit+":"+readLimit+":"+checkInterval);
      }
 
@@ -169,7 +170,8 @@ public abstract class AbstractTrafficShapingHandler extends
      */
     protected AbstractTrafficShapingHandler(Timer timer, long writeLimit,
                                             long readLimit, long checkInterval) {
-        init(new DefaultObjectSizeEstimator(), timer, writeLimit, readLimit, checkInterval);
+        init(new DefaultObjectSizeEstimator(), timer, writeLimit, readLimit, checkInterval,
+                DEFAULT_MAX_TIME);
     }
 
     /**
@@ -191,7 +193,7 @@ public abstract class AbstractTrafficShapingHandler extends
     protected AbstractTrafficShapingHandler(
             ObjectSizeEstimator objectSizeEstimator, Timer timer,
             long writeLimit, long readLimit, long checkInterval) {
-        init(objectSizeEstimator, timer, writeLimit, readLimit, checkInterval);
+        init(objectSizeEstimator, timer, writeLimit, readLimit, checkInterval, DEFAULT_MAX_TIME);
     }
 
     /**
@@ -206,7 +208,8 @@ public abstract class AbstractTrafficShapingHandler extends
      */
     protected AbstractTrafficShapingHandler(Timer timer, long writeLimit,
                                             long readLimit) {
-        init(new DefaultObjectSizeEstimator(), timer, writeLimit, readLimit, DEFAULT_CHECK_INTERVAL);
+        init(new DefaultObjectSizeEstimator(), timer, writeLimit, readLimit,
+                DEFAULT_CHECK_INTERVAL, DEFAULT_MAX_TIME);
     }
 
     /**
@@ -225,7 +228,8 @@ public abstract class AbstractTrafficShapingHandler extends
     protected AbstractTrafficShapingHandler(
             ObjectSizeEstimator objectSizeEstimator, Timer timer,
             long writeLimit, long readLimit) {
-        init(objectSizeEstimator, timer, writeLimit, readLimit, DEFAULT_CHECK_INTERVAL);
+        init(objectSizeEstimator, timer, writeLimit, readLimit,
+                DEFAULT_CHECK_INTERVAL, DEFAULT_MAX_TIME);
     }
 
     /**
@@ -235,7 +239,8 @@ public abstract class AbstractTrafficShapingHandler extends
      *          created once for instance like HashedWheelTimer(10, TimeUnit.MILLISECONDS, 1024)
      */
     protected AbstractTrafficShapingHandler(Timer timer) {
-        init(new DefaultObjectSizeEstimator(), timer, 0, 0, DEFAULT_CHECK_INTERVAL);
+        init(new DefaultObjectSizeEstimator(), timer, 0, 0,
+                DEFAULT_CHECK_INTERVAL, DEFAULT_MAX_TIME);
     }
 
     /**
@@ -249,7 +254,8 @@ public abstract class AbstractTrafficShapingHandler extends
      */
     protected AbstractTrafficShapingHandler(
             ObjectSizeEstimator objectSizeEstimator, Timer timer) {
-        init(objectSizeEstimator, timer, 0, 0, DEFAULT_CHECK_INTERVAL);
+        init(objectSizeEstimator, timer, 0, 0,
+                DEFAULT_CHECK_INTERVAL, DEFAULT_MAX_TIME);
     }
 
     /**
@@ -262,7 +268,7 @@ public abstract class AbstractTrafficShapingHandler extends
      *            channels or 0 if no stats are to be computed
      */
     protected AbstractTrafficShapingHandler(Timer timer, long checkInterval) {
-        init(new DefaultObjectSizeEstimator(), timer, 0, 0, checkInterval);
+        init(new DefaultObjectSizeEstimator(), timer, 0, 0, checkInterval, DEFAULT_MAX_TIME);
     }
 
     /**
@@ -280,7 +286,52 @@ public abstract class AbstractTrafficShapingHandler extends
     protected AbstractTrafficShapingHandler(
             ObjectSizeEstimator objectSizeEstimator, Timer timer,
             long checkInterval) {
-        init(objectSizeEstimator, timer, 0, 0, checkInterval);
+        init(objectSizeEstimator, timer, 0, 0, checkInterval, DEFAULT_MAX_TIME);
+    }
+
+    /**
+     * Constructor using default {@link ObjectSizeEstimator}
+     *
+     * @param timer
+     *          created once for instance like HashedWheelTimer(10, TimeUnit.MILLISECONDS, 1024)
+     * @param writeLimit
+     *          0 or a limit in bytes/s
+     * @param readLimit
+     *          0 or a limit in bytes/s
+     * @param checkInterval
+     *          The delay between two computations of performances for
+     *            channels or 0 if no stats are to be computed
+     * @param maxTime
+     *          The max time to wait in case of excess of traffic (to prevent Time Out event)
+     */
+    protected AbstractTrafficShapingHandler(Timer timer, long writeLimit,
+                                            long readLimit, long checkInterval, long maxTime) {
+        init(new DefaultObjectSizeEstimator(), timer, writeLimit, readLimit, checkInterval,
+                maxTime);
+    }
+
+    /**
+     * Constructor using the specified ObjectSizeEstimator
+     *
+     * @param objectSizeEstimator
+     *            the {@link ObjectSizeEstimator} that will be used to compute
+     *            the size of the message
+     * @param timer
+     *          created once for instance like HashedWheelTimer(10, TimeUnit.MILLISECONDS, 1024)
+     * @param writeLimit
+     *          0 or a limit in bytes/s
+     * @param readLimit
+     *          0 or a limit in bytes/s
+     * @param checkInterval
+     *          The delay between two computations of performances for
+     *            channels or 0 if no stats are to be computed
+     * @param maxTime
+     *          The max time to wait in case of excess of traffic (to prevent Time Out event)
+     */
+    protected AbstractTrafficShapingHandler(
+            ObjectSizeEstimator objectSizeEstimator, Timer timer,
+            long writeLimit, long readLimit, long checkInterval, long maxTime) {
+        init(objectSizeEstimator, timer, writeLimit, readLimit, checkInterval, maxTime);
     }
 
     /**

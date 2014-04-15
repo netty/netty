@@ -337,16 +337,16 @@ public class TrafficCounter {
     public long getReadTimeToWait(long limitTraffic, long maxTime) {
         long interval = System.currentTimeMillis() - lastTime.get();
         long sum = currentReadBytes.get();
-        if (interval > 10 && sum > 0) {
+        if (interval > AbstractTrafficShapingHandler.MINIMAL_WAIT && sum > 0) {
             long time = (sum * 1000 / limitTraffic - interval) / 10 * 10;
-            if (time > 10) {
+            if (time > AbstractTrafficShapingHandler.MINIMAL_WAIT) {
                 return time > maxTime ? maxTime : time;
             }
         }
         sum += lastReadBytes;
         long time = (sum * 1000 / limitTraffic - interval - getCheckInterval())
                 / 10 * 10;
-        if (time > 10) {
+        if (time > AbstractTrafficShapingHandler.MINIMAL_WAIT) {
             return time > maxTime ? maxTime : time;
         }
         return 0;
@@ -360,16 +360,16 @@ public class TrafficCounter {
     public long getWriteTimeToWait(long limitTraffic, long maxTime) {
         long interval = System.currentTimeMillis() - lastTime.get();
         long sum = currentWrittenBytes.get();
-        if (interval > 10 && sum > 0) {
+        if (interval > AbstractTrafficShapingHandler.MINIMAL_WAIT && sum > 0) {
             long time = (sum * 1000 / limitTraffic - interval) / 10 * 10;
-            if (time > 10) {
+            if (time > AbstractTrafficShapingHandler.MINIMAL_WAIT) {
                 return time > maxTime ? maxTime : time;
             }
         }
         sum += lastWrittenBytes;
         long time = (sum * 1000 / limitTraffic - interval - getCheckInterval())
                 / 10 * 10;
-        if (time > 10) {
+        if (time > AbstractTrafficShapingHandler.MINIMAL_WAIT) {
             return time > maxTime ? maxTime : time;
         }
         return 0;
