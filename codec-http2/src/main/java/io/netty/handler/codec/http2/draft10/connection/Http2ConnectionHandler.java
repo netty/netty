@@ -83,7 +83,6 @@ public class Http2ConnectionHandler extends ChannelHandlerAdapter {
     private final OutboundFlowController outboundFlow;
     private boolean initialSettingsSent;
     private boolean initialSettingsReceived;
-    private ChannelFutureListener initialSettingsListener;
 
     public Http2ConnectionHandler(boolean server) {
         this(new DefaultHttp2Connection(server));
@@ -655,26 +654,24 @@ public class Http2ConnectionHandler extends ChannelHandlerAdapter {
      * Sends the initial settings frame upon establishment of the connection, if not already sent.
      */
     private void sendInitialSettings(final ChannelHandlerContext ctx) throws Http2Exception {
-        if (!initialSettingsSent && initialSettingsListener == null && ctx.channel().isActive()) {
-            initialSettingsListener = new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    if (future.isSuccess()) {
-                        initialSettingsSent = true;
-                        initialSettingsListener = null;
-                    } else if (ctx.channel().isOpen()) {
-                        // The write failed, close the connection.
-                        ctx.close();
-                    }
-                }
-            };
+        if (!initialSettingsSent && ctx.channel().isActive()) {
+            initialSettingsSent = true;
+
             // Create and send the frame to the remote endpoint.
             DefaultHttp2SettingsFrame frame =
                     new DefaultHttp2SettingsFrame.Builder()
                             .setInitialWindowSize(inboundFlow.getInitialInboundWindowSize())
                             .setMaxConcurrentStreams(connection.remote().getMaxStreams())
                             .setPushEnabled(connection.local().isPushToAllowed()).build();
-            ctx.writeAndFlush(frame).addListener(initialSettingsListener);
+            ctx.writeAndFlush(frame).addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    if (!future.isSuccess() && ctx.channel().isOpen()) {
+                        // The write failed, close the connection.
+                        ctx.close();
+                    }
+                }
+            });
         }
     }
 }
