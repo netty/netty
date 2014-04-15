@@ -66,9 +66,8 @@ public final class NioDatagramChannel
     private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
 
     private final DatagramChannelConfig config;
-    private final Map<InetAddress, List<MembershipKey>> memberships =
-            new HashMap<InetAddress, List<MembershipKey>>();
 
+    private Map<InetAddress, List<MembershipKey>> memberships;
     private RecvByteBufAllocator.Handle allocHandle;
 
     private static DatagramChannel newSocket(SelectorProvider provider) {
@@ -398,7 +397,12 @@ public final class NioDatagramChannel
             }
 
             synchronized (this) {
-                List<MembershipKey> keys = memberships.get(multicastAddress);
+                List<MembershipKey> keys = null;
+                if (memberships == null) {
+                    memberships = new HashMap<InetAddress, List<MembershipKey>>();
+                } else {
+                    keys = memberships.get(multicastAddress);
+                }
                 if (keys == null) {
                     keys = new ArrayList<MembershipKey>();
                     memberships.put(multicastAddress, keys);
