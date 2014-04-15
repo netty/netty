@@ -211,12 +211,14 @@ public final class SpdyFrameCodec extends ByteToMessageDecoder implements SpdyFr
         }
     }
 
+    @Override
     public void readDataFrame(int streamId, boolean last, ByteBuf data) {
         SpdyDataFrame spdyDataFrame = new DefaultSpdyDataFrame(streamId, data);
         spdyDataFrame.setLast(last);
         ctx.fireChannelRead(spdyDataFrame);
     }
 
+    @Override
     public void readSynStreamFrame(
             int streamId, int associatedToStreamId, byte priority, boolean last, boolean unidirectional) {
         SpdySynStreamFrame spdySynStreamFrame = new DefaultSpdySynStreamFrame(streamId, associatedToStreamId, priority);
@@ -225,52 +227,62 @@ public final class SpdyFrameCodec extends ByteToMessageDecoder implements SpdyFr
         spdyHeadersFrame = spdySynStreamFrame;
     }
 
+    @Override
     public void readSynReplyFrame(int streamId, boolean last) {
         SpdySynReplyFrame spdySynReplyFrame = new DefaultSpdySynReplyFrame(streamId);
         spdySynReplyFrame.setLast(last);
         spdyHeadersFrame = spdySynReplyFrame;
     }
 
+    @Override
     public void readRstStreamFrame(int streamId, int statusCode) {
         SpdyRstStreamFrame spdyRstStreamFrame = new DefaultSpdyRstStreamFrame(streamId, statusCode);
         ctx.fireChannelRead(spdyRstStreamFrame);
     }
 
+    @Override
     public void readSettingsFrame(boolean clearPersisted) {
         spdySettingsFrame = new DefaultSpdySettingsFrame();
         spdySettingsFrame.setClearPreviouslyPersistedSettings(clearPersisted);
     }
 
+    @Override
     public void readSetting(int id, int value, boolean persistValue, boolean persisted) {
         spdySettingsFrame.setValue(id, value, persistValue, persisted);
     }
 
+    @Override
     public void readSettingsEnd() {
         Object frame = spdySettingsFrame;
         spdySettingsFrame = null;
         ctx.fireChannelRead(frame);
     }
 
+    @Override
     public void readPingFrame(int id) {
         SpdyPingFrame spdyPingFrame = new DefaultSpdyPingFrame(id);
         ctx.fireChannelRead(spdyPingFrame);
     }
 
+    @Override
     public void readGoAwayFrame(int lastGoodStreamId, int statusCode) {
         SpdyGoAwayFrame spdyGoAwayFrame = new DefaultSpdyGoAwayFrame(lastGoodStreamId, statusCode);
         ctx.fireChannelRead(spdyGoAwayFrame);
     }
 
+    @Override
     public void readHeadersFrame(int streamId, boolean last) {
         spdyHeadersFrame = new DefaultSpdyHeadersFrame(streamId);
         spdyHeadersFrame.setLast(last);
     }
 
+    @Override
     public void readWindowUpdateFrame(int streamId, int deltaWindowSize) {
         SpdyWindowUpdateFrame spdyWindowUpdateFrame = new DefaultSpdyWindowUpdateFrame(streamId, deltaWindowSize);
         ctx.fireChannelRead(spdyWindowUpdateFrame);
     }
 
+    @Override
     public void readHeaderBlock(ByteBuf headerBlock) {
         try {
             spdyHeaderBlockDecoder.decode(headerBlock, spdyHeadersFrame);
@@ -279,6 +291,7 @@ public final class SpdyFrameCodec extends ByteToMessageDecoder implements SpdyFr
         }
     }
 
+    @Override
     public void readHeaderBlockEnd() {
         Object frame = null;
         try {
@@ -293,6 +306,7 @@ public final class SpdyFrameCodec extends ByteToMessageDecoder implements SpdyFr
         }
     }
 
+    @Override
     public void readFrameError(String message) {
         ctx.fireExceptionCaught(INVALID_FRAME);
     }
