@@ -16,13 +16,14 @@
 
 package io.netty.example.http2.server;
 
-import static io.netty.util.internal.logging.InternalLogLevel.INFO;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.example.http2.client.Http2FrameLogger;
-import io.netty.handler.codec.http2.draft10.connection.Http2ConnectionHandler;
-import io.netty.handler.codec.http2.draft10.frame.Http2FrameCodec;
+import io.netty.example.securechat.SecureChatSslContextFactory;
+import io.netty.handler.ssl.SslHandler;
+import org.eclipse.jetty.npn.NextProtoNego;
+
+import javax.net.ssl.SSLEngine;
 
 /**
  * Sets up the Netty pipeline
@@ -32,9 +33,15 @@ public class Http2ServerInitializer extends ChannelInitializer<SocketChannel> {
     public void initChannel(SocketChannel ch) throws Exception {
         ChannelPipeline p = ch.pipeline();
 
-        p.addLast("http2FrameCodec", new Http2FrameCodec());
-        p.addLast("http2FrameLogger", new Http2FrameLogger(INFO));
-        p.addLast("http2ConnectionHandler", new Http2ConnectionHandler(true));
-        p.addLast("helloWorldHandler", new HelloWorldHandler());
+        SSLEngine engine = SecureChatSslContextFactory.getServerContext().createSSLEngine();
+        engine.setUseClientMode(false);
+        p.addLast("ssl", new SslHandler(engine));
+
+        // Setup NextProtoNego with our server provider
+        NextProtoNego.put(engine, new Http2ServerProvider());
+        NextProtoNego.debug = true;
+
+        // Negotiates with the browser if HTTP2 or HTTP is going to be used
+        p.addLast("handler", new Http2OrHttpHandler());
     }
 }

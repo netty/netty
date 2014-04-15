@@ -16,8 +16,8 @@
 package io.netty.example.http2.server;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http2.draft10.DefaultHttp2Headers;
 import io.netty.handler.codec.http2.draft10.Http2Headers;
 import io.netty.handler.codec.http2.draft10.frame.DefaultHttp2DataFrame;
@@ -26,24 +26,19 @@ import io.netty.handler.codec.http2.draft10.frame.Http2DataFrame;
 import io.netty.handler.codec.http2.draft10.frame.Http2HeadersFrame;
 import io.netty.handler.codec.http2.draft10.frame.Http2StreamFrame;
 import io.netty.util.CharsetUtil;
-import io.netty.util.ReferenceCountUtil;
 
 /**
  * A simple handler that responds with the message "Hello World!".
  */
-public class HelloWorldHandler extends ChannelHandlerAdapter {
-    private static final byte[] RESPONSE_BYTES = "Hello World".getBytes(CharsetUtil.UTF_8);
+public class HelloWorldHttp2Handler extends SimpleChannelInboundHandler<Http2StreamFrame> {
+
+    static final byte[] RESPONSE_BYTES = "Hello World".getBytes(CharsetUtil.UTF_8);
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (msg instanceof Http2StreamFrame) {
-            Http2StreamFrame frame = (Http2StreamFrame) msg;
-            if (frame.isEndOfStream()) {
-                sendResponse(ctx, frame.getStreamId());
-            }
+    public void messageReceived(ChannelHandlerContext ctx, Http2StreamFrame frame) throws Exception {
+        if (frame.isEndOfStream()) {
+            sendResponse(ctx, frame.getStreamId());
         }
-
-        ReferenceCountUtil.release(msg);
     }
 
     @Override
@@ -51,7 +46,7 @@ public class HelloWorldHandler extends ChannelHandlerAdapter {
         cause.printStackTrace();
     }
 
-    private void sendResponse(ChannelHandlerContext ctx, int streamId) {
+    private static void sendResponse(ChannelHandlerContext ctx, int streamId) {
         ByteBuf content = ctx.alloc().buffer();
         content.writeBytes(RESPONSE_BYTES);
 
