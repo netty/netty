@@ -38,7 +38,7 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
         ChannelPipeline pipeline = ch.pipeline();
 
         pipeline.addLast("http2FrameCodec", new Http2FrameCodec());
-        pipeline.addLast("spdyFrameLogger", new Http2FrameLogger(INFO));
+        pipeline.addLast("http2FrameLogger", new Http2FrameLogger(INFO));
         pipeline.addLast("http2ConnectionHandler", new Http2ConnectionHandler(false));
         pipeline.addLast("httpHandler", httpResponseHandler);
     }
