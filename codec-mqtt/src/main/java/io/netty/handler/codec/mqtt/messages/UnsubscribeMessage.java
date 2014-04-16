@@ -17,7 +17,8 @@
 package io.netty.handler.codec.mqtt.messages;
 
 /**
- * http://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html#unsubscribe
+ * See <a href="http://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html#unsubscribe">
+ *     MQTTV3.1/unsubscribe</a>
  */
 public class UnsubscribeMessage extends Message {
 

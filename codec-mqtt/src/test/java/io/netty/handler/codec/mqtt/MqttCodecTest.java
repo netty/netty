@@ -289,7 +289,7 @@ public class MqttCodecTest {
     private static PublishMessage createPublishMessage() {
         FixedHeader fixedHeader = new FixedHeader(MessageType.PUBLISH, false, QOS1, true, 0);
         PublishVariableHeader publishVariableHeader = new PublishVariableHeader("/abc", 1234);
-        ByteBuf payload =  ALLOCATOR.heapBuffer(8);
+        ByteBuf payload =  ALLOCATOR.buffer();
         payload.writeBytes("whatever".getBytes(CharsetUtil.UTF_8));
         return new PublishMessage(fixedHeader, publishVariableHeader, payload);
     }
@@ -382,7 +382,7 @@ public class MqttCodecTest {
     }
 
     private static void validatePublishPayload(ByteBuf expected, ByteBuf actual) {
-        assertArrayEquals("PublishPayload mismatch", expected.array(), actual.array());
+        assertEquals("PublishPayload mismatch ", 0, expected.compareTo(actual));
     }
 
     private static void validateMessageIdVariableHeader(

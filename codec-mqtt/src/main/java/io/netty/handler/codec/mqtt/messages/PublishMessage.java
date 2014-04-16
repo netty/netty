@@ -22,7 +22,7 @@ import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.internal.StringUtil;
 
 /**
- * http://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html#publish
+ * See <a href="http://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html#publish">MQTTV3.1/publish</a>
  */
 public class PublishMessage extends Message implements ByteBufHolder {
 

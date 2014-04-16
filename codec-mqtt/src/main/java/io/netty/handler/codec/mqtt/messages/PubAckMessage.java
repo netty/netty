@@ -17,7 +17,7 @@
 package io.netty.handler.codec.mqtt.messages;
 
 /**
- * http://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html#puback
+ * See <a href="http://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html#puback">MQTTV3.1/puback</a>
  */
 public class PubAckMessage extends Message {
 

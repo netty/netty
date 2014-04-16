@@ -17,7 +17,7 @@
 package io.netty.handler.codec.mqtt.messages;
 
 /**
- * http://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html#unsuback
+ * See <a href="http://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html#unsuback">MQTTV3.1/unsuback</a>
  */
 public class UnsubAckMessage extends Message {
 

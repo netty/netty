@@ -39,9 +39,10 @@ import io.netty.handler.codec.mqtt.messages.UnsubscribePayload;
 import io.netty.util.CharsetUtil;
 
 import java.util.List;
+
 /**
  * Encodes Mqtt messages into bytes following the protocl specification v3.1
- * as described here http://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html
+ * as described here <a href="http://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html">MQTTV3.1</a>
  */
 public class MqttEncoder extends MessageToMessageEncoder<Message> {
 
@@ -305,7 +306,7 @@ public class MqttEncoder extends MessageToMessageEncoder<Message> {
             PublishMessage message) {
         FixedHeader fixedHeader = message.getFixedHeader();
         PublishVariableHeader variableHeader = message.getVariableHeader();
-        ByteBuf payload = message.getPayload();
+        ByteBuf payload = message.getPayload().duplicate();
 
         String topicName = variableHeader.getTopicName();
         byte[] topicNameBytes = encodeStringUtf8(topicName);

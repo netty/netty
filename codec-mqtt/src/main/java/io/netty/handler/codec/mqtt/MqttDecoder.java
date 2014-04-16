@@ -18,6 +18,7 @@ package io.netty.handler.codec.mqtt;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.mqtt.MqttDecoder.DecoderState;
 import io.netty.handler.codec.mqtt.messages.ConnAckVariableHeader;
@@ -41,7 +42,7 @@ import static io.netty.handler.codec.mqtt.MqttConstants.*;
 
 /**
  * Decodes Mqtt messages from bytes, following the protocl specification v3.1
- * as described here http://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html
+ * as described here <a href="http://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html">MQTTV3.1</a>
  */
 public class MqttDecoder extends ReplayingDecoder<DecoderState> {
 
@@ -91,7 +92,7 @@ public class MqttDecoder extends ReplayingDecoder<DecoderState> {
                 payload = decodedPayload.value;
                 bytesRemainingInVariablePart -= decodedPayload.numberOfBytesConsumed;
                 if (bytesRemainingInVariablePart != 0) {
-                    throw new IllegalStateException(
+                    throw new DecoderException(
                             String.format(
                                     "Non-zero bytes remaining (%d).Should never happen. "
                                             + "Message type: %d. Channel: %x",
@@ -142,7 +143,7 @@ public class MqttDecoder extends ReplayingDecoder<DecoderState> {
 
         // MQTT protocol limits Remaining Length to 4 bytes
         if (loops == 4 && (digit & 128) != 0) {
-            throw new IllegalStateException(
+            throw new DecoderException(
                     String.format(
                             "Failed to read fixed header of MQTT message. " +
                                     "It has more than 4 digits for Remaining Length. " +
@@ -194,7 +195,7 @@ public class MqttDecoder extends ReplayingDecoder<DecoderState> {
     private static DecodeResult<ConnectVariableHeader> decodeConnectionVariableHeader(ByteBuf buffer) {
         final DecodeResult<String> protoString = decodeString(buffer);
         if (!PROTOCOL_NAME.equals(protoString.value)) {
-            throw new IllegalStateException(PROTOCOL_NAME + " signature is missing. Closing channel.");
+            throw new DecoderException(PROTOCOL_NAME + " signature is missing. Closing channel.");
         }
 
         int numberOfBytesConsumed = protoString.numberOfBytesConsumed;
@@ -371,7 +372,7 @@ public class MqttDecoder extends ReplayingDecoder<DecoderState> {
     }
 
     private static DecodeResult<ByteBuf> decodePublishPayload(ByteBuf buffer, int bytesRemainingInVariablePart) {
-        ByteBuf b = buffer.readBytes(bytesRemainingInVariablePart);
+        ByteBuf b = buffer.readSlice(bytesRemainingInVariablePart).retain();
         return new DecodeResult<ByteBuf>(b, bytesRemainingInVariablePart);
     }
 
