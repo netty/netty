@@ -15,16 +15,6 @@
 
 package io.netty.handler.codec.http2.draft10.connection;
 
-import static io.netty.handler.codec.http2.draft10.Http2Error.PROTOCOL_ERROR;
-import static io.netty.handler.codec.http2.draft10.Http2Error.STREAM_CLOSED;
-import static io.netty.handler.codec.http2.draft10.Http2Exception.format;
-import static io.netty.handler.codec.http2.draft10.Http2Exception.protocolError;
-import static io.netty.handler.codec.http2.draft10.connection.Http2ConnectionUtil.toHttp2Exception;
-import static io.netty.handler.codec.http2.draft10.connection.Http2Stream.State.HALF_CLOSED_LOCAL;
-import static io.netty.handler.codec.http2.draft10.connection.Http2Stream.State.HALF_CLOSED_REMOTE;
-import static io.netty.handler.codec.http2.draft10.connection.Http2Stream.State.OPEN;
-import static io.netty.handler.codec.http2.draft10.connection.Http2Stream.State.RESERVED_LOCAL;
-import static io.netty.handler.codec.http2.draft10.connection.Http2Stream.State.RESERVED_REMOTE;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerAdapter;
@@ -47,6 +37,11 @@ import io.netty.handler.codec.http2.draft10.frame.Http2SettingsFrame;
 import io.netty.handler.codec.http2.draft10.frame.Http2StreamFrame;
 import io.netty.handler.codec.http2.draft10.frame.Http2WindowUpdateFrame;
 import io.netty.util.ReferenceCountUtil;
+
+import static io.netty.handler.codec.http2.draft10.Http2Error.*;
+import static io.netty.handler.codec.http2.draft10.Http2Exception.*;
+import static io.netty.handler.codec.http2.draft10.connection.Http2ConnectionUtil.*;
+import static io.netty.handler.codec.http2.draft10.connection.Http2Stream.State.*;
 
 /**
  * Handler for HTTP/2 connection state. Manages inbound and outbound flow control for data frames.
@@ -153,7 +148,7 @@ public class Http2ConnectionHandler extends ChannelHandlerAdapter {
             processHttp2Exception(ctx, (Http2Exception) cause);
         }
 
-        ctx.fireExceptionCaught(cause);
+        super.exceptionCaught(ctx, cause);
     }
 
     @Override

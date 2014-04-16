@@ -25,6 +25,7 @@ import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http2.draft10.connection.Http2ConnectionHandler;
 import io.netty.handler.codec.http2.draft10.frame.Http2FrameCodec;
+import io.netty.handler.codec.http2.draft10.frame.decoder.Http2ServerPrefaceReader;
 import io.netty.handler.ssl.SslHandler;
 
 import javax.net.ssl.SSLEngine;
@@ -129,6 +130,7 @@ public abstract class Http2OrHttpChooser extends ByteToMessageDecoder {
      */
     protected void addHttp2Handlers(ChannelHandlerContext ctx) {
         ChannelPipeline pipeline = ctx.pipeline();
+        pipeline.addLast("http2ServerPrefaceReader", new Http2ServerPrefaceReader());
         pipeline.addLast("http2FrameCodec", new Http2FrameCodec());
         pipeline.addLast("http2ConnectionHandler", new Http2ConnectionHandler(true));
         pipeline.addLast("http2RequestHandler", createHttp2RequestHandler());
