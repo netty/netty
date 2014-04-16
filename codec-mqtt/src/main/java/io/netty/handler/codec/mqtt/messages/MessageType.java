@@ -16,6 +16,9 @@
 
 package io.netty.handler.codec.mqtt.messages;
 
+/**
+ * MQTT Message Types.
+ */
 public final class MessageType {
 
     public static final int CONNECT = 1;

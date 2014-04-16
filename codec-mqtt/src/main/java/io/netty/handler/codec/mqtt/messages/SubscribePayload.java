@@ -16,14 +16,18 @@
 
 package io.netty.handler.codec.mqtt.messages;
 
+import java.util.Collections;
 import java.util.List;
 
+/**
+ * Payload of the {@link io.netty.handler.codec.mqtt.messages.SubscribeMessage}
+ */
 public class SubscribePayload {
 
     private final List<TopicSubscription> topicSubscriptionList;
 
     public SubscribePayload(List<TopicSubscription> topicSubscriptionList) {
-        this.topicSubscriptionList = topicSubscriptionList;
+        this.topicSubscriptionList = Collections.unmodifiableList(topicSubscriptionList);
     }
 
     public List<TopicSubscription> getTopicSubscriptionList() {

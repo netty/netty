@@ -16,6 +16,9 @@
 
 package io.netty.handler.codec.mqtt.messages;
 
+/**
+ * Variable Header for the {@link io.netty.handler.codec.mqtt.messages.ConnectMessage}
+ */
 public class ConnectVariableHeader {
 
     private final String name;

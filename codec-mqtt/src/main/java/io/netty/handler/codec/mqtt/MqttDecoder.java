@@ -32,6 +32,7 @@ import io.netty.handler.codec.mqtt.messages.SubAckPayload;
 import io.netty.handler.codec.mqtt.messages.SubscribePayload;
 import io.netty.handler.codec.mqtt.messages.TopicSubscription;
 import io.netty.handler.codec.mqtt.messages.UnsubscribePayload;
+import io.netty.util.CharsetUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -90,13 +91,13 @@ public class MqttDecoder extends ReplayingDecoder<DecoderState> {
                 payload = decodedPayload.value;
                 bytesRemainingInVariablePart -= decodedPayload.numberOfBytesConsumed;
                 if (bytesRemainingInVariablePart != 0) {
-                    throw new IllegalArgumentException(
+                    throw new IllegalStateException(
                             String.format(
-                                    "Non-zero bytes remaining (%d). Should never happen. "
-                                            + "Message type: %d. Channel: %x.",
+                                    "Non-zero bytes remaining (%d).Should never happen. "
+                                            + "Message type: %d. Channel: %x",
                                     bytesRemainingInVariablePart,
                                     fixedHeader.getMessageType(),
-                                    ctx.channel().hashCode()));
+                                    ctx.channel().id()));
                 }
                 checkpoint(DecoderState.READ_FIXED_HEADER);
                 Message message = MessageFactory.create(fixedHeader, variableHeader, payload);
@@ -141,7 +142,7 @@ public class MqttDecoder extends ReplayingDecoder<DecoderState> {
 
         // MQTT protocol limits Remaining Length to 4 bytes
         if (loops == 4 && (digit & 128) != 0) {
-            throw new IllegalArgumentException(
+            throw new IllegalStateException(
                     String.format(
                             "Failed to read fixed header of MQTT message. " +
                                     "It has more than 4 digits for Remaining Length. " +
@@ -193,14 +194,13 @@ public class MqttDecoder extends ReplayingDecoder<DecoderState> {
     private static DecodeResult<ConnectVariableHeader> decodeConnectionVariableHeader(ByteBuf buffer) {
         final DecodeResult<String> protoString = decodeString(buffer);
         if (!PROTOCOL_NAME.equals(protoString.value)) {
-            throw new IllegalArgumentException(PROTOCOL_NAME + " signature is missing. Closing channel.");
+            throw new IllegalStateException(PROTOCOL_NAME + " signature is missing. Closing channel.");
         }
 
         int numberOfBytesConsumed = protoString.numberOfBytesConsumed;
 
         final byte version = buffer.readByte();
         final int b1 = buffer.readUnsignedByte();
-        // bytesRemainingInVariablePart -= 2;
         numberOfBytesConsumed += 2;
 
         final DecodeResult<Integer> keepAlive = decodeMsbLsb(buffer);
@@ -229,7 +229,6 @@ public class MqttDecoder extends ReplayingDecoder<DecoderState> {
     private static DecodeResult<ConnAckVariableHeader> decodeConnAckVariableHeader(ByteBuf buffer) {
         buffer.readUnsignedByte(); // reserved byte
         byte returnCode = buffer.readByte();
-        // bytesRemainingInVariablePart -= 2;
         final int numberOfBytesConsumed = 2;
         final ConnAckVariableHeader connAckVariableHeader = new ConnAckVariableHeader(returnCode);
         return new DecodeResult<ConnAckVariableHeader>(connAckVariableHeader, numberOfBytesConsumed);
@@ -350,7 +349,6 @@ public class MqttDecoder extends ReplayingDecoder<DecoderState> {
         int numberOfBytesConsumed = 0;
         while (numberOfBytesConsumed < bytesRemainingInVariablePart) {
             int qos = buffer.readUnsignedByte() & 0x03;
-            // bytesRemainingInVariablePart--;
             numberOfBytesConsumed++;
             grantedQos.add(qos);
         }
@@ -372,10 +370,9 @@ public class MqttDecoder extends ReplayingDecoder<DecoderState> {
                 numberOfBytesConsumed);
     }
 
-    private static DecodeResult<byte[]> decodePublishPayload(ByteBuf buffer, int bytesRemainingInVariablePart) {
+    private static DecodeResult<ByteBuf> decodePublishPayload(ByteBuf buffer, int bytesRemainingInVariablePart) {
         ByteBuf b = buffer.readBytes(bytesRemainingInVariablePart);
-        // bytesRemainingInVariablePart = 0;
-        return new DecodeResult<byte[]>(b.array(), bytesRemainingInVariablePart);
+        return new DecodeResult<ByteBuf>(b, bytesRemainingInVariablePart);
     }
 
     private static DecodeResult<String> decodeString(ByteBuf buffer) {
@@ -399,14 +396,12 @@ public class MqttDecoder extends ReplayingDecoder<DecoderState> {
         int numberOfBytesConsumed = decodedSize.numberOfBytesConsumed;
         if (size < minBytes || size > maxBytes) {
             buffer.skipBytes(size);
-            // bytesRemainingInVariablePart -= size;
             numberOfBytesConsumed += size;
             return new DecodeResult<String>(null, numberOfBytesConsumed);
         }
         ByteBuf buf = buffer.readBytes(size);
-        // bytesRemainingInVariablePart -= size;
         numberOfBytesConsumed += size;
-        return new DecodeResult<String>(buf.toString(UTF8_CHARSET), numberOfBytesConsumed);
+        return new DecodeResult<String>(buf.toString(CharsetUtil.UTF_8), numberOfBytesConsumed);
     }
 
     private static DecodeResult<Integer> decodeMsbLsb(ByteBuf buffer) {
@@ -416,7 +411,6 @@ public class MqttDecoder extends ReplayingDecoder<DecoderState> {
     private static DecodeResult<Integer> decodeMsbLsb(ByteBuf buffer, int min, int max) {
         short msbSize = buffer.readUnsignedByte();
         short lsbSize = buffer.readUnsignedByte();
-        // bytesRemainingInVariablePart -= 2;
         final int numberOfBytesConsumed = 2;
         int result = msbSize << 8 | lsbSize;
         if (result < min || result > max) {

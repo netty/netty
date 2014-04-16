@@ -159,6 +159,7 @@
     <module>codec-http</module>
     <module>codec-http2</module>
     <module>codec-memcache</module>
+    <module>codec-mqtt</module>
     <module>codec-socks</module>
     <module>transport</module>
     <module>transport-rxtx</module>
@@ -170,7 +171,6 @@
     <module>microbench</module>
     <module>all</module>
     <module>tarball</module>
-    <module>codec-mqtt</module>
   </modules>
 
   <dependencyManagement>

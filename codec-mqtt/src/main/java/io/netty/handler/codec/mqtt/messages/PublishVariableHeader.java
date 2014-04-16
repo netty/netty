@@ -16,6 +16,9 @@
 
 package io.netty.handler.codec.mqtt.messages;
 
+/**
+ * Variable Header of the {@link io.netty.handler.codec.mqtt.messages.PublishMessage}
+ */
 public class PublishVariableHeader {
 
     private final String topicName;

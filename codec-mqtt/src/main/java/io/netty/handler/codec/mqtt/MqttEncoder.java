@@ -18,9 +18,8 @@ package io.netty.handler.codec.mqtt;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.handler.codec.mqtt.messages.ConnAckMessage;
 import io.netty.handler.codec.mqtt.messages.ConnectMessage;
 import io.netty.handler.codec.mqtt.messages.ConnectPayload;
@@ -37,23 +36,24 @@ import io.netty.handler.codec.mqtt.messages.SubscribePayload;
 import io.netty.handler.codec.mqtt.messages.TopicSubscription;
 import io.netty.handler.codec.mqtt.messages.UnsubscribeMessage;
 import io.netty.handler.codec.mqtt.messages.UnsubscribePayload;
+import io.netty.util.CharsetUtil;
 
-
-import static io.netty.handler.codec.mqtt.MqttConstants.*;
-
+import java.util.List;
 /**
  * Encodes Mqtt messages into bytes following the protocl specification v3.1
  * as described here http://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html
  */
-public class MqttEncoder extends ChannelHandlerAdapter {
+public class MqttEncoder extends MessageToMessageEncoder<Message> {
 
     public static final MqttEncoder DEFAUL_ENCODER = new MqttEncoder();
 
     private static final byte[] EMPTY = new byte[0];
 
+    private static final byte[] CONNECT_VARIABLE_HEADER_START = new byte[] {0, 6, 'M', 'Q', 'I', 's', 'd', 'p'};
+
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-      ctx.writeAndFlush(encode(ctx.alloc(), msg), promise);
+    protected void encode(ChannelHandlerContext ctx, Message msg, List<Object> out) throws Exception {
+        out.add(doEncode(ctx.alloc(), msg));
     }
 
     /**
@@ -61,12 +61,10 @@ public class MqttEncoder extends ChannelHandlerAdapter {
      * It's only visible for testing.
      *
      * @param byteBufAllocator Allocates ByteBuf
-     * @param msg MQTT message to encode
+     * @param message MQTT message to encode
      * @return ByteBuf with encoded bytes
      */
-    static ByteBuf encode(ByteBufAllocator byteBufAllocator, Object msg) {
-
-        final Message message = (Message) msg;
+    static ByteBuf doEncode(ByteBufAllocator byteBufAllocator, Message message) {
 
         switch (message.getFixedHeader().getMessageType()) {
             case MessageType.CONNECT:
@@ -149,15 +147,8 @@ public class MqttEncoder extends ChannelHandlerAdapter {
         buf.writeByte(getFixedHeaderByte1(fixedHeader));
         writeVariableLengthInt(buf, variablePartSize);
 
-        // Variable header
-        buf.writeByte(0);
-        buf.writeByte(6);
-        buf.writeByte('M');
-        buf.writeByte('Q');
-        buf.writeByte('I');
-        buf.writeByte('s');
-        buf.writeByte('d');
-        buf.writeByte('p');
+        buf.writeBytes(CONNECT_VARIABLE_HEADER_START);
+
         buf.writeByte(variableHeader.getVersion());
         buf.writeByte(getConnVariableHeaderFlag(variableHeader));
         buf.writeShort(variableHeader.getKeepAliveTimeSeconds());
@@ -314,14 +305,14 @@ public class MqttEncoder extends ChannelHandlerAdapter {
             PublishMessage message) {
         FixedHeader fixedHeader = message.getFixedHeader();
         PublishVariableHeader variableHeader = message.getVariableHeader();
-        byte[] payload = message.getPayload();
+        ByteBuf payload = message.getPayload();
 
         String topicName = variableHeader.getTopicName();
         byte[] topicNameBytes = encodeStringUtf8(topicName);
 
         int variableHeaderBufferSize = 2 + topicNameBytes.length +
                 (fixedHeader.getQosLevel() > 0 ? 2 : 0);
-        int payloadBufferSize = payload.length;
+        int payloadBufferSize = payload.readableBytes();
         int variablePartSize = variableHeaderBufferSize + payloadBufferSize;
         int fixedHeaderBufferSize = 1 + getVariableLengthInt(variablePartSize);
 
@@ -400,7 +391,7 @@ public class MqttEncoder extends ChannelHandlerAdapter {
     }
 
     private static byte[] encodeStringUtf8(String s) {
-      return s.getBytes(UTF8_CHARSET);
+      return s.getBytes(CharsetUtil.UTF_8);
     }
 
 }

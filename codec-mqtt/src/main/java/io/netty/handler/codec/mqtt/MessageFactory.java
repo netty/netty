@@ -16,6 +16,7 @@
 
 package io.netty.handler.codec.mqtt;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.mqtt.messages.ConnAckMessage;
 import io.netty.handler.codec.mqtt.messages.ConnAckVariableHeader;
 import io.netty.handler.codec.mqtt.messages.ConnectMessage;
@@ -79,7 +80,7 @@ public final class MessageFactory {
                 return new PublishMessage(
                         fixedHeader,
                         (PublishVariableHeader) variableHeader,
-                        (byte[]) payload);
+                        (ByteBuf) payload);
 
             case MessageType.PUBACK:
             case MessageType.PUBREC:

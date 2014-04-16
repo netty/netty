@@ -16,6 +16,10 @@
 
 package io.netty.handler.codec.mqtt.messages;
 
+/**
+ * Variable Header containing only Message Id
+ * http://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html#msg-id
+ */
 public class MessageIdVariableHeader {
 
     private final int messageId;

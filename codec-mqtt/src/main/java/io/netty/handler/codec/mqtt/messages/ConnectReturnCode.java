@@ -16,6 +16,9 @@
 
 package io.netty.handler.codec.mqtt.messages;
 
+/**
+ * Return Code of {@link io.netty.handler.codec.mqtt.messages.ConnAckMessage}
+ */
 public final class ConnectReturnCode {
 
     public static final byte CONNECTION_ACCEPTED = 0x00;

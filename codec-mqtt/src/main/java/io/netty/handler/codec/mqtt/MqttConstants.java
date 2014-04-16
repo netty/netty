@@ -18,10 +18,12 @@ package io.netty.handler.codec.mqtt;
 
 import java.nio.charset.Charset;
 
+/**
+ * Holds Constant values used by multiple classes in mqtt-codec.
+ */
 public final class MqttConstants {
 
     public static final String PROTOCOL_NAME = "MQIsdp";
-    public static final Charset UTF8_CHARSET = Charset.forName("UTF-8");
 
     public static final int QOS0 = 0;
     public static final int QOS1 = 1;

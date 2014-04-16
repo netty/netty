@@ -16,14 +16,18 @@
 
 package io.netty.handler.codec.mqtt.messages;
 
+import java.util.Collections;
 import java.util.List;
 
+/**
+ * Pyaload of the {@link io.netty.handler.codec.mqtt.messages.UnsubscribeMessage}
+ */
 public class UnsubscribePayload {
 
     private final List<String> topics;
 
     public UnsubscribePayload(List<String> topics) {
-        this.topics = topics;
+        this.topics = Collections.unmodifiableList(topics);
     }
 
     public List<String> getTopics() {

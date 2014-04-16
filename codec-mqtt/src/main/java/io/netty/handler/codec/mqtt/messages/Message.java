@@ -16,6 +16,9 @@
 
 package io.netty.handler.codec.mqtt.messages;
 
+/**
+ * Base class for all MQTT message types.
+ */
 public class Message {
 
     private final FixedHeader fixedHeader;

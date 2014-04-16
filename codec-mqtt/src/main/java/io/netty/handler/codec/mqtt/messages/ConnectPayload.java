@@ -16,6 +16,9 @@
 
 package io.netty.handler.codec.mqtt.messages;
 
+/**
+ * Payload of {@link io.netty.handler.codec.mqtt.messages.ConnectMessage}
+ */
 public class ConnectPayload {
 
     private final String clientIdentifier;

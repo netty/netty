@@ -18,6 +18,9 @@ package io.netty.handler.codec.mqtt.messages;
 
 import java.util.List;
 
+/**
+ * Payload of the {@link io.netty.handler.codec.mqtt.messages.SubAckMessage}
+ */
 public class SubAckPayload {
 
     private final List<Integer> grantedQoSLevels;

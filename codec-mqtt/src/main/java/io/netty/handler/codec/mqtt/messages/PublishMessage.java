@@ -16,9 +16,17 @@
 
 package io.netty.handler.codec.mqtt.messages;
 
-public class PublishMessage extends Message {
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
+import io.netty.util.IllegalReferenceCountException;
+import io.netty.util.internal.StringUtil;
 
-    public PublishMessage(FixedHeader fixedHeader, PublishVariableHeader variableHeader, byte[] payload) {
+/**
+ * http://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html#publish
+ */
+public class PublishMessage extends Message implements ByteBufHolder {
+
+    public PublishMessage(FixedHeader fixedHeader, PublishVariableHeader variableHeader, ByteBuf payload) {
         super(fixedHeader, variableHeader, payload);
     }
 
@@ -28,7 +36,70 @@ public class PublishMessage extends Message {
     }
 
     @Override
-    public byte[] getPayload() {
-        return (byte[]) super.getPayload();
+    public ByteBuf getPayload() {
+        return content();
+    }
+
+    @Override
+    public ByteBuf content() {
+        final ByteBuf data = (ByteBuf) super.getPayload();
+        if (data.refCnt() <= 0) {
+            throw new IllegalReferenceCountException(data.refCnt());
+        }
+        return data;
+    }
+
+    @Override
+    public ByteBufHolder copy() {
+        return new PublishMessage(getFixedHeader(), getVariableHeader(), content().copy());
+    }
+
+    @Override
+    public ByteBufHolder duplicate() {
+        return new PublishMessage(getFixedHeader(), getVariableHeader(), content().duplicate());
+    }
+
+    @Override
+    public int refCnt() {
+        return content().refCnt();
+    }
+
+    @Override
+    public ByteBufHolder retain() {
+        content().retain();
+        return this;
+    }
+
+    @Override
+    public ByteBufHolder retain(int increment) {
+        content().retain(increment);
+        return this;
+    }
+
+    @Override
+    public ByteBufHolder touch() {
+        content().touch();
+        return this;
+    }
+
+    @Override
+    public ByteBufHolder touch(Object hint) {
+        content().touch(hint);
+        return this;
+    }
+
+    @Override
+    public boolean release() {
+        return content().release();
+    }
+
+    @Override
+    public boolean release(int decrement) {
+        return content().release(decrement);
+    }
+
+    @Override
+    public String toString() {
+        return StringUtil.simpleClassName(this) + '(' + content().toString() + ')';
     }
 }

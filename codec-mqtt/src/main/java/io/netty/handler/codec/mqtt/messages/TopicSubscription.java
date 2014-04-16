@@ -16,6 +16,10 @@
 
 package io.netty.handler.codec.mqtt.messages;
 
+/**
+ * Contains a topic name and Qos Level.
+ * This is part of the {@link io.netty.handler.codec.mqtt.messages.SubscribePayload}
+ */
 public class TopicSubscription {
 
     private final String topicName;

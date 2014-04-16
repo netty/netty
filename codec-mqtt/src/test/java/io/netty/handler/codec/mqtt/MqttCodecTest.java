@@ -18,7 +18,7 @@ package io.netty.handler.codec.mqtt;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.messages.ConnAckMessage;
@@ -40,6 +40,7 @@ import io.netty.handler.codec.mqtt.messages.SubscribePayload;
 import io.netty.handler.codec.mqtt.messages.TopicSubscription;
 import io.netty.handler.codec.mqtt.messages.UnsubscribeMessage;
 import io.netty.handler.codec.mqtt.messages.UnsubscribePayload;
+import io.netty.util.CharsetUtil;
 import org.easymock.Mock;
 import org.junit.Before;
 import org.junit.Test;
@@ -52,6 +53,9 @@ import static io.netty.handler.codec.mqtt.MqttConstants.*;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
+/**
+ * Unit tests for MqttEncoder and MqttDecoder.
+ */
 public class MqttCodecTest {
 
     private static final String CLIENT_ID = "RANDOM_TEST_CLIENT";
@@ -63,7 +67,7 @@ public class MqttCodecTest {
     private static final int PROTOCOL_VERSION = 3;
     private static final int KEEP_ALIVE_SECONDS = 600;
 
-    private static final ByteBufAllocator ALLOCATOR = new PooledByteBufAllocator();
+    private static final ByteBufAllocator ALLOCATOR = new UnpooledByteBufAllocator(false);
 
     @Mock
     private final ChannelHandlerContext ctx = mock(ChannelHandlerContext.class);
@@ -82,7 +86,7 @@ public class MqttCodecTest {
     @Test
     public void testConnectMessage() throws Exception {
         final ConnectMessage message = createConnectMessage();
-        ByteBuf byteBuf = MqttEncoder.encode(ALLOCATOR, message);
+        ByteBuf byteBuf = MqttEncoder.doEncode(ALLOCATOR, message);
 
         final List<Object> out = new LinkedList<Object>();
         mqttDecoder.decode(ctx, byteBuf, out);
@@ -99,7 +103,7 @@ public class MqttCodecTest {
     @Test
     public void testConnAckMessage() throws Exception {
         final ConnAckMessage message = createConnAckMessage();
-        ByteBuf byteBuf = MqttEncoder.encode(ALLOCATOR, message);
+        ByteBuf byteBuf = MqttEncoder.doEncode(ALLOCATOR, message);
 
         final List<Object> out = new LinkedList<Object>();
         mqttDecoder.decode(ctx, byteBuf, out);
@@ -114,7 +118,7 @@ public class MqttCodecTest {
     @Test
     public void testPublishMessage() throws Exception {
         final PublishMessage message = createPublishMessage();
-        ByteBuf byteBuf = MqttEncoder.encode(ALLOCATOR, message);
+        ByteBuf byteBuf = MqttEncoder.doEncode(ALLOCATOR, message);
 
         final List<Object> out = new LinkedList<Object>();
         mqttDecoder.decode(ctx, byteBuf, out);
@@ -150,7 +154,7 @@ public class MqttCodecTest {
     @Test
     public void testSubscribeMessage() throws Exception {
         final SubscribeMessage message = createSubscribeMessage();
-        ByteBuf byteBuf = MqttEncoder.encode(ALLOCATOR, message);
+        ByteBuf byteBuf = MqttEncoder.doEncode(ALLOCATOR, message);
 
         final List<Object> out = new LinkedList<Object>();
         mqttDecoder.decode(ctx, byteBuf, out);
@@ -166,7 +170,7 @@ public class MqttCodecTest {
     @Test
     public void testSubAckMessage() throws Exception {
         final SubAckMessage message = createSubAckMessage();
-        ByteBuf byteBuf = MqttEncoder.encode(ALLOCATOR, message);
+        ByteBuf byteBuf = MqttEncoder.doEncode(ALLOCATOR, message);
 
         final List<Object> out = new LinkedList<Object>();
         mqttDecoder.decode(ctx, byteBuf, out);
@@ -182,7 +186,7 @@ public class MqttCodecTest {
     @Test
     public void testUnSubscribeMessage() throws Exception {
         final UnsubscribeMessage message = createUnsubscribeMessage();
-        ByteBuf byteBuf = MqttEncoder.encode(ALLOCATOR, message);
+        ByteBuf byteBuf = MqttEncoder.doEncode(ALLOCATOR, message);
 
         final List<Object> out = new LinkedList<Object>();
         mqttDecoder.decode(ctx, byteBuf, out);
@@ -217,7 +221,7 @@ public class MqttCodecTest {
 
     private void testMessageWithOnlyFixedHeader(int messageType) throws Exception {
         Message message = createMessageWithFixedHeader(messageType);
-        ByteBuf byteBuf = MqttEncoder.encode(ALLOCATOR, message);
+        ByteBuf byteBuf = MqttEncoder.doEncode(ALLOCATOR, message);
 
         final List<Object> out = new LinkedList<Object>();
         mqttDecoder.decode(ctx, byteBuf, out);
@@ -231,7 +235,7 @@ public class MqttCodecTest {
     private void testMessageWithOnlyFixedHeaderAndMessageIdVariableHeader(int messageType) throws Exception {
         Message message = createMessageWithFixedHeaderAndMessageIdVariableHeader(messageType);
 
-        ByteBuf byteBuf = MqttEncoder.encode(ALLOCATOR, message);
+        ByteBuf byteBuf = MqttEncoder.doEncode(ALLOCATOR, message);
 
         final List<Object> out = new LinkedList<Object>();
         mqttDecoder.decode(ctx, byteBuf, out);
@@ -285,7 +289,8 @@ public class MqttCodecTest {
     private static PublishMessage createPublishMessage() {
         FixedHeader fixedHeader = new FixedHeader(MessageType.PUBLISH, false, QOS1, true, 0);
         PublishVariableHeader publishVariableHeader = new PublishVariableHeader("/abc", 1234);
-        byte[] payload = "whatever".getBytes(UTF8_CHARSET);
+        ByteBuf payload =  ALLOCATOR.heapBuffer(8);
+        payload.writeBytes("whatever".getBytes(CharsetUtil.UTF_8));
         return new PublishMessage(fixedHeader, publishVariableHeader, payload);
     }
 
@@ -376,8 +381,8 @@ public class MqttCodecTest {
         assertEquals("PublishVariableHeader MessageId mismatch ", expected.getMessageId(), actual.getMessageId());
     }
 
-    private static void validatePublishPayload(byte[] expected, byte[] actual) {
-        assertArrayEquals("PublishPayload mismatch", expected, actual);
+    private static void validatePublishPayload(ByteBuf expected, ByteBuf actual) {
+        assertArrayEquals("PublishPayload mismatch", expected.array(), actual.array());
     }
 
     private static void validateMessageIdVariableHeader(
