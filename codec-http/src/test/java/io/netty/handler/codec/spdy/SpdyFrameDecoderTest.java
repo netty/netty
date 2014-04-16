@@ -18,7 +18,6 @@ package io.netty.handler.codec.spdy;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.ReferenceCounted;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -41,16 +40,92 @@ public class SpdyFrameDecoderTest {
 
     @Before
     public void createDecoder() {
-        decoder = new SpdyFrameDecoder(SpdyVersion.SPDY_3_1, delegate);
+        decoder = new SpdyFrameDecoder(SpdyVersion.SPDY_3_1, new SpdyFrameDecoderDelegate() {
+            @Override
+            public void readDataFrame(int streamId, boolean last, ByteBuf data) {
+                try {
+                    delegate.readDataFrame(streamId, last, data);
+                } finally {
+                    // release the data after we delegate it and so checked it.
+                    data.release();
+                }
+            }
+
+            @Override
+            public void readSynStreamFrame(int streamId, int associatedToStreamId,
+                                           byte priority, boolean last, boolean unidirectional) {
+                delegate.readSynStreamFrame(streamId, associatedToStreamId, priority, last, unidirectional);
+            }
+
+            @Override
+            public void readSynReplyFrame(int streamId, boolean last) {
+                delegate.readSynReplyFrame(streamId, last);
+            }
+
+            @Override
+            public void readRstStreamFrame(int streamId, int statusCode) {
+                delegate.readRstStreamFrame(streamId, statusCode);
+            }
+
+            @Override
+            public void readSettingsFrame(boolean clearPersisted) {
+                delegate.readSettingsFrame(clearPersisted);
+            }
+
+            @Override
+            public void readSetting(int id, int value, boolean persistValue, boolean persisted) {
+                delegate.readSetting(id, value, persistValue, persisted);
+            }
+
+            @Override
+            public void readSettingsEnd() {
+                delegate.readSettingsEnd();
+            }
+
+            @Override
+            public void readPingFrame(int id) {
+                delegate.readPingFrame(id);
+            }
+
+            @Override
+            public void readGoAwayFrame(int lastGoodStreamId, int statusCode) {
+                delegate.readGoAwayFrame(lastGoodStreamId, statusCode);
+            }
+
+            @Override
+            public void readHeadersFrame(int streamId, boolean last) {
+                delegate.readHeadersFrame(streamId, last);
+            }
+
+            @Override
+            public void readWindowUpdateFrame(int streamId, int deltaWindowSize) {
+                delegate.readWindowUpdateFrame(streamId, deltaWindowSize);
+            }
+
+            @Override
+            public void readHeaderBlock(ByteBuf headerBlock) {
+                delegate.readHeaderBlock(headerBlock);
+            }
+
+            @Override
+            public void readHeaderBlockEnd() {
+                delegate.readHeaderBlockEnd();
+            }
+
+            @Override
+            public void readFrameError(String message) {
+                delegate.readFrameError(message);
+            }
+        });
     }
 
-    private void encodeDataFrameHeader(ByteBuf buffer, int streamId, byte flags, int length) {
+    private static void encodeDataFrameHeader(ByteBuf buffer, int streamId, byte flags, int length) {
         buffer.writeInt(streamId & 0x7FFFFFFF);
         buffer.writeByte(flags);
         buffer.writeMedium(length);
     }
 
-    private void encodeControlFrameHeader(ByteBuf buffer, short type, byte flags, int length) {
+    private static void encodeControlFrameHeader(ByteBuf buffer, short type, byte flags, int length) {
         buffer.writeShort(0x8000 | SpdyVersion.SPDY_3_1.getVersion());
         buffer.writeShort(type);
         buffer.writeByte(flags);
@@ -68,7 +143,6 @@ public class SpdyFrameDecoderTest {
         for (int i = 0; i < 256; i ++) {
             buf.writeInt(RANDOM.nextInt());
         }
-
         delegate.readDataFrame(streamId, false, buf.slice(SPDY_HEADER_SIZE, length));
         replay(delegate);
         decoder.decode(buf);
