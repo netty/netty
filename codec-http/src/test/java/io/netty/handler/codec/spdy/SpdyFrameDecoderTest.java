@@ -104,7 +104,12 @@ public class SpdyFrameDecoderTest {
 
             @Override
             public void readHeaderBlock(ByteBuf headerBlock) {
-                delegate.readHeaderBlock(headerBlock);
+                try {
+                    delegate.readHeaderBlock(headerBlock);
+                } finally {
+                    // release the data after we delegate it and so checked it.
+                    headerBlock.release();
+                }
             }
 
             @Override
@@ -430,14 +435,14 @@ public class SpdyFrameDecoderTest {
         int associatedToStreamId = RANDOM.nextInt() & 0x7FFFFFFF;
         byte priority = (byte) (RANDOM.nextInt() & 0x07);
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length + headerBlockLength);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length + headerBlockLength));
         encodeControlFrameHeader(buf, type, flags, length + headerBlockLength);
         buf.writeInt(streamId);
         buf.writeInt(associatedToStreamId);
         buf.writeByte(priority << 5);
         buf.writeByte(0);
 
-        ByteBuf headerBlock = Unpooled.buffer(headerBlockLength);
+        ByteBuf headerBlock = ReferenceCountUtil.releaseLater(Unpooled.buffer(headerBlockLength));
         for (int i = 0; i < 256; i ++) {
             headerBlock.writeInt(RANDOM.nextInt());
         }
