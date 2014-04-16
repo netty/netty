@@ -339,8 +339,9 @@
     <module>codec-haproxy</module>
     <module>codec-http</module>
     <module>codec-memcache</module>
-    <module>codec-stomp</module>
+    <module>codec-mqtt</module>
     <module>codec-socks</module>
+    <module>codec-stomp</module>
     <module>transport</module>
     <module>transport-rxtx</module>
     <module>transport-sctp</module>
@@ -534,6 +535,14 @@
         <version>0.5-rc1</version>
         <scope>test</scope>
       </dependency>
+
+      <!-- Test dependencies for MQTT -->
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-all</artifactId>
+      <version>1.9.5</version>
+      <scope>test</scope>
+    </dependency>
     </dependencies>
   </dependencyManagement>
 
