@@ -53,7 +53,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
             assert eventLoop().inEventLoop();
             final ChannelConfig config = config();
             if (!config.isAutoRead() && !isReadPending()) {
-                // Config.setAutoRead() was called in the meantime
+                // ChannelConfig.setAutoRead(false) was called in the meantime
                 removeReadOp();
                 return;
             }

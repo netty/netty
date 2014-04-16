@@ -390,12 +390,8 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
         }
 
         @Override
-        public SctpChannelConfig setAutoRead(boolean autoRead) {
-            super.setAutoRead(autoRead);
-            if (!autoRead) {
-                setReadPending(false);
-            }
-            return this;
+        protected void autoReadCleared() {
+            setReadPending(false);
         }
     }
 }

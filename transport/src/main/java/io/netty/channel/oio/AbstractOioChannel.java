@@ -31,17 +31,17 @@ public abstract class AbstractOioChannel extends AbstractChannel {
 
     protected static final int SO_TIMEOUT = 1000;
 
-    private volatile  boolean readPending;
+    private volatile boolean readPending;
 
     private final Runnable readTask = new Runnable() {
         @Override
         public void run() {
-            if (!readPending && !config().isAutoRead()) {
-                // Config.setAutoRead() was called in the meantime so just return
+            if (!isReadPending() && !config().isAutoRead()) {
+                // ChannelConfig.setAutoRead(false) was called in the meantime so just return
                 return;
             }
 
-            readPending = false;
+            setReadPending(false);
             doRead();
         }
     };
@@ -99,11 +99,11 @@ public abstract class AbstractOioChannel extends AbstractChannel {
 
     @Override
     protected void doBeginRead() throws Exception {
-        if (readPending) {
+        if (isReadPending()) {
             return;
         }
 
-        readPending = true;
+        setReadPending(true);
         eventLoop().execute(readTask);
     }
 
@@ -116,5 +116,4 @@ public abstract class AbstractOioChannel extends AbstractChannel {
     protected void setReadPending(boolean readPending) {
         this.readPending = readPending;
     }
-
 }

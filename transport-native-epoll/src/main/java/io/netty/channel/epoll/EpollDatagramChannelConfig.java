@@ -34,7 +34,7 @@ public final class EpollDatagramChannelConfig extends DefaultChannelConfig imple
 
     EpollDatagramChannelConfig(EpollDatagramChannel channel) {
         super(channel);
-        this.datagramChannel = channel;
+        datagramChannel = channel;
         setRecvByteBufAllocator(DEFAULT_RCVBUF_ALLOCATOR);
     }
 
@@ -277,5 +277,10 @@ public final class EpollDatagramChannelConfig extends DefaultChannelConfig imple
     @Override
     public EpollDatagramChannelConfig setNetworkInterface(NetworkInterface networkInterface) {
         throw new UnsupportedOperationException("Multicast not supported");
+    }
+
+    @Override
+    protected void autoReadCleared() {
+        datagramChannel.clearEpollIn();
     }
 }

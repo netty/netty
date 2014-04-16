@@ -89,7 +89,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
         public void read() {
             final ChannelConfig config = config();
             if (!config.isAutoRead() && !isReadPending()) {
-                // Config.setAutoRead() was called in the meantime
+                // ChannelConfig.setAutoRead(false) was called in the meantime
                 removeReadOp();
                 return;
             }
@@ -108,7 +108,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             try {
                 int byteBufCapacity = allocHandle.guess();
                 int totalReadAmount = 0;
-                boolean pendingReset = false;
+                boolean readPendingReset = false;
                 do {
                     byteBuf = allocator.ioBuffer(byteBufCapacity);
                     int writable = byteBuf.writableBytes();
@@ -119,8 +119,8 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                         close = localReadAmount < 0;
                         break;
                     }
-                    if (!pendingReset) {
-                        pendingReset = true;
+                    if (!readPendingReset) {
+                        readPendingReset = true;
                         setReadPending(false);
                     }
                     pipeline.fireChannelRead(byteBuf);

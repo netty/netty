@@ -110,7 +110,7 @@ abstract class AbstractEpollChannel extends AbstractChannel {
         if (loop.inEventLoop()) {
             unsafe.clearEpollIn0();
         } else {
-            // schedule a task to clear the EPOLLIN as it is not safe to motify it directly
+            // schedule a task to clear the EPOLLIN as it is not safe to modify it directly
             loop.execute(new OneTimeTask() {
                 @Override
                 public void run() {

@@ -185,12 +185,8 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
         }
 
         @Override
-        public ServerSocketChannelConfig setAutoRead(boolean autoRead) {
-            super.setAutoRead(autoRead);
-            if (!autoRead) {
-                setReadPending(false);
-            }
-            return this;
+        protected void autoReadCleared() {
+            setReadPending(false);
         }
     }
 }

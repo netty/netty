@@ -251,9 +251,6 @@ public final class EpollSocketChannelConfig extends DefaultChannelConfig
     @Override
     public EpollSocketChannelConfig setAutoRead(boolean autoRead) {
         super.setAutoRead(autoRead);
-        if (!autoRead) {
-            channel.clearEpollIn();
-        }
         return this;
     }
 
@@ -279,5 +276,10 @@ public final class EpollSocketChannelConfig extends DefaultChannelConfig
     public EpollSocketChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
         super.setMessageSizeEstimator(estimator);
         return this;
+    }
+
+    @Override
+    protected void autoReadCleared() {
+        channel.clearEpollIn();
     }
 }

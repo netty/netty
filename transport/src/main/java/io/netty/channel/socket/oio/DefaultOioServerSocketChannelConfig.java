@@ -147,10 +147,14 @@ public class DefaultOioServerSocketChannelConfig extends DefaultServerSocketChan
     @Override
     public OioServerSocketChannelConfig setAutoRead(boolean autoRead) {
         super.setAutoRead(autoRead);
-        if (!autoRead && channel instanceof OioServerSocketChannel) {
+        return this;
+    }
+
+    @Override
+    protected void autoReadCleared() {
+        if (channel instanceof OioServerSocketChannel) {
             ((OioServerSocketChannel) channel).setReadPending(false);
         }
-        return this;
     }
 
     @Override
