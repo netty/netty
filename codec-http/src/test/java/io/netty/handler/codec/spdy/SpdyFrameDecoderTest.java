@@ -17,6 +17,8 @@ package io.netty.handler.codec.spdy;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ReferenceCounted;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -61,7 +63,7 @@ public class SpdyFrameDecoderTest {
         byte flags = 0;
         int length = 1024;
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeDataFrameHeader(buf, streamId, flags, length);
         for (int i = 0; i < 256; i ++) {
             buf.writeInt(RANDOM.nextInt());
@@ -80,7 +82,7 @@ public class SpdyFrameDecoderTest {
         byte flags = 0;
         int length = 0;
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeDataFrameHeader(buf, streamId, flags, length);
 
         delegate.readDataFrame(streamId, false, Unpooled.EMPTY_BUFFER);
@@ -96,7 +98,7 @@ public class SpdyFrameDecoderTest {
         byte flags = 0x01; // FLAG_FIN
         int length = 0;
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeDataFrameHeader(buf, streamId, flags, length);
 
         delegate.readDataFrame(streamId, true, Unpooled.EMPTY_BUFFER);
@@ -112,7 +114,7 @@ public class SpdyFrameDecoderTest {
         byte flags = (byte) 0xFE; // should ignore any unknown flags
         int length = 0;
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeDataFrameHeader(buf, streamId, flags, length);
 
         delegate.readDataFrame(streamId, false, Unpooled.EMPTY_BUFFER);
@@ -128,7 +130,7 @@ public class SpdyFrameDecoderTest {
         byte flags = 0;
         int length = 0;
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeDataFrameHeader(buf, streamId, flags, length);
 
         delegate.readFrameError((String) anyObject());
@@ -145,7 +147,7 @@ public class SpdyFrameDecoderTest {
         byte flags = 0;
         int length = 0;
 
-        ByteBuf buf = Unpooled.buffer(2 * (SPDY_HEADER_SIZE + length));
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(2 * (SPDY_HEADER_SIZE + length)));
         encodeDataFrameHeader(buf, streamId1, flags, length);
         encodeDataFrameHeader(buf, streamId2, flags, length);
 
@@ -166,7 +168,7 @@ public class SpdyFrameDecoderTest {
         int associatedToStreamId = RANDOM.nextInt() & 0x7FFFFFFF;
         byte priority = (byte) (RANDOM.nextInt() & 0x07);
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(streamId);
         buf.writeInt(associatedToStreamId);
@@ -190,7 +192,7 @@ public class SpdyFrameDecoderTest {
         int associatedToStreamId = RANDOM.nextInt() & 0x7FFFFFFF;
         byte priority = (byte) (RANDOM.nextInt() & 0x07);
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(streamId);
         buf.writeInt(associatedToStreamId);
@@ -214,7 +216,7 @@ public class SpdyFrameDecoderTest {
         int associatedToStreamId = RANDOM.nextInt() & 0x7FFFFFFF;
         byte priority = (byte) (RANDOM.nextInt() & 0x07);
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(streamId);
         buf.writeInt(associatedToStreamId);
@@ -238,7 +240,7 @@ public class SpdyFrameDecoderTest {
         int associatedToStreamId = 0; // independent of all other streams
         byte priority = (byte) (RANDOM.nextInt() & 0x07);
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(streamId);
         buf.writeInt(associatedToStreamId);
@@ -262,7 +264,7 @@ public class SpdyFrameDecoderTest {
         int associatedToStreamId = RANDOM.nextInt() & 0x7FFFFFFF;
         byte priority = (byte) (RANDOM.nextInt() & 0x07);
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(streamId);
         buf.writeInt(associatedToStreamId);
@@ -286,7 +288,7 @@ public class SpdyFrameDecoderTest {
         int associatedToStreamId = RANDOM.nextInt() & 0x7FFFFFFF;
         byte priority = (byte) (RANDOM.nextInt() & 0x07);
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(streamId | 0x80000000); // should ignore reserved bit
         buf.writeInt(associatedToStreamId | 0x80000000); // should ignore reserved bit
@@ -309,7 +311,7 @@ public class SpdyFrameDecoderTest {
         int streamId = RANDOM.nextInt() & 0x7FFFFFFF | 0x01;
         int associatedToStreamId = RANDOM.nextInt() & 0x7FFFFFFF;
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(streamId);
         buf.writeInt(associatedToStreamId);
@@ -330,7 +332,7 @@ public class SpdyFrameDecoderTest {
         int associatedToStreamId = RANDOM.nextInt() & 0x7FFFFFFF;
         byte priority = (byte) (RANDOM.nextInt() & 0x07);
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(streamId);
         buf.writeInt(associatedToStreamId);
@@ -384,7 +386,7 @@ public class SpdyFrameDecoderTest {
         int length = 4;
         int streamId = RANDOM.nextInt() & 0x7FFFFFFF | 0x01;
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(streamId);
 
@@ -403,7 +405,7 @@ public class SpdyFrameDecoderTest {
         int length = 4;
         int streamId = RANDOM.nextInt() & 0x7FFFFFFF | 0x01;
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(streamId);
 
@@ -422,7 +424,7 @@ public class SpdyFrameDecoderTest {
         int length = 4;
         int streamId = RANDOM.nextInt() & 0x7FFFFFFF | 0x01;
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(streamId);
 
@@ -441,7 +443,7 @@ public class SpdyFrameDecoderTest {
         int length = 4;
         int streamId = RANDOM.nextInt() & 0x7FFFFFFF | 0x01;
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(streamId | 0x80000000); // should ignore reserved bit
 
@@ -459,7 +461,7 @@ public class SpdyFrameDecoderTest {
         byte flags = 0;
         int length = 0; // invalid length
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
 
         delegate.readFrameError((String) anyObject());
@@ -476,7 +478,7 @@ public class SpdyFrameDecoderTest {
         int length = 4;
         int streamId = 0; // invalid stream identifier
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(streamId);
 
@@ -495,7 +497,7 @@ public class SpdyFrameDecoderTest {
         int headerBlockLength = 1024;
         int streamId = RANDOM.nextInt() & 0x7FFFFFFF | 0x01;
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length + headerBlockLength);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length + headerBlockLength));
         encodeControlFrameHeader(buf, type, flags, length + headerBlockLength);
         buf.writeInt(streamId);
 
@@ -523,7 +525,7 @@ public class SpdyFrameDecoderTest {
         int streamId = RANDOM.nextInt() & 0x7FFFFFFF | 0x01;
         int statusCode = RANDOM.nextInt() | 0x01;
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(streamId);
         buf.writeInt(statusCode);
@@ -543,7 +545,7 @@ public class SpdyFrameDecoderTest {
         int streamId = RANDOM.nextInt() & 0x7FFFFFFF | 0x01;
         int statusCode = RANDOM.nextInt() | 0x01;
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(streamId | 0x80000000); // should ignore reserved bit
         buf.writeInt(statusCode);
@@ -563,7 +565,7 @@ public class SpdyFrameDecoderTest {
         int streamId = RANDOM.nextInt() & 0x7FFFFFFF | 0x01;
         int statusCode = RANDOM.nextInt() | 0x01;
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(streamId);
         buf.writeInt(statusCode);
@@ -583,7 +585,7 @@ public class SpdyFrameDecoderTest {
         int streamId = RANDOM.nextInt() & 0x7FFFFFFF | 0x01;
         int statusCode = RANDOM.nextInt() | 0x01;
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(streamId);
         buf.writeInt(statusCode);
@@ -603,7 +605,7 @@ public class SpdyFrameDecoderTest {
         int streamId = 0; // invalid stream identifier
         int statusCode = RANDOM.nextInt() | 0x01;
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(streamId);
         buf.writeInt(statusCode);
@@ -623,7 +625,7 @@ public class SpdyFrameDecoderTest {
         int streamId = RANDOM.nextInt() & 0x7FFFFFFF | 0x01;
         int statusCode = 0; // invalid status code
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(streamId);
         buf.writeInt(statusCode);
@@ -645,7 +647,7 @@ public class SpdyFrameDecoderTest {
         int id = RANDOM.nextInt() & 0x00FFFFFF;
         int value = RANDOM.nextInt();
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(numSettings);
         for (int i = 0; i < numSettings; i++) {
@@ -671,7 +673,7 @@ public class SpdyFrameDecoderTest {
         int numSettings = 0;
         int length = 8 * numSettings + 4;
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(numSettings);
 
@@ -690,7 +692,7 @@ public class SpdyFrameDecoderTest {
         int numSettings = 0;
         int length = 8 * numSettings + 4;
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(numSettings);
 
@@ -712,7 +714,7 @@ public class SpdyFrameDecoderTest {
         int id = RANDOM.nextInt() & 0x00FFFFFF;
         int value = RANDOM.nextInt();
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(numSettings);
         for (int i = 0; i < numSettings; i++) {
@@ -741,7 +743,7 @@ public class SpdyFrameDecoderTest {
         int id = RANDOM.nextInt() & 0x00FFFFFF;
         int value = RANDOM.nextInt();
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(numSettings);
         for (int i = 0; i < numSettings; i++) {
@@ -767,7 +769,7 @@ public class SpdyFrameDecoderTest {
         int numSettings = 0;
         int length = 8 * numSettings + 4;
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(numSettings);
 
@@ -789,7 +791,7 @@ public class SpdyFrameDecoderTest {
         int id = RANDOM.nextInt() & 0x00FFFFFF;
         int value = RANDOM.nextInt();
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(numSettings);
         for (int i = 0; i < numSettings; i++) {
@@ -818,7 +820,7 @@ public class SpdyFrameDecoderTest {
         int id = RANDOM.nextInt() & 0x00FFFFFF;
         int value = RANDOM.nextInt();
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(numSettings);
         for (int i = 0; i < numSettings; i++) {
@@ -844,7 +846,7 @@ public class SpdyFrameDecoderTest {
         int id = RANDOM.nextInt() & 0x00FFFFFF;
         int value = RANDOM.nextInt();
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(0); // invalid num_settings
         for (int i = 0; i < numSettings; i++) {
@@ -866,7 +868,7 @@ public class SpdyFrameDecoderTest {
         byte flags = (byte) 0xFF;
         int length = 8;
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeLong(RANDOM.nextLong());
 
@@ -882,7 +884,7 @@ public class SpdyFrameDecoderTest {
         byte flags = (byte) 0xFF;
         int length = 0;
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
 
         replay(delegate);
@@ -898,7 +900,7 @@ public class SpdyFrameDecoderTest {
         int segment = 4;
         int length = 2 * segment;
 
-        ByteBuf header = Unpooled.buffer(SPDY_HEADER_SIZE);
+        ByteBuf header = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE));
         ByteBuf segment1 = Unpooled.buffer(segment);
         ByteBuf segment2 = Unpooled.buffer(segment);
         encodeControlFrameHeader(header, type, flags, length);
@@ -922,7 +924,7 @@ public class SpdyFrameDecoderTest {
         int length = 4;
         int id = RANDOM.nextInt();
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(id);
 
@@ -940,7 +942,7 @@ public class SpdyFrameDecoderTest {
         int length = 4;
         int id = RANDOM.nextInt();
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(id);
 
@@ -958,7 +960,7 @@ public class SpdyFrameDecoderTest {
         int length = 8; // invalid length
         int id = RANDOM.nextInt();
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(id);
 
@@ -977,7 +979,7 @@ public class SpdyFrameDecoderTest {
         int lastGoodStreamId = RANDOM.nextInt() & 0x7FFFFFFF;
         int statusCode = RANDOM.nextInt() | 0x01;
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(lastGoodStreamId);
         buf.writeInt(statusCode);
@@ -997,7 +999,7 @@ public class SpdyFrameDecoderTest {
         int lastGoodStreamId = RANDOM.nextInt() & 0x7FFFFFFF;
         int statusCode = RANDOM.nextInt() | 0x01;
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(lastGoodStreamId);
         buf.writeInt(statusCode);
@@ -1017,7 +1019,7 @@ public class SpdyFrameDecoderTest {
         int lastGoodStreamId = RANDOM.nextInt() & 0x7FFFFFFF;
         int statusCode = RANDOM.nextInt() | 0x01;
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(lastGoodStreamId | 0x80000000); // should ignore reserved bit
         buf.writeInt(statusCode);
@@ -1037,7 +1039,7 @@ public class SpdyFrameDecoderTest {
         int lastGoodStreamId = RANDOM.nextInt() & 0x7FFFFFFF;
         int statusCode = RANDOM.nextInt() | 0x01;
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(lastGoodStreamId);
         buf.writeInt(statusCode);
@@ -1056,7 +1058,7 @@ public class SpdyFrameDecoderTest {
         int length = 4;
         int streamId = RANDOM.nextInt() & 0x7FFFFFFF | 0x01;
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(streamId);
 
@@ -1075,7 +1077,7 @@ public class SpdyFrameDecoderTest {
         int length = 4;
         int streamId = RANDOM.nextInt() & 0x7FFFFFFF | 0x01;
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(streamId);
 
@@ -1094,7 +1096,7 @@ public class SpdyFrameDecoderTest {
         int length = 4;
         int streamId = RANDOM.nextInt() & 0x7FFFFFFF | 0x01;
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(streamId);
 
@@ -1113,7 +1115,7 @@ public class SpdyFrameDecoderTest {
         int length = 4;
         int streamId = RANDOM.nextInt() & 0x7FFFFFFF | 0x01;
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(streamId | 0x80000000); // should ignore reserved bit
 
@@ -1131,7 +1133,7 @@ public class SpdyFrameDecoderTest {
         byte flags = 0;
         int length = 0; // invalid length
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
 
         delegate.readFrameError((String) anyObject());
@@ -1148,7 +1150,7 @@ public class SpdyFrameDecoderTest {
         int length = 4;
         int streamId = 0; // invalid stream identifier
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(streamId);
 
@@ -1167,11 +1169,11 @@ public class SpdyFrameDecoderTest {
         int headerBlockLength = 1024;
         int streamId = RANDOM.nextInt() & 0x7FFFFFFF | 0x01;
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length + headerBlockLength);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length + headerBlockLength);
         buf.writeInt(streamId);
 
-        ByteBuf headerBlock = Unpooled.buffer(headerBlockLength);
+        ByteBuf headerBlock = ReferenceCountUtil.releaseLater(Unpooled.buffer(headerBlockLength));
         for (int i = 0; i < 256; i ++) {
             headerBlock.writeInt(RANDOM.nextInt());
         }
@@ -1215,7 +1217,7 @@ public class SpdyFrameDecoderTest {
         int streamId = RANDOM.nextInt() & 0x7FFFFFFF;
         int deltaWindowSize = RANDOM.nextInt() & 0x7FFFFFFF | 0x01;
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(streamId);
         buf.writeInt(deltaWindowSize);
@@ -1235,7 +1237,7 @@ public class SpdyFrameDecoderTest {
         int streamId = RANDOM.nextInt() & 0x7FFFFFFF;
         int deltaWindowSize = RANDOM.nextInt() & 0x7FFFFFFF | 0x01;
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(streamId | 0x80000000); // should ignore reserved bit
         buf.writeInt(deltaWindowSize | 0x80000000); // should ignore reserved bit
@@ -1255,7 +1257,7 @@ public class SpdyFrameDecoderTest {
         int streamId = RANDOM.nextInt() & 0x7FFFFFFF;
         int deltaWindowSize = RANDOM.nextInt() & 0x7FFFFFFF | 0x01;
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(streamId);
         buf.writeInt(deltaWindowSize);
@@ -1275,7 +1277,7 @@ public class SpdyFrameDecoderTest {
         int streamId = RANDOM.nextInt() & 0x7FFFFFFF;
         int deltaWindowSize = 0; // invalid delta window size
 
-        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(SPDY_HEADER_SIZE + length));
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(streamId);
         buf.writeInt(deltaWindowSize);
