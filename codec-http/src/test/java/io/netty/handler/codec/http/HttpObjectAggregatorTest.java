@@ -222,6 +222,23 @@ public class HttpObjectAggregatorTest {
         assertFalse(embedder.finish());
     }
 
+    @Test
+    public void testRequestWith100ContinueAndEncoder() {
+        EmbeddedChannel embedder = new EmbeddedChannel(new HttpObjectAggregator(8), new HttpResponseEncoder());
+
+        HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "http://localhost");
+        HttpHeaders.set100ContinueExpected(message);
+        HttpHeaders.setContentLength(message, 6);
+
+        // Aggregator sends "100 Continue" response back
+        assertFalse(embedder.writeInbound(message));
+
+        // The 100 Continue response should use the same outbound handlers, as other "normal" responses
+        ByteBuf response = embedder.readOutbound();
+        String contents = response.toString(CharsetUtil.US_ASCII);
+        assertTrue(contents.contains("100 Continue"));
+    }
+
     private static void checkOversizedRequest(HttpRequest message) {
         EmbeddedChannel embedder = new EmbeddedChannel(new HttpObjectAggregator(4));
 
