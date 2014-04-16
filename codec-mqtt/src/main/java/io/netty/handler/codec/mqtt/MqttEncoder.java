@@ -20,22 +20,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageEncoder;
-import io.netty.handler.codec.mqtt.messages.ConnAckMessage;
-import io.netty.handler.codec.mqtt.messages.ConnectMessage;
-import io.netty.handler.codec.mqtt.messages.ConnectPayload;
-import io.netty.handler.codec.mqtt.messages.ConnectVariableHeader;
-import io.netty.handler.codec.mqtt.messages.FixedHeader;
-import io.netty.handler.codec.mqtt.messages.Message;
-import io.netty.handler.codec.mqtt.messages.MessageIdVariableHeader;
-import io.netty.handler.codec.mqtt.messages.MessageType;
-import io.netty.handler.codec.mqtt.messages.PublishMessage;
-import io.netty.handler.codec.mqtt.messages.PublishVariableHeader;
-import io.netty.handler.codec.mqtt.messages.SubAckMessage;
-import io.netty.handler.codec.mqtt.messages.SubscribeMessage;
-import io.netty.handler.codec.mqtt.messages.SubscribePayload;
-import io.netty.handler.codec.mqtt.messages.TopicSubscription;
-import io.netty.handler.codec.mqtt.messages.UnsubscribeMessage;
-import io.netty.handler.codec.mqtt.messages.UnsubscribePayload;
 import io.netty.util.CharsetUtil;
 
 import java.util.List;
@@ -44,16 +28,16 @@ import java.util.List;
  * Encodes Mqtt messages into bytes following the protocl specification v3.1
  * as described here <a href="http://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html">MQTTV3.1</a>
  */
-public class MqttEncoder extends MessageToMessageEncoder<Message> {
+public class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
 
     public static final MqttEncoder DEFAUL_ENCODER = new MqttEncoder();
 
     private static final byte[] EMPTY = new byte[0];
 
-    private static final byte[] CONNECT_VARIABLE_HEADER_START = new byte[] {0, 6, 'M', 'Q', 'I', 's', 'd', 'p'};
+    private static final byte[] CONNECT_VARIABLE_HEADER_START = {0, 6, 'M', 'Q', 'I', 's', 'd', 'p'};
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, Message msg, List<Object> out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, MqttMessage msg, List<Object> out) throws Exception {
         out.add(doEncode(ctx.alloc(), msg));
     }
 
@@ -65,77 +49,77 @@ public class MqttEncoder extends MessageToMessageEncoder<Message> {
      * @param message MQTT message to encode
      * @return ByteBuf with encoded bytes
      */
-    static ByteBuf doEncode(ByteBufAllocator byteBufAllocator, Message message) {
+    static ByteBuf doEncode(ByteBufAllocator byteBufAllocator, MqttMessage message) {
 
-        switch (message.getFixedHeader().getMessageType()) {
-            case MessageType.CONNECT:
-                return encodeConnectMessage(byteBufAllocator, (ConnectMessage) message);
+        switch (message.fixedHeader().messageType()) {
+            case CONNECT:
+                return encodeConnectMessage(byteBufAllocator, (MqttConnectMessage) message);
 
-            case MessageType.CONNACK:
-                return encodeConnAckMessage(byteBufAllocator, (ConnAckMessage) message);
+            case CONNACK:
+                return encodeConnAckMessage(byteBufAllocator, (MqttConnAckMessage) message);
 
-            case MessageType.PUBLISH:
-                return encodePublishMessage(byteBufAllocator, (PublishMessage) message);
+            case PUBLISH:
+                return encodePublishMessage(byteBufAllocator, (MqttPublishMessage) message);
 
-            case MessageType.SUBSCRIBE:
-                return encodeSubscribeMessage(byteBufAllocator, (SubscribeMessage) message);
+            case SUBSCRIBE:
+                return encodeSubscribeMessage(byteBufAllocator, (MqttSubscribeMessage) message);
 
-            case MessageType.UNSUBSCRIBE:
-                return encodeUnsubscribeMessage(byteBufAllocator, (UnsubscribeMessage) message);
+            case UNSUBSCRIBE:
+                return encodeUnsubscribeMessage(byteBufAllocator, (MqttUnsubscribeMessage) message);
 
-            case MessageType.SUBACK:
-                return encodeSubAckMessage(byteBufAllocator, (SubAckMessage) message);
+            case SUBACK:
+                return encodeSubAckMessage(byteBufAllocator, (MqttSubAckMessage) message);
 
-            case MessageType.UNSUBACK:
-            case MessageType.PUBACK:
-            case MessageType.PUBREC:
-            case MessageType.PUBREL:
-            case MessageType.PUBCOMP:
+            case UNSUBACK:
+            case PUBACK:
+            case PUBREC:
+            case PUBREL:
+            case PUBCOMP:
                 return encodeMessageWithOnlySingleByteFixedHeaderAndMessageId(byteBufAllocator, message);
 
-            case MessageType.PINGREQ:
-            case MessageType.PINGRESP:
-            case MessageType.DISCONNECT:
+            case PINGREQ:
+            case PINGRESP:
+            case DISCONNECT:
                 return encodeMessageWithOnlySingleByteFixedHeader(byteBufAllocator, message);
 
             default:
                 throw new IllegalArgumentException(
-                        "Unknown message type: " + message.getFixedHeader().getMessageType());
+                        "Unknown message type: " + message.fixedHeader().messageType().value());
         }
     }
 
     private static ByteBuf encodeConnectMessage(
             ByteBufAllocator byteBufAllocator,
-            ConnectMessage message) {
+            MqttConnectMessage message) {
         int variableHeaderBufferSize = 12;
         int payloadBufferSize = 0;
 
-        FixedHeader fixedHeader = message.getFixedHeader();
-        ConnectVariableHeader variableHeader = message.getVariableHeader();
-        ConnectPayload payload = message.getPayload();
+        MqttFixedHeader mqttFixedHeader = message.fixedHeader();
+        MqttConnectVariableHeader variableHeader = message.variableHeader();
+        MqttConnectPayload payload = message.payload();
 
         // Client id
-        String clientIdentifier = payload.getClientIdentifier();
+        String clientIdentifier = payload.clientIdentifier();
         byte[] clientIdentifierBytes = encodeStringUtf8(clientIdentifier);
         payloadBufferSize += 2 + clientIdentifierBytes.length;
 
         // Will topic and message
-        String willTopic = payload.getWillTopic();
+        String willTopic = payload.willTopic();
         byte[] willTopicBytes = willTopic != null ? encodeStringUtf8(willTopic) : EMPTY;
-        String willMessage = payload.getWillMessage();
+        String willMessage = payload.willMessage();
         byte[] willMessageBytes = willMessage != null ? encodeStringUtf8(willMessage) : EMPTY;
         if (variableHeader.isWillFlag()) {
             payloadBufferSize += 2 + willTopicBytes.length;
             payloadBufferSize += 2 + willMessageBytes.length;
         }
 
-        String userName = payload.getUserName();
+        String userName = payload.userName();
         byte[] userNameBytes = userName != null ? encodeStringUtf8(userName) : EMPTY;
         if (variableHeader.hasUserName()) {
             payloadBufferSize += 2 + userNameBytes.length;
         }
 
-        String password = payload.getPassword();
+        String password = payload.password();
         byte[] passwordBytes = password != null ? encodeStringUtf8(password) : EMPTY;
         if (variableHeader.hasPassword()) {
             payloadBufferSize += 2 + passwordBytes.length;
@@ -145,14 +129,14 @@ public class MqttEncoder extends MessageToMessageEncoder<Message> {
         int variablePartSize = variableHeaderBufferSize + payloadBufferSize;
         int fixedHeaderBufferSize = 1 + getVariableLengthInt(variablePartSize);
         ByteBuf buf = byteBufAllocator.buffer(fixedHeaderBufferSize + variablePartSize);
-        buf.writeByte(getFixedHeaderByte1(fixedHeader));
+        buf.writeByte(getFixedHeaderByte1(mqttFixedHeader));
         writeVariableLengthInt(buf, variablePartSize);
 
         buf.writeBytes(CONNECT_VARIABLE_HEADER_START);
 
-        buf.writeByte(variableHeader.getVersion());
+        buf.writeByte(variableHeader.version());
         buf.writeByte(getConnVariableHeaderFlag(variableHeader));
-        buf.writeShort(variableHeader.getKeepAliveTimeSeconds());
+        buf.writeShort(variableHeader.keepAliveTimeSeconds());
 
         // Payload
         buf.writeShort(clientIdentifierBytes.length);
@@ -174,7 +158,7 @@ public class MqttEncoder extends MessageToMessageEncoder<Message> {
         return buf;
     }
 
-    private static int getConnVariableHeaderFlag(ConnectVariableHeader variableHeader) {
+    private static int getConnVariableHeaderFlag(MqttConnectVariableHeader variableHeader) {
         int flagByte = 0;
         if (variableHeader.hasUserName()) {
             flagByte |= 0x80;
@@ -185,7 +169,7 @@ public class MqttEncoder extends MessageToMessageEncoder<Message> {
         if (variableHeader.isWillRetain()) {
             flagByte |= 0x20;
         }
-        flagByte |= (variableHeader.getWillQos() & 0x03) << 3;
+        flagByte |= (variableHeader.willQos() & 0x03) << 3;
         if (variableHeader.isWillFlag()) {
             flagByte |= 0x04;
         }
@@ -197,28 +181,28 @@ public class MqttEncoder extends MessageToMessageEncoder<Message> {
 
     private static ByteBuf encodeConnAckMessage(
             ByteBufAllocator byteBufAllocator,
-            ConnAckMessage message) {
+            MqttConnAckMessage message) {
         ByteBuf buf = byteBufAllocator.buffer(4);
-        buf.writeByte(getFixedHeaderByte1(message.getFixedHeader()));
+        buf.writeByte(getFixedHeaderByte1(message.fixedHeader()));
         buf.writeByte(2);
         buf.writeByte(0);
-        buf.writeByte(message.getVariableHeader().getConnectReturnCode());
+        buf.writeByte(message.variableHeader().connectReturnCode().value());
 
         return buf;
     }
 
     private static ByteBuf encodeSubscribeMessage(
             ByteBufAllocator byteBufAllocator,
-            SubscribeMessage message) {
+            MqttSubscribeMessage message) {
         int variableHeaderBufferSize = 2;
         int payloadBufferSize = 0;
 
-        FixedHeader fixedHeader = message.getFixedHeader();
-        MessageIdVariableHeader variableHeader = message.getVariableHeader();
-        SubscribePayload payload = message.getPayload();
+        MqttFixedHeader mqttFixedHeader = message.fixedHeader();
+        MqttMessageIdVariableHeader variableHeader = message.variableHeader();
+        MqttSubscribePayload payload = message.payload();
 
-        for (TopicSubscription topic : payload.getTopicSubscriptionList()) {
-            String topicName = topic.getTopicName();
+        for (MqttTopicSubscription topic : payload.topicSubscriptions()) {
+            String topicName = topic.topicName();
             byte[] topicNameBytes = encodeStringUtf8(topicName);
             payloadBufferSize += 2 + topicNameBytes.length;
             payloadBufferSize += 1;
@@ -228,20 +212,20 @@ public class MqttEncoder extends MessageToMessageEncoder<Message> {
         int fixedHeaderBufferSize = 1 + getVariableLengthInt(variablePartSize);
 
         ByteBuf buf = byteBufAllocator.buffer(fixedHeaderBufferSize + variablePartSize);
-        buf.writeByte(getFixedHeaderByte1(fixedHeader));
+        buf.writeByte(getFixedHeaderByte1(mqttFixedHeader));
         writeVariableLengthInt(buf, variablePartSize);
 
         // Variable Header
-        int messageId = variableHeader.getMessageId();
+        int messageId = variableHeader.messageId();
         buf.writeShort(messageId);
 
         // Payload
-        for (TopicSubscription topic : payload.getTopicSubscriptionList()) {
-            String topicName = topic.getTopicName();
+        for (MqttTopicSubscription topic : payload.topicSubscriptions()) {
+            String topicName = topic.topicName();
             byte[] topicNameBytes = encodeStringUtf8(topicName);
             buf.writeShort(topicNameBytes.length);
             buf.writeBytes(topicNameBytes, 0, topicNameBytes.length);
-            buf.writeByte(topic.getQualityOfService());
+            buf.writeByte(topic.qualityOfService());
         }
 
         return buf;
@@ -249,15 +233,15 @@ public class MqttEncoder extends MessageToMessageEncoder<Message> {
 
     private static ByteBuf encodeUnsubscribeMessage(
             ByteBufAllocator byteBufAllocator,
-            UnsubscribeMessage message) {
+            MqttUnsubscribeMessage message) {
         int variableHeaderBufferSize = 2;
         int payloadBufferSize = 0;
 
-        FixedHeader fixedHeader = message.getFixedHeader();
-        MessageIdVariableHeader variableHeader = message.getVariableHeader();
-        UnsubscribePayload payload = message.getPayload();
+        MqttFixedHeader mqttFixedHeader = message.fixedHeader();
+        MqttMessageIdVariableHeader variableHeader = message.variableHeader();
+        MqttUnsubscribePayload payload = message.payload();
 
-        for (String topicName : payload.getTopics()) {
+        for (String topicName : payload.topics()) {
             byte[] topicNameBytes = encodeStringUtf8(topicName);
             payloadBufferSize += 2 + topicNameBytes.length;
         }
@@ -266,15 +250,15 @@ public class MqttEncoder extends MessageToMessageEncoder<Message> {
         int fixedHeaderBufferSize = 1 + getVariableLengthInt(variablePartSize);
 
         ByteBuf buf = byteBufAllocator.buffer(fixedHeaderBufferSize + variablePartSize);
-        buf.writeByte(getFixedHeaderByte1(fixedHeader));
+        buf.writeByte(getFixedHeaderByte1(mqttFixedHeader));
         writeVariableLengthInt(buf, variablePartSize);
 
         // Variable Header
-        int messageId = variableHeader.getMessageId();
+        int messageId = variableHeader.messageId();
         buf.writeShort(messageId);
 
         // Payload
-        for (String topicName : payload.getTopics()) {
+        for (String topicName : payload.topics()) {
             byte[] topicNameBytes = encodeStringUtf8(topicName);
             buf.writeShort(topicNameBytes.length);
             buf.writeBytes(topicNameBytes, 0, topicNameBytes.length);
@@ -285,16 +269,16 @@ public class MqttEncoder extends MessageToMessageEncoder<Message> {
 
     private static ByteBuf encodeSubAckMessage(
             ByteBufAllocator byteBufAllocator,
-            SubAckMessage message) {
+            MqttSubAckMessage message) {
         int variableHeaderBufferSize = 2;
-        int payloadBufferSize = message.getPayload().getGrantedQoSLevels().size();
+        int payloadBufferSize = message.payload().grantedQoSLevels().size();
         int variablePartSize = variableHeaderBufferSize + payloadBufferSize;
         int fixedHeaderBufferSize = 1 + getVariableLengthInt(variablePartSize);
         ByteBuf buf = byteBufAllocator.buffer(fixedHeaderBufferSize + variablePartSize);
-        buf.writeByte(getFixedHeaderByte1(message.getFixedHeader()));
+        buf.writeByte(getFixedHeaderByte1(message.fixedHeader()));
         writeVariableLengthInt(buf, variablePartSize);
-        buf.writeShort(message.getVariableHeader().getMessageId());
-        for (int qos : message.getPayload().getGrantedQoSLevels()) {
+        buf.writeShort(message.variableHeader().messageId());
+        for (int qos : message.payload().grantedQoSLevels()) {
             buf.writeByte(qos);
         }
 
@@ -303,27 +287,27 @@ public class MqttEncoder extends MessageToMessageEncoder<Message> {
 
     private static ByteBuf encodePublishMessage(
             ByteBufAllocator byteBufAllocator,
-            PublishMessage message) {
-        FixedHeader fixedHeader = message.getFixedHeader();
-        PublishVariableHeader variableHeader = message.getVariableHeader();
-        ByteBuf payload = message.getPayload().duplicate();
+            MqttPublishMessage message) {
+        MqttFixedHeader mqttFixedHeader = message.fixedHeader();
+        MqttPublishVariableHeader variableHeader = message.variableHeader();
+        ByteBuf payload = message.payload().duplicate();
 
-        String topicName = variableHeader.getTopicName();
+        String topicName = variableHeader.topicName();
         byte[] topicNameBytes = encodeStringUtf8(topicName);
 
         int variableHeaderBufferSize = 2 + topicNameBytes.length +
-                (fixedHeader.getQosLevel() > 0 ? 2 : 0);
+                (mqttFixedHeader.qosLevel() > 0 ? 2 : 0);
         int payloadBufferSize = payload.readableBytes();
         int variablePartSize = variableHeaderBufferSize + payloadBufferSize;
         int fixedHeaderBufferSize = 1 + getVariableLengthInt(variablePartSize);
 
         ByteBuf buf = byteBufAllocator.buffer(fixedHeaderBufferSize + variablePartSize);
-        buf.writeByte(getFixedHeaderByte1(fixedHeader));
+        buf.writeByte(getFixedHeaderByte1(mqttFixedHeader));
         writeVariableLengthInt(buf, variablePartSize);
         buf.writeShort(topicNameBytes.length);
         buf.writeBytes(topicNameBytes);
-        if (fixedHeader.getQosLevel() > 0) {
-            buf.writeShort(variableHeader.getMessageId());
+        if (mqttFixedHeader.qosLevel() > 0) {
+            buf.writeShort(variableHeader.messageId());
         }
         buf.writeBytes(payload);
 
@@ -332,15 +316,15 @@ public class MqttEncoder extends MessageToMessageEncoder<Message> {
 
     private static ByteBuf encodeMessageWithOnlySingleByteFixedHeaderAndMessageId(
             ByteBufAllocator byteBufAllocator,
-            Message message) {
-        FixedHeader fixedHeader = message.getFixedHeader();
-        MessageIdVariableHeader variableHeader = (MessageIdVariableHeader) message.getVariableHeader();
-        int msgId = variableHeader.getMessageId();
+            MqttMessage message) {
+        MqttFixedHeader mqttFixedHeader = message.fixedHeader();
+        MqttMessageIdVariableHeader variableHeader = (MqttMessageIdVariableHeader) message.variableHeader();
+        int msgId = variableHeader.messageId();
 
         int variableHeaderBufferSize = 2; // variable part only has a message id
         int fixedHeaderBufferSize = 1 + getVariableLengthInt(variableHeaderBufferSize);
         ByteBuf buf = byteBufAllocator.buffer(fixedHeaderBufferSize + variableHeaderBufferSize);
-        buf.writeByte(getFixedHeaderByte1(fixedHeader));
+        buf.writeByte(getFixedHeaderByte1(mqttFixedHeader));
         writeVariableLengthInt(buf, variableHeaderBufferSize);
         buf.writeShort(msgId);
 
@@ -349,22 +333,22 @@ public class MqttEncoder extends MessageToMessageEncoder<Message> {
 
     private static ByteBuf encodeMessageWithOnlySingleByteFixedHeader(
             ByteBufAllocator byteBufAllocator,
-            Message message) {
-        FixedHeader fixedHeader = message.getFixedHeader();
+            MqttMessage message) {
+        MqttFixedHeader mqttFixedHeader = message.fixedHeader();
         ByteBuf buf = byteBufAllocator.buffer(2);
-        buf.writeByte(getFixedHeaderByte1(fixedHeader));
+        buf.writeByte(getFixedHeaderByte1(mqttFixedHeader));
         buf.writeByte(0);
 
         return buf;
     }
 
-    private static int getFixedHeaderByte1(FixedHeader header) {
+    private static int getFixedHeaderByte1(MqttFixedHeader header) {
         int ret = 0;
-        ret |= header.getMessageType() << 4;
+        ret |= header.messageType().value() << 4;
         if (header.isDup()) {
             ret |= 0x08;
         }
-        ret |= header.getQosLevel() << 1;
+        ret |= header.qosLevel() << 1;
         if (header.isRetain()) {
             ret |= 0x01;
         }

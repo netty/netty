@@ -14,28 +14,28 @@
  * under the License.
  */
 
-package io.netty.handler.codec.mqtt.messages;
+package io.netty.handler.codec.mqtt;
 
 /**
  * See <a href="http://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html#unsubscribe">
  *     MQTTV3.1/unsubscribe</a>
  */
-public class UnsubscribeMessage extends Message {
+public class MqttUnsubscribeMessage extends MqttMessage {
 
-    public UnsubscribeMessage(
-            FixedHeader fixedHeader,
-            MessageIdVariableHeader variableHeader,
-            UnsubscribePayload payload) {
-        super(fixedHeader, variableHeader, payload);
+    public MqttUnsubscribeMessage(
+            MqttFixedHeader mqttFixedHeader,
+            MqttMessageIdVariableHeader variableHeader,
+            MqttUnsubscribePayload payload) {
+        super(mqttFixedHeader, variableHeader, payload);
     }
 
     @Override
-    public MessageIdVariableHeader getVariableHeader() {
-        return (MessageIdVariableHeader) super.getVariableHeader();
+    public MqttMessageIdVariableHeader variableHeader() {
+        return (MqttMessageIdVariableHeader) super.variableHeader();
     }
 
     @Override
-    public UnsubscribePayload getPayload() {
-        return (UnsubscribePayload) super.getPayload();
+    public MqttUnsubscribePayload payload() {
+        return (MqttUnsubscribePayload) super.payload();
     }
 }

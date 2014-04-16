@@ -21,25 +21,6 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.mqtt.messages.ConnAckMessage;
-import io.netty.handler.codec.mqtt.messages.ConnAckVariableHeader;
-import io.netty.handler.codec.mqtt.messages.ConnectMessage;
-import io.netty.handler.codec.mqtt.messages.ConnectPayload;
-import io.netty.handler.codec.mqtt.messages.ConnectReturnCode;
-import io.netty.handler.codec.mqtt.messages.ConnectVariableHeader;
-import io.netty.handler.codec.mqtt.messages.FixedHeader;
-import io.netty.handler.codec.mqtt.messages.Message;
-import io.netty.handler.codec.mqtt.messages.MessageIdVariableHeader;
-import io.netty.handler.codec.mqtt.messages.MessageType;
-import io.netty.handler.codec.mqtt.messages.PublishMessage;
-import io.netty.handler.codec.mqtt.messages.PublishVariableHeader;
-import io.netty.handler.codec.mqtt.messages.SubAckMessage;
-import io.netty.handler.codec.mqtt.messages.SubAckPayload;
-import io.netty.handler.codec.mqtt.messages.SubscribeMessage;
-import io.netty.handler.codec.mqtt.messages.SubscribePayload;
-import io.netty.handler.codec.mqtt.messages.TopicSubscription;
-import io.netty.handler.codec.mqtt.messages.UnsubscribeMessage;
-import io.netty.handler.codec.mqtt.messages.UnsubscribePayload;
 import io.netty.util.CharsetUtil;
 import org.easymock.Mock;
 import org.junit.Before;
@@ -85,7 +66,7 @@ public class MqttCodecTest {
 
     @Test
     public void testConnectMessage() throws Exception {
-        final ConnectMessage message = createConnectMessage();
+        final MqttConnectMessage message = createConnectMessage();
         ByteBuf byteBuf = MqttEncoder.doEncode(ALLOCATOR, message);
 
         final List<Object> out = new LinkedList<Object>();
@@ -93,16 +74,16 @@ public class MqttCodecTest {
 
         assertEquals("Expected one object bout got " + out.size(), 1, out.size());
 
-        final ConnectMessage decodedMessage = (ConnectMessage) out.get(0);
+        final MqttConnectMessage decodedMessage = (MqttConnectMessage) out.get(0);
 
-        validateFixedHeaders(message.getFixedHeader(), decodedMessage.getFixedHeader());
-        vlidateConnectVariableHeader(message.getVariableHeader(), decodedMessage.getVariableHeader());
-        validateConnectPayload(message.getPayload(), decodedMessage.getPayload());
+        validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
+        vlidateConnectVariableHeader(message.variableHeader(), decodedMessage.variableHeader());
+        validateConnectPayload(message.payload(), decodedMessage.payload());
     }
 
     @Test
     public void testConnAckMessage() throws Exception {
-        final ConnAckMessage message = createConnAckMessage();
+        final MqttConnAckMessage message = createConnAckMessage();
         ByteBuf byteBuf = MqttEncoder.doEncode(ALLOCATOR, message);
 
         final List<Object> out = new LinkedList<Object>();
@@ -110,14 +91,14 @@ public class MqttCodecTest {
 
         assertEquals("Expected one object bout got " + out.size(), 1, out.size());
 
-        final ConnAckMessage decodedMessage = (ConnAckMessage) out.get(0);
-        validateFixedHeaders(message.getFixedHeader(), decodedMessage.getFixedHeader());
-        validateConnAckVariableHeader(message.getVariableHeader(), decodedMessage.getVariableHeader());
+        final MqttConnAckMessage decodedMessage = (MqttConnAckMessage) out.get(0);
+        validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
+        validateConnAckVariableHeader(message.variableHeader(), decodedMessage.variableHeader());
     }
 
     @Test
     public void testPublishMessage() throws Exception {
-        final PublishMessage message = createPublishMessage();
+        final MqttPublishMessage message = createPublishMessage();
         ByteBuf byteBuf = MqttEncoder.doEncode(ALLOCATOR, message);
 
         final List<Object> out = new LinkedList<Object>();
@@ -125,35 +106,35 @@ public class MqttCodecTest {
 
         assertEquals("Expected one object bout got " + out.size(), 1, out.size());
 
-        final PublishMessage decodedMessage = (PublishMessage) out.get(0);
-        validateFixedHeaders(message.getFixedHeader(), decodedMessage.getFixedHeader());
-        validatePublishVariableHeader(message.getVariableHeader(), decodedMessage.getVariableHeader());
-        validatePublishPayload(message.getPayload(), decodedMessage.getPayload());
+        final MqttPublishMessage decodedMessage = (MqttPublishMessage) out.get(0);
+        validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
+        validatePublishVariableHeader(message.variableHeader(), decodedMessage.variableHeader());
+        validatePublishPayload(message.payload(), decodedMessage.payload());
     }
 
     @Test
     public void testPubAckMessage() throws Exception {
-        testMessageWithOnlyFixedHeaderAndMessageIdVariableHeader(MessageType.PUBACK);
+        testMessageWithOnlyFixedHeaderAndMessageIdVariableHeader(MqttMessageType.PUBACK);
     }
 
     @Test
     public void testPubRecMessage() throws Exception {
-        testMessageWithOnlyFixedHeaderAndMessageIdVariableHeader(MessageType.PUBREC);
+        testMessageWithOnlyFixedHeaderAndMessageIdVariableHeader(MqttMessageType.PUBREC);
     }
 
     @Test
     public void testPubRelMessage() throws Exception {
-        testMessageWithOnlyFixedHeaderAndMessageIdVariableHeader(MessageType.PUBREL);
+        testMessageWithOnlyFixedHeaderAndMessageIdVariableHeader(MqttMessageType.PUBREL);
     }
 
     @Test
     public void testPubCompMessage() throws Exception {
-        testMessageWithOnlyFixedHeaderAndMessageIdVariableHeader(MessageType.PUBCOMP);
+        testMessageWithOnlyFixedHeaderAndMessageIdVariableHeader(MqttMessageType.PUBCOMP);
     }
 
     @Test
     public void testSubscribeMessage() throws Exception {
-        final SubscribeMessage message = createSubscribeMessage();
+        final MqttSubscribeMessage message = createSubscribeMessage();
         ByteBuf byteBuf = MqttEncoder.doEncode(ALLOCATOR, message);
 
         final List<Object> out = new LinkedList<Object>();
@@ -161,15 +142,15 @@ public class MqttCodecTest {
 
         assertEquals("Expected one object bout got " + out.size(), 1, out.size());
 
-        final SubscribeMessage decodedMessage = (SubscribeMessage) out.get(0);
-        validateFixedHeaders(message.getFixedHeader(), decodedMessage.getFixedHeader());
-        validateMessageIdVariableHeader(message.getVariableHeader(), decodedMessage.getVariableHeader());
-        validateSubscribePayload(message.getPayload(), decodedMessage.getPayload());
+        final MqttSubscribeMessage decodedMessage = (MqttSubscribeMessage) out.get(0);
+        validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
+        validateMessageIdVariableHeader(message.variableHeader(), decodedMessage.variableHeader());
+        validateSubscribePayload(message.payload(), decodedMessage.payload());
     }
 
     @Test
     public void testSubAckMessage() throws Exception {
-        final SubAckMessage message = createSubAckMessage();
+        final MqttSubAckMessage message = createSubAckMessage();
         ByteBuf byteBuf = MqttEncoder.doEncode(ALLOCATOR, message);
 
         final List<Object> out = new LinkedList<Object>();
@@ -177,15 +158,15 @@ public class MqttCodecTest {
 
         assertEquals("Expected one object bout got " + out.size(), 1, out.size());
 
-        final SubAckMessage decodedMessage = (SubAckMessage) out.get(0);
-        validateFixedHeaders(message.getFixedHeader(), decodedMessage.getFixedHeader());
-        validateMessageIdVariableHeader(message.getVariableHeader(), decodedMessage.getVariableHeader());
-        validateSubAckPayload(message.getPayload(), decodedMessage.getPayload());
+        final MqttSubAckMessage decodedMessage = (MqttSubAckMessage) out.get(0);
+        validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
+        validateMessageIdVariableHeader(message.variableHeader(), decodedMessage.variableHeader());
+        validateSubAckPayload(message.payload(), decodedMessage.payload());
     }
 
     @Test
     public void testUnSubscribeMessage() throws Exception {
-        final UnsubscribeMessage message = createUnsubscribeMessage();
+        final MqttUnsubscribeMessage message = createUnsubscribeMessage();
         ByteBuf byteBuf = MqttEncoder.doEncode(ALLOCATOR, message);
 
         final List<Object> out = new LinkedList<Object>();
@@ -193,34 +174,34 @@ public class MqttCodecTest {
 
         assertEquals("Expected one object bout got " + out.size(), 1, out.size());
 
-        final UnsubscribeMessage decodedMessage = (UnsubscribeMessage) out.get(0);
-        validateFixedHeaders(message.getFixedHeader(), decodedMessage.getFixedHeader());
-        validateMessageIdVariableHeader(message.getVariableHeader(), decodedMessage.getVariableHeader());
-        validateUnsubscribePayload(message.getPayload(), decodedMessage.getPayload());
+        final MqttUnsubscribeMessage decodedMessage = (MqttUnsubscribeMessage) out.get(0);
+        validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
+        validateMessageIdVariableHeader(message.variableHeader(), decodedMessage.variableHeader());
+        validateUnsubscribePayload(message.payload(), decodedMessage.payload());
     }
 
     @Test
     public void testUnsubAckMessage() throws Exception {
-        testMessageWithOnlyFixedHeaderAndMessageIdVariableHeader(MessageType.UNSUBACK);
+        testMessageWithOnlyFixedHeaderAndMessageIdVariableHeader(MqttMessageType.UNSUBACK);
     }
 
     @Test
     public void testPingReqMessage() throws Exception {
-        testMessageWithOnlyFixedHeader(MessageType.PINGREQ);
+        testMessageWithOnlyFixedHeader(MqttMessageType.PINGREQ);
     }
 
     @Test
     public void testPingRespMessage() throws Exception {
-        testMessageWithOnlyFixedHeader(MessageType.PINGRESP);
+        testMessageWithOnlyFixedHeader(MqttMessageType.PINGRESP);
     }
 
     @Test
     public void testDisconnectMessage() throws Exception {
-        testMessageWithOnlyFixedHeader(MessageType.DISCONNECT);
+        testMessageWithOnlyFixedHeader(MqttMessageType.DISCONNECT);
     }
 
-    private void testMessageWithOnlyFixedHeader(int messageType) throws Exception {
-        Message message = createMessageWithFixedHeader(messageType);
+    private void testMessageWithOnlyFixedHeader(MqttMessageType messageType) throws Exception {
+        MqttMessage message = createMessageWithFixedHeader(messageType);
         ByteBuf byteBuf = MqttEncoder.doEncode(ALLOCATOR, message);
 
         final List<Object> out = new LinkedList<Object>();
@@ -228,12 +209,13 @@ public class MqttCodecTest {
 
         assertEquals("Expected one object bout got " + out.size(), 1, out.size());
 
-        final Message decodedMessage = (Message) out.get(0);
-        validateFixedHeaders(message.getFixedHeader(), decodedMessage.getFixedHeader());
+        final MqttMessage decodedMessage = (MqttMessage) out.get(0);
+        validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
     }
 
-    private void testMessageWithOnlyFixedHeaderAndMessageIdVariableHeader(int messageType) throws Exception {
-        Message message = createMessageWithFixedHeaderAndMessageIdVariableHeader(messageType);
+    private void testMessageWithOnlyFixedHeaderAndMessageIdVariableHeader(MqttMessageType messageType)
+            throws Exception {
+        MqttMessage message = createMessageWithFixedHeaderAndMessageIdVariableHeader(messageType);
 
         ByteBuf byteBuf = MqttEncoder.doEncode(ALLOCATOR, message);
 
@@ -242,30 +224,30 @@ public class MqttCodecTest {
 
         assertEquals("Expected one object bout got " + out.size(), 1, out.size());
 
-        final Message decodedMessage = (Message) out.get(0);
-        validateFixedHeaders(message.getFixedHeader(), decodedMessage.getFixedHeader());
+        final MqttMessage decodedMessage = (MqttMessage) out.get(0);
+        validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
         validateMessageIdVariableHeader(
-                (MessageIdVariableHeader) message.getVariableHeader(),
-                (MessageIdVariableHeader) decodedMessage.getVariableHeader());
+                (MqttMessageIdVariableHeader) message.variableHeader(),
+                (MqttMessageIdVariableHeader) decodedMessage.variableHeader());
     }
 
     // Factory methods of different MQTT
     // Message types to help testing
 
-    private static Message createMessageWithFixedHeader(int messageType) {
-        return new Message(new FixedHeader(messageType, false, QOS0, false, 0));
+    private static MqttMessage createMessageWithFixedHeader(MqttMessageType messageType) {
+        return new MqttMessage(new MqttFixedHeader(messageType, false, QOS0, false, 0));
     }
 
-    private static Message createMessageWithFixedHeaderAndMessageIdVariableHeader(int messageType) {
-        FixedHeader fixedHeader = new FixedHeader(messageType, false, QOS1, false, 0);
-        MessageIdVariableHeader messageIdVariableHeader = new MessageIdVariableHeader(12345);
-        return new Message(fixedHeader, messageIdVariableHeader);
+    private static MqttMessage createMessageWithFixedHeaderAndMessageIdVariableHeader(MqttMessageType messageType) {
+        MqttFixedHeader mqttFixedHeader = new MqttFixedHeader(messageType, false, QOS1, false, 0);
+        MqttMessageIdVariableHeader mqttMessageIdVariableHeader = new MqttMessageIdVariableHeader(12345);
+        return new MqttMessage(mqttFixedHeader, mqttMessageIdVariableHeader);
     }
 
-    private static ConnectMessage createConnectMessage() {
-        FixedHeader fixedHeader = new FixedHeader(MessageType.CONNECT, false, QOS0, false, 0);
-        ConnectVariableHeader connectVariableHeader =
-                new ConnectVariableHeader(
+    private static MqttConnectMessage createConnectMessage() {
+        MqttFixedHeader mqttFixedHeader = new MqttFixedHeader(MqttMessageType.CONNECT, false, QOS0, false, 0);
+        MqttConnectVariableHeader mqttConnectVariableHeader =
+                new MqttConnectVariableHeader(
                         PROTOCOL_NAME,
                         PROTOCOL_VERSION,
                         true,
@@ -275,110 +257,121 @@ public class MqttCodecTest {
                         true,
                         true,
                         KEEP_ALIVE_SECONDS);
-        ConnectPayload connectPayload = new ConnectPayload(CLIENT_ID, WILL_TOPIC, WILL_MESSAGE, USER_NAME, PASSWORD);
+        MqttConnectPayload mqttConnectPayload =
+                new MqttConnectPayload(CLIENT_ID, WILL_TOPIC, WILL_MESSAGE, USER_NAME, PASSWORD);
 
-        return new ConnectMessage(fixedHeader, connectVariableHeader, connectPayload);
+        return new MqttConnectMessage(mqttFixedHeader, mqttConnectVariableHeader, mqttConnectPayload);
     }
 
-    private static ConnAckMessage createConnAckMessage() {
-        FixedHeader fixedHeader = new FixedHeader(MessageType.CONNACK, false, QOS0, false, 0);
-        ConnAckVariableHeader connAckVariableHeader = new ConnAckVariableHeader(ConnectReturnCode.CONNECTION_ACCEPTED);
-        return new ConnAckMessage(fixedHeader, connAckVariableHeader);
+    private static MqttConnAckMessage createConnAckMessage() {
+        MqttFixedHeader mqttFixedHeader = new MqttFixedHeader(MqttMessageType.CONNACK, false, QOS0, false, 0);
+        MqttConnAckVariableHeader mqttConnAckVariableHeader =
+                new MqttConnAckVariableHeader(MqttConnectReturnCode.CONNECTION_ACCEPTED);
+        return new MqttConnAckMessage(mqttFixedHeader, mqttConnAckVariableHeader);
     }
 
-    private static PublishMessage createPublishMessage() {
-        FixedHeader fixedHeader = new FixedHeader(MessageType.PUBLISH, false, QOS1, true, 0);
-        PublishVariableHeader publishVariableHeader = new PublishVariableHeader("/abc", 1234);
+    private static MqttPublishMessage createPublishMessage() {
+        MqttFixedHeader mqttFixedHeader = new MqttFixedHeader(MqttMessageType.PUBLISH, false, QOS1, true, 0);
+        MqttPublishVariableHeader mqttPublishVariableHeader = new MqttPublishVariableHeader("/abc", 1234);
         ByteBuf payload =  ALLOCATOR.buffer();
         payload.writeBytes("whatever".getBytes(CharsetUtil.UTF_8));
-        return new PublishMessage(fixedHeader, publishVariableHeader, payload);
+        return new MqttPublishMessage(mqttFixedHeader, mqttPublishVariableHeader, payload);
     }
 
-    private static SubscribeMessage createSubscribeMessage() {
-        FixedHeader fixedHeader = new FixedHeader(MessageType.SUBSCRIBE, false, QOS1, true, 0);
-        MessageIdVariableHeader messageIdVariableHeader = new MessageIdVariableHeader(12345);
+    private static MqttSubscribeMessage createSubscribeMessage() {
+        MqttFixedHeader mqttFixedHeader = new MqttFixedHeader(MqttMessageType.SUBSCRIBE, false, QOS1, true, 0);
+        MqttMessageIdVariableHeader mqttMessageIdVariableHeader = new MqttMessageIdVariableHeader(12345);
 
-        List<TopicSubscription> topicSubscriptions = new LinkedList<TopicSubscription>();
-        topicSubscriptions.add(new TopicSubscription("/abc", QOS1));
-        topicSubscriptions.add(new TopicSubscription("/def", QOS1));
-        topicSubscriptions.add(new TopicSubscription("/xyz", QOS2));
+        List<MqttTopicSubscription> topicSubscriptions = new LinkedList<MqttTopicSubscription>();
+        topicSubscriptions.add(new MqttTopicSubscription("/abc", QOS1));
+        topicSubscriptions.add(new MqttTopicSubscription("/def", QOS1));
+        topicSubscriptions.add(new MqttTopicSubscription("/xyz", QOS2));
 
-        SubscribePayload subscribePayload = new SubscribePayload(topicSubscriptions);
-        return new SubscribeMessage(fixedHeader, messageIdVariableHeader, subscribePayload);
+        MqttSubscribePayload mqttSubscribePayload = new MqttSubscribePayload(topicSubscriptions);
+        return new MqttSubscribeMessage(mqttFixedHeader, mqttMessageIdVariableHeader, mqttSubscribePayload);
     }
 
-    private static SubAckMessage createSubAckMessage() {
-        FixedHeader fixedHeader = new FixedHeader(MessageType.SUBACK, false, QOS1, false, 0);
-        MessageIdVariableHeader messageIdVariableHeader = new MessageIdVariableHeader(12345);
+    private static MqttSubAckMessage createSubAckMessage() {
+        MqttFixedHeader mqttFixedHeader = new MqttFixedHeader(MqttMessageType.SUBACK, false, QOS1, false, 0);
+        MqttMessageIdVariableHeader mqttMessageIdVariableHeader = new MqttMessageIdVariableHeader(12345);
         List<Integer> grantedQosLevels = new LinkedList<Integer>();
         grantedQosLevels.add(1);
         grantedQosLevels.add(2);
         grantedQosLevels.add(0);
-        SubAckPayload subAckPayload = new SubAckPayload(grantedQosLevels);
-        return new SubAckMessage(fixedHeader, messageIdVariableHeader, subAckPayload);
+        MqttSubAckPayload mqttSubAckPayload = new MqttSubAckPayload(grantedQosLevels);
+        return new MqttSubAckMessage(mqttFixedHeader, mqttMessageIdVariableHeader, mqttSubAckPayload);
     }
 
-    private static UnsubscribeMessage createUnsubscribeMessage() {
-        FixedHeader fixedHeader = new FixedHeader(MessageType.UNSUBSCRIBE, false, QOS1, true, 0);
-        MessageIdVariableHeader messageIdVariableHeader = new MessageIdVariableHeader(12345);
+    private static MqttUnsubscribeMessage createUnsubscribeMessage() {
+        MqttFixedHeader mqttFixedHeader = new MqttFixedHeader(MqttMessageType.UNSUBSCRIBE, false, QOS1, true, 0);
+        MqttMessageIdVariableHeader mqttMessageIdVariableHeader = new MqttMessageIdVariableHeader(12345);
 
         List<String> topics = new LinkedList<String>();
         topics.add("/abc");
         topics.add("/def");
         topics.add("/xyz");
 
-        UnsubscribePayload unsubscribePayload = new UnsubscribePayload(topics);
-        return new UnsubscribeMessage(fixedHeader, messageIdVariableHeader, unsubscribePayload);
+        MqttUnsubscribePayload mqttUnsubscribePayload = new MqttUnsubscribePayload(topics);
+        return new MqttUnsubscribeMessage(mqttFixedHeader, mqttMessageIdVariableHeader, mqttUnsubscribePayload);
     }
 
     // Helper methdos to compare expected and actual
     // MQTT messages
 
-    private static void validateFixedHeaders(FixedHeader expected, FixedHeader actual) {
-        assertEquals("FixedHeader MessageType mismatch ", expected.getMessageType(), actual.getMessageType());
-        assertEquals("FixedHeader Qos mismatch ", expected.getQosLevel(), actual.getQosLevel());
+    private static void validateFixedHeaders(MqttFixedHeader expected, MqttFixedHeader actual) {
+        assertEquals("MqttFixedHeader MqttMessageType mismatch ", expected.messageType(), actual.messageType());
+        assertEquals("MqttFixedHeader Qos mismatch ", expected.qosLevel(), actual.qosLevel());
     }
 
-    private static void vlidateConnectVariableHeader(ConnectVariableHeader expected, ConnectVariableHeader actual) {
-        assertEquals("ConnectVariableHeader Name mismatch ", expected.getName(), actual.getName());
+    private static void vlidateConnectVariableHeader(
+            MqttConnectVariableHeader expected,
+            MqttConnectVariableHeader actual) {
+        assertEquals("MqttConnectVariableHeader Name mismatch ", expected.name(), actual.name());
         assertEquals(
-                "ConnectVariableHeader KeepAliveTimeSeconds mismatch ",
-                expected.getKeepAliveTimeSeconds(),
-                actual.getKeepAliveTimeSeconds());
-        assertEquals("ConnectVariableHeader Version mismatch ", expected.getVersion(), actual.getVersion());
-        assertEquals("ConnectVariableHeader WillQos mismatch ", expected.getWillQos(), actual.getWillQos());
+                "MqttConnectVariableHeader KeepAliveTimeSeconds mismatch ",
+                expected.keepAliveTimeSeconds(),
+                actual.keepAliveTimeSeconds());
+        assertEquals("MqttConnectVariableHeader Version mismatch ", expected.version(), actual.version());
+        assertEquals("MqttConnectVariableHeader WillQos mismatch ", expected.willQos(), actual.willQos());
 
-        assertEquals("ConnectVariableHeader HasUserName mismatch ", expected.hasUserName(), actual.hasUserName());
-        assertEquals("ConnectVariableHeader HasPassword mismatch ", expected.hasPassword(), actual.hasPassword());
+        assertEquals("MqttConnectVariableHeader HasUserName mismatch ", expected.hasUserName(), actual.hasUserName());
+        assertEquals("MqttConnectVariableHeader HasPassword mismatch ", expected.hasPassword(), actual.hasPassword());
         assertEquals(
-                "ConnectVariableHeader IsCleanSession mismatch ",
+                "MqttConnectVariableHeader IsCleanSession mismatch ",
                 expected.isCleanSession(),
                 actual.isCleanSession());
-        assertEquals("ConnectVariableHeader IsWillFlag mismatch ", expected.isWillFlag(), actual.isWillFlag());
-        assertEquals("ConnectVariableHeader IsWillRetain mismatch ", expected.isWillRetain(), actual.isWillRetain());
-    }
-
-    private static void validateConnectPayload(ConnectPayload expected, ConnectPayload actual) {
+        assertEquals("MqttConnectVariableHeader IsWillFlag mismatch ", expected.isWillFlag(), actual.isWillFlag());
         assertEquals(
-                "ConnectPayload ClientIdentifier mismatch ",
-                expected.getClientIdentifier(),
-                actual.getClientIdentifier());
-        assertEquals("ConnectPayload UserName mismatch ", expected.getUserName(), actual.getUserName());
-        assertEquals("ConnectPayload Password mismatch ", expected.getPassword(), actual.getPassword());
-        assertEquals("ConnectPayload WillMessage mismatch ", expected.getWillMessage(), actual.getWillMessage());
-        assertEquals("ConnectPayload WillTopic mismatch ", expected.getWillTopic(), actual.getWillTopic());
+                "MqttConnectVariableHeader IsWillRetain mismatch ",
+                expected.isWillRetain(),
+                actual.isWillRetain());
     }
 
-    private static void validateConnAckVariableHeader(ConnAckVariableHeader expected, ConnAckVariableHeader actual) {
+    private static void validateConnectPayload(MqttConnectPayload expected, MqttConnectPayload actual) {
         assertEquals(
-                "ConnAckVariableHeader ConnectReturnCode mismatch",
-                expected.getConnectReturnCode(),
-                actual.getConnectReturnCode());
+                "MqttConnectPayload ClientIdentifier mismatch ",
+                expected.clientIdentifier(),
+                actual.clientIdentifier());
+        assertEquals("MqttConnectPayload UserName mismatch ", expected.userName(), actual.userName());
+        assertEquals("MqttConnectPayload Password mismatch ", expected.password(), actual.password());
+        assertEquals("MqttConnectPayload WillMessage mismatch ", expected.willMessage(), actual.willMessage());
+        assertEquals("MqttConnectPayload WillTopic mismatch ", expected.willTopic(), actual.willTopic());
     }
 
-    private static void validatePublishVariableHeader(PublishVariableHeader expected, PublishVariableHeader actual) {
-        assertEquals("PublishVariableHeader TopicName mismatch ", expected.getTopicName(), actual.getTopicName());
-        assertEquals("PublishVariableHeader MessageId mismatch ", expected.getMessageId(), actual.getMessageId());
+    private static void validateConnAckVariableHeader(
+            MqttConnAckVariableHeader expected,
+            MqttConnAckVariableHeader actual) {
+        assertEquals(
+                "MqttConnAckVariableHeader MqttConnectReturnCode mismatch",
+                expected.connectReturnCode(),
+                actual.connectReturnCode());
+    }
+
+    private static void validatePublishVariableHeader(
+            MqttPublishVariableHeader expected,
+            MqttPublishVariableHeader actual) {
+        assertEquals("MqttPublishVariableHeader TopicName mismatch ", expected.topicName(), actual.topicName());
+        assertEquals("MqttPublishVariableHeader MessageId mismatch ", expected.messageId(), actual.messageId());
     }
 
     private static void validatePublishPayload(ByteBuf expected, ByteBuf actual) {
@@ -386,17 +379,17 @@ public class MqttCodecTest {
     }
 
     private static void validateMessageIdVariableHeader(
-            MessageIdVariableHeader expected,
-            MessageIdVariableHeader actual) {
-        assertEquals("MessageIdVariableHeader MessageId mismatch ", expected.getMessageId(), actual.getMessageId());
+            MqttMessageIdVariableHeader expected,
+            MqttMessageIdVariableHeader actual) {
+        assertEquals("MqttMessageIdVariableHeader MessageId mismatch ", expected.messageId(), actual.messageId());
     }
 
-    private static void validateSubscribePayload(SubscribePayload expected, SubscribePayload actual) {
-        List<TopicSubscription> expectedTopicSubscriptions = expected.getTopicSubscriptionList();
-        List<TopicSubscription> actualTopicSubscriptions = actual.getTopicSubscriptionList();
+    private static void validateSubscribePayload(MqttSubscribePayload expected, MqttSubscribePayload actual) {
+        List<MqttTopicSubscription> expectedTopicSubscriptions = expected.topicSubscriptions();
+        List<MqttTopicSubscription> actualTopicSubscriptions = actual.topicSubscriptions();
 
         assertEquals(
-                "SubscribePayload TopicSubscriptionList size mismatch ",
+                "MqttSubscribePayload TopicSubscriptionList size mismatch ",
                 expectedTopicSubscriptions.size(),
                 actualTopicSubscriptions.size());
         for (int i = 0; i < expectedTopicSubscriptions.size(); i++) {
@@ -404,22 +397,27 @@ public class MqttCodecTest {
         }
     }
 
-    private static void validateTopicSubscription(TopicSubscription expected, TopicSubscription actual) {
-        assertEquals("TopicSubscription TopicName mismatch ", expected.getTopicName(), actual.getTopicName());
-        assertEquals("TopicSubscription Qos mismatch ", expected.getQualityOfService(), actual.getQualityOfService());
+    private static void validateTopicSubscription(
+            MqttTopicSubscription expected,
+            MqttTopicSubscription actual) {
+        assertEquals("MqttTopicSubscription TopicName mismatch ", expected.topicName(), actual.topicName());
+        assertEquals(
+                "MqttTopicSubscription Qos mismatch ",
+                expected.qualityOfService(),
+                actual.qualityOfService());
     }
 
-    private static void validateSubAckPayload(SubAckPayload expected, SubAckPayload actual) {
+    private static void validateSubAckPayload(MqttSubAckPayload expected, MqttSubAckPayload actual) {
         assertArrayEquals(
-                "SubAckPayload GrantedQosLevels mismatch ",
-                expected.getGrantedQoSLevels().toArray(),
-                actual.getGrantedQoSLevels().toArray());
+                "MqttSubAckPayload GrantedQosLevels mismatch ",
+                expected.grantedQoSLevels().toArray(),
+                actual.grantedQoSLevels().toArray());
     }
 
-    private static void validateUnsubscribePayload(UnsubscribePayload expected, UnsubscribePayload actual) {
+    private static void validateUnsubscribePayload(MqttUnsubscribePayload expected, MqttUnsubscribePayload actual) {
         assertArrayEquals(
-                "UnsubscribePayload TopicList mismatch ",
-                expected.getTopics().toArray(),
-                actual.getTopics().toArray());
+                "MqttUnsubscribePayload TopicList mismatch ",
+                expected.topics().toArray(),
+                actual.topics().toArray());
     }
 }

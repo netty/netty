@@ -14,49 +14,51 @@
  * under the License.
  */
 
-package io.netty.handler.codec.mqtt.messages;
+package io.netty.handler.codec.mqtt;
+
+import io.netty.util.internal.StringUtil;
 
 /**
- * Variable Header for the {@link io.netty.handler.codec.mqtt.messages.ConnectMessage}
+ * Variable Header for the {@link MqttConnectMessage}
  */
-public class ConnectVariableHeader {
+public class MqttConnectVariableHeader {
 
     private final String name;
     private final int version;
     private final boolean hasUserName;
     private final boolean hasPassword;
-    private final boolean willRetain;
+    private final boolean isWillRetain;
     private final int willQos;
-    private final boolean willFlag;
-    private final boolean cleanSession;
+    private final boolean isWillFlag;
+    private final boolean isCleanSession;
     private final int keepAliveTimeSeconds;
 
-    public ConnectVariableHeader(
+    public MqttConnectVariableHeader(
             String name,
             int version,
             boolean hasUserName,
             boolean hasPassword,
-            boolean willRetain,
+            boolean isWillRetain,
             int willQos,
-            boolean willFlag,
-            boolean cleanSession,
+            boolean isWillFlag,
+            boolean isCleanSession,
             int keepAliveTimeSeconds) {
         this.name = name;
         this.version = version;
         this.hasUserName = hasUserName;
         this.hasPassword = hasPassword;
-        this.willRetain = willRetain;
+        this.isWillRetain = isWillRetain;
         this.willQos = willQos;
-        this.willFlag = willFlag;
-        this.cleanSession = cleanSession;
+        this.isWillFlag = isWillFlag;
+        this.isCleanSession = isCleanSession;
         this.keepAliveTimeSeconds = keepAliveTimeSeconds;
     }
 
-    public String getName() {
+    public String name() {
         return name;
     }
 
-    public int getVersion() {
+    public int version() {
         return version;
     }
 
@@ -69,22 +71,37 @@ public class ConnectVariableHeader {
     }
 
     public boolean isWillRetain() {
-        return willRetain;
+        return isWillRetain;
     }
 
-    public int getWillQos() {
+    public int willQos() {
         return willQos;
     }
 
     public boolean isWillFlag() {
-        return willFlag;
+        return isWillFlag;
     }
 
     public boolean isCleanSession() {
-        return cleanSession;
+        return isCleanSession;
     }
 
-    public int getKeepAliveTimeSeconds() {
+    public int keepAliveTimeSeconds() {
         return keepAliveTimeSeconds;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder builder = new StringBuilder(StringUtil.simpleClassName(this)).append("[");
+        builder.append("name=").append(name);
+        builder.append(", version=").append(version);
+        builder.append(", hasUserName=").append(hasUserName);
+        builder.append(", hasPassword=").append(hasPassword);
+        builder.append(", isWillRetain=").append(isWillRetain);
+        builder.append(", isWillFlag=").append(isWillFlag);
+        builder.append(", isCleanSession=").append(isCleanSession);
+        builder.append(", keepAliveTimeSeconds=").append(keepAliveTimeSeconds);
+        builder.append("]");
+        return builder.toString();
     }
 }

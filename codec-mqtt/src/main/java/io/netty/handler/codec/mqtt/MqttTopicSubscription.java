@@ -14,27 +14,38 @@
  * under the License.
  */
 
-package io.netty.handler.codec.mqtt.messages;
+package io.netty.handler.codec.mqtt;
+
+import io.netty.util.internal.StringUtil;
 
 /**
  * Contains a topic name and Qos Level.
- * This is part of the {@link io.netty.handler.codec.mqtt.messages.SubscribePayload}
+ * This is part of the {@link MqttSubscribePayload}
  */
-public class TopicSubscription {
+public class MqttTopicSubscription {
 
     private final String topicName;
     private final int qualityOfService;
 
-    public TopicSubscription(String topicName, int qualityOfService) {
+    public MqttTopicSubscription(String topicName, int qualityOfService) {
         this.topicName = topicName;
         this.qualityOfService = qualityOfService;
     }
 
-    public String getTopicName() {
+    public String topicName() {
         return topicName;
     }
 
-    public int getQualityOfService() {
+    public int qualityOfService() {
         return qualityOfService;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder builder = new StringBuilder(StringUtil.simpleClassName(this)).append("[");
+        builder.append("topicName=").append(topicName);
+        builder.append(", qualityOfService=").append(qualityOfService);
+        builder.append("]");
+        return builder.toString();
     }
 }

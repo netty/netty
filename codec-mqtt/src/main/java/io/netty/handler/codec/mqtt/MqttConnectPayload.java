@@ -14,12 +14,14 @@
  * under the License.
  */
 
-package io.netty.handler.codec.mqtt.messages;
+package io.netty.handler.codec.mqtt;
+
+import io.netty.util.internal.StringUtil;
 
 /**
- * Payload of {@link io.netty.handler.codec.mqtt.messages.ConnectMessage}
+ * Payload of {@link MqttConnectMessage}
  */
-public class ConnectPayload {
+public class MqttConnectPayload {
 
     private final String clientIdentifier;
     private final String willTopic;
@@ -27,7 +29,7 @@ public class ConnectPayload {
     private final String userName;
     private final String password;
 
-    public ConnectPayload(
+    public MqttConnectPayload(
             String clientIdentifier,
             String willTopic,
             String willMessage,
@@ -40,23 +42,35 @@ public class ConnectPayload {
         this.password = password;
     }
 
-    public String getClientIdentifier() {
+    public String clientIdentifier() {
         return clientIdentifier;
     }
 
-    public String getWillTopic() {
+    public String willTopic() {
         return willTopic;
     }
 
-    public String getWillMessage() {
+    public String willMessage() {
         return willMessage;
     }
 
-    public String getUserName() {
+    public String userName() {
         return userName;
     }
 
-    public String getPassword() {
+    public String password() {
         return password;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder builder = new StringBuilder(StringUtil.simpleClassName(this)).append("[");
+        builder.append("clientIdentifier=").append(clientIdentifier);
+        builder.append(", willTopic=").append(willTopic);
+        builder.append(", willMessage=").append(willMessage);
+        builder.append(", userName=").append(userName);
+        builder.append(", password=").append(password);
+        builder.append("]");
+        return builder.toString();
     }
 }

@@ -14,19 +14,19 @@
  * under the License.
  */
 
-package io.netty.handler.codec.mqtt.messages;
+package io.netty.handler.codec.mqtt;
 
 /**
- * See <a href="http://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html#connack">MQTTV3.1/connack</a>
+ * See <a href="http://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html#pubrec">MQTTV3.1/pubrec</a>
  */
-public class ConnAckMessage extends Message {
+public class MqttPubRecMessage extends MqttMessage {
 
-    public ConnAckMessage(FixedHeader fixedHeader, ConnAckVariableHeader variableHeader) {
-        super(fixedHeader, variableHeader);
+    public MqttPubRecMessage(MqttFixedHeader mqttFixedHeader, MqttMessageIdVariableHeader variableHeader) {
+        super(mqttFixedHeader, variableHeader);
     }
 
     @Override
-    public ConnAckVariableHeader getVariableHeader() {
-        return (ConnAckVariableHeader) super.getVariableHeader();
+    public MqttMessageIdVariableHeader variableHeader() {
+        return (MqttMessageIdVariableHeader) super.variableHeader();
     }
 }

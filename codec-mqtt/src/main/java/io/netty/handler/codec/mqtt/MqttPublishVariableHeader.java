@@ -14,21 +14,37 @@
  * under the License.
  */
 
-package io.netty.handler.codec.mqtt.messages;
+package io.netty.handler.codec.mqtt;
+
+import io.netty.util.internal.StringUtil;
 
 /**
- * Variable Header containing only Message Id
- * See <a href="http://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html#msg-id">MQTTV3.1/msg-id</a>
+ * Variable Header of the {@link MqttPublishMessage}
  */
-public class MessageIdVariableHeader {
+public class MqttPublishVariableHeader {
 
+    private final String topicName;
     private final int messageId;
 
-    public MessageIdVariableHeader(int messageId) {
+    public MqttPublishVariableHeader(String topicName, int messageId) {
+        this.topicName = topicName;
         this.messageId = messageId;
     }
 
-    public int getMessageId() {
+    public String topicName() {
+        return topicName;
+    }
+
+    public int messageId() {
         return messageId;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder builder = new StringBuilder(StringUtil.simpleClassName(this)).append("[");
+        builder.append("topicName=").append(topicName);
+        builder.append(", messageId=").append(messageId);
+        builder.append("]");
+        return builder.toString();
     }
 }

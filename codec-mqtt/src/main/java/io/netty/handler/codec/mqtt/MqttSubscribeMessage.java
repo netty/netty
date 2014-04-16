@@ -14,25 +14,28 @@
  * under the License.
  */
 
-package io.netty.handler.codec.mqtt.messages;
+package io.netty.handler.codec.mqtt;
 
 /**
  * See <a href="http://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html#subscribe">
  *     MQTTV3.1/subscribe</a>
  */
-public class SubscribeMessage extends Message {
+public class MqttSubscribeMessage extends MqttMessage {
 
-    public SubscribeMessage(FixedHeader fixedHeader, MessageIdVariableHeader variableHeader, SubscribePayload payload) {
-        super(fixedHeader, variableHeader, payload);
+    public MqttSubscribeMessage(
+            MqttFixedHeader mqttFixedHeader,
+            MqttMessageIdVariableHeader variableHeader,
+            MqttSubscribePayload payload) {
+        super(mqttFixedHeader, variableHeader, payload);
     }
 
     @Override
-    public MessageIdVariableHeader getVariableHeader() {
-        return (MessageIdVariableHeader) super.getVariableHeader();
+    public MqttMessageIdVariableHeader variableHeader() {
+        return (MqttMessageIdVariableHeader) super.variableHeader();
     }
 
     @Override
-    public SubscribePayload getPayload() {
-        return (SubscribePayload) super.getPayload();
+    public MqttSubscribePayload payload() {
+        return (MqttSubscribePayload) super.payload();
     }
 }

@@ -14,29 +14,36 @@
  * under the License.
  */
 
-package io.netty.handler.codec.mqtt.messages;
+package io.netty.handler.codec.mqtt;
+
+import io.netty.util.internal.StringUtil;
 
 /**
  * See <a href="http://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html#fixed-header">
  *     MQTTV3.1/fixed-header</a>
  */
-public class FixedHeader {
+public class MqttFixedHeader {
 
-    private final int messageType;
+    private final MqttMessageType messageType;
     private final boolean isDup;
     private final int qosLevel;
     private final boolean isRetain;
     private final int remainingLength;
 
-    public FixedHeader(int messageType, boolean isDup, int qosLevel, boolean isRetain) {
+    public MqttFixedHeader(MqttMessageType messageType, boolean isDup, int qosLevel, boolean isRetain) {
         this.messageType = messageType;
         this.isDup = isDup;
         this.qosLevel = qosLevel;
         this.isRetain = isRetain;
-        this.remainingLength = 0; // this is ignored and the real value is calculated while encoding
+        remainingLength = 0; // this is ignored and the real value is calculated while encoding
     }
 
-    public FixedHeader(int messageType, boolean isDup, int qosLevel, boolean isRetain, int remainingLength) {
+    public MqttFixedHeader(
+            MqttMessageType messageType,
+            boolean isDup,
+            int qosLevel,
+            boolean isRetain,
+            int remainingLength) {
         this.messageType = messageType;
         this.isDup = isDup;
         this.qosLevel = qosLevel;
@@ -44,7 +51,7 @@ public class FixedHeader {
         this.remainingLength = remainingLength;
     }
 
-    public int getMessageType() {
+    public MqttMessageType messageType() {
         return messageType;
     }
 
@@ -52,7 +59,7 @@ public class FixedHeader {
         return isDup;
     }
 
-    public int getQosLevel() {
+    public int qosLevel() {
         return qosLevel;
     }
 
@@ -60,7 +67,20 @@ public class FixedHeader {
         return isRetain;
     }
 
-    public int getRemainingLength() {
+    public int remainingLength() {
         return remainingLength;
     }
+
+    @Override
+    public String toString() {
+        StringBuilder builder = new StringBuilder(StringUtil.simpleClassName(this)).append("[");
+        builder.append("messageType=").append(messageType);
+        builder.append(", isDup=").append(isDup);
+        builder.append(", qosLevel=").append(qosLevel);
+        builder.append(", isRetain=").append(isRetain);
+        builder.append(", remainingLength=").append(remainingLength);
+        builder.append("]");
+        return builder.toString();
+    }
+
 }

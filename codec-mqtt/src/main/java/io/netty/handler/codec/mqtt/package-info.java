@@ -14,6 +14,6 @@
  */
 
 /**
- * Encoder, decoder for MQTT.
+ * Encoder, decoder and different Message Types for MQTT.
  */
 package io.netty.handler.codec.mqtt;

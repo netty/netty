@@ -14,23 +14,32 @@
  * under the License.
  */
 
-package io.netty.handler.codec.mqtt.messages;
+package io.netty.handler.codec.mqtt;
 
-import java.util.Collections;
+import io.netty.util.internal.StringUtil;
+
 import java.util.List;
 
 /**
- * Payload of the {@link io.netty.handler.codec.mqtt.messages.SubscribeMessage}
+ * Payload of the {@link MqttSubAckMessage}
  */
-public class SubscribePayload {
+public class MqttSubAckPayload {
 
-    private final List<TopicSubscription> topicSubscriptionList;
+    private final List<Integer> grantedQoSLevels;
 
-    public SubscribePayload(List<TopicSubscription> topicSubscriptionList) {
-        this.topicSubscriptionList = Collections.unmodifiableList(topicSubscriptionList);
+    public MqttSubAckPayload(List<Integer> grantedQoSLevels) {
+        this.grantedQoSLevels = grantedQoSLevels;
     }
 
-    public List<TopicSubscription> getTopicSubscriptionList() {
-        return topicSubscriptionList;
+    public List<Integer> grantedQoSLevels() {
+        return grantedQoSLevels;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder builder = new StringBuilder(StringUtil.simpleClassName(this)).append("[");
+        builder.append("grantedQoSLevels=").append(grantedQoSLevels);
+        builder.append("]");
+        return builder.toString();
     }
 }

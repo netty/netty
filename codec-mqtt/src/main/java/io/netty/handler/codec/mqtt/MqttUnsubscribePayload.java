@@ -14,23 +14,36 @@
  * under the License.
  */
 
-package io.netty.handler.codec.mqtt.messages;
+package io.netty.handler.codec.mqtt;
+
+import io.netty.util.internal.StringUtil;
 
 import java.util.Collections;
 import java.util.List;
 
 /**
- * Pyaload of the {@link io.netty.handler.codec.mqtt.messages.UnsubscribeMessage}
+ * Pyaload of the {@link MqttUnsubscribeMessage}
  */
-public class UnsubscribePayload {
+public class MqttUnsubscribePayload {
 
     private final List<String> topics;
 
-    public UnsubscribePayload(List<String> topics) {
+    public MqttUnsubscribePayload(List<String> topics) {
         this.topics = Collections.unmodifiableList(topics);
     }
 
-    public List<String> getTopics() {
+    public List<String> topics() {
         return topics;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder builder = new StringBuilder(StringUtil.simpleClassName(this)).append("[");
+        for (int i = 0; i < topics.size() - 1; i++) {
+            builder.append("topicName = " + topics.get(i) + ", ");
+        }
+        builder.append("topicName = " + topics.get(topics.size() - 1));
+        builder.append("]");
+        return builder.toString();
     }
 }

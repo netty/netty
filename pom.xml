@@ -324,6 +324,14 @@
         <version>0.5-rc1</version>
         <scope>test</scope>
       </dependency>
+
+      <!-- Test dependencies for mqtt -->
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-all</artifactId>
+      <version>1.9.5</version>
+      <scope>test</scope>
+    </dependency>
     </dependencies>
   </dependencyManagement>
 

@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package io.netty.handler.codec.mqtt.messages;
+package io.netty.handler.codec.mqtt;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
@@ -24,25 +24,28 @@ import io.netty.util.internal.StringUtil;
 /**
  * See <a href="http://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html#publish">MQTTV3.1/publish</a>
  */
-public class PublishMessage extends Message implements ByteBufHolder {
+public class MqttPublishMessage extends MqttMessage implements ByteBufHolder {
 
-    public PublishMessage(FixedHeader fixedHeader, PublishVariableHeader variableHeader, ByteBuf payload) {
-        super(fixedHeader, variableHeader, payload);
+    public MqttPublishMessage(
+            MqttFixedHeader mqttFixedHeader,
+            MqttPublishVariableHeader variableHeader,
+            ByteBuf payload) {
+        super(mqttFixedHeader, variableHeader, payload);
     }
 
     @Override
-    public PublishVariableHeader getVariableHeader() {
-        return (PublishVariableHeader) super.getVariableHeader();
+    public MqttPublishVariableHeader variableHeader() {
+        return (MqttPublishVariableHeader) super.variableHeader();
     }
 
     @Override
-    public ByteBuf getPayload() {
+    public ByteBuf payload() {
         return content();
     }
 
     @Override
     public ByteBuf content() {
-        final ByteBuf data = (ByteBuf) super.getPayload();
+        final ByteBuf data = (ByteBuf) super.payload();
         if (data.refCnt() <= 0) {
             throw new IllegalReferenceCountException(data.refCnt());
         }
@@ -50,13 +53,13 @@ public class PublishMessage extends Message implements ByteBufHolder {
     }
 
     @Override
-    public ByteBufHolder copy() {
-        return new PublishMessage(getFixedHeader(), getVariableHeader(), content().copy());
+    public MqttPublishMessage copy() {
+        return new MqttPublishMessage(fixedHeader(), variableHeader(), content().copy());
     }
 
     @Override
-    public ByteBufHolder duplicate() {
-        return new PublishMessage(getFixedHeader(), getVariableHeader(), content().duplicate());
+    public MqttPublishMessage duplicate() {
+        return new MqttPublishMessage(fixedHeader(), variableHeader(), content().duplicate());
     }
 
     @Override
@@ -65,25 +68,25 @@ public class PublishMessage extends Message implements ByteBufHolder {
     }
 
     @Override
-    public ByteBufHolder retain() {
+    public MqttPublishMessage retain() {
         content().retain();
         return this;
     }
 
     @Override
-    public ByteBufHolder retain(int increment) {
+    public MqttPublishMessage retain(int increment) {
         content().retain(increment);
         return this;
     }
 
     @Override
-    public ByteBufHolder touch() {
+    public MqttPublishMessage touch() {
         content().touch();
         return this;
     }
 
     @Override
-    public ByteBufHolder touch(Object hint) {
+    public MqttPublishMessage touch(Object hint) {
         content().touch(hint);
         return this;
     }
@@ -98,8 +101,4 @@ public class PublishMessage extends Message implements ByteBufHolder {
         return content().release(decrement);
     }
 
-    @Override
-    public String toString() {
-        return StringUtil.simpleClassName(this) + '(' + content().toString() + ')';
-    }
 }

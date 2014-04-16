@@ -23,11 +23,11 @@ import java.nio.charset.Charset;
  */
 public final class MqttConstants {
 
-    public static final String PROTOCOL_NAME = "MQIsdp";
+    static final String PROTOCOL_NAME = "MQIsdp";
 
-    public static final int QOS0 = 0;
-    public static final int QOS1 = 1;
-    public static final int QOS2 = 2;
+    static final int QOS0 = 0;
+    static final int QOS1 = 1;
+    static final int QOS2 = 2;
 
     private MqttConstants() { }
 }

@@ -14,20 +14,30 @@
  * under the License.
  */
 
-package io.netty.handler.codec.mqtt.messages;
+package io.netty.handler.codec.mqtt;
+
+import io.netty.util.internal.StringUtil;
 
 /**
- * Variable header of {@link io.netty.handler.codec.mqtt.messages.ConnectMessage }
+ * Variable header of {@link MqttConnectMessage }
  */
-public class ConnAckVariableHeader {
+public class MqttConnAckVariableHeader {
 
-    private final byte connectReturnCode;
+    private final MqttConnectReturnCode connectReturnCode;
 
-    public ConnAckVariableHeader(byte connectReturnCode) {
+    public MqttConnAckVariableHeader(MqttConnectReturnCode connectReturnCode) {
         this.connectReturnCode = connectReturnCode;
     }
 
-    public byte getConnectReturnCode() {
+    public MqttConnectReturnCode connectReturnCode() {
         return connectReturnCode;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder builder = new StringBuilder(StringUtil.simpleClassName(this)).append("[");
+        builder.append("connectReturnCode=").append(connectReturnCode);
+        builder.append("]");
+        return builder.toString();
     }
 }

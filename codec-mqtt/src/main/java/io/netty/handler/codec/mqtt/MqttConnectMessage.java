@@ -14,24 +14,27 @@
  * under the License.
  */
 
-package io.netty.handler.codec.mqtt.messages;
+package io.netty.handler.codec.mqtt;
 
 /**
- * See <a href="http://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html#suback">MQTTV3.1/suback</a>
+ * See <a href="http://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html#connect">MQTTV3.1/connect</a>
  */
-public class SubAckMessage extends Message {
+public final class MqttConnectMessage extends MqttMessage {
 
-    public SubAckMessage(FixedHeader fixedHeader, MessageIdVariableHeader variableHeader, SubAckPayload payload) {
-        super(fixedHeader, variableHeader, payload);
+    public MqttConnectMessage(
+            MqttFixedHeader mqttFixedHeader,
+            MqttConnectVariableHeader variableHeader,
+            MqttConnectPayload payload) {
+        super(mqttFixedHeader, variableHeader, payload);
     }
 
     @Override
-    public MessageIdVariableHeader getVariableHeader() {
-        return (MessageIdVariableHeader) super.getVariableHeader();
+    public MqttConnectVariableHeader variableHeader() {
+        return (MqttConnectVariableHeader) super.variableHeader();
     }
 
     @Override
-    public SubAckPayload getPayload() {
-        return (SubAckPayload) super.getPayload();
+    public MqttConnectPayload payload() {
+        return (MqttConnectPayload) super.payload();
     }
 }
