@@ -197,4 +197,8 @@ public final class EpollServerSocketChannelConfig extends DefaultChannelConfig
         return this;
     }
 
+    @Override
+    protected void autoReadCleared() {
+        channel.clearEpollIn();
+    }
 }

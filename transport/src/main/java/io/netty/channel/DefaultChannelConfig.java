@@ -266,9 +266,17 @@ public class DefaultChannelConfig implements ChannelConfig {
         this.autoRead = autoRead;
         if (autoRead && !oldAutoRead) {
             channel.read();
+        } else if (!autoRead && oldAutoRead) {
+            autoReadCleared();
         }
         return this;
     }
+
+    /**
+     * Is called once {@link #setAutoRead(boolean)} is called with {@code false} and {@link #isAutoRead()} was
+     * {@code true} before.
+     */
+    protected void autoReadCleared() { }
 
     @Override
     public boolean isAutoClose() {

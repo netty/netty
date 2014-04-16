@@ -32,6 +32,7 @@ import io.netty.util.internal.OneTimeTask;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
@@ -91,7 +92,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
      */
     public NioSocketChannel(Channel parent, SocketChannel socket) {
         super(parent, socket);
-        config = new DefaultSocketChannelConfig(this, socket.socket());
+        config = new NioSocketChannelConfig(this, socket.socket());
     }
 
     @Override
@@ -314,6 +315,17 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
                 incompleteWrite(setOpWrite);
                 break;
             }
+        }
+    }
+
+    private final class NioSocketChannelConfig  extends DefaultSocketChannelConfig {
+        private NioSocketChannelConfig(NioSocketChannel channel, Socket javaSocket) {
+            super(channel, javaSocket);
+        }
+
+        @Override
+        protected void autoReadCleared() {
+            setReadPending(false);
         }
     }
 }

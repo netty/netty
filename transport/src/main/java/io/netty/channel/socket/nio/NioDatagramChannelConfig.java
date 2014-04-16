@@ -161,6 +161,17 @@ class NioDatagramChannelConfig extends DefaultDatagramChannelConfig {
         return this;
     }
 
+    @Override
+    public DatagramChannelConfig setAutoRead(boolean autoRead) {
+        super.setAutoRead(autoRead);
+        return this;
+    }
+
+    @Override
+    protected void autoReadCleared() {
+        ((NioDatagramChannel) channel).setReadPending(false);
+    }
+
     private Object getOption0(Object option) {
         if (PlatformDependent.javaVersion() < 7) {
             throw new UnsupportedOperationException();

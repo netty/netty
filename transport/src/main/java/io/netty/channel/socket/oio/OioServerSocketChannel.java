@@ -193,4 +193,9 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
     protected void doDisconnect() throws Exception {
         throw new UnsupportedOperationException();
     }
+
+    @Override
+    protected void setReadPending(boolean readPending) {
+        super.setReadPending(readPending);
+    }
 }

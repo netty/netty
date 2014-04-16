@@ -102,7 +102,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
         super(parent, sctpChannel, SelectionKey.OP_READ);
         try {
             sctpChannel.configureBlocking(false);
-            config = new DefaultSctpChannelConfig(this, sctpChannel);
+            config = new NioSctpChannelConfig(this, sctpChannel);
             notificationHandler = new SctpNotificationHandler(this);
         } catch (IOException e) {
             try {
@@ -382,5 +382,16 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
             });
         }
         return promise;
+    }
+
+    private final class NioSctpChannelConfig extends DefaultSctpChannelConfig {
+        private NioSctpChannelConfig(NioSctpChannel channel, SctpChannel javaChannel) {
+            super(channel, javaChannel);
+        }
+
+        @Override
+        protected void autoReadCleared() {
+            setReadPending(false);
+        }
     }
 }
