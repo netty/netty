@@ -170,6 +170,7 @@
     <module>microbench</module>
     <module>all</module>
     <module>tarball</module>
+    <module>codec-mqtt</module>
   </modules>
 
   <dependencyManagement>
