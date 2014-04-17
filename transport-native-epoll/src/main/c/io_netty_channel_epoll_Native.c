@@ -1027,6 +1027,18 @@ JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_setBroadcast(JNIEnv * 
     setOption(env, fd, SOL_SOCKET, SO_BROADCAST, &optval, sizeof(optval));
 }
 
+JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_setTcpKeepIdle(JNIEnv *env, jclass clazz, jint fd, jint optval) {
+    setOption(env, fd, SOL_TCP, TCP_KEEPIDLE, &optval, sizeof(optval));
+}
+
+JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_setTcpKeepIntvl(JNIEnv *env, jclass clazz, jint fd, jint optval) {
+    setOption(env, fd, SOL_TCP, TCP_KEEPINTVL, &optval, sizeof(optval));
+}
+
+JNIEXPORT void Java_io_netty_channel_epoll_Native_setTcpKeepCnt(JNIEnv *env, jclass clazz, jint fd, jint optval) {
+    setOption(env, fd, SOL_TCP, TCP_KEEPCNT, &optval, sizeof(optval));
+}
+
 JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_isReuseAddresss(JNIEnv *env, jclass clazz, jint fd) {
     int optval;
     if (getOption(env, fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) == -1) {
@@ -1101,6 +1113,30 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_isBroadcast(JNIEnv *en
         return -1;
     }
     return optval;
+}
+
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_getTcpKeepIdle(JNIEnv *env, jclass clazz, jint fd) {
+    int optval;
+    if (getOption(env, fd, SOL_TCP, TCP_KEEPIDLE, &optval, sizeof(optval)) == -1) {
+        return -1;
+    }
+    return optval;
+}
+
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_getTcpKeepIntvl(JNIEnv *env, jclass clazz, jint fd) {
+    int optval;
+    if (getOption(env, fd, SOL_TCP, TCP_KEEPINTVL, &optval, sizeof(optval)) == -1) {
+        return -1;
+    }
+    return optval;
+}
+
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_getTcpKeepCnt(JNIEnv *env, jclass clazz, jint fd) {
+     int optval;
+     if (getOption(env, fd, SOL_TCP, TCP_KEEPCNT, &optval, sizeof(optval)) == -1) {
+         return -1;
+     }
+     return optval;
 }
 
 JNIEXPORT jstring JNICALL Java_io_netty_channel_epoll_Native_kernelVersion(JNIEnv *env, jclass clazz) {
