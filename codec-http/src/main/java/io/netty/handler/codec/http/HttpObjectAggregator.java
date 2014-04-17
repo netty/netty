@@ -32,8 +32,9 @@ import static io.netty.handler.codec.http.HttpHeaders.*;
 
 /**
  * A {@link ChannelHandler} that aggregates an {@link HttpMessage}
- * and its following {@link HttpContent}s into a single {@link HttpMessage} with
- * no following {@link HttpContent}s.  It is useful when you don't want to take
+ * and its following {@link HttpContent}s into a single {@link FullHttpRequest}
+ * or {@link FullHttpResponse} (depending on if it used to handle requests or responses)
+ * with no following {@link HttpContent}s.  It is useful when you don't want to take
  * care of HTTP messages whose transfer encoding is 'chunked'.  Insert this
  * handler after {@link HttpObjectDecoder} in the {@link ChannelPipeline}:
  * <pre>
@@ -45,6 +46,8 @@ import static io.netty.handler.codec.http.HttpHeaders.*;
  * ...
  * p.addLast("handler", new HttpRequestHandler());
  * </pre>
+ * Be aware that you need to have the {@link HttpResponseEncoder} or {@link HttpRequestEncoder}
+ * before the {@link HttpObjectAggregator} in the {@link ChannelPipeline}.
  */
 public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
     public static final int DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS = 1024;
