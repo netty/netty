@@ -45,7 +45,8 @@ public final class EpollDatagramChannelConfig extends DefaultChannelConfig imple
                 ChannelOption.SO_BROADCAST, ChannelOption.SO_RCVBUF, ChannelOption.SO_SNDBUF,
                 ChannelOption.SO_REUSEADDR, ChannelOption.IP_MULTICAST_LOOP_DISABLED,
                 ChannelOption.IP_MULTICAST_ADDR, ChannelOption.IP_MULTICAST_IF, ChannelOption.IP_MULTICAST_TTL,
-                ChannelOption.IP_TOS, ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION);
+                ChannelOption.IP_TOS, ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION,
+                EpollChannelOption.SO_REUSEPORT);
     }
 
     @SuppressWarnings("unchecked")
@@ -83,6 +84,9 @@ public final class EpollDatagramChannelConfig extends DefaultChannelConfig imple
         if (option == ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION) {
             return (T) Boolean.valueOf(activeOnOpen);
         }
+        if (option == EpollChannelOption.SO_REUSEPORT) {
+            return (T) Boolean.valueOf(isReusePort());
+        }
         return super.getOption(option);
     }
 
@@ -110,6 +114,8 @@ public final class EpollDatagramChannelConfig extends DefaultChannelConfig imple
             setTrafficClass((Integer) value);
         } else if (option == ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION) {
             setActiveOnOpen((Boolean) value);
+        } else if (option == EpollChannelOption.SO_REUSEPORT) {
+            setReusePort((Boolean) value);
         } else {
             return super.setOption(option, value);
         }
@@ -271,6 +277,25 @@ public final class EpollDatagramChannelConfig extends DefaultChannelConfig imple
     @Override
     public EpollDatagramChannelConfig setNetworkInterface(NetworkInterface networkInterface) {
         throw new UnsupportedOperationException("Multicast not supported");
+    }
+
+    /**
+     * Returns {@code true} if the SO_REUSEPORT option is set.
+     */
+    public boolean isReusePort() {
+        return Native.isReusePort(datagramChannel.fd) == 1;
+    }
+
+    /**
+     * Set the SO_REUSEPORT option on the underlying Channel. This will allow to bind multiple
+     * {@link EpollSocketChannel}s to the same port and so accept connections with multiple threads.
+     *
+     * Be aware this method needs be called before {@link EpollDatagramChannel#bind(java.net.SocketAddress)} to have
+     * any affect.
+     */
+    public EpollDatagramChannelConfig setReusePort(boolean reusePort) {
+        Native.setReusePort(datagramChannel.fd, reusePort ? 1 : 0);
+        return this;
     }
 
     @Override
