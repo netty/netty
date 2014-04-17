@@ -22,6 +22,9 @@ public final class EpollChannelOption {
 
     public static final ChannelOption<Boolean> TCP_CORK = ChannelOption.valueOf(T, "TCP_CORK");
     public static final ChannelOption<Boolean> SO_REUSEPORT = ChannelOption.valueOf(T, "SO_REUSEPORT");
+    public static final ChannelOption<Boolean> TCP_KEEPIDLE = ChannelOption.valueOf(T, "TCP_KEEPIDLE");
+    public static final ChannelOption<Boolean> TCP_KEEPINTVL = ChannelOption.valueOf(T, "TCP_KEEPINTVL");
+    public static final ChannelOption<Boolean> TCP_KEEPCNT = ChannelOption.valueOf(T, "TCP_KEEPCNT");
 
     private EpollChannelOption() { }
 

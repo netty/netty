@@ -50,7 +50,8 @@ public final class EpollSocketChannelConfig extends DefaultChannelConfig
         return getOptions(
                 super.getOptions(),
                 SO_RCVBUF, SO_SNDBUF, TCP_NODELAY, SO_KEEPALIVE, SO_REUSEADDR, SO_LINGER, IP_TOS,
-                ALLOW_HALF_CLOSURE, EpollChannelOption.TCP_CORK);
+                ALLOW_HALF_CLOSURE, EpollChannelOption.TCP_CORK, EpollChannelOption.TCP_KEEPCNT,
+                EpollChannelOption.TCP_KEEPIDLE, EpollChannelOption.TCP_KEEPINTVL);
     }
 
     @SuppressWarnings("unchecked")
@@ -83,6 +84,15 @@ public final class EpollSocketChannelConfig extends DefaultChannelConfig
         if (option == EpollChannelOption.TCP_CORK) {
             return (T) Boolean.valueOf(isTcpCork());
         }
+        if (option == EpollChannelOption.TCP_KEEPIDLE) {
+            return (T) Integer.valueOf(getTcpKeepIdle());
+        }
+        if (option == EpollChannelOption.TCP_KEEPINTVL) {
+            return (T) Integer.valueOf(getTcpKeepIntvl());
+        }
+        if (option == EpollChannelOption.TCP_KEEPCNT) {
+            return (T) Integer.valueOf(getTcpKeepCnt());
+        }
         return super.getOption(option);
     }
 
@@ -108,6 +118,12 @@ public final class EpollSocketChannelConfig extends DefaultChannelConfig
             setAllowHalfClosure((Boolean) value);
         } else if (option == EpollChannelOption.TCP_CORK) {
             setTcpCork((Boolean) value);
+        } else if (option == EpollChannelOption.TCP_KEEPIDLE) {
+            setTcpKeepIdle((Integer) value);
+        } else if (option == EpollChannelOption.TCP_KEEPCNT) {
+            setTcpKeepCntl((Integer) value);
+        } else if (option == EpollChannelOption.TCP_KEEPINTVL) {
+            setTcpKeepIntvl((Integer) value);
         } else {
             return super.setOption(option, value);
         }
@@ -150,8 +166,32 @@ public final class EpollSocketChannelConfig extends DefaultChannelConfig
         return Native.isTcpNoDelay(channel.fd) == 1;
     }
 
+    /**
+     * Get the {@code TCP_CORK} option on the socket. See {@code man 7 tcp} for more details.
+     */
     public boolean isTcpCork() {
         return Native.isTcpCork(channel.fd) == 1;
+    }
+
+    /**
+     * Get the {@code TCP_KEEPIDLE} option on the socket. See {@code man 7 tcp} for more details.
+     */
+    public int getTcpKeepIdle() {
+        return Native.getTcpKeepIdle(channel.fd);
+    }
+
+    /**
+     * Get the {@code TCP_KEEPINTVL} option on the socket. See {@code man 7 tcp} for more details.
+     */
+    public int getTcpKeepIntvl() {
+        return Native.getTcpKeepIntvl(channel.fd);
+    }
+
+    /**
+     * Get the {@code TCP_KEEPCNT} option on the socket. See {@code man 7 tcp} for more details.
+     */
+    public int getTcpKeepCnt() {
+        return Native.getTcpKeepCnt(channel.fd);
     }
 
     @Override
@@ -196,6 +236,9 @@ public final class EpollSocketChannelConfig extends DefaultChannelConfig
         return this;
     }
 
+    /**
+     * Set the {@code TCP_CORK} option on the socket. See {@code man 7 tcp} for more details.
+     */
     public EpollSocketChannelConfig setTcpCork(boolean tcpCork) {
         Native.setTcpCork(channel.fd, tcpCork ? 1 : 0);
         return this;
@@ -204,6 +247,30 @@ public final class EpollSocketChannelConfig extends DefaultChannelConfig
     @Override
     public EpollSocketChannelConfig setTrafficClass(int trafficClass) {
         Native.setTrafficClass(channel.fd, trafficClass);
+        return this;
+    }
+
+    /**
+     * Set the {@code TCP_KEEPIDLE} option on the socket. See {@code man 7 tcp} for more details.
+     */
+    public EpollSocketChannelConfig setTcpKeepIdle(int seconds) {
+        Native.setTcpKeepIdle(channel.fd, seconds);
+        return this;
+    }
+
+    /**
+     * Set the {@code TCP_KEEPINTVL} option on the socket. See {@code man 7 tcp} for more details.
+     */
+    public EpollSocketChannelConfig setTcpKeepIntvl(int seconds) {
+        Native.setTcpKeepIntvl(channel.fd, seconds);
+        return this;
+    }
+
+    /**
+     * Set the {@code TCP_KEEPCNT} option on the socket. See {@code man 7 tcp} for more details.
+     */
+    public EpollSocketChannelConfig setTcpKeepCntl(int probes) {
+        Native.setTcpKeepCnt(channel.fd, probes);
         return this;
     }
 

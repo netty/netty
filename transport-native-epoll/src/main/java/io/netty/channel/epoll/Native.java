@@ -179,6 +179,9 @@ final class Native {
     public static native int getSoLinger(int fd);
     public static native int getTrafficClass(int fd);
     public static native int isBroadcast(int fd);
+    public static native int getTcpKeepIdle(int fd);
+    public static native int getTcpKeepIntvl(int fd);
+    public static native int getTcpKeepCnt(int fd);
 
     public static native void setKeepAlive(int fd, int keepAlive);
     public static native void setReceiveBufferSize(int fd, int receiveBufferSize);
@@ -190,6 +193,9 @@ final class Native {
     public static native void setSoLinger(int fd, int soLinger);
     public static native void setTrafficClass(int fd, int tcpNoDelay);
     public static native void setBroadcast(int fd, int broadcast);
+    public static native void setTcpKeepIdle(int fd, int seconds);
+    public static native void setTcpKeepIntvl(int fd, int seconds);
+    public static native void setTcpKeepCnt(int fd, int probes);
 
     private static NativeInetAddress toNativeInetAddress(InetAddress addr) {
         byte[] bytes = addr.getAddress();
