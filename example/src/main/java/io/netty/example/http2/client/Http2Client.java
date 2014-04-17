@@ -23,6 +23,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.example.http2.server.Http2Server;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http2.draft10.DefaultHttp2Headers;
 import io.netty.handler.codec.http2.draft10.Http2Headers;
@@ -99,6 +100,7 @@ public class Http2Client {
     }
 
     public static void main(String[] args) throws Exception {
+        Http2Server.checkForNpnSupport();
         int port;
         if (args.length > 0) {
             port = Integer.parseInt(args[0]);
