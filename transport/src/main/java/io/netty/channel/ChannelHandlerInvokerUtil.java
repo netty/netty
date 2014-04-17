@@ -16,6 +16,8 @@
 
 package io.netty.channel;
 
+import io.netty.util.internal.StringUtil;
+
 import java.net.SocketAddress;
 
 import static io.netty.channel.DefaultChannelPipeline.*;
@@ -154,6 +156,44 @@ public final class ChannelHandlerInvokerUtil {
     public static void invokeWriteAndFlushNow(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
         invokeWriteNow(ctx, msg, promise);
         invokeFlushNow(ctx);
+    }
+
+    public static boolean validatePromise(
+            ChannelHandlerContext ctx, ChannelPromise promise, boolean allowVoidPromise) {
+        if (ctx == null) {
+            throw new NullPointerException("ctx");
+        }
+
+        if (promise == null) {
+            throw new NullPointerException("promise");
+        }
+
+        if (promise.isDone()) {
+            if (promise.isCancelled()) {
+                return false;
+            }
+            throw new IllegalArgumentException("promise already done: " + promise);
+        }
+
+        if (promise.channel() != ctx.channel()) {
+            throw new IllegalArgumentException(String.format(
+                    "promise.channel does not match: %s (expected: %s)", promise.channel(), ctx.channel()));
+        }
+
+        if (promise.getClass() == DefaultChannelPromise.class) {
+            return true;
+        }
+
+        if (!allowVoidPromise && promise instanceof VoidChannelPromise) {
+            throw new IllegalArgumentException(
+                    StringUtil.simpleClassName(VoidChannelPromise.class) + " not allowed for this operation");
+        }
+
+        if (promise instanceof AbstractChannel.CloseFuture) {
+            throw new IllegalArgumentException(
+                    StringUtil.simpleClassName(AbstractChannel.CloseFuture.class) + " not allowed in a pipeline");
+        }
+        return true;
     }
 
     private static void notifyHandlerException(ChannelHandlerContext ctx, Throwable cause) {
