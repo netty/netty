@@ -85,6 +85,7 @@ public class LocalChannel extends AbstractChannel {
     private volatile LocalAddress remoteAddress;
     private volatile ChannelPromise connectPromise;
     private volatile boolean readInProgress;
+    private volatile boolean registerInProgress;
 
     public LocalChannel(EventLoop eventLoop) {
         super(null, eventLoop);
@@ -155,6 +156,14 @@ public class LocalChannel extends AbstractChannel {
     @Override
     protected void doRegister() throws Exception {
         if (peer != null) {
+            // Store the peer in a local variable as it may be set to null if doClose() is called.
+            // Because of this we also set registerInProgress to true as we check for this in doClose() and make sure
+            // we delay the fireChannelInactive() to be fired after the fireChannelActive() and so keep the correct
+            // order of events.
+            //
+            // See https://github.com/netty/netty/issues/2144
+            final LocalChannel peer = this.peer;
+            registerInProgress = true;
             state = State.CONNECTED;
 
             peer.remoteAddress = parent() == null ? null : parent().localAddress();
@@ -167,6 +176,7 @@ public class LocalChannel extends AbstractChannel {
             peer.eventLoop().execute(new Runnable() {
                 @Override
                 public void run() {
+                    registerInProgress = false;
                     peer.pipeline().fireChannelActive();
                     peer.connectPromise.setSuccess();
                 }
@@ -206,7 +216,12 @@ public class LocalChannel extends AbstractChannel {
             // Need to execute the close in the correct EventLoop
             // See https://github.com/netty/netty/issues/1777
             EventLoop eventLoop = peer.eventLoop();
-            if (eventLoop.inEventLoop()) {
+
+            // Also check if the registration was not done yet. In this case we submit the close to the EventLoop
+            // to make sure it is run after the registration completes.
+            //
+            // See https://github.com/netty/netty/issues/2144
+            if (eventLoop.inEventLoop() && !registerInProgress) {
                 peer.unsafe().close(unsafe().voidPromise());
             } else {
                 peer.eventLoop().execute(new Runnable() {
