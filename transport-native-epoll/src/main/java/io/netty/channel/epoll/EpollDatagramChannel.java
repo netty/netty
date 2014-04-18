@@ -377,12 +377,11 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
 
             assert eventLoop().inEventLoop();
             final ChannelPipeline pipeline = pipeline();
-            Throwable exception = null;
             try {
-                try {
-                    for (;;) {
-                        boolean free = true;
-                        ByteBuf data = allocHandle.allocate(config.getAllocator());
+                for (;;) {
+                    ByteBuf data = null;
+                    try {
+                        data = allocHandle.allocate(config.getAllocator());
                         int writerIndex = data.writerIndex();
                         DatagramSocketAddress remoteAddress;
                         if (data.hasMemoryAddress()) {
@@ -402,28 +401,19 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                         int readBytes = remoteAddress.receivedAmount;
                         data.writerIndex(data.writerIndex() + readBytes);
                         allocHandle.record(readBytes);
-                        try {
-                            readPending = false;
-                            pipeline.fireChannelRead(
-                                    new DatagramPacket(data, (InetSocketAddress) localAddress(), remoteAddress));
-                            free = false;
-                        } catch (Throwable t) {
-                            // keep on reading as we use epoll ET and need to consume everything from the socket
-                            pipeline.fireChannelReadComplete();
-                            pipeline.fireExceptionCaught(t);
-                        } finally {
-                            if (free) {
-                                data.release();
-                            }
+                        readPending = false;
+                        pipeline.fireChannelRead(
+                                new DatagramPacket(data, (InetSocketAddress) localAddress(), remoteAddress));
+                        data = null;
+                    } catch (Throwable t) {
+                        // keep on reading as we use epoll ET and need to consume everything from the socket
+                        pipeline.fireChannelReadComplete();
+                        pipeline.fireExceptionCaught(t);
+                    } finally {
+                        if (data != null) {
+                            data.release();
                         }
                     }
-                } catch (Throwable t) {
-                    exception = t;
-                }
-                pipeline.fireChannelReadComplete();
-
-                if (exception != null) {
-                    pipeline.fireExceptionCaught(exception);
                 }
             } finally {
                 // Check if there is a readPending which was not processed yet.
