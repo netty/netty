@@ -927,9 +927,7 @@ public class SslHandler extends FrameDecoder
         return (short) (buf.getByte(offset) << 8 | buf.getByte(offset + 1) & 0xFF);
     }
 
-    private void wrap(ChannelHandlerContext context, Channel channel)
-            throws SSLException {
-
+    private void wrap(ChannelHandlerContext context, Channel channel) throws SSLException {
         ChannelBuffer msg;
         ByteBuffer outNetBuf = bufferPool.acquireBuffer();
         boolean success = true;
@@ -1018,10 +1016,13 @@ public class SslHandler extends FrameDecoder
                                     runDelegatedTasks();
                                     break;
                                 case FINISHED:
-                                case NOT_HANDSHAKING:
-                                    if (handshakeStatus == HandshakeStatus.FINISHED) {
-                                        setHandshakeSuccess(channel);
+                                    setHandshakeSuccess(channel);
+                                    if (result.getStatus() == Status.CLOSED) {
+                                        success = false;
                                     }
+                                    break loop;
+                                case NOT_HANDSHAKING:
+                                    setHandshakeSuccessIfStillHandshaking(channel);
                                     if (result.getStatus() == Status.CLOSED) {
                                         success = false;
                                     }
@@ -1174,6 +1175,10 @@ public class SslHandler extends FrameDecoder
                     }
                     break;
                 case NOT_HANDSHAKING:
+                    if (setHandshakeSuccessIfStillHandshaking(channel)) {
+                        runDelegatedTasks();
+                    }
+                    break;
                 case NEED_WRAP:
                     break;
                 default:
@@ -1279,6 +1284,10 @@ public class SslHandler extends FrameDecoder
                         needsWrap = true;
                         continue;
                     case NOT_HANDSHAKING:
+                        if (setHandshakeSuccessIfStillHandshaking(channel)) {
+                            needsWrap = true;
+                            continue;
+                        }
                         break;
                     default:
                         throw new IllegalStateException(
@@ -1439,6 +1448,21 @@ public class SslHandler extends FrameDecoder
                 Thread.currentThread().interrupt();
             }
         }
+    }
+
+    /**
+     * Works around some Android {@link SSLEngine} implementations that skip {@link HandshakeStatus#FINISHED} and
+     * go straight into {@link HandshakeStatus#NOT_HANDSHAKING} when handshake is finished.
+     *
+     * @return {@code true} if and only if the workaround has been applied and thus {@link #handshakeFuture} has been
+     *         marked as success by this method
+     */
+    private boolean setHandshakeSuccessIfStillHandshaking(Channel channel) {
+        if (handshaking && !handshakeFuture.isDone()) {
+            setHandshakeSuccess(channel);
+            return true;
+        }
+        return false;
     }
 
     private void setHandshakeSuccess(Channel channel) {
