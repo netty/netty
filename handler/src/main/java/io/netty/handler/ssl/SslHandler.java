@@ -470,6 +470,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                             setHandshakeSuccess();
                             // deliberate fall-through
                         case NOT_HANDSHAKING:
+                            setHandshakeSuccessIfStillHandshaking();
+                            // deliberate fall-through
                         case NEED_WRAP:
                             finishWrap(ctx, out, promise, inUnwrap);
                             promise = null;
@@ -541,6 +543,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     case NEED_WRAP:
                         break;
                     case NOT_HANDSHAKING:
+                        setHandshakeSuccessIfStillHandshaking();
                         // Workaround for TLS False Start problem reported at:
                         // https://github.com/netty/netty/issues/1108#issuecomment-14266970
                         if (!inUnwrap) {
@@ -895,6 +898,10 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         wrapLater = true;
                         continue;
                     case NOT_HANDSHAKING:
+                        if (setHandshakeSuccessIfStillHandshaking()) {
+                            wrapLater = true;
+                            continue;
+                        }
                         break;
                     default:
                         throw new IllegalStateException("Unknown handshake status: " + handshakeStatus);
@@ -1004,6 +1011,21 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 Thread.currentThread().interrupt();
             }
         }
+    }
+
+    /**
+     * Works around some Android {@link SSLEngine} implementations that skip {@link HandshakeStatus#FINISHED} and
+     * go straight into {@link HandshakeStatus#NOT_HANDSHAKING} when handshake is finished.
+     *
+     * @return {@code true} if and only if the workaround has been applied and thus {@link #handshakeFuture} has been
+     *         marked as success by this method
+     */
+    private boolean setHandshakeSuccessIfStillHandshaking() {
+        if (!handshakePromise.isDone()) {
+            setHandshakeSuccess();
+            return true;
+        }
+        return false;
     }
 
     /**
