@@ -155,7 +155,12 @@ public class LocalChannel extends AbstractChannel {
 
     @Override
     protected void doRegister() throws Exception {
-        if (peer != null) {
+        // Check if both peer and parent are non-null because this channel was created by a LocalServerChannel.
+        // This is needed as a peer may not be null also if a LocalChannel was connected before and
+        // deregistered / registered later again.
+        //
+        // See https://github.com/netty/netty/issues/2400
+        if (peer != null && parent() != null) {
             // Store the peer in a local variable as it may be set to null if doClose() is called.
             // Because of this we also set registerInProgress to true as we check for this in doClose() and make sure
             // we delay the fireChannelInactive() to be fired after the fireChannelActive() and so keep the correct
@@ -237,9 +242,7 @@ public class LocalChannel extends AbstractChannel {
 
     @Override
     protected void doDeregister() throws Exception {
-        if (isOpen()) {
-            unsafe().close(unsafe().voidPromise());
-        }
+        // Just remove the shutdownHook as this Channel may be closed later or registered to another EventLoop
         ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
     }
 
