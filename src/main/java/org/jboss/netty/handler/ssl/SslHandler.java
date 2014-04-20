@@ -918,7 +918,7 @@ public class SslHandler extends FrameDecoder
             //
             // See https://github.com/netty/netty/issues/1534
             assert recordLengths != null;
-            unwrapped = unwrap(ctx, channel, in, totalLength, recordLengths, nRecords);
+            unwrapped = unwrapMultiple(ctx, channel, in, totalLength, recordLengths, nRecords);
         }
 
         if (nonSslRecord) {
@@ -1227,7 +1227,17 @@ public class SslHandler extends FrameDecoder
         return future;
     }
 
-    private ChannelBuffer unwrap(
+    /**
+     * Calls {@link SSLEngine#unwrap(ByteBuffer, ByteBuffer)} with an empty buffer to handle handshakes, etc.
+     */
+    private void unwrapNonAppData(ChannelHandlerContext ctx, Channel channel) throws SSLException {
+        unwrapSingle(ctx, channel, ChannelBuffers.EMPTY_BUFFER, EMPTY_BUFFER, null, -1);
+    }
+
+    /**
+     * Unwraps multiple inbound SSL records.
+     */
+    private ChannelBuffer unwrapMultiple(
             ChannelHandlerContext ctx, Channel channel,
             ChannelBuffer buffer, int totalLength, int[] recordLengths, int nRecords) throws SSLException {
 
@@ -1236,18 +1246,17 @@ public class SslHandler extends FrameDecoder
 
         for (int i = 0; i < nRecords; i ++) {
             inNetBuf.limit(inNetBuf.position() + recordLengths[i]);
-            frame = unwrap0(ctx, channel, buffer, inNetBuf, frame, totalLength);
+            frame = unwrapSingle(ctx, channel, buffer, inNetBuf, frame, totalLength);
             assert !inNetBuf.hasRemaining();
         }
 
         return frame;
     }
 
-    private void unwrapNonAppData(ChannelHandlerContext ctx, Channel channel) throws SSLException {
-        unwrap0(ctx, channel, ChannelBuffers.EMPTY_BUFFER, EMPTY_BUFFER, null, -1);
-    }
-
-    private ChannelBuffer unwrap0(
+    /**
+     * Unwraps a single SSL record.
+     */
+    private ChannelBuffer unwrapSingle(
             ChannelHandlerContext ctx, Channel channel,
             ChannelBuffer nettyInNetBuf, ByteBuffer nioInNetBuf,
             ChannelBuffer nettyOutAppBuf, int initialNettyOutAppBufCapacity) throws SSLException {
