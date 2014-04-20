@@ -29,7 +29,6 @@ import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.nio.channels.ClosedChannelException;
@@ -248,6 +247,39 @@ public class LocalChannelTest {
         }
     }
 
+    @Test
+    public void testReRegister() {
+        EventLoopGroup group1 = new LocalEventLoopGroup();
+        EventLoopGroup group2 = new LocalEventLoopGroup();
+        LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
+        Bootstrap cb = new Bootstrap();
+        ServerBootstrap sb = new ServerBootstrap();
+
+        cb.group(group1)
+                .channel(LocalChannel.class)
+                .handler(new TestHandler());
+
+        sb.group(group2)
+                .channel(LocalServerChannel.class)
+                .childHandler(new ChannelInitializer<LocalChannel>() {
+                    @Override
+                    public void initChannel(LocalChannel ch) throws Exception {
+                        ch.pipeline().addLast(new TestHandler());
+                    }
+                });
+
+        // Start server
+        final Channel sc = sb.bind(addr).syncUninterruptibly().channel();
+
+        // Connect to the server
+        final Channel cc = cb.connect(addr).syncUninterruptibly().channel();
+
+        cc.deregister().syncUninterruptibly();
+        // Change event loop group.
+        group2.register(cc).syncUninterruptibly();
+        cc.close().syncUninterruptibly();
+        sc.close().syncUninterruptibly();
+    }
     static class TestHandler extends ChannelInboundHandlerAdapter {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
