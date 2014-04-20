@@ -25,6 +25,7 @@ package io.netty.util.internal;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.lang.Thread.UncaughtExceptionHandler;
 import java.security.SecureRandom;
 import java.util.Random;
 import java.util.concurrent.BlockingQueue;
@@ -90,17 +91,27 @@ public class ThreadLocalRandom extends Random {
                     queue.add(random.generateSeed(8));
                 }
             };
+            generatorThread.setDaemon(true);
             generatorThread.start();
+            generatorThread.setUncaughtExceptionHandler(new UncaughtExceptionHandler() {
+                @Override
+                public void uncaughtException(Thread t, Throwable e) {
+                    logger.debug("An exception has been raised by {}", t.getName(), e);
+                }
+            });
 
             // Get the random seed from the thread with timeout.
             final long timeoutSeconds = 3;
             final long deadLine = System.nanoTime() + TimeUnit.SECONDS.toNanos(timeoutSeconds);
+            boolean interrupted = false;
             for (;;) {
                 long waitTime = deadLine - System.nanoTime();
                 if (waitTime <= 0) {
+                    generatorThread.interrupt();
                     logger.warn(
                             "Failed to generate a seed from SecureRandom within {} seconds. " +
-                            "Not enough entrophy?", timeoutSeconds);
+                                    "Not enough entrophy?", timeoutSeconds
+                    );
                     break;
                 }
 
@@ -119,8 +130,10 @@ public class ThreadLocalRandom extends Random {
                         break;
                     }
                 } catch (InterruptedException e) {
-                    // restore interrupt status because we don't know how to/don't need to handle it here
-                    Thread.currentThread().interrupt();
+                    interrupted = true;
+                    generatorThread.interrupt();
+                    logger.warn("Failed to generate a seed from SecureRandom due to an InterruptedException.");
+                    break;
                 }
             }
 
@@ -129,6 +142,11 @@ public class ThreadLocalRandom extends Random {
             initialSeedUniquifier ^= Long.reverse(System.nanoTime());
 
             ThreadLocalRandom.initialSeedUniquifier = initialSeedUniquifier;
+
+            if (interrupted) {
+                // restore interrupt status because we don't know how to/don't need to handle it here
+                Thread.currentThread().interrupt();
+            }
         }
 
         return initialSeedUniquifier;
