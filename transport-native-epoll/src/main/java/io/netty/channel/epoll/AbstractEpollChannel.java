@@ -100,7 +100,7 @@ abstract class AbstractEpollChannel extends AbstractChannel {
     protected void doBeginRead() throws Exception {
         if ((flags & readFlag) == 0) {
             flags |= readFlag;
-            ((EpollEventLoop) eventLoop()).modify(this);
+            modifyEvents();
         }
     }
 
@@ -126,13 +126,19 @@ abstract class AbstractEpollChannel extends AbstractChannel {
     protected final void setEpollOut() {
         if ((flags & Native.EPOLLOUT) == 0) {
             flags |= Native.EPOLLOUT;
-            ((EpollEventLoop) eventLoop()).modify(this);
+            modifyEvents();
         }
     }
 
     protected final void clearEpollOut() {
         if ((flags & Native.EPOLLOUT) != 0) {
             flags &= ~Native.EPOLLOUT;
+            modifyEvents();
+        }
+    }
+
+    private void modifyEvents() {
+        if (isOpen()) {
             ((EpollEventLoop) eventLoop()).modify(this);
         }
     }
@@ -200,7 +206,7 @@ abstract class AbstractEpollChannel extends AbstractChannel {
         protected final void clearEpollIn0() {
             if ((flags & readFlag) != 0) {
                 flags &= ~readFlag;
-                ((EpollEventLoop) eventLoop()).modify(AbstractEpollChannel.this);
+                modifyEvents();
             }
         }
     }
