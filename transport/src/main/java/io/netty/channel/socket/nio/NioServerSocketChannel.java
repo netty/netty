@@ -72,7 +72,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
 
     public NioServerSocketChannel(SelectorProvider provider) {
         super(null, newSocket(provider), SelectionKey.OP_ACCEPT);
-        config = new DefaultServerSocketChannelConfig(this, javaChannel().socket());
+        config = new NioServerSocketChannelConfig(this, javaChannel().socket());
     }
 
     @Override
