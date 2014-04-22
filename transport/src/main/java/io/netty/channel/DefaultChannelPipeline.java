@@ -550,6 +550,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         try {
             ctx.handler().handlerAdded(ctx);
         } catch (Throwable t) {
+            t.printStackTrace();
             boolean removed = false;
             try {
                 remove(ctx);

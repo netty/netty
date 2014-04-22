@@ -192,7 +192,10 @@ public class ChannelHandlerAppender extends ChannelHandlerAdapter {
                 } else {
                     name = e.name;
                 }
-                pipeline.addAfter(ctx.invoker(), oldName, name, e.handler);
+                // Pass in direct the invoker to eliminate the possibility of an IllegalStateException
+                // if the Channel is not registered yet.
+                DefaultChannelHandlerContext context = (DefaultChannelHandlerContext) ctx;
+                pipeline.addAfter(context.invoker, oldName, name, e.handler);
             }
         } finally {
             if (selfRemoval) {
