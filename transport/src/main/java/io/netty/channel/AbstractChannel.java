@@ -30,7 +30,6 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.NotYetConnectedException;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 /**
  * A skeletal {@link Channel} implementation.
@@ -80,7 +79,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public ChannelId id() {
+    public final ChannelId id() {
         return id;
     }
 

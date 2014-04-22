@@ -17,6 +17,8 @@ package io.netty.bootstrap;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
@@ -27,7 +29,6 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.AttributeKey;
-import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -73,8 +74,8 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
     }
 
     /**
-     * Set the {@link EventExecutorGroup} for the parent (acceptor) and the child (client). These
-     * {@link EventExecutorGroup}'s are used to handle all the events and IO for {@link SocketChannel} and
+     * Set the {@link EventLoopGroup} for the parent (acceptor) and the child (client). These
+     * {@link EventLoopGroup}'s are used to handle all the events and IO for {@link SocketChannel} and
      * {@link Channel}'s.
      */
     public ServerBootstrap group(EventLoopGroup parentGroup, EventLoopGroup childGroup) {
@@ -229,7 +230,7 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
         @Override
         @SuppressWarnings("unchecked")
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
-            Channel child = (Channel) msg;
+            final Channel child = (Channel) msg;
 
             child.pipeline().addLast(childHandler);
 
@@ -248,11 +249,22 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
             }
 
             try {
-                childGroup.register(child);
+                childGroup.register(child).addListener(new ChannelFutureListener() {
+                    @Override
+                    public void operationComplete(ChannelFuture future) throws Exception {
+                        if (!future.isSuccess()) {
+                            forceClose(child, future.cause());
+                        }
+                    }
+                });
             } catch (Throwable t) {
-                child.unsafe().closeForcibly();
-                logger.warn("Failed to register an accepted channel: " + child, t);
+                forceClose(child, t);
             }
+        }
+
+        private static void forceClose(Channel child, Throwable t) {
+            child.unsafe().closeForcibly();
+            logger.warn("Failed to register an accepted channel: " + child, t);
         }
 
         @Override
@@ -265,7 +277,7 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
                 ctx.channel().eventLoop().schedule(new Runnable() {
                     @Override
                     public void run() {
-                       config.setAutoRead(true);
+                        config.setAutoRead(true);
                     }
                 }, 1, TimeUnit.SECONDS);
             }
@@ -320,3 +332,4 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
         return buf.toString();
     }
 }
+
