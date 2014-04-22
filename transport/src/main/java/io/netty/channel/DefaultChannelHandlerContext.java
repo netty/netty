@@ -225,14 +225,9 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         this.pipeline = pipeline;
         this.name = name;
         this.handler = handler;
+        this.invoker = invoker;
 
         skipFlags = skipFlags(handler);
-
-        if (invoker == null) {
-            this.invoker = channel.unsafe().invoker();
-        } else {
-            this.invoker = invoker;
-        }
     }
 
     /** Invocation initiated by {@link DefaultChannelPipeline#teardownAll()}}. */
@@ -277,11 +272,14 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     @Override
     public EventExecutor executor() {
-        return invoker.executor();
+        return invoker().executor();
     }
 
     @Override
     public ChannelHandlerInvoker invoker() {
+        if (invoker == null) {
+            return channel.unsafe().invoker();
+        }
         return invoker;
     }
 
@@ -303,42 +301,42 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     @Override
     public ChannelHandlerContext fireChannelRegistered() {
         DefaultChannelHandlerContext next = findContextInbound(MASK_CHANNEL_REGISTERED);
-        next.invoker.invokeChannelRegistered(next);
+        next.invoker().invokeChannelRegistered(next);
         return this;
     }
 
     @Override
     public ChannelHandlerContext fireChannelUnregistered() {
         DefaultChannelHandlerContext next = findContextInbound(MASK_CHANNEL_UNREGISTERED);
-        next.invoker.invokeChannelUnregistered(next);
+        next.invoker().invokeChannelUnregistered(next);
         return this;
     }
 
     @Override
     public ChannelHandlerContext fireChannelActive() {
         DefaultChannelHandlerContext next = findContextInbound(MASK_CHANNEL_ACTIVE);
-        next.invoker.invokeChannelActive(next);
+        next.invoker().invokeChannelActive(next);
         return this;
     }
 
     @Override
     public ChannelHandlerContext fireChannelInactive() {
         DefaultChannelHandlerContext next = findContextInbound(MASK_CHANNEL_INACTIVE);
-        next.invoker.invokeChannelInactive(next);
+        next.invoker().invokeChannelInactive(next);
         return this;
     }
 
     @Override
     public ChannelHandlerContext fireExceptionCaught(Throwable cause) {
         DefaultChannelHandlerContext next = findContextInbound(MASK_EXCEPTION_CAUGHT);
-        next.invoker.invokeExceptionCaught(next, cause);
+        next.invoker().invokeExceptionCaught(next, cause);
         return this;
     }
 
     @Override
     public ChannelHandlerContext fireUserEventTriggered(Object event) {
         DefaultChannelHandlerContext next = findContextInbound(MASK_USER_EVENT_TRIGGERED);
-        next.invoker.invokeUserEventTriggered(next, event);
+        next.invoker().invokeUserEventTriggered(next, event);
         return this;
     }
 
@@ -346,21 +344,21 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     public ChannelHandlerContext fireChannelRead(Object msg) {
         DefaultChannelHandlerContext next = findContextInbound(MASK_CHANNEL_READ);
         ReferenceCountUtil.touch(msg, next);
-        next.invoker.invokeChannelRead(next, msg);
+        next.invoker().invokeChannelRead(next, msg);
         return this;
     }
 
     @Override
     public ChannelHandlerContext fireChannelReadComplete() {
         DefaultChannelHandlerContext next = findContextInbound(MASK_CHANNEL_READ_COMPLETE);
-        next.invoker.invokeChannelReadComplete(next);
+        next.invoker().invokeChannelReadComplete(next);
         return this;
     }
 
     @Override
     public ChannelHandlerContext fireChannelWritabilityChanged() {
         DefaultChannelHandlerContext next = findContextInbound(MASK_CHANNEL_WRITABILITY_CHANGED);
-        next.invoker.invokeChannelWritabilityChanged(next);
+        next.invoker().invokeChannelWritabilityChanged(next);
         return this;
     }
 
@@ -397,7 +395,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     @Override
     public ChannelFuture bind(final SocketAddress localAddress, final ChannelPromise promise) {
         DefaultChannelHandlerContext next = findContextOutbound(MASK_BIND);
-        next.invoker.invokeBind(next, localAddress, promise);
+        next.invoker().invokeBind(next, localAddress, promise);
         return promise;
     }
 
@@ -409,7 +407,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     @Override
     public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
         DefaultChannelHandlerContext next = findContextOutbound(MASK_CONNECT);
-        next.invoker.invokeConnect(next, remoteAddress, localAddress, promise);
+        next.invoker().invokeConnect(next, remoteAddress, localAddress, promise);
         return promise;
     }
 
@@ -420,28 +418,28 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         }
 
         DefaultChannelHandlerContext next = findContextOutbound(MASK_DISCONNECT);
-        next.invoker.invokeDisconnect(next, promise);
+        next.invoker().invokeDisconnect(next, promise);
         return promise;
     }
 
     @Override
     public ChannelFuture close(ChannelPromise promise) {
         DefaultChannelHandlerContext next = findContextOutbound(MASK_CLOSE);
-        next.invoker.invokeClose(next, promise);
+        next.invoker().invokeClose(next, promise);
         return promise;
     }
 
     @Override
     public ChannelFuture deregister(ChannelPromise promise) {
         DefaultChannelHandlerContext next = findContextOutbound(MASK_DEREGISTER);
-        next.invoker.invokeDeregister(next, promise);
+        next.invoker().invokeDeregister(next, promise);
         return promise;
     }
 
     @Override
     public ChannelHandlerContext read() {
         DefaultChannelHandlerContext next = findContextOutbound(MASK_READ);
-        next.invoker.invokeRead(next);
+        next.invoker().invokeRead(next);
         return this;
     }
 
@@ -454,14 +452,14 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     public ChannelFuture write(Object msg, ChannelPromise promise) {
         DefaultChannelHandlerContext next = findContextOutbound(MASK_WRITE);
         ReferenceCountUtil.touch(msg, next);
-        next.invoker.invokeWrite(next, msg, promise);
+        next.invoker().invokeWrite(next, msg, promise);
         return promise;
     }
 
     @Override
     public ChannelHandlerContext flush() {
         DefaultChannelHandlerContext next = findContextOutbound(MASK_FLUSH);
-        next.invoker.invokeFlush(next);
+        next.invoker().invokeFlush(next);
         return this;
     }
 
@@ -470,9 +468,9 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         DefaultChannelHandlerContext next;
         next = findContextOutbound(MASK_WRITE);
         ReferenceCountUtil.touch(msg, next);
-        next.invoker.invokeWrite(next, msg, promise);
+        next.invoker().invokeWrite(next, msg, promise);
         next = findContextOutbound(MASK_FLUSH);
-        next.invoker.invokeFlush(next);
+        next.invoker().invokeFlush(next);
         return promise;
     }
 

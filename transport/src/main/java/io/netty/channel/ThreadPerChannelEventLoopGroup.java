@@ -16,6 +16,7 @@
 package io.netty.channel;
 
 
+import io.netty.util.concurrent.AbstractEventExecutorGroup;
 import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
@@ -39,13 +40,14 @@ import java.util.concurrent.TimeUnit;
 /**
  * An {@link EventLoopGroup} that creates one {@link EventLoop} per {@link Channel}.
  */
-public class ThreadPerChannelEventLoopGroup extends AbstractEventLoopGroup {
+public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup implements EventLoopGroup {
 
     private final Object[] childArgs;
     private final int maxChannels;
     final Executor executor;
     final Set<EventLoop> activeChildren =
             Collections.newSetFromMap(PlatformDependent.<EventLoop, Boolean>newConcurrentHashMap());
+    private final Set<EventLoop> readOnlyActiveChildren = Collections.unmodifiableSet(activeChildren);
     final Queue<EventLoop> idleChildren = new ConcurrentLinkedQueue<EventLoop>();
     private final ChannelException tooManyChannels;
 
@@ -73,7 +75,9 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventLoopGroup {
      *
      * @param maxChannels       the maximum number of channels to handle with this instance. Once you try to register
      *                          a new {@link Channel} and the maximum is exceed it will throw an
-     *                          {@link ChannelException}. Use {@code 0} to use no limit
+     *                          {@link ChannelException}. on the {@link #register(Channel)} and
+     *                          {@link #register(Channel, ChannelPromise)} method.
+     *                          Use {@code 0} to use no limit
      */
     protected ThreadPerChannelEventLoopGroup(int maxChannels) {
         this(maxChannels, Executors.defaultThreadFactory());
@@ -84,7 +88,9 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventLoopGroup {
      *
      * @param maxChannels       the maximum number of channels to handle with this instance. Once you try to register
      *                          a new {@link Channel} and the maximum is exceed it will throw an
-     *                          {@link ChannelException}. Use {@code 0} to use no limit
+     *                          {@link ChannelException} on the {@link #register(Channel)} and
+     *                          {@link #register(Channel, ChannelPromise)} method.
+     *                          Use {@code 0} to use no limit
      * @param threadFactory     the {@link ThreadFactory} used to create new {@link Thread} instances that handle the
      *                          registered {@link Channel}s
      * @param args              arguments which will passed to each {@link #newChild(Object...)} call.
@@ -98,7 +104,9 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventLoopGroup {
      *
      * @param maxChannels       the maximum number of channels to handle with this instance. Once you try to register
      *                          a new {@link Channel} and the maximum is exceed it will throw an
-     *                          {@link ChannelException}. Use {@code 0} to use no limit
+     *                          {@link ChannelException} on the {@link #register(Channel)} and
+     *                          {@link #register(Channel, ChannelPromise)} method.
+     *                          Use {@code 0} to use no limit
      * @param executor          the {@link Executor} used to create new {@link Thread} instances that handle the
      *                          registered {@link Channel}s
      * @param args              arguments which will passed to each {@link #newChild(Object...)} call.
@@ -126,34 +134,21 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventLoopGroup {
     }
 
     /**
-     * Creates a new {@link EventLoop}.
+     * Creates a new {@link EventLoop}.  The default implementation creates a new {@link ThreadPerChannelEventLoop}.
      */
-    protected EventLoop newChild(@SuppressWarnings("UnusedParameters") Object... args) {
+    protected EventLoop newChild(@SuppressWarnings("UnusedParameters") Object... args) throws Exception {
         return new ThreadPerChannelEventLoop(this);
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public <E extends EventExecutor> Set<E> children() {
-        return Collections.unmodifiableSet((Set<E>) activeChildren);
+        return (Set<E>) readOnlyActiveChildren;
     }
 
     @Override
     public EventLoop next() {
-        if (shuttingDown) {
-            throw new RejectedExecutionException("shutting down");
-        }
-
-        EventLoop loop = idleChildren.poll();
-        if (loop == null) {
-            if (maxChannels > 0 && activeChildren.size() >= maxChannels) {
-                throw tooManyChannels;
-            }
-            loop = newChild(childArgs);
-            loop.terminationFuture().addListener(childTerminationListener);
-        }
-        activeChildren.add(loop);
-        return loop;
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -278,9 +273,10 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventLoopGroup {
             throw new NullPointerException("channel");
         }
         try {
-            return nextChild().register(channel);
+            EventLoop l = nextChild();
+            return l.register(channel, new DefaultChannelPromise(channel, l));
         } catch (Throwable t) {
-            return channel.newFailedFuture(t);
+            return new FailedChannelFuture(channel, GlobalEventExecutor.INSTANCE, t);
         }
     }
 

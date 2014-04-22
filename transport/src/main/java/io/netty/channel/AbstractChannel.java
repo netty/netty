@@ -67,9 +67,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private boolean strValActive;
     private String strVal;
 
-    private static final AtomicReferenceFieldUpdater<AbstractChannel, EventLoop> EVENT_LOOP_UPDATER =
-            AtomicReferenceFieldUpdater.newUpdater(AbstractChannel.class, EventLoop.class, "eventLoop");
-
     /**
      * Creates a new instance.
      *
@@ -392,7 +389,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public final ChannelHandlerInvoker invoker() {
-            return eventLoop.asInvoker();
+            return eventLoop().asInvoker();
         }
 
         @Override
@@ -415,16 +412,17 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             if (eventLoop == null) {
                 throw new NullPointerException("eventLoop");
             }
-
+            if (isRegistered()) {
+                promise.setFailure(new IllegalStateException("registered to an event loop already"));
+                return;
+            }
             if (!isCompatible(eventLoop)) {
                 promise.setFailure(new IllegalStateException("incompatible event loop type: " +
                         eventLoop.getClass().getName()));
                 return;
             }
 
-            if (!AbstractChannel.EVENT_LOOP_UPDATER.compareAndSet(AbstractChannel.this, null, eventLoop)) {
-                return;
-            }
+            AbstractChannel.this.eventLoop = eventLoop;
 
             if (eventLoop.inEventLoop()) {
                 register0(promise);
