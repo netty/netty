@@ -22,8 +22,8 @@ import java.util.EnumSet;
 final class LoggingHandler implements ChannelHandler {
 
     enum Event {
-        WRITE, FLUSH, BIND, CONNECT, DISCONNECT, CLOSE, READ, WRITABILITY, HANDLER_ADDED,
-        HANDLER_REMOVED, EXCEPTION, READ_COMPLETE, REGISTERED, ACTIVE, INACTIVE, USER
+        WRITE, FLUSH, BIND, CONNECT, DISCONNECT, CLOSE, DEREGISTER, READ, WRITABILITY, HANDLER_ADDED,
+        HANDLER_REMOVED, EXCEPTION, READ_COMPLETE, REGISTERED, UNREGISTERED, ACTIVE, INACTIVE, USER
     }
 
     private StringBuilder log = new StringBuilder();
@@ -69,6 +69,12 @@ final class LoggingHandler implements ChannelHandler {
     }
 
     @Override
+    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        log(Event.DEREGISTER);
+        ctx.deregister(promise);
+    }
+
+    @Override
     public void read(ChannelHandlerContext ctx) throws Exception {
         log(Event.READ);
         ctx.read();
@@ -99,6 +105,12 @@ final class LoggingHandler implements ChannelHandler {
     public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
         log(Event.REGISTERED);
         ctx.fireChannelRegistered();
+    }
+
+    @Override
+    public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
+        log(Event.UNREGISTERED);
+        ctx.fireChannelUnregistered();
     }
 
     @Override

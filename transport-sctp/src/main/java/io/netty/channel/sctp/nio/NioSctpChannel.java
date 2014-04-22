@@ -27,7 +27,6 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.sctp.DefaultSctpChannelConfig;
@@ -82,15 +81,15 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     /**
      * Create a new instance
      */
-    public NioSctpChannel(EventLoop eventLoop) {
-        this(eventLoop, newSctpChannel());
+    public NioSctpChannel() {
+        this(newSctpChannel());
     }
 
     /**
      * Create a new instance using {@link SctpChannel}
      */
-    public NioSctpChannel(EventLoop eventLoop, SctpChannel sctpChannel) {
-        this(null, eventLoop, sctpChannel);
+    public NioSctpChannel(SctpChannel sctpChannel) {
+        this(null, sctpChannel);
     }
 
     /**
@@ -100,8 +99,8 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
      *                      or {@code null}.
      * @param sctpChannel   the underlying {@link SctpChannel}
      */
-    public NioSctpChannel(Channel parent, EventLoop eventLoop, SctpChannel sctpChannel) {
-        super(parent, eventLoop, sctpChannel, SelectionKey.OP_READ);
+    public NioSctpChannel(Channel parent, SctpChannel sctpChannel) {
+        super(parent, sctpChannel, SelectionKey.OP_READ);
         try {
             sctpChannel.configureBlocking(false);
             config = new NioSctpChannelConfig(this, sctpChannel);

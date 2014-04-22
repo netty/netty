@@ -58,6 +58,20 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
     }
 
     @Override
+    public void invokeChannelUnregistered(final ChannelHandlerContext ctx) {
+        if (executor.inEventLoop()) {
+            invokeChannelUnregisteredNow(ctx);
+        } else {
+            executor.execute(new OneTimeTask() {
+                @Override
+                public void run() {
+                    invokeChannelUnregisteredNow(ctx);
+                }
+            });
+        }
+    }
+
+    @Override
     public void invokeChannelActive(final ChannelHandlerContext ctx) {
         if (executor.inEventLoop()) {
             invokeChannelActiveNow(ctx);
@@ -264,6 +278,25 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
                 @Override
                 public void run() {
                     invokeCloseNow(ctx, promise);
+                }
+            }, promise);
+        }
+    }
+
+    @Override
+    public void invokeDeregister(final ChannelHandlerContext ctx, final ChannelPromise promise) {
+        if (!validatePromise(ctx, promise, false)) {
+            // promise cancelled
+            return;
+        }
+
+        if (executor.inEventLoop()) {
+            invokeDeregisterNow(ctx, promise);
+        } else {
+            safeExecuteOutbound(new OneTimeTask() {
+                @Override
+                public void run() {
+                    invokeDeregisterNow(ctx, promise);
                 }
             }, promise);
         }

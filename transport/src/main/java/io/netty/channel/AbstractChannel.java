@@ -59,7 +59,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     private volatile SocketAddress localAddress;
     private volatile SocketAddress remoteAddress;
-    private final EventLoop eventLoop;
+    private volatile EventLoop eventLoop;
     private volatile boolean registered;
 
     /** Cache for the string representation of this channel */
@@ -72,9 +72,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      * @param parent
      *        the parent of this channel. {@code null} if there's no parent.
      */
-    protected AbstractChannel(Channel parent, EventLoop eventLoop) {
+    protected AbstractChannel(Channel parent) {
         this.parent = parent;
-        this.eventLoop = validate(eventLoop);
         unsafe = newUnsafe();
         pipeline = new DefaultChannelPipeline(this);
     }
@@ -107,6 +106,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     @Override
     public EventLoop eventLoop() {
+        EventLoop eventLoop = this.eventLoop;
+        if (eventLoop == null) {
+            throw new IllegalStateException("channel not registered to an event loop");
+        }
         return eventLoop;
     }
 
@@ -180,6 +183,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
+    public ChannelFuture deregister() {
+        return pipeline.deregister();
+    }
+
+    @Override
     public Channel flush() {
         pipeline.flush();
         return this;
@@ -208,6 +216,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     @Override
     public ChannelFuture close(ChannelPromise promise) {
         return pipeline.close(promise);
+    }
+
+    @Override
+    public ChannelFuture deregister(ChannelPromise promise) {
+        return pipeline.deregister(promise);
     }
 
     @Override
@@ -375,7 +388,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public final ChannelHandlerInvoker invoker() {
-            return eventLoop.asInvoker();
+            return eventLoop().asInvoker();
         }
 
         @Override
@@ -394,7 +407,22 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public final void register(final ChannelPromise promise) {
+        public final void register(EventLoop eventLoop, final ChannelPromise promise) {
+            if (eventLoop == null) {
+                throw new NullPointerException("eventLoop");
+            }
+            if (isRegistered()) {
+                promise.setFailure(new IllegalStateException("registered to an event loop already"));
+                return;
+            }
+            if (!isCompatible(eventLoop)) {
+                promise.setFailure(new IllegalStateException("incompatible event loop type: " +
+                        eventLoop.getClass().getName()));
+                return;
+            }
+
+            AbstractChannel.this.eventLoop = eventLoop;
+
             if (eventLoop.inEventLoop()) {
                 register0(promise);
             } else {
@@ -552,7 +580,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     });
                 }
 
-                deregister();
+                deregister(voidPromise());
             }
         }
 
@@ -565,8 +593,14 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
         }
 
-        private void deregister() {
+        @Override
+        public final void deregister(final ChannelPromise promise) {
+            if (!promise.setUncancellable()) {
+                return;
+            }
+
             if (!registered) {
+                safeSetSuccess(promise);
                 return;
             }
 
@@ -577,6 +611,18 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             } finally {
                 if (registered) {
                     registered = false;
+                    invokeLater(new OneTimeTask() {
+                        @Override
+                        public void run() {
+                            pipeline.fireChannelUnregistered();
+                        }
+                    });
+                    safeSetSuccess(promise);
+                } else {
+                    // Some transports like local and AIO does not allow the deregistration of
+                    // an open channel.  Their doDeregister() calls close().  Consequently,
+                    // close() calls deregister() again - no need to fire channelUnregistered.
+                    safeSetSuccess(promise);
                 }
             }
         }
@@ -716,16 +762,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             // which means the execution of two inbound handler methods of the same handler overlap undesirably.
             eventLoop().execute(task);
         }
-    }
-
-    private EventLoop validate(EventLoop eventLoop) {
-        if (eventLoop == null) {
-            throw new IllegalStateException("null event loop");
-        }
-        if (!isCompatible(eventLoop)) {
-            throw new IllegalStateException("incompatible event loop type: " + eventLoop.getClass().getName());
-        }
-        return eventLoop;
     }
 
     /**

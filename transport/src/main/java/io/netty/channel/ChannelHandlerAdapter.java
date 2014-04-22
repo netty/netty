@@ -103,6 +103,18 @@ public class ChannelHandlerAdapter implements ChannelHandler {
     }
 
     /**
+     * Calls {@link ChannelHandlerContext#fireChannelRegistered()} to forward
+     * to the next {@link ChannelHandler} in the {@link ChannelPipeline}.
+     *
+     * Sub-classes may override this method to change behavior.
+     */
+    @Skip
+    @Override
+    public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
+        ctx.fireChannelUnregistered();
+    }
+
+    /**
      * Calls {@link ChannelHandlerContext#fireChannelActive()} to forward
      * to the next {@link ChannelHandler} in the {@link ChannelPipeline}.
      *
@@ -222,6 +234,18 @@ public class ChannelHandlerAdapter implements ChannelHandler {
     @Override
     public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         ctx.close(promise);
+    }
+
+    /**
+     * Calls {@link ChannelHandlerContext#deregister(ChannelPromise)} to forward
+     * to the next {@link ChannelHandler} in the {@link ChannelPipeline}.
+     *
+     * Sub-classes may override this method to change behavior.
+     */
+    @Skip
+    @Override
+    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        ctx.deregister(promise);
     }
 
     /**
