@@ -105,21 +105,28 @@ abstract class AbstractEpollChannel extends AbstractChannel {
     }
 
     final void clearEpollIn() {
-        final EventLoop loop = eventLoop();
-        final AbstractEpollUnsafe unsafe = (AbstractEpollUnsafe) unsafe();
-        if (loop.inEventLoop()) {
-            unsafe.clearEpollIn0();
-        } else {
-            // schedule a task to clear the EPOLLIN as it is not safe to modify it directly
-            loop.execute(new OneTimeTask() {
-                @Override
-                public void run() {
-                    if (!config().isAutoRead() && !unsafe.readPending) {
-                        // Still no read triggered so clear it now
-                        unsafe.clearEpollIn0();
+        // Only clear if registered with an EventLoop as otherwise
+        if (isRegistered()) {
+            final EventLoop loop = eventLoop();
+            final AbstractEpollUnsafe unsafe = (AbstractEpollUnsafe) unsafe();
+            if (loop.inEventLoop()) {
+                unsafe.clearEpollIn0();
+            } else {
+                // schedule a task to clear the EPOLLIN as it is not safe to modify it directly
+                loop.execute(new OneTimeTask() {
+                    @Override
+                    public void run() {
+                        if (!config().isAutoRead() && !unsafe.readPending) {
+                            // Still no read triggered so clear it now
+                            unsafe.clearEpollIn0();
+                        }
                     }
-                }
-            });
+                });
+            }
+        } else  {
+            // The EventLoop is not registered atm so just update the flags so the correct value
+            // will be used once the channel is registered
+            flags &= ~readFlag;
         }
     }
 
