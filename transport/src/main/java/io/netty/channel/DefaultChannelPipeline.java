@@ -802,6 +802,17 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         return this;
     }
 
+    @Override
+    public ChannelPipeline fireChannelUnregistered() {
+        head.fireChannelUnregistered();
+
+        // Remove all handlers sequentially if channel is closed and unregistered.
+        if (!channel.isOpen()) {
+            teardownAll();
+        }
+        return this;
+    }
+
     /**
      * Removes all handlers from the pipeline one by one from tail (exclusive) to head (inclusive) to trigger
      * handlerRemoved().  Note that the tail handler is excluded because it's neither an outbound handler nor it
@@ -825,7 +836,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     @Override
     public ChannelPipeline fireChannelInactive() {
         head.fireChannelInactive();
-        teardownAll();
         return this;
     }
 
@@ -888,6 +898,11 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
+    public ChannelFuture deregister() {
+        return tail.deregister();
+    }
+
+    @Override
     public ChannelPipeline flush() {
         tail.flush();
         return this;
@@ -915,6 +930,11 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelFuture close(ChannelPromise promise) {
+        return tail.close(promise);
+    }
+
+    @Override
+    public ChannelFuture deregister(ChannelPromise promise) {
         return tail.close(promise);
     }
 
@@ -984,6 +1004,9 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         public void channelRegistered(ChannelHandlerContext ctx) throws Exception { }
 
         @Override
+        public void channelUnregistered(ChannelHandlerContext ctx) throws Exception { }
+
+        @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception { }
 
         @Override
@@ -1048,6 +1071,11 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         @Override
         public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
             unsafe.close(promise);
+        }
+
+        @Override
+        public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+            unsafe.deregister(promise);
         }
 
         @Override

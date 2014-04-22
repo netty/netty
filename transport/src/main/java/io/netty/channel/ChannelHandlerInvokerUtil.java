@@ -35,6 +35,14 @@ public final class ChannelHandlerInvokerUtil {
         }
     }
 
+    public static void invokeChannelUnregisteredNow(ChannelHandlerContext ctx) {
+        try {
+            ctx.handler().channelUnregistered(ctx);
+        } catch (Throwable t) {
+            notifyHandlerException(ctx, t);
+        }
+    }
+
     public static void invokeChannelActiveNow(final ChannelHandlerContext ctx) {
         try {
             ctx.handler().channelActive(ctx);
@@ -124,6 +132,14 @@ public final class ChannelHandlerInvokerUtil {
     public static void invokeCloseNow(final ChannelHandlerContext ctx, final ChannelPromise promise) {
         try {
             ctx.handler().close(ctx, promise);
+        } catch (Throwable t) {
+            notifyOutboundHandlerException(t, promise);
+        }
+    }
+
+    public static void invokeDeregisterNow(final ChannelHandlerContext ctx, final ChannelPromise promise) {
+        try {
+            ctx.handler().deregister(ctx, promise);
         } catch (Throwable t) {
             notifyOutboundHandlerException(t, promise);
         }

@@ -176,6 +176,15 @@ public interface ChannelHandlerContext extends AttributeMap {
     ChannelHandlerContext fireChannelRegistered();
 
     /**
+     * A {@link Channel} was unregistered from its {@link EventLoop}.
+     *
+     * This will result in having the  {@link ChannelHandler#channelUnregistered(ChannelHandlerContext)} method
+     * called of the next  {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link Channel}.
+     */
+    ChannelHandlerContext fireChannelUnregistered();
+
+    /**
      * A {@link Channel} is active now, which means it is connected.
      *
      * This will result in having the  {@link ChannelHandler#channelActive(ChannelHandlerContext)} method
@@ -296,6 +305,19 @@ public interface ChannelHandlerContext extends AttributeMap {
     ChannelFuture close();
 
     /**
+     * Request to deregister from the previous assigned {@link EventExecutor} and notify the
+     * {@link ChannelFuture} once the operation completes, either because the operation was successful or because of
+     * an error.
+     * <p>
+     * This will result in having the
+     * {@link ChannelHandler#deregister(ChannelHandlerContext, ChannelPromise)}
+     * method called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link Channel}.
+     *
+     */
+    ChannelFuture deregister();
+
+    /**
      * Request to bind to the given {@link SocketAddress} and notify the {@link ChannelFuture} once the operation
      * completes, either because the operation was successful or because of an error.
      *
@@ -367,6 +389,20 @@ public interface ChannelHandlerContext extends AttributeMap {
      * {@link Channel}.
      */
     ChannelFuture close(ChannelPromise promise);
+
+    /**
+     * Request to deregister from the previous assigned {@link EventExecutor} and notify the
+     * {@link ChannelFuture} once the operation completes, either because the operation was successful or because of
+     * an error.
+     *
+     * The given {@link ChannelPromise} will be notified.
+     * <p>
+     * This will result in having the
+     * {@link ChannelHandler#deregister(ChannelHandlerContext, ChannelPromise)}
+     * method called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link Channel}.
+     */
+    ChannelFuture deregister(ChannelPromise promise);
 
     /**
      * Request to Read data from the {@link Channel} into the first inbound buffer, triggers an

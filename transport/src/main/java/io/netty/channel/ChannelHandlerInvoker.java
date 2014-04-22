@@ -40,6 +40,13 @@ public interface ChannelHandlerInvoker {
     void invokeChannelRegistered(ChannelHandlerContext ctx);
 
     /**
+     * Invokes {@link ChannelHandler#channelUnregistered(ChannelHandlerContext)}. This method is not for a user
+     * but for the internal {@link ChannelHandlerContext} implementation. To trigger an event, use the methods in
+     * {@link ChannelHandlerContext} instead.
+     */
+    void invokeChannelUnregistered(ChannelHandlerContext ctx);
+
+    /**
      * Invokes {@link ChannelHandler#channelActive(ChannelHandlerContext)}. This method is not for a user
      * but for the internal {@link ChannelHandlerContext} implementation. To trigger an event, use the methods in
      * {@link ChannelHandlerContext} instead.
@@ -117,6 +124,13 @@ public interface ChannelHandlerInvoker {
      * To trigger an event, use the methods in {@link ChannelHandlerContext} instead.
      */
     void invokeClose(ChannelHandlerContext ctx, ChannelPromise promise);
+
+    /**
+     * Invokes {@link ChannelHandler#deregister(ChannelHandlerContext, ChannelPromise)}.
+     * This method is not for a user but for the internal {@link ChannelHandlerContext} implementation.
+     * To trigger an event, use the methods in {@link ChannelHandlerContext} instead.
+     */
+    void invokeDeregister(ChannelHandlerContext ctx, ChannelPromise promise);
 
     /**
      * Invokes {@link ChannelHandler#read(ChannelHandlerContext)}.

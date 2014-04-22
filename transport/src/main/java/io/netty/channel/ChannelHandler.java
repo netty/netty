@@ -197,6 +197,11 @@ public interface ChannelHandler {
     void channelRegistered(ChannelHandlerContext ctx) throws Exception;
 
     /**
+     * The {@link Channel} of the {@link ChannelHandlerContext} was unregistered from its {@link EventLoop}
+     */
+    void channelUnregistered(ChannelHandlerContext ctx) throws Exception;
+
+    /**
      * The {@link Channel} of the {@link ChannelHandlerContext} is now active
      */
     void channelActive(ChannelHandlerContext ctx) throws Exception;
@@ -275,6 +280,15 @@ public interface ChannelHandler {
      * @throws Exception        thrown if an error accour
      */
     void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception;
+
+    /**
+     * Called once a deregister operation is made from the current registered {@link EventLoop}.
+     *
+     * @param ctx               the {@link ChannelHandlerContext} for which the close operation is made
+     * @param promise           the {@link ChannelPromise} to notify once the operation completes
+     * @throws Exception        thrown if an error accour
+     */
+    void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception;
 
     /**
      * Intercepts {@link ChannelHandlerContext#read()}.

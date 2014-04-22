@@ -180,6 +180,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
+    public ChannelFuture deregister() {
+        return pipeline.deregister();
+    }
+
+    @Override
     public Channel flush() {
         pipeline.flush();
         return this;
@@ -208,6 +213,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     @Override
     public ChannelFuture close(ChannelPromise promise) {
         return pipeline.close(promise);
+    }
+
+    @Override
+    public ChannelFuture deregister(ChannelPromise promise) {
+        return pipeline.deregister(promise);
     }
 
     @Override
@@ -552,7 +562,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     });
                 }
 
-                deregister();
+                deregister(voidPromise());
             }
         }
 
@@ -565,8 +575,14 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
         }
 
-        private void deregister() {
+        @Override
+        public final void deregister(final ChannelPromise promise) {
+            if (!promise.setUncancellable()) {
+                return;
+            }
+
             if (!registered) {
+                safeSetSuccess(promise);
                 return;
             }
 
@@ -577,6 +593,18 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             } finally {
                 if (registered) {
                     registered = false;
+                    invokeLater(new OneTimeTask() {
+                        @Override
+                        public void run() {
+                            pipeline.fireChannelUnregistered();
+                        }
+                    });
+                    safeSetSuccess(promise);
+                } else {
+                    // Some transports like local and AIO does not allow the deregistration of
+                    // an open channel.  Their doDeregister() calls close().  Consequently,
+                    // close() calls deregister() again - no need to fire channelUnregistered.
+                    safeSetSuccess(promise);
                 }
             }
         }

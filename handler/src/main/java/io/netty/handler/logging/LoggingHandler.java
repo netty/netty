@@ -196,6 +196,14 @@ public class LoggingHandler extends ChannelHandlerAdapter {
     }
 
     @Override
+    public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
+        if (logger.isEnabled(internalLevel)) {
+            logger.log(internalLevel, format(ctx, "UNREGISTERED"));
+        }
+        ctx.fireChannelUnregistered();
+    }
+
+    @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "ACTIVE"));
