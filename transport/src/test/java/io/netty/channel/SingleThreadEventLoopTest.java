@@ -339,13 +339,11 @@ public class SingleThreadEventLoopTest {
         }
 
         try {
-            Channel channel = new LocalChannel(loopA);
-            ChannelPromise f = channel.newPromise();
-            channel.unsafe().register(f);
+            ChannelFuture f = loopA.register(new LocalChannel());
             f.awaitUninterruptibly();
             assertFalse(f.isSuccess());
             assertThat(f.cause(), is(instanceOf(RejectedExecutionException.class)));
-            assertFalse(channel.isOpen());
+            assertFalse(f.channel().isOpen());
         } finally {
             for (Appender<ILoggingEvent> a: appenders) {
                 root.addAppender(a);
@@ -358,7 +356,7 @@ public class SingleThreadEventLoopTest {
     public void testRegistrationAfterShutdown2() throws Exception {
         loopA.shutdown();
         final CountDownLatch latch = new CountDownLatch(1);
-        Channel ch = new LocalChannel(loopA);
+        Channel ch = new LocalChannel();
         ChannelPromise promise = ch.newPromise();
         promise.addListener(new ChannelFutureListener() {
             @Override
@@ -377,10 +375,10 @@ public class SingleThreadEventLoopTest {
         }
 
         try {
-            ch.unsafe().register(promise);
-            promise.awaitUninterruptibly();
-            assertFalse(promise.isSuccess());
-            assertThat(promise.cause(), is(instanceOf(RejectedExecutionException.class)));
+            ChannelFuture f = loopA.register(ch, promise);
+            f.awaitUninterruptibly();
+            assertFalse(f.isSuccess());
+            assertThat(f.cause(), is(instanceOf(RejectedExecutionException.class)));
 
             // Ensure the listener was notified.
             assertFalse(latch.await(1, TimeUnit.SECONDS));

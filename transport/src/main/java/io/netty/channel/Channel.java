@@ -460,7 +460,7 @@ public interface Channel extends AttributeMap, Comparable<Channel> {
          * Register the {@link Channel} of the {@link ChannelPromise} and notify
          * the {@link ChannelFuture} once the registration was complete.
          */
-        void register(ChannelPromise promise);
+        void register(EventLoop eventLoop, ChannelPromise promise);
 
         /**
          * Bind the {@link SocketAddress} to the {@link Channel} of the {@link ChannelPromise} and notify

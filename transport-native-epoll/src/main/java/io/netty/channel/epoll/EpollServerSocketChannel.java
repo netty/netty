@@ -19,7 +19,6 @@ import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
-import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.ServerSocketChannel;
 
 import java.net.InetSocketAddress;
@@ -32,13 +31,11 @@ import java.net.SocketAddress;
 public final class EpollServerSocketChannel extends AbstractEpollChannel implements ServerSocketChannel {
 
     private final EpollServerSocketChannelConfig config;
-    private final EventLoopGroup childGroup;
     private volatile InetSocketAddress local;
 
-    public EpollServerSocketChannel(EventLoop eventLoop, EventLoopGroup childGroup) {
-        super(eventLoop, Native.socketStreamFd(), Native.EPOLLACCEPT);
+    public EpollServerSocketChannel() {
+        super(Native.socketStreamFd(), Native.EPOLLACCEPT);
         config = new EpollServerSocketChannelConfig(this);
-        this.childGroup = childGroup;
     }
 
     @Override
@@ -81,11 +78,6 @@ public final class EpollServerSocketChannel extends AbstractEpollChannel impleme
         throw new UnsupportedOperationException();
     }
 
-    @Override
-    public EventLoopGroup childEventLoopGroup() {
-        return childGroup;
-    }
-
     final class EpollServerSocketUnsafe extends AbstractEpollUnsafe {
 
         @Override
@@ -109,8 +101,7 @@ public final class EpollServerSocketChannel extends AbstractEpollChannel impleme
                         }
                         try {
                             readPending = false;
-                            pipeline.fireChannelRead(new EpollSocketChannel(EpollServerSocketChannel.this,
-                                    childEventLoopGroup().next(), socketFd));
+                            pipeline.fireChannelRead(new EpollSocketChannel(EpollServerSocketChannel.this, socketFd));
                         } catch (Throwable t) {
                             // keep on reading as we use epoll ET and need to consume everything from the socket
                             pipeline.fireChannelReadComplete();

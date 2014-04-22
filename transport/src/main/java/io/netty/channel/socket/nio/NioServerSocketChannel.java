@@ -18,9 +18,7 @@ package io.netty.channel.socket.nio;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
-import io.netty.channel.EventLoop;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.AbstractNioMessageServerChannel;
+import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.socket.DefaultServerSocketChannelConfig;
 import io.netty.channel.socket.ServerSocketChannelConfig;
 import io.netty.util.internal.logging.InternalLogger;
@@ -40,8 +38,8 @@ import java.util.List;
  * A {@link io.netty.channel.socket.ServerSocketChannel} implementation which uses
  * NIO selector based implementation to accept new connections.
  */
-public class NioServerSocketChannel extends AbstractNioMessageServerChannel
-                                 implements io.netty.channel.socket.ServerSocketChannel {
+public class NioServerSocketChannel extends AbstractNioMessageChannel
+                             implements io.netty.channel.socket.ServerSocketChannel {
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
     private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
@@ -68,23 +66,13 @@ public class NioServerSocketChannel extends AbstractNioMessageServerChannel
     /**
      * Create a new instance
      */
-    public NioServerSocketChannel(EventLoop eventLoop, EventLoopGroup childGroup) {
-        this(eventLoop, childGroup, newSocket(DEFAULT_SELECTOR_PROVIDER));
+    public NioServerSocketChannel() {
+        this(DEFAULT_SELECTOR_PROVIDER);
     }
 
-    /**
-     * Create a new instance using the given {@link SelectorProvider}.
-     */
-    public NioServerSocketChannel(EventLoop eventLoop, EventLoopGroup childGroup, SelectorProvider provider) {
-        this(eventLoop, childGroup, newSocket(provider));
-    }
-
-    /**
-     * Create a new instance using the given {@link ServerSocketChannel}.
-     */
-    public NioServerSocketChannel(EventLoop eventLoop, EventLoopGroup childGroup, ServerSocketChannel channel) {
-        super(null, eventLoop, childGroup, channel, SelectionKey.OP_ACCEPT);
-        config = new NioServerSocketChannelConfig(this, javaChannel().socket());
+    public NioServerSocketChannel(SelectorProvider provider) {
+        super(null, newSocket(provider), SelectionKey.OP_ACCEPT);
+        config = new DefaultServerSocketChannelConfig(this, javaChannel().socket());
     }
 
     @Override
@@ -138,7 +126,7 @@ public class NioServerSocketChannel extends AbstractNioMessageServerChannel
 
         try {
             if (ch != null) {
-                buf.add(new NioSocketChannel(this, childEventLoopGroup().next(), ch));
+                buf.add(new NioSocketChannel(this, ch));
                 return 1;
             }
         } catch (Throwable t) {

@@ -46,8 +46,11 @@ public abstract class AbstractOioChannel extends AbstractChannel {
         }
     };
 
-    protected AbstractOioChannel(Channel parent, EventLoop eventLoop) {
-        super(parent, eventLoop);
+    /**
+     * @see AbstractChannel#AbstractChannel(Channel)
+     */
+    protected AbstractOioChannel(Channel parent) {
+        super(parent);
     }
 
     @Override

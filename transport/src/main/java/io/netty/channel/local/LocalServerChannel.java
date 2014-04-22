@@ -20,7 +20,6 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
-import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
@@ -46,10 +45,6 @@ public class LocalServerChannel extends AbstractServerChannel {
     private volatile int state; // 0 - open, 1 - active, 2 - closed
     private volatile LocalAddress localAddress;
     private volatile boolean acceptInProgress;
-
-    public LocalServerChannel(EventLoop eventLoop, EventLoopGroup childGroup) {
-        super(eventLoop, childGroup);
-    }
 
     @Override
     public ChannelConfig config() {
@@ -136,7 +131,7 @@ public class LocalServerChannel extends AbstractServerChannel {
     }
 
     LocalChannel serve(final LocalChannel peer) {
-        final LocalChannel child = new LocalChannel(this, childEventLoopGroup().next(), peer);
+        final LocalChannel child = new LocalChannel(this, peer);
         if (eventLoop().inEventLoop()) {
             serve0(child);
         } else {

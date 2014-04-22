@@ -32,12 +32,12 @@ abstract class AbstractEpollChannel extends AbstractChannel {
     volatile int fd;
     int id;
 
-    AbstractEpollChannel(EventLoop eventLoop, int fd, int flag) {
-        this(null, eventLoop, fd, flag, false);
+    AbstractEpollChannel(int fd, int flag) {
+        this(null, fd, flag, false);
     }
 
-    AbstractEpollChannel(Channel parent, EventLoop eventLoop, int fd, int flag, boolean active) {
-        super(parent, eventLoop);
+    AbstractEpollChannel(Channel parent, int fd, int flag, boolean active) {
+        super(parent);
         this.fd = fd;
         readFlag = flag;
         flags |= flag;

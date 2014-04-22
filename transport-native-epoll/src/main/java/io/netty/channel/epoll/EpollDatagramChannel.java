@@ -23,7 +23,6 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
@@ -51,8 +50,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     private volatile boolean connected;
     private final EpollDatagramChannelConfig config;
 
-    public EpollDatagramChannel(EventLoop loop) {
-        super(loop, Native.socketDgramFd(), Native.EPOLLIN);
+    public EpollDatagramChannel() {
+        super(Native.socketDgramFd(), Native.EPOLLIN);
         config = new EpollDatagramChannelConfig(this);
     }
 

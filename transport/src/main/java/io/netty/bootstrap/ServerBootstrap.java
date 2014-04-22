@@ -17,14 +17,12 @@ package io.netty.bootstrap;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.SocketChannel;
@@ -34,7 +32,6 @@ import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.lang.reflect.Constructor;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -48,7 +45,6 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ServerBootstrap.class);
 
-    private volatile ServerChannelFactory<? extends ServerChannel> channelFactory;
     private final Map<ChannelOption<?>, Object> childOptions = new LinkedHashMap<ChannelOption<?>, Object>();
     private final Map<AttributeKey<?>, Object> childAttrs = new LinkedHashMap<AttributeKey<?>, Object>();
     private volatile EventLoopGroup childGroup;
@@ -58,7 +54,6 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
 
     private ServerBootstrap(ServerBootstrap bootstrap) {
         super(bootstrap);
-        channelFactory = bootstrap.channelFactory;
         childGroup = bootstrap.childGroup;
         childHandler = bootstrap.childHandler;
         synchronized (bootstrap.childOptions) {
@@ -67,47 +62,6 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
         synchronized (bootstrap.childAttrs) {
             childAttrs.putAll(bootstrap.childAttrs);
         }
-    }
-
-    /**
-     * The {@link Class} which is used to create {@link Channel} instances from.
-     * You either use this or {@link #channelFactory(ServerChannelFactory)} if your
-     * {@link Channel} implementation has no no-args constructor.
-     */
-    public ServerBootstrap channel(Class<? extends ServerChannel> channelClass) {
-        if (channelClass == null) {
-            throw new NullPointerException("channelClass");
-        }
-        return channelFactory(new ServerBootstrapChannelFactory<ServerChannel>(channelClass));
-    }
-
-    /**
-     * {@link ChannelFactory} which is used to create {@link Channel} instances from
-     * when calling {@link #bind()}. This method is usually only used if {@link #channel(Class)}
-     * is not working for you because of some more complex needs. If your {@link Channel} implementation
-     * has a no-args constructor, its highly recommend to just use {@link #channel(Class)} for
-     * simplify your code.
-     */
-    public ServerBootstrap channelFactory(ServerChannelFactory<? extends ServerChannel> channelFactory) {
-        if (channelFactory == null) {
-            throw new NullPointerException("channelFactory");
-        }
-        if (this.channelFactory != null) {
-            throw new IllegalStateException("channelFactory set already");
-        }
-
-        this.channelFactory = channelFactory;
-        return this;
-    }
-
-    @Override
-    Channel createChannel() {
-        EventLoop eventLoop = group().next();
-        return channelFactory().newChannel(eventLoop, childGroup);
-    }
-
-    ServerChannelFactory<? extends ServerChannel> channelFactory() {
-        return channelFactory;
     }
 
     /**
@@ -212,6 +166,7 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
             p.addLast(handler());
         }
 
+        final EventLoopGroup currentChildGroup = childGroup;
         final ChannelHandler currentChildHandler = childHandler;
         final Entry<ChannelOption<?>, Object>[] currentChildOptions;
         final Entry<AttributeKey<?>, Object>[] currentChildAttrs;
@@ -225,8 +180,8 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
         p.addLast(new ChannelInitializer<Channel>() {
             @Override
             public void initChannel(Channel ch) throws Exception {
-                ch.pipeline().addLast(new ServerBootstrapAcceptor(currentChildHandler, currentChildOptions,
-                        currentChildAttrs));
+                ch.pipeline().addLast(new ServerBootstrapAcceptor(
+                        currentChildGroup, currentChildHandler, currentChildOptions, currentChildAttrs));
             }
         });
     }
@@ -240,9 +195,6 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
         if (childGroup == null) {
             logger.warn("childGroup is not set. Using parentGroup instead.");
             childGroup = group();
-        }
-        if (channelFactory == null) {
-            throw new IllegalStateException("channel or channelFactory not set");
         }
         return this;
     }
@@ -259,12 +211,16 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
 
     private static class ServerBootstrapAcceptor extends ChannelHandlerAdapter {
 
+        private final EventLoopGroup childGroup;
         private final ChannelHandler childHandler;
         private final Entry<ChannelOption<?>, Object>[] childOptions;
         private final Entry<AttributeKey<?>, Object>[] childAttrs;
 
-        ServerBootstrapAcceptor(ChannelHandler childHandler, Entry<ChannelOption<?>, Object>[] childOptions,
-                Entry<AttributeKey<?>, Object>[] childAttrs) {
+        @SuppressWarnings("unchecked")
+        ServerBootstrapAcceptor(
+                EventLoopGroup childGroup, ChannelHandler childHandler,
+                Entry<ChannelOption<?>, Object>[] childOptions, Entry<AttributeKey<?>, Object>[] childAttrs) {
+            this.childGroup = childGroup;
             this.childHandler = childHandler;
             this.childOptions = childOptions;
             this.childAttrs = childAttrs;
@@ -291,7 +247,12 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
                 child.attr((AttributeKey<Object>) e.getKey()).set(e.getValue());
             }
 
-            child.unsafe().register(child.newPromise());
+            try {
+                childGroup.register(child);
+            } catch (Throwable t) {
+                child.unsafe().closeForcibly();
+                logger.warn("Failed to register an accepted channel: " + child, t);
+            }
         }
 
         @Override
@@ -357,30 +318,5 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
         }
 
         return buf.toString();
-    }
-
-    private static final class ServerBootstrapChannelFactory<T extends ServerChannel>
-            implements ServerChannelFactory<T> {
-
-        private final Class<? extends T> clazz;
-
-        ServerBootstrapChannelFactory(Class<? extends T> clazz) {
-            this.clazz = clazz;
-        }
-
-        @Override
-        public T newChannel(EventLoop eventLoop, EventLoopGroup childGroup) {
-            try {
-                Constructor<? extends T> constructor = clazz.getConstructor(EventLoop.class, EventLoopGroup.class);
-                return constructor.newInstance(eventLoop, childGroup);
-            } catch (Throwable t) {
-                throw new ChannelException("Unable to create Channel from class " + clazz, t);
-            }
-        }
-
-        @Override
-        public String toString() {
-            return StringUtil.simpleClassName(clazz) + ".class";
-        }
     }
 }

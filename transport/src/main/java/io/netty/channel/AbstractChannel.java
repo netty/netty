@@ -30,6 +30,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.NotYetConnectedException;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 /**
  * A skeletal {@link Channel} implementation.
@@ -59,12 +60,15 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     private volatile SocketAddress localAddress;
     private volatile SocketAddress remoteAddress;
-    private final EventLoop eventLoop;
+    private volatile EventLoop eventLoop;
     private volatile boolean registered;
 
     /** Cache for the string representation of this channel */
     private boolean strValActive;
     private String strVal;
+
+    private static final AtomicReferenceFieldUpdater<AbstractChannel, EventLoop> EVENT_LOOP_UPDATER =
+            AtomicReferenceFieldUpdater.newUpdater(AbstractChannel.class, EventLoop.class, "eventLoop");
 
     /**
      * Creates a new instance.
@@ -72,15 +76,14 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      * @param parent
      *        the parent of this channel. {@code null} if there's no parent.
      */
-    protected AbstractChannel(Channel parent, EventLoop eventLoop) {
+    protected AbstractChannel(Channel parent) {
         this.parent = parent;
-        this.eventLoop = validate(eventLoop);
         unsafe = newUnsafe();
         pipeline = new DefaultChannelPipeline(this);
     }
 
     @Override
-    public final ChannelId id() {
+    public ChannelId id() {
         return id;
     }
 
@@ -107,6 +110,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     @Override
     public EventLoop eventLoop() {
+        EventLoop eventLoop = this.eventLoop;
+        if (eventLoop == null) {
+            throw new IllegalStateException("channel not registered to an event loop");
+        }
         return eventLoop;
     }
 
@@ -404,7 +411,21 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public final void register(final ChannelPromise promise) {
+        public final void register(EventLoop eventLoop, final ChannelPromise promise) {
+            if (eventLoop == null) {
+                throw new NullPointerException("eventLoop");
+            }
+
+            if (!isCompatible(eventLoop)) {
+                promise.setFailure(new IllegalStateException("incompatible event loop type: " +
+                        eventLoop.getClass().getName()));
+                return;
+            }
+
+            if (!AbstractChannel.EVENT_LOOP_UPDATER.compareAndSet(AbstractChannel.this, null, eventLoop)) {
+                return;
+            }
+
             if (eventLoop.inEventLoop()) {
                 register0(promise);
             } else {
@@ -744,16 +765,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             // which means the execution of two inbound handler methods of the same handler overlap undesirably.
             eventLoop().execute(task);
         }
-    }
-
-    private EventLoop validate(EventLoop eventLoop) {
-        if (eventLoop == null) {
-            throw new IllegalStateException("null event loop");
-        }
-        if (!isCompatible(eventLoop)) {
-            throw new IllegalStateException("incompatible event loop type: " + eventLoop.getClass().getName());
-        }
-        return eventLoop;
     }
 
     /**

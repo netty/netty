@@ -54,7 +54,7 @@ public class EmbeddedChannel extends AbstractChannel {
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
-    private final EmbeddedEventLoop loop;
+    private final EmbeddedEventLoop loop = new EmbeddedEventLoop();
     private final ChannelConfig config = new DefaultChannelConfig(this);
     private final Queue<Object> inboundMessages = new ArrayDeque<Object>();
     private final Queue<Object> outboundMessages = new ArrayDeque<Object>();
@@ -74,9 +74,7 @@ public class EmbeddedChannel extends AbstractChannel {
      * @param handlers the @link ChannelHandler}s which will be add in the {@link ChannelPipeline}
      */
     public EmbeddedChannel(ChannelHandler... handlers) {
-        super(null, new EmbeddedEventLoop());
-
-        loop = (EmbeddedEventLoop) eventLoop();
+        super(null);
 
         if (handlers == null) {
             throw new NullPointerException("handlers");
@@ -91,7 +89,7 @@ public class EmbeddedChannel extends AbstractChannel {
         }
 
         p.addLast(new LastInboundHandler());
-        unsafe().register(newPromise());
+        loop.register(this);
     }
 
     @Override

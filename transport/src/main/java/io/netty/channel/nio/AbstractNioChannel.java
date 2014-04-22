@@ -65,8 +65,8 @@ public abstract class AbstractNioChannel extends AbstractChannel {
      * @param ch                the underlying {@link SelectableChannel} on which it operates
      * @param readInterestOp    the ops to set to receive data from the {@link SelectableChannel}
      */
-    protected AbstractNioChannel(Channel parent, EventLoop eventLoop, SelectableChannel ch, int readInterestOp) {
-        super(parent, eventLoop);
+    protected AbstractNioChannel(Channel parent, SelectableChannel ch, int readInterestOp) {
+        super(parent);
         this.ch = ch;
         this.readInterestOp = readInterestOp;
         try {
