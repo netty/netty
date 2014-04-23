@@ -201,7 +201,7 @@ public abstract class AbstractBinaryMemcacheDecoder<M extends BinaryMemcacheMess
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         super.channelInactive(ctx);
 
-        if (currentMessage.getExtras() != null) {
+        if (currentMessage != null && currentMessage.getExtras() != null) {
             currentMessage.getExtras().release();
         }
 
