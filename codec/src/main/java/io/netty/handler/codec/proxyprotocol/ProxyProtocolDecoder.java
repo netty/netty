@@ -88,8 +88,6 @@ public class ProxyProtocolDecoder extends ByteToMessageDecoder {
      * Creates a new decoder.
      */
     public ProxyProtocolDecoder() {
-        super();
-        setSingleDecode(true);
     }
 
     /**
@@ -149,6 +147,11 @@ public class ProxyProtocolDecoder extends ByteToMessageDecoder {
     }
 
     @Override
+    public boolean isSingleDecode() {
+        return true;
+    }
+
+    @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         super.channelRead(ctx, msg);
         if (finished) {
@@ -202,23 +205,18 @@ public class ProxyProtocolDecoder extends ByteToMessageDecoder {
         final int eoh = findEndOfHeader(buffer);
         if (!discarding) {
             if (eoh >= 0) {
-                final ByteBuf frame;
                 final int length = eoh - buffer.readerIndex();
-
                 if (length > v2MaxLength) {
                     buffer.readerIndex(eoh);
                     failOverLimit(ctx, length);
                     return null;
                 }
-
-                frame = buffer.readSlice(length);
-
-                return frame;
+                return buffer.readSlice(length);
             } else {
                 final int length = buffer.readableBytes();
                 if (length > v2MaxLength) {
                     discardedBytes = length;
-                    buffer.readerIndex(buffer.writerIndex());
+                    buffer.skipBytes(length);
                     discarding = true;
                     failOverLimit(ctx, "over " + discardedBytes);
                 }
@@ -232,7 +230,7 @@ public class ProxyProtocolDecoder extends ByteToMessageDecoder {
                 discarding = false;
             } else {
                 discardedBytes = buffer.readableBytes();
-                buffer.readerIndex(buffer.writerIndex());
+                buffer.skipBytes(discardedBytes);
             }
             return null;
         }
@@ -252,24 +250,20 @@ public class ProxyProtocolDecoder extends ByteToMessageDecoder {
         final int eol = findEndOfLine(buffer);
         if (!discarding) {
             if (eol >= 0) {
-                final ByteBuf frame;
                 final int length = eol - buffer.readerIndex();
-
                 if (length > v1MaxLength) {
                     buffer.readerIndex(eol + delimLength);
                     failOverLimit(ctx, length);
                     return null;
                 }
-
-                frame = buffer.readSlice(length);
+                ByteBuf frame = buffer.readSlice(length);
                 buffer.skipBytes(delimLength);
-
                 return frame;
             } else {
                 final int length = buffer.readableBytes();
                 if (length > v1MaxLength) {
                     discardedBytes = length;
-                    buffer.readerIndex(buffer.writerIndex());
+                    buffer.skipBytes(length);
                     discarding = true;
                     failOverLimit(ctx, "over " + discardedBytes);
                 }
@@ -284,7 +278,7 @@ public class ProxyProtocolDecoder extends ByteToMessageDecoder {
                 discarding = false;
             } else {
                 discardedBytes = buffer.readableBytes();
-                buffer.readerIndex(buffer.writerIndex());
+                buffer.skipBytes(discardedBytes);
             }
             return null;
         }
@@ -314,5 +308,4 @@ public class ProxyProtocolDecoder extends ByteToMessageDecoder {
         }
         ctx.fireExceptionCaught(ppex);
     }
-
 }

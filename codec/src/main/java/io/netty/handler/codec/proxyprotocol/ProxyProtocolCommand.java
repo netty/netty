@@ -34,12 +34,12 @@ public final class ProxyProtocolCommand implements Comparable<ProxyProtocolComma
      */
     public static final ProxyProtocolCommand PROXY = new ProxyProtocolCommand("PROXY", (byte) 0x01);
 
-    private static final Map<Byte, ProxyProtocolCommand> commandMap =
+    private static final Map<Byte, ProxyProtocolCommand> COMMAND_MAP =
             new HashMap<Byte, ProxyProtocolCommand>(2);
 
     static {
-        commandMap.put(LOCAL.byteValue(), LOCAL);
-        commandMap.put(PROXY.byteValue(), PROXY);
+        COMMAND_MAP.put(LOCAL.byteValue(), LOCAL);
+        COMMAND_MAP.put(PROXY.byteValue(), PROXY);
     }
 
     private final String name;
@@ -57,10 +57,10 @@ public final class ProxyProtocolCommand implements Comparable<ProxyProtocolComma
      * Returns the {@link ProxyProtocolCommand} represented by the specified command byte.
      *
      * @param cmdByte  Command byte
-     * @return         {@link ProxyProtocolCommand} instance OR <code>null</code> if the command is not recognized
+     * @return         {@link ProxyProtocolCommand} instance OR {@code null} if the command is not recognized
      */
     public static ProxyProtocolCommand valueOf(byte cmdByte) {
-        return commandMap.get(cmdByte);
+        return COMMAND_MAP.get(cmdByte);
     }
 
     /**
@@ -105,5 +105,4 @@ public final class ProxyProtocolCommand implements Comparable<ProxyProtocolComma
     public int compareTo(ProxyProtocolCommand o) {
         return Byte.valueOf(byteValue()).compareTo(Byte.valueOf(o.byteValue()));
     }
-
 }

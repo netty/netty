@@ -42,13 +42,13 @@ public final class ProxiedTransportProtocol implements Comparable<ProxiedTranspo
      */
     public static final ProxiedTransportProtocol DGRAM = new ProxiedTransportProtocol("DGRAM", (byte) 0x02);
 
-    private static final Map<Byte, ProxiedTransportProtocol> transportMap =
+    private static final Map<Byte, ProxiedTransportProtocol> TRANSPORT_MAP =
             new HashMap<Byte, ProxiedTransportProtocol>(3);
 
     static {
-        transportMap.put(UNSPECIFIED.byteValue(), UNSPECIFIED);
-        transportMap.put(STREAM.byteValue(), STREAM);
-        transportMap.put(DGRAM.byteValue(), DGRAM);
+        TRANSPORT_MAP.put(UNSPECIFIED.byteValue(), UNSPECIFIED);
+        TRANSPORT_MAP.put(STREAM.byteValue(), STREAM);
+        TRANSPORT_MAP.put(DGRAM.byteValue(), DGRAM);
     }
 
     private final String name;
@@ -66,11 +66,11 @@ public final class ProxiedTransportProtocol implements Comparable<ProxiedTranspo
      * Returns the {@link ProxiedTransportProtocol} represented by the specified transport protocol byte.
      *
      * @param addressFamilyByte  transport protocol byte
-     * @return                   {@link ProxiedTransportProtocol} instance OR <code>null</code> if the
+     * @return                   {@link ProxiedTransportProtocol} instance OR {@code null} if the
      *                           transport protocol is not recognized
      */
     public static ProxiedTransportProtocol valueOf(byte transportByte) {
-        return transportMap.get((byte) (transportByte & TRANSPORT_MASK));
+        return TRANSPORT_MAP.get((byte) (transportByte & TRANSPORT_MASK));
     }
 
     /**
@@ -115,5 +115,4 @@ public final class ProxiedTransportProtocol implements Comparable<ProxiedTranspo
     public int compareTo(ProxiedTransportProtocol o) {
         return Byte.valueOf(byteValue()).compareTo(Byte.valueOf(o.byteValue()));
     }
-
 }

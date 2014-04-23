@@ -21,7 +21,13 @@ import io.netty.util.NetUtil;
 /**
  * Message container for decoded proxy protocol parameters
  */
-public class ProxyProtocolMessage {
+public final class ProxyProtocolMessage {
+    /**
+     * Version 1 proxy protocol message for 'UNKNOWN' proxied protocols. Per spec, when the proxied protocol is
+     * 'UNKNOWN' we must discard all other header values.
+     */
+    private static final ProxyProtocolMessage V1_UNKNOWN_MSG = new ProxyProtocolMessage(
+            ProxyProtocolVersion.ONE, ProxyProtocolCommand.PROXY, ProxiedProtocolAndFamily.UNKNOWN, null, null, 0, 0);
 
     private ProxyProtocolVersion version;
     private ProxyProtocolCommand command;
@@ -34,7 +40,29 @@ public class ProxyProtocolMessage {
     /**
      * Creates a new instance.
      */
-    public ProxyProtocolMessage() {
+    private ProxyProtocolMessage(ProxyProtocolVersion ver, ProxyProtocolCommand cmd, ProxiedProtocolAndFamily paf,
+                                 String srcAddress, String dstAddress, String srcPort, String dstPort) {
+        this(ver, cmd, paf, srcAddress, dstAddress, portStringToInt(srcPort), portStringToInt(dstPort));
+    }
+
+    /**
+     * Creates a new instance.
+     */
+    private ProxyProtocolMessage(ProxyProtocolVersion ver, ProxyProtocolCommand cmd, ProxiedProtocolAndFamily paf,
+                                 String srcAddress, String dstAddress, int srcPort, int dstPort) {
+        this.version = ver;
+        this.command = cmd;
+        this.paf = paf;
+
+        checkAddress(srcAddress);
+        checkAddress(dstAddress);
+        checkPort(srcPort);
+        checkPort(dstPort);
+
+        this.sourceAddress = srcAddress;
+        this.destinationAddress = dstAddress;
+        this.sourcePort = srcPort;
+        this.destinationPort = dstPort;
     }
 
     /**
@@ -44,7 +72,7 @@ public class ProxyProtocolMessage {
      * @return                         {@link ProxyProtocolMessage} instance.
      * @throws ProxyProtocolException  If any portion of the header is invalid.
      */
-    public static final ProxyProtocolMessage decodeHeader(ByteBuf header) throws ProxyProtocolException {
+    public static ProxyProtocolMessage decodeHeader(ByteBuf header) throws ProxyProtocolException {
         throw new ProxyProtocolException("version 2 headers are currently not supported");
     }
 
@@ -55,7 +83,7 @@ public class ProxyProtocolMessage {
      * @return                         {@link ProxyProtocolMessage} instance.
      * @throws ProxyProtocolException  If any portion of the header is invalid.
      */
-    public static final ProxyProtocolMessage decodeHeader(String header) throws ProxyProtocolException {
+    public static ProxyProtocolMessage decodeHeader(String header) throws ProxyProtocolException {
 
         if (header == null) {
             throw new ProxyProtocolException("null header");
@@ -66,45 +94,48 @@ public class ProxyProtocolMessage {
 
         if (numParts < 2) {
             throw new ProxyProtocolException(
-                    "invalid format (header must at least contain protocol and proxied protocol values)"
-            );
+                    "invalid format (header must at least contain protocol and proxied protocol values)");
         }
 
         if (!"PROXY".equals(parts[0])) {
             throw new ProxyProtocolException("unsupported protocol " + parts[0]);
         }
 
-        ProxiedProtocolAndFamily paf = ProxiedProtocolAndFamily.valueOf(parts[1]);
+        ProxiedProtocolAndFamily protAndFam = ProxiedProtocolAndFamily.valueOf(parts[1]);
 
-        if (paf == null) {
-            throw new ProxyProtocolException("unsupported proxied protocol " + parts[1]);
+        boolean validPaf = protAndFam != null &&
+                (ProxiedProtocolAndFamily.TCP4.equals(protAndFam) || ProxiedProtocolAndFamily.TCP6.equals(protAndFam) ||
+                ProxiedProtocolAndFamily.UNKNOWN.equals(protAndFam));
+
+        if (!validPaf) {
+            throw new ProxyProtocolException("unsupported v1 proxied protocol " + parts[1]);
         }
 
-        // per spec, when the proxied protocol is 'UNKNOWN' we must discard all other values
-        if (ProxiedProtocolAndFamily.UNKNOWN.equals(paf)) {
-            ProxyProtocolMessage msg = new ProxyProtocolMessage();
-            msg.setVersion(ProxyProtocolVersion.ONE);
-            msg.setCommand(ProxyProtocolCommand.PROXY);
-            msg.setProtocolAndFamily(paf);
-            return msg;
+        if (ProxiedProtocolAndFamily.UNKNOWN.equals(protAndFam)) {
+            return V1_UNKNOWN_MSG;
         }
 
         if (numParts != 6) {
-            throw new ProxyProtocolException(
-                    "invalid format (header must contain exactly 6 values for TCP4 and TCP6 proxies)"
-            );
+            throw new ProxyProtocolException("invalid format (header must contain exactly 6 values for TCP proxies)");
         }
 
-        ProxyProtocolMessage msg = new ProxyProtocolMessage();
-        msg.setVersion(ProxyProtocolVersion.ONE);
-        msg.setCommand(ProxyProtocolCommand.PROXY);
-        msg.setProtocolAndFamily(paf);
-        msg.setSourceAddress(parts[2]);
-        msg.setDestinationAddress(parts[3]);
-        msg.setSourcePort(parts[4]);
-        msg.setDestinationPort(parts[5]);
+        return new ProxyProtocolMessage(ProxyProtocolVersion.ONE, ProxyProtocolCommand.PROXY,
+                protAndFam, parts[2], parts[3], parts[4], parts[5]);
+    }
 
-        return msg;
+    /**
+     * Convert port to integer.
+     *
+     * @param port                     The port
+     * @return                         Port as integer
+     * @throws ProxyProtocolException  If port is not a valid integer
+     */
+    private static int portStringToInt(String port) throws ProxyProtocolException {
+        try {
+            return Integer.parseInt(port);
+        } catch (Exception e) {
+            throw new ProxyProtocolException(port + " is not a valid port", e);
+        }
     }
 
     /**
@@ -115,10 +146,15 @@ public class ProxyProtocolMessage {
      */
     private void checkAddress(String address) throws ProxyProtocolException {
 
-        ProxiedAddressFamily protoFamily = getProtocolAndFamily().getProxiedAddressFamily();
+        ProxiedAddressFamily protoFamily = protocolAndFamily().proxiedAddressFamily();
 
-        if (protoFamily == null || ProxiedAddressFamily.UNSPECIFIED.equals(protoFamily)) {
+        if (protoFamily == null) {
             throw new ProxyProtocolException("unable to validate address because no protocol is set");
+        }
+
+        if (ProxiedAddressFamily.UNSPECIFIED.equals(protoFamily) && address != null) {
+            throw new ProxyProtocolException(
+                    "unable to validate address because protocol is " + protoFamily.toString());
         }
 
         if (ProxiedAddressFamily.UNIX.equals(protoFamily)) {
@@ -146,42 +182,8 @@ public class ProxyProtocolMessage {
      */
     private void checkPort(int port) throws ProxyProtocolException {
         if (port < 0 || port > 65535) {
-            throw new ProxyProtocolException(port + " is not a valid TCP port");
+            throw new ProxyProtocolException(port + " is not a valid port");
         }
-    }
-
-    /**
-     * Set the UDP/TCP source port of this {@link ProxyProtocolMessage}.
-     *
-     * @return                         This {@link ProxyProtocolMessage}.
-     * @throws ProxyProtocolException  If the port is not a valid integer or is out of range (0-65535 inclusive).
-     */
-    public ProxyProtocolMessage setSourcePort(String sourcePort) throws ProxyProtocolException {
-        int srcPort;
-        try {
-            srcPort = Integer.parseInt(sourcePort);
-        } catch (Exception e) {
-            throw new ProxyProtocolException(sourcePort + " is not a valid port");
-        }
-        setSourcePort(srcPort);
-        return this;
-    }
-
-    /**
-     * Set the UDP/TCP destination port of this {@link ProxyProtocolMessage}.
-     *
-     * @return                         This {@link ProxyProtocolMessage}.
-     * @throws ProxyProtocolException  If the port is not a valid integer or is out of range (0-65535 inclusive).
-     */
-    public ProxyProtocolMessage setDestinationPort(String destinationPort) throws ProxyProtocolException {
-        int destPort;
-        try {
-            destPort = Integer.parseInt(destinationPort);
-        } catch (Exception e) {
-            throw new ProxyProtocolException(destinationPort + " is not a valid port", e);
-        }
-        setDestinationPort(destPort);
-        return this;
     }
 
     /**
@@ -189,18 +191,8 @@ public class ProxyProtocolMessage {
      *
      * @return The proxy protocol specification version
      */
-    public ProxyProtocolVersion getVersion() {
+    public ProxyProtocolVersion version() {
         return version;
-    }
-
-    /**
-     * Set the {@link ProxyProtocolVersion} of this {@link ProxyProtocolMessage}.
-     *
-     * @return This {@link ProxyProtocolMessage}.
-     */
-    public ProxyProtocolMessage setVersion(ProxyProtocolVersion version) {
-        this.version = version;
-        return this;
     }
 
     /**
@@ -208,18 +200,8 @@ public class ProxyProtocolMessage {
      *
      * @return The proxy protocol command
      */
-    public ProxyProtocolCommand getCommand() {
+    public ProxyProtocolCommand command() {
         return command;
-    }
-
-    /**
-     * Set the {@link ProxyProtocolCommand} of this {@link ProxyProtocolMessage}.
-     *
-     * @return This {@link ProxyProtocolMessage}.
-     */
-    public ProxyProtocolMessage setCommand(ProxyProtocolCommand command) {
-        this.command = command;
-        return this;
     }
 
     /**
@@ -227,18 +209,8 @@ public class ProxyProtocolMessage {
      *
      * @return The proxied protocol and address family
      */
-    public ProxiedProtocolAndFamily getProtocolAndFamily() {
+    public ProxiedProtocolAndFamily protocolAndFamily() {
         return paf;
-    }
-
-    /**
-     * Set the {@link ProxiedProtocolAndFamily} of this {@link ProxyProtocolMessage}.
-     *
-     * @return This {@link ProxyProtocolMessage}.
-     */
-    public ProxyProtocolMessage setProtocolAndFamily(ProxiedProtocolAndFamily paf) {
-        this.paf = paf;
-        return this;
     }
 
     /**
@@ -246,20 +218,8 @@ public class ProxyProtocolMessage {
      *
      * @return The human-readable source address
      */
-    public String getSourceAddress() {
+    public String sourceAddress() {
         return sourceAddress;
-    }
-
-    /**
-     * Set the human-readable source address of this {@link ProxyProtocolMessage}.
-     *
-     * @return                         This {@link ProxyProtocolMessage}.
-     * @throws ProxyProtocolException  If the address is invalid.
-     */
-    public ProxyProtocolMessage setSourceAddress(String sourceAddress) throws ProxyProtocolException {
-        checkAddress(sourceAddress);
-        this.sourceAddress = sourceAddress;
-        return this;
     }
 
     /**
@@ -267,20 +227,8 @@ public class ProxyProtocolMessage {
      *
      * @return The human-readable destination address
      */
-    public String getDestinationAddress() {
+    public String destinationAddress() {
         return destinationAddress;
-    }
-
-    /**
-     * Set the human-readable destination address of this {@link ProxyProtocolMessage}.
-     *
-     * @return                         This {@link ProxyProtocolMessage}.
-     * @throws ProxyProtocolException  If the address is invalid.
-     */
-    public ProxyProtocolMessage setDestinationAddress(String destinationAddress) throws ProxyProtocolException {
-        checkAddress(destinationAddress);
-        this.destinationAddress = destinationAddress;
-        return this;
     }
 
     /**
@@ -288,20 +236,8 @@ public class ProxyProtocolMessage {
      *
      * @return The UDP/TCP source port
      */
-    public int getSourcePort() {
+    public int sourcePort() {
         return sourcePort;
-    }
-
-    /**
-     * Set the UDP/TCP source port of this {@link ProxyProtocolMessage}.
-     *
-     * @return                         This {@link ProxyProtocolMessage}.
-     * @throws ProxyProtocolException  If the port is out of range (0-65535 inclusive).
-     */
-    public ProxyProtocolMessage setSourcePort(int sourcePort) throws ProxyProtocolException {
-        checkPort(sourcePort);
-        this.sourcePort = sourcePort;
-        return this;
     }
 
     /**
@@ -309,20 +245,7 @@ public class ProxyProtocolMessage {
      *
      * @return The UDP/TCP destination port
      */
-    public int getDestinationPort() {
+    public int destinationPort() {
         return destinationPort;
     }
-
-    /**
-     * Set the UDP/TCP destination port of this {@link ProxyProtocolMessage}.
-     *
-     * @return                         This {@link ProxyProtocolMessage}.
-     * @throws ProxyProtocolException  If the port is out of range (0-65535 inclusive).
-     */
-    public ProxyProtocolMessage setDestinationPort(int destinationPort) throws ProxyProtocolException {
-        checkPort(destinationPort);
-        this.destinationPort = destinationPort;
-        return this;
-    }
-
 }

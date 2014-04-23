@@ -32,12 +32,12 @@ public final class ProxyProtocolVersion implements Comparable<ProxyProtocolVersi
      */
     public static final ProxyProtocolVersion TWO = new ProxyProtocolVersion("TWO", (byte) 0x02);
 
-    private static final Map<Byte, ProxyProtocolVersion> versionMap =
+    private static final Map<Byte, ProxyProtocolVersion> VERSION_MAP =
             new HashMap<Byte, ProxyProtocolVersion>(2);
 
     static {
-        versionMap.put(ONE.byteValue(), ONE);
-        versionMap.put(TWO.byteValue(), TWO);
+        VERSION_MAP.put(ONE.byteValue(), ONE);
+        VERSION_MAP.put(TWO.byteValue(), TWO);
     }
 
     private final String name;
@@ -55,11 +55,11 @@ public final class ProxyProtocolVersion implements Comparable<ProxyProtocolVersi
      * Returns the {@link ProxyProtocolVersion} represented by the specified version byte.
      *
      * @param versionByte  version byte
-     * @return             {@link ProxyProtocolVersion} instance OR <code>null</code> if the
+     * @return             {@link ProxyProtocolVersion} instance OR {@code null} if the
      *                     version is not recognized
      */
     public static ProxyProtocolVersion valueOf(byte versionByte) {
-        return versionMap.get(versionByte);
+        return VERSION_MAP.get(versionByte);
     }
 
     /**
@@ -104,5 +104,4 @@ public final class ProxyProtocolVersion implements Comparable<ProxyProtocolVersi
     public int compareTo(ProxyProtocolVersion o) {
         return Byte.valueOf(byteValue()).compareTo(Byte.valueOf(o.byteValue()));
     }
-
 }

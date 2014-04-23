@@ -65,33 +65,33 @@ public final class ProxiedProtocolAndFamily implements Comparable<ProxiedProtoco
     public static final ProxiedProtocolAndFamily UNIX_DGRAM = new ProxiedProtocolAndFamily(
             "UNIX_DGRAM", ProxiedAddressFamily.UNIX, ProxiedTransportProtocol.DGRAM, (byte) 0x32);
 
-    private static final Map<String, ProxiedProtocolAndFamily> protoAndFamilyNameMap =
+    private static final Map<String, ProxiedProtocolAndFamily> PROTO_AND_FAMILY_NAME_MAP =
             new HashMap<String, ProxiedProtocolAndFamily>(7);
 
-    private static final Map<Byte, ProxiedProtocolAndFamily> protoAndFamilyByteMap =
+    private static final Map<Byte, ProxiedProtocolAndFamily> PROTO_AND_FAMILY_BYTE_MAP =
             new HashMap<Byte, ProxiedProtocolAndFamily>(7);
 
     static {
-        protoAndFamilyNameMap.put(UNKNOWN.name(), UNKNOWN);
-        protoAndFamilyByteMap.put(UNKNOWN.byteValue(), UNKNOWN);
+        PROTO_AND_FAMILY_NAME_MAP.put(UNKNOWN.name(), UNKNOWN);
+        PROTO_AND_FAMILY_BYTE_MAP.put(UNKNOWN.byteValue(), UNKNOWN);
 
-        protoAndFamilyNameMap.put(TCP4.name(), TCP4);
-        protoAndFamilyByteMap.put(TCP4.byteValue(), TCP4);
+        PROTO_AND_FAMILY_NAME_MAP.put(TCP4.name(), TCP4);
+        PROTO_AND_FAMILY_BYTE_MAP.put(TCP4.byteValue(), TCP4);
 
-        protoAndFamilyNameMap.put(TCP6.name(), TCP6);
-        protoAndFamilyByteMap.put(TCP6.byteValue(), TCP6);
+        PROTO_AND_FAMILY_NAME_MAP.put(TCP6.name(), TCP6);
+        PROTO_AND_FAMILY_BYTE_MAP.put(TCP6.byteValue(), TCP6);
 
-        protoAndFamilyNameMap.put(UDP4.name(), UDP4);
-        protoAndFamilyByteMap.put(UDP4.byteValue(), UDP4);
+        PROTO_AND_FAMILY_NAME_MAP.put(UDP4.name(), UDP4);
+        PROTO_AND_FAMILY_BYTE_MAP.put(UDP4.byteValue(), UDP4);
 
-        protoAndFamilyNameMap.put(UDP6.name(), UDP6);
-        protoAndFamilyByteMap.put(UDP6.byteValue(), UDP6);
+        PROTO_AND_FAMILY_NAME_MAP.put(UDP6.name(), UDP6);
+        PROTO_AND_FAMILY_BYTE_MAP.put(UDP6.byteValue(), UDP6);
 
-        protoAndFamilyNameMap.put(UNIX_STREAM.name(), UNIX_STREAM);
-        protoAndFamilyByteMap.put(UNIX_STREAM.byteValue(), UNIX_STREAM);
+        PROTO_AND_FAMILY_NAME_MAP.put(UNIX_STREAM.name(), UNIX_STREAM);
+        PROTO_AND_FAMILY_BYTE_MAP.put(UNIX_STREAM.byteValue(), UNIX_STREAM);
 
-        protoAndFamilyNameMap.put(UNIX_DGRAM.name(), UNIX_DGRAM);
-        protoAndFamilyByteMap.put(UNIX_DGRAM.byteValue(), UNIX_DGRAM);
+        PROTO_AND_FAMILY_NAME_MAP.put(UNIX_DGRAM.name(), UNIX_DGRAM);
+        PROTO_AND_FAMILY_BYTE_MAP.put(UNIX_DGRAM.byteValue(), UNIX_DGRAM);
     }
 
     private final String name;
@@ -114,22 +114,22 @@ public final class ProxiedProtocolAndFamily implements Comparable<ProxiedProtoco
      * Returns the {@link ProxiedProtocolAndFamily} represented by the specified name.
      *
      * @param name  Protocol and address family name
-     * @return      {@link ProxiedProtocolAndFamily} instance OR <code>null</code> if the
+     * @return      {@link ProxiedProtocolAndFamily} instance OR {@code null} if the
      *              name is not recognized
      */
     public static ProxiedProtocolAndFamily valueOf(String name) {
-        return protoAndFamilyNameMap.get(name);
+        return PROTO_AND_FAMILY_NAME_MAP.get(name);
     }
 
     /**
      * Returns the {@link ProxiedProtocolAndFamily} represented by the protocol and family byte.
      *
      * @param pafByte  Protocol and address family byte
-     * @return         {@link ProxiedProtocolAndFamily} instance OR <code>null</code> if the
+     * @return         {@link ProxiedProtocolAndFamily} instance OR {@code null} if the
      *                 protocol and address family byte is not recognized
      */
     public static ProxiedProtocolAndFamily valueOf(byte pafByte) {
-        return protoAndFamilyByteMap.get(pafByte);
+        return PROTO_AND_FAMILY_BYTE_MAP.get(pafByte);
     }
 
     /**
@@ -155,7 +155,7 @@ public final class ProxiedProtocolAndFamily implements Comparable<ProxiedProtoco
      *
      * @return The address family
      */
-    public ProxiedAddressFamily getProxiedAddressFamily() {
+    public ProxiedAddressFamily proxiedAddressFamily() {
         return addressFamily;
     }
 
@@ -164,7 +164,7 @@ public final class ProxiedProtocolAndFamily implements Comparable<ProxiedProtoco
      *
      * @return The transport protocol
      */
-    public ProxiedTransportProtocol getProxiedTransportProtocol() {
+    public ProxiedTransportProtocol proxiedTransportProtocol() {
         return transportProtocol;
     }
 
@@ -192,5 +192,4 @@ public final class ProxiedProtocolAndFamily implements Comparable<ProxiedProtoco
     public int compareTo(ProxiedProtocolAndFamily o) {
         return name().compareTo(o.name());
     }
-
 }

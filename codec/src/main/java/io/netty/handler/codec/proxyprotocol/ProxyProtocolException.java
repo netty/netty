@@ -51,5 +51,4 @@ public class ProxyProtocolException extends DecoderException {
     public ProxyProtocolException(Throwable cause) {
         super(cause);
     }
-
 }

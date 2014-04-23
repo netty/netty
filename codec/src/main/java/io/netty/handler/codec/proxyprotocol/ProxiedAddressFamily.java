@@ -72,7 +72,7 @@ public final class ProxiedAddressFamily implements Comparable<ProxiedAddressFami
      * Returns the {@link ProxiedAddressFamily} represented by the specified address family byte.
      *
      * @param addressFamilyByte  Address family byte
-     * @return                   {@link ProxiedAddressFamily} instance OR <code>null</code> if the
+     * @return                   {@link ProxiedAddressFamily} instance OR {@code null} if the
      *                           address family is not recognized
      */
     public static ProxiedAddressFamily valueOf(byte addressFamilyByte) {
@@ -121,5 +121,4 @@ public final class ProxiedAddressFamily implements Comparable<ProxiedAddressFami
     public int compareTo(ProxiedAddressFamily o) {
         return Byte.valueOf(byteValue()).compareTo(Byte.valueOf(o.byteValue()));
     }
-
 }

@@ -44,13 +44,13 @@ public class ProxyProtocolDecoderTest {
         assertEquals(startChannels - 1, ch.pipeline().names().size());
         assertTrue(msgObj instanceof ProxyProtocolMessage);
         ProxyProtocolMessage msg = (ProxyProtocolMessage) msgObj;
-        assertEquals(ProxyProtocolVersion.ONE, msg.getVersion());
-        assertEquals(ProxyProtocolCommand.PROXY, msg.getCommand());
-        assertEquals(ProxiedProtocolAndFamily.TCP4, msg.getProtocolAndFamily());
-        assertEquals("192.168.0.1", msg.getSourceAddress());
-        assertEquals("192.168.0.11", msg.getDestinationAddress());
-        assertEquals(56324, msg.getSourcePort());
-        assertEquals(443, msg.getDestinationPort());
+        assertEquals(ProxyProtocolVersion.ONE, msg.version());
+        assertEquals(ProxyProtocolCommand.PROXY, msg.command());
+        assertEquals(ProxiedProtocolAndFamily.TCP4, msg.protocolAndFamily());
+        assertEquals("192.168.0.1", msg.sourceAddress());
+        assertEquals("192.168.0.11", msg.destinationAddress());
+        assertEquals(56324, msg.sourcePort());
+        assertEquals(443, msg.destinationPort());
         assertNull(ch.readInbound());
         assertFalse(ch.finish());
     }
@@ -64,13 +64,13 @@ public class ProxyProtocolDecoderTest {
         assertEquals(startChannels - 1, ch.pipeline().names().size());
         assertTrue(msgObj instanceof ProxyProtocolMessage);
         ProxyProtocolMessage msg = (ProxyProtocolMessage) msgObj;
-        assertEquals(ProxyProtocolVersion.ONE, msg.getVersion());
-        assertEquals(ProxyProtocolCommand.PROXY, msg.getCommand());
-        assertEquals(ProxiedProtocolAndFamily.TCP6, msg.getProtocolAndFamily());
-        assertEquals("2001:0db8:85a3:0000:0000:8a2e:0370:7334", msg.getSourceAddress());
-        assertEquals("1050:0:0:0:5:600:300c:326b", msg.getDestinationAddress());
-        assertEquals(56324, msg.getSourcePort());
-        assertEquals(443, msg.getDestinationPort());
+        assertEquals(ProxyProtocolVersion.ONE, msg.version());
+        assertEquals(ProxyProtocolCommand.PROXY, msg.command());
+        assertEquals(ProxiedProtocolAndFamily.TCP6, msg.protocolAndFamily());
+        assertEquals("2001:0db8:85a3:0000:0000:8a2e:0370:7334", msg.sourceAddress());
+        assertEquals("1050:0:0:0:5:600:300c:326b", msg.destinationAddress());
+        assertEquals(56324, msg.sourcePort());
+        assertEquals(443, msg.destinationPort());
         assertNull(ch.readInbound());
         assertFalse(ch.finish());
     }
@@ -84,13 +84,13 @@ public class ProxyProtocolDecoderTest {
         assertEquals(startChannels - 1, ch.pipeline().names().size());
         assertTrue(msgObj instanceof ProxyProtocolMessage);
         ProxyProtocolMessage msg = (ProxyProtocolMessage) msgObj;
-        assertEquals(ProxyProtocolVersion.ONE, msg.getVersion());
-        assertEquals(ProxyProtocolCommand.PROXY, msg.getCommand());
-        assertEquals(ProxiedProtocolAndFamily.UNKNOWN, msg.getProtocolAndFamily());
-        assertNull(msg.getSourceAddress());
-        assertNull(msg.getDestinationAddress());
-        assertEquals(0, msg.getSourcePort());
-        assertEquals(0, msg.getDestinationPort());
+        assertEquals(ProxyProtocolVersion.ONE, msg.version());
+        assertEquals(ProxyProtocolCommand.PROXY, msg.command());
+        assertEquals(ProxiedProtocolAndFamily.UNKNOWN, msg.protocolAndFamily());
+        assertNull(msg.sourceAddress());
+        assertNull(msg.destinationAddress());
+        assertEquals(0, msg.sourcePort());
+        assertEquals(0, msg.destinationPort());
         assertNull(ch.readInbound());
         assertFalse(ch.finish());
     }
@@ -235,5 +235,4 @@ public class ProxyProtocolDecoderTest {
         ch.writeInbound(copiedBuffer(header));
         assertFalse(ch.finish());
     }
-
-} //ProxyProtocolDecoderTest
+}
