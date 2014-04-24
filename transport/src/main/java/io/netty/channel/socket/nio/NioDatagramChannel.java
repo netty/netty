@@ -110,13 +110,26 @@ public final class NioDatagramChannel
     }
 
     /**
+     * Create a new instance using the given {@link SelectorProvider}
+     * which will use the Operation Systems default {@link InternetProtocolFamily}.
+     */
+    public NioDatagramChannel(SelectorProvider provider) {
+        this(newSocket(provider));
+    }
+
+    /**
      * Create a new instance using the given {@link InternetProtocolFamily}. If {@code null} is used it will depend
      * on the Operation Systems default which will be chosen.
      */
     public NioDatagramChannel(InternetProtocolFamily ipFamily) {
-        this(DEFAULT_SELECTOR_PROVIDER, ipFamily);
+        this(newSocket(DEFAULT_SELECTOR_PROVIDER, ipFamily));
     }
 
+    /**
+     * Create a new instance using the given {@link SelectorProvider} and {@link InternetProtocolFamily}.
+     * If {@link InternetProtocolFamily} is {@code null} it will depend on the Operation Systems default
+     * which will be chosen.
+     */
     public NioDatagramChannel(SelectorProvider provider, InternetProtocolFamily ipFamily) {
         this(newSocket(provider, ipFamily));
     }

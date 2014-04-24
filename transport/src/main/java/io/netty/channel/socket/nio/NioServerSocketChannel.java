@@ -67,11 +67,21 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
      * Create a new instance
      */
     public NioServerSocketChannel() {
-        this(DEFAULT_SELECTOR_PROVIDER);
+        this(newSocket(DEFAULT_SELECTOR_PROVIDER));
     }
 
+    /**
+     * Create a new instance using the given {@link SelectorProvider}.
+     */
     public NioServerSocketChannel(SelectorProvider provider) {
-        super(null, newSocket(provider), SelectionKey.OP_ACCEPT);
+        this(newSocket(provider));
+    }
+
+    /**
+     * Create a new instance using the given {@link ServerSocketChannel}.
+     */
+    public NioServerSocketChannel(ServerSocketChannel channel) {
+        super(null, channel, SelectionKey.OP_ACCEPT);
         config = new NioServerSocketChannelConfig(this, javaChannel().socket());
     }
 
