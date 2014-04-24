@@ -22,7 +22,7 @@ import io.netty.handler.codec.DecoderException;
  */
 public class HAProxyProtocolException extends DecoderException {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 713710864325167351L;
 
     /**
      * Creates a new instance.

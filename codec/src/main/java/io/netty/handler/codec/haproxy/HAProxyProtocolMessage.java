@@ -18,10 +18,18 @@ package io.netty.handler.codec.haproxy;
 import io.netty.buffer.ByteBuf;
 import io.netty.util.NetUtil;
 
+import java.util.regex.Pattern;
+
 /**
  * Message container for decoded HAProxy proxy protocol parameters
  */
 public final class HAProxyProtocolMessage {
+
+    /**
+     * Version 1 header param splitter.
+     */
+    private static final Pattern SINGLE_SPACE_PATTERN = Pattern.compile(" ");
+
     /**
      * Version 1 proxy protocol message for 'UNKNOWN' proxied protocols. Per spec, when the proxied protocol is
      * 'UNKNOWN' we must discard all other header values.
@@ -29,13 +37,13 @@ public final class HAProxyProtocolMessage {
     private static final HAProxyProtocolMessage V1_UNKNOWN_MSG = new HAProxyProtocolMessage(HAProxyProtocolVersion.ONE,
             HAProxyProtocolCommand.PROXY, ProxiedProtocolAndFamily.UNKNOWN, null, null, 0, 0);
 
-    private HAProxyProtocolVersion version;
-    private HAProxyProtocolCommand command;
-    private ProxiedProtocolAndFamily paf;
-    private String sourceAddress;
-    private String destinationAddress;
-    private int sourcePort;
-    private int destinationPort;
+    private final HAProxyProtocolVersion version;
+    private final HAProxyProtocolCommand command;
+    private final ProxiedProtocolAndFamily paf;
+    private final String sourceAddress;
+    private final String destinationAddress;
+    private final int sourcePort;
+    private final int destinationPort;
 
     /**
      * Creates a new instance.
@@ -96,7 +104,7 @@ public final class HAProxyProtocolMessage {
             throw new HAProxyProtocolException("null header");
         }
 
-        String[] parts = header.split(" ");
+        String[] parts = SINGLE_SPACE_PATTERN.split(header);
         int numParts = parts.length;
 
         if (numParts < 2) {
@@ -186,7 +194,7 @@ public final class HAProxyProtocolMessage {
      * @param port                       UDP/TCP port.
      * @throws HAProxyProtocolException  If the port is out of range (0-65535 inclusive).
      */
-    private void checkPort(int port) throws HAProxyProtocolException {
+    private static void checkPort(int port) throws HAProxyProtocolException {
         if (port < 0 || port > 65535) {
             throw new HAProxyProtocolException(port + " is not a valid port");
         }

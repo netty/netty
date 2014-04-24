@@ -15,9 +15,6 @@
  */
 package io.netty.handler.codec.haproxy;
 
-import java.util.HashMap;
-import java.util.Map;
-
 /**
  * The transport protocol of an HAProxy proxy protocol header.
  */
@@ -28,28 +25,27 @@ public final class ProxiedTransportProtocol implements Comparable<ProxiedTranspo
     private static final byte TRANSPORT_MASK = (byte) 0x0f;
 
     /**
+     * Transport Protocol byte constants.
+     */
+    private static final byte UNSPECIFIED_BYTE = (byte) 0x00;
+    private static final byte STREAM_BYTE = (byte) 0x01;
+    private static final byte DGRAM_BYTE = (byte) 0x02;
+
+    /**
      * The UNSPECIFIED transport protocol represents a connection which was forwarded for an unkown protocol
      */
-    public static final ProxiedTransportProtocol UNSPECIFIED = new ProxiedTransportProtocol("UNSPECIFIED", (byte) 0x00);
+    public static final ProxiedTransportProtocol UNSPECIFIED = new ProxiedTransportProtocol(
+            "UNSPECIFIED", UNSPECIFIED_BYTE);
 
     /**
      * The STREAM transport protocol represents a connection which was forwarded for a TCP connection
      */
-    public static final ProxiedTransportProtocol STREAM = new ProxiedTransportProtocol("STREAM", (byte) 0x01);
+    public static final ProxiedTransportProtocol STREAM = new ProxiedTransportProtocol("STREAM", STREAM_BYTE);
 
     /**
      * The DGRAM transport protocol represents a connection which was forwarded for a UDP connection
      */
-    public static final ProxiedTransportProtocol DGRAM = new ProxiedTransportProtocol("DGRAM", (byte) 0x02);
-
-    private static final Map<Byte, ProxiedTransportProtocol> TRANSPORT_MAP =
-            new HashMap<Byte, ProxiedTransportProtocol>(3);
-
-    static {
-        TRANSPORT_MAP.put(UNSPECIFIED.byteValue(), UNSPECIFIED);
-        TRANSPORT_MAP.put(STREAM.byteValue(), STREAM);
-        TRANSPORT_MAP.put(DGRAM.byteValue(), DGRAM);
-    }
+    public static final ProxiedTransportProtocol DGRAM = new ProxiedTransportProtocol("DGRAM", DGRAM_BYTE);
 
     private final String name;
     private final byte transportByte;
@@ -70,7 +66,16 @@ public final class ProxiedTransportProtocol implements Comparable<ProxiedTranspo
      *                           transport protocol is not recognized
      */
     public static ProxiedTransportProtocol valueOf(byte transportByte) {
-        return TRANSPORT_MAP.get((byte) (transportByte & TRANSPORT_MASK));
+        switch ((byte) (transportByte & TRANSPORT_MASK)) {
+            case STREAM_BYTE:
+                return STREAM;
+            case UNSPECIFIED_BYTE:
+                return UNSPECIFIED;
+            case DGRAM_BYTE:
+                return DGRAM;
+            default:
+                return null;
+        }
     }
 
     /**

@@ -15,32 +15,27 @@
  */
 package io.netty.handler.codec.haproxy;
 
-import java.util.HashMap;
-import java.util.Map;
-
 /**
  * The command of an HAProxy proxy protocol header.
  */
 public final class HAProxyProtocolCommand implements Comparable<HAProxyProtocolCommand> {
     /**
+     * Version byte constants.
+     */
+    private static final byte LOCAL_BYTE = (byte) 0x00;
+    private static final byte PROXY_BYTE = (byte) 0x01;
+
+    /**
      * The LOCAL command represents a connection that was established on purpose by the proxy
      * without being relayed
      */
-    public static final HAProxyProtocolCommand LOCAL = new HAProxyProtocolCommand("LOCAL", (byte) 0x00);
+    public static final HAProxyProtocolCommand LOCAL = new HAProxyProtocolCommand("LOCAL", LOCAL_BYTE);
 
     /**
      * The PROXY command represents a connection that was established on behalf of another node,
      * and reflects the original connection endpoints
      */
-    public static final HAProxyProtocolCommand PROXY = new HAProxyProtocolCommand("PROXY", (byte) 0x01);
-
-    private static final Map<Byte, HAProxyProtocolCommand> COMMAND_MAP =
-            new HashMap<Byte, HAProxyProtocolCommand>(2);
-
-    static {
-        COMMAND_MAP.put(LOCAL.byteValue(), LOCAL);
-        COMMAND_MAP.put(PROXY.byteValue(), PROXY);
-    }
+    public static final HAProxyProtocolCommand PROXY = new HAProxyProtocolCommand("PROXY", PROXY_BYTE);
 
     private final String name;
     private final byte cmdByte;
@@ -60,7 +55,14 @@ public final class HAProxyProtocolCommand implements Comparable<HAProxyProtocolC
      * @return         {@link HAProxyProtocolCommand} instance OR {@code null} if the command is not recognized
      */
     public static HAProxyProtocolCommand valueOf(byte cmdByte) {
-        return COMMAND_MAP.get(cmdByte);
+        switch (cmdByte) {
+            case PROXY_BYTE:
+                return PROXY;
+            case LOCAL_BYTE:
+                return LOCAL;
+            default:
+                return null;
+        }
     }
 
     /**

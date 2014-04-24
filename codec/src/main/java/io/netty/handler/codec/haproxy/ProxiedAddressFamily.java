@@ -15,9 +15,6 @@
  */
 package io.netty.handler.codec.haproxy;
 
-import java.util.HashMap;
-import java.util.Map;
-
 /**
  * The address family of an HAProxy proxy protocol header.
  */
@@ -28,34 +25,32 @@ public final class ProxiedAddressFamily implements Comparable<ProxiedAddressFami
     private static final byte FAMILY_MASK = (byte) 0xf0;
 
     /**
+     * Address family byte constants.
+     */
+    private static final byte UNSPECIFIED_BYTE = (byte) 0x00;
+    private static final byte IPV4_BYTE = (byte) 0x10;
+    private static final byte IPV6_BYTE = (byte) 0x20;
+    private static final byte UNIX_BYTE = (byte) 0x30;
+
+    /**
      * The UNSPECIFIED address family represents a connection which was forwarded for an unkown protocol
      */
-    public static final ProxiedAddressFamily UNSPECIFIED = new ProxiedAddressFamily("UNSPECIFIED", (byte) 0x00);
+    public static final ProxiedAddressFamily UNSPECIFIED = new ProxiedAddressFamily("UNSPECIFIED", UNSPECIFIED_BYTE);
 
     /**
      * The IPV4 address family represents a connection which was forwarded for an IPV4 client
      */
-    public static final ProxiedAddressFamily IPV4 = new ProxiedAddressFamily("IPV4", (byte) 0x10);
+    public static final ProxiedAddressFamily IPV4 = new ProxiedAddressFamily("IPV4", IPV4_BYTE);
 
     /**
      * The IPV6 address family represents a connection which was forwarded for an IPV6 client
      */
-    public static final ProxiedAddressFamily IPV6 = new ProxiedAddressFamily("IPV6", (byte) 0x20);
+    public static final ProxiedAddressFamily IPV6 = new ProxiedAddressFamily("IPV6", IPV6_BYTE);
 
     /**
      * The UNIX address family represents a connection which was forwarded for a unix socket
      */
-    public static final ProxiedAddressFamily UNIX = new ProxiedAddressFamily("UNIX", (byte) 0x30);
-
-    private static final Map<Byte, ProxiedAddressFamily> ADDRESS_FAMILY_MAP =
-            new HashMap<Byte, ProxiedAddressFamily>(4);
-
-    static {
-        ADDRESS_FAMILY_MAP.put(UNSPECIFIED.byteValue(), UNSPECIFIED);
-        ADDRESS_FAMILY_MAP.put(IPV4.byteValue(), IPV4);
-        ADDRESS_FAMILY_MAP.put(IPV6.byteValue(), IPV6);
-        ADDRESS_FAMILY_MAP.put(UNIX.byteValue(), UNIX);
-    }
+    public static final ProxiedAddressFamily UNIX = new ProxiedAddressFamily("UNIX", UNIX_BYTE);
 
     private final String name;
     private final byte addressFamilyByte;
@@ -76,7 +71,18 @@ public final class ProxiedAddressFamily implements Comparable<ProxiedAddressFami
      *                           address family is not recognized
      */
     public static ProxiedAddressFamily valueOf(byte addressFamilyByte) {
-        return ADDRESS_FAMILY_MAP.get((byte) (addressFamilyByte & FAMILY_MASK));
+        switch((byte) (addressFamilyByte & FAMILY_MASK)) {
+            case IPV4_BYTE:
+                return IPV4;
+            case IPV6_BYTE:
+                return IPV6;
+            case UNSPECIFIED_BYTE:
+                return UNSPECIFIED;
+            case UNIX_BYTE:
+                return UNIX;
+            default:
+                return null;
+        }
     }
 
     /**

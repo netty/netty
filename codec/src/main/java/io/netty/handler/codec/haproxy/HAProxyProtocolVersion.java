@@ -15,30 +15,25 @@
  */
 package io.netty.handler.codec.haproxy;
 
-import java.util.HashMap;
-import java.util.Map;
-
 /**
  * The HAProxy proxy protocol specification version
  */
 public final class HAProxyProtocolVersion implements Comparable<HAProxyProtocolVersion> {
     /**
+     * Version byte constants.
+     */
+    private static final byte ONE_BYTE = (byte) 0x01;
+    private static final byte TWO_BYTE = (byte) 0x02;
+
+    /**
      * The ONE proxy protocol version represents a version 1 (human-readable) header
      */
-    public static final HAProxyProtocolVersion ONE = new HAProxyProtocolVersion("ONE", (byte) 0x01);
+    public static final HAProxyProtocolVersion ONE = new HAProxyProtocolVersion("ONE", ONE_BYTE);
 
     /**
      * The TWO proxy protocol version represents a version 2 (binary) header
      */
-    public static final HAProxyProtocolVersion TWO = new HAProxyProtocolVersion("TWO", (byte) 0x02);
-
-    private static final Map<Byte, HAProxyProtocolVersion> VERSION_MAP =
-            new HashMap<Byte, HAProxyProtocolVersion>(2);
-
-    static {
-        VERSION_MAP.put(ONE.byteValue(), ONE);
-        VERSION_MAP.put(TWO.byteValue(), TWO);
-    }
+    public static final HAProxyProtocolVersion TWO = new HAProxyProtocolVersion("TWO", TWO_BYTE);
 
     private final String name;
     private final byte versionByte;
@@ -59,7 +54,14 @@ public final class HAProxyProtocolVersion implements Comparable<HAProxyProtocolV
      *                     version is not recognized
      */
     public static HAProxyProtocolVersion valueOf(byte versionByte) {
-        return VERSION_MAP.get(versionByte);
+        switch (versionByte) {
+            case TWO_BYTE:
+                return TWO;
+            case ONE_BYTE:
+                return ONE;
+            default:
+                return null;
+        }
     }
 
     /**
