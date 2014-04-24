@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.proxyprotocol;
+package io.netty.handler.codec.haproxy;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
@@ -26,13 +26,13 @@ import org.junit.Test;
 import static io.netty.buffer.Unpooled.*;
 import static org.junit.Assert.*;
 
-public class ProxyProtocolDecoderTest {
+public class HAProxyProtocolDecoderTest {
 
     private EmbeddedChannel ch;
 
     @Before
     public void setUp() {
-        ch = new EmbeddedChannel(new ProxyProtocolDecoder());
+        ch = new EmbeddedChannel(new HAProxyProtocolDecoder());
     }
 
     @Test
@@ -42,10 +42,10 @@ public class ProxyProtocolDecoderTest {
         ch.writeInbound(copiedBuffer(header, CharsetUtil.US_ASCII));
         Object msgObj = ch.readInbound();
         assertEquals(startChannels - 1, ch.pipeline().names().size());
-        assertTrue(msgObj instanceof ProxyProtocolMessage);
-        ProxyProtocolMessage msg = (ProxyProtocolMessage) msgObj;
-        assertEquals(ProxyProtocolVersion.ONE, msg.version());
-        assertEquals(ProxyProtocolCommand.PROXY, msg.command());
+        assertTrue(msgObj instanceof HAProxyProtocolMessage);
+        HAProxyProtocolMessage msg = (HAProxyProtocolMessage) msgObj;
+        assertEquals(HAProxyProtocolVersion.ONE, msg.version());
+        assertEquals(HAProxyProtocolCommand.PROXY, msg.command());
         assertEquals(ProxiedProtocolAndFamily.TCP4, msg.protocolAndFamily());
         assertEquals("192.168.0.1", msg.sourceAddress());
         assertEquals("192.168.0.11", msg.destinationAddress());
@@ -62,10 +62,10 @@ public class ProxyProtocolDecoderTest {
         ch.writeInbound(copiedBuffer(header, CharsetUtil.US_ASCII));
         Object msgObj = ch.readInbound();
         assertEquals(startChannels - 1, ch.pipeline().names().size());
-        assertTrue(msgObj instanceof ProxyProtocolMessage);
-        ProxyProtocolMessage msg = (ProxyProtocolMessage) msgObj;
-        assertEquals(ProxyProtocolVersion.ONE, msg.version());
-        assertEquals(ProxyProtocolCommand.PROXY, msg.command());
+        assertTrue(msgObj instanceof HAProxyProtocolMessage);
+        HAProxyProtocolMessage msg = (HAProxyProtocolMessage) msgObj;
+        assertEquals(HAProxyProtocolVersion.ONE, msg.version());
+        assertEquals(HAProxyProtocolCommand.PROXY, msg.command());
         assertEquals(ProxiedProtocolAndFamily.TCP6, msg.protocolAndFamily());
         assertEquals("2001:0db8:85a3:0000:0000:8a2e:0370:7334", msg.sourceAddress());
         assertEquals("1050:0:0:0:5:600:300c:326b", msg.destinationAddress());
@@ -82,10 +82,10 @@ public class ProxyProtocolDecoderTest {
         ch.writeInbound(copiedBuffer(header, CharsetUtil.US_ASCII));
         Object msgObj = ch.readInbound();
         assertEquals(startChannels - 1, ch.pipeline().names().size());
-        assertTrue(msgObj instanceof ProxyProtocolMessage);
-        ProxyProtocolMessage msg = (ProxyProtocolMessage) msgObj;
-        assertEquals(ProxyProtocolVersion.ONE, msg.version());
-        assertEquals(ProxyProtocolCommand.PROXY, msg.command());
+        assertTrue(msgObj instanceof HAProxyProtocolMessage);
+        HAProxyProtocolMessage msg = (HAProxyProtocolMessage) msgObj;
+        assertEquals(HAProxyProtocolVersion.ONE, msg.version());
+        assertEquals(HAProxyProtocolCommand.PROXY, msg.command());
         assertEquals(ProxiedProtocolAndFamily.UNKNOWN, msg.protocolAndFamily());
         assertNull(msg.sourceAddress());
         assertNull(msg.destinationAddress());
@@ -95,55 +95,55 @@ public class ProxyProtocolDecoderTest {
         assertFalse(ch.finish());
     }
 
-    @Test(expected = ProxyProtocolException.class)
+    @Test(expected = HAProxyProtocolException.class)
     public void testInvalidPort() {
         String header = "PROXY TCP4 192.168.0.1 192.168.0.11 80000 443\r\n";
         ch.writeInbound(copiedBuffer(header, CharsetUtil.US_ASCII));
     }
 
-    @Test(expected = ProxyProtocolException.class)
+    @Test(expected = HAProxyProtocolException.class)
     public void testInvalidIPV4Address() {
         String header = "PROXY TCP4 299.168.0.1 192.168.0.11 56324 443\r\n";
         ch.writeInbound(copiedBuffer(header, CharsetUtil.US_ASCII));
     }
 
-    @Test(expected = ProxyProtocolException.class)
+    @Test(expected = HAProxyProtocolException.class)
     public void testInvalidIPV6Address() {
         String header = "PROXY TCP6 r001:0db8:85a3:0000:0000:8a2e:0370:7334 1050:0:0:0:5:600:300c:326b 56324 443\r\n";
         ch.writeInbound(copiedBuffer(header, CharsetUtil.US_ASCII));
     }
 
-    @Test(expected = ProxyProtocolException.class)
+    @Test(expected = HAProxyProtocolException.class)
     public void testInvalidProtocol() {
         String header = "PROXY TCP7 192.168.0.1 192.168.0.11 56324 443\r\n";
         ch.writeInbound(copiedBuffer(header, CharsetUtil.US_ASCII));
     }
 
-    @Test(expected = ProxyProtocolException.class)
+    @Test(expected = HAProxyProtocolException.class)
     public void testMissingParams() {
         String header = "PROXY TCP4 192.168.0.1 192.168.0.11 56324\r\n";
         ch.writeInbound(copiedBuffer(header, CharsetUtil.US_ASCII));
     }
 
-    @Test(expected = ProxyProtocolException.class)
+    @Test(expected = HAProxyProtocolException.class)
     public void testTooManyParams() {
         String header = "PROXY TCP4 192.168.0.1 192.168.0.11 56324 443 123\r\n";
         ch.writeInbound(copiedBuffer(header, CharsetUtil.US_ASCII));
     }
 
-    @Test(expected = ProxyProtocolException.class)
+    @Test(expected = HAProxyProtocolException.class)
     public void testInvalidCommand() {
         String header = "PING TCP4 192.168.0.1 192.168.0.11 56324 443\r\n";
         ch.writeInbound(copiedBuffer(header, CharsetUtil.US_ASCII));
     }
 
-    @Test(expected = ProxyProtocolException.class)
+    @Test(expected = HAProxyProtocolException.class)
     public void testInvalidEOL() {
         String header = "PROXY TCP4 192.168.0.1 192.168.0.11 56324 443\nGET / HTTP/1.1\r\n";
         ch.writeInbound(copiedBuffer(header, CharsetUtil.US_ASCII));
     }
 
-    @Test(expected = ProxyProtocolException.class)
+    @Test(expected = HAProxyProtocolException.class)
     public void testHeaderTooLong() {
         String header = "PROXY TCP4 192.168.0.1 192.168.0.11 56324 " +
                 "00000000000000000000000000000000000000000000000000000000000000000443\r\n";
@@ -164,7 +164,7 @@ public class ProxyProtocolDecoderTest {
         String header = "GET / HTTP/1.1\r\n";
         try {
             ch.writeInbound(copiedBuffer(header, CharsetUtil.US_ASCII));
-        } catch (ProxyProtocolException ppex) {
+        } catch (HAProxyProtocolException ppex) {
             // swallow this exception since we're just testing to be sure the channel was closed
         }
         boolean isComplete = closeFuture.awaitUninterruptibly(5000);
@@ -200,7 +200,7 @@ public class ProxyProtocolDecoderTest {
         assertEquals(ProxiedAddressFamily.UNIX, ProxiedAddressFamily.valueOf(unix_dgram));
     }
 
-    @Test(expected = ProxyProtocolException.class)
+    @Test(expected = HAProxyProtocolException.class)
     public void testV2Unsupported() {
         byte[] header = new byte[] {
                 (byte) 0x0D, // Binary Prefix

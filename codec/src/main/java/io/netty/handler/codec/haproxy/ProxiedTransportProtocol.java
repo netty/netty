@@ -13,13 +13,13 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.proxyprotocol;
+package io.netty.handler.codec.haproxy;
 
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * The transport protocol of a proxy protocol header
+ * The transport protocol of an HAProxy proxy protocol header.
  */
 public final class ProxiedTransportProtocol implements Comparable<ProxiedTransportProtocol> {
     /**

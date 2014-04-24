@@ -13,27 +13,27 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.proxyprotocol;
+package io.netty.handler.codec.haproxy;
 
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * The proxy protocol specification version
+ * The HAProxy proxy protocol specification version
  */
-public final class ProxyProtocolVersion implements Comparable<ProxyProtocolVersion> {
+public final class HAProxyProtocolVersion implements Comparable<HAProxyProtocolVersion> {
     /**
      * The ONE proxy protocol version represents a version 1 (human-readable) header
      */
-    public static final ProxyProtocolVersion ONE = new ProxyProtocolVersion("ONE", (byte) 0x01);
+    public static final HAProxyProtocolVersion ONE = new HAProxyProtocolVersion("ONE", (byte) 0x01);
 
     /**
      * The TWO proxy protocol version represents a version 2 (binary) header
      */
-    public static final ProxyProtocolVersion TWO = new ProxyProtocolVersion("TWO", (byte) 0x02);
+    public static final HAProxyProtocolVersion TWO = new HAProxyProtocolVersion("TWO", (byte) 0x02);
 
-    private static final Map<Byte, ProxyProtocolVersion> VERSION_MAP =
-            new HashMap<Byte, ProxyProtocolVersion>(2);
+    private static final Map<Byte, HAProxyProtocolVersion> VERSION_MAP =
+            new HashMap<Byte, HAProxyProtocolVersion>(2);
 
     static {
         VERSION_MAP.put(ONE.byteValue(), ONE);
@@ -46,19 +46,19 @@ public final class ProxyProtocolVersion implements Comparable<ProxyProtocolVersi
     /**
      * Creates a new instance.
      */
-    private ProxyProtocolVersion(String name, byte versionByte) {
+    private HAProxyProtocolVersion(String name, byte versionByte) {
         this.name = name;
         this.versionByte = versionByte;
     }
 
     /**
-     * Returns the {@link ProxyProtocolVersion} represented by the specified version byte.
+     * Returns the {@link HAProxyProtocolVersion} represented by the specified version byte.
      *
      * @param versionByte  version byte
-     * @return             {@link ProxyProtocolVersion} instance OR {@code null} if the
+     * @return             {@link HAProxyProtocolVersion} instance OR {@code null} if the
      *                     version is not recognized
      */
-    public static ProxyProtocolVersion valueOf(byte versionByte) {
+    public static HAProxyProtocolVersion valueOf(byte versionByte) {
         return VERSION_MAP.get(versionByte);
     }
 
@@ -87,11 +87,11 @@ public final class ProxyProtocolVersion implements Comparable<ProxyProtocolVersi
 
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof ProxyProtocolVersion)) {
+        if (!(o instanceof HAProxyProtocolVersion)) {
             return false;
         }
 
-        ProxyProtocolVersion that = (ProxyProtocolVersion) o;
+        HAProxyProtocolVersion that = (HAProxyProtocolVersion) o;
         return byteValue() == that.byteValue();
     }
 
@@ -101,7 +101,7 @@ public final class ProxyProtocolVersion implements Comparable<ProxyProtocolVersi
     }
 
     @Override
-    public int compareTo(ProxyProtocolVersion o) {
+    public int compareTo(HAProxyProtocolVersion o) {
         return Byte.valueOf(byteValue()).compareTo(Byte.valueOf(o.byteValue()));
     }
 }

@@ -13,38 +13,37 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.proxyprotocol;
+package io.netty.handler.codec.haproxy;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.util.CharsetUtil;
 
-import java.util.Arrays;
 import java.util.List;
 
 /**
- * Decodes a proxy protocol header.
+ * Decodes an HAProxy proxy protocol header.
  *
  * @see <a href="http://haproxy.1wt.eu/download/1.5/doc/proxy-protocol.txt">Proxy Protocol Specification</a>
  */
-public class ProxyProtocolDecoder extends ByteToMessageDecoder {
+public class HAProxyProtocolDecoder extends ByteToMessageDecoder {
 
     /**
      * Maximum possible length of a proxy protocol header.
      */
-    private static final int v1MaxLength = 108;
-    private static final int v2MaxLength = 271;
+    private static final int V1_MAX_LENGTH = 108;
+    private static final int V2_MAX_LENGTH = 271;
 
     /**
      * Version 1 header delimiter is always '\r\n' per spec.
      */
-    private static final int delimLength = 2;
+    private static final int DELIMITER_LENGTH = 2;
 
     /**
      * Binary header prefix.
      */
-    private static final byte[] binaryPrefix = new byte[]{
+    private static final byte[] BINARY_PREFIX = new byte[]{
             (byte) 0x0D,
             (byte) 0x0A,
             (byte) 0x0D,
@@ -62,7 +61,7 @@ public class ProxyProtocolDecoder extends ByteToMessageDecoder {
     /**
      * Binary header prefix length.
      */
-    private static final int binaryPrefixLength = binaryPrefix.length;
+    private static final int BINARY_PREFIX_LENGTH = BINARY_PREFIX.length;
 
     /**
      * True if we're discarding input because we're already over maxLength.
@@ -87,7 +86,7 @@ public class ProxyProtocolDecoder extends ByteToMessageDecoder {
     /**
      * Creates a new decoder.
      */
-    public ProxyProtocolDecoder() {
+    public HAProxyProtocolDecoder() {
     }
 
     /**
@@ -102,14 +101,14 @@ public class ProxyProtocolDecoder extends ByteToMessageDecoder {
 
         int idx = buffer.readerIndex();
 
-        for (int i = 0; i < binaryPrefixLength; i++) {
+        for (int i = 0; i < BINARY_PREFIX_LENGTH; i++) {
             final byte b = buffer.getByte(idx + i);
-            if (b != binaryPrefix[i]) {
+            if (b != BINARY_PREFIX[i]) {
                 return 1;
             }
         }
 
-        return buffer.getByte(idx + binaryPrefixLength);
+        return buffer.getByte(idx + BINARY_PREFIX_LENGTH);
     }
 
     /**
@@ -181,11 +180,11 @@ public class ProxyProtocolDecoder extends ByteToMessageDecoder {
             finished = true;
             try {
                 if (version == 1) {
-                    out.add(ProxyProtocolMessage.decodeHeader(decoded.toString(CharsetUtil.US_ASCII)));
+                    out.add(HAProxyProtocolMessage.decodeHeader(decoded.toString(CharsetUtil.US_ASCII)));
                 } else {
-                    out.add(ProxyProtocolMessage.decodeHeader(decoded));
+                    out.add(HAProxyProtocolMessage.decodeHeader(decoded));
                 }
-            } catch (ProxyProtocolException e) {
+            } catch (HAProxyProtocolException e) {
                 fail(ctx, null, e);
             }
         }
@@ -196,7 +195,7 @@ public class ProxyProtocolDecoder extends ByteToMessageDecoder {
      * Based on code from <a href="https://github.com/netty/netty/blob/a8af57742334d2962bba108a0773878a3a4af346/codec/
      * src/main/java/io/netty/handler/codec/LineBasedFrameDecoder.java#L88">LineBasedFrameDecoder</a>.
      *
-     * @param ctx     the {@link ChannelHandlerContext} which this {@link ProxyProtocolDecoder} belongs to
+     * @param ctx     the {@link ChannelHandlerContext} which this {@link HAProxyProtocolDecoder} belongs to
      * @param buffer  the {@link ByteBuf} from which to read data
      * @return frame  the {@link ByteBuf} which represent the frame or {@code null} if no frame could
      *                be created.
@@ -206,7 +205,7 @@ public class ProxyProtocolDecoder extends ByteToMessageDecoder {
         if (!discarding) {
             if (eoh >= 0) {
                 final int length = eoh - buffer.readerIndex();
-                if (length > v2MaxLength) {
+                if (length > V2_MAX_LENGTH) {
                     buffer.readerIndex(eoh);
                     failOverLimit(ctx, length);
                     return null;
@@ -214,7 +213,7 @@ public class ProxyProtocolDecoder extends ByteToMessageDecoder {
                 return buffer.readSlice(length);
             } else {
                 final int length = buffer.readableBytes();
-                if (length > v2MaxLength) {
+                if (length > V2_MAX_LENGTH) {
                     discardedBytes = length;
                     buffer.skipBytes(length);
                     discarding = true;
@@ -241,7 +240,7 @@ public class ProxyProtocolDecoder extends ByteToMessageDecoder {
      * Based on code from <a href="https://github.com/netty/netty/blob/a8af57742334d2962bba108a0773878a3a4af346/codec/
      * src/main/java/io/netty/handler/codec/LineBasedFrameDecoder.java#L88">LineBasedFrameDecoder</a>.
      *
-     * @param ctx     the {@link ChannelHandlerContext} which this {@link ProxyProtocolDecoder} belongs to
+     * @param ctx     the {@link ChannelHandlerContext} which this {@link HAProxyProtocolDecoder} belongs to
      * @param buffer  the {@link ByteBuf} from which to read data
      * @return frame  the {@link ByteBuf} which represent the frame or {@code null} if no frame could
      *                be created.
@@ -251,17 +250,17 @@ public class ProxyProtocolDecoder extends ByteToMessageDecoder {
         if (!discarding) {
             if (eol >= 0) {
                 final int length = eol - buffer.readerIndex();
-                if (length > v1MaxLength) {
-                    buffer.readerIndex(eol + delimLength);
+                if (length > V1_MAX_LENGTH) {
+                    buffer.readerIndex(eol + DELIMITER_LENGTH);
                     failOverLimit(ctx, length);
                     return null;
                 }
                 ByteBuf frame = buffer.readSlice(length);
-                buffer.skipBytes(delimLength);
+                buffer.skipBytes(DELIMITER_LENGTH);
                 return frame;
             } else {
                 final int length = buffer.readableBytes();
-                if (length > v1MaxLength) {
+                if (length > V1_MAX_LENGTH) {
                     discardedBytes = length;
                     buffer.skipBytes(length);
                     discarding = true;
@@ -289,23 +288,23 @@ public class ProxyProtocolDecoder extends ByteToMessageDecoder {
     }
 
     private void failOverLimit(final ChannelHandlerContext ctx, String length) {
-        int maxLength = version == 1 ? v1MaxLength : v2MaxLength;
+        int maxLength = version == 1 ? V1_MAX_LENGTH : V2_MAX_LENGTH;
         fail(ctx, "header length (" + length + ") exceeds the allowed maximum (" + maxLength + ")", null);
     }
 
     private void fail(final ChannelHandlerContext ctx, String errMsg, Throwable t) {
         finished = true;
         ctx.close(); // drop connection immediately per spec
-        ProxyProtocolException ppex;
+        HAProxyProtocolException ppex;
         if (errMsg != null && t != null) {
-            ppex = new ProxyProtocolException(errMsg, t);
+            ppex = new HAProxyProtocolException(errMsg, t);
         } else if (errMsg != null) {
-            ppex = new ProxyProtocolException(errMsg);
+            ppex = new HAProxyProtocolException(errMsg);
         } else if (t != null) {
-            ppex = new ProxyProtocolException(t);
+            ppex = new HAProxyProtocolException(t);
         } else {
-            ppex = new ProxyProtocolException();
+            ppex = new HAProxyProtocolException();
         }
-        ctx.fireExceptionCaught(ppex);
+        throw ppex;
     }
 }

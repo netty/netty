@@ -13,13 +13,13 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.proxyprotocol;
+package io.netty.handler.codec.haproxy;
 
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * The address family of a proxy protocol header
+ * The address family of an HAProxy proxy protocol header.
  */
 public final class ProxiedAddressFamily implements Comparable<ProxiedAddressFamily> {
     /**
@@ -47,14 +47,14 @@ public final class ProxiedAddressFamily implements Comparable<ProxiedAddressFami
      */
     public static final ProxiedAddressFamily UNIX = new ProxiedAddressFamily("UNIX", (byte) 0x30);
 
-    private static final Map<Byte, ProxiedAddressFamily> addressFamilyMap =
+    private static final Map<Byte, ProxiedAddressFamily> ADDRESS_FAMILY_MAP =
             new HashMap<Byte, ProxiedAddressFamily>(4);
 
     static {
-        addressFamilyMap.put(UNSPECIFIED.byteValue(), UNSPECIFIED);
-        addressFamilyMap.put(IPV4.byteValue(), IPV4);
-        addressFamilyMap.put(IPV6.byteValue(), IPV6);
-        addressFamilyMap.put(UNIX.byteValue(), UNIX);
+        ADDRESS_FAMILY_MAP.put(UNSPECIFIED.byteValue(), UNSPECIFIED);
+        ADDRESS_FAMILY_MAP.put(IPV4.byteValue(), IPV4);
+        ADDRESS_FAMILY_MAP.put(IPV6.byteValue(), IPV6);
+        ADDRESS_FAMILY_MAP.put(UNIX.byteValue(), UNIX);
     }
 
     private final String name;
@@ -76,7 +76,7 @@ public final class ProxiedAddressFamily implements Comparable<ProxiedAddressFami
      *                           address family is not recognized
      */
     public static ProxiedAddressFamily valueOf(byte addressFamilyByte) {
-        return addressFamilyMap.get((byte) (addressFamilyByte & FAMILY_MASK));
+        return ADDRESS_FAMILY_MAP.get((byte) (addressFamilyByte & FAMILY_MASK));
     }
 
     /**

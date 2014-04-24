@@ -13,42 +13,41 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.proxyprotocol;
+package io.netty.handler.codec.haproxy;
 
 import io.netty.handler.codec.DecoderException;
 
 /**
- * A {@link DecoderException} which is thrown when an invalid
- * proxy protocol header is encountered.
+ * A {@link DecoderException} which is thrown when an invalid HAProxy proxy protocol header is encountered.
  */
-public class ProxyProtocolException extends DecoderException {
+public class HAProxyProtocolException extends DecoderException {
 
     private static final long serialVersionUID = 1L;
 
     /**
      * Creates a new instance.
      */
-    public ProxyProtocolException() {
+    public HAProxyProtocolException() {
     }
 
     /**
      * Creates a new instance.
      */
-    public ProxyProtocolException(String message, Throwable cause) {
+    public HAProxyProtocolException(String message, Throwable cause) {
         super(message, cause);
     }
 
     /**
      * Creates a new instance.
      */
-    public ProxyProtocolException(String message) {
+    public HAProxyProtocolException(String message) {
         super(message);
     }
 
     /**
      * Creates a new instance.
      */
-    public ProxyProtocolException(Throwable cause) {
+    public HAProxyProtocolException(Throwable cause) {
         super(cause);
     }
 }

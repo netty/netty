@@ -13,29 +13,29 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.proxyprotocol;
+package io.netty.handler.codec.haproxy;
 
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * The command of a proxy protocol header
+ * The command of an HAProxy proxy protocol header.
  */
-public final class ProxyProtocolCommand implements Comparable<ProxyProtocolCommand> {
+public final class HAProxyProtocolCommand implements Comparable<HAProxyProtocolCommand> {
     /**
      * The LOCAL command represents a connection that was established on purpose by the proxy
      * without being relayed
      */
-    public static final ProxyProtocolCommand LOCAL = new ProxyProtocolCommand("LOCAL", (byte) 0x00);
+    public static final HAProxyProtocolCommand LOCAL = new HAProxyProtocolCommand("LOCAL", (byte) 0x00);
 
     /**
      * The PROXY command represents a connection that was established on behalf of another node,
      * and reflects the original connection endpoints
      */
-    public static final ProxyProtocolCommand PROXY = new ProxyProtocolCommand("PROXY", (byte) 0x01);
+    public static final HAProxyProtocolCommand PROXY = new HAProxyProtocolCommand("PROXY", (byte) 0x01);
 
-    private static final Map<Byte, ProxyProtocolCommand> COMMAND_MAP =
-            new HashMap<Byte, ProxyProtocolCommand>(2);
+    private static final Map<Byte, HAProxyProtocolCommand> COMMAND_MAP =
+            new HashMap<Byte, HAProxyProtocolCommand>(2);
 
     static {
         COMMAND_MAP.put(LOCAL.byteValue(), LOCAL);
@@ -48,18 +48,18 @@ public final class ProxyProtocolCommand implements Comparable<ProxyProtocolComma
     /**
      * Creates a new instance.
      */
-    private ProxyProtocolCommand(String name, byte cmdByte) {
+    private HAProxyProtocolCommand(String name, byte cmdByte) {
         this.name = name;
         this.cmdByte = cmdByte;
     }
 
     /**
-     * Returns the {@link ProxyProtocolCommand} represented by the specified command byte.
+     * Returns the {@link HAProxyProtocolCommand} represented by the specified command byte.
      *
      * @param cmdByte  Command byte
-     * @return         {@link ProxyProtocolCommand} instance OR {@code null} if the command is not recognized
+     * @return         {@link HAProxyProtocolCommand} instance OR {@code null} if the command is not recognized
      */
-    public static ProxyProtocolCommand valueOf(byte cmdByte) {
+    public static HAProxyProtocolCommand valueOf(byte cmdByte) {
         return COMMAND_MAP.get(cmdByte);
     }
 
@@ -88,11 +88,11 @@ public final class ProxyProtocolCommand implements Comparable<ProxyProtocolComma
 
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof ProxyProtocolCommand)) {
+        if (!(o instanceof HAProxyProtocolCommand)) {
             return false;
         }
 
-        ProxyProtocolCommand that = (ProxyProtocolCommand) o;
+        HAProxyProtocolCommand that = (HAProxyProtocolCommand) o;
         return byteValue() == that.byteValue();
     }
 
@@ -102,7 +102,7 @@ public final class ProxyProtocolCommand implements Comparable<ProxyProtocolComma
     }
 
     @Override
-    public int compareTo(ProxyProtocolCommand o) {
+    public int compareTo(HAProxyProtocolCommand o) {
         return Byte.valueOf(byteValue()).compareTo(Byte.valueOf(o.byteValue()));
     }
 }
