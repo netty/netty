@@ -42,7 +42,7 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
      * @param httpVersion       the HTTP version of the request
      * @param method            the HTTP getMethod of the request
      * @param uri               the URI or path of the request
-     * @param validateHeaders   validate the header names and values when adding them to the {@link HttpHeaders}.
+     * @param validateHeaders   validate the header names and values when adding them to the {@link HttpHeaders}
      */
     public DefaultHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri, boolean validateHeaders) {
         super(httpVersion, validateHeaders);
@@ -98,7 +98,7 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
         buf.append(getDecoderResult());
         buf.append(')');
         buf.append(StringUtil.NEWLINE);
-        buf.append(getMethod().toString());
+        buf.append(getMethod());
         buf.append(' ');
         buf.append(getUri());
         buf.append(' ');

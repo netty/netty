@@ -49,9 +49,7 @@ public final class Signal extends Error implements Constant<Signal> {
     private final String name;
 
     /**
-     * Create a new instance
-     *
-     * @param name      the name under which it is registered
+     * Creates a new {@link Signal} with the specified {@code name}.
      */
     private Signal(int id, String name) {
         this.id = id;

@@ -16,8 +16,8 @@
 package io.netty.handler.codec.memcache.binary;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelHandlerAppender;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.PrematureChannelClosureException;
 import io.netty.handler.codec.memcache.LastMemcacheContent;
 
@@ -35,8 +35,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * content, which defaults to 8192. This chunk size is the maximum, so if smaller chunks arrive they
  * will be passed up the pipeline and not queued up to the chunk size.
  */
-public final class BinaryMemcacheClientCodec
-    extends ChannelHandlerAppender {
+public final class BinaryMemcacheClientCodec extends ChannelHandlerAppender {
 
     private final boolean failOnMissingResponse;
     private final AtomicLong requestResponseCounter = new AtomicLong();
@@ -65,7 +64,8 @@ public final class BinaryMemcacheClientCodec
      */
     public BinaryMemcacheClientCodec(int decodeChunkSize, boolean failOnMissingResponse) {
         this.failOnMissingResponse = failOnMissingResponse;
-        add(new Decoder(decodeChunkSize), new Encoder());
+        add(new Decoder(decodeChunkSize));
+        add(new Encoder());
     }
 
     private final class Encoder extends BinaryMemcacheRequestEncoder {
@@ -82,7 +82,7 @@ public final class BinaryMemcacheClientCodec
 
     private final class Decoder extends BinaryMemcacheResponseDecoder {
 
-        public Decoder(int chunkSize) {
+        Decoder(int chunkSize) {
             super(chunkSize);
         }
 

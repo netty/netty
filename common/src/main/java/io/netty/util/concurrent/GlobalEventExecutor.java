@@ -88,6 +88,7 @@ public final class GlobalEventExecutor extends AbstractEventExecutor {
                     try {
                         task = taskQueue.poll(delayNanos, TimeUnit.NANOSECONDS);
                     } catch (InterruptedException e) {
+                        // Waken up.
                         return null;
                     }
                 } else {

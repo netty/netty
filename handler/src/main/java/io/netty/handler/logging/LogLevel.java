@@ -34,7 +34,7 @@ public enum LogLevel {
     }
 
     /**
-     * Convert the {@link LogLevel} to its {@link InternalLogLevel} variant.
+     * Converts the specified {@link LogLevel} to its {@link InternalLogLevel} variant.
      *
      * @return the converted level.
      */

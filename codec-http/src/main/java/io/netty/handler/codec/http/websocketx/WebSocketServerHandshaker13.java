@@ -20,6 +20,7 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpHeaders.Names;
+import io.netty.handler.codec.http.HttpHeaders.Values;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.CharsetUtil;
 
@@ -32,8 +33,8 @@ import static io.netty.handler.codec.http.HttpVersion.*;
  * </p>
  */
 public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
-    private static final CharSequence WEBSOCKET = HttpHeaders.newEntity(
-            HttpHeaders.Values.WEBSOCKET.toString().toLowerCase());
+
+    private static final CharSequence WEBSOCKET = HttpHeaders.newEntity(Values.WEBSOCKET.toString().toLowerCase());
 
     public static final String WEBSOCKET_13_ACCEPT_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 

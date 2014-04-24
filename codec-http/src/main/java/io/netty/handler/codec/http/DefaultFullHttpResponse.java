@@ -25,7 +25,6 @@ import io.netty.buffer.Unpooled;
 public class DefaultFullHttpResponse extends DefaultHttpResponse implements FullHttpResponse {
 
     private final ByteBuf content;
-
     private final HttpHeaders trailingHeaders;
     private final boolean validateHeaders;
 

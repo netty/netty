@@ -712,7 +712,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
                 // "multipart/form-data; boundary=--89421926422648"
                 String lowercased = contentType.toLowerCase();
                 if (lowercased.startsWith(HttpHeaders.Values.MULTIPART_FORM_DATA.toString()) ||
-                    lowercased.startsWith(HttpHeaders.Values.APPLICATION_X_WWW_FORM_URLENCODED.toString())) {
+                        lowercased.startsWith(HttpHeaders.Values.APPLICATION_X_WWW_FORM_URLENCODED.toString())) {
                     // ignore
                 } else {
                     headers.add(HttpHeaders.Names.CONTENT_TYPE, contentType);

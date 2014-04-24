@@ -35,10 +35,6 @@ final class EmbeddedEventLoop extends AbstractEventLoop implements ChannelHandle
 
     private final Queue<Runnable> tasks = new ArrayDeque<Runnable>(2);
 
-    protected EmbeddedEventLoop() {
-        super(null);
-    }
-
     @Override
     public void execute(Runnable command) {
         if (command == null) {

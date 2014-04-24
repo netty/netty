@@ -27,7 +27,6 @@ public interface HttpDataFactory {
     /**
      * To set a max size limitation on fields. Exceeding it will generate an ErrorDataDecoderException.
      * A value of -1 means no limitation (default).
-     * @param max
      */
     void setMaxLimit(long max);
 

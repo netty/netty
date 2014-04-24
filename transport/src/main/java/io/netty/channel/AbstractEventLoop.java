@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 The Netty Project
+ * Copyright 2014 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -22,6 +22,8 @@ import io.netty.util.concurrent.AbstractEventExecutor;
  * Skeletal implementation of {@link EventLoop}.
  */
 public abstract class AbstractEventLoop extends AbstractEventExecutor implements EventLoop {
+
+    protected AbstractEventLoop() { }
 
     protected AbstractEventLoop(EventLoopGroup parent) {
         super(parent);

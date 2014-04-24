@@ -64,9 +64,8 @@ public final class ChannelHandlerInvokerUtil {
             ctx.handler().exceptionCaught(ctx, cause);
         } catch (Throwable t) {
             if (logger.isWarnEnabled()) {
-                logger.warn(
-                        "An exception was thrown by a user handler's " +
-                                "exceptionCaught() method while handling the following exception:", cause);
+                logger.warn("An exception was thrown by a user handler's exceptionCaught() method:", t);
+                logger.warn(".. and the cause of the exceptionCaught() was:", cause);
             }
         }
     }

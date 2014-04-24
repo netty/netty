@@ -37,28 +37,6 @@ final class AdvancedLeakAwareByteBuf extends WrappedByteBuf {
     }
 
     @Override
-    public boolean release() {
-        boolean deallocated =  super.release();
-        if (deallocated) {
-            leak.close();
-        } else {
-            leak.record();
-        }
-        return deallocated;
-    }
-
-    @Override
-    public boolean release(int decrement) {
-        boolean deallocated = super.release(decrement);
-        if (deallocated) {
-            leak.close();
-        } else {
-            leak.record();
-        }
-        return deallocated;
-    }
-
-    @Override
     public ByteBuf order(ByteOrder endianness) {
         leak.record();
         if (order() == endianness) {
@@ -705,6 +683,12 @@ final class AdvancedLeakAwareByteBuf extends WrappedByteBuf {
     }
 
     @Override
+    public ByteBuf capacity(int newCapacity) {
+        leak.record();
+        return super.capacity(newCapacity);
+    }
+
+    @Override
     public ByteBuf retain() {
         leak.record();
         return super.retain();
@@ -729,8 +713,24 @@ final class AdvancedLeakAwareByteBuf extends WrappedByteBuf {
     }
 
     @Override
-    public ByteBuf capacity(int newCapacity) {
-        leak.record();
-        return super.capacity(newCapacity);
+    public boolean release() {
+        boolean deallocated = super.release();
+        if (deallocated) {
+            leak.close();
+        } else {
+            leak.record();
+        }
+        return deallocated;
+    }
+
+    @Override
+    public boolean release(int decrement) {
+        boolean deallocated = super.release(decrement);
+        if (deallocated) {
+            leak.close();
+        } else {
+            leak.record();
+        }
+        return deallocated;
     }
 }

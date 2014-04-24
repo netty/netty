@@ -15,8 +15,8 @@
  */
 package io.netty.handler.codec.http.cors;
 
-import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpResponse;
@@ -239,12 +239,10 @@ public class CorsHandlerTest {
         return new DefaultFullHttpRequest(HTTP_1_1, method, "/info");
     }
 
-    private static class EchoHandler extends ChannelHandlerAdapter {
-
+    private static class EchoHandler extends SimpleChannelInboundHandler<Object> {
         @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
             ctx.writeAndFlush(new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.OK));
         }
     }
-
 }

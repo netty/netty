@@ -493,10 +493,10 @@ public class HttpResponseDecoderTest {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
         ch.writeInbound(Unpooled.wrappedBuffer(data, otherData));
 
-        HttpResponse res = (HttpResponse) ch.readInbound();
+        HttpResponse res = ch.readInbound();
         assertThat(res.getProtocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
         assertThat(res.getStatus(), is(HttpResponseStatus.SWITCHING_PROTOCOLS));
-        HttpContent content = (HttpContent) ch.readInbound();
+        HttpContent content = ch.readInbound();
         assertThat(content.content().readableBytes(), is(16));
         content.release();
 

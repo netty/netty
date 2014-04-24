@@ -17,8 +17,8 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelHandlerAppender;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.PrematureChannelClosureException;
 
 import java.util.ArrayDeque;
@@ -81,7 +81,8 @@ public final class HttpClientCodec extends ChannelHandlerAppender {
     public HttpClientCodec(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean failOnMissingResponse,
             boolean validateHeaders) {
-        add(new Decoder(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders), new Encoder());
+        add(new Decoder(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders));
+        add(new Encoder());
         this.failOnMissingResponse = failOnMissingResponse;
     }
 

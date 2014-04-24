@@ -127,7 +127,7 @@ public class LoggingHandler extends ChannelHandlerAdapter {
      * Creates a new instance with the specified logger name and with hex dump
      * enabled.
      *
-     * @param clazz the class type to generate the logger for.
+     * @param clazz the class type to generate the logger for
      */
     public LoggingHandler(Class<?> clazz) {
         this(clazz, DEFAULT_LEVEL);
@@ -136,8 +136,8 @@ public class LoggingHandler extends ChannelHandlerAdapter {
     /**
      * Creates a new instance with the specified logger name.
      *
-     * @param clazz the class type to generate the logger for.
-     * @param level the log level.
+     * @param clazz the class type to generate the logger for
+     * @param level the log level
      */
     public LoggingHandler(Class<?> clazz, LogLevel level) {
         if (clazz == null) {
@@ -155,7 +155,7 @@ public class LoggingHandler extends ChannelHandlerAdapter {
     /**
      * Creates a new instance with the specified logger name using the default log level.
      *
-     * @param name the name of the class to use for the logger.
+     * @param name the name of the class to use for the logger
      */
     public LoggingHandler(String name) {
         this(name, DEFAULT_LEVEL);
@@ -164,8 +164,8 @@ public class LoggingHandler extends ChannelHandlerAdapter {
     /**
      * Creates a new instance with the specified logger name.
      *
-     * @param name the name of the class to use for the logger.
-     * @param level the log level.
+     * @param name the name of the class to use for the logger
+     * @param level the log level
      */
     public LoggingHandler(String name, LogLevel level) {
         if (name == null) {

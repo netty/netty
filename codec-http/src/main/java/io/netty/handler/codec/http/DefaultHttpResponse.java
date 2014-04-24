@@ -39,7 +39,7 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
      *
      * @param version           the HTTP version of this response
      * @param status            the getStatus of this response
-     * @param validateHeaders   validate the header names and values when adding them to the {@link HttpHeaders}.
+     * @param validateHeaders   validate the header names and values when adding them to the {@link HttpHeaders}
      */
     public DefaultHttpResponse(HttpVersion version, HttpResponseStatus status, boolean validateHeaders) {
         super(version, validateHeaders);

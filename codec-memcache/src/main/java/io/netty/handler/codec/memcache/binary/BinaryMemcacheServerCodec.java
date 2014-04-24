@@ -31,6 +31,7 @@ public class BinaryMemcacheServerCodec extends ChannelHandlerAppender {
     }
 
     public BinaryMemcacheServerCodec(int decodeChunkSize) {
-        add(new BinaryMemcacheRequestDecoder(decodeChunkSize), new BinaryMemcacheResponseEncoder());
+        add(new BinaryMemcacheRequestDecoder(decodeChunkSize));
+        add(new BinaryMemcacheResponseEncoder());
     }
 }

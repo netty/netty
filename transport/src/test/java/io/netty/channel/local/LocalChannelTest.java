@@ -153,7 +153,7 @@ public class LocalChannelTest {
     @Test
     public void testServerCloseChannelSameEventLoop() throws Exception {
         LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
-        LocalEventLoopGroup group = new LocalEventLoopGroup(1);
+        EventLoopGroup group = new DefaultEventLoopGroup(1);
         final CountDownLatch latch = new CountDownLatch(1);
         ServerBootstrap sb = new ServerBootstrap()
                 .group(group)

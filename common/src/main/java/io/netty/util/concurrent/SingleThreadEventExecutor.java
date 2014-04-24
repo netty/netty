@@ -196,6 +196,7 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
                     try {
                         task = taskQueue.poll(delayNanos, TimeUnit.NANOSECONDS);
                     } catch (InterruptedException e) {
+                        // Waken up.
                         return null;
                     }
                 }

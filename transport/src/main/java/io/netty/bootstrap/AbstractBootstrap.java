@@ -210,7 +210,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     /**
      * Returns a deep clone of this bootstrap which has the identical configuration.  This method is useful when making
      * multiple {@link Channel}s with similar settings.  Please note that this method does not clone the
-     * {@link EventExecutorGroup} deeply but shallowly, making the group a shared resource.
+     * {@link EventLoopGroup} deeply but shallowly, making the group a shared resource.
      */
     @Override
     @SuppressWarnings("CloneDoesntDeclareCloneNotSupportedException")

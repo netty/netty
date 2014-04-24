@@ -58,6 +58,8 @@ public class AutobahnServerHandler extends ChannelHandlerAdapter {
             handleHttpRequest(ctx, (FullHttpRequest) msg);
         } else if (msg instanceof WebSocketFrame) {
             handleWebSocketFrame(ctx, (WebSocketFrame) msg);
+        } else {
+            throw new IllegalStateException("unknown message: " + msg);
         }
     }
 

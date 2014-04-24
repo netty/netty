@@ -40,8 +40,7 @@ import java.net.URI;
 public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketClientHandshaker08.class);
-    private static final CharSequence WEBSOCKET = HttpHeaders.newEntity(
-            HttpHeaders.Values.WEBSOCKET.toString().toLowerCase());
+    private static final CharSequence WEBSOCKET = HttpHeaders.newEntity(Values.WEBSOCKET.toString().toLowerCase());
 
     public static final String MAGIC_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 

@@ -19,15 +19,15 @@ package io.netty.channel.oio;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ThreadPerChannelEventLoopGroup;
-import io.netty.util.concurrent.EventExecutorGroup;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 
 /**
- * {@link EventExecutorGroup} which is used to handle OIO {@link Channel}'s. Each {@link Channel} will be handled by its
+ * {@link EventLoopGroup} which is used to handle OIO {@link Channel}'s. Each {@link Channel} will be handled by its
  * own {@link EventLoop} to not block others.
  */
 public class OioEventLoopGroup extends ThreadPerChannelEventLoopGroup {

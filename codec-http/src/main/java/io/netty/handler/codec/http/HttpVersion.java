@@ -177,6 +177,7 @@ public class HttpVersion implements Comparable<HttpVersion> {
         this.minorVersion = minorVersion;
         text = protocolName + '/' + majorVersion + '.' + minorVersion;
         this.keepAliveDefault = keepAliveDefault;
+
         if (bytes) {
             this.bytes = text.getBytes(CharsetUtil.US_ASCII);
         } else {

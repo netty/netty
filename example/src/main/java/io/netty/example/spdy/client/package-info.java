@@ -41,4 +41,3 @@
  *     mvn exec:exec -Pspdy-client
  */
 package io.netty.example.spdy.client;
-
