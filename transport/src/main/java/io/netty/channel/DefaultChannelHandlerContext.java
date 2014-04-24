@@ -306,7 +306,9 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     public ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
         DefaultChannelHandlerContext next = findContextOutbound();
         ReferenceCountUtil.touch(msg, next);
-        next.invoker().invokeWriteAndFlush(next, msg, promise);
+        ChannelHandlerInvoker invoker = next.invoker();
+        invoker.invokeWrite(next, msg, promise);
+        invoker.invokeFlush(next);
         return promise;
     }
 
