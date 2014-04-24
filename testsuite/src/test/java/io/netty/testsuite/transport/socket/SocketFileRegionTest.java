@@ -91,14 +91,14 @@ public class SocketFileRegionTest extends AbstractSocketTest {
 
         ChannelInboundHandler ch = new SimpleChannelInboundHandler<Object>() {
             @Override
+            public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+            }
+
+            @Override
             public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
                 if (!autoRead) {
                     ctx.read();
                 }
-            }
-
-            @Override
-            public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
             }
 
             @Override

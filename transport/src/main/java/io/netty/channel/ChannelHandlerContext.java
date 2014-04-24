@@ -30,12 +30,14 @@ import java.nio.channels.Channels;
 
 /**
  * Enables a {@link ChannelHandler} to interact with its {@link ChannelPipeline}
- * and other handlers.  A handler can notify the next {@link ChannelHandler} in the {@link ChannelPipeline},
- * modify the {@link ChannelPipeline} it belongs to dynamically.
+ * and other handlers. Among other things a handler can notify the next {@link ChannelHandler} in the
+ * {@link ChannelPipeline} as well as modify the {@link ChannelPipeline} it belongs to dynamically.
  *
  * <h3>Notify</h3>
  *
- * You can notify the closest handler in the same {@link ChannelPipeline} by calling one of the various method.
+ * You can notify the closest handler in the same {@link ChannelPipeline} by calling one of the various methods
+ * provided here.
+ *
  * Please refer to {@link ChannelPipeline} to understand how an event flows.
  *
  * <h3>Modifying a pipeline</h3>
@@ -84,15 +86,14 @@ import java.nio.channels.Channels;
  * as how many times it is added to pipelines, regardless if it is added to the
  * same pipeline multiple times or added to different pipelines multiple times:
  * <pre>
- * public class FactorialHandler extends {@link ChannelInboundHandlerAdapter}&lt{@link Integer}&gt {
+ * public class FactorialHandler extends {@link ChannelInboundHandlerAdapter} {
  *
- *   private final {@link AttributeKey}&lt{@link Integer}&gt counter =
- *           new {@link AttributeKey}&lt{@link Integer}&gt("counter");
+ *   private final {@link AttributeKey}&lt{@link Integer}&gt counter = {@link AttributeKey}.valueOf("counter");
  *
  *   // This handler will receive a sequence of increasing integers starting
  *   // from 1.
  *   {@code @Override}
- *   public void channelRead({@link ChannelHandlerContext} ctx, {@link Integer} integer) {
+ *   public void channelRead({@link ChannelHandlerContext} ctx, Object msg) {
  *     {@link Attribute}&lt{@link Integer}&gt attr = ctx.getAttr(counter);
  *     Integer a = ctx.getAttr(counter).get();
  *
@@ -100,13 +101,13 @@ import java.nio.channels.Channels;
  *       a = 1;
  *     }
  *
- *     attr.set(a * integer));
+ *     attr.set(a * (Integer) msg));
  *   }
  * }
  *
  * // Different context objects are given to "f1", "f2", "f3", and "f4" even if
  * // they refer to the same handler instance.  Because the FactorialHandler
- * // stores its state in a context object (as an (using an {@link AttributeKey}), the factorial is
+ * // stores its state in a context object (using an {@link AttributeKey}), the factorial is
  * // calculated correctly 4 times once the two pipelines (p1 and p2) are active.
  * FactorialHandler fh = new FactorialHandler();
  *

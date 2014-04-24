@@ -75,13 +75,13 @@
  * type.
  * <pre>
  * // The composite type is compatible with the component type.
- * {@link ByteBuf} message = {@link Unpooled}.wrappedBuffer(header, body);
+ * {@link io.netty.buffer.ByteBuf} message = {@link io.netty.buffer.Unpooled}.wrappedBuffer(header, body);
  *
  * // Therefore, you can even create a composite by mixing a composite and an
  * // ordinary buffer.
- * {@link ByteBuf} messageWithFooter = {@link Unpooled}.wrappedBuffer(message, footer);
+ * {@link io.netty.buffer.ByteBuf} messageWithFooter = {@link io.netty.buffer.Unpooled}.wrappedBuffer(message, footer);
  *
- * // Because the composite is still a {@link ByteBuf}, you can access its content
+ * // Because the composite is still a {@link io.netty.buffer.ByteBuf}, you can access its content
  * // easily, and the accessor method will behave just like it's a single buffer
  * // even if the region you want to access spans over multiple components.  The
  * // unsigned integer being read here is located across body and footer.
@@ -100,7 +100,7 @@
  * <pre>
  * // A new dynamic buffer is created.  Internally, the actual buffer is created
  * // lazily to avoid potentially wasted memory space.
- * {@link ByteBuf} b = {@link Unpooled}.buffer(4);
+ * {@link io.netty.buffer.ByteBuf} b = {@link io.netty.buffer.Unpooled}.buffer(4);
  *
  * // When the first write attempt is made, the internal buffer is created with
  * // the specified initial capacity (4).

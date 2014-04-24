@@ -40,6 +40,7 @@ import java.net.URI;
 public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketClientHandshaker08.class);
+    private static final CharSequence WEBSOCKET = HttpHeaders.newEntity(Values.WEBSOCKET.toLowerCase());
 
     public static final String MAGIC_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
@@ -119,7 +120,7 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
         FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, path);
         HttpHeaders headers = request.headers();
 
-        headers.add(Names.UPGRADE, Values.WEBSOCKET.toLowerCase())
+        headers.add(Names.UPGRADE, WEBSOCKET)
                .add(Names.CONNECTION, Values.UPGRADE)
                .add(Names.SEC_WEBSOCKET_KEY, key)
                .add(Names.HOST, wsURL.getHost());
@@ -173,12 +174,12 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
         }
 
         String upgrade = headers.get(Names.UPGRADE);
-        if (!Values.WEBSOCKET.equalsIgnoreCase(upgrade)) {
+        if (!HttpHeaders.equalsIgnoreCase(Values.WEBSOCKET, upgrade)) {
             throw new WebSocketHandshakeException("Invalid handshake response upgrade: " + upgrade);
         }
 
         String connection = headers.get(Names.CONNECTION);
-        if (!Values.UPGRADE.equalsIgnoreCase(connection)) {
+        if (!HttpHeaders.equalsIgnoreCase(Values.UPGRADE, connection)) {
             throw new WebSocketHandshakeException("Invalid handshake response connection: " + connection);
         }
 

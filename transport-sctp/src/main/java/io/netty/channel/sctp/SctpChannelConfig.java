@@ -33,11 +33,11 @@ import io.netty.channel.RecvByteBufAllocator;
  * <tr>
  * <th>Name</th><th>Associated setter method</th>
  * </tr><tr>
+ * <td>{@link io.netty.channel.ChannelOption#SO_RCVBUF}</td><td>{@link #setReceiveBufferSize(int)}</td>
+ * </tr><tr>
+ * <td>{@link io.netty.channel.ChannelOption#SO_SNDBUF}</td><td>{@link #setSendBufferSize(int)}</td>
+ * </tr><tr>
  * <td>{@link SctpChannelOption#SCTP_NODELAY}</td><td>{@link #setSctpNoDelay(boolean)}}</td>
- * </tr><tr>
- * <td>{@link SctpChannelOption#SO_RCVBUF}</td><td>{@link #setReceiveBufferSize(int)}</td>
- * </tr><tr>
- * <td>{@link SctpChannelOption#SO_SNDBUF}</td><td>{@link #setSendBufferSize(int)}</td>
  * </tr><tr>
  * <td>{@link SctpChannelOption#SCTP_INIT_MAXSTREAMS}</td><td>{@link #setInitMaxStreams(InitMaxStreams)}</td>
  * </tr>

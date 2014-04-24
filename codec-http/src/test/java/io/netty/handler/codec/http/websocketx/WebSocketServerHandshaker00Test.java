@@ -75,6 +75,7 @@ public class WebSocketServerHandshaker00Test {
         HttpResponse res = ch2.readInbound();
 
         Assert.assertEquals("ws://example.com/chat", res.headers().get(Names.SEC_WEBSOCKET_LOCATION));
+
         if (subProtocol) {
             Assert.assertEquals("chat", res.headers().get(Names.SEC_WEBSOCKET_PROTOCOL));
         } else {

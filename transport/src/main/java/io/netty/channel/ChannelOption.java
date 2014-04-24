@@ -99,7 +99,7 @@ public final class ChannelOption<T> extends AbstractConstant<ChannelOption<T>> {
             valueOf("DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION");
 
     /**
-     * Creates a new {@link ChannelOption} with the specified {@code name}.
+     * Creates a new {@link ChannelOption} with the specified unique {@code name}.
      */
     private ChannelOption(int id, String name) {
         super(id, name);

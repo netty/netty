@@ -56,7 +56,7 @@ import java.lang.annotation.Target;
  * {@link ChannelPipeline} it belongs to via a context object.  Using the
  * context object, the {@link ChannelHandler} can pass events upstream or
  * downstream, modify the pipeline dynamically, or store the information
- *  (using {@link AttributeKey}s) which is specific to the handler.
+ * (using {@link AttributeKey}s) which is specific to the handler.
  *
  * <h3>State management</h3>
  *
@@ -104,7 +104,7 @@ import java.lang.annotation.Target;
  *
  * </pre>
  *
- * <h4>Using {@link AttributeKey}</h4>
+ * <h4>Using {@link AttributeKey}s</h4>
  *
  * Although it's recommended to use member variables to store the state of a
  * handler, for some reason you might not want to create many handler instances.
@@ -138,7 +138,7 @@ import java.lang.annotation.Target;
  *     ...
  * }
  * </pre>
- * Now that the state of the handler isattached to the {@link ChannelHandlerContext}, you can add the
+ * Now that the state of the handler is attached to the {@link ChannelHandlerContext}, you can add the
  * same handler instance to different pipelines:
  * <pre>
  * public class DataServerInitializer extends {@link ChannelInitializer}&lt{@link Channel}&gt {

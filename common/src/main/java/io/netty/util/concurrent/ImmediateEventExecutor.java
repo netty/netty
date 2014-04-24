@@ -21,13 +21,14 @@ import java.util.concurrent.TimeUnit;
  * {@link AbstractEventExecutor} which execute tasks in the callers thread.
  */
 public final class ImmediateEventExecutor extends AbstractEventExecutor {
+
     public static final ImmediateEventExecutor INSTANCE = new ImmediateEventExecutor();
 
     private final Future<?> terminationFuture = new FailedFuture<Object>(
             GlobalEventExecutor.INSTANCE, new UnsupportedOperationException());
 
     private ImmediateEventExecutor() {
-        // use static instance
+        // Singleton
     }
 
     @Override
