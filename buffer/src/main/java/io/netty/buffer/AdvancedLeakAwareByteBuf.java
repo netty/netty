@@ -714,7 +714,7 @@ final class AdvancedLeakAwareByteBuf extends WrappedByteBuf {
 
     @Override
     public boolean release() {
-        boolean deallocated =  super.release();
+        boolean deallocated = super.release();
         if (deallocated) {
             leak.close();
         } else {

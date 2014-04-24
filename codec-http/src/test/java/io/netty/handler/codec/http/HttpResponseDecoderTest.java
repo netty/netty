@@ -266,6 +266,33 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
+    public void testLastResponseWithHeaderRemoveTrailingSpaces() {
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
+        ch.writeInbound(Unpooled.copiedBuffer(
+                "HTTP/1.1 200 OK\r\nX-Header: h2=h2v2; Expires=Wed, 09-Jun-2021 10:18:14 GMT       \r\n\r\n",
+                CharsetUtil.US_ASCII));
+
+        HttpResponse res = ch.readInbound();
+        assertThat(res.getProtocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
+        assertThat(res.getStatus(), is(HttpResponseStatus.OK));
+        assertThat(res.headers().get("X-Header"), is("h2=h2v2; Expires=Wed, 09-Jun-2021 10:18:14 GMT"));
+        assertThat(ch.readInbound(), is(nullValue()));
+
+        ch.writeInbound(Unpooled.wrappedBuffer(new byte[1024]));
+        HttpContent content = ch.readInbound();
+        assertThat(content.content().readableBytes(), is(1024));
+        content.release();
+
+        assertThat(ch.finish(), is(true));
+
+        LastHttpContent lastContent = ch.readInbound();
+        assertThat(lastContent.content().isReadable(), is(false));
+        lastContent.release();
+
+        assertThat(ch.readInbound(), is(nullValue()));
+    }
+
+    @Test
     public void testLastResponseWithTrailingHeader() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
         ch.writeInbound(Unpooled.copiedBuffer(

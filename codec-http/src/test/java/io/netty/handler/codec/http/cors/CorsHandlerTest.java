@@ -240,11 +240,9 @@ public class CorsHandlerTest {
     }
 
     private static class EchoHandler extends SimpleChannelInboundHandler<Object> {
-
         @Override
         public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
             ctx.writeAndFlush(new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.OK));
         }
     }
-
 }

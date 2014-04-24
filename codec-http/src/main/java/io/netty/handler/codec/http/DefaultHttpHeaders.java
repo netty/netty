@@ -381,6 +381,14 @@ public class DefaultHttpHeaders extends HttpHeaders {
         return names;
     }
 
+    void encode(ByteBuf buf) {
+        HeaderEntry e = head.after;
+        while (e != head) {
+            e.encode(buf);
+            e = e.after;
+        }
+    }
+
     private static CharSequence toCharSequence(Object value) {
         if (value == null) {
             return null;
@@ -398,14 +406,6 @@ public class DefaultHttpHeaders extends HttpHeaders {
             return HttpHeaderDateFormat.get().format(((Calendar) value).getTime());
         }
         return value.toString();
-    }
-
-    void encode(ByteBuf buf) {
-        HeaderEntry e = head.after;
-        while (e != head) {
-            e.encode(buf);
-            e = e.after;
-        }
     }
 
     private final class HeaderIterator implements Iterator<Map.Entry<String, String>> {

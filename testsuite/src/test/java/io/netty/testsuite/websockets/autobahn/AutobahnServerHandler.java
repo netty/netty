@@ -24,7 +24,6 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.ContinuationWebSocketFrame;
@@ -35,7 +34,6 @@ import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory;
 import io.netty.util.CharsetUtil;
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.StringUtil;
 
 import java.util.logging.Level;
@@ -61,7 +59,7 @@ public class AutobahnServerHandler extends ChannelInboundHandlerAdapter {
         } else if (msg instanceof WebSocketFrame) {
             handleWebSocketFrame(ctx, (WebSocketFrame) msg);
         } else {
-            ReferenceCountUtil.release(msg);
+            throw new IllegalStateException("unknown message: " + msg);
         }
     }
 
@@ -107,13 +105,13 @@ public class AutobahnServerHandler extends ChannelInboundHandlerAdapter {
         if (frame instanceof CloseWebSocketFrame) {
             handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame);
         } else if (frame instanceof PingWebSocketFrame) {
-            ctx.write(new PongWebSocketFrame(frame.isFinalFragment(), frame.rsv(), frame.content()), ctx.voidPromise());
+            ctx.write(new PongWebSocketFrame(frame.isFinalFragment(), frame.rsv(), frame.content()));
         } else if (frame instanceof TextWebSocketFrame) {
-            ctx.write(frame, ctx.voidPromise());
+            ctx.write(frame);
         } else if (frame instanceof BinaryWebSocketFrame) {
-            ctx.write(frame, ctx.voidPromise());
+            ctx.write(frame);
         } else if (frame instanceof ContinuationWebSocketFrame) {
-            ctx.write(frame, ctx.voidPromise());
+            ctx.write(frame);
         } else if (frame instanceof PongWebSocketFrame) {
             frame.release();
             // Ignore
@@ -146,6 +144,6 @@ public class AutobahnServerHandler extends ChannelInboundHandlerAdapter {
     }
 
     private static String getWebSocketLocation(FullHttpRequest req) {
-        return "ws://" + req.headers().get(HttpHeaders.Names.HOST);
+        return "ws://" + req.headers().get(Names.HOST);
     }
 }

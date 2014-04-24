@@ -16,7 +16,6 @@
 package io.netty.handler.codec.spdy;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.util.CharsetUtil;
 
 final class SpdyCodecUtil {
 

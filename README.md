@@ -22,4 +22,5 @@ Note that this is build-time requirement.  JDK 5 (for 3.x) or 6 (for 4.0+) is en
 
 ## Branches to look
 
-[The 'master' branch](https://github.com/netty/netty/tree/master) is where the development of the latest major version lives on.  The development of all other major versions takes place in each branch whose name is identical to its major version number.  For example, the development of 3.x and 4.x resides in [the branch '3'](https://github.com/netty/netty/tree/3) and [the branch '4'](https://github.com/netty/netty/tree/4) respectively.
+[The 'master' branch](https://github.com/netty/netty/tree/master) is where the development of the latest major version lives on.  The development of all other versions takes place in each branch whose name is identical to `<majorVersion>.<minorVersion>`.  For example, the development of 3.9 and 4.0 resides in [the branch '3.9'](https://github.com/netty/netty/tree/3.9) and [the branch '4.0'](https://github.com/netty/netty/tree/4.0) respectively.
+

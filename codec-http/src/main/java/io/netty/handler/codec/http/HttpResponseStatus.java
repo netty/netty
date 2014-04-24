@@ -213,8 +213,7 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
     /**
      * 417 Expectation Failed
      */
-    public static final HttpResponseStatus EXPECTATION_FAILED =
-            new HttpResponseStatus(417, "Expectation Failed", true);
+    public static final HttpResponseStatus EXPECTATION_FAILED = new HttpResponseStatus(417, "Expectation Failed", true);
 
     /**
      * 422 Unprocessable Entity (WebDAV, RFC4918)
@@ -225,8 +224,7 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
     /**
      * 423 Locked (WebDAV, RFC4918)
      */
-    public static final HttpResponseStatus LOCKED =
-            new HttpResponseStatus(423, "Locked", true);
+    public static final HttpResponseStatus LOCKED = new HttpResponseStatus(423, "Locked", true);
 
     /**
      * 424 Failed Dependency (WebDAV, RFC4918)

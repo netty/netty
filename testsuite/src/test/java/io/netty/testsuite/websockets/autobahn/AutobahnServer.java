@@ -36,20 +36,21 @@ public class AutobahnServer {
     }
 
     public void run() throws Exception {
-        EventLoopGroup group = new NioEventLoopGroup();
+        EventLoopGroup bossGroup = new NioEventLoopGroup(1);
+        EventLoopGroup workerGroup = new NioEventLoopGroup();
         try {
             ServerBootstrap b = new ServerBootstrap();
-            b.group(group)
+            b.group(bossGroup, workerGroup)
              .channel(NioServerSocketChannel.class)
              .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
-             .option(ChannelOption.SO_BACKLOG, 1024)
              .childHandler(new AutobahnServerInitializer());
 
             ChannelFuture f = b.bind(port).sync();
             System.out.println("Web Socket Server started at port " + port);
             f.channel().closeFuture().sync();
         } finally {
-            group.shutdownGracefully();
+            bossGroup.shutdownGracefully();
+            workerGroup.shutdownGracefully();
         }
     }
 

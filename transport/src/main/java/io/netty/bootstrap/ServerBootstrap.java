@@ -277,7 +277,7 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
                 ctx.channel().eventLoop().schedule(new Runnable() {
                     @Override
                     public void run() {
-                       config.setAutoRead(true);
+                        config.setAutoRead(true);
                     }
                 }, 1, TimeUnit.SECONDS);
             }

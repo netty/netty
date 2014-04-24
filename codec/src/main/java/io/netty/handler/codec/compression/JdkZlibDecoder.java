@@ -18,7 +18,6 @@ package io.netty.handler.codec.compression;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 
-import java.nio.ByteOrder;
 import java.util.List;
 import java.util.zip.CRC32;
 import java.util.zip.DataFormatException;
