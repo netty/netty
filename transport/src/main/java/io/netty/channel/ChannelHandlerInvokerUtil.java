@@ -171,11 +171,6 @@ public final class ChannelHandlerInvokerUtil {
         }
     }
 
-    public static void invokeWriteAndFlushNow(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-        invokeWriteNow(ctx, msg, promise);
-        invokeFlushNow(ctx);
-    }
-
     public static boolean validatePromise(
             ChannelHandlerContext ctx, ChannelPromise promise, boolean allowVoidPromise) {
         if (ctx == null) {

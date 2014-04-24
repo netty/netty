@@ -204,11 +204,6 @@ final class EmbeddedEventLoop extends AbstractEventLoop implements ChannelHandle
     }
 
     @Override
-    public void invokeWriteAndFlush(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-        invokeWriteAndFlushNow(ctx, msg, promise);
-    }
-
-    @Override
     public void invokeFlush(ChannelHandlerContext ctx) {
         invokeFlushNow(ctx);
     }

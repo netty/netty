@@ -147,14 +147,6 @@ public interface ChannelHandlerInvoker {
     void invokeWrite(ChannelHandlerContext ctx, Object msg, ChannelPromise promise);
 
     /**
-     * Invokes {@link ChannelOutboundHandler#write(ChannelHandlerContext, Object, ChannelPromise)} and
-     * {@link ChannelOutboundHandler#flush(ChannelHandlerContext)} sequentially.
-     * This method is not for a user but for the internal {@link ChannelHandlerContext} implementation.
-     * To trigger an event, use the methods in {@link ChannelHandlerContext} instead.
-     */
-    void invokeWriteAndFlush(ChannelHandlerContext ctx, Object msg, ChannelPromise promise);
-
-    /**
      * Invokes {@link ChannelOutboundHandler#flush(ChannelHandlerContext)}.
      * This method is not for a user but for the internal {@link ChannelHandlerContext} implementation.
      * To trigger an event, use the methods in {@link ChannelHandlerContext} instead.

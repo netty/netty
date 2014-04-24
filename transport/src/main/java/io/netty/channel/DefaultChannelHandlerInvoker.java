@@ -326,22 +326,14 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
         if (msg == null) {
             throw new NullPointerException("msg");
         }
-
         if (!validatePromise(ctx, promise, true)) {
             // promise cancelled
             ReferenceCountUtil.release(msg);
             return;
         }
 
-        invokeWrite(ctx, msg, false, promise);
-    }
-
-    private void invokeWrite(ChannelHandlerContext ctx, Object msg, boolean flush, ChannelPromise promise) {
         if (executor.inEventLoop()) {
             invokeWriteNow(ctx, msg, promise);
-            if (flush) {
-                invokeFlushNow(ctx);
-            }
         } else {
             AbstractChannel channel = (AbstractChannel) ctx.channel();
             int size = channel.estimatorHandle().size(msg);
@@ -352,13 +344,7 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
                     buffer.incrementPendingOutboundBytes(size);
                 }
             }
-            Runnable task;
-            if (flush) {
-                task = WriteAndFlushTask.newInstance(ctx, msg, size, promise);
-            }  else {
-                task = WriteTask.newInstance(ctx, msg, size, promise);
-            }
-            safeExecuteOutbound(task, promise, msg);
+            safeExecuteOutbound(WriteTask.newInstance(ctx, msg, size, promise), promise, msg);
         }
     }
 
@@ -379,21 +365,6 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
             }
             executor.execute(task);
         }
-    }
-
-    @Override
-    public void invokeWriteAndFlush(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-        if (msg == null) {
-            throw new NullPointerException("msg");
-        }
-
-        if (!validatePromise(ctx, promise, true)) {
-            // promise cancelled
-            ReferenceCountUtil.release(msg);
-            return;
-        }
-
-        invokeWrite(ctx, msg, true, promise);
     }
 
     private void safeExecuteInbound(Runnable task, Object msg) {
@@ -427,55 +398,11 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
         }
     }
 
-    abstract static class AbstractWriteTask<T> extends OneTimeTask {
-        private final Recycler.Handle<T> handle;
-
+    static final class WriteTask extends OneTimeTask implements SingleThreadEventLoop.NonWakeupRunnable {
         private ChannelHandlerContext ctx;
         private Object msg;
         private ChannelPromise promise;
         private int size;
-
-        protected AbstractWriteTask(Recycler.Handle<T> handle) {
-            this.handle = handle;
-        }
-
-        protected static void init(
-                AbstractWriteTask<?> task, ChannelHandlerContext ctx, Object msg, int size, ChannelPromise promise) {
-            task.ctx = ctx;
-            task.msg = msg;
-            task.promise = promise;
-            task.size = size;
-        }
-
-        @Override
-        public final void run() {
-            try {
-                if (size > 0) {
-                    ChannelOutboundBuffer buffer = ctx.channel().unsafe().outboundBuffer();
-                    // Check for null as it may be set to null if the channel is closed already
-                    if (buffer != null) {
-                        buffer.decrementPendingOutboundBytes(size);
-                    }
-                }
-                write(ctx, msg, promise);
-            } finally {
-                // Set to null so the GC can collect them directly
-                ctx = null;
-                msg = null;
-                promise = null;
-                recycle(handle);
-            }
-        }
-
-        protected void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-            invokeWriteNow(ctx, msg, promise);
-        }
-
-        protected abstract void recycle(Recycler.Handle<T> handle);
-    }
-
-    static final class WriteTask
-            extends AbstractWriteTask<WriteTask> implements SingleThreadEventLoop.NonWakeupRunnable {
 
         private static final Recycler<WriteTask> RECYCLER = new Recycler<WriteTask>() {
             @Override
@@ -484,51 +411,41 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
             }
         };
 
-        static WriteTask newInstance(ChannelHandlerContext ctx, Object msg, int size, ChannelPromise promise) {
+        private static WriteTask newInstance(
+                ChannelHandlerContext ctx, Object msg, int size, ChannelPromise promise) {
             WriteTask task = RECYCLER.get();
-            init(task, ctx, msg, size, promise);
+            task.ctx = ctx;
+            task.msg = msg;
+            task.promise = promise;
+            task.size = size;
             return task;
         }
+
+        private final Recycler.Handle<WriteTask> handle;
 
         private WriteTask(Recycler.Handle<WriteTask> handle) {
-            super(handle);
+            this.handle = handle;
         }
 
         @Override
-        protected void recycle(Recycler.Handle<WriteTask> handle) {
-            RECYCLER.recycle(this, handle);
-        }
-    }
+        public void run() {
+            try {
+                if (size > 0) {
+                    ChannelOutboundBuffer buffer = ctx.channel().unsafe().outboundBuffer();
+                    // Check for null as it may be set to null if the channel is closed already
+                    if (buffer != null) {
+                        buffer.decrementPendingOutboundBytes(size);
+                    }
+                }
+                invokeWriteNow(ctx, msg, promise);
+            } finally {
+                // Set to null so the GC can collect them directly
+                ctx = null;
+                msg = null;
+                promise = null;
 
-    static final class WriteAndFlushTask extends AbstractWriteTask<WriteAndFlushTask> {
-
-        private static final Recycler<WriteAndFlushTask> RECYCLER = new Recycler<WriteAndFlushTask>() {
-            @Override
-            protected WriteAndFlushTask newObject(Handle<WriteAndFlushTask> handle) {
-                return new WriteAndFlushTask(handle);
+                RECYCLER.recycle(this, handle);
             }
-        };
-
-        static WriteAndFlushTask newInstance(
-                ChannelHandlerContext ctx, Object msg, int size, ChannelPromise promise) {
-            WriteAndFlushTask task = RECYCLER.get();
-            init(task, ctx, msg, size, promise);
-            return task;
-        }
-
-        private WriteAndFlushTask(Recycler.Handle<WriteAndFlushTask> handle) {
-            super(handle);
-        }
-
-        @Override
-        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-            super.write(ctx, msg, promise);
-            invokeFlushNow(ctx);
-        }
-
-        @Override
-        protected void recycle(Recycler.Handle<WriteAndFlushTask> handle) {
-            RECYCLER.recycle(this, handle);
         }
     }
 }
