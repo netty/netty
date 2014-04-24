@@ -537,7 +537,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    private void callHandlerAdded(final ChannelHandlerContext ctx) {
+    private void callHandlerAdded(final DefaultChannelHandlerContext ctx) {
         if (ctx.channel().isRegistered() && !ctx.executor().inEventLoop()) {
             ctx.executor().execute(new Runnable() {
                 @Override
@@ -550,13 +550,13 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         callHandlerAdded0(ctx);
     }
 
-    private void callHandlerAdded0(final ChannelHandlerContext ctx) {
+    private void callHandlerAdded0(final DefaultChannelHandlerContext ctx) {
         try {
             ctx.handler().handlerAdded(ctx);
         } catch (Throwable t) {
             boolean removed = false;
             try {
-                remove((DefaultChannelHandlerContext) ctx);
+                remove(ctx);
                 removed = true;
             } catch (Throwable t2) {
                 if (logger.isWarnEnabled()) {
@@ -934,7 +934,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public ChannelFuture deregister(final ChannelPromise promise) {
+    public ChannelFuture deregister(ChannelPromise promise) {
         return tail.deregister(promise);
     }
 
@@ -1046,22 +1046,12 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         public void channelReadComplete(ChannelHandlerContext ctx) throws Exception { }
     }
 
-    static final class HeadHandler implements ChannelOutboundHandler {
+    static final class HeadHandler extends ChannelOutboundHandlerAdapter {
 
         private final Unsafe unsafe;
 
         HeadHandler(Unsafe unsafe) {
             this.unsafe = unsafe;
-        }
-
-        @Override
-        public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-            // NOOP
-        }
-
-        @Override
-        public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-            // NOOP
         }
 
         @Override
@@ -1090,7 +1080,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        @Deprecated
         public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
             unsafe.deregister(promise);
         }
@@ -1108,11 +1097,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         @Override
         public void flush(ChannelHandlerContext ctx) throws Exception {
             unsafe.flush();
-        }
-
-        @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-            ctx.fireExceptionCaught(cause);
         }
     }
 }
