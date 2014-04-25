@@ -131,7 +131,6 @@ public class ThreadLocalRandom extends Random {
                     }
                 } catch (InterruptedException e) {
                     interrupted = true;
-                    generatorThread.interrupt();
                     logger.warn("Failed to generate a seed from SecureRandom due to an InterruptedException.");
                     break;
                 }
@@ -144,8 +143,12 @@ public class ThreadLocalRandom extends Random {
             ThreadLocalRandom.initialSeedUniquifier = initialSeedUniquifier;
 
             if (interrupted) {
-                // restore interrupt status because we don't know how to/don't need to handle it here
+                // Restore the interrupt status because we don't know how to/don't need to handle it here.
                 Thread.currentThread().interrupt();
+
+                // Interrupt the generator thread if it's still running,
+                // in the hope that the SecureRandom provider raises an exception on interruption.
+                generatorThread.interrupt();
             }
         }
 
