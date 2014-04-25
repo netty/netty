@@ -201,35 +201,35 @@ public final class NioUdtProvider<T extends UdtChannel> implements ChannelFactor
     @Override
     public T newChannel() {
         switch (kind) {
-        case ACCEPTOR:
-            switch (type) {
-            case DATAGRAM:
-                return (T) new NioUdtMessageAcceptorChannel();
-            case STREAM:
-                return (T) new NioUdtByteAcceptorChannel();
+            case ACCEPTOR:
+                switch (type) {
+                    case DATAGRAM:
+                        return (T) new NioUdtMessageAcceptorChannel();
+                    case STREAM:
+                        return (T) new NioUdtByteAcceptorChannel();
+                    default:
+                        throw new IllegalStateException("wrong type=" + type);
+                }
+            case CONNECTOR:
+                switch (type) {
+                    case DATAGRAM:
+                        return (T) new NioUdtMessageConnectorChannel();
+                    case STREAM:
+                        return (T) new NioUdtByteConnectorChannel();
+                    default:
+                        throw new IllegalStateException("wrong type=" + type);
+                }
+            case RENDEZVOUS:
+                switch (type) {
+                    case DATAGRAM:
+                        return (T) new NioUdtMessageRendezvousChannel();
+                    case STREAM:
+                        return (T) new NioUdtByteRendezvousChannel();
+                    default:
+                        throw new IllegalStateException("wrong type=" + type);
+                }
             default:
-                throw new IllegalStateException("wrong type=" + type);
-            }
-        case CONNECTOR:
-            switch (type) {
-            case DATAGRAM:
-                return (T) new NioUdtMessageConnectorChannel();
-            case STREAM:
-                return (T) new NioUdtByteConnectorChannel();
-            default:
-                throw new IllegalStateException("wrong type=" + type);
-            }
-        case RENDEZVOUS:
-            switch (type) {
-            case DATAGRAM:
-                return (T) new NioUdtMessageRendezvousChannel();
-            case STREAM:
-                return (T) new NioUdtByteRendezvousChannel();
-            default:
-                throw new IllegalStateException("wrong type=" + type);
-            }
-        default:
-            throw new IllegalStateException("wrong kind=" + kind);
+                throw new IllegalStateException("wrong kind=" + kind);
         }
     }
 
@@ -239,5 +239,4 @@ public final class NioUdtProvider<T extends UdtChannel> implements ChannelFactor
     public TypeUDT type() {
         return type;
     }
-
 }

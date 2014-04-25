@@ -25,7 +25,6 @@ import static io.netty.channel.ChannelOption.*;
 /**
  * Option for configuring a serial port connection
  */
-
 public final class RxtxChannelOption {
 
     private static final Class<RxtxChannelOption> T = RxtxChannelOption.class;

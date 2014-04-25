@@ -30,7 +30,7 @@
  * <li> <tt>{@link io.netty.handler.traffic.AbstractTrafficShapingHandler}</tt>: this abstract class implements
  * the kernel of traffic shaping. It could be extended to fit your needs. Two classes are proposed as default
  * implementations: see {@link io.netty.handler.traffic.ChannelTrafficShapingHandler} and
- * see {@link io.netty.handler.traffic.GlobalTrafficShapingHandler} respectively for Channel traffic shaping and
+ * {@link io.netty.handler.traffic.GlobalTrafficShapingHandler} respectively for Channel traffic shaping and
  * global traffic shaping.</li>
  * </ul></p>
  *

@@ -127,6 +127,11 @@ final class EmbeddedEventLoop extends AbstractEventLoop implements ChannelHandle
     }
 
     @Override
+    public void invokeChannelUnregistered(ChannelHandlerContext ctx) {
+        invokeChannelUnregisteredNow(ctx);
+    }
+
+    @Override
     public void invokeChannelActive(ChannelHandlerContext ctx) {
         invokeChannelActiveNow(ctx);
     }
@@ -134,11 +139,6 @@ final class EmbeddedEventLoop extends AbstractEventLoop implements ChannelHandle
     @Override
     public void invokeChannelInactive(ChannelHandlerContext ctx) {
         invokeChannelInactiveNow(ctx);
-    }
-
-    @Override
-    public void invokeChannelUnregistered(ChannelHandlerContext ctx) {
-        invokeChannelUnregisteredNow(ctx);
     }
 
     @Override

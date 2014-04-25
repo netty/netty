@@ -67,7 +67,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
      * Create a new instance
      */
     public NioSocketChannel() {
-        this(newSocket(DEFAULT_SELECTOR_PROVIDER));
+        this(DEFAULT_SELECTOR_PROVIDER);
     }
 
     /**

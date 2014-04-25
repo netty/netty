@@ -66,7 +66,7 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
     private volatile boolean inputShutdown;
     private volatile boolean outputShutdown;
 
-    EpollSocketChannel(Channel parent, int fd) throws IOException {
+    EpollSocketChannel(Channel parent, int fd) {
         super(parent, fd, Native.EPOLLIN, true);
         config = new EpollSocketChannelConfig(this);
         // Directly cache the remote and local addresses
