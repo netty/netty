@@ -249,19 +249,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelPipeline addFirst(EventExecutorGroup group, ChannelHandler... handlers) {
-        if (handlers == null) {
-            throw new NullPointerException("handlers");
-        }
-        if (handlers.length == 0 || handlers[0] == null) {
-            return this;
-        }
-
-        int size;
-        for (size = 1; size < handlers.length; size ++) {
-            if (handlers[size] == null) {
-                break;
-            }
-        }
+        int size = handlersSize(handlers);
 
         for (int i = size - 1; i >= 0; i --) {
             ChannelHandler h = handlers[i];
@@ -273,19 +261,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelPipeline addFirst(ChannelHandlerInvoker invoker, ChannelHandler... handlers) {
-        if (handlers == null) {
-            throw new NullPointerException("handlers");
-        }
-        if (handlers.length == 0 || handlers[0] == null) {
-            return this;
-        }
-
-        int size;
-        for (size = 1; size < handlers.length; size ++) {
-            if (handlers[size] == null) {
-                break;
-            }
-        }
+        int size = handlersSize(handlers);
 
         for (int i = size - 1; i >= 0; i --) {
             ChannelHandler h = handlers[i];
@@ -302,14 +278,10 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelPipeline addLast(EventExecutorGroup group, ChannelHandler... handlers) {
-        if (handlers == null) {
-            throw new NullPointerException("handlers");
-        }
+        int size = handlersSize(handlers);
 
-        for (ChannelHandler h: handlers) {
-            if (h == null) {
-                break;
-            }
+        for (int i = 0; i < size; i++) {
+            ChannelHandler h = handlers[i];
             addLast(group, generateName(h), h);
         }
 
@@ -318,18 +290,31 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelPipeline addLast(ChannelHandlerInvoker invoker, ChannelHandler... handlers) {
-        if (handlers == null) {
-            throw new NullPointerException("handlers");
-        }
+        int size = handlersSize(handlers);
 
-        for (ChannelHandler h: handlers) {
-            if (h == null) {
-                break;
-            }
+        for (int i = 0; i < size; i++) {
+            ChannelHandler h = handlers[i];
             addLast(invoker, generateName(h), h);
         }
 
         return this;
+    }
+
+    private static int handlersSize(ChannelHandler... handlers) {
+        if (handlers == null) {
+            throw new NullPointerException("handlers");
+        }
+        if (handlers.length == 0 || handlers[0] == null) {
+            return 0;
+        }
+
+        int size;
+        for (size = 1; size < handlers.length; size ++) {
+            if (handlers[size] == null) {
+                break;
+            }
+        }
+        return size;
     }
 
     // No need for synchronization because it is always executed in a synchronized(this) block.
