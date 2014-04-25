@@ -82,6 +82,7 @@ public class CorsHandlerTest {
         final HttpResponse response = preflightRequest(config, "http://localhost:8888", "content-type, xheader1");
         assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN), is("http://localhost:8888"));
         assertThat(response.headers().getAll(ACCESS_CONTROL_ALLOW_METHODS), hasItems("GET", "DELETE"));
+        assertThat(response.headers().get(VARY), equalTo(ORIGIN.toString()));
     }
 
     @Test
@@ -94,6 +95,7 @@ public class CorsHandlerTest {
         assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN), is("http://localhost:8888"));
         assertThat(response.headers().getAll(ACCESS_CONTROL_ALLOW_METHODS), hasItems("OPTIONS", "GET"));
         assertThat(response.headers().getAll(ACCESS_CONTROL_ALLOW_HEADERS), hasItems("content-type", "xheader1"));
+        assertThat(response.headers().get(VARY), equalTo(ORIGIN.toString()));
     }
 
     @Test
@@ -102,6 +104,7 @@ public class CorsHandlerTest {
         final HttpResponse response = preflightRequest(config, "http://localhost:8888", "content-type, xheader1");
         assertThat(response.headers().get(CONTENT_LENGTH), is("0"));
         assertThat(response.headers().get(DATE), is(notNullValue()));
+        assertThat(response.headers().get(VARY), equalTo(ORIGIN.toString()));
     }
 
     @Test
@@ -111,6 +114,7 @@ public class CorsHandlerTest {
                 .build();
         final HttpResponse response = preflightRequest(config, "http://localhost:8888", "content-type, xheader1");
         assertThat(response.headers().get("CustomHeader"), equalTo("somevalue"));
+        assertThat(response.headers().get(VARY), equalTo(ORIGIN.toString()));
     }
 
     @Test
@@ -120,6 +124,7 @@ public class CorsHandlerTest {
                 .build();
         final HttpResponse response = preflightRequest(config, "http://localhost:8888", "content-type, xheader1");
         assertThat(response.headers().getAll("CustomHeader"), hasItems("value1", "value2"));
+        assertThat(response.headers().get(VARY), equalTo(ORIGIN.toString()));
     }
 
     @Test
@@ -129,6 +134,7 @@ public class CorsHandlerTest {
                 .build();
         final HttpResponse response = preflightRequest(config, "http://localhost:8888", "content-type, xheader1");
         assertThat(response.headers().getAll("CustomHeader"), hasItems("value1", "value2"));
+        assertThat(response.headers().get(VARY), equalTo(ORIGIN.toString()));
     }
 
     @Test
@@ -142,6 +148,7 @@ public class CorsHandlerTest {
                 }).build();
         final HttpResponse response = preflightRequest(config, "http://localhost:8888", "content-type, xheader1");
         assertThat(response.headers().get("GenHeader"), equalTo("generatedValue"));
+        assertThat(response.headers().get(VARY), equalTo(ORIGIN.toString()));
     }
 
     @Test
@@ -188,6 +195,15 @@ public class CorsHandlerTest {
         final CorsConfig config = CorsConfig.withAnyOrigin().build();
         final HttpResponse response = simpleRequest(config, "http://localhost:7777", "");
         assertThat(response.headers().contains(ACCESS_CONTROL_ALLOW_CREDENTIALS), is(false));
+    }
+
+    @Test
+    public void anyOriginAndAllowCredentialsShouldEchoRequestOrigin() {
+        final CorsConfig config = CorsConfig.withAnyOrigin().allowCredentials().build();
+        final HttpResponse response = simpleRequest(config, "http://localhost:7777", "");
+        assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_CREDENTIALS), equalTo("true"));
+        assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN), equalTo("http://localhost:7777"));
+        assertThat(response.headers().get(VARY), equalTo(ORIGIN.toString()));
     }
 
     @Test
