@@ -116,5 +116,4 @@ public final class BinaryMemcacheClientCodec extends ChannelHandlerAppender {
             }
         }
     }
-
 }

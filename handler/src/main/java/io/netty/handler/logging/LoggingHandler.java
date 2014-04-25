@@ -35,7 +35,7 @@ import java.net.SocketAddress;
  * By default, all events are logged at <tt>DEBUG</tt> level.
  */
 @Sharable
-@SuppressWarnings("StringConcatenationInsideStringBufferAppend")
+@SuppressWarnings({ "StringConcatenationInsideStringBufferAppend", "StringBufferReplaceableByString" })
 public class LoggingHandler extends ChannelDuplexHandler {
 
     private static final LogLevel DEFAULT_LEVEL = LogLevel.DEBUG;
@@ -202,7 +202,7 @@ public class LoggingHandler extends ChannelDuplexHandler {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "UNREGISTERED"));
         }
-        super.channelUnregistered(ctx);
+        ctx.fireChannelUnregistered();
     }
 
     @Override
@@ -276,7 +276,7 @@ public class LoggingHandler extends ChannelDuplexHandler {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "DEREGISTER"));
         }
-        super.deregister(ctx, promise);
+        ctx.deregister(promise);
     }
 
     @Override
