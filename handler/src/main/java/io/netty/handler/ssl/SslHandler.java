@@ -43,7 +43,6 @@ import javax.net.ssl.SSLEngineResult.HandshakeStatus;
 import javax.net.ssl.SSLEngineResult.Status;
 import javax.net.ssl.SSLException;
 import java.io.IOException;
-import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.DatagramChannel;
@@ -333,17 +332,6 @@ public class SslHandler extends ByteToMessageDecoder {
     }
 
     @Override
-    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) throws Exception {
-        ctx.bind(localAddress, promise);
-    }
-
-    @Override
-    public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-                        ChannelPromise promise) throws Exception {
-        ctx.connect(remoteAddress, localAddress, promise);
-    }
-
-    @Override
     public void disconnect(final ChannelHandlerContext ctx,
                            final ChannelPromise promise) throws Exception {
         closeOutboundAndChannel(ctx, promise, true);
@@ -353,11 +341,6 @@ public class SslHandler extends ByteToMessageDecoder {
     public void close(final ChannelHandlerContext ctx,
                       final ChannelPromise promise) throws Exception {
         closeOutboundAndChannel(ctx, promise, false);
-    }
-
-    @Override
-    public void read(ChannelHandlerContext ctx) {
-        ctx.read();
     }
 
     @Override

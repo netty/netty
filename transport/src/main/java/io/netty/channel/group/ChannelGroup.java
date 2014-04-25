@@ -214,7 +214,6 @@ public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
      * @return the {@link ChannelGroupFuture} instance that notifies when
      * the operation is done for all channels
      */
-    @Deprecated
     ChannelGroupFuture deregister();
 
     /**
