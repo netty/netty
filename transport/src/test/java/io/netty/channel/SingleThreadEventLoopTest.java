@@ -137,7 +137,7 @@ public class SingleThreadEventLoopTest {
         testScheduleTask(loopB);
     }
 
-    private static void testScheduleTask(EventExecutor loopA) throws InterruptedException, ExecutionException {
+    private static void testScheduleTask(EventLoop loopA) throws InterruptedException, ExecutionException {
         long startTime = System.nanoTime();
         final AtomicLong endTime = new AtomicLong();
         loopA.schedule(new Runnable() {
@@ -159,7 +159,7 @@ public class SingleThreadEventLoopTest {
         testScheduleTaskAtFixedRate(loopB);
     }
 
-    private static void testScheduleTaskAtFixedRate(EventExecutor loopA) throws InterruptedException {
+    private static void testScheduleTaskAtFixedRate(EventLoop loopA) throws InterruptedException {
         final Queue<Long> timestamps = new LinkedBlockingQueue<Long>();
         ScheduledFuture<?> f = loopA.scheduleAtFixedRate(new Runnable() {
             @Override
@@ -199,7 +199,7 @@ public class SingleThreadEventLoopTest {
         testScheduleLaggyTaskAtFixedRate(loopB);
     }
 
-    private static void testScheduleLaggyTaskAtFixedRate(EventExecutor loopA) throws InterruptedException {
+    private static void testScheduleLaggyTaskAtFixedRate(EventLoop loopA) throws InterruptedException {
         final Queue<Long> timestamps = new LinkedBlockingQueue<Long>();
         ScheduledFuture<?> f = loopA.scheduleAtFixedRate(new Runnable() {
             @Override

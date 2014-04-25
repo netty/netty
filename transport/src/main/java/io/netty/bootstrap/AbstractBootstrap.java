@@ -24,9 +24,9 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
+import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.AttributeKey;
-import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.internal.StringUtil;
 
@@ -217,7 +217,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     public abstract B clone();
 
     /**
-     * Create a new {@link Channel} and register it with an {@link EventExecutorGroup}.
+     * Create a new {@link Channel} and register it with an {@link EventLoop}.
      */
     public ChannelFuture register() {
         validate();
@@ -448,7 +448,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
 
         @Override
         public String toString() {
-            return clazz.getSimpleName() + ".class";
+            return StringUtil.simpleClassName(clazz) + ".class";
         }
     }
 }

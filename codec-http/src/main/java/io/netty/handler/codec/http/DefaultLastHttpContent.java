@@ -114,9 +114,9 @@ public class DefaultLastHttpContent extends DefaultHttpContent implements LastHt
         @Override
         void validateHeaderName0(CharSequence name) {
             super.validateHeaderName0(name);
-            if (equalsIgnoreCase(name, HttpHeaders.Names.CONTENT_LENGTH) ||
-                    equalsIgnoreCase(name, HttpHeaders.Names.TRANSFER_ENCODING) ||
-                    equalsIgnoreCase(name, HttpHeaders.Names.TRAILER)) {
+            if (equalsIgnoreCase(HttpHeaders.Names.CONTENT_LENGTH, name) ||
+                    equalsIgnoreCase(HttpHeaders.Names.TRANSFER_ENCODING, name) ||
+                    equalsIgnoreCase(HttpHeaders.Names.TRAILER, name)) {
                 throw new IllegalArgumentException(
                         "prohibited trailing header: " + name);
             }

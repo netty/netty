@@ -90,10 +90,10 @@ public class DefaultHttpHeaders extends HttpHeaders {
         CharSequence strVal;
         if (validate) {
             validateHeaderName0(name);
-            strVal = toCharsequence(value);
+            strVal = toCharSequence(value);
             validateHeaderValue(strVal);
         } else {
-            strVal = toCharsequence(value);
+            strVal = toCharSequence(value);
         }
         int h = hash(name);
         int i = index(h);
@@ -109,7 +109,7 @@ public class DefaultHttpHeaders extends HttpHeaders {
         int h = hash(name);
         int i = index(h);
         for (Object v: values) {
-            CharSequence vstr = toCharsequence(v);
+            CharSequence vstr = toCharSequence(v);
             if (validate) {
                 validateHeaderValue(vstr);
             }
@@ -181,10 +181,10 @@ public class DefaultHttpHeaders extends HttpHeaders {
         CharSequence strVal;
         if (validate) {
             validateHeaderName0(name);
-            strVal = toCharsequence(value);
+            strVal = toCharSequence(value);
             validateHeaderValue(strVal);
         } else {
-            strVal = toCharsequence(value);
+            strVal = toCharSequence(value);
         }
         int h = hash(name);
         int i = index(h);
@@ -210,7 +210,7 @@ public class DefaultHttpHeaders extends HttpHeaders {
             if (v == null) {
                 break;
             }
-            CharSequence strVal = toCharsequence(v);
+            CharSequence strVal = toCharSequence(v);
             if (validate) {
                 validateHeaderValue(strVal);
             }
@@ -344,7 +344,7 @@ public class DefaultHttpHeaders extends HttpHeaders {
         }
     }
 
-    private static CharSequence toCharsequence(Object value) {
+    private static CharSequence toCharSequence(Object value) {
         if (value == null) {
             return null;
         }

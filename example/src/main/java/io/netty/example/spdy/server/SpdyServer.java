@@ -38,7 +38,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
  * <p>
  * Once started, you can test the server with your
  * <a href="http://en.wikipedia.org/wiki/SPDY#Browser_support_and_usage">SPDY enabled web browser</a> by navigating
- * to to <a href="https://localhost:8443/">https://localhost:8443/</a>
+ * to <a href="https://localhost:8443/">https://localhost:8443/</a>
  */
 public class SpdyServer {
 

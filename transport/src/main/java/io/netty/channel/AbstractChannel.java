@@ -416,8 +416,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return;
             }
             if (!isCompatible(eventLoop)) {
-                promise.setFailure(new IllegalStateException("incompatible event loop type: " +
-                        eventLoop.getClass().getName()));
+                promise.setFailure(
+                        new IllegalStateException("incompatible event loop type: " + eventLoop.getClass().getName()));
                 return;
             }
 
@@ -493,6 +493,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 closeIfClosed();
                 return;
             }
+
             if (!wasActive && isActive()) {
                 invokeLater(new OneTimeTask() {
                     @Override
@@ -501,6 +502,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     }
                 });
             }
+
             safeSetSuccess(promise);
         }
 
@@ -518,6 +520,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 closeIfClosed();
                 return;
             }
+
             if (wasActive && !isActive()) {
                 invokeLater(new OneTimeTask() {
                     @Override
@@ -526,6 +529,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     }
                 });
             }
+
             safeSetSuccess(promise);
             closeIfClosed(); // doDisconnect() might have closed the channel
         }
@@ -749,18 +753,22 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         private void invokeLater(Runnable task) {
-            // This method is used by outbound operation implementations to trigger an inbound event later.
-            // They do not trigger an inbound event immediately because an outbound operation might have been
-            // triggered by another inbound event handler method.  If fired immediately, the call stack
-            // will look like this for example:
-            //
-            //   handlerA.inboundBufferUpdated() - (1) an inbound handler method closes a connection.
-            //   -> handlerA.ctx.close()
-            //      -> channel.unsafe.close()
-            //         -> handlerA.channelInactive() - (2) another inbound handler method called while in (1) yet
-            //
-            // which means the execution of two inbound handler methods of the same handler overlap undesirably.
-            eventLoop().execute(task);
+            try {
+                // This method is used by outbound operation implementations to trigger an inbound event later.
+                // They do not trigger an inbound event immediately because an outbound operation might have been
+                // triggered by another inbound event handler method.  If fired immediately, the call stack
+                // will look like this for example:
+                //
+                //   handlerA.inboundBufferUpdated() - (1) an inbound handler method closes a connection.
+                //   -> handlerA.ctx.close()
+                //      -> channel.unsafe.close()
+                //         -> handlerA.channelInactive() - (2) another inbound handler method called while in (1) yet
+                //
+                // which means the execution of two inbound handler methods of the same handler overlap undesirably.
+                eventLoop().execute(task);
+            } catch (RejectedExecutionException e) {
+                logger.warn("Can't invoke task later as EventLoop rejected it", e);
+            }
         }
     }
 
@@ -787,8 +795,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     protected abstract SocketAddress remoteAddress0();
 
     /**
-     * Is called after the {@link Channel} is registered with its {@link EventLoop} as part of the register
-     * process.
+     * Is called after the {@link Channel} is registered with its {@link EventLoop} as part of the register process.
      *
      * Sub-classes may override this method
      */

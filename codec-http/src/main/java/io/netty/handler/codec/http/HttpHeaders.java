@@ -933,7 +933,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     /**
      * Sets the {@code "Host"} header.
      */
-    public static void setHost(HttpMessage message, String value) {
+    public static void setHost(HttpMessage message, CharSequence value) {
         message.headers().set(Names.HOST, value);
     }
 

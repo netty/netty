@@ -92,7 +92,7 @@ final class EmbeddedEventLoop extends AbstractEventLoop implements ChannelHandle
 
     @Override
     public ChannelFuture register(Channel channel) {
-        return register(channel, channel.newPromise());
+        return register(channel, new DefaultChannelPromise(channel, this));
     }
 
     @Override

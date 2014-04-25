@@ -26,7 +26,9 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.DefaultThreadFactory;
+import io.netty.util.concurrent.EventExecutorGroup;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -83,8 +85,8 @@ public class LocalTransportThreadModelTest {
     @Test(timeout = 5000)
     public void testStagedExecution() throws Throwable {
         EventLoopGroup l = new DefaultEventLoopGroup(4, new DefaultThreadFactory("l"));
-        EventLoopGroup e1 = new DefaultEventLoopGroup(4, new DefaultThreadFactory("e1"));
-        EventLoopGroup e2 = new DefaultEventLoopGroup(4, new DefaultThreadFactory("e2"));
+        EventExecutorGroup e1 = new DefaultEventExecutorGroup(4, new DefaultThreadFactory("e1"));
+        EventExecutorGroup e2 = new DefaultEventExecutorGroup(4, new DefaultThreadFactory("e2"));
         ThreadNameAuditor h1 = new ThreadNameAuditor();
         ThreadNameAuditor h2 = new ThreadNameAuditor();
         ThreadNameAuditor h3 = new ThreadNameAuditor(true);
@@ -226,11 +228,11 @@ public class LocalTransportThreadModelTest {
     @Ignore
     public void testConcurrentMessageBufferAccess() throws Throwable {
         EventLoopGroup l = new DefaultEventLoopGroup(4, new DefaultThreadFactory("l"));
-        EventLoopGroup e1 = new DefaultEventLoopGroup(4, new DefaultThreadFactory("e1"));
-        EventLoopGroup e2 = new DefaultEventLoopGroup(4, new DefaultThreadFactory("e2"));
-        EventLoopGroup e3 = new DefaultEventLoopGroup(4, new DefaultThreadFactory("e3"));
-        EventLoopGroup e4 = new DefaultEventLoopGroup(4, new DefaultThreadFactory("e4"));
-        EventLoopGroup e5 = new DefaultEventLoopGroup(4, new DefaultThreadFactory("e5"));
+        EventExecutorGroup e1 = new DefaultEventExecutorGroup(4, new DefaultThreadFactory("e1"));
+        EventExecutorGroup e2 = new DefaultEventExecutorGroup(4, new DefaultThreadFactory("e2"));
+        EventExecutorGroup e3 = new DefaultEventExecutorGroup(4, new DefaultThreadFactory("e3"));
+        EventExecutorGroup e4 = new DefaultEventExecutorGroup(4, new DefaultThreadFactory("e4"));
+        EventExecutorGroup e5 = new DefaultEventExecutorGroup(4, new DefaultThreadFactory("e5"));
 
         try {
             final MessageForwarder1 h1 = new MessageForwarder1();
