@@ -332,7 +332,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         return this;
     }
 
-    // No need for synchronization as it is always executed in a synchronized(this) block.
+    // No need for synchronization because it is always executed in a synchronized(this) block.
     private ChannelHandlerInvoker findInvoker(EventExecutorGroup group) {
         if (group == null) {
             return null;
