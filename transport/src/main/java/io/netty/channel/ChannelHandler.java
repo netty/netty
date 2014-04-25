@@ -189,12 +189,7 @@ public interface ChannelHandler {
 
     /**
      * Gets called if a {@link Throwable} was thrown.
-     *
-     * @deprecated  Will be removed in the future and only {@link ChannelInboundHandler} will receive
-     *              exceptionCaught events. For {@link ChannelOutboundHandler} the {@link ChannelPromise}
-     *              must be failed.
      */
-    @Deprecated
     void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception;
 
     /**

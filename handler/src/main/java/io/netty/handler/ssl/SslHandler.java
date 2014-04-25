@@ -370,7 +370,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     @Override
-    @Deprecated
     public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         ctx.deregister(promise);
     }

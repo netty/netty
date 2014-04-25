@@ -177,7 +177,6 @@ public interface ChannelHandlerContext
      * called of the next  {@link ChannelInboundHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    @Deprecated
     ChannelHandlerContext fireChannelUnregistered();
 
     /**
@@ -311,7 +310,6 @@ public interface ChannelHandlerContext
      * {@link Channel}.
      *
      */
-    @Deprecated
     ChannelFuture deregister();
 
     /**
@@ -399,7 +397,6 @@ public interface ChannelHandlerContext
      * method called of the next {@link ChannelOutboundHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    @Deprecated
     ChannelFuture deregister(ChannelPromise promise);
 
     /**
