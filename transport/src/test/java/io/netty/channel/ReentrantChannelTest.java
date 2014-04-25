@@ -214,7 +214,6 @@ public class ReentrantChannelTest extends BaseChannelTest {
             }
 
             @Override
-            @SuppressWarnings("deprecation")
             public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
                 ctx.close();
             }

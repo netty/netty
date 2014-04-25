@@ -190,7 +190,6 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     }
 
     @Override
-    @Deprecated
     public ChannelGroupFuture deregister() {
         return deregister(ChannelMatchers.all());
     }
@@ -294,7 +293,6 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     }
 
     @Override
-    @Deprecated
     public ChannelGroupFuture deregister(ChannelMatcher matcher) {
         if (matcher == null) {
             throw new NullPointerException("matcher");

@@ -35,7 +35,6 @@ public final class ChannelHandlerInvokerUtil {
         }
     }
 
-    @SuppressWarnings("deprecation")
     public static void invokeChannelUnregisteredNow(ChannelHandlerContext ctx) {
         try {
             ((ChannelInboundHandler) ctx.handler()).channelUnregistered(ctx);
@@ -60,7 +59,6 @@ public final class ChannelHandlerInvokerUtil {
         }
     }
 
-    @SuppressWarnings("deprecation")
     public static void invokeExceptionCaughtNow(final ChannelHandlerContext ctx, final Throwable cause) {
         try {
             ctx.handler().exceptionCaught(ctx, cause);
@@ -138,7 +136,6 @@ public final class ChannelHandlerInvokerUtil {
         }
     }
 
-    @SuppressWarnings("deprecation")
     public static void invokeDeregisterNow(final ChannelHandlerContext ctx, final ChannelPromise promise) {
         try {
             ((ChannelOutboundHandler) ctx.handler()).deregister(ctx, promise);

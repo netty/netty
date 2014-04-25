@@ -292,7 +292,6 @@ public interface Channel extends AttributeMap, Comparable<Channel> {
      * {@link Channel}.
      *
      */
-    @Deprecated
     ChannelFuture deregister();
 
     /**
@@ -380,7 +379,6 @@ public interface Channel extends AttributeMap, Comparable<Channel> {
      * method called of the next {@link ChannelOutboundHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    @Deprecated
     ChannelFuture deregister(ChannelPromise promise);
 
     /**
@@ -502,7 +500,6 @@ public interface Channel extends AttributeMap, Comparable<Channel> {
          * Deregister the {@link Channel} of the {@link ChannelPromise} from {@link EventLoop} and notify the
          * {@link ChannelPromise} once the operation was complete.
          */
-        @Deprecated
         void deregister(ChannelPromise promise);
 
         /**
