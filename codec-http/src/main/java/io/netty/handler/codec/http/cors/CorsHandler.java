@@ -89,11 +89,17 @@ public class CorsHandler extends ChannelDuplexHandler {
                 return true;
             }
             if (config.isAnyOriginSupported()) {
-                setAnyOrigin(response);
+                if (config.isCredentialsAllowed()) {
+                    echoRequestOrigin(response);
+                    setVaryHeader(response);
+                } else {
+                    setAnyOrigin(response);
+                }
                 return true;
             }
             if (config.origins().contains(origin)) {
-                response.headers().set(ACCESS_CONTROL_ALLOW_ORIGIN, origin);
+                setOrigin(response, origin);
+                setVaryHeader(response);
                 return true;
             }
             logger.debug("Request origin [" + origin + "] was not among the configured origins " + config.origins());
@@ -101,8 +107,20 @@ public class CorsHandler extends ChannelDuplexHandler {
         return false;
     }
 
-    private static void setAnyOrigin(final HttpResponse response) {
-        response.headers().set(ACCESS_CONTROL_ALLOW_ORIGIN, "*");
+    private void echoRequestOrigin(final HttpResponse response) {
+        setOrigin(response, request.headers().get(ORIGIN));
+    }
+
+    private void setVaryHeader(final HttpResponse response) {
+        response.headers().set(VARY, ORIGIN);
+    }
+
+    private void setAnyOrigin(final HttpResponse response) {
+        setOrigin(response, "*");
+    }
+
+    private void setOrigin(final HttpResponse response, final String origin) {
+        response.headers().set(ACCESS_CONTROL_ALLOW_ORIGIN, origin);
     }
 
     private void setAllowCredentials(final HttpResponse response) {
