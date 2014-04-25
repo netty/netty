@@ -90,7 +90,7 @@ public class LocalTransportThreadModelTest {
         EventExecutorGroup e2 = new DefaultEventExecutorGroup(4, new DefaultThreadFactory("e2"));
         ThreadNameAuditor h1 = new ThreadNameAuditor();
         ThreadNameAuditor h2 = new ThreadNameAuditor();
-        ThreadNameAuditor h3 = new ThreadNameAuditor();
+        ThreadNameAuditor h3 = new ThreadNameAuditor(true);
 
         Channel ch = new LocalChannel();
         // With no EventExecutor specified, h1 will be always invoked by EventLoop 'l'.
@@ -361,6 +361,15 @@ public class LocalTransportThreadModelTest {
         private final Queue<String> inboundThreadNames = new ConcurrentLinkedQueue<String>();
         private final Queue<String> outboundThreadNames = new ConcurrentLinkedQueue<String>();
         private final Queue<String> removalThreadNames = new ConcurrentLinkedQueue<String>();
+        private final boolean discard;
+
+        ThreadNameAuditor() {
+            this(false);
+        }
+
+        ThreadNameAuditor(boolean discard) {
+            this.discard = discard;
+        }
 
         @Override
         public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
@@ -370,7 +379,9 @@ public class LocalTransportThreadModelTest {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             inboundThreadNames.add(Thread.currentThread().getName());
-            ctx.fireChannelRead(msg);
+            if (!discard) {
+                ctx.fireChannelRead(msg);
+            }
         }
 
         @Override

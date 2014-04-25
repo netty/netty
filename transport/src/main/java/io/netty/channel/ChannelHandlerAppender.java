@@ -192,6 +192,9 @@ public class ChannelHandlerAppender extends ChannelInboundHandlerAdapter {
                 } else {
                     name = e.name;
                 }
+
+                // Note that we do not use dctx.invoker() because it raises an IllegalStateExxception
+                // if the Channel is not registered yet.
                 pipeline.addAfter(dctx.invoker, oldName, name, e.handler);
             }
         } finally {

@@ -143,6 +143,7 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
         }
         this.activeOnOpen = activeOnOpen;
     }
+
     @Override
     public boolean isBroadcast() {
         try {

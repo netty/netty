@@ -23,7 +23,7 @@ import java.net.SocketAddress;
 /**
  * Invokes the event handler methods of {@link ChannelInboundHandler} and {@link ChannelOutboundHandler}.
  * A user can specify a {@link ChannelHandlerInvoker} to implement a custom thread model unsupported by the default
- * implementation.
+ * implementation. Note that the methods in this interface are not intended to be called by a user.
  */
 public interface ChannelHandlerInvoker {
 
