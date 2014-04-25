@@ -49,6 +49,7 @@ public class LocalTransportThreadModelTest3 {
         MESSAGE_RECEIVED_LAST,
         INACTIVE,
         ACTIVE,
+        UNREGISTERED,
         REGISTERED,
         MESSAGE_RECEIVED,
         WRITE,
@@ -197,9 +198,14 @@ public class LocalTransportThreadModelTest3 {
 
             ch.close().sync();
 
+            while (events.peekLast() != EventType.UNREGISTERED) {
+                Thread.sleep(10);
+            }
+
             expectedEvents.addFirst(EventType.ACTIVE);
             expectedEvents.addFirst(EventType.REGISTERED);
             expectedEvents.addLast(EventType.INACTIVE);
+            expectedEvents.addLast(EventType.UNREGISTERED);
 
             for (;;) {
                 EventType event = events.poll();
@@ -284,6 +290,11 @@ public class LocalTransportThreadModelTest3 {
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
             events.add(EventType.ACTIVE);
+        }
+
+        @Override
+        public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
+            events.add(EventType.UNREGISTERED);
         }
 
         @Override

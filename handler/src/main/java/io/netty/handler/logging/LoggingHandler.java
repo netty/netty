@@ -244,8 +244,9 @@ public class LoggingHandler extends ChannelHandlerAdapter {
     }
 
     @Override
-    public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-        ChannelPromise promise) throws Exception {
+    public void connect(
+            ChannelHandlerContext ctx,
+            SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) throws Exception {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "CONNECT", remoteAddress, localAddress));
         }
@@ -266,6 +267,14 @@ public class LoggingHandler extends ChannelHandlerAdapter {
             logger.log(internalLevel, format(ctx, "CLOSE"));
         }
         ctx.close(promise);
+    }
+
+    @Override
+    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        if (logger.isEnabled(internalLevel)) {
+            logger.log(internalLevel, format(ctx, "DEREGISTER"));
+        }
+        ctx.deregister(promise);
     }
 
     @Override

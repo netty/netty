@@ -19,8 +19,8 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.DefaultEventLoopGroup;
@@ -248,8 +248,41 @@ public class LocalChannelTest {
         }
     }
 
-    static class TestHandler extends ChannelHandlerAdapter {
+    @Test
+    public void testReRegister() {
+        EventLoopGroup group1 = new LocalEventLoopGroup();
+        EventLoopGroup group2 = new LocalEventLoopGroup();
+        LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
+        Bootstrap cb = new Bootstrap();
+        ServerBootstrap sb = new ServerBootstrap();
 
+        cb.group(group1)
+                .channel(LocalChannel.class)
+                .handler(new TestHandler());
+
+        sb.group(group2)
+                .channel(LocalServerChannel.class)
+                .childHandler(new ChannelInitializer<LocalChannel>() {
+                    @Override
+                    public void initChannel(LocalChannel ch) throws Exception {
+                        ch.pipeline().addLast(new TestHandler());
+                    }
+                });
+
+        // Start server
+        final Channel sc = sb.bind(addr).syncUninterruptibly().channel();
+
+        // Connect to the server
+        final Channel cc = cb.connect(addr).syncUninterruptibly().channel();
+
+        cc.deregister().syncUninterruptibly();
+        // Change event loop group.
+        group2.register(cc).syncUninterruptibly();
+        cc.close().syncUninterruptibly();
+        sc.close().syncUninterruptibly();
+    }
+
+    static class TestHandler extends ChannelHandlerAdapter {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             logger.info(String.format("Received mesage: %s", msg));

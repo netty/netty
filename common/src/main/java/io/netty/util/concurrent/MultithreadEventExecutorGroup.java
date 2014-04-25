@@ -91,6 +91,7 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
                                 e.awaitTermination(Integer.MAX_VALUE, TimeUnit.SECONDS);
                             }
                         } catch (InterruptedException interrupted) {
+                            // Let the caller handle the interruption.
                             Thread.currentThread().interrupt();
                             break;
                         }

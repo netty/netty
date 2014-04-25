@@ -190,6 +190,11 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     }
 
     @Override
+    public ChannelGroupFuture deregister() {
+        return deregister(ChannelMatchers.all());
+    }
+
+    @Override
     public ChannelGroupFuture write(Object message) {
         return write(message, ChannelMatchers.all());
     }
@@ -276,6 +281,29 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
         for (Channel c: nonServerChannels.values()) {
             if (matcher.matches(c)) {
                 futures.put(c, c.close());
+            }
+        }
+
+        return new DefaultChannelGroupFuture(this, futures, executor);
+    }
+
+    @Override
+    public ChannelGroupFuture deregister(ChannelMatcher matcher) {
+        if (matcher == null) {
+            throw new NullPointerException("matcher");
+        }
+
+        Map<Channel, ChannelFuture> futures =
+                new LinkedHashMap<Channel, ChannelFuture>(size());
+
+        for (Channel c: serverChannels.values()) {
+            if (matcher.matches(c)) {
+                futures.put(c, c.deregister());
+            }
+        }
+        for (Channel c: nonServerChannels.values()) {
+            if (matcher.matches(c)) {
+                futures.put(c, c.deregister());
             }
         }
 

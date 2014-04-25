@@ -249,7 +249,7 @@ public class SingleThreadEventLoopTest {
         testScheduleTaskWithFixedDelay(loopB);
     }
 
-    private static void testScheduleTaskWithFixedDelay(EventExecutor loopA) throws InterruptedException {
+    private static void testScheduleTaskWithFixedDelay(EventLoop loopA) throws InterruptedException {
         final Queue<Long> timestamps = new LinkedBlockingQueue<Long>();
         ScheduledFuture<?> f = loopA.scheduleWithFixedDelay(new Runnable() {
             @Override
