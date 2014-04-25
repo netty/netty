@@ -69,7 +69,6 @@ public interface ChannelOutboundHandler extends ChannelHandler {
      * @param promise           the {@link ChannelPromise} to notify once the operation completes
      * @throws Exception        thrown if an error accour
      */
-    @Deprecated
     void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception;
 
     /**
