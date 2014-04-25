@@ -66,8 +66,7 @@ import java.util.Queue;
  * transfer.  To resume the transfer when a new chunk is available, you have to
  * call {@link #resumeTransfer()}.
  */
-public class ChunkedWriteHandler
-        extends ChannelDuplexHandler {
+public class ChunkedWriteHandler extends ChannelDuplexHandler {
 
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(ChunkedWriteHandler.class);

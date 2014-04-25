@@ -121,6 +121,7 @@ final class EmbeddedEventLoop extends AbstractEventLoop implements ChannelHandle
     public EventExecutor executor() {
         return this;
     }
+
     @Override
     public void invokeChannelRegistered(ChannelHandlerContext ctx) {
         invokeChannelRegisteredNow(ctx);
