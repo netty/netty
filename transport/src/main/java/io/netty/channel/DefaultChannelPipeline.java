@@ -326,7 +326,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         // Lazily initialize the data structure that maps an EventExecutorGroup to a ChannelHandlerInvoker.
         Map<EventExecutorGroup, ChannelHandlerInvoker> childInvokers = this.childInvokers;
         if (childInvokers == null) {
-            childInvokers = this.childInvokers = new IdentityHashMap<EventExecutorGroup, ChannelHandlerInvoker>();
+            childInvokers = this.childInvokers = new IdentityHashMap<EventExecutorGroup, ChannelHandlerInvoker>(4);
         }
 
         // Pick one of the child executors and remember its invoker
