@@ -95,6 +95,7 @@ public class HAProxyProtocolDecoder extends ByteToMessageDecoder {
      */
     private static int findVersion(final ByteBuf buffer) {
         final int n = buffer.readableBytes();
+        // per spec, the version number is found in the 13th byte
         if (n < 13) {
             return -1;
         }
@@ -117,12 +118,18 @@ public class HAProxyProtocolDecoder extends ByteToMessageDecoder {
      */
     private static int findEndOfHeader(final ByteBuf buffer) {
         final int n = buffer.readableBytes();
+
+        // per spec, the 16th byte contains the address length in bytes
         if (n < 16) {
             return -1;
         }
 
         int offset = buffer.readerIndex() + 15;
+
+        // the total header length will be a fixed 16 byte sequence + the dynamic address length
         int totalHeaderBytes = 16 + buffer.getByte(offset);
+
+        // ensure we actually have the full header available
         if (n >= totalHeaderBytes) {
             return totalHeaderBytes;
         } else {
