@@ -145,12 +145,13 @@ public class OioServerSocketChannelFactory implements ServerSocketChannelFactory
 
     public void shutdown() {
         if (shutdownExecutor) {
+            ExecutorUtil.shutdownNow(bossExecutor);
             ExecutorUtil.shutdownNow(workerExecutor);
         }
     }
 
     public void releaseExternalResources() {
-        shutdown();
+        ExecutorUtil.shutdownNow(bossExecutor);
         ExecutorUtil.shutdownNow(workerExecutor);
     }
 }
