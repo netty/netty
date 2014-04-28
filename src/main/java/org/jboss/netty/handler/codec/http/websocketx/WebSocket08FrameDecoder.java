@@ -79,7 +79,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
     private static final byte OPCODE_PING = 0x9;
     private static final byte OPCODE_PONG = 0xA;
 
-    private UTF8Output fragmentedFramesText;
+    private Utf8Validator utf8Validator;
     private int fragmentedFramesCount;
 
     private final long maxFramePayloadLength;
@@ -315,7 +315,6 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
 
             // Processing for possible fragmented messages for text and binary
             // frames
-            String aggregatedText = null;
             if (frameFinalFlag) {
                 // Final frame of the sequence. Apparently ping frames are
                 // allowed in the middle of a fragmented message
@@ -323,15 +322,13 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
                     fragmentedFramesCount = 0;
 
                     // Check text for UTF8 correctness
-                    if (frameOpcode == OPCODE_TEXT || fragmentedFramesText != null) {
+                    if (frameOpcode == OPCODE_TEXT || (utf8Validator != null && utf8Validator.isChecking())) {
                         // Check UTF-8 correctness for this payload
                         checkUTF8String(channel, framePayload.array());
 
                         // This does a second check to make sure UTF-8
                         // correctness for entire text message
-                        aggregatedText = fragmentedFramesText.toString();
-
-                        fragmentedFramesText = null;
+                        utf8Validator.finish();
                     }
                 }
             } else {
@@ -339,13 +336,12 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
                 // fragmented sequence
                 if (fragmentedFramesCount == 0) {
                     // First text or binary frame for a fragmented set
-                    fragmentedFramesText = null;
                     if (frameOpcode == OPCODE_TEXT) {
                         checkUTF8String(channel, framePayload.array());
                     }
                 } else {
                     // Subsequent frames - only check if init frame is text
-                    if (fragmentedFramesText != null) {
+                    if (utf8Validator != null && utf8Validator.isChecking()) {
                         checkUTF8String(channel, framePayload.array());
                     }
                 }
@@ -360,7 +356,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
             } else if (frameOpcode == OPCODE_BINARY) {
                 return new BinaryWebSocketFrame(frameFinalFlag, frameRsv, framePayload);
             } else if (frameOpcode == OPCODE_CONT) {
-                return new ContinuationWebSocketFrame(frameFinalFlag, frameRsv, framePayload, aggregatedText);
+                return new ContinuationWebSocketFrame(frameFinalFlag, frameRsv, framePayload);
             } else {
                 throw new UnsupportedOperationException("Cannot decode web socket frame with opcode: " + frameOpcode);
             }
@@ -382,11 +378,15 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
     }
 
     private void protocolViolation(Channel channel, String reason) throws CorruptedFrameException {
+        protocolViolation(channel, new CorruptedFrameException(reason));
+    }
+
+    private void protocolViolation(Channel channel, CorruptedFrameException ex) throws CorruptedFrameException {
         checkpoint(State.CORRUPT);
         if (channel.isConnected()) {
             channel.write(ChannelBuffers.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
         }
-        throw new CorruptedFrameException(reason);
+        throw ex;
     }
 
     private static int toFrameLength(long l) throws TooLongFrameException {
@@ -399,20 +399,12 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
 
     private void checkUTF8String(Channel channel, byte[] bytes) throws CorruptedFrameException {
         try {
-            // StringBuilder sb = new StringBuilder("UTF8 " + bytes.length +
-            // " bytes: ");
-            // for (byte b : bytes) {
-            // sb.append(Integer.toHexString(b)).append(" ");
-            // }
-            // logger.debug(sb.toString());
-
-            if (fragmentedFramesText == null) {
-                fragmentedFramesText = new UTF8Output(bytes);
-            } else {
-                fragmentedFramesText.write(bytes);
+            if (utf8Validator == null) {
+                utf8Validator = new Utf8Validator();
             }
-        } catch (UTF8Exception ex) {
-            protocolViolation(channel, "invalid UTF-8 bytes");
+            utf8Validator.check(bytes);
+        } catch (CorruptedFrameException ex) {
+            protocolViolation(channel, ex);
         }
     }
 
@@ -440,9 +432,10 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
             byte[] b = new byte[buffer.readableBytes()];
             buffer.readBytes(b);
             try {
-                new UTF8Output(b);
-            } catch (UTF8Exception ex) {
-                protocolViolation(channel, "Invalid close frame reason text. Invalid UTF-8 bytes");
+                Utf8Validator validator = new Utf8Validator();
+                validator.check(b);
+            } catch (CorruptedFrameException ex) {
+                protocolViolation(channel, ex);
             }
         }
 
