@@ -35,10 +35,12 @@
  */
 package org.jboss.netty.handler.codec.http.websocketx;
 
+import org.jboss.netty.handler.codec.frame.CorruptedFrameException;
+
 /**
  * Checks UTF8 bytes for validity before converting it into a string
  */
-final class UTF8Output {
+final class Utf8Validator {
     private static final int UTF8_ACCEPT = 0;
     private static final int UTF8_REJECT = 12;
 
@@ -63,39 +65,37 @@ final class UTF8Output {
     @SuppressWarnings("RedundantFieldInitialization")
     private int state = UTF8_ACCEPT;
     private int codep;
+    private boolean checking;
 
-    private final StringBuilder stringBuilder;
-
-    UTF8Output(byte[] bytes) {
-        stringBuilder = new StringBuilder(bytes.length);
-        write(bytes);
-    }
-
-    public void write(byte[] bytes) {
+    public void check(byte[] bytes) throws CorruptedFrameException {
+        checking = true;
         for (byte b : bytes) {
             write(b);
         }
     }
 
-    public void write(int b) {
+    private void write(int b) throws CorruptedFrameException {
         byte type = TYPES[b & 0xFF];
 
         codep = state != UTF8_ACCEPT ? b & 0x3f | codep << 6 : 0xff >> type & b;
 
         state = STATES[state + type];
 
-        if (state == UTF8_ACCEPT) {
-            stringBuilder.append((char) codep);
-        } else if (state == UTF8_REJECT) {
-            throw new UTF8Exception("bytes are not UTF-8");
+        if (state == UTF8_REJECT) {
+            throw new CorruptedFrameException("bytes are not UTF-8");
         }
     }
 
-    @Override
-    public String toString() {
+    public void finish() throws CorruptedFrameException {
+        checking = false;
+        codep = 0;
         if (state != UTF8_ACCEPT) {
-            throw new UTF8Exception("bytes are not UTF-8");
+            state = UTF8_ACCEPT;
+            throw new CorruptedFrameException("bytes are not UTF-8");
         }
-        return stringBuilder.toString();
+    }
+
+    public boolean isChecking() {
+        return checking;
     }
 }
