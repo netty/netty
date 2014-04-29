@@ -16,19 +16,13 @@
 package io.netty.handler.codec.haproxy;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.util.internal.StringUtil;
 import io.netty.util.NetUtil;
-
-import java.util.regex.Pattern;
 
 /**
  * Message container for decoded HAProxy proxy protocol parameters
  */
 public final class HAProxyProtocolMessage {
-
-    /**
-     * Version 1 header param splitter.
-     */
-    private static final Pattern SINGLE_SPACE_PATTERN = Pattern.compile(" ");
 
     /**
      * Version 1 proxy protocol message for 'UNKNOWN' proxied protocols. Per spec, when the proxied protocol is
@@ -46,7 +40,7 @@ public final class HAProxyProtocolMessage {
     private final int destinationPort;
 
     /**
-     * Creates a new instance.
+     * Creates a new instance
      */
     private HAProxyProtocolMessage(HAProxyProtocolVersion ver, HAProxyProtocolCommand cmd, ProxiedProtocolAndFamily paf,
                                    String srcAddress, String dstAddress, String srcPort, String dstPort) {
@@ -54,7 +48,7 @@ public final class HAProxyProtocolMessage {
     }
 
     /**
-     * Creates a new instance.
+     * Creates a new instance
      */
     private HAProxyProtocolMessage(HAProxyProtocolVersion ver, HAProxyProtocolCommand cmd, ProxiedProtocolAndFamily paf,
                                    String srcAddress, String dstAddress, int srcPort, int dstPort) {
@@ -81,30 +75,30 @@ public final class HAProxyProtocolMessage {
     }
 
     /**
-     * Decode a version 2, binary proxy protocol header.
+     * Decode a version 2, binary proxy protocol header
      *
-     * @param header                     A version 2 proxy protocol header.
-     * @return                           {@link HAProxyProtocolMessage} instance.
-     * @throws HAProxyProtocolException  If any portion of the header is invalid.
+     * @param header                     a version 2 proxy protocol header
+     * @return                           {@link HAProxyProtocolMessage} instance
+     * @throws HAProxyProtocolException  if any portion of the header is invalid
      */
-    public static HAProxyProtocolMessage decodeHeader(ByteBuf header) throws HAProxyProtocolException {
+    static HAProxyProtocolMessage decodeHeader(ByteBuf header) throws HAProxyProtocolException {
         throw new HAProxyProtocolException("version 2 headers are currently not supported");
     }
 
     /**
-     * Decode a version 1, human-readable proxy protocol header.
+     * Decode a version 1, human-readable proxy protocol header
      *
-     * @param header                     A version 1 proxy protocol header.
-     * @return                           {@link HAProxyProtocolMessage} instance.
-     * @throws HAProxyProtocolException  If any portion of the header is invalid.
+     * @param header                     a version 1 proxy protocol header
+     * @return                           {@link HAProxyProtocolMessage} instance
+     * @throws HAProxyProtocolException  if any portion of the header is invalid
      */
-    public static HAProxyProtocolMessage decodeHeader(String header) throws HAProxyProtocolException {
+    static HAProxyProtocolMessage decodeHeader(String header) throws HAProxyProtocolException {
 
         if (header == null) {
             throw new HAProxyProtocolException("null header");
         }
 
-        String[] parts = SINGLE_SPACE_PATTERN.split(header);
+        String[] parts = StringUtil.split(header, ' ');
         int numParts = parts.length;
 
         if (numParts < 2) {
@@ -139,11 +133,11 @@ public final class HAProxyProtocolMessage {
     }
 
     /**
-     * Convert port to integer.
+     * Convert port to integer
      *
-     * @param port                       The port
-     * @return                           Port as integer
-     * @throws HAProxyProtocolException  If port is not a valid integer
+     * @param port                       the port
+     * @return                           port as integer
+     * @throws HAProxyProtocolException  if port is not a valid integer
      */
     private static int portStringToInt(String port) throws HAProxyProtocolException {
         try {
@@ -154,11 +148,11 @@ public final class HAProxyProtocolMessage {
     }
 
     /**
-     * Validate an address (IPv4, IPv6, Unix Socket).
+     * Validate an address (IPv4, IPv6, Unix Socket)
      *
-     * @param address                    Human-readable address.
-     * @param addrFamily                 The {@link ProxiedAddressFamily} to check the address against.
-     * @throws HAProxyProtocolException  If the address is invalid.
+     * @param address                    human-readable address
+     * @param addrFamily                 the {@link ProxiedAddressFamily} to check the address against
+     * @throws HAProxyProtocolException  if the address is invalid
      */
     private static void checkAddress(String address, ProxiedAddressFamily addrFamily) throws HAProxyProtocolException {
 
@@ -168,7 +162,7 @@ public final class HAProxyProtocolMessage {
 
         if (ProxiedAddressFamily.UNSPECIFIED.equals(addrFamily) && address != null) {
             throw new HAProxyProtocolException(
-                    "unable to validate address because address family is " + addrFamily.toString());
+                    "unable to validate address because address family is " + addrFamily);
         }
 
         if (ProxiedAddressFamily.UNIX.equals(addrFamily)) {
@@ -184,15 +178,15 @@ public final class HAProxyProtocolMessage {
         }
 
         if (!isValid) {
-            throw new HAProxyProtocolException(address + " is not a valid " + addrFamily.toString() + " address");
+            throw new HAProxyProtocolException(address + " is not a valid " + addrFamily + " address");
         }
     }
 
     /**
-     * Validate a UDP/TCP port.
+     * Validate a UDP/TCP port
      *
-     * @param port                       UDP/TCP port.
-     * @throws HAProxyProtocolException  If the port is out of range (0-65535 inclusive).
+     * @param port                       the UDP/TCP port
+     * @throws HAProxyProtocolException  if the port is out of range (0-65535 inclusive)
      */
     private static void checkPort(int port) throws HAProxyProtocolException {
         if (port < 0 || port > 65535) {
@@ -203,7 +197,7 @@ public final class HAProxyProtocolMessage {
     /**
      * Returns the {@link HAProxyProtocolVersion} of this {@link HAProxyProtocolMessage}
      *
-     * @return The proxy protocol specification version
+     * @return the proxy protocol specification version
      */
     public HAProxyProtocolVersion version() {
         return version;
@@ -212,7 +206,7 @@ public final class HAProxyProtocolMessage {
     /**
      * Returns the {@link HAProxyProtocolCommand} of this {@link HAProxyProtocolMessage}
      *
-     * @return The proxy protocol command
+     * @return the proxy protocol command
      */
     public HAProxyProtocolCommand command() {
         return command;
@@ -221,7 +215,7 @@ public final class HAProxyProtocolMessage {
     /**
      * Returns the {@link ProxiedProtocolAndFamily} of this {@link HAProxyProtocolMessage}
      *
-     * @return The proxied protocol and address family
+     * @return the proxied protocol and address family
      */
     public ProxiedProtocolAndFamily protocolAndFamily() {
         return paf;
@@ -230,7 +224,7 @@ public final class HAProxyProtocolMessage {
     /**
      * Returns the human-readable source address of this {@link HAProxyProtocolMessage}
      *
-     * @return The human-readable source address
+     * @return the human-readable source address
      */
     public String sourceAddress() {
         return sourceAddress;
@@ -239,7 +233,7 @@ public final class HAProxyProtocolMessage {
     /**
      * Returns the human-readable destination address of this {@link HAProxyProtocolMessage}
      *
-     * @return The human-readable destination address
+     * @return the human-readable destination address
      */
     public String destinationAddress() {
         return destinationAddress;
@@ -248,7 +242,7 @@ public final class HAProxyProtocolMessage {
     /**
      * Returns the UDP/TCP source port of this {@link HAProxyProtocolMessage}
      *
-     * @return The UDP/TCP source port
+     * @return the UDP/TCP source port
      */
     public int sourcePort() {
         return sourcePort;
@@ -257,7 +251,7 @@ public final class HAProxyProtocolMessage {
     /**
      * Returns the UDP/TCP destination port of this {@link HAProxyProtocolMessage}
      *
-     * @return The UDP/TCP destination port
+     * @return the UDP/TCP destination port
      */
     public int destinationPort() {
         return destinationPort;

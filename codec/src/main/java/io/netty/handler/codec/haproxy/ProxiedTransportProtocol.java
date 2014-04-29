@@ -16,7 +16,7 @@
 package io.netty.handler.codec.haproxy;
 
 /**
- * The transport protocol of an HAProxy proxy protocol header.
+ * The transport protocol of an HAProxy proxy protocol header
  */
 public final class ProxiedTransportProtocol implements Comparable<ProxiedTransportProtocol> {
     /**
@@ -25,7 +25,7 @@ public final class ProxiedTransportProtocol implements Comparable<ProxiedTranspo
     private static final byte TRANSPORT_MASK = (byte) 0x0f;
 
     /**
-     * Transport Protocol byte constants.
+     * Transport Protocol byte constants
      */
     private static final byte UNSPECIFIED_BYTE = (byte) 0x00;
     private static final byte STREAM_BYTE = (byte) 0x01;
@@ -51,7 +51,7 @@ public final class ProxiedTransportProtocol implements Comparable<ProxiedTranspo
     private final byte transportByte;
 
     /**
-     * Creates a new instance.
+     * Creates a new instance
      */
     private ProxiedTransportProtocol(String name, byte transportByte) {
         this.name = name;
@@ -59,7 +59,7 @@ public final class ProxiedTransportProtocol implements Comparable<ProxiedTranspo
     }
 
     /**
-     * Returns the {@link ProxiedTransportProtocol} represented by the specified transport protocol byte.
+     * Returns the {@link ProxiedTransportProtocol} represented by the specified transport protocol byte
      *
      * @param addressFamilyByte  transport protocol byte
      * @return                   {@link ProxiedTransportProtocol} instance OR {@code null} if the
@@ -79,18 +79,18 @@ public final class ProxiedTransportProtocol implements Comparable<ProxiedTranspo
     }
 
     /**
-     * Returns the name of this transport protocol.
+     * Returns the name of this transport protocol
      *
-     * @return The name of this transport protocol
+     * @return the name of this transport protocol
      */
     public String name() {
         return name;
     }
 
     /**
-     * Returns the byte value of this transport protocol.
+     * Returns the byte value of this transport protocol
      *
-     * @return The byte value of this transport protocol
+     * @return the byte value of this transport protocol
      */
     public byte byteValue() {
         return transportByte;
@@ -118,6 +118,6 @@ public final class ProxiedTransportProtocol implements Comparable<ProxiedTranspo
 
     @Override
     public int compareTo(ProxiedTransportProtocol o) {
-        return Byte.valueOf(byteValue()).compareTo(Byte.valueOf(o.byteValue()));
+        return byteValue() - o.byteValue();
     }
 }

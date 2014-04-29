@@ -16,7 +16,7 @@
 package io.netty.handler.codec.haproxy;
 
 /**
- * The address family of an HAProxy proxy protocol header.
+ * The address family of an HAProxy proxy protocol header
  */
 public final class ProxiedAddressFamily implements Comparable<ProxiedAddressFamily> {
     /**
@@ -25,7 +25,7 @@ public final class ProxiedAddressFamily implements Comparable<ProxiedAddressFami
     private static final byte FAMILY_MASK = (byte) 0xf0;
 
     /**
-     * Address family byte constants.
+     * Address family byte constants
      */
     private static final byte UNSPECIFIED_BYTE = (byte) 0x00;
     private static final byte IPV4_BYTE = (byte) 0x10;
@@ -56,7 +56,7 @@ public final class ProxiedAddressFamily implements Comparable<ProxiedAddressFami
     private final byte addressFamilyByte;
 
     /**
-     * Creates a new instance.
+     * Creates a new instance
      */
     private ProxiedAddressFamily(String name, byte addressFamilyByte) {
         this.name = name;
@@ -64,9 +64,9 @@ public final class ProxiedAddressFamily implements Comparable<ProxiedAddressFami
     }
 
     /**
-     * Returns the {@link ProxiedAddressFamily} represented by the specified address family byte.
+     * Returns the {@link ProxiedAddressFamily} represented by the specified address family byte
      *
-     * @param addressFamilyByte  Address family byte
+     * @param addressFamilyByte  address family byte
      * @return                   {@link ProxiedAddressFamily} instance OR {@code null} if the
      *                           address family is not recognized
      */
@@ -86,18 +86,18 @@ public final class ProxiedAddressFamily implements Comparable<ProxiedAddressFami
     }
 
     /**
-     * Returns the name of this address family.
+     * Returns the name of this address family
      *
-     * @return The name of this address family
+     * @return the name of this address family
      */
     public String name() {
         return name;
     }
 
     /**
-     * Returns the byte value of this address family.
+     * Returns the byte value of this address family
      *
-     * @return The byte value of this address family
+     * @return the byte value of this address family
      */
     public byte byteValue() {
         return addressFamilyByte;
@@ -125,6 +125,6 @@ public final class ProxiedAddressFamily implements Comparable<ProxiedAddressFami
 
     @Override
     public int compareTo(ProxiedAddressFamily o) {
-        return Byte.valueOf(byteValue()).compareTo(Byte.valueOf(o.byteValue()));
+        return byteValue() - o.byteValue();
     }
 }

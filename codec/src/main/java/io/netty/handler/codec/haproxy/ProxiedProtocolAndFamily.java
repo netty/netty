@@ -19,11 +19,11 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * The protocol and address family of an HAProxy proxy protocol header.
+ * The protocol and address family of an HAProxy proxy protocol header
  */
 public final class ProxiedProtocolAndFamily implements Comparable<ProxiedProtocolAndFamily> {
     /**
-     * Protocol and address family byte constants.
+     * Protocol and address family byte constants
      */
     private static final byte UNKNOWN_BYTE = (byte) 0x00;
     private static final byte TCP4_BYTE = (byte) 0x11;
@@ -35,7 +35,7 @@ public final class ProxiedProtocolAndFamily implements Comparable<ProxiedProtoco
 
     /**
      * The UNKNOWN protocol and address family represents a connection which was forwarded for an unknown protocol
-     * and address family.
+     * and address family
      */
     public static final ProxiedProtocolAndFamily UNKNOWN = new ProxiedProtocolAndFamily(
             "UNKNOWN", ProxiedAddressFamily.UNSPECIFIED, ProxiedTransportProtocol.UNSPECIFIED, UNKNOWN_BYTE);
@@ -95,7 +95,7 @@ public final class ProxiedProtocolAndFamily implements Comparable<ProxiedProtoco
     private final ProxiedTransportProtocol transportProtocol;
 
     /**
-     * Creates a new instance.
+     * Creates a new instance
      */
     private ProxiedProtocolAndFamily(String name, ProxiedAddressFamily addressFamily,
                                      ProxiedTransportProtocol transportProtocol, byte pafByte) {
@@ -106,9 +106,9 @@ public final class ProxiedProtocolAndFamily implements Comparable<ProxiedProtoco
     }
 
     /**
-     * Returns the {@link ProxiedProtocolAndFamily} represented by the specified name.
+     * Returns the {@link ProxiedProtocolAndFamily} represented by the specified name
      *
-     * @param name  Protocol and address family name
+     * @param name  protocol and address family name
      * @return      {@link ProxiedProtocolAndFamily} instance OR {@code null} if the
      *              name is not recognized
      */
@@ -117,9 +117,9 @@ public final class ProxiedProtocolAndFamily implements Comparable<ProxiedProtoco
     }
 
     /**
-     * Returns the {@link ProxiedProtocolAndFamily} represented by the protocol and family byte.
+     * Returns the {@link ProxiedProtocolAndFamily} represented by the protocol and family byte
      *
-     * @param pafByte  Protocol and address family byte
+     * @param pafByte  protocol and address family byte
      * @return         {@link ProxiedProtocolAndFamily} instance OR {@code null} if the
      *                 protocol and address family byte is not recognized
      */
@@ -145,36 +145,36 @@ public final class ProxiedProtocolAndFamily implements Comparable<ProxiedProtoco
     }
 
     /**
-     * Returns the name of this protocol and address family.
+     * Returns the name of this protocol and address family
      *
-     * @return The name of this protocol and address family
+     * @return the name of this protocol and address family
      */
     public String name() {
         return name;
     }
 
     /**
-     * Returns the byte value of this protocol and address family.
+     * Returns the byte value of this protocol and address family
      *
-     * @return The byte value of this protocol and address family
+     * @return the byte value of this protocol and address family
      */
     public byte byteValue() {
         return pafByte;
     }
 
     /**
-     * Returns the {@link ProxiedAddressFamily} of this protocol and address family.
+     * Returns the {@link ProxiedAddressFamily} of this protocol and address family
      *
-     * @return The address family
+     * @return the address family
      */
     public ProxiedAddressFamily proxiedAddressFamily() {
         return addressFamily;
     }
 
     /**
-     * Returns the {@link ProxiedTransportProtocol} of this protocol and address family.
+     * Returns the {@link ProxiedTransportProtocol} of this protocol and address family
      *
-     * @return The transport protocol
+     * @return the transport protocol
      */
     public ProxiedTransportProtocol proxiedTransportProtocol() {
         return transportProtocol;

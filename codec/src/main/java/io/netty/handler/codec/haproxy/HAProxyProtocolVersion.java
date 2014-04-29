@@ -20,7 +20,7 @@ package io.netty.handler.codec.haproxy;
  */
 public final class HAProxyProtocolVersion implements Comparable<HAProxyProtocolVersion> {
     /**
-     * Version byte constants.
+     * Version byte constants
      */
     private static final byte ONE_BYTE = (byte) 0x01;
     private static final byte TWO_BYTE = (byte) 0x02;
@@ -39,7 +39,7 @@ public final class HAProxyProtocolVersion implements Comparable<HAProxyProtocolV
     private final byte versionByte;
 
     /**
-     * Creates a new instance.
+     * Creates a new instance
      */
     private HAProxyProtocolVersion(String name, byte versionByte) {
         this.name = name;
@@ -47,7 +47,7 @@ public final class HAProxyProtocolVersion implements Comparable<HAProxyProtocolV
     }
 
     /**
-     * Returns the {@link HAProxyProtocolVersion} represented by the specified version byte.
+     * Returns the {@link HAProxyProtocolVersion} represented by the specified version byte
      *
      * @param versionByte  version byte
      * @return             {@link HAProxyProtocolVersion} instance OR {@code null} if the
@@ -65,18 +65,18 @@ public final class HAProxyProtocolVersion implements Comparable<HAProxyProtocolV
     }
 
     /**
-     * Returns the name of this version.
+     * Returns the name of this version
      *
-     * @return The name of this version
+     * @return the name of this version
      */
     public String name() {
         return name;
     }
 
     /**
-     * Returns the byte value of this version.
+     * Returns the byte value of this version
      *
-     * @return The byte value of this version
+     * @return the byte value of this version
      */
     public byte byteValue() {
         return versionByte;
@@ -104,6 +104,6 @@ public final class HAProxyProtocolVersion implements Comparable<HAProxyProtocolV
 
     @Override
     public int compareTo(HAProxyProtocolVersion o) {
-        return Byte.valueOf(byteValue()).compareTo(Byte.valueOf(o.byteValue()));
+        return byteValue() - o.byteValue();
     }
 }

@@ -23,27 +23,27 @@ import io.netty.util.CharsetUtil;
 import java.util.List;
 
 /**
- * Decodes an HAProxy proxy protocol header.
+ * Decodes an HAProxy proxy protocol header
  *
  * @see <a href="http://haproxy.1wt.eu/download/1.5/doc/proxy-protocol.txt">Proxy Protocol Specification</a>
  */
 public class HAProxyProtocolDecoder extends ByteToMessageDecoder {
 
     /**
-     * Maximum possible length of a proxy protocol header.
+     * Maximum possible length of a proxy protocol header
      */
     private static final int V1_MAX_LENGTH = 108;
     private static final int V2_MAX_LENGTH = 271;
 
     /**
-     * Version 1 header delimiter is always '\r\n' per spec.
+     * Version 1 header delimiter is always '\r\n' per spec
      */
     private static final int DELIMITER_LENGTH = 2;
 
     /**
-     * Binary header prefix.
+     * Binary header prefix
      */
-    private static final byte[] BINARY_PREFIX = new byte[]{
+    private static final byte[] BINARY_PREFIX = new byte[] {
             (byte) 0x0D,
             (byte) 0x0A,
             (byte) 0x0D,
@@ -59,22 +59,22 @@ public class HAProxyProtocolDecoder extends ByteToMessageDecoder {
     };
 
     /**
-     * Binary header prefix length.
+     * Binary header prefix length
      */
     private static final int BINARY_PREFIX_LENGTH = BINARY_PREFIX.length;
 
     /**
-     * True if we're discarding input because we're already over maxLength.
+     * {@code true} if we're discarding input because we're already over maxLength
      */
     private boolean discarding;
 
     /**
-     * Number of discarded bytes.
+     * Number of discarded bytes
      */
     private int discardedBytes;
 
     /**
-     * True if we're finished decoding the proxy protocol header
+     * {@code true} if we're finished decoding the proxy protocol header
      */
     private boolean finished;
 
@@ -84,7 +84,7 @@ public class HAProxyProtocolDecoder extends ByteToMessageDecoder {
     private int version = -1;
 
     /**
-     * Creates a new decoder.
+     * Creates a new decoder
      */
     public HAProxyProtocolDecoder() {
     }
@@ -154,6 +154,8 @@ public class HAProxyProtocolDecoder extends ByteToMessageDecoder {
 
     @Override
     public boolean isSingleDecode() {
+        // ByteToMessageDecoder uses this method to optionally break out of the decoding loop after each unit of work.
+        // Since we only ever want to decode a single header we always return true to save a bit of work here.
         return true;
     }
 
@@ -199,13 +201,12 @@ public class HAProxyProtocolDecoder extends ByteToMessageDecoder {
 
     /**
      * Create a frame out of the {@link ByteBuf} and return it.
-     * Based on code from <a href="https://github.com/netty/netty/blob/a8af57742334d2962bba108a0773878a3a4af346/codec/
-     * src/main/java/io/netty/handler/codec/LineBasedFrameDecoder.java#L88">LineBasedFrameDecoder</a>.
+     * Based on code from {@link LineBasedFrameDecoder#decode(ChannelHandlerContext, ByteBuf)}.
      *
      * @param ctx     the {@link ChannelHandlerContext} which this {@link HAProxyProtocolDecoder} belongs to
      * @param buffer  the {@link ByteBuf} from which to read data
      * @return frame  the {@link ByteBuf} which represent the frame or {@code null} if no frame could
-     *                be created.
+     *                be created
      */
     protected ByteBuf decodeStruct(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
         final int eoh = findEndOfHeader(buffer);
@@ -244,13 +245,12 @@ public class HAProxyProtocolDecoder extends ByteToMessageDecoder {
 
     /**
      * Create a frame out of the {@link ByteBuf} and return it.
-     * Based on code from <a href="https://github.com/netty/netty/blob/a8af57742334d2962bba108a0773878a3a4af346/codec/
-     * src/main/java/io/netty/handler/codec/LineBasedFrameDecoder.java#L88">LineBasedFrameDecoder</a>.
+     * Based on code from {@link LineBasedFrameDecoder#decode(ChannelHandlerContext, ByteBuf)}.
      *
      * @param ctx     the {@link ChannelHandlerContext} which this {@link HAProxyProtocolDecoder} belongs to
      * @param buffer  the {@link ByteBuf} from which to read data
      * @return frame  the {@link ByteBuf} which represent the frame or {@code null} if no frame could
-     *                be created.
+     *                be created
      */
     protected ByteBuf decodeLine(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
         final int eol = findEndOfLine(buffer);

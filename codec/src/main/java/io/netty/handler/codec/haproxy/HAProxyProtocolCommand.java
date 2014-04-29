@@ -16,11 +16,11 @@
 package io.netty.handler.codec.haproxy;
 
 /**
- * The command of an HAProxy proxy protocol header.
+ * The command of an HAProxy proxy protocol header
  */
 public final class HAProxyProtocolCommand implements Comparable<HAProxyProtocolCommand> {
     /**
-     * Version byte constants.
+     * Version byte constants
      */
     private static final byte LOCAL_BYTE = (byte) 0x00;
     private static final byte PROXY_BYTE = (byte) 0x01;
@@ -41,7 +41,7 @@ public final class HAProxyProtocolCommand implements Comparable<HAProxyProtocolC
     private final byte cmdByte;
 
     /**
-     * Creates a new instance.
+     * Creates a new instance
      */
     private HAProxyProtocolCommand(String name, byte cmdByte) {
         this.name = name;
@@ -49,9 +49,9 @@ public final class HAProxyProtocolCommand implements Comparable<HAProxyProtocolC
     }
 
     /**
-     * Returns the {@link HAProxyProtocolCommand} represented by the specified command byte.
+     * Returns the {@link HAProxyProtocolCommand} represented by the specified command byte
      *
-     * @param cmdByte  Command byte
+     * @param cmdByte  command byte
      * @return         {@link HAProxyProtocolCommand} instance OR {@code null} if the command is not recognized
      */
     public static HAProxyProtocolCommand valueOf(byte cmdByte) {
@@ -66,18 +66,18 @@ public final class HAProxyProtocolCommand implements Comparable<HAProxyProtocolC
     }
 
     /**
-     * Returns the name of this command.
+     * Returns the name of this command
      *
-     * @return The name of this command
+     * @return the name of this command
      */
     public String name() {
         return name;
     }
 
     /**
-     * Returns the byte value of this command.
+     * Returns the byte value of this command
      *
-     * @return The byte value of this command
+     * @return the byte value of this command
      */
     public byte byteValue() {
         return cmdByte;
@@ -105,6 +105,6 @@ public final class HAProxyProtocolCommand implements Comparable<HAProxyProtocolC
 
     @Override
     public int compareTo(HAProxyProtocolCommand o) {
-        return Byte.valueOf(byteValue()).compareTo(Byte.valueOf(o.byteValue()));
+        return byteValue() - o.byteValue();
     }
 }
