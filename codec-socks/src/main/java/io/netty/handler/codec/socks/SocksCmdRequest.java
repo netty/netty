@@ -23,6 +23,7 @@ import io.netty.util.NetUtil;
 
 /**
  * An socks cmd request.
+ * For backward compatibility was created another constructor for Socks4
  *
  * @see SocksCmdResponse
  * @see SocksCmdRequestDecoder

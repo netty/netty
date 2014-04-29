@@ -28,6 +28,7 @@ import static io.netty.handler.codec.socks.SocksCmdStatus.UNASSIGNED;
 
 /**
  * A socks cmd response.
+ * For backward compatibility was created 2 different constructor: one for Socks4 and another one for Socks5
  *
  * @see SocksCmdRequest
  * @see SocksCmdResponseDecoder
