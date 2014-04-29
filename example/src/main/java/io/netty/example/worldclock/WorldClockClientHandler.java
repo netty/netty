@@ -30,14 +30,9 @@ import java.util.Formatter;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
 public class WorldClockClientHandler extends SimpleChannelInboundHandler<LocalTimes> {
-
-    private static final Logger logger = Logger.getLogger(
-            WorldClockClientHandler.class.getName());
 
     private static final Pattern DELIM = Pattern.compile("/");
 
@@ -67,7 +62,7 @@ public class WorldClockClientHandler extends SimpleChannelInboundHandler<LocalTi
             try {
                 localTimes = answer.take();
                 break;
-            } catch (InterruptedException e) {
+            } catch (InterruptedException ignore) {
                 interrupted = true;
             }
         }
@@ -94,7 +89,7 @@ public class WorldClockClientHandler extends SimpleChannelInboundHandler<LocalTi
     }
 
     @Override
-    public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+    public void channelRegistered(ChannelHandlerContext ctx) {
         channel = ctx.channel();
     }
 
@@ -104,10 +99,8 @@ public class WorldClockClientHandler extends SimpleChannelInboundHandler<LocalTi
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        logger.log(
-                Level.WARNING,
-                "Unexpected exception from downstream.", cause);
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+        cause.printStackTrace();
         ctx.close();
     }
 }

@@ -21,6 +21,8 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 
 /**
  * A SPDY Server that responds to a GET request with a Hello World.
@@ -42,9 +44,11 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
  */
 public class SpdyServer {
 
+    private final SslContext sslCtx;
     private final int port;
 
-    public SpdyServer(int port) {
+    public SpdyServer(SslContext sslCtx, int port) {
+        this.sslCtx = sslCtx;
         this.port = port;
     }
 
@@ -56,7 +60,7 @@ public class SpdyServer {
             ServerBootstrap b = new ServerBootstrap();
             b.option(ChannelOption.SO_BACKLOG, 1024);
             b.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class)
-                    .childHandler(new SpdyServerInitializer());
+                    .childHandler(new SpdyServerInitializer(sslCtx));
 
             Channel ch = b.bind(port).sync().channel();
             ch.closeFuture().sync();
@@ -78,6 +82,9 @@ public class SpdyServer {
         System.out.println("Open your SPDY enabled browser and navigate to https://localhost:" + port + '/');
         System.out.println("If using Chrome browser, check your SPDY sessions at chrome://net-internals/#spdy");
 
-        new SpdyServer(port).run();
+        // Configure SSL.
+        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        SslContext sslCtx = SslContext.newServerContext(ssc.certificate(), ssc.privateKey());
+        new SpdyServer(sslCtx, port).run();
     }
 }

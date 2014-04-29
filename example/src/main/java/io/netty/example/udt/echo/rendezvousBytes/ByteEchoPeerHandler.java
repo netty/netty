@@ -15,17 +15,11 @@
  */
 package io.netty.example.udt.echo.rendezvousBytes;
 
-import com.yammer.metrics.Metrics;
-import com.yammer.metrics.core.Meter;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.udt.nio.NioUdtProvider;
-
-import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Handler implementation for the echo client. It initiates the ping-pong
@@ -33,11 +27,8 @@ import java.util.logging.Logger;
  * the server on activation.
  */
 public class ByteEchoPeerHandler extends SimpleChannelInboundHandler<ByteBuf> {
-    private static final Logger log = Logger.getLogger(ByteEchoPeerHandler.class.getName());
-    private final ByteBuf message;
 
-    final Meter meter = Metrics.newMeter(ByteEchoPeerHandler.class, "rate",
-            "bytes", TimeUnit.SECONDS);
+    private final ByteBuf message;
 
     public ByteEchoPeerHandler(final int messageSize) {
         super(false);
@@ -48,26 +39,24 @@ public class ByteEchoPeerHandler extends SimpleChannelInboundHandler<ByteBuf> {
     }
 
     @Override
-    public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        log.info("ECHO active " + NioUdtProvider.socketUDT(ctx.channel()).toStringOptions());
+    public void channelActive(ChannelHandlerContext ctx) {
+        System.err.println("ECHO active " + NioUdtProvider.socketUDT(ctx.channel()).toStringOptions());
         ctx.writeAndFlush(message);
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        log.log(Level.WARNING, "close the connection when an exception is raised", cause);
-        ctx.close();
-    }
-
-    @Override
-    public void channelRead0(ChannelHandlerContext ctx, ByteBuf buf) throws Exception {
-        meter.mark(buf.readableBytes());
-
+    public void channelRead0(ChannelHandlerContext ctx, ByteBuf buf) {
         ctx.write(buf);
     }
 
     @Override
-    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+    public void channelReadComplete(ChannelHandlerContext ctx) {
         ctx.flush();
+    }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+        cause.printStackTrace();
+        ctx.close();
     }
 }

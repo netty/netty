@@ -37,6 +37,8 @@ import io.netty.handler.codec.http.multipart.HttpDataFactory;
 import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder;
 import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder.ErrorDataEncoderException;
 import io.netty.handler.codec.http.multipart.InterfaceHttpData;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -97,7 +99,13 @@ public class HttpUploadClient {
             return;
         }
 
+        final SslContext sslCtx;
         boolean ssl = "https".equalsIgnoreCase(scheme);
+        if (ssl) {
+            sslCtx = SslContext.newClientContext(InsecureTrustManagerFactory.INSTANCE);
+        } else {
+            sslCtx = null;
+        }
 
         URI uriFile;
         try {
@@ -125,7 +133,7 @@ public class HttpUploadClient {
 
         try {
             Bootstrap b = new Bootstrap();
-            b.group(group).channel(NioSocketChannel.class).handler(new HttpUploadClientIntializer(ssl));
+            b.group(group).channel(NioSocketChannel.class).handler(new HttpUploadClientIntializer(sslCtx));
 
             // Simple Get form: no factory used (not usable)
             List<Entry<String, String>> headers = formGet(b, host, port, get, uriSimple);

@@ -15,12 +15,6 @@
  */
 package io.netty.util.internal;
 
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
-import sun.misc.Cleaner;
-import sun.misc.Unsafe;
-import sun.nio.ch.DirectBuffer;
-
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.Buffer;
@@ -31,6 +25,11 @@ import java.security.PrivilegedAction;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
+import sun.misc.Cleaner;
+import sun.misc.Unsafe;
+import sun.nio.ch.DirectBuffer;
 
 /**
  * The {@link PlatformDependent} operations which requires access to {@code sun.misc.*}.
@@ -41,6 +40,12 @@ final class PlatformDependent0 {
     private static final Unsafe UNSAFE;
     private static final boolean BIG_ENDIAN = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
     private static final long ADDRESS_FIELD_OFFSET;
+
+    /**
+     * Limits the number of bytes to copy per {@link Unsafe#copyMemory(long, long, long)} to allow safepoint polling
+     * during a large copy.
+     */
+    private static final long UNSAFE_COPY_THRESHOLD = 1024L * 1024L;
 
     /**
      * {@code true} if and only if the platform supports unaligned access.
@@ -155,11 +160,9 @@ final class PlatformDependent0 {
         }
         try {
             Cleaner cleaner = ((DirectBuffer) buffer).cleaner();
-            if (cleaner == null) {
-                throw new IllegalArgumentException(
-                        "attempted to deallocate the buffer which was allocated via JNIEnv->NewDirectByteBuffer()");
+            if (cleaner != null) {
+                cleaner.clean();
             }
-            cleaner.clean();
         } catch (Throwable t) {
             // Nothing we can do here.
         }
@@ -308,11 +311,25 @@ final class PlatformDependent0 {
     }
 
     static void copyMemory(long srcAddr, long dstAddr, long length) {
-        UNSAFE.copyMemory(srcAddr, dstAddr, length);
+        //UNSAFE.copyMemory(srcAddr, dstAddr, length);
+        while (length > 0) {
+            long size = Math.min(length, UNSAFE_COPY_THRESHOLD);
+            UNSAFE.copyMemory(srcAddr, dstAddr, size);
+            length -= size;
+            srcAddr += size;
+            dstAddr += size;
+        }
     }
 
     static void copyMemory(Object src, long srcOffset, Object dst, long dstOffset, long length) {
-        UNSAFE.copyMemory(src, srcOffset, dst, dstOffset, length);
+        //UNSAFE.copyMemory(src, srcOffset, dst, dstOffset, length);
+        while (length > 0) {
+            long size = Math.min(length, UNSAFE_COPY_THRESHOLD);
+            UNSAFE.copyMemory(src, srcOffset, dst, dstOffset, size);
+            length -= size;
+            srcOffset += size;
+            dstOffset += size;
+        }
     }
 
     static <U, W> AtomicReferenceFieldUpdater<U, W> newAtomicReferenceFieldUpdater(

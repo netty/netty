@@ -20,18 +20,18 @@
   <parent>
     <groupId>org.sonatype.oss</groupId>
     <artifactId>oss-parent</artifactId>
-    <version>7</version>
+    <version>9</version>
   </parent>
 
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.0.19.Final-SNAPSHOT</version>
+  <version>4.0.20.Final-SNAPSHOT</version>
 
   <name>Netty</name>
   <url>http://netty.io/</url>
   <description>
-    Netty is an asynchronous event-driven network application framework for 
+    Netty is an asynchronous event-driven network application framework for
     rapid development of maintainable high performance protocol servers and
     clients.
   </description>
@@ -71,24 +71,13 @@
     <profile>
       <id>leak</id>
       <properties>
-        <test.jvm.argLine>
-          -server 
-          -dsa -da -ea:io.netty...
-          -XX:+AggressiveOpts
-          -XX:+TieredCompilation
-          -XX:+UseBiasedLocking
-          -XX:+UseFastAccessorMethods
-          -XX:+OptimizeStringConcat
-          -XX:+HeapDumpOnOutOfMemoryError
-          -Dio.netty.leakDetectionLevel=3
-          -verbose:gc
-        </test.jvm.argLine>
+        <argLine.leak>-Dio.netty.leakDetectionLevel=paranoid</argLine.leak>
       </properties>
     </profile>
     <profile>
       <id>coverage</id>
       <properties>
-        <test.jvm.argLine.coverage>${jacoco.argLine}</test.jvm.argLine.coverage>
+        <argLine.coverage>${jacoco.argLine}</argLine.coverage>
       </properties>
       <build>
         <plugins>
@@ -111,18 +100,20 @@
         </plugins>
       </build>
     </profile>
-    <!-- Our Javadoc has poor enough quality to fail the build thanks to JDK8 javadoc which got more strict. -->
     <profile>
       <id>jdk8</id>
       <activation>
         <jdk>[1.8,)</jdk>
       </activation>
       <properties>
+        <!-- Our Javadoc has poor enough quality to fail the build thanks to JDK8 javadoc which got more strict. -->
         <maven.javadoc.failOnError>false</maven.javadoc.failOnError>
+        <!-- npn-boot does not work with JDK 8 -->
+        <argLine.bootcp>-D_</argLine.bootcp>
       </properties>
     </profile>
     <profile>
-      <id>linux-native</id>
+      <id>linux</id>
       <activation>
         <os>
           <family>linux</family>
@@ -132,15 +123,200 @@
         <module>transport-native-epoll</module>
       </modules>
     </profile>
+    <!--
+      Netty must be released from RHEL 6.5 x86_64 or compatible so that:
+
+        1) we ship x86_64 version of epoll transport officially, and
+        2) we ensure the ABI compatibility with older GLIBC versions.
+
+           The shared library built on a distribution with newer GLIBC
+           will not run on older distributions.
+    -->
+    <profile>
+      <id>restricted-release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-enforcer-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>enforce-release-environment</id>
+                <goals>
+                  <goal>enforce</goal>
+                </goals>
+                <configuration>
+                  <rules>
+                    <requireProperty>
+                      <regexMessage>
+                        Release process must be performed on linux-x86_64.
+                      </regexMessage>
+                      <property>os.detected.classifier</property>
+                      <regex>^linux-x86_64$</regex>
+                    </requireProperty>
+                    <requireFilesContent>
+                      <message>
+                        Release process must be performed on RHEL 6.5 or its derivatives.
+                      </message>
+                      <files>
+                        <file>/etc/redhat-release</file>
+                      </files>
+                      <content>release 6.5</content>
+                    </requireFilesContent>
+                  </rules>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <!--
+      Profiles that assigns proper Jetty npn-boot version.
+      See: http://www.eclipse.org/jetty/documentation/current/npn-chapter.html#npn-versions
+    -->
+    <profile>
+      <id>npn-7u9</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.7.0_9</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.npn.version>1.1.3.v20130313</jetty.npn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>npn-7u10</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.7.0_10</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.npn.version>1.1.3.v20130313</jetty.npn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>npn-7u11</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.7.0_11</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.npn.version>1.1.3.v20130313</jetty.npn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>npn-7u13</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.7.0_13</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.npn.version>1.1.4.v20130313</jetty.npn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>npn-7u15</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.7.0_15</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.npn.version>1.1.5.v20130313</jetty.npn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>npn-7u17</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.7.0_17</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.npn.version>1.1.5.v20130313</jetty.npn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>npn-7u21</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.7.0_21</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.npn.version>1.1.5.v20130313</jetty.npn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>npn-7u25</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.7.0_25</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.npn.version>1.1.5.v20130313</jetty.npn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>npn-7u40</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.7.0_40</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.npn.version>1.1.6.v20130911</jetty.npn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>npn-7u45</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.7.0_45</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.npn.version>1.1.6.v20130911</jetty.npn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>npn-7u51</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.7.0_51</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.npn.version>1.1.6.v20130911</jetty.npn.version>
+      </properties>
+    </profile>
   </profiles>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <jboss.marshalling.version>1.3.18.GA</jboss.marshalling.version>
-    <test.jvm.argLine.coverage /> <!-- Set when 'coverage' profile is active -->
-    <test.jvm.argLine>
-      -server 
+    <jetty.npn.version>1.1.7.v20140316</jetty.npn.version>
+    <jetty.npn.path>${settings.localRepository}/org/mortbay/jetty/npn/npn-boot/${jetty.npn.version}/npn-boot-${jetty.npn.version}.jar</jetty.npn.path>
+    <argLine.common>
+      -server
       -dsa -da -ea:io.netty...
       -XX:+AggressiveOpts
       -XX:+TieredCompilation
@@ -149,7 +325,10 @@
       -XX:+OptimizeStringConcat
       -XX:+HeapDumpOnOutOfMemoryError
       -verbose:gc
-    </test.jvm.argLine>
+    </argLine.common>
+    <argLine.bootcp>-Xbootclasspath/p:${jetty.npn.path}</argLine.bootcp>
+    <argLine.leak>-D_</argLine.leak> <!-- Set when 'leak' profile is active -->
+    <argLine.coverage>-D_</argLine.coverage> <!-- Set when 'coverage' profile is active -->
   </properties>
 
   <modules>
@@ -189,19 +368,49 @@
         <scope>compile</scope>
         <optional>true</optional>
       </dependency>
-    
-      <!-- SPDY Example - completely optional -->
+
+      <!-- SPDY and HTTP/2 - completely optional -->
       <dependency>
         <groupId>org.eclipse.jetty.npn</groupId>
         <artifactId>npn-api</artifactId>
         <version>1.1.0.v20120525</version>
       </dependency>
-        
+      <dependency>
+        <groupId>org.mortbay.jetty.npn</groupId>
+        <artifactId>npn-boot</artifactId>
+        <version>${jetty.npn.version}</version>
+      </dependency>
+
+      <!-- Google Protocol Buffers - completely optional -->
       <dependency>
         <groupId>com.google.protobuf</groupId>
         <artifactId>protobuf-java</artifactId>
         <version>2.5.0</version>
       </dependency>
+
+      <!-- Our own Tomcat Native fork - completely optional, used for acclerating SSL with OpenSSL. -->
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>netty-tcnative</artifactId>
+        <version>1.1.30.Fork2</version>
+        <classifier>${os.detected.classifier}</classifier>
+        <scope>compile</scope>
+        <optional>true</optional>
+      </dependency>
+
+      <!--
+        Bouncy Castle - completely optional, only needed when:
+        - you generate a temporary self-signed certificate using SelfSignedCertificate, and
+        - you don't use the JDK which doesn't provide sun.security.x509 package.
+      -->
+      <dependency>
+        <groupId>org.bouncycastle</groupId>
+        <artifactId>bcpkix-jdk15on</artifactId>
+        <version>1.50</version>
+        <scope>compile</scope>
+        <optional>true</optional>
+      </dependency>
+
       <dependency>
         <groupId>com.jcraft</groupId>
         <artifactId>jzlib</artifactId>
@@ -260,14 +469,14 @@
         </exclusions>
         <optional>true</optional>
       </dependency>
-      
+
       <!-- Metrics providers -->
       <dependency>
         <groupId>com.yammer.metrics</groupId>
         <artifactId>metrics-core</artifactId>
         <version>2.2.0</version>
       </dependency>
-      
+
       <!-- Common test dependencies -->
       <dependency>
         <groupId>junit</groupId>
@@ -361,10 +570,17 @@
   </dependencies>
 
   <build>
+    <extensions>
+      <extension>
+        <groupId>kr.motd.maven</groupId>
+        <artifactId>os-maven-plugin</artifactId>
+        <version>1.2.3.Final</version>
+      </extension>
+    </extensions>
+
     <plugins>
       <plugin>
         <artifactId>maven-enforcer-plugin</artifactId>
-        <version>1.3</version>
         <executions>
           <execution>
             <id>enforce-tools</id>
@@ -409,6 +625,9 @@
           -->
           <meminitial>256m</meminitial>
           <maxmem>1024m</maxmem>
+          <excludes>
+            <exclude>**/package-info.java</exclude>
+          </excludes>
         </configuration>
       </plugin>
       <plugin>
@@ -435,6 +654,22 @@
             <ignore>java.nio.channels.MembershipKey</ignore>
             <ignore>java.net.StandardProtocolFamily</ignore>
             <ignore>java.nio.channels.spi.SelectorProvider</ignore>
+
+            <!-- Self-signed certificate generation -->
+            <ignore>sun.security.x509.AlgorithmId</ignore>
+            <ignore>sun.security.x509.CertificateAlgorithmId</ignore>
+            <ignore>sun.security.x509.CertificateIssuerName</ignore>
+            <ignore>sun.security.x509.CertificateSerialNumber</ignore>
+            <ignore>sun.security.x509.CertificateSubjectName</ignore>
+            <ignore>sun.security.x509.CertificateValidity</ignore>
+            <ignore>sun.security.x509.CertificateVersion</ignore>
+            <ignore>sun.security.x509.CertificateX509Key</ignore>
+            <ignore>sun.security.x509.X500Name</ignore>
+            <ignore>sun.security.x509.X509CertInfo</ignore>
+            <ignore>sun.security.x509.X509CertImpl</ignore>
+
+            <!-- SSLSession implelementation -->
+            <ignore>javax.net.ssl.SSLEngine</ignore>
           </ignores>
         </configuration>
         <executions>
@@ -470,9 +705,27 @@
           <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>netty-build</artifactId>
-            <version>19</version>
+            <version>21</version>
           </dependency>
         </dependencies>
+      </plugin>
+      <!-- Download the npn-boot.jar in advance to add it to the boot classpath. -->
+      <plugin>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>get-npn-boot</id>
+            <phase>validate</phase>
+            <goals>
+              <goal>get</goal>
+            </goals>
+            <configuration>
+              <groupId>org.mortbay.jetty.npn</groupId>
+              <artifactId>npn-boot</artifactId>
+              <version>${jetty.npn.version}</version>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
@@ -486,7 +739,7 @@
             <exclude>**/TestUtil*</exclude>
           </excludes>
           <runOrder>random</runOrder>
-          <argLine>${test.jvm.argLine.coverage} ${test.jvm.argLine}</argLine>
+          <argLine>${argLine.common} ${argLine.bootcp} ${argLine.leak} ${argLine.coverage}</argLine>
         </configuration>
       </plugin>
       <!-- always produce osgi bundles -->
@@ -516,7 +769,7 @@
             </configuration>
           </execution>
         </executions>
-      </plugin>             
+      </plugin>
       <plugin>
         <artifactId>maven-source-plugin</artifactId>
         <version>2.2.1</version>
@@ -572,7 +825,7 @@
         <version>2.4.2</version>
         <configuration>
           <useReleaseProfile>false</useReleaseProfile>
-          <arguments>-P release,sonatype-oss-release,full,no-osgi,linux-native</arguments>
+          <arguments>-P restricted-release,sonatype-oss-release,full</arguments>
           <autoVersionSubmodules>true</autoVersionSubmodules>
           <allowTimestampedSnapshots>false</allowTimestampedSnapshots>
           <tagNameFormat>netty-@{project.version}</tagNameFormat>
@@ -728,6 +981,18 @@
 
     <pluginManagement>
       <plugins>
+        <plugin>
+          <artifactId>maven-enforcer-plugin</artifactId>
+          <version>1.3.1</version>
+          <dependencies>
+            <!-- Provides the 'requireFilesContent' enforcer rule. -->
+            <dependency>
+              <groupId>com.ceilfors.maven.plugin</groupId>
+              <artifactId>enforcer-rules</artifactId>
+              <version>1.1.0</version>
+            </dependency>
+          </dependencies>
+        </plugin>
         <!-- keep surefire and failsafe in sync -->
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>
@@ -798,11 +1063,16 @@
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>build-helper-maven-plugin</artifactId>
           <version>1.8</version>
-        </plugin>               
+        </plugin>
         <plugin>
-          <groupId>org.codehaus.mojo</groupId>
+          <groupId>org.fusesource.hawtjni</groupId>
+          <artifactId>maven-hawtjni-plugin</artifactId>
+          <version>1.10</version>
+        </plugin>
+        <plugin>
+          <groupId>kr.motd.maven</groupId>
           <artifactId>exec-maven-plugin</artifactId>
-          <version>1.2.1</version>
+          <version>1.0.0.Final</version>
         </plugin>
 
         <!-- Workaround for the 'M2E plugin execution not covered' problem.
@@ -883,6 +1153,34 @@
                   </pluginExecutionFilter>
                   <action>
                     <ignore />
+                  </action>
+                </pluginExecution>
+                <pluginExecution>
+                  <pluginExecutionFilter>
+                    <groupId>org.fusesource.hawtjni</groupId>
+                    <artifactId>maven-hawtjni-plugin</artifactId>
+                    <versionRange>[1.10,)</versionRange>
+                    <goals>
+                      <goal>generate</goal>
+                      <goal>build</goal>
+                    </goals>
+                  </pluginExecutionFilter>
+                  <action>
+                    <ignore></ignore>
+                  </action>
+                </pluginExecution>
+                <pluginExecution>
+                  <pluginExecutionFilter>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-dependency-plugin</artifactId>
+                    <versionRange>[2.8,)</versionRange>
+                    <goals>
+                      <goal>properties</goal>
+                      <goal>copy</goal>
+                    </goals>
+                  </pluginExecutionFilter>
+                  <action>
+                    <ignore></ignore>
                   </action>
                 </pluginExecution>
               </pluginExecutions>

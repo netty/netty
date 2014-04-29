@@ -27,6 +27,8 @@ public class SpdyHeaderBlockRawDecoder extends SpdyHeaderBlockDecoder {
 
     private State state;
 
+    private ByteBuf cumulation;
+
     private int headerSize;
     private int numHeaders;
     private int length;
@@ -67,6 +69,24 @@ public class SpdyHeaderBlockRawDecoder extends SpdyHeaderBlockDecoder {
             throw new NullPointerException("frame");
         }
 
+        if (cumulation == null) {
+            decodeHeaderBlock(headerBlock, frame);
+            if (headerBlock.isReadable()) {
+                cumulation = headerBlock.alloc().buffer(headerBlock.readableBytes());
+                cumulation.writeBytes(headerBlock);
+            }
+        } else {
+            cumulation.writeBytes(headerBlock);
+            decodeHeaderBlock(cumulation, frame);
+            if (cumulation.isReadable()) {
+                cumulation.discardReadBytes();
+            } else {
+                cumulation = null;
+            }
+        }
+    }
+
+    protected void decodeHeaderBlock(ByteBuf headerBlock, SpdyHeadersFrame frame) throws Exception {
         int skipLength;
         while (headerBlock.isReadable()) {
             switch(state) {
@@ -267,6 +287,9 @@ public class SpdyHeaderBlockRawDecoder extends SpdyHeaderBlockDecoder {
         if (state != State.END_HEADER_BLOCK) {
             frame.setInvalid();
         }
+
+        releaseBuffer();
+
         // Initialize header block decoding fields
         headerSize = 0;
         name = null;
@@ -275,5 +298,13 @@ public class SpdyHeaderBlockRawDecoder extends SpdyHeaderBlockDecoder {
 
     @Override
     void end() {
+        releaseBuffer();
+    }
+
+    private void releaseBuffer() {
+        if (cumulation != null) {
+            cumulation.release();
+            cumulation = null;
+        }
     }
 }

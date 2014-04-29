@@ -22,6 +22,8 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.example.telnet.TelnetClient;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -31,10 +33,12 @@ import java.io.InputStreamReader;
  */
 public class SecureChatClient {
 
+    private final SslContext sslCtx;
     private final String host;
     private final int port;
 
-    public SecureChatClient(String host, int port) {
+    public SecureChatClient(SslContext sslCtx, String host, int port) {
+        this.sslCtx = sslCtx;
         this.host = host;
         this.port = port;
     }
@@ -45,7 +49,7 @@ public class SecureChatClient {
             Bootstrap b = new Bootstrap();
             b.group(group)
              .channel(NioSocketChannel.class)
-             .handler(new SecureChatClientInitializer());
+             .handler(new SecureChatClientInitializer(sslCtx));
 
             // Start the connection attempt.
             Channel ch = b.connect(host, port).sync().channel();
@@ -93,6 +97,8 @@ public class SecureChatClient {
         String host = args[0];
         int port = Integer.parseInt(args[1]);
 
-        new SecureChatClient(host, port).run();
+        // Configure SSL.
+        SslContext sslCtx = SslContext.newClientContext(InsecureTrustManagerFactory.INSTANCE);
+        new SecureChatClient(sslCtx, host, port).run();
     }
 }

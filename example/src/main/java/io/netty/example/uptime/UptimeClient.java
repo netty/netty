@@ -16,6 +16,8 @@
 package io.netty.example.uptime;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
@@ -29,38 +31,29 @@ import io.netty.handler.timeout.IdleStateHandler;
  * server.  This example demonstrates how to implement reliable reconnection
  * mechanism in Netty.
  */
-public class UptimeClient {
+public final class UptimeClient {
 
+    static final String HOST = System.getProperty("host", "127.0.0.1");
+    static final int PORT = Integer.parseInt(System.getProperty("port", "8080"));
     // Sleep 5 seconds before a reconnection attempt.
-    static final int RECONNECT_DELAY = 5;
-
+    static final int RECONNECT_DELAY = Integer.parseInt(System.getProperty("reconnectDelay", "5"));
     // Reconnect when the server sends nothing for 10 seconds.
-    private static final int READ_TIMEOUT = 10;
+    static final int READ_TIMEOUT = Integer.parseInt(System.getProperty("readTimeout", "10"));
 
-    private final String host;
-    private final int port;
+    private static final UptimeClientHandler handler = new UptimeClientHandler();
 
-    // A single handler will be reused across multiple connection attempts to keep when the last
-    // successful connection attempt was.
-    private final UptimeClientHandler handler = new UptimeClientHandler(this);
-
-    public UptimeClient(String host, int port) {
-        this.host = host;
-        this.port = port;
-    }
-
-    public void run() {
+    public static void main(String[] args) throws Exception {
         configureBootstrap(new Bootstrap()).connect();
     }
 
-    private Bootstrap configureBootstrap(Bootstrap b) {
+    private static Bootstrap configureBootstrap(Bootstrap b) {
         return configureBootstrap(b, new NioEventLoopGroup());
     }
 
-    Bootstrap configureBootstrap(Bootstrap b, EventLoopGroup g) {
+    static Bootstrap configureBootstrap(Bootstrap b, EventLoopGroup g) {
         b.group(g)
          .channel(NioSocketChannel.class)
-         .remoteAddress(host, port)
+         .remoteAddress(HOST, PORT)
          .handler(new ChannelInitializer<SocketChannel>() {
             @Override
             public void initChannel(SocketChannel ch) throws Exception {
@@ -71,19 +64,15 @@ public class UptimeClient {
         return b;
     }
 
-    public static void main(String[] args) throws Exception {
-        // Print usage if no argument is specified.
-        if (args.length != 2) {
-            System.err.println(
-                    "Usage: " + UptimeClient.class.getSimpleName() +
-                    " <host> <port>");
-            return;
-        }
-
-        // Parse options.
-        String host = args[0];
-        int port = Integer.parseInt(args[1]);
-
-        new UptimeClient(host, port).run();
+    static void connect(Bootstrap b) {
+        b.connect().addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) throws Exception {
+                if (future.cause() != null) {
+                    handler.startTime = -1;
+                    handler.println("Failed to connect: " + future.cause());
+                }
+            }
+        });
     }
 }

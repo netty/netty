@@ -183,7 +183,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
     private final boolean startTls;
     private boolean sentFirstMessage;
-
+    private boolean flushedBeforeHandshakeDone;
     private final LazyChannelPromise handshakePromise = new LazyChannelPromise();
     private final LazyChannelPromise sslCloseFuture = new LazyChannelPromise();
     private final Deque<PendingWrite> pendingUnencryptedWrites = new ArrayDeque<PendingWrite>();
@@ -415,6 +415,9 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         if (pendingUnencryptedWrites.isEmpty()) {
             pendingUnencryptedWrites.add(PendingWrite.newInstance(Unpooled.EMPTY_BUFFER, null));
         }
+        if (!handshakePromise.isDone()) {
+            flushedBeforeHandshakeDone = true;
+        }
         wrap(ctx, false);
         ctx.flush();
     }
@@ -437,7 +440,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     pendingUnencryptedWrites.remove();
                     continue;
                 }
-
                 ByteBuf buf = (ByteBuf) pending.msg();
                 SSLEngineResult result = wrap(engine, buf, out);
 
@@ -890,7 +892,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     private void unwrapMultiple(
             ChannelHandlerContext ctx, ByteBuffer packet, int totalLength,
             int[] recordLengths, int nRecords, List<Object> out) throws SSLException {
-
         for (int i = 0; i < nRecords; i ++) {
             packet.limit(packet.position() + recordLengths[i]);
             try {
@@ -949,6 +950,14 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                             wrapLater = true;
                             continue;
                         }
+                        if (flushedBeforeHandshakeDone) {
+                            // We need to call wrap(...) in case there was a flush done before the handshake completed.
+                            //
+                            // See https://github.com/netty/netty/pull/2437
+                            flushedBeforeHandshakeDone = false;
+                            wrapLater = true;
+                        }
+
                         break;
                     default:
                         throw new IllegalStateException("Unknown handshake status: " + handshakeStatus);

@@ -23,6 +23,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.FileRegion;
+import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.util.internal.StringUtil;
 
@@ -32,6 +33,7 @@ import java.io.IOException;
  * Abstract base class for OIO which reads and writes bytes from/to a Socket
  */
 public abstract class AbstractOioByteChannel extends AbstractOioChannel {
+    private RecvByteBufAllocator.Handle allocHandle;
 
     private volatile boolean inputShutdown;
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
@@ -76,13 +78,20 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
         final ChannelConfig config = config();
         final ChannelPipeline pipeline = pipeline();
 
-        // TODO: calculate size as in 3.x
-        ByteBuf byteBuf = alloc().buffer();
+        RecvByteBufAllocator.Handle allocHandle = this.allocHandle;
+        if (allocHandle == null) {
+            this.allocHandle = allocHandle = config.getRecvByteBufAllocator().newHandle();
+        }
+
+        ByteBuf byteBuf = allocHandle.allocate(alloc());
+
         boolean closed = false;
         boolean read = false;
         Throwable exception = null;
         int localReadAmount = 0;
         try {
+            int totalReadAmount = 0;
+
             for (;;) {
                 localReadAmount = doReadBytes(byteBuf);
                 if (localReadAmount > 0) {
@@ -114,12 +123,23 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
                         }
                     }
                 }
+
+                if (totalReadAmount >= Integer.MAX_VALUE - localReadAmount) {
+                    // Avoid overflow.
+                    totalReadAmount = Integer.MAX_VALUE;
+                    break;
+                }
+
+                totalReadAmount += localReadAmount;
+
                 if (!config.isAutoRead()) {
                     // stop reading until next Channel.read() call
                     // See https://github.com/netty/netty/issues/1363
                     break;
                 }
             }
+            allocHandle.record(totalReadAmount);
+
         } catch (Throwable t) {
             exception = t;
         } finally {

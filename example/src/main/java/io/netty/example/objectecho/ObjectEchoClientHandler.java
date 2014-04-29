@@ -20,8 +20,6 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Handler implementation for the object echo client.  It initiates the
@@ -30,48 +28,38 @@ import java.util.logging.Logger;
  */
 public class ObjectEchoClientHandler extends ChannelInboundHandlerAdapter {
 
-    private static final Logger logger = Logger.getLogger(
-            ObjectEchoClientHandler.class.getName());
-
     private final List<Integer> firstMessage;
 
     /**
      * Creates a client-side handler.
      */
-    public ObjectEchoClientHandler(int firstMessageSize) {
-        if (firstMessageSize <= 0) {
-            throw new IllegalArgumentException(
-                    "firstMessageSize: " + firstMessageSize);
-        }
-        firstMessage = new ArrayList<Integer>(firstMessageSize);
-        for (int i = 0; i < firstMessageSize; i ++) {
+    public ObjectEchoClientHandler() {
+        firstMessage = new ArrayList<Integer>(ObjectEchoClient.SIZE);
+        for (int i = 0; i < ObjectEchoClient.SIZE; i ++) {
             firstMessage.add(Integer.valueOf(i));
         }
     }
 
     @Override
-    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+    public void channelActive(ChannelHandlerContext ctx) {
         // Send the first message if this handler is a client-side handler.
         ctx.writeAndFlush(firstMessage);
     }
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void channelRead(ChannelHandlerContext ctx, Object msg) {
         // Echo back the received object to the server.
         ctx.write(msg);
     }
 
     @Override
-    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+    public void channelReadComplete(ChannelHandlerContext ctx) {
         ctx.flush();
     }
 
     @Override
-    public void exceptionCaught(
-            ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        logger.log(
-                Level.WARNING,
-                "Unexpected exception from downstream.", cause);
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+        cause.printStackTrace();
         ctx.close();
     }
 }

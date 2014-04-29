@@ -119,26 +119,62 @@ final class PoolChunk<T> {
     }
 
     private long allocateRun(int normCapacity, int curIdx, int val) {
-        for (;;) {
-            if ((val & ST_ALLOCATED) != 0) { // state == ST_ALLOCATED || state == ST_ALLOCATED_SUBPAGE
-                return -1;
-            }
-
-            if ((val & ST_BRANCH) != 0) { // state == ST_BRANCH
-                int nextIdx = curIdx << 1 ^ nextRandom();
-                long res = allocateRun(normCapacity, nextIdx, memoryMap[nextIdx]);
-                if (res > 0) {
-                    return res;
+        switch (val & 3) {
+            case ST_UNUSED:
+                return allocateRunSimple(normCapacity, curIdx, val);
+            case ST_BRANCH:
+                final int nextIdxLeft = curIdx << 1;
+                final int nextValLeft = memoryMap[nextIdxLeft];
+                final boolean recurseLeft;
+                switch (nextValLeft & 3) {
+                    case ST_UNUSED:
+                        return allocateRunSimple(normCapacity, nextIdxLeft, nextValLeft);
+                    case ST_BRANCH:
+                        recurseLeft = true;
+                        break;
+                    default:
+                        recurseLeft = false;
                 }
 
-                curIdx = nextIdx ^ 1;
-                val = memoryMap[curIdx];
-                continue;
-            }
+                final int nextIdxRight = nextIdxLeft ^ 1;
+                final int nextValRight = memoryMap[nextIdxRight];
+                final boolean recurseRight;
+                switch (nextValRight & 3) {
+                    case ST_UNUSED:
+                        return allocateRunSimple(normCapacity, nextIdxRight, nextValRight);
+                    case ST_BRANCH:
+                        recurseRight = true;
+                        break;
+                    default:
+                        recurseRight = false;
+                }
 
-            // state == ST_UNUSED
-            return allocateRunSimple(normCapacity, curIdx, val);
+                if (recurseLeft) {
+                    long res = branchRun(normCapacity, nextIdxLeft);
+                    if (res > 0) {
+                        return res;
+                    }
+                }
+
+                if (recurseRight) {
+                    return branchRun(normCapacity, nextIdxRight);
+                }
         }
+
+        return -1;
+    }
+
+    private long branchRun(int normCapacity, int nextIdx) {
+        int nextNextIdx = nextIdx << 1;
+        int nextNextVal = memoryMap[nextNextIdx];
+        long res = allocateRun(normCapacity, nextNextIdx, nextNextVal);
+        if (res > 0) {
+            return res;
+        }
+
+        nextNextIdx ^= 1;
+        nextNextVal = memoryMap[nextNextIdx];
+        return allocateRun(normCapacity, nextNextIdx, nextNextVal);
     }
 
     private long allocateRunSimple(int normCapacity, int curIdx, int val) {

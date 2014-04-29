@@ -20,7 +20,6 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.Test;
 import sun.net.util.IPAddressUtil;
-
 import static org.junit.Assert.*;
 
 public class SocksCmdRequestDecoderTest {

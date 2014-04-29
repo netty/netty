@@ -27,6 +27,8 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
 import java.net.URI;
 
@@ -59,7 +61,13 @@ public class HttpSnoopClient {
             return;
         }
 
+        final SslContext sslCtx;
         boolean ssl = "https".equalsIgnoreCase(scheme);
+        if (ssl) {
+            sslCtx = SslContext.newClientContext(InsecureTrustManagerFactory.INSTANCE);
+        } else {
+            sslCtx = null;
+        }
 
         // Configure the client.
         EventLoopGroup group = new NioEventLoopGroup();
@@ -67,7 +75,7 @@ public class HttpSnoopClient {
             Bootstrap b = new Bootstrap();
             b.group(group)
              .channel(NioSocketChannel.class)
-             .handler(new HttpSnoopClientInitializer(ssl));
+             .handler(new HttpSnoopClientInitializer(sslCtx));
 
             // Make the connection attempt.
             Channel ch = b.connect(host, port).sync().channel();
