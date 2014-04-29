@@ -15,12 +15,12 @@
  */
 package io.netty.handler.codec.socks;
 
+import java.util.List;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.util.CharsetUtil;
-
-import java.util.List;
 
 /**
  * Decodes {@link ByteBuf}s into {@link SocksCmdRequest}.
@@ -38,6 +38,7 @@ public class SocksCmdRequestDecoder extends ReplayingDecoder<SocksCmdRequestDeco
     private SocksCmdType cmdType;
     private SocksAddressType addressType;
     private byte reserved;
+    private String userId;
     private String host;
     private int port;
     private SocksRequest msg = SocksCommonUtils.UNKNOWN_SOCKS_REQUEST;
@@ -51,40 +52,56 @@ public class SocksCmdRequestDecoder extends ReplayingDecoder<SocksCmdRequestDeco
         switch (state()) {
             case CHECK_PROTOCOL_VERSION: {
                 version = SocksProtocolVersion.fromByte(byteBuf.readByte());
-                if (version != SocksProtocolVersion.SOCKS5) {
+                if (version != SocksProtocolVersion.SOCKS5 && version != SocksProtocolVersion.SOCKS4) {
+                    msg = new UnknownSocksRequest(version);
                     break;
                 }
                 checkpoint(State.READ_CMD_HEADER);
             }
             case READ_CMD_HEADER: {
                 cmdType = SocksCmdType.fromByte(byteBuf.readByte());
-                reserved = byteBuf.readByte();
-                addressType = SocksAddressType.fromByte(byteBuf.readByte());
+                if (SocksProtocolVersion.SOCKS5.equals(version)) {
+                    reserved = byteBuf.readByte();
+                    addressType = SocksAddressType.fromByte(byteBuf.readByte());
+                }
                 checkpoint(State.READ_CMD_ADDRESS);
             }
             case READ_CMD_ADDRESS: {
-                switch (addressType) {
-                    case IPv4: {
-                        host = SocksCommonUtils.intToIp(byteBuf.readInt());
-                        port = byteBuf.readUnsignedShort();
-                        msg = new SocksCmdRequest(cmdType, addressType, host, port);
-                        break;
+                if (version == SocksProtocolVersion.SOCKS5) {
+                    switch (addressType) {
+                        case IPv4: {
+                            host = SocksCommonUtils.intToIp(byteBuf.readInt());
+                            port = byteBuf.readUnsignedShort();
+                            msg = new SocksCmdRequest(cmdType, addressType, host, port);
+                            break;
+                        }
+                        case DOMAIN: {
+                            fieldLength = byteBuf.readByte();
+                            host = byteBuf.readBytes(fieldLength).toString(CharsetUtil.US_ASCII);
+                            port = byteBuf.readUnsignedShort();
+                            msg = new SocksCmdRequest(cmdType, addressType, host, port);
+                            break;
+                        }
+                        case IPv6: {
+                            host = SocksCommonUtils.ipv6toStr(byteBuf.readBytes(16).array());
+                            port = byteBuf.readUnsignedShort();
+                            msg = new SocksCmdRequest(cmdType, addressType, host, port);
+                            break;
+                        }
+                        case UNKNOWN:
+                            break;
                     }
-                    case DOMAIN: {
-                        fieldLength = byteBuf.readByte();
-                        host = byteBuf.readBytes(fieldLength).toString(CharsetUtil.US_ASCII);
-                        port = byteBuf.readUnsignedShort();
-                        msg = new SocksCmdRequest(cmdType, addressType, host, port);
-                        break;
+                } else if (version == SocksProtocolVersion.SOCKS4) {
+                    port = byteBuf.readUnsignedShort();
+                    host = SocksCommonUtils.intToIp(byteBuf.readInt());
+                    ByteBuf buf = Unpooled.buffer();
+                    byte b = byteBuf.readByte();
+                    while (b != SocksCmdResponse.NULL) {
+                        buf.writeByte(b);
+                        b = byteBuf.readByte();
                     }
-                    case IPv6: {
-                        host = SocksCommonUtils.ipv6toStr(byteBuf.readBytes(16).array());
-                        port = byteBuf.readUnsignedShort();
-                        msg = new SocksCmdRequest(cmdType, addressType, host, port);
-                        break;
-                    }
-                    case UNKNOWN:
-                        break;
+                    userId = buf.toString(CharsetUtil.US_ASCII);
+                    msg = new SocksCmdRequest(cmdType, port, host);
                 }
             }
         }

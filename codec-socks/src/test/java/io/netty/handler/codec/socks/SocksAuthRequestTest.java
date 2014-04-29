@@ -16,21 +16,22 @@
 package io.netty.handler.codec.socks;
 
 import org.junit.Test;
-import static org.junit.Assert.assertTrue;
 
-public class SocksAuthRequestTest {
+public class SocksAuthRequestTest extends AbstractSocksMessageTest {
     @Test
     public void testConstructorParamsAreNotNull() {
         try {
             new SocksAuthRequest(null, "");
         } catch (Exception e) {
-            assertTrue(e instanceof NullPointerException);
+            assertNullPointerException(e);
         }
         try {
             new SocksAuthRequest("", null);
         } catch (Exception e) {
-            assertTrue(e instanceof NullPointerException);
+            assertNullPointerException(e);
         }
+
+        assertExceptionCounter(2);
     }
 
     @Test
@@ -38,13 +39,15 @@ public class SocksAuthRequestTest {
         try {
             new SocksAuthRequest("παράδειγμα.δοκιμή", "password");
         } catch (Exception e) {
-            assertTrue(e instanceof IllegalArgumentException);
+            assertIllegalArgumentException(e);
         }
         try {
             new SocksAuthRequest("username", "παράδειγμα.δοκιμή");
         } catch (Exception e) {
-            assertTrue(e instanceof IllegalArgumentException);
+            assertIllegalArgumentException(e);
         }
+
+        assertExceptionCounter(2);
     }
 
     @Test
@@ -59,9 +62,10 @@ public class SocksAuthRequestTest {
                     "passwordpasswordpasswordpasswordpasswordpasswordpassword" +
                     "passwordpasswordpasswordpasswordpasswordpasswordpassword" +
                     "passwordpasswordpasswordpasswordpasswordpasswordpassword",
-                    "password");
+                    "password"
+            );
         } catch (Exception e) {
-            assertTrue(e instanceof IllegalArgumentException);
+            assertIllegalArgumentException(e);
         }
         try {
             new SocksAuthRequest("password",
@@ -72,10 +76,13 @@ public class SocksAuthRequestTest {
                     "passwordpasswordpasswordpasswordpasswordpasswordpassword" +
                     "passwordpasswordpasswordpasswordpasswordpasswordpassword" +
                     "passwordpasswordpasswordpasswordpasswordpasswordpassword" +
-                    "passwordpasswordpasswordpasswordpasswordpasswordpassword");
+                    "passwordpasswordpasswordpasswordpasswordpasswordpassword"
+            );
         } catch (Exception e) {
-            assertTrue(e instanceof IllegalArgumentException);
+            assertIllegalArgumentException(e);
         }
+
+        assertExceptionCounter(2);
     }
 
 }

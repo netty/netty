@@ -25,9 +25,12 @@ import io.netty.buffer.ByteBuf;
  * @see SocksCmdRequestDecoder
  */
 public final class UnknownSocksRequest extends SocksRequest {
+    public UnknownSocksRequest(SocksProtocolVersion protocolVersion) {
+        super(protocolVersion, SocksRequestType.UNKNOWN);
+    }
 
     public UnknownSocksRequest() {
-        super(SocksRequestType.UNKNOWN);
+        super(SocksProtocolVersion.UNKNOWN, SocksRequestType.UNKNOWN);
     }
 
     @Override

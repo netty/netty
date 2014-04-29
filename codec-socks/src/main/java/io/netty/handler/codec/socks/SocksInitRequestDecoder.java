@@ -15,12 +15,11 @@
  */
 package io.netty.handler.codec.socks;
 
+import java.util.ArrayList;
+import java.util.List;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Decodes {@link ByteBuf}s into {@link SocksInitRequest}.
@@ -47,7 +46,7 @@ public class SocksInitRequestDecoder extends ReplayingDecoder<SocksInitRequestDe
         switch (state()) {
             case CHECK_PROTOCOL_VERSION: {
                 version = SocksProtocolVersion.fromByte(byteBuf.readByte());
-                if (version != SocksProtocolVersion.SOCKS5) {
+                if (version == SocksProtocolVersion.UNKNOWN) {
                     break;
                 }
                 checkpoint(State.READ_AUTH_SCHEMES);

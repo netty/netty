@@ -15,11 +15,11 @@
  */
 package io.netty.handler.codec.socks;
 
+import java.net.IDN;
 import io.netty.buffer.ByteBuf;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 
-import java.net.IDN;
 
 /**
  * An socks cmd request.
@@ -33,8 +33,31 @@ public final class SocksCmdRequest extends SocksRequest {
     private final String host;
     private final int port;
 
+    public SocksCmdRequest(SocksCmdType cmdType, int port, String host) {
+        super(SocksProtocolVersion.SOCKS4, SocksRequestType.CMD);
+        if (cmdType == null) {
+            throw new NullPointerException("cmdType");
+        }
+        if (host == null) {
+            throw new NullPointerException("host");
+        }
+        if (!SocksCmdType.BIND.equals(cmdType) && !SocksCmdType.CONNECT.equals(cmdType)) {
+            throw new IllegalArgumentException("Incorrect SocksCmdType for Socks4!");
+        }
+        if (port <= 0 || port > 65535) {
+            throw new IllegalArgumentException(port + " is not in bounds 0 < x < 65536");
+        }
+        if (!NetUtil.isValidIpV4Address(host)) {
+            throw new IllegalArgumentException(host + " is not a valid IPv4 address");
+        }
+        this.cmdType = cmdType;
+        this.host = host;
+        this.port = port;
+        this.addressType = null;
+    }
+
     public SocksCmdRequest(SocksCmdType cmdType, SocksAddressType addressType, String host, int port) {
-        super(SocksRequestType.CMD);
+        super(SocksProtocolVersion.SOCKS5, SocksRequestType.CMD);
         if (cmdType == null) {
             throw new NullPointerException("cmdType");
         }
@@ -63,7 +86,7 @@ public final class SocksCmdRequest extends SocksRequest {
             case UNKNOWN:
                 break;
         }
-        if (port < 0 && port >= 65536) {
+        if (port <= 0 || port > 65535) {
             throw new IllegalArgumentException(port + " is not in bounds 0 < x < 65536");
         }
         this.cmdType = cmdType;
@@ -82,9 +105,9 @@ public final class SocksCmdRequest extends SocksRequest {
     }
 
     /**
-     * Returns the {@link SocksAddressType} of this {@link SocksCmdRequest}
+     * Returns the {@link SocksAddressType} of this {@link SocksCmdRequest} for Socks5
      *
-     * @return The {@link SocksAddressType} of this {@link SocksCmdRequest}
+     * @return The {@link SocksAddressType} of this {@link SocksCmdRequest} for Socks5
      */
     public SocksAddressType addressType() {
         return addressType;
@@ -112,25 +135,37 @@ public final class SocksCmdRequest extends SocksRequest {
     public void encodeAsByteBuf(ByteBuf byteBuf) {
         byteBuf.writeByte(protocolVersion().byteValue());
         byteBuf.writeByte(cmdType.byteValue());
-        byteBuf.writeByte(0x00);
-        byteBuf.writeByte(addressType.byteValue());
-        switch (addressType) {
-            case IPv4: {
-                byteBuf.writeBytes(NetUtil.createByteArrayFromIpAddressString(host));
+        switch (protocolVersion()) {
+            case SOCKS4: {
                 byteBuf.writeShort(port);
+                byteBuf.writeBytes(NetUtil.createByteArrayFromIpAddressString(host));
+                byteBuf.writeByte(' ');       // userId for Ident (skipped)
+                byteBuf.writeByte(SocksCmdResponse.NULL);
                 break;
             }
+            case SOCKS5: {
+                byteBuf.writeByte(0x00);
+                byteBuf.writeByte(addressType.byteValue());
+                switch (addressType) {
+                    case IPv4: {
+                        byteBuf.writeBytes(NetUtil.createByteArrayFromIpAddressString(host));
+                        byteBuf.writeShort(port);
+                        break;
+                    }
 
-            case DOMAIN: {
-                byteBuf.writeByte(host.length());
-                byteBuf.writeBytes(host.getBytes(CharsetUtil.US_ASCII));
-                byteBuf.writeShort(port);
-                break;
-            }
+                    case DOMAIN: {
+                        byteBuf.writeByte(host.length());
+                        byteBuf.writeBytes(host.getBytes(CharsetUtil.US_ASCII));
+                        byteBuf.writeShort(port);
+                        break;
+                    }
 
-            case IPv6: {
-                byteBuf.writeBytes(NetUtil.createByteArrayFromIpAddressString(host));
-                byteBuf.writeShort(port);
+                    case IPv6: {
+                        byteBuf.writeBytes(NetUtil.createByteArrayFromIpAddressString(host));
+                        byteBuf.writeShort(port);
+                        break;
+                    }
+                }
                 break;
             }
         }

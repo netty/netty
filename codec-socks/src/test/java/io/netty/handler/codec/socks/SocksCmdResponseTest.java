@@ -18,22 +18,103 @@ package io.netty.handler.codec.socks;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.junit.Test;
-
+import static io.netty.handler.codec.socks.SocksCmdResponse.NULL;
 import static org.junit.Assert.*;
 
-public class SocksCmdResponseTest {
+public class SocksCmdResponseTest extends AbstractSocksMessageTest {
     @Test
     public void testConstructorParamsAreNotNull() {
         try {
+            new SocksCmdResponse(null);
+        } catch (Exception e) {
+            assertNullPointerException(e);
+        }
+        try {
             new SocksCmdResponse(null, SocksAddressType.UNKNOWN);
         } catch (Exception e) {
-            assertTrue(e instanceof NullPointerException);
+            assertNullPointerException(e);
         }
         try {
             new SocksCmdResponse(SocksCmdStatus.UNASSIGNED, null);
         } catch (Exception e) {
-            assertTrue(e instanceof NullPointerException);
+            assertNullPointerException(e);
         }
+
+        assertExceptionCounter(3);
+    }
+
+    @Test
+    public void testCorrectCmdStatus() {
+        // for Socks4
+        try {
+            new SocksCmdResponse(SocksCmdStatus.SUCCESS);
+        } catch (Exception e) {
+            assertIllegalArgumentException(e);
+        }
+        try {
+            new SocksCmdResponse(SocksCmdStatus.FAILURE);
+        } catch (Exception e) {
+            assertIllegalArgumentException(e);
+        }
+        try {
+            new SocksCmdResponse(SocksCmdStatus.FORBIDDEN);
+        } catch (Exception e) {
+            assertIllegalArgumentException(e);
+        }
+        try {
+            new SocksCmdResponse(SocksCmdStatus.NETWORK_UNREACHABLE);
+        } catch (Exception e) {
+            assertIllegalArgumentException(e);
+        }
+        try {
+            new SocksCmdResponse(SocksCmdStatus.HOST_UNREACHABLE);
+        } catch (Exception e) {
+            assertIllegalArgumentException(e);
+        }
+        try {
+            new SocksCmdResponse(SocksCmdStatus.REFUSED);
+        } catch (Exception e) {
+            assertIllegalArgumentException(e);
+        }
+        try {
+            new SocksCmdResponse(SocksCmdStatus.TTL_EXPIRED);
+        } catch (Exception e) {
+            assertIllegalArgumentException(e);
+        }
+        try {
+            new SocksCmdResponse(SocksCmdStatus.COMMAND_NOT_SUPPORTED);
+        } catch (Exception e) {
+            assertIllegalArgumentException(e);
+        }
+        try {
+            new SocksCmdResponse(SocksCmdStatus.ADDRESS_NOT_SUPPORTED);
+        } catch (Exception e) {
+            assertIllegalArgumentException(e);
+        }
+
+        // for Socks5
+        try {
+            new SocksCmdResponse(SocksCmdStatus.SUCCESS4, SocksAddressType.IPv4);
+        } catch (Exception e) {
+            assertIllegalArgumentException(e);
+        }
+        try {
+            new SocksCmdResponse(SocksCmdStatus.FAILURE4, SocksAddressType.IPv4);
+        } catch (Exception e) {
+            assertIllegalArgumentException(e);
+        }
+        try {
+            new SocksCmdResponse(SocksCmdStatus.FAILURE4_IDENTD_CONFIRM, SocksAddressType.IPv4);
+        } catch (Exception e) {
+            assertIllegalArgumentException(e);
+        }
+        try {
+            new SocksCmdResponse(SocksCmdStatus.FAILURE4_IDENTD_NOT_RUN, SocksAddressType.IPv4);
+        } catch (Exception e) {
+            assertIllegalArgumentException(e);
+        }
+
+        assertExceptionCounter(13);
     }
 
     /**
@@ -43,7 +124,7 @@ public class SocksCmdResponseTest {
     public void testEmptyDomain() {
         SocksCmdResponse socksCmdResponse = new SocksCmdResponse(SocksCmdStatus.SUCCESS, SocksAddressType.DOMAIN);
         assertNull(socksCmdResponse.host());
-        assertEquals(0, socksCmdResponse.port());
+        assertEquals(1, socksCmdResponse.port());
         ByteBuf buffer = Unpooled.buffer(20);
         socksCmdResponse.encodeAsByteBuf(buffer);
         byte[] expected = {
@@ -54,7 +135,7 @@ public class SocksCmdResponseTest {
                 0x01, // length of domain
                 0x00, // domain value
                 0x00, // port value
-                0x00
+                0x01
         };
         assertByteBufEquals(expected, buffer);
     }
@@ -81,7 +162,25 @@ public class SocksCmdResponseTest {
                 0x01,
                 0x00, // port
                 0x50
-                };
+        };
+        assertByteBufEquals(expected, buffer);
+    }
+
+    @Test
+    public void testSocks4Success() {
+        SocksCmdResponse socksCmdResponse = new SocksCmdResponse(SocksCmdStatus.SUCCESS4);
+        ByteBuf buffer = Unpooled.buffer(20);
+        socksCmdResponse.encodeAsByteBuf(buffer);
+        byte[] expected = {
+                NULL, // for Socks4 version in response == 0x00 (null byte)
+                0x5a, // success reply
+                0x11, // reserved 2
+                0x22,
+                0x33, // reserved 4
+                0x44,
+                0x55,
+                0x66,
+        };
         assertByteBufEquals(expected, buffer);
     }
 
@@ -115,12 +214,4 @@ public class SocksCmdResponseTest {
     public void testInvalidBoundAddress() {
         new SocksCmdResponse(SocksCmdStatus.SUCCESS, SocksAddressType.IPv4, "127.0.0", 1000);
     }
-
-    private static void assertByteBufEquals(byte[] expected, ByteBuf actual) {
-        byte[] actualBytes = new byte[actual.readableBytes()];
-        actual.readBytes(actualBytes);
-        assertEquals("Generated response has incorrect length", expected.length, actualBytes.length);
-        assertArrayEquals("Generated response differs from expected", expected, actualBytes);
-    }
-
 }

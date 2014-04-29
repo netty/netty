@@ -15,12 +15,11 @@
  */
 package io.netty.handler.codec.socks;
 
+import java.util.List;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.util.CharsetUtil;
-
-import java.util.List;
 
 /**
  * Decodes {@link ByteBuf}s into {@link SocksCmdResponse}.
@@ -38,6 +37,8 @@ public class SocksCmdResponseDecoder extends ReplayingDecoder<SocksCmdResponseDe
     private SocksCmdStatus cmdStatus;
     private SocksAddressType addressType;
     private byte reserved;
+    private byte[] reserved2 = new byte[2];
+    private byte[] reserved4 = new byte[4];
     private String host;
     private int port;
     private SocksResponse msg = SocksCommonUtils.UNKNOWN_SOCKS_RESPONSE;
@@ -50,17 +51,27 @@ public class SocksCmdResponseDecoder extends ReplayingDecoder<SocksCmdResponseDe
     protected void decode(ChannelHandlerContext ctx, ByteBuf byteBuf, List<Object> out) throws Exception {
         switch (state()) {
             case CHECK_PROTOCOL_VERSION: {
-                version = SocksProtocolVersion.fromByte(byteBuf.readByte());
-                if (version != SocksProtocolVersion.SOCKS5) {
+                byte firstOctet = byteBuf.readByte();
+                version = SocksProtocolVersion.fromByte(firstOctet == SocksCmdResponse.NULL ? 0x04 : firstOctet);
+                if (version != SocksProtocolVersion.SOCKS5 && version != SocksProtocolVersion.SOCKS4) {
+                    msg = new UnknownSocksResponse(version);
                     break;
                 }
                 checkpoint(State.READ_CMD_HEADER);
             }
             case READ_CMD_HEADER: {
                 cmdStatus = SocksCmdStatus.fromByte(byteBuf.readByte());
-                reserved = byteBuf.readByte();
-                addressType = SocksAddressType.fromByte(byteBuf.readByte());
-                checkpoint(State.READ_CMD_ADDRESS);
+                if (version == SocksProtocolVersion.SOCKS5) {
+                    reserved = byteBuf.readByte();
+                    addressType = SocksAddressType.fromByte(byteBuf.readByte());
+                    checkpoint(State.READ_CMD_ADDRESS);
+                } else if (version == SocksProtocolVersion.SOCKS4) {
+                    byteBuf.readBytes(reserved2);
+                    byteBuf.readBytes(reserved4);
+                    msg = new SocksCmdResponse(cmdStatus);
+                    checkpoint(State.END);
+                    break;                        // last parse state for socks4
+                }
             }
             case READ_CMD_ADDRESS: {
                 switch (addressType) {
@@ -87,6 +98,9 @@ public class SocksCmdResponseDecoder extends ReplayingDecoder<SocksCmdResponseDe
                         break;
                 }
             }
+            case END: {
+                break;
+            }
         }
         ctx.pipeline().remove(this);
         out.add(msg);
@@ -95,6 +109,7 @@ public class SocksCmdResponseDecoder extends ReplayingDecoder<SocksCmdResponseDe
     enum State {
         CHECK_PROTOCOL_VERSION,
         READ_CMD_HEADER,
-        READ_CMD_ADDRESS
+        READ_CMD_ADDRESS,
+        END
     }
 }
