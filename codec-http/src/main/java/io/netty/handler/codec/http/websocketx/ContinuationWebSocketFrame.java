@@ -25,13 +25,11 @@ import io.netty.util.CharsetUtil;
  */
 public class ContinuationWebSocketFrame extends WebSocketFrame {
 
-    private String aggregatedText;
-
     /**
      * Creates a new empty continuation frame.
      */
     public ContinuationWebSocketFrame() {
-        super(Unpooled.buffer(0));
+        this(Unpooled.buffer(0));
     }
 
     /**
@@ -59,25 +57,6 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
     }
 
     /**
-     * Creates a new continuation frame with the specified binary data
-     *
-     * @param finalFragment
-     *            flag indicating if this frame is the final fragment
-     * @param rsv
-     *            reserved bits used for protocol extensions
-     * @param binaryData
-     *            the content of the frame.
-     * @param aggregatedText
-     *            Aggregated text set by decoder on the final continuation frame of a fragmented
-     *            text message
-     */
-    public ContinuationWebSocketFrame(
-            boolean finalFragment, int rsv, ByteBuf binaryData, String aggregatedText) {
-        super(finalFragment, rsv, binaryData);
-        this.aggregatedText = aggregatedText;
-    }
-
-    /**
      * Creates a new continuation frame with the specified text data
      *
      * @param finalFragment
@@ -88,7 +67,7 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
      *            text content of the frame.
      */
     public ContinuationWebSocketFrame(boolean finalFragment, int rsv, String text) {
-        this(finalFragment, rsv, fromText(text), null);
+        this(finalFragment, rsv, fromText(text));
     }
 
     /**
@@ -112,21 +91,14 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
         }
     }
 
-    /**
-     * Aggregated text returned by decoder on the final continuation frame of a fragmented text message
-     */
-    public String aggregatedText() {
-        return aggregatedText;
-    }
-
     @Override
     public ContinuationWebSocketFrame copy() {
-        return new ContinuationWebSocketFrame(isFinalFragment(), rsv(), content().copy(), aggregatedText());
+        return new ContinuationWebSocketFrame(isFinalFragment(), rsv(), content().copy());
     }
 
     @Override
     public ContinuationWebSocketFrame duplicate() {
-        return new ContinuationWebSocketFrame(isFinalFragment(), rsv(), content().duplicate(), aggregatedText());
+        return new ContinuationWebSocketFrame(isFinalFragment(), rsv(), content().duplicate());
     }
 
     @Override
