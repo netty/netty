@@ -49,7 +49,7 @@ public class SocksCmdRequestDecoderTest {
     @Test
     public void testCmdRequestDecoderIPv4() throws Exception{
         String[] hosts = { "127.0.0.1" };
-        int[] ports = {0, 32769, 65535 };
+        int[] ports = {1, 32769, 65535 };
         for (SocksMessage.CmdType cmdType : SocksMessage.CmdType.values()) {
             for (String host : hosts) {
                 for (int port : ports) {
@@ -62,7 +62,7 @@ public class SocksCmdRequestDecoderTest {
     @Test
     public void testCmdRequestDecoderIPv6() throws Exception{
         String[] hosts = { SocksCommonUtils.ipv6toStr(IPAddressUtil.textToNumericFormatV6("::1")) };
-        int[] ports = {0, 32769, 65535};
+        int[] ports = {1, 32769, 65535};
         for (SocksMessage.CmdType cmdType : SocksMessage.CmdType.values()) {
             for (String host : hosts) {
                 for (int port : ports) {
@@ -86,7 +86,7 @@ public class SocksCmdRequestDecoderTest {
                           "例え.テスト",
                           "실례.테스트",
                           "உதாரணம்.பரிட்சை"};
-        int[] ports = {0, 32769, 65535};
+        int[] ports = {1, 32769, 65535};
         for (SocksMessage.CmdType cmdType : SocksMessage.CmdType.values()) {
             for (String host : hosts) {
                 for (int port : ports) {
