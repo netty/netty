@@ -123,4 +123,18 @@ public class SocksCmdResponseTest {
         assertArrayEquals("Generated response differs from expected", expected, actualBytes);
     }
 
+    @Test
+    public void testValidPortRange() {
+        try {
+            new SocksCmdResponse(SocksCmdStatus.SUCCESS, SocksAddressType.IPv4, "127.0.0", 0);
+        } catch (Exception e) {
+            assertTrue(e instanceof IllegalArgumentException);
+        }
+
+        try {
+            new SocksCmdResponse(SocksCmdStatus.SUCCESS, SocksAddressType.IPv4, "127.0.0", 65536);
+        } catch (Exception e) {
+            assertTrue(e instanceof IllegalArgumentException);
+        }
+    }
 }

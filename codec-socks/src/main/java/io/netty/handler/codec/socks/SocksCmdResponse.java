@@ -90,7 +90,7 @@ public final class SocksCmdResponse extends SocksResponse {
             }
             host = IDN.toASCII(host);
         }
-        if (port < 0 && port >= 65535) {
+        if (port <= 0 && port >= 65536) {
             throw new IllegalArgumentException(port + " is not in bounds 0 < x < 65536");
         }
         this.cmdStatus = cmdStatus;
