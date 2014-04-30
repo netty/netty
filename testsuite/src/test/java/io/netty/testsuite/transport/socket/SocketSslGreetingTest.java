@@ -110,7 +110,7 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
         final CountDownLatch latch = new CountDownLatch(1);
 
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, ByteBuf buf) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, ByteBuf buf) throws Exception {
             assertEquals(greeting, buf);
             latch.countDown();
             ctx.close();
@@ -128,12 +128,12 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
         }
     }
 
-    private class ServerHandler extends SimpleChannelInboundHandler<String> {
+    private class ServerHandler extends SimpleChannelInboundHandler<ByteBuf> {
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
 
         @Override
-        protected void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
+        protected void messageReceived(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
             // discard
         }
 
