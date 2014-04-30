@@ -36,11 +36,13 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufProcessor;
+import io.netty.handler.codec.CorruptedFrameException;
 
 /**
- * Checks UTF8 bytes for validity before converting it into a string
+ * Checks UTF8 bytes for validity
  */
-final class UTF8Output {
+final class Utf8Validator implements ByteBufProcessor {
     private static final int UTF8_ACCEPT = 0;
     private static final int UTF8_REJECT = 12;
 
@@ -65,45 +67,38 @@ final class UTF8Output {
     @SuppressWarnings("RedundantFieldInitialization")
     private int state = UTF8_ACCEPT;
     private int codep;
+    private boolean checking;
 
-    private final StringBuilder stringBuilder;
-
-    UTF8Output(ByteBuf buffer) {
-        stringBuilder = new StringBuilder(buffer.readableBytes());
-        write(buffer);
+    public void check(ByteBuf buffer) {
+        checking = true;
+        buffer.forEachByte(this);
     }
 
-    public void write(ByteBuf buffer) {
-        for (int i = buffer.readerIndex(); i < buffer.writerIndex(); i++) {
-            write(buffer.getByte(i));
+    public void finish() {
+        checking = false;
+        codep = 0;
+        if (state != UTF8_ACCEPT) {
+            state = UTF8_ACCEPT;
+            throw new CorruptedFrameException("bytes are not UTF-8");
         }
     }
 
-    public void write(byte[] bytes) {
-        for (byte b : bytes) {
-            write(b);
-        }
-    }
-
-    public void write(int b) {
+    @Override
+    public boolean process(byte b) throws Exception {
         byte type = TYPES[b & 0xFF];
 
         codep = state != UTF8_ACCEPT ? b & 0x3f | codep << 6 : 0xff >> type & b;
 
         state = STATES[state + type];
 
-        if (state == UTF8_ACCEPT) {
-            stringBuilder.append((char) codep);
-        } else if (state == UTF8_REJECT) {
-            throw new UTF8Exception("bytes are not UTF-8");
+        if (state == UTF8_REJECT) {
+            checking = false;
+            throw new CorruptedFrameException("bytes are not UTF-8");
         }
+        return true;
     }
 
-    @Override
-    public String toString() {
-        if (state != UTF8_ACCEPT) {
-            throw new UTF8Exception("bytes are not UTF-8");
-        }
-        return stringBuilder.toString();
+    public boolean isChecking() {
+        return checking;
     }
 }
