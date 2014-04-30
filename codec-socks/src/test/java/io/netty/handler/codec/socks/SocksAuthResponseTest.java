@@ -27,4 +27,5 @@ public class SocksAuthResponseTest {
             assertTrue(e instanceof NullPointerException);
         }
     }
+
 }
