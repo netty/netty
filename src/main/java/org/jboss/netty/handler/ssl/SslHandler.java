@@ -240,7 +240,7 @@ public class SslHandler extends FrameDecoder
     private final NonReentrantLock pendingEncryptedWritesLock = new NonReentrantLock();
 
     private volatile boolean issueHandshake;
-
+    private volatile boolean writeBeforeHandshakeDone;
     private final SSLEngineInboundCloseFuture sslEngineCloseFuture = new SSLEngineInboundCloseFuture();
 
     private boolean closeOnSSLException;
@@ -618,6 +618,9 @@ public class SslHandler extends FrameDecoder
             pendingUnencryptedWritesLock.unlock();
         }
 
+        if (handshakeFuture == null || !handshakeFuture.isDone()) {
+            writeBeforeHandshakeDone = true;
+        }
         wrap(context, evt.getChannel());
     }
 
@@ -1340,6 +1343,13 @@ public class SslHandler extends FrameDecoder
                         if (setHandshakeSuccessIfStillHandshaking(channel)) {
                             needsWrap = true;
                             continue;
+                        }
+                        if (writeBeforeHandshakeDone) {
+                            // We need to call wrap(...) in case there was a flush done before the handshake completed.
+                            //
+                            // See https://github.com/netty/netty/pull/2437
+                            writeBeforeHandshakeDone = false;
+                            needsWrap = true;
                         }
                         break;
                     default:
