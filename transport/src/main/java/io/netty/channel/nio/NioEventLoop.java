@@ -24,6 +24,7 @@ import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import io.netty.util.metrics.MetricsCollector;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -110,8 +111,9 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     private int cancelledKeys;
     private boolean needsToSelectAgain;
 
-    NioEventLoop(NioEventLoopGroup parent, Executor executor, SelectorProvider selectorProvider) {
-        super(parent, executor, false);
+    NioEventLoop(
+            NioEventLoopGroup parent, Executor executor, MetricsCollector metrics, SelectorProvider selectorProvider) {
+        super(parent, executor, metrics, false);
         if (selectorProvider == null) {
             throw new NullPointerException("selectorProvider");
         }

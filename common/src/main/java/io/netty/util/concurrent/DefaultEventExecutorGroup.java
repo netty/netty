@@ -15,6 +15,7 @@
  */
 package io.netty.util.concurrent;
 
+import io.netty.util.metrics.MetricsCollector;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 
@@ -22,7 +23,7 @@ import java.util.concurrent.ThreadFactory;
  * Default implementation of {@link MultithreadEventExecutorGroup} which will use {@link DefaultEventExecutor} instances
  * to handle the tasks.
  */
-public class DefaultEventExecutorGroup extends MultithreadEventExecutorGroup {
+public class DefaultEventExecutorGroup extends MultithreadEventExecutorGroup<EventExecutor> {
 
     /**
      * @see {@link #DefaultEventExecutorGroup(int, ThreadFactory)}
@@ -38,11 +39,11 @@ public class DefaultEventExecutorGroup extends MultithreadEventExecutorGroup {
      * @param threadFactory     the ThreadFactory to use, or {@code null} if the default should be used.
      */
     public DefaultEventExecutorGroup(int nThreads, ThreadFactory threadFactory) {
-        super(nThreads, threadFactory);
+        super(nThreads, threadFactory, null);
     }
 
     @Override
-    protected EventExecutor newChild(Executor executor, Object... args) throws Exception {
+    protected EventExecutor newChild(Executor executor, MetricsCollector metrics, Object... args) throws Exception {
         return new DefaultEventExecutor(this, executor);
     }
 }

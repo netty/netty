@@ -20,6 +20,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
 import io.netty.channel.local.LocalChannel;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.metrics.NoMetricsCollector;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -440,7 +441,7 @@ public class SingleThreadEventLoopTest {
         final AtomicInteger cleanedUp = new AtomicInteger();
 
         SingleThreadEventLoopA() {
-            super(null, Executors.defaultThreadFactory(), true);
+            super(null, Executors.defaultThreadFactory(), NoMetricsCollector.INSTANCE, true);
         }
 
         @Override
@@ -467,7 +468,7 @@ public class SingleThreadEventLoopTest {
     private static class SingleThreadEventLoopB extends SingleThreadEventLoop {
 
         SingleThreadEventLoopB() {
-            super(null, Executors.defaultThreadFactory(), false);
+            super(null, Executors.defaultThreadFactory(), NoMetricsCollector.INSTANCE, false);
         }
 
         @Override
