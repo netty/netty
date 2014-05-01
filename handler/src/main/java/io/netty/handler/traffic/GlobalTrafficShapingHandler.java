@@ -44,7 +44,7 @@ import java.util.concurrent.ScheduledExecutorService;
  * Traffic Shaping depends on the period where the traffic is computed. The highest the interval,
  * the less precise the traffic shaping will be. It is suggested as higher value something close
  * to 5 or 10 minutes.<br><br>
- * 
+ *
  *  maxTimeToWait, by default set to 15s, allows to specify an upper bound of time shaping.<br>
  * </li>
  * </ul><br>
