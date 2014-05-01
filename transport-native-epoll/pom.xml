@@ -60,39 +60,16 @@
       <plugin>
         <groupId>org.fusesource.hawtjni</groupId>
         <artifactId>maven-hawtjni-plugin</artifactId>
-        <version>1.10</version>
         <executions>
           <execution>
-            <id>build-linux64</id>
+            <id>build-native-lib</id>
             <configuration>
-              <name>${project.artifactId}</name>
-              <buildDirectory>${project.build.directory}/linux64</buildDirectory>
-              <nativeSourceDirectory>${nativeSourceDirectory}</nativeSourceDirectory>
-              <libDirectory>${libDirectory}</libDirectory>
-              <configureArgs>
-                <arg>--with-arch=x86_64</arg>
-              </configureArgs>
-              <platform>linux64</platform>
-              <forceConfigure>true</forceConfigure>
-              <forceAutogen>true</forceAutogen>
-            </configuration>
-            <goals>
-              <goal>generate</goal>
-              <goal>build</goal>
-            </goals>
-            <phase>compile</phase>
-          </execution>
-          <execution>
-            <id>build-linux32</id>
-            <configuration>
-              <buildDirectory>${project.build.directory}/linux32</buildDirectory>
-                <nativeSourceDirectory>${nativeSourceDirectory}</nativeSourceDirectory>
-                <libDirectory>${libDirectory}</libDirectory>
-              <name>${project.artifactId}</name>
-              <configureArgs>
-                <arg>--with-arch=i386</arg>
-              </configureArgs>
-              <platform>linux32</platform>
+              <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
+              <libDirectory>${project.build.outputDirectory}</libDirectory>
+              <!-- We use Maven's artifact classifier instead.
+                   This hack will make the hawtjni plugin to put the native library
+                   under 'META-INF/native' rather than 'META-INF/native/${platform}'. -->
+              <platform>.</platform>
               <forceConfigure>true</forceConfigure>
               <forceAutogen>true</forceAutogen>
             </configuration>
@@ -104,10 +81,15 @@
           </execution>
         </executions>
       </plugin>
+
+      <!-- Because the generated JAR is platform dependent, use the platform as a classifier. -->
+      <plugin>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <classifier>${os.detected.classifier}</classifier>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
-  <properties>
-    <nativeSourceDirectory>${basedir}/src/main/c</nativeSourceDirectory>
-    <libDirectory>${basedir}/target/classes/</libDirectory>
-  </properties>
 </project>
+

@@ -24,8 +24,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URL;
-import java.util.Locale;
-import java.util.regex.Pattern;
 
 /**
  * Helper class to load JNI resources.
@@ -35,7 +33,6 @@ public final class NativeLibraryLoader {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NativeLibraryLoader.class);
 
-    private static final Pattern REPLACE = Pattern.compile("\\W+");
     private static final File WORKDIR;
 
     static {
@@ -67,7 +64,7 @@ public final class NativeLibraryLoader {
      */
     public static void load(String name, ClassLoader loader) {
         String libname = System.mapLibraryName(name);
-        String path = "META-INF/native/" + osIdentifier() + PlatformDependent.bitMode() + '/' + libname;
+        String path = "META-INF/native/" + libname;
 
         URL url = loader.getResource(path);
         if (url == null) {
@@ -126,21 +123,6 @@ public final class NativeLibraryLoader {
                 }
             }
         }
-    }
-
-    private static String osIdentifier() {
-        String name = SystemPropertyUtil.get("os.name", "unknown").toLowerCase(Locale.US).trim();
-        if (name.startsWith("win")) {
-            return "windows";
-        }
-        if (name.startsWith("mac os x")) {
-            return "osx";
-        }
-        if (name.startsWith("linux")) {
-            return "linux";
-        }
-
-        return REPLACE.matcher(name).replaceAll("_");
     }
 
     private NativeLibraryLoader() {
