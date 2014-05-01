@@ -363,6 +363,14 @@
   </dependencies>
 
   <build>
+    <extensions>
+      <extension>
+        <groupId>kr.motd.maven</groupId>
+        <artifactId>os-maven-plugin</artifactId>
+        <version>1.1.1</version>
+      </extension>
+    </extensions>
+
     <plugins>
       <plugin>
         <artifactId>maven-enforcer-plugin</artifactId>
@@ -805,6 +813,11 @@
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>exec-maven-plugin</artifactId>
           <version>1.2.1</version>
+        </plugin>
+        <plugin>
+          <groupId>org.fusesource.hawtjni</groupId>
+          <artifactId>maven-hawtjni-plugin</artifactId>
+          <version>1.10</version>
         </plugin>
 
         <!-- Workaround for the 'M2E plugin execution not covered' problem.
