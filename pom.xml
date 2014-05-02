@@ -20,7 +20,7 @@
   <parent>
     <groupId>org.sonatype.oss</groupId>
     <artifactId>oss-parent</artifactId>
-    <version>7</version>
+    <version>9</version>
   </parent>
 
   <groupId>io.netty</groupId>
@@ -122,7 +122,7 @@
       </properties>
     </profile>
     <profile>
-      <id>linux-native</id>
+      <id>linux</id>
       <activation>
         <os>
           <family>linux</family>
@@ -131,6 +131,53 @@
       <modules>
         <module>transport-native-epoll</module>
       </modules>
+    </profile>
+    <!--
+      Netty must be released from RHEL 6.5 x86_64 or compatible so that:
+
+        1) we ship x86_64 version of epoll transport officially, and
+        2) we ensure the ABI compatibility with older GLIBC versions.
+
+           The shared library built on a distribution with newer GLIBC
+           will not run on older distributions.
+    -->
+    <profile>
+      <id>release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-enforcer-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>enforce-release-environment</id>
+                <goals>
+                  <goal>enforce</goal>
+                </goals>
+                <configuration>
+                  <rules>
+                    <requireProperty>
+                      <regexMessage>
+                        Release process must be performed on linux-x86_64.
+                      </regexMessage>
+                      <property>os.detected.classifier</property>
+                      <regex>^linux-x86_64$</regex>
+                    </requireProperty>
+                    <requireFilesContent>
+                      <message>
+                        Release process must be performed on RHEL 6.5 or its derivatives.
+                      </message>
+                      <files>
+                        <file>/etc/redhat-release</file>
+                      </files>
+                      <content>release 6.5</content>
+                    </requireFilesContent>
+                  </rules>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
   </profiles>
 
@@ -189,14 +236,14 @@
         <scope>compile</scope>
         <optional>true</optional>
       </dependency>
-    
+
       <!-- SPDY Example - completely optional -->
       <dependency>
         <groupId>org.eclipse.jetty.npn</groupId>
         <artifactId>npn-api</artifactId>
         <version>1.1.0.v20120525</version>
       </dependency>
-        
+
       <dependency>
         <groupId>com.google.protobuf</groupId>
         <artifactId>protobuf-java</artifactId>
@@ -372,7 +419,6 @@
     <plugins>
       <plugin>
         <artifactId>maven-enforcer-plugin</artifactId>
-        <version>1.3</version>
         <executions>
           <execution>
             <id>enforce-tools</id>
@@ -580,7 +626,7 @@
         <version>2.4.2</version>
         <configuration>
           <useReleaseProfile>false</useReleaseProfile>
-          <arguments>-P release,sonatype-oss-release,full,no-osgi,linux-native</arguments>
+          <arguments>-P release,sonatype-oss-release,full</arguments>
           <autoVersionSubmodules>true</autoVersionSubmodules>
           <allowTimestampedSnapshots>false</allowTimestampedSnapshots>
           <tagNameFormat>netty-@{project.version}</tagNameFormat>
@@ -736,6 +782,18 @@
 
     <pluginManagement>
       <plugins>
+        <plugin>
+          <artifactId>maven-enforcer-plugin</artifactId>
+          <version>1.3.1</version>
+          <dependencies>
+            <!-- Provides the 'requireFilesContent' enforcer rule. -->
+            <dependency>
+              <groupId>com.ceilfors.maven.plugin</groupId>
+              <artifactId>enforcer-rules</artifactId>
+              <version>1.1.0</version>
+            </dependency>
+          </dependencies>
+        </plugin>
         <!-- keep surefire and failsafe in sync -->
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>

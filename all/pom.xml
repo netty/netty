@@ -42,12 +42,6 @@
       </properties>
     </profile>
     <profile>
-      <id>sonatype-oss-release</id>
-      <properties>
-        <quickbuild>false</quickbuild>
-      </properties>
-    </profile>
-    <profile>
       <id>release</id>
       <properties>
         <quickbuild>false</quickbuild>
@@ -94,7 +88,7 @@
       </build>
     </profile>
     <profile>
-      <id>linux-native</id>
+      <id>linux</id>
       <activation>
         <os>
           <family>linux</family>
