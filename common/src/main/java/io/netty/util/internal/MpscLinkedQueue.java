@@ -39,7 +39,7 @@ import java.util.concurrent.atomic.AtomicReference;
  *
  */
 @SuppressWarnings("serial")
-final class MpscLinkedQueue extends AtomicReference<OneTimeTask> implements Queue<Runnable> {
+public final class MpscLinkedQueue<T> extends AtomicReference<MpscLinkedQueue.Node<T>> implements Queue<T> {
     private static final long tailOffset;
 
     static {
@@ -54,74 +54,75 @@ final class MpscLinkedQueue extends AtomicReference<OneTimeTask> implements Queu
     // Extends AtomicReference for the "head" slot (which is the one that is appended to)
     // since Unsafe does not expose XCHG operation intrinsically
     @SuppressWarnings({ "unused", "FieldMayBeFinal" })
-    private volatile OneTimeTask tail;
+    private volatile Node<T> tail;
 
     MpscLinkedQueue() {
-        final OneTimeTask task = new OneTimeTaskAdapter(null);
+        final Node<T> task = new DefaultNode<T>(null);
         tail = task;
         set(task);
     }
 
+    @SuppressWarnings("unchecked")
     @Override
-    public boolean add(Runnable runnable) {
-        if (runnable instanceof OneTimeTask) {
-            OneTimeTask node = (OneTimeTask) runnable;
+    public boolean add(T value) {
+        if (value instanceof Node) {
+            Node<T> node = (Node<T>) value;
             node.setNext(null);
             getAndSet(node).setNext(node);
         } else {
-            final OneTimeTask n = new OneTimeTaskAdapter(runnable);
+            final Node<T> n = new DefaultNode<T>(value);
             getAndSet(n).setNext(n);
         }
         return true;
     }
 
     @Override
-    public boolean offer(Runnable runnable) {
-        return add(runnable);
+    public boolean offer(T value) {
+        return add(value);
     }
 
     @Override
-    public Runnable remove() {
-        Runnable task = poll();
-        if (task == null) {
+    public T remove() {
+        T v = poll();
+        if (v == null) {
             throw new NoSuchElementException();
         }
-        return task;
+        return v;
     }
 
     @Override
-    public Runnable poll() {
-        final OneTimeTask next = peekTask();
+    public T poll() {
+        final Node<T> next = peekNode();
         if (next == null) {
             return null;
         }
-        final OneTimeTask ret = next;
+        final Node<T> ret = next;
         PlatformDependent.putOrderedObject(this, tailOffset, next);
-        return unwrapIfNeeded(ret);
+        return ret.value();
     }
 
     @Override
-    public Runnable element() {
-        final OneTimeTask next = peekTask();
+    public T element() {
+        final Node<T> next = peekNode();
         if (next == null) {
             throw new NoSuchElementException();
         }
-        return unwrapIfNeeded(next);
+        return next.value();
     }
 
     @Override
-    public Runnable peek() {
-        final OneTimeTask next = peekTask();
+    public T peek() {
+        final Node<T> next = peekNode();
         if (next == null) {
             return null;
         }
-        return unwrapIfNeeded(next);
+        return next.value();
     }
 
     @Override
     public int size() {
         int count = 0;
-        OneTimeTask n = peekTask();
+        Node<T> n = peekNode();
         for (;;) {
             if (n == null) {
                 break;
@@ -133,10 +134,10 @@ final class MpscLinkedQueue extends AtomicReference<OneTimeTask> implements Queu
     }
 
     @SuppressWarnings("unchecked")
-    private OneTimeTask peekTask() {
+    private Node<T> peekNode() {
         for (;;) {
-            final OneTimeTask tail = (OneTimeTask) PlatformDependent.getObjectVolatile(this, tailOffset);
-            final OneTimeTask next = tail.next();
+            final Node<T> tail = (Node<T>) PlatformDependent.getObjectVolatile(this, tailOffset);
+            final Node<T> next = tail.next();
             if (next != null || get() == tail) {
                 return next;
             }
@@ -150,12 +151,12 @@ final class MpscLinkedQueue extends AtomicReference<OneTimeTask> implements Queu
 
     @Override
     public boolean contains(Object o) {
-        OneTimeTask n = peekTask();
+        Node<T> n = peekNode();
         for (;;) {
             if (n == null) {
                 break;
             }
-            if (unwrapIfNeeded(n) == o) {
+            if (n.value() == o) {
                 return true;
             }
             n = n.next();
@@ -164,7 +165,7 @@ final class MpscLinkedQueue extends AtomicReference<OneTimeTask> implements Queu
     }
 
     @Override
-    public Iterator<Runnable> iterator() {
+    public Iterator<T> iterator() {
         throw new UnsupportedOperationException();
     }
 
@@ -194,8 +195,8 @@ final class MpscLinkedQueue extends AtomicReference<OneTimeTask> implements Queu
     }
 
     @Override
-    public boolean addAll(Collection<? extends Runnable> c) {
-        for (Runnable r: c) {
+    public boolean addAll(Collection<? extends T> c) {
+        for (T r: c) {
             add(r);
         }
         return false;
@@ -220,26 +221,50 @@ final class MpscLinkedQueue extends AtomicReference<OneTimeTask> implements Queu
         }
     }
 
-    /**
-     * Unwrap {@link OneTimeTask} if needed and so return the proper queued task.
-     */
-    private static Runnable unwrapIfNeeded(OneTimeTask task) {
-        if (task instanceof OneTimeTaskAdapter) {
-            return ((OneTimeTaskAdapter) task).task;
-        }
-        return task;
-    }
+    private static final class DefaultNode<T> extends Node<T> {
+        private final T value;
 
-    private static final class OneTimeTaskAdapter extends OneTimeTask {
-        private final Runnable task;
-
-        OneTimeTaskAdapter(Runnable task) {
-            this.task = task;
+        DefaultNode(T value) {
+            this.value = value;
         }
 
         @Override
-        public void run() {
-            task.run();
+        public T value() {
+            return value;
         }
+    }
+
+    public abstract static class Node<T> {
+
+        private static final long nextOffset;
+
+        static {
+            if (PlatformDependent0.hasUnsafe()) {
+                try {
+                    nextOffset = PlatformDependent.objectFieldOffset(
+                            Node.class.getDeclaredField("tail"));
+                } catch (Throwable t) {
+                    throw new ExceptionInInitializerError(t);
+                }
+            } else {
+                nextOffset = -1;
+            }
+        }
+
+        @SuppressWarnings("unused")
+        private volatile Node<T> tail;
+
+        // Only use from MpscLinkedQueue and so we are sure Unsafe is present
+        @SuppressWarnings("unchecked")
+        final Node<T> next() {
+            return (Node<T>) PlatformDependent.getObjectVolatile(this, nextOffset);
+        }
+
+        // Only use from MpscLinkedQueue and so we are sure Unsafe is present
+        final void setNext(final Node<T> newNext) {
+            PlatformDependent.putOrderedObject(this, nextOffset, newNext);
+        }
+
+        public abstract T value();
     }
 }

@@ -379,11 +379,11 @@ public final class PlatformDependent {
      * Create a new {@link Queue} which is safe to use for multiple producers (different threads) and a single
      * consumer (one thread!).
      */
-    public static Queue<Runnable> newMpscQueue() {
+    public static <T> Queue<T> newMpscQueue() {
         if (hasUnsafe()) {
-            return new MpscLinkedQueue();
+            return new MpscLinkedQueue<T>();
         } else {
-            return new ConcurrentLinkedQueue<Runnable>();
+            return new ConcurrentLinkedQueue<T>();
         }
     }
 
