@@ -31,7 +31,7 @@ import java.util.List;
 /**
  * A {@link ChannelHandler} that encodes and decodes SPDY Frames.
  */
-public final class SpdyFrameCodec extends ByteToMessageDecoder
+public class SpdyFrameCodec extends ByteToMessageDecoder
         implements SpdyFrameDecoderDelegate, ChannelOutboundHandler {
 
     private static final SpdyProtocolException INVALID_FRAME =
