@@ -1,22 +1,22 @@
 /*
  * Copyright 2014 The Netty Project
  *
- * The Netty Project licenses this file to you under the Apache License,
- * version 2.0 (the "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at:
+ * The Netty Project licenses this file to you under the Apache License, version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 package io.netty.example.http2.client;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelOption;
@@ -25,33 +25,32 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.example.http2.server.Http2Server;
 import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http2.draft10.DefaultHttp2Headers;
-import io.netty.handler.codec.http2.draft10.Http2Headers;
-import io.netty.handler.codec.http2.draft10.frame.DefaultHttp2HeadersFrame;
-import io.netty.handler.codec.http2.draft10.frame.Http2Frame;
+import io.netty.handler.codec.http2.DefaultHttp2Headers;
+import io.netty.handler.codec.http2.Http2Exception;
+import io.netty.handler.codec.http2.Http2Headers;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.BlockingQueue;
 
 /**
- * An HTTP2 client that allows you to send HTTP2 frames to a server. Inbound and outbound frames
- * are logged.
+ * An HTTP2 client that allows you to send HTTP2 frames to a server. Inbound and outbound frames are
+ * logged.
  */
 public class Http2Client {
 
     private final String host;
     private final int port;
-    private final Http2ResponseClientHandler httpResponseHandler;
+    private final Http2ClientConnectionHandler http2ConnectionHandler;
     private Channel channel;
     private EventLoopGroup workerGroup;
 
     public Http2Client(String host, int port) {
         this.host = host;
         this.port = port;
-        httpResponseHandler = new Http2ResponseClientHandler();
+        http2ConnectionHandler = new Http2ClientConnectionHandler();
     }
 
-    public void start() {
+    public void start() throws Exception {
         if (channel != null) {
             System.out.println("Already running!");
             return;
@@ -64,10 +63,11 @@ public class Http2Client {
         b.channel(NioSocketChannel.class);
         b.option(ChannelOption.SO_KEEPALIVE, true);
         b.remoteAddress(new InetSocketAddress(host, port));
-        b.handler(new Http2ClientInitializer(httpResponseHandler));
+        b.handler(new Http2ClientInitializer(http2ConnectionHandler));
 
         // Start the client.
         channel = b.connect().syncUninterruptibly().channel();
+        http2ConnectionHandler.awaitInitialization();
         System.out.println("Connected to [" + host + ':' + port + ']');
     }
 
@@ -82,21 +82,23 @@ public class Http2Client {
         }
     }
 
-    public ChannelFuture send(Http2Frame request) {
-        // Sends the HTTP request.
-        return channel.writeAndFlush(request);
+    public ChannelFuture sendHeaders(int streamId, Http2Headers headers) throws Http2Exception {
+        return http2ConnectionHandler.writeHeaders(streamId, headers, 0, true, true);
     }
 
-    public Http2Frame get() {
-        Http2Headers headers =
-                DefaultHttp2Headers.newBuilder().setAuthority(host)
-                        .setMethod(HttpMethod.GET.name()).build();
-        return new DefaultHttp2HeadersFrame.Builder().setHeaders(headers).setStreamId(3)
-                .setEndOfStream(true).build();
+    public ChannelFuture send(int streamId, ByteBuf data, int padding, boolean endStream,
+            boolean endSegment, boolean compressed) throws Http2Exception {
+        return http2ConnectionHandler.writeData(streamId, data, padding, endStream, endSegment,
+                compressed);
+    }
+
+    public Http2Headers headers() {
+        return DefaultHttp2Headers.newBuilder().authority(host).method(HttpMethod.GET.name())
+                .build();
     }
 
     public BlockingQueue<ChannelFuture> queue() {
-        return httpResponseHandler.queue();
+        return http2ConnectionHandler.queue();
     }
 
     public static void main(String[] args) throws Exception {
@@ -112,8 +114,9 @@ public class Http2Client {
 
         try {
             client.start();
-            ChannelFuture requestFuture = client.send(client.get()).sync();
-
+            System.out.println("Sending headers...");
+            ChannelFuture requestFuture = client.sendHeaders(3, client.headers()).sync();
+            System.out.println("Back from sending headers...");
             if (!requestFuture.isSuccess()) {
                 requestFuture.cause().printStackTrace();
             }
@@ -126,6 +129,8 @@ public class Http2Client {
             }
 
             System.out.println("Finished HTTP/2 request");
+        } catch (Throwable t) {
+            t.printStackTrace();
         } finally {
             client.stop();
         }

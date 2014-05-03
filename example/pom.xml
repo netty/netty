@@ -176,6 +176,49 @@
       </build>
     </profile>
 
+    <profile>
+      <id>http2-server</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <configuration>
+              <executable>${java.home}/bin/java</executable>
+              <arguments>
+                <argument>-Xbootclasspath/p:${project.build.directory}/npn/npn-boot-${npn.version}.jar</argument>
+                <argument>-classpath</argument>
+                <classpath/>
+                <argument>io.netty.example.http2.server.Http2Server</argument>
+              </arguments>
+              <classpathScope>runtime</classpathScope>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>http2-client</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <configuration>
+              <executable>${java.home}/bin/java</executable>
+              <arguments>
+                <argument>-Xbootclasspath/p:${project.build.directory}/npn/npn-boot-${npn.version}.jar</argument>
+                <argument>-classpath</argument>
+                <classpath/>
+                <argument>io.netty.example.http2.client.Http2Client</argument>
+              </arguments>
+              <classpathScope>runtime</classpathScope>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
     <!--
       profiles for the various npn vs OpenJDK version as found on:
       http://www.eclipse.org/jetty/documentation/current/npn-chapter.html#npn-versions
