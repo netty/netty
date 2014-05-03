@@ -15,9 +15,7 @@
  */
 package org.jboss.netty.handler.ssl;
 
-import org.apache.tomcat.jni.Library;
 import org.apache.tomcat.jni.Pool;
-import org.apache.tomcat.jni.SSL;
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -90,15 +88,7 @@ public abstract class AbstractSocketSslEchoTest {
             }
         });
 
-        boolean hasOpenSsl = false;
-        try {
-            Library.initialize(null);
-            SSL.initialize(null);
-            hasOpenSsl = true;
-        } catch (Exception e) {
-            logger.warn("OpenSSLEngine is unavailable and thus will not be tested.", e);
-        }
-
+        boolean hasOpenSsl = OpenSslEngine.isAvailable();
         if (hasOpenSsl) {
             final long pool = Pool.create(0);
             final OpenSslBufferPool bufferPool = new OpenSslBufferPool(Runtime.getRuntime().availableProcessors() * 2);
@@ -156,6 +146,8 @@ public abstract class AbstractSocketSslEchoTest {
                 }
             });
             */
+        } else {
+            logger.warn("OpenSslEngine is unavailable and thus will not be tested.");
         }
 
         for (SSLEngineFactory sf: serverEngines) {

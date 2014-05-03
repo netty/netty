@@ -15,6 +15,7 @@
  */
 package org.jboss.netty.handler.ssl;
 
+import org.apache.tomcat.jni.Library;
 import org.apache.tomcat.jni.SSL;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
@@ -52,14 +53,26 @@ public class OpenSslEngine extends javax.net.ssl.SSLEngine {
         Throwable cause = null;
         try {
             NativeLibraryLoader.load("netty-tcnative", SSL.class.getClassLoader());
+            Library.initialize("provided");
+            SSL.initialize(null);
         } catch (Throwable t) {
             cause = t;
+            logger.debug(
+                    "Failed to load netty-tcnative; " +
+                    OpenSslEngine.class.getSimpleName() + " will be unavailable.", t);
         }
         UNAVAILABILITY_CAUSE = cause;
     }
 
     public static boolean isAvailable() {
         return UNAVAILABILITY_CAUSE == null;
+    }
+
+    public static void ensureAvailability() {
+        if (UNAVAILABILITY_CAUSE != null) {
+            throw (Error) new UnsatisfiedLinkError(
+                    "failed to load the required native library").initCause(UNAVAILABILITY_CAUSE);
+        }
     }
 
     private static SSLException ENGINE_IS_CLOSED = new SSLException("Engine is closed");
@@ -96,10 +109,7 @@ public class OpenSslEngine extends javax.net.ssl.SSLEngine {
     private OpenSslBufferPool bufferPool;
 
     public OpenSslEngine(OpenSslContextHolder contextHolder, OpenSslBufferPool bufferPool) {
-        if (UNAVAILABILITY_CAUSE != null) {
-            throw (Error) new UnsatisfiedLinkError(
-                    "failed to load the required native library").initCause(UNAVAILABILITY_CAUSE);
-        }
+        ensureAvailability();
 
         this.bufferPool = bufferPool;
         this.ssl = SSL.newSSL(contextHolder.getSslContext(), true);
