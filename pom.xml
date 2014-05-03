@@ -142,7 +142,7 @@
            will not run on older distributions.
     -->
     <profile>
-      <id>release</id>
+      <id>restricted-release</id>
       <build>
         <plugins>
           <plugin>
@@ -627,7 +627,7 @@
         <version>2.4.2</version>
         <configuration>
           <useReleaseProfile>false</useReleaseProfile>
-          <arguments>-P release,sonatype-oss-release,full</arguments>
+          <arguments>-P restricted-release,sonatype-oss-release,full</arguments>
           <autoVersionSubmodules>true</autoVersionSubmodules>
           <allowTimestampedSnapshots>false</allowTimestampedSnapshots>
           <tagNameFormat>netty-@{project.version}</tagNameFormat>
