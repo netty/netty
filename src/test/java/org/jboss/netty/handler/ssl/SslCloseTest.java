@@ -15,10 +15,6 @@
  */
 package org.jboss.netty.handler.ssl;
 
-import java.net.InetSocketAddress;
-
-import javax.net.ssl.SSLEngine;
-
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -32,6 +28,9 @@ import org.jboss.netty.example.securechat.SecureChatSslContextFactory;
 import org.jboss.netty.util.CharsetUtil;
 import org.junit.Assert;
 import org.junit.Test;
+
+import javax.net.ssl.SSLEngine;
+import java.net.InetSocketAddress;
 
 public class SslCloseTest {
 
@@ -52,7 +51,6 @@ public class SslCloseTest {
             @Override
             public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
                 e.getCause().printStackTrace();
-                System.out.println("Close channel");
                 ctx.getChannel().close();
             }
 

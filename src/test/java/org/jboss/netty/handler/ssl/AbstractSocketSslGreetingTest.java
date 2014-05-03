@@ -27,15 +27,19 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jboss.netty.example.securechat.SecureChatSslContextFactory;
+import org.jboss.netty.handler.ssl.AbstractSocketSslEchoTest.SSLEngineFactory;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.TestUtil;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
 import javax.net.ssl.SSLEngine;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Collection;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -43,15 +47,29 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.*;
 
+@RunWith(Parameterized.class)
 public abstract class AbstractSocketSslGreetingTest {
     static final InternalLogger logger =
             InternalLoggerFactory.getInstance(AbstractSocketSslGreetingTest.class);
+
+    @Parameters(name = "{index}: serverEngine = {0}, clientEngine = {1}")
+    public static Collection<SSLEngineFactory[]> engines() throws Exception {
+        return AbstractSocketSslEchoTest.engines();
+    }
 
     private final ChannelBuffer greeting = ChannelBuffers.wrappedBuffer(new byte[] {'a'});
 
     protected abstract ChannelFactory newServerSocketChannelFactory(Executor executor);
     protected abstract ChannelFactory newClientSocketChannelFactory(Executor executor);
 
+    private final SSLEngineFactory serverEngineFactory;
+    private final SSLEngineFactory clientEngineFactory;
+
+    protected AbstractSocketSslGreetingTest(
+            SSLEngineFactory serverEngineFactory, SSLEngineFactory clientEngineFactory) {
+        this.serverEngineFactory = serverEngineFactory;
+        this.clientEngineFactory = clientEngineFactory;
+    }
 
     @Test
     public void testSslEcho() throws Throwable {
@@ -61,8 +79,8 @@ public abstract class AbstractSocketSslGreetingTest {
         ServerHandler sh = new ServerHandler();
         ClientHandler ch = new ClientHandler();
 
-        SSLEngine sse = SecureChatSslContextFactory.getServerContext().createSSLEngine();
-        SSLEngine cse = SecureChatSslContextFactory.getClientContext().createSSLEngine();
+        SSLEngine sse = serverEngineFactory.newEngine();
+        SSLEngine cse = clientEngineFactory.newEngine();
         sse.setUseClientMode(false);
         cse.setUseClientMode(true);
 

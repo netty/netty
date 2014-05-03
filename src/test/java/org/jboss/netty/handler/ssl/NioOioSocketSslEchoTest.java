@@ -15,13 +15,17 @@
  */
 package org.jboss.netty.handler.ssl;
 
-import java.util.concurrent.Executor;
-
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.oio.OioServerSocketChannelFactory;
 
+import java.util.concurrent.Executor;
+
 public class NioOioSocketSslEchoTest extends AbstractSocketSslEchoTest {
+
+    public NioOioSocketSslEchoTest(SSLEngineFactory serverEngineFactory, SSLEngineFactory clientEngineFactory) {
+        super(serverEngineFactory, clientEngineFactory);
+    }
 
     @Override
     protected ChannelFactory newClientSocketChannelFactory(Executor executor) {

@@ -71,6 +71,15 @@
   </developers>
 
   <dependencies>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-tcnative</artifactId>
+      <version>1.1.30.Fork1</version>
+      <classifier>${os.detected.classifier}</classifier>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
+
     <!-- JBoss Marshalling - completely optional -->
     <dependency>
       <groupId>org.jboss.marshalling</groupId>
@@ -186,7 +195,7 @@
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <version>4.10</version>
+      <version>4.11</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -228,6 +237,14 @@
   </properties>
 
   <build>
+    <extensions>
+      <extension>
+        <groupId>kr.motd.maven</groupId>
+        <artifactId>os-maven-plugin</artifactId>
+        <version>1.2.0.Final</version>
+      </extension>
+    </extensions>
+
     <resources>
       <resource>
         <directory>${basedir}/src/main/resources</directory>
