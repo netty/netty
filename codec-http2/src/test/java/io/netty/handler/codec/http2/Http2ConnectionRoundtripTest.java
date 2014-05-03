@@ -1,0 +1,258 @@
+/*
+ * Copyright 2014 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License, version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at:
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
+ */
+
+package io.netty.handler.codec.http2;
+
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.util.NetUtil;
+
+import java.net.InetSocketAddress;
+import java.util.concurrent.CountDownLatch;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+
+/**
+ * Tests the full HTTP/2 framing stack including the connection and preface handlers.
+ */
+public class Http2ConnectionRoundtripTest {
+
+    @Mock
+    private Http2FrameObserver clientObserver;
+
+    @Mock
+    private Http2FrameObserver serverObserver;
+
+    private DelegatingHttp2ConnectionHandler http2Client;
+    private ServerBootstrap sb;
+    private Bootstrap cb;
+    private Channel serverChannel;
+    private Channel clientChannel;
+    private CountDownLatch requestLatch;
+
+    @Before
+    public void setup() throws Exception {
+        MockitoAnnotations.initMocks(this);
+
+        sb = new ServerBootstrap();
+        cb = new Bootstrap();
+
+        sb.group(new NioEventLoopGroup(), new NioEventLoopGroup());
+        sb.channel(NioServerSocketChannel.class);
+        sb.childHandler(new ChannelInitializer<Channel>() {
+            @Override
+            protected void initChannel(Channel ch) throws Exception {
+                ChannelPipeline p = ch.pipeline();
+                p.addLast(new Http2PrefaceHandler(true));
+                p.addLast(new DelegatingHttp2ConnectionHandler(true, new FrameCountDown()));
+            }
+        });
+
+        cb.group(new NioEventLoopGroup());
+        cb.channel(NioSocketChannel.class);
+        cb.handler(new ChannelInitializer<Channel>() {
+            @Override
+            protected void initChannel(Channel ch) throws Exception {
+                ChannelPipeline p = ch.pipeline();
+                p.addLast(new Http2PrefaceHandler(false));
+                p.addLast(new DelegatingHttp2ConnectionHandler(false, serverObserver));
+            }
+        });
+
+        serverChannel = sb.bind(new InetSocketAddress(0)).sync().channel();
+        int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
+
+        ChannelFuture ccf = cb.connect(new InetSocketAddress(NetUtil.LOCALHOST, port));
+        assertTrue(ccf.awaitUninterruptibly().isSuccess());
+        clientChannel = ccf.channel();
+        http2Client = clientChannel.pipeline().get(DelegatingHttp2ConnectionHandler.class);
+    }
+
+    @After
+    public void teardown() throws Exception {
+        serverChannel.close().sync();
+        sb.group().shutdownGracefully();
+        cb.group().shutdownGracefully();
+    }
+
+    @Test
+    public void stressTest() throws Exception {
+        Http2Headers headers =
+                new DefaultHttp2Headers.Builder().method("GET").scheme("https")
+                        .authority("example.org").path("/some/path/resource2").build();
+        String text = "hello world";
+        int numStreams = 1000;
+        int expectedFrames = numStreams * 2;
+        requestLatch = new CountDownLatch(expectedFrames);
+
+        for (int i = 0, nextStream = 3; i < numStreams; ++i, nextStream += 2) {
+            http2Client.writeHeaders(ctx(), newPromise(), nextStream, headers, 0, (short) 16,
+                    false, 0, false, false);
+            http2Client.writeData(ctx(), newPromise(), nextStream,
+                    Unpooled.copiedBuffer(text.getBytes()), 0, true, true, false);
+            flush();
+        }
+
+        // Wait for all frames to be received.
+        awaitRequests();
+        verify(serverObserver, times(numStreams)).onHeadersRead(anyInt(), eq(headers), eq(0),
+                eq((short) 16), eq(false), eq(0), eq(false), eq(false));
+        verify(serverObserver, times(numStreams)).onDataRead(anyInt(),
+                eq(Unpooled.copiedBuffer(text.getBytes())), eq(0), eq(true), eq(true), eq(false));
+    }
+
+    private void awaitRequests() throws Exception {
+        requestLatch.await(5, SECONDS);
+    }
+
+    private ChannelHandlerContext ctx() {
+        return clientChannel.pipeline().firstContext();
+    }
+
+    private ChannelPromise newPromise() {
+        return ctx().newPromise();
+    }
+
+    private void flush() {
+        ctx().flush();
+    }
+
+    /**
+     * A decorator around the serverObserver that counts down the latch so that we can await the
+     * completion of the request.
+     */
+    private final class FrameCountDown implements Http2FrameObserver {
+
+        @Override
+        public void onDataRead(int streamId, ByteBuf data, int padding, boolean endOfStream,
+                boolean endOfSegment, boolean compressed) throws Http2Exception {
+            serverObserver.onDataRead(streamId, copy(data), padding, endOfStream, endOfSegment,
+                    compressed);
+            requestLatch.countDown();
+        }
+
+        @Override
+        public void onHeadersRead(int streamId, Http2Headers headers, int padding,
+                boolean endStream, boolean endSegment) throws Http2Exception {
+            serverObserver.onHeadersRead(streamId, headers, padding, endStream, endSegment);
+            requestLatch.countDown();
+        }
+
+        @Override
+        public void
+                onHeadersRead(int streamId, Http2Headers headers, int streamDependency,
+                        short weight, boolean exclusive, int padding, boolean endStream,
+                        boolean endSegment) throws Http2Exception {
+            serverObserver.onHeadersRead(streamId, headers, streamDependency, weight, exclusive,
+                    padding, endStream, endSegment);
+            requestLatch.countDown();
+        }
+
+        @Override
+        public void onPriorityRead(int streamId, int streamDependency, short weight,
+                boolean exclusive) throws Http2Exception {
+            serverObserver.onPriorityRead(streamId, streamDependency, weight, exclusive);
+            requestLatch.countDown();
+        }
+
+        @Override
+        public void onRstStreamRead(int streamId, long errorCode) throws Http2Exception {
+            serverObserver.onRstStreamRead(streamId, errorCode);
+            requestLatch.countDown();
+        }
+
+        @Override
+        public void onSettingsAckRead() throws Http2Exception {
+            serverObserver.onSettingsAckRead();
+            requestLatch.countDown();
+        }
+
+        @Override
+        public void onSettingsRead(Http2Settings settings) throws Http2Exception {
+            serverObserver.onSettingsRead(settings);
+            requestLatch.countDown();
+        }
+
+        @Override
+        public void onPingRead(ByteBuf data) throws Http2Exception {
+            serverObserver.onPingRead(copy(data));
+            requestLatch.countDown();
+        }
+
+        @Override
+        public void onPingAckRead(ByteBuf data) throws Http2Exception {
+            serverObserver.onPingAckRead(copy(data));
+            requestLatch.countDown();
+        }
+
+        @Override
+        public void onPushPromiseRead(int streamId, int promisedStreamId, Http2Headers headers,
+                int padding) throws Http2Exception {
+            serverObserver.onPushPromiseRead(streamId, promisedStreamId, headers, padding);
+            requestLatch.countDown();
+        }
+
+        @Override
+        public void onGoAwayRead(int lastStreamId, long errorCode, ByteBuf debugData)
+                throws Http2Exception {
+            serverObserver.onGoAwayRead(lastStreamId, errorCode, copy(debugData));
+            requestLatch.countDown();
+        }
+
+        @Override
+        public void onWindowUpdateRead(int streamId, int windowSizeIncrement) throws Http2Exception {
+            serverObserver.onWindowUpdateRead(streamId, windowSizeIncrement);
+            requestLatch.countDown();
+        }
+
+        @Override
+        public void onAltSvcRead(int streamId, long maxAge, int port, ByteBuf protocolId,
+                String host, String origin) throws Http2Exception {
+            serverObserver.onAltSvcRead(streamId, maxAge, port, copy(protocolId), host, origin);
+            requestLatch.countDown();
+        }
+
+        @Override
+        public void onBlockedRead(int streamId) throws Http2Exception {
+            serverObserver.onBlockedRead(streamId);
+            requestLatch.countDown();
+        }
+
+        ByteBuf copy(ByteBuf buffer) {
+            return Unpooled.copiedBuffer(buffer);
+        }
+    }
+}

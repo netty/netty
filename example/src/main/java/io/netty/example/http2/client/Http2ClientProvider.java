@@ -19,7 +19,7 @@ import org.eclipse.jetty.npn.NextProtoNego;
 
 import java.util.List;
 
-import static io.netty.handler.codec.http2.draft10.Http2OrHttpChooser.SelectedProtocol.*;
+import static io.netty.handler.codec.http2.Http2OrHttpChooser.SelectedProtocol.*;
 
 /**
  * The Jetty project provides an implementation of the Transport Layer Security (TLS) extension for Next Protocol
