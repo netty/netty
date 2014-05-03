@@ -18,6 +18,7 @@ package org.jboss.netty.handler.ssl;
 import org.apache.tomcat.jni.SSL;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.util.internal.NativeLibraryLoader;
 
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
@@ -45,6 +46,22 @@ public class OpenSslEngine extends javax.net.ssl.SSLEngine {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(OpenSslEngine.class);
 
+    private static final Throwable UNAVAILABILITY_CAUSE;
+
+    static {
+        Throwable cause = null;
+        try {
+            NativeLibraryLoader.load("netty-tcnative", SSL.class.getClassLoader());
+        } catch (Throwable t) {
+            cause = t;
+        }
+        UNAVAILABILITY_CAUSE = cause;
+    }
+
+    public static boolean isAvailable() {
+        return UNAVAILABILITY_CAUSE == null;
+    }
+
     private static SSLException ENGINE_IS_CLOSED = new SSLException("Engine is closed");
     private static SSLException RENEGOTIATION_NOT_SUPPORTED = new SSLException("Renegotiation is not supported");
     private static SSLException ENCRYPTED_PACKET_OVERSIZE = new SSLException("Encrypted packet is oversize");
@@ -60,7 +77,10 @@ public class OpenSslEngine extends javax.net.ssl.SSLEngine {
     private long ssl;
     private long networkBIO;
 
-    private boolean accepted;
+    /**
+     * 0 - not accepted, 1 - accepted implicitly via wrap()/unwrap(), 2 - accepted explicitly via beginHandshake() call
+     */
+    private int accepted;
     private boolean handshakeFinished;
     private boolean receivedShutdown;
     private AtomicBoolean destroyed = new AtomicBoolean();
@@ -76,6 +96,11 @@ public class OpenSslEngine extends javax.net.ssl.SSLEngine {
     private OpenSslBufferPool bufferPool;
 
     public OpenSslEngine(OpenSslContextHolder contextHolder, OpenSslBufferPool bufferPool) {
+        if (UNAVAILABILITY_CAUSE != null) {
+            throw (Error) new UnsatisfiedLinkError(
+                    "failed to load the required native library").initCause(UNAVAILABILITY_CAUSE);
+        }
+
         this.bufferPool = bufferPool;
         this.ssl = SSL.newSSL(contextHolder.getSslContext(), true);
         this.networkBIO = SSL.makeNetworkBIO(ssl);
@@ -229,8 +254,8 @@ public class OpenSslEngine extends javax.net.ssl.SSLEngine {
         }
 
         // Prepare OpenSSL to work in server mode and receive handshake
-        if (!accepted) {
-            beginHandshake();
+        if (accepted == 0) {
+            beginHandshakeImplicitly();
         }
 
         // In handshake or close_notify stages, check if call to wrap was made
@@ -343,8 +368,8 @@ public class OpenSslEngine extends javax.net.ssl.SSLEngine {
         }
 
         // Prepare OpenSSL to work in server mode and receive handshake
-        if (!accepted) {
-            beginHandshake();
+        if (accepted == 0) {
+            beginHandshakeImplicitly();
         }
 
         // In handshake or close_notify stages, check if call to unwrap was made
@@ -450,7 +475,7 @@ public class OpenSslEngine extends javax.net.ssl.SSLEngine {
         isInboundDone = true;
         engineClosed = true;
 
-        if (accepted) {
+        if (accepted != 0) {
             if (!receivedShutdown) {
                 shutdown();
                 throw new SSLException("close_notify has not been received");
@@ -478,7 +503,7 @@ public class OpenSslEngine extends javax.net.ssl.SSLEngine {
         isOutboundDone = true;
         engineClosed = true;
 
-        if (accepted && !destroyed.get()) {
+        if (accepted != 0 && !destroyed.get()) {
             int mode = SSL.getShutdown(ssl);
             if ((mode & SSL.SSL_SENT_SHUTDOWN) != SSL.SSL_SENT_SHUTDOWN) {
                 SSL.shutdownSSL(ssl);
@@ -612,11 +637,33 @@ public class OpenSslEngine extends javax.net.ssl.SSLEngine {
             throw ENGINE_IS_CLOSED;
         }
 
-        if (!accepted) {
+        switch (accepted) {
+            case 0:
+                SSL.doHandshake(ssl);
+                accepted = 2;
+                break;
+            case 1:
+                // A user did not start handshake by calling this method by him/herself,
+                // but handshake has been started already by wrap() or unwrap() implicitly.
+                // Because it's the user's first time to call this method, it is unfair to
+                // raise an exception.  From the user's standpoint, he or she never asked
+                // for renegotiation.
+
+                accepted = 2; // Next time this method is invoked by the user, we should raise an exception.
+                break;
+            case 2:
+                throw RENEGOTIATION_NOT_SUPPORTED;
+        }
+    }
+
+    private synchronized void beginHandshakeImplicitly() throws SSLException {
+        if (engineClosed) {
+            throw ENGINE_IS_CLOSED;
+        }
+
+        if (accepted == 0) {
             SSL.doHandshake(ssl);
-            accepted = true;
-        } else {
-            throw RENEGOTIATION_NOT_SUPPORTED;
+            accepted = 1;
         }
     }
 
@@ -629,7 +676,7 @@ public class OpenSslEngine extends javax.net.ssl.SSLEngine {
      */
     @Override
     public synchronized SSLEngineResult.HandshakeStatus getHandshakeStatus() {
-        if (!accepted || destroyed.get()) {
+        if (accepted == 0 || destroyed.get()) {
             return SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING;
         }
 

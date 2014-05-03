@@ -15,6 +15,9 @@
  */
 package org.jboss.netty.handler.ssl;
 
+import org.apache.tomcat.jni.Library;
+import org.apache.tomcat.jni.Pool;
+import org.apache.tomcat.jni.SSL;
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -34,10 +37,21 @@ import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.TestUtil;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
 import javax.net.ssl.SSLEngine;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
@@ -46,6 +60,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.*;
 
+@RunWith(Parameterized.class)
 public abstract class AbstractSocketSslEchoTest {
     static final InternalLogger logger =
         InternalLoggerFactory.getInstance(AbstractSocketSslEchoTest.class);
@@ -55,6 +70,125 @@ public abstract class AbstractSocketSslEchoTest {
 
     static {
         random.nextBytes(data);
+    }
+
+    @Parameters(name = "{index}: serverEngine = {0}, clientEngine = {1}")
+    public static Collection<SSLEngineFactory[]> engines() throws Exception {
+        List<SSLEngineFactory[]> params = new ArrayList<SSLEngineFactory[]>();
+
+        List<SSLEngineFactory> serverEngines = new ArrayList<SSLEngineFactory>();
+        serverEngines.add(new SSLEngineFactory("JDK") {
+            public SSLEngine newEngine() {
+                return SecureChatSslContextFactory.getServerContext().createSSLEngine();
+            }
+        });
+
+        List<SSLEngineFactory> clientEngines = new ArrayList<SSLEngineFactory>();
+        clientEngines.add(new SSLEngineFactory("JDK") {
+            public SSLEngine newEngine() {
+                return SecureChatSslContextFactory.getClientContext().createSSLEngine();
+            }
+        });
+
+        boolean hasOpenSsl = false;
+        try {
+            Library.initialize(null);
+            SSL.initialize(null);
+            hasOpenSsl = true;
+        } catch (Exception e) {
+            logger.warn("OpenSSLEngine is unavailable and thus will not be tested.", e);
+        }
+
+        if (hasOpenSsl) {
+            final long pool = Pool.create(0);
+            final OpenSslBufferPool bufferPool = new OpenSslBufferPool(Runtime.getRuntime().availableProcessors() * 2);
+
+            final Map<String, String> configMap = new HashMap<String, String>();
+
+            final String certPath = File.createTempFile("ssl_test_", ".crt").getAbsolutePath();
+            new File(certPath).deleteOnExit();
+            final String keyPath = File.createTempFile("ssl_test_", ".pem").getAbsolutePath();
+            new File(keyPath).deleteOnExit();
+
+            ClassLoader cl = AbstractSocketSslEchoTest.class.getClassLoader();
+            FileOutputStream certOut = new FileOutputStream(certPath);
+            InputStream certIn = cl.getResourceAsStream("openssl.crt");
+            for (;;) {
+                int b = certIn.read();
+                if (b < 0) {
+                    break;
+                }
+                certOut.write(b);
+            }
+            certOut.close();
+
+            FileOutputStream keyOut = new FileOutputStream(keyPath);
+            InputStream keyIn = cl.getResourceAsStream("openssl.pem");
+            for (;;) {
+                int b = keyIn.read();
+                if (b < 0) {
+                    break;
+                }
+                keyOut.write(b);
+            }
+            keyOut.close();
+
+            configMap.put("ssl.cert_path", certPath);
+            configMap.put("ssl.key_path", keyPath);
+            configMap.put(
+                    "ssl.cipher_spec",
+                    "AES128-SHA:RC4:AES:!ADH:!aNULL:!DH:!EDH:!PSK:!ECDH:!eNULL:!LOW:!SSLv2:!EXP:!NULL");
+
+            final OpenSslConfig sslConfig = new OpenSslConfig(configMap);
+            final OpenSslContextHolder contextHolder = new OpenSslContextHolder(pool, sslConfig);
+
+            serverEngines.add(new SSLEngineFactory("TCNative") {
+                public SSLEngine newEngine() {
+                    return new OpenSslEngine(contextHolder, bufferPool);
+                }
+            });
+
+            // TODO: Client mode is not supported yet.
+            /*
+            clientEngines.add(new SSLEngineFactory("TCNative") {
+                public SSLEngine newEngine() {
+                    return new OpenSSLEngine(contextHolder, sslBufferPool);
+                }
+            });
+            */
+        }
+
+        for (SSLEngineFactory sf: serverEngines) {
+            for (SSLEngineFactory cf: clientEngines) {
+                params.add(new SSLEngineFactory[] { sf, cf });
+            }
+        }
+
+        return params;
+    }
+
+    protected static abstract class SSLEngineFactory {
+
+        private final String name;
+
+        public SSLEngineFactory(String name) {
+            this.name = name;
+        }
+
+        public abstract SSLEngine newEngine();
+
+        @Override
+        public String toString() {
+            return name;
+        }
+    }
+
+    private final SSLEngineFactory serverEngineFactory;
+    private final SSLEngineFactory clientEngineFactory;
+
+    protected AbstractSocketSslEchoTest(SSLEngineFactory serverEngineFactory, SSLEngineFactory clientEngineFactory) {
+        this.serverEngineFactory = serverEngineFactory;
+        this.clientEngineFactory = clientEngineFactory;
     }
 
     protected abstract ChannelFactory newServerSocketChannelFactory(Executor executor);
@@ -94,8 +228,8 @@ public abstract class AbstractSocketSslEchoTest {
         EchoHandler sh = new EchoHandler(true);
         EchoHandler ch = new EchoHandler(false);
 
-        SSLEngine sse = SecureChatSslContextFactory.getServerContext().createSSLEngine();
-        SSLEngine cse = SecureChatSslContextFactory.getClientContext().createSSLEngine();
+        SSLEngine sse = serverEngineFactory.newEngine();
+        SSLEngine cse = clientEngineFactory.newEngine();
         sse.setUseClientMode(false);
         cse.setUseClientMode(true);
 

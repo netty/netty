@@ -1250,6 +1250,9 @@ public class SslHandler extends FrameDecoder
         for (int i = 0; i < nRecords; i ++) {
             inNetBuf.limit(inNetBuf.position() + recordLengths[i]);
             frame = unwrapSingle(ctx, channel, buffer, inNetBuf, frame, totalLength);
+            if (engine.isInboundDone()) {
+                break;
+            }
             assert !inNetBuf.hasRemaining();
         }
 
