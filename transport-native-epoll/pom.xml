@@ -82,12 +82,29 @@
         </executions>
       </plugin>
 
-      <!-- Because the generated JAR is platform dependent, use the platform as a classifier. -->
       <plugin>
         <artifactId>maven-jar-plugin</artifactId>
-        <configuration>
-          <classifier>${os.detected.classifier}</classifier>
-        </configuration>
+        <executions>
+          <!-- Generate the fallback JAR that does not contain the native library. -->
+          <execution>
+            <id>default-jar</id>
+            <configuration>
+              <excludes>
+                <exclude>META-INF/native/**</exclude>
+              </excludes>
+            </configuration>
+          </execution>
+          <!-- Generate the JAR that contains the native library in it. -->
+          <execution>
+            <id>native-jar</id>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+            <configuration>
+              <classifier>${os.detected.classifier}</classifier>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>

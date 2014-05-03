@@ -42,12 +42,6 @@
       </properties>
     </profile>
     <profile>
-      <id>release</id>
-      <properties>
-        <quickbuild>false</quickbuild>
-      </properties>
-    </profile>
-    <profile>
       <id>coverage</id>
       <build>
         <plugins>
