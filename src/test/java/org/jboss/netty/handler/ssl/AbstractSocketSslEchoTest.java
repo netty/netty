@@ -123,7 +123,10 @@ public abstract class AbstractSocketSslEchoTest {
 
             factory.setCertPath(certPath);
             factory.setKeyPath(keyPath);
-            factory.setCipherSpec("AES128-SHA:RC4:AES:!ADH:!aNULL:!DH:!EDH:!PSK:!ECDH:!eNULL:!LOW:!SSLv2:!EXP:!NULL");
+            factory.setCipherSpec(
+                    "EECDH+ECDSA+AESGCM:EECDH+aRSA+AESGCM:EECDH+ECDSA+SHA384:EECDH+ECDSA+SHA256:" +
+                    "EECDH+aRSA+SHA384:EECDH+aRSA+SHA256:EECDH+aRSA+RC4:EECDH:EDH+aRSA:RC4:" +
+                    "!aNULL:!eNULL:!LOW:!3DES:!MD5:!EXP:!PSK:!SRP:!DSS:!RC4");
 
             factory.init();
 
