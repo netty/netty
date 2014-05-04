@@ -66,6 +66,7 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
     private final String websocketPath;
     private final String subprotocols;
     private final boolean allowExtensions;
+    private final int maxFramePayloadLength;
 
     public WebSocketServerProtocolHandler(String websocketPath) {
         this(websocketPath, null, false);
@@ -76,9 +77,15 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
     }
 
     public WebSocketServerProtocolHandler(String websocketPath, String subprotocols, boolean allowExtensions) {
+        this(websocketPath, subprotocols, allowExtensions, 65536);
+    }
+
+    public WebSocketServerProtocolHandler(String websocketPath, String subprotocols,
+            boolean allowExtensions, int maxFrameSize) {
         this.websocketPath = websocketPath;
         this.subprotocols = subprotocols;
         this.allowExtensions = allowExtensions;
+        this.maxFramePayloadLength = maxFrameSize;
     }
 
     @Override
@@ -87,7 +94,8 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
         if (cp.get(WebSocketServerProtocolHandshakeHandler.class) == null) {
             // Add the WebSocketHandshakeHandler before this one.
             ctx.pipeline().addBefore(ctx.name(), WebSocketServerProtocolHandshakeHandler.class.getName(),
-                    new WebSocketServerProtocolHandshakeHandler(websocketPath, subprotocols, allowExtensions));
+                    new WebSocketServerProtocolHandshakeHandler(websocketPath, subprotocols,
+                            allowExtensions, maxFramePayloadLength));
         }
     }
 
