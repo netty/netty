@@ -93,7 +93,7 @@ final class SpdyHeaderBlockZlibDecoder extends SpdyHeaderBlockRawDecoder {
             }
 
             decompressed.writerIndex(decompressed.writerIndex() + numBytes);
-            super.decode(decompressed, frame);
+            super.decodeHeaderBlock(decompressed, frame);
             decompressed.discardReadBytes();
 
             return numBytes;

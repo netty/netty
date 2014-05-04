@@ -16,6 +16,7 @@
 package org.jboss.netty.handler.codec.spdy;
 
 import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
 
 import static org.jboss.netty.handler.codec.spdy.SpdyCodecUtil.*;
 
@@ -26,6 +27,8 @@ public class SpdyHeaderBlockRawDecoder extends SpdyHeaderBlockDecoder {
     private final int maxHeaderSize;
 
     private State state;
+
+    private ChannelBuffer cumulation;
 
     private int headerSize;
     private int numHeaders;
@@ -67,6 +70,24 @@ public class SpdyHeaderBlockRawDecoder extends SpdyHeaderBlockDecoder {
             throw new NullPointerException("frame");
         }
 
+        if (cumulation == null) {
+            decodeHeaderBlock(headerBlock, frame);
+            if (headerBlock.readable()) {
+                cumulation = ChannelBuffers.dynamicBuffer(headerBlock.readableBytes());
+                cumulation.writeBytes(headerBlock);
+            }
+        } else {
+            cumulation.writeBytes(headerBlock);
+            decodeHeaderBlock(cumulation, frame);
+            if (cumulation.readable()) {
+                cumulation.discardReadBytes();
+            } else {
+                cumulation = null;
+            }
+        }
+    }
+
+    protected void decodeHeaderBlock(ChannelBuffer headerBlock, SpdyHeadersFrame frame) throws Exception {
         int skipLength;
         while (headerBlock.readable()) {
             switch(state) {
@@ -267,6 +288,9 @@ public class SpdyHeaderBlockRawDecoder extends SpdyHeaderBlockDecoder {
         if (state != State.END_HEADER_BLOCK) {
             frame.setInvalid();
         }
+
+        cumulation = null;
+
         // Initialize header block decoding fields
         headerSize = 0;
         name = null;
@@ -275,5 +299,6 @@ public class SpdyHeaderBlockRawDecoder extends SpdyHeaderBlockDecoder {
 
     @Override
     void end() {
+        cumulation = null;
     }
 }

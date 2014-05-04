@@ -92,6 +92,7 @@ public class SpdyHeaderBlockZlibDecoderTest {
         for (int i = 0; i < readableBytes; i++) {
             ChannelBuffer headerBlockSegment = headerBlock.slice(i, 1);
             decoder.decode(headerBlockSegment, frame);
+            assertFalse(headerBlockSegment.readable());
         }
         decoder.endHeaderBlock(frame);
 

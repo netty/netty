@@ -391,25 +391,21 @@ public class SpdyHeaderBlockRawDecoderTest {
 
     @Test
     public void testMultipleDecodes() throws Exception {
-        ChannelBuffer numHeaders = ChannelBuffers.buffer(4);
-        numHeaders.writeInt(1);
+        ChannelBuffer headerBlock = ChannelBuffers.buffer(21);
+        headerBlock.writeInt(1);
+        headerBlock.writeInt(4);
+        headerBlock.writeBytes(nameBytes);
+        headerBlock.writeInt(5);
+        headerBlock.writeBytes(valueBytes);
 
-        ChannelBuffer nameBlock = ChannelBuffers.buffer(8);
-        nameBlock.writeInt(4);
-        nameBlock.writeBytes(nameBytes);
-
-        ChannelBuffer valueBlock = ChannelBuffers.buffer(9);
-        valueBlock.writeInt(5);
-        valueBlock.writeBytes(valueBytes);
-
-        decoder.decode(numHeaders, frame);
-        decoder.decode(nameBlock, frame);
-        decoder.decode(valueBlock, frame);
+        int readableBytes = headerBlock.readableBytes();
+        for (int i = 0; i < readableBytes; i++) {
+            ChannelBuffer headerBlockSegment = headerBlock.slice(i, 1);
+            decoder.decode(headerBlockSegment, frame);
+            assertFalse(headerBlockSegment.readable());
+        }
         decoder.endHeaderBlock(frame);
 
-        assertFalse(numHeaders.readable());
-        assertFalse(nameBlock.readable());
-        assertFalse(valueBlock.readable());
         assertFalse(frame.isInvalid());
         assertEquals(1, frame.headers().names().size());
         assertTrue(frame.headers().contains(name));
