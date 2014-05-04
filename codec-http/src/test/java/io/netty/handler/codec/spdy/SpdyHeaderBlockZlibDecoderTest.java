@@ -92,6 +92,7 @@ public class SpdyHeaderBlockZlibDecoderTest {
         for (int i = 0; i < readableBytes; i++) {
             ByteBuf headerBlockSegment = headerBlock.slice(i, 1);
             decoder.decode(headerBlockSegment, frame);
+            assertFalse(headerBlockSegment.isReadable());
         }
         decoder.endHeaderBlock(frame);
 
