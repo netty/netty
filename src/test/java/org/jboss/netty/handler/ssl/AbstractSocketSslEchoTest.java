@@ -120,9 +120,12 @@ public abstract class AbstractSocketSslEchoTest {
             final long pool = Pool.create(0);
             final OpenSslBufferPool bufferPool = new OpenSslBufferPool(Runtime.getRuntime().availableProcessors() * 2);
             final OpenSslServerEngineFactory factory = new OpenSslServerEngineFactory(pool, bufferPool);
+
             factory.setCertPath(certPath);
             factory.setKeyPath(keyPath);
             factory.setCipherSpec("AES128-SHA:RC4:AES:!ADH:!aNULL:!DH:!EDH:!PSK:!ECDH:!eNULL:!LOW:!SSLv2:!EXP:!NULL");
+
+            factory.init();
 
             serverEngines.add(new SSLEngineFactory("TCNative") {
                 public SSLEngine newEngine() throws Exception {
