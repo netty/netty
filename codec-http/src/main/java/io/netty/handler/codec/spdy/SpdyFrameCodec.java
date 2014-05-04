@@ -327,6 +327,8 @@ public class SpdyFrameCodec extends ByteToMessageDecoder
             spdyHeaderBlockDecoder.decode(headerBlock, spdyHeadersFrame);
         } catch (Exception e) {
             ctx.fireExceptionCaught(e);
+        } finally {
+            headerBlock.release();
         }
     }
 
