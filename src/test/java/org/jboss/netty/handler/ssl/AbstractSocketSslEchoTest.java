@@ -123,18 +123,14 @@ public abstract class AbstractSocketSslEchoTest {
             }
             keyOut.close();
 
-            configMap.put("ssl.cert_path", certPath);
-            configMap.put("ssl.key_path", keyPath);
-            configMap.put(
-                    "ssl.cipher_spec",
-                    "AES128-SHA:RC4:AES:!ADH:!aNULL:!DH:!EDH:!PSK:!ECDH:!eNULL:!LOW:!SSLv2:!EXP:!NULL");
-
-            final OpenSslConfig sslConfig = new OpenSslConfig(configMap);
-            final OpenSslContextHolder contextHolder = new OpenSslContextHolder(pool, sslConfig);
+            final OpenSslServerEngineFactory factory = new OpenSslServerEngineFactory(pool, bufferPool);
+            factory.setCertPath(certPath);
+            factory.setKeyPath(keyPath);
+            factory.setCipherSpec("AES128-SHA:RC4:AES:!ADH:!aNULL:!DH:!EDH:!PSK:!ECDH:!eNULL:!LOW:!SSLv2:!EXP:!NULL");
 
             serverEngines.add(new SSLEngineFactory("TCNative") {
-                public SSLEngine newEngine() {
-                    return new OpenSslEngine(contextHolder, bufferPool);
+                public SSLEngine newEngine() throws Exception {
+                    return factory.newServerEngine();
                 }
             });
 
@@ -167,7 +163,7 @@ public abstract class AbstractSocketSslEchoTest {
             this.name = name;
         }
 
-        public abstract SSLEngine newEngine();
+        public abstract SSLEngine newEngine() throws Exception;
 
         @Override
         public String toString() {

@@ -73,7 +73,6 @@ public abstract class AbstractSocketSslGreetingTest {
 
     @Test
     public void testSslEcho() throws Throwable {
-        System.err.println("-------------------------------");
         ServerBootstrap sb = new ServerBootstrap(newServerSocketChannelFactory(Executors.newCachedThreadPool()));
         ClientBootstrap cb = new ClientBootstrap(newClientSocketChannelFactory(Executors.newCachedThreadPool()));
 

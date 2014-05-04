@@ -632,8 +632,7 @@ public class SslHandler extends FrameDecoder
     }
 
     @Override
-    public void channelDisconnected(ChannelHandlerContext ctx,
-            ChannelStateEvent e) throws Exception {
+    public void channelDisconnected(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
 
         // Make sure the handshake future is notified when a connection has
         // been closed during handshake.
@@ -648,18 +647,23 @@ public class SslHandler extends FrameDecoder
             super.channelDisconnected(ctx, e);
         } finally {
             unwrapNonAppData(ctx, e.getChannel());
-            engine.closeOutbound();
-            if (sentCloseNotify == 0 && handshaken) {
-                try {
-                    engine.closeInbound();
-                } catch (SSLException ex) {
-                    if (logger.isDebugEnabled()) {
-                        logger.debug("Failed to clean up SSLEngine.", ex);
-                    }
+            closeEngine();
+        }
+    }
+
+    private void closeEngine() {
+        engine.closeOutbound();
+        if (sentCloseNotify == 0 && handshaken) {
+            try {
+                engine.closeInbound();
+            } catch (SSLException ex) {
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Failed to clean up SSLEngine.", ex);
                 }
             }
         }
     }
+
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
             throws Exception {
@@ -1674,6 +1678,7 @@ public class SslHandler extends FrameDecoder
      */
     @Override
     public void afterRemove(ChannelHandlerContext ctx) throws Exception {
+        closeEngine();
 
         // there is no need for synchronization here as we do not receive downstream events anymore
         Throwable cause = null;

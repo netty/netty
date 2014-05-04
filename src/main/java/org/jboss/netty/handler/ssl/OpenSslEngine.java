@@ -21,6 +21,7 @@ import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.internal.NativeLibraryLoader;
 
+import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLPeerUnverifiedException;
@@ -43,7 +44,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  *   SSLEngine: http://download.oracle.com/javase/1,5.0/docs/api/javax/net/ssl/SSLEngine.html
  *   OpenSSL:   http://www.openssl.org/docs/crypto/BIO_s_bio.html#example
  */
-public class OpenSslEngine extends javax.net.ssl.SSLEngine {
+public class OpenSslEngine extends SSLEngine {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(OpenSslEngine.class);
 
@@ -108,11 +109,11 @@ public class OpenSslEngine extends javax.net.ssl.SSLEngine {
 
     private OpenSslBufferPool bufferPool;
 
-    public OpenSslEngine(OpenSslContextHolder contextHolder, OpenSslBufferPool bufferPool) {
+    OpenSslEngine(long sslContext, OpenSslBufferPool bufferPool) {
         ensureAvailability();
 
         this.bufferPool = bufferPool;
-        this.ssl = SSL.newSSL(contextHolder.getSslContext(), true);
+        this.ssl = SSL.newSSL(sslContext, true);
         this.networkBIO = SSL.makeNetworkBIO(ssl);
     }
 
@@ -760,12 +761,4 @@ public class OpenSslEngine extends javax.net.ssl.SSLEngine {
     public boolean getEnableSessionCreation() {
         return false;
     }
-
-    /*
-    @Override
-    protected void finalize() throws Throwable {
-        shutdown();
-        super.finalize();
-    }
-    */
 }
