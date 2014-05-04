@@ -47,9 +47,7 @@ import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
@@ -90,11 +88,6 @@ public abstract class AbstractSocketSslEchoTest {
 
         boolean hasOpenSsl = OpenSslEngine.isAvailable();
         if (hasOpenSsl) {
-            final long pool = Pool.create(0);
-            final OpenSslBufferPool bufferPool = new OpenSslBufferPool(Runtime.getRuntime().availableProcessors() * 2);
-
-            final Map<String, String> configMap = new HashMap<String, String>();
-
             final String certPath = File.createTempFile("ssl_test_", ".crt").getAbsolutePath();
             new File(certPath).deleteOnExit();
             final String keyPath = File.createTempFile("ssl_test_", ".pem").getAbsolutePath();
@@ -123,6 +116,9 @@ public abstract class AbstractSocketSslEchoTest {
             }
             keyOut.close();
 
+            // FIXME: APR pool, OpenSSL buffer pool, and OpenSslServerEngineFactory should be freed after the test.
+            final long pool = Pool.create(0);
+            final OpenSslBufferPool bufferPool = new OpenSslBufferPool(Runtime.getRuntime().availableProcessors() * 2);
             final OpenSslServerEngineFactory factory = new OpenSslServerEngineFactory(pool, bufferPool);
             factory.setCertPath(certPath);
             factory.setKeyPath(keyPath);
