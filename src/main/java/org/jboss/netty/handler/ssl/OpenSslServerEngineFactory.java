@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package org.jboss.netty.handler.ssl;
 
 import org.apache.tomcat.jni.SSL;
@@ -21,10 +20,15 @@ import org.apache.tomcat.jni.SSLContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
+import org.jboss.netty.util.internal.StringUtil;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 import java.io.Closeable;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Creates a new {@link OpenSslEngine}.  Internally, this factory keeps the SSL_CTX object of OpenSSL.
@@ -51,7 +55,9 @@ public class OpenSslServerEngineFactory implements Closeable {
 
     private String certPath;
     private String keyPath;
-    private String cipherSpec;
+    private List<String> cipherSpec;
+    private List<String> unmodifiableCipherSpec;
+    private String cipherSpecText;
     private String keyPassword;
     private String caPath;
     private String nextProtos;
@@ -93,13 +99,69 @@ public class OpenSslServerEngineFactory implements Closeable {
         this.keyPath = keyPath;
     }
 
-    public String cipherSpec() {
-        return cipherSpec;
+    public List<String> cipherSpec() {
+        if (cipherSpec == null || cipherSpec.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        if (unmodifiableCipherSpec == null) {
+            unmodifiableCipherSpec = Collections.unmodifiableList(cipherSpec);
+        }
+
+        return unmodifiableCipherSpec;
     }
 
-    public void setCipherSpec(String cipherSpec) {
+    public String cipherSpecText() {
+        if (cipherSpec == null || cipherSpec.isEmpty()) {
+            return "";
+        }
+
+        if (cipherSpecText == null) {
+            StringBuilder cipherSpecBuf = new StringBuilder();
+            for (String c: cipherSpec) {
+                cipherSpecBuf.append(c);
+                cipherSpecBuf.append(':');
+            }
+            cipherSpecBuf.setLength(cipherSpecBuf.length() - 1);
+            cipherSpecText = cipherSpecBuf.toString();
+        }
+
+        return cipherSpecText;
+    }
+
+    public void setCipherSpec(Iterable<String> cipherSpec) {
         ensureUnfrozen();
-        this.cipherSpec = cipherSpec;
+        if (cipherSpec == null) {
+            throw new NullPointerException("cipherSpec");
+        }
+
+        List<String> list = new ArrayList<String>();
+        for (String c: cipherSpec) {
+            if (c == null) {
+                break;
+            }
+            if (c.contains(":")) {
+                for (String cc : StringUtil.split(c, ':')) {
+                    if (cc.length() != 0) {
+                        list.add(cc);
+                    }
+                }
+            } else {
+                list.add(c);
+            }
+        }
+
+        this.cipherSpec = list;
+        unmodifiableCipherSpec = null;
+        cipherSpecText = null;
+    }
+
+    public void setCipherSpec(String... cipherSpec) {
+        ensureUnfrozen();
+        if (cipherSpec == null) {
+            throw new NullPointerException("cipherSpec");
+        }
+        setCipherSpec(Arrays.asList(cipherSpec));
     }
 
     public String keyPassword() {
@@ -163,11 +225,11 @@ public class OpenSslServerEngineFactory implements Closeable {
 
             /* List the ciphers that the client is permitted to negotiate. */
             try {
-                SSLContext.setCipherSuite(sslContext, cipherSpec);
+                SSLContext.setCipherSuite(sslContext, cipherSpecText());
             } catch (SSLException e) {
                 throw e;
             } catch (Exception e) {
-                throw new SSLException("failed to set cipher suite: " + cipherSpec, e);
+                throw new SSLException("failed to set cipher suite: " + cipherSpecText(), e);
             }
 
             /* Set certificate verification policy. */
@@ -228,7 +290,7 @@ public class OpenSslServerEngineFactory implements Closeable {
             throw new SSLException("missing: keyPath");
         }
 
-        if (cipherSpec == null || cipherSpec.length() == 0) {
+        if (cipherSpec == null || cipherSpec.isEmpty()) {
             throw new SSLException("missing: cipherSpec");
         }
     }
