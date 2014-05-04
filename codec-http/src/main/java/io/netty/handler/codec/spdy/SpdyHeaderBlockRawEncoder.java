@@ -34,19 +34,11 @@ public class SpdyHeaderBlockRawEncoder extends SpdyHeaderBlockEncoder {
     }
 
     private void setLengthField(ByteBuf buffer, int writerIndex, int length) {
-        if (version < 3) {
-            buffer.setShort(writerIndex, length);
-        } else {
-            buffer.setInt(writerIndex, length);
-        }
+        buffer.setInt(writerIndex, length);
     }
 
     private void writeLengthField(ByteBuf buffer, int length) {
-        if (version < 3) {
-            buffer.writeShort(length);
-        } else {
-            buffer.writeInt(length);
-        }
+        buffer.writeInt(length);
     }
 
     @Override
@@ -77,12 +69,7 @@ public class SpdyHeaderBlockRawEncoder extends SpdyHeaderBlockEncoder {
                     valueLength += valueBytes.length + 1;
                 }
             }
-            if (valueLength == 0) {
-                if (version < 3) {
-                    throw new IllegalArgumentException(
-                            "header value cannot be empty: " + name);
-                }
-            } else {
+            if (valueLength != 0) {
                 valueLength --;
             }
             if (valueLength > SPDY_MAX_NV_LENGTH) {
