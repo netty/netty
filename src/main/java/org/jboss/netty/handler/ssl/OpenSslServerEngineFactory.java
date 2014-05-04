@@ -173,7 +173,6 @@ public class OpenSslServerEngineFactory implements Closeable {
             /* Set certificate verification policy. */
             SSLContext.setVerify(sslContext, SSL.SSL_CVERIFY_NONE, 10);
 
-
             /* Load the certificate file and private key. */
             try {
                 if (!SSLContext.setCertificate(
@@ -221,15 +220,15 @@ public class OpenSslServerEngineFactory implements Closeable {
      * @throws SSLException if a required value is not set.
      */
     private void assertRequiredFieldsAssigned() throws SSLException {
-        if (certPath == null || certPath.isEmpty()) {
+        if (certPath == null || certPath.length() == 0) {
             throw new SSLException("missing: certPath");
         }
 
-        if (keyPath == null || keyPath.isEmpty()) {
+        if (keyPath == null || keyPath.length() == 0) {
             throw new SSLException("missing: keyPath");
         }
 
-        if (cipherSpec == null || cipherSpec.isEmpty()) {
+        if (cipherSpec == null || cipherSpec.length() == 0) {
             throw new SSLException("missing: cipherSpec");
         }
     }
