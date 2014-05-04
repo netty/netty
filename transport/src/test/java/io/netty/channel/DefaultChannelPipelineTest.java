@@ -511,6 +511,30 @@ public class DefaultChannelPipelineTest {
         assertEquals(0, buffer.refCnt());
     }
 
+    @Test
+    public void testFirstContextEmptyPipeline() throws Exception {
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        assertNull(pipeline.firstContext());
+    }
+
+    @Test
+    public void testLastContextEmptyPipeline() throws Exception {
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        assertNull(pipeline.lastContext());
+    }
+
+    @Test
+    public void testFirstHandlerEmptyPipeline() throws Exception {
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        assertNull(pipeline.first());
+    }
+
+    @Test
+    public void testLastHandlerEmptyPipeline() throws Exception {
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        assertNull(pipeline.last());
+    }
+
     private static int next(DefaultChannelHandlerContext ctx) {
         DefaultChannelHandlerContext next = ctx.next;
         if (next == null) {
