@@ -262,7 +262,7 @@ public class OpenSslServerEngineFactory implements Closeable {
             }
 
             /* Load certificate chain file, if specified */
-            if (caPath != null && caPath.length() > 0) {
+            if (caPath != null && caPath.length() != 0) {
                 /* If named same as cert file, we must skip the first cert since it was loaded above. */
                 boolean skipFirstCert = certPath.equals(caPath);
 
@@ -273,7 +273,7 @@ public class OpenSslServerEngineFactory implements Closeable {
             }
 
             /* Set next protocols for next protocol negotiation extension, if specified */
-            if (nextProtos != null && nextProtos.length() > 0) {
+            if (nextProtos != null && nextProtos.length() != 0) {
                 SSLContext.setNextProtos(sslContext, nextProtos);
             }
         }
