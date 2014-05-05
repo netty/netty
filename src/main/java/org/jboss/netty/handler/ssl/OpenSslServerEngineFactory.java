@@ -79,6 +79,19 @@ public class OpenSslServerEngineFactory implements Closeable {
 
         this.aprPool = aprPool;
         this.bufPool = bufPool;
+
+        // Set the default cipher suite.
+        setCipherSpec(
+                "ECDHE-RSA-AES128-GCM-SHA256",
+                "ECDHE-RSA-RC4-SHA",
+                "ECDHE-RSA-AES128-SHA",
+                "ECDHE-RSA-AES256-SHA",
+                "AES128-GCM-SHA256",
+                "RC4-SHA",
+                "RC4-MD5",
+                "AES128-SHA",
+                "AES256-SHA",
+                "DES-CBC3-SHA");
     }
 
     public String certPath() {
