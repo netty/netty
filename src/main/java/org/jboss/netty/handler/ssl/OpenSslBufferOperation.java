@@ -16,15 +16,20 @@
 package org.jboss.netty.handler.ssl;
 
 import org.apache.tomcat.jni.Buffer;
+import org.jboss.netty.util.internal.EmptyArrays;
 
 import java.nio.ByteBuffer;
 
 abstract class OpenSslBufferOperation {
 
     private static final RuntimeException ALLOCATION_INTERRUPTED =
-            new IllegalStateException("Buffer allocation interrupted");
+            new IllegalStateException("buffer allocation interrupted");
 
-    private OpenSslBufferPool pool;
+    static {
+        ALLOCATION_INTERRUPTED.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
+    }
+
+    private final OpenSslBufferPool pool;
 
     OpenSslBufferOperation(OpenSslBufferPool pool) {
         this.pool = pool;

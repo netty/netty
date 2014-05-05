@@ -17,6 +17,7 @@ package org.jboss.netty.handler.ssl;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
@@ -29,11 +30,11 @@ import java.util.concurrent.LinkedBlockingQueue;
  */
 public class OpenSslBufferPool {
 
-    private LinkedBlockingQueue<ByteBuffer> buffers;
-
     // BUFFER_SIZE must be large enough to accomodate the maximum SSL record size.
     // Header (5) + Data (2^14) + Compression (1024) + Encryption (1024) + MAC (20) + Padding (256)
-    private final int BUFFER_SIZE = 18713;
+    private static final int BUFFER_SIZE = 18713;
+
+    private final BlockingQueue<ByteBuffer> buffers;
 
     /**
      * Construct a new pool with the specified capacity.
@@ -70,11 +71,11 @@ public class OpenSslBufferPool {
     @Override
     public String toString() {
         return "[DirectBufferPool " +
-            buffers.size() + " buffers * " +
-            BUFFER_SIZE + " bytes = " +
-            buffers.size() * BUFFER_SIZE + " total bytes; " +
-            "size: " + buffers.size() +
-            " remainingCapacity: " + buffers.remainingCapacity() +
-            "]";
+                buffers.size() + " buffers * " +
+                BUFFER_SIZE + " bytes = " +
+                buffers.size() * BUFFER_SIZE + " total bytes; " +
+                "size: " + buffers.size() +
+                " remainingCapacity: " + buffers.remainingCapacity() +
+                ']';
     }
 }
