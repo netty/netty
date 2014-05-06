@@ -81,7 +81,7 @@ public class SpdyHeaderBlockRawDecoder extends SpdyHeaderBlockDecoder {
             if (cumulation.isReadable()) {
                 cumulation.discardReadBytes();
             } else {
-                cumulation = null;
+                releaseBuffer();
             }
         }
     }
