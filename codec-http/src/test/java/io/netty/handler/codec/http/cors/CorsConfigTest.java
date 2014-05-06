@@ -123,4 +123,10 @@ public class CorsConfigTest {
         withOrigin("*").preflightResponseHeader("HeaderName", new Object[]{null}).build();
     }
 
+    @Test
+    public void shortCurcuit() {
+        final CorsConfig cors = withOrigin("http://localhost:8080").shortCurcuit().build();
+        assertThat(cors.isShortCurcuit(), is(true));
+    }
+
 }
