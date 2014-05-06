@@ -47,6 +47,7 @@ public final class CorsConfig {
     private final Set<String> allowedRequestHeaders;
     private final boolean allowNullOrigin;
     private final Map<CharSequence, Callable<?>> preflightHeaders;
+    private final boolean shortCurcuit;
 
     private CorsConfig(final Builder builder) {
         origins = new LinkedHashSet<String>(builder.origins);
@@ -59,6 +60,7 @@ public final class CorsConfig {
         allowedRequestHeaders = builder.requestHeaders;
         allowNullOrigin = builder.allowNullOrigin;
         preflightHeaders = builder.preflightHeaders;
+        shortCurcuit = builder.shortCurcuit;
     }
 
     /**
@@ -214,6 +216,20 @@ public final class CorsConfig {
         return preflightHeaders;
     }
 
+    /**
+     * Determines whether a CORS request should be rejected if it's invalid before being
+     * further processing.
+     *
+     * CORS headers are set after a request is processed. This may not always be desired
+     * and this setting will check that the Origin is valid and if it is not valid no
+     * further processing will take place, and a error will be returned to the calling client.
+     *
+     * @return {@code true} if a CORS request should short-curcuit upon receiving an invalid Origin header.
+     */
+    public boolean isShortCurcuit() {
+        return shortCurcuit;
+    }
+
     private static <T> T getValue(final Callable<T> callable) {
         try {
             return callable.call();
@@ -281,6 +297,7 @@ public final class CorsConfig {
         private final Set<String> requestHeaders = new HashSet<String>();
         private final Map<CharSequence, Callable<?>> preflightHeaders = new HashMap<CharSequence, Callable<?>>();
         private boolean noPreflightHeaders;
+        private boolean shortCurcuit;
 
         /**
          * Creates a new Builder instance with the origin passed in.
@@ -497,6 +514,21 @@ public final class CorsConfig {
                 preflightHeaders.put(Names.CONTENT_LENGTH, new ConstantValueGenerator("0"));
             }
             return new CorsConfig(this);
+        }
+
+        /**
+         * Specifies that a CORS request should be rejected if it's invalid before being
+         * further processing.
+         *
+         * CORS headers are set after a request is processed. This may not always be desired
+         * and this setting will check that the Origin is valid and if it is not valid no
+         * further processing will take place, and a error will be returned to the calling client.
+         *
+         * @return {@link Builder} to support method chaining.
+         */
+        public Builder shortCurcuit() {
+            shortCurcuit = true;
+            return this;
         }
     }
 
