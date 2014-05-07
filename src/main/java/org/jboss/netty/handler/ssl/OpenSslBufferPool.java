@@ -15,6 +15,8 @@
  */
 package org.jboss.netty.handler.ssl;
 
+import org.jboss.netty.util.internal.EmptyArrays;
+
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.concurrent.BlockingQueue;
@@ -29,6 +31,13 @@ import java.util.concurrent.LinkedBlockingQueue;
  * TODO: Attempt to replace the directly-allocated ByteBuffers this with one APR pool.
  */
 public class OpenSslBufferPool {
+
+    private static final RuntimeException ALLOCATION_INTERRUPTED =
+            new IllegalStateException("buffer allocation interrupted");
+
+    static {
+        ALLOCATION_INTERRUPTED.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
+    }
 
     // BUFFER_SIZE must be large enough to accomodate the maximum SSL record size.
     // Header (5) + Data (2^14) + Compression (1024) + Encryption (1024) + MAC (20) + Padding (256)
@@ -54,8 +63,12 @@ public class OpenSslBufferPool {
      *
      * @return a ByteBuffer.
      */
-    public ByteBuffer acquire() throws InterruptedException {
-        return buffers.take();
+    public ByteBuffer acquire() {
+        try {
+            return buffers.take();
+        } catch (InterruptedException ignore) {
+            throw ALLOCATION_INTERRUPTED;
+        }
     }
 
     /**

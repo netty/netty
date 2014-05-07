@@ -15,6 +15,7 @@
  */
 package org.jboss.netty.handler.ssl;
 
+import org.apache.tomcat.jni.Buffer;
 import org.apache.tomcat.jni.Library;
 import org.apache.tomcat.jni.SSL;
 import org.jboss.netty.logging.InternalLogger;
@@ -150,103 +151,106 @@ final class OpenSslEngine extends SSLEngine {
      * Calling this function with src.remaining == 0 is undefined.
      */
     private int writePlaintextData(final ByteBuffer src) {
-        final AtomicInteger written = new AtomicInteger();
-        new OpenSslBufferOperation(bufferPool) {
-            @Override
-            void run(ByteBuffer buffer, long address) {
-                int position = src.position();
-                int limit = src.limit();
-                int len = Math.min(src.remaining(), MAX_PLAINTEXT_LENGTH);
-                if (len > buffer.capacity()) {
-                    throw new RuntimeException("Buffer pool write overflow");
-                }
-                src.limit(position + len);
-
-                buffer.put(src);
-                src.limit(limit);
-                int sslWrote = SSL.writeToSSL(ssl, address, len);
-                if (sslWrote > 0) {
-                    src.position(position + sslWrote);
-                    written.set(sslWrote);
-                } else {
-                    src.position(position);
-                    throw new IllegalStateException();
-                }
+        final ByteBuffer buffer = bufferPool.acquire();
+        final long address = Buffer.address(buffer);
+        try {
+            int position = src.position();
+            int limit = src.limit();
+            int len = Math.min(src.remaining(), MAX_PLAINTEXT_LENGTH);
+            if (len > buffer.capacity()) {
+                throw new RuntimeException("Buffer pool write overflow");
             }
-        };
-        return written.get();
+            src.limit(position + len);
+
+            buffer.put(src);
+            src.limit(limit);
+
+            final int sslWrote = SSL.writeToSSL(ssl, address, len);
+            if (sslWrote > 0) {
+                src.position(position + sslWrote);
+                return sslWrote;
+            } else {
+                src.position(position);
+                throw new IllegalStateException();
+            }
+        } finally {
+            bufferPool.release(buffer);
+        }
     }
 
     /**
      * Write encrypted data to the OpenSSL network BIO
      */
     private int writeEncryptedData(final ByteBuffer src, final AtomicInteger primingReadResult) {
-        final AtomicInteger written = new AtomicInteger();
-        new OpenSslBufferOperation(bufferPool) {
-            @Override
-            void run(ByteBuffer buffer, long address) {
-                int position = src.position();
-                int len = src.remaining();
-                if (len > buffer.capacity()) {
-                    throw new RuntimeException("Buffer pool write overflow");
-                }
-
-                buffer.put(src);
-                int netWrote = SSL.writeToBIO(networkBIO, address, len);
-                if (netWrote > -1) {
-                    written.set(netWrote);
-                    src.position(position + netWrote);
-                    primingReadResult.set(SSL.readFromSSL(ssl, address, 0)); // priming read
-                } else {
-                    src.position(position);
-                }
+        final ByteBuffer buffer = bufferPool.acquire();
+        final long address = Buffer.address(buffer);
+        try {
+            int position = src.position();
+            int len = src.remaining();
+            if (len > buffer.capacity()) {
+                throw new RuntimeException("Buffer pool write overflow");
             }
-        };
-        return written.get();
+
+            buffer.put(src);
+
+            final int netWrote = SSL.writeToBIO(networkBIO, address, len);
+            if (netWrote >= 0) {
+                src.position(position + netWrote);
+                primingReadResult.set(SSL.readFromSSL(ssl, address, 0)); // priming read
+                return netWrote;
+            } else {
+                src.position(position);
+                return 0;
+            }
+        } finally {
+            bufferPool.release(buffer);
+        }
     }
 
     /**
      * Read plaintext data from the OpenSSL internal BIO
      */
     private int readPlaintextData(final ByteBuffer dst) {
-        final AtomicInteger read = new AtomicInteger();
-        new OpenSslBufferOperation(bufferPool) {
-            @Override
-            void run(ByteBuffer buffer, long address) {
-                buffer.limit(Math.min(buffer.limit(), dst.capacity()));
-                int sslRead = SSL.readFromSSL(ssl, address, buffer.limit());
-                if (sslRead > 0) {
-                    read.set(sslRead);
-                    buffer.limit(sslRead);
-                    dst.put(buffer);
-                }
+        final ByteBuffer buffer = bufferPool.acquire();
+        final long address = Buffer.address(buffer);
+        try {
+            buffer.limit(Math.min(buffer.limit(), dst.capacity()));
+            final int sslRead = SSL.readFromSSL(ssl, address, buffer.limit());
+            if (sslRead > 0) {
+                buffer.limit(sslRead);
+                dst.put(buffer);
+                return sslRead;
+            } else {
+                return 0;
             }
-        };
-        return read.get();
+        } finally {
+            bufferPool.release(buffer);
+        }
     }
 
     /**
      * Read encrypted data from the OpenSSL network BIO
      */
     private int readEncryptedData(final ByteBuffer dst, final int pending) {
-        final AtomicInteger read = new AtomicInteger();
-        new OpenSslBufferOperation(bufferPool) {
-            @Override
-            void run(ByteBuffer buffer, long address) {
-                if (pending > buffer.capacity()) {
-                    throw new RuntimeException("network BIO read overflow " +
-                            "(pending: " + pending + ", capacity: " + buffer.capacity() + ')');
-                }
-
-                int bioRead = SSL.readFromBIO(networkBIO, address, pending);
-                if (bioRead > 0) {
-                    read.set(bioRead);
-                    buffer.limit(bioRead);
-                    dst.put(buffer);
-                }
+        final ByteBuffer buffer = bufferPool.acquire();
+        final long address = Buffer.address(buffer);
+        try {
+            if (pending > buffer.capacity()) {
+                throw new RuntimeException("network BIO read overflow " +
+                        "(pending: " + pending + ", capacity: " + buffer.capacity() + ')');
             }
-        };
-        return read.get();
+
+            final int bioRead = SSL.readFromBIO(networkBIO, address, pending);
+            if (bioRead > 0) {
+                buffer.limit(bioRead);
+                dst.put(buffer);
+                return bioRead;
+            } else {
+                return 0;
+            }
+        } finally {
+            bufferPool.release(buffer);
+        }
     }
 
     /**
