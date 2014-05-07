@@ -281,8 +281,11 @@ final class OpenSslEngine extends SSLEngine {
         }
 
         if (offset >= srcs.length || offset + length > srcs.length) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException(
+                    "offset: " + offset + ", length: " + length +
+                            " (expected: offset <= offset + length <= srcs.length (" + srcs.length + "))");
         }
+
         if (dst.isReadOnly()) {
             throw new ReadOnlyBufferException();
         }
@@ -386,7 +389,9 @@ final class OpenSslEngine extends SSLEngine {
             throw new NullPointerException("dsts");
         }
         if (offset >= dsts.length || offset + length > dsts.length) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException(
+                    "offset: " + offset + ", length: " + length +
+                            " (expected: offset <= offset + length <= dsts.length (" + dsts.length + "))");
         }
 
         int capacity = 0;
