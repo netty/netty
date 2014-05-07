@@ -124,13 +124,19 @@ final class OpenSslEngine extends SSLEngine {
     private boolean isOutboundDone;
     private boolean engineClosed;
 
-    private final OpenSslBufferPool bufferPool;
+    private final OpenSslBufferPool bufPool;
     private SSLSession session;
 
-    OpenSslEngine(long sslContext, OpenSslBufferPool bufferPool) {
+    OpenSslEngine(long sslContext, OpenSslBufferPool bufPool) {
         ensureAvailability();
+        if (sslContext == 0) {
+            throw new NullPointerException("sslContext");
+        }
+        if (bufPool == null) {
+            throw new NullPointerException("bufPool");
+        }
 
-        this.bufferPool = bufferPool;
+        this.bufPool = bufPool;
         ssl = SSL.newSSL(sslContext, true);
         networkBIO = SSL.makeNetworkBIO(ssl);
     }
@@ -152,21 +158,21 @@ final class OpenSslEngine extends SSLEngine {
      * Calling this function with src.remaining == 0 is undefined.
      */
     private int writePlaintextData(final ByteBuffer src) {
-        final ByteBuffer buffer = bufferPool.acquire();
-        final long address = Buffer.address(buffer);
+        final ByteBuffer buf = bufPool.acquire();
+        final long addr = Buffer.address(buf);
         try {
             int position = src.position();
             int limit = src.limit();
             int len = Math.min(src.remaining(), MAX_PLAINTEXT_LENGTH);
-            if (len > buffer.capacity()) {
+            if (len > buf.capacity()) {
                 throw new IllegalStateException("buffer pool write overflow");
             }
             src.limit(position + len);
 
-            buffer.put(src);
+            buf.put(src);
             src.limit(limit);
 
-            final int sslWrote = SSL.writeToSSL(ssl, address, len);
+            final int sslWrote = SSL.writeToSSL(ssl, addr, len);
             if (sslWrote > 0) {
                 src.position(position + sslWrote);
                 return sslWrote;
@@ -175,7 +181,7 @@ final class OpenSslEngine extends SSLEngine {
                 throw new IllegalStateException("SSL.writeToSSL() returned a non-positive value: " + sslWrote);
             }
         } finally {
-            bufferPool.release(buffer);
+            bufPool.release(buf);
         }
     }
 
@@ -183,28 +189,28 @@ final class OpenSslEngine extends SSLEngine {
      * Write encrypted data to the OpenSSL network BIO
      */
     private int writeEncryptedData(final ByteBuffer src, final AtomicInteger primingReadResult) {
-        final ByteBuffer buffer = bufferPool.acquire();
-        final long address = Buffer.address(buffer);
+        final ByteBuffer buf = bufPool.acquire();
+        final long addr = Buffer.address(buf);
         try {
             int position = src.position();
             int len = src.remaining();
-            if (len > buffer.capacity()) {
+            if (len > buf.capacity()) {
                 throw new IllegalStateException("buffer pool write overflow");
             }
 
-            buffer.put(src);
+            buf.put(src);
 
-            final int netWrote = SSL.writeToBIO(networkBIO, address, len);
+            final int netWrote = SSL.writeToBIO(networkBIO, addr, len);
             if (netWrote >= 0) {
                 src.position(position + netWrote);
-                primingReadResult.set(SSL.readFromSSL(ssl, address, 0)); // priming read
+                primingReadResult.set(SSL.readFromSSL(ssl, addr, 0)); // priming read
                 return netWrote;
             } else {
                 src.position(position);
                 return 0;
             }
         } finally {
-            bufferPool.release(buffer);
+            bufPool.release(buf);
         }
     }
 
@@ -212,20 +218,20 @@ final class OpenSslEngine extends SSLEngine {
      * Read plaintext data from the OpenSSL internal BIO
      */
     private int readPlaintextData(final ByteBuffer dst) {
-        final ByteBuffer buffer = bufferPool.acquire();
-        final long address = Buffer.address(buffer);
+        final ByteBuffer buf = bufPool.acquire();
+        final long addr = Buffer.address(buf);
         try {
-            buffer.limit(Math.min(buffer.limit(), dst.capacity()));
-            final int sslRead = SSL.readFromSSL(ssl, address, buffer.limit());
+            buf.limit(Math.min(buf.limit(), dst.capacity()));
+            final int sslRead = SSL.readFromSSL(ssl, addr, buf.limit());
             if (sslRead > 0) {
-                buffer.limit(sslRead);
-                dst.put(buffer);
+                buf.limit(sslRead);
+                dst.put(buf);
                 return sslRead;
             } else {
                 return 0;
             }
         } finally {
-            bufferPool.release(buffer);
+            bufPool.release(buf);
         }
     }
 
@@ -233,24 +239,24 @@ final class OpenSslEngine extends SSLEngine {
      * Read encrypted data from the OpenSSL network BIO
      */
     private int readEncryptedData(final ByteBuffer dst, final int pending) {
-        final ByteBuffer buffer = bufferPool.acquire();
-        final long address = Buffer.address(buffer);
+        final ByteBuffer buf = bufPool.acquire();
+        final long addr = Buffer.address(buf);
         try {
-            if (pending > buffer.capacity()) {
+            if (pending > buf.capacity()) {
                 throw new IllegalStateException("network BIO read overflow " +
-                        "(pending: " + pending + ", capacity: " + buffer.capacity() + ')');
+                        "(pending: " + pending + ", capacity: " + buf.capacity() + ')');
             }
 
-            final int bioRead = SSL.readFromBIO(networkBIO, address, pending);
+            final int bioRead = SSL.readFromBIO(networkBIO, addr, pending);
             if (bioRead > 0) {
-                buffer.limit(bioRead);
-                dst.put(buffer);
+                buf.limit(bioRead);
+                dst.put(buf);
                 return bioRead;
             } else {
                 return 0;
             }
         } finally {
-            bufferPool.release(buffer);
+            bufPool.release(buf);
         }
     }
 
