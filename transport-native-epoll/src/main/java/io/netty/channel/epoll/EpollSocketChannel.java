@@ -171,7 +171,7 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
             NioSocketChannelOutboundBuffer in, int msgCount, ByteBuffer[] nioBuffers) throws IOException {
 
         int nioBufferCnt = in.nioBufferCount();
-        long expectedWrittenBytes = in.nioBufferCount();
+        long expectedWrittenBytes = in.nioBufferSize();
 
         long localWrittenBytes = Native.writev(fd, nioBuffers, 0, nioBufferCnt);
 
