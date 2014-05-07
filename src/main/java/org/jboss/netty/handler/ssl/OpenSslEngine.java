@@ -158,7 +158,7 @@ final class OpenSslEngine extends SSLEngine {
             int limit = src.limit();
             int len = Math.min(src.remaining(), MAX_PLAINTEXT_LENGTH);
             if (len > buffer.capacity()) {
-                throw new RuntimeException("Buffer pool write overflow");
+                throw new IllegalStateException("buffer pool write overflow");
             }
             src.limit(position + len);
 
@@ -188,7 +188,7 @@ final class OpenSslEngine extends SSLEngine {
             int position = src.position();
             int len = src.remaining();
             if (len > buffer.capacity()) {
-                throw new RuntimeException("Buffer pool write overflow");
+                throw new IllegalStateException("buffer pool write overflow");
             }
 
             buffer.put(src);
@@ -236,7 +236,7 @@ final class OpenSslEngine extends SSLEngine {
         final long address = Buffer.address(buffer);
         try {
             if (pending > buffer.capacity()) {
-                throw new RuntimeException("network BIO read overflow " +
+                throw new IllegalStateException("network BIO read overflow " +
                         "(pending: " + pending + ", capacity: " + buffer.capacity() + ')');
             }
 
@@ -560,7 +560,9 @@ final class OpenSslEngine extends SSLEngine {
     }
 
     @Override
-    public void setEnabledCipherSuites(String[] strings) { }
+    public void setEnabledCipherSuites(String[] strings) {
+        throw new UnsupportedOperationException();
+    }
 
     @Override
     public String[] getSupportedProtocols() {
@@ -573,7 +575,9 @@ final class OpenSslEngine extends SSLEngine {
     }
 
     @Override
-    public void setEnabledProtocols(String[] strings) { }
+    public void setEnabledProtocols(String[] strings) {
+        throw new UnsupportedOperationException();
+    }
 
     @Override
     public SSLSession getSession() {
@@ -748,7 +752,7 @@ final class OpenSslEngine extends SSLEngine {
     @Override
     public void setUseClientMode(boolean clientMode) {
         if (clientMode) {
-            throw new RuntimeException("client mode unsupported");
+            throw new UnsupportedOperationException();
         }
     }
 
@@ -758,7 +762,11 @@ final class OpenSslEngine extends SSLEngine {
     }
 
     @Override
-    public void setNeedClientAuth(boolean b) { }
+    public void setNeedClientAuth(boolean b) {
+        if (b) {
+            throw new UnsupportedOperationException();
+        }
+    }
 
     @Override
     public boolean getNeedClientAuth() {
@@ -766,7 +774,11 @@ final class OpenSslEngine extends SSLEngine {
     }
 
     @Override
-    public void setWantClientAuth(boolean b) { }
+    public void setWantClientAuth(boolean b) {
+        if (b) {
+            throw new UnsupportedOperationException();
+        }
+    }
 
     @Override
     public boolean getWantClientAuth() {
@@ -774,7 +786,11 @@ final class OpenSslEngine extends SSLEngine {
     }
 
     @Override
-    public void setEnableSessionCreation(boolean b) { }
+    public void setEnableSessionCreation(boolean b) {
+        if (b) {
+            throw new UnsupportedOperationException();
+        }
+    }
 
     @Override
     public boolean getEnableSessionCreation() {
