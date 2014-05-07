@@ -687,6 +687,8 @@ final class OpenSslEngine extends SSLEngine {
                 break;
             case 2:
                 throw RENEGOTIATION_UNSUPPORTED;
+            default:
+                throw new Error();
         }
     }
 
