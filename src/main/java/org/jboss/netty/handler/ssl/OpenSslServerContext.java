@@ -251,6 +251,10 @@ public final class OpenSslServerContext {
         return stats;
     }
 
+    public void setTicketKeys(byte[] keys) {
+        SSLContext.setSessionTicketKeys(ctx, keys);
+    }
+
     @Override
     @SuppressWarnings("FinalizeDeclaration")
     protected void finalize() throws Throwable {
