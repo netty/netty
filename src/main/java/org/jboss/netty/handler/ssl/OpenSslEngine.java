@@ -329,11 +329,12 @@ final class OpenSslEngine extends SSLEngine {
 
         // There was no pending data in the network BIO -- encrypt any application data
         for (int i = offset; i < length; ++ i) {
-            while (srcs[i].hasRemaining()) {
+            final ByteBuffer src = srcs[i];
+            while (src.hasRemaining()) {
 
                 // Write plaintext application data to the SSL engine
                 try {
-                    bytesConsumed += writePlaintextData(srcs[i]);
+                    bytesConsumed += writePlaintextData(src);
                 } catch (Exception e) {
                     throw new SSLException(e);
                 }
@@ -390,13 +391,14 @@ final class OpenSslEngine extends SSLEngine {
 
         int capacity = 0;
         for (int i = offset; i < offset + length; ++i) {
-            if (null == dsts[i]) {
+            ByteBuffer dst = dsts[i];
+            if (dst == null) {
                 throw new IllegalArgumentException();
             }
-            if (dsts[i].isReadOnly()) {
+            if (dst.isReadOnly()) {
                 throw new ReadOnlyBufferException();
             }
-            capacity += dsts[i].remaining();
+            capacity += dst.remaining();
         }
 
         // Prepare OpenSSL to work in server mode and receive handshake
@@ -452,14 +454,20 @@ final class OpenSslEngine extends SSLEngine {
 
         // Write decrypted data to dsts buffers
         int idx = offset;
-        while (pendingApp > 0) {
-            while (dsts[idx].capacity() == 0) {
-                ++ idx;
+        for (;;) {
+            ByteBuffer dst = dsts[idx];
+            if (!dst.hasRemaining()) {
+                idx ++;
+                continue;
+            }
+
+            if (pendingApp <= 0) {
+                break;
             }
 
             int bytesRead;
             try {
-                bytesRead = readPlaintextData(dsts[idx]);
+                bytesRead = readPlaintextData(dst);
             } catch (Exception e) {
                 throw new SSLException(e);
             }
@@ -467,10 +475,12 @@ final class OpenSslEngine extends SSLEngine {
             if (bytesRead == 0) {
                 break;
             }
+
             bytesProduced += bytesRead;
             pendingApp -= bytesRead;
-            if (dsts[idx].remaining() == 0) {
-                ++ idx;
+
+            if (!dst.hasRemaining()) {
+                idx ++;
             }
         }
 
