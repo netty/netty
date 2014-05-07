@@ -20,7 +20,7 @@
   <parent>
     <groupId>org.sonatype.oss</groupId>
     <artifactId>oss-parent</artifactId>
-    <version>7</version>
+    <version>9</version>
   </parent>
 
   <groupId>io.netty</groupId>
@@ -671,7 +671,7 @@
           <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>netty-build</artifactId>
-            <version>16</version>
+            <version>20</version>
           </dependency>
         </dependencies>
       </plugin>
