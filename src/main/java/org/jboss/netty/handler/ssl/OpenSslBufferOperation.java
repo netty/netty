@@ -51,7 +51,6 @@ abstract class OpenSslBufferOperation {
     }
 
     private void releaseDirectBuffer(ByteBuffer buffer) {
-        buffer.rewind();
         buffer.clear();
         pool.release(buffer);
     }
