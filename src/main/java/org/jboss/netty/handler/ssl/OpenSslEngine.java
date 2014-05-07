@@ -172,7 +172,7 @@ final class OpenSslEngine extends SSLEngine {
                 return sslWrote;
             } else {
                 src.position(position);
-                throw new IllegalStateException();
+                throw new IllegalStateException("SSL.writeToSSL() returned a non-positive value: " + sslWrote);
             }
         } finally {
             bufferPool.release(buffer);
