@@ -29,6 +29,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.CharsetUtil;
 
+import io.netty.util.ReferenceCountUtil;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -77,7 +78,7 @@ public class DefaultHttp2FrameIOTest {
     @Test
     public void dataShouldRoundtrip() throws Exception {
         ByteBuf data = dummyData();
-        writer.writeData(ctx, promise, 1000, data, 0, false, false, false);
+        writer.writeData(ctx, promise, 1000, data.retain().duplicate(), 0, false, false, false);
         ByteBuf frame = captureWrite();
         reader.readFrame(alloc, frame, observer);
         verify(observer).onDataRead(eq(1000), eq(data), eq(0), eq(false), eq(false), eq(false));
@@ -86,7 +87,7 @@ public class DefaultHttp2FrameIOTest {
     @Test
     public void dataWithPaddingShouldRoundtrip() throws Exception {
         ByteBuf data = dummyData();
-        writer.writeData(ctx, promise, 1, data, 256, true, true, true);
+        writer.writeData(ctx, promise, 1, data.retain().duplicate(), 256, true, true, true);
         ByteBuf frame = captureWrite();
         reader.readFrame(alloc, frame, observer);
         verify(observer).onDataRead(eq(1), eq(data), eq(256), eq(true), eq(true), eq(true));
@@ -142,7 +143,7 @@ public class DefaultHttp2FrameIOTest {
     @Test
     public void pingShouldRoundtrip() throws Exception {
         ByteBuf data = dummyData();
-        writer.writePing(ctx, promise, false, data);
+        writer.writePing(ctx, promise, false, data.retain().duplicate());
         ByteBuf frame = captureWrite();
         reader.readFrame(alloc, frame, observer);
         verify(observer).onPingRead(eq(data));
@@ -151,7 +152,7 @@ public class DefaultHttp2FrameIOTest {
     @Test
     public void pingAckShouldRoundtrip() throws Exception {
         ByteBuf data = dummyData();
-        writer.writePing(ctx, promise, true, data);
+        writer.writePing(ctx, promise, true, data.retain().duplicate());
         ByteBuf frame = captureWrite();
         reader.readFrame(alloc, frame, observer);
         verify(observer).onPingAckRead(eq(data));
@@ -160,7 +161,7 @@ public class DefaultHttp2FrameIOTest {
     @Test
     public void goAwayShouldRoundtrip() throws Exception {
         ByteBuf data = dummyData();
-        writer.writeGoAway(ctx, promise, 1, MAX_UNSIGNED_INT, data);
+        writer.writeGoAway(ctx, promise, 1, MAX_UNSIGNED_INT, data.retain().duplicate());
         ByteBuf frame = captureWrite();
         reader.readFrame(alloc, frame, observer);
         verify(observer).onGoAwayRead(eq(1), eq(MAX_UNSIGNED_INT), eq(data));
@@ -203,7 +204,7 @@ public class DefaultHttp2FrameIOTest {
 
     @Test
     public void emptyHeadersShouldRoundtrip() throws Exception {
-        Http2Headers headers = DefaultHttp2Headers.EMPTY_HEADERS;
+        Http2Headers headers = Http2Headers.EMPTY_HEADERS;
         writer.writeHeaders(ctx, promise, 1, headers, 0, true, true);
         ByteBuf frame = captureWrite();
         reader.readFrame(alloc, frame, observer);
@@ -212,7 +213,7 @@ public class DefaultHttp2FrameIOTest {
 
     @Test
     public void emptyHeadersWithPaddingShouldRoundtrip() throws Exception {
-        Http2Headers headers = DefaultHttp2Headers.EMPTY_HEADERS;
+        Http2Headers headers = Http2Headers.EMPTY_HEADERS;
         writer.writeHeaders(ctx, promise, 1, headers, 256, true, true);
         ByteBuf frame = captureWrite();
         reader.readFrame(alloc, frame, observer);
@@ -329,15 +330,15 @@ public class DefaultHttp2FrameIOTest {
     }
 
     private ByteBuf dummyData() {
-        return alloc.buffer().writeBytes("abcdefgh".getBytes(CharsetUtil.UTF_8));
+        return ReferenceCountUtil.releaseLater(alloc.buffer().writeBytes("abcdefgh".getBytes(CharsetUtil.UTF_8)));
     }
 
-    private Http2Headers dummyHeaders() {
+    private static Http2Headers dummyHeaders() {
         return DefaultHttp2Headers.newBuilder().method("GET").scheme("https")
                 .authority("example.org").path("/some/path").add("accept", "*/*").build();
     }
 
-    private Http2Headers largeHeaders() {
+    private static Http2Headers largeHeaders() {
         DefaultHttp2Headers.Builder builder = DefaultHttp2Headers.newBuilder();
         for (int i = 0; i < 100; ++i) {
             String key = "this-is-a-test-header-key-" + i;

@@ -98,6 +98,8 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
             return ctx.writeAndFlush(out, promise);
         } catch (RuntimeException e) {
             throw failAndThrow(promise, e);
+        } finally {
+            data.release();
         }
     }
 
@@ -220,6 +222,8 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
             return ctx.writeAndFlush(frame, promise);
         } catch (RuntimeException e) {
             throw failAndThrow(promise, e);
+        } finally {
+            data.release();
         }
     }
 
@@ -297,6 +301,8 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
             return ctx.writeAndFlush(frame, promise);
         } catch (RuntimeException e) {
             throw failAndThrow(promise, e);
+        } finally {
+            debugData.release();
         }
     }
 
@@ -351,6 +357,8 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
             return ctx.writeAndFlush(frame, promise);
         } catch (RuntimeException e) {
             throw failAndThrow(promise, e);
+        } finally {
+            protocolId.release();
         }
     }
 

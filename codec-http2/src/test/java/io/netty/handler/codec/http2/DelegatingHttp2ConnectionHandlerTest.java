@@ -577,9 +577,9 @@ public class DelegatingHttp2ConnectionHandlerTest {
         verify(reader).maxHeaderTableSize(2000);
     }
 
-    private ByteBuf dummyData() {
+    private static ByteBuf dummyData() {
         // The buffer is purposely 8 bytes so it will even work for a ping frame.
-        return Unpooled.copiedBuffer("abcdefgh", UTF_8);
+        return Unpooled.wrappedBuffer("abcdefgh".getBytes(UTF_8));
     }
 
     private void mockContext() {

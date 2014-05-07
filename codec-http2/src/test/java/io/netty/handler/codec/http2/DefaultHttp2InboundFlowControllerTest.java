@@ -113,11 +113,13 @@ public class DefaultHttp2InboundFlowControllerTest {
     }
 
     private void applyFlowControl(int dataSize, boolean endOfStream) throws Http2Exception {
-        controller.applyInboundFlowControl(STREAM_ID, dummyData(dataSize), 0, endOfStream, false,
+        ByteBuf buf = dummyData(dataSize);
+        controller.applyInboundFlowControl(STREAM_ID, buf, 0, endOfStream, false,
                 false, frameWriter);
+        buf.release();
     }
 
-    private ByteBuf dummyData(int size) {
+    private static ByteBuf dummyData(int size) {
         ByteBuf buffer = Unpooled.buffer(size);
         buffer.writerIndex(size);
         return buffer;

@@ -115,7 +115,6 @@ public class Http2FrameRoundtripTest {
 
         frameWriter.writeData(ctx(), newPromise(), 0x7FFFFFFF,
                 Unpooled.copiedBuffer(text.getBytes()), 100, true, false, false);
-        flush();
 
         awaitRequests();
         verify(serverObserver).onDataRead(eq(0x7FFFFFFF), dataCaptor.capture(), eq(100), eq(true),
@@ -128,7 +127,6 @@ public class Http2FrameRoundtripTest {
                 new DefaultHttp2Headers.Builder().method("GET").scheme("https")
                         .authority("example.org").path("/some/path/resource2").build();
         frameWriter.writeHeaders(ctx(), newPromise(), 0x7FFFFFFF, headers, 0, true, false);
-        flush();
 
         awaitRequests();
         verify(serverObserver).onHeadersRead(eq(0x7FFFFFFF), eq(headers), eq(0), eq(true),
@@ -142,7 +140,6 @@ public class Http2FrameRoundtripTest {
                         .authority("example.org").path("/some/path/resource2").build();
         frameWriter.writeHeaders(ctx(), newPromise(), 0x7FFFFFFF, headers, 4, (short) 255, true, 0,
                 true, false);
-        flush();
 
         awaitRequests();
         verify(serverObserver).onHeadersRead(eq(0x7FFFFFFF), eq(headers), eq(4), eq((short) 255),
@@ -154,7 +151,6 @@ public class Http2FrameRoundtripTest {
         String text = "test";
         frameWriter.writeGoAway(ctx(), newPromise(), 0x7FFFFFFF, 0xFFFFFFFFL,
                 Unpooled.copiedBuffer(text.getBytes()));
-        flush();
 
         awaitRequests();
         verify(serverObserver).onGoAwayRead(eq(0x7FFFFFFF), eq(0xFFFFFFFFL), dataCaptor.capture());
@@ -164,7 +160,6 @@ public class Http2FrameRoundtripTest {
     public void pingFrameShouldMatch() throws Exception {
         ByteBuf buf = Unpooled.copiedBuffer("01234567", UTF_8);
         frameWriter.writePing(ctx(), ctx().newPromise(), true, buf);
-        flush();
 
         awaitRequests();
         verify(serverObserver).onPingAckRead(dataCaptor.capture());
@@ -173,7 +168,6 @@ public class Http2FrameRoundtripTest {
     @Test
     public void priorityFrameShouldMatch() throws Exception {
         frameWriter.writePriority(ctx(), newPromise(), 0x7FFFFFFF, 1, (short) 1, true);
-        flush();
 
         awaitRequests();
         verify(serverObserver).onPriorityRead(eq(0x7FFFFFFF), eq(1), eq((short) 1), eq(true));
@@ -185,7 +179,6 @@ public class Http2FrameRoundtripTest {
                 new DefaultHttp2Headers.Builder().method("GET").scheme("https")
                         .authority("example.org").path("/some/path/resource2").build();
         frameWriter.writePushPromise(ctx(), newPromise(), 0x7FFFFFFF, 1, headers, 5);
-        flush();
 
         awaitRequests();
         verify(serverObserver).onPushPromiseRead(eq(0x7FFFFFFF), eq(1), eq(headers), eq(5));
@@ -194,7 +187,6 @@ public class Http2FrameRoundtripTest {
     @Test
     public void rstStreamFrameShouldMatch() throws Exception {
         frameWriter.writeRstStream(ctx(), newPromise(), 0x7FFFFFFF, 0xFFFFFFFFL);
-        flush();
 
         awaitRequests();
         verify(serverObserver).onRstStreamRead(eq(0x7FFFFFFF), eq(0xFFFFFFFFL));
@@ -208,7 +200,6 @@ public class Http2FrameRoundtripTest {
         settings.maxConcurrentStreams(1000);
         settings.maxHeaderTableSize(4096);
         frameWriter.writeSettings(ctx(), newPromise(), settings);
-        flush();
 
         awaitRequests();
         verify(serverObserver).onSettingsRead(eq(settings));
@@ -217,7 +208,6 @@ public class Http2FrameRoundtripTest {
     @Test
     public void windowUpdateFrameShouldMatch() throws Exception {
         frameWriter.writeWindowUpdate(ctx(), newPromise(), 0x7FFFFFFF, 0x7FFFFFFF);
-        flush();
 
         awaitRequests();
         verify(serverObserver).onWindowUpdateRead(eq(0x7FFFFFFF), eq(0x7FFFFFFF));
@@ -238,7 +228,6 @@ public class Http2FrameRoundtripTest {
                     false, false);
             frameWriter.writeData(ctx(), newPromise(), i, Unpooled.copiedBuffer(text.getBytes()),
                     0, true, true, false);
-            flush();
         }
 
         // Wait for all frames to be received.
@@ -255,10 +244,6 @@ public class Http2FrameRoundtripTest {
 
     private ChannelPromise newPromise() {
         return ctx().newPromise();
-    }
-
-    private void flush() {
-        ctx().flush();
     }
 
     private final class FrameAdapter extends ByteToMessageDecoder {
