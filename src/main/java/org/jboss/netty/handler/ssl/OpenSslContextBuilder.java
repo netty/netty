@@ -57,7 +57,8 @@ public class OpenSslContextBuilder {
 
     public OpenSslContextBuilder cipherSpec(Iterable<String> cipherSpec) {
         if (cipherSpec == null) {
-            cipherSpec = Collections.emptyList();
+            this.cipherSpec = null;
+            return this;
         }
 
         List<String> list = new ArrayList<String>();
@@ -76,7 +77,11 @@ public class OpenSslContextBuilder {
             }
         }
 
-        this.cipherSpec = list;
+        if (list.isEmpty()) {
+            this.cipherSpec = null;
+        } else {
+            this.cipherSpec = list;
+        }
         return this;
     }
 
