@@ -125,6 +125,7 @@ final class OpenSslEngine extends SSLEngine {
     private boolean engineClosed;
 
     private final OpenSslBufferPool bufferPool;
+    private SSLSession session;
 
     OpenSslEngine(long sslContext, OpenSslBufferPool bufferPool) {
         ensureAvailability();
@@ -581,85 +582,93 @@ final class OpenSslEngine extends SSLEngine {
 
     @Override
     public SSLSession getSession() {
-        return new SSLSession() {
-            public byte[] getId() {
-               return String.valueOf(ssl).getBytes();
-            }
+        SSLSession session = this.session;
+        if (session == null) {
+            this.session = session = new SSLSession() {
+                public byte[] getId() {
+                    return String.valueOf(ssl).getBytes();
+                }
 
-            public SSLSessionContext getSessionContext() {
-                return null;
-            }
+                public SSLSessionContext getSessionContext() {
+                    return null;
+                }
 
-            public long getCreationTime() {
-                return 0;
-            }
+                public long getCreationTime() {
+                    return 0;
+                }
 
-            public long getLastAccessedTime() {
-                return 0;
-            }
+                public long getLastAccessedTime() {
+                    return 0;
+                }
 
-            public void invalidate() { }
+                public void invalidate() {
+                }
 
-            public boolean isValid() {
-                return false;
-            }
+                public boolean isValid() {
+                    return false;
+                }
 
-            public void putValue(String s, Object o) { }
+                public void putValue(String s, Object o) {
+                }
 
-            public Object getValue(String s) {
-                return null;
-            }
+                public Object getValue(String s) {
+                    return null;
+                }
 
-            public void removeValue(String s) { }
+                public void removeValue(String s) {
+                }
 
-            public String[] getValueNames() {
-                return EmptyArrays.EMPTY_STRINGS;
-            }
+                public String[] getValueNames() {
+                    return EmptyArrays.EMPTY_STRINGS;
+                }
 
-            public Certificate[] getPeerCertificates() {
-                return EMPTY_CERTIFICATES;
-            }
+                public Certificate[] getPeerCertificates() {
+                    return EMPTY_CERTIFICATES;
+                }
 
-            public Certificate[] getLocalCertificates() {
-                return EMPTY_CERTIFICATES;
-            }
+                public Certificate[] getLocalCertificates() {
+                    return EMPTY_CERTIFICATES;
+                }
 
-            public X509Certificate[] getPeerCertificateChain() {
-                return EMPTY_X509_CERTIFICATES;
-            }
+                public X509Certificate[] getPeerCertificateChain() {
+                    return EMPTY_X509_CERTIFICATES;
+                }
 
-            public Principal getPeerPrincipal() {
-                return null;
-            }
+                public Principal getPeerPrincipal() {
+                    return null;
+                }
 
-            public Principal getLocalPrincipal() {
-                return null;
-            }
+                public Principal getLocalPrincipal() {
+                    return null;
+                }
 
-            public String getCipherSuite() {
-                return cipher;
-            }
+                public String getCipherSuite() {
+                    return cipher;
+                }
 
-            public String getProtocol() {
-                return protocol;
-            }
+                public String getProtocol() {
+                    return protocol;
+                }
 
-            public String getPeerHost() {
-                return null;
-            }
+                public String getPeerHost() {
+                    return null;
+                }
 
-            public int getPeerPort() {
-                return 0;
-            }
+                public int getPeerPort() {
+                    return 0;
+                }
 
-            public int getPacketBufferSize() {
-                return MAX_ENCRYPTED_PACKET;
-            }
+                public int getPacketBufferSize() {
+                    return MAX_ENCRYPTED_PACKET;
+                }
 
-            public int getApplicationBufferSize() {
-                return MAX_PLAINTEXT_LENGTH;
-            }
-        };
+                public int getApplicationBufferSize() {
+                    return MAX_PLAINTEXT_LENGTH;
+                }
+            };
+        }
+
+        return session;
     }
 
     /**
