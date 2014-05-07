@@ -15,7 +15,6 @@
  */
 package org.jboss.netty.handler.ssl;
 
-import org.apache.tomcat.jni.Pool;
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -74,6 +73,7 @@ public abstract class AbstractSocketSslEchoTest {
 
         List<SSLEngineFactory> serverEngines = new ArrayList<SSLEngineFactory>();
         serverEngines.add(new SSLEngineFactory("JDK") {
+            @Override
             public SSLEngine newEngine() {
                 return SecureChatSslContextFactory.getServerContext().createSSLEngine();
             }
@@ -81,6 +81,7 @@ public abstract class AbstractSocketSslEchoTest {
 
         List<SSLEngineFactory> clientEngines = new ArrayList<SSLEngineFactory>();
         clientEngines.add(new SSLEngineFactory("JDK") {
+            @Override
             public SSLEngine newEngine() {
                 return SecureChatSslContextFactory.getClientContext().createSSLEngine();
             }
@@ -116,18 +117,13 @@ public abstract class AbstractSocketSslEchoTest {
             }
             keyOut.close();
 
-            // FIXME: APR pool, OpenSSL buffer pool, and OpenSslServerEngineFactory should be freed after the test.
-            final long pool = Pool.create(0);
-            final OpenSslBufferPool bufferPool = new OpenSslBufferPool(Runtime.getRuntime().availableProcessors() * 2);
-            final OpenSslServerEngineFactory factory = new OpenSslServerEngineFactory(pool, bufferPool);
-
-            factory.setCertPath(certPath);
-            factory.setKeyPath(keyPath);
-            factory.init();
+            final OpenSslContextBuilder ctxBuilder = new OpenSslContextBuilder();
+            final OpenSslServerContext ctx = ctxBuilder.certPath(certPath).keyPath(keyPath).newServerContext();
 
             serverEngines.add(new SSLEngineFactory("TCNative") {
+                @Override
                 public SSLEngine newEngine() throws Exception {
-                    return factory.newServerEngine();
+                    return ctx.newEngine();
                 }
             });
 
@@ -152,11 +148,11 @@ public abstract class AbstractSocketSslEchoTest {
         return params;
     }
 
-    protected static abstract class SSLEngineFactory {
+    protected abstract static class SSLEngineFactory {
 
         private final String name;
 
-        public SSLEngineFactory(String name) {
+        SSLEngineFactory(String name) {
             this.name = name;
         }
 

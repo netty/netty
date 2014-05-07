@@ -47,7 +47,7 @@ import static javax.net.ssl.SSLEngineResult.Status.*;
  *   SSLEngine: http://download.oracle.com/javase/1,5.0/docs/api/javax/net/ssl/SSLEngine.html
  *   OpenSSL:   http://www.openssl.org/docs/crypto/BIO_s_bio.html#example
  */
-public class OpenSslEngine extends SSLEngine {
+final class OpenSslEngine extends SSLEngine {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(OpenSslEngine.class);
 
