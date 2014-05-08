@@ -366,7 +366,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
     protected final void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out)
             throws Exception {
         try {
-            frameReader.readFrame(ctx.alloc(), in, internalFrameObserver);
+            frameReader.readFrame(ctx, in, internalFrameObserver);
         } catch (Http2Exception e) {
             processHttp2Exception(ctx, e);
         }
@@ -514,8 +514,8 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
     private final class FrameReadObserver implements Http2FrameObserver {
 
         @Override
-        public void onDataRead(int streamId, ByteBuf data, int padding, boolean endOfStream,
-                boolean endOfSegment, boolean compressed) throws Http2Exception {
+        public void onDataRead(final ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
+                boolean endOfStream, boolean endOfSegment, boolean compressed) throws Http2Exception {
             verifyInitialSettingsReceived();
 
             if (!connection.local().allowCompressedData() && compressed) {
@@ -546,22 +546,21 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
                 closeRemoteSide(stream, ctx, ctx.newSucceededFuture());
             }
 
-            AbstractHttp2ConnectionHandler.this.onDataRead(streamId, data, padding, endOfStream,
+            AbstractHttp2ConnectionHandler.this.onDataRead(ctx, streamId, data, padding, endOfStream,
                     endOfSegment, compressed);
         }
 
         @Override
-        public void onHeadersRead(int streamId, Http2Headers headers, int padding,
-                boolean endStream, boolean endSegment) throws Http2Exception {
-            onHeadersRead(streamId, headers, 0, DEFAULT_PRIORITY_WEIGHT, false, padding, endStream,
-                    endSegment);
+        public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
+                int padding, boolean endStream, boolean endSegment) throws Http2Exception {
+            onHeadersRead(ctx, streamId, headers, 0, DEFAULT_PRIORITY_WEIGHT, false, padding,
+                    endStream, endSegment);
         }
 
         @Override
-        public void
-                onHeadersRead(int streamId, Http2Headers headers, int streamDependency,
-                        short weight, boolean exclusive, int padding, boolean endStream,
-                        boolean endSegment) throws Http2Exception {
+        public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
+                int streamDependency, short weight, boolean exclusive, int padding,
+                boolean endStream, boolean endSegment) throws Http2Exception {
             verifyInitialSettingsReceived();
 
             if (isInboundStreamAfterGoAway(streamId)) {
@@ -607,13 +606,13 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
                 }
             }
 
-            AbstractHttp2ConnectionHandler.this.onHeadersRead(streamId, headers, streamDependency,
+            AbstractHttp2ConnectionHandler.this.onHeadersRead(ctx, streamId, headers, streamDependency,
                     weight, exclusive, padding, endStream, endSegment);
         }
 
         @Override
-        public void onPriorityRead(int streamId, int streamDependency, short weight,
-                boolean exclusive) throws Http2Exception {
+        public void onPriorityRead(ChannelHandlerContext ctx, int streamId, int streamDependency,
+                short weight, boolean exclusive) throws Http2Exception {
             verifyInitialSettingsReceived();
 
             if (isInboundStreamAfterGoAway(streamId)) {
@@ -624,12 +623,13 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
             // Set the priority for this stream on the flow controller.
             outboundFlow.updateStream(streamId, streamDependency, weight, exclusive);
 
-            AbstractHttp2ConnectionHandler.this.onPriorityRead(streamId, streamDependency, weight,
-                    exclusive);
+            AbstractHttp2ConnectionHandler.this.onPriorityRead(ctx, streamId, streamDependency,
+                    weight, exclusive);
         }
 
         @Override
-        public void onRstStreamRead(int streamId, long errorCode) throws Http2Exception {
+        public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode)
+                throws Http2Exception {
             verifyInitialSettingsReceived();
 
             if (isInboundStreamAfterGoAway(streamId)) {
@@ -645,18 +645,19 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
 
             close(stream, ctx, ctx.newSucceededFuture());
 
-            AbstractHttp2ConnectionHandler.this.onRstStreamRead(streamId, errorCode);
+            AbstractHttp2ConnectionHandler.this.onRstStreamRead(ctx, streamId, errorCode);
         }
 
         @Override
-        public void onSettingsAckRead() throws Http2Exception {
+        public void onSettingsAckRead(ChannelHandlerContext ctx) throws Http2Exception {
             verifyInitialSettingsReceived();
 
-            AbstractHttp2ConnectionHandler.this.onSettingsAckRead();
+            AbstractHttp2ConnectionHandler.this.onSettingsAckRead(ctx);
         }
 
         @Override
-        public void onSettingsRead(Http2Settings settings) throws Http2Exception {
+        public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings)
+                throws Http2Exception {
             if (settings.hasAllowCompressedData()) {
                 connection.remote().allowCompressedData(settings.allowCompressedData());
             }
@@ -683,29 +684,29 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
             // We've received at least one non-ack settings frame from the remote endpoint.
             initialSettingsReceived = true;
 
-            AbstractHttp2ConnectionHandler.this.onSettingsRead(settings);
+            AbstractHttp2ConnectionHandler.this.onSettingsRead(ctx, settings);
         }
 
         @Override
-        public void onPingRead(ByteBuf data) throws Http2Exception {
+        public void onPingRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
             verifyInitialSettingsReceived();
 
             // Send an ack back to the remote client.
             frameWriter.writePing(ctx, ctx.newPromise(), true, data);
 
-            AbstractHttp2ConnectionHandler.this.onPingRead(data);
+            AbstractHttp2ConnectionHandler.this.onPingRead(ctx, data);
         }
 
         @Override
-        public void onPingAckRead(ByteBuf data) throws Http2Exception {
+        public void onPingAckRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
             verifyInitialSettingsReceived();
 
-            AbstractHttp2ConnectionHandler.this.onPingAckRead(data);
+            AbstractHttp2ConnectionHandler.this.onPingAckRead(ctx, data);
         }
 
         @Override
-        public void onPushPromiseRead(int streamId, int promisedStreamId, Http2Headers headers,
-                int padding) throws Http2Exception {
+        public void onPushPromiseRead(ChannelHandlerContext ctx, int streamId,
+                int promisedStreamId, Http2Headers headers, int padding) throws Http2Exception {
             verifyInitialSettingsReceived();
 
             if (isInboundStreamAfterGoAway(streamId)) {
@@ -717,21 +718,22 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
             Http2Stream parentStream = connection.requireStream(streamId);
             connection.remote().reservePushStream(promisedStreamId, parentStream);
 
-            AbstractHttp2ConnectionHandler.this.onPushPromiseRead(streamId, promisedStreamId,
+            AbstractHttp2ConnectionHandler.this.onPushPromiseRead(ctx, streamId, promisedStreamId,
                     headers, padding);
         }
 
         @Override
-        public void onGoAwayRead(int lastStreamId, long errorCode, ByteBuf debugData)
+        public void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData)
                 throws Http2Exception {
             // Don't allow any more connections to be created.
             connection.goAwayReceived();
 
-            AbstractHttp2ConnectionHandler.this.onGoAwayRead(lastStreamId, errorCode, debugData);
+            AbstractHttp2ConnectionHandler.this.onGoAwayRead(ctx, lastStreamId, errorCode, debugData);
         }
 
         @Override
-        public void onWindowUpdateRead(int streamId, int windowSizeIncrement) throws Http2Exception {
+        public void onWindowUpdateRead(ChannelHandlerContext ctx, int streamId,
+                int windowSizeIncrement) throws Http2Exception {
             verifyInitialSettingsReceived();
 
             if (isInboundStreamAfterGoAway(streamId)) {
@@ -751,18 +753,18 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
             // Update the outbound flow controller.
             outboundFlow.updateOutboundWindowSize(streamId, windowSizeIncrement);
 
-            AbstractHttp2ConnectionHandler.this.onWindowUpdateRead(streamId, windowSizeIncrement);
+            AbstractHttp2ConnectionHandler.this.onWindowUpdateRead(ctx, streamId, windowSizeIncrement);
         }
 
         @Override
-        public void onAltSvcRead(int streamId, long maxAge, int port, ByteBuf protocolId,
-                String host, String origin) throws Http2Exception {
-            AbstractHttp2ConnectionHandler.this.onAltSvcRead(streamId, maxAge, port, protocolId,
-                    host, origin);
+        public void onAltSvcRead(ChannelHandlerContext ctx, int streamId, long maxAge, int port,
+                ByteBuf protocolId, String host, String origin) throws Http2Exception {
+            AbstractHttp2ConnectionHandler.this.onAltSvcRead(ctx, streamId, maxAge, port,
+                    protocolId, host, origin);
         }
 
         @Override
-        public void onBlockedRead(int streamId) throws Http2Exception {
+        public void onBlockedRead(ChannelHandlerContext ctx, int streamId) throws Http2Exception {
             verifyInitialSettingsReceived();
 
             if (isInboundStreamAfterGoAway(streamId)) {
@@ -782,7 +784,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
             // Update the outbound flow controller.
             outboundFlow.setBlocked(streamId);
 
-            AbstractHttp2ConnectionHandler.this.onBlockedRead(streamId);
+            AbstractHttp2ConnectionHandler.this.onBlockedRead(ctx, streamId);
         }
 
         /**
