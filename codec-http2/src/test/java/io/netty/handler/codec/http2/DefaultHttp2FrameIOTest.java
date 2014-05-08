@@ -71,8 +71,8 @@ public class DefaultHttp2FrameIOTest {
         ByteBuf data = Unpooled.EMPTY_BUFFER;
         writer.writeData(ctx, promise, 1000, data, 0, false, false, false);
         ByteBuf frame = captureWrite();
-        reader.readFrame(alloc, frame, observer);
-        verify(observer).onDataRead(eq(1000), eq(data), eq(0), eq(false), eq(false), eq(false));
+        reader.readFrame(ctx, frame, observer);
+        verify(observer).onDataRead(eq(ctx), eq(1000), eq(data), eq(0), eq(false), eq(false), eq(false));
     }
 
     @Test
@@ -80,8 +80,8 @@ public class DefaultHttp2FrameIOTest {
         ByteBuf data = dummyData();
         writer.writeData(ctx, promise, 1000, data.retain().duplicate(), 0, false, false, false);
         ByteBuf frame = captureWrite();
-        reader.readFrame(alloc, frame, observer);
-        verify(observer).onDataRead(eq(1000), eq(data), eq(0), eq(false), eq(false), eq(false));
+        reader.readFrame(ctx, frame, observer);
+        verify(observer).onDataRead(eq(ctx), eq(1000), eq(data), eq(0), eq(false), eq(false), eq(false));
     }
 
     @Test
@@ -89,32 +89,32 @@ public class DefaultHttp2FrameIOTest {
         ByteBuf data = dummyData();
         writer.writeData(ctx, promise, 1, data.retain().duplicate(), 256, true, true, true);
         ByteBuf frame = captureWrite();
-        reader.readFrame(alloc, frame, observer);
-        verify(observer).onDataRead(eq(1), eq(data), eq(256), eq(true), eq(true), eq(true));
+        reader.readFrame(ctx, frame, observer);
+        verify(observer).onDataRead(eq(ctx), eq(1), eq(data), eq(256), eq(true), eq(true), eq(true));
     }
 
     @Test
     public void priorityShouldRoundtrip() throws Exception {
         writer.writePriority(ctx, promise, 1, 2, (short) 255, true);
         ByteBuf frame = captureWrite();
-        reader.readFrame(alloc, frame, observer);
-        verify(observer).onPriorityRead(eq(1), eq(2), eq((short) 255), eq(true));
+        reader.readFrame(ctx, frame, observer);
+        verify(observer).onPriorityRead(eq(ctx), eq(1), eq(2), eq((short) 255), eq(true));
     }
 
     @Test
     public void rstStreamShouldRoundtrip() throws Exception {
         writer.writeRstStream(ctx, promise, 1, MAX_UNSIGNED_INT);
         ByteBuf frame = captureWrite();
-        reader.readFrame(alloc, frame, observer);
-        verify(observer).onRstStreamRead(eq(1), eq(MAX_UNSIGNED_INT));
+        reader.readFrame(ctx, frame, observer);
+        verify(observer).onRstStreamRead(eq(ctx), eq(1), eq(MAX_UNSIGNED_INT));
     }
 
     @Test
     public void emptySettingsShouldRoundtrip() throws Exception {
         writer.writeSettings(ctx, promise, new Http2Settings());
         ByteBuf frame = captureWrite();
-        reader.readFrame(alloc, frame, observer);
-        verify(observer).onSettingsRead(eq(new Http2Settings()));
+        reader.readFrame(ctx, frame, observer);
+        verify(observer).onSettingsRead(eq(ctx), eq(new Http2Settings()));
     }
 
     @Test
@@ -128,16 +128,16 @@ public class DefaultHttp2FrameIOTest {
 
         writer.writeSettings(ctx, promise, settings);
         ByteBuf frame = captureWrite();
-        reader.readFrame(alloc, frame, observer);
-        verify(observer).onSettingsRead(eq(settings));
+        reader.readFrame(ctx, frame, observer);
+        verify(observer).onSettingsRead(eq(ctx), eq(settings));
     }
 
     @Test
     public void settingsAckShouldRoundtrip() throws Exception {
         writer.writeSettingsAck(ctx, promise);
         ByteBuf frame = captureWrite();
-        reader.readFrame(alloc, frame, observer);
-        verify(observer).onSettingsAckRead();
+        reader.readFrame(ctx, frame, observer);
+        verify(observer).onSettingsAckRead(eq(ctx));
     }
 
     @Test
@@ -145,8 +145,8 @@ public class DefaultHttp2FrameIOTest {
         ByteBuf data = dummyData();
         writer.writePing(ctx, promise, false, data.retain().duplicate());
         ByteBuf frame = captureWrite();
-        reader.readFrame(alloc, frame, observer);
-        verify(observer).onPingRead(eq(data));
+        reader.readFrame(ctx, frame, observer);
+        verify(observer).onPingRead(eq(ctx), eq(data));
     }
 
     @Test
@@ -154,8 +154,8 @@ public class DefaultHttp2FrameIOTest {
         ByteBuf data = dummyData();
         writer.writePing(ctx, promise, true, data.retain().duplicate());
         ByteBuf frame = captureWrite();
-        reader.readFrame(alloc, frame, observer);
-        verify(observer).onPingAckRead(eq(data));
+        reader.readFrame(ctx, frame, observer);
+        verify(observer).onPingAckRead(eq(ctx), eq(data));
     }
 
     @Test
@@ -163,16 +163,16 @@ public class DefaultHttp2FrameIOTest {
         ByteBuf data = dummyData();
         writer.writeGoAway(ctx, promise, 1, MAX_UNSIGNED_INT, data.retain().duplicate());
         ByteBuf frame = captureWrite();
-        reader.readFrame(alloc, frame, observer);
-        verify(observer).onGoAwayRead(eq(1), eq(MAX_UNSIGNED_INT), eq(data));
+        reader.readFrame(ctx, frame, observer);
+        verify(observer).onGoAwayRead(eq(ctx), eq(1), eq(MAX_UNSIGNED_INT), eq(data));
     }
 
     @Test
     public void windowUpdateShouldRoundtrip() throws Exception {
         writer.writeWindowUpdate(ctx, promise, 1, Integer.MAX_VALUE);
         ByteBuf frame = captureWrite();
-        reader.readFrame(alloc, frame, observer);
-        verify(observer).onWindowUpdateRead(eq(1), eq(Integer.MAX_VALUE));
+        reader.readFrame(ctx, frame, observer);
+        verify(observer).onWindowUpdateRead(eq(ctx), eq(1), eq(Integer.MAX_VALUE));
     }
 
     @Test
@@ -180,8 +180,8 @@ public class DefaultHttp2FrameIOTest {
         writer.writeAltSvc(ctx, promise, 1, MAX_UNSIGNED_INT, MAX_UNSIGNED_SHORT, dummyData(), "host",
                 "origin");
         ByteBuf frame = captureWrite();
-        reader.readFrame(alloc, frame, observer);
-        verify(observer).onAltSvcRead(eq(1), eq(MAX_UNSIGNED_INT), eq(MAX_UNSIGNED_SHORT),
+        reader.readFrame(ctx, frame, observer);
+        verify(observer).onAltSvcRead(eq(ctx), eq(1), eq(MAX_UNSIGNED_INT), eq(MAX_UNSIGNED_SHORT),
                 eq(dummyData()), eq("host"), eq("origin"));
     }
 
@@ -189,8 +189,8 @@ public class DefaultHttp2FrameIOTest {
     public void altSvcWithoutOriginShouldRoundtrip() throws Exception {
         writer.writeAltSvc(ctx, promise, 1, MAX_UNSIGNED_INT, MAX_UNSIGNED_SHORT, dummyData(), "host", null);
         ByteBuf frame = captureWrite();
-        reader.readFrame(alloc, frame, observer);
-        verify(observer).onAltSvcRead(eq(1), eq(MAX_UNSIGNED_INT), eq(MAX_UNSIGNED_SHORT),
+        reader.readFrame(ctx, frame, observer);
+        verify(observer).onAltSvcRead(eq(ctx), eq(1), eq(MAX_UNSIGNED_INT), eq(MAX_UNSIGNED_SHORT),
                 eq(dummyData()), eq("host"), isNull(String.class));
     }
 
@@ -198,8 +198,8 @@ public class DefaultHttp2FrameIOTest {
     public void blockedShouldRoundtrip() throws Exception {
         writer.writeBlocked(ctx, promise, 1);
         ByteBuf frame = captureWrite();
-        reader.readFrame(alloc, frame, observer);
-        verify(observer).onBlockedRead(eq(1));
+        reader.readFrame(ctx, frame, observer);
+        verify(observer).onBlockedRead(eq(ctx), eq(1));
     }
 
     @Test
@@ -207,8 +207,8 @@ public class DefaultHttp2FrameIOTest {
         Http2Headers headers = Http2Headers.EMPTY_HEADERS;
         writer.writeHeaders(ctx, promise, 1, headers, 0, true, true);
         ByteBuf frame = captureWrite();
-        reader.readFrame(alloc, frame, observer);
-        verify(observer).onHeadersRead(eq(1), eq(headers), eq(0), eq(true), eq(true));
+        reader.readFrame(ctx, frame, observer);
+        verify(observer).onHeadersRead(eq(ctx), eq(1), eq(headers), eq(0), eq(true), eq(true));
     }
 
     @Test
@@ -216,8 +216,8 @@ public class DefaultHttp2FrameIOTest {
         Http2Headers headers = Http2Headers.EMPTY_HEADERS;
         writer.writeHeaders(ctx, promise, 1, headers, 256, true, true);
         ByteBuf frame = captureWrite();
-        reader.readFrame(alloc, frame, observer);
-        verify(observer).onHeadersRead(eq(1), eq(headers), eq(256), eq(true), eq(true));
+        reader.readFrame(ctx, frame, observer);
+        verify(observer).onHeadersRead(eq(ctx), eq(1), eq(headers), eq(256), eq(true), eq(true));
     }
 
     @Test
@@ -225,8 +225,8 @@ public class DefaultHttp2FrameIOTest {
         Http2Headers headers = dummyHeaders();
         writer.writeHeaders(ctx, promise, 1, headers, 0, true, true);
         ByteBuf frame = captureWrite();
-        reader.readFrame(alloc, frame, observer);
-        verify(observer).onHeadersRead(eq(1), eq(headers), eq(0), eq(true), eq(true));
+        reader.readFrame(ctx, frame, observer);
+        verify(observer).onHeadersRead(eq(ctx), eq(1), eq(headers), eq(0), eq(true), eq(true));
     }
 
     @Test
@@ -234,8 +234,8 @@ public class DefaultHttp2FrameIOTest {
         Http2Headers headers = dummyHeaders();
         writer.writeHeaders(ctx, promise, 1, headers, 256, true, true);
         ByteBuf frame = captureWrite();
-        reader.readFrame(alloc, frame, observer);
-        verify(observer).onHeadersRead(eq(1), eq(headers), eq(256), eq(true), eq(true));
+        reader.readFrame(ctx, frame, observer);
+        verify(observer).onHeadersRead(eq(ctx), eq(1), eq(headers), eq(256), eq(true), eq(true));
     }
 
     @Test
@@ -243,8 +243,8 @@ public class DefaultHttp2FrameIOTest {
         Http2Headers headers = dummyHeaders();
         writer.writeHeaders(ctx, promise, 1, headers, 2, (short) 3, true, 0, true, true);
         ByteBuf frame = captureWrite();
-        reader.readFrame(alloc, frame, observer);
-        verify(observer).onHeadersRead(eq(1), eq(headers), eq(2), eq((short) 3), eq(true), eq(0),
+        reader.readFrame(ctx, frame, observer);
+        verify(observer).onHeadersRead(eq(ctx), eq(1), eq(headers), eq(2), eq((short) 3), eq(true), eq(0),
                 eq(true), eq(true));
     }
 
@@ -253,8 +253,8 @@ public class DefaultHttp2FrameIOTest {
         Http2Headers headers = dummyHeaders();
         writer.writeHeaders(ctx, promise, 1, headers, 2, (short) 3, true, 256, true, true);
         ByteBuf frame = captureWrite();
-        reader.readFrame(alloc, frame, observer);
-        verify(observer).onHeadersRead(eq(1), eq(headers), eq(2), eq((short) 3), eq(true), eq(256),
+        reader.readFrame(ctx, frame, observer);
+        verify(observer).onHeadersRead(eq(ctx), eq(1), eq(headers), eq(2), eq((short) 3), eq(true), eq(256),
                 eq(true), eq(true));
     }
 
@@ -263,8 +263,8 @@ public class DefaultHttp2FrameIOTest {
         Http2Headers headers = largeHeaders();
         writer.writeHeaders(ctx, promise, 1, headers, 2, (short) 3, true, 0, true, true);
         ByteBuf frame = captureWrite();
-        reader.readFrame(alloc, frame, observer);
-        verify(observer).onHeadersRead(eq(1), eq(headers), eq(2), eq((short) 3), eq(true), eq(0),
+        reader.readFrame(ctx, frame, observer);
+        verify(observer).onHeadersRead(eq(ctx), eq(1), eq(headers), eq(2), eq((short) 3), eq(true), eq(0),
                 eq(true), eq(true));
     }
 
@@ -273,8 +273,8 @@ public class DefaultHttp2FrameIOTest {
         Http2Headers headers = largeHeaders();
         writer.writeHeaders(ctx, promise, 1, headers, 2, (short) 3, true, 256, true, true);
         ByteBuf frame = captureWrite();
-        reader.readFrame(alloc, frame, observer);
-        verify(observer).onHeadersRead(eq(1), eq(headers), eq(2), eq((short) 3), eq(true), eq(256),
+        reader.readFrame(ctx, frame, observer);
+        verify(observer).onHeadersRead(eq(ctx), eq(1), eq(headers), eq(2), eq((short) 3), eq(true), eq(256),
                 eq(true), eq(true));
     }
 
@@ -283,8 +283,8 @@ public class DefaultHttp2FrameIOTest {
         Http2Headers headers = Http2Headers.EMPTY_HEADERS;
         writer.writePushPromise(ctx, promise, 1, 2, headers, 0);
         ByteBuf frame = captureWrite();
-        reader.readFrame(alloc, frame, observer);
-        verify(observer).onPushPromiseRead(eq(1), eq(2), eq(headers), eq(0));
+        reader.readFrame(ctx, frame, observer);
+        verify(observer).onPushPromiseRead(eq(ctx), eq(1), eq(2), eq(headers), eq(0));
     }
 
     @Test
@@ -292,8 +292,8 @@ public class DefaultHttp2FrameIOTest {
         Http2Headers headers = dummyHeaders();
         writer.writePushPromise(ctx, promise, 1, 2, headers, 0);
         ByteBuf frame = captureWrite();
-        reader.readFrame(alloc, frame, observer);
-        verify(observer).onPushPromiseRead(eq(1), eq(2), eq(headers), eq(0));
+        reader.readFrame(ctx, frame, observer);
+        verify(observer).onPushPromiseRead(eq(ctx), eq(1), eq(2), eq(headers), eq(0));
     }
 
     @Test
@@ -301,8 +301,8 @@ public class DefaultHttp2FrameIOTest {
         Http2Headers headers = dummyHeaders();
         writer.writePushPromise(ctx, promise, 1, 2, headers, 256);
         ByteBuf frame = captureWrite();
-        reader.readFrame(alloc, frame, observer);
-        verify(observer).onPushPromiseRead(eq(1), eq(2), eq(headers), eq(256));
+        reader.readFrame(ctx, frame, observer);
+        verify(observer).onPushPromiseRead(eq(ctx), eq(1), eq(2), eq(headers), eq(256));
     }
 
     @Test
@@ -310,8 +310,8 @@ public class DefaultHttp2FrameIOTest {
         Http2Headers headers = largeHeaders();
         writer.writePushPromise(ctx, promise, 1, 2, headers, 0);
         ByteBuf frame = captureWrite();
-        reader.readFrame(alloc, frame, observer);
-        verify(observer).onPushPromiseRead(eq(1), eq(2), eq(headers), eq(0));
+        reader.readFrame(ctx, frame, observer);
+        verify(observer).onPushPromiseRead(eq(ctx), eq(1), eq(2), eq(headers), eq(0));
     }
 
     @Test
@@ -319,8 +319,8 @@ public class DefaultHttp2FrameIOTest {
         Http2Headers headers = largeHeaders();
         writer.writePushPromise(ctx, promise, 1, 2, headers, 256);
         ByteBuf frame = captureWrite();
-        reader.readFrame(alloc, frame, observer);
-        verify(observer).onPushPromiseRead(eq(1), eq(2), eq(headers), eq(256));
+        reader.readFrame(ctx, frame, observer);
+        verify(observer).onPushPromiseRead(eq(ctx), eq(1), eq(2), eq(headers), eq(256));
     }
 
     private ByteBuf captureWrite() {

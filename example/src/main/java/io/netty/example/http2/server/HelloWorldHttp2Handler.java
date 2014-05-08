@@ -36,26 +36,26 @@ public class HelloWorldHttp2Handler extends AbstractHttp2ConnectionHandler {
     }
 
     @Override
-    public void onDataRead(int streamId, ByteBuf data, int padding, boolean endOfStream,
-            boolean endOfSegment, boolean compressed) throws Http2Exception {
+    public void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
+            boolean endOfStream, boolean endOfSegment, boolean compressed) throws Http2Exception {
         if (endOfStream) {
             sendResponse(ctx(), streamId);
         }
     }
 
     @Override
-    public void onHeadersRead(int streamId,
-            io.netty.handler.codec.http2.Http2Headers headers, int padding,
-            boolean endStream, boolean endSegment) throws Http2Exception {
+    public void onHeadersRead(ChannelHandlerContext ctx, int streamId,
+            io.netty.handler.codec.http2.Http2Headers headers, int padding, boolean endStream,
+            boolean endSegment) throws Http2Exception {
         if (endStream) {
             sendResponse(ctx(), streamId);
         }
     }
 
     @Override
-    public void onHeadersRead(int streamId,
-            io.netty.handler.codec.http2.Http2Headers headers, int streamDependency,
-            short weight, boolean exclusive, int padding, boolean endStream, boolean endSegment)
+    public void onHeadersRead(ChannelHandlerContext ctx, int streamId,
+            io.netty.handler.codec.http2.Http2Headers headers, int streamDependency, short weight,
+            boolean exclusive, int padding, boolean endStream, boolean endSegment)
             throws Http2Exception {
         if (endStream) {
             sendResponse(ctx(), streamId);
@@ -63,52 +63,53 @@ public class HelloWorldHttp2Handler extends AbstractHttp2ConnectionHandler {
     }
 
     @Override
-    public void onPriorityRead(int streamId, int streamDependency, short weight, boolean exclusive)
+    public void onPriorityRead(ChannelHandlerContext ctx, int streamId, int streamDependency,
+            short weight, boolean exclusive) throws Http2Exception {
+    }
+
+    @Override
+    public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode)
             throws Http2Exception {
     }
 
     @Override
-    public void onRstStreamRead(int streamId, long errorCode) throws Http2Exception {
+    public void onSettingsAckRead(ChannelHandlerContext ctx) throws Http2Exception {
     }
 
     @Override
-    public void onSettingsAckRead() throws Http2Exception {
+    public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings) throws Http2Exception {
     }
 
     @Override
-    public void onSettingsRead(Http2Settings settings) throws Http2Exception {
+    public void onPingRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
     }
 
     @Override
-    public void onPingRead(ByteBuf data) throws Http2Exception {
+    public void onPingAckRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
     }
 
     @Override
-    public void onPingAckRead(ByteBuf data) throws Http2Exception {
+    public void onPushPromiseRead(ChannelHandlerContext ctx, int streamId, int promisedStreamId,
+            io.netty.handler.codec.http2.Http2Headers headers, int padding) throws Http2Exception {
     }
 
     @Override
-    public void onPushPromiseRead(int streamId, int promisedStreamId,
-            io.netty.handler.codec.http2.Http2Headers headers, int padding)
+    public void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode,
+            ByteBuf debugData) throws Http2Exception {
+    }
+
+    @Override
+    public void onWindowUpdateRead(ChannelHandlerContext ctx, int streamId, int windowSizeIncrement)
             throws Http2Exception {
     }
 
     @Override
-    public void onGoAwayRead(int lastStreamId, long errorCode, ByteBuf debugData)
-            throws Http2Exception {
+    public void onAltSvcRead(ChannelHandlerContext ctx, int streamId, long maxAge, int port,
+            ByteBuf protocolId, String host, String origin) throws Http2Exception {
     }
 
     @Override
-    public void onWindowUpdateRead(int streamId, int windowSizeIncrement) throws Http2Exception {
-    }
-
-    @Override
-    public void onAltSvcRead(int streamId, long maxAge, int port, ByteBuf protocolId, String host,
-            String origin) throws Http2Exception {
-    }
-
-    @Override
-    public void onBlockedRead(int streamId) throws Http2Exception {
+    public void onBlockedRead(ChannelHandlerContext ctx, int streamId) throws Http2Exception {
     }
 
     @Override

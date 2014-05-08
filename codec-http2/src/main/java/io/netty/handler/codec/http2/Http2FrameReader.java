@@ -16,7 +16,7 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.ChannelHandlerContext;
 
 import java.io.Closeable;
 
@@ -30,7 +30,7 @@ public interface Http2FrameReader extends Closeable {
      * Attempts to read the next frame from the input buffer. If enough data is available to fully
      * read the frame, notifies the observer of the read frame.
      */
-    void readFrame(ByteBufAllocator alloc, ByteBuf input, Http2FrameObserver observer)
+    void readFrame(ChannelHandlerContext ctx, ByteBuf input, Http2FrameObserver observer)
             throws Http2Exception;
 
     /**

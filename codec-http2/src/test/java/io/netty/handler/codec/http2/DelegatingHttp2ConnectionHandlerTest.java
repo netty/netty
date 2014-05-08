@@ -39,7 +39,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -150,8 +149,8 @@ public class DelegatingHttp2ConnectionHandlerTest {
         verify(writer).writeSettings(eq(ctx), eq(promise), eq(settings));
 
         // Simulate receiving the initial settings from the remote endpoint.
-        decode().onSettingsRead(new Http2Settings());
-        verify(observer).onSettingsRead(new Http2Settings());
+        decode().onSettingsRead(ctx, new Http2Settings());
+        verify(observer).onSettingsRead(eq(ctx), eq(new Http2Settings()));
         verify(writer).writeSettingsAck(eq(ctx), eq(promise));
 
         // Re-mock the context so no calls are registered.
@@ -198,123 +197,123 @@ public class DelegatingHttp2ConnectionHandlerTest {
     @Test
     public void dataReadAfterGoAwayShouldApplyFlowControl() throws Exception {
         when(connection.isGoAwaySent()).thenReturn(true);
-        decode().onDataRead(STREAM_ID, dummyData(), 10, true, true, true);
+        decode().onDataRead(ctx, STREAM_ID, dummyData(), 10, true, true, true);
         verify(inboundFlow).applyInboundFlowControl(eq(STREAM_ID), eq(dummyData()), eq(10),
                 eq(true), eq(true), eq(true), any(Http2InboundFlowController.FrameWriter.class));
 
         // Verify that the event was absorbed and not propagated to the oberver.
-        verify(observer, never()).onDataRead(anyInt(), any(ByteBuf.class), anyInt(), anyBoolean(),
+        verify(observer, never()).onDataRead(eq(ctx), anyInt(), any(ByteBuf.class), anyInt(), anyBoolean(),
                 anyBoolean(), anyBoolean());
     }
 
     @Test
     public void dataReadWithEndOfStreamShouldCloseRemoteSide() throws Exception {
-        decode().onDataRead(STREAM_ID, dummyData(), 10, true, false, false);
+        decode().onDataRead(ctx, STREAM_ID, dummyData(), 10, true, false, false);
         verify(inboundFlow).applyInboundFlowControl(eq(STREAM_ID), eq(dummyData()), eq(10),
                 eq(true), eq(false), eq(false), any(Http2InboundFlowController.FrameWriter.class));
         verify(stream).closeRemoteSide();
-        verify(observer).onDataRead(eq(STREAM_ID), eq(dummyData()), eq(10), eq(true), eq(false),
-                eq(false));
+        verify(observer).onDataRead(eq(ctx), eq(STREAM_ID), eq(dummyData()), eq(10), eq(true),
+                eq(false), eq(false));
     }
 
     @Test
     public void dataReadWithShouldAllowCompression() throws Exception {
         when(local.allowCompressedData()).thenReturn(true);
-        decode().onDataRead(STREAM_ID, dummyData(), 10, false, false, true);
+        decode().onDataRead(ctx, STREAM_ID, dummyData(), 10, false, false, true);
         verify(inboundFlow).applyInboundFlowControl(eq(STREAM_ID), eq(dummyData()), eq(10),
                 eq(false), eq(false), eq(true), any(Http2InboundFlowController.FrameWriter.class));
         verify(stream, never()).closeRemoteSide();
-        verify(observer).onDataRead(eq(STREAM_ID), eq(dummyData()), eq(10), eq(false), eq(false),
-                eq(true));
+        verify(observer).onDataRead(eq(ctx), eq(STREAM_ID), eq(dummyData()), eq(10), eq(false),
+                eq(false), eq(true));
     }
 
     @Test(expected = Http2Exception.class)
     public void dataReadShouldDisallowCompression() throws Exception {
         when(local.allowCompressedData()).thenReturn(false);
-        decode().onDataRead(STREAM_ID, dummyData(), 10, false, false, true);
+        decode().onDataRead(ctx, STREAM_ID, dummyData(), 10, false, false, true);
     }
 
     @Test
     public void headersReadAfterGoAwayShouldBeIgnored() throws Exception {
         when(connection.isGoAwaySent()).thenReturn(true);
-        decode().onHeadersRead(STREAM_ID, EMPTY_HEADERS, 0, false, false);
+        decode().onHeadersRead(ctx, STREAM_ID, EMPTY_HEADERS, 0, false, false);
         verify(remote, never()).createStream(eq(STREAM_ID), eq(false));
 
         // Verify that the event was absorbed and not propagated to the oberver.
-        verify(observer, never()).onHeadersRead(anyInt(), any(Http2Headers.class), anyInt(),
-                anyBoolean(), anyBoolean());
+        verify(observer, never()).onHeadersRead(eq(ctx), anyInt(), any(Http2Headers.class),
+                anyInt(), anyBoolean(), anyBoolean());
         verify(outboundFlow, never()).updateStream(anyInt(), anyInt(), anyShort(), anyBoolean());
         verify(inboundFlow, never()).addStream(anyInt());
     }
 
     @Test
     public void headersReadForUnknownStreamShouldCreateStream() throws Exception {
-        decode().onHeadersRead(5, EMPTY_HEADERS, 0, false, false);
+        decode().onHeadersRead(ctx, 5, EMPTY_HEADERS, 0, false, false);
         verify(remote).createStream(eq(5), eq(false));
         verify(outboundFlow).addStream(eq(5), eq(0), eq(DEFAULT_PRIORITY_WEIGHT), eq(false));
         verify(inboundFlow).addStream(5);
-        verify(observer).onHeadersRead(eq(5), eq(EMPTY_HEADERS), eq(0),
+        verify(observer).onHeadersRead(eq(ctx), eq(5), eq(EMPTY_HEADERS), eq(0),
                 eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(false), eq(false));
     }
 
     @Test
     public void headersReadForUnknownStreamShouldCreateHalfClosedStream() throws Exception {
-        decode().onHeadersRead(5, EMPTY_HEADERS, 0, true, false);
+        decode().onHeadersRead(ctx, 5, EMPTY_HEADERS, 0, true, false);
         verify(remote).createStream(eq(5), eq(true));
         verify(outboundFlow).addStream(eq(5), eq(0), eq(DEFAULT_PRIORITY_WEIGHT), eq(false));
         verify(inboundFlow, never()).addStream(5);
-        verify(observer).onHeadersRead(eq(5), eq(EMPTY_HEADERS), eq(0),
+        verify(observer).onHeadersRead(eq(ctx), eq(5), eq(EMPTY_HEADERS), eq(0),
                 eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(true), eq(false));
     }
 
     @Test
     public void headersReadForPromisedStreamShouldHalfOpenStream() throws Exception {
         when(stream.state()).thenReturn(RESERVED_REMOTE);
-        decode().onHeadersRead(STREAM_ID, EMPTY_HEADERS, 0, false, false);
+        decode().onHeadersRead(ctx, STREAM_ID, EMPTY_HEADERS, 0, false, false);
         verify(stream).openForPush();
         verify(outboundFlow, never()).addStream(anyInt(), anyInt(), anyShort(), anyBoolean());
         verify(inboundFlow).addStream(STREAM_ID);
-        verify(observer).onHeadersRead(eq(STREAM_ID), eq(EMPTY_HEADERS), eq(0),
+        verify(observer).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(EMPTY_HEADERS), eq(0),
                 eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(false), eq(false));
     }
 
     @Test
     public void headersReadForPromisedStreamShouldCloseStream() throws Exception {
         when(stream.state()).thenReturn(RESERVED_REMOTE);
-        decode().onHeadersRead(STREAM_ID, EMPTY_HEADERS, 0, true, false);
+        decode().onHeadersRead(ctx, STREAM_ID, EMPTY_HEADERS, 0, true, false);
         verify(stream).openForPush();
         verify(stream).close();
         verify(outboundFlow, never()).addStream(anyInt(), anyInt(), anyShort(), anyBoolean());
         verify(inboundFlow, never()).addStream(STREAM_ID);
         verify(outboundFlow).removeStream(STREAM_ID);
         verify(inboundFlow).removeStream(STREAM_ID);
-        verify(observer).onHeadersRead(eq(STREAM_ID), eq(EMPTY_HEADERS), eq(0),
+        verify(observer).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(EMPTY_HEADERS), eq(0),
                 eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(true), eq(false));
     }
 
     @Test
     public void pushPromiseReadAfterGoAwayShouldBeIgnored() throws Exception {
         when(connection.isGoAwaySent()).thenReturn(true);
-        decode().onPushPromiseRead(STREAM_ID, PUSH_STREAM_ID, EMPTY_HEADERS, 0);
+        decode().onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, EMPTY_HEADERS, 0);
         verify(remote, never()).reservePushStream(anyInt(), any(Http2Stream.class));
-        verify(observer, never()).onPushPromiseRead(anyInt(), anyInt(), any(Http2Headers.class),
-                anyInt());
+        verify(observer, never()).onPushPromiseRead(eq(ctx), anyInt(), anyInt(),
+                any(Http2Headers.class), anyInt());
     }
 
     @Test
     public void pushPromiseReadShouldSucceed() throws Exception {
-        decode().onPushPromiseRead(STREAM_ID, PUSH_STREAM_ID, EMPTY_HEADERS, 0);
+        decode().onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, EMPTY_HEADERS, 0);
         verify(remote).reservePushStream(eq(PUSH_STREAM_ID), eq(stream));
-        verify(observer).onPushPromiseRead(eq(STREAM_ID), eq(PUSH_STREAM_ID), eq(EMPTY_HEADERS),
-                eq(0));
+        verify(observer).onPushPromiseRead(eq(ctx), eq(STREAM_ID), eq(PUSH_STREAM_ID),
+                eq(EMPTY_HEADERS), eq(0));
     }
 
     @Test
     public void priorityReadAfterGoAwayShouldBeIgnored() throws Exception {
         when(connection.isGoAwaySent()).thenReturn(true);
-        decode().onPriorityRead(STREAM_ID, 0, (short) 255, true);
+        decode().onPriorityRead(ctx, STREAM_ID, 0, (short) 255, true);
         verify(outboundFlow, never()).updateStream(anyInt(), anyInt(), anyShort(), anyBoolean());
-        verify(observer, never()).onPriorityRead(anyInt(), anyInt(), anyShort(), anyBoolean());
+        verify(observer, never()).onPriorityRead(eq(ctx), anyInt(), anyInt(), anyShort(), anyBoolean());
     }
 
     @Test
@@ -322,79 +321,79 @@ public class DelegatingHttp2ConnectionHandlerTest {
         // The outbound flow controller may keep a prioritized stream around for some time after
         // being closed. Verify that the flow controller is updated regardless of the presence of
         // the stream.
-        decode().onPriorityRead(5, 0, (short) 255, true);
+        decode().onPriorityRead(ctx, 5, 0, (short) 255, true);
         verify(outboundFlow).updateStream(eq(5), eq(0), eq((short) 255), eq(true));
-        verify(observer).onPriorityRead(eq(5), eq(0), eq((short) 255), eq(true));
+        verify(observer).onPriorityRead(eq(ctx), eq(5), eq(0), eq((short) 255), eq(true));
     }
 
     @Test
     public void priorityReadShouldSucceed() throws Exception {
-        decode().onPriorityRead(STREAM_ID, 0, (short) 255, true);
+        decode().onPriorityRead(ctx, STREAM_ID, 0, (short) 255, true);
         verify(outboundFlow).updateStream(eq(STREAM_ID), eq(0), eq((short) 255), eq(true));
-        verify(observer).onPriorityRead(eq(STREAM_ID), eq(0), eq((short) 255), eq(true));
+        verify(observer).onPriorityRead(eq(ctx), eq(STREAM_ID), eq(0), eq((short) 255), eq(true));
     }
 
     @Test
     public void windowUpdateReadAfterGoAwayShouldBeIgnored() throws Exception {
         when(connection.isGoAwaySent()).thenReturn(true);
-        decode().onWindowUpdateRead(STREAM_ID, 10);
+        decode().onWindowUpdateRead(ctx, STREAM_ID, 10);
         verify(outboundFlow, never()).updateOutboundWindowSize(anyInt(), anyInt());
-        verify(observer, never()).onWindowUpdateRead(anyInt(), anyInt());
+        verify(observer, never()).onWindowUpdateRead(eq(ctx), anyInt(), anyInt());
     }
 
     @Test
     public void windowUpdateReadForUnknownStreamShouldBeIgnored() throws Exception {
-        decode().onWindowUpdateRead(5, 10);
+        decode().onWindowUpdateRead(ctx, 5, 10);
         verify(outboundFlow, never()).updateOutboundWindowSize(anyInt(), anyInt());
-        verify(observer, never()).onWindowUpdateRead(anyInt(), anyInt());
+        verify(observer, never()).onWindowUpdateRead(eq(ctx), anyInt(), anyInt());
     }
 
     @Test
     public void windowUpdateReadShouldSucceed() throws Exception {
-        decode().onWindowUpdateRead(STREAM_ID, 10);
+        decode().onWindowUpdateRead(ctx, STREAM_ID, 10);
         verify(outboundFlow).updateOutboundWindowSize(eq(STREAM_ID), eq(10));
-        verify(observer).onWindowUpdateRead(eq(STREAM_ID), eq(10));
+        verify(observer).onWindowUpdateRead(eq(ctx), eq(STREAM_ID), eq(10));
     }
 
     @Test
     public void rstStreamReadAfterGoAwayShouldBeIgnored() throws Exception {
         when(connection.isGoAwaySent()).thenReturn(true);
-        decode().onRstStreamRead(STREAM_ID, PROTOCOL_ERROR.code());
+        decode().onRstStreamRead(ctx, STREAM_ID, PROTOCOL_ERROR.code());
         verify(stream, never()).close();
-        verify(observer, never()).onRstStreamRead(anyInt(), anyLong());
+        verify(observer, never()).onRstStreamRead(eq(ctx), anyInt(), anyLong());
     }
 
     @Test
     public void rstStreamReadForUnknownStreamShouldBeIgnored() throws Exception {
-        decode().onRstStreamRead(5, PROTOCOL_ERROR.code());
+        decode().onRstStreamRead(ctx, 5, PROTOCOL_ERROR.code());
         verify(stream, never()).close();
-        verify(observer, never()).onRstStreamRead(anyInt(), anyLong());
+        verify(observer, never()).onRstStreamRead(eq(ctx), anyInt(), anyLong());
     }
 
     @Test
     public void rstStreamReadShouldCloseStream() throws Exception {
-        decode().onRstStreamRead(STREAM_ID, PROTOCOL_ERROR.code());
+        decode().onRstStreamRead(ctx, STREAM_ID, PROTOCOL_ERROR.code());
         verify(stream).close();
-        verify(observer).onRstStreamRead(eq(STREAM_ID), eq((long) PROTOCOL_ERROR.code()));
+        verify(observer).onRstStreamRead(eq(ctx), eq(STREAM_ID), eq((long) PROTOCOL_ERROR.code()));
     }
 
     @Test
     public void pingReadWithAckShouldNotifyObserver() throws Exception {
-        decode().onPingAckRead(emptyPingBuf());
-        verify(observer).onPingAckRead(eq(emptyPingBuf()));
+        decode().onPingAckRead(ctx, emptyPingBuf());
+        verify(observer).onPingAckRead(eq(ctx), eq(emptyPingBuf()));
     }
 
     @Test
     public void pingReadShouldReplyWithAck() throws Exception {
-        decode().onPingRead(emptyPingBuf());
+        decode().onPingRead(ctx, emptyPingBuf());
         verify(writer).writePing(eq(ctx), eq(promise), eq(true), eq(emptyPingBuf()));
-        verify(observer, never()).onPingAckRead(any(ByteBuf.class));
+        verify(observer, never()).onPingAckRead(eq(ctx), any(ByteBuf.class));
     }
 
     @Test
     public void settingsReadWithAckShouldNotifyObserver() throws Exception {
-        decode().onSettingsAckRead();
-        verify(observer).onSettingsAckRead();
+        decode().onSettingsAckRead(ctx);
+        verify(observer).onSettingsAckRead(eq(ctx));
     }
 
     @Test
@@ -405,7 +404,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
         settings.maxConcurrentStreams(456);
         settings.allowCompressedData(true);
         settings.maxHeaderTableSize(789);
-        decode().onSettingsRead(settings);
+        decode().onSettingsRead(ctx, settings);
         verify(remote).allowPushTo(true);
         verify(outboundFlow).initialOutboundWindowSize(123);
         verify(local).maxStreams(456);
@@ -413,14 +412,14 @@ public class DelegatingHttp2ConnectionHandlerTest {
         verify(writer).maxHeaderTableSize(789);
         // Take into account the time this was called during setup().
         verify(writer, times(2)).writeSettingsAck(eq(ctx), eq(promise));
-        verify(observer).onSettingsRead(eq(settings));
+        verify(observer).onSettingsRead(eq(ctx), eq(settings));
     }
 
     @Test
     public void goAwayShoultShouldUpdateConnectionState() throws Exception {
-        decode().onGoAwayRead(1, 2, EMPTY_BUFFER);
+        decode().onGoAwayRead(ctx, 1, 2, EMPTY_BUFFER);
         verify(connection).goAwayReceived();
-        verify(observer).onGoAwayRead(eq(1), eq(2L), eq(EMPTY_BUFFER));
+        verify(observer).onGoAwayRead(eq(ctx), eq(1), eq(2L), eq(EMPTY_BUFFER));
     }
 
     @Test(expected = Http2Exception.class)
@@ -595,8 +594,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
     private Http2FrameObserver decode() throws Exception {
         ArgumentCaptor<Http2FrameObserver> internalObserver =
                 ArgumentCaptor.forClass(Http2FrameObserver.class);
-        doNothing().when(reader).readFrame(any(ByteBufAllocator.class), any(ByteBuf.class),
-                internalObserver.capture());
+        doNothing().when(reader).readFrame(eq(ctx), any(ByteBuf.class), internalObserver.capture());
         handler.decode(ctx, EMPTY_BUFFER, Collections.emptyList());
         return internalObserver.getValue();
     }
