@@ -48,6 +48,11 @@ public interface Http2PriorityTree<T> extends Iterable<Http2PriorityTree.Priorit
         T data();
 
         /**
+         * Associates the given data with this priority node.
+         */
+        Priority<T> data(T data);
+
+        /**
          * Returns weight assigned to the dependency with the parent. The weight will be a value
          * between 1 and 256.
          */
@@ -83,7 +88,7 @@ public interface Http2PriorityTree<T> extends Iterable<Http2PriorityTree.Priorit
          * Attempts to find a child of this node for the given stream. If not found, returns
          * {@code null}.
          */
-        Priority<T> getChild(int streamId);
+        Priority<T> child(int streamId);
 
         /**
          * Gets the children nodes that are dependent on this node.
@@ -99,7 +104,7 @@ public interface Http2PriorityTree<T> extends Iterable<Http2PriorityTree.Priorit
      * @param data optional user-defined data to associate to the stream
      * @return the priority for the stream.
      */
-    Priority<T> prioritizeUsingDefaults(int streamId, T data);
+    Priority<T> prioritizeUsingDefaults(int streamId);
 
     /**
      * Adds a new priority or updates an existing priority for the given stream.
@@ -111,10 +116,9 @@ public interface Http2PriorityTree<T> extends Iterable<Http2PriorityTree.Priorit
      *            must be between 1 and 256 (inclusive)
      * @param exclusive indicates that the stream should be the exclusive dependent on its parent.
      *            This only applies if the stream has a parent.
-     * @param data optional user-defined data to associate to the stream.
      * @return the priority for the stream.
      */
-    Priority<T> prioritize(int streamId, int parent, short weight, boolean exclusive, T data);
+    Priority<T> prioritize(int streamId, int parent, short weight, boolean exclusive);
 
     /**
      * Removes the priority information for the given stream. Adjusts other priorities if necessary.

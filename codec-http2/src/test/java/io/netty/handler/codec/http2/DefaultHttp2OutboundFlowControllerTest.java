@@ -19,6 +19,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_FLOW_CONTROL_WINDOW_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyInt;
@@ -364,6 +365,187 @@ public class DefaultHttp2OutboundFlowControllerTest {
         int d = captor.getValue().readableBytes();
         assertEquals(5, c + d);
         assertEquals(1, Math.abs(c - d));
+    }
+
+    /**
+     * In this test, we verify re-prioritizing a stream. We start out with B blocked:
+     *
+     * <pre>
+     *         0
+     *        / \
+     *       A  [B]
+     *      / \
+     *     C   D
+     * </pre>
+     *
+     * We then re-prioritize D so that it's directly off of the connection and verify that A and D split the
+     * written bytes between them.
+     * <pre>
+     *           0
+     *          /|\
+     *        /  |  \
+     *       A  [B]  D
+     *      /
+     *     C
+     * </pre>
+     */
+    @Test
+    public void reprioritizeShouldAdjustOutboundFlow() throws Http2Exception {
+        // Block the connection
+        controller.updateOutboundWindowSize(CONNECTION_STREAM_ID,
+                -DEFAULT_FLOW_CONTROL_WINDOW_SIZE);
+
+        // Block stream B
+        controller.updateOutboundWindowSize(STREAM_B, -DEFAULT_FLOW_CONTROL_WINDOW_SIZE);
+
+        // Send 10 bytes to each.
+        send(STREAM_A, dummyData(10));
+        send(STREAM_B, dummyData(10));
+        send(STREAM_C, dummyData(10));
+        send(STREAM_D, dummyData(10));
+        verifyNoWrite(STREAM_A);
+        verifyNoWrite(STREAM_B);
+        verifyNoWrite(STREAM_C);
+        verifyNoWrite(STREAM_D);
+
+        // Re-prioritize D as a direct child of the connection.
+        controller.updateStream(STREAM_D, 0, DEFAULT_PRIORITY_WEIGHT, false);
+
+        // Verify that the entire frame was sent.
+        controller.updateOutboundWindowSize(CONNECTION_STREAM_ID, 10);
+        ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
+
+        // Verify that A received all the bytes.
+        captureWrite(STREAM_A, captor, false);
+        assertEquals(5, captor.getValue().readableBytes());
+        captureWrite(STREAM_D, captor, false);
+        assertEquals(5, captor.getValue().readableBytes());
+        verifyNoWrite(STREAM_B);
+        verifyNoWrite(STREAM_C);
+    }
+
+    /**
+     * In this test, we root all streams at the connection, and then verify that data
+     * is split appropriately based on weight (all available data is the same).
+     *
+     * <pre>
+     *           0
+     *        / / \ \
+     *       A B   C D
+     * </pre>
+     */
+    @Test
+    public void writeShouldPreferHighestWeight() throws Http2Exception {
+        // Block the connection
+        controller.updateOutboundWindowSize(CONNECTION_STREAM_ID,
+                -DEFAULT_FLOW_CONTROL_WINDOW_SIZE);
+
+        // Root the streams at the connection and assign weights.
+        controller.updateStream(STREAM_A, 0, (short) 50, false);
+        controller.updateStream(STREAM_B, 0, (short) 200, false);
+        controller.updateStream(STREAM_C, 0, (short) 100, false);
+        controller.updateStream(STREAM_D, 0, (short) 100, false);
+
+        // Send a bunch of data on each stream.
+        send(STREAM_A, dummyData(1000));
+        send(STREAM_B, dummyData(1000));
+        send(STREAM_C, dummyData(1000));
+        send(STREAM_D, dummyData(1000));
+        verifyNoWrite(STREAM_A);
+        verifyNoWrite(STREAM_B);
+        verifyNoWrite(STREAM_C);
+        verifyNoWrite(STREAM_D);
+
+        // Allow 1000 bytes to be sent.
+        controller.updateOutboundWindowSize(CONNECTION_STREAM_ID, 1000);
+        ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
+
+        captureWrite(STREAM_A, captor, false);
+        int aWritten = captor.getValue().readableBytes();
+        int min = aWritten;
+        int max = aWritten;
+
+        captureWrite(STREAM_B, captor, false);
+        int bWritten = captor.getValue().readableBytes();
+        min = Math.min(min, bWritten);
+        max = Math.max(max, bWritten);
+
+        captureWrite(STREAM_C, captor, false);
+        int cWritten = captor.getValue().readableBytes();
+        min = Math.min(min, cWritten);
+        max = Math.max(max, cWritten);
+
+        captureWrite(STREAM_D, captor, false);
+        int dWritten = captor.getValue().readableBytes();
+        min = Math.min(min, dWritten);
+        max = Math.max(max, dWritten);
+
+        assertEquals(1000, aWritten + bWritten + cWritten + dWritten);
+        assertEquals(aWritten, min);
+        assertEquals(bWritten, max);
+        assertTrue(aWritten < cWritten);
+        assertEquals(cWritten, dWritten);
+        assertTrue(cWritten < bWritten);
+    }
+
+    /**
+     * In this test, we root all streams at the connection, and then verify that data
+     * is split equally among the stream, since they all have the same weight.
+     *
+     * <pre>
+     *           0
+     *        / / \ \
+     *       A B   C D
+     * </pre>
+     */
+    @Test
+    public void samePriorityShouldWriteEqualData() throws Http2Exception {
+        // Block the connection
+        controller.updateOutboundWindowSize(CONNECTION_STREAM_ID,
+                -DEFAULT_FLOW_CONTROL_WINDOW_SIZE);
+
+        // Root the streams at the connection with the same weights.
+        controller.updateStream(STREAM_A, 0, DEFAULT_PRIORITY_WEIGHT, false);
+        controller.updateStream(STREAM_B, 0, DEFAULT_PRIORITY_WEIGHT, false);
+        controller.updateStream(STREAM_C, 0, DEFAULT_PRIORITY_WEIGHT, false);
+        controller.updateStream(STREAM_D, 0, DEFAULT_PRIORITY_WEIGHT, false);
+
+        // Send a bunch of data on each stream.
+        send(STREAM_A, dummyData(400));
+        send(STREAM_B, dummyData(500));
+        send(STREAM_C, dummyData(0));
+        send(STREAM_D, dummyData(700));
+        verifyNoWrite(STREAM_A);
+        verifyNoWrite(STREAM_B);
+        verifyNoWrite(STREAM_D);
+
+        // The write will occur on C, because it's an empty frame.
+        ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
+        captureWrite(STREAM_C, captor, false);
+        assertEquals(0, captor.getValue().readableBytes());
+
+        // Allow 1000 bytes to be sent.
+        controller.updateOutboundWindowSize(CONNECTION_STREAM_ID, 999);
+
+        captureWrite(STREAM_A, captor, false);
+        int aWritten = captor.getValue().readableBytes();
+        int min = aWritten;
+        int max = aWritten;
+
+        captureWrite(STREAM_B, captor, false);
+        int bWritten = captor.getValue().readableBytes();
+        min = Math.min(min, bWritten);
+        max = Math.max(max, bWritten);
+
+        captureWrite(STREAM_D, captor, false);
+        int dWritten = captor.getValue().readableBytes();
+        min = Math.min(min, dWritten);
+        max = Math.max(max, dWritten);
+
+        assertEquals(999, aWritten + bWritten + dWritten);
+        assertEquals(333, aWritten);
+        assertEquals(333, bWritten);
+        assertEquals(333, dWritten);
     }
 
     private void send(int streamId, ByteBuf data) throws Http2Exception {

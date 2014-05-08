@@ -16,6 +16,8 @@
 package io.netty.handler.codec.http2;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
+import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_UNSIGNED_BYTE;
+import io.netty.handler.codec.http2.Http2PriorityTree.Priority;
 
 import java.util.ArrayDeque;
 import java.util.Collections;
@@ -31,8 +33,8 @@ import java.util.Set;
  */
 public class DefaultHttp2PriorityTree<T> implements Http2PriorityTree<T> {
 
-    private final DefaultPriority<T> root = new DefaultPriority<T>(0, (short) 0, null);
-    private Map<Integer, Priority<T>> priorityMap = new HashMap<Integer, Priority<T>>();
+    private final DefaultPriority<T> root = new DefaultPriority<T>(0, (short) 0);
+    private final Map<Integer, Priority<T>> priorityMap = new HashMap<Integer, Priority<T>>();
 
     @Override
     public Priority<T> get(int streamId) {
@@ -45,13 +47,12 @@ public class DefaultHttp2PriorityTree<T> implements Http2PriorityTree<T> {
     }
 
     @Override
-    public Priority<T> prioritizeUsingDefaults(int streamId, T data) {
-        return prioritize(streamId, 0, DEFAULT_PRIORITY_WEIGHT, false, data);
+    public Priority<T> prioritizeUsingDefaults(int streamId) {
+        return prioritize(streamId, 0, DEFAULT_PRIORITY_WEIGHT, false);
     }
 
     @Override
-    public Priority<T> prioritize(int streamId, int parent, short weight, boolean exclusive,
-            T data) {
+    public Priority<T> prioritize(int streamId, int parent, short weight, boolean exclusive) {
         if (streamId <= 0) {
             throw new IllegalArgumentException("Stream ID must be > 0");
         }
@@ -61,7 +62,7 @@ public class DefaultHttp2PriorityTree<T> implements Http2PriorityTree<T> {
         if (parent < 0) {
             throw new IllegalArgumentException("Parent stream ID must be >= 0");
         }
-        if (weight < 1 || weight > 256) {
+        if (weight < 1 || weight > MAX_UNSIGNED_BYTE) {
             throw new IllegalArgumentException("Invalid weight: " + weight);
         }
 
@@ -77,15 +78,14 @@ public class DefaultHttp2PriorityTree<T> implements Http2PriorityTree<T> {
         DefaultPriority<T> priority = internalGet(streamId);
         if (priority == null) {
             // Add a new priority.
-            priority = new DefaultPriority<T>(streamId, weight, data);
+            priority = new DefaultPriority<T>(streamId, weight);
             newParent.addChild(priority, exclusive);
             priorityMap.put(streamId, priority);
             return priority;
         }
 
         // Already have a priority. Re-prioritize the stream.
-        priority.setWeight(weight);
-        priority.setData(data);
+        priority.weight(weight);
 
         if (newParent == priority.parent() && !exclusive) {
             // No changes were made to the tree structure.
@@ -167,10 +167,9 @@ public class DefaultHttp2PriorityTree<T> implements Http2PriorityTree<T> {
         private DefaultPriority<T> parent;
         private int totalChildWeights;
 
-        DefaultPriority(int streamId, short weight, T data) {
+        DefaultPriority(int streamId, short weight) {
             this.streamId = streamId;
             this.weight = weight;
-            this.data = data;
         }
 
         @Override
@@ -191,6 +190,12 @@ public class DefaultHttp2PriorityTree<T> implements Http2PriorityTree<T> {
         @Override
         public T data() {
             return data;
+        }
+
+        @Override
+        public Priority<T> data(T data) {
+            this.data = data;
+            return this;
         }
 
         @Override
@@ -232,11 +237,11 @@ public class DefaultHttp2PriorityTree<T> implements Http2PriorityTree<T> {
 
         @Override
         public boolean hasChild(int streamId) {
-            return getChild(streamId) != null;
+            return child(streamId) != null;
         }
 
         @Override
-        public Priority<T> getChild(int streamId) {
+        public Priority<T> child(int streamId) {
             for (DefaultPriority<T> child : children) {
                 if (child.streamId() == streamId) {
                     return child;
@@ -245,16 +250,12 @@ public class DefaultHttp2PriorityTree<T> implements Http2PriorityTree<T> {
             return null;
         }
 
-        void setWeight(short weight) {
+        void weight(short weight) {
             if (parent != null && weight != this.weight) {
                 int delta = weight - this.weight;
                 parent.totalChildWeights += delta;
             }
             this.weight = weight;
-        }
-
-        void setData(T data) {
-            this.data = data;
         }
 
         Set<DefaultPriority<T>> removeAllChildren() {
