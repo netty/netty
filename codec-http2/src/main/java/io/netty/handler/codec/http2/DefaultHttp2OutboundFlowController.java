@@ -21,10 +21,15 @@ import static io.netty.handler.codec.http2.Http2Error.FLOW_CONTROL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.STREAM_CLOSED;
 import static io.netty.handler.codec.http2.Http2Exception.format;
 import static io.netty.handler.codec.http2.Http2Exception.protocolError;
+import static java.lang.Math.max;
+import static java.lang.Math.min;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http2.Http2PriorityTree.Priority;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Queue;
 import java.util.concurrent.TimeUnit;
 
@@ -33,16 +38,38 @@ import java.util.concurrent.TimeUnit;
  */
 public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowController {
     /**
-     * The interval (in ns) at which the removed priority garbage collector runs.
+     * A comparators that sorts priority nodes in ascending order by the amount
+     * of priority data available for its subtree.
      */
-    private final long GARBAGE_COLLECTION_INTERVAL = TimeUnit.SECONDS.toNanos(2);
+    private static final Comparator<Priority<FlowState>> DATA_WEIGHT =
+            new Comparator<Priority<FlowState>>() {
+                private static final int MAX_DATA_THRESHOLD = Integer.MAX_VALUE / 256;
+                @Override
+                public int compare(Priority<FlowState> o1, Priority<FlowState> o2) {
+                    int o1Data = o1.data().priorityBytes();
+                    int o2Data = o2.data().priorityBytes();
+                    if (o1Data > MAX_DATA_THRESHOLD || o2Data > MAX_DATA_THRESHOLD) {
+                        // Corner case to make sure we don't overflow an integer with
+                        // the multiply.
+                        return o1.data().priorityBytes() - o2.data().priorityBytes();
+                    }
 
-    private final Http2PriorityTree<FlowState> priorityTree =
-            new DefaultHttp2PriorityTree<FlowState>();
-    private final Queue<Priority<FlowState>> garbage = new ArrayDeque<Priority<FlowState>>();
+                    // Scale the data by the weight.
+                    return (o1Data * o1.weight()) - (o2Data * o2.weight());
+                }
+            };
+
+    private final Http2PriorityTree<FlowState> priorityTree;
+    private final FlowState connectionFlow;
+    private final GarbageCollector garbageCollector;
     private int initialWindowSize = DEFAULT_FLOW_CONTROL_WINDOW_SIZE;
-    private int connectionWindowSize = DEFAULT_FLOW_CONTROL_WINDOW_SIZE;
-    private long lastGarbageCollection;
+
+    public DefaultHttp2OutboundFlowController() {
+        priorityTree = new DefaultHttp2PriorityTree<FlowState>();
+        connectionFlow = new FlowState(priorityTree.root());
+        priorityTree.root().data(connectionFlow);
+        garbageCollector = new GarbageCollector();
+    }
 
     @Override
     public void addStream(int streamId, int parent, short weight, boolean exclusive) {
@@ -54,13 +81,12 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
             throw new IllegalArgumentException("stream " + streamId + " already exists");
         }
 
-        FlowState state = new FlowState();
-        priority = priorityTree.prioritize(streamId, parent, weight, exclusive, state);
-        state.init(priority);
+        priority = priorityTree.prioritize(streamId, parent, weight, exclusive);
+        priority.data(new FlowState(priority));
     }
 
     @Override
-    public void updateStream(int streamId, int parent, short weight, boolean exclusive) {
+    public void updateStream(int streamId, int parentId, short weight, boolean exclusive) {
         if (streamId <= 0) {
             throw new IllegalArgumentException("Stream ID must be > 0");
         }
@@ -69,7 +95,48 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
             throw new IllegalArgumentException("stream " + streamId + " does not exist");
         }
 
-        priorityTree.prioritize(streamId, parent, weight, exclusive, priority.data());
+        // Get the parent stream.
+        Priority<FlowState> parent = priorityTree.root();
+        if (parentId != 0) {
+            parent = priorityTree.get(parentId);
+            if (parent == null) {
+                throw new IllegalArgumentException("Parent stream " + parentId + " does not exist");
+            }
+        }
+
+        // Determine whether we're adding a circular dependency on the parent. If so, this will
+        // restructure the tree to move this priority above the parent.
+        boolean circularDependency = parent.isDescendantOf(priority);
+        Priority<FlowState> previousParent = priority.parent();
+        boolean parentChange = previousParent != parent;
+
+        // If the parent is changing, remove the priority bytes from all relevant branches of the
+        // priority tree. We will restore them where appropriate after the move.
+        if (parentChange) {
+            // The parent is changing, remove the priority bytes for this subtree from its previous
+            // parent.
+            previousParent.data().incrementPriorityBytes(-priority.data().priorityBytes());
+            if (circularDependency) {
+                // The parent is currently a descendant of priority. Remove the priority bytes
+                // for its subtree starting at its parent node.
+                parent.parent().data().incrementPriorityBytes(-parent.data().priorityBytes());
+            }
+        }
+
+        // Adjust the priority tree.
+        priorityTree.prioritize(streamId, parentId, weight, exclusive);
+
+        // If the parent was changed, restore the priority bytes to the appropriate branches
+        // of the priority tree.
+        if (parentChange) {
+            if (circularDependency) {
+                // The parent was re-rooted. Update the priority bytes for its parent branch.
+               parent.parent().data().incrementPriorityBytes(parent.data().priorityBytes());
+            }
+
+            // Add the priority bytes for this subtree to the new parent branch.
+            parent.data().incrementPriorityBytes(priority.data().priorityBytes());
+        }
     }
 
     @Override
@@ -88,12 +155,12 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
     public void initialOutboundWindowSize(int newWindowSize) throws Http2Exception {
         int delta = newWindowSize - initialWindowSize;
         initialWindowSize = newWindowSize;
-        addAndGetConnectionWindowSize(delta);
+        connectionFlow.incrementStreamWindow(delta);
         for (Priority<FlowState> priority : priorityTree) {
             FlowState state = priority.data();
             if (!state.isMarkedForRemoval()) {
                 // Verify that the maximum value is not exceeded by this change.
-                state.addAndGetWindow(delta);
+                state.incrementStreamWindow(delta);
             }
         }
 
@@ -112,12 +179,12 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
     public void updateOutboundWindowSize(int streamId, int delta) throws Http2Exception {
         if (streamId == CONNECTION_STREAM_ID) {
             // Update the connection window and write any pending frames for all streams.
-            addAndGetConnectionWindowSize(delta);
+            connectionFlow.incrementStreamWindow(delta);
             writePendingBytes();
         } else {
             // Update the stream window and write any pending frames for the stream.
             FlowState state = getStateOrFail(streamId);
-            state.addAndGetWindow(delta);
+            state.incrementStreamWindow(delta);
             state.writeBytes(state.writableWindow());
         }
     }
@@ -166,20 +233,10 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
     }
 
     /**
-     * Indicates whether applying the delta to the given value will cause an integer overflow.
+     * Returns the flow control window for the entire connection.
      */
-    private static boolean isIntegerOverflow(int previousValue, int delta) {
-        return delta > 0 && (Integer.MAX_VALUE - delta) < previousValue;
-    }
-
-    /**
-     * Increments the connectionWindowSize and returns the new value.
-     */
-    private int addAndGetConnectionWindowSize(int delta) throws Http2Exception {
-        if (isIntegerOverflow(connectionWindowSize, delta)) {
-            throw format(FLOW_CONTROL_ERROR, "Window update exceeds maximum for connection");
-        }
-        return connectionWindowSize += delta;
+    private int connectionWindow() {
+        return priorityTree.root().data().streamWindow();
     }
 
     /**
@@ -187,41 +244,29 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
      */
     private void writePendingBytes() throws Http2Exception {
         // Perform garbage collection to remove any priorities marked for deletion from the tree.
-        garbageCollect();
-
-        // Calculate the total writable bytes for each stream in the tree.
-        // TODO: consider maintaining a running total of the writable bytes at each node so we
-        // don't have to walk the entire tree here.
-        int totalWritableBytes = 0;
-        for (Priority<FlowState> priority : priorityTree.root().children()) {
-            totalWritableBytes += priority.data().calcWritableBytes();
-        }
+        garbageCollector.run();
 
         // Recursively write as many of the total writable bytes as possible.
-        writeAllowedBytes(totalWritableBytes, priorityTree.root());
+        Priority<FlowState> root = priorityTree.root();
+        writeAllowedBytes(root, root.data().priorityBytes());
     }
 
     /**
      * Recursively traverses the priority tree rooted at the given node. Attempts to write the
      * allowed bytes for the streams in this sub tree based on their weighted priorities.
      *
-     * @param allowance an allowed number of bytes that may be written to the streams in this sub
-     *            tree.
      * @param priority the sub tree to write to. On the first invocation, this will be the root of
      *            the priority tree (i.e. the connection node).
+     * @param allowance an allowed number of bytes that may be written to the streams in this sub
+     *            tree.
      */
-    private void writeAllowedBytes(int allowance, Priority<FlowState> priority)
+    private void writeAllowedBytes(Priority<FlowState> priority, int allowance)
             throws Http2Exception {
-        // Get the flow control state for this priority node. It may be null if processing the root
-        // node (i.e. the connection) or if the priority is being retained for a short time
-        // after the stream was closed.
+        // Write the allowed bytes for this node. If not all of the allowance was used,
+        // restore what's left so that it can be propagated to future nodes.
         FlowState state = priority.data();
-        if (state != null) {
-            // Write the allowed bytes for this node. If not all of the allowance was used,
-            // restore what's left so that it can be propagated to future nodes.
-            int bytesWritten = state.writeBytes(allowance);
-            allowance -= bytesWritten;
-        }
+        int bytesWritten = state.writeBytes(allowance);
+        allowance -= bytesWritten;
 
         if (allowance <= 0 || priority.isLeaf()) {
             // Nothing left to do in this sub tree.
@@ -229,23 +274,28 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         }
 
         // Clip the remaining connection flow control window by the allowance.
-        int remainingWindow = Math.min(allowance, connectionWindowSize);
+        int remainingWindow = min(allowance, connectionWindow());
 
-        // Decreasing totals for all nodes yet to be processed in the current pass.
-        // For the root node, the allowance is the total number of writable bytes.
-        int unallocatedBytes = priority.isRoot() ? allowance : priority.data().unallocatedBytes();
+        // The total number of unallocated bytes from the children of this node.
+        int unallocatedBytes = state.priorityBytes() - state.streamableBytes();
 
         // Optimization. If the window is big enough to fit all the data. Just write everything
         // and skip the priority algorithm.
         if (unallocatedBytes <= remainingWindow) {
             for (Priority<FlowState> child : priority.children()) {
-                child.data().writeBytes(child.data().unallocatedBytes());
+                writeAllowedBytes(child, child.data().unallocatedPriorityBytes());
             }
             return;
         }
 
-        // Get the total weight of all children directly under the current node.
-        int remainingWeight = priority.totalChildWeights();
+        // Copy and sort the children of this node. They are sorted in ascending order the total
+        // priority bytes for the subtree scaled by the weight of the node. The algorithm gives
+        // preference to nodes that appear later in the list, since the weight of each node
+        // increases in value as the list is iterated. This means that with this node ordering,
+        // the most bytes will be written to those nodes with the largest aggregate number of
+        // bytes and the highest priority.
+        ArrayList<Priority<FlowState>> states = new ArrayList<Priority<FlowState>>(priority.children());
+        Collections.sort(states, DATA_WEIGHT);
 
         // Iterate over the children and spread the remaining bytes across them as is appropriate
         // based on the weights. This algorithm loops over all of the children more than once,
@@ -253,40 +303,38 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         // give a node its share of the current remaining bytes. The node's weight and bytes
         // allocated are then decremented from the totals, so that the subsequent
         // nodes split the difference. If after being processed, a node still has writable data,
-        // it is added to the end of the queue and will be processed again in the next pass.
-
-        // Increasing totals for nodes that have been re-added to the queue for the next pass.
+        // it is added back to the queue for further processing in the next pass.
+        int remainingWeight = priority.totalChildWeights();
+        int nextTail = 0;
         int unallocatedBytesForNextPass = 0;
         int remainingWeightForNextPass = 0;
-
-        // Copy the children to a deque
-        ArrayDeque<Priority<FlowState>> deque =
-                new ArrayDeque<Priority<FlowState>>(priority.children());
-        for (;;) {
-            Priority<FlowState> next = deque.poll();
-            if (next == null) {
-                break;
-            }
-            FlowState node = next.data();
-
-            if (remainingWeight == 0) {
+        for (int head = 0, tail = states.size(); ; ++head) {
+            if (head >= tail) {
                 // We've reached the end one pass of the nodes. Reset the totals based on
                 // the nodes that were re-added to the deque since they still have data available.
                 unallocatedBytes = unallocatedBytesForNextPass;
                 remainingWeight = remainingWeightForNextPass;
                 unallocatedBytesForNextPass = 0;
                 remainingWeightForNextPass = 0;
+                head = 0;
+                tail = nextTail;
+                nextTail = 0;
             }
 
+            // Get the next state, or break if nothing to do.
+            if (head >= tail) {
+                break;
+            }
+            Priority<FlowState> next = states.get(head);
+            FlowState node = next.data();
             int weight = node.priority().weight();
 
-            // Determine the amount of data that's still unallocated and will fit into
-            // the current connection window.
-            int writableData = Math.min(unallocatedBytes, remainingWindow);
-            if (writableData > 0 && node.unallocatedBytes() > 0) {
+            // Determine the value (in bytes) of a single unit of weight.
+            double dataToWeightRatio = min(unallocatedBytes, remainingWindow) / (double) remainingWeight;
+            unallocatedBytes -= node.unallocatedPriorityBytes();
+            remainingWeight -= weight;
 
-                // Determine the value (in bytes) of a single unit of weight.
-                double dataToWeightRatio = writableData / (double) remainingWeight;
+            if (dataToWeightRatio > 0.0 && node.unallocatedPriorityBytes() > 0) {
 
                 // Determine the portion of the current writable data that is assigned to this
                 // node.
@@ -294,37 +342,30 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
 
                 // Clip the chunk allocated by the total amount of unallocated data remaining in
                 // the node.
-                int allocatedChunk = Math.min(writableChunk, node.unallocatedBytes());
+                int allocatedChunk = min(writableChunk, node.unallocatedPriorityBytes());
 
                 // Update the remaining connection window size.
                 remainingWindow -= allocatedChunk;
 
-                // This node has been processed for this loop. Remove it from the loop totals.
-                unallocatedBytes -= node.unallocatedBytes();
-                remainingWeight -= weight;
-
-                // Update the node state.
-                node.allocateBytes(allocatedChunk);
-                if (node.unallocatedBytes() > 0) {
-                    // There is still data remaining for this stream. Add it to the end of the
-                    // deque to be processed in the next loop.
-                    unallocatedBytesForNextPass += node.unallocatedBytes();
+                // Mark these bytes as allocated.
+                node.allocatePriorityBytes(allocatedChunk);
+                if (node.unallocatedPriorityBytes() > 0) {
+                    // There is still data remaining for this stream. Add it back to the queue
+                    // for the next pass.
+                    unallocatedBytesForNextPass += node.unallocatedPriorityBytes();
                     remainingWeightForNextPass += weight;
-                    deque.add(node.priority());
-
-                    // Don't write the data for this node yet - there may be more that will
-                    // be allocated in the next loop.
+                    states.set(nextTail++, node.priority());
                     continue;
                 }
-            } else {
-                // This node has been processed for this loop. Remove it from the loop totals.
-                unallocatedBytes -= node.unallocatedBytes();
-                remainingWeight -= weight;
             }
 
-            if (node.allocatedBytes() > 0) {
+            if (node.allocatedPriorityBytes() > 0) {
                 // Write the allocated data for this stream.
-                writeAllowedBytes(node.allocatedBytes(), node.priority());
+                writeAllowedBytes(node.priority(), node.allocatedPriorityBytes());
+
+                // We're done with this node. Remark all bytes as unallocated for future
+                // invocations.
+                node.allocatePriorityBytes(0);
             }
         }
     }
@@ -335,54 +376,20 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
     }
 
     /**
-     * Removes any priorities from the tree that were marked for removal greater than
-     * {@link #GARBAGE_COLLECTION_INTERVAL} milliseconds ago. Garbage collection will run at most on
-     * the interval {@link #GARBAGE_COLLECTION_INTERVAL}, so calling it more frequently will have no
-     * effect.
-     */
-    private void garbageCollect() {
-        if (garbage.isEmpty()) {
-            return;
-        }
-
-        long time = System.nanoTime();
-        if (time - lastGarbageCollection < GARBAGE_COLLECTION_INTERVAL) {
-            // Only run the garbage collection on the threshold interval (at most).
-            return;
-        }
-        lastGarbageCollection = time;
-
-        for (;;) {
-            Priority<FlowState> next = garbage.peek();
-            if (next == null) {
-                break;
-            }
-            long removeTime = next.data().removalTime();
-            if (time - removeTime > GARBAGE_COLLECTION_INTERVAL) {
-                Priority<FlowState> priority = garbage.remove();
-                priorityTree.remove(priority.streamId());
-            } else {
-                break;
-            }
-        }
-    }
-
-    /**
      * The outbound flow control state for a single stream.
      */
     private final class FlowState {
-        private final Queue<Frame> pendingWriteQueue = new ArrayDeque<Frame>(2);
-        private Priority<FlowState> priority;
-        private int windowSize = initialWindowSize;
+        private final Queue<Frame> pendingWriteQueue;
+        private final Priority<FlowState> priority;
+        private int streamWindow = initialWindowSize;
         private long removalTime;
-        private int writableBytes;
-        private int allocatedBytes;
+        private int pendingBytes;
+        private int priorityBytes;
+        private int allocatedPriorityBytes;
 
-        /**
-         * Initializes this flow state with the stream priority.
-         */
-        void init(Priority<FlowState> priority) {
+        FlowState(Priority<FlowState> priority) {
             this.priority = priority;
+            pendingWriteQueue = new ArrayDeque<Frame>(2);
         }
 
         /**
@@ -413,80 +420,83 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
          */
         void markForRemoval() {
             if (!isMarkedForRemoval()) {
-                removalTime = System.nanoTime();
-                garbage.add(priority);
+                garbageCollector.add(priority);
                 clear();
             }
+        }
+
+        /**
+         * The flow control window for this stream. If this state is for stream 0, then this is
+         * the flow control window for the entire connection.
+         */
+        int streamWindow() {
+            return streamWindow;
         }
 
         /**
          * Increments the flow control window for this stream by the given delta and returns the new
          * value.
          */
-        int addAndGetWindow(int delta) throws Http2Exception {
-            if (isIntegerOverflow(windowSize, delta)) {
+        int incrementStreamWindow(int delta) throws Http2Exception {
+            if (delta > 0 && (Integer.MAX_VALUE - delta) < streamWindow) {
                 throw new Http2StreamException(priority.streamId(), FLOW_CONTROL_ERROR,
-                        "Window size overflow for stream");
+                        "Window size overflow for stream: " + priority.streamId());
             }
-            windowSize += delta;
-            return windowSize;
+            int previouslyStreamable = streamableBytes();
+            streamWindow += delta;
+
+            // Update this branch of the priority tree if the streamable bytes have changed for this
+            // node.
+            incrementPriorityBytes(streamableBytes() - previouslyStreamable);
+            return streamWindow;
         }
 
         /**
          * Returns the maximum writable window (minimum of the stream and connection windows).
          */
         int writableWindow() {
-            return Math.min(windowSize, connectionWindowSize);
+            return min(streamWindow, connectionWindow());
+        }
+
+        /**
+         * Returns the number of pending bytes for this node that will fit within the
+         * {@link #streamWindow}. This is used for the priority algorithm to determine the aggregate
+         * total for {@link #priorityBytes} at each node. Each node only takes into account it's
+         * stream window so that when a change occurs to the connection window, these values need
+         * not change (i.e. no tree traversal is required).
+         */
+        int streamableBytes() {
+            return max(0, min(pendingBytes, streamWindow));
+        }
+
+        /**
+         * The aggregate total of all {@link #streamableBytes()} for subtree rooted at this node.
+         */
+        int priorityBytes() {
+            return priorityBytes;
         }
 
         /**
          * Used by the priority algorithm to allocate bytes to this stream.
          */
-        void allocateBytes(int bytes) {
-            allocatedBytes += bytes;
+        void allocatePriorityBytes(int bytes) {
+            allocatedPriorityBytes += bytes;
         }
 
         /**
          * Used by the priority algorithm to get the intermediate allocation of bytes to this
          * stream.
          */
-        int allocatedBytes() {
-            return allocatedBytes;
+        int allocatedPriorityBytes() {
+            return allocatedPriorityBytes;
         }
 
         /**
          * Used by the priority algorithm to determine the number of writable bytes that have not
          * yet been allocated.
          */
-        int unallocatedBytes() {
-            return writableBytes - allocatedBytes;
-        }
-
-        /**
-         * Used by the priority algorithm to calculate the number of writable bytes for this
-         * sub-tree. Writable bytes takes into account the connection window and the stream windows
-         * for each node.
-         */
-        int calcWritableBytes() {
-            writableBytes = 0;
-
-            // Calculate the writable bytes for this node.
-            if (!isMarkedForRemoval()) {
-                int window = writableWindow();
-                for (Frame frame : pendingWriteQueue) {
-                    writableBytes += Math.min(window, frame.data.readableBytes());
-                    if (writableBytes == window) {
-                        break;
-                    }
-                }
-            }
-
-            // Calculate the writable bytes for all children.
-            for (Priority<FlowState> child : priority.children()) {
-                writableBytes += child.data().calcWritableBytes();
-            }
-
-            return writableBytes;
+        int unallocatedPriorityBytes() {
+            return priorityBytes - allocatedPriorityBytes;
         }
 
         /**
@@ -509,7 +519,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
          * size is zero.
          */
         Frame peek() {
-            if (windowSize > 0) {
+            if (streamWindow > 0) {
                 return pendingWriteQueue.peek();
             }
             return null;
@@ -519,7 +529,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
          * Clears the pending queue and writes errors for each remaining frame.
          */
         void clear() {
-            while (true) {
+            for (;;) {
                 Frame frame = pendingWriteQueue.poll();
                 if (frame == null) {
                     break;
@@ -540,7 +550,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
                 return bytesWritten;
             }
 
-            int maxBytes = Math.min(bytes, writableWindow());
+            int maxBytes = min(bytes, writableWindow());
             while (bytesWritten < maxBytes && hasFrame()) {
                 Frame pendingWrite = peek();
                 if (maxBytes >= pendingWrite.size()) {
@@ -555,9 +565,33 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
                 }
 
                 // Update the threshold.
-                maxBytes = Math.min(bytes - bytesWritten, writableWindow());
+                maxBytes = min(bytes - bytesWritten, writableWindow());
             }
             return bytesWritten;
+        }
+
+        /**
+         * Increments the number of pending bytes for this node. If there was any change to the
+         * number of bytes that fit into the stream window, then {@link #incrementPriorityBytes} to
+         * recursively update this branch of the priority tree.
+         */
+        private void incrementPendingBytes(int numBytes) {
+            int previouslyStreamable = streamableBytes();
+            this.pendingBytes += numBytes;
+            incrementPriorityBytes(streamableBytes() - previouslyStreamable);
+        }
+
+        /**
+         * Recursively increments the priority bytes for this branch in the priority tree starting
+         * at the current node.
+         */
+        private void incrementPriorityBytes(int numBytes) {
+            if (numBytes != 0) {
+                priorityBytes += numBytes;
+                if (!priority.isRoot()) {
+                    priority.parent().data().incrementPriorityBytes(numBytes);
+                }
+            }
         }
 
         /**
@@ -590,6 +624,9 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
                 if (!enqueued) {
                     enqueued = true;
                     pendingWriteQueue.offer(this);
+
+                    // Increment the number of pending bytes for this stream.
+                    incrementPendingBytes(data.readableBytes());
                 }
             }
 
@@ -600,10 +637,11 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
              */
             void write() throws Http2Exception {
                 int dataLength = data.readableBytes();
-                connectionWindowSize -= dataLength;
-                addAndGetWindow(-dataLength);
+                connectionFlow.incrementStreamWindow(-dataLength);
+                incrementStreamWindow(-dataLength);
                 writer.writeFrame(priority.streamId(), data, padding, endStream, endSegment,
                         compressed);
+                decrementPendingBytes(dataLength);
             }
 
             /**
@@ -611,6 +649,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
              * unwritten bytes are removed from this branch of the priority tree.
              */
             void writeError(Http2Exception cause) {
+                decrementPendingBytes(data.readableBytes());
                 data.release();
                 writer.setFailure(cause);
             }
@@ -626,9 +665,77 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
              */
             Frame split(int maxBytes) {
                 // TODO: Should padding be included in the chunks or only the last frame?
-                maxBytes = Math.min(maxBytes, data.readableBytes());
-                return new Frame(data.readSlice(maxBytes).retain(), 0, false, false, compressed,
+                maxBytes = min(maxBytes, data.readableBytes());
+                Frame frame = new Frame(data.readSlice(maxBytes).retain(), 0, false, false, compressed,
                         writer);
+                decrementPendingBytes(maxBytes);
+                return frame;
+            }
+
+            /**
+             * If this frame is in the pending queue, decrements the number of pending bytes for the
+             * stream.
+             */
+            void decrementPendingBytes(int bytes) {
+                if (enqueued) {
+                    incrementPendingBytes(-bytes);
+                }
+            }
+        }
+    }
+
+    /**
+     * Controls garbage collection for priorities that have been marked for removal.
+     */
+    private final class GarbageCollector implements Runnable {
+        /**
+         * The interval (in ns) at which the removed priority garbage collector runs.
+         */
+        private final long GARBAGE_COLLECTION_INTERVAL = TimeUnit.SECONDS.toNanos(2);
+
+        private final Queue<Priority<FlowState>> garbage;
+        private long lastGarbageCollection;
+
+        GarbageCollector() {
+            garbage = new ArrayDeque<Priority<FlowState>>();
+        }
+
+        void add(Priority<FlowState> priority) {
+            priority.data().removalTime = System.nanoTime();
+            garbage.add(priority);
+        }
+
+        /**
+         * Removes any priorities from the tree that were marked for removal greater than
+         * {@link #GARBAGE_COLLECTION_INTERVAL} milliseconds ago. Garbage collection will run at most on
+         * the interval {@link #GARBAGE_COLLECTION_INTERVAL}, so calling it more frequently will have no
+         * effect.
+         */
+        @Override
+        public void run() {
+            if (garbage.isEmpty()) {
+                return;
+            }
+
+            long time = System.nanoTime();
+            if (time - lastGarbageCollection < GARBAGE_COLLECTION_INTERVAL) {
+                // Only run the garbage collection on the threshold interval (at most).
+                return;
+            }
+            lastGarbageCollection = time;
+
+            for (;;) {
+                Priority<FlowState> next = garbage.peek();
+                if (next == null) {
+                    break;
+                }
+                long removeTime = next.data().removalTime();
+                if (time - removeTime > GARBAGE_COLLECTION_INTERVAL) {
+                    Priority<FlowState> priority = garbage.remove();
+                    priorityTree.remove(priority.streamId());
+                } else {
+                    break;
+                }
             }
         }
     }

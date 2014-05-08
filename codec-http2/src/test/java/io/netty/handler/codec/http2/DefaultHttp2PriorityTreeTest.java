@@ -18,7 +18,6 @@ package io.netty.handler.codec.http2;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertSame;
 import io.netty.handler.codec.http2.Http2PriorityTree.Priority;
 
 import org.junit.Before;
@@ -37,12 +36,10 @@ public class DefaultHttp2PriorityTreeTest {
 
     @Test
     public void prioritizeShouldUseDefaults() {
-        Object data = new Object();
-        tree.prioritizeUsingDefaults(1, data);
+        tree.prioritizeUsingDefaults(1);
         assertEquals(1, tree.root().numChildren());
         Priority<Object> p = tree.root().children().iterator().next();
         assertEquals(1, p.streamId());
-        assertSame(data, p.data());
         assertEquals(DEFAULT_PRIORITY_WEIGHT, p.weight());
         assertEquals(0, p.parent().streamId());
         assertEquals(0, p.numChildren());
@@ -50,12 +47,10 @@ public class DefaultHttp2PriorityTreeTest {
 
     @Test
     public void prioritizeFromEmptyShouldSucceed() {
-        Object data = new Object();
-        tree.prioritize(1, 0, DEFAULT_PRIORITY_WEIGHT, false, data);
+        tree.prioritize(1, 0, DEFAULT_PRIORITY_WEIGHT, false);
         assertEquals(1, tree.root().numChildren());
-        Priority<Object> p = tree.root().getChild(1);
+        Priority<Object> p = tree.root().child(1);
         assertNotNull(p);
-        assertSame(data, p.data());
         assertEquals(DEFAULT_PRIORITY_WEIGHT, p.weight());
         assertEquals(0, p.parent().streamId());
         assertEquals(0, p.numChildren());
@@ -63,14 +58,11 @@ public class DefaultHttp2PriorityTreeTest {
 
     @Test
     public void reprioritizeWithNoChangeShouldDoNothing() {
-        Object d1 = new Object();
-        Object d2 = new Object();
-        tree.prioritize(1, 0, DEFAULT_PRIORITY_WEIGHT, false, d1);
-        tree.prioritize(1, 0, DEFAULT_PRIORITY_WEIGHT, false, d2);
+        tree.prioritize(1, 0, DEFAULT_PRIORITY_WEIGHT, false);
+        tree.prioritize(1, 0, DEFAULT_PRIORITY_WEIGHT, false);
         assertEquals(1, tree.root().numChildren());
-        Priority<Object> p = tree.root().getChild(1);
+        Priority<Object> p = tree.root().child(1);
         assertNotNull(p);
-        assertSame(d2, p.data());
         assertEquals(DEFAULT_PRIORITY_WEIGHT, p.weight());
         assertEquals(0, p.parent().streamId());
         assertEquals(0, p.numChildren());
@@ -78,14 +70,10 @@ public class DefaultHttp2PriorityTreeTest {
 
     @Test
     public void insertExclusiveShouldAddNewLevel() {
-        Object d1 = new Object();
-        Object d2 = new Object();
-        Object d3 = new Object();
-        Object d4 = new Object();
-        tree.prioritize(1, 0, DEFAULT_PRIORITY_WEIGHT, false, d1);
-        tree.prioritize(2, 1, DEFAULT_PRIORITY_WEIGHT, false, d2);
-        tree.prioritize(3, 1, DEFAULT_PRIORITY_WEIGHT, false, d3);
-        tree.prioritize(4, 1, DEFAULT_PRIORITY_WEIGHT, true, d4);
+        tree.prioritize(1, 0, DEFAULT_PRIORITY_WEIGHT, false);
+        tree.prioritize(2, 1, DEFAULT_PRIORITY_WEIGHT, false);
+        tree.prioritize(3, 1, DEFAULT_PRIORITY_WEIGHT, false);
+        tree.prioritize(4, 1, DEFAULT_PRIORITY_WEIGHT, true);
         assertEquals(4, tree.size());
 
         // Level 0
@@ -94,31 +82,27 @@ public class DefaultHttp2PriorityTreeTest {
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
 
         // Level 1
-        p = p.getChild(1);
+        p = p.child(1);
         assertNotNull(p);
-        assertSame(d1, p.data());
         assertEquals(0, p.parent().streamId());
         assertEquals(1, p.numChildren());
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
 
         // Level 2
-        p = p.getChild(4);
+        p = p.child(4);
         assertNotNull(p);
-        assertSame(d4, p.data());
         assertEquals(1, p.parent().streamId());
         assertEquals(2, p.numChildren());
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
 
         // Level 3
-        p = p.getChild(2);
+        p = p.child(2);
         assertNotNull(p);
-        assertSame(d2, p.data());
         assertEquals(4, p.parent().streamId());
         assertEquals(0, p.numChildren());
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
-        p = p.parent().getChild(3);
+        p = p.parent().child(3);
         assertNotNull(p);
-        assertSame(d3, p.data());
         assertEquals(4, p.parent().streamId());
         assertEquals(0, p.numChildren());
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
@@ -126,14 +110,10 @@ public class DefaultHttp2PriorityTreeTest {
 
     @Test
     public void removeShouldRestructureTree() {
-        Object d1 = new Object();
-        Object d2 = new Object();
-        Object d3 = new Object();
-        Object d4 = new Object();
-        tree.prioritize(1, 0, DEFAULT_PRIORITY_WEIGHT, false, d1);
-        tree.prioritize(2, 1, DEFAULT_PRIORITY_WEIGHT, false, d2);
-        tree.prioritize(3, 2, DEFAULT_PRIORITY_WEIGHT, false, d3);
-        tree.prioritize(4, 2, DEFAULT_PRIORITY_WEIGHT, false, d4);
+        tree.prioritize(1, 0, DEFAULT_PRIORITY_WEIGHT, false);
+        tree.prioritize(2, 1, DEFAULT_PRIORITY_WEIGHT, false);
+        tree.prioritize(3, 2, DEFAULT_PRIORITY_WEIGHT, false);
+        tree.prioritize(4, 2, DEFAULT_PRIORITY_WEIGHT, false);
         tree.remove(2);
 
         // Level 0
@@ -142,23 +122,20 @@ public class DefaultHttp2PriorityTreeTest {
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
 
         // Level 1
-        p = p.getChild(1);
+        p = p.child(1);
         assertNotNull(p);
-        assertSame(d1, p.data());
         assertEquals(0, p.parent().streamId());
         assertEquals(2, p.numChildren());
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
 
         // Level 2
-        p = p.getChild(3);
+        p = p.child(3);
         assertNotNull(p);
-        assertSame(d3, p.data());
         assertEquals(1, p.parent().streamId());
         assertEquals(0, p.numChildren());
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
-        p = p.parent().getChild(4);
+        p = p.parent().child(4);
         assertNotNull(p);
-        assertSame(d4, p.data());
         assertEquals(1, p.parent().streamId());
         assertEquals(0, p.numChildren());
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
@@ -173,16 +150,16 @@ public class DefaultHttp2PriorityTreeTest {
         int d = 4;
         int e = 5;
         int f = 6;
-        tree.prioritize(a, 0, DEFAULT_PRIORITY_WEIGHT, false, null);
-        tree.prioritize(b, a, DEFAULT_PRIORITY_WEIGHT, false, null);
-        tree.prioritize(c, a, DEFAULT_PRIORITY_WEIGHT, false, null);
-        tree.prioritize(d, c, DEFAULT_PRIORITY_WEIGHT, false, null);
-        tree.prioritize(e, c, DEFAULT_PRIORITY_WEIGHT, false, null);
-        tree.prioritize(f, d, DEFAULT_PRIORITY_WEIGHT, false, null);
+        tree.prioritize(a, 0, DEFAULT_PRIORITY_WEIGHT, false);
+        tree.prioritize(b, a, DEFAULT_PRIORITY_WEIGHT, false);
+        tree.prioritize(c, a, DEFAULT_PRIORITY_WEIGHT, false);
+        tree.prioritize(d, c, DEFAULT_PRIORITY_WEIGHT, false);
+        tree.prioritize(e, c, DEFAULT_PRIORITY_WEIGHT, false);
+        tree.prioritize(f, d, DEFAULT_PRIORITY_WEIGHT, false);
         assertEquals(6, tree.size());
 
         // Non-exclusive re-prioritization of a->d.
-        tree.prioritize(a, d, DEFAULT_PRIORITY_WEIGHT, false, null);
+        tree.prioritize(a, d, DEFAULT_PRIORITY_WEIGHT, false);
 
         // Level 0
         Priority<Object> p = tree.root();
@@ -190,33 +167,33 @@ public class DefaultHttp2PriorityTreeTest {
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
 
         // Level 1
-        p = p.getChild(d);
+        p = p.child(d);
         assertNotNull(p);
         assertEquals(2, p.numChildren());
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
 
         // Level 2
-        p = p.getChild(f);
+        p = p.child(f);
         assertNotNull(p);
         assertEquals(0, p.numChildren());
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
-        p = p.parent().getChild(a);
+        p = p.parent().child(a);
         assertNotNull(p);
         assertEquals(2, p.numChildren());
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
 
         // Level 3
-        p = p.getChild(b);
+        p = p.child(b);
         assertNotNull(p);
         assertEquals(0, p.numChildren());
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
-        p = p.parent().getChild(c);
+        p = p.parent().child(c);
         assertNotNull(p);
         assertEquals(1, p.numChildren());
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
 
         // Level 4;
-        p = p.getChild(e);
+        p = p.child(e);
         assertNotNull(p);
         assertEquals(0, p.numChildren());
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
@@ -233,16 +210,16 @@ public class DefaultHttp2PriorityTreeTest {
         int d = 4;
         int e = 5;
         int f = 6;
-        tree.prioritize(a, 0, DEFAULT_PRIORITY_WEIGHT, false, null);
-        tree.prioritize(b, a, DEFAULT_PRIORITY_WEIGHT, false, null);
-        tree.prioritize(c, a, DEFAULT_PRIORITY_WEIGHT, false, null);
-        tree.prioritize(d, c, DEFAULT_PRIORITY_WEIGHT, false, null);
-        tree.prioritize(e, c, DEFAULT_PRIORITY_WEIGHT, false, null);
-        tree.prioritize(f, d, DEFAULT_PRIORITY_WEIGHT, false, null);
+        tree.prioritize(a, 0, DEFAULT_PRIORITY_WEIGHT, false);
+        tree.prioritize(b, a, DEFAULT_PRIORITY_WEIGHT, false);
+        tree.prioritize(c, a, DEFAULT_PRIORITY_WEIGHT, false);
+        tree.prioritize(d, c, DEFAULT_PRIORITY_WEIGHT, false);
+        tree.prioritize(e, c, DEFAULT_PRIORITY_WEIGHT, false);
+        tree.prioritize(f, d, DEFAULT_PRIORITY_WEIGHT, false);
         assertEquals(6, tree.size());
 
         // Exclusive re-prioritization of a->d.
-        tree.prioritize(a, d, DEFAULT_PRIORITY_WEIGHT, true, null);
+        tree.prioritize(a, d, DEFAULT_PRIORITY_WEIGHT, true);
 
         // Level 0
         Priority<Object> p = tree.root();
@@ -250,33 +227,33 @@ public class DefaultHttp2PriorityTreeTest {
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
 
         // Level 1
-        p = p.getChild(d);
+        p = p.child(d);
         assertNotNull(p);
         assertEquals(1, p.numChildren());
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
 
         // Level 2
-        p = p.getChild(a);
+        p = p.child(a);
         assertNotNull(p);
         assertEquals(3, p.numChildren());
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
 
         // Level 3
-        p = p.getChild(b);
+        p = p.child(b);
         assertNotNull(p);
         assertEquals(0, p.numChildren());
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
-        p = p.parent().getChild(f);
+        p = p.parent().child(f);
         assertNotNull(p);
         assertEquals(0, p.numChildren());
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
-        p = p.parent().getChild(c);
+        p = p.parent().child(c);
         assertNotNull(p);
         assertEquals(1, p.numChildren());
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
 
         // Level 4;
-        p = p.getChild(e);
+        p = p.child(e);
         assertNotNull(p);
         assertEquals(0, p.numChildren());
         assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
