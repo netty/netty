@@ -16,6 +16,7 @@
 package io.netty.buffer;
 
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.EmptyArrays;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -163,6 +164,8 @@ public abstract class AbstractByteBufTest {
         buffer.writerIndex(0);
         buffer.readerIndex(0);
         buffer.writerIndex(CAPACITY);
+
+        buffer.writeBytes(ByteBuffer.wrap(EmptyArrays.EMPTY_BYTES));
     }
 
     @Test(expected = IndexOutOfBoundsException.class)
