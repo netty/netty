@@ -274,7 +274,7 @@ final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
 
     @Override
     public ByteBuf setBytes(int index, ByteBuffer src) {
-        checkIndex(index);
+        checkIndex(index, src.remaining());
         ByteBuffer tmpBuf = internalNioBuffer();
         if (src == tmpBuf) {
             src = src.duplicate();
