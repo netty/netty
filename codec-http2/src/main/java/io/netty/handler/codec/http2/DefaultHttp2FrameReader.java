@@ -44,7 +44,6 @@ public class DefaultHttp2FrameReader implements Http2FrameReader {
         ERROR
     }
 
-    private final boolean server;
     private final Http2HeadersDecoder headersDecoder;
 
     private State state = State.FRAME_HEADER;
@@ -54,12 +53,11 @@ public class DefaultHttp2FrameReader implements Http2FrameReader {
     private int payloadLength;
     private HeadersContinuation headersContinuation;
 
-    public DefaultHttp2FrameReader(boolean server) {
-        this(server, new DefaultHttp2HeadersDecoder());
+    public DefaultHttp2FrameReader() {
+        this(new DefaultHttp2HeadersDecoder());
     }
 
-    public DefaultHttp2FrameReader(boolean server, Http2HeadersDecoder headersDecoder) {
-        this.server = server;
+    public DefaultHttp2FrameReader(Http2HeadersDecoder headersDecoder) {
         this.headersDecoder = headersDecoder;
     }
 
@@ -373,10 +371,6 @@ public class DefaultHttp2FrameReader implements Http2FrameReader {
         verifyStreamOrConnectionId(streamId, "Stream ID");
         verifyPayloadLength(payloadLength);
 
-        if (server) {
-            throw protocolError("ALT_SVC frames must not be received by servers");
-        }
-
         if (payloadLength < 8) {
             throw protocolError("Frame length too small." + payloadLength);
         }
@@ -420,7 +414,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader {
             long word1 = payload.readUnsignedInt();
             final boolean exclusive = (word1 & 0x80000000L) > 0;
             final int streamDependency = (int) (word1 & 0x7FFFFFFFL);
-            final short headersWeight = payload.readUnsignedByte();
+            final short weight = (short) (payload.readUnsignedByte() + 1);
             final ByteBuf fragment = payload.readSlice(payload.readableBytes() - padding);
 
             // Create a handler that invokes the observer when the header block is complete.
@@ -437,7 +431,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader {
                     if (endOfHeaders) {
                         Http2Headers headers = builder().buildHeaders();
                         observer.onHeadersRead(ctx, headersStreamId, headers, streamDependency,
-                                headersWeight, exclusive, padding, headersFlags.endOfStream(),
+                                weight, exclusive, padding, headersFlags.endOfStream(),
                                 headersFlags.endOfSegment());
                         close();
                     }
@@ -480,7 +474,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader {
         long word1 = payload.readUnsignedInt();
         boolean exclusive = (word1 & 0x80000000L) > 0;
         int streamDependency = (int) (word1 & 0x7FFFFFFFL);
-        short weight = payload.readUnsignedByte();
+        short weight = (short) (payload.readUnsignedByte() + 1);
         observer.onPriorityRead(ctx, streamId, streamDependency, weight, exclusive);
     }
 

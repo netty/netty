@@ -116,17 +116,27 @@ public class DefaultHttp2ConnectionTest {
 
     @Test
     public void clientReservePushStreamShouldSucceed() throws Http2Exception {
-        Http2Stream stream = client.remote().createStream(2, true);
-        Http2Stream pushStream = client.local().reservePushStream(3, stream);
-        assertEquals(3, pushStream.id());
+        Http2Stream stream = server.remote().createStream(3, true);
+        Http2Stream pushStream = server.local().reservePushStream(4, stream);
+        assertEquals(4, pushStream.id());
         assertEquals(State.RESERVED_LOCAL, pushStream.state());
-        assertEquals(1, client.activeStreams().size());
-        assertEquals(3, client.local().lastStreamCreated());
+        assertEquals(1, server.activeStreams().size());
+        assertEquals(4, server.local().lastStreamCreated());
     }
 
     @Test(expected = Http2Exception.class)
-    public void createStreamWithInvalidIdShouldThrow() throws Http2Exception {
-        server.remote().createStream(1, true);
+    public void newStreamBehindExpectedShouldThrow() throws Http2Exception {
+        server.local().createStream(0, true);
+    }
+
+    @Test(expected = Http2Exception.class)
+    public void newStreamNotForServerShouldThrow() throws Http2Exception {
+        server.local().createStream(11, true);
+    }
+
+    @Test(expected = Http2Exception.class)
+    public void newStreamNotForClientShouldThrow() throws Http2Exception {
+        client.local().createStream(10, true);
     }
 
     @Test(expected = Http2Exception.class)

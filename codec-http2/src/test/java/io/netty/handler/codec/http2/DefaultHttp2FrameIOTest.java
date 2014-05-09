@@ -62,8 +62,8 @@ public class DefaultHttp2FrameIOTest {
 
         when(ctx.alloc()).thenReturn(alloc);
 
-        reader = new DefaultHttp2FrameReader(false);
-        writer = new DefaultHttp2FrameWriter(true);
+        reader = new DefaultHttp2FrameReader();
+        writer = new DefaultHttp2FrameWriter();
     }
 
     @Test
@@ -118,7 +118,7 @@ public class DefaultHttp2FrameIOTest {
     }
 
     @Test
-    public void settingsShouldRoundtrip() throws Exception {
+    public void settingsShouldStripShouldRoundtrip() throws Exception {
         Http2Settings settings = new Http2Settings();
         settings.pushEnabled(true);
         settings.maxHeaderTableSize(4096);

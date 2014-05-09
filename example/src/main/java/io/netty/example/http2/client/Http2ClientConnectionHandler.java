@@ -192,10 +192,10 @@ public class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler
     }
 
     private static Http2FrameReader frameReader() {
-        return new Http2InboundFrameLogger(new DefaultHttp2FrameReader(false), logger);
+        return new Http2InboundFrameLogger(new DefaultHttp2FrameReader(), logger);
     }
 
     private static Http2FrameWriter frameWriter() {
-        return new Http2OutboundFrameLogger(new DefaultHttp2FrameWriter(false), logger);
+        return new Http2OutboundFrameLogger(new DefaultHttp2FrameWriter(), logger);
     }
 }

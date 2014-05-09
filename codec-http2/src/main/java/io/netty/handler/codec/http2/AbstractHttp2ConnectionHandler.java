@@ -75,8 +75,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
     }
 
     protected AbstractHttp2ConnectionHandler(Http2Connection connection) {
-        this(connection, new DefaultHttp2FrameReader(connection.isServer()),
-                new DefaultHttp2FrameWriter(connection.isServer()),
+        this(connection, new DefaultHttp2FrameReader(), new DefaultHttp2FrameWriter(),
                 new DefaultHttp2InboundFlowController(), new DefaultHttp2OutboundFlowController());
     }
 
@@ -165,9 +164,12 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
         Http2Settings settings = new Http2Settings();
         settings.allowCompressedData(connection.local().allowCompressedData());
         settings.initialWindowSize(inboundFlow.initialInboundWindowSize());
-        settings.pushEnabled(connection.local().allowPushTo());
         settings.maxConcurrentStreams(connection.remote().maxStreams());
         settings.maxHeaderTableSize(frameReader.maxHeaderTableSize());
+        if (!connection.isServer()) {
+            // Only set the pushEnabled flag if this is a client endpoint.
+            settings.pushEnabled(connection.local().allowPushTo());
+        }
         return settings;
     }
 
@@ -295,12 +297,15 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
                 throw protocolError("Sending settings after connection going away.");
             }
 
-            if (settings.hasAllowCompressedData()) {
-                connection.local().allowCompressedData(settings.allowCompressedData());
+            if (settings.hasPushEnabled()) {
+                if (connection.isServer()) {
+                    throw protocolError("Server sending SETTINGS frame with ENABLE_PUSH specified");
+                }
+                connection.local().allowPushTo(settings.pushEnabled());
             }
 
-            if (settings.hasPushEnabled()) {
-                connection.local().allowPushTo(settings.pushEnabled());
+            if (settings.hasAllowCompressedData()) {
+                connection.local().allowCompressedData(settings.allowCompressedData());
             }
 
             if (settings.hasMaxConcurrentStreams()) {
@@ -358,6 +363,9 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
     protected ChannelFuture writeAltSvc(ChannelHandlerContext ctx, ChannelPromise promise,
             int streamId, long maxAge, int port, ByteBuf protocolId, String host, String origin)
             throws Http2Exception {
+        if (!connection.isServer()) {
+            throw protocolError("Client sending ALT_SVC frame");
+        }
         return frameWriter.writeAltSvc(ctx, promise, streamId, maxAge, port, protocolId, host,
                         origin);
     }
@@ -658,16 +666,19 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
         @Override
         public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings)
                 throws Http2Exception {
+            if (settings.hasPushEnabled()) {
+                if (!connection.isServer()) {
+                    throw protocolError("Client received SETTINGS frame with ENABLE_PUSH specified");
+                }
+                connection.remote().allowPushTo(settings.pushEnabled());
+            }
+
             if (settings.hasAllowCompressedData()) {
                 connection.remote().allowCompressedData(settings.allowCompressedData());
             }
 
             if (settings.hasMaxConcurrentStreams()) {
                 connection.local().maxStreams(settings.maxConcurrentStreams());
-            }
-
-            if (settings.hasPushEnabled()) {
-                connection.remote().allowPushTo(settings.pushEnabled());
             }
 
             if (settings.hasMaxHeaderTableSize()) {
@@ -759,6 +770,9 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
         @Override
         public void onAltSvcRead(ChannelHandlerContext ctx, int streamId, long maxAge, int port,
                 ByteBuf protocolId, String host, String origin) throws Http2Exception {
+            if (connection.isServer()) {
+                throw protocolError("Server received ALT_SVC frame");
+            }
             AbstractHttp2ConnectionHandler.this.onAltSvcRead(ctx, streamId, maxAge, port,
                     protocolId, host, origin);
         }
