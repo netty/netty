@@ -21,6 +21,8 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_PAYLOAD_LENG
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_UNSIGNED_BYTE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_UNSIGNED_INT;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_UNSIGNED_SHORT;
+import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_WEIGHT;
+import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_WEIGHT;
 import static io.netty.handler.codec.http2.Http2CodecUtil.PRIORITY_ENTRY_LENGTH;
 import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_COMPRESS_DATA;
 import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_ENABLE_PUSH;
@@ -43,15 +45,13 @@ import io.netty.channel.ChannelPromise;
  */
 public class DefaultHttp2FrameWriter implements Http2FrameWriter {
 
-    private final boolean server;
     private final Http2HeadersEncoder headersEncoder;
 
-    public DefaultHttp2FrameWriter(boolean server) {
-        this(server, new DefaultHttp2HeadersEncoder());
+    public DefaultHttp2FrameWriter() {
+        this(new DefaultHttp2HeadersEncoder());
     }
 
-    public DefaultHttp2FrameWriter(boolean server, Http2HeadersEncoder headersEncoder) {
-        this.server = server;
+    public DefaultHttp2FrameWriter(Http2HeadersEncoder headersEncoder) {
         this.headersEncoder = headersEncoder;
     }
 
@@ -133,7 +133,9 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
                     Http2Flags.EMPTY, streamId);
             long word1 = exclusive ? (0x80000000L | streamDependency) : streamDependency;
             writeUnsignedInt(word1, frame);
-            frame.writeByte(weight);
+
+            // Adjust the weight so that it fits into a single byte on the wire.
+            frame.writeByte(weight - 1);
             return ctx.writeAndFlush(frame, promise);
         } catch (RuntimeException e) {
             throw failAndThrow(promise, e);
@@ -189,6 +191,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
                 writeUnsignedInt(settings.maxConcurrentStreams(), frame);
             }
             if (settings.hasPushEnabled()) {
+                // Only write the enable push flag from client endpoints.
                 frame.writeByte(SETTINGS_ENABLE_PUSH);
                 writeUnsignedInt(settings.pushEnabled() ? 1L : 0L, frame);
             }
@@ -327,9 +330,6 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
     public ChannelFuture writeAltSvc(ChannelHandlerContext ctx, ChannelPromise promise,
             int streamId, long maxAge, int port, ByteBuf protocolId, String host, String origin) {
         try {
-            if (!server) {
-                throw new IllegalArgumentException("ALT_SVC frames must not be sent by clients");
-            }
             verifyStreamOrConnectionId(streamId, "Stream ID");
             verifyMaxAge(maxAge);
             verifyPort(port);
@@ -428,7 +428,9 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
             if (hasPriority) {
                 long word1 = exclusive ? (0x80000000L | streamDependency) : streamDependency;
                 writeUnsignedInt(word1, firstFrame);
-                firstFrame.writeByte(weight);
+
+                // Adjust the weight so that it fits into a single byte on the wire.
+                firstFrame.writeByte(weight - 1);
             }
 
             // Write the first fragment.
@@ -542,7 +544,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
     }
 
     private static void verifyWeight(short weight) {
-        if (weight < 1 || weight > MAX_UNSIGNED_BYTE) {
+        if (weight < MIN_WEIGHT || weight > MAX_WEIGHT) {
             throw new IllegalArgumentException("Invalid weight: " + weight);
         }
     }

@@ -56,12 +56,18 @@ public interface Http2Connection {
         Http2Stream reservePushStream(int streamId, Http2Stream parent) throws Http2Exception;
 
         /**
+         * Indicates whether or not this endpoint is the server-side of the connection.
+         */
+        boolean isServer();
+
+        /**
          * Sets whether server push is allowed to this endpoint.
          */
         void allowPushTo(boolean allow);
 
         /**
-         * Gets whether or not server push is allowed to this endpoint.
+         * Gets whether or not server push is allowed to this endpoint. This is always false
+         * for a server endpoint.
          */
         boolean allowPushTo();
 
@@ -97,7 +103,7 @@ public interface Http2Connection {
     }
 
     /**
-     * Indicates whether or not this endpoint is the server-side of the connection.
+     * Indicates whether or not the local endpoint for this connection is the server.
      */
     boolean isServer();
 

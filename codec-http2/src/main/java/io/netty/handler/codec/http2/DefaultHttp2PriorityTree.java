@@ -16,8 +16,8 @@
 package io.netty.handler.codec.http2;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
-import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_UNSIGNED_BYTE;
-import io.netty.handler.codec.http2.Http2PriorityTree.Priority;
+import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_WEIGHT;
+import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_WEIGHT;
 
 import java.util.ArrayDeque;
 import java.util.Collections;
@@ -62,7 +62,7 @@ public class DefaultHttp2PriorityTree<T> implements Http2PriorityTree<T> {
         if (parent < 0) {
             throw new IllegalArgumentException("Parent stream ID must be >= 0");
         }
-        if (weight < 1 || weight > MAX_UNSIGNED_BYTE) {
+        if (weight < MIN_WEIGHT || weight > MAX_WEIGHT) {
             throw new IllegalArgumentException("Invalid weight: " + weight);
         }
 

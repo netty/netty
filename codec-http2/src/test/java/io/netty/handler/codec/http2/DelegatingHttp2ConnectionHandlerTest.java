@@ -396,8 +396,17 @@ public class DelegatingHttp2ConnectionHandlerTest {
         verify(observer).onSettingsAckRead(eq(ctx));
     }
 
+    @Test(expected = Http2Exception.class)
+    public void clientSettingsReadWithPushShouldThrow() throws Exception {
+        when(connection.isServer()).thenReturn(false);
+        Http2Settings settings = new Http2Settings();
+        settings.pushEnabled(true);
+        decode().onSettingsRead(ctx, settings);
+    }
+
     @Test
     public void settingsReadShouldSetValues() throws Exception {
+        when(connection.isServer()).thenReturn(true);
         Http2Settings settings = new Http2Settings();
         settings.pushEnabled(true);
         settings.initialWindowSize(123);
@@ -416,10 +425,26 @@ public class DelegatingHttp2ConnectionHandlerTest {
     }
 
     @Test
-    public void goAwayShoultShouldUpdateConnectionState() throws Exception {
+    public void goAwayShouldReadShouldUpdateConnectionState() throws Exception {
         decode().onGoAwayRead(ctx, 1, 2, EMPTY_BUFFER);
         verify(connection).goAwayReceived();
         verify(observer).onGoAwayRead(eq(ctx), eq(1), eq(2L), eq(EMPTY_BUFFER));
+    }
+
+    @Test(expected = Http2Exception.class)
+    public void serverAltSvcReadShouldThrow() throws Exception {
+        when(connection.isServer()).thenReturn(true);
+        decode().onAltSvcRead(ctx, STREAM_ID, 1, 2, Unpooled.EMPTY_BUFFER, "www.example.com", null);
+    }
+
+    @Test
+    public void clientAltSvcReadShouldNotifyObserver() throws Exception {
+        String host = "www.host.com";
+        String origin = "www.origin.com";
+        when(connection.isServer()).thenReturn(false);
+        decode().onAltSvcRead(ctx, STREAM_ID, 1, 2, EMPTY_BUFFER, host, origin);
+        verify(observer).onAltSvcRead(eq(ctx), eq(STREAM_ID), eq(1L), eq(2), eq(EMPTY_BUFFER),
+                eq(host), eq(origin));
     }
 
     @Test(expected = Http2Exception.class)
@@ -574,6 +599,23 @@ public class DelegatingHttp2ConnectionHandlerTest {
         verify(local).allowPushTo(eq(false));
         verify(remote).maxStreams(eq(1000));
         verify(reader).maxHeaderTableSize(2000);
+    }
+
+    @Test(expected = Http2Exception.class)
+    public void clientWriteAltSvcShouldThrow() throws Exception {
+        when(connection.isServer()).thenReturn(false);
+        handler.writeAltSvc(ctx, promise, STREAM_ID, 1, 2, Unpooled.EMPTY_BUFFER,
+                "www.example.com", null);
+    }
+
+    @Test
+    public void serverWriteAltSvcShouldSucceed() throws Exception {
+        String host = "www.host.com";
+        String origin = "www.origin.com";
+        when(connection.isServer()).thenReturn(true);
+        handler.writeAltSvc(ctx, promise, STREAM_ID, 1, 2, EMPTY_BUFFER, host, origin);
+        verify(writer).writeAltSvc(eq(ctx), eq(promise), eq(STREAM_ID), eq(1L), eq(2),
+                eq(EMPTY_BUFFER), eq(host), eq(origin));
     }
 
     private static ByteBuf dummyData() {

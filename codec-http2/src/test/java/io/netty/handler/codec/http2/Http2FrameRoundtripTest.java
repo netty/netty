@@ -69,7 +69,7 @@ public class Http2FrameRoundtripTest {
         MockitoAnnotations.initMocks(this);
 
         requestLatch = new CountDownLatch(1);
-        frameWriter = new DefaultHttp2FrameWriter(false);
+        frameWriter = new DefaultHttp2FrameWriter();
         dataCaptor = ArgumentCaptor.forClass(ByteBuf.class);
 
         sb = new ServerBootstrap();
@@ -259,7 +259,7 @@ public class Http2FrameRoundtripTest {
 
         FrameAdapter(Http2FrameObserver observer) {
             this.observer = observer;
-            reader = new DefaultHttp2FrameReader(observer != null);
+            reader = new DefaultHttp2FrameReader();
         }
 
         @Override

@@ -41,17 +41,15 @@ public class DefaultHttp2Connection implements Http2Connection {
     private final DefaultEndpoint remoteEndpoint;
     private boolean goAwaySent;
     private boolean goAwayReceived;
-    private boolean server;
 
     public DefaultHttp2Connection(boolean server, boolean allowCompressedData) {
-        this.server = server;
         localEndpoint = new DefaultEndpoint(server, allowCompressedData);
         remoteEndpoint = new DefaultEndpoint(!server, false);
     }
 
     @Override
     public boolean isServer() {
-        return server;
+        return localEndpoint.isServer();
     }
 
     @Override
@@ -216,19 +214,26 @@ public class DefaultHttp2Connection implements Http2Connection {
      * Simple endpoint implementation.
      */
     private final class DefaultEndpoint implements Endpoint {
+        private final boolean server;
         private int nextStreamId;
         private int lastStreamCreated;
-        private int maxStreams = Integer.MAX_VALUE;
-        private boolean pushToAllowed = true;
+        private int maxStreams;
+        private boolean pushToAllowed;
         private boolean allowCompressedData;
 
-        DefaultEndpoint(boolean serverEndpoint, boolean allowCompressedData) {
-            // Determine the starting stream ID for this endpoint. Zero is reserved for the
-            // connection and 1 is reserved for responding to an upgrade from HTTP 1.1.
-            // Client-initiated streams use odd identifiers and server-initiated streams use
-            // even.
-            nextStreamId = serverEndpoint ? 2 : 3;
+        DefaultEndpoint(boolean server, boolean allowCompressedData) {
             this.allowCompressedData = allowCompressedData;
+            this.server = server;
+
+            // Determine the starting stream ID for this endpoint. Client-initiated streams
+            // are odd and server-initiated streams are even. Zero is reserved for the
+            // connection. Stream 1 is reserved client-initiated stream for responding to an
+            // upgrade from HTTP 1.1.
+            nextStreamId = server ? 2 : 1;
+
+            // Push is disallowed by default for servers and allowed for clients.
+            pushToAllowed = !server;
+            maxStreams = Integer.MAX_VALUE;
         }
 
         @Override
@@ -244,13 +249,18 @@ public class DefaultHttp2Connection implements Http2Connection {
             }
 
             // Update the next and last stream IDs.
-            nextStreamId += 2;
+            nextStreamId = streamId + 2;
             lastStreamCreated = streamId;
 
             // Register the stream and mark it as active.
             streamMap.put(streamId, stream);
             activeStreams.add(stream);
             return stream;
+        }
+
+        @Override
+        public boolean isServer() {
+            return server;
         }
 
         @Override
@@ -271,7 +281,7 @@ public class DefaultHttp2Connection implements Http2Connection {
             stream.state = isLocal() ? State.RESERVED_LOCAL : State.RESERVED_REMOTE;
 
             // Update the next and last stream IDs.
-            nextStreamId += 2;
+            nextStreamId = streamId + 2;
             lastStreamCreated = streamId;
 
             // Register the stream.
@@ -281,6 +291,9 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         @Override
         public void allowPushTo(boolean allow) {
+            if (allow && server) {
+                throw new IllegalArgumentException("Servers do not allow push");
+            }
             pushToAllowed = allow;
         }
 
@@ -323,14 +336,24 @@ public class DefaultHttp2Connection implements Http2Connection {
             if (isGoAway()) {
                 throw protocolError("Cannot create a stream since the connection is going away");
             }
+            verifyStreamId(streamId);
+            if (streamMap.size() + 1 > maxStreams) {
+                throw protocolError("Maximum streams exceeded for this endpoint.");
+            }
+        }
+
+        private void verifyStreamId(int streamId) throws Http2Exception {
             if (nextStreamId < 0) {
                 throw protocolError("No more streams can be created on this connection");
             }
-            if (streamId != nextStreamId) {
-                throw protocolError("Incorrect next stream ID requested: %d", streamId);
+            if (streamId < nextStreamId) {
+                throw protocolError("Request stream %d is behind the next expected stream %d",
+                        streamId, nextStreamId);
             }
-            if (streamMap.size() + 1 > maxStreams) {
-                throw protocolError("Maximum streams exceeded for this endpoint.");
+            boolean even = (streamId & 1) == 0;
+            if (server != even) {
+                throw protocolError("Request stream %d is not correct for %s connection", streamId,
+                        server ? "server" : "client");
             }
         }
 

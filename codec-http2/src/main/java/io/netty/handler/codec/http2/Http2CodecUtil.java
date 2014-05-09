@@ -43,6 +43,8 @@ public final class Http2CodecUtil {
     public static final int SETTING_ENTRY_LENGTH = 5;
     public static final int PRIORITY_ENTRY_LENGTH = 5;
     public static final int INT_FIELD_LENGTH = 4;
+    public static final short MAX_WEIGHT = (short) 256;
+    public static final short MIN_WEIGHT = (short) 1;
 
     public static final short SETTINGS_HEADER_TABLE_SIZE = 1;
     public static final short SETTINGS_ENABLE_PUSH = 2;
