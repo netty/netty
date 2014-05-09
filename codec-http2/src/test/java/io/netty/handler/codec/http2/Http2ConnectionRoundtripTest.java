@@ -15,6 +15,7 @@
 
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.Http2TestUtil.runInChannel;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
@@ -116,24 +117,18 @@ public class Http2ConnectionRoundtripTest {
                 new DefaultHttp2Headers.Builder().method("GET").scheme("https")
                         .authority("example.org").path("/some/path/resource2").build();
         final String text = "hello world";
-
-        for (int i = 0, nextStream = 3; i < NUM_STREAMS; ++i, nextStream += 2) {
-            final int streamId = nextStream;
-            clientChannel.eventLoop().execute(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        http2Client.writeHeaders(ctx(), newPromise(), streamId, headers, 0,
-                                (short) 16, false, 0, false, false);
-                        http2Client.writeData(ctx(), newPromise(), streamId,
-                                Unpooled.copiedBuffer(text.getBytes()), 0, true, true, false);
-                    } catch (Http2Exception e) {
-                        throw new RuntimeException(e);
-                    }
+        runInChannel(clientChannel, new Http2TestUtil.Http2Runnable() {
+            @Override
+            public void run() throws Http2Exception {
+                for (int i = 0, nextStream = 3; i < NUM_STREAMS; ++i, nextStream += 2) {
+                    final int streamId = nextStream;
+                    http2Client.writeHeaders(ctx(), newPromise(), streamId, headers, 0, (short) 16,
+                            false, 0, false, false);
+                    http2Client.writeData(ctx(), newPromise(), streamId,
+                            Unpooled.copiedBuffer(text.getBytes()), 0, true, true, false);
                 }
-            });
-        }
-
+            }
+        });
         // Wait for all frames to be received.
         awaitRequests();
         verify(serverObserver, times(NUM_STREAMS)).onHeadersRead(any(ChannelHandlerContext.class),
