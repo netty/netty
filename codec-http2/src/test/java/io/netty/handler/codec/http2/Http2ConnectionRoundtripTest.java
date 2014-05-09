@@ -112,17 +112,26 @@ public class Http2ConnectionRoundtripTest {
 
     @Test
     public void stressTest() throws Exception {
-        Http2Headers headers =
+        final Http2Headers headers =
                 new DefaultHttp2Headers.Builder().method("GET").scheme("https")
                         .authority("example.org").path("/some/path/resource2").build();
-        String text = "hello world";
+        final String text = "hello world";
 
         for (int i = 0, nextStream = 3; i < NUM_STREAMS; ++i, nextStream += 2) {
-            http2Client.writeHeaders(ctx(), newPromise(), nextStream, headers, 0, (short) 16,
-                    false, 0, false, false);
-            http2Client.writeData(ctx(), newPromise(), nextStream,
-                    Unpooled.copiedBuffer(text.getBytes()), 0, true, true, false);
-            flush();
+            final int streamId = nextStream;
+            clientChannel.eventLoop().execute(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        http2Client.writeHeaders(ctx(), newPromise(), streamId, headers, 0,
+                                (short) 16, false, 0, false, false);
+                        http2Client.writeData(ctx(), newPromise(), streamId,
+                                Unpooled.copiedBuffer(text.getBytes()), 0, true, true, false);
+                    } catch (Http2Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            });
         }
 
         // Wait for all frames to be received.
@@ -144,10 +153,6 @@ public class Http2ConnectionRoundtripTest {
 
     private ChannelPromise newPromise() {
         return ctx().newPromise();
-    }
-
-    private void flush() {
-        ctx().flush();
     }
 
     /**
