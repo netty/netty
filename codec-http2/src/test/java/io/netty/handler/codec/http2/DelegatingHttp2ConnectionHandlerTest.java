@@ -153,6 +153,9 @@ public class DelegatingHttp2ConnectionHandlerTest {
         verify(observer).onSettingsRead(eq(ctx), eq(new Http2Settings()));
         verify(writer).writeSettingsAck(eq(ctx), eq(promise));
 
+        // Simulate receiving the SETTINGS ACK for the initial settings.
+        decode().onSettingsAckRead(ctx);
+
         // Re-mock the context so no calls are registered.
         mockContext();
         handler.handlerAdded(ctx);
@@ -393,7 +396,8 @@ public class DelegatingHttp2ConnectionHandlerTest {
     @Test
     public void settingsReadWithAckShouldNotifyObserver() throws Exception {
         decode().onSettingsAckRead(ctx);
-        verify(observer).onSettingsAckRead(eq(ctx));
+        // Take into account the time this was called during setup().
+        verify(observer, times(2)).onSettingsAckRead(eq(ctx));
     }
 
     @Test(expected = Http2Exception.class)
@@ -585,7 +589,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
     }
 
     @Test
-    public void settingsWriteShouldUpdateSettings() throws Exception {
+    public void settingsWriteShouldNotUpdateSettings() throws Exception {
         Http2Settings settings = new Http2Settings();
         settings.allowCompressedData(false);
         settings.initialWindowSize(100);
@@ -594,11 +598,19 @@ public class DelegatingHttp2ConnectionHandlerTest {
         settings.maxHeaderTableSize(2000);
         handler.writeSettings(ctx, promise, settings);
         verify(writer).writeSettings(eq(ctx), eq(promise), eq(settings));
+        // Verify that application of local settings must not be done when it is dispatched.
+        verify(local, never()).allowCompressedData(eq(false));
+        verify(inboundFlow, never()).initialInboundWindowSize(eq(100));
+        verify(local, never()).allowPushTo(eq(false));
+        verify(remote, never()).maxStreams(eq(1000));
+        verify(reader, never()).maxHeaderTableSize(eq(2000));
+        // Verify that settings values are applied on the reception of SETTINGS ACK
+        decode().onSettingsAckRead(ctx);
         verify(local).allowCompressedData(eq(false));
         verify(inboundFlow).initialInboundWindowSize(eq(100));
         verify(local).allowPushTo(eq(false));
         verify(remote).maxStreams(eq(1000));
-        verify(reader).maxHeaderTableSize(2000);
+        verify(reader).maxHeaderTableSize(eq(2000));
     }
 
     @Test(expected = Http2Exception.class)

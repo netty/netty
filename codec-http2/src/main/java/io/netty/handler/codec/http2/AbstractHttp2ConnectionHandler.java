@@ -35,6 +35,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.ByteToMessageDecoder;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -65,6 +66,9 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
     private boolean initialSettingsReceived;
     private ChannelHandlerContext ctx;
     private ChannelFutureListener closeListener;
+    // We prefer ArrayDeque to LinkedList because later will produce more GC.
+    // This initial capacity is plenty for SETTINGS traffic.
+    private final ArrayDeque<Http2Settings> outstandingLocalSettingsQueue = new ArrayDeque<Http2Settings>(4);
 
     protected AbstractHttp2ConnectionHandler(boolean server) {
         this(server, false);
@@ -292,6 +296,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
 
     protected ChannelFuture writeSettings(ChannelHandlerContext ctx, ChannelPromise promise,
             Http2Settings settings) throws Http2Exception {
+        outstandingLocalSettingsQueue.add(settings);
         try {
             if (connection.isGoAway()) {
                 throw protocolError("Sending settings after connection going away.");
@@ -301,23 +306,6 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
                 if (connection.isServer()) {
                     throw protocolError("Server sending SETTINGS frame with ENABLE_PUSH specified");
                 }
-                connection.local().allowPushTo(settings.pushEnabled());
-            }
-
-            if (settings.hasAllowCompressedData()) {
-                connection.local().allowCompressedData(settings.allowCompressedData());
-            }
-
-            if (settings.hasMaxConcurrentStreams()) {
-                connection.remote().maxStreams(settings.maxConcurrentStreams());
-            }
-
-            if (settings.hasMaxHeaderTableSize()) {
-                frameReader.maxHeaderTableSize(settings.maxHeaderTableSize());
-            }
-
-            if (settings.hasInitialWindowSize()) {
-                inboundFlow.initialInboundWindowSize(settings.initialWindowSize());
             }
 
             return frameWriter.writeSettings(ctx, promise, settings);
@@ -511,7 +499,11 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
     private void sendInitialSettings(final ChannelHandlerContext ctx) throws Http2Exception {
         if (!initialSettingsSent && ctx.channel().isActive()) {
             initialSettingsSent = true;
-            frameWriter.writeSettings(ctx, ctx.newPromise(), settings()).addListener(
+
+            Http2Settings settings = settings();
+            outstandingLocalSettingsQueue.add(settings);
+
+            frameWriter.writeSettings(ctx, ctx.newPromise(), settings).addListener(
                     ChannelFutureListener.CLOSE_ON_FAILURE);
         }
     }
@@ -659,6 +651,31 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
         @Override
         public void onSettingsAckRead(ChannelHandlerContext ctx) throws Http2Exception {
             verifyInitialSettingsReceived();
+            // Apply oldest outstanding local settings here. This is a synchronization point
+            // between endpoints.
+            Http2Settings settings = outstandingLocalSettingsQueue.poll();
+
+            if (settings != null) {
+                if (settings.hasPushEnabled()) {
+                    connection.local().allowPushTo(settings.pushEnabled());
+                }
+
+                if (settings.hasAllowCompressedData()) {
+                    connection.local().allowCompressedData(settings.allowCompressedData());
+                }
+
+                if (settings.hasMaxConcurrentStreams()) {
+                    connection.remote().maxStreams(settings.maxConcurrentStreams());
+                }
+
+                if (settings.hasMaxHeaderTableSize()) {
+                    frameReader.maxHeaderTableSize(settings.maxHeaderTableSize());
+                }
+
+                if (settings.hasInitialWindowSize()) {
+                    inboundFlow.initialInboundWindowSize(settings.initialWindowSize());
+                }
+            }
 
             AbstractHttp2ConnectionHandler.this.onSettingsAckRead(ctx);
         }
