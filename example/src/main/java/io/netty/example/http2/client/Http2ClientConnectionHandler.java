@@ -67,16 +67,16 @@ public class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler
         initialized = ctx.newPromise();
     }
 
-    public ChannelFuture writeData(int streamId, ByteBuf data, int padding, boolean endStream,
-            boolean endSegment, boolean compressed) throws Http2Exception {
-        return super.writeData(ctx(), ctx().newPromise(), streamId, data, padding, endStream,
-                endSegment, compressed);
+    public ChannelFuture writeData(ChannelPromise promise, int streamId, ByteBuf data, int padding,
+            boolean endStream, boolean endSegment, boolean compressed) throws Http2Exception {
+        return super.writeData(ctx(), promise, streamId, data, padding, endStream, endSegment,
+                compressed);
     }
 
-    public ChannelFuture writeHeaders(int streamId, Http2Headers headers, int padding,
-            boolean endStream, boolean endSegment) throws Http2Exception {
-        return super.writeHeaders(ctx(), ctx().newPromise(), streamId, headers, padding, endStream,
-                endSegment);
+    public ChannelFuture writeHeaders(ChannelPromise promise, int streamId, Http2Headers headers,
+            int padding, boolean endStream, boolean endSegment) throws Http2Exception {
+        return super
+                .writeHeaders(ctx(), promise, streamId, headers, padding, endStream, endSegment);
     }
 
     @Override

@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -82,14 +83,30 @@ public class Http2Client {
         }
     }
 
-    public ChannelFuture sendHeaders(int streamId, Http2Headers headers) throws Http2Exception {
-        return http2ConnectionHandler.writeHeaders(streamId, headers, 0, true, true);
+    public ChannelFuture sendHeaders(final int streamId, final Http2Headers headers)
+            throws Http2Exception {
+        final ChannelPromise promise = channel.newPromise();
+        runInChannel(channel, new Http2Runnable() {
+            @Override
+            public void run() throws Http2Exception {
+                http2ConnectionHandler.writeHeaders(promise, streamId, headers, 0, true, true);
+            }
+        });
+        return promise;
     }
 
-    public ChannelFuture send(int streamId, ByteBuf data, int padding, boolean endStream,
-            boolean endSegment, boolean compressed) throws Http2Exception {
-        return http2ConnectionHandler.writeData(streamId, data, padding, endStream, endSegment,
-                compressed);
+    public ChannelFuture send(final int streamId, final ByteBuf data, final int padding,
+            final boolean endStream, final boolean endSegment, final boolean compressed)
+            throws Http2Exception {
+        final ChannelPromise promise = channel.newPromise();
+        runInChannel(channel, new Http2Runnable() {
+            @Override
+            public void run() throws Http2Exception {
+                http2ConnectionHandler.writeData(promise, streamId, data, padding, endStream,
+                        endSegment, compressed);
+            }
+        });
+        return promise;
     }
 
     public Http2Headers headers() {
@@ -134,5 +151,28 @@ public class Http2Client {
         } finally {
             client.stop();
         }
+    }
+
+    /**
+     * Interface that allows for running a operation that throws a {@link Http2Exception}.
+     */
+    private interface Http2Runnable {
+        void run() throws Http2Exception;
+    }
+
+    /**
+     * Runs the given operation within the event loop thread of the given {@link Channel}.
+     */
+    private static void runInChannel(Channel channel, final Http2Runnable runnable) {
+        channel.eventLoop().execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    runnable.run();
+                } catch (Http2Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        });
     }
 }
