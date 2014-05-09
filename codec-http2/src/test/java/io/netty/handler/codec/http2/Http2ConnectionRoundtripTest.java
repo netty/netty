@@ -62,7 +62,8 @@ public class Http2ConnectionRoundtripTest {
     private Bootstrap cb;
     private Channel serverChannel;
     private Channel clientChannel;
-    private CountDownLatch requestLatch;
+    private static final int NUM_STREAMS = 1000;
+    private final CountDownLatch requestLatch = new CountDownLatch(NUM_STREAMS * 2);
 
     @Before
     public void setup() throws Exception {
@@ -115,11 +116,8 @@ public class Http2ConnectionRoundtripTest {
                 new DefaultHttp2Headers.Builder().method("GET").scheme("https")
                         .authority("example.org").path("/some/path/resource2").build();
         String text = "hello world";
-        int numStreams = 1000;
-        int expectedFrames = numStreams * 2;
-        requestLatch = new CountDownLatch(expectedFrames);
 
-        for (int i = 0, nextStream = 3; i < numStreams; ++i, nextStream += 2) {
+        for (int i = 0, nextStream = 3; i < NUM_STREAMS; ++i, nextStream += 2) {
             http2Client.writeHeaders(ctx(), newPromise(), nextStream, headers, 0, (short) 16,
                     false, 0, false, false);
             http2Client.writeData(ctx(), newPromise(), nextStream,
@@ -129,10 +127,10 @@ public class Http2ConnectionRoundtripTest {
 
         // Wait for all frames to be received.
         awaitRequests();
-        verify(serverObserver, times(numStreams)).onHeadersRead(any(ChannelHandlerContext.class),
+        verify(serverObserver, times(NUM_STREAMS)).onHeadersRead(any(ChannelHandlerContext.class),
                 anyInt(), eq(headers), eq(0), eq((short) 16), eq(false), eq(0), eq(false),
                 eq(false));
-        verify(serverObserver, times(numStreams)).onDataRead(any(ChannelHandlerContext.class),
+        verify(serverObserver, times(NUM_STREAMS)).onDataRead(any(ChannelHandlerContext.class),
                 anyInt(), eq(Unpooled.copiedBuffer(text.getBytes())), eq(0), eq(true), eq(true), eq(false));
     }
 
