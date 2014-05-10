@@ -17,6 +17,7 @@ package io.netty.handler.codec.http2;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
+import static io.netty.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuf;
 import static io.netty.handler.codec.http2.Http2CodecUtil.emptyPingBuf;
 import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
@@ -40,6 +41,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
@@ -159,6 +161,45 @@ public class DelegatingHttp2ConnectionHandlerTest {
         // Re-mock the context so no calls are registered.
         mockContext();
         handler.handlerAdded(ctx);
+    }
+
+    @Test
+    public void clientShouldSendClientPrefaceStringWhenActive() throws Exception {
+        when(connection.isServer()).thenReturn(false);
+        handler = new DelegatingHttp2ConnectionHandler(connection, reader, writer, inboundFlow,
+                        outboundFlow, observer);
+        handler.channelActive(ctx);
+        verify(ctx).write(eq(connectionPrefaceBuf()));
+    }
+
+    @Test
+    public void serverShouldNotSendClientPrefaceStringWhenActive() throws Exception {
+        when(connection.isServer()).thenReturn(true);
+        handler = new DelegatingHttp2ConnectionHandler(connection, reader, writer, inboundFlow,
+                        outboundFlow, observer);
+        handler.channelActive(ctx);
+        verify(ctx, never()).write(eq(connectionPrefaceBuf()));
+    }
+
+    @Test
+    public void serverReceivingInvalidClientPrefaceStringShouldCloseConnection() throws Exception {
+        when(connection.isServer()).thenReturn(true);
+        handler = new DelegatingHttp2ConnectionHandler(connection, reader, writer, inboundFlow,
+                        outboundFlow, observer);
+        handler.decode(ctx, Unpooled.copiedBuffer("BAD_PREFACE", UTF_8), Collections.emptyList());
+        verify(ctx).close();
+    }
+
+    @Test
+    public void serverReceivingValidClientPrefaceStringShouldContinueReadingFrames() throws Exception {
+        Mockito.reset(observer);
+        when(connection.isServer()).thenReturn(true);
+        handler = new DelegatingHttp2ConnectionHandler(connection, reader, writer, inboundFlow,
+                        outboundFlow, observer);
+        handler.decode(ctx, connectionPrefaceBuf(), Collections.emptyList());
+        verify(ctx, never()).close();
+        decode().onSettingsRead(ctx, new Http2Settings());
+        verify(observer).onSettingsRead(eq(ctx), eq(new Http2Settings()));
     }
 
     @Test
@@ -637,9 +678,11 @@ public class DelegatingHttp2ConnectionHandlerTest {
 
     private void mockContext() {
         Mockito.reset(ctx);
+        when(ctx.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
         when(ctx.channel()).thenReturn(channel);
         when(ctx.newSucceededFuture()).thenReturn(future);
         when(ctx.newPromise()).thenReturn(promise);
+        when(ctx.write(any())).thenReturn(future);
     }
 
     /**

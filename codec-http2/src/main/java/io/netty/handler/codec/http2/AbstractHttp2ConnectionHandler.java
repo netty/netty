@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http2;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
+import static io.netty.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuf;
 import static io.netty.handler.codec.http2.Http2CodecUtil.failAndThrow;
 import static io.netty.handler.codec.http2.Http2CodecUtil.toByteBuf;
 import static io.netty.handler.codec.http2.Http2CodecUtil.toHttp2Exception;
@@ -41,17 +42,16 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Abstract base class for a handler of HTTP/2 frames. Handles reading and writing of HTTP/2
- * frames as well as management of connection state and flow control for both inbound and outbound
- * data frames.
+ * Abstract base class for a handler of HTTP/2 frames. Handles reading and writing of HTTP/2 frames
+ * as well as management of connection state and flow control for both inbound and outbound data
+ * frames.
  * <p>
  * Subclasses need to implement the methods defined by the {@link Http2FrameObserver} interface for
  * receiving inbound frames. Outbound frames are sent via one of the {@code writeXXX} methods.
  * <p>
- * It should be noted that the initial SETTINGS frame is sent upon either activation or addition of
- * this handler to the pipeline. Subclasses overriding {@link #channelActive} or
- * {@link #handlerAdded} must call this class to write the initial SETTINGS frame to the remote
- * endpoint.
+ * It should be noted that the connection preface is sent upon either activation or addition of this
+ * handler to the pipeline. Subclasses overriding {@link #channelActive} or {@link #handlerAdded}
+ * must call this class to write the preface to the remote endpoint.
  */
 public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecoder implements
         Http2FrameObserver {
@@ -62,8 +62,9 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
     private final Http2Connection connection;
     private final Http2InboundFlowController inboundFlow;
     private final Http2OutboundFlowController outboundFlow;
-    private boolean initialSettingsSent;
-    private boolean initialSettingsReceived;
+    private ByteBuf clientPrefaceString;
+    private boolean prefaceSent;
+    private boolean prefaceReceived;
     private ChannelHandlerContext ctx;
     private ChannelFutureListener closeListener;
     // We prefer ArrayDeque to LinkedList because later will produce more GC.
@@ -106,22 +107,31 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
         this.frameWriter = frameWriter;
         this.inboundFlow = inboundFlow;
         this.outboundFlow = outboundFlow;
+
+        // Set the expected client preface string. Only servers should receive this.
+        this.clientPrefaceString = connection.isServer()? connectionPrefaceBuf() : null;
     }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        // The channel just became active - send the initial settings frame to the remote
+        // The channel just became active - send the connection preface to the remote
         // endpoint.
-        sendInitialSettings(ctx);
+        sendPreface(ctx);
         super.channelActive(ctx);
     }
 
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
         // This handler was just added to the context. In case it was handled after
-        // the connection became active, send the initial settings frame now.
+        // the connection became active, send the connection preface now.
         this.ctx = ctx;
-        sendInitialSettings(ctx);
+        sendPreface(ctx);
+    }
+
+    @Override
+    protected void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
+        // Free any resources associated with this handler.
+        freeResources();
     }
 
     protected final ChannelHandlerContext ctx() {
@@ -362,10 +372,53 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
     protected final void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out)
             throws Exception {
         try {
+            // Read the remaining of the client preface string if we haven't already.
+            // If this is a client endpoint, always returns true.
+            if (!readClientPrefaceString(ctx, in)) {
+                // Still processing the client preface.
+                return;
+            }
+
             frameReader.readFrame(ctx, in, internalFrameObserver);
         } catch (Http2Exception e) {
             processHttp2Exception(ctx, e);
         }
+    }
+
+    /**
+     * Decodes the client connection preface string from the input buffer.
+     *
+     * @return {@code true} if processing of the client preface string is complete. Since client
+     *         preface strings can only be received by servers, returns true immediately for client
+     *         endpoints.
+     */
+    private boolean readClientPrefaceString(ChannelHandlerContext ctx, ByteBuf in) throws Http2Exception {
+        if (clientPrefaceString == null) {
+            return true;
+        }
+
+        int prefaceRemaining = clientPrefaceString.readableBytes();
+        int bytesRead = Math.min(in.readableBytes(), prefaceRemaining);
+
+        // Read the portion of the input up to the length of the preface, if reached.
+        ByteBuf sourceSlice = in.readSlice(bytesRead);
+
+        // Read the same number of bytes from the preface buffer.
+        ByteBuf prefaceSlice = clientPrefaceString.readSlice(bytesRead);
+
+        // If the input so far doesn't match the preface, break the connection.
+        if (bytesRead == 0 || !prefaceSlice.equals(sourceSlice)) {
+            ctx.close();
+            return false;
+        }
+
+        if (!clientPrefaceString.isReadable()) {
+            // Entire preface has been read.
+            clientPrefaceString.release();
+            clientPrefaceString = null;
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -445,6 +498,10 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
     private void freeResources() {
         frameReader.close();
         frameWriter.close();
+        if (clientPrefaceString != null) {
+            clientPrefaceString.release();
+            clientPrefaceString = null;
+        }
     }
 
     private void closeLocalSide(Http2Stream stream, ChannelHandlerContext ctx, ChannelFuture future) {
@@ -487,25 +544,35 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
         }
     }
 
-    private void verifyInitialSettingsReceived() throws Http2Exception {
-        if (!initialSettingsReceived) {
+    /**
+     * Verifies that the HTTP/2 connection preface has been received from the remote endpoint.
+     */
+    private void verifyPrefaceReceived() throws Http2Exception {
+        if (!prefaceReceived) {
             throw protocolError("Received non-SETTINGS as first frame.");
         }
     }
 
     /**
-     * Sends the initial settings frame upon establishment of the connection, if not already sent.
+     * Sends the HTTP/2 connection preface upon establishment of the connection, if not already sent.
      */
-    private void sendInitialSettings(final ChannelHandlerContext ctx) throws Http2Exception {
-        if (!initialSettingsSent && ctx.channel().isActive()) {
-            initialSettingsSent = true;
-
-            Http2Settings settings = settings();
-            outstandingLocalSettingsQueue.add(settings);
-
-            frameWriter.writeSettings(ctx, ctx.newPromise(), settings).addListener(
-                    ChannelFutureListener.CLOSE_ON_FAILURE);
+    private void sendPreface(final ChannelHandlerContext ctx) throws Http2Exception {
+        if (prefaceSent || !ctx.channel().isActive()) {
+            return;
         }
+
+        prefaceSent = true;
+
+        if (!connection.isServer()) {
+            // Clients must send the preface string as the first bytes on the connection.
+            ctx.write(connectionPrefaceBuf()).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+        }
+
+        // Both client and server must send their initial settings.
+        Http2Settings settings = settings();
+        outstandingLocalSettingsQueue.add(settings);
+        frameWriter.writeSettings(ctx, ctx.newPromise(), settings).addListener(
+                ChannelFutureListener.CLOSE_ON_FAILURE);
     }
 
     /**
@@ -516,7 +583,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
         @Override
         public void onDataRead(final ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
                 boolean endOfStream, boolean endOfSegment, boolean compressed) throws Http2Exception {
-            verifyInitialSettingsReceived();
+            verifyPrefaceReceived();
 
             if (!connection.local().allowCompressedData() && compressed) {
                 throw protocolError("compression is disallowed.");
@@ -561,7 +628,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
         public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
                 int streamDependency, short weight, boolean exclusive, int padding,
                 boolean endStream, boolean endSegment) throws Http2Exception {
-            verifyInitialSettingsReceived();
+            verifyPrefaceReceived();
 
             if (isInboundStreamAfterGoAway(streamId)) {
                 return;
@@ -613,7 +680,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
         @Override
         public void onPriorityRead(ChannelHandlerContext ctx, int streamId, int streamDependency,
                 short weight, boolean exclusive) throws Http2Exception {
-            verifyInitialSettingsReceived();
+            verifyPrefaceReceived();
 
             if (isInboundStreamAfterGoAway(streamId)) {
                 // Ignore frames for any stream created after we sent a go-away.
@@ -630,7 +697,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
         @Override
         public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode)
                 throws Http2Exception {
-            verifyInitialSettingsReceived();
+            verifyPrefaceReceived();
 
             if (isInboundStreamAfterGoAway(streamId)) {
                 // Ignore frames for any stream created after we sent a go-away.
@@ -650,7 +717,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
 
         @Override
         public void onSettingsAckRead(ChannelHandlerContext ctx) throws Http2Exception {
-            verifyInitialSettingsReceived();
+            verifyPrefaceReceived();
             // Apply oldest outstanding local settings here. This is a synchronization point
             // between endpoints.
             Http2Settings settings = outstandingLocalSettingsQueue.poll();
@@ -710,14 +777,14 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
             frameWriter.writeSettingsAck(ctx, ctx.newPromise());
 
             // We've received at least one non-ack settings frame from the remote endpoint.
-            initialSettingsReceived = true;
+            prefaceReceived = true;
 
             AbstractHttp2ConnectionHandler.this.onSettingsRead(ctx, settings);
         }
 
         @Override
         public void onPingRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
-            verifyInitialSettingsReceived();
+            verifyPrefaceReceived();
 
             // Send an ack back to the remote client.
             frameWriter.writePing(ctx, ctx.newPromise(), true, data);
@@ -727,7 +794,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
 
         @Override
         public void onPingAckRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
-            verifyInitialSettingsReceived();
+            verifyPrefaceReceived();
 
             AbstractHttp2ConnectionHandler.this.onPingAckRead(ctx, data);
         }
@@ -735,7 +802,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
         @Override
         public void onPushPromiseRead(ChannelHandlerContext ctx, int streamId,
                 int promisedStreamId, Http2Headers headers, int padding) throws Http2Exception {
-            verifyInitialSettingsReceived();
+            verifyPrefaceReceived();
 
             if (isInboundStreamAfterGoAway(streamId)) {
                 // Ignore frames for any stream created after we sent a go-away.
@@ -762,7 +829,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
         @Override
         public void onWindowUpdateRead(ChannelHandlerContext ctx, int streamId,
                 int windowSizeIncrement) throws Http2Exception {
-            verifyInitialSettingsReceived();
+            verifyPrefaceReceived();
 
             if (isInboundStreamAfterGoAway(streamId)) {
                 // Ignore frames for any stream created after we sent a go-away.
@@ -796,7 +863,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
 
         @Override
         public void onBlockedRead(ChannelHandlerContext ctx, int streamId) throws Http2Exception {
-            verifyInitialSettingsReceived();
+            verifyPrefaceReceived();
 
             if (isInboundStreamAfterGoAway(streamId)) {
                 // Ignore frames for any stream created after we sent a go-away.

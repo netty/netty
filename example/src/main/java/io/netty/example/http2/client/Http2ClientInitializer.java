@@ -19,7 +19,6 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.example.securechat.SecureChatSslContextFactory;
 import io.netty.handler.codec.http2.AbstractHttp2ConnectionHandler;
-import io.netty.handler.codec.http2.Http2PrefaceHandler;
 import io.netty.handler.ssl.SslHandler;
 
 import javax.net.ssl.SSLEngine;
@@ -47,7 +46,6 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
         ChannelPipeline pipeline = ch.pipeline();
 
         pipeline.addLast("ssl", new SslHandler(engine));
-        pipeline.addLast("http2PrefaceHandler", new Http2PrefaceHandler(false));
         pipeline.addLast("http2ConnectionHandler", connectionHandler);
     }
 }

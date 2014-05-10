@@ -36,7 +36,7 @@ public class Http2OrHttpHandler extends Http2OrHttpChooser {
     }
 
     public Http2OrHttpHandler(int maxHttpContentLength) {
-        super(true, maxHttpContentLength);
+        super(maxHttpContentLength);
     }
 
     @Override
