@@ -26,11 +26,11 @@ public class MqttFixedHeader {
 
     private final MqttMessageType messageType;
     private final boolean isDup;
-    private final int qosLevel;
+    private final QoS qosLevel;
     private final boolean isRetain;
     private final int remainingLength;
 
-    public MqttFixedHeader(MqttMessageType messageType, boolean isDup, int qosLevel, boolean isRetain) {
+    public MqttFixedHeader(MqttMessageType messageType, boolean isDup, QoS qosLevel, boolean isRetain) {
         this.messageType = messageType;
         this.isDup = isDup;
         this.qosLevel = qosLevel;
@@ -41,7 +41,7 @@ public class MqttFixedHeader {
     public MqttFixedHeader(
             MqttMessageType messageType,
             boolean isDup,
-            int qosLevel,
+            QoS qosLevel,
             boolean isRetain,
             int remainingLength) {
         this.messageType = messageType;
@@ -59,7 +59,7 @@ public class MqttFixedHeader {
         return isDup;
     }
 
-    public int qosLevel() {
+    public QoS qosLevel() {
         return qosLevel;
     }
 
@@ -73,13 +73,13 @@ public class MqttFixedHeader {
 
     @Override
     public String toString() {
-        StringBuilder builder = new StringBuilder(StringUtil.simpleClassName(this)).append("[");
+        StringBuilder builder = new StringBuilder(StringUtil.simpleClassName(this)).append('[');
         builder.append("messageType=").append(messageType);
         builder.append(", isDup=").append(isDup);
         builder.append(", qosLevel=").append(qosLevel);
         builder.append(", isRetain=").append(isRetain);
         builder.append(", remainingLength=").append(remainingLength);
-        builder.append("]");
+        builder.append(']');
         return builder.toString();
     }
 

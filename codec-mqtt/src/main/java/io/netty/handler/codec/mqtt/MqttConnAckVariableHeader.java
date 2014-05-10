@@ -35,9 +35,9 @@ public class MqttConnAckVariableHeader {
 
     @Override
     public String toString() {
-        StringBuilder builder = new StringBuilder(StringUtil.simpleClassName(this)).append("[");
+        StringBuilder builder = new StringBuilder(StringUtil.simpleClassName(this)).append('[');
         builder.append("connectReturnCode=").append(connectReturnCode);
-        builder.append("]");
+        builder.append(']');
         return builder.toString();
     }
 }

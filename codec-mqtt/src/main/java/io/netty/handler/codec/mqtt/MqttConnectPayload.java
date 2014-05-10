@@ -64,13 +64,13 @@ public class MqttConnectPayload {
 
     @Override
     public String toString() {
-        StringBuilder builder = new StringBuilder(StringUtil.simpleClassName(this)).append("[");
+        StringBuilder builder = new StringBuilder(StringUtil.simpleClassName(this)).append('[');
         builder.append("clientIdentifier=").append(clientIdentifier);
         builder.append(", willTopic=").append(willTopic);
         builder.append(", willMessage=").append(willMessage);
         builder.append(", userName=").append(userName);
         builder.append(", password=").append(password);
-        builder.append("]");
+        builder.append(']');
         return builder.toString();
     }
 }

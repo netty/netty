@@ -26,7 +26,7 @@ import io.netty.util.CharsetUtil;
 import java.util.ArrayList;
 import java.util.List;
 
-import static io.netty.handler.codec.mqtt.MqttConstants.*;
+import static io.netty.handler.codec.mqtt.MqttVersion.*;
 
 /**
  * Decodes Mqtt messages from bytes, following
@@ -171,7 +171,7 @@ public class MqttDecoder extends ReplayingDecoder<DecoderState> {
                             messageType));
         }
 
-        return new MqttFixedHeader(messageType, dupFlag, qosLevel, retain, remainingLength);
+        return new MqttFixedHeader(messageType, dupFlag, QoS.valueOf(qosLevel), retain, remainingLength);
     }
 
     /**
@@ -206,10 +206,8 @@ public class MqttDecoder extends ReplayingDecoder<DecoderState> {
             case DISCONNECT:
                 // Empty variable header
                 return new Result<Object>(null, 0);
-
-            default:
-                return new Result<Object>(null, 0);
         }
+        return new Result<Object>(null, 0); //should never reach here
     }
 
     private static Result<MqttConnectVariableHeader> decodeConnectionVariableHeader(ByteBuf buffer) {
@@ -259,7 +257,7 @@ public class MqttDecoder extends ReplayingDecoder<DecoderState> {
     private static Result<MqttMessageIdVariableHeader> decodeMessageIdVariableHeader(ByteBuf buffer) {
         final Result<Integer> messageId = decodeMsbLsb(buffer);
         return new Result<MqttMessageIdVariableHeader>(
-                new MqttMessageIdVariableHeader(messageId.value),
+                MqttMessageIdVariableHeader.from(messageId.value),
                 messageId.numberOfBytesConsumed);
     }
 
@@ -270,7 +268,7 @@ public class MqttDecoder extends ReplayingDecoder<DecoderState> {
         int numberOfBytesConsumed = decodedTopic.numberOfBytesConsumed;
 
         int messageId = -1;
-        if (mqttFixedHeader.qosLevel() > 0) {
+        if (mqttFixedHeader.qosLevel().value() > 0) {
             final Result<Integer> decodedMessageId = decodeMsbLsb(buffer);
             messageId = decodedMessageId.value;
             numberOfBytesConsumed += decodedMessageId.numberOfBytesConsumed;
@@ -320,6 +318,12 @@ public class MqttDecoder extends ReplayingDecoder<DecoderState> {
             ByteBuf buffer,
             MqttConnectVariableHeader mqttConnectVariableHeader) {
         final Result<String> decodedClientId = decodeString(buffer, 1, 23);
+        final String decodedClientIdValue = decodedClientId.value;
+        if (decodedClientId.value == null && decodedClientId.numberOfBytesConsumed > 23) {
+            throw new IllegalArgumentException(
+                    String.format("Invalid clientIdentifier %s. Must be less than 23 chars long",
+                            decodedClientIdValue != null ? decodedClientIdValue : "null"));
+        }
         int numberOfBytesConsumed = decodedClientId.numberOfBytesConsumed;
 
         Result<String> decodedWillTopic = null;
@@ -361,7 +365,7 @@ public class MqttDecoder extends ReplayingDecoder<DecoderState> {
             numberOfBytesConsumed += decodedTopicName.numberOfBytesConsumed;
             int qos = buffer.readUnsignedByte() & 0x03;
             numberOfBytesConsumed++;
-            subscribeTopics.add(new MqttTopicSubscription(decodedTopicName.value, qos));
+            subscribeTopics.add(new MqttTopicSubscription(decodedTopicName.value, QoS.valueOf(qos)));
         }
         return new Result<MqttSubscribePayload>(new MqttSubscribePayload(subscribeTopics), numberOfBytesConsumed);
     }

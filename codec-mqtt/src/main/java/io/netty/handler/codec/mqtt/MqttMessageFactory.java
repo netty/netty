@@ -65,10 +65,11 @@ public final class MqttMessageFactory {
                         (ByteBuf) payload);
 
             case PUBACK:
+                return new MqttPubAckMessage(mqttFixedHeader, (MqttMessageIdVariableHeader) variableHeader);
             case PUBREC:
             case PUBREL:
             case PUBCOMP:
-                return new MqttPubAckMessage(mqttFixedHeader, (MqttMessageIdVariableHeader) variableHeader);
+                return new MqttMessage(mqttFixedHeader, (MqttMessageIdVariableHeader) variableHeader);
 
             case PINGREQ:
             case PINGRESP:

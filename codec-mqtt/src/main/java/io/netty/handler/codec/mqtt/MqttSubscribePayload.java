@@ -38,12 +38,12 @@ public class MqttSubscribePayload {
 
     @Override
     public String toString() {
-        StringBuilder builder = new StringBuilder(StringUtil.simpleClassName(this)).append("[");
+        StringBuilder builder = new StringBuilder(StringUtil.simpleClassName(this)).append('[');
         for (int i = 0; i < topicSubscriptions.size() - 1; i++) {
-            builder.append(topicSubscriptions.get(i) + ", ");
+            builder.append(topicSubscriptions.get(i)).append(", ");
         }
         builder.append(topicSubscriptions.get(topicSubscriptions.size() - 1));
-        builder.append("]");
+        builder.append(']');
         return builder.toString();
     }
 }

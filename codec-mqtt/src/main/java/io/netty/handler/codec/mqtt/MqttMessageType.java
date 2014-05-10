@@ -16,10 +16,6 @@
 
 package io.netty.handler.codec.mqtt;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-
 /**
  * MQTT Message Types.
  */
@@ -39,16 +35,6 @@ public enum MqttMessageType {
     PINGRESP(13),
     DISCONNECT(14);
 
-    private  static final Map<Integer, MqttMessageType> valueToTypeMap;
-
-    static {
-        final Map<Integer, MqttMessageType> valueMap = new HashMap<Integer, MqttMessageType>();
-        for (MqttMessageType type : values()) {
-            valueMap.put(type.value, type);
-        }
-        valueToTypeMap = Collections.unmodifiableMap(valueMap);
-    }
-
     private final int value;
 
     MqttMessageType(int value) {
@@ -59,12 +45,13 @@ public enum MqttMessageType {
         return value;
     }
 
-    public static MqttMessageType valueOf(int i) {
-        if (valueToTypeMap.containsKey(i)) {
-            return valueToTypeMap.get(i);
+    public static MqttMessageType valueOf(int type) {
+        for (MqttMessageType t : values()) {
+            if (t.value == type) {
+                return t;
+            }
         }
-        throw new IllegalArgumentException("message type " + i + " unsupported");
+        throw new IllegalArgumentException("message type " + type + " unsupported");
     }
-
 }
 
