@@ -106,11 +106,10 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             int messages = 0;
             boolean close = false;
             try {
-                int byteBufCapacity = allocHandle.guess();
                 int totalReadAmount = 0;
                 boolean readPendingReset = false;
                 do {
-                    byteBuf = allocator.ioBuffer(byteBufCapacity);
+                    byteBuf = allocHandle.allocate(allocator);
                     int writable = byteBuf.writableBytes();
                     int localReadAmount = doReadBytes(byteBuf);
                     if (localReadAmount <= 0) {
