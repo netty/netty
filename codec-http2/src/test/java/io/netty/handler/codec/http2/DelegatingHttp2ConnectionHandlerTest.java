@@ -166,8 +166,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
     @Test
     public void clientShouldSendClientPrefaceStringWhenActive() throws Exception {
         when(connection.isServer()).thenReturn(false);
-        handler =
-                new DelegatingHttp2ConnectionHandler(connection, reader, writer, inboundFlow,
+        handler = new DelegatingHttp2ConnectionHandler(connection, reader, writer, inboundFlow,
                         outboundFlow, observer);
         handler.channelActive(ctx);
         verify(ctx).write(eq(connectionPrefaceBuf()));
@@ -176,8 +175,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
     @Test
     public void serverShouldNotSendClientPrefaceStringWhenActive() throws Exception {
         when(connection.isServer()).thenReturn(true);
-        handler =
-                new DelegatingHttp2ConnectionHandler(connection, reader, writer, inboundFlow,
+        handler = new DelegatingHttp2ConnectionHandler(connection, reader, writer, inboundFlow,
                         outboundFlow, observer);
         handler.channelActive(ctx);
         verify(ctx, never()).write(eq(connectionPrefaceBuf()));
@@ -186,8 +184,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
     @Test
     public void serverReceivingInvalidClientPrefaceStringShouldCloseConnection() throws Exception {
         when(connection.isServer()).thenReturn(true);
-        handler =
-                new DelegatingHttp2ConnectionHandler(connection, reader, writer, inboundFlow,
+        handler = new DelegatingHttp2ConnectionHandler(connection, reader, writer, inboundFlow,
                         outboundFlow, observer);
         handler.decode(ctx, Unpooled.copiedBuffer("BAD_PREFACE", UTF_8), Collections.emptyList());
         verify(ctx).close();
@@ -197,8 +194,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
     public void serverReceivingValidClientPrefaceStringShouldContinueReadingFrames() throws Exception {
         Mockito.reset(observer);
         when(connection.isServer()).thenReturn(true);
-        handler =
-                new DelegatingHttp2ConnectionHandler(connection, reader, writer, inboundFlow,
+        handler = new DelegatingHttp2ConnectionHandler(connection, reader, writer, inboundFlow,
                         outboundFlow, observer);
         handler.decode(ctx, connectionPrefaceBuf(), Collections.emptyList());
         verify(ctx, never()).close();

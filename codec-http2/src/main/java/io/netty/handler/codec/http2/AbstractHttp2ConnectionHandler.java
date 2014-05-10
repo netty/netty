@@ -30,7 +30,6 @@ import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_LOCAL;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -63,7 +62,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
     private final Http2Connection connection;
     private final Http2InboundFlowController inboundFlow;
     private final Http2OutboundFlowController outboundFlow;
-    private final ByteBuf clientPrefaceString;
+    private ByteBuf clientPrefaceString;
     private boolean prefaceSent;
     private boolean prefaceReceived;
     private ChannelHandlerContext ctx;
@@ -110,7 +109,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
         this.outboundFlow = outboundFlow;
 
         // Set the expected client preface string. Only servers should receive this.
-        this.clientPrefaceString = connection.isServer()? connectionPrefaceBuf() : Unpooled.EMPTY_BUFFER;
+        this.clientPrefaceString = connection.isServer()? connectionPrefaceBuf() : null;
     }
 
     @Override
@@ -127,6 +126,12 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
         // the connection became active, send the connection preface now.
         this.ctx = ctx;
         sendPreface(ctx);
+    }
+
+    @Override
+    protected void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
+        // Free any resources associated with this handler.
+        freeResources();
     }
 
     protected final ChannelHandlerContext ctx() {
@@ -383,12 +388,12 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
     /**
      * Decodes the client connection preface string from the input buffer.
      *
-     * @return true if processing of the client preface string is complete. Since client preface
-     *         strings can only be received by servers, returns true immediately for client
+     * @return {@code true} if processing of the client preface string is complete. Since client
+     *         preface strings can only be received by servers, returns true immediately for client
      *         endpoints.
      */
     private boolean readClientPrefaceString(ChannelHandlerContext ctx, ByteBuf in) throws Http2Exception {
-        if (!clientPrefaceString.isReadable()) {
+        if (clientPrefaceString == null) {
             return true;
         }
 
@@ -410,6 +415,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
         if (!clientPrefaceString.isReadable()) {
             // Entire preface has been read.
             clientPrefaceString.release();
+            clientPrefaceString = null;
             return true;
         }
         return false;
@@ -492,6 +498,10 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
     private void freeResources() {
         frameReader.close();
         frameWriter.close();
+        if (clientPrefaceString != null) {
+            clientPrefaceString.release();
+            clientPrefaceString = null;
+        }
     }
 
     private void closeLocalSide(Http2Stream stream, ChannelHandlerContext ctx, ChannelFuture future) {
