@@ -78,7 +78,6 @@ public class Http2ConnectionRoundtripTest {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
-                p.addLast(new Http2PrefaceHandler(true));
                 p.addLast(new DelegatingHttp2ConnectionHandler(true, new FrameCountDown()));
             }
         });
@@ -89,7 +88,6 @@ public class Http2ConnectionRoundtripTest {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
-                p.addLast(new Http2PrefaceHandler(false));
                 p.addLast(new DelegatingHttp2ConnectionHandler(false, serverObserver));
             }
         });

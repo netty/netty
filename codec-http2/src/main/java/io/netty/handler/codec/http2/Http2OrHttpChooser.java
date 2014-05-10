@@ -73,10 +73,8 @@ public abstract class Http2OrHttpChooser extends ByteToMessageDecoder {
     }
 
     private final int maxHttpContentLength;
-    private final boolean server;
 
-    protected Http2OrHttpChooser(boolean server, int maxHttpContentLength) {
-        this.server = server;
+    protected Http2OrHttpChooser(int maxHttpContentLength) {
         this.maxHttpContentLength = maxHttpContentLength;
     }
 
@@ -129,7 +127,6 @@ public abstract class Http2OrHttpChooser extends ByteToMessageDecoder {
      */
     protected void addHttp2Handlers(ChannelHandlerContext ctx) {
         ChannelPipeline pipeline = ctx.pipeline();
-        pipeline.addLast("http2PrefaceHandler", new Http2PrefaceHandler(server));
         pipeline.addLast("http2ConnectionHandler", createHttp2RequestHandler());
     }
 
