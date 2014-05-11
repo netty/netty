@@ -163,7 +163,11 @@ public final class NativeLibraryLoader {
 
         URL url = loader.getResource(path);
         if (url == null && isOSX()) {
-            url = loader.getResource(NATIVE_RESOURCE_HOME + "lib" + name + ".jnilib");
+            if (path.endsWith(".jnilib")) {
+                url = loader.getResource(NATIVE_RESOURCE_HOME + "lib" + name + ".dynlib");
+            } else {
+                url = loader.getResource(NATIVE_RESOURCE_HOME + "lib" + name + ".jnilib");
+            }
         }
 
         if (url == null) {
