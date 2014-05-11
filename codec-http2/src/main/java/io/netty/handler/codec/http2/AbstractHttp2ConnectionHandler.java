@@ -17,7 +17,6 @@ package io.netty.handler.codec.http2;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuf;
-import static io.netty.handler.codec.http2.Http2CodecUtil.failAndThrow;
 import static io.netty.handler.codec.http2.Http2CodecUtil.toByteBuf;
 import static io.netty.handler.codec.http2.Http2CodecUtil.toHttp2Exception;
 import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
@@ -189,7 +188,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
 
     protected ChannelFuture writeData(final ChannelHandlerContext ctx,
             final ChannelPromise promise, int streamId, final ByteBuf data, int padding,
-            boolean endStream, boolean endSegment, boolean compressed) throws Http2Exception {
+            boolean endStream, boolean endSegment, boolean compressed) {
         try {
             if (connection.isGoAway()) {
                 throw protocolError("Sending data after connection going away.");
@@ -208,21 +207,19 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
 
             return promise;
         } catch (Http2Exception e) {
-            throw failAndThrow(promise, e);
+            return promise.setFailure(e);
         }
     }
 
     protected ChannelFuture writeHeaders(ChannelHandlerContext ctx, ChannelPromise promise,
-            int streamId, Http2Headers headers, int padding, boolean endStream, boolean endSegment)
-            throws Http2Exception {
+            int streamId, Http2Headers headers, int padding, boolean endStream, boolean endSegment) {
         return writeHeaders(ctx, promise, streamId, headers, 0, DEFAULT_PRIORITY_WEIGHT, false,
                 padding, endStream, endSegment);
     }
 
     protected ChannelFuture writeHeaders(ChannelHandlerContext ctx, ChannelPromise promise,
             int streamId, Http2Headers headers, int streamDependency, short weight,
-            boolean exclusive, int padding, boolean endStream, boolean endSegment)
-            throws Http2Exception {
+            boolean exclusive, int padding, boolean endStream, boolean endSegment) {
         try {
             if (connection.isGoAway()) {
                 throw protocolError("Sending headers after connection going away.");
@@ -268,13 +265,12 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
             return frameWriter.writeHeaders(ctx, promise, streamId, headers, streamDependency,
                     weight, exclusive, padding, endStream, endSegment);
         } catch (Http2Exception e) {
-            throw failAndThrow(promise, e);
+            return promise.setFailure(e);
         }
     }
 
     protected ChannelFuture writePriority(ChannelHandlerContext ctx, ChannelPromise promise,
-            int streamId, int streamDependency, short weight, boolean exclusive)
-            throws Http2Exception {
+            int streamId, int streamDependency, short weight, boolean exclusive) {
         try {
             if (connection.isGoAway()) {
                 throw protocolError("Sending priority after connection going away.");
@@ -286,7 +282,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
             return frameWriter.writePriority(ctx, promise, streamId, streamDependency, weight,
                     exclusive);
         } catch (Http2Exception e) {
-            throw failAndThrow(promise, e);
+            return promise.setFailure(e);
         }
     }
 
@@ -305,7 +301,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
     }
 
     protected ChannelFuture writeSettings(ChannelHandlerContext ctx, ChannelPromise promise,
-            Http2Settings settings) throws Http2Exception {
+            Http2Settings settings) {
         outstandingLocalSettingsQueue.add(settings);
         try {
             if (connection.isGoAway()) {
@@ -320,12 +316,12 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
 
             return frameWriter.writeSettings(ctx, promise, settings);
         } catch (Http2Exception e) {
-            throw failAndThrow(promise, e);
+            return promise.setFailure(e);
         }
     }
 
     protected ChannelFuture writePing(ChannelHandlerContext ctx, ChannelPromise promise,
-            ByteBuf data) throws Http2Exception {
+            ByteBuf data) {
         try {
             if (connection.isGoAway()) {
                 throw protocolError("Sending ping after connection going away.");
@@ -334,13 +330,12 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
             // Just pass the frame through.
             return frameWriter.writePing(ctx, promise, false, data);
         } catch (Http2Exception e) {
-            throw failAndThrow(promise, e);
+            return promise.setFailure(e);
         }
     }
 
     protected ChannelFuture writePushPromise(ChannelHandlerContext ctx, ChannelPromise promise,
-            int streamId, int promisedStreamId, Http2Headers headers, int padding)
-            throws Http2Exception {
+            int streamId, int promisedStreamId, Http2Headers headers, int padding) {
         try {
             if (connection.isGoAway()) {
                 throw protocolError("Sending push promise after connection going away.");
@@ -354,15 +349,14 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
             return frameWriter.writePushPromise(ctx, promise, streamId, promisedStreamId, headers,
                     padding);
         } catch (Http2Exception e) {
-            throw failAndThrow(promise, e);
+            return promise.setFailure(e);
         }
     }
 
     protected ChannelFuture writeAltSvc(ChannelHandlerContext ctx, ChannelPromise promise,
-            int streamId, long maxAge, int port, ByteBuf protocolId, String host, String origin)
-            throws Http2Exception {
+            int streamId, long maxAge, int port, ByteBuf protocolId, String host, String origin) {
         if (!connection.isServer()) {
-            throw protocolError("Client sending ALT_SVC frame");
+            return promise.setFailure(protocolError("Client sending ALT_SVC frame"));
         }
         return frameWriter.writeAltSvc(ctx, promise, streamId, maxAge, port, protocolId, host,
                         origin);
@@ -392,7 +386,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
      *         preface strings can only be received by servers, returns true immediately for client
      *         endpoints.
      */
-    private boolean readClientPrefaceString(ChannelHandlerContext ctx, ByteBuf in) throws Http2Exception {
+    private boolean readClientPrefaceString(ChannelHandlerContext ctx, ByteBuf in) {
         if (clientPrefaceString == null) {
             return true;
         }
@@ -918,58 +912,54 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
         @Override
         public void writeFrame(int streamId, ByteBuf data, int padding,
                 boolean endStream, boolean endSegment, boolean compressed) {
-            try {
-                if (promise.isDone()) {
-                    // Most likely the write already failed. Just release the
-                    // buffer.
-                    data.release();
-                    return;
-                }
-
-                remaining -= data.readableBytes();
-
-                // The flow controller may split the write into chunks. Use a new
-                // promise for intermediate writes.
-                final ChannelPromise chunkPromise =
-                        remaining == 0 ? promise : ctx.newPromise();
-
-                // The original promise is already in the list, so don't add again.
-                if (chunkPromise != promise) {
-                    promises.add(chunkPromise);
-                }
-
-                // TODO: consider adding a flush() method to this interface. The
-                // frameWriter flushes on each write which isn't optimal
-                // for the case of the outbound flow controller, which sends a batch
-                // of frames when the flow control window changes. We should let
-                // the flow controller manually flush after all writes are.
-                // complete.
-
-                // Write the frame.
-                ChannelFuture future =
-                        frameWriter.writeData(ctx, chunkPromise, streamId, data,
-                                padding, endStream, endSegment, compressed);
-
-                // Close the connection on write failures that leave the outbound
-                // flow
-                // control window in a corrupt state.
-                future.addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future)
-                            throws Exception {
-                        if (!future.isSuccess()) {
-                            // If any of the chunk writes fail, also fail the
-                            // original
-                            // future that was returned to the caller.
-                            failAllPromises(future.cause());
-                            processHttp2Exception(ctx,
-                                    toHttp2Exception(future.cause()));
-                        }
-                    }
-                });
-            } catch (Http2Exception e) {
-                processHttp2Exception(ctx, e);
+            if (promise.isDone()) {
+                // Most likely the write already failed. Just release the
+                // buffer.
+                data.release();
+                return;
             }
+
+            remaining -= data.readableBytes();
+
+            // The flow controller may split the write into chunks. Use a new
+            // promise for intermediate writes.
+            final ChannelPromise chunkPromise =
+                    remaining == 0 ? promise : ctx.newPromise();
+
+            // The original promise is already in the list, so don't add again.
+            if (chunkPromise != promise) {
+                promises.add(chunkPromise);
+            }
+
+            // TODO: consider adding a flush() method to this interface. The
+            // frameWriter flushes on each write which isn't optimal
+            // for the case of the outbound flow controller, which sends a batch
+            // of frames when the flow control window changes. We should let
+            // the flow controller manually flush after all writes are.
+            // complete.
+
+            // Write the frame.
+            ChannelFuture future =
+                    frameWriter.writeData(ctx, chunkPromise, streamId, data,
+                            padding, endStream, endSegment, compressed);
+
+            // Close the connection on write failures that leave the outbound
+            // flow
+            // control window in a corrupt state.
+            future.addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future)
+                        throws Exception {
+                    if (!future.isSuccess()) {
+                        // If any of the chunk writes fail, also fail the
+                        // original
+                        // future that was returned to the caller.
+                        failAllPromises(future.cause());
+                        processHttp2Exception(ctx,
+                                toHttp2Exception(future.cause()));
+                    }
+                }
+            });
 
             // Close the local side of the stream if this is the last frame
             if (endStream) {

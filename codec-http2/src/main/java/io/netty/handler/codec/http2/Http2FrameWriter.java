@@ -41,8 +41,7 @@ public interface Http2FrameWriter extends Closeable {
      * @return the future for the write.
      */
     ChannelFuture writeData(ChannelHandlerContext ctx, ChannelPromise promise, int streamId,
-            ByteBuf data, int padding, boolean endStream, boolean endSegment, boolean compressed)
-            throws Http2Exception;
+            ByteBuf data, int padding, boolean endStream, boolean endSegment, boolean compressed);
 
     /**
      * Writes a HEADERS frame to the remote endpoint.
@@ -57,8 +56,7 @@ public interface Http2FrameWriter extends Closeable {
      * @return the future for the write.
      */
     ChannelFuture writeHeaders(ChannelHandlerContext ctx, ChannelPromise promise, int streamId,
-            Http2Headers headers, int padding, boolean endStream, boolean endSegment)
-            throws Http2Exception;
+            Http2Headers headers, int padding, boolean endStream, boolean endSegment);
 
     /**
      * Writes a HEADERS frame with priority specified to the remote endpoint.
@@ -78,7 +76,7 @@ public interface Http2FrameWriter extends Closeable {
      */
     ChannelFuture writeHeaders(ChannelHandlerContext ctx, ChannelPromise promise, int streamId,
             Http2Headers headers, int streamDependency, short weight, boolean exclusive,
-            int padding, boolean endStream, boolean endSegment) throws Http2Exception;
+            int padding, boolean endStream, boolean endSegment);
 
     /**
      * Writes a PRIORITY frame to the remote endpoint.
@@ -93,7 +91,7 @@ public interface Http2FrameWriter extends Closeable {
      * @return the future for the write.
      */
     ChannelFuture writePriority(ChannelHandlerContext ctx, ChannelPromise promise, int streamId,
-            int streamDependency, short weight, boolean exclusive) throws Http2Exception;
+            int streamDependency, short weight, boolean exclusive);
 
     /**
      * Writes a RST_STREAM frame to the remote endpoint.
@@ -116,7 +114,7 @@ public interface Http2FrameWriter extends Closeable {
      * @return the future for the write.
      */
     ChannelFuture writeSettings(ChannelHandlerContext ctx, ChannelPromise promise,
-            Http2Settings settings) throws Http2Exception;
+            Http2Settings settings);
 
     /**
      * Writes a SETTINGS acknowledgment to the remote endpoint.
@@ -125,8 +123,7 @@ public interface Http2FrameWriter extends Closeable {
      * @param promise the promise for the write.
      * @return the future for the write.
      */
-    ChannelFuture writeSettingsAck(ChannelHandlerContext ctx, ChannelPromise promise)
-            throws Http2Exception;
+    ChannelFuture writeSettingsAck(ChannelHandlerContext ctx, ChannelPromise promise);
 
     /**
      * Writes a PING frame to the remote endpoint.
@@ -139,7 +136,7 @@ public interface Http2FrameWriter extends Closeable {
      * @return the future for the write.
      */
     ChannelFuture writePing(ChannelHandlerContext ctx, ChannelPromise promise, boolean ack,
-            ByteBuf data) throws Http2Exception;
+            ByteBuf data);
 
     /**
      * Writes a PUSH_PROMISE frame to the remote endpoint.
@@ -153,7 +150,7 @@ public interface Http2FrameWriter extends Closeable {
      * @return the future for the write.
      */
     ChannelFuture writePushPromise(ChannelHandlerContext ctx, ChannelPromise promise, int streamId,
-            int promisedStreamId, Http2Headers headers, int padding) throws Http2Exception;
+            int promisedStreamId, Http2Headers headers, int padding);
 
     /**
      * Writes a GO_AWAY frame to the remote endpoint.
@@ -179,7 +176,7 @@ public interface Http2FrameWriter extends Closeable {
      * @return the future for the write.
      */
     ChannelFuture writeWindowUpdate(ChannelHandlerContext ctx, ChannelPromise promise,
-            int streamId, int windowSizeIncrement) throws Http2Exception;
+            int streamId, int windowSizeIncrement);
 
     /**
      * Writes a ALT_SVC frame to the remote endpoint.
@@ -196,8 +193,7 @@ public interface Http2FrameWriter extends Closeable {
      * @return the future for the write.
      */
     ChannelFuture writeAltSvc(ChannelHandlerContext ctx, ChannelPromise promise, int streamId,
-            long maxAge, int port, ByteBuf protocolId, String host, String origin)
-            throws Http2Exception;
+            long maxAge, int port, ByteBuf protocolId, String host, String origin);
 
     /**
      * Writes a BLOCKED frame to the remote endpoint.
@@ -207,8 +203,7 @@ public interface Http2FrameWriter extends Closeable {
      * @param streamId the stream that is blocked or 0 if the entire connection is blocked.
      * @return the future for the write.
      */
-    ChannelFuture writeBlocked(ChannelHandlerContext ctx, ChannelPromise promise, int streamId)
-            throws Http2Exception;
+    ChannelFuture writeBlocked(ChannelHandlerContext ctx, ChannelPromise promise, int streamId);
 
     /**
      * Closes this writer and frees any allocated resources.

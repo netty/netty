@@ -38,6 +38,11 @@ import java.util.concurrent.TimeUnit;
  */
 public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowController {
     /**
+     * The interval (in ns) at which the removed priority garbage collector runs.
+     */
+    private static final long GARBAGE_COLLECTION_INTERVAL = TimeUnit.SECONDS.toNanos(2);
+
+    /**
      * A comparators that sorts priority nodes in ascending order by the amount
      * of priority data available for its subtree.
      */
@@ -577,7 +582,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
          */
         private void incrementPendingBytes(int numBytes) {
             int previouslyStreamable = streamableBytes();
-            this.pendingBytes += numBytes;
+            pendingBytes += numBytes;
             incrementPriorityBytes(streamableBytes() - previouslyStreamable);
         }
 
@@ -688,10 +693,6 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
      * Controls garbage collection for priorities that have been marked for removal.
      */
     private final class GarbageCollector implements Runnable {
-        /**
-         * The interval (in ns) at which the removed priority garbage collector runs.
-         */
-        private final long GARBAGE_COLLECTION_INTERVAL = TimeUnit.SECONDS.toNanos(2);
 
         private final Queue<Priority<FlowState>> garbage;
         private long lastGarbageCollection;

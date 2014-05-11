@@ -49,7 +49,7 @@ public enum Http2FrameType {
 
     private final short code;
 
-    private Http2FrameType(short code) {
+    Http2FrameType(short code) {
         this.code = code;
     }
 

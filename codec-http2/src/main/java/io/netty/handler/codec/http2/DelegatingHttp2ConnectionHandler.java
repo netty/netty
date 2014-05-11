@@ -59,32 +59,28 @@ public class DelegatingHttp2ConnectionHandler extends AbstractHttp2ConnectionHan
 
     @Override
     public ChannelFuture writeData(ChannelHandlerContext ctx, ChannelPromise promise, int streamId,
-            ByteBuf data, int padding, boolean endStream, boolean endSegment, boolean compressed)
-            throws Http2Exception {
+            ByteBuf data, int padding, boolean endStream, boolean endSegment, boolean compressed) {
         return super.writeData(ctx, promise, streamId, data, padding, endStream, endSegment,
                 compressed);
     }
 
     @Override
     public ChannelFuture writeHeaders(ChannelHandlerContext ctx, ChannelPromise promise,
-            int streamId, Http2Headers headers, int padding, boolean endStream, boolean endSegment)
-            throws Http2Exception {
+            int streamId, Http2Headers headers, int padding, boolean endStream, boolean endSegment) {
         return super.writeHeaders(ctx, promise, streamId, headers, padding, endStream, endSegment);
     }
 
     @Override
     public ChannelFuture writeHeaders(ChannelHandlerContext ctx, ChannelPromise promise,
             int streamId, Http2Headers headers, int streamDependency, short weight,
-            boolean exclusive, int padding, boolean endStream, boolean endSegment)
-            throws Http2Exception {
+            boolean exclusive, int padding, boolean endStream, boolean endSegment) {
         return super.writeHeaders(ctx, promise, streamId, headers, streamDependency, weight,
                 exclusive, padding, endStream, endSegment);
     }
 
     @Override
     public ChannelFuture writePriority(ChannelHandlerContext ctx, ChannelPromise promise,
-            int streamId, int streamDependency, short weight, boolean exclusive)
-            throws Http2Exception {
+            int streamId, int streamDependency, short weight, boolean exclusive) {
         return super.writePriority(ctx, promise, streamId, streamDependency, weight, exclusive);
     }
 
@@ -96,27 +92,24 @@ public class DelegatingHttp2ConnectionHandler extends AbstractHttp2ConnectionHan
 
     @Override
     public ChannelFuture writeSettings(ChannelHandlerContext ctx, ChannelPromise promise,
-            Http2Settings settings) throws Http2Exception {
+            Http2Settings settings) {
         return super.writeSettings(ctx, promise, settings);
     }
 
     @Override
-    public ChannelFuture writePing(ChannelHandlerContext ctx, ChannelPromise promise, ByteBuf data)
-            throws Http2Exception {
+    public ChannelFuture writePing(ChannelHandlerContext ctx, ChannelPromise promise, ByteBuf data) {
         return super.writePing(ctx, promise, data);
     }
 
     @Override
     public ChannelFuture writePushPromise(ChannelHandlerContext ctx, ChannelPromise promise,
-            int streamId, int promisedStreamId, Http2Headers headers, int padding)
-            throws Http2Exception {
+            int streamId, int promisedStreamId, Http2Headers headers, int padding) {
         return super.writePushPromise(ctx, promise, streamId, promisedStreamId, headers, padding);
     }
 
     @Override
     public ChannelFuture writeAltSvc(ChannelHandlerContext ctx, ChannelPromise promise,
-            int streamId, long maxAge, int port, ByteBuf protocolId, String host, String origin)
-            throws Http2Exception {
+            int streamId, long maxAge, int port, ByteBuf protocolId, String host, String origin) {
         return super.writeAltSvc(ctx, promise, streamId, maxAge, port, protocolId, host, origin);
     }
 

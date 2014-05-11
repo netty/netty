@@ -101,7 +101,6 @@ public interface Http2PriorityTree<T> extends Iterable<Http2PriorityTree.Priorit
      * priority values.
      *
      * @param streamId the stream to be prioritized
-     * @param data optional user-defined data to associate to the stream
      * @return the priority for the stream.
      */
     Priority<T> prioritizeUsingDefaults(int streamId);

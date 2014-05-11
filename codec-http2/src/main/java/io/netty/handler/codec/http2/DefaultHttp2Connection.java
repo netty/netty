@@ -22,7 +22,6 @@ import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_REMOTE;
 import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_LOCAL;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
-import io.netty.handler.codec.http2.Http2Stream.State;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -146,10 +145,10 @@ public class DefaultHttp2Connection implements Http2Connection {
         public Http2Stream openForPush() throws Http2Exception {
             switch (state) {
                 case RESERVED_LOCAL:
-                    state = State.HALF_CLOSED_REMOTE;
+                    state = HALF_CLOSED_REMOTE;
                     break;
                 case RESERVED_REMOTE:
-                    state = State.HALF_CLOSED_LOCAL;
+                    state = HALF_CLOSED_LOCAL;
                     break;
                 default:
                     throw protocolError("Attempting to open non-reserved stream for push");
@@ -173,7 +172,7 @@ public class DefaultHttp2Connection implements Http2Connection {
         public Http2Stream closeLocalSide() {
             switch (state) {
                 case OPEN:
-                    state = State.HALF_CLOSED_LOCAL;
+                    state = HALF_CLOSED_LOCAL;
                     break;
                 case HALF_CLOSED_LOCAL:
                     break;
@@ -188,7 +187,7 @@ public class DefaultHttp2Connection implements Http2Connection {
         public Http2Stream closeRemoteSide() {
             switch (state) {
                 case OPEN:
-                    state = State.HALF_CLOSED_REMOTE;
+                    state = HALF_CLOSED_REMOTE;
                     break;
                 case HALF_CLOSED_REMOTE:
                     break;
@@ -243,9 +242,9 @@ public class DefaultHttp2Connection implements Http2Connection {
             // Create and initialize the stream.
             DefaultStream stream = new DefaultStream(streamId);
             if (halfClosed) {
-                stream.state = isLocal() ? State.HALF_CLOSED_LOCAL : State.HALF_CLOSED_REMOTE;
+                stream.state = isLocal() ? HALF_CLOSED_LOCAL : HALF_CLOSED_REMOTE;
             } else {
-                stream.state = State.OPEN;
+                stream.state = OPEN;
             }
 
             // Update the next and last stream IDs.
@@ -278,7 +277,7 @@ public class DefaultHttp2Connection implements Http2Connection {
 
             // Create and initialize the stream.
             DefaultStream stream = new DefaultStream(streamId);
-            stream.state = isLocal() ? State.RESERVED_LOCAL : State.RESERVED_REMOTE;
+            stream.state = isLocal() ? RESERVED_LOCAL : RESERVED_REMOTE;
 
             // Update the next and last stream IDs.
             nextStreamId = streamId + 2;

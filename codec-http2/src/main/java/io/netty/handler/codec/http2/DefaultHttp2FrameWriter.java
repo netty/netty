@@ -30,7 +30,6 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_HEADER_TABLE_
 import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_INITIAL_WINDOW_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_MAX_CONCURRENT_STREAMS;
 import static io.netty.handler.codec.http2.Http2CodecUtil.SETTING_ENTRY_LENGTH;
-import static io.netty.handler.codec.http2.Http2CodecUtil.failAndThrow;
 import static io.netty.handler.codec.http2.Http2CodecUtil.writeUnsignedInt;
 import static io.netty.handler.codec.http2.Http2CodecUtil.writeUnsignedShort;
 import static io.netty.util.CharsetUtil.UTF_8;
@@ -97,7 +96,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
             out.writeZero(padding);
             return ctx.writeAndFlush(out, promise);
         } catch (RuntimeException e) {
-            throw failAndThrow(promise, e);
+            return promise.setFailure(e);
         } finally {
             data.release();
         }
@@ -105,8 +104,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
 
     @Override
     public ChannelFuture writeHeaders(ChannelHandlerContext ctx, ChannelPromise promise,
-            int streamId, Http2Headers headers, int padding, boolean endStream, boolean endSegment)
-            throws Http2Exception {
+            int streamId, Http2Headers headers, int padding, boolean endStream, boolean endSegment) {
         return writeHeadersInternal(ctx, promise, streamId, headers, padding, endStream,
                 endSegment, false, 0, (short) 0, false);
     }
@@ -114,8 +112,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
     @Override
     public ChannelFuture writeHeaders(ChannelHandlerContext ctx, ChannelPromise promise,
             int streamId, Http2Headers headers, int streamDependency, short weight,
-            boolean exclusive, int padding, boolean endStream, boolean endSegment)
-            throws Http2Exception {
+            boolean exclusive, int padding, boolean endStream, boolean endSegment) {
         return writeHeadersInternal(ctx, promise, streamId, headers, padding, endStream,
                 endSegment, true, streamDependency, weight, exclusive);
     }
@@ -138,7 +135,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
             frame.writeByte(weight - 1);
             return ctx.writeAndFlush(frame, promise);
         } catch (RuntimeException e) {
-            throw failAndThrow(promise, e);
+            return promise.setFailure(e);
         }
     }
 
@@ -155,7 +152,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
             writeUnsignedInt(errorCode, frame);
             return ctx.writeAndFlush(frame, promise);
         } catch (RuntimeException e) {
-            throw failAndThrow(promise, e);
+            return promise.setFailure(e);
         }
     }
 
@@ -197,7 +194,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
             }
             return ctx.writeAndFlush(frame, promise);
         } catch (RuntimeException e) {
-            throw failAndThrow(promise, e);
+            return promise.setFailure(e);
         }
     }
 
@@ -208,7 +205,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
             writeFrameHeader(frame, 0, Http2FrameType.SETTINGS, Http2Flags.ACK_ONLY, 0);
             return ctx.writeAndFlush(frame, promise);
         } catch (RuntimeException e) {
-            throw failAndThrow(promise, e);
+            return promise.setFailure(e);
         }
     }
 
@@ -224,7 +221,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
             frame.writeBytes(data, data.readerIndex(), data.readableBytes());
             return ctx.writeAndFlush(frame, promise);
         } catch (RuntimeException e) {
-            throw failAndThrow(promise, e);
+            return promise.setFailure(e);
         } finally {
             data.release();
         }
@@ -232,8 +229,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
 
     @Override
     public ChannelFuture writePushPromise(ChannelHandlerContext ctx, ChannelPromise promise,
-            int streamId, int promisedStreamId, Http2Headers headers, int padding)
-            throws Http2Exception {
+            int streamId, int promisedStreamId, Http2Headers headers, int padding) {
         ByteBuf headerBlock = null;
         try {
             verifyStreamId(streamId, "Stream ID");
@@ -279,8 +275,8 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
 
             // Create a composite buffer wrapping the first frame and any continuation frames.
             return continueHeaders(ctx, promise, streamId, padding, headerBlock, firstFrame);
-        } catch (RuntimeException e) {
-            throw failAndThrow(promise, e);
+        } catch (Exception e) {
+            return promise.setFailure(e);
         } finally {
             if (headerBlock != null) {
                 headerBlock.release();
@@ -303,7 +299,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
             frame.writeBytes(debugData, debugData.readerIndex(), debugData.readableBytes());
             return ctx.writeAndFlush(frame, promise);
         } catch (RuntimeException e) {
-            throw failAndThrow(promise, e);
+            return promise.setFailure(e);
         } finally {
             debugData.release();
         }
@@ -322,7 +318,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
             frame.writeInt(windowSizeIncrement);
             return ctx.writeAndFlush(frame, promise);
         } catch (RuntimeException e) {
-            throw failAndThrow(promise, e);
+            return promise.setFailure(e);
         }
     }
 
@@ -356,7 +352,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
             }
             return ctx.writeAndFlush(frame, promise);
         } catch (RuntimeException e) {
-            throw failAndThrow(promise, e);
+            return promise.setFailure(e);
         } finally {
             protocolId.release();
         }
@@ -372,7 +368,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
             writeFrameHeader(frame, 0, Http2FrameType.BLOCKED, Http2Flags.EMPTY, streamId);
             return ctx.writeAndFlush(frame, promise);
         } catch (RuntimeException e) {
-            throw failAndThrow(promise, e);
+            return promise.setFailure(e);
         }
     }
 
@@ -387,8 +383,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
 
     private ChannelFuture writeHeadersInternal(ChannelHandlerContext ctx, ChannelPromise promise,
             int streamId, Http2Headers headers, int padding, boolean endStream, boolean endSegment,
-            boolean hasPriority, int streamDependency, short weight, boolean exclusive)
-            throws Http2Exception {
+            boolean hasPriority, int streamDependency, short weight, boolean exclusive) {
         ByteBuf headerBlock = null;
         try {
             verifyStreamId(streamId, "Stream ID");
@@ -445,8 +440,8 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
 
             // Create a composite buffer wrapping the first frame and any continuation frames.
             return continueHeaders(ctx, promise, streamId, padding, headerBlock, firstFrame);
-        } catch (RuntimeException e) {
-            throw failAndThrow(promise, e);
+        } catch (Exception e) {
+            return promise.setFailure(e);
         } finally {
             if (headerBlock != null) {
                 headerBlock.release();

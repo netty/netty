@@ -23,7 +23,7 @@ import io.netty.buffer.ByteBuf;
 public interface Http2OutboundFlowController {
 
     /**
-     * Interface that abstracts the writing of {@link Http2Frame} objects to the remote endpoint.
+     * Interface that abstracts the writing of frames to the remote endpoint.
      */
     interface FrameWriter {
 
