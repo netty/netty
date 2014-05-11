@@ -48,7 +48,7 @@ import static javax.net.ssl.SSLEngineResult.Status.*;
  *   SSLEngine: http://download.oracle.com/javase/1,5.0/docs/api/javax/net/ssl/SSLEngine.html
  *   OpenSSL:   http://www.openssl.org/docs/crypto/BIO_s_bio.html#example
  */
-final class OpenSslEngine extends SSLEngine {
+public final class OpenSslEngine extends SSLEngine {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(OpenSslEngine.class);
 
@@ -81,6 +81,10 @@ final class OpenSslEngine extends SSLEngine {
             throw (Error) new UnsatisfiedLinkError(
                     "failed to load the required native library").initCause(UNAVAILABILITY_CAUSE);
         }
+    }
+
+    public static Throwable unavailabilityCause() {
+        return UNAVAILABILITY_CAUSE;
     }
 
     private static final SSLException ENGINE_CLOSED = new SSLException("engine closed");
@@ -127,7 +131,7 @@ final class OpenSslEngine extends SSLEngine {
     private final OpenSslBufferPool bufPool;
     private SSLSession session;
 
-    OpenSslEngine(long sslContext, OpenSslBufferPool bufPool) {
+    public OpenSslEngine(long sslContext, OpenSslBufferPool bufPool) {
         ensureAvailability();
         if (sslContext == 0) {
             throw new NullPointerException("sslContext");

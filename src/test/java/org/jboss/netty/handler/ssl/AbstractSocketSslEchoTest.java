@@ -136,7 +136,9 @@ public abstract class AbstractSocketSslEchoTest {
             });
             */
         } else {
-            logger.warn("OpenSslEngine is unavailable and thus will not be tested.");
+            logger.warn(
+                    "OpenSslEngine is unavailable and thus will not be tested.",
+                    OpenSslEngine.unavailabilityCause());
         }
 
         for (SSLEngineFactory sf: serverEngines) {
