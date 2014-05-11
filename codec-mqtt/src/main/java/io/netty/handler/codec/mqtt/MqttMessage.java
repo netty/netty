@@ -64,17 +64,17 @@ public class MqttMessage {
         return payload;
     }
 
-    public DecoderResult getDecoderResult() {
+    public DecoderResult decoderResult() {
         return decoderResult;
     }
 
     @Override
     public String toString() {
-        StringBuilder builder = new StringBuilder(StringUtil.simpleClassName(this)).append("[");
+        StringBuilder builder = new StringBuilder(StringUtil.simpleClassName(this)).append('[');
         builder.append("fixedHeader=").append(fixedHeader() != null ? fixedHeader().toString() : "");
         builder.append(", variableHeader=").append(variableHeader() != null ? variableHeader.toString() : "");
         builder.append(", payload=").append(payload() != null ? payload.toString() : "");
-        builder.append("]");
+        builder.append(']');
         return builder.toString();
     }
 }

@@ -16,18 +16,12 @@
 
 package io.netty.handler.codec.mqtt;
 
-import java.nio.charset.Charset;
-
 /**
  * Holds Constant values used by multiple classes in mqtt-codec.
  */
-public final class MqttConstants {
+final class MqttVersion {
 
     static final String PROTOCOL_NAME = "MQIsdp";
 
-    static final int QOS0 = 0;
-    static final int QOS1 = 1;
-    static final int QOS2 = 2;
-
-    private MqttConstants() { }
+    private MqttVersion() { }
 }

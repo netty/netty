@@ -24,28 +24,28 @@ import io.netty.util.internal.StringUtil;
  */
 public class MqttTopicSubscription {
 
-    private final String topicName;
-    private final int qualityOfService;
+    private final String topicFilter;
+    private final QoS qualityOfService;
 
-    public MqttTopicSubscription(String topicName, int qualityOfService) {
-        this.topicName = topicName;
+    public MqttTopicSubscription(String topicFilter, QoS qualityOfService) {
+        this.topicFilter = topicFilter;
         this.qualityOfService = qualityOfService;
     }
 
     public String topicName() {
-        return topicName;
+        return topicFilter;
     }
 
-    public int qualityOfService() {
+    public QoS qualityOfService() {
         return qualityOfService;
     }
 
     @Override
     public String toString() {
-        StringBuilder builder = new StringBuilder(StringUtil.simpleClassName(this)).append("[");
-        builder.append("topicName=").append(topicName);
+        StringBuilder builder = new StringBuilder(StringUtil.simpleClassName(this)).append('[');
+        builder.append("topicFilter=").append(topicFilter);
         builder.append(", qualityOfService=").append(qualityOfService);
-        builder.append("]");
+        builder.append(']');
         return builder.toString();
     }
 }

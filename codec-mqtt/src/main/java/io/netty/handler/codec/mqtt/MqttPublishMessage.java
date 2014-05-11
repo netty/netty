@@ -19,7 +19,6 @@ package io.netty.handler.codec.mqtt;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.util.IllegalReferenceCountException;
-import io.netty.util.internal.StringUtil;
 
 /**
  * See <a href="http://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html#publish">MQTTV3.1/publish</a>

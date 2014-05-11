@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,28 +16,13 @@
 
 package io.netty.handler.codec.mqtt;
 
-/**
- * MQTT Message Types.
- */
-public enum MqttMessageType {
-    CONNECT(1),
-    CONNACK(2),
-    PUBLISH(3),
-    PUBACK(4),
-    PUBREC(5),
-    PUBREL(6),
-    PUBCOMP(7),
-    SUBSCRIBE(8),
-    SUBACK(9),
-    UNSUBSCRIBE(10),
-    UNSUBACK(11),
-    PINGREQ(12),
-    PINGRESP(13),
-    DISCONNECT(14);
+public enum QoS {
+    AT_MOST_ONCE(0),
+    AT_LEAST_ONCE(1),
+    EXACTLY_ONCE(2);
 
     private final int value;
-
-    MqttMessageType(int value) {
+    private QoS(int value) {
         this.value = value;
     }
 
@@ -45,13 +30,13 @@ public enum MqttMessageType {
         return value;
     }
 
-    public static MqttMessageType valueOf(int type) {
-        for (MqttMessageType t : values()) {
-            if (t.value == type) {
-                return t;
+    public static QoS valueOf(int value) {
+        for (QoS q : values()) {
+            if (q.value == value) {
+                return q;
             }
         }
-        throw new IllegalArgumentException("message type " + type + " unsupported");
+        throw new IllegalArgumentException(String.format("Invalid QoS: %d", value));
     }
 }
 

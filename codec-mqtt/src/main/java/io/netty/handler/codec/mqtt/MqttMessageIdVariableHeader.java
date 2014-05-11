@@ -22,11 +22,20 @@ import io.netty.util.internal.StringUtil;
  * Variable Header containing only Message Id
  * See <a href="http://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html#msg-id">MQTTV3.1/msg-id</a>
  */
-public class MqttMessageIdVariableHeader {
+public final class MqttMessageIdVariableHeader {
 
     private final int messageId;
 
-    public MqttMessageIdVariableHeader(int messageId) {
+    public static MqttMessageIdVariableHeader from(int messageId) {
+      if (messageId < 1 || messageId > 0xffff) {
+        throw new IllegalArgumentException(
+            String.format("Message id must be in the range of 1 - 0xffff but %d given ",
+                          messageId));
+      }
+      return new MqttMessageIdVariableHeader(messageId);
+    }
+
+    private MqttMessageIdVariableHeader(int messageId) {
         this.messageId = messageId;
     }
 
@@ -36,9 +45,9 @@ public class MqttMessageIdVariableHeader {
 
     @Override
     public String toString() {
-        StringBuilder builder = new StringBuilder(StringUtil.simpleClassName(this)).append("[");
+        StringBuilder builder = new StringBuilder(StringUtil.simpleClassName(this)).append('[');
         builder.append("messageId=").append(messageId);
-        builder.append("]");
+        builder.append(']');
         return builder.toString();
     }
 }

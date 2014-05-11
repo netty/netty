@@ -30,7 +30,7 @@ import org.mockito.MockitoAnnotations;
 import java.util.LinkedList;
 import java.util.List;
 
-import static io.netty.handler.codec.mqtt.MqttConstants.*;
+import static io.netty.handler.codec.mqtt.MqttVersion.*;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
@@ -235,17 +235,18 @@ public class MqttCodecTest {
     // Message types to help testing
 
     private static MqttMessage createMessageWithFixedHeader(MqttMessageType messageType) {
-        return new MqttMessage(new MqttFixedHeader(messageType, false, QOS0, false, 0));
+        return new MqttMessage(new MqttFixedHeader(messageType, false, QoS.AT_MOST_ONCE, false, 0));
     }
 
     private static MqttMessage createMessageWithFixedHeaderAndMessageIdVariableHeader(MqttMessageType messageType) {
-        MqttFixedHeader mqttFixedHeader = new MqttFixedHeader(messageType, false, QOS1, false, 0);
-        MqttMessageIdVariableHeader mqttMessageIdVariableHeader = new MqttMessageIdVariableHeader(12345);
+        MqttFixedHeader mqttFixedHeader = new MqttFixedHeader(messageType, false, QoS.AT_LEAST_ONCE, false, 0);
+        MqttMessageIdVariableHeader mqttMessageIdVariableHeader = MqttMessageIdVariableHeader.from(12345);
         return new MqttMessage(mqttFixedHeader, mqttMessageIdVariableHeader);
     }
 
     private static MqttConnectMessage createConnectMessage() {
-        MqttFixedHeader mqttFixedHeader = new MqttFixedHeader(MqttMessageType.CONNECT, false, QOS0, false, 0);
+        MqttFixedHeader mqttFixedHeader =
+                new MqttFixedHeader(MqttMessageType.CONNECT, false, QoS.AT_MOST_ONCE, false, 0);
         MqttConnectVariableHeader mqttConnectVariableHeader =
                 new MqttConnectVariableHeader(
                         PROTOCOL_NAME,
@@ -264,14 +265,16 @@ public class MqttCodecTest {
     }
 
     private static MqttConnAckMessage createConnAckMessage() {
-        MqttFixedHeader mqttFixedHeader = new MqttFixedHeader(MqttMessageType.CONNACK, false, QOS0, false, 0);
+        MqttFixedHeader mqttFixedHeader =
+                new MqttFixedHeader(MqttMessageType.CONNACK, false, QoS.AT_MOST_ONCE, false, 0);
         MqttConnAckVariableHeader mqttConnAckVariableHeader =
                 new MqttConnAckVariableHeader(MqttConnectReturnCode.CONNECTION_ACCEPTED);
         return new MqttConnAckMessage(mqttFixedHeader, mqttConnAckVariableHeader);
     }
 
     private static MqttPublishMessage createPublishMessage() {
-        MqttFixedHeader mqttFixedHeader = new MqttFixedHeader(MqttMessageType.PUBLISH, false, QOS1, true, 0);
+        MqttFixedHeader mqttFixedHeader =
+                new MqttFixedHeader(MqttMessageType.PUBLISH, false, QoS.AT_LEAST_ONCE, true, 0);
         MqttPublishVariableHeader mqttPublishVariableHeader = new MqttPublishVariableHeader("/abc", 1234);
         ByteBuf payload =  ALLOCATOR.buffer();
         payload.writeBytes("whatever".getBytes(CharsetUtil.UTF_8));
@@ -279,21 +282,23 @@ public class MqttCodecTest {
     }
 
     private static MqttSubscribeMessage createSubscribeMessage() {
-        MqttFixedHeader mqttFixedHeader = new MqttFixedHeader(MqttMessageType.SUBSCRIBE, false, QOS1, true, 0);
-        MqttMessageIdVariableHeader mqttMessageIdVariableHeader = new MqttMessageIdVariableHeader(12345);
+        MqttFixedHeader mqttFixedHeader =
+                new MqttFixedHeader(MqttMessageType.SUBSCRIBE, false, QoS.AT_LEAST_ONCE, true, 0);
+        MqttMessageIdVariableHeader mqttMessageIdVariableHeader = MqttMessageIdVariableHeader.from(12345);
 
         List<MqttTopicSubscription> topicSubscriptions = new LinkedList<MqttTopicSubscription>();
-        topicSubscriptions.add(new MqttTopicSubscription("/abc", QOS1));
-        topicSubscriptions.add(new MqttTopicSubscription("/def", QOS1));
-        topicSubscriptions.add(new MqttTopicSubscription("/xyz", QOS2));
+        topicSubscriptions.add(new MqttTopicSubscription("/abc", QoS.AT_LEAST_ONCE));
+        topicSubscriptions.add(new MqttTopicSubscription("/def", QoS.AT_LEAST_ONCE));
+        topicSubscriptions.add(new MqttTopicSubscription("/xyz", QoS.EXACTLY_ONCE));
 
         MqttSubscribePayload mqttSubscribePayload = new MqttSubscribePayload(topicSubscriptions);
         return new MqttSubscribeMessage(mqttFixedHeader, mqttMessageIdVariableHeader, mqttSubscribePayload);
     }
 
     private static MqttSubAckMessage createSubAckMessage() {
-        MqttFixedHeader mqttFixedHeader = new MqttFixedHeader(MqttMessageType.SUBACK, false, QOS1, false, 0);
-        MqttMessageIdVariableHeader mqttMessageIdVariableHeader = new MqttMessageIdVariableHeader(12345);
+        MqttFixedHeader mqttFixedHeader =
+                new MqttFixedHeader(MqttMessageType.SUBACK, false, QoS.AT_LEAST_ONCE, false, 0);
+        MqttMessageIdVariableHeader mqttMessageIdVariableHeader = MqttMessageIdVariableHeader.from(12345);
         List<Integer> grantedQosLevels = new LinkedList<Integer>();
         grantedQosLevels.add(1);
         grantedQosLevels.add(2);
@@ -303,8 +308,9 @@ public class MqttCodecTest {
     }
 
     private static MqttUnsubscribeMessage createUnsubscribeMessage() {
-        MqttFixedHeader mqttFixedHeader = new MqttFixedHeader(MqttMessageType.UNSUBSCRIBE, false, QOS1, true, 0);
-        MqttMessageIdVariableHeader mqttMessageIdVariableHeader = new MqttMessageIdVariableHeader(12345);
+        MqttFixedHeader mqttFixedHeader =
+                new MqttFixedHeader(MqttMessageType.UNSUBSCRIBE, false, QoS.AT_LEAST_ONCE, true, 0);
+        MqttMessageIdVariableHeader mqttMessageIdVariableHeader = MqttMessageIdVariableHeader.from(12345);
 
         List<String> topics = new LinkedList<String>();
         topics.add("/abc");

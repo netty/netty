@@ -100,6 +100,11 @@ public class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
 
         // Client id
         String clientIdentifier = payload.clientIdentifier();
+        if (!isValidClientIdentifier(clientIdentifier)) {
+            throw new IllegalArgumentException(
+                    String.format("Invalid clientIdentifier %s. Must be less than 23 chars long",
+                            clientIdentifier != null ? clientIdentifier : "null"));
+        }
         byte[] clientIdentifierBytes = encodeStringUtf8(clientIdentifier);
         payloadBufferSize += 2 + clientIdentifierBytes.length;
 
@@ -225,7 +230,7 @@ public class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
             byte[] topicNameBytes = encodeStringUtf8(topicName);
             buf.writeShort(topicNameBytes.length);
             buf.writeBytes(topicNameBytes, 0, topicNameBytes.length);
-            buf.writeByte(topic.qualityOfService());
+            buf.writeByte(topic.qualityOfService().value());
         }
 
         return buf;
@@ -296,7 +301,7 @@ public class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
         byte[] topicNameBytes = encodeStringUtf8(topicName);
 
         int variableHeaderBufferSize = 2 + topicNameBytes.length +
-                (mqttFixedHeader.qosLevel() > 0 ? 2 : 0);
+                (mqttFixedHeader.qosLevel().value() > 0 ? 2 : 0);
         int payloadBufferSize = payload.readableBytes();
         int variablePartSize = variableHeaderBufferSize + payloadBufferSize;
         int fixedHeaderBufferSize = 1 + getVariableLengthInt(variablePartSize);
@@ -306,7 +311,7 @@ public class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
         writeVariableLengthInt(buf, variablePartSize);
         buf.writeShort(topicNameBytes.length);
         buf.writeBytes(topicNameBytes);
-        if (mqttFixedHeader.qosLevel() > 0) {
+        if (mqttFixedHeader.qosLevel().value() > 0) {
             buf.writeShort(variableHeader.messageId());
         }
         buf.writeBytes(payload);
@@ -348,7 +353,7 @@ public class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
         if (header.isDup()) {
             ret |= 0x08;
         }
-        ret |= header.qosLevel() << 1;
+        ret |= header.qosLevel().value() << 1;
         if (header.isRetain()) {
             ret |= 0x01;
         }
@@ -377,6 +382,14 @@ public class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
 
     private static byte[] encodeStringUtf8(String s) {
       return s.getBytes(CharsetUtil.UTF_8);
+    }
+
+    private static boolean isValidClientIdentifier(String clientIdentifier) {
+        if (clientIdentifier == null) {
+            return false;
+        }
+        int length = clientIdentifier.length();
+        return length >= 1 && length <= 23;
     }
 
 }
