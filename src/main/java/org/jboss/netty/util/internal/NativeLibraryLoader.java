@@ -35,9 +35,13 @@ public final class NativeLibraryLoader {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NativeLibraryLoader.class);
 
+    private static final String NATIVE_RESOURCE_HOME = "META-INF/native/";
+    private static final String OSNAME;
     private static final File WORKDIR;
 
     static {
+        OSNAME = SystemPropertyUtil.get("os.name", "").toLowerCase(Locale.US).replaceAll("[^a-z0-9]+", "");
+
         String workdir = SystemPropertyUtil.get("io.netty.native.workdir");
         if (workdir != null) {
             File f = new File(workdir);
@@ -143,7 +147,11 @@ public final class NativeLibraryLoader {
     }
 
     private static boolean isWindows() {
-        return SystemPropertyUtil.get("os.name", "").toLowerCase(Locale.US).contains("win");
+        return OSNAME.startsWith("windows");
+    }
+
+    private static boolean isOSX() {
+        return OSNAME.startsWith("macosx") || OSNAME.startsWith("osx");
     }
 
     /**
@@ -151,61 +159,66 @@ public final class NativeLibraryLoader {
      */
     public static void load(String name, ClassLoader loader) {
         String libname = System.mapLibraryName(name);
-        String path = "META-INF/native/" + libname;
+        String path = NATIVE_RESOURCE_HOME + libname;
 
         URL url = loader.getResource(path);
+        if (url == null && isOSX()) {
+            url = loader.getResource(NATIVE_RESOURCE_HOME + "lib" + name + ".jnilib");
+        }
+
         if (url == null) {
             // Fall back to normal loading of JNI stuff
             System.loadLibrary(name);
-        } else {
-            int index = libname.lastIndexOf('.');
-            String prefix = libname.substring(0, index);
-            String suffix = libname.substring(index, libname.length());
-            InputStream in = null;
-            OutputStream out = null;
-            File tmpFile = null;
-            boolean loaded = false;
-            try {
-                tmpFile = File.createTempFile(prefix, suffix, WORKDIR);
-                in = url.openStream();
-                out = new FileOutputStream(tmpFile);
+            return;
+        }
 
-                byte[] buffer = new byte[8192];
-                int length;
-                while ((length = in.read(buffer)) > 0) {
-                    out.write(buffer, 0, length);
-                }
-                out.flush();
-                out.close();
-                out = null;
+        int index = libname.lastIndexOf('.');
+        String prefix = libname.substring(0, index);
+        String suffix = libname.substring(index, libname.length());
+        InputStream in = null;
+        OutputStream out = null;
+        File tmpFile = null;
+        boolean loaded = false;
+        try {
+            tmpFile = File.createTempFile(prefix, suffix, WORKDIR);
+            in = url.openStream();
+            out = new FileOutputStream(tmpFile);
 
-                System.load(tmpFile.getPath());
-                loaded = true;
-            } catch (Exception e) {
-                throw (UnsatisfiedLinkError) new UnsatisfiedLinkError(
-                        "could not load a native library: " + name).initCause(e);
-            } finally {
-                if (in != null) {
-                    try {
-                        in.close();
-                    } catch (IOException ignore) {
-                        // ignore
-                    }
+            byte[] buffer = new byte[8192];
+            int length;
+            while ((length = in.read(buffer)) > 0) {
+                out.write(buffer, 0, length);
+            }
+            out.flush();
+            out.close();
+            out = null;
+
+            System.load(tmpFile.getPath());
+            loaded = true;
+        } catch (Exception e) {
+            throw (UnsatisfiedLinkError) new UnsatisfiedLinkError(
+                    "could not load a native library: " + name).initCause(e);
+        } finally {
+            if (in != null) {
+                try {
+                    in.close();
+                } catch (IOException ignore) {
+                    // ignore
                 }
-                if (out != null) {
-                    try {
-                        out.close();
-                    } catch (IOException ignore) {
-                        // ignore
-                    }
+            }
+            if (out != null) {
+                try {
+                    out.close();
+                } catch (IOException ignore) {
+                    // ignore
                 }
-                if (tmpFile != null) {
-                    if (loaded) {
+            }
+            if (tmpFile != null) {
+                if (loaded) {
+                    tmpFile.deleteOnExit();
+                } else {
+                    if (!tmpFile.delete()) {
                         tmpFile.deleteOnExit();
-                    } else {
-                        if (!tmpFile.delete()) {
-                            tmpFile.deleteOnExit();
-                        }
                     }
                 }
             }
