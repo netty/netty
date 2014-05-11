@@ -120,14 +120,10 @@ public class Http2ConnectionRoundtripTest {
             clientChannel.eventLoop().execute(new Runnable() {
                 @Override
                 public void run() {
-                    try {
-                        http2Client.writeHeaders(ctx(), newPromise(), streamId, headers, 0,
-                                (short) 16, false, 0, false, false);
-                        http2Client.writeData(ctx(), newPromise(), streamId,
-                                Unpooled.copiedBuffer(text.getBytes()), 0, true, true, false);
-                    } catch (Http2Exception e) {
-                        throw new RuntimeException(e);
-                    }
+                    http2Client.writeHeaders(ctx(), newPromise(), streamId, headers, 0,
+                            (short) 16, false, 0, false, false);
+                    http2Client.writeData(ctx(), newPromise(), streamId,
+                            Unpooled.copiedBuffer(text.getBytes()), 0, true, true, false);
                 }
             });
         }

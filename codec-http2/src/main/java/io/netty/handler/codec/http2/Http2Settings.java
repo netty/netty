@@ -62,7 +62,7 @@ public class Http2Settings {
         }
 
         enable(MAX_HEADER_TABLE_SIZE_MASK);
-        this.maxHeaderTableSize = headerTableSize;
+        maxHeaderTableSize = headerTableSize;
         return this;
     }
 

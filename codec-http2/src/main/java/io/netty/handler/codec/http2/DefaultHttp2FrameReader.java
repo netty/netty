@@ -575,7 +575,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader {
         }
     }
 
-    private void readGoAwayFrame(ChannelHandlerContext ctx, ByteBuf payload,
+    private static void readGoAwayFrame(ChannelHandlerContext ctx, ByteBuf payload,
             Http2FrameObserver observer) throws Http2Exception {
         int lastStreamId = readUnsignedInt(payload);
         long errorCode = payload.readUnsignedInt();
@@ -620,7 +620,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader {
     /**
      * Base class for processing of HEADERS and PUSH_PROMISE header blocks that potentially span
      * multiple frames. The implementation of this interface will perform the final callback to the
-     * {@linkHttp2FrameObserver} once the end of headers is reached.
+     * {@link Http2FrameObserver} once the end of headers is reached.
      */
     private abstract class HeadersContinuation {
         private final HeadersBuilder builder = new HeadersBuilder();
@@ -635,7 +635,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader {
          *
          * @param endOfHeaders whether the fragment is the last in the header block.
          * @param fragment the fragment of the header block to be added.
-         * @param padding the amount of padding to be supplied to the {@linkHttp2FrameObserver}
+         * @param padding the amount of padding to be supplied to the {@link Http2FrameObserver}
          *            callback.
          * @param observer the observer to be notified if the header block is completed.
          */

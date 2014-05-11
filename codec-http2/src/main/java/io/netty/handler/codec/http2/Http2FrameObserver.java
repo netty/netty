@@ -133,7 +133,7 @@ public interface Http2FrameObserver {
      * @param streamId the stream the frame was sent on.
      * @param promisedStreamId the ID of the promised stream.
      * @param headers the received headers.
-     * @param paddingthe number of padding bytes found at the end of the frame.
+     * @param padding the number of padding bytes found at the end of the frame.
      */
     void onPushPromiseRead(ChannelHandlerContext ctx, int streamId, int promisedStreamId,
             Http2Headers headers, int padding) throws Http2Exception;
