@@ -51,6 +51,7 @@ public class OpenSslBufferPool {
      * @param capacity The number of buffers to instantiate.
      */
     public OpenSslBufferPool(int capacity) {
+        OpenSsl.ensureAvailability();
         buffers = new LinkedBlockingQueue<ByteBuffer>(capacity);
         while (buffers.remainingCapacity() > 0) {
             ByteBuffer buf = ByteBuffer.allocateDirect(BUFFER_SIZE).order(ByteOrder.nativeOrder());

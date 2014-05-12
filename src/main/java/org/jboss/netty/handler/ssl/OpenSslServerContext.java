@@ -63,11 +63,13 @@ public final class OpenSslServerContext {
     private final long ctx;
     private final OpenSslSessionStats stats;
 
-    OpenSslServerContext(
+    public OpenSslServerContext(
             long aprPool, OpenSslBufferPool bufPool,
             String certPath, String keyPath, String keyPassword,
             String caPath, String nextProtos, Iterable<String> ciphers,
             long sessionCacheSize, long sessionTimeout) throws SSLException {
+
+        OpenSsl.ensureAvailability();
 
         if (certPath == null) {
             throw new NullPointerException("certPath");

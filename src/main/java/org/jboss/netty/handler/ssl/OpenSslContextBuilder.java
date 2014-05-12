@@ -39,6 +39,10 @@ public class OpenSslContextBuilder {
     private String caPath;
     private String nextProtos;
 
+    public OpenSslContextBuilder() {
+        OpenSsl.ensureAvailability();
+    }
+
     public OpenSslContextBuilder certPath(String certPath) {
         if (certPath == null) {
             throw new NullPointerException("certPath");

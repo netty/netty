@@ -16,12 +16,10 @@
 package org.jboss.netty.handler.ssl;
 
 import org.apache.tomcat.jni.Buffer;
-import org.apache.tomcat.jni.Library;
 import org.apache.tomcat.jni.SSL;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.internal.EmptyArrays;
-import org.jboss.netty.util.internal.NativeLibraryLoader;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
@@ -54,38 +52,6 @@ public final class OpenSslEngine extends SSLEngine {
 
     private static final Certificate[] EMPTY_CERTIFICATES = new Certificate[0];
     private static final X509Certificate[] EMPTY_X509_CERTIFICATES = new X509Certificate[0];
-
-    private static final Throwable UNAVAILABILITY_CAUSE;
-
-    static {
-        Throwable cause = null;
-        try {
-            NativeLibraryLoader.load("netty-tcnative", SSL.class.getClassLoader());
-            Library.initialize("provided");
-            SSL.initialize(null);
-        } catch (Throwable t) {
-            cause = t;
-            logger.debug(
-                    "Failed to load netty-tcnative; " +
-                    OpenSslEngine.class.getSimpleName() + " will be unavailable.", t);
-        }
-        UNAVAILABILITY_CAUSE = cause;
-    }
-
-    public static boolean isAvailable() {
-        return UNAVAILABILITY_CAUSE == null;
-    }
-
-    public static void ensureAvailability() {
-        if (UNAVAILABILITY_CAUSE != null) {
-            throw (Error) new UnsatisfiedLinkError(
-                    "failed to load the required native library").initCause(UNAVAILABILITY_CAUSE);
-        }
-    }
-
-    public static Throwable unavailabilityCause() {
-        return UNAVAILABILITY_CAUSE;
-    }
 
     private static final SSLException ENGINE_CLOSED = new SSLException("engine closed");
     private static final SSLException RENEGOTIATION_UNSUPPORTED = new SSLException("renegotiation unsupported");
@@ -132,7 +98,7 @@ public final class OpenSslEngine extends SSLEngine {
     private SSLSession session;
 
     public OpenSslEngine(long sslContext, OpenSslBufferPool bufPool) {
-        ensureAvailability();
+        OpenSsl.ensureAvailability();
         if (sslContext == 0) {
             throw new NullPointerException("sslContext");
         }
