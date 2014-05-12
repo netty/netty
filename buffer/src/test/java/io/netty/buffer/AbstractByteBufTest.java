@@ -163,6 +163,8 @@ public abstract class AbstractByteBufTest {
         buffer.writerIndex(0);
         buffer.readerIndex(0);
         buffer.writerIndex(CAPACITY);
+
+        buffer.writeBytes(ByteBuffer.wrap(new byte[]{}));
     }
 
     @Test(expected = IndexOutOfBoundsException.class)
