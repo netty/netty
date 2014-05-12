@@ -87,7 +87,7 @@ public abstract class AbstractSocketSslEchoTest {
             }
         });
 
-        boolean hasOpenSsl = OpenSslEngine.isAvailable();
+        boolean hasOpenSsl = OpenSsl.isAvailable();
         if (hasOpenSsl) {
             final String certPath = File.createTempFile("ssl_test_", ".crt").getAbsolutePath();
             new File(certPath).deleteOnExit();
@@ -136,9 +136,7 @@ public abstract class AbstractSocketSslEchoTest {
             });
             */
         } else {
-            logger.warn(
-                    "OpenSslEngine is unavailable and thus will not be tested.",
-                    OpenSslEngine.unavailabilityCause());
+            logger.warn("OpenSSL is unavailable and thus will not be tested.", OpenSsl.unavailabilityCause());
         }
 
         for (SSLEngineFactory sf: serverEngines) {
