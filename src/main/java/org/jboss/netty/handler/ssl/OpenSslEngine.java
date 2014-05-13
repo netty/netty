@@ -241,12 +241,9 @@ public final class OpenSslEngine extends SSLEngine {
     public synchronized SSLEngineResult wrap(
             final ByteBuffer[] srcs, final int offset, final int length, final ByteBuffer dst) throws SSLException {
 
-        int bytesConsumed = 0;
-        int bytesProduced = 0;
-
         // Check to make sure the engine has not been closed
         if (destroyed != 0) {
-            return new SSLEngineResult(CLOSED, NOT_HANDSHAKING, bytesConsumed, bytesProduced);
+            return new SSLEngineResult(CLOSED, NOT_HANDSHAKING, 0, 0);
         }
 
         // Throw required runtime exceptions
@@ -276,9 +273,10 @@ public final class OpenSslEngine extends SSLEngine {
         // without regard to the handshake status.
         SSLEngineResult.HandshakeStatus handshakeStatus = getHandshakeStatus();
         if ((!handshakeFinished || engineClosed) && handshakeStatus == NEED_UNWRAP) {
-            return new SSLEngineResult(getEngineStatus(), NEED_UNWRAP, bytesConsumed, bytesProduced);
+            return new SSLEngineResult(getEngineStatus(), NEED_UNWRAP, 0, 0);
         }
 
+        int bytesProduced = 0;
         int pendingNet;
 
         // Check for pending data in the network BIO
@@ -287,7 +285,7 @@ public final class OpenSslEngine extends SSLEngine {
             // Do we have enough room in dst to write encrypted data?
             int capacity = dst.remaining();
             if (capacity < pendingNet) {
-                return new SSLEngineResult(BUFFER_OVERFLOW, handshakeStatus, bytesConsumed, bytesProduced);
+                return new SSLEngineResult(BUFFER_OVERFLOW, handshakeStatus, 0, bytesProduced);
             }
 
             // Write the pending data from the network BIO into the dst buffer
@@ -304,10 +302,11 @@ public final class OpenSslEngine extends SSLEngine {
                 shutdown();
             }
 
-            return new SSLEngineResult(getEngineStatus(), getHandshakeStatus(), bytesConsumed, bytesProduced);
+            return new SSLEngineResult(getEngineStatus(), getHandshakeStatus(), 0, bytesProduced);
         }
 
         // There was no pending data in the network BIO -- encrypt any application data
+        int bytesConsumed = 0;
         for (int i = offset; i < length; ++ i) {
             final ByteBuffer src = srcs[i];
             while (src.hasRemaining()) {
