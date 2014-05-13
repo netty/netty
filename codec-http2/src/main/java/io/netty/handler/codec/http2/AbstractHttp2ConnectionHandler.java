@@ -108,7 +108,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
         this.outboundFlow = outboundFlow;
 
         // Set the expected client preface string. Only servers should receive this.
-        this.clientPrefaceString = connection.isServer()? connectionPrefaceBuf() : null;
+        clientPrefaceString = connection.isServer()? connectionPrefaceBuf() : null;
     }
 
     @Override

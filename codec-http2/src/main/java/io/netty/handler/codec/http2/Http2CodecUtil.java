@@ -27,10 +27,8 @@ import io.netty.channel.ChannelPromise;
  * Constants and utility method used for encoding/decoding HTTP2 frames.
  */
 public final class Http2CodecUtil {
-    private static final ByteBuf CONNECTION_PREFACE_BUF = Unpooled.unmodifiableBuffer(Unpooled
-            .copiedBuffer("PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n", UTF_8));
-    private static final ByteBuf EMPTY_PING_BUF = Unpooled.unmodifiableBuffer(Unpooled
-            .copiedBuffer(new byte[8]));
+    private static final byte[] CONNECTION_PREFACE = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".getBytes(UTF_8);
+    private static final byte[] EMPTY_PING = new byte[8];
 
     public static final int CONNECTION_STREAM_ID = 0;
     public static final int MAX_FRAME_PAYLOAD_LENGTH = 16383;
@@ -63,7 +61,7 @@ public final class Http2CodecUtil {
     public static ByteBuf connectionPrefaceBuf() {
         // Return a duplicate so that modifications to the reader index will not affect the original
         // buffer.
-        return CONNECTION_PREFACE_BUF.duplicate().retain();
+        return Unpooled.wrappedBuffer(CONNECTION_PREFACE);
     }
 
     /**
@@ -72,7 +70,7 @@ public final class Http2CodecUtil {
     public static ByteBuf emptyPingBuf() {
         // Return a duplicate so that modifications to the reader index will not affect the original
         // buffer.
-        return EMPTY_PING_BUF.duplicate().retain();
+        return Unpooled.wrappedBuffer(EMPTY_PING);
     }
 
     /**
