@@ -349,12 +349,9 @@ public final class OpenSslEngine extends SSLEngine {
     public synchronized SSLEngineResult unwrap(
             final ByteBuffer src, final ByteBuffer[] dsts, final int offset, final int length) throws SSLException {
 
-        int bytesConsumed = 0;
-        int bytesProduced = 0;
-
         // Check to make sure the engine has not been closed
         if (destroyed != 0) {
-            return new SSLEngineResult(CLOSED, NOT_HANDSHAKING, bytesConsumed, bytesProduced);
+            return new SSLEngineResult(CLOSED, NOT_HANDSHAKING, 0, 0);
         }
 
         // Throw requried runtime exceptions
@@ -391,7 +388,7 @@ public final class OpenSslEngine extends SSLEngine {
         // without regard to the handshake status.
         SSLEngineResult.HandshakeStatus handshakeStatus = getHandshakeStatus();
         if ((!handshakeFinished || engineClosed) && handshakeStatus == NEED_WRAP) {
-            return new SSLEngineResult(getEngineStatus(), NEED_WRAP, bytesConsumed, bytesProduced);
+            return new SSLEngineResult(getEngineStatus(), NEED_WRAP, 0, 0);
         }
 
         // protect against protocol overflow attack vector
@@ -405,6 +402,7 @@ public final class OpenSslEngine extends SSLEngine {
 
         // Write encrypted data to network BIO
         AtomicInteger primingReadResult = new AtomicInteger(0);
+        int bytesConsumed = 0;
         try {
             bytesConsumed += writeEncryptedData(src, primingReadResult);
         } catch (Exception e) {
@@ -430,10 +428,11 @@ public final class OpenSslEngine extends SSLEngine {
 
         // Do we have enough room in dsts to write decrypted data?
         if (capacity < pendingApp) {
-            return new SSLEngineResult(BUFFER_OVERFLOW, getHandshakeStatus(), bytesConsumed, bytesProduced);
+            return new SSLEngineResult(BUFFER_OVERFLOW, getHandshakeStatus(), bytesConsumed, 0);
         }
 
         // Write decrypted data to dsts buffers
+        int bytesProduced = 0;
         int idx = offset;
         for (;;) {
             ByteBuffer dst = dsts[idx];
