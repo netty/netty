@@ -30,7 +30,7 @@ import java.util.concurrent.LinkedBlockingQueue;
  *
  * TODO: Attempt to replace the directly-allocated ByteBuffers this with one APR pool.
  */
-public class OpenSslBufferPool {
+public final class OpenSslBufferPool {
 
     private static final RuntimeException ALLOCATION_INTERRUPTED =
             new IllegalStateException("buffer allocation interrupted");
