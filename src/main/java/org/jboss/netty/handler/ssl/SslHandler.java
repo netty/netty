@@ -182,8 +182,7 @@ import static org.jboss.netty.channel.Channels.*;
 public class SslHandler extends FrameDecoder
                         implements ChannelDownstreamHandler {
 
-    private static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(SslHandler.class);
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(SslHandler.class);
 
     private static final ByteBuffer EMPTY_BUFFER = ByteBuffer.allocate(0);
 
@@ -851,31 +850,25 @@ public class SslHandler extends FrameDecoder
     protected Object decode(
             final ChannelHandlerContext ctx, Channel channel, ChannelBuffer in) throws Exception {
 
-        // Keeps the list of the length of every SSL record in the input buffer.
-        int[] recordLengths = null;
-        int nRecords = 0;
-
         final int startOffset = in.readerIndex();
         final int endOffset = in.writerIndex();
         int offset = startOffset;
+        int totalLength = 0;
 
         // If we calculated the length of the current SSL record before, use that information.
         if (packetLength > 0) {
             if (endOffset - startOffset < packetLength) {
                 return null;
             } else {
-                recordLengths = new int[4];
-                recordLengths[0] = packetLength;
-                nRecords = 1;
-
                 offset += packetLength;
+                totalLength = packetLength;
                 packetLength = 0;
             }
         }
 
         boolean nonSslRecord = false;
 
-        for (;;) {
+        while (totalLength < OpenSslEngine.MAX_ENCRYPTED_PACKET_LENGTH) {
             final int readableBytes = endOffset - offset;
             if (readableBytes < 5) {
                 break;
@@ -895,23 +888,18 @@ public class SslHandler extends FrameDecoder
                 break;
             }
 
-            // We have a whole packet.
-            // Remember the offset and length of the current packet.
-            if (recordLengths == null) {
-                recordLengths = new int[4];
+            int newTotalLength = totalLength + packetLength;
+            if (newTotalLength > OpenSslEngine.MAX_ENCRYPTED_PACKET_LENGTH) {
+                // Don't read too much.
+                break;
             }
-            if (nRecords == recordLengths.length) {
-                int[] newRecordLengths = new int[recordLengths.length << 1];
-                System.arraycopy(recordLengths, 0, newRecordLengths, 0, recordLengths.length);
-                recordLengths = newRecordLengths;
-            }
-            recordLengths[nRecords ++] = packetLength;
 
+            // We have a whole packet.
             // Increment the offset to handle the next packet.
             offset += packetLength;
+            totalLength = newTotalLength;
         }
 
-        final int totalLength = offset - startOffset;
         ChannelBuffer unwrapped = null;
         if (totalLength > 0) {
             // The buffer contains one or more full SSL records.
@@ -924,8 +912,10 @@ public class SslHandler extends FrameDecoder
             // 4) unwrapLater(...) calls decode(...)
             //
             // See https://github.com/netty/netty/issues/1534
-            assert recordLengths != null;
-            unwrapped = unwrapMultiple(ctx, channel, in, totalLength, recordLengths, nRecords);
+
+            final ByteBuffer inNetBuf = in.toByteBuffer(in.readerIndex(), totalLength);
+            unwrapped = unwrap(ctx, channel, in, inNetBuf, totalLength);
+            assert !inNetBuf.hasRemaining() || engine.isInboundDone();
         }
 
         if (nonSslRecord) {
@@ -1238,42 +1228,22 @@ public class SslHandler extends FrameDecoder
      * Calls {@link SSLEngine#unwrap(ByteBuffer, ByteBuffer)} with an empty buffer to handle handshakes, etc.
      */
     private void unwrapNonAppData(ChannelHandlerContext ctx, Channel channel) throws SSLException {
-        unwrapSingle(ctx, channel, ChannelBuffers.EMPTY_BUFFER, EMPTY_BUFFER, null, -1);
+        unwrap(ctx, channel, ChannelBuffers.EMPTY_BUFFER, EMPTY_BUFFER, -1);
     }
 
     /**
-     * Unwraps multiple inbound SSL records.
+     * Unwraps inbound SSL records.
      */
-    private ChannelBuffer unwrapMultiple(
-            ChannelHandlerContext ctx, Channel channel,
-            ChannelBuffer buffer, int totalLength, int[] recordLengths, int nRecords) throws SSLException {
-
-        final ByteBuffer inNetBuf = buffer.toByteBuffer(buffer.readerIndex(), totalLength);
-        ChannelBuffer frame = null;
-
-        for (int i = 0; i < nRecords; i ++) {
-            inNetBuf.limit(inNetBuf.position() + recordLengths[i]);
-            frame = unwrapSingle(ctx, channel, buffer, inNetBuf, frame, totalLength);
-            if (engine.isInboundDone()) {
-                break;
-            }
-            assert !inNetBuf.hasRemaining();
-        }
-
-        return frame;
-    }
-
-    /**
-     * Unwraps a single SSL record.
-     */
-    private ChannelBuffer unwrapSingle(
+    private ChannelBuffer unwrap(
             ChannelHandlerContext ctx, Channel channel,
             ChannelBuffer nettyInNetBuf, ByteBuffer nioInNetBuf,
-            ChannelBuffer nettyOutAppBuf, int initialNettyOutAppBufCapacity) throws SSLException {
+            int initialNettyOutAppBufCapacity) throws SSLException {
 
         final int nettyInNetBufStartOffset = nettyInNetBuf.readerIndex();
         final int nioInNetBufStartOffset = nioInNetBuf.position();
         final ByteBuffer nioOutAppBuf = bufferPool.acquireBuffer();
+
+        ChannelBuffer nettyOutAppBuf = null;
 
         try {
             boolean needsWrap = false;

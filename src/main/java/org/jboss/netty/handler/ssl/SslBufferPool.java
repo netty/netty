@@ -38,8 +38,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class SslBufferPool {
 
     // Add 1024 as a room for compressed data and another 1024 for Apache Harmony compatibility.
-    private static final int MAX_PACKET_SIZE = 16665 + 2048;
-    private static final int MAX_PACKET_SIZE_ALIGNED = (MAX_PACKET_SIZE / 128 + 1) * 128;
+    private static final int MAX_PACKET_SIZE_ALIGNED = (OpenSslEngine.MAX_ENCRYPTED_PACKET_LENGTH / 128 + 1) * 128;
 
     private static final int DEFAULT_POOL_SIZE = MAX_PACKET_SIZE_ALIGNED * 1024;
 
@@ -156,7 +155,7 @@ public class SslBufferPool {
                 // Note that we can allocate more buffers than maxBufferCount.
                 // We will discard the buffers allocated after numAllocations reached maxBufferCount in releaseBuffer().
                 numAllocations.incrementAndGet();
-                buf = allocate(MAX_PACKET_SIZE);
+                buf = allocate(OpenSslEngine.MAX_ENCRYPTED_PACKET_LENGTH);
             }
         }
 

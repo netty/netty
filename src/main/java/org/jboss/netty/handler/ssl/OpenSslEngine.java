@@ -65,7 +65,9 @@ public final class OpenSslEngine extends SSLEngine {
     private static final int MAX_PLAINTEXT_LENGTH = 16 * 1024; // 2^14
     private static final int MAX_COMPRESSED_LENGTH = MAX_PLAINTEXT_LENGTH + 1024;
     private static final int MAX_CIPHERTEXT_LENGTH = MAX_COMPRESSED_LENGTH + 1024;
-    private static final int MAX_ENCRYPTED_PACKET = MAX_CIPHERTEXT_LENGTH + 5 + 20 + 256;
+
+    // Header (5) + Data (2^14) + Compression (1024) + Encryption (1024) + MAC (20) + Padding (256)
+    static final int MAX_ENCRYPTED_PACKET_LENGTH = MAX_CIPHERTEXT_LENGTH + 5 + 20 + 256;
 
     private static final AtomicIntegerFieldUpdater<OpenSslEngine> DESTROYED_UPDATER =
             AtomicIntegerFieldUpdater.newUpdater(OpenSslEngine.class, "destroyed");
@@ -432,7 +434,7 @@ public final class OpenSslEngine extends SSLEngine {
         }
 
         // protect against protocol overflow attack vector
-        if (src.remaining() > MAX_ENCRYPTED_PACKET) {
+        if (src.remaining() > MAX_ENCRYPTED_PACKET_LENGTH) {
             isInboundDone = true;
             isOutboundDone = true;
             engineClosed = true;
@@ -689,7 +691,7 @@ public final class OpenSslEngine extends SSLEngine {
                 }
 
                 public int getPacketBufferSize() {
-                    return MAX_ENCRYPTED_PACKET;
+                    return MAX_ENCRYPTED_PACKET_LENGTH;
                 }
 
                 public int getApplicationBufferSize() {
