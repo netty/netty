@@ -207,6 +207,7 @@
     <module>codec-http2</module>
     <module>codec-memcache</module>
     <module>codec-socks</module>
+    <module>codec-sockjs</module>
     <module>transport</module>
     <module>transport-rxtx</module>
     <module>transport-sctp</module>
@@ -310,6 +311,12 @@
         <optional>true</optional>
       </dependency>
       
+      <dependency>
+        <groupId>org.codehaus.jackson</groupId>
+        <artifactId>jackson-mapper-asl</artifactId>
+        <version>1.9.12</version>
+      </dependency>
+      
       <!-- Metrics providers -->
       <dependency>
         <groupId>com.yammer.metrics</groupId>
@@ -369,6 +376,19 @@
         <artifactId>caliper</artifactId>
         <version>0.5-rc1</version>
         <scope>test</scope>
+      </dependency>
+      
+      <dependency>
+        <groupId>org.mockito</groupId>
+        <artifactId>mockito-core</artifactId>
+        <scope>test</scope>
+        <version>1.9.5</version>
+        <exclusions>
+            <exclusion>
+                <groupId>org.hamcrest</groupId>
+                <artifactId>hamcrest-core</artifactId>
+            </exclusion>
+        </exclusions> 
       </dependency>
     </dependencies>
   </dependencyManagement>
@@ -989,6 +1009,11 @@
               </pluginExecutions>
             </lifecycleMappingMetadata>
           </configuration>
+        </plugin>
+        <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <version>1.2</version>
         </plugin>
       </plugins>
     </pluginManagement>

@@ -128,3 +128,11 @@ It can be obtained at:
     * license/LICENSE.abstractnodequeue.txt (Public Domain)
   * HOMEPAGE:
     * https://github.com/akka/akka/blob/wip-2.2.3-for-scala-2.11/akka-actor/src/main/java/akka/dispatch/AbstractNodeQueue.java
+
+This product contains a modified portion of 'sockjs-netty', written by Carl
+Byström:
+
+  * LICENSE:
+    * http://www.opensource.org/licenses/mit-license.php (MIT License)
+  * HOMEPAGE
+    * http://cgbystrom.com/
