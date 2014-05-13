@@ -245,17 +245,6 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
                     }
                     ctx.executor().schedule(reopenTask, wait,
                             TimeUnit.MILLISECONDS);
-                } else {
-                    // Create a Runnable to update the next handler in the chain. If one was create before it will
-                    // just be reused to limit object creation
-                    Runnable bufferUpdateTask = new Runnable() {
-                        @Override
-                        public void run() {
-                            ctx.fireChannelRead(msg);
-                        }
-                    };
-                    ctx.executor().schedule(bufferUpdateTask, wait, TimeUnit.MILLISECONDS);
-                    return;
                 }
             }
         }
