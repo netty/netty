@@ -191,8 +191,9 @@ public final class OpenSslEngine extends SSLEngine {
         final ByteBuffer buf = bufPool.acquire();
         final long addr = Buffer.address(buf);
         try {
-            buf.limit(Math.min(buf.limit(), dst.capacity()));
-            final int sslRead = SSL.readFromSSL(ssl, addr, buf.limit());
+            final int len = Math.min(buf.capacity(), dst.capacity());
+            buf.limit(len);
+            final int sslRead = SSL.readFromSSL(ssl, addr, len);
             if (sslRead > 0) {
                 buf.limit(sslRead);
                 dst.put(buf);
