@@ -39,10 +39,6 @@ public final class OpenSslBufferPool {
         ALLOCATION_INTERRUPTED.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
     }
 
-    // BUFFER_SIZE must be large enough to accomodate the maximum SSL record size.
-    // Header (5) + Data (2^14) + Compression (1024) + Encryption (1024) + MAC (20) + Padding (256)
-    private static final int BUFFER_SIZE = 18713;
-
     private final BlockingQueue<ByteBuffer> buffers;
 
     /**
@@ -54,7 +50,8 @@ public final class OpenSslBufferPool {
         OpenSsl.ensureAvailability();
         buffers = new LinkedBlockingQueue<ByteBuffer>(capacity);
         while (buffers.remainingCapacity() > 0) {
-            ByteBuffer buf = ByteBuffer.allocateDirect(BUFFER_SIZE).order(ByteOrder.nativeOrder());
+            ByteBuffer buf = ByteBuffer.allocateDirect(OpenSslEngine.MAX_ENCRYPTED_PACKET_LENGTH);
+            buf.order(ByteOrder.nativeOrder());
             buffers.offer(buf);
         }
     }
@@ -86,8 +83,8 @@ public final class OpenSslBufferPool {
     public String toString() {
         return "[DirectBufferPool " +
                 buffers.size() + " buffers * " +
-                BUFFER_SIZE + " bytes = " +
-                buffers.size() * BUFFER_SIZE + " total bytes; " +
+                OpenSslEngine.MAX_ENCRYPTED_PACKET_LENGTH + " bytes = " +
+                buffers.size() * OpenSslEngine.MAX_ENCRYPTED_PACKET_LENGTH + " total bytes; " +
                 "size: " + buffers.size() +
                 " remainingCapacity: " + buffers.remainingCapacity() +
                 ']';

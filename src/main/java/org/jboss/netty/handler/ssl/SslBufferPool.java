@@ -34,9 +34,7 @@ import java.nio.ByteBuffer;
  */
 public class SslBufferPool {
 
-    // Add 1024 as a room for compressed data and another 1024 for Apache Harmony compatibility.
-    private static final int MAX_PACKET_SIZE = 16665 + 2048;
-    private static final int DEFAULT_POOL_SIZE = MAX_PACKET_SIZE * 1024;
+    private static final int DEFAULT_POOL_SIZE = OpenSslEngine.MAX_ENCRYPTED_PACKET_LENGTH * 1024;
 
     private final ByteBuffer[] pool;
     private final int maxBufferCount;
@@ -60,8 +58,8 @@ public class SslBufferPool {
             throw new IllegalArgumentException("maxPoolSize: " + maxPoolSize);
         }
 
-        int maxBufferCount = maxPoolSize / MAX_PACKET_SIZE;
-        if (maxPoolSize % MAX_PACKET_SIZE != 0) {
+        int maxBufferCount = maxPoolSize / OpenSslEngine.MAX_ENCRYPTED_PACKET_LENGTH;
+        if (maxPoolSize % OpenSslEngine.MAX_ENCRYPTED_PACKET_LENGTH != 0) {
             maxBufferCount ++;
         }
 
@@ -74,7 +72,7 @@ public class SslBufferPool {
      * can be somewhat different from what was specified in the constructor.
      */
     public int getMaxPoolSize() {
-        return maxBufferCount * MAX_PACKET_SIZE;
+        return maxBufferCount * OpenSslEngine.MAX_ENCRYPTED_PACKET_LENGTH;
     }
 
     /**
@@ -85,7 +83,7 @@ public class SslBufferPool {
      * value, it means the pool is wasting the heap space.
      */
     public synchronized int getUnacquiredPoolSize() {
-        return index * MAX_PACKET_SIZE;
+        return index * OpenSslEngine.MAX_ENCRYPTED_PACKET_LENGTH;
     }
 
     /**
@@ -94,7 +92,7 @@ public class SslBufferPool {
      */
     public synchronized ByteBuffer acquireBuffer() {
         if (index == 0) {
-            return ByteBuffer.allocate(MAX_PACKET_SIZE);
+            return ByteBuffer.allocate(OpenSslEngine.MAX_ENCRYPTED_PACKET_LENGTH);
         } else {
             return (ByteBuffer) pool[-- index].clear();
         }
