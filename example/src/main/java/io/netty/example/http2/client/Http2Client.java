@@ -14,42 +14,46 @@
  */
 package io.netty.example.http2.client;
 
-import static java.util.concurrent.TimeUnit.SECONDS;
+import static io.netty.example.http2.Http2ExampleUtil.parseEndpointConfig;
+import static io.netty.handler.codec.http.HttpHeaders.Names.HOST;
+import static io.netty.handler.codec.http.HttpMethod.GET;
+import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.example.http2.server.Http2Server;
-import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http2.DefaultHttp2Headers;
-import io.netty.handler.codec.http2.Http2Exception;
-import io.netty.handler.codec.http2.Http2Headers;
+import io.netty.example.http2.Http2ExampleUtil.EndpointConfig;
+import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.FullHttpRequest;
 
 import java.net.InetSocketAddress;
-import java.util.concurrent.BlockingQueue;
 
 /**
  * An HTTP2 client that allows you to send HTTP2 frames to a server. Inbound and outbound frames are
- * logged.
+ * logged. When run from the command-line, sends a single HEADERS frame to the server and gets back
+ * a "Hello World" response.
+ * <p>
+ * To client accepts command-line arguments for {@code -host=<host/ip>}
+ * <i>(default="localhost")</i>, {@code -port=<port number>} <i>(default: http=8080,
+ * https=8443)</i>, and {@code -ssl=<true/false>} <i>(default=false)</i>.
  */
 public class Http2Client {
 
-    private final String host;
-    private final int port;
-    private final Http2ClientConnectionHandler http2ConnectionHandler;
+    private final EndpointConfig config;
+    private Http2ClientConnectionHandler http2ConnectionHandler;
     private Channel channel;
     private EventLoopGroup workerGroup;
 
-    public Http2Client(String host, int port) {
-        this.host = host;
-        this.port = port;
-        http2ConnectionHandler = new Http2ClientConnectionHandler();
+    public Http2Client(EndpointConfig config) {
+        this.config = config;
     }
 
+    /**
+     * Starts the client and waits for the HTTP/2 upgrade to occur.
+     */
     public void start() throws Exception {
         if (channel != null) {
             System.out.println("Already running!");
@@ -62,15 +66,40 @@ public class Http2Client {
         b.group(workerGroup);
         b.channel(NioSocketChannel.class);
         b.option(ChannelOption.SO_KEEPALIVE, true);
-        b.remoteAddress(new InetSocketAddress(host, port));
-        b.handler(new Http2ClientInitializer(http2ConnectionHandler));
+        b.remoteAddress(new InetSocketAddress(config.host(), config.port()));
+        Http2ClientInitializer initializer = new Http2ClientInitializer(config.isSsl());
+        b.handler(initializer);
 
         // Start the client.
         channel = b.connect().syncUninterruptibly().channel();
+        System.out.println("Connected to [" + config.host() + ':' + config.port() + ']');
+
+        // Wait for the HTTP/2 upgrade to occur.
+        http2ConnectionHandler = initializer.connectionHandler();
         http2ConnectionHandler.awaitInitialization();
-        System.out.println("Connected to [" + host + ':' + port + ']');
     }
 
+    /**
+     * Sends the given request to the server.
+     */
+    public void sendRequest(FullHttpRequest request) throws Exception {
+        ChannelFuture requestFuture = channel.writeAndFlush(request).sync();
+        System.out.println("Back from sending headers...");
+        if (!requestFuture.isSuccess()) {
+            throw new RuntimeException(requestFuture.cause());
+        }
+    }
+
+    /**
+     * Waits for the full response to be received.
+     */
+    public void awaitResponse() throws Exception {
+        http2ConnectionHandler.awaitResponse();
+    }
+
+    /**
+     * Closes the channel and waits for shutdown to complete.
+     */
     public void stop() {
         try {
             // Wait until the connection is closed.
@@ -82,52 +111,29 @@ public class Http2Client {
         }
     }
 
-    public ChannelFuture sendHeaders(int streamId, Http2Headers headers) throws Http2Exception {
-        return http2ConnectionHandler.writeHeaders(streamId, headers, 0, true, true);
-    }
-
-    public ChannelFuture send(int streamId, ByteBuf data, int padding, boolean endStream,
-            boolean endSegment, boolean compressed) throws Http2Exception {
-        return http2ConnectionHandler.writeData(streamId, data, padding, endStream, endSegment,
-                compressed);
-    }
-
-    public Http2Headers headers() {
-        return DefaultHttp2Headers.newBuilder().authority(host).method(HttpMethod.GET.name())
-                .build();
-    }
-
-    public BlockingQueue<ChannelFuture> queue() {
-        return http2ConnectionHandler.queue();
-    }
-
     public static void main(String[] args) throws Exception {
-        Http2Server.checkForNpnSupport();
-        int port;
-        if (args.length > 0) {
-            port = Integer.parseInt(args[0]);
-        } else {
-            port = 8443;
-        }
+        EndpointConfig config = parseEndpointConfig(args);
+        System.out.println(config);
 
-        final Http2Client client = new Http2Client("localhost", port);
-
+        final Http2Client client = new Http2Client(config);
         try {
+            // Start the client and wait for the HTTP/2 upgrade to complete.
             client.start();
-            System.out.println("Sending headers...");
-            ChannelFuture requestFuture = client.sendHeaders(3, client.headers()).sync();
+
+            // Create a simple GET request with just headers.
+            FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, "/whatever");
+            request.headers().add(HOST, config.host());
+
+            System.out.println("Sending request...");
+            ChannelFuture requestFuture = client.channel.writeAndFlush(request).sync();
             System.out.println("Back from sending headers...");
             if (!requestFuture.isSuccess()) {
                 requestFuture.cause().printStackTrace();
+                return;
             }
 
             // Waits for the complete response
-            ChannelFuture responseFuture = client.queue().poll(5, SECONDS);
-
-            if (!responseFuture.isSuccess()) {
-                responseFuture.cause().printStackTrace();
-            }
-
+            client.awaitResponse();
             System.out.println("Finished HTTP/2 request");
         } catch (Throwable t) {
             t.printStackTrace();

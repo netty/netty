@@ -180,6 +180,22 @@ public class Http2Settings {
         return this;
     }
 
+    /**
+     * Overwrites this settings object with the values of the given settings.
+     *
+     * @param source the source that will overwrite the current settings.
+     * @return this object.
+     */
+    public Http2Settings copy(Http2Settings source) {
+        this.enabled = source.enabled;
+        this.allowCompressedData = source.allowCompressedData;
+        this.initialWindowSize = source.initialWindowSize;
+        this.maxConcurrentStreams = source.maxConcurrentStreams;
+        this.maxHeaderTableSize = source.maxHeaderTableSize;
+        this.pushEnabled = source.pushEnabled;
+        return this;
+    }
+
     @Override
     public int hashCode() {
         final int prime = 31;

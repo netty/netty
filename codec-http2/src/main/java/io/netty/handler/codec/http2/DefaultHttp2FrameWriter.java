@@ -24,12 +24,9 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_UNSIGNED_SHORT;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_WEIGHT;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_WEIGHT;
 import static io.netty.handler.codec.http2.Http2CodecUtil.PRIORITY_ENTRY_LENGTH;
-import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_COMPRESS_DATA;
-import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_ENABLE_PUSH;
-import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_HEADER_TABLE_SIZE;
-import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_INITIAL_WINDOW_SIZE;
-import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_MAX_CONCURRENT_STREAMS;
-import static io.netty.handler.codec.http2.Http2CodecUtil.SETTING_ENTRY_LENGTH;
+import static io.netty.handler.codec.http2.Http2CodecUtil.calcSettingsPayloadLength;
+import static io.netty.handler.codec.http2.Http2CodecUtil.writeFrameHeader;
+import static io.netty.handler.codec.http2.Http2CodecUtil.writeSettingsPayload;
 import static io.netty.handler.codec.http2.Http2CodecUtil.writeUnsignedInt;
 import static io.netty.handler.codec.http2.Http2CodecUtil.writeUnsignedShort;
 import static io.netty.util.CharsetUtil.UTF_8;
@@ -160,38 +157,10 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
     public ChannelFuture writeSettings(ChannelHandlerContext ctx, ChannelPromise promise,
             Http2Settings settings) {
         try {
-            int numFields = 0;
-            numFields += settings.hasAllowCompressedData() ? 1 : 0;
-            numFields += settings.hasMaxHeaderTableSize() ? 1 : 0;
-            numFields += settings.hasInitialWindowSize() ? 1 : 0;
-            numFields += settings.hasMaxConcurrentStreams() ? 1 : 0;
-            numFields += settings.hasPushEnabled() ? 1 : 0;
-
-            int payloadLength = SETTING_ENTRY_LENGTH * numFields;
+            int payloadLength = calcSettingsPayloadLength(settings);
             ByteBuf frame = ctx.alloc().buffer(FRAME_HEADER_LENGTH + payloadLength);
             writeFrameHeader(frame, payloadLength, Http2FrameType.SETTINGS, Http2Flags.EMPTY, 0);
-
-            if (settings.hasAllowCompressedData()) {
-                frame.writeByte(SETTINGS_COMPRESS_DATA);
-                writeUnsignedInt(settings.allowCompressedData() ? 1L : 0L, frame);
-            }
-            if (settings.hasMaxHeaderTableSize()) {
-                frame.writeByte(SETTINGS_HEADER_TABLE_SIZE);
-                writeUnsignedInt(settings.maxHeaderTableSize(), frame);
-            }
-            if (settings.hasInitialWindowSize()) {
-                frame.writeByte(SETTINGS_INITIAL_WINDOW_SIZE);
-                writeUnsignedInt(settings.initialWindowSize(), frame);
-            }
-            if (settings.hasMaxConcurrentStreams()) {
-                frame.writeByte(SETTINGS_MAX_CONCURRENT_STREAMS);
-                writeUnsignedInt(settings.maxConcurrentStreams(), frame);
-            }
-            if (settings.hasPushEnabled()) {
-                // Only write the enable push flag from client endpoints.
-                frame.writeByte(SETTINGS_ENABLE_PUSH);
-                writeUnsignedInt(settings.pushEnabled() ? 1L : 0L, frame);
-            }
+            writeSettingsPayload(settings, frame);
             return ctx.writeAndFlush(frame, promise);
         } catch (RuntimeException e) {
             return promise.setFailure(e);
@@ -370,15 +339,6 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
         } catch (RuntimeException e) {
             return promise.setFailure(e);
         }
-    }
-
-    private static void writeFrameHeader(ByteBuf out, int payloadLength, Http2FrameType type,
-            Http2Flags flags, int streamId) {
-        out.ensureWritable(FRAME_HEADER_LENGTH + payloadLength);
-        out.writeShort(payloadLength);
-        out.writeByte(type.typeCode());
-        out.writeByte(flags.value());
-        out.writeInt(streamId);
     }
 
     private ChannelFuture writeHeadersInternal(ChannelHandlerContext ctx, ChannelPromise promise,

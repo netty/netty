@@ -16,24 +16,28 @@
 
 package io.netty.example.http2.server;
 
+import static io.netty.example.http2.Http2ExampleUtil.parseEndpointConfig;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.example.http2.Http2ExampleUtil.EndpointConfig;
 
 /**
- * A HTTP/2 Server that responds to requests with a Hello World.
+ * A HTTP/2 Server that responds to requests with a Hello World. Once started, you can test the
+ * server with the example client.
  * <p>
- * Once started, you can test the server with the example client.
+ * To server accepts command-line arguments for {@code -port=<port number>} <i>(default: http=8080,
+ * https=8443)</i>, and {@code -ssl=<true/false>} <i>(default=false)</i>.
  */
 public class Http2Server {
 
-    private final int port;
+    private final EndpointConfig config;
 
-    public Http2Server(int port) {
-        this.port = port;
+    public Http2Server(EndpointConfig config) {
+        this.config = config;
     }
 
     public void run() throws Exception {
@@ -44,9 +48,9 @@ public class Http2Server {
             ServerBootstrap b = new ServerBootstrap();
             b.option(ChannelOption.SO_BACKLOG, 1024);
             b.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class)
-                    .childHandler(new Http2ServerInitializer());
+                    .childHandler(new Http2ServerInitializer(config.isSsl()));
 
-            Channel ch = b.bind(port).sync().channel();
+            Channel ch = b.bind(config.port()).sync().channel();
             ch.closeFuture().sync();
         } finally {
             bossGroup.shutdownGracefully();
@@ -55,30 +59,10 @@ public class Http2Server {
     }
 
     public static void main(String[] args) throws Exception {
-        checkForNpnSupport();
-        int port;
-        if (args.length > 0) {
-            port = Integer.parseInt(args[0]);
-        } else {
-            port = 8443;
-        }
+        EndpointConfig config = parseEndpointConfig(args);
+        System.out.println(config);
 
-        System.out.println("HTTP2 server started at port " + port + '.');
-
-        new Http2Server(port).run();
-    }
-
-    public static void checkForNpnSupport() {
-        try {
-            Class.forName("sun.security.ssl.NextProtoNegoExtension");
-        } catch (ClassNotFoundException ignored) {
-            System.err.println();
-            System.err.println("Could not locate Next Protocol Negotiation (NPN) implementation.");
-            System.err.println("The NPN jar should have been made available when building the examples with maven.");
-            System.err.println("Please check that your JDK is among those supported by Jetty-NPN:");
-            System.err.println("http://wiki.eclipse.org/Jetty/Feature/NPN#Versions");
-            System.err.println();
-            throw new IllegalStateException("Could not locate NPN implementation. See console err for details.");
-        }
+        System.out.println("HTTP2 server started at port " + config.port() + '.');
+        new Http2Server(config).run();
     }
 }

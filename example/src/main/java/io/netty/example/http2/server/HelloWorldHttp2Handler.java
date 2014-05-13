@@ -15,26 +15,62 @@
 
 package io.netty.example.http2.server;
 
+import static io.netty.example.http2.Http2ExampleUtil.UPGRADE_RESPONSE_HEADER;
+import static io.netty.util.internal.logging.InternalLogLevel.INFO;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.example.http2.client.Http2ClientConnectionHandler;
+import io.netty.handler.codec.http.HttpServerUpgradeHandler;
 import io.netty.handler.codec.http2.AbstractHttp2ConnectionHandler;
+import io.netty.handler.codec.http2.DefaultHttp2Connection;
+import io.netty.handler.codec.http2.DefaultHttp2FrameReader;
+import io.netty.handler.codec.http2.DefaultHttp2FrameWriter;
 import io.netty.handler.codec.http2.DefaultHttp2Headers;
+import io.netty.handler.codec.http2.DefaultHttp2InboundFlowController;
+import io.netty.handler.codec.http2.DefaultHttp2OutboundFlowController;
 import io.netty.handler.codec.http2.Http2Exception;
+import io.netty.handler.codec.http2.Http2FrameLogger;
 import io.netty.handler.codec.http2.Http2Headers;
+import io.netty.handler.codec.http2.Http2InboundFrameLogger;
+import io.netty.handler.codec.http2.Http2OutboundFrameLogger;
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 /**
  * A simple handler that responds with the message "Hello World!".
  */
 public class HelloWorldHttp2Handler extends AbstractHttp2ConnectionHandler {
 
+    private static final Http2FrameLogger logger = new Http2FrameLogger(INFO,
+            InternalLoggerFactory.getInstance(Http2ClientConnectionHandler.class));
     static final byte[] RESPONSE_BYTES = "Hello World".getBytes(CharsetUtil.UTF_8);
 
     public HelloWorldHttp2Handler() {
-        super(true);
+        super(new DefaultHttp2Connection(true, false), new Http2InboundFrameLogger(
+                new DefaultHttp2FrameReader(), logger), new Http2OutboundFrameLogger(
+                new DefaultHttp2FrameWriter(), logger), new DefaultHttp2InboundFlowController(),
+                new DefaultHttp2OutboundFlowController());
     }
 
+    /**
+     * Handles the cleartext HTTP upgrade event. If an upgrade occurred, sends a simple response via HTTP/2
+     * on stream 1 (the stream specifically reserved for cleartext HTTP upgrade).
+     */
+    @Override
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        if (evt instanceof HttpServerUpgradeHandler.UpgradeEvent) {
+            // Write an HTTP/2 response to the upgrade request
+            Http2Headers headers =
+                    DefaultHttp2Headers.newBuilder().set(UPGRADE_RESPONSE_HEADER, "true").build();
+            writeHeaders(ctx, ctx.newPromise(), 1, headers, 0, true, true);
+        }
+        super.userEventTriggered(ctx, evt);
+    }
+
+    /**
+     * If receive a frame with end-of-stream set, send a pre-canned response.
+     */
     @Override
     public void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
             boolean endOfStream, boolean endOfSegment, boolean compressed) throws Http2Exception {
@@ -43,6 +79,9 @@ public class HelloWorldHttp2Handler extends AbstractHttp2ConnectionHandler {
         }
     }
 
+    /**
+     * If receive a frame with end-of-stream set, send a pre-canned response.
+     */
     @Override
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId,
             io.netty.handler.codec.http2.Http2Headers headers, int padding, boolean endStream,
@@ -52,6 +91,9 @@ public class HelloWorldHttp2Handler extends AbstractHttp2ConnectionHandler {
         }
     }
 
+    /**
+     * If receive a frame with end-of-stream set, send a pre-canned response.
+     */
     @Override
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId,
             io.netty.handler.codec.http2.Http2Headers headers, int streamDependency, short weight,
@@ -77,7 +119,8 @@ public class HelloWorldHttp2Handler extends AbstractHttp2ConnectionHandler {
     }
 
     @Override
-    public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings) throws Http2Exception {
+    public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings)
+            throws Http2Exception {
     }
 
     @Override
@@ -100,7 +143,7 @@ public class HelloWorldHttp2Handler extends AbstractHttp2ConnectionHandler {
 
     @Override
     public void onWindowUpdateRead(ChannelHandlerContext ctx, int streamId, int windowSizeIncrement)
-            throws Http2Exception {
+                    throws Http2Exception {
     }
 
     @Override
@@ -118,6 +161,9 @@ public class HelloWorldHttp2Handler extends AbstractHttp2ConnectionHandler {
         super.exceptionCaught(ctx, cause);
     }
 
+    /**
+     * Sends a "Hello World" DATA frame to the client.
+     */
     private void sendResponse(ChannelHandlerContext ctx, int streamId) throws Http2Exception {
         // Send a frame for the response status
         Http2Headers headers = DefaultHttp2Headers.newBuilder().status("200").build();

@@ -31,6 +31,10 @@ public final class Http2CodecUtil {
     private static final byte[] EMPTY_PING = new byte[8];
 
     public static final int CONNECTION_STREAM_ID = 0;
+    public static final int HTTP_UPGRADE_STREAM_ID = 1;
+    public static final String HTTP_UPGRADE_SETTINGS_HEADER = "HTTP2-Settings";
+    public static final String HTTP_UPGRADE_PROTOCOL_NAME = "h2c-12";
+
     public static final int MAX_FRAME_PAYLOAD_LENGTH = 16383;
     public static final int PING_FRAME_PAYLOAD_LENGTH = 8;
     public static final short MAX_UNSIGNED_BYTE = 0xFF;
@@ -124,6 +128,61 @@ public final class Http2CodecUtil {
     public static void writeUnsignedShort(int value, ByteBuf out) {
         out.writeByte((int) ((value >> 8) & 0xFF));
         out.writeByte((int) ((value & 0xFF)));
+    }
+
+    /**
+     * Writes an HTTP/2 frame header to the output buffer.
+     */
+    public static void writeFrameHeader(ByteBuf out, int payloadLength, Http2FrameType type,
+            Http2Flags flags, int streamId) {
+        out.ensureWritable(FRAME_HEADER_LENGTH + payloadLength);
+        out.writeShort(payloadLength);
+        out.writeByte(type.typeCode());
+        out.writeByte(flags.value());
+        out.writeInt(streamId);
+    }
+
+    /**
+     * Calculates the HTTP/2 SETTINGS payload length for the serialized representation
+     * of the given settings.
+     */
+    public static int calcSettingsPayloadLength(Http2Settings settings) {
+        int numFields = 0;
+        numFields += settings.hasAllowCompressedData() ? 1 : 0;
+        numFields += settings.hasMaxHeaderTableSize() ? 1 : 0;
+        numFields += settings.hasInitialWindowSize() ? 1 : 0;
+        numFields += settings.hasMaxConcurrentStreams() ? 1 : 0;
+        numFields += settings.hasPushEnabled() ? 1 : 0;
+
+        return SETTING_ENTRY_LENGTH * numFields;
+    }
+
+    /**
+     * Serializes the settings to the output buffer in the format of an HTTP/2 SETTINGS frame
+     * payload.
+     */
+    public static void writeSettingsPayload(Http2Settings settings, ByteBuf out) {
+        if (settings.hasAllowCompressedData()) {
+            out.writeByte(SETTINGS_COMPRESS_DATA);
+            writeUnsignedInt(settings.allowCompressedData() ? 1L : 0L, out);
+        }
+        if (settings.hasMaxHeaderTableSize()) {
+            out.writeByte(SETTINGS_HEADER_TABLE_SIZE);
+            writeUnsignedInt(settings.maxHeaderTableSize(), out);
+        }
+        if (settings.hasInitialWindowSize()) {
+            out.writeByte(SETTINGS_INITIAL_WINDOW_SIZE);
+            writeUnsignedInt(settings.initialWindowSize(), out);
+        }
+        if (settings.hasMaxConcurrentStreams()) {
+            out.writeByte(SETTINGS_MAX_CONCURRENT_STREAMS);
+            writeUnsignedInt(settings.maxConcurrentStreams(), out);
+        }
+        if (settings.hasPushEnabled()) {
+            // Only write the enable push flag from client endpoints.
+            out.writeByte(SETTINGS_ENABLE_PUSH);
+            writeUnsignedInt(settings.pushEnabled() ? 1L : 0L, out);
+        }
     }
 
     /**
