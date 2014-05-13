@@ -31,7 +31,6 @@ import java.nio.ByteBuffer;
 import java.nio.ReadOnlyBufferException;
 import java.security.Principal;
 import java.security.cert.Certificate;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static javax.net.ssl.SSLEngineResult.HandshakeStatus.*;
@@ -93,6 +92,8 @@ public final class OpenSslEngine extends SSLEngine {
     private boolean isInboundDone;
     private boolean isOutboundDone;
     private boolean engineClosed;
+
+    private int lastPrimingReadResult;
 
     private final OpenSslBufferPool bufPool;
     private SSLSession session;
@@ -158,7 +159,7 @@ public final class OpenSslEngine extends SSLEngine {
     /**
      * Write encrypted data to the OpenSSL network BIO
      */
-    private int writeEncryptedData(final ByteBuffer src, final AtomicInteger primingReadResult) {
+    private int writeEncryptedData(final ByteBuffer src) {
         final ByteBuffer buf = bufPool.acquire();
         final long addr = Buffer.address(buf);
         try {
@@ -173,7 +174,7 @@ public final class OpenSslEngine extends SSLEngine {
             final int netWrote = SSL.writeToBIO(networkBIO, addr, len);
             if (netWrote >= 0) {
                 src.position(position + netWrote);
-                primingReadResult.set(SSL.readFromSSL(ssl, addr, 0)); // priming read
+                lastPrimingReadResult = SSL.readFromSSL(ssl, addr, 0); // priming read
                 return netWrote;
             } else {
                 src.position(position);
@@ -401,10 +402,10 @@ public final class OpenSslEngine extends SSLEngine {
         }
 
         // Write encrypted data to network BIO
-        AtomicInteger primingReadResult = new AtomicInteger(0);
         int bytesConsumed = 0;
+        lastPrimingReadResult = 0;
         try {
-            bytesConsumed += writeEncryptedData(src, primingReadResult);
+            bytesConsumed += writeEncryptedData(src);
         } catch (Exception e) {
             throw new SSLException(e);
         }
@@ -414,7 +415,7 @@ public final class OpenSslEngine extends SSLEngine {
         if (error != null && !error.startsWith(SSL_IGNORABLE_ERROR_PREFIX)) {
             if (logger.isInfoEnabled()) {
                 logger.info(
-                        "SSL_read failed: primingReadResult: " + primingReadResult.get() +
+                        "SSL_read failed: primingReadResult: " + lastPrimingReadResult +
                                 "; OpenSSL error: '" + error + '\'');
             }
 
