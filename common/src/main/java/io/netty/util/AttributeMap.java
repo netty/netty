@@ -26,4 +26,9 @@ public interface AttributeMap {
      * an {@link Attribute} which does not have a value set yet.
      */
     <T> Attribute<T> attr(AttributeKey<T> key);
+
+    /**
+     * Returns {@code} true if and only if the given {@link Attribute} exists in this {@link AttributeMap}.
+     */
+    <T> boolean hasAttr(AttributeKey<T> key);
 }
