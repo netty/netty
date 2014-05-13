@@ -39,6 +39,7 @@ public class HttpStaticFileServerInitializer extends ChannelInitializer<SocketCh
         pipeline.addLast("aggregator", new HttpObjectAggregator(65536));
         pipeline.addLast("chunkedWriter", new ChunkedWriteHandler());
 
-        pipeline.addLast("handler", new HttpStaticFileServerHandler(true)); // Specify false if SSL.
+        // If your operating system supports zero-copy file transfer such as sendfile, this should be true.
+        pipeline.addLast("handler", new HttpStaticFileServerHandler(true));
     }
 }
