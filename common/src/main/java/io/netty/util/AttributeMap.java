@@ -28,7 +28,7 @@ public interface AttributeMap {
     <T> Attribute<T> attr(AttributeKey<T> key);
 
     /**
-     * Returns {@code} true if the given {@link Attribute} exists in this {@link AttributeMap}.
+     * Returns {@code} true if and only if the given {@link Attribute} exists in this {@link AttributeMap}.
      */
     <T> boolean hasAttr(AttributeKey<T> key);
 }

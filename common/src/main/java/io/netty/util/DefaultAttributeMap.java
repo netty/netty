@@ -66,7 +66,7 @@ public class DefaultAttributeMap implements AttributeMap {
         int i = index(key);
         DefaultAttribute<?> head = attributes.get(i);
         if (head == null) {
-            // no head exists yet which means we may be able to add the attribute without synchronization and just
+            // No head exists yet which means we may be able to add the attribute without synchronization and just
             // use compare and set. At worst we need to fallback to synchronization
             head = new DefaultAttribute(key);
             if (attributes.compareAndSet(i, null, head)) {
@@ -108,7 +108,7 @@ public class DefaultAttributeMap implements AttributeMap {
         int i = index(key);
         DefaultAttribute<?> head = attributes.get(i);
         if (head == null) {
-            // no attribute exists which point to the bucket in which the head should be located
+            // No attribute exists which point to the bucket in which the head should be located
             return false;
         }
 
@@ -141,15 +141,15 @@ public class DefaultAttributeMap implements AttributeMap {
 
         private static final long serialVersionUID = -2661411462200283011L;
 
-        // the head of the linked-list this attribute belongs too, wich may be itself
+        // The head of the linked-list this attribute belongs to, which may be itself
         private final DefaultAttribute<?> head;
         private final AttributeKey<T> key;
 
-        // double-linked list to prev and next node to allow fast removal
+        // Double-linked list to prev and next node to allow fast removal
         private DefaultAttribute<?> prev;
         private DefaultAttribute<?> next;
 
-        // will be set to true one the attribute is removed via getAndRemove() or remove()
+        // Will be set to true one the attribute is removed via getAndRemove() or remove()
         private volatile boolean removed;
 
         DefaultAttribute(DefaultAttribute<?> head, AttributeKey<T> key) {
@@ -195,7 +195,7 @@ public class DefaultAttributeMap implements AttributeMap {
 
         private void remove0() {
             synchronized (head) {
-                // we only update the linked-list structure if prev != null because if it is null this
+                // We only update the linked-list structure if prev != null because if it is null this
                 // DefaultAttribute acts also as head. The head must never be removed completely and just be
                 // marked as removed as all synchronization is done on the head itself for each bucket.
                 // The head itself will be GC'ed once the DefaultAttributeMap is GC'ed. So at most 5 heads will
