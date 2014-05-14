@@ -46,7 +46,7 @@ import java.util.Random;
  *
  * @since 1.7
  */
-final class ThreadLocalRandom extends Random {
+public final class ThreadLocalRandom extends Random {
     // same constants as Random, but must be redeclared because private
     private static final long multiplier = 0x5DEECE66DL;
     private static final long addend = 0xBL;
@@ -87,7 +87,7 @@ final class ThreadLocalRandom extends Random {
      *
      * @return the current thread's {@code ThreadLocalRandom}
      */
-    static ThreadLocalRandom current() {
+    public static ThreadLocalRandom current() {
         return localRandom.get();
     }
 

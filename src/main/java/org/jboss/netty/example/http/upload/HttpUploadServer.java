@@ -15,18 +15,23 @@
  */
 package org.jboss.netty.example.http.upload;
 
+import org.jboss.netty.bootstrap.ServerBootstrap;
+import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import org.jboss.netty.handler.ssl.SslContext;
+import org.jboss.netty.handler.ssl.util.SelfSignedCertificate;
+
 import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
 
-import org.jboss.netty.bootstrap.ServerBootstrap;
-import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
-
 public class HttpUploadServer {
 
-    private final int port;
-    public static boolean isSSL;
+    private static final boolean useSsl = false; // Set to true to enable SSL.
 
-    public HttpUploadServer(int port) {
+    private final SslContext sslCtx;
+    private final int port;
+
+    public HttpUploadServer(SslContext sslCtx, int port) {
+        this.sslCtx = sslCtx;
         this.port = port;
     }
 
@@ -38,22 +43,28 @@ public class HttpUploadServer {
                         Executors.newCachedThreadPool()));
 
         // Set up the event pipeline factory.
-        bootstrap.setPipelineFactory(new HttpUploadServerPipelineFactory());
+        bootstrap.setPipelineFactory(new HttpUploadServerPipelineFactory(sslCtx));
 
         // Bind and start to accept incoming connections.
         bootstrap.bind(new InetSocketAddress(port));
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         int port;
         if (args.length > 0) {
             port = Integer.parseInt(args[0]);
         } else {
             port = 8080;
         }
-        if (args.length > 1) {
-            isSSL = true;
+
+        SslContext sslCtx;
+        if (useSsl) {
+            SelfSignedCertificate ssc = new SelfSignedCertificate();
+            sslCtx = SslContext.newServerContext(ssc.certificate(), ssc.privateKey());
+        } else {
+            sslCtx = null;
         }
-        new HttpUploadServer(port).run();
+
+        new HttpUploadServer(sslCtx, port).run();
     }
 }

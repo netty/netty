@@ -25,6 +25,8 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpVersion;
+import org.jboss.netty.handler.ssl.SslContext;
+import org.jboss.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -42,7 +44,7 @@ public class HttpSnoopClient {
         this.uri = uri;
     }
 
-    public void run() {
+    public void run() throws Exception {
         String scheme = uri.getScheme() == null? "http" : uri.getScheme();
         String host = uri.getHost() == null? "localhost" : uri.getHost();
         int port = uri.getPort();
@@ -59,7 +61,14 @@ public class HttpSnoopClient {
             return;
         }
 
-        boolean ssl = "https".equalsIgnoreCase(scheme);
+        // Configure SSL context if necessary.
+        final boolean ssl = "https".equalsIgnoreCase(scheme);
+        final SslContext sslCtx;
+        if (ssl) {
+            sslCtx = SslContext.newClientContext(InsecureTrustManagerFactory.INSTANCE);
+        } else {
+            sslCtx = null;
+        }
 
         // Configure the client.
         ClientBootstrap bootstrap = new ClientBootstrap(
@@ -68,7 +77,7 @@ public class HttpSnoopClient {
                         Executors.newCachedThreadPool()));
 
         // Set up the event pipeline factory.
-        bootstrap.setPipelineFactory(new HttpSnoopClientPipelineFactory(ssl));
+        bootstrap.setPipelineFactory(new HttpSnoopClientPipelineFactory(sslCtx));
 
         // Start the connection attempt.
         ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));

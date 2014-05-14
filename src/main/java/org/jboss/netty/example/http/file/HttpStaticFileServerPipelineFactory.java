@@ -15,30 +15,31 @@
  */
 package org.jboss.netty.example.http.file;
 
-import static org.jboss.netty.channel.Channels.*;
-
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
 import org.jboss.netty.handler.codec.http.HttpRequestDecoder;
 import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
+import org.jboss.netty.handler.ssl.SslContext;
 import org.jboss.netty.handler.stream.ChunkedWriteHandler;
 
-// Uncomment the following lines if you want HTTPS
-//import javax.net.ssl.SSLEngine;
-//import org.jboss.netty.example.securechat.SecureChatSslContextFactory;
-//import org.jboss.netty.handler.ssl.SslHandler;
+import static org.jboss.netty.channel.Channels.*;
 
 public class HttpStaticFileServerPipelineFactory implements ChannelPipelineFactory {
+
+    private final SslContext sslCtx;
+
+    public HttpStaticFileServerPipelineFactory(SslContext sslCtx) {
+        this.sslCtx = sslCtx;
+    }
+
     public ChannelPipeline getPipeline() throws Exception {
         // Create a default pipeline implementation.
         ChannelPipeline pipeline = pipeline();
 
-        // Uncomment the following lines if you want HTTPS
-        //SSLEngine engine = SecureChatSslContextFactory.getServerContext().createSSLEngine();
-        //engine.setUseClientMode(false);
-        //pipeline.addLast("ssl", new SslHandler(engine));
-
+        if (sslCtx != null) {
+            pipeline.addLast("ssl", sslCtx.newHandler());
+        }
         pipeline.addLast("decoder", new HttpRequestDecoder());
         pipeline.addLast("aggregator", new HttpChunkAggregator(65536));
         pipeline.addLast("encoder", new HttpResponseEncoder());

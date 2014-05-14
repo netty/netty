@@ -15,23 +15,21 @@
  */
 package org.jboss.netty.example.http.upload;
 
-import static org.jboss.netty.channel.Channels.*;
-
-import javax.net.ssl.SSLEngine;
-
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.example.securechat.SecureChatSslContextFactory;
 import org.jboss.netty.handler.codec.http.HttpClientCodec;
 import org.jboss.netty.handler.codec.http.HttpContentDecompressor;
+import org.jboss.netty.handler.ssl.SslContext;
 import org.jboss.netty.handler.ssl.SslHandler;
 import org.jboss.netty.handler.stream.ChunkedWriteHandler;
 
-public class HttpUploadClientPipelineFactory implements ChannelPipelineFactory {
-    private final boolean ssl;
+import static org.jboss.netty.channel.Channels.*;
 
-    public HttpUploadClientPipelineFactory(boolean ssl) {
-        this.ssl = ssl;
+public class HttpUploadClientPipelineFactory implements ChannelPipelineFactory {
+    private final SslContext sslCtx;
+
+    public HttpUploadClientPipelineFactory(SslContext sslCtx) {
+        this.sslCtx = sslCtx;
     }
 
     public ChannelPipeline getPipeline() throws Exception {
@@ -39,12 +37,8 @@ public class HttpUploadClientPipelineFactory implements ChannelPipelineFactory {
         ChannelPipeline pipeline = pipeline();
 
         // Enable HTTPS if necessary.
-        if (ssl) {
-            SSLEngine engine =
-                SecureChatSslContextFactory.getClientContext().createSSLEngine();
-            engine.setUseClientMode(true);
-
-            SslHandler handler = new SslHandler(engine);
+        if (sslCtx != null) {
+            SslHandler handler = sslCtx.newHandler();
             handler.setIssueHandshake(true);
             pipeline.addLast("ssl", handler);
         }

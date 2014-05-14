@@ -30,6 +30,8 @@ public final class OpenSsl {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(OpenSsl.class);
     private static final Throwable UNAVAILABILITY_CAUSE;
 
+    static final String IGNORABLE_ERROR_PREFIX = "error:00000000:";
+
     static {
         Throwable cause = null;
         try {

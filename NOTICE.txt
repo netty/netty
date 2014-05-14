@@ -50,6 +50,14 @@ zlib in pure Java, which can be obtained at:
   * HOMEPAGE:
     * http://www.jcraft.com/jzlib/
 
+This product contains a modified version of 'Webbit', a Java event based
+WebSocket and HTTP server:
+
+  * LICENSE:
+    * license/LICENSE.webbit.txt (BSD License)
+  * HOMEPAGE:
+    * https://github.com/joewalnes/webbit
+
 This product optionally depends on 'Protocol Buffers', Google's data
 interchange format, which can be obtained at:
 
@@ -57,6 +65,15 @@ interchange format, which can be obtained at:
     * license/LICENSE.protobuf.txt (New BSD License)
   * HOMEPAGE:
     * http://code.google.com/p/protobuf/
+
+This product optionally depends on 'Bouncy Castle Crypto APIs' to generate
+a temporary self-signed X.509 certificate when the JVM does not provide the
+equivalent functionality.  It can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.bouncycastle.txt (MIT License)
+  * HOMEPAGE:
+    * http://www.bouncycastle.org/
 
 This product optionally depends on 'SLF4J', a simple logging facade for Java,
 which can be obtained at:
@@ -97,12 +114,4 @@ framework implementation, which can be obtained at:
     * license/LICENSE.felix.txt (Apache License 2.0)
   * HOMEPAGE:
     * http://felix.apache.org/
-    
-This product optionally depends on 'Webbit', a Java event based  
-WebSocket and HTTP server:
 
-  * LICENSE:
-    * license/LICENSE.webbit.txt (BSD License)
-  * HOMEPAGE:
-    * https://github.com/joewalnes/webbit
-     

@@ -15,8 +15,6 @@
  */
 package org.jboss.netty.example.portunification;
 
-import javax.net.ssl.SSLEngine;
-
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -25,7 +23,6 @@ import org.jboss.netty.example.factorial.BigIntegerDecoder;
 import org.jboss.netty.example.factorial.FactorialServerHandler;
 import org.jboss.netty.example.factorial.NumberEncoder;
 import org.jboss.netty.example.http.snoop.HttpSnoopServerHandler;
-import org.jboss.netty.example.securechat.SecureChatSslContextFactory;
 import org.jboss.netty.handler.codec.compression.ZlibDecoder;
 import org.jboss.netty.handler.codec.compression.ZlibEncoder;
 import org.jboss.netty.handler.codec.compression.ZlibWrapper;
@@ -33,6 +30,7 @@ import org.jboss.netty.handler.codec.frame.FrameDecoder;
 import org.jboss.netty.handler.codec.http.HttpContentCompressor;
 import org.jboss.netty.handler.codec.http.HttpRequestDecoder;
 import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
+import org.jboss.netty.handler.ssl.SslContext;
 import org.jboss.netty.handler.ssl.SslHandler;
 
 /**
@@ -41,14 +39,16 @@ import org.jboss.netty.handler.ssl.SslHandler;
  */
 public class PortUnificationServerHandler extends FrameDecoder {
 
+    private final SslContext sslCtx;
     private final boolean detectSsl;
     private final boolean detectGzip;
 
-    public PortUnificationServerHandler() {
-        this(true, true);
+    public PortUnificationServerHandler(SslContext sslCtx) {
+        this(sslCtx, true, true);
     }
 
-    private PortUnificationServerHandler(boolean detectSsl, boolean detectGzip) {
+    private PortUnificationServerHandler(SslContext sslCtx, boolean detectSsl, boolean detectGzip) {
+        this.sslCtx = sslCtx;
         this.detectSsl = detectSsl;
         this.detectGzip = detectGzip;
     }
@@ -116,13 +116,8 @@ public class PortUnificationServerHandler extends FrameDecoder {
 
     private void enableSsl(ChannelHandlerContext ctx) {
         ChannelPipeline p = ctx.getPipeline();
-
-        SSLEngine engine =
-            SecureChatSslContextFactory.getServerContext().createSSLEngine();
-        engine.setUseClientMode(false);
-
-        p.addLast("ssl", new SslHandler(engine));
-        p.addLast("unificationA", new PortUnificationServerHandler(false, detectGzip));
+        p.addLast("ssl", sslCtx.newHandler());
+        p.addLast("unificationA", new PortUnificationServerHandler(sslCtx, false, detectGzip));
         p.remove(this);
     }
 
@@ -130,7 +125,7 @@ public class PortUnificationServerHandler extends FrameDecoder {
         ChannelPipeline p = ctx.getPipeline();
         p.addLast("gzipdeflater", new ZlibEncoder(ZlibWrapper.GZIP));
         p.addLast("gzipinflater", new ZlibDecoder(ZlibWrapper.GZIP));
-        p.addLast("unificationB", new PortUnificationServerHandler(detectSsl, false));
+        p.addLast("unificationB", new PortUnificationServerHandler(sslCtx, detectSsl, false));
         p.remove(this);
     }
 

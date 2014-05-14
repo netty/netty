@@ -22,14 +22,14 @@ import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.socket.http.HttpTunnelingClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory;
-import org.jboss.netty.example.securechat.SecureChatSslContextFactory;
 import org.jboss.netty.handler.codec.string.StringDecoder;
 import org.jboss.netty.handler.codec.string.StringEncoder;
 import org.jboss.netty.handler.logging.LoggingHandler;
+import org.jboss.netty.handler.ssl.JdkSslClientContext;
+import org.jboss.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import org.jboss.netty.logging.InternalLogLevel;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -49,7 +49,7 @@ public class HttpTunnelingClientExample {
         this.uri = uri;
     }
 
-    public void run() throws IOException {
+    public void run() throws Exception {
         String scheme = uri.getScheme() == null? "http" : uri.getScheme();
 
         // Configure the client.
@@ -72,7 +72,7 @@ public class HttpTunnelingClientExample {
 
         // Configure SSL if necessary
         if ("https".equals(scheme)) {
-            b.setOption("sslContext", SecureChatSslContextFactory.getClientContext());
+            b.setOption("sslContext", new JdkSslClientContext(InsecureTrustManagerFactory.INSTANCE).context());
         } else if (!"http".equals(scheme)) {
             // Only HTTP and HTTPS are supported.
             System.err.println("Only HTTP(S) is supported.");
