@@ -51,6 +51,7 @@ import java.util.Arrays;
 import java.util.Collections;
 
 import io.netty.channel.DefaultChannelPromise;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -166,6 +167,11 @@ public class DelegatingHttp2ConnectionHandlerTest {
         handler.handlerAdded(ctx);
     }
 
+    @After
+    public void tearDown() throws Exception {
+        handler.handlerRemoved(ctx);
+    }
+
     @Test
     public void clientShouldSendClientPrefaceStringWhenActive() throws Exception {
         when(connection.isServer()).thenReturn(false);
@@ -189,7 +195,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
         when(connection.isServer()).thenReturn(true);
         handler = new DelegatingHttp2ConnectionHandler(connection, reader, writer, inboundFlow,
                         outboundFlow, observer);
-        handler.decode(ctx, Unpooled.copiedBuffer("BAD_PREFACE", UTF_8), Collections.emptyList());
+        handler.channelRead(ctx, Unpooled.copiedBuffer("BAD_PREFACE", UTF_8));
         verify(ctx).close();
     }
 
@@ -199,7 +205,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
         when(connection.isServer()).thenReturn(true);
         handler = new DelegatingHttp2ConnectionHandler(connection, reader, writer, inboundFlow,
                         outboundFlow, observer);
-        handler.decode(ctx, connectionPrefaceBuf(), Collections.emptyList());
+        handler.channelRead(ctx, connectionPrefaceBuf());
         verify(ctx, never()).close();
         decode().onSettingsRead(ctx, new Http2Settings());
         verify(observer).onSettingsRead(eq(ctx), eq(new Http2Settings()));
