@@ -243,7 +243,7 @@ public class SslHandler extends FrameDecoder
     private volatile boolean writeBeforeHandshakeDone;
     private final SSLEngineInboundCloseFuture sslEngineCloseFuture = new SSLEngineInboundCloseFuture();
 
-    private boolean closeOnSSLException;
+    private boolean closeOnSslException;
 
     private int packetLength;
 
@@ -440,7 +440,7 @@ public class SslHandler extends FrameDecoder
                                 hsFuture.setFailure(cause);
 
                                 fireExceptionCaught(ctx, cause);
-                                if (closeOnSSLException) {
+                                if (closeOnSslException) {
                                     Channels.close(ctx, future(channel));
                                 }
                             }
@@ -450,13 +450,13 @@ public class SslHandler extends FrameDecoder
                     handshakeFuture.setFailure(e);
 
                     fireExceptionCaught(ctx, e);
-                    if (closeOnSSLException) {
+                    if (closeOnSslException) {
                         Channels.close(ctx, future(channel));
                     }
                 }
             } else { // Failed to initiate handshake.
                 fireExceptionCaught(ctx, exception);
-                if (closeOnSSLException) {
+                if (closeOnSslException) {
                     Channels.close(ctx, future(channel));
                 }
             }
@@ -484,7 +484,7 @@ public class SslHandler extends FrameDecoder
             return wrapNonAppData(ctx, channel);
         } catch (SSLException e) {
             fireExceptionCaught(ctx, e);
-            if (closeOnSSLException) {
+            if (closeOnSslException) {
                 Channels.close(ctx, future(channel));
             }
             return failedFuture(channel, e);
@@ -562,11 +562,11 @@ public class SslHandler extends FrameDecoder
         if (ctx != null) {
             throw new IllegalStateException("Can only get changed before attached to ChannelPipeline");
         }
-        closeOnSSLException = closeOnSslException;
+        this.closeOnSslException = closeOnSslException;
     }
 
     public boolean getCloseOnSSLException() {
-        return closeOnSSLException;
+        return closeOnSslException;
     }
 
     public void handleDownstream(
@@ -933,7 +933,7 @@ public class SslHandler extends FrameDecoder
             NotSslRecordException e = new NotSslRecordException(
                     "not an SSL/TLS record: " + ChannelBuffers.hexDump(in));
             in.skipBytes(in.readableBytes());
-            if (closeOnSSLException) {
+            if (closeOnSslException) {
                 // first trigger the exception and then close the channel
                 fireExceptionCaught(ctx, e);
                 Channels.close(ctx, future(channel));
@@ -1271,9 +1271,9 @@ public class SslHandler extends FrameDecoder
             ChannelBuffer nettyInNetBuf, ByteBuffer nioInNetBuf,
             ChannelBuffer nettyOutAppBuf, int initialNettyOutAppBufCapacity) throws SSLException {
 
-        final ByteBuffer nioOutAppBuf = bufferPool.acquireBuffer();
         final int nettyInNetBufStartOffset = nettyInNetBuf.readerIndex();
         final int nioInNetBufStartOffset = nioInNetBuf.position();
+        final ByteBuffer nioOutAppBuf = bufferPool.acquireBuffer();
 
         try {
             boolean needsWrap = false;
@@ -1545,6 +1545,10 @@ public class SslHandler extends FrameDecoder
             cancelHandshakeTimeout();
         }
 
+        if (logger.isDebugEnabled()) {
+            logger.debug(channel + " HANDSHAKEN: " + engine.getSession().getCipherSuite());
+        }
+
         handshakeFuture.setSuccess();
     }
 
@@ -1580,7 +1584,7 @@ public class SslHandler extends FrameDecoder
         }
 
         handshakeFuture.setFailure(cause);
-        if (closeOnSSLException) {
+        if (closeOnSslException) {
             Channels.close(ctx, future(channel));
         }
     }

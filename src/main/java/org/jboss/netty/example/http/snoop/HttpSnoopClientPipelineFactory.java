@@ -15,23 +15,20 @@
  */
 package org.jboss.netty.example.http.snoop;
 
-import static org.jboss.netty.channel.Channels.*;
-
-import javax.net.ssl.SSLEngine;
-
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.example.securechat.SecureChatSslContextFactory;
 import org.jboss.netty.handler.codec.http.HttpClientCodec;
 import org.jboss.netty.handler.codec.http.HttpContentDecompressor;
-import org.jboss.netty.handler.ssl.SslHandler;
+import org.jboss.netty.handler.ssl.SslContext;
+
+import static org.jboss.netty.channel.Channels.*;
 
 public class HttpSnoopClientPipelineFactory implements ChannelPipelineFactory {
 
-    private final boolean ssl;
+    private final SslContext sslCtx;
 
-    public HttpSnoopClientPipelineFactory(boolean ssl) {
-        this.ssl = ssl;
+    public HttpSnoopClientPipelineFactory(SslContext sslCtx) {
+        this.sslCtx = sslCtx;
     }
 
     public ChannelPipeline getPipeline() throws Exception {
@@ -39,12 +36,8 @@ public class HttpSnoopClientPipelineFactory implements ChannelPipelineFactory {
         ChannelPipeline pipeline = pipeline();
 
         // Enable HTTPS if necessary.
-        if (ssl) {
-            SSLEngine engine =
-                SecureChatSslContextFactory.getClientContext().createSSLEngine();
-            engine.setUseClientMode(true);
-
-            pipeline.addLast("ssl", new SslHandler(engine));
+        if (sslCtx != null) {
+            pipeline.addLast("ssl", sslCtx.newHandler());
         }
 
         pipeline.addLast("codec", new HttpClientCodec());

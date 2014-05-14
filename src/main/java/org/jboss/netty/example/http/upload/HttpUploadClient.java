@@ -33,6 +33,8 @@ import org.jboss.netty.handler.codec.http.multipart.HttpDataFactory;
 import org.jboss.netty.handler.codec.http.multipart.HttpPostRequestEncoder;
 import org.jboss.netty.handler.codec.http.multipart.HttpPostRequestEncoder.ErrorDataEncoderException;
 import org.jboss.netty.handler.codec.http.multipart.InterfaceHttpData;
+import org.jboss.netty.handler.ssl.SslContext;
+import org.jboss.netty.handler.ssl.util.SelfSignedCertificate;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 
@@ -57,7 +59,7 @@ public class HttpUploadClient {
         this.filePath = filePath;
     }
 
-    public void run() {
+    public void run() throws Exception {
         String postSimple, postFile, get;
         if (baseUri.endsWith("/")) {
             postSimple = baseUri + "formpost";
@@ -91,7 +93,14 @@ public class HttpUploadClient {
             return;
         }
 
-        boolean ssl = "https".equalsIgnoreCase(scheme);
+        final boolean ssl = "https".equalsIgnoreCase(scheme);
+        final SslContext sslCtx;
+        if (ssl) {
+            SelfSignedCertificate ssc = new SelfSignedCertificate();
+            sslCtx = SslContext.newServerContext(ssc.certificate(), ssc.privateKey());
+        } else {
+            sslCtx = null;
+        }
 
         URI uriFile;
         try {
@@ -113,7 +122,7 @@ public class HttpUploadClient {
                         Executors.newCachedThreadPool()));
 
         // Set up the event pipeline factory.
-        bootstrap.setPipelineFactory(new HttpUploadClientPipelineFactory(ssl));
+        bootstrap.setPipelineFactory(new HttpUploadClientPipelineFactory(sslCtx));
 
         // setup the factory: here using a mixed memory/disk based on size threshold
         HttpDataFactory factory = new DefaultHttpDataFactory(
@@ -225,7 +234,7 @@ public class HttpUploadClient {
     private static List<InterfaceHttpData> formpost(ClientBootstrap bootstrap,
             String host, int port,
             URI uriSimple, File file, HttpDataFactory factory,
-            List<Entry<String, String>> headers) {
+            List<Entry<String, String>> headers) throws ErrorDataEncoderException {
         // XXX /formpost
         // Start the connection attempt.
         ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
@@ -242,17 +251,8 @@ public class HttpUploadClient {
                 HttpVersion.HTTP_1_1, HttpMethod.POST, uriSimple.toASCIIString());
 
         // Use the PostBody encoder
-        HttpPostRequestEncoder bodyRequestEncoder = null;
-        try {
-            bodyRequestEncoder = new HttpPostRequestEncoder(factory,
-                    request, false);  // false => not multipart
-        } catch (NullPointerException e) {
-            // should not be since args are not null
-            e.printStackTrace();
-        } catch (ErrorDataEncoderException e) {
-            // test if method is a POST method
-            e.printStackTrace();
-        }
+        HttpPostRequestEncoder bodyRequestEncoder =
+                new HttpPostRequestEncoder(factory, request, false);  // false => not multipart
 
         // it is legal to add directly header or cookie into the request until finalize
         for (Entry<String, String> entry : headers) {
@@ -260,28 +260,15 @@ public class HttpUploadClient {
         }
 
         // add Form attribute
-        try {
-            bodyRequestEncoder.addBodyAttribute("getform", "POST");
-            bodyRequestEncoder.addBodyAttribute("info", "first value");
-            bodyRequestEncoder.addBodyAttribute("secondinfo", "secondvalue ���&");
-            bodyRequestEncoder.addBodyAttribute("thirdinfo", textArea);
-            bodyRequestEncoder.addBodyFileUpload("myfile", file, "application/x-zip-compressed", false);
-            bodyRequestEncoder.addBodyAttribute("Send", "Send");
-        } catch (NullPointerException e) {
-            // should not be since not null args
-            e.printStackTrace();
-        } catch (ErrorDataEncoderException e) {
-            // if an encoding error occurs
-            e.printStackTrace();
-        }
+        bodyRequestEncoder.addBodyAttribute("getform", "POST");
+        bodyRequestEncoder.addBodyAttribute("info", "first value");
+        bodyRequestEncoder.addBodyAttribute("secondinfo", "secondvalue ���&");
+        bodyRequestEncoder.addBodyAttribute("thirdinfo", textArea);
+        bodyRequestEncoder.addBodyFileUpload("myfile", file, "application/x-zip-compressed", false);
 
         // finalize request
-        try {
-            request = bodyRequestEncoder.finalizeRequest();
-        } catch (ErrorDataEncoderException e) {
-            // if an encoding error occurs
-            e.printStackTrace();
-        }
+        request = bodyRequestEncoder.finalizeRequest();
+
         // Create the bodylist to be reused on the last version with Multipart support
         List<InterfaceHttpData> bodylist = bodyRequestEncoder.getBodyListAttributes();
 
@@ -311,7 +298,7 @@ public class HttpUploadClient {
      */
     private static void formpostmultipart(ClientBootstrap bootstrap, String host, int port,
             URI uriFile, HttpDataFactory factory,
-            List<Entry<String, String>> headers, List<InterfaceHttpData> bodylist) {
+            List<Entry<String, String>> headers, List<InterfaceHttpData> bodylist) throws ErrorDataEncoderException {
         // XXX /formpostmultipart
         // Start the connection attempt.
         ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
@@ -328,17 +315,8 @@ public class HttpUploadClient {
                 HttpVersion.HTTP_1_1, HttpMethod.POST, uriFile.toASCIIString());
 
         // Use the PostBody encoder
-        HttpPostRequestEncoder bodyRequestEncoder = null;
-        try {
-            bodyRequestEncoder = new HttpPostRequestEncoder(factory,
-                    request, true); // true => multipart
-        } catch (NullPointerException e) {
-            // should not be since no null args
-            e.printStackTrace();
-        } catch (ErrorDataEncoderException e) {
-            // test if method is a POST method
-            e.printStackTrace();
-        }
+        HttpPostRequestEncoder bodyRequestEncoder =
+                new HttpPostRequestEncoder(factory, request, true); // true => multipart
 
         // it is legal to add directly header or cookie into the request until finalize
         for (Entry<String, String> entry : headers) {
@@ -346,23 +324,10 @@ public class HttpUploadClient {
         }
 
         // add Form attribute from previous request in formpost()
-        try {
-            bodyRequestEncoder.setBodyHttpDatas(bodylist);
-        } catch (NullPointerException e1) {
-            // should not be since previously created
-            e1.printStackTrace();
-        } catch (ErrorDataEncoderException e1) {
-            // again should not be since previously encoded (except if an error occurs previously)
-            e1.printStackTrace();
-        }
+        bodyRequestEncoder.setBodyHttpDatas(bodylist);
 
         // finalize request
-        try {
-            bodyRequestEncoder.finalizeRequest();
-        } catch (ErrorDataEncoderException e) {
-            // if an encoding error occurs
-            e.printStackTrace();
-        }
+        bodyRequestEncoder.finalizeRequest();
 
         // send request
         channel.write(request);
@@ -379,7 +344,7 @@ public class HttpUploadClient {
         channel.getCloseFuture().awaitUninterruptibly();
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         if (args.length != 2) {
             logger.error(
                     "Usage: " + HttpUploadClient.class.getSimpleName() +
@@ -983,5 +948,4 @@ public class HttpUploadClient {
         "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM\r\n" +
         "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM\r\n" +
         "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM\r\n";
-
 }

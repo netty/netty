@@ -67,8 +67,6 @@ public final class OpenSslEngine extends SSLEngine {
     private static final int MAX_CIPHERTEXT_LENGTH = MAX_COMPRESSED_LENGTH + 1024;
     private static final int MAX_ENCRYPTED_PACKET = MAX_CIPHERTEXT_LENGTH + 5 + 20 + 256;
 
-    private static final String SSL_IGNORABLE_ERROR_PREFIX = "error:00000000:";
-
     private static final AtomicIntegerFieldUpdater<OpenSslEngine> DESTROYED_UPDATER =
             AtomicIntegerFieldUpdater.newUpdater(OpenSslEngine.class, "destroyed");
 
@@ -95,10 +93,10 @@ public final class OpenSslEngine extends SSLEngine {
 
     private int lastPrimingReadResult;
 
-    private final OpenSslBufferPool bufPool;
+    private final SslBufferPool bufPool;
     private SSLSession session;
 
-    public OpenSslEngine(long sslContext, OpenSslBufferPool bufPool) {
+    public OpenSslEngine(long sslContext, SslBufferPool bufPool) {
         OpenSsl.ensureAvailability();
         if (sslContext == 0) {
             throw new NullPointerException("sslContext");
@@ -129,107 +127,148 @@ public final class OpenSslEngine extends SSLEngine {
      * Calling this function with src.remaining == 0 is undefined.
      */
     private int writePlaintextData(final ByteBuffer src) {
-        final ByteBuffer buf = bufPool.acquire();
-        final long addr = Buffer.address(buf);
-        try {
-            int position = src.position();
-            int limit = src.limit();
-            int len = Math.min(src.remaining(), MAX_PLAINTEXT_LENGTH);
-            if (len > buf.capacity()) {
-                throw new IllegalStateException("buffer pool write overflow");
-            }
-            src.limit(position + len);
+        final int pos = src.position();
+        final int limit = src.limit();
+        final int len = Math.min(limit - pos, MAX_PLAINTEXT_LENGTH);
+        final int sslWrote;
 
-            buf.put(src);
-            src.limit(limit);
-
-            final int sslWrote = SSL.writeToSSL(ssl, addr, len);
+        if (src.isDirect()) {
+            final long addr = Buffer.address(src) + pos;
+            sslWrote = SSL.writeToSSL(ssl, addr, len);
             if (sslWrote > 0) {
-                src.position(position + sslWrote);
+                src.position(pos + sslWrote);
                 return sslWrote;
-            } else {
-                src.position(position);
-                throw new IllegalStateException("SSL.writeToSSL() returned a non-positive value: " + sslWrote);
             }
-        } finally {
-            bufPool.release(buf);
+        } else {
+            final ByteBuffer buf = bufPool.acquireBuffer();
+            try {
+                assert buf.isDirect();
+                assert len <= buf.capacity() : "buffer pool write overflow";
+                final long addr = Buffer.address(buf);
+
+                src.limit(pos + len);
+
+                buf.put(src);
+                src.limit(limit);
+
+                sslWrote = SSL.writeToSSL(ssl, addr, len);
+                if (sslWrote > 0) {
+                    src.position(pos + sslWrote);
+                    return sslWrote;
+                } else {
+                    src.position(pos);
+                }
+            } finally {
+                bufPool.releaseBuffer(buf);
+            }
         }
+
+        throw new IllegalStateException("SSL.writeToSSL() returned a non-positive value: " + sslWrote);
     }
 
     /**
      * Write encrypted data to the OpenSSL network BIO
      */
     private int writeEncryptedData(final ByteBuffer src) {
-        final ByteBuffer buf = bufPool.acquire();
-        final long addr = Buffer.address(buf);
-        try {
-            int position = src.position();
-            int len = src.remaining();
-            if (len > buf.capacity()) {
-                throw new IllegalStateException("buffer pool write overflow");
-            }
-
-            buf.put(src);
-
+        final int pos = src.position();
+        final int len = src.remaining();
+        if (src.isDirect()) {
+            final long addr = Buffer.address(src) + pos;
             final int netWrote = SSL.writeToBIO(networkBIO, addr, len);
             if (netWrote >= 0) {
-                src.position(position + netWrote);
+                src.position(pos + netWrote);
                 lastPrimingReadResult = SSL.readFromSSL(ssl, addr, 0); // priming read
                 return netWrote;
-            } else {
-                src.position(position);
-                return 0;
             }
-        } finally {
-            bufPool.release(buf);
+        } else {
+            final ByteBuffer buf = bufPool.acquireBuffer();
+            try {
+                assert buf.isDirect();
+                assert len <= buf.capacity();
+                final long addr = Buffer.address(buf);
+
+                buf.put(src);
+
+                final int netWrote = SSL.writeToBIO(networkBIO, addr, len);
+                src.position(pos + netWrote);
+                if (netWrote >= 0) {
+                    lastPrimingReadResult = SSL.readFromSSL(ssl, addr, 0); // priming read
+                    return netWrote;
+                }
+            } finally {
+                bufPool.releaseBuffer(buf);
+            }
         }
+
+        return 0;
     }
 
     /**
      * Read plaintext data from the OpenSSL internal BIO
      */
     private int readPlaintextData(final ByteBuffer dst) {
-        final ByteBuffer buf = bufPool.acquire();
-        final long addr = Buffer.address(buf);
-        try {
-            final int len = Math.min(buf.capacity(), dst.capacity());
-            buf.limit(len);
+        if (dst.isDirect()) {
+            final int pos = dst.position();
+            final long addr = Buffer.address(dst) + pos;
+            final int len = dst.limit() - pos;
             final int sslRead = SSL.readFromSSL(ssl, addr, len);
             if (sslRead > 0) {
-                buf.limit(sslRead);
-                dst.put(buf);
+                dst.position(pos + sslRead);
                 return sslRead;
-            } else {
-                return 0;
             }
-        } finally {
-            bufPool.release(buf);
+        } else {
+            final ByteBuffer buf = bufPool.acquireBuffer();
+            try {
+                assert buf.isDirect();
+                final long addr = Buffer.address(buf);
+                final int len = Math.min(buf.capacity(), dst.remaining());
+                buf.limit(len);
+                final int sslRead = SSL.readFromSSL(ssl, addr, len);
+                if (sslRead > 0) {
+                    buf.limit(sslRead);
+                    dst.put(buf);
+                    return sslRead;
+                }
+            } finally {
+                bufPool.releaseBuffer(buf);
+            }
         }
+
+        return 0;
     }
 
     /**
      * Read encrypted data from the OpenSSL network BIO
      */
     private int readEncryptedData(final ByteBuffer dst, final int pending) {
-        final ByteBuffer buf = bufPool.acquire();
-        final long addr = Buffer.address(buf);
-        try {
-            if (pending > buf.capacity()) {
-                throw new IllegalStateException("network BIO read overflow " +
-                        "(pending: " + pending + ", capacity: " + buf.capacity() + ')');
-            }
-
+        if (dst.isDirect() && dst.remaining() >= pending) {
+            final int pos = dst.position();
+            final long addr = Buffer.address(dst) + pos;
             final int bioRead = SSL.readFromBIO(networkBIO, addr, pending);
             if (bioRead > 0) {
-                buf.limit(bioRead);
-                dst.put(buf);
+                dst.position(pos + bioRead);
                 return bioRead;
-            } else {
-                return 0;
             }
-        } finally {
-            bufPool.release(buf);
+        } else {
+            final ByteBuffer buf = bufPool.acquireBuffer();
+            try {
+                assert buf.isDirect();
+                final long addr = Buffer.address(buf);
+                assert buf.capacity() >= pending :
+                        "network BIO read overflow (pending: " + pending + ", capacity: " + buf.capacity() + ')';
+
+                final int bioRead = SSL.readFromBIO(networkBIO, addr, pending);
+                if (bioRead > 0) {
+                    buf.limit(bioRead);
+                    dst.put(buf);
+                    return bioRead;
+                }
+            } finally {
+                bufPool.releaseBuffer(buf);
+            }
         }
+
+        return 0;
     }
 
     /**
@@ -412,7 +451,7 @@ public final class OpenSslEngine extends SSLEngine {
 
         // Check for OpenSSL errors caused by the priming read
         String error = SSL.getLastError();
-        if (error != null && !error.startsWith(SSL_IGNORABLE_ERROR_PREFIX)) {
+        if (error != null && !error.startsWith(OpenSsl.IGNORABLE_ERROR_PREFIX)) {
             if (logger.isInfoEnabled()) {
                 logger.info(
                         "SSL_read failed: primingReadResult: " + lastPrimingReadResult +

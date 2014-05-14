@@ -15,14 +15,16 @@
  */
 package org.jboss.netty.example.portunification;
 
-import java.net.InetSocketAddress;
-import java.util.concurrent.Executors;
-
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import org.jboss.netty.handler.ssl.SslContext;
+import org.jboss.netty.handler.ssl.util.SelfSignedCertificate;
+
+import java.net.InetSocketAddress;
+import java.util.concurrent.Executors;
 
 /**
  * Serves two protocols (HTTP and Factorial) using only one port, enabling
@@ -33,9 +35,11 @@ import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
  */
 public class PortUnificationServer {
 
+    private final SslContext sslCtx;
     private final int port;
 
-    public PortUnificationServer(int port) {
+    public PortUnificationServer(SslContext sslCtx, int port) {
+        this.sslCtx = sslCtx;
         this.port = port;
     }
 
@@ -49,7 +53,7 @@ public class PortUnificationServer {
         // Set up the event pipeline factory.
         bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
             public ChannelPipeline getPipeline() throws Exception {
-                return Channels.pipeline(new PortUnificationServerHandler());
+                return Channels.pipeline(new PortUnificationServerHandler(sslCtx));
             }
         });
 
@@ -64,6 +68,12 @@ public class PortUnificationServer {
         } else {
             port = 8080;
         }
-        new PortUnificationServer(port).run();
+
+        // Configure SSL context
+        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        final SslContext sslCtx = SslContext.newServerContext(ssc.certificate(), ssc.privateKey());
+
+        // Start the server.
+        new PortUnificationServer(sslCtx, port).run();
     }
 }

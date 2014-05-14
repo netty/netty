@@ -19,33 +19,33 @@ import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
-import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
-import org.jboss.netty.example.securechat.SecureChatSslContextFactory;
 import org.jboss.netty.util.CharsetUtil;
 import org.junit.Assert;
 import org.junit.Test;
 
-import javax.net.ssl.SSLEngine;
 import java.net.InetSocketAddress;
 
-public class SslCloseTest {
+public class SslCloseTest extends SslTest{
+
+    public SslCloseTest(
+            SslContext serverCtx, SslContext clientCtx,
+            ChannelFactory serverChannelFactory, ChannelFactory clientChannelFactory) {
+        super(serverCtx, clientCtx, serverChannelFactory, clientChannelFactory);
+    }
 
     /**
      * Try to write a testcase to reproduce #343
      */
     @Test
     public void testCloseOnSslException() {
-        ServerBootstrap sb = new ServerBootstrap(new NioServerSocketChannelFactory());
-        ClientBootstrap cb = new ClientBootstrap(new NioClientSocketChannelFactory());
+        ServerBootstrap sb = new ServerBootstrap(serverChannelFactory);
+        ClientBootstrap cb = new ClientBootstrap(clientChannelFactory);
 
-        SSLEngine sse = SecureChatSslContextFactory.getServerContext().createSSLEngine();
-        sse.setUseClientMode(false);
-
-        sb.getPipeline().addFirst("ssl", new SslHandler(sse));
+        sb.getPipeline().addFirst("ssl", serverCtx.newHandler());
         sb.getPipeline().addLast("handler", new SimpleChannelUpstreamHandler() {
 
             @Override
@@ -64,8 +64,5 @@ public class SslCloseTest {
         Assert.assertTrue(cc.getCloseFuture().awaitUninterruptibly(5000));
 
         serverChannel.close();
-
-        cb.releaseExternalResources();
-        sb.releaseExternalResources();
     }
 }

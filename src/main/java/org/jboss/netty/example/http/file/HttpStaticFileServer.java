@@ -15,17 +15,23 @@
  */
 package org.jboss.netty.example.http.file;
 
+import org.jboss.netty.bootstrap.ServerBootstrap;
+import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import org.jboss.netty.handler.ssl.SslContext;
+import org.jboss.netty.handler.ssl.util.SelfSignedCertificate;
+
 import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
 
-import org.jboss.netty.bootstrap.ServerBootstrap;
-import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
-
 public class HttpStaticFileServer {
 
+    private static final boolean useSsl = false; // Set to true to enable SSL.
+
+    private final SslContext sslCtx;
     private final int port;
 
-    public HttpStaticFileServer(int port) {
+    public HttpStaticFileServer(SslContext sslCtx, int port) {
+        this.sslCtx = sslCtx;
         this.port = port;
     }
 
@@ -37,19 +43,28 @@ public class HttpStaticFileServer {
                         Executors.newCachedThreadPool()));
 
         // Set up the event pipeline factory.
-        bootstrap.setPipelineFactory(new HttpStaticFileServerPipelineFactory());
+        bootstrap.setPipelineFactory(new HttpStaticFileServerPipelineFactory(sslCtx));
 
         // Bind and start to accept incoming connections.
         bootstrap.bind(new InetSocketAddress(port));
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         int port;
         if (args.length > 0) {
             port = Integer.parseInt(args[0]);
         } else {
             port = 8080;
         }
-        new HttpStaticFileServer(port).run();
+
+        final SslContext sslCtx;
+        if (useSsl) {
+            SelfSignedCertificate ssc = new SelfSignedCertificate();
+            sslCtx = SslContext.newServerContext(ssc.certificate(), ssc.privateKey());
+        } else {
+            sslCtx = null;
+        }
+
+        new HttpStaticFileServer(sslCtx, port).run();
     }
 }

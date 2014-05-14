@@ -27,70 +27,45 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jboss.netty.handler.ssl.AbstractSocketSslEchoTest.SSLEngineFactory;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.TestUtil;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
 
-import javax.net.ssl.SSLEngine;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.Collection;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.*;
 
-@RunWith(Parameterized.class)
-public abstract class AbstractSocketSslGreetingTest {
-    static final InternalLogger logger =
-            InternalLoggerFactory.getInstance(AbstractSocketSslGreetingTest.class);
+public class SocketSslGreetingTest extends SslTest {
 
-    @Parameters(name = "{index}: serverEngine = {0}, clientEngine = {1}")
-    public static Collection<SSLEngineFactory[]> engines() throws Exception {
-        return AbstractSocketSslEchoTest.engines();
-    }
+    static final InternalLogger logger = InternalLoggerFactory.getInstance(SocketSslGreetingTest.class);
 
     private final ChannelBuffer greeting = ChannelBuffers.wrappedBuffer(new byte[] {'a'});
 
-    protected abstract ChannelFactory newServerSocketChannelFactory(Executor executor);
-    protected abstract ChannelFactory newClientSocketChannelFactory(Executor executor);
-
-    private final SSLEngineFactory serverEngineFactory;
-    private final SSLEngineFactory clientEngineFactory;
-
-    protected AbstractSocketSslGreetingTest(
-            SSLEngineFactory serverEngineFactory, SSLEngineFactory clientEngineFactory) {
-        this.serverEngineFactory = serverEngineFactory;
-        this.clientEngineFactory = clientEngineFactory;
+    public SocketSslGreetingTest(
+            SslContext serverCtx, SslContext clientCtx,
+            ChannelFactory serverChannelFactory, ChannelFactory clientChannelFactory) {
+        super(serverCtx, clientCtx, serverChannelFactory, clientChannelFactory);
     }
 
     @Test
     public void testSslEcho() throws Throwable {
-        ServerBootstrap sb = new ServerBootstrap(newServerSocketChannelFactory(Executors.newCachedThreadPool()));
-        ClientBootstrap cb = new ClientBootstrap(newClientSocketChannelFactory(Executors.newCachedThreadPool()));
+        ServerBootstrap sb = new ServerBootstrap(serverChannelFactory);
+        ClientBootstrap cb = new ClientBootstrap(clientChannelFactory);
 
         ServerHandler sh = new ServerHandler();
         ClientHandler ch = new ClientHandler();
-
-        SSLEngine sse = serverEngineFactory.newEngine();
-        SSLEngine cse = clientEngineFactory.newEngine();
-        sse.setUseClientMode(false);
-        cse.setUseClientMode(true);
 
         // Workaround for blocking I/O transport write-write dead lock.
         sb.setOption("receiveBufferSize", 1048576);
         sb.setOption("receiveBufferSize", 1048576);
 
-        sb.getPipeline().addFirst("ssl", new SslHandler(sse));
+        sb.getPipeline().addFirst("ssl", serverCtx.newHandler());
         sb.getPipeline().addLast("handler", sh);
-        cb.getPipeline().addFirst("ssl", new SslHandler(cse));
+        cb.getPipeline().addFirst("ssl", clientCtx.newHandler());
         cb.getPipeline().addLast("handler", ch);
 
         Channel sc = sb.bind(new InetSocketAddress(0));
@@ -120,10 +95,6 @@ public abstract class AbstractSocketSslGreetingTest {
         sh.channel.close().awaitUninterruptibly();
         cc.close().awaitUninterruptibly();
         sc.close().awaitUninterruptibly();
-        cb.shutdown();
-        sb.shutdown();
-        cb.releaseExternalResources();
-        sb.releaseExternalResources();
 
         if (sh.exception.get() != null && !(sh.exception.get() instanceof IOException)) {
             throw sh.exception.get();

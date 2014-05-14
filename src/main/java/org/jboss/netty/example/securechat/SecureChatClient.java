@@ -20,6 +20,8 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.example.telnet.TelnetClient;
+import org.jboss.netty.handler.ssl.SslContext;
+import org.jboss.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -32,10 +34,12 @@ import java.util.concurrent.Executors;
  */
 public class SecureChatClient {
 
+    private final SslContext sslCtx;
     private final String host;
     private final int port;
 
-    public SecureChatClient(String host, int port) {
+    public SecureChatClient(SslContext sslCtx, String host, int port) {
+        this.sslCtx = sslCtx;
         this.host = host;
         this.port = port;
     }
@@ -48,7 +52,7 @@ public class SecureChatClient {
                         Executors.newCachedThreadPool()));
 
         // Configure the pipeline factory.
-        bootstrap.setPipelineFactory(new SecureChatClientPipelineFactory());
+        bootstrap.setPipelineFactory(new SecureChatClientPipelineFactory(sslCtx));
 
         // Start the connection attempt.
         ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
@@ -107,6 +111,9 @@ public class SecureChatClient {
         String host = args[0];
         int port = Integer.parseInt(args[1]);
 
-        new SecureChatClient(host, port).run();
+        // Configure the SSL context.
+        SslContext sslCtx = SslContext.newClientContext(InsecureTrustManagerFactory.INSTANCE);
+
+        new SecureChatClient(sslCtx, host, port).run();
     }
 }

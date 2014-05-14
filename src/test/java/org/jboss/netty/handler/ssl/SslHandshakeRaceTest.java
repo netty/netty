@@ -19,6 +19,7 @@ import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -29,20 +30,15 @@ import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
-import org.jboss.netty.channel.socket.ServerSocketChannelFactory;
-import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
-import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
-import org.jboss.netty.channel.socket.oio.OioServerSocketChannelFactory;
-import org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory;
-import org.jboss.netty.example.securechat.SecureChatSslContextFactory;
+import org.junit.Test;
 
-import javax.net.ssl.SSLEngine;
 import java.net.InetSocketAddress;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class SslHandshakeRaceTester {
+public class SslHandshakeRaceTest extends SslTest {
+
+    private static final int COUNT = 10;
 
     private static final Random random = new Random();
     static final byte[] data = new byte[1048576];
@@ -52,35 +48,25 @@ public class SslHandshakeRaceTester {
         random.nextBytes(data);
     }
 
-    public void run(int rounds, boolean nio) throws Throwable {
-        ClientSocketChannelFactory clientFactory;
-        if (nio) {
-            clientFactory = new NioClientSocketChannelFactory();
-        } else {
-            clientFactory = new OioClientSocketChannelFactory();
-        }
-        ClientBootstrap cb = new ClientBootstrap(clientFactory);
+    public SslHandshakeRaceTest(
+            SslContext serverCtx, SslContext clientCtx,
+            ChannelFactory serverChannelFactory, ChannelFactory clientChannelFactory) {
+        super(serverCtx, clientCtx, serverChannelFactory, clientChannelFactory);
+    }
+
+    @Test
+    public void testHandshakeRace() throws Throwable {
+        ClientBootstrap cb = new ClientBootstrap(clientChannelFactory);
         cb.setPipelineFactory(new ChannelPipelineFactory() {
             public ChannelPipeline getPipeline() throws Exception {
                 ChannelPipeline cp = Channels.pipeline();
-
-                SSLEngine cse = SecureChatSslContextFactory.getClientContext().createSSLEngine();
-                cse.setUseClientMode(true);
-                cp.addFirst("ssl", new SslHandler(cse));
-
+                cp.addFirst("ssl", clientCtx.newHandler());
                 cp.addLast("handler", new TestHandler());
                 return cp;
             }
         });
 
-        ServerSocketChannelFactory serverFactory;
-        if (nio) {
-            serverFactory = new NioServerSocketChannelFactory();
-        } else {
-            serverFactory = new OioServerSocketChannelFactory();
-        }
-        ServerBootstrap sb = new ServerBootstrap(serverFactory);
-
+        ServerBootstrap sb = new ServerBootstrap(serverChannelFactory);
         sb.setPipelineFactory(new ChannelPipelineFactory() {
             public ChannelPipeline getPipeline() throws Exception {
                 ChannelPipeline cp = Channels.pipeline();
@@ -98,14 +84,13 @@ public class SslHandshakeRaceTester {
                         });
 
                         ++count;
-                        System.out.println("Connection #" + count);
+                        if (count % 100 == 0) {
+                            System.out.println("Connection #" + count);
+                        }
                     }
                 });
 
-                SSLEngine sse = SecureChatSslContextFactory.getServerContext().createSSLEngine();
-                sse.setUseClientMode(false);
-                cp.addFirst("ssl", new SslHandler(sse));
-
+                cp.addFirst("ssl", serverCtx.newHandler());
                 cp.addLast("handler",  new TestHandler());
                 return cp;
             }
@@ -114,22 +99,17 @@ public class SslHandshakeRaceTester {
         Channel sc = sb.bind(new InetSocketAddress(0));
         int port = ((InetSocketAddress) sc.getLocalAddress()).getPort();
 
-        for (int i = 0; i < rounds; i++) {
+        for (int i = 0; i < COUNT; i++) {
             connectAndSend(cb, port);
         }
 
-        cb.shutdown();
-        cb.releaseExternalResources();
         sc.close().awaitUninterruptibly();
-        sb.shutdown();
-        sb.releaseExternalResources();
     }
 
     private static void connectAndSend(ClientBootstrap cb, int port) throws Throwable {
         ChannelFuture ccf = cb.connect(new InetSocketAddress("127.0.0.1", port));
         ccf.awaitUninterruptibly();
         if (!ccf.isSuccess()) {
-            ccf.getCause().printStackTrace();
             throw ccf.getCause();
         }
         TestHandler ch = ccf.getChannel().getPipeline().get(TestHandler.class);
@@ -138,7 +118,6 @@ public class SslHandshakeRaceTester {
         ChannelFuture hf = cc.getPipeline().get(SslHandler.class).handshake();
         hf.awaitUninterruptibly();
         if (!hf.isSuccess()) {
-            hf.getCause().printStackTrace();
             ch.channel.close();
             throw hf.getCause();
         }
@@ -182,16 +161,5 @@ public class SslHandshakeRaceTester {
             exception.compareAndSet(null, e.getCause());
             e.getChannel().close();
         }
-    }
-
-    public static void main(String[] args) throws Throwable {
-        int count = 20000;
-        boolean nio = false;
-        if (args.length == 2) {
-            count = Integer.parseInt(args[0]);
-            nio = Boolean.parseBoolean(args[1]);
-        }
-        SslHandshakeRaceTester test = new SslHandshakeRaceTester();
-        test.run(count, nio);
     }
 }
