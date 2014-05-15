@@ -16,8 +16,10 @@
 
 package io.netty.util;
 
-import java.util.HashMap;
-import java.util.Map;
+import io.netty.util.internal.PlatformDependent;
+
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A pool of {@link Constant}s.
@@ -26,9 +28,8 @@ import java.util.Map;
  */
 public abstract class ConstantPool<T extends Constant<T>> {
 
-    private final Map<String, T> constants = new HashMap<String, T>();
-
-    private int nextId = 1;
+    private final ConcurrentMap<String, T> constants = PlatformDependent.newConcurrentHashMap();
+    private final AtomicInteger nextId = new AtomicInteger(1);
 
     /**
      * Shortcut of {@link #valueOf(String) valueOf(firstNameComponent.getName() + "#" + secondNameComponent)}.
@@ -60,17 +61,15 @@ public abstract class ConstantPool<T extends Constant<T>> {
         if (name.isEmpty()) {
             throw new IllegalArgumentException("empty name");
         }
-
-        synchronized (constants) {
-            T c = constants.get(name);
-            if (c == null) {
-                c = newConstant(nextId, name);
-                constants.put(name, c);
-                nextId ++;
+        T c = constants.get(name);
+        if (c == null) {
+            c = newConstant(nextId.getAndIncrement(), name);
+            T constant = constants.putIfAbsent(name, c);
+            if (constant != null) {
+                c = constant;
             }
-
-            return c;
         }
+        return c;
     }
 
     protected abstract T newConstant(int id, String name);
