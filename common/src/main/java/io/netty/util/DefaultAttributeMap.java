@@ -41,7 +41,8 @@ public class DefaultAttributeMap implements AttributeMap {
         updater = referenceFieldUpdater;
     }
 
-    private static final int BUCKET_SIZE = 5;
+    private static final int BUCKET_SIZE = 4;
+    private static final int MASK = BUCKET_SIZE  - 1;
 
     // Initialize lazily to reduce memory consumption; updated by AtomicReferenceFieldUpdater above.
     @SuppressWarnings("UnusedDeclaration")
@@ -131,9 +132,7 @@ public class DefaultAttributeMap implements AttributeMap {
     }
 
     private static int index(AttributeKey<?> key) {
-        int hash = System.identityHashCode(key);
-        int index = hash % BUCKET_SIZE;
-        return index;
+        return key.id() & MASK;
     }
 
     @SuppressWarnings("serial")
