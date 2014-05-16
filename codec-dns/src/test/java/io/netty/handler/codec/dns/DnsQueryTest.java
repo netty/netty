@@ -16,13 +16,14 @@
 package io.netty.handler.codec.dns;
 
 import io.netty.channel.embedded.EmbeddedChannel;
-
 import io.netty.channel.socket.DatagramPacket;
+
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class DnsQueryTest {
@@ -31,30 +32,15 @@ public class DnsQueryTest {
     public void writeQueryTest() throws Exception {
         InetSocketAddress addr = new InetSocketAddress(0);
         EmbeddedChannel embedder = new EmbeddedChannel(new DnsQueryEncoder());
-        for (int i = 0; i < 5; i++) {
-            DnsQuery query = new DnsQuery(1, addr);
-            switch (i) {
 
-            case 0:
-                query.addQuestion(new DnsQuestion("1.0.0.127.in-addr.arpa", DnsEntry.TYPE_PTR));
-                break;
+        DnsQuery q1 = (DnsQuery)new DnsQuery(1, addr).addQuestion(new DnsQuestion("1.0.0.127.in-addr.arpa", DnsEntry.TYPE_PTR));
+        DnsQuery q2 = (DnsQuery)new DnsQuery(1, addr).addQuestion(new DnsQuestion("www.example.com", DnsEntry.TYPE_A));
+        DnsQuery q3 = (DnsQuery)new DnsQuery(1, addr).addQuestion(new DnsQuestion("example.com", DnsEntry.TYPE_AAAA));
+        DnsQuery q4 = (DnsQuery)new DnsQuery(1, addr).addQuestion(new DnsQuestion("example.com", DnsEntry.TYPE_MX));
+        DnsQuery q5 = (DnsQuery)new DnsQuery(1, addr).addQuestion(new DnsQuestion("example.com", DnsEntry.TYPE_CNAME));
 
-            case 1:
-                query.addQuestion(new DnsQuestion("www.example.com", DnsEntry.TYPE_A));
-                break;
+        for (DnsQuery query : Arrays.asList(q1, q2, q3, q4, q5)) {
 
-            case 2:
-                query.addQuestion(new DnsQuestion("example.com", DnsEntry.TYPE_AAAA));
-                break;
-
-            case 3:
-                query.addQuestion(new DnsQuestion("example.com", DnsEntry.TYPE_MX));
-                break;
-
-            case 4:
-                query.addQuestion(new DnsQuestion("example.com", DnsEntry.TYPE_CNAME));
-                break;
-            }
             Assert.assertEquals("Invalid question count, expected 1.", 1, query.getHeader().questionCount());
             Assert.assertEquals("Invalid answer count, expected 0.", 0, query.getHeader().answerCount());
             Assert.assertEquals("Invalid authority resource record count, expected 0.", 0, query.getHeader()
@@ -72,5 +58,4 @@ public class DnsQueryTest {
             Assert.assertEquals("Malformed packet", packet.content(), p.content());
         }
     }
-
 }

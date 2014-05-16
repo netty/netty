@@ -131,7 +131,7 @@ public class AsynchronousDnsResolverTest {
             }
         }));
 
-        List<Inet6Address> addresses = dns.resolve6("netty.io").get();
+        List<Inet6Address> addresses = dns.resolve6("google.com").get();
         Assert.assertEquals(1, addresses.size());
         Assert.assertArrayEquals(IP6_BYTES, addresses.get(0).getAddress());
     }

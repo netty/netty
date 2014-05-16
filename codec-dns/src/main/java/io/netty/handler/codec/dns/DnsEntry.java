@@ -315,7 +315,7 @@ public class DnsEntry {
     // only allow to extend from same package
     DnsEntry(String name, int type, int dnsClass) {
         if (name == null || name.isEmpty()) {
-            throw new IllegalArgumentException("name must not be null or left blank.");
+            throw new NullPointerException("name must not be null or left blank.");
         }
         if ((type & 0xffff) != type) {
             throw new IllegalArgumentException("type must be an unsigned short.");
@@ -351,17 +351,12 @@ public class DnsEntry {
 
     @Override
     public int hashCode() {
-        int hash = 7;
-        for (int i = 0; i < name.length(); i++) {
-            hash = hash * 31 + name.charAt(i);
-        }
-        hash = hash * 31 + type;
-        return hash * 31 + dnsClass;
+        return (name.hashCode() * 31 + type) * 31 + dnsClass;
     }
 
     @Override
     public String toString() {
-        return new StringBuilder().append(getClass().getSimpleName()).append("(domain name: ").append(name)
+        return new StringBuilder(128).append(getClass().getSimpleName()).append("(domain name: ").append(name)
                 .append(", type: ").append(type).append(", class: ").append(dnsClass).append(')').toString();
     }
 
@@ -371,11 +366,8 @@ public class DnsEntry {
             return true;
         }
         if (o instanceof DnsEntry) {
-            if (o.hashCode() != hashCode()) {
-                return false;
-            }
             DnsEntry other = (DnsEntry) o;
-            return other.name().equals(name) && other.type() == type && other.dnsClass() == dnsClass;
+            return other.type() == type && other.dnsClass() == dnsClass && other.name().equals(name);
         }
         return false;
     }
