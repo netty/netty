@@ -60,4 +60,16 @@ public class ByteBufAllocatorBenchmark extends AbstractMicrobenchmark {
         buffer.release();
     }
 
+    @GenerateMicroBenchmark
+    public void defaultPooledHeapAllocAndFree() {
+        ByteBuf buffer = PooledByteBufAllocator.DEFAULT.heapBuffer(size);
+        buffer.release();
+    }
+
+    @GenerateMicroBenchmark
+    public void defaultPooledDirectAllocAndFree() {
+        ByteBuf buffer = PooledByteBufAllocator.DEFAULT.directBuffer(size);
+        buffer.release();
+    }
+
 }

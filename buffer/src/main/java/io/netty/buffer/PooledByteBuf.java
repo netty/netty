@@ -149,7 +149,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
     private void recycle() {
         Recycler.Handle recyclerHandle = this.recyclerHandle;
         if (recyclerHandle != null) {
-            ((Recycler<Object>) recycler()).recycle(this, recyclerHandle);
+            recyclerHandle.recycle();
         }
     }
 

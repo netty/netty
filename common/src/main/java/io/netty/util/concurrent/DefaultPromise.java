@@ -35,7 +35,8 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             InternalLoggerFactory.getInstance(DefaultPromise.class.getName() + ".rejectedExecution");
 
     private static final int MAX_LISTENER_STACK_DEPTH = 8;
-    private static final ThreadLocal<Integer> LISTENER_STACK_DEPTH = new ThreadLocal<Integer>() {
+    private static final FastThreadLocal<Integer> LISTENER_STACK_DEPTH
+    = new FastThreadLocal<Integer>(FastThreadLocal.Type.DefaultPromise_ListenerStackDepth) {
         @Override
         protected Integer initialValue() {
             return 0;

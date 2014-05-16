@@ -28,7 +28,7 @@ public class PooledLittleEndianHeapByteBufTest extends AbstractByteBufTest {
 
     @Override
     protected ByteBuf newBuffer(int length) {
-        buffer = PooledByteBufAllocator.DEFAULT.heapBuffer(length).order(ByteOrder.LITTLE_ENDIAN);
+        buffer = AbstractPooledByteBufAllocator.DEFAULT.heapBuffer(length).order(ByteOrder.LITTLE_ENDIAN);
         assertEquals(0, buffer.writerIndex());
         return buffer;
     }

@@ -98,7 +98,7 @@ public class DefaultThreadFactory implements ThreadFactory {
 
     @Override
     public Thread newThread(Runnable r) {
-        Thread t = new Thread(r, prefix + nextId.incrementAndGet());
+        Thread t = new FastThreadLocal.FastThreadLocalThread(r, prefix + nextId.incrementAndGet());
         try {
             if (t.isDaemon()) {
                 if (!daemon) {

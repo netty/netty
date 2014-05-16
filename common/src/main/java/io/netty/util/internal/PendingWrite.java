@@ -17,13 +17,15 @@ package io.netty.util.internal;
 
 import io.netty.util.Recycler;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.Promise;
 
 /**
  * Some pending write which should be picked up later.
  */
 public final class PendingWrite {
-    private static final Recycler<PendingWrite> RECYCLER = new Recycler<PendingWrite>() {
+    private static final Recycler<PendingWrite> RECYCLER
+    = new Recycler<PendingWrite>(FastThreadLocal.Type.PendingWrite_Recycler) {
         @Override
         protected PendingWrite newObject(Handle handle) {
             return new PendingWrite(handle);
@@ -54,7 +56,8 @@ public final class PendingWrite {
     public boolean recycle() {
         msg = null;
         promise = null;
-        return RECYCLER.recycle(this, handle);
+        handle.recycle();
+        return true;
     }
 
     /**

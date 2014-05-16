@@ -23,7 +23,7 @@ import java.nio.ByteBuffer;
 
 abstract class PoolArena<T> {
 
-    final PooledByteBufAllocator parent;
+    final AbstractPooledByteBufAllocator parent;
 
     private final int pageSize;
     private final int maxOrder;
@@ -44,7 +44,8 @@ abstract class PoolArena<T> {
     // TODO: Test if adding padding helps under contention
     //private long pad0, pad1, pad2, pad3, pad4, pad5, pad6, pad7;
 
-    protected PoolArena(PooledByteBufAllocator parent, int pageSize, int maxOrder, int pageShifts, int chunkSize) {
+    protected PoolArena(AbstractPooledByteBufAllocator parent, int pageSize, int maxOrder, int pageShifts,
+                        int chunkSize) {
         this.parent = parent;
         this.pageSize = pageSize;
         this.maxOrder = maxOrder;
@@ -232,7 +233,7 @@ abstract class PoolArena<T> {
         int readerIndex = buf.readerIndex();
         int writerIndex = buf.writerIndex();
 
-        allocate(parent.threadCache.get(), buf, newCapacity);
+        allocate(parent.cache(), buf, newCapacity);
         if (newCapacity > oldCapacity) {
             memoryCopy(
                     oldMemory, oldOffset,
@@ -335,7 +336,7 @@ abstract class PoolArena<T> {
 
     static final class HeapArena extends PoolArena<byte[]> {
 
-        HeapArena(PooledByteBufAllocator parent, int pageSize, int maxOrder, int pageShifts, int chunkSize) {
+        HeapArena(AbstractPooledByteBufAllocator parent, int pageSize, int maxOrder, int pageShifts, int chunkSize) {
             super(parent, pageSize, maxOrder, pageShifts, chunkSize);
         }
 
@@ -373,7 +374,7 @@ abstract class PoolArena<T> {
 
         private static final boolean HAS_UNSAFE = PlatformDependent.hasUnsafe();
 
-        DirectArena(PooledByteBufAllocator parent, int pageSize, int maxOrder, int pageShifts, int chunkSize) {
+        DirectArena(AbstractPooledByteBufAllocator parent, int pageSize, int maxOrder, int pageShifts, int chunkSize) {
             super(parent, pageSize, maxOrder, pageShifts, chunkSize);
         }
 

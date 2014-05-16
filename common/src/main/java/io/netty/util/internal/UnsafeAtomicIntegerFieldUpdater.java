@@ -58,4 +58,8 @@ final class UnsafeAtomicIntegerFieldUpdater<T> extends AtomicIntegerFieldUpdater
     public int get(T obj) {
         return unsafe.getIntVolatile(obj, offset);
     }
+
+    public int getNonVolatile(T obj) {
+        return unsafe.getInt(obj, offset);
+    }
 }

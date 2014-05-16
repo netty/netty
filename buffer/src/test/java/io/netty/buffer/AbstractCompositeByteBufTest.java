@@ -620,20 +620,20 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
 
     @Test
     public void testGatheringWritesHeapPooled() throws Exception {
-        testGatheringWrites(PooledByteBufAllocator.DEFAULT.heapBuffer().order(order),
-                PooledByteBufAllocator.DEFAULT.heapBuffer().order(order));
+        testGatheringWrites(AbstractPooledByteBufAllocator.DEFAULT.heapBuffer().order(order),
+                AbstractPooledByteBufAllocator.DEFAULT.heapBuffer().order(order));
     }
 
     @Test
     public void testGatheringWritesDirectPooled() throws Exception {
-        testGatheringWrites(PooledByteBufAllocator.DEFAULT.directBuffer().order(order),
-                PooledByteBufAllocator.DEFAULT.directBuffer().order(order));
+        testGatheringWrites(AbstractPooledByteBufAllocator.DEFAULT.directBuffer().order(order),
+                AbstractPooledByteBufAllocator.DEFAULT.directBuffer().order(order));
     }
 
     @Test
     public void testGatheringWritesMixesPooled() throws Exception {
-        testGatheringWrites(PooledByteBufAllocator.DEFAULT.heapBuffer().order(order),
-                PooledByteBufAllocator.DEFAULT.directBuffer().order(order));
+        testGatheringWrites(AbstractPooledByteBufAllocator.DEFAULT.heapBuffer().order(order),
+                AbstractPooledByteBufAllocator.DEFAULT.directBuffer().order(order));
     }
 
     private static void testGatheringWrites(ByteBuf buf1, ByteBuf buf2) throws Exception {
@@ -684,38 +684,38 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
 
     @Test
     public void testGatheringWritesPartialHeapPooled() throws Exception {
-        testGatheringWritesPartial(PooledByteBufAllocator.DEFAULT.heapBuffer().order(order),
-                PooledByteBufAllocator.DEFAULT.heapBuffer().order(order), false);
+        testGatheringWritesPartial(AbstractPooledByteBufAllocator.DEFAULT.heapBuffer().order(order),
+                AbstractPooledByteBufAllocator.DEFAULT.heapBuffer().order(order), false);
     }
 
     @Test
     public void testGatheringWritesPartialDirectPooled() throws Exception {
-        testGatheringWritesPartial(PooledByteBufAllocator.DEFAULT.directBuffer().order(order),
-                PooledByteBufAllocator.DEFAULT.directBuffer().order(order), false);
+        testGatheringWritesPartial(AbstractPooledByteBufAllocator.DEFAULT.directBuffer().order(order),
+                AbstractPooledByteBufAllocator.DEFAULT.directBuffer().order(order), false);
     }
 
     @Test
     public void testGatheringWritesPartialMixesPooled() throws Exception {
-        testGatheringWritesPartial(PooledByteBufAllocator.DEFAULT.heapBuffer().order(order),
-                PooledByteBufAllocator.DEFAULT.directBuffer().order(order), false);
+        testGatheringWritesPartial(AbstractPooledByteBufAllocator.DEFAULT.heapBuffer().order(order),
+                AbstractPooledByteBufAllocator.DEFAULT.directBuffer().order(order), false);
     }
 
     @Test
     public void testGatheringWritesPartialHeapPooledSliced() throws Exception {
-        testGatheringWritesPartial(PooledByteBufAllocator.DEFAULT.heapBuffer().order(order),
-                PooledByteBufAllocator.DEFAULT.heapBuffer().order(order), true);
+        testGatheringWritesPartial(AbstractPooledByteBufAllocator.DEFAULT.heapBuffer().order(order),
+                AbstractPooledByteBufAllocator.DEFAULT.heapBuffer().order(order), true);
     }
 
     @Test
     public void testGatheringWritesPartialDirectPooledSliced() throws Exception {
-        testGatheringWritesPartial(PooledByteBufAllocator.DEFAULT.directBuffer().order(order),
-                PooledByteBufAllocator.DEFAULT.directBuffer().order(order), true);
+        testGatheringWritesPartial(AbstractPooledByteBufAllocator.DEFAULT.directBuffer().order(order),
+                AbstractPooledByteBufAllocator.DEFAULT.directBuffer().order(order), true);
     }
 
     @Test
     public void testGatheringWritesPartialMixesPooledSliced() throws Exception {
-        testGatheringWritesPartial(PooledByteBufAllocator.DEFAULT.heapBuffer().order(order),
-                PooledByteBufAllocator.DEFAULT.directBuffer().order(order), true);
+        testGatheringWritesPartial(AbstractPooledByteBufAllocator.DEFAULT.heapBuffer().order(order),
+                AbstractPooledByteBufAllocator.DEFAULT.directBuffer().order(order), true);
     }
 
     private static void testGatheringWritesPartial(ByteBuf buf1, ByteBuf buf2, boolean slice) throws Exception {

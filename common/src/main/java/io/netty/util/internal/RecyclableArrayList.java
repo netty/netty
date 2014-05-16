@@ -18,6 +18,7 @@ package io.netty.util.internal;
 
 import io.netty.util.Recycler;
 import io.netty.util.Recycler.Handle;
+import io.netty.util.concurrent.FastThreadLocal;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -33,7 +34,8 @@ public final class RecyclableArrayList extends ArrayList<Object> {
 
     private static final int DEFAULT_INITIAL_CAPACITY = 8;
 
-    private static final Recycler<RecyclableArrayList> RECYCLER = new Recycler<RecyclableArrayList>() {
+    private static final Recycler<RecyclableArrayList> RECYCLER
+    = new Recycler<RecyclableArrayList>(FastThreadLocal.Type.RecyclableArrayList_Recycler) {
         @Override
         protected RecyclableArrayList newObject(Handle handle) {
             return new RecyclableArrayList(handle);
@@ -58,7 +60,7 @@ public final class RecyclableArrayList extends ArrayList<Object> {
 
     private final Handle handle;
 
-    private RecyclableArrayList(Handle handle) {
+    public RecyclableArrayList(Handle handle) {
         this(handle, DEFAULT_INITIAL_CAPACITY);
     }
 
@@ -127,6 +129,7 @@ public final class RecyclableArrayList extends ArrayList<Object> {
      */
     public boolean recycle() {
         clear();
-        return RECYCLER.recycle(this, handle);
+        handle.recycle();
+        return true;
     }
 }

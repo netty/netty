@@ -28,7 +28,7 @@ public class PooledBigEndianDirectByteBufTest extends AbstractByteBufTest {
 
     @Override
     protected ByteBuf newBuffer(int length) {
-        buffer = PooledByteBufAllocator.DEFAULT.directBuffer(length);
+        buffer = AbstractPooledByteBufAllocator.DEFAULT.directBuffer(length);
         assertSame(ByteOrder.BIG_ENDIAN, buffer.order());
         assertEquals(0, buffer.writerIndex());
         return buffer;

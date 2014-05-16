@@ -26,7 +26,7 @@ public class PooledBigEndianHeapByteBufTest extends AbstractByteBufTest {
 
     @Override
     protected ByteBuf newBuffer(int length) {
-        buffer = PooledByteBufAllocator.DEFAULT.heapBuffer(length);
+        buffer = AbstractPooledByteBufAllocator.DEFAULT.heapBuffer(length);
         assertEquals(0, buffer.writerIndex());
         return buffer;
     }

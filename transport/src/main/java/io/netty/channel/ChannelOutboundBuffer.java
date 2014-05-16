@@ -29,6 +29,7 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.Recycler;
 import io.netty.util.Recycler.Handle;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -57,7 +58,8 @@ public final class ChannelOutboundBuffer {
         logger.debug("-Dio.netty.threadLocalDirectBufferSize: {}", threadLocalDirectBufferSize);
     }
 
-    private static final Recycler<ChannelOutboundBuffer> RECYCLER = new Recycler<ChannelOutboundBuffer>() {
+    private static final Recycler<ChannelOutboundBuffer> RECYCLER
+    = new Recycler<ChannelOutboundBuffer>(FastThreadLocal.Type.ChannelOutboundBuffer_Recycler) {
         @Override
         protected ChannelOutboundBuffer newObject(Handle handle) {
             return new ChannelOutboundBuffer(handle);
@@ -640,7 +642,7 @@ public final class ChannelOutboundBuffer {
         // Set the channel to null so it can be GC'ed ASAP
         channel = null;
 
-        RECYCLER.recycle(this, handle);
+        handle.recycle();
     }
 
     public long totalPendingWriteBytes() {
@@ -693,7 +695,8 @@ public final class ChannelOutboundBuffer {
     static final class ThreadLocalPooledByteBuf extends UnpooledDirectByteBuf {
         private final Recycler.Handle handle;
 
-        private static final Recycler<ThreadLocalPooledByteBuf> RECYCLER = new Recycler<ThreadLocalPooledByteBuf>() {
+        private static final Recycler<ThreadLocalPooledByteBuf> RECYCLER
+        = new Recycler<ThreadLocalPooledByteBuf>(FastThreadLocal.Type.ChannelOutboundBuffer_PooledByteBuf_Recycler) {
             @Override
             protected ThreadLocalPooledByteBuf newObject(Handle handle) {
                 return new ThreadLocalPooledByteBuf(handle);
@@ -717,7 +720,7 @@ public final class ChannelOutboundBuffer {
                 super.deallocate();
             } else {
                 clear();
-                RECYCLER.recycle(this, handle);
+                handle.recycle();
             }
         }
     }

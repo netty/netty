@@ -54,7 +54,7 @@ public final class ByteBufUtil {
             alloc = UnpooledByteBufAllocator.DEFAULT;
             logger.debug("-Dio.netty.allocator.type: {}", allocType);
         } else if ("pooled".equals(allocType)) {
-            alloc = PooledByteBufAllocator.DEFAULT;
+            alloc = AbstractPooledByteBufAllocator.DEFAULT;
             logger.debug("-Dio.netty.allocator.type: {}", allocType);
         } else {
             alloc = UnpooledByteBufAllocator.DEFAULT;

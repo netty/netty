@@ -16,7 +16,7 @@
 package io.netty.testsuite.websockets.autobahn;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.buffer.AbstractPooledByteBufAllocator;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
@@ -41,7 +41,7 @@ public class AutobahnServer {
             ServerBootstrap b = new ServerBootstrap();
             b.group(group)
              .channel(NioServerSocketChannel.class)
-             .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
+             .childOption(ChannelOption.ALLOCATOR, AbstractPooledByteBufAllocator.DEFAULT)
              .option(ChannelOption.SO_BACKLOG, 1024)
              .childHandler(new AutobahnServerInitializer());
 

@@ -16,12 +16,15 @@
 package io.netty.channel;
 
 import static io.netty.channel.DefaultChannelPipeline.logger;
+import static io.netty.util.concurrent.FastThreadLocal.Type.*;
+
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.Recycler;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorGroup;
+import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.StringUtil;
 
 import java.net.SocketAddress;
@@ -906,20 +909,19 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 ctx = null;
                 msg = null;
                 promise = null;
-                recycle(handle);
+                handle.recycle();
             }
         }
 
         protected void write(DefaultChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
             ctx.invokeWrite(msg, promise);
         }
-
-        protected abstract void recycle(Recycler.Handle handle);
     }
 
     static final class WriteTask extends AbstractWriteTask implements SingleThreadEventLoop.NonWakeupRunnable {
 
-        private static final Recycler<WriteTask> RECYCLER = new Recycler<WriteTask>() {
+        private static final Recycler<WriteTask> RECYCLER
+        = new Recycler<WriteTask>(DefaultChannelHandlerContext_WriteTask_Recycler) {
             @Override
             protected WriteTask newObject(Handle handle) {
                 return new WriteTask(handle);
@@ -936,16 +938,12 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         private WriteTask(Recycler.Handle handle) {
             super(handle);
         }
-
-        @Override
-        protected void recycle(Recycler.Handle handle) {
-            RECYCLER.recycle(this, handle);
-        }
     }
 
     static final class WriteAndFlushTask extends AbstractWriteTask {
 
-        private static final Recycler<WriteAndFlushTask> RECYCLER = new Recycler<WriteAndFlushTask>() {
+        private static final Recycler<WriteAndFlushTask> RECYCLER
+        = new Recycler<WriteAndFlushTask>(DefaultChannelHandlerContext_WriteAndFlushTask_Recycler) {
             @Override
             protected WriteAndFlushTask newObject(Handle handle) {
                 return new WriteAndFlushTask(handle);
@@ -967,11 +965,6 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         public void write(DefaultChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
             super.write(ctx, msg, promise);
             ctx.invokeFlush();
-        }
-
-        @Override
-        protected void recycle(Recycler.Handle handle) {
-            RECYCLER.recycle(this, handle);
         }
     }
 }

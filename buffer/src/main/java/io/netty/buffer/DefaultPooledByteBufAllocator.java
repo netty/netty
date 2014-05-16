@@ -18,11 +18,13 @@ package io.netty.buffer;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class PooledByteBufAllocator extends AbstractPooledByteBufAllocator {
+import io.netty.util.concurrent.FastThreadLocal;
+import io.netty.util.internal.PlatformDependent;
 
-    public static final DefaultPooledByteBufAllocator DEFAULT = new DefaultPooledByteBufAllocator();
+public class DefaultPooledByteBufAllocator extends AbstractPooledByteBufAllocator {
 
-    final ThreadLocal<PoolThreadCache> threadCache = new ThreadLocal<PoolThreadCache>() {
+    final FastThreadLocal<PoolThreadCache> threadCache
+    = new FastThreadLocal<PoolThreadCache>(FastThreadLocal.Type.DefaultPooledByteBufAllocator_ThreadCache) {
         private final AtomicInteger index = new AtomicInteger();
         @Override
         protected PoolThreadCache initialValue() {
@@ -35,19 +37,7 @@ public class PooledByteBufAllocator extends AbstractPooledByteBufAllocator {
         return threadCache.get();
     }
 
-    public PooledByteBufAllocator() {
-        super(false);
-    }
-
-    public PooledByteBufAllocator(boolean preferDirect) {
-        super(preferDirect);
-    }
-
-    public PooledByteBufAllocator(int nHeapArena, int nDirectArena, int pageSize, int maxOrder) {
-        super(nHeapArena, nDirectArena, pageSize, maxOrder);
-    }
-
-    public PooledByteBufAllocator(boolean preferDirect, int nHeapArena, int nDirectArena, int pageSize, int maxOrder) {
-        super(preferDirect);
+    DefaultPooledByteBufAllocator() {
+        super(PlatformDependent.directBufferPreferred());
     }
 }
