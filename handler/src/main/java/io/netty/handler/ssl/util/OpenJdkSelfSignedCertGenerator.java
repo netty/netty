@@ -32,6 +32,7 @@ import java.math.BigInteger;
 import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.SecureRandom;
+import java.security.cert.CertificateException;
 
 import static io.netty.handler.ssl.util.SelfSignedCertificate.*;
 
@@ -48,8 +49,16 @@ final class OpenJdkSelfSignedCertGenerator {
         X500Name owner = new X500Name("CN=" + fqdn);
         info.set(X509CertInfo.VERSION, new CertificateVersion(CertificateVersion.V3));
         info.set(X509CertInfo.SERIAL_NUMBER, new CertificateSerialNumber(new BigInteger(64, random)));
-        info.set(X509CertInfo.SUBJECT, new CertificateSubjectName(owner));
-        info.set(X509CertInfo.ISSUER, new CertificateIssuerName(owner));
+        try {
+            info.set(X509CertInfo.SUBJECT, new CertificateSubjectName(owner));
+        } catch (CertificateException ignore) {
+            info.set(X509CertInfo.SUBJECT, owner);
+        }
+        try {
+            info.set(X509CertInfo.ISSUER, new CertificateIssuerName(owner));
+        } catch (CertificateException ignore) {
+            info.set(X509CertInfo.ISSUER, owner);
+        }
         info.set(X509CertInfo.VALIDITY, new CertificateValidity(NOT_BEFORE, NOT_AFTER));
         info.set(X509CertInfo.KEY, new CertificateX509Key(keypair.getPublic()));
         info.set(X509CertInfo.ALGORITHM_ID,
