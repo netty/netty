@@ -246,11 +246,26 @@
         <version>1.1.0.v20120525</version>
       </dependency>
 
+      <!-- Google Protocol Buffers - completely optional -->
       <dependency>
         <groupId>com.google.protobuf</groupId>
         <artifactId>protobuf-java</artifactId>
         <version>2.5.0</version>
       </dependency>
+
+      <!--
+        Bouncy Castle - completely optional, only needed when:
+        - you generate a temporary self-signed certificate using SelfSignedCertificate, and
+        - you don't use the JDK which doesn't provide sun.security.x509 package.
+      -->
+      <dependency>
+        <groupId>org.bouncycastle</groupId>
+        <artifactId>bcpkix-jdk15on</artifactId>
+        <version>1.50</version>
+        <scope>compile</scope>
+        <optional>true</optional>
+      </dependency>
+
       <dependency>
         <groupId>com.jcraft</groupId>
         <artifactId>jzlib</artifactId>
@@ -491,6 +506,19 @@
             <ignore>java.nio.channels.MembershipKey</ignore>
             <ignore>java.net.StandardProtocolFamily</ignore>
             <ignore>java.nio.channels.spi.SelectorProvider</ignore>
+
+            <!-- Self-signed certificate generation -->
+            <ignore>sun.security.x509.AlgorithmId</ignore>
+            <ignore>sun.security.x509.CertificateAlgorithmId</ignore>
+            <ignore>sun.security.x509.CertificateIssuerName</ignore>
+            <ignore>sun.security.x509.CertificateSerialNumber</ignore>
+            <ignore>sun.security.x509.CertificateSubjectName</ignore>
+            <ignore>sun.security.x509.CertificateValidity</ignore>
+            <ignore>sun.security.x509.CertificateVersion</ignore>
+            <ignore>sun.security.x509.CertificateX509Key</ignore>
+            <ignore>sun.security.x509.X500Name</ignore>
+            <ignore>sun.security.x509.X509CertInfo</ignore>
+            <ignore>sun.security.x509.X509CertImpl</ignore>
           </ignores>
         </configuration>
         <executions>
