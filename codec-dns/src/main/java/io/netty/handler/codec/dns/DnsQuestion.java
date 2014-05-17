@@ -50,7 +50,7 @@ public final class DnsQuestion extends DnsEntry {
     public DnsQuestion(String name, int type, int qClass) {
         super(name, type, qClass);
     }
-    
+
     @Override
     public int hashCode() {
         return (name().hashCode() * 31 + type()) * 31 + dnsClass();
