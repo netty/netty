@@ -123,10 +123,17 @@ public final class JdkSslClientContext extends JdkSslContext {
                 ks.load(null, null);
                 CertificateFactory cf = CertificateFactory.getInstance("X.509");
 
-                for (ByteBuf buf: PemReader.readCertificates(certChainFile)) {
-                    X509Certificate cert = (X509Certificate) cf.generateCertificate(new ByteBufInputStream(buf));
-                    X500Principal principal = cert.getSubjectX500Principal();
-                    ks.setCertificateEntry(principal.getName("RFC2253"), cert);
+                ByteBuf[] certs = PemReader.readCertificates(certChainFile);
+                try {
+                    for (ByteBuf buf: certs) {
+                        X509Certificate cert = (X509Certificate) cf.generateCertificate(new ByteBufInputStream(buf));
+                        X500Principal principal = cert.getSubjectX500Principal();
+                        ks.setCertificateEntry(principal.getName("RFC2253"), cert);
+                    }
+                } finally {
+                    for (ByteBuf buf: certs) {
+                        buf.release();
+                    }
                 }
 
                 // Set up trust manager factory to use our key store.

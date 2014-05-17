@@ -71,7 +71,11 @@ final class PemReader {
                 break;
             }
 
-            certs.add(Base64.decode(Unpooled.copiedBuffer(m.group(1), CharsetUtil.US_ASCII)));
+            ByteBuf base64 = Unpooled.copiedBuffer(m.group(1), CharsetUtil.US_ASCII);
+            ByteBuf der = Base64.decode(base64);
+            base64.release();
+            certs.add(der);
+
             start = m.end();
         }
 
@@ -95,7 +99,10 @@ final class PemReader {
             throw new KeyException("found no private key: " + file);
         }
 
-        return Base64.decode(Unpooled.copiedBuffer(m.group(1), CharsetUtil.US_ASCII));
+        ByteBuf base64 = Unpooled.copiedBuffer(m.group(1), CharsetUtil.US_ASCII);
+        ByteBuf der = Base64.decode(base64);
+        base64.release();
+        return der;
     }
 
     private static String readContent(File file) throws IOException {
