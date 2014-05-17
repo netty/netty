@@ -27,6 +27,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * An {@link SslContext} which uses JDK's SSL/TLS implementation.
+ */
 public abstract class JdkSslContext extends SslContext {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(JdkSslContext.class);
@@ -109,8 +112,14 @@ public abstract class JdkSslContext extends SslContext {
         unmodifiableCipherSuites = Collections.unmodifiableList(Arrays.asList(cipherSuites));
     }
 
+    /**
+     * Returns the JDK {@link SSLContext} object held by this context.
+     */
     public abstract SSLContext context();
 
+    /**
+     * Returns the JDK {@link SSLSessionContext} object held by this context.
+     */
     public final SSLSessionContext sessionContext() {
         if (isServer()) {
             return context().getServerSessionContext();
@@ -144,8 +153,8 @@ public abstract class JdkSslContext extends SslContext {
     }
 
     @Override
-    public final SSLEngine newEngine(String host, int port) {
-        SSLEngine engine = context().createSSLEngine(host, port);
+    public final SSLEngine newEngine(String peerHost, int peerPort) {
+        SSLEngine engine = context().createSSLEngine(peerHost, peerPort);
         engine.setEnabledCipherSuites(cipherSuites);
         engine.setEnabledProtocols(PROTOCOLS);
         engine.setUseClientMode(isClient());

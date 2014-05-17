@@ -31,29 +31,73 @@ import java.security.cert.X509Certificate;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * A client-side {@link SslContext} which uses JDK's SSL/TLS implementation.
+ */
 public final class JdkSslClientContext extends JdkSslContext {
 
     private final SSLContext ctx;
-    private final SSLSessionContext sessCtx;
 
+    /**
+     * Creates a new instance.
+     */
     public JdkSslClientContext() throws SSLException {
         this(null, null, null, null, null, 0, 0);
     }
 
+    /**
+     * Creates a new instance.
+     *
+     * @param certChainFile an X.509 certificate chain file in PEM format.
+     *                      {@code null} to use the system default
+     */
     public JdkSslClientContext(File certChainFile) throws SSLException {
         this(certChainFile, null);
     }
 
+    /**
+     * Creates a new instance.
+     *
+     * @param trustManagerFactory the {@link TrustManagerFactory} that provides the {@link javax.net.ssl.TrustManager}s
+     *                            that verifies the certificates sent from servers.
+     *                            {@code null} to use the default.
+     */
     public JdkSslClientContext(TrustManagerFactory trustManagerFactory) throws SSLException {
         this(null, trustManagerFactory);
     }
 
+    /**
+     * Creates a new instance.
+     *
+     * @param certChainFile an X.509 certificate chain file in PEM format.
+     *                      {@code null} to use the system default
+     * @param trustManagerFactory the {@link TrustManagerFactory} that provides the {@link javax.net.ssl.TrustManager}s
+     *                            that verifies the certificates sent from servers.
+     *                            {@code null} to use the default.
+     */
     public JdkSslClientContext(File certChainFile, TrustManagerFactory trustManagerFactory) throws SSLException {
         this(null, certChainFile, trustManagerFactory, null, null, 0, 0);
     }
 
     /**
-     * Creates a new factory that creates a new client-side {@link javax.net.ssl.SSLEngine}.
+     * Creates a new instance.
+     *
+     * @param bufPool the buffer pool which will be used by this context.
+     *                {@code null} to use the default buffer pool.
+     * @param certChainFile an X.509 certificate chain file in PEM format.
+     *                      {@code null} to use the system default
+     * @param trustManagerFactory the {@link TrustManagerFactory} that provides the {@link javax.net.ssl.TrustManager}s
+     *                            that verifies the certificates sent from servers.
+     *                            {@code null} to use the default.
+     * @param ciphers the cipher suites to enable, in the order of preference.
+     *                {@code null} to use the default cipher suites.
+     * @param nextProtocolSelector the {@link ApplicationProtocolSelector} that chooses one of the application layer
+     *                             protocols returned by a TLS server.
+     *                             {@code null} to disable TLS NPN/ALPN extension.
+     * @param sessionCacheSize the size of the cache used for storing SSL session objects.
+     *                         {@code 0} to use the default value.
+     * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
+     *                       {@code 0} to use the default value.
      */
     public JdkSslClientContext(
             SslBufferPool bufPool, File certChainFile, TrustManagerFactory trustManagerFactory,
@@ -97,7 +141,7 @@ public final class JdkSslClientContext extends JdkSslContext {
                 ctx.init(null, trustManagerFactory.getTrustManagers(), null);
             }
 
-            sessCtx = ctx.getServerSessionContext();
+            SSLSessionContext sessCtx = ctx.getClientSessionContext();
             if (sessionCacheSize > 0) {
                 sessCtx.setSessionCacheSize((int) Math.min(sessionCacheSize, Integer.MAX_VALUE));
             }
@@ -124,9 +168,6 @@ public final class JdkSslClientContext extends JdkSslContext {
         return Collections.emptyList();
     }
 
-    /**
-     * Returns the {@link javax.net.ssl.SSLContext} object of this factory.
-     */
     @Override
     public SSLContext context() {
         return ctx;

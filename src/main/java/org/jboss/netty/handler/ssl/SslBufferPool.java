@@ -22,18 +22,15 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * A {@link ByteBuffer} pool dedicated for {@link SslHandler} performance
- * improvement.
+ * A {@link ByteBuffer} pool dedicated for {@link SslHandler} performance improvement.
  * <p>
- * In most cases, you won't need to create a new pool instance because
- * {@link SslHandler} has a default pool instance internally.
+ * In most cases, you won't need to create a new pool instance because {@link SslHandler} has a default pool
+ * instance internally.
  * <p>
- * The reason why {@link SslHandler} requires a buffer pool is because the
- * current {@link SSLEngine} implementation always requires a 17KiB buffer for
- * every 'wrap' and 'unwrap' operation.  In most cases, the actual size of the
- * required buffer is much smaller than that, and therefore allocating a 17KiB
- * buffer for every 'wrap' and 'unwrap' operation wastes a lot of memory
- * bandwidth, resulting in the application performance degradation.
+ * The reason why {@link SslHandler} requires a buffer pool is because the current {@link SSLEngine} implementation
+ * always requires a 17KiB buffer for every 'wrap' and 'unwrap' operation.  In most cases, the actual size of the
+ * required buffer is much smaller than that, and therefore allocating a 17KiB buffer for every 'wrap' and 'unwrap'
+ * operation wastes a lot of memory bandwidth, resulting in the application performance degradation.
  */
 public class SslBufferPool {
 
@@ -53,16 +50,18 @@ public class SslBufferPool {
     private final AtomicInteger numAllocations;
 
     /**
-     * Creates a new buffer pool whose size is {@code 19267584}, which can
-     * hold {@code 1024} buffers.
+     * Creates a new buffer pool whose size is {@code 19267584}, which can hold {@code 1024} buffers.
      */
     public SslBufferPool() {
         this(DEFAULT_POOL_SIZE);
     }
 
     /**
-     * Creates a new buffer pool whose size is {@code 19267584}, which can
-     * hold {@code 1024} buffers.
+     * Creates a new buffer pool whose size is {@code 19267584}, which can hold {@code 1024} buffers.
+     *
+     * @param preallocate {@code true} if and only if the buffers in this pool has to be pre-allocated
+     *                    at construction time
+     * @param allocateDirect {@code true} if and only if this pool has to allocate direct buffers.
      */
     public SslBufferPool(boolean preallocate, boolean allocateDirect) {
         this(DEFAULT_POOL_SIZE, preallocate, allocateDirect);
@@ -81,6 +80,9 @@ public class SslBufferPool {
      * Creates a new buffer pool.
      *
      * @param maxPoolSize the maximum number of bytes that this pool can hold
+     * @param preallocate {@code true} if and only if the buffers in this pool has to be pre-allocated
+     *                    at construction time
+     * @param allocateDirect {@code true} if and only if this pool has to allocate direct buffers.
      */
     public SslBufferPool(int maxPoolSize, boolean preallocate, boolean allocateDirect) {
         if (maxPoolSize <= 0) {

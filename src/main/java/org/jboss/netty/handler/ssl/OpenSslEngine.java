@@ -37,13 +37,8 @@ import static javax.net.ssl.SSLEngineResult.HandshakeStatus.*;
 import static javax.net.ssl.SSLEngineResult.Status.*;
 
 /**
- * Implements a java.net.SSLEngine in terms of OpenSSL.
- *
- * Documentation on the dataflow and operation of SSLEngine and OpenSSL BIO abstractions
- * can be found at:
- *
- *   SSLEngine: http://download.oracle.com/javase/1,5.0/docs/api/javax/net/ssl/SSLEngine.html
- *   OpenSSL:   http://www.openssl.org/docs/crypto/BIO_s_bio.html#example
+ * Implements a {@link SSLEngine} using
+ * <a href="https://www.openssl.org/docs/crypto/BIO_s_bio.html#EXAMPLE">OpenSSL BIO abstractions</a>.
  */
 public final class OpenSslEngine extends SSLEngine {
 
@@ -98,9 +93,15 @@ public final class OpenSslEngine extends SSLEngine {
     private final SslBufferPool bufPool;
     private SSLSession session;
 
-    public OpenSslEngine(long sslContext, SslBufferPool bufPool) {
+    /**
+     * Creates a new instance
+     *
+     * @param sslCtx an OpenSSL {@code SSL_CTX} object
+     * @param bufPool the {@link SslBufferPool} that will be used by this engine
+     */
+    public OpenSslEngine(long sslCtx, SslBufferPool bufPool) {
         OpenSsl.ensureAvailability();
-        if (sslContext == 0) {
+        if (sslCtx == 0) {
             throw new NullPointerException("sslContext");
         }
         if (bufPool == null) {
@@ -108,10 +109,13 @@ public final class OpenSslEngine extends SSLEngine {
         }
 
         this.bufPool = bufPool;
-        ssl = SSL.newSSL(sslContext, true);
+        ssl = SSL.newSSL(sslCtx, true);
         networkBIO = SSL.makeNetworkBIO(ssl);
     }
 
+    /**
+     * Destroys this engine.
+     */
     public synchronized void shutdown() {
         if (DESTROYED_UPDATER.compareAndSet(this, 0, 1)) {
             SSL.freeSSL(ssl);
@@ -273,12 +277,6 @@ public final class OpenSslEngine extends SSLEngine {
         return 0;
     }
 
-    /**
-     * Encrypt plaintext data from srcs buffers into dst buffer.
-     *
-     * This is called both to encrypt application data as well as
-     * to retrieve handshake data destined for the peer.
-     */
     @Override
     public synchronized SSLEngineResult wrap(
             final ByteBuffer[] srcs, final int offset, final int length, final ByteBuffer dst) throws SSLException {
@@ -384,9 +382,6 @@ public final class OpenSslEngine extends SSLEngine {
         return new SSLEngineResult(getEngineStatus(), getHandshakeStatus(), bytesConsumed, bytesProduced);
     }
 
-    /**
-     * Decrypt encrypted data from src buffers into dsts buffers.
-     */
     @Override
     public synchronized SSLEngineResult unwrap(
             final ByteBuffer src, final ByteBuffer[] dsts, final int offset, final int length) throws SSLException {
@@ -516,19 +511,14 @@ public final class OpenSslEngine extends SSLEngine {
         return new SSLEngineResult(getEngineStatus(), getHandshakeStatus(), bytesConsumed, bytesProduced);
     }
 
-    /**
-     * Currently we do not delegate SSL computation tasks
-     * TODO: in the future, possibly create tasks to do encrypt / decrypt async
-     */
     @Override
     public Runnable getDelegatedTask() {
+        // Currently, we do not delegate SSL computation tasks
+        // TODO: in the future, possibly create tasks to do encrypt / decrypt async
+
         return null;
     }
 
-    /**
-     * This method is called on channel disconnection by SSLHandler when the server
-     * did not initiate the closure process to detect against truncation attacks.
-     */
     @Override
     public synchronized void closeInbound() throws SSLException {
         if (isInboundDone) {
@@ -554,9 +544,6 @@ public final class OpenSslEngine extends SSLEngine {
         return isInboundDone || engineClosed;
     }
 
-    /**
-     * This method is called on channel disconnection to send close_notify
-     */
     @Override
     public synchronized void closeOutbound() {
         if (isOutboundDone) {
@@ -703,9 +690,6 @@ public final class OpenSslEngine extends SSLEngine {
         return session;
     }
 
-    /**
-     * This method causes the OpenSSL engine to accept connections
-     */
     @Override
     public synchronized void beginHandshake() throws SSLException {
         if (engineClosed) {
@@ -748,9 +732,6 @@ public final class OpenSslEngine extends SSLEngine {
         return engineClosed? CLOSED : OK;
     }
 
-    /**
-     * Return the handshake status of the SSL Engine.
-     */
     @Override
     public synchronized SSLEngineResult.HandshakeStatus getHandshakeStatus() {
         if (accepted == 0 || destroyed != 0) {

@@ -35,6 +35,9 @@ import java.security.SecureRandom;
 
 import static org.jboss.netty.handler.ssl.util.SelfSignedCertificate.*;
 
+/**
+ * Generates a self-signed certificate using {@code sun.security.x509} package provided by OpenJDK.
+ */
 final class OpenJdkSelfSignedCertGenerator {
 
     static String[] generate(String fqdn, KeyPair keypair, SecureRandom random) throws Exception {

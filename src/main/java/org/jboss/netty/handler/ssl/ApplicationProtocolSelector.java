@@ -18,7 +18,9 @@ package org.jboss.netty.handler.ssl;
 import java.util.List;
 
 /**
- * Selects an application layer protocol in SSL NPN or ALPM.
+ * Selects an application layer protocol in TLS <a href="http://tools.ietf.org/html/draft-agl-tls-nextprotoneg-04">NPN
+ * (Next Protocol Negotiation)</a> or <a href="https://tools.ietf.org/html/draft-ietf-tls-applayerprotoneg-05">ALPN
+ * (Application Layer Protocol Negotiation)</a>.
  */
 public interface ApplicationProtocolSelector {
     /**

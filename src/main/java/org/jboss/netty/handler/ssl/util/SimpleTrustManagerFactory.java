@@ -50,10 +50,18 @@ public abstract class SimpleTrustManagerFactory extends TrustManagerFactory {
                 }
             };
 
+    /**
+     * Creates a new instance.
+     */
     protected SimpleTrustManagerFactory() {
         this("");
     }
 
+    /**
+     * Creates a new instance.
+     *
+     * @param name the name of this {@link TrustManagerFactory}
+     */
     protected SimpleTrustManagerFactory(String name) {
         super(CURRENT_SPI.get(), PROVIDER, name);
         CURRENT_SPI.get().init(this);
@@ -64,10 +72,25 @@ public abstract class SimpleTrustManagerFactory extends TrustManagerFactory {
         }
     }
 
+    /**
+     * Initializes this factory with a source of certificate authorities and related trust material.
+     *
+     * @see TrustManagerFactorySpi#engineInit(KeyStore)
+     */
     protected abstract void engineInit(KeyStore keyStore) throws Exception;
 
+    /**
+     * Initializes this factory with a source of provider-specific key material.
+     *
+     * @see TrustManagerFactorySpi#engineInit(ManagerFactoryParameters)
+     */
     protected abstract void engineInit(ManagerFactoryParameters managerFactoryParameters) throws Exception;
 
+    /**
+     * Returns one trust manager for each type of trust material.
+     *
+     * @see TrustManagerFactorySpi#engineGetTrustManagers()
+     */
     protected abstract TrustManager[] engineGetTrustManagers();
 
     static final class SimpleTrustManagerFactorySpi extends TrustManagerFactorySpi {

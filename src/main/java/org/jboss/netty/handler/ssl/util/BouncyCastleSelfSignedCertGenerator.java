@@ -34,6 +34,9 @@ import java.security.cert.X509Certificate;
 
 import static org.jboss.netty.handler.ssl.util.SelfSignedCertificate.*;
 
+/**
+ * Generates a self-signed certificate using <a href="http://www.bouncycastle.org/">Bouncy Castle</a>.
+ */
 final class BouncyCastleSelfSignedCertGenerator {
 
     private static final Provider PROVIDER = new BouncyCastleProvider();

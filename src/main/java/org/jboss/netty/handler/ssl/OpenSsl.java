@@ -23,7 +23,8 @@ import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.internal.NativeLibraryLoader;
 
 /**
- * Tells if {@code netty-tcnative} and its OpenSSL support are available.
+ * Tells if <a href="http://netty.io/wiki/forked-tomcat-native.html">{@code netty-tcnative}</a> and its OpenSSL support
+ * are available.
  */
 public final class OpenSsl {
 
@@ -48,14 +49,17 @@ public final class OpenSsl {
     }
 
     /**
-     * Returns {@code true} if and only if {@code netty-tcnative} and its OpenSSL support are available.
+     * Returns {@code true} if and only if
+     * <a href="http://netty.io/wiki/forked-tomcat-native.html">{@code netty-tcnative}</a> and its OpenSSL support
+     * are available.
      */
     public static boolean isAvailable() {
         return UNAVAILABILITY_CAUSE == null;
     }
 
     /**
-     * Ensure that {@code netty-tcnative} and its OpenSSL support are available.
+     * Ensure that <a href="http://netty.io/wiki/forked-tomcat-native.html">{@code netty-tcnative}</a> and
+     * its OpenSSL support are available.
      *
      * @throws UnsatisfiedLinkError if unavailable
      */
@@ -67,7 +71,8 @@ public final class OpenSsl {
     }
 
     /**
-     * Returns the cause of unavailability of {@code netty-tcnative} and its OpenSSL support.
+     * Returns the cause of unavailability of
+     * <a href="http://netty.io/wiki/forked-tomcat-native.html">{@code netty-tcnative}</a> and its OpenSSL support.
      *
      * @return the cause if unavailable. {@code null} if available.
      */

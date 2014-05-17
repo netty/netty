@@ -21,7 +21,6 @@ import org.jboss.netty.buffer.ChannelBufferInputStream;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLSessionContext;
 import java.io.File;
@@ -37,21 +36,52 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * A server-side {@link SslContext} which uses JDK's SSL/TLS implementation.
+ */
 public final class JdkSslServerContext extends JdkSslContext {
 
     private final SSLContext ctx;
-    private final SSLSessionContext sessCtx;
 
+    /**
+     * Creates a new instance.
+     *
+     * @param certChainFile an X.509 certificate chain file in PEM format
+     * @param keyFile a PKCS#8 private key file in PEM format
+     */
     public JdkSslServerContext(File certChainFile, File keyFile) throws SSLException {
         this(certChainFile, keyFile, null);
     }
 
+    /**
+     * Creates a new instance.
+     *
+     * @param certChainFile an X.509 certificate chain file in PEM format
+     * @param keyFile a PKCS#8 private key file in PEM format
+     * @param keyPassword the password of the {@code keyFile}.
+     *                    {@code null} if it's not password-protected.
+     */
     public JdkSslServerContext(File certChainFile, File keyFile, String keyPassword) throws SSLException {
         this(null, certChainFile, keyFile, keyPassword, null, null, 0, 0);
     }
 
     /**
-     * Creates a new factory that creates a new server-side {@link SSLEngine}.
+     * Creates a new instance.
+     *
+     * @param bufPool the buffer pool which will be used by this context.
+     *                {@code null} to use the default buffer pool.
+     * @param certChainFile an X.509 certificate chain file in PEM format
+     * @param keyFile a PKCS#8 private key file in PEM format
+     * @param keyPassword the password of the {@code keyFile}.
+     *                    {@code null} if it's not password-protected.
+     * @param ciphers the cipher suites to enable, in the order of preference.
+     *                {@code null} to use the default cipher suites.
+     * @param nextProtocols the application layer protocols to accept, in the order of preference.
+     *                      {@code null} to disable TLS NPN/ALPN extension.
+     * @param sessionCacheSize the size of the cache used for storing SSL session objects.
+     *                         {@code 0} to use the default value.
+     * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
+     *                       {@code 0} to use the default value.
      */
     public JdkSslServerContext(
             SslBufferPool bufPool,
@@ -115,7 +145,7 @@ public final class JdkSslServerContext extends JdkSslContext {
             ctx = SSLContext.getInstance(PROTOCOL);
             ctx.init(kmf.getKeyManagers(), null, null);
 
-            sessCtx = ctx.getServerSessionContext();
+            SSLSessionContext sessCtx = ctx.getServerSessionContext();
             if (sessionCacheSize > 0) {
                 sessCtx.setSessionCacheSize((int) Math.min(sessionCacheSize, Integer.MAX_VALUE));
             }
@@ -142,9 +172,6 @@ public final class JdkSslServerContext extends JdkSslContext {
         return Collections.emptyList();
     }
 
-    /**
-     * Returns the {@link SSLContext} object of this factory.
-     */
     @Override
     public SSLContext context() {
         return ctx;

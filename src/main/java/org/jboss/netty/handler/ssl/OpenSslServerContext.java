@@ -18,9 +18,6 @@ package org.jboss.netty.handler.ssl;
 import org.apache.tomcat.jni.Pool;
 import org.apache.tomcat.jni.SSL;
 import org.apache.tomcat.jni.SSLContext;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.Channels;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 
@@ -32,22 +29,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Creates a new {@link OpenSslEngine}.  Internally, this factory keeps the SSL_CTX object of OpenSSL.
- * This factory is intended for a shared use by multiple channels:
- * <pre>
- * public class MyChannelPipelineFactory extends {@link ChannelPipelineFactory} {
- *
- *     private final {@link OpenSslServerContext} sslEngineFactory = ...;
- *
- *     public {@link ChannelPipeline} getPipeline() {
- *         {@link ChannelPipeline} p = {@link Channels#pipeline() Channels.pipeline()};
- *         p.addLast("ssl", new {@link SslHandler}(sslEngineFactory.newEngine()));
- *         ...
- *         return p;
- *     }
- * }
- * </pre>
- *
+ * A server-side {@link SslContext} which uses OpenSSL's SSL/TLS implementation.
  */
 public final class OpenSslServerContext extends SslContext {
 
@@ -89,14 +71,46 @@ public final class OpenSslServerContext extends SslContext {
     private final long ctx;
     private final OpenSslSessionStats stats;
 
+    /**
+     * Creates a new instance.
+     *
+     * @param certChainFile an X.509 certificate chain file in PEM format
+     * @param keyFile a PKCS#8 private key file in PEM format
+     */
     public OpenSslServerContext(File certChainFile, File keyFile) throws SSLException {
         this(certChainFile, keyFile, null);
     }
 
+    /**
+     * Creates a new instance.
+     *
+     * @param certChainFile an X.509 certificate chain file in PEM format
+     * @param keyFile a PKCS#8 private key file in PEM format
+     * @param keyPassword the password of the {@code keyFile}.
+     *                    {@code null} if it's not password-protected.
+     */
     public OpenSslServerContext(File certChainFile, File keyFile, String keyPassword) throws SSLException {
         this(null, certChainFile, keyFile, keyPassword, null, null, 0, 0);
     }
 
+    /**
+     * Creates a new instance.
+     *
+     * @param bufPool the buffer pool which will be used by this context.
+     *                {@code null} to use the default buffer pool.
+     * @param certChainFile an X.509 certificate chain file in PEM format
+     * @param keyFile a PKCS#8 private key file in PEM format
+     * @param keyPassword the password of the {@code keyFile}.
+     *                    {@code null} if it's not password-protected.
+     * @param ciphers the cipher suites to enable, in the order of preference.
+     *                {@code null} to use the default cipher suites.
+     * @param nextProtocols the application layer protocols to accept, in the order of preference.
+     *                      {@code null} to disable TLS NPN/ALPN extension.
+     * @param sessionCacheSize the size of the cache used for storing SSL session objects.
+     *                         {@code 0} to use the default value.
+     * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
+     *                       {@code 0} to use the default value.
+     */
     public OpenSslServerContext(
             SslBufferPool bufPool,
             File certChainFile, File keyFile, String keyPassword,
@@ -287,12 +301,15 @@ public final class OpenSslServerContext extends SslContext {
     }
 
     /**
-     * Returns the {@code SSL_CTX} object of this factory.
+     * Returns the {@code SSL_CTX} object of this context.
      */
     public long context() {
         return ctx;
     }
 
+    /**
+     * Returns the stats of this context.
+     */
     public OpenSslSessionStats stats() {
         return stats;
     }
@@ -306,10 +323,13 @@ public final class OpenSslServerContext extends SslContext {
     }
 
     @Override
-    public SSLEngine newEngine(String host, int port) {
+    public SSLEngine newEngine(String peerHost, int peerPort) {
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * Sets the SSL session ticket keys of this context.
+     */
     public void setTicketKeys(byte[] keys) {
         if (keys != null) {
             throw new NullPointerException("keys");
