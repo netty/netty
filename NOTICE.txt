@@ -50,14 +50,6 @@ WebSocket and HTTP server, which can be obtained at:
   * HOMEPAGE:
     * https://github.com/joewalnes/webbit
 
-This product contains a modified portion of 'Caliper', Google's micro-
-benchmarking framework, which can be obtained at:
-
-  * LICENSE:
-    * license/LICENSE.caliper.txt (Apache License 2.0)
-  * HOMEPAGE:
-    * http://code.google.com/p/caliper/
-
 This product contains a modified portion of 'SLF4J', a simple logging
 facade for Java, which can be obtained at:
 
@@ -71,6 +63,15 @@ Bloch of Google, Inc:
 
   * LICENSE:
     * license/LICENSE.deque.txt (Public Domain)
+
+This product contains a modified version of Roland Kuhn's ASL2
+AbstractNodeQueue, which is based on Dmitriy Vyukov's non-intrusive MPSC queue.
+It can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.abstractnodequeue.txt (Public Domain)
+  * HOMEPAGE:
+    * https://github.com/akka/akka/blob/wip-2.2.3-for-scala-2.11/akka-actor/src/main/java/akka/dispatch/AbstractNodeQueue.java
 
 This product optionally depends on 'JZlib', a re-implementation of zlib in
 pure Java, which can be obtained at:
@@ -88,6 +89,23 @@ interchange format, which can be obtained at:
   * HOMEPAGE:
     * http://code.google.com/p/protobuf/
 
+This product optionally depends on 'Bouncy Castle Crypto APIs' to generate
+a temporary self-signed X.509 certificate when the JVM does not provide the
+equivalent functionality.  It can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.bouncycastle.txt (MIT License)
+  * HOMEPAGE:
+    * http://www.bouncycastle.org/
+
+This product optionally depends on 'Snappy', a compression library produced
+by Google Inc, which can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.snappy.txt (New BSD License)
+  * HOMEPAGE:
+    * http://code.google.com/p/snappy/
+
 This product optionally depends on 'JBoss Marshalling', an alternative Java
 serialization API, which can be obtained at:
 
@@ -95,6 +113,14 @@ serialization API, which can be obtained at:
     * license/LICENSE.jboss-marshalling.txt (GNU LGPL 2.1)
   * HOMEPAGE:
     * http://www.jboss.org/jbossmarshalling
+
+This product optionally depends on 'Caliper', Google's micro-
+benchmarking framework, which can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.caliper.txt (Apache License 2.0)
+  * HOMEPAGE:
+    * http://code.google.com/p/caliper/
 
 This product optionally depends on 'Apache Commons Logging', a logging
 framework, which can be obtained at:
@@ -111,20 +137,3 @@ can be obtained at:
     * license/LICENSE.log4j.txt (Apache License 2.0)
   * HOMEPAGE:
     * http://logging.apache.org/log4j/
-
-This product optionally depends on 'Snappy', a compression library produced
-by Google Inc, which can be obtained at:
-
-  * LICENSE:
-    * license/LICENSE.snappy.txt (New BSD License)
-  * HOMEPAGE:
-    * http://code.google.com/p/snappy/
-
-This product contains a modified version of Roland Kuhn's ASL2
-AbstractNodeQueue, which is based on Dmitriy Vyukov's non-intrusive MPSC queue.
-It can be obtained at:
-
-  * LICENSE:
-    * license/LICENSE.abstractnodequeue.txt (Public Domain)
-  * HOMEPAGE:
-    * https://github.com/akka/akka/blob/wip-2.2.3-for-scala-2.11/akka-actor/src/main/java/akka/dispatch/AbstractNodeQueue.java
