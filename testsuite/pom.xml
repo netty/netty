@@ -69,6 +69,12 @@
       <artifactId>netty-transport-udt</artifactId>
       <version>${project.version}</version>
     </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-tcnative</artifactId>
+      <classifier>${os.detected.classifier}</classifier>
+      <optional>true</optional>
+    </dependency>
   </dependencies>
 
   <properties>

@@ -20,15 +20,19 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.example.telnet.TelnetServer;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 
 /**
  * Simple SSL chat server modified from {@link TelnetServer}.
  */
 public class SecureChatServer {
 
+    private final SslContext sslCtx;
     private final int port;
 
-    public SecureChatServer(int port) {
+    public SecureChatServer(SslContext sslCtx, int port) {
+        this.sslCtx = sslCtx;
         this.port = port;
     }
 
@@ -39,7 +43,7 @@ public class SecureChatServer {
             ServerBootstrap b = new ServerBootstrap();
             b.group(bossGroup, workerGroup)
              .channel(NioServerSocketChannel.class)
-             .childHandler(new SecureChatServerInitializer());
+             .childHandler(new SecureChatServerInitializer(sslCtx));
 
             b.bind(port).sync().channel().closeFuture().sync();
         } finally {
@@ -55,6 +59,11 @@ public class SecureChatServer {
         } else {
             port = 8443;
         }
-        new SecureChatServer(port).run();
+
+        // Configure SSL context.
+        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        SslContext sslCtx = SslContext.newServerContext(ssc.certificate(), ssc.privateKey());
+
+        new SecureChatServer(sslCtx, port).run();
     }
 }

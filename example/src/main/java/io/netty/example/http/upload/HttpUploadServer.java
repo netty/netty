@@ -20,16 +20,20 @@ import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 
 /**
  * A HTTP server showing how to use the HTTP multipart package for file uploads and decoding post data.
  */
 public class HttpUploadServer {
 
+    private final SslContext sslCtx;
     private final int port;
     public static boolean isSSL;
 
-    public HttpUploadServer(int port) {
+    public HttpUploadServer(SslContext sslCtx, int port) {
+        this.sslCtx = sslCtx;
         this.port = port;
     }
 
@@ -39,7 +43,7 @@ public class HttpUploadServer {
         try {
             ServerBootstrap b = new ServerBootstrap();
             b.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class)
-                    .childHandler(new HttpUploadServerInitializer());
+                    .childHandler(new HttpUploadServerInitializer(sslCtx));
 
             Channel ch = b.bind(port).sync().channel();
             System.out.println("HTTP Upload Server at port " + port + '.');
@@ -62,6 +66,15 @@ public class HttpUploadServer {
         if (args.length > 1) {
             isSSL = true;
         }
-        new HttpUploadServer(port).run();
+
+        // Configure SSL.
+        SslContext sslCtx;
+        if (isSSL) {
+            SelfSignedCertificate ssc = new SelfSignedCertificate();
+            sslCtx = SslContext.newServerContext(ssc.certificate(), ssc.privateKey());
+        } else {
+            sslCtx = null;
+        }
+        new HttpUploadServer(sslCtx, port).run();
     }
 }
