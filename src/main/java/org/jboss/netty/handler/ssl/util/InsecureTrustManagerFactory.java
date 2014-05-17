@@ -18,6 +18,7 @@ package org.jboss.netty.handler.ssl.util;
 
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.util.internal.EmptyArrays;
 
 import javax.net.ssl.ManagerFactoryParameters;
 import javax.net.ssl.TrustManager;
@@ -50,7 +51,7 @@ public final class InsecureTrustManagerFactory extends SimpleTrustManagerFactory
         }
 
         public X509Certificate[] getAcceptedIssuers() {
-            return new X509Certificate[0];
+            return EmptyArrays.EMPTY_X509_CERTIFICATES;
         }
     };
 
