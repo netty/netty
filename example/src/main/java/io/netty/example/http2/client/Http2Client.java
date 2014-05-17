@@ -14,7 +14,6 @@
  */
 package io.netty.example.http2.client;
 
-import static java.util.concurrent.TimeUnit.SECONDS;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -28,9 +27,14 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http2.DefaultHttp2Headers;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2Headers;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
+import javax.net.ssl.SSLException;
 import java.net.InetSocketAddress;
 import java.util.concurrent.BlockingQueue;
+
+import static java.util.concurrent.TimeUnit.*;
 
 /**
  * An HTTP2 client that allows you to send HTTP2 frames to a server. Inbound and outbound frames are
@@ -38,13 +42,15 @@ import java.util.concurrent.BlockingQueue;
  */
 public class Http2Client {
 
+    private final SslContext sslCtx;
     private final String host;
     private final int port;
     private final Http2ClientConnectionHandler http2ConnectionHandler;
     private Channel channel;
     private EventLoopGroup workerGroup;
 
-    public Http2Client(String host, int port) {
+    public Http2Client(String host, int port) throws SSLException {
+        sslCtx = SslContext.newClientContext(InsecureTrustManagerFactory.INSTANCE);
         this.host = host;
         this.port = port;
         http2ConnectionHandler = new Http2ClientConnectionHandler();
@@ -63,7 +69,7 @@ public class Http2Client {
         b.channel(NioSocketChannel.class);
         b.option(ChannelOption.SO_KEEPALIVE, true);
         b.remoteAddress(new InetSocketAddress(host, port));
-        b.handler(new Http2ClientInitializer(http2ConnectionHandler));
+        b.handler(new Http2ClientInitializer(sslCtx, http2ConnectionHandler));
 
         // Start the client.
         channel = b.connect().syncUninterruptibly().channel();

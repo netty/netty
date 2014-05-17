@@ -17,29 +17,30 @@ package io.netty.example.http2.client;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.example.securechat.SecureChatSslContextFactory;
 import io.netty.handler.codec.http2.AbstractHttp2ConnectionHandler;
+import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
+import org.eclipse.jetty.npn.NextProtoNego;
 
 import javax.net.ssl.SSLEngine;
-
-import org.eclipse.jetty.npn.NextProtoNego;
 
 /**
  * Configures the client pipeline to support HTTP/2 frames.
  */
 public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
 
+    private final SslContext sslCtx;
     private final AbstractHttp2ConnectionHandler connectionHandler;
 
-    public Http2ClientInitializer(AbstractHttp2ConnectionHandler connectionHandler) {
+    public Http2ClientInitializer(SslContext sslCtx, AbstractHttp2ConnectionHandler connectionHandler) {
+        this.sslCtx = sslCtx;
         this.connectionHandler = connectionHandler;
     }
 
     @Override
     public void initChannel(SocketChannel ch) throws Exception {
-        SSLEngine engine = SecureChatSslContextFactory.getClientContext().createSSLEngine();
-        engine.setUseClientMode(true);
+        SslHandler sslHandler = sslCtx.newHandler(ch.alloc());
+        SSLEngine engine = sslHandler.engine();
         NextProtoNego.put(engine, new Http2ClientProvider());
         NextProtoNego.debug = true;
 

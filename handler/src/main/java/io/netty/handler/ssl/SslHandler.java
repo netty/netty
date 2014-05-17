@@ -848,7 +848,7 @@ public class SslHandler extends ByteToMessageDecoder {
             packet.limit(packet.position() + recordLengths[i]);
             try {
                 unwrapSingle(ctx, packet, totalLength);
-                assert !packet.hasRemaining();
+                assert !packet.hasRemaining() || engine.isInboundDone();
             } finally {
                 ByteBuf decodeOut = this.decodeOut;
                 if (decodeOut != null && decodeOut.isReadable()) {
@@ -986,6 +986,9 @@ public class SslHandler extends ByteToMessageDecoder {
      */
     private void setHandshakeSuccess() {
         if (handshakePromise.trySuccess(ctx.channel())) {
+            if (logger.isDebugEnabled()) {
+                logger.debug(ctx.channel() + " HANDSHAKEN: " + engine.getSession().getCipherSuite());
+            }
             ctx.fireUserEventTriggered(SslHandshakeCompletionEvent.SUCCESS);
         }
     }
@@ -1050,7 +1053,7 @@ public class SslHandler extends ByteToMessageDecoder {
     public void handlerAdded(final ChannelHandlerContext ctx) throws Exception {
         this.ctx = ctx;
 
-        if (ctx.channel().isActive()) {
+        if (ctx.channel().isActive() && engine.getUseClientMode()) {
             // channelActive() event has been fired already, which means this.channelActive() will
             // not be invoked. We have to initialize here instead.
             handshake();

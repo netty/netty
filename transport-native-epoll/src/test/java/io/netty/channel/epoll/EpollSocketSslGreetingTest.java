@@ -19,13 +19,13 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.handler.ssl.SslContext;
 import io.netty.testsuite.transport.TestsuitePermutation;
-import io.netty.testsuite.transport.socket.SocketStartTlsTest;
+import io.netty.testsuite.transport.socket.SocketSslGreetingTest;
 
 import java.util.List;
 
-public class EpollSocketStartTlsTest extends SocketStartTlsTest {
+public class EpollSocketSslGreetingTest extends SocketSslGreetingTest {
 
-    public EpollSocketStartTlsTest(SslContext serverCtx, SslContext clientCtx) {
+    public EpollSocketSslGreetingTest(SslContext serverCtx, SslContext clientCtx) {
         super(serverCtx, clientCtx);
     }
 

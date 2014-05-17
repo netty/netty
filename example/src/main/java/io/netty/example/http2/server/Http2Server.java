@@ -22,6 +22,9 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslProvider;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 
 /**
  * A HTTP/2 Server that responds to requests with a Hello World.
@@ -30,9 +33,11 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
  */
 public class Http2Server {
 
+    private final SslContext sslCtx;
     private final int port;
 
-    public Http2Server(int port) {
+    public Http2Server(SslContext sslCtx, int port) {
+        this.sslCtx = sslCtx;
         this.port = port;
     }
 
@@ -44,7 +49,7 @@ public class Http2Server {
             ServerBootstrap b = new ServerBootstrap();
             b.option(ChannelOption.SO_BACKLOG, 1024);
             b.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class)
-                    .childHandler(new Http2ServerInitializer());
+                    .childHandler(new Http2ServerInitializer(sslCtx));
 
             Channel ch = b.bind(port).sync().channel();
             ch.closeFuture().sync();
@@ -65,7 +70,11 @@ public class Http2Server {
 
         System.out.println("HTTP2 server started at port " + port + '.');
 
-        new Http2Server(port).run();
+        // Configure SSL context.
+        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        SslContext sslCtx = SslContext.newServerContext(SslProvider.JDK, ssc.certificate(), ssc.privateKey());
+
+        new Http2Server(sslCtx, port).run();
     }
 
     public static void checkForNpnSupport() {

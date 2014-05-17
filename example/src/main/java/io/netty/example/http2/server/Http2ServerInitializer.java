@@ -19,7 +19,7 @@ package io.netty.example.http2.server;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.example.securechat.SecureChatSslContextFactory;
+import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
 import org.eclipse.jetty.npn.NextProtoNego;
 
@@ -29,12 +29,19 @@ import javax.net.ssl.SSLEngine;
  * Sets up the Netty pipeline
  */
 public class Http2ServerInitializer extends ChannelInitializer<SocketChannel> {
+
+    private final SslContext sslCtx;
+
+    public Http2ServerInitializer(SslContext sslCtx) {
+        this.sslCtx = sslCtx;
+    }
+
     @Override
     public void initChannel(SocketChannel ch) throws Exception {
         ChannelPipeline p = ch.pipeline();
 
-        SSLEngine engine = SecureChatSslContextFactory.getServerContext().createSSLEngine();
-        engine.setUseClientMode(false);
+        SslHandler handler = sslCtx.newHandler(ch.alloc());
+        SSLEngine engine = handler.engine();
         p.addLast("ssl", new SslHandler(engine));
 
         // Setup NextProtoNego with our server provider
