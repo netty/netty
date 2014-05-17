@@ -16,6 +16,10 @@
 
 package org.jboss.netty.handler.ssl;
 
+import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.channel.Channels;
+
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
@@ -27,6 +31,24 @@ import java.util.List;
 /**
  * A secure socket protocol implementation which acts as a factory for {@link SSLEngine} and {@link SslHandler}.
  * Internally, it is implemented via JDK's {@link SSLContext} or OpenSSL's {@code SSL_CTX}.
+ *
+ * <h3>Making your server support SSL/TLS</h3>
+ * <pre>
+ * // In your {@link ChannelPipelineFactory}:
+ * {@link ChannelPipeline} p = {@link Channels#pipeline()};
+ * {@link SslContext} sslCtx = {@link #newServerContext(File, File) SslContext.newServerContext(...)};
+ * p.addLast("ssl", {@link #newEngine() sslCtx.newEngine()});
+ * ...
+ * </pre>
+ *
+ * <h3>Making your client support SSL/TLS</h3>
+ * <pre>
+ * // In your {@link ChannelPipelineFactory}:
+ * {@link ChannelPipeline} p = {@link Channels#pipeline()};
+ * {@link SslContext} sslCtx = {@link #newClientContext(File) SslContext.newClientContext(...)};
+ * p.addLast("ssl", {@link #newEngine(String, int) sslCtx.newEngine(host, port)});
+ * ...
+ * </pre>
  */
 public abstract class SslContext {
 
