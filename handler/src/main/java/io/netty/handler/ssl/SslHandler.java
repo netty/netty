@@ -174,6 +174,14 @@ public class SslHandler extends ByteToMessageDecoder {
     private volatile ChannelHandlerContext ctx;
     private final SSLEngine engine;
     private final int maxPacketBufferSize;
+    /**
+     * {@code true} if and only if {@link SSLEngine#wrap(ByteBuffer, ByteBuffer)} requires the output buffer
+     * to be always as large as {@link #maxPacketBufferSize} even if the input buffer contains small amount of data.
+     * <p>
+     * If this flag is {@code false}, we allocate a smaller output buffer.
+     * </p>
+     */
+    private final boolean needsLargeOutNetBuf;
 
     private final boolean startTls;
     private boolean sentFirstMessage;
@@ -216,6 +224,7 @@ public class SslHandler extends ByteToMessageDecoder {
         this.engine = engine;
         this.startTls = startTls;
         maxPacketBufferSize = engine.getSession().getPacketBufferSize();
+        needsLargeOutNetBuf = !(engine instanceof OpenSslEngine);
     }
 
     public long getHandshakeTimeoutMillis() {
@@ -378,16 +387,18 @@ public class SslHandler extends ByteToMessageDecoder {
                 if (pending == null) {
                     break;
                 }
-                if (out == null) {
-                    out = allocate(ctx, maxPacketBufferSize);
-                }
 
                 if (!(pending.msg() instanceof ByteBuf)) {
                     ctx.write(pending.msg(), (ChannelPromise) pending.recycleAndGet());
                     pendingUnencryptedWrites.remove();
                     continue;
                 }
+
                 ByteBuf buf = (ByteBuf) pending.msg();
+                if (out == null) {
+                    out = allocateOutNetBuf(ctx, buf.readableBytes());
+                }
+
                 SSLEngineResult result = wrap(engine, buf, out);
 
                 if (!buf.isReadable()) {
@@ -465,7 +476,7 @@ public class SslHandler extends ByteToMessageDecoder {
         try {
             for (;;) {
                 if (out == null) {
-                    out = allocate(ctx, maxPacketBufferSize);
+                    out = allocateOutNetBuf(ctx, 0);
                 }
                 SSLEngineResult result = wrap(engine, Unpooled.EMPTY_BUFFER, out);
 
@@ -1128,6 +1139,20 @@ public class SslHandler extends ByteToMessageDecoder {
             return alloc.directBuffer(capacity);
         } else {
             return alloc.buffer(capacity);
+        }
+    }
+
+    /**
+     * Allocates an outbound network buffer for {@link SSLEngine#wrap(ByteBuffer, ByteBuffer)} which can encrypt
+     * the specified amount of pending bytes.
+     */
+    private ByteBuf allocateOutNetBuf(ChannelHandlerContext ctx, int pendingBytes) {
+        if (needsLargeOutNetBuf) {
+            return allocate(ctx, maxPacketBufferSize);
+        } else {
+            return allocate(ctx, Math.min(
+                    pendingBytes + OpenSslEngine.MAX_ENCRYPTION_OVERHEAD_LENGTH,
+                    maxPacketBufferSize));
         }
     }
 
