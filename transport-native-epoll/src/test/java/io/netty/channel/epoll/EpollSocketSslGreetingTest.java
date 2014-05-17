@@ -19,20 +19,14 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.handler.ssl.SslContext;
 import io.netty.testsuite.transport.TestsuitePermutation;
-import io.netty.testsuite.transport.socket.SocketSslEchoTest;
+import io.netty.testsuite.transport.socket.SocketSslGreetingTest;
 
 import java.util.List;
 
-public class EpollSocketSslEchoTest extends SocketSslEchoTest {
+public class EpollSocketSslGreetingTest extends SocketSslGreetingTest {
 
-    public EpollSocketSslEchoTest(
-            SslContext serverCtx, SslContext clientCtx,
-            boolean serverUsesDelegatedTaskExecutor, boolean clientUsesDelegatedTaskExecutor,
-            boolean useChunkedWriteHandler, boolean useCompositeByteBuf) {
-        super(
-                serverCtx, clientCtx,
-                serverUsesDelegatedTaskExecutor, clientUsesDelegatedTaskExecutor,
-                useChunkedWriteHandler, useCompositeByteBuf);
+    public EpollSocketSslGreetingTest(SslContext serverCtx, SslContext clientCtx) {
+        super(serverCtx, clientCtx);
     }
 
     @Override

@@ -22,14 +22,18 @@ import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.Delimiters;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
-import io.netty.handler.ssl.SslHandler;
-
-import javax.net.ssl.SSLEngine;
+import io.netty.handler.ssl.SslContext;
 
 /**
  * Creates a newly configured {@link ChannelPipeline} for a new channel.
  */
 public class SecureChatServerInitializer extends ChannelInitializer<SocketChannel> {
+
+    private final SslContext sslCtx;
+
+    public SecureChatServerInitializer(SslContext sslCtx) {
+        this.sslCtx = sslCtx;
+    }
 
     @Override
     public void initChannel(SocketChannel ch) throws Exception {
@@ -43,12 +47,7 @@ public class SecureChatServerInitializer extends ChannelInitializer<SocketChanne
         //
         // Read SecureChatSslContextFactory
         // if you need client certificate authentication.
-
-        SSLEngine engine =
-            SecureChatSslContextFactory.getServerContext().createSSLEngine();
-        engine.setUseClientMode(false);
-
-        pipeline.addLast("ssl", new SslHandler(engine));
+        pipeline.addLast("ssl", sslCtx.newHandler(ch.alloc()));
 
         // On top of the SSL handler, add the text line codec.
         pipeline.addLast("framer", new DelimiterBasedFrameDecoder(

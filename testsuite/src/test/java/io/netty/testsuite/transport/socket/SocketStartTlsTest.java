@@ -17,6 +17,7 @@ package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
@@ -28,25 +29,83 @@ import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.ssl.JdkSslClientContext;
+import io.netty.handler.ssl.JdkSslServerContext;
+import io.netty.handler.ssl.OpenSsl;
+import io.netty.handler.ssl.OpenSslServerContext;
+import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
-import io.netty.testsuite.util.BogusSslContextFactory;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.Future;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
 import javax.net.ssl.SSLEngine;
+import java.io.File;
 import java.io.IOException;
+import java.security.cert.CertificateException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.*;
 
+@RunWith(Parameterized.class)
 public class SocketStartTlsTest extends AbstractSocketTest {
 
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(SocketStartTlsTest.class);
+
     private static final LogLevel LOG_LEVEL = LogLevel.TRACE;
+    private static final File CERT_FILE;
+    private static final File KEY_FILE;
     private static EventExecutorGroup executor;
+
+    static {
+        SelfSignedCertificate ssc;
+        try {
+            ssc = new SelfSignedCertificate();
+        } catch (CertificateException e) {
+            throw new Error(e);
+        }
+        CERT_FILE = ssc.certificate();
+        KEY_FILE = ssc.privateKey();
+    }
+
+    @Parameters(name = "{index}: serverEngine = {0}, clientEngine = {1}")
+    public static Collection<Object[]> data() throws Exception {
+        List<SslContext> serverContexts = new ArrayList<SslContext>();
+        serverContexts.add(new JdkSslServerContext(CERT_FILE, KEY_FILE));
+
+        List<SslContext> clientContexts = new ArrayList<SslContext>();
+        clientContexts.add(new JdkSslClientContext(CERT_FILE));
+
+        boolean hasOpenSsl = OpenSsl.isAvailable();
+        if (hasOpenSsl) {
+            serverContexts.add(new OpenSslServerContext(CERT_FILE, KEY_FILE));
+
+            // TODO: Client mode is not supported yet.
+            // clientContexts.add(new OpenSslContext(CERT_FILE));
+        } else {
+            logger.warn("OpenSSL is unavailable and thus will not be tested.", OpenSsl.unavailabilityCause());
+        }
+
+        List<Object[]> params = new ArrayList<Object[]>();
+        for (SslContext sc: serverContexts) {
+            for (SslContext cc: clientContexts) {
+                params.add(new Object[] { sc, cc });
+            }
+        }
+        return params;
+    }
 
     @BeforeClass
     public static void createExecutor() {
@@ -56,6 +115,14 @@ public class SocketStartTlsTest extends AbstractSocketTest {
     @AfterClass
     public static void shutdownExecutor() throws Exception {
         executor.shutdownGracefully().sync();
+    }
+
+    private final SslContext serverCtx;
+    private final SslContext clientCtx;
+
+    public SocketStartTlsTest(SslContext serverCtx, SslContext clientCtx) {
+        this.serverCtx = serverCtx;
+        this.clientCtx = clientCtx;
     }
 
     @Test(timeout = 30000)
@@ -78,8 +145,8 @@ public class SocketStartTlsTest extends AbstractSocketTest {
 
     private void testStartTls(ServerBootstrap sb, Bootstrap cb, boolean autoRead) throws Throwable {
         final EventExecutorGroup executor = SocketStartTlsTest.executor;
-        final SSLEngine sse = BogusSslContextFactory.getServerContext().createSSLEngine();
-        final SSLEngine cse = BogusSslContextFactory.getClientContext().createSSLEngine();
+        SSLEngine sse = serverCtx.newEngine(PooledByteBufAllocator.DEFAULT);
+        SSLEngine cse = clientCtx.newEngine(PooledByteBufAllocator.DEFAULT);
 
         final StartTlsServerHandler sh = new StartTlsServerHandler(sse, autoRead);
         final StartTlsClientHandler ch = new StartTlsClientHandler(cse, autoRead);
@@ -155,7 +222,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         }
     }
 
-    private class StartTlsClientHandler extends SimpleChannelInboundHandler<String> {
+    private static class StartTlsClientHandler extends SimpleChannelInboundHandler<String> {
         private final SslHandler sslHandler;
         private final boolean autoRead;
         private Future<Channel> handshakeFuture;
@@ -207,7 +274,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         }
     }
 
-    private class StartTlsServerHandler extends SimpleChannelInboundHandler<String> {
+    private static class StartTlsServerHandler extends SimpleChannelInboundHandler<String> {
         private final SslHandler sslHandler;
         private final boolean autoRead;
         volatile Channel channel;
