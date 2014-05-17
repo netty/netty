@@ -27,7 +27,11 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslProvider;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
+import javax.net.ssl.SSLException;
 import java.net.InetSocketAddress;
 import java.util.concurrent.BlockingQueue;
 
@@ -48,13 +52,15 @@ import static java.util.concurrent.TimeUnit.*;
  */
 public class SpdyClient {
 
+    private final SslContext sslCtx;
     private final String host;
     private final int port;
     private final HttpResponseClientHandler httpResponseHandler;
     private Channel channel;
     private EventLoopGroup workerGroup;
 
-    public SpdyClient(String host, int port) {
+    public SpdyClient(String host, int port) throws SSLException {
+        sslCtx = SslContext.newClientContext(SslProvider.JDK, InsecureTrustManagerFactory.INSTANCE);
         this.host = host;
         this.port = port;
         httpResponseHandler = new HttpResponseClientHandler();
@@ -73,7 +79,7 @@ public class SpdyClient {
         b.channel(NioSocketChannel.class);
         b.option(ChannelOption.SO_KEEPALIVE, true);
         b.remoteAddress(new InetSocketAddress(host, port));
-        b.handler(new SpdyClientInitializer(httpResponseHandler));
+        b.handler(new SpdyClientInitializer(sslCtx, httpResponseHandler));
 
         // Start the client.
         channel = b.connect().syncUninterruptibly().channel();

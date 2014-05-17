@@ -21,6 +21,8 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 
 /**
  * Serves two protocols (HTTP and Factorial) using only one port, enabling
@@ -31,9 +33,11 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
  */
 public class PortUnificationServer {
 
+    private final SslContext sslCtx;
     private final int port;
 
-    public PortUnificationServer(int port) {
+    public PortUnificationServer(SslContext sslCtx, int port) {
+        this.sslCtx = sslCtx;
         this.port = port;
     }
 
@@ -47,7 +51,7 @@ public class PortUnificationServer {
              .childHandler(new ChannelInitializer<SocketChannel>() {
                 @Override
                 public void initChannel(SocketChannel ch) throws Exception {
-                    ch.pipeline().addLast(new PortUnificationServerHandler());
+                    ch.pipeline().addLast(new PortUnificationServerHandler(sslCtx));
                 }
             });
 
@@ -66,6 +70,11 @@ public class PortUnificationServer {
         } else {
             port = 8080;
         }
-        new PortUnificationServer(port).run();
+
+        // Configure SSL.
+        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        SslContext sslCtx = SslContext.newServerContext(ssc.certificate(), ssc.privateKey());
+
+        new PortUnificationServer(sslCtx, port).run();
     }
 }

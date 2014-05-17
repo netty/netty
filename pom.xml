@@ -252,6 +252,16 @@
         <version>2.5.0</version>
       </dependency>
 
+      <!-- Our own Tomcat Native fork - completely optional, used for acclerating SSL with OpenSSL. -->
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>netty-tcnative</artifactId>
+        <version>1.1.30.Fork1</version>
+        <classifier>${os.detected.classifier}</classifier>
+        <scope>compile</scope>
+        <optional>true</optional>
+      </dependency>
+
       <!--
         Bouncy Castle - completely optional, only needed when:
         - you generate a temporary self-signed certificate using SelfSignedCertificate, and
