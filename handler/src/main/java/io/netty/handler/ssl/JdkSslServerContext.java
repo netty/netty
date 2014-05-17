@@ -117,7 +117,7 @@ public final class JdkSslServerContext extends JdkSslContext {
 
             ByteBuf encodedKeyBuf = PemReader.readPrivateKey(keyFile);
             byte[] encodedKey = new byte[encodedKeyBuf.readableBytes()];
-            encodedKeyBuf.readBytes(encodedKey);
+            encodedKeyBuf.readBytes(encodedKey).release();
             PKCS8EncodedKeySpec encodedKeySpec = new PKCS8EncodedKeySpec(encodedKey);
 
             PrivateKey key;
@@ -128,8 +128,15 @@ public final class JdkSslServerContext extends JdkSslContext {
             }
 
             List<Certificate> certChain = new ArrayList<Certificate>();
-            for (ByteBuf buf: PemReader.readCertificates(certChainFile)) {
-                certChain.add(cf.generateCertificate(new ByteBufInputStream(buf)));
+            ByteBuf[] certs = PemReader.readCertificates(certChainFile);
+            try {
+                for (ByteBuf buf: certs) {
+                    certChain.add(cf.generateCertificate(new ByteBufInputStream(buf)));
+                }
+            } finally {
+                for (ByteBuf buf: certs) {
+                    buf.release();
+                }
             }
 
             ks.setKeyEntry("key", key, keyPassword.toCharArray(), certChain.toArray(new Certificate[certChain.size()]));
