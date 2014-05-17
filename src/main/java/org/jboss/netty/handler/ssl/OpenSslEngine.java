@@ -196,10 +196,12 @@ public final class OpenSslEngine extends SSLEngine {
                 buf.put(src);
 
                 final int netWrote = SSL.writeToBIO(networkBIO, addr, len);
-                src.position(pos + netWrote);
                 if (netWrote >= 0) {
+                    src.position(pos + netWrote);
                     lastPrimingReadResult = SSL.readFromSSL(ssl, addr, 0); // priming read
                     return netWrote;
+                } else {
+                    src.position(pos);
                 }
             } finally {
                 bufPool.releaseBuffer(buf);
@@ -405,7 +407,8 @@ public final class OpenSslEngine extends SSLEngine {
         }
 
         int capacity = 0;
-        for (int i = offset; i < offset + length; ++i) {
+        final int endOffset = offset + length;
+        for (int i = offset; i < endOffset; i ++) {
             ByteBuffer dst = dsts[i];
             if (dst == null) {
                 throw new IllegalArgumentException();
@@ -471,7 +474,7 @@ public final class OpenSslEngine extends SSLEngine {
         // Write decrypted data to dsts buffers
         int bytesProduced = 0;
         int idx = offset;
-        for (;;) {
+        while (idx < endOffset) {
             ByteBuffer dst = dsts[idx];
             if (!dst.hasRemaining()) {
                 idx ++;
