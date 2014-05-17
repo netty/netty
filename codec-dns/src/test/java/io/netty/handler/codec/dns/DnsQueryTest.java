@@ -33,11 +33,16 @@ public class DnsQueryTest {
         InetSocketAddress addr = new InetSocketAddress(0);
         EmbeddedChannel embedder = new EmbeddedChannel(new DnsQueryEncoder());
 
-        DnsQuery q1 = (DnsQuery)new DnsQuery(1, addr).addQuestion(new DnsQuestion("1.0.0.127.in-addr.arpa", DnsEntry.TYPE_PTR));
-        DnsQuery q2 = (DnsQuery)new DnsQuery(1, addr).addQuestion(new DnsQuestion("www.example.com", DnsEntry.TYPE_A));
-        DnsQuery q3 = (DnsQuery)new DnsQuery(1, addr).addQuestion(new DnsQuestion("example.com", DnsEntry.TYPE_AAAA));
-        DnsQuery q4 = (DnsQuery)new DnsQuery(1, addr).addQuestion(new DnsQuestion("example.com", DnsEntry.TYPE_MX));
-        DnsQuery q5 = (DnsQuery)new DnsQuery(1, addr).addQuestion(new DnsQuestion("example.com", DnsEntry.TYPE_CNAME));
+        DnsQuery q1 = new DnsQuery(1, addr);
+        q1.addQuestion(new DnsQuestion("1.0.0.127.in-addr.arpa", DnsEntry.TYPE_PTR));
+        DnsQuery q2 = new DnsQuery(1, addr);
+        q2.addQuestion(new DnsQuestion("www.example.com", DnsEntry.TYPE_A));
+        DnsQuery q3 = new DnsQuery(1, addr);
+        q3.addQuestion(new DnsQuestion("example.com", DnsEntry.TYPE_AAAA));
+        DnsQuery q4 = new DnsQuery(1, addr);
+        q4.addQuestion(new DnsQuestion("example.com", DnsEntry.TYPE_MX));
+        DnsQuery q5 = new DnsQuery(1, addr);
+        q5.addQuestion(new DnsQuestion("example.com", DnsEntry.TYPE_CNAME));
 
         for (DnsQuery query : Arrays.asList(q1, q2, q3, q4, q5)) {
 
