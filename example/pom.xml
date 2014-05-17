@@ -72,6 +72,11 @@
       <artifactId>protobuf-java</artifactId>
     </dependency>
     <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-tcnative</artifactId>
+      <classifier>${os.detected.classifier}</classifier>
+    </dependency>
+    <dependency>
       <groupId>com.jcraft</groupId>
       <artifactId>jzlib</artifactId>
       <scope>runtime</scope>
