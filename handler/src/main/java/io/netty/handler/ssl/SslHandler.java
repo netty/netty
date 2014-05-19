@@ -174,6 +174,13 @@ public class SslHandler extends ByteToMessageDecoder {
     private volatile ChannelHandlerContext ctx;
     private final SSLEngine engine;
     private final int maxPacketBufferSize;
+
+    // BEGIN Platform-dependent flags
+
+    /**
+     * {@code trus} if and only if {@link SSLEngine} expects a direct buffer.
+     */
+    private final boolean wantsDirectBuffer;
     /**
      * {@code true} if and only if {@link SSLEngine#wrap(ByteBuffer, ByteBuffer)} requires the output buffer
      * to be always as large as {@link #maxPacketBufferSize} even if the input buffer contains small amount of data.
@@ -181,7 +188,15 @@ public class SslHandler extends ByteToMessageDecoder {
      * If this flag is {@code false}, we allocate a smaller output buffer.
      * </p>
      */
-    private final boolean needsLargeOutNetBuf;
+    private final boolean wantsLargeOutboundNetworkBuffer;
+    /**
+     * {@code true} if and only if {@link SSLEngine#unwrap(ByteBuffer, ByteBuffer)} expects a heap buffer rather than
+     * a direct buffer.  For an unknown reason, JDK8 SSLEngine causes JVM to crash when its cipher suite uses Galois
+     * Counter Mode (GCM).
+     */
+    private boolean wantsInboundHeapBuffer;
+
+    // END Platform-dependent flags
 
     private final boolean startTls;
     private boolean sentFirstMessage;
@@ -224,7 +239,9 @@ public class SslHandler extends ByteToMessageDecoder {
         this.engine = engine;
         this.startTls = startTls;
         maxPacketBufferSize = engine.getSession().getPacketBufferSize();
-        needsLargeOutNetBuf = !(engine instanceof OpenSslEngine);
+
+        wantsDirectBuffer = engine instanceof OpenSslEngine;
+        wantsLargeOutboundNetworkBuffer = !(engine instanceof OpenSslEngine);
     }
 
     public long getHandshakeTimeoutMillis() {
@@ -530,6 +547,12 @@ public class SslHandler extends ByteToMessageDecoder {
 
     private SSLEngineResult wrap(SSLEngine engine, ByteBuf in, ByteBuf out) throws SSLException {
         ByteBuffer in0 = in.nioBuffer();
+        if (!in0.isDirect()) {
+            ByteBuffer newIn0 = ByteBuffer.allocateDirect(in0.remaining());
+            newIn0.put(in0).flip();
+            in0 = newIn0;
+        }
+
         for (;;) {
             ByteBuffer out0 = out.nioBuffer(out.writerIndex(), out.writableBytes());
             SSLEngineResult result = engine.wrap(in0, out0);
@@ -835,6 +858,20 @@ public class SslHandler extends ByteToMessageDecoder {
     private void unwrap(
             ChannelHandlerContext ctx, ByteBuffer packet, int initialOutAppBufCapacity) throws SSLException {
 
+        // If SSLEngine expects a heap buffer for unwrapping, do the conversion.
+        final ByteBuffer oldPacket;
+        final ByteBuf newPacket;
+        final int oldPos = packet.position();
+        if (wantsInboundHeapBuffer && packet.isDirect()) {
+            newPacket = ctx.alloc().heapBuffer(packet.limit() - oldPos);
+            newPacket.writeBytes(packet);
+            oldPacket = packet;
+            packet = newPacket.nioBuffer();
+        } else {
+            oldPacket = null;
+            newPacket = null;
+        }
+
         boolean wrapLater = false;
         ByteBuf decodeOut = allocate(ctx, initialOutAppBufCapacity);
         try {
@@ -894,6 +931,13 @@ public class SslHandler extends ByteToMessageDecoder {
             setHandshakeFailure(e);
             throw e;
         } finally {
+            // If we converted packet into a heap buffer at the beginning of this method,
+            // we should synchronize the position of the original buffer.
+            if (newPacket != null) {
+                oldPacket.position(oldPos + packet.position());
+                newPacket.release();
+            }
+
             if (decodeOut.isReadable()) {
                 ctx.fireChannelRead(decodeOut);
             } else {
@@ -958,6 +1002,12 @@ public class SslHandler extends ByteToMessageDecoder {
      * Notify all the handshake futures about the successfully handshake
      */
     private void setHandshakeSuccess() {
+        // Work around the JVM crash which occurs when a cipher suite with GCM enabled.
+        final String cipherSuite = String.valueOf(engine.getSession().getCipherSuite());
+        if (!wantsDirectBuffer && (cipherSuite.contains("_GCM_") || cipherSuite.contains("-GCM-"))) {
+            wantsInboundHeapBuffer = true;
+        }
+
         if (handshakePromise.trySuccess(ctx.channel())) {
             if (logger.isDebugEnabled()) {
                 logger.debug(ctx.channel() + " HANDSHAKEN: " + engine.getSession().getCipherSuite());
@@ -1090,6 +1140,7 @@ public class SslHandler extends ByteToMessageDecoder {
         }
         ctx.fireChannelActive();
     }
+
     private void safeClose(
             final ChannelHandlerContext ctx, ChannelFuture flushFuture,
             final ChannelPromise promise) {
@@ -1133,9 +1184,9 @@ public class SslHandler extends ByteToMessageDecoder {
      * Always prefer a direct buffer when it's pooled, so that we reduce the number of memory copies
      * in {@link OpenSslEngine}.
      */
-    private static ByteBuf allocate(ChannelHandlerContext ctx, int capacity) {
+    private ByteBuf allocate(ChannelHandlerContext ctx, int capacity) {
         ByteBufAllocator alloc = ctx.alloc();
-        if (alloc.isDirectBufferPooled()) {
+        if (wantsDirectBuffer) {
             return alloc.directBuffer(capacity);
         } else {
             return alloc.buffer(capacity);
@@ -1147,7 +1198,7 @@ public class SslHandler extends ByteToMessageDecoder {
      * the specified amount of pending bytes.
      */
     private ByteBuf allocateOutNetBuf(ChannelHandlerContext ctx, int pendingBytes) {
-        if (needsLargeOutNetBuf) {
+        if (wantsLargeOutboundNetworkBuffer) {
             return allocate(ctx, maxPacketBufferSize);
         } else {
             return allocate(ctx, Math.min(
