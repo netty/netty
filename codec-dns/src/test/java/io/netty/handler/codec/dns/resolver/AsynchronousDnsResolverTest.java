@@ -125,7 +125,6 @@ public class AsynchronousDnsResolverTest {
                 ResourceRecordModifier rm = createModifier();
                 rm.setDnsType(RecordType.AAAA);
                 rm.put(DnsAttribute.IP_ADDRESS, "::1");
-
                 set.add(rm.getEntry());
                 return set;
             }
@@ -269,7 +268,6 @@ public class AsynchronousDnsResolverTest {
                 ResourceRecordModifier rm = createModifier();
                 rm.setDnsType(RecordType.A);
                 rm.put(DnsAttribute.IP_ADDRESS, ip);
-
                 set.add(rm.getEntry());
                 return set;
             }
@@ -289,7 +287,6 @@ public class AsynchronousDnsResolverTest {
                 ResourceRecordModifier rm = createModifier();
                 rm.setDnsType(RecordType.AAAA);
                 rm.put(DnsAttribute.IP_ADDRESS, "::1");
-
                 set.add(rm.getEntry());
                 return set;
             }
@@ -310,7 +307,6 @@ public class AsynchronousDnsResolverTest {
                 ResourceRecordModifier rm = createModifier();
                 rm.setDnsType(RecordType.A);
                 rm.put(DnsAttribute.IP_ADDRESS, ip);
-
                 set.add(rm.getEntry());
                 return set;
             }
