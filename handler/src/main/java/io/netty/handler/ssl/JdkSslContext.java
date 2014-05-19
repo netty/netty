@@ -69,14 +69,18 @@ public abstract class JdkSslContext extends SslContext {
         addIfSupported(
                 supportedCiphers, ciphers,
                 // XXX: Make sure to sync this list with OpenSslEngineFactory.
-                "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", // since JDK 8
+                // GCM (Galois/Counter Mode) requires JDK 8.
+                "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
                 "TLS_ECDHE_RSA_WITH_RC4_128_SHA",
                 "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA",
+                // AES256 requires JCE unlimited strength jurisdiction policy files.
                 "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA",
-                "TLS_RSA_WITH_AES_128_GCM_SHA256", // since JDK 8
+                // GCM (Galois/Counter Mode) requires JDK 8.
+                "TLS_RSA_WITH_AES_128_GCM_SHA256",
                 "SSL_RSA_WITH_RC4_128_SHA",
                 "SSL_RSA_WITH_RC4_128_MD5",
                 "TLS_RSA_WITH_AES_128_CBC_SHA",
+                // AES256 requires JCE unlimited strength jurisdiction policy files.
                 "TLS_RSA_WITH_AES_256_CBC_SHA",
                 "SSL_RSA_WITH_DES_CBC_SHA");
 
