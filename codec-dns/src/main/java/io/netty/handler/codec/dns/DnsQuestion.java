@@ -52,20 +52,15 @@ public final class DnsQuestion extends DnsEntry {
     }
 
     @Override
-    public boolean equals(Object other) {
-        if (other == this) {
-            return true;
-        }
-        if (other instanceof DnsQuestion) {
-            DnsQuestion question = (DnsQuestion) other;
-            return question.name().equals(name()) && question.type() == type() && question.dnsClass() == dnsClass();
-        }
-        return false;
+    public int hashCode() {
+        return (name().hashCode() * 31 + type()) * 31 + dnsClass();
     }
 
     @Override
-    public int hashCode() {
-        return ((name().hashCode() + type()) * 7 + dnsClass()) * 7;
+    public boolean equals(Object other) {
+        if (!(other instanceof DnsQuestion)) {
+            return true;
+        }
+        return super.equals(other);
     }
-
 }

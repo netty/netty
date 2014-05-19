@@ -54,7 +54,7 @@ public class DnsHeader {
     // only allow to extend from within the same package
     DnsHeader(DnsMessage<? extends DnsHeader> parent) {
         if (parent == null) {
-            throw new NullPointerException("the parent field cannot be null and must point to a valid DnsMessage.");
+            throw new NullPointerException("the parent field cannot be null.");
         }
         this.parent = parent;
     }

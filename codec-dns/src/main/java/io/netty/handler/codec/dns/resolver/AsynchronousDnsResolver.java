@@ -145,7 +145,7 @@ public final class AsynchronousDnsResolver {
             }
             return addresses;
         } catch (Exception e) {
-            logger.error("Failed to obtain system's DNS server addresses.", e);
+            logger.error("failed to obtains system's DNS server addresses.", e);
             throw new IllegalStateException("Failed to obtains system's DNS server addresses", e);
         }
     }
