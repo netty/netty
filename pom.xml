@@ -623,6 +623,9 @@
           -->
           <meminitial>256m</meminitial>
           <maxmem>1024m</maxmem>
+          <excludes>
+            <exclude>**/package-info.java</exclude>
+          </excludes>
         </configuration>
       </plugin>
       <plugin>
