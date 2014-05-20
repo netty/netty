@@ -100,14 +100,16 @@
         </plugins>
       </build>
     </profile>
-    <!-- Our Javadoc has poor enough quality to fail the build thanks to JDK8 javadoc which got more strict. -->
     <profile>
       <id>jdk8</id>
       <activation>
         <jdk>[1.8,)</jdk>
       </activation>
       <properties>
+        <!-- Our Javadoc has poor enough quality to fail the build thanks to JDK8 javadoc which got more strict. -->
         <maven.javadoc.failOnError>false</maven.javadoc.failOnError>
+        <!-- npn-boot does not work with JDK 8 -->
+        <argLine.bootcp>-D_</argLine.bootcp>
       </properties>
     </profile>
     <profile>
@@ -314,7 +316,6 @@
     <jetty.npn.version>1.1.7.v20140316</jetty.npn.version>
     <jetty.npn.path>${settings.localRepository}/org/mortbay/jetty/npn/npn-boot/${jetty.npn.version}/npn-boot-${jetty.npn.version}.jar</jetty.npn.path>
     <argLine.common>
-      -Xbootclasspath/p:${jetty.npn.path}
       -server
       -dsa -da -ea:io.netty...
       -XX:+AggressiveOpts
@@ -325,6 +326,7 @@
       -XX:+HeapDumpOnOutOfMemoryError
       -verbose:gc
     </argLine.common>
+    <argLine.bootcp>-Xbootclasspath/p:${jetty.npn.path}</argLine.bootcp>
     <argLine.leak>-D_</argLine.leak> <!-- Set when 'leak' profile is active -->
     <argLine.coverage>-D_</argLine.coverage> <!-- Set when 'coverage' profile is active -->
   </properties>
@@ -735,7 +737,7 @@
             <exclude>**/TestUtil*</exclude>
           </excludes>
           <runOrder>random</runOrder>
-          <argLine>${argLine.common} ${argLine.leak} ${argLine.coverage}</argLine>
+          <argLine>${argLine.common} ${argLine.bootcp} ${argLine.leak} ${argLine.coverage}</argLine>
         </configuration>
       </plugin>
       <!-- always produce osgi bundles -->
