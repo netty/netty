@@ -105,34 +105,6 @@
     </dependency>
   </dependencies>
 
-  <profiles>
-    <profile>
-      <id>spdy-server</id>
-      <properties>
-        <exampleClass>io.netty.example.spdy.server.SpdyServer</exampleClass>
-      </properties>
-    </profile>
-    <profile>
-      <id>spdy-client</id>
-      <properties>
-        <exampleClass>io.netty.example.spdy.client.SpdyClient</exampleClass>
-      </properties>
-    </profile>
-
-    <profile>
-      <id>http2-server</id>
-      <properties>
-        <exampleClass>io.netty.example.http2.server.Http2Server</exampleClass>
-      </properties>
-    </profile>
-    <profile>
-      <id>http2-client</id>
-      <properties>
-        <exampleClass>io.netty.example.http2.client.Http2Client</exampleClass>
-      </properties>
-    </profile>
-  </profiles>
-
   <build>
     <plugins>
       <plugin>
@@ -146,6 +118,7 @@
             ${argLine.leak}
             ${argLine.coverage}
             -classpath %classpath
+            ${argLine.example}
             ${exampleClass}
           </commandlineArgs>
           <classpathScope>runtime</classpathScope>
