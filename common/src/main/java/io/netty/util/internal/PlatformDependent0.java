@@ -48,7 +48,6 @@ final class PlatformDependent0 {
      */
     private static final long UNSAFE_COPY_THRESHOLD = 1024L * 1024L;
 
-
     /**
      * {@code true} if and only if the platform supports unaligned access.
      *
