@@ -41,7 +41,7 @@ public class SpdyServerInitializer extends ChannelInitializer<SocketChannel> {
 
         SslHandler sslHandler = sslCtx.newHandler(ch.alloc());
         SSLEngine engine = sslHandler.engine();
-        p.addLast("ssl", new SslHandler(engine));
+        p.addLast("ssl", sslHandler);
 
         // Setup NextProtoNego with our server provider
         NextProtoNego.put(engine, new SpdyServerProvider());
