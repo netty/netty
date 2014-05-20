@@ -71,24 +71,13 @@
     <profile>
       <id>leak</id>
       <properties>
-        <test.jvm.argLine>
-          -server 
-          -dsa -da -ea:io.netty...
-          -XX:+AggressiveOpts
-          -XX:+TieredCompilation
-          -XX:+UseBiasedLocking
-          -XX:+UseFastAccessorMethods
-          -XX:+OptimizeStringConcat
-          -XX:+HeapDumpOnOutOfMemoryError
-          -Dio.netty.leakDetectionLevel=3
-          -verbose:gc
-        </test.jvm.argLine>
+        <argLine.leak>-Dio.netty.leakDetectionLevel=paranoid</argLine.leak>
       </properties>
     </profile>
     <profile>
       <id>coverage</id>
       <properties>
-        <test.jvm.argLine.coverage>${jacoco.argLine}</test.jvm.argLine.coverage>
+        <argLine.coverage>${jacoco.argLine}</argLine.coverage>
       </properties>
       <build>
         <plugins>
@@ -179,15 +168,154 @@
         </plugins>
       </build>
     </profile>
+
+    <!--
+      Profiles that assigns proper Jetty npn-boot version.
+      See: http://www.eclipse.org/jetty/documentation/current/npn-chapter.html#npn-versions
+    -->
+    <profile>
+      <id>npn-7u9</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.7.0_9</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.npn.version>1.1.3.v20130313</jetty.npn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>npn-7u10</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.7.0_10</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.npn.version>1.1.3.v20130313</jetty.npn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>npn-7u11</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.7.0_11</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.npn.version>1.1.3.v20130313</jetty.npn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>npn-7u13</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.7.0_13</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.npn.version>1.1.4.v20130313</jetty.npn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>npn-7u15</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.7.0_15</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.npn.version>1.1.5.v20130313</jetty.npn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>npn-7u17</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.7.0_17</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.npn.version>1.1.5.v20130313</jetty.npn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>npn-7u21</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.7.0_21</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.npn.version>1.1.5.v20130313</jetty.npn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>npn-7u25</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.7.0_25</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.npn.version>1.1.5.v20130313</jetty.npn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>npn-7u40</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.7.0_40</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.npn.version>1.1.6.v20130911</jetty.npn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>npn-7u45</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.7.0_45</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.npn.version>1.1.6.v20130911</jetty.npn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>npn-7u51</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.7.0_51</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.npn.version>1.1.6.v20130911</jetty.npn.version>
+      </properties>
+    </profile>
   </profiles>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <jboss.marshalling.version>1.3.18.GA</jboss.marshalling.version>
-    <test.jvm.argLine.coverage></test.jvm.argLine.coverage> <!-- Set when 'coverage' profile is active -->
-    <test.jvm.argLine>
-      -server 
+    <jetty.npn.version>1.1.7.v20140316</jetty.npn.version>
+    <jetty.npn.path>${settings.localRepository}/org/mortbay/jetty/npn/npn-boot/${jetty.npn.version}/npn-boot-${jetty.npn.version}.jar</jetty.npn.path>
+    <argLine.common>
+      -Xbootclasspath/p:${jetty.npn.path}
+      -server
       -dsa -da -ea:io.netty...
       -XX:+AggressiveOpts
       -XX:+TieredCompilation
@@ -196,7 +324,9 @@
       -XX:+OptimizeStringConcat
       -XX:+HeapDumpOnOutOfMemoryError
       -verbose:gc
-    </test.jvm.argLine>
+    </argLine.common>
+    <argLine.leak>-D_</argLine.leak> <!-- Set when 'leak' profile is active -->
+    <argLine.coverage>-D_</argLine.coverage> <!-- Set when 'coverage' profile is active -->
   </properties>
 
   <modules>
@@ -239,11 +369,16 @@
         <optional>true</optional>
       </dependency>
 
-      <!-- SPDY Example - completely optional -->
+      <!-- SPDY and HTTP/2 - completely optional -->
       <dependency>
         <groupId>org.eclipse.jetty.npn</groupId>
         <artifactId>npn-api</artifactId>
         <version>1.1.0.v20120525</version>
+      </dependency>
+      <dependency>
+        <groupId>org.mortbay.jetty.npn</groupId>
+        <artifactId>npn-boot</artifactId>
+        <version>${jetty.npn.version}</version>
       </dependency>
 
       <!-- Google Protocol Buffers - completely optional -->
@@ -568,6 +703,24 @@
           </dependency>
         </dependencies>
       </plugin>
+      <!-- Download the npn-boot.jar in advance to add it to the boot classpath. -->
+      <plugin>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>get-npn-boot</id>
+            <phase>validate</phase>
+            <goals>
+              <goal>get</goal>
+            </goals>
+            <configuration>
+              <groupId>org.mortbay.jetty.npn</groupId>
+              <artifactId>npn-boot</artifactId>
+              <version>${jetty.npn.version}</version>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
@@ -580,7 +733,7 @@
             <exclude>**/TestUtil*</exclude>
           </excludes>
           <runOrder>random</runOrder>
-          <argLine>${test.jvm.argLine.coverage} ${test.jvm.argLine}</argLine>
+          <argLine>${argLine.common} ${argLine.leak} ${argLine.coverage}</argLine>
         </configuration>
       </plugin>
       <!-- always produce osgi bundles -->
@@ -908,7 +1061,7 @@
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>exec-maven-plugin</artifactId>
-          <version>1.2.1</version>
+          <version>1.3</version>
         </plugin>
         <plugin>
           <groupId>org.fusesource.hawtjni</groupId>
