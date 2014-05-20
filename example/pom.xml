@@ -142,6 +142,7 @@
           <executable>${java.home}/bin/java</executable>
           <commandlineArgs>
             ${argLine.common}
+            ${argLine.bootcp}
             ${argLine.leak}
             ${argLine.coverage}
             -classpath %classpath
