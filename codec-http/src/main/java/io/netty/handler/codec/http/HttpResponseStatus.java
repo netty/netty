@@ -497,14 +497,14 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
     }
 
     /**
-     * Returns the code of this getStatus.
+     * Returns the code of this {@link HttpResponseStatus}.
      */
     public int code() {
         return code;
     }
 
     /**
-     * Returns the reason phrase of this getStatus.
+     * Returns the reason phrase of this {@link HttpResponseStatus}.
      */
     public String reasonPhrase() {
         return reasonPhrase;
@@ -515,6 +515,10 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
         return code();
     }
 
+    /**
+     * Equality of {@link HttpResponseStatus} only depends on {@link #code()}. The
+     * reason phrase is not considered for equality.
+     */
     @Override
     public boolean equals(Object o) {
         if (!(o instanceof HttpResponseStatus)) {
@@ -524,6 +528,10 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
         return code() == ((HttpResponseStatus) o).code();
     }
 
+    /**
+     * Equality of {@link HttpResponseStatus} only depends on {@link #code()}. The
+     * reason phrase is not considered for equality.
+     */
     @Override
     public int compareTo(HttpResponseStatus o) {
         return code() - o.code();
