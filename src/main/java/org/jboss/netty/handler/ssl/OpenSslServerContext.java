@@ -319,7 +319,12 @@ public final class OpenSslServerContext extends SslContext {
      */
     @Override
     public SSLEngine newEngine() {
-        return new OpenSslEngine(ctx, bufferPool());
+        if (unmodifiableNextProtocols.isEmpty()) {
+            return new OpenSslEngine(ctx, bufferPool(), null);
+        } else {
+            return new OpenSslEngine(
+                    ctx, bufferPool(), unmodifiableNextProtocols.get(unmodifiableNextProtocols.size() - 1));
+        }
     }
 
     @Override

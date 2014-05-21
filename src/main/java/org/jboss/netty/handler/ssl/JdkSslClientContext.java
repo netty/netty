@@ -20,6 +20,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferInputStream;
 
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLSessionContext;
 import javax.net.ssl.TrustManagerFactory;
@@ -37,6 +38,7 @@ import java.util.List;
 public final class JdkSslClientContext extends JdkSslContext {
 
     private final SSLContext ctx;
+    private final ApplicationProtocolSelector nextProtocolSelector;
 
     /**
      * Creates a new instance.
@@ -106,9 +108,11 @@ public final class JdkSslClientContext extends JdkSslContext {
 
         super(bufPool, ciphers);
 
-        if (nextProtocolSelector != null) {
+        if (nextProtocolSelector != null && !JettyNpnSslEngine.isAvailable()) {
             throw new SSLException("NPN/ALPN unsupported: " + nextProtocolSelector);
         }
+
+        this.nextProtocolSelector = nextProtocolSelector;
 
         try {
             if (certChainFile == null) {
@@ -160,7 +164,7 @@ public final class JdkSslClientContext extends JdkSslContext {
 
     @Override
     public ApplicationProtocolSelector nextProtocolSelector() {
-        return null;
+        return nextProtocolSelector;
     }
 
     @Override
@@ -171,5 +175,14 @@ public final class JdkSslClientContext extends JdkSslContext {
     @Override
     public SSLContext context() {
         return ctx;
+    }
+
+    @Override
+    SSLEngine wrapEngine(SSLEngine engine) {
+        if (nextProtocolSelector == null) {
+            return engine;
+        } else {
+            return new JettyNpnSslEngine(engine, nextProtocolSelector);
+        }
     }
 }

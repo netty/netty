@@ -111,6 +111,16 @@
       <optional>true</optional>
     </dependency>
 
+    <!-- Jetty NPN API - completely optional -->
+    <!-- Used for Next Protocol Negotiation extension support -->
+    <dependency>
+      <groupId>org.eclipse.jetty.npn</groupId>
+      <artifactId>npn-api</artifactId>
+      <version>1.1.0.v20120525</version>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
+
     <!-- Servlet API - completely optional -->
     <!-- Used for HTTP tunneling transport -->
     <dependency>
@@ -387,6 +397,9 @@
             <ignore>sun.security.x509.X500Name</ignore>
             <ignore>sun.security.x509.X509CertInfo</ignore>
             <ignore>sun.security.x509.X509CertImpl</ignore>
+
+            <!-- SSLSession implelementation -->
+            <ignore>javax.net.ssl.SSLEngine</ignore>
           </ignores>
         </configuration>
         <executions>
