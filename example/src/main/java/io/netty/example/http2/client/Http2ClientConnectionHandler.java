@@ -14,15 +14,17 @@
  */
 package io.netty.example.http2.client;
 
+import static io.netty.example.http2.Http2ExampleUtil.UPGRADE_RESPONSE_HEADER;
 import static io.netty.util.internal.logging.InternalLogLevel.INFO;
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http2.AbstractHttp2ConnectionHandler;
 import io.netty.handler.codec.http2.DefaultHttp2Connection;
 import io.netty.handler.codec.http2.DefaultHttp2FrameReader;
 import io.netty.handler.codec.http2.DefaultHttp2FrameWriter;
+import io.netty.handler.codec.http2.DefaultHttp2Headers;
 import io.netty.handler.codec.http2.DefaultHttp2InboundFlowController;
 import io.netty.handler.codec.http2.DefaultHttp2OutboundFlowController;
 import io.netty.handler.codec.http2.Http2Exception;
@@ -36,8 +38,7 @@ import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -47,36 +48,65 @@ import java.util.concurrent.TimeUnit;
 public class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler {
     private static final Http2FrameLogger logger = new Http2FrameLogger(INFO,
             InternalLoggerFactory.getInstance(Http2ClientConnectionHandler.class));
-    private final BlockingQueue<ChannelFuture> queue = new LinkedBlockingQueue<ChannelFuture>();
-
+    private final ChannelPromise initPromise;
+    private final ChannelPromise responsePromise;
     private ByteBuf collectedData;
-    private ChannelPromise initialized;
 
-    public Http2ClientConnectionHandler() {
+    public Http2ClientConnectionHandler(ChannelPromise initPromise, ChannelPromise responsePromise) {
         super(new DefaultHttp2Connection(false, false), frameReader(), frameWriter(),
                 new DefaultHttp2InboundFlowController(), new DefaultHttp2OutboundFlowController());
+        this.initPromise = initPromise;
+        this.responsePromise = responsePromise;
     }
 
-    public void awaitInitialization() throws InterruptedException {
-        initialized.await(5, TimeUnit.SECONDS);
+    /**
+     * Wait for this handler to be added after the upgrade to HTTP/2, and for initial preface
+     * handshake to complete.
+     */
+    public void awaitInitialization() throws Exception {
+        if (!initPromise.awaitUninterruptibly(5, TimeUnit.SECONDS)) {
+            throw new IllegalStateException("Timed out waiting for initialization");
+        }
+        if (!initPromise.isSuccess()) {
+            throw new RuntimeException(initPromise.cause());
+        }
     }
 
+    /**
+     * Wait for this full response to be received and printed out.
+     */
+    public void awaitResponse() throws Exception {
+        if (!responsePromise.awaitUninterruptibly(5, TimeUnit.SECONDS)) {
+            throw new IllegalStateException("Timed out waiting for completion of the response");
+        }
+        if (!responsePromise.isSuccess()) {
+            throw new RuntimeException(initPromise.cause());
+        }
+    }
+
+    /**
+     * Handles conversion of a {@link FullHttpMessage} to HTTP/2 frames.
+     */
     @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        super.handlerAdded(ctx);
-        initialized = ctx.newPromise();
-    }
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise)
+            throws Exception {
+        if (msg instanceof FullHttpMessage) {
+            FullHttpMessage httpMsg = (FullHttpMessage) msg;
+            boolean hasData = httpMsg.content().isReadable();
 
-    public ChannelFuture writeData(int streamId, ByteBuf data, int padding, boolean endStream,
-            boolean endSegment, boolean compressed) throws Http2Exception {
-        return super.writeData(ctx(), ctx().newPromise(), streamId, data, padding, endStream,
-                endSegment, compressed);
-    }
-
-    public ChannelFuture writeHeaders(int streamId, Http2Headers headers, int padding,
-            boolean endStream, boolean endSegment) throws Http2Exception {
-        return super.writeHeaders(ctx(), ctx().newPromise(), streamId, headers, padding, endStream,
-                endSegment);
+            // Convert and write the headers.
+            DefaultHttp2Headers.Builder headers = DefaultHttp2Headers.newBuilder();
+            for (Map.Entry<String, String> entry : httpMsg.headers().entries()) {
+                headers.add(entry.getKey(), entry.getValue());
+            }
+            int streamId = nextStreamId();
+            writeHeaders(ctx, promise, streamId, headers.build(), 0, !hasData, false);
+            if (hasData) {
+                writeData(ctx, promise, streamId, httpMsg.content(), 0, true, true, false);
+            }
+        } else {
+            super.write(ctx, msg, promise);
+        }
     }
 
     @Override
@@ -107,7 +137,7 @@ public class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler
             collectedData.release();
             collectedData = null;
 
-            queue.add(ctx().channel().newSucceededFuture());
+            responsePromise.setSuccess();
         }
     }
 
@@ -120,6 +150,9 @@ public class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
             int streamDependency, short weight, boolean exclusive, int padding, boolean endStream,
             boolean endSegment) throws Http2Exception {
+        if (headers.contains(UPGRADE_RESPONSE_HEADER)) {
+            System.out.println("Received HTTP/2 response to the HTTP->HTTP/2 upgrade request");
+        }
     }
 
     @Override
@@ -139,8 +172,8 @@ public class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler
     @Override
     public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings)
             throws Http2Exception {
-        if (!initialized.isDone()) {
-            initialized.setSuccess();
+        if (!initPromise.isDone()) {
+            initPromise.setSuccess();
         }
     }
 
@@ -178,17 +211,13 @@ public class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        queue.add(ctx.channel().newFailedFuture(cause));
-        cause.printStackTrace();
-
-        super.exceptionCaught(ctx, cause);
-        if (!initialized.isDone()) {
-            initialized.setFailure(cause);
+        if (!initPromise.isDone()) {
+            initPromise.setFailure(cause);
         }
-    }
-
-    public BlockingQueue<ChannelFuture> queue() {
-        return queue;
+        if (!responsePromise.isDone()) {
+            initPromise.setFailure(cause);
+        }
+        super.exceptionCaught(ctx, cause);
     }
 
     private static Http2FrameReader frameReader() {

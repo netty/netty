@@ -58,7 +58,7 @@ public class Http2FrameLogger extends ChannelHandlerAdapter {
 
     public void logHeaders(Direction direction, int streamId, Http2Headers headers, int padding,
             boolean endStream, boolean endSegment) {
-        log(direction, "HEADERS: steramId:%d, headers=%s, padding=%d, endStream=%b, endSegment=%b",
+        log(direction, "HEADERS: streamId:%d, headers=%s, padding=%d, endStream=%b, endSegment=%b",
                 streamId, headers, padding, endStream, endSegment);
     }
 
@@ -66,7 +66,7 @@ public class Http2FrameLogger extends ChannelHandlerAdapter {
             int streamDependency, short weight, boolean exclusive, int padding, boolean endStream,
             boolean endSegment) {
         log(direction,
-                "HEADERS: steramId:%d, headers=%s, streamDependency=%d, weight=%d, exclusive=%b, "
+                "HEADERS: streamId:%d, headers=%s, streamDependency=%d, weight=%d, exclusive=%b, "
                         + "padding=%d, endStream=%b, endSegment=%b", streamId, headers,
                 streamDependency, weight, exclusive, padding, endStream, endSegment);
     }
@@ -109,7 +109,7 @@ public class Http2FrameLogger extends ChannelHandlerAdapter {
     }
 
     public void logWindowsUpdate(Direction direction, int streamId, int windowSizeIncrement) {
-        log(direction, "WINDOW_UPDATE: stream=%d, windowSizeIncrement=%d", streamId,
+        log(direction, "WINDOW_UPDATE: streamId=%d, windowSizeIncrement=%d", streamId,
                 windowSizeIncrement);
     }
 

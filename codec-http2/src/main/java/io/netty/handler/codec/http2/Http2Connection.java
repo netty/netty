@@ -25,6 +25,11 @@ public interface Http2Connection {
     interface Endpoint {
 
         /**
+         * Returns the next valid streamId for this endpoint.
+         */
+        int nextStreamId();
+
+        /**
          * Creates a stream initiated by this endpoint. This could fail for the following reasons:
          * <p/>
          * - The requested stream ID is not the next sequential ID for this endpoint. <br>

@@ -15,7 +15,9 @@
 
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
+import static io.netty.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuf;
 import static io.netty.handler.codec.http2.Http2CodecUtil.toByteBuf;
 import static io.netty.handler.codec.http2.Http2CodecUtil.toHttp2Exception;
@@ -61,14 +63,14 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
     private final Http2Connection connection;
     private final Http2InboundFlowController inboundFlow;
     private final Http2OutboundFlowController outboundFlow;
+    // We prefer ArrayDeque to LinkedList because later will produce more GC.
+    // This initial capacity is plenty for SETTINGS traffic.
+    private final ArrayDeque<Http2Settings> outstandingLocalSettingsQueue = new ArrayDeque<Http2Settings>(4);
     private ByteBuf clientPrefaceString;
     private boolean prefaceSent;
     private boolean prefaceReceived;
     private ChannelHandlerContext ctx;
     private ChannelFutureListener closeListener;
-    // We prefer ArrayDeque to LinkedList because later will produce more GC.
-    // This initial capacity is plenty for SETTINGS traffic.
-    private final ArrayDeque<Http2Settings> outstandingLocalSettingsQueue = new ArrayDeque<Http2Settings>(4);
 
     protected AbstractHttp2ConnectionHandler(boolean server) {
         this(server, false);
@@ -109,6 +111,45 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
 
         // Set the expected client preface string. Only servers should receive this.
         clientPrefaceString = connection.isServer()? connectionPrefaceBuf() : null;
+    }
+
+    /**
+     * Handles the client-side (cleartext) upgrade from HTTP to HTTP/2. Reserves local stream 1 for
+     * the HTTP/2 response.
+     */
+    public final void onHttpClientUpgrade() throws Http2Exception {
+        if (connection.isServer()) {
+            throw protocolError("Client-side HTTP upgrade requested for a server");
+        }
+        if (prefaceSent || prefaceReceived) {
+            throw protocolError("HTTP upgrade must occur before HTTP/2 preface is sent or received");
+        }
+
+        // Create a local stream used for the HTTP cleartext upgrade.
+        createLocalStream(HTTP_UPGRADE_STREAM_ID, true, CONNECTION_STREAM_ID,
+                DEFAULT_PRIORITY_WEIGHT, false);
+    }
+
+    /**
+     * Handles the server-side (cleartext) upgrade from HTTP to HTTP/2.
+     *
+     * @param settings the settings for the remote endpoint.
+     */
+    public final void onHttpServerUpgrade(Http2Settings settings)
+            throws Http2Exception {
+        if (!connection.isServer()) {
+            throw protocolError("Server-side HTTP upgrade requested for a client");
+        }
+        if (prefaceSent || prefaceReceived) {
+            throw protocolError("HTTP upgrade must occur before HTTP/2 preface is sent or received");
+        }
+
+        // Apply the settings but no ACK is necessary.
+        applyRemoteSettings(settings);
+
+        // Create a stream in the half-closed state.
+        createRemoteStream(HTTP_UPGRADE_STREAM_ID, true, CONNECTION_STREAM_ID,
+                DEFAULT_PRIORITY_WEIGHT, false);
     }
 
     @Override
@@ -186,6 +227,13 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
         return settings;
     }
 
+    /**
+     * Gets the next stream ID that can be created by the local endpoint.
+     */
+    protected int nextStreamId() {
+        return connection.local().nextStreamId();
+    }
+
     protected ChannelFuture writeData(final ChannelHandlerContext ctx,
             final ChannelPromise promise, int streamId, final ByteBuf data, int padding,
             boolean endStream, boolean endSegment, boolean compressed) {
@@ -227,14 +275,8 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
 
             Http2Stream stream = connection.stream(streamId);
             if (stream == null) {
-                // Creates a new locally-initiated stream.
-                stream = connection.local().createStream(streamId, endStream);
-
-                // Allow bi-directional traffic.
-                inboundFlow.addStream(streamId);
-                if (!endStream) {
-                    outboundFlow.addStream(streamId, streamDependency, weight, exclusive);
-                }
+                // Create a new locally-initiated stream.
+                stream = createLocalStream(streamId, endStream, streamDependency, weight, exclusive);
             } else {
                 // An existing stream...
                 if (stream.state() == RESERVED_LOCAL) {
@@ -308,10 +350,8 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
                 throw protocolError("Sending settings after connection going away.");
             }
 
-            if (settings.hasPushEnabled()) {
-                if (connection.isServer()) {
-                    throw protocolError("Server sending SETTINGS frame with ENABLE_PUSH specified");
-                }
+            if (settings.hasPushEnabled() && connection.isServer()) {
+                throw protocolError("Server sending SETTINGS frame with ENABLE_PUSH specified");
             }
 
             return frameWriter.writeSettings(ctx, promise, settings);
@@ -570,6 +610,88 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
     }
 
     /**
+     * Applies settings sent from the local endpoint.
+     */
+    private void applyLocalSettings(Http2Settings settings) throws Http2Exception {
+        if (settings.hasPushEnabled()) {
+            if (connection.isServer()) {
+                throw protocolError("Server sending SETTINGS frame with ENABLE_PUSH specified");
+            }
+            connection.local().allowPushTo(settings.pushEnabled());
+        }
+
+        if (settings.hasAllowCompressedData()) {
+            connection.local().allowCompressedData(settings.allowCompressedData());
+        }
+
+        if (settings.hasMaxConcurrentStreams()) {
+            connection.remote().maxStreams(settings.maxConcurrentStreams());
+        }
+
+        if (settings.hasMaxHeaderTableSize()) {
+            frameReader.maxHeaderTableSize(settings.maxHeaderTableSize());
+        }
+
+        if (settings.hasInitialWindowSize()) {
+            inboundFlow.initialInboundWindowSize(settings.initialWindowSize());
+        }
+    }
+
+    /**
+     * Applies settings received from the remote endpoint.
+     */
+    private void applyRemoteSettings(Http2Settings settings) throws Http2Exception {
+        if (settings.hasPushEnabled()) {
+            if (!connection.isServer()) {
+                throw protocolError("Client received SETTINGS frame with ENABLE_PUSH specified");
+            }
+            connection.remote().allowPushTo(settings.pushEnabled());
+        }
+
+        if (settings.hasAllowCompressedData()) {
+            connection.remote().allowCompressedData(settings.allowCompressedData());
+        }
+
+        if (settings.hasMaxConcurrentStreams()) {
+            connection.local().maxStreams(settings.maxConcurrentStreams());
+        }
+
+        if (settings.hasMaxHeaderTableSize()) {
+            frameWriter.maxHeaderTableSize(settings.maxHeaderTableSize());
+        }
+
+        if (settings.hasInitialWindowSize()) {
+            outboundFlow.initialOutboundWindowSize(settings.initialWindowSize());
+        }
+    }
+
+    /**
+     * Creates a new stream initiated by the local endpoint.
+     */
+    private Http2Stream createLocalStream(int streamId, boolean halfClosed, int streamDependency,
+            short weight, boolean exclusive) throws Http2Exception {
+        Http2Stream stream = connection.local().createStream(streamId, halfClosed);
+        inboundFlow.addStream(streamId);
+        if (!halfClosed) {
+            outboundFlow.addStream(streamId, streamDependency, weight, exclusive);
+        }
+        return stream;
+    }
+
+    /**
+     * Creates a new stream initiated by the remote endpoint.
+     */
+    private Http2Stream createRemoteStream(int streamId, boolean halfClosed, int streamDependency,
+            short weight, boolean exclusive) throws Http2Exception {
+        Http2Stream stream = connection.remote().createStream(streamId, halfClosed);
+        outboundFlow.addStream(streamId, streamDependency, weight, exclusive);
+        if (!halfClosed) {
+            inboundFlow.addStream(streamId);
+        }
+        return stream;
+    }
+
+    /**
      * Handles all inbound frames from the network.
      */
     private final class FrameReadObserver implements Http2FrameObserver {
@@ -630,14 +752,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
 
             Http2Stream stream = connection.stream(streamId);
             if (stream == null) {
-                // Create the new stream.
-                connection.remote().createStream(streamId, endStream);
-
-                // Allow bi-directional traffic.
-                outboundFlow.addStream(streamId, streamDependency, weight, exclusive);
-                if (!endStream) {
-                    inboundFlow.addStream(streamId);
-                }
+                createRemoteStream(streamId, endStream, streamDependency, weight, exclusive);
             } else {
                 if (stream.state() == RESERVED_REMOTE) {
                     // Received headers for a reserved push stream ... open it for push to the
@@ -717,25 +832,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
             Http2Settings settings = outstandingLocalSettingsQueue.poll();
 
             if (settings != null) {
-                if (settings.hasPushEnabled()) {
-                    connection.local().allowPushTo(settings.pushEnabled());
-                }
-
-                if (settings.hasAllowCompressedData()) {
-                    connection.local().allowCompressedData(settings.allowCompressedData());
-                }
-
-                if (settings.hasMaxConcurrentStreams()) {
-                    connection.remote().maxStreams(settings.maxConcurrentStreams());
-                }
-
-                if (settings.hasMaxHeaderTableSize()) {
-                    frameReader.maxHeaderTableSize(settings.maxHeaderTableSize());
-                }
-
-                if (settings.hasInitialWindowSize()) {
-                    inboundFlow.initialInboundWindowSize(settings.initialWindowSize());
-                }
+                applyLocalSettings(settings);
             }
 
             AbstractHttp2ConnectionHandler.this.onSettingsAckRead(ctx);
@@ -744,28 +841,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
         @Override
         public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings)
                 throws Http2Exception {
-            if (settings.hasPushEnabled()) {
-                if (!connection.isServer()) {
-                    throw protocolError("Client received SETTINGS frame with ENABLE_PUSH specified");
-                }
-                connection.remote().allowPushTo(settings.pushEnabled());
-            }
-
-            if (settings.hasAllowCompressedData()) {
-                connection.remote().allowCompressedData(settings.allowCompressedData());
-            }
-
-            if (settings.hasMaxConcurrentStreams()) {
-                connection.local().maxStreams(settings.maxConcurrentStreams());
-            }
-
-            if (settings.hasMaxHeaderTableSize()) {
-                frameWriter.maxHeaderTableSize(settings.maxHeaderTableSize());
-            }
-
-            if (settings.hasInitialWindowSize()) {
-                outboundFlow.initialOutboundWindowSize(settings.initialWindowSize());
-            }
+            applyRemoteSettings(settings);
 
             // Acknowledge receipt of the settings.
             frameWriter.writeSettingsAck(ctx, ctx.newPromise());

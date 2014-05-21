@@ -236,6 +236,13 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         @Override
+        public int nextStreamId() {
+            // For manually created client-side streams, 1 is reserved for HTTP upgrade, so
+            // start at 3.
+            return nextStreamId > 1? nextStreamId : nextStreamId + 2;
+        }
+
+        @Override
         public DefaultStream createStream(int streamId, boolean halfClosed) throws Http2Exception {
             checkNewStreamAllowed(streamId);
 
