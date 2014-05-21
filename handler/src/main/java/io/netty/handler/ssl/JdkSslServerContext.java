@@ -21,6 +21,7 @@ import io.netty.buffer.ByteBufInputStream;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLSessionContext;
 import java.io.File;
@@ -42,6 +43,7 @@ import java.util.List;
 public final class JdkSslServerContext extends JdkSslContext {
 
     private final SSLContext ctx;
+    private final List<String> nextProtocols;
 
     /**
      * Creates a new instance.
@@ -100,7 +102,21 @@ public final class JdkSslServerContext extends JdkSslContext {
         }
 
         if (nextProtocols != null && nextProtocols.iterator().hasNext()) {
-            throw new SSLException("NPN/ALPN unsupported: " + nextProtocols);
+            if (!JettyNpnSslEngine.isAvailable()) {
+                throw new SSLException("NPN/ALPN unsupported: " + nextProtocols);
+            }
+
+            List<String> list = new ArrayList<String>();
+            for (String p: nextProtocols) {
+                if (p == null) {
+                    break;
+                }
+                list.add(p);
+            }
+
+            this.nextProtocols = Collections.unmodifiableList(list);
+        } else {
+            this.nextProtocols = Collections.emptyList();
         }
 
         String algorithm = Security.getProperty("ssl.KeyManagerFactory.algorithm");
@@ -173,11 +189,20 @@ public final class JdkSslServerContext extends JdkSslContext {
 
     @Override
     public List<String> nextProtocols() {
-        return Collections.emptyList();
+        return nextProtocols;
     }
 
     @Override
     public SSLContext context() {
         return ctx;
+    }
+
+    @Override
+    SSLEngine wrapEngine(SSLEngine engine) {
+        if (nextProtocols.isEmpty()) {
+            return engine;
+        } else {
+            return new JettyNpnSslEngine(engine, nextProtocols);
+        }
     }
 }

@@ -26,6 +26,7 @@ import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -371,6 +372,83 @@ public abstract class SslContext {
         return new JdkSslClientContext(
                 certChainFile, trustManagerFactory,
                 ciphers, nextProtocolSelector, sessionCacheSize, sessionTimeout);
+    }
+
+    /**
+     * Creates a simple client-side {@link ApplicationProtocolSelector} that selects the most preferred protocol
+     * among the application protocols sent by the server.  If there is no match, it chooses the least preferred one.
+     *
+     * @param nextProtocols the list of the supported client-side application protocols, in the order of preference
+     * @return the new {@link ApplicationProtocolSelector}.
+     *         {@code null} if the specified {@code nextProtocols} does not contain any elements.
+     *
+     */
+    public static ApplicationProtocolSelector newApplicationProtocolSelector(String... nextProtocols) {
+        if (nextProtocols == null) {
+            throw new NullPointerException("nextProtocols");
+        }
+
+        final List<String> list = new ArrayList<String>();
+        for (String p: nextProtocols) {
+            if (p == null) {
+                break;
+            }
+            list.add(p);
+        }
+
+        if (list.isEmpty()) {
+            return null;
+        }
+
+        return newApplicationProtocolSelector(list);
+    }
+
+    private static ApplicationProtocolSelector newApplicationProtocolSelector(final List<String> list) {
+        return new ApplicationProtocolSelector() {
+            @Override
+            public String selectProtocol(List<String> protocols) throws Exception {
+                for (String p: list) {
+                    if (protocols.contains(p)) {
+                        return p;
+                    }
+                }
+                return list.get(list.size() - 1);
+            }
+
+            @Override
+            public String toString() {
+                return "ApplicationProtocolSelector(" + list + ')';
+            }
+        };
+    }
+
+    /**
+     * Creates a simple client-side {@link ApplicationProtocolSelector} that selects the most preferred protocol
+     * among the application protocols sent by the server.  If there is no match, it chooses the least preferred one.
+     *
+     * @param nextProtocols the list of the supported client-side application protocols, in the order of preference
+     * @return the new {@link ApplicationProtocolSelector}.
+     *         {@code null} if the specified {@code nextProtocols} does not contain any elements.
+     *
+     */
+    public static ApplicationProtocolSelector newApplicationProtocolSelector(Iterable<String> nextProtocols) {
+        if (nextProtocols == null) {
+            throw new NullPointerException("nextProtocols");
+        }
+
+        final List<String> list = new ArrayList<String>();
+        for (String p: nextProtocols) {
+            if (p == null) {
+                break;
+            }
+            list.add(p);
+        }
+
+        if (list.isEmpty()) {
+            return null;
+        }
+
+        return newApplicationProtocolSelector(list);
     }
 
     SslContext() { }
