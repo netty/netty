@@ -21,6 +21,11 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.codec.spdy.SpdyOrHttpChooser.SelectedProtocol;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
+
+import java.util.Arrays;
 
 /**
  * A SPDY Server that responds to a GET request with a Hello World.
@@ -31,9 +36,9 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
  * See <a href="http://www.eclipse.org/jetty/documentation/current/npn-chapter.html">Jetty docs</a> for more
  * information.
  * <p>
- * You may also use maven to start the server from the command line:
+ * You may also use the {@code run-example.sh} script to start the server from the command line:
  * <pre>
- *     mvn exec:exec -Pspdy-server
+ *     ./run-example spdy-server
  * </pre>
  * <p>
  * Once started, you can test the server with your
@@ -42,9 +47,11 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
  */
 public class SpdyServer {
 
+    private final SslContext sslCtx;
     private final int port;
 
-    public SpdyServer(int port) {
+    public SpdyServer(SslContext sslCtx, int port) {
+        this.sslCtx = sslCtx;
         this.port = port;
     }
 
@@ -56,7 +63,7 @@ public class SpdyServer {
             ServerBootstrap b = new ServerBootstrap();
             b.option(ChannelOption.SO_BACKLOG, 1024);
             b.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class)
-                    .childHandler(new SpdyServerInitializer());
+                    .childHandler(new SpdyServerInitializer(sslCtx));
 
             Channel ch = b.bind(port).sync().channel();
             ch.closeFuture().sync();
@@ -67,7 +74,6 @@ public class SpdyServer {
     }
 
     public static void main(String[] args) throws Exception {
-        checkForNpnSupport();
         int port;
         if (args.length > 0) {
             port = Integer.parseInt(args[0]);
@@ -79,20 +85,15 @@ public class SpdyServer {
         System.out.println("Open your SPDY enabled browser and navigate to https://localhost:" + port + '/');
         System.out.println("If using Chrome browser, check your SPDY sessions at chrome://net-internals/#spdy");
 
-        new SpdyServer(port).run();
-    }
+        // Configure SSL.
+        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        SslContext sslCtx = SslContext.newServerContext(
+                ssc.certificate(), ssc.privateKey(), null, null,
+                Arrays.asList(
+                        SelectedProtocol.SPDY_3_1.protocolName(),
+                        SelectedProtocol.HTTP_1_1.protocolName()),
+                0, 0);
 
-    private static void checkForNpnSupport() {
-        try {
-            Class.forName("sun.security.ssl.NextProtoNegoExtension");
-        } catch (ClassNotFoundException ignored) {
-            System.err.println();
-            System.err.println("Could not locate Next Protocol Negotiation (NPN) implementation.");
-            System.err.println("The NPN jar should have been made available when building the examples with maven.");
-            System.err.println("Please check that your JDK is among those supported by Jetty-NPN:");
-            System.err.println("http://wiki.eclipse.org/Jetty/Feature/NPN#Versions");
-            System.err.println();
-            throw new IllegalStateException("Could not locate NPN implementation. See console err for details.");
-        }
+        new SpdyServer(sslCtx, port).run();
     }
 }

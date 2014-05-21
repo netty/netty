@@ -28,8 +28,13 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.example.http2.Http2ExampleUtil.EndpointConfig;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http2.Http2OrHttpChooser.SelectedProtocol;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
 import java.net.InetSocketAddress;
+
+import javax.net.ssl.SSLException;
 
 /**
  * An HTTP2 client that allows you to send HTTP2 frames to a server. Inbound and outbound frames are
@@ -42,13 +47,24 @@ import java.net.InetSocketAddress;
  */
 public class Http2Client {
 
+    private final SslContext sslCtx;
     private final EndpointConfig config;
     private Http2ClientConnectionHandler http2ConnectionHandler;
     private Channel channel;
     private EventLoopGroup workerGroup;
 
-    public Http2Client(EndpointConfig config) {
+    public Http2Client(EndpointConfig config) throws SSLException {
         this.config = config;
+        if (config.isSsl()) {
+            sslCtx = SslContext.newClientContext(
+                    null, InsecureTrustManagerFactory.INSTANCE, null,
+                    SslContext.newApplicationProtocolSelector(
+                            SelectedProtocol.HTTP_2.protocolName(),
+                            SelectedProtocol.HTTP_1_1.protocolName()),
+                    0, 0);
+        } else {
+            sslCtx = null;
+        }
     }
 
     /**
@@ -67,7 +83,7 @@ public class Http2Client {
         b.channel(NioSocketChannel.class);
         b.option(ChannelOption.SO_KEEPALIVE, true);
         b.remoteAddress(new InetSocketAddress(config.host(), config.port()));
-        Http2ClientInitializer initializer = new Http2ClientInitializer(config.isSsl());
+        Http2ClientInitializer initializer = new Http2ClientInitializer(sslCtx);
         b.handler(initializer);
 
         // Start the client.

@@ -17,37 +17,31 @@ package io.netty.example.http2.client;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.example.securechat.SecureChatSslContextFactory;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpClientUpgradeHandler;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http2.Http2ClientUpgradeCodec;
-import io.netty.handler.ssl.SslHandler;
-
-import javax.net.ssl.SSLEngine;
-
-import org.eclipse.jetty.npn.NextProtoNego;
+import io.netty.handler.ssl.SslContext;
 
 /**
  * Configures the client pipeline to support HTTP/2 frames.
  */
 public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
 
+    private final SslContext sslCtx;
     private Http2ClientConnectionHandler connectionHandler;
-    private final boolean ssl;
 
-    public Http2ClientInitializer(boolean ssl) {
-        this.ssl = ssl;
+    public Http2ClientInitializer(SslContext sslCtx) {
+        this.sslCtx = sslCtx;
     }
 
     @Override
     public void initChannel(SocketChannel ch) throws Exception {
         connectionHandler = new Http2ClientConnectionHandler(ch.newPromise(), ch.newPromise());
-        if (ssl) {
+        if (sslCtx != null) {
             configureSsl(ch);
         } else {
             configureClearText(ch);
@@ -62,15 +56,7 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
      * Configure the pipeline for TLS NPN negotiation to HTTP/2.
      */
     private void configureSsl(SocketChannel ch) {
-        SSLEngine engine = SecureChatSslContextFactory.getClientContext().createSSLEngine();
-        engine.setUseClientMode(true);
-        NextProtoNego.put(engine, new Http2ClientProvider());
-        NextProtoNego.debug = true;
-
-        ChannelPipeline pipeline = ch.pipeline();
-
-        pipeline.addLast("ssl", new SslHandler(engine));
-        pipeline.addLast("http2ConnectionHandler", connectionHandler);
+        ch.pipeline().addLast(sslCtx.newHandler(ch.alloc()), connectionHandler);
     }
 
     /**

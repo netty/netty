@@ -299,6 +299,11 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     @Override
+    public <T> boolean hasAttr(AttributeKey<T> key) {
+        return channel.hasAttr(key);
+    }
+
+    @Override
     public ChannelHandlerContext fireChannelRegistered() {
         DefaultChannelHandlerContext next = findContextInbound(MASK_CHANNEL_REGISTERED);
         next.invoker().invokeChannelRegistered(next);

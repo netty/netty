@@ -23,6 +23,7 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.ssl.SslHandler;
 import io.netty.util.CharsetUtil;
 
 import java.util.Date;
@@ -43,6 +44,8 @@ public class SpdyServerHandler extends SimpleChannelInboundHandler<Object> {
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+        SslHandler h = ctx.pipeline().get(SslHandler.class);
+        System.err.println(h.engine().getSession().getProtocol());
         if (msg instanceof HttpRequest) {
             HttpRequest req = (HttpRequest) msg;
 

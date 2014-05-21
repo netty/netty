@@ -18,21 +18,18 @@ package io.netty.example.http.snoop;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.example.securechat.SecureChatSslContextFactory;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpContentDecompressor;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
-import io.netty.handler.ssl.SslHandler;
-
-import javax.net.ssl.SSLEngine;
+import io.netty.handler.ssl.SslContext;
 
 public class HttpSnoopClientInitializer extends ChannelInitializer<SocketChannel> {
 
-    private final boolean ssl;
+    private final SslContext sslCtx;
 
-    public HttpSnoopClientInitializer(boolean ssl) {
-        this.ssl = ssl;
+    public HttpSnoopClientInitializer(SslContext sslCtx) {
+        this.sslCtx = sslCtx;
     }
 
     @Override
@@ -41,13 +38,10 @@ public class HttpSnoopClientInitializer extends ChannelInitializer<SocketChannel
         ChannelPipeline p = ch.pipeline();
 
         p.addLast("log", new LoggingHandler(LogLevel.INFO));
-        // Enable HTTPS if necessary.
-        if (ssl) {
-            SSLEngine engine =
-                SecureChatSslContextFactory.getClientContext().createSSLEngine();
-            engine.setUseClientMode(true);
 
-            p.addLast("ssl", new SslHandler(engine));
+        // Enable HTTPS if necessary.
+        if (sslCtx != null) {
+            p.addLast("ssl", sslCtx.newHandler(ch.alloc()));
         }
 
         p.addLast("codec", new HttpClientCodec());

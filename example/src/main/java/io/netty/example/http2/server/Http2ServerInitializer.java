@@ -22,34 +22,29 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.example.securechat.SecureChatSslContextFactory;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler;
 import io.netty.handler.codec.http2.Http2ServerUpgradeCodec;
-import io.netty.handler.ssl.SslHandler;
+import io.netty.handler.ssl.SslContext;
 
 import java.util.Arrays;
-
-import javax.net.ssl.SSLEngine;
-
-import org.eclipse.jetty.npn.NextProtoNego;
 
 /**
  * Sets up the Netty pipeline for the example server. Depending on the endpoint config, sets up the
  * pipeline for NPN or cleartext HTTP upgrade to HTTP/2.
  */
 public class Http2ServerInitializer extends ChannelInitializer<SocketChannel> {
-    private final boolean ssl;
+    private final SslContext sslCtx;
 
-    public Http2ServerInitializer(boolean ssl) {
-        this.ssl = ssl;
+    public Http2ServerInitializer(SslContext sslCtx) {
+        this.sslCtx = sslCtx;
     }
 
     @Override
     public void initChannel(SocketChannel ch) throws Exception {
-        if (ssl) {
+        if (sslCtx != null) {
             configureSsl(ch);
         } else {
             configureClearText(ch);
@@ -60,18 +55,7 @@ public class Http2ServerInitializer extends ChannelInitializer<SocketChannel> {
      * Configure the pipeline for TLS NPN negotiation to HTTP/2.
      */
     private void configureSsl(SocketChannel ch) {
-        ChannelPipeline p = ch.pipeline();
-
-        SSLEngine engine = SecureChatSslContextFactory.getServerContext().createSSLEngine();
-        engine.setUseClientMode(false);
-        p.addLast("ssl", new SslHandler(engine));
-
-        // Setup NextProtoNego with our server provider
-        NextProtoNego.put(engine, new Http2ServerProvider());
-        NextProtoNego.debug = true;
-
-        // Negotiates with the browser if HTTP2 or HTTP is going to be used
-        p.addLast("handler", new Http2OrHttpHandler());
+        ch.pipeline().addLast(sslCtx.newHandler(ch.alloc()), new Http2OrHttpHandler());
     }
 
     /**

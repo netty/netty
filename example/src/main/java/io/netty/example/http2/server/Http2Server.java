@@ -24,6 +24,11 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.example.http2.Http2ExampleUtil.EndpointConfig;
+import io.netty.handler.codec.http2.Http2OrHttpChooser.SelectedProtocol;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
+
+import java.util.Arrays;
 
 /**
  * A HTTP/2 Server that responds to requests with a Hello World. Once started, you can test the
@@ -47,8 +52,21 @@ public class Http2Server {
         try {
             ServerBootstrap b = new ServerBootstrap();
             b.option(ChannelOption.SO_BACKLOG, 1024);
+
+            // If SSL was selected, configure the SSL context.
+            SslContext sslCtx = null;
+            if (config.isSsl()) {
+                SelfSignedCertificate ssc = new SelfSignedCertificate();
+                sslCtx = SslContext.newServerContext(
+                        ssc.certificate(), ssc.privateKey(), null, null,
+                        Arrays.asList(
+                                SelectedProtocol.HTTP_2.protocolName(),
+                                SelectedProtocol.HTTP_1_1.protocolName()),
+                        0, 0);
+            }
+
             b.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class)
-                    .childHandler(new Http2ServerInitializer(config.isSsl()));
+                    .childHandler(new Http2ServerInitializer(sslCtx));
 
             Channel ch = b.bind(config.port()).sync().channel();
             ch.closeFuture().sync();
