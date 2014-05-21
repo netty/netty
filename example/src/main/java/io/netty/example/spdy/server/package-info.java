@@ -28,9 +28,9 @@
  * See <a href="http://www.eclipse.org/jetty/documentation/current/npn-chapter.html">Jetty docs</a> for more
  * information.
  * <p>
- * You may also use maven to start the server from the command line:
+ * You may also use the {@code run-example.sh} script to start the server from the command line:
  * <pre>
- *     mvn exec:exec -Pspdy-server
+ *     ./run-example spdy-server
  * </pre>
  * <p>
  * Once started, you can test the server with your
