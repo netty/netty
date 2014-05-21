@@ -34,6 +34,9 @@ final class JettyNpnSslSession implements SSLSession {
     }
 
     void setApplicationProtocol(String applicationProtocol) {
+        if (applicationProtocol != null) {
+            applicationProtocol = applicationProtocol.replace(':', '_');
+        }
         this.applicationProtocol = applicationProtocol;
     }
 
