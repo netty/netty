@@ -21,9 +21,11 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.codec.spdy.SpdyOrHttpChooser.SelectedProtocol;
 import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+
+import java.util.Arrays;
 
 /**
  * A SPDY Server that responds to a GET request with a Hello World.
@@ -72,7 +74,6 @@ public class SpdyServer {
     }
 
     public static void main(String[] args) throws Exception {
-        checkForNpnSupport();
         int port;
         if (args.length > 0) {
             port = Integer.parseInt(args[0]);
@@ -86,21 +87,13 @@ public class SpdyServer {
 
         // Configure SSL.
         SelfSignedCertificate ssc = new SelfSignedCertificate();
-        SslContext sslCtx = SslContext.newServerContext(SslProvider.JDK, ssc.certificate(), ssc.privateKey());
-        new SpdyServer(sslCtx, port).run();
-    }
+        SslContext sslCtx = SslContext.newServerContext(
+                ssc.certificate(), ssc.privateKey(), null, null,
+                Arrays.asList(
+                        SelectedProtocol.SPDY_3_1.protocolName(),
+                        SelectedProtocol.HTTP_1_1.protocolName()),
+                0, 0);
 
-    private static void checkForNpnSupport() {
-        try {
-            Class.forName("sun.security.ssl.NextProtoNegoExtension");
-        } catch (ClassNotFoundException ignored) {
-            System.err.println();
-            System.err.println("Could not locate Next Protocol Negotiation (NPN) implementation.");
-            System.err.println("The NPN jar should have been made available when building the examples with maven.");
-            System.err.println("Please check that your JDK is among those supported by Jetty-NPN:");
-            System.err.println("http://wiki.eclipse.org/Jetty/Feature/NPN#Versions");
-            System.err.println();
-            throw new IllegalStateException("Could not locate NPN implementation. See console err for details.");
-        }
+        new SpdyServer(sslCtx, port).run();
     }
 }

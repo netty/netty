@@ -17,10 +17,7 @@ package io.netty.example.http2.server;
 import io.netty.channel.ChannelHandler;
 import io.netty.handler.codec.http2.Http2OrHttpChooser;
 
-import org.eclipse.jetty.npn.NextProtoNego;
-
 import javax.net.ssl.SSLEngine;
-
 import java.util.logging.Logger;
 
 /**
@@ -41,8 +38,8 @@ public class Http2OrHttpHandler extends Http2OrHttpChooser {
 
     @Override
     protected SelectedProtocol getProtocol(SSLEngine engine) {
-        Http2ServerProvider provider = (Http2ServerProvider) NextProtoNego.get(engine);
-        SelectedProtocol selectedProtocol = provider.getSelectedProtocol();
+        String[] protocol = engine.getSession().getProtocol().split(":");
+        SelectedProtocol selectedProtocol = SelectedProtocol.protocol(protocol[1]);
 
         logger.info("Selected Protocol is " + selectedProtocol);
         return selectedProtocol;

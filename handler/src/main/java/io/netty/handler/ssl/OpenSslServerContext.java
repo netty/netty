@@ -310,7 +310,11 @@ public final class OpenSslServerContext extends SslContext {
      */
     @Override
     public SSLEngine newEngine(ByteBufAllocator alloc) {
-        return new OpenSslEngine(ctx, alloc);
+        if (unmodifiableNextProtocols.isEmpty()) {
+            return new OpenSslEngine(ctx, alloc, null);
+        } else {
+            return new OpenSslEngine(ctx, alloc, unmodifiableNextProtocols.get(unmodifiableNextProtocols.size() - 1));
+        }
     }
 
     @Override

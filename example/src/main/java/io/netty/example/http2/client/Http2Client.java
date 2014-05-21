@@ -22,11 +22,11 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.example.http2.server.Http2Server;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http2.DefaultHttp2Headers;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2Headers;
+import io.netty.handler.codec.http2.Http2OrHttpChooser.SelectedProtocol;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
@@ -50,7 +50,13 @@ public class Http2Client {
     private EventLoopGroup workerGroup;
 
     public Http2Client(String host, int port) throws SSLException {
-        sslCtx = SslContext.newClientContext(InsecureTrustManagerFactory.INSTANCE);
+        sslCtx = SslContext.newClientContext(
+                null, InsecureTrustManagerFactory.INSTANCE, null,
+                SslContext.newApplicationProtocolSelector(
+                        SelectedProtocol.HTTP_2.protocolName(),
+                        SelectedProtocol.HTTP_1_1.protocolName()),
+                0, 0);
+
         this.host = host;
         this.port = port;
         http2ConnectionHandler = new Http2ClientConnectionHandler();
@@ -108,7 +114,6 @@ public class Http2Client {
     }
 
     public static void main(String[] args) throws Exception {
-        Http2Server.checkForNpnSupport();
         int port;
         if (args.length > 0) {
             port = Integer.parseInt(args[0]);

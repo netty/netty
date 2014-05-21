@@ -17,13 +17,8 @@
 package io.netty.example.http2.server;
 
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslHandler;
-import org.eclipse.jetty.npn.NextProtoNego;
-
-import javax.net.ssl.SSLEngine;
 
 /**
  * Sets up the Netty pipeline
@@ -38,17 +33,6 @@ public class Http2ServerInitializer extends ChannelInitializer<SocketChannel> {
 
     @Override
     public void initChannel(SocketChannel ch) throws Exception {
-        ChannelPipeline p = ch.pipeline();
-
-        SslHandler handler = sslCtx.newHandler(ch.alloc());
-        SSLEngine engine = handler.engine();
-        p.addLast("ssl", new SslHandler(engine));
-
-        // Setup NextProtoNego with our server provider
-        NextProtoNego.put(engine, new Http2ServerProvider());
-        NextProtoNego.debug = true;
-
-        // Negotiates with the browser if HTTP2 or HTTP is going to be used
-        p.addLast("handler", new Http2OrHttpHandler());
+        ch.pipeline().addLast(sslCtx.newHandler(ch.alloc()), new Http2OrHttpHandler());
     }
 }

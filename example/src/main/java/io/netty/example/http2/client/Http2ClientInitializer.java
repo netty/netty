@@ -15,14 +15,9 @@
 package io.netty.example.http2.client;
 
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http2.AbstractHttp2ConnectionHandler;
 import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslHandler;
-import org.eclipse.jetty.npn.NextProtoNego;
-
-import javax.net.ssl.SSLEngine;
 
 /**
  * Configures the client pipeline to support HTTP/2 frames.
@@ -39,14 +34,6 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
 
     @Override
     public void initChannel(SocketChannel ch) throws Exception {
-        SslHandler sslHandler = sslCtx.newHandler(ch.alloc());
-        SSLEngine engine = sslHandler.engine();
-        NextProtoNego.put(engine, new Http2ClientProvider());
-        NextProtoNego.debug = true;
-
-        ChannelPipeline pipeline = ch.pipeline();
-
-        pipeline.addLast("ssl", new SslHandler(engine));
-        pipeline.addLast("http2ConnectionHandler", connectionHandler);
+        ch.pipeline().addLast(sslCtx.newHandler(ch.alloc()), connectionHandler);
     }
 }

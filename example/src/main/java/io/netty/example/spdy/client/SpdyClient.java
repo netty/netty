@@ -27,8 +27,8 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.spdy.SpdyOrHttpChooser.SelectedProtocol;
 import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
 import javax.net.ssl.SSLException;
@@ -60,7 +60,13 @@ public class SpdyClient {
     private EventLoopGroup workerGroup;
 
     public SpdyClient(String host, int port) throws SSLException {
-        sslCtx = SslContext.newClientContext(SslProvider.JDK, InsecureTrustManagerFactory.INSTANCE);
+        sslCtx = SslContext.newClientContext(
+                null, InsecureTrustManagerFactory.INSTANCE, null,
+                SslContext.newApplicationProtocolSelector(
+                        SelectedProtocol.SPDY_3_1.protocolName(),
+                        SelectedProtocol.HTTP_1_1.protocolName()),
+                0, 0);
+
         this.host = host;
         this.port = port;
         httpResponseHandler = new HttpResponseClientHandler();
