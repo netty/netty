@@ -55,6 +55,17 @@
       <artifactId>bcpkix-jdk15on</artifactId>
       <optional>true</optional>
     </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty.npn</groupId>
+      <artifactId>npn-api</artifactId>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>org.mortbay.jetty.npn</groupId>
+      <artifactId>npn-boot</artifactId>
+      <scope>provided</scope>
+      <optional>true</optional>
+    </dependency>
   </dependencies>
 </project>
 

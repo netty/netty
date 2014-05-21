@@ -153,7 +153,7 @@ public abstract class JdkSslContext extends SslContext {
         engine.setEnabledCipherSuites(cipherSuites);
         engine.setEnabledProtocols(PROTOCOLS);
         engine.setUseClientMode(isClient());
-        return engine;
+        return wrapEngine(engine);
     }
 
     @Override
@@ -162,8 +162,10 @@ public abstract class JdkSslContext extends SslContext {
         engine.setEnabledCipherSuites(cipherSuites);
         engine.setEnabledProtocols(PROTOCOLS);
         engine.setUseClientMode(isClient());
-        return engine;
+        return wrapEngine(engine);
     }
+
+    abstract SSLEngine wrapEngine(SSLEngine engine);
 
     private static String[] toCipherSuiteArray(Iterable<String> ciphers) {
         if (ciphers == null) {

@@ -85,7 +85,7 @@ public final class OpenSslEngine extends SSLEngine {
     private volatile int destroyed;
 
     private String cipher;
-    private String protocol;
+    private volatile String applicationProtocol;
 
     // SSL Engine status variables
     private boolean isInboundDone;
@@ -95,6 +95,7 @@ public final class OpenSslEngine extends SSLEngine {
     private int lastPrimingReadResult;
 
     private final ByteBufAllocator alloc;
+    private final String fallbackApplicationProtocol;
     private SSLSession session;
 
     /**
@@ -103,7 +104,7 @@ public final class OpenSslEngine extends SSLEngine {
      * @param sslCtx an OpenSSL {@code SSL_CTX} object
      * @param alloc the {@link ByteBufAllocator} that will be used by this engine
      */
-    public OpenSslEngine(long sslCtx, ByteBufAllocator alloc) {
+    public OpenSslEngine(long sslCtx, ByteBufAllocator alloc, String fallbackApplicationProtocol) {
         OpenSsl.ensureAvailability();
         if (sslCtx == 0) {
             throw new NullPointerException("sslContext");
@@ -115,6 +116,7 @@ public final class OpenSslEngine extends SSLEngine {
         this.alloc = alloc;
         ssl = SSL.newSSL(sslCtx, true);
         networkBIO = SSL.makeNetworkBIO(ssl);
+        this.fallbackApplicationProtocol = fallbackApplicationProtocol;
     }
 
     /**
@@ -708,7 +710,13 @@ public final class OpenSslEngine extends SSLEngine {
 
                 @Override
                 public String getProtocol() {
-                    return protocol;
+                    // TODO: Figure out how to get the current protocol.
+                    String applicationProtocol = OpenSslEngine.this.applicationProtocol;
+                    if (applicationProtocol == null) {
+                        return "unknown";
+                    } else {
+                        return "unknown:" + applicationProtocol;
+                    }
                 }
 
                 @Override
@@ -796,7 +804,11 @@ public final class OpenSslEngine extends SSLEngine {
             if (SSL.isInInit(ssl) == 0) {
                 handshakeFinished = true;
                 cipher = SSL.getCipherForSSL(ssl);
-                protocol = SSL.getNextProtoNegotiated(ssl);
+                String applicationProtocol = SSL.getNextProtoNegotiated(ssl);
+                if (applicationProtocol == null) {
+                    applicationProtocol = fallbackApplicationProtocol;
+                }
+                this.applicationProtocol = applicationProtocol;
                 return FINISHED;
             }
 

@@ -21,9 +21,11 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.codec.spdy.SpdyOrHttpChooser.SelectedProtocol;
 import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+
+import java.util.Arrays;
 
 /**
  * A SPDY Server that responds to a GET request with a Hello World.
@@ -85,7 +87,13 @@ public class SpdyServer {
 
         // Configure SSL.
         SelfSignedCertificate ssc = new SelfSignedCertificate();
-        SslContext sslCtx = SslContext.newServerContext(SslProvider.JDK, ssc.certificate(), ssc.privateKey());
+        SslContext sslCtx = SslContext.newServerContext(
+                ssc.certificate(), ssc.privateKey(), null, null,
+                Arrays.asList(
+                        SelectedProtocol.SPDY_3_1.protocolName(),
+                        SelectedProtocol.HTTP_1_1.protocolName()),
+                0, 0);
+
         new SpdyServer(sslCtx, port).run();
     }
 }

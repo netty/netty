@@ -17,7 +17,6 @@ package io.netty.example.spdy.server;
 
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.handler.codec.spdy.SpdyOrHttpChooser;
-import org.eclipse.jetty.npn.NextProtoNego;
 
 import javax.net.ssl.SSLEngine;
 import java.util.logging.Logger;
@@ -41,8 +40,8 @@ public class SpdyOrHttpHandler extends SpdyOrHttpChooser {
 
     @Override
     protected SelectedProtocol getProtocol(SSLEngine engine) {
-        SpdyServerProvider provider = (SpdyServerProvider) NextProtoNego.get(engine);
-        SelectedProtocol selectedProtocol = provider.getSelectedProtocol();
+        String[] protocol = engine.getSession().getProtocol().split(":");
+        SelectedProtocol selectedProtocol = SelectedProtocol.protocol(protocol[1]);
 
         logger.info("Selected Protocol is " + selectedProtocol);
         return selectedProtocol;

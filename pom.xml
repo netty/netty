@@ -667,6 +667,9 @@
             <ignore>sun.security.x509.X500Name</ignore>
             <ignore>sun.security.x509.X509CertInfo</ignore>
             <ignore>sun.security.x509.X509CertImpl</ignore>
+
+            <!-- SSLSession implelementation -->
+            <ignore>javax.net.ssl.SSLEngine</ignore>
           </ignores>
         </configuration>
         <executions>
