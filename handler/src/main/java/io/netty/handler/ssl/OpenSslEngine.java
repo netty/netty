@@ -808,7 +808,11 @@ public final class OpenSslEngine extends SSLEngine {
                 if (applicationProtocol == null) {
                     applicationProtocol = fallbackApplicationProtocol;
                 }
-                this.applicationProtocol = applicationProtocol.replace(':', '_');
+                if (applicationProtocol != null) {
+                    this.applicationProtocol = applicationProtocol.replace(':', '_');
+                } else {
+                    this.applicationProtocol = null;
+                }
                 return FINISHED;
             }
 
