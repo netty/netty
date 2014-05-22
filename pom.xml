@@ -502,6 +502,12 @@
       <plugin>
         <artifactId>maven-antrun-plugin</artifactId>
         <version>1.7</version>
+        <configuration>
+          <target>
+            <property name="runtime_classpath" refid="maven.runtime.classpath"/>
+            <ant antfile="${antfile}"/>
+          </target>
+        </configuration>
         <executions>
           <execution>
             <id>write-version</id>
@@ -729,20 +735,6 @@
             <version>21</version>
           </dependency>
         </dependencies>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>exec-maven-plugin</artifactId>
-        <version>1.3</version>
-        <configuration>
-          <executable>${java.home}/bin/java</executable>
-          <commandlineArgs>
-            -classpath %classpath
-            ${argLine.example}
-            ${exampleClass}
-          </commandlineArgs>
-          <classpathScope>runtime</classpathScope>
-        </configuration>
       </plugin>
     </plugins>
   </build>
