@@ -285,7 +285,7 @@
             <goals>
               <goal>run</goal>
             </goals>
-            <configuration>
+            <configuration combine.self="override">
               <target>
                 <taskdef resource="net/sf/antcontrib/antlib.xml" />
                 <propertyselector property="versions" match="^(${project.groupId}:(?!netty-example)[^:]+:jar)$" select="\1" />
