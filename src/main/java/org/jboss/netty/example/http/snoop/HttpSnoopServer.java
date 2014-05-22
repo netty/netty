@@ -17,6 +17,8 @@ package org.jboss.netty.example.http.snoop;
 
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import org.jboss.netty.handler.ssl.SslContext;
+import org.jboss.netty.handler.ssl.util.SelfSignedCertificate;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
@@ -25,15 +27,21 @@ import java.util.concurrent.Executors;
  * An HTTP server that sends back the content of the received HTTP request
  * in a pretty plaintext form.
  */
-public class HttpSnoopServer {
+public final class HttpSnoopServer {
 
-    private final int port;
+    static final boolean SSL = System.getProperty("ssl") != null;
+    static final int PORT = Integer.parseInt(System.getProperty("port", SSL? "8443" : "8080"));
 
-    public HttpSnoopServer(int port) {
-        this.port = port;
-    }
+    public static void main(String[] args) throws Exception {
+        // Configure SSL.
+        final SslContext sslCtx;
+        if (SSL) {
+            SelfSignedCertificate ssc = new SelfSignedCertificate();
+            sslCtx = SslContext.newServerContext(ssc.certificate(), ssc.privateKey());
+        } else {
+            sslCtx = null;
+        }
 
-    public void run() {
         // Configure the server.
         ServerBootstrap bootstrap = new ServerBootstrap(
                 new NioServerSocketChannelFactory(
@@ -44,20 +52,9 @@ public class HttpSnoopServer {
         bootstrap.setOption("child.tcpNoDelay", true);
 
         // Set up the event pipeline factory.
-        bootstrap.setPipelineFactory(new HttpSnoopServerPipelineFactory());
+        bootstrap.setPipelineFactory(new HttpSnoopServerPipelineFactory(sslCtx));
 
         // Bind and start to accept incoming connections.
-        bootstrap.bind(new InetSocketAddress(port));
+        bootstrap.bind(new InetSocketAddress(PORT));
     }
-
-    public static void main(String[] args) {
-        int port;
-        if (args.length > 0) {
-            port = Integer.parseInt(args[0]);
-        } else {
-            port = 8080;
-        }
-        new HttpSnoopServer(port).run();
-    }
-
 }

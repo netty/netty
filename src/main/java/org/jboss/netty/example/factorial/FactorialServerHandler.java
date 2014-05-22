@@ -15,17 +15,15 @@
  */
 package org.jboss.netty.example.factorial;
 
-import java.math.BigInteger;
-import java.util.Formatter;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
+
+import java.math.BigInteger;
+import java.util.Formatter;
 
 /**
  * Handler for a server-side channel.  This handler maintains stateful
@@ -36,26 +34,20 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
  */
 public class FactorialServerHandler extends SimpleChannelUpstreamHandler {
 
-    private static final Logger logger = Logger.getLogger(
-            FactorialServerHandler.class.getName());
-
     // Stateful properties.
     private int lastMultiplier = 1;
     private BigInteger factorial = new BigInteger(new byte[] { 1 });
 
     @Override
-    public void handleUpstream(
-            ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
+    public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
         if (e instanceof ChannelStateEvent) {
-            logger.info(e.toString());
+            System.err.println(e);
         }
         super.handleUpstream(ctx, e);
     }
 
     @Override
-    public void messageReceived(
-            ChannelHandlerContext ctx, MessageEvent e) {
-
+    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
         // Calculate the cumulative factorial and send it to the client.
         BigInteger number;
         if (e.getMessage() instanceof BigInteger) {
@@ -69,19 +61,13 @@ public class FactorialServerHandler extends SimpleChannelUpstreamHandler {
     }
 
     @Override
-    public void channelDisconnected(ChannelHandlerContext ctx,
-            ChannelStateEvent e) throws Exception {
-        logger.info(new Formatter().format(
-                "Factorial of %,d is: %,d", lastMultiplier, factorial).toString());
+    public void channelDisconnected(ChannelHandlerContext ctx, ChannelStateEvent e) {
+        System.err.println(new Formatter().format("Factorial of %,d is: %,d", lastMultiplier, factorial));
     }
 
     @Override
-    public void exceptionCaught(
-            ChannelHandlerContext ctx, ExceptionEvent e) {
-        logger.log(
-                Level.WARNING,
-                "Unexpected exception from downstream.",
-                e.getCause());
+    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
+        e.getCause().printStackTrace();
         e.getChannel().close();
     }
 }

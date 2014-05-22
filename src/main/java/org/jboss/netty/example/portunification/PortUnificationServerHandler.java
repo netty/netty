@@ -54,7 +54,7 @@ public class PortUnificationServerHandler extends FrameDecoder {
     }
 
     @Override
-    protected Object decode(ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer) throws Exception {
+    protected Object decode(ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer) {
         // Will use the first 5 bytes to detect a protocol.
         if (buffer.readableBytes() < 5) {
             return null;

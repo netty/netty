@@ -26,18 +26,22 @@ import static org.jboss.netty.channel.Channels.*;
 public class HttpSnoopClientPipelineFactory implements ChannelPipelineFactory {
 
     private final SslContext sslCtx;
+    private final String host;
+    private final int port;
 
-    public HttpSnoopClientPipelineFactory(SslContext sslCtx) {
+    public HttpSnoopClientPipelineFactory(SslContext sslCtx, String host, int port) {
         this.sslCtx = sslCtx;
+        this.host = host;
+        this.port = port;
     }
 
-    public ChannelPipeline getPipeline() throws Exception {
+    public ChannelPipeline getPipeline() {
         // Create a default pipeline implementation.
         ChannelPipeline pipeline = pipeline();
 
         // Enable HTTPS if necessary.
         if (sslCtx != null) {
-            pipeline.addLast("ssl", sslCtx.newHandler());
+            pipeline.addLast("ssl", sslCtx.newHandler(host, port));
         }
 
         pipeline.addLast("codec", new HttpClientCodec());

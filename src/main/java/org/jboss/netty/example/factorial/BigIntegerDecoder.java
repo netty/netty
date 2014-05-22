@@ -15,13 +15,13 @@
  */
 package org.jboss.netty.example.factorial;
 
-import java.math.BigInteger;
-
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.handler.codec.frame.CorruptedFrameException;
 import org.jboss.netty.handler.codec.frame.FrameDecoder;
+
+import java.math.BigInteger;
 
 /**
  * Decodes the binary representation of a {@link BigInteger} prepended
@@ -32,8 +32,7 @@ import org.jboss.netty.handler.codec.frame.FrameDecoder;
 public class BigIntegerDecoder extends FrameDecoder {
 
     @Override
-    protected Object decode(
-            ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer) throws Exception {
+    protected Object decode(ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer) throws Exception {
         // Wait until the length prefix is available.
         if (buffer.readableBytes() < 5) {
             return null;
@@ -45,8 +44,7 @@ public class BigIntegerDecoder extends FrameDecoder {
         int magicNumber = buffer.readUnsignedByte();
         if (magicNumber != 'F') {
             buffer.resetReaderIndex();
-            throw new CorruptedFrameException(
-                    "Invalid magic number: " + magicNumber);
+            throw new CorruptedFrameException("Invalid magic number: " + magicNumber);
         }
 
         // Wait until the whole data is available.

@@ -15,9 +15,6 @@
  */
 package org.jboss.netty.example.telnet;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelStateEvent;
@@ -30,32 +27,23 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
  */
 public class TelnetClientHandler extends SimpleChannelUpstreamHandler {
 
-    private static final Logger logger = Logger.getLogger(
-            TelnetClientHandler.class.getName());
-
     @Override
-    public void handleUpstream(
-            ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
+    public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
         if (e instanceof ChannelStateEvent) {
-            logger.info(e.toString());
+            System.err.println(e);
         }
         super.handleUpstream(ctx, e);
     }
 
     @Override
-    public void messageReceived(
-            ChannelHandlerContext ctx, MessageEvent e) {
+    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
         // Print out the line received from the server.
         System.err.println(e.getMessage());
     }
 
     @Override
-    public void exceptionCaught(
-            ChannelHandlerContext ctx, ExceptionEvent e) {
-        logger.log(
-                Level.WARNING,
-                "Unexpected exception from downstream.",
-                e.getCause());
+    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
+        e.getCause().printStackTrace();
         e.getChannel().close();
     }
 }

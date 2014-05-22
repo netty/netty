@@ -726,9 +726,23 @@
           <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>netty-build</artifactId>
-            <version>20</version>
+            <version>21</version>
           </dependency>
         </dependencies>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>1.3</version>
+        <configuration>
+          <executable>${java.home}/bin/java</executable>
+          <commandlineArgs>
+            -classpath %classpath
+            ${argLine.example}
+            ${exampleClass}
+          </commandlineArgs>
+          <classpathScope>runtime</classpathScope>
+        </configuration>
       </plugin>
     </plugins>
   </build>

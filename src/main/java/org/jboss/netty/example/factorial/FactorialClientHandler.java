@@ -15,12 +15,6 @@
  */
 package org.jboss.netty.example.factorial;
 
-import java.math.BigInteger;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
@@ -31,6 +25,10 @@ import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 
+import java.math.BigInteger;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+
 /**
  * Handler for a client-side channel.  This handler maintains stateful
  * information which is specific to a certain channel using member variables.
@@ -40,39 +38,32 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
  */
 public class FactorialClientHandler extends SimpleChannelUpstreamHandler {
 
-    private static final Logger logger = Logger.getLogger(
-            FactorialClientHandler.class.getName());
-
     // Stateful properties
     private int i = 1;
     private int receivedMessages;
-    private final int count;
     final BlockingQueue<BigInteger> answer = new LinkedBlockingQueue<BigInteger>();
-
-    public FactorialClientHandler(int count) {
-        this.count = count;
-    }
 
     public BigInteger getFactorial() {
         boolean interrupted = false;
-        for (;;) {
-            try {
-                BigInteger factorial = answer.take();
-                if (interrupted) {
-                    Thread.currentThread().interrupt();
+        try {
+            for (;;) {
+                try {
+                    return answer.take();
+                } catch (InterruptedException ignore) {
+                    interrupted = true;
                 }
-                return factorial;
-            } catch (InterruptedException e) {
-                interrupted = true;
+            }
+        } finally {
+            if (interrupted) {
+                Thread.currentThread().interrupt();
             }
         }
     }
 
     @Override
-    public void handleUpstream(
-            ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
+    public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
         if (e instanceof ChannelStateEvent) {
-            logger.info(e.toString());
+            System.err.println(e);
         }
         super.handleUpstream(ctx, e);
     }
@@ -91,7 +82,7 @@ public class FactorialClientHandler extends SimpleChannelUpstreamHandler {
     public void messageReceived(
             ChannelHandlerContext ctx, final MessageEvent e) {
         receivedMessages ++;
-        if (receivedMessages == count) {
+        if (receivedMessages == FactorialClient.COUNT) {
             // Offer the answer after closing the connection.
             e.getChannel().close().addListener(new ChannelFutureListener() {
                 public void operationComplete(ChannelFuture future) {
@@ -103,19 +94,15 @@ public class FactorialClientHandler extends SimpleChannelUpstreamHandler {
     }
 
     @Override
-    public void exceptionCaught(
-            ChannelHandlerContext ctx, ExceptionEvent e) {
-        logger.log(
-                Level.WARNING,
-                "Unexpected exception from downstream.",
-                e.getCause());
+    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
+        e.getCause().printStackTrace();
         e.getChannel().close();
     }
 
     private void sendNumbers(ChannelStateEvent e) {
         Channel channel = e.getChannel();
         while (channel.isWritable()) {
-            if (i <= count) {
+            if (i <= FactorialClient.COUNT) {
                 channel.write(i);
                 i ++;
             } else {

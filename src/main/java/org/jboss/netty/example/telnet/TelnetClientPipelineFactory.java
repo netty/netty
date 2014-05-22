@@ -15,24 +15,34 @@
  */
 package org.jboss.netty.example.telnet;
 
-import static org.jboss.netty.channel.Channels.*;
-
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
 import org.jboss.netty.handler.codec.frame.Delimiters;
 import org.jboss.netty.handler.codec.string.StringDecoder;
 import org.jboss.netty.handler.codec.string.StringEncoder;
+import org.jboss.netty.handler.ssl.SslContext;
+
+import static org.jboss.netty.channel.Channels.*;
 
 /**
  * Creates a newly configured {@link ChannelPipeline} for a new channel.
  */
-public class TelnetClientPipelineFactory implements
-        ChannelPipelineFactory {
+public class TelnetClientPipelineFactory implements ChannelPipelineFactory {
 
-    public ChannelPipeline getPipeline() throws Exception {
+    private final SslContext sslCtx;
+
+    public TelnetClientPipelineFactory(SslContext sslCtx) {
+        this.sslCtx = sslCtx;
+    }
+
+    public ChannelPipeline getPipeline() {
         // Create a default pipeline implementation.
         ChannelPipeline pipeline = pipeline();
+
+        if (sslCtx != null) {
+            pipeline.addLast("ssl", sslCtx.newHandler());
+        }
 
         // Add the text line codec combination first,
         pipeline.addLast("framer", new DelimiterBasedFrameDecoder(

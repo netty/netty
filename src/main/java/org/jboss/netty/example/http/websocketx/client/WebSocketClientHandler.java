@@ -61,44 +61,44 @@ public class WebSocketClientHandler extends SimpleChannelUpstreamHandler {
     }
 
     @Override
-    public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-        System.out.println("WebSocket Client disconnected!");
+    public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) {
+        System.err.println("WebSocket Client disconnected!");
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
         Channel ch = ctx.getChannel();
         if (!handshaker.isHandshakeComplete()) {
             handshaker.finishHandshake(ch, (HttpResponse) e.getMessage());
-            System.out.println("WebSocket Client connected!");
+            System.err.println("WebSocket Client connected!");
             return;
         }
 
         if (e.getMessage() instanceof HttpResponse) {
             HttpResponse response = (HttpResponse) e.getMessage();
-            throw new Exception("Unexpected HttpResponse (status=" + response.getStatus() + ", content="
-                    + response.getContent().toString(CharsetUtil.UTF_8) + ')');
+            throw new IllegalStateException(
+                    "unexpected response (status=" + response.getStatus() +
+                            ", content=" + response.getContent().toString(CharsetUtil.UTF_8) + ')');
         }
 
         WebSocketFrame frame = (WebSocketFrame) e.getMessage();
         if (frame instanceof TextWebSocketFrame) {
             TextWebSocketFrame textFrame = (TextWebSocketFrame) frame;
-            System.out.println("WebSocket Client received message: " + textFrame.getText());
+            System.err.println("WebSocket Client received message: " + textFrame.getText());
         } else if (frame instanceof PongWebSocketFrame) {
-            System.out.println("WebSocket Client received pong");
+            System.err.println("WebSocket Client received pong");
         } else if (frame instanceof CloseWebSocketFrame) {
-            System.out.println("WebSocket Client received closing");
+            System.err.println("WebSocket Client received closing");
             ch.close();
         } else if (frame instanceof PingWebSocketFrame) {
-            System.out.println("WebSocket Client received ping, response with pong");
+            System.err.println("WebSocket Client received ping, response with pong");
             ch.write(new PongWebSocketFrame(frame.getBinaryData()));
         }
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
-        final Throwable t = e.getCause();
-        t.printStackTrace();
+    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
+        e.getCause().printStackTrace();
         e.getChannel().close();
     }
 }

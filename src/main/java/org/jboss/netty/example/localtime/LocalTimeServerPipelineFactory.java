@@ -15,19 +15,29 @@
  */
 package org.jboss.netty.example.localtime;
 
-import static org.jboss.netty.channel.Channels.*;
-
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.handler.codec.protobuf.ProtobufDecoder;
 import org.jboss.netty.handler.codec.protobuf.ProtobufEncoder;
 import org.jboss.netty.handler.codec.protobuf.ProtobufVarint32FrameDecoder;
 import org.jboss.netty.handler.codec.protobuf.ProtobufVarint32LengthFieldPrepender;
+import org.jboss.netty.handler.ssl.SslContext;
+
+import static org.jboss.netty.channel.Channels.*;
 
 public class LocalTimeServerPipelineFactory implements ChannelPipelineFactory {
 
-    public ChannelPipeline getPipeline() throws Exception {
+    private final SslContext sslCtx;
+
+    public LocalTimeServerPipelineFactory(SslContext sslCtx) {
+        this.sslCtx = sslCtx;
+    }
+
+    public ChannelPipeline getPipeline() {
         ChannelPipeline p = pipeline();
+        if (sslCtx != null) {
+            p.addLast("ssl", sslCtx.newHandler());
+        }
         p.addLast("frameDecoder", new ProtobufVarint32FrameDecoder());
         p.addLast("protobufDecoder", new ProtobufDecoder(LocalTimeProtocol.Locations.getDefaultInstance()));
 

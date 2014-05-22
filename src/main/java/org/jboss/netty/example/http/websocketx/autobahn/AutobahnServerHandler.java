@@ -15,11 +15,6 @@
  */
 package org.jboss.netty.example.http.websocketx.autobahn;
 
-import static org.jboss.netty.handler.codec.http.HttpHeaders.*;
-import static org.jboss.netty.handler.codec.http.HttpMethod.*;
-import static org.jboss.netty.handler.codec.http.HttpResponseStatus.*;
-import static org.jboss.netty.handler.codec.http.HttpVersion.*;
-
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
@@ -44,6 +39,11 @@ import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.CharsetUtil;
 
+import static org.jboss.netty.handler.codec.http.HttpHeaders.*;
+import static org.jboss.netty.handler.codec.http.HttpMethod.*;
+import static org.jboss.netty.handler.codec.http.HttpResponseStatus.*;
+import static org.jboss.netty.handler.codec.http.HttpVersion.*;
+
 /**
  * Handles handshakes and messages
  */
@@ -53,7 +53,7 @@ public class AutobahnServerHandler extends SimpleChannelUpstreamHandler {
     private WebSocketServerHandshaker handshaker;
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
         Object msg = e.getMessage();
         if (msg instanceof HttpRequest) {
             handleHttpRequest(ctx, (HttpRequest) msg);
@@ -62,7 +62,7 @@ public class AutobahnServerHandler extends SimpleChannelUpstreamHandler {
         }
     }
 
-    private void handleHttpRequest(ChannelHandlerContext ctx, HttpRequest req) throws Exception {
+    private void handleHttpRequest(ChannelHandlerContext ctx, HttpRequest req) {
         // Allow only GET methods.
         if (req.getMethod() != GET) {
             sendHttpResponse(ctx, req, new DefaultHttpResponse(HTTP_1_1, FORBIDDEN));
@@ -70,8 +70,8 @@ public class AutobahnServerHandler extends SimpleChannelUpstreamHandler {
         }
 
         // Handshake
-        WebSocketServerHandshakerFactory wsFactory = new WebSocketServerHandshakerFactory(
-                getWebSocketLocation(req), null, false);
+        WebSocketServerHandshakerFactory wsFactory =
+                new WebSocketServerHandshakerFactory(getWebSocketLocation(req), null, false);
         handshaker = wsFactory.newHandshaker(req);
         if (handshaker == null) {
             wsFactory.sendUnsupportedWebSocketVersionResponse(ctx.getChannel());
@@ -82,8 +82,8 @@ public class AutobahnServerHandler extends SimpleChannelUpstreamHandler {
 
     private void handleWebSocketFrame(ChannelHandlerContext ctx, WebSocketFrame frame) {
         if (logger.isDebugEnabled()) {
-            logger.debug(String
-                    .format("Channel %s received %s", ctx.getChannel().getId(), frame.getClass().getSimpleName()));
+            logger.debug(String.format(
+                    "Channel %s received %s", ctx.getChannel().getId(), frame.getClass().getSimpleName()));
         }
 
         if (frame instanceof CloseWebSocketFrame) {
@@ -124,7 +124,7 @@ public class AutobahnServerHandler extends SimpleChannelUpstreamHandler {
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
         e.getCause().printStackTrace();
         e.getChannel().close();
     }

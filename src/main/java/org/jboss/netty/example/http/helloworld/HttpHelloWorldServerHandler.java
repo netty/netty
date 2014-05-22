@@ -38,7 +38,7 @@ public class HttpHelloWorldServerHandler extends SimpleChannelUpstreamHandler {
     private static final byte[] CONTENT = { 'H', 'e', 'l', 'l', 'o', ' ', 'W', 'o', 'r', 'l', 'd' };
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
         Object msg = e.getMessage();
         Channel ch = e.getChannel();
         if (msg instanceof HttpRequest) {
@@ -66,8 +66,7 @@ public class HttpHelloWorldServerHandler extends SimpleChannelUpstreamHandler {
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
-            throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
         e.getCause().printStackTrace();
         e.getChannel().close();
     }

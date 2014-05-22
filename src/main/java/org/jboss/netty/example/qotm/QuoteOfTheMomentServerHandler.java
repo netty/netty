@@ -15,12 +15,12 @@
  */
 package org.jboss.netty.example.qotm;
 
-import java.util.Random;
-
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
+
+import java.util.Random;
 
 public class QuoteOfTheMomentServerHandler extends SimpleChannelUpstreamHandler {
 
@@ -43,8 +43,7 @@ public class QuoteOfTheMomentServerHandler extends SimpleChannelUpstreamHandler 
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
-            throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
         String msg = (String) e.getMessage();
         if ("QOTM?".equals(msg)) {
             e.getChannel().write("QOTM: " + nextQuote(), e.getRemoteAddress());
@@ -52,8 +51,7 @@ public class QuoteOfTheMomentServerHandler extends SimpleChannelUpstreamHandler 
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
-            throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
         e.getCause().printStackTrace();
         // We don't close the channel because we can keep serving requests.
     }

@@ -15,22 +15,32 @@
  */
 package org.jboss.netty.example.factorial;
 
-import static org.jboss.netty.channel.Channels.*;
-
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.handler.codec.compression.ZlibDecoder;
 import org.jboss.netty.handler.codec.compression.ZlibEncoder;
 import org.jboss.netty.handler.codec.compression.ZlibWrapper;
+import org.jboss.netty.handler.ssl.SslContext;
+
+import static org.jboss.netty.channel.Channels.*;
 
 /**
  * Creates a newly configured {@link ChannelPipeline} for a server-side channel.
  */
-public class FactorialServerPipelineFactory implements
-        ChannelPipelineFactory {
+public class FactorialServerPipelineFactory implements ChannelPipelineFactory {
 
-    public ChannelPipeline getPipeline() throws Exception {
+    private final SslContext sslCtx;
+
+    public FactorialServerPipelineFactory(SslContext sslCtx) {
+        this.sslCtx = sslCtx;
+    }
+
+    public ChannelPipeline getPipeline() {
         ChannelPipeline pipeline = pipeline();
+
+        if (sslCtx != null) {
+            pipeline.addLast("ssl", sslCtx.newHandler());
+        }
 
         // Enable stream compression (you can remove these two if unnecessary)
         pipeline.addLast("deflater", new ZlibEncoder(ZlibWrapper.GZIP));

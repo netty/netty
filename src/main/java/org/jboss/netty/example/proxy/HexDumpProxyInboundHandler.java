@@ -15,8 +15,6 @@
  */
 package org.jboss.netty.example.proxy;
 
-import java.net.InetSocketAddress;
-
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -30,11 +28,11 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
 
+import java.net.InetSocketAddress;
+
 public class HexDumpProxyInboundHandler extends SimpleChannelUpstreamHandler {
 
     private final ClientSocketChannelFactory cf;
-    private final String remoteHost;
-    private final int remotePort;
 
     // This lock guards against the race condition that overrides the
     // OP_READ flag incorrectly.
@@ -43,16 +41,12 @@ public class HexDumpProxyInboundHandler extends SimpleChannelUpstreamHandler {
 
     private volatile Channel outboundChannel;
 
-    public HexDumpProxyInboundHandler(
-            ClientSocketChannelFactory cf, String remoteHost, int remotePort) {
+    public HexDumpProxyInboundHandler(ClientSocketChannelFactory cf) {
         this.cf = cf;
-        this.remoteHost = remoteHost;
-        this.remotePort = remotePort;
     }
 
     @Override
-    public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e)
-            throws Exception {
+    public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e) {
         // Suspend incoming traffic until connected to the remote host.
         final Channel inboundChannel = e.getChannel();
         inboundChannel.setReadable(false);
@@ -60,11 +54,11 @@ public class HexDumpProxyInboundHandler extends SimpleChannelUpstreamHandler {
         // Start the connection attempt.
         ClientBootstrap cb = new ClientBootstrap(cf);
         cb.getPipeline().addLast("handler", new OutboundHandler(e.getChannel()));
-        ChannelFuture f = cb.connect(new InetSocketAddress(remoteHost, remotePort));
+        ChannelFuture f = cb.connect(new InetSocketAddress(HexDumpProxy.REMOTE_HOST, HexDumpProxy.REMOTE_PORT));
 
         outboundChannel = f.getChannel();
         f.addListener(new ChannelFutureListener() {
-            public void operationComplete(ChannelFuture future) throws Exception {
+            public void operationComplete(ChannelFuture future) {
                 if (future.isSuccess()) {
                     // Connection attempt succeeded:
                     // Begin to accept incoming traffic.
@@ -78,10 +72,9 @@ public class HexDumpProxyInboundHandler extends SimpleChannelUpstreamHandler {
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, final MessageEvent e)
-            throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, final MessageEvent e) {
         ChannelBuffer msg = (ChannelBuffer) e.getMessage();
-        //System.out.println(">>> " + ChannelBuffers.hexDump(msg));
+        //System.err.println(">>> " + ChannelBuffers.hexDump(msg));
         synchronized (trafficLock) {
             outboundChannel.write(msg);
             // If outboundChannel is saturated, do not read until notified in
@@ -93,8 +86,7 @@ public class HexDumpProxyInboundHandler extends SimpleChannelUpstreamHandler {
     }
 
     @Override
-    public void channelInterestChanged(ChannelHandlerContext ctx,
-            ChannelStateEvent e) throws Exception {
+    public void channelInterestChanged(ChannelHandlerContext ctx, ChannelStateEvent e) {
         // If inboundChannel is not saturated anymore, continue accepting
         // the incoming traffic from the outboundChannel.
         synchronized (trafficLock) {
@@ -107,16 +99,14 @@ public class HexDumpProxyInboundHandler extends SimpleChannelUpstreamHandler {
     }
 
     @Override
-    public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e)
-            throws Exception {
+    public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) {
         if (outboundChannel != null) {
             closeOnFlush(outboundChannel);
         }
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
-            throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
         e.getCause().printStackTrace();
         closeOnFlush(e.getChannel());
     }
@@ -130,10 +120,9 @@ public class HexDumpProxyInboundHandler extends SimpleChannelUpstreamHandler {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, final MessageEvent e)
-                throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, final MessageEvent e) {
             ChannelBuffer msg = (ChannelBuffer) e.getMessage();
-            //System.out.println("<<< " + ChannelBuffers.hexDump(msg));
+            //System.err.println("<<< " + ChannelBuffers.hexDump(msg));
             synchronized (trafficLock) {
                 inboundChannel.write(msg);
                 // If inboundChannel is saturated, do not read until notified in
@@ -145,8 +134,7 @@ public class HexDumpProxyInboundHandler extends SimpleChannelUpstreamHandler {
         }
 
         @Override
-        public void channelInterestChanged(ChannelHandlerContext ctx,
-                ChannelStateEvent e) throws Exception {
+        public void channelInterestChanged(ChannelHandlerContext ctx, ChannelStateEvent e) {
             // If outboundChannel is not saturated anymore, continue accepting
             // the incoming traffic from the inboundChannel.
             synchronized (trafficLock) {
@@ -157,14 +145,12 @@ public class HexDumpProxyInboundHandler extends SimpleChannelUpstreamHandler {
         }
 
         @Override
-        public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e)
-                throws Exception {
+        public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) {
             closeOnFlush(inboundChannel);
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
-                throws Exception {
+        public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
             e.getCause().printStackTrace();
             closeOnFlush(e.getChannel());
         }

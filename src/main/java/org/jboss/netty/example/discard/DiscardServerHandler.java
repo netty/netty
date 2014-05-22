@@ -15,9 +15,6 @@
  */
 package org.jboss.netty.example.discard;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -31,9 +28,6 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
  */
 public class DiscardServerHandler extends SimpleChannelUpstreamHandler {
 
-    private static final Logger logger = Logger.getLogger(
-            DiscardServerHandler.class.getName());
-
     private long transferredBytes;
 
     public long getTransferredBytes() {
@@ -43,7 +37,7 @@ public class DiscardServerHandler extends SimpleChannelUpstreamHandler {
     @Override
     public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
         if (e instanceof ChannelStateEvent) {
-            logger.info(e.toString());
+            System.err.println(e);
         }
 
         // Let SimpleChannelHandler call actual event handler methods below.
@@ -59,10 +53,7 @@ public class DiscardServerHandler extends SimpleChannelUpstreamHandler {
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
         // Close the connection when an exception is raised.
-        logger.log(
-                Level.WARNING,
-                "Unexpected exception from downstream.",
-                e.getCause());
+        e.getCause().printStackTrace();
         e.getChannel().close();
     }
 }

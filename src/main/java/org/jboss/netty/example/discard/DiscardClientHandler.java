@@ -15,9 +15,6 @@
  */
 package org.jboss.netty.example.discard;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
@@ -35,18 +32,11 @@ import org.jboss.netty.channel.WriteCompletionEvent;
  */
 public class DiscardClientHandler extends SimpleChannelUpstreamHandler {
 
-    private static final Logger logger = Logger.getLogger(
-            DiscardClientHandler.class.getName());
-
     private long transferredBytes;
     private final byte[] content;
 
-    public DiscardClientHandler(int messageSize) {
-        if (messageSize <= 0) {
-            throw new IllegalArgumentException(
-                    "messageSize: " + messageSize);
-        }
-        content = new byte[messageSize];
+    public DiscardClientHandler() {
+        content = new byte[DiscardClient.SIZE];
     }
 
     public long getTransferredBytes() {
@@ -57,7 +47,7 @@ public class DiscardClientHandler extends SimpleChannelUpstreamHandler {
     public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
         if (e instanceof ChannelStateEvent) {
             if (((ChannelStateEvent) e).getState() != ChannelState.INTEREST_OPS) {
-                logger.info(e.toString());
+                System.err.println(e);
             }
         }
 
@@ -90,10 +80,7 @@ public class DiscardClientHandler extends SimpleChannelUpstreamHandler {
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
         // Close the connection when an exception is raised.
-        logger.log(
-                Level.WARNING,
-                "Unexpected exception from downstream.",
-                e.getCause());
+        e.getCause().printStackTrace();
         e.getChannel().close();
     }
 

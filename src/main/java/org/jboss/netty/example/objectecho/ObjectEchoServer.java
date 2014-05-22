@@ -15,9 +15,6 @@
  */
 package org.jboss.netty.example.objectecho;
 
-import java.net.InetSocketAddress;
-import java.util.concurrent.Executors;
-
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
@@ -27,19 +24,30 @@ import org.jboss.netty.example.echo.EchoServer;
 import org.jboss.netty.handler.codec.serialization.ClassResolvers;
 import org.jboss.netty.handler.codec.serialization.ObjectDecoder;
 import org.jboss.netty.handler.codec.serialization.ObjectEncoder;
+import org.jboss.netty.handler.ssl.SslContext;
+import org.jboss.netty.handler.ssl.util.SelfSignedCertificate;
+
+import java.net.InetSocketAddress;
+import java.util.concurrent.Executors;
 
 /**
  * Modification of {@link EchoServer} which utilizes Java object serialization.
  */
-public class ObjectEchoServer {
+public final class ObjectEchoServer {
 
-    private final int port;
+    static final boolean SSL = System.getProperty("ssl") != null;
+    static final int PORT = Integer.parseInt(System.getProperty("port", "8007"));
 
-    public ObjectEchoServer(int port) {
-        this.port = port;
-    }
+    public static void main(String[] args) throws Exception {
+        // Configure SSL.
+        final SslContext sslCtx;
+        if (SSL) {
+            SelfSignedCertificate ssc = new SelfSignedCertificate();
+            sslCtx = SslContext.newServerContext(ssc.certificate(), ssc.privateKey());
+        } else {
+            sslCtx = null;
+        }
 
-    public void run() {
         // Configure the server.
         ServerBootstrap bootstrap = new ServerBootstrap(
                 new NioServerSocketChannelFactory(
@@ -48,26 +56,19 @@ public class ObjectEchoServer {
 
         // Set up the pipeline factory.
         bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
-            public ChannelPipeline getPipeline() throws Exception {
-                return Channels.pipeline(
+            public ChannelPipeline getPipeline() {
+                ChannelPipeline p = Channels.pipeline(
                         new ObjectEncoder(),
-                        new ObjectDecoder(
-                                ClassResolvers.cacheDisabled(getClass().getClassLoader())),
+                        new ObjectDecoder(ClassResolvers.cacheDisabled(getClass().getClassLoader())),
                         new ObjectEchoServerHandler());
+                if (sslCtx != null) {
+                    p.addFirst("ssl", sslCtx.newHandler());
+                }
+                return p;
             }
         });
 
         // Bind and start to accept incoming connections.
-        bootstrap.bind(new InetSocketAddress(port));
-    }
-
-    public static void main(String[] args) throws Exception {
-        int port;
-        if (args.length > 0) {
-            port = Integer.parseInt(args[0]);
-        } else {
-            port = 8080;
-        }
-        new ObjectEchoServer(port).run();
+        bootstrap.bind(new InetSocketAddress(PORT));
     }
 }

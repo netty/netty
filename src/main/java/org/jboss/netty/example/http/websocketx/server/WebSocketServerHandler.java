@@ -33,8 +33,6 @@ import org.jboss.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import org.jboss.netty.handler.codec.http.websocketx.WebSocketFrame;
 import org.jboss.netty.handler.codec.http.websocketx.WebSocketServerHandshaker;
 import org.jboss.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory;
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.CharsetUtil;
 
 import static org.jboss.netty.handler.codec.http.HttpHeaders.Names.*;
@@ -47,14 +45,13 @@ import static org.jboss.netty.handler.codec.http.HttpVersion.*;
  * Handles handshakes and messages
  */
 public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketServerHandler.class);
 
     private static final String WEBSOCKET_PATH = "/websocket";
 
     private WebSocketServerHandshaker handshaker;
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
         Object msg = e.getMessage();
         if (msg instanceof HttpRequest) {
             handleHttpRequest(ctx, (HttpRequest) msg);
@@ -63,7 +60,7 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
         }
     }
 
-    private void handleHttpRequest(ChannelHandlerContext ctx, HttpRequest req) throws Exception {
+    private void handleHttpRequest(ChannelHandlerContext ctx, HttpRequest req) {
         // Allow only GET methods.
         if (req.getMethod() != GET) {
             sendHttpResponse(ctx, req, new DefaultHttpResponse(HTTP_1_1, FORBIDDEN));
@@ -101,7 +98,6 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
     }
 
     private void handleWebSocketFrame(ChannelHandlerContext ctx, WebSocketFrame frame) {
-
         // Check for closing frame
         if (frame instanceof CloseWebSocketFrame) {
             handshaker.close(ctx.getChannel(), (CloseWebSocketFrame) frame);
@@ -112,15 +108,13 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
             return;
         }
         if (!(frame instanceof TextWebSocketFrame)) {
-            throw new UnsupportedOperationException(String.format("%s frame types not supported", frame.getClass()
-                    .getName()));
+            throw new UnsupportedOperationException(
+                    String.format("%s frame types not supported", frame.getClass().getName()));
         }
 
         // Send the uppercase string back.
         String request = ((TextWebSocketFrame) frame).getText();
-        if (logger.isDebugEnabled()) {
-            logger.debug(String.format("Channel %s received %s", ctx.getChannel().getId(), request));
-        }
+        System.err.println(String.format("Channel %s received %s", ctx.getChannel().getId(), request));
         ctx.getChannel().write(new TextWebSocketFrame(request.toUpperCase()));
     }
 
@@ -139,7 +133,7 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
         e.getCause().printStackTrace();
         e.getChannel().close();
     }

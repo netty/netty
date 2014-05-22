@@ -20,19 +20,25 @@ import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.handler.codec.http.HttpContentCompressor;
 import org.jboss.netty.handler.codec.http.HttpRequestDecoder;
 import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
+import org.jboss.netty.handler.ssl.SslContext;
 
 import static org.jboss.netty.channel.Channels.*;
 
 public class HttpHelloWorldServerPipelineFactory implements ChannelPipelineFactory {
-    public ChannelPipeline getPipeline() throws Exception {
+
+    private final SslContext sslCtx;
+
+    public HttpHelloWorldServerPipelineFactory(SslContext sslCtx) {
+        this.sslCtx = sslCtx;
+    }
+
+    public ChannelPipeline getPipeline() {
         // Create a default pipeline implementation.
         ChannelPipeline pipeline = pipeline();
 
-        // Uncomment the following line if you want HTTPS
-        //SSLEngine engine = SecureChatSslContextFactory.getServerContext().createSSLEngine();
-        //engine.setUseClientMode(false);
-        //pipeline.addLast("ssl", new SslHandler(engine));
-
+        if (sslCtx != null) {
+            pipeline.addLast("ssl", sslCtx.newHandler());
+        }
         pipeline.addLast("decoder", new HttpRequestDecoder());
         // Uncomment the following line if you don't want to handle HttpChunks.
         //pipeline.addLast("aggregator", new HttpChunkAggregator(1048576));

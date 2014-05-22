@@ -33,7 +33,7 @@ public class HttpStaticFileServerPipelineFactory implements ChannelPipelineFacto
         this.sslCtx = sslCtx;
     }
 
-    public ChannelPipeline getPipeline() throws Exception {
+    public ChannelPipeline getPipeline() {
         // Create a default pipeline implementation.
         ChannelPipeline pipeline = pipeline();
 

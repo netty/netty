@@ -26,19 +26,24 @@ import org.jboss.netty.handler.stream.ChunkedWriteHandler;
 import static org.jboss.netty.channel.Channels.*;
 
 public class HttpUploadClientPipelineFactory implements ChannelPipelineFactory {
-    private final SslContext sslCtx;
 
-    public HttpUploadClientPipelineFactory(SslContext sslCtx) {
+    private final SslContext sslCtx;
+    private final String host;
+    private final int port;
+
+    public HttpUploadClientPipelineFactory(SslContext sslCtx, String host, int port) {
         this.sslCtx = sslCtx;
+        this.host = host;
+        this.port = port;
     }
 
-    public ChannelPipeline getPipeline() throws Exception {
+    public ChannelPipeline getPipeline() {
         // Create a default pipeline implementation.
         ChannelPipeline pipeline = pipeline();
 
         // Enable HTTPS if necessary.
         if (sslCtx != null) {
-            SslHandler handler = sslCtx.newHandler();
+            SslHandler handler = sslCtx.newHandler(host, port);
             handler.setIssueHandshake(true);
             pipeline.addLast("ssl", handler);
         }

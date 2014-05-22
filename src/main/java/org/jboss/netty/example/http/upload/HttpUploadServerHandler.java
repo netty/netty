@@ -50,8 +50,6 @@ import org.jboss.netty.handler.codec.http.multipart.HttpPostRequestDecoder.Incom
 import org.jboss.netty.handler.codec.http.multipart.HttpPostRequestDecoder.NotEnoughDataDecoderException;
 import org.jboss.netty.handler.codec.http.multipart.InterfaceHttpData;
 import org.jboss.netty.handler.codec.http.multipart.InterfaceHttpData.HttpDataType;
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.CharsetUtil;
 
 import java.io.IOException;
@@ -64,19 +62,9 @@ import java.util.Set;
 
 public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
 
-    private static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(HttpUploadServerHandler.class);
+    private static final HttpDataFactory factory =
+            new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE); // Disk if size exceed MINSIZE
 
-    private HttpRequest request;
-
-    private boolean readingChunks;
-
-    private final StringBuilder responseContent = new StringBuilder();
-
-    private static final HttpDataFactory factory = new DefaultHttpDataFactory(
-            DefaultHttpDataFactory.MINSIZE); // Disk if size exceed MINSIZE
-
-    private HttpPostRequestDecoder decoder;
     static {
         //To limit to roughly 5MB each attribute, including fileupload
         //factory.setMaxLimit(5000000);
@@ -89,9 +77,13 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
         DiskAttribute.baseDirectory = null; // system temp directory
     }
 
+    private final StringBuilder responseContent = new StringBuilder();
+    private HttpPostRequestDecoder decoder;
+    private HttpRequest request;
+    private boolean readingChunks;
+
     @Override
-    public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e)
-            throws Exception {
+    public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) {
         if (decoder != null) {
             decoder.cleanFiles();
         }
@@ -116,18 +108,13 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
             responseContent.setLength(0);
             responseContent.append("WELCOME TO THE WILD WILD WEB SERVER\r\n");
             responseContent.append("===================================\r\n");
-
-            responseContent.append("VERSION: " +
-                    request.getProtocolVersion().getText() + "\r\n");
-
-            responseContent.append("REQUEST_URI: " + request.getUri() +
-                    "\r\n\r\n");
+            responseContent.append("VERSION: " + request.getProtocolVersion().getText() + "\r\n");
+            responseContent.append("REQUEST_URI: " + request.getUri() + "\r\n\r\n");
             responseContent.append("\r\n\r\n");
 
             // new method
             for (Entry<String, String> entry: request.headers()) {
-                responseContent.append("HEADER: " + entry.getKey() + '=' +
-                        entry.getValue() + "\r\n");
+                responseContent.append("HEADER: " + entry.getKey() + '=' + entry.getValue() + "\r\n");
             }
             responseContent.append("\r\n\r\n");
 
@@ -141,14 +128,12 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
                 cookies = decoder.decode(value);
             }
             for (Cookie cookie: cookies) {
-                responseContent.append("COOKIE: " + cookie.toString() + "\r\n");
+                responseContent.append("COOKIE: " + cookie + "\r\n");
             }
             responseContent.append("\r\n\r\n");
 
-            QueryStringDecoder decoderQuery = new QueryStringDecoder(request
-                    .getUri());
-            Map<String, List<String>> uriAttributes = decoderQuery
-                    .getParameters();
+            QueryStringDecoder decoderQuery = new QueryStringDecoder(request.getUri());
+            Map<String, List<String>> uriAttributes = decoderQuery.getParameters();
             for (Entry<String, List<String>> attr: uriAttributes.entrySet()) {
                 for (String attrVal: attr.getValue()) {
                     responseContent.append("URI: " + attr.getKey() + '=' + attrVal + "\r\n");
@@ -174,10 +159,8 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
                 return;
             }
 
-            responseContent.append("Is Chunked: " + request.isChunked() +
-                    "\r\n");
-            responseContent.append("IsMultipart: " + decoder.isMultipart() +
-                    "\r\n");
+            responseContent.append("Is Chunked: " + request.isChunked() + "\r\n");
+            responseContent.append("IsMultipart: " + decoder.isMultipart() + "\r\n");
             if (request.isChunked()) {
                 // Chunk version
                 responseContent.append("Chunks: ");
@@ -185,8 +168,7 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
             } else {
                 // Not chunk version
                 readHttpDataAllReceive(e.getChannel());
-                responseContent
-                        .append("\r\n\r\nEND OF NOT CHUNKED CONTENT\r\n");
+                responseContent.append("\r\n\r\nEND OF NOT CHUNKED CONTENT\r\n");
                 writeResponse(e.getChannel());
             }
         } else {
@@ -249,8 +231,7 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
             }
         } catch (EndOfDataDecoderException e1) {
             // end
-            responseContent
-                    .append("\r\n\r\nEND OF CONTENT CHUNK BY CHUNK\r\n\r\n");
+            responseContent.append("\r\n\r\nEND OF CONTENT CHUNK BY CHUNK\r\n\r\n");
         }
     }
 
@@ -271,17 +252,14 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
             }
             if (value.length() > 100) {
                 responseContent.append("\r\nBODY Attribute: " +
-                        attribute.getHttpDataType().name() + ": " +
-                        attribute.getName() + " data too long\r\n");
+                        attribute.getHttpDataType().name() + ": " + attribute.getName() + " data too long\r\n");
             } else {
-                responseContent.append("\r\nBODY Attribute: " +
-                        attribute.getHttpDataType().name() + ": " +
-                        attribute.toString() + "\r\n");
+                responseContent.append(
+                        "\r\nBODY Attribute: " + attribute.getHttpDataType().name() + ": " + attribute + "\r\n");
             }
         } else {
-            responseContent.append("\r\nBODY FileUpload: " +
-                    data.getHttpDataType().name() + ": " + data.toString() +
-                    "\r\n");
+            responseContent.append(
+                    "\r\nBODY FileUpload: " + data.getHttpDataType().name() + ": " + data + "\r\n");
             if (data.getHttpDataType() == HttpDataType.FileUpload) {
                 FileUpload fileUpload = (FileUpload) data;
                 if (fileUpload.isCompleted()) {
@@ -295,9 +273,8 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
                         }
                         responseContent.append("\r\n");
                     } else {
-                        responseContent
-                                .append("\tFile too long to be printed out:" +
-                                        fileUpload.length() + "\r\n");
+                        responseContent.append(
+                                "\tFile too long to be printed out:" + fileUpload.length() + "\r\n");
                     }
                     // fileUpload.isInMemory();// tells if the file is in Memory
                     // or on File
@@ -306,8 +283,7 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
                     // decoder.removeFileUploadFromClean(fileUpload); //remove
                     // the File of to delete file
                 } else {
-                    responseContent
-                            .append("\tFile to be continued but should not!\r\n");
+                    responseContent.append("\tFile to be continued but should not!\r\n");
                 }
             }
         }
@@ -315,29 +291,24 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
 
     private void writeResponse(Channel channel) {
         // Convert the response content to a ChannelBuffer.
-        ChannelBuffer buf = ChannelBuffers.copiedBuffer(responseContent
-                .toString(), CharsetUtil.UTF_8);
+        ChannelBuffer buf = ChannelBuffers.copiedBuffer(responseContent.toString(), CharsetUtil.UTF_8);
         responseContent.setLength(0);
 
         // Decide whether to close the connection or not.
-        boolean close = HttpHeaders.Values.CLOSE.equalsIgnoreCase(request
-                .headers().get(HttpHeaders.Names.CONNECTION)) ||
+        boolean close = HttpHeaders.Values.CLOSE.equalsIgnoreCase(
+                request.headers().get(HttpHeaders.Names.CONNECTION)) ||
                 request.getProtocolVersion().equals(HttpVersion.HTTP_1_0) &&
-                !HttpHeaders.Values.KEEP_ALIVE.equalsIgnoreCase(request
-                        .headers().get(HttpHeaders.Names.CONNECTION));
+                !HttpHeaders.Values.KEEP_ALIVE.equalsIgnoreCase(request.headers().get(HttpHeaders.Names.CONNECTION));
 
         // Build the response object.
-        HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1,
-                HttpResponseStatus.OK);
+        HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         response.setContent(buf);
-        response.headers().set(HttpHeaders.Names.CONTENT_TYPE,
-                "text/plain; charset=UTF-8");
+        response.headers().set(HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=UTF-8");
 
         if (!close) {
             // There's no need to add 'Content-Length' header
             // if this is the last response.
-            response.headers().set(HttpHeaders.Names.CONTENT_LENGTH, String
-                    .valueOf(buf.readableBytes()));
+            response.headers().set(HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(buf.readableBytes()));
         }
 
         Set<Cookie> cookies;
@@ -353,8 +324,7 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
             CookieEncoder cookieEncoder = new CookieEncoder(true);
             for (Cookie cookie: cookies) {
                 cookieEncoder.addCookie(cookie);
-                response.headers().add(HttpHeaders.Names.SET_COOKIE, cookieEncoder
-                        .encode());
+                response.headers().add(HttpHeaders.Names.SET_COOKIE, cookieEncoder.encode());
                 cookieEncoder = new CookieEncoder(true);
             }
         }
@@ -376,8 +346,7 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
         responseContent.append("<head>");
         responseContent.append("<title>Netty Test Form</title>\r\n");
         responseContent.append("</head>\r\n");
-        responseContent
-                .append("<body bgcolor=white><style>td{font-size: 12pt;}</style>");
+        responseContent.append("<body bgcolor=white><style>td{font-size: 12pt;}</style>");
 
         responseContent.append("<table border=\"0\">");
         responseContent.append("<tr>");
@@ -389,98 +358,66 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
         responseContent.append("</table>\r\n");
 
         // GET
-        responseContent
-                .append("<CENTER>GET FORM<HR WIDTH=\"75%\" NOSHADE color=\"blue\"></CENTER>");
+        responseContent.append("<CENTER>GET FORM<HR WIDTH=\"75%\" NOSHADE color=\"blue\"></CENTER>");
         responseContent.append("<FORM ACTION=\"/formget\" METHOD=\"GET\">");
-        responseContent
-                .append("<input type=hidden name=getform value=\"GET\">");
+        responseContent.append("<input type=hidden name=getform value=\"GET\">");
         responseContent.append("<table border=\"0\">");
-        responseContent
-                .append("<tr><td>Fill with value: <br> <input type=text name=\"info\" size=10></td></tr>");
-        responseContent
-                .append("<tr><td>Fill with value: <br> <input type=text name=\"secondinfo\" size=20>");
-        responseContent
-                .append("<tr><td>Fill with value: <br> <textarea name=\"thirdinfo\" cols=40 rows=10></textarea>");
+        responseContent.append("<tr><td>Fill with value:<br> <input type=text name=\"info\" size=10></td></tr>");
+        responseContent.append("<tr><td>Fill with value:<br> <input type=text name=\"secondinfo\" size=20>");
+        responseContent.append("<tr><td>Fill with value:<br> <textarea name=\"thirdinfo\" cols=40 rows=10></textarea>");
         responseContent.append("</td></tr>");
-        responseContent
-                .append("<tr><td><INPUT TYPE=\"submit\" NAME=\"Send\" VALUE=\"Send\"></INPUT></td>");
-        responseContent
-                .append("<td><INPUT TYPE=\"reset\" NAME=\"Clear\" VALUE=\"Clear\" ></INPUT></td></tr>");
+        responseContent.append("<tr><td><INPUT TYPE=\"submit\" NAME=\"Send\" VALUE=\"Send\"></INPUT></td>");
+        responseContent.append("<td><INPUT TYPE=\"reset\" NAME=\"Clear\" VALUE=\"Clear\" ></INPUT></td></tr>");
         responseContent.append("</table></FORM>\r\n");
-        responseContent
-                .append("<CENTER><HR WIDTH=\"75%\" NOSHADE color=\"blue\"></CENTER>");
+        responseContent.append("<CENTER><HR WIDTH=\"75%\" NOSHADE color=\"blue\"></CENTER>");
 
         // POST
-        responseContent
-                .append("<CENTER>POST FORM<HR WIDTH=\"75%\" NOSHADE color=\"blue\"></CENTER>");
+        responseContent.append("<CENTER>POST FORM<HR WIDTH=\"75%\" NOSHADE color=\"blue\"></CENTER>");
         responseContent.append("<FORM ACTION=\"/formpost\" METHOD=\"POST\">");
-        responseContent
-                .append("<input type=hidden name=getform value=\"POST\">");
+        responseContent.append("<input type=hidden name=getform value=\"POST\">");
         responseContent.append("<table border=\"0\">");
-        responseContent
-                .append("<tr><td>Fill with value: <br> <input type=text name=\"info\" size=10></td></tr>");
-        responseContent
-                .append("<tr><td>Fill with value: <br> <input type=text name=\"secondinfo\" size=20>");
-        responseContent
-                .append("<tr><td>Fill with value: <br> <textarea name=\"thirdinfo\" cols=40 rows=10></textarea>");
-        responseContent
-                .append("<tr><td>Fill with file (only file name will be transmitted): <br> " +
-                        "<input type=file name=\"myfile\">");
+        responseContent.append("<tr><td>Fill with value:<br> <input type=text name=\"info\" size=10></td></tr>");
+        responseContent.append("<tr><td>Fill with value:<br> <input type=text name=\"secondinfo\" size=20>");
+        responseContent.append("<tr><td>Fill with value:<br> <textarea name=\"thirdinfo\" cols=40 rows=10></textarea>");
+        responseContent.append("<tr><td>Fill with file (only file name will be transmitted): <br> ");
+        responseContent.append("<input type=file name=\"myfile\">");
         responseContent.append("</td></tr>");
-        responseContent
-                .append("<tr><td><INPUT TYPE=\"submit\" NAME=\"Send\" VALUE=\"Send\"></INPUT></td>");
-        responseContent
-                .append("<td><INPUT TYPE=\"reset\" NAME=\"Clear\" VALUE=\"Clear\" ></INPUT></td></tr>");
+        responseContent.append("<tr><td><INPUT TYPE=\"submit\" NAME=\"Send\" VALUE=\"Send\"></INPUT></td>");
+        responseContent.append("<td><INPUT TYPE=\"reset\" NAME=\"Clear\" VALUE=\"Clear\" ></INPUT></td></tr>");
         responseContent.append("</table></FORM>\r\n");
-        responseContent
-                .append("<CENTER><HR WIDTH=\"75%\" NOSHADE color=\"blue\"></CENTER>");
+        responseContent.append("<CENTER><HR WIDTH=\"75%\" NOSHADE color=\"blue\"></CENTER>");
 
         // POST with enctype="multipart/form-data"
-        responseContent
-                .append("<CENTER>POST MULTIPART FORM<HR WIDTH=\"75%\" NOSHADE color=\"blue\"></CENTER>");
-        responseContent
-                .append("<FORM ACTION=\"/formpostmultipart\" ENCTYPE=\"multipart/form-data\" METHOD=\"POST\">");
-        responseContent
-                .append("<input type=hidden name=getform value=\"POST\">");
+        responseContent.append("<CENTER>POST MULTIPART FORM<HR WIDTH=\"75%\" NOSHADE color=\"blue\"></CENTER>");
+        responseContent.append("<FORM ACTION=\"/formpostmultipart\" ENCTYPE=\"multipart/form-data\" METHOD=\"POST\">");
+        responseContent.append("<input type=hidden name=getform value=\"POST\">");
         responseContent.append("<table border=\"0\">");
-        responseContent
-                .append("<tr><td>Fill with value: <br> <input type=text name=\"info\" size=10></td></tr>");
-        responseContent
-                .append("<tr><td>Fill with value: <br> <input type=text name=\"secondinfo\" size=20>");
-        responseContent
-                .append("<tr><td>Fill with value: <br> <textarea name=\"thirdinfo\" cols=40 rows=10></textarea>");
-        responseContent
-                .append("<tr><td>Fill with file: <br> <input type=file name=\"myfile\">");
+        responseContent.append("<tr><td>Fill with value:<br> <input type=text name=\"info\" size=10></td></tr>");
+        responseContent.append("<tr><td>Fill with value:<br> <input type=text name=\"secondinfo\" size=20>");
+        responseContent.append("<tr><td>Fill with value:<br> <textarea name=\"thirdinfo\" cols=40 rows=10></textarea>");
+        responseContent.append("<tr><td>Fill with file: <br> <input type=file name=\"myfile\">");
         responseContent.append("</td></tr>");
-        responseContent
-                .append("<tr><td><INPUT TYPE=\"submit\" NAME=\"Send\" VALUE=\"Send\"></INPUT></td>");
-        responseContent
-                .append("<td><INPUT TYPE=\"reset\" NAME=\"Clear\" VALUE=\"Clear\" ></INPUT></td></tr>");
+        responseContent.append("<tr><td><INPUT TYPE=\"submit\" NAME=\"Send\" VALUE=\"Send\"></INPUT></td>");
+        responseContent.append("<td><INPUT TYPE=\"reset\" NAME=\"Clear\" VALUE=\"Clear\" ></INPUT></td></tr>");
         responseContent.append("</table></FORM>\r\n");
-        responseContent
-                .append("<CENTER><HR WIDTH=\"75%\" NOSHADE color=\"blue\"></CENTER>");
+        responseContent.append("<CENTER><HR WIDTH=\"75%\" NOSHADE color=\"blue\"></CENTER>");
 
         responseContent.append("</body>");
         responseContent.append("</html>");
 
-        ChannelBuffer buf = ChannelBuffers.copiedBuffer(responseContent
-                .toString(), CharsetUtil.UTF_8);
+        ChannelBuffer buf = ChannelBuffers.copiedBuffer(responseContent.toString(), CharsetUtil.UTF_8);
         // Build the response object.
-        HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1,
-                HttpResponseStatus.OK);
+        HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         response.setContent(buf);
-        response.headers().set(HttpHeaders.Names.CONTENT_TYPE,
-                "text/html; charset=UTF-8");
-        response.headers().set(HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(buf
-                .readableBytes()));
+        response.headers().set(HttpHeaders.Names.CONTENT_TYPE, "text/html; charset=UTF-8");
+        response.headers().set(HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(buf.readableBytes()));
         // Write the response.
         e.getChannel().write(response);
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
-            throws Exception {
-        logger.error(responseContent.toString(), e.getCause());
+    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
+        e.getCause().printStackTrace();
         e.getChannel().close();
     }
 }

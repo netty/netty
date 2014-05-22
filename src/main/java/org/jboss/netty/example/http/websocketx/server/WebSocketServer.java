@@ -15,11 +15,13 @@
  */
 package org.jboss.netty.example.http.websocketx.server;
 
-import java.net.InetSocketAddress;
-import java.util.concurrent.Executors;
-
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import org.jboss.netty.handler.ssl.SslContext;
+import org.jboss.netty.handler.ssl.util.SelfSignedCertificate;
+
+import java.net.InetSocketAddress;
+import java.util.concurrent.Executors;
 
 /**
  * A HTTP server which serves Web Socket requests at:
@@ -42,34 +44,30 @@ import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
  */
 public class WebSocketServer {
 
-    private final int port;
+    static final boolean SSL = System.getProperty("ssl") != null;
+    static final int PORT = Integer.parseInt(System.getProperty("port", SSL? "8443" : "8080"));
 
-    public WebSocketServer(int port) {
-        this.port = port;
-    }
+    public static void main(String[] args) throws Exception {
+        // Configure SSL.
+        final SslContext sslCtx;
+        if (SSL) {
+            SelfSignedCertificate ssc = new SelfSignedCertificate();
+            sslCtx = SslContext.newServerContext(ssc.certificate(), ssc.privateKey());
+        } else {
+            sslCtx = null;
+        }
 
-    public void run() {
         // Configure the server.
         ServerBootstrap bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(
                 Executors.newCachedThreadPool(), Executors.newCachedThreadPool()));
 
         // Set up the event pipeline factory.
-        bootstrap.setPipelineFactory(new WebSocketServerPipelineFactory());
+        bootstrap.setPipelineFactory(new WebSocketServerPipelineFactory(sslCtx));
 
         // Bind and start to accept incoming connections.
-        bootstrap.bind(new InetSocketAddress(port));
+        bootstrap.bind(new InetSocketAddress(PORT));
 
-        System.out.println("Web socket server started at port " + port + '.');
-        System.out.println("Open your browser and navigate to http://localhost:" + port + '/');
-    }
-
-    public static void main(String[] args) {
-        int port;
-        if (args.length > 0) {
-            port = Integer.parseInt(args[0]);
-        } else {
-            port = 8080;
-        }
-        new WebSocketServer(port).run();
+        System.err.println("Web socket server started at port " + PORT + '.');
+        System.err.println("Open your browser and navigate to http://localhost:" + PORT + '/');
     }
 }

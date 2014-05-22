@@ -41,88 +41,81 @@ import java.util.concurrent.Executors;
  * for the detailed instruction on how to deploy the server-side HTTP tunnel in
  * your Servlet container.
  */
-public class HttpTunnelingClientExample {
+public final class HttpTunnelingClientExample {
 
-    private final URI uri;
+    static final String URL = System.getProperty("url", "http://localhost:8080/netty-tunnel");
 
-    public HttpTunnelingClientExample(URI uri) {
-        this.uri = uri;
-    }
-
-    public void run() throws Exception {
+    public static void main(String[] args) throws Exception {
+        URI uri = new URI(URL);
         String scheme = uri.getScheme() == null? "http" : uri.getScheme();
+        String host = uri.getHost() == null? "127.0.0.1" : uri.getHost();
+        int port = uri.getPort();
+        if (port == -1) {
+            if ("http".equalsIgnoreCase(scheme)) {
+                port = 80;
+            } else if ("https".equalsIgnoreCase(scheme)) {
+                port = 443;
+            }
+        }
+
+        if (!"http".equalsIgnoreCase(scheme) && !"https".equalsIgnoreCase(scheme)) {
+            System.err.println("Only HTTP(S) is supported.");
+            return;
+        }
 
         // Configure the client.
         ClientBootstrap b = new ClientBootstrap(
                 new HttpTunnelingClientSocketChannelFactory(
                         new OioClientSocketChannelFactory(Executors.newCachedThreadPool())));
 
-        b.setPipelineFactory(new ChannelPipelineFactory() {
-            public ChannelPipeline getPipeline() throws Exception {
-                return Channels.pipeline(
-                        new StringDecoder(),
-                        new StringEncoder(),
-                        new LoggingHandler(InternalLogLevel.INFO));
-            }
-        });
+        try {
+            b.setPipelineFactory(new ChannelPipelineFactory() {
+                public ChannelPipeline getPipeline() {
+                    return Channels.pipeline(
+                            new StringDecoder(),
+                            new StringEncoder(),
+                            new LoggingHandler(InternalLogLevel.INFO));
+                }
+            });
 
-        // Set additional options required by the HTTP tunneling transport.
-        b.setOption("serverName", uri.getHost());
-        b.setOption("serverPath", uri.getRawPath());
+            // Set additional options required by the HTTP tunneling transport.
+            b.setOption("serverName", uri.getHost());
+            b.setOption("serverPath", uri.getRawPath());
 
-        // Configure SSL if necessary
-        if ("https".equals(scheme)) {
-            b.setOption("sslContext", new JdkSslClientContext(InsecureTrustManagerFactory.INSTANCE).context());
-        } else if (!"http".equals(scheme)) {
-            // Only HTTP and HTTPS are supported.
-            System.err.println("Only HTTP(S) is supported.");
-            return;
-        }
-
-        // Make the connection attempt.
-        ChannelFuture channelFuture = b.connect(
-                new InetSocketAddress(uri.getHost(), uri.getPort()));
-        channelFuture.awaitUninterruptibly();
-
-        // Read commands from the stdin.
-        System.out.println("Enter text ('quit' to exit)");
-        ChannelFuture lastWriteFuture = null;
-        BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
-        for (; ;) {
-            String line = in.readLine();
-            if (line == null || "quit".equalsIgnoreCase(line)) {
-                break;
+            // Configure SSL if necessary
+            if ("https".equals(scheme)) {
+                b.setOption("sslContext", new JdkSslClientContext(InsecureTrustManagerFactory.INSTANCE).context());
             }
 
-            // Sends the received line to the server.
-            lastWriteFuture = channelFuture.getChannel().write(line);
+            // Make the connection attempt.
+            ChannelFuture channelFuture = b.connect(new InetSocketAddress(host, port));
+            channelFuture.sync();
+
+            // Read commands from the stdin.
+            System.err.println("Enter text ('quit' to exit)");
+
+            ChannelFuture lastWriteFuture = null;
+            BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+            for (;;) {
+                String line = in.readLine();
+                if (line == null || "quit".equalsIgnoreCase(line)) {
+                    break;
+                }
+
+                // Sends the received line to the server.
+                lastWriteFuture = channelFuture.getChannel().write(line);
+            }
+
+            // Wait until all messages are flushed before closing the channel.
+            if (lastWriteFuture != null) {
+                lastWriteFuture.sync();
+            }
+
+            // Close the connection.
+            channelFuture.getChannel().close().sync();
+        } finally {
+            // Shut down all threads.
+            b.releaseExternalResources();
         }
-
-        // Wait until all messages are flushed before closing the channel.
-        if (lastWriteFuture != null) {
-            lastWriteFuture.awaitUninterruptibly();
-        }
-
-        channelFuture.getChannel().close();
-        // Wait until the connection is closed or the connection attempt fails.
-        channelFuture.getChannel().getCloseFuture().awaitUninterruptibly();
-
-        // Shut down all threads.
-        b.releaseExternalResources();
-    }
-
-    public static void main(String[] args) throws Exception {
-        if (args.length != 1) {
-            System.err.println(
-                    "Usage: " + HttpTunnelingClientExample.class.getSimpleName() +
-                    " <URL>");
-            System.err.println(
-                    "Example: " + HttpTunnelingClientExample.class.getSimpleName() +
-                    " http://localhost:8080/netty-tunnel");
-            return;
-        }
-
-        URI uri = new URI(args[0]);
-        new HttpTunnelingClientExample(uri).run();
     }
 }

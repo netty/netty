@@ -30,36 +30,28 @@ import org.jboss.netty.example.localtime.LocalTimeProtocol.Locations;
 
 import java.util.Calendar;
 import java.util.TimeZone;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import static java.util.Calendar.*;
 
 public class LocalTimeServerHandler extends SimpleChannelUpstreamHandler {
 
-    private static final Logger logger = Logger.getLogger(
-            LocalTimeServerHandler.class.getName());
-
     @Override
-    public void handleUpstream(
-            ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
+    public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
         if (e instanceof ChannelStateEvent) {
-            logger.info(e.toString());
+            System.err.println(e);
         }
         super.handleUpstream(ctx, e);
     }
 
     @Override
-    public void messageReceived(
-            ChannelHandlerContext ctx, MessageEvent e) {
+    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
 
         Locations locations = (Locations) e.getMessage();
         long currentTime = System.currentTimeMillis();
 
         LocalTimes.Builder builder = LocalTimes.newBuilder();
         for (Location l: locations.getLocationList()) {
-            TimeZone tz = TimeZone.getTimeZone(
-                    toString(l.getContinent()) + '/' + l.getCity());
+            TimeZone tz = TimeZone.getTimeZone(toString(l.getContinent()) + '/' + l.getCity());
             Calendar calendar = getInstance(tz);
             calendar.setTimeInMillis(currentTime);
 
@@ -77,12 +69,8 @@ public class LocalTimeServerHandler extends SimpleChannelUpstreamHandler {
     }
 
     @Override
-    public void exceptionCaught(
-            ChannelHandlerContext ctx, ExceptionEvent e) {
-        logger.log(
-                Level.WARNING,
-                "Unexpected exception from downstream.",
-                e.getCause());
+    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
+        e.getCause().printStackTrace();
         e.getChannel().close();
     }
 

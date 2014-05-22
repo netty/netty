@@ -36,17 +36,14 @@ import java.util.concurrent.Executors;
  * A simple HTTP client that prints out the content of the HTTP response to
  * {@link System#out} to test {@link HttpSnoopServer}.
  */
-public class HttpSnoopClient {
+public final class HttpSnoopClient {
 
-    private final URI uri;
+    static final String URL = System.getProperty("url", "http://127.0.0.1:8080/");
 
-    public HttpSnoopClient(URI uri) {
-        this.uri = uri;
-    }
-
-    public void run() throws Exception {
+    public static void main(String[] args) throws Exception {
+        URI uri = new URI(URL);
         String scheme = uri.getScheme() == null? "http" : uri.getScheme();
-        String host = uri.getHost() == null? "localhost" : uri.getHost();
+        String host = uri.getHost() == null? "127.0.0.1" : uri.getHost();
         int port = uri.getPort();
         if (port == -1) {
             if ("http".equalsIgnoreCase(scheme)) {
@@ -76,52 +73,37 @@ public class HttpSnoopClient {
                         Executors.newCachedThreadPool(),
                         Executors.newCachedThreadPool()));
 
-        // Set up the event pipeline factory.
-        bootstrap.setPipelineFactory(new HttpSnoopClientPipelineFactory(sslCtx));
+        try {
+            // Set up the event pipeline factory.
+            bootstrap.setPipelineFactory(new HttpSnoopClientPipelineFactory(sslCtx, host, port));
 
-        // Start the connection attempt.
-        ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
+            // Start the connection attempt.
+            ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
 
-        // Wait until the connection attempt succeeds or fails.
-        Channel channel = future.awaitUninterruptibly().getChannel();
-        if (!future.isSuccess()) {
-            future.getCause().printStackTrace();
+            // Wait until the connection attempt succeeds or fails.
+            Channel channel = future.sync().getChannel();
+
+            // Prepare the HTTP request.
+            HttpRequest request = new DefaultHttpRequest(
+                    HttpVersion.HTTP_1_1, HttpMethod.GET, uri.getRawPath());
+            request.headers().set(HttpHeaders.Names.HOST, host);
+            request.headers().set(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
+            request.headers().set(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP);
+
+            // Set some example cookies.
+            CookieEncoder httpCookieEncoder = new CookieEncoder(false);
+            httpCookieEncoder.addCookie("my-cookie", "foo");
+            httpCookieEncoder.addCookie("another-cookie", "bar");
+            request.headers().set(HttpHeaders.Names.COOKIE, httpCookieEncoder.encode());
+
+            // Send the HTTP request.
+            channel.write(request);
+
+            // Wait for the server to close the connection.
+            channel.getCloseFuture().sync();
+        } finally {
+            // Shut down executor threads to exit.
             bootstrap.releaseExternalResources();
-            return;
         }
-
-        // Prepare the HTTP request.
-        HttpRequest request = new DefaultHttpRequest(
-                HttpVersion.HTTP_1_1, HttpMethod.GET, uri.getRawPath());
-        request.headers().set(HttpHeaders.Names.HOST, host);
-        request.headers().set(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
-        request.headers().set(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP);
-
-        // Set some example cookies.
-        CookieEncoder httpCookieEncoder = new CookieEncoder(false);
-        httpCookieEncoder.addCookie("my-cookie", "foo");
-        httpCookieEncoder.addCookie("another-cookie", "bar");
-        request.headers().set(HttpHeaders.Names.COOKIE, httpCookieEncoder.encode());
-
-        // Send the HTTP request.
-        channel.write(request);
-
-        // Wait for the server to close the connection.
-        channel.getCloseFuture().awaitUninterruptibly();
-
-        // Shut down executor threads to exit.
-        bootstrap.releaseExternalResources();
-    }
-
-    public static void main(String[] args) throws Exception {
-        if (args.length != 1) {
-            System.err.println(
-                    "Usage: " + HttpSnoopClient.class.getSimpleName() +
-                    " <URL>");
-            return;
-        }
-
-        URI uri = new URI(args[0]);
-        new HttpSnoopClient(uri).run();
     }
 }

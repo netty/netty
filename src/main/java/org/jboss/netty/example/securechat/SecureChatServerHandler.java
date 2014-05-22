@@ -29,32 +29,24 @@ import org.jboss.netty.channel.group.DefaultChannelGroup;
 import org.jboss.netty.handler.ssl.SslHandler;
 
 import java.net.InetAddress;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Handles a server-side channel.
  */
 public class SecureChatServerHandler extends SimpleChannelUpstreamHandler {
 
-    private static final Logger logger = Logger.getLogger(
-            SecureChatServerHandler.class.getName());
-
     static final ChannelGroup channels = new DefaultChannelGroup();
 
     @Override
-    public void handleUpstream(
-            ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
+    public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
         if (e instanceof ChannelStateEvent) {
-            logger.info(e.toString());
+            System.err.println(e);
         }
         super.handleUpstream(ctx, e);
     }
 
     @Override
-    public void channelConnected(
-            ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-
+    public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) {
         // Get the SslHandler in the current pipeline.
         // We added it in SecureChatPipelineFactory.
         final SslHandler sslHandler = ctx.getPipeline().get(SslHandler.class);
@@ -65,16 +57,14 @@ public class SecureChatServerHandler extends SimpleChannelUpstreamHandler {
     }
 
     @Override
-    public void channelDisconnected(
-            ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+    public void channelDisconnected(ChannelHandlerContext ctx, ChannelStateEvent e) {
         // Unregister the channel from the global channel list
         // so the channel does not receive messages anymore.
         channels.remove(e.getChannel());
     }
 
     @Override
-    public void messageReceived(
-            ChannelHandlerContext ctx, MessageEvent e) {
+    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
 
         // Convert to a String first.
         String request = (String) e.getMessage();
@@ -96,12 +86,8 @@ public class SecureChatServerHandler extends SimpleChannelUpstreamHandler {
     }
 
     @Override
-    public void exceptionCaught(
-            ChannelHandlerContext ctx, ExceptionEvent e) {
-        logger.log(
-                Level.WARNING,
-                "Unexpected exception from downstream.",
-                e.getCause());
+    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
+        e.getCause().printStackTrace();
         e.getChannel().close();
     }
 
@@ -117,11 +103,9 @@ public class SecureChatServerHandler extends SimpleChannelUpstreamHandler {
             if (future.isSuccess()) {
                 // Once session is secured, send a greeting.
                 future.getChannel().write(
-                        "Welcome to " + InetAddress.getLocalHost().getHostName() +
-                        " secure chat service!\n");
+                        "Welcome to " + InetAddress.getLocalHost().getHostName() + " secure chat service!\n");
                 future.getChannel().write(
-                        "Your session is protected by " +
-                        sslHandler.getEngine().getSession().getCipherSuite() +
+                        "Your session is protected by " + sslHandler.getEngine().getSession().getCipherSuite() +
                         " cipher suite.\n");
 
                 // Register the channel to the global channel list

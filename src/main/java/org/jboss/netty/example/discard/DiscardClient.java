@@ -15,75 +15,63 @@
  */
 package org.jboss.netty.example.discard;
 
-import java.net.InetSocketAddress;
-import java.util.concurrent.Executors;
-
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
+import org.jboss.netty.handler.ssl.SslContext;
+import org.jboss.netty.handler.ssl.util.InsecureTrustManagerFactory;
+
+import java.net.InetSocketAddress;
+import java.util.concurrent.Executors;
 
 /**
  * Keeps sending random data to the specified address.
  */
-public class DiscardClient {
+public final class DiscardClient {
 
-    private final String host;
-    private final int port;
-    private final int firstMessageSize;
+    static final boolean SSL = System.getProperty("ssl") != null;
+    static final String HOST = System.getProperty("host", "127.0.0.1");
+    static final int PORT = Integer.parseInt(System.getProperty("port", "8009"));
+    static final int SIZE = Integer.parseInt(System.getProperty("size", "256"));
 
-    public DiscardClient(String host, int port, int firstMessageSize) {
-        this.host = host;
-        this.port = port;
-        this.firstMessageSize = firstMessageSize;
-    }
+    public static void main(String[] args) throws Exception {
+        // Configure SSL.
+        final SslContext sslCtx;
+        if (SSL) {
+            sslCtx = SslContext.newClientContext(InsecureTrustManagerFactory.INSTANCE);
+        } else {
+            sslCtx = null;
+        }
 
-    public void run() {
-        // Configure the client.
+        // Configure the bootstrap.
         ClientBootstrap bootstrap = new ClientBootstrap(
                 new NioClientSocketChannelFactory(
                         Executors.newCachedThreadPool(),
                         Executors.newCachedThreadPool()));
 
-        // Set up the pipeline factory.
-        bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
-            public ChannelPipeline getPipeline() throws Exception {
-                return Channels.pipeline(
-                        new DiscardClientHandler(firstMessageSize));
-            }
-        });
+        try {
+            bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
+                public ChannelPipeline getPipeline() {
+                    ChannelPipeline p = Channels.pipeline();
+                    if (sslCtx != null) {
+                        p.addLast("ssl", sslCtx.newHandler(HOST, PORT));
+                    }
+                    p.addLast("discard", new DiscardClientHandler());
+                    return p;
+                }
+            });
 
-        // Start the connection attempt.
-        ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
+            // Start the connection attempt.
+            ChannelFuture future = bootstrap.connect(new InetSocketAddress(HOST, PORT));
 
-        // Wait until the connection is closed or the connection attempt fails.
-        future.getChannel().getCloseFuture().awaitUninterruptibly();
-
-        // Shut down thread pools to exit.
-        bootstrap.releaseExternalResources();
-    }
-
-    public static void main(String[] args) throws Exception {
-        // Print usage if no argument is specified.
-        if (args.length < 2 || args.length > 3) {
-            System.err.println(
-                    "Usage: " + DiscardClient.class.getSimpleName() +
-                    " <host> <port> [<first message size>]");
-            return;
+            // Wait until the connection is closed or the connection attempt fails.
+            future.getChannel().getCloseFuture().sync();
+        } finally {
+            // Shut down thread pools to exit.
+            bootstrap.releaseExternalResources();
         }
-
-        // Parse options.
-        final String host = args[0];
-        final int port = Integer.parseInt(args[1]);
-        final int firstMessageSize;
-        if (args.length == 3) {
-            firstMessageSize = Integer.parseInt(args[2]);
-        } else {
-            firstMessageSize = 256;
-        }
-
-        new DiscardClient(host, port, firstMessageSize).run();
     }
 }

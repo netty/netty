@@ -15,10 +15,6 @@
  */
 package org.jboss.netty.example.local;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.ChannelFuture;
@@ -34,76 +30,69 @@ import org.jboss.netty.handler.codec.string.StringEncoder;
 import org.jboss.netty.handler.logging.LoggingHandler;
 import org.jboss.netty.logging.InternalLogLevel;
 
-public class LocalExample {
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 
-    private final String port;
+public final class LocalExample {
 
-    public LocalExample(String port) {
-        this.port = port;
-    }
-
-    public void run() throws IOException {
-        // Address to bind on / connect to.
-        LocalAddress socketAddress = new LocalAddress(port);
-
-        // Configure the server.
-        ServerBootstrap sb = new ServerBootstrap(
-                new DefaultLocalServerChannelFactory());
-
-        // Set up the default server-side event pipeline.
-        EchoServerHandler handler = new EchoServerHandler();
-        sb.getPipeline().addLast("handler", handler);
-
-        // Start up the server.
-        sb.bind(socketAddress);
-
-        // Configure the client.
-        ClientBootstrap cb = new ClientBootstrap(
-                new DefaultLocalClientChannelFactory());
-
-        // Set up the client-side pipeline factory.
-        cb.setPipelineFactory(new ChannelPipelineFactory() {
-            public ChannelPipeline getPipeline() throws Exception {
-                return Channels.pipeline(
-                        new StringDecoder(),
-                        new StringEncoder(),
-                        new LoggingHandler(InternalLogLevel.INFO));
-            }
-        });
-
-        // Make the connection attempt to the server.
-        ChannelFuture channelFuture = cb.connect(socketAddress);
-        channelFuture.awaitUninterruptibly();
-
-        // Read commands from the stdin.
-        System.out.println("Enter text (quit to end)");
-        ChannelFuture lastWriteFuture = null;
-        BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
-        for (; ;) {
-            String line = in.readLine();
-            if (line == null || "quit".equalsIgnoreCase(line)) {
-                break;
-            }
-
-            // Sends the received line to the server.
-            lastWriteFuture = channelFuture.getChannel().write(line);
-        }
-
-        // Wait until all messages are flushed before closing the channel.
-        if (lastWriteFuture != null) {
-            lastWriteFuture.awaitUninterruptibly();
-        }
-        channelFuture.getChannel().close();
-
-        // Wait until the connection is closed or the connection attempt fails.
-        channelFuture.getChannel().getCloseFuture().awaitUninterruptibly();
-
-        // Release all resources used by the local transport.
-        cb.releaseExternalResources();
-        sb.releaseExternalResources();
-    }
+    static final String PORT = System.getProperty("port", "test_port");
 
     public static void main(String[] args) throws Exception {
-        new LocalExample("1").run();
+        // Address to bind on / connect to.
+        LocalAddress socketAddress = new LocalAddress(PORT);
+
+        // Create the bootstraps for both client and server side.
+        ServerBootstrap sb = new ServerBootstrap(new DefaultLocalServerChannelFactory());
+        ClientBootstrap cb = new ClientBootstrap(new DefaultLocalClientChannelFactory());
+
+        try {
+            // Set up the default server-side event pipeline.
+            EchoServerHandler handler = new EchoServerHandler();
+            sb.getPipeline().addLast("handler", handler);
+
+            // Start up the server.
+            sb.bind(socketAddress);
+
+            // Set up the client-side pipeline factory.
+            cb.setPipelineFactory(new ChannelPipelineFactory() {
+                public ChannelPipeline getPipeline() {
+                    return Channels.pipeline(
+                            new StringDecoder(),
+                            new StringEncoder(),
+                            new LoggingHandler(InternalLogLevel.INFO));
+                }
+            });
+
+            // Make the connection attempt to the server.
+            ChannelFuture channelFuture = cb.connect(socketAddress);
+            channelFuture.sync();
+
+            // Read commands from the stdin.
+            System.err.println("Enter text (quit to end)");
+            ChannelFuture lastWriteFuture = null;
+            BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+            for (;;) {
+                String line = in.readLine();
+                if (line == null || "quit".equalsIgnoreCase(line)) {
+                    break;
+                }
+
+                // Sends the received line to the server.
+                lastWriteFuture = channelFuture.getChannel().write(line);
+            }
+
+            // Wait until all messages are flushed before closing the channel.
+            if (lastWriteFuture != null) {
+                lastWriteFuture.sync();
+            }
+            channelFuture.getChannel().close();
+
+            // Wait until the connection is closed or the connection attempt fails.
+            channelFuture.getChannel().getCloseFuture().sync();
+        } finally {
+            // Release all resources used by the local transport.
+            cb.releaseExternalResources();
+            sb.releaseExternalResources();
+        }
     }
 }

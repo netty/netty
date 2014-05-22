@@ -15,9 +15,6 @@
  */
 package org.jboss.netty.example.uptime;
 
-import java.net.InetSocketAddress;
-import java.util.concurrent.Executors;
-
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelPipeline;
@@ -28,29 +25,25 @@ import org.jboss.netty.handler.timeout.ReadTimeoutHandler;
 import org.jboss.netty.util.HashedWheelTimer;
 import org.jboss.netty.util.Timer;
 
+import java.net.InetSocketAddress;
+import java.util.concurrent.Executors;
+
 
 /**
  * Connects to a server periodically to measure and print the uptime of the
  * server.  This example demonstrates how to implement reliable reconnection
  * mechanism in Netty.
  */
-public class UptimeClient {
+public final class UptimeClient {
 
+    static final String HOST = System.getProperty("host", "127.0.0.1");
+    static final int PORT = Integer.parseInt(System.getProperty("port", "8080"));
     // Sleep 5 seconds before a reconnection attempt.
-    static final int RECONNECT_DELAY = 5;
-
+    static final int RECONNECT_DELAY = Integer.parseInt(System.getProperty("reconnectDelay", "5"));
     // Reconnect when the server sends nothing for 10 seconds.
-    private static final int READ_TIMEOUT = 10;
+    static final int READ_TIMEOUT = Integer.parseInt(System.getProperty("readTimeout", "10"));
 
-    private final String host;
-    private final int port;
-
-    public UptimeClient(String host, int port) {
-        this.host = host;
-        this.port = port;
-    }
-
-    public void run() {
+    public static void main(String[] args) throws Exception {
         // Initialize the timer that schedules subsequent reconnection attempts.
         final Timer timer = new HashedWheelTimer();
 
@@ -63,38 +56,18 @@ public class UptimeClient {
         // Configure the pipeline factory.
         bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
 
-            private final ChannelHandler timeoutHandler =
-                new ReadTimeoutHandler(timer, READ_TIMEOUT);
-            private final ChannelHandler uptimeHandler =
-                new UptimeClientHandler(bootstrap, timer);
+            private final ChannelHandler timeoutHandler = new ReadTimeoutHandler(timer, READ_TIMEOUT);
+            private final ChannelHandler uptimeHandler = new UptimeClientHandler(bootstrap, timer);
 
-            public ChannelPipeline getPipeline() throws Exception {
-                return Channels.pipeline(
-                        timeoutHandler, uptimeHandler);
+            public ChannelPipeline getPipeline() {
+                return Channels.pipeline(timeoutHandler, uptimeHandler);
             }
         });
 
-        bootstrap.setOption(
-                "remoteAddress", new InetSocketAddress(host, port));
+        bootstrap.setOption("remoteAddress", new InetSocketAddress(HOST, PORT));
 
         // Initiate the first connection attempt - the rest is handled by
         // UptimeClientHandler.
         bootstrap.connect();
-    }
-
-    public static void main(String[] args) throws Exception {
-        // Print usage if no argument is specified.
-        if (args.length != 2) {
-            System.err.println(
-                    "Usage: " + UptimeClient.class.getSimpleName() +
-                    " <host> <port>");
-            return;
-        }
-
-        // Parse options.
-        String host = args[0];
-        int port = Integer.parseInt(args[1]);
-
-        new UptimeClient(host, port).run();
     }
 }

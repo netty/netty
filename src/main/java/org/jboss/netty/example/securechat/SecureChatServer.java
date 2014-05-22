@@ -27,17 +27,14 @@ import java.util.concurrent.Executors;
 /**
  * Simple SSL chat server modified from {@link TelnetServer}.
  */
-public class SecureChatServer {
+public final class SecureChatServer {
 
-    private final SslContext sslCtx;
-    private final int port;
+    static final int PORT = Integer.parseInt(System.getProperty("port", "8992"));
 
-    public SecureChatServer(SslContext sslCtx, int port) {
-        this.sslCtx = sslCtx;
-        this.port = port;
-    }
+    public static void main(String[] args) throws Exception {
+        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        SslContext sslCtx = SslContext.newServerContext(ssc.certificate(), ssc.privateKey());
 
-    public void run() {
         // Configure the server.
         ServerBootstrap bootstrap = new ServerBootstrap(
                 new NioServerSocketChannelFactory(
@@ -48,19 +45,6 @@ public class SecureChatServer {
         bootstrap.setPipelineFactory(new SecureChatServerPipelineFactory(sslCtx));
 
         // Bind and start to accept incoming connections.
-        bootstrap.bind(new InetSocketAddress(port));
-    }
-
-    public static void main(String[] args) throws Exception {
-        int port;
-        if (args.length > 0) {
-            port = Integer.parseInt(args[0]);
-        } else {
-            port = 8443;
-        }
-
-        SelfSignedCertificate ssc = new SelfSignedCertificate();
-        SslContext sslCtx = SslContext.newServerContext(ssc.certificate(), ssc.privateKey());
-        new SecureChatServer(sslCtx, port).run();
+        bootstrap.bind(new InetSocketAddress(PORT));
     }
 }

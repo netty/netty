@@ -15,11 +15,6 @@
  */
 package org.jboss.netty.example.telnet;
 
-import java.net.InetAddress;
-import java.util.Date;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
@@ -29,35 +24,31 @@ import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 
+import java.net.InetAddress;
+import java.util.Date;
+
 /**
  * Handles a server-side channel.
  */
 public class TelnetServerHandler extends SimpleChannelUpstreamHandler {
 
-    private static final Logger logger = Logger.getLogger(
-            TelnetServerHandler.class.getName());
-
     @Override
-    public void handleUpstream(
-            ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
+    public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
         if (e instanceof ChannelStateEvent) {
-            logger.info(e.toString());
+            System.err.println(e);
         }
         super.handleUpstream(ctx, e);
     }
 
     @Override
-    public void channelConnected(
-            ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+    public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
         // Send greeting for a new connection.
-        e.getChannel().write(
-                "Welcome to " + InetAddress.getLocalHost().getHostName() + "!\r\n");
+        e.getChannel().write("Welcome to " + InetAddress.getLocalHost().getHostName() + "!\r\n");
         e.getChannel().write("It is " + new Date() + " now.\r\n");
     }
 
     @Override
-    public void messageReceived(
-            ChannelHandlerContext ctx, MessageEvent e) {
+    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
 
         // Cast to a String first.
         // We know it is a String because we put some codec in TelnetPipelineFactory.
@@ -87,12 +78,8 @@ public class TelnetServerHandler extends SimpleChannelUpstreamHandler {
     }
 
     @Override
-    public void exceptionCaught(
-            ChannelHandlerContext ctx, ExceptionEvent e) {
-        logger.log(
-                Level.WARNING,
-                "Unexpected exception from downstream.",
-                e.getCause());
+    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
+        e.getCause().printStackTrace();
         e.getChannel().close();
     }
 }

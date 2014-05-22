@@ -19,108 +19,65 @@ import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
+import org.jboss.netty.handler.ssl.SslContext;
+import org.jboss.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Executors;
-import java.util.regex.Pattern;
 
 /**
  * Sends a list of continent/city pairs to a {@link LocalTimeServer} to
  * get the local times of the specified cities.
  */
-public class LocalTimeClient {
+public final class LocalTimeClient {
 
-    private final String host;
-    private final int port;
-    private final Collection<String> cities;
+    static final boolean SSL = System.getProperty("ssl") != null;
+    static final String HOST = System.getProperty("host", "127.0.0.1");
+    static final int PORT = Integer.parseInt(System.getProperty("port", "8463"));
+    static final List<String> CITIES = Arrays.asList(System.getProperty(
+            "cities", "Asia/Seoul,Europe/Berlin,America/Los_Angeles").split(","));
 
-    public LocalTimeClient(String host, int port, Collection<String> cities) {
-        this.host = host;
-        this.port = port;
-        this.cities = new ArrayList<String>();
-        this.cities.addAll(cities);
-    }
+    public static void main(String[] args) throws Exception {
+        // Configure SSL.
+        final SslContext sslCtx;
+        if (SSL) {
+            sslCtx = SslContext.newClientContext(InsecureTrustManagerFactory.INSTANCE);
+        } else {
+            sslCtx = null;
+        }
 
-    public void run() {
-        // Set up.
         ClientBootstrap bootstrap = new ClientBootstrap(
                 new NioClientSocketChannelFactory(
                         Executors.newCachedThreadPool(),
                         Executors.newCachedThreadPool()));
+        try {
+            // Configure the event pipeline factory.
+            bootstrap.setPipelineFactory(new LocalTimeClientPipelineFactory(sslCtx));
 
-        // Configure the event pipeline factory.
-        bootstrap.setPipelineFactory(new LocalTimeClientPipelineFactory());
+            // Make a new connection.
+            ChannelFuture connectFuture = bootstrap.connect(new InetSocketAddress(HOST, PORT));
 
-        // Make a new connection.
-        ChannelFuture connectFuture =
-            bootstrap.connect(new InetSocketAddress(host, port));
+            // Wait until the connection is made successfully.
+            Channel channel = connectFuture.sync().getChannel();
 
-        // Wait until the connection is made successfully.
-        Channel channel = connectFuture.awaitUninterruptibly().getChannel();
+            // Get the handler instance to initiate the request.
+            LocalTimeClientHandler handler = channel.getPipeline().get(LocalTimeClientHandler.class);
 
-        // Get the handler instance to initiate the request.
-        LocalTimeClientHandler handler =
-            channel.getPipeline().get(LocalTimeClientHandler.class);
+            // Request and get the response.
+            List<String> response = handler.getLocalTimes(CITIES);
 
-        // Request and get the response.
-        List<String> response = handler.getLocalTimes(cities);
-        // Close the connection.
-        channel.close().awaitUninterruptibly();
+            // Close the connection.
+            channel.close().sync();
 
-        // Shut down all thread pools to exit.
-        bootstrap.releaseExternalResources();
-
-        // Print the response at last but not least.
-        Iterator<String> i1 = cities.iterator();
-        Iterator<String> i2 = response.iterator();
-        while (i1.hasNext()) {
-            System.out.format("%28s: %s%n", i1.next(), i2.next());
-        }
-    }
-
-    public static void main(String[] args) throws Exception {
-        // Print usage if necessary.
-        if (args.length < 3) {
-            printUsage();
-            return;
-        }
-
-        // Parse options.
-        String host = args[0];
-        int port = Integer.parseInt(args[1]);
-        Collection<String> cities = parseCities(args, 2);
-        if (cities == null) {
-            return;
-        }
-
-        new LocalTimeClient(host, port, cities).run();
-    }
-
-    private static void printUsage() {
-        System.err.println(
-                "Usage: " + LocalTimeClient.class.getSimpleName() +
-                " <host> <port> <continent/city_name> ...");
-        System.err.println(
-                "Example: " + LocalTimeClient.class.getSimpleName() +
-                " localhost 8080 America/New_York Asia/Seoul");
-    }
-
-    private static final Pattern CITY_PATTERN = Pattern.compile("^[_A-Za-z]+/[_A-Za-z]+$");
-
-    private static List<String> parseCities(String[] args, int offset) {
-        List<String> cities = new ArrayList<String>();
-        for (int i = offset; i < args.length; i ++) {
-            if (!CITY_PATTERN.matcher(args[i]).matches()) {
-                System.err.println("Syntax error: '" + args[i] + '\'');
-                printUsage();
-                return null;
+            // Print the response at last but not least.
+            for (int i = 0; i < CITIES.size(); i ++) {
+                System.out.format("%28s: %s%n", CITIES.get(i), response.get(i));
             }
-            cities.add(args[i].trim());
+        } finally {
+            // Shut down all thread pools to exit.
+            bootstrap.releaseExternalResources();
         }
-        return cities;
     }
 }

@@ -15,10 +15,6 @@
  */
 package org.jboss.netty.example.uptime;
 
-import java.net.ConnectException;
-import java.net.InetSocketAddress;
-import java.util.concurrent.TimeUnit;
-
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelStateEvent;
@@ -28,6 +24,10 @@ import org.jboss.netty.handler.timeout.ReadTimeoutException;
 import org.jboss.netty.util.Timeout;
 import org.jboss.netty.util.Timer;
 import org.jboss.netty.util.TimerTask;
+
+import java.net.ConnectException;
+import java.net.InetSocketAddress;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Keep reconnecting to the server while printing out the current uptime and
@@ -57,7 +57,7 @@ public class UptimeClientHandler extends SimpleChannelUpstreamHandler {
     public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) {
         println("Sleeping for: " + UptimeClient.RECONNECT_DELAY + 's');
         timer.newTimeout(new TimerTask() {
-            public void run(Timeout timeout) throws Exception {
+            public void run(Timeout timeout) {
                 println("Reconnecting to: " + getRemoteAddress());
                 bootstrap.connect();
             }
@@ -89,7 +89,7 @@ public class UptimeClientHandler extends SimpleChannelUpstreamHandler {
         ctx.getChannel().close();
     }
 
-    void println(String msg) {
+    private void println(String msg) {
         if (startTime < 0) {
             System.err.format("[SERVER IS DOWN] %s%n", msg);
         } else {

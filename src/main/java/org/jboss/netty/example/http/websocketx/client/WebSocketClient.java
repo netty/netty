@@ -36,11 +36,6 @@
 //THE SOFTWARE.
 package org.jboss.netty.example.http.websocketx.client;
 
-import java.net.InetSocketAddress;
-import java.net.URI;
-import java.util.HashMap;
-import java.util.concurrent.Executors;
-
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
@@ -57,16 +52,53 @@ import org.jboss.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import org.jboss.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
 import org.jboss.netty.handler.codec.http.websocketx.WebSocketClientHandshakerFactory;
 import org.jboss.netty.handler.codec.http.websocketx.WebSocketVersion;
+import org.jboss.netty.handler.ssl.SslContext;
+import org.jboss.netty.handler.ssl.util.SelfSignedCertificate;
 
-public class WebSocketClient {
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.Executors;
 
-    private final URI uri;
+public final class WebSocketClient {
 
-    public WebSocketClient(URI uri) {
-        this.uri = uri;
-    }
+    static final String URL = System.getProperty("url", "ws://127.0.0.1:8080/websocket");
 
-    public void run() throws Exception {
+    public static void main(String[] args) throws Exception {
+        URI uri = new URI(URL);
+        String scheme = uri.getScheme() == null? "http" : uri.getScheme();
+        final String host = uri.getHost() == null? "127.0.0.1" : uri.getHost();
+        final int port;
+        if (uri.getPort() == -1) {
+            if ("http".equalsIgnoreCase(scheme)) {
+                port = 80;
+            } else if ("https".equalsIgnoreCase(scheme)) {
+                port = 443;
+            } else {
+                port = -1;
+            }
+        } else {
+            port = uri.getPort();
+        }
+
+        if (!"ws".equalsIgnoreCase(scheme) && !"wss".equalsIgnoreCase(scheme)) {
+            System.err.println("Only WS(S) is supported.");
+            return;
+        }
+
+        final boolean ssl = "wss".equalsIgnoreCase(scheme);
+        final SslContext sslCtx;
+        if (ssl) {
+            SelfSignedCertificate ssc = new SelfSignedCertificate();
+            sslCtx = SslContext.newServerContext(ssc.certificate(), ssc.privateKey());
+        } else {
+            sslCtx = null;
+        }
+
+        Map<String, String> customHeaders = new HashMap<String, String>();
+        customHeaders.put("MyHeader", "MyValue");
+
         ClientBootstrap bootstrap =
                 new ClientBootstrap(
                         new NioClientSocketChannelFactory(
@@ -74,16 +106,7 @@ public class WebSocketClient {
                                 Executors.newCachedThreadPool()));
 
         Channel ch = null;
-
         try {
-            String protocol = uri.getScheme();
-            if (!"ws".equals(protocol)) {
-                throw new IllegalArgumentException("Unsupported protocol: " + protocol);
-            }
-
-            HashMap<String, String> customHeaders = new HashMap<String, String>();
-            customHeaders.put("MyHeader", "MyValue");
-
             // Connect with V13 (RFC 6455 aka HyBi-17). You can change it to V08 or V00.
             // If you change it to V00, ping is not supported and remember to change
             // HttpResponseDecoder to WebSocketHttpResponseDecoder in the pipeline.
@@ -92,9 +115,12 @@ public class WebSocketClient {
                             uri, WebSocketVersion.V13, null, false, customHeaders);
 
             bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
-                public ChannelPipeline getPipeline() throws Exception {
+                public ChannelPipeline getPipeline() {
                     ChannelPipeline pipeline = Channels.pipeline();
 
+                    if (sslCtx != null) {
+                        pipeline.addLast("ssl", sslCtx.newHandler(host, port));
+                    }
                     pipeline.addLast("decoder", new HttpResponseDecoder());
                     pipeline.addLast("encoder", new HttpRequestEncoder());
                     pipeline.addLast("ws-handler", new WebSocketClientHandler(handshaker));
@@ -102,48 +128,31 @@ public class WebSocketClient {
                 }
             });
 
-            // Connect
-            System.out.println("WebSocket Client connecting");
-            ChannelFuture future =
-                    bootstrap.connect(
-                            new InetSocketAddress(uri.getHost(), uri.getPort()));
-            future.syncUninterruptibly();
+            // Connect.
+            ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
+            ch = future.sync().getChannel();
 
-            ch = future.getChannel();
-            handshaker.handshake(ch).syncUninterruptibly();
+            handshaker.handshake(ch).sync();
 
             // Send 10 messages and wait for responses
-            System.out.println("WebSocket Client sending message");
             for (int i = 0; i < 1000; i++) {
                 ch.write(new TextWebSocketFrame("Message #" + i));
             }
 
             // Ping
-            System.out.println("WebSocket Client sending ping");
-            ch.write(new PingWebSocketFrame(ChannelBuffers.copiedBuffer(new byte[]{1, 2, 3, 4, 5, 6})));
+            ch.write(new PingWebSocketFrame(ChannelBuffers.wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6 })));
 
             // Close
-            System.out.println("WebSocket Client sending close");
             ch.write(new CloseWebSocketFrame());
 
             // WebSocketClientHandler will close the connection when the server
             // responds to the CloseWebSocketFrame.
-            ch.getCloseFuture().awaitUninterruptibly();
+            ch.getCloseFuture().sync();
         } finally {
             if (ch != null) {
                 ch.close();
             }
             bootstrap.releaseExternalResources();
         }
-    }
-
-    public static void main(String[] args) throws Exception {
-        URI uri;
-        if (args.length > 0) {
-            uri = new URI(args[0]);
-        } else {
-            uri = new URI("ws://localhost:8080/websocket");
-        }
-        new WebSocketClient(uri).run();
     }
 }

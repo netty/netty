@@ -23,8 +23,7 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 public class QuoteOfTheMomentClientHandler extends SimpleChannelUpstreamHandler {
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
-            throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
         String msg = (String) e.getMessage();
         if (msg.startsWith("QOTM: ")) {
             System.out.println("Quote of the Moment: " + msg.substring(6));
@@ -33,8 +32,7 @@ public class QuoteOfTheMomentClientHandler extends SimpleChannelUpstreamHandler 
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
-            throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
         e.getCause().printStackTrace();
         e.getChannel().close();
     }

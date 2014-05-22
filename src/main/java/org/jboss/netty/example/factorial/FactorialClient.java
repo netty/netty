@@ -15,76 +15,59 @@
  */
 package org.jboss.netty.example.factorial;
 
-import java.net.InetSocketAddress;
-import java.util.concurrent.Executors;
-
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
+import org.jboss.netty.handler.ssl.SslContext;
+import org.jboss.netty.handler.ssl.util.InsecureTrustManagerFactory;
+
+import java.net.InetSocketAddress;
+import java.util.concurrent.Executors;
 
 /**
  * Sends a sequence of integers to a {@link FactorialServer} to calculate
  * the factorial of the specified integer.
  */
-public class FactorialClient {
+public final class FactorialClient {
 
-    private final String host;
-    private final int port;
-    private final int count;
+    static final boolean SSL = System.getProperty("ssl") != null;
+    static final String HOST = System.getProperty("host", "127.0.0.1");
+    static final int PORT = Integer.parseInt(System.getProperty("port", "8322"));
+    static final int COUNT = Integer.parseInt(System.getProperty("count", "1000"));
 
-    public FactorialClient(String host, int port, int count) {
-        this.host = host;
-        this.port = port;
-        this.count = count;
-    }
+    public static void main(String[] args) throws Exception {
+        // Configure SSL.
+        final SslContext sslCtx;
+        if (SSL) {
+            sslCtx = SslContext.newClientContext(InsecureTrustManagerFactory.INSTANCE);
+        } else {
+            sslCtx = null;
+        }
 
-    public void run() {
-        // Configure the client.
+        // Configure the bootstrap.
         ClientBootstrap bootstrap = new ClientBootstrap(
                 new NioClientSocketChannelFactory(
                         Executors.newCachedThreadPool(),
                         Executors.newCachedThreadPool()));
 
-        // Set up the event pipeline factory.
-        bootstrap.setPipelineFactory(new FactorialClientPipelineFactory(count));
+        try {
+            bootstrap.setPipelineFactory(new FactorialClientPipelineFactory(sslCtx));
 
-        // Make a new connection.
-        ChannelFuture connectFuture =
-            bootstrap.connect(new InetSocketAddress(host, port));
+            // Make a new connection.
+            ChannelFuture connectFuture = bootstrap.connect(new InetSocketAddress(HOST, PORT));
 
-        // Wait until the connection is made successfully.
-        Channel channel = connectFuture.awaitUninterruptibly().getChannel();
+            // Wait until the connection is made successfully.
+            Channel channel = connectFuture.sync().getChannel();
 
-        // Get the handler instance to retrieve the answer.
-        FactorialClientHandler handler =
-            (FactorialClientHandler) channel.getPipeline().getLast();
+            // Get the handler instance to retrieve the answer.
+            FactorialClientHandler handler = (FactorialClientHandler) channel.getPipeline().getLast();
 
-        // Print out the answer.
-        System.err.format(
-                "Factorial of %,d is: %,d", count, handler.getFactorial());
-
-        // Shut down all thread pools to exit.
-        bootstrap.releaseExternalResources();
-    }
-
-    public static void main(String[] args) throws Exception {
-        // Print usage if no argument is specified.
-        if (args.length != 3) {
-            System.err.println(
-                    "Usage: " + FactorialClient.class.getSimpleName() +
-                    " <host> <port> <count>");
-            return;
+            // Print out the answer.
+            System.err.format("Factorial of %,d is: %,d", COUNT, handler.getFactorial());
+        } finally {
+            // Shut down all thread pools to exit.
+            bootstrap.releaseExternalResources();
         }
-
-        // Parse options.
-        String host = args[0];
-        int port = Integer.parseInt(args[1]);
-        int count = Integer.parseInt(args[2]);
-        if (count <= 0) {
-            throw new IllegalArgumentException("count must be a positive integer.");
-        }
-
-        new FactorialClient(host, port, count).run();
     }
 }

@@ -15,10 +15,8 @@
  */
 package org.jboss.netty.example.objectecho;
 
-import java.net.InetSocketAddress;
-import java.util.concurrent.Executors;
-
 import org.jboss.netty.bootstrap.ClientBootstrap;
+import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
@@ -27,64 +25,61 @@ import org.jboss.netty.example.echo.EchoClient;
 import org.jboss.netty.handler.codec.serialization.ClassResolvers;
 import org.jboss.netty.handler.codec.serialization.ObjectDecoder;
 import org.jboss.netty.handler.codec.serialization.ObjectEncoder;
+import org.jboss.netty.handler.ssl.SslContext;
+import org.jboss.netty.handler.ssl.util.InsecureTrustManagerFactory;
+
+import java.net.InetSocketAddress;
+import java.util.concurrent.Executors;
 
 /**
  * Modification of {@link EchoClient} which utilizes Java object serialization.
  */
-public class ObjectEchoClient {
+public final class ObjectEchoClient {
 
-    private final String host;
-    private final int port;
-    private final int firstMessageSize;
+    static final boolean SSL = System.getProperty("ssl") != null;
+    static final String HOST = System.getProperty("host", "127.0.0.1");
+    static final int PORT = Integer.parseInt(System.getProperty("port", "8007"));
+    static final int SIZE = Integer.parseInt(System.getProperty("size", "256"));
 
-    public ObjectEchoClient(String host, int port, int firstMessageSize) {
-        this.host = host;
-        this.port = port;
-        this.firstMessageSize = firstMessageSize;
-    }
+    public static void main(String[] args) throws Exception {
+        // Configure SSL.
+        final SslContext sslCtx;
+        if (SSL) {
+            sslCtx = SslContext.newClientContext(InsecureTrustManagerFactory.INSTANCE);
+        } else {
+            sslCtx = null;
+        }
 
-    public void run() {
         // Configure the client.
         ClientBootstrap bootstrap = new ClientBootstrap(
                 new NioClientSocketChannelFactory(
                         Executors.newCachedThreadPool(),
                         Executors.newCachedThreadPool()));
 
-        // Set up the pipeline factory.
-        bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
-            public ChannelPipeline getPipeline() throws Exception {
-                return Channels.pipeline(
-                        new ObjectEncoder(),
-                        new ObjectDecoder(
-                                ClassResolvers.cacheDisabled(getClass().getClassLoader())),
-                        new ObjectEchoClientHandler(firstMessageSize));
-            }
-        });
+        try {
+            // Set up the pipeline factory.
+            bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
+                public ChannelPipeline getPipeline() {
+                    ChannelPipeline p = Channels.pipeline(
+                            new ObjectEncoder(),
+                            new ObjectDecoder(ClassResolvers.cacheDisabled(getClass().getClassLoader())),
+                            new ObjectEchoClientHandler(SIZE)
+                    );
 
-        // Start the connection attempt.
-        bootstrap.connect(new InetSocketAddress(host, port));
-    }
+                    if (sslCtx != null) {
+                        p.addFirst("ssl", sslCtx.newHandler(HOST, PORT));
+                    }
+                    return p;
+                }
+            });
 
-    public static void main(String[] args) throws Exception {
-        // Print usage if no argument is specified.
-        if (args.length < 2 || args.length > 3) {
-            System.err.println(
-                    "Usage: " + ObjectEchoClient.class.getSimpleName() +
-                    " <host> <port> [<first message size>]");
-            return;
+            // Start the connection attempt.
+            ChannelFuture f = bootstrap.connect(new InetSocketAddress(HOST, PORT));
+
+            // Wait until the connection attempt is finished and then the connection is closed.
+            f.sync().getChannel().getCloseFuture().sync();
+        } finally {
+            bootstrap.releaseExternalResources();
         }
-
-        // Parse options.
-        final String host = args[0];
-        final int port = Integer.parseInt(args[1]);
-        final int firstMessageSize;
-
-        if (args.length == 3) {
-            firstMessageSize = Integer.parseInt(args[2]);
-        } else {
-            firstMessageSize = 256;
-        }
-
-        new ObjectEchoClient(host, port, firstMessageSize).run();
     }
 }

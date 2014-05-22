@@ -36,7 +36,7 @@ public class SecureChatClientPipelineFactory implements ChannelPipelineFactory {
         this.sslCtx = sslCtx;
     }
 
-    public ChannelPipeline getPipeline() throws Exception {
+    public ChannelPipeline getPipeline() {
         ChannelPipeline pipeline = pipeline();
 
         // Add SSL handler first to encrypt and decrypt everything.
@@ -44,11 +44,10 @@ public class SecureChatClientPipelineFactory implements ChannelPipelineFactory {
         // and accept any invalid certificates in the client side.
         // You will need something more complicated to identify both
         // and server in the real world.
-        pipeline.addLast("ssl", sslCtx.newHandler());
+        pipeline.addLast("ssl", sslCtx.newHandler(SecureChatClient.HOST, SecureChatClient.PORT));
 
         // On top of the SSL handler, add the text line codec.
-        pipeline.addLast("framer", new DelimiterBasedFrameDecoder(
-                8192, Delimiters.lineDelimiter()));
+        pipeline.addLast("framer", new DelimiterBasedFrameDecoder(8192, Delimiters.lineDelimiter()));
         pipeline.addLast("decoder", new StringDecoder());
         pipeline.addLast("encoder", new StringEncoder());
 

@@ -15,40 +15,34 @@
  */
 package org.jboss.netty.example.qotm;
 
-import java.net.InetSocketAddress;
-
 import org.jboss.netty.bootstrap.ConnectionlessBootstrap;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.FixedReceiveBufferSizePredictorFactory;
-import org.jboss.netty.channel.socket.DatagramChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioDatagramChannelFactory;
 import org.jboss.netty.handler.codec.string.StringDecoder;
 import org.jboss.netty.handler.codec.string.StringEncoder;
 import org.jboss.netty.util.CharsetUtil;
 
+import java.net.InetSocketAddress;
+
 /**
- * A UDP server that responds to the QOTM (quote of the moment) request to a
- * {@link QuoteOfTheMomentClient}.
+ * A UDP server that responds to the QOTM (quote of the moment) request to a {@link QuoteOfTheMomentClient}.
  *
- * Inspired by <a href="http://goo.gl/BsXVR">the official Java tutorial</a>.
+ * Inspired by <a href="http://docs.oracle.com/javase/tutorial/networking/datagrams/clientServer.html">the official
+ * Java tutorial</a>.
  */
-public class QuoteOfTheMomentServer {
+public final class QuoteOfTheMomentServer {
 
-    private final int port;
+    private static final int PORT = Integer.parseInt(System.getProperty("port", "7686"));
 
-    public QuoteOfTheMomentServer(int port) {
-        this.port = port;
-    }
-
-    public void run() {
-        DatagramChannelFactory f = new NioDatagramChannelFactory();
-        ConnectionlessBootstrap b = new ConnectionlessBootstrap(f);
+    public static void main(String[] args) throws Exception {
+        ConnectionlessBootstrap b = new ConnectionlessBootstrap(new NioDatagramChannelFactory());
 
         // Configure the pipeline factory.
         b.setPipelineFactory(new ChannelPipelineFactory() {
-            public ChannelPipeline getPipeline() throws Exception {
+            public ChannelPipeline getPipeline() {
                 return Channels.pipeline(
                         new StringEncoder(CharsetUtil.ISO_8859_1),
                         new StringDecoder(CharsetUtil.ISO_8859_1),
@@ -74,16 +68,6 @@ public class QuoteOfTheMomentServer {
                 new FixedReceiveBufferSizePredictorFactory(1024));
 
         // Bind to the port and start the service.
-        b.bind(new InetSocketAddress(port));
-    }
-
-    public static void main(String[] args) throws Exception {
-        int port;
-        if (args.length > 0) {
-            port = Integer.parseInt(args[0]);
-        } else {
-            port = 8080;
-        }
-        new QuoteOfTheMomentServer(port).run();
+        b.bind(new InetSocketAddress(PORT));
     }
 }

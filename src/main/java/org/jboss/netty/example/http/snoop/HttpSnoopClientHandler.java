@@ -28,42 +28,42 @@ public class HttpSnoopClientHandler extends SimpleChannelUpstreamHandler {
     private boolean readingChunks;
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
         if (!readingChunks) {
             HttpResponse response = (HttpResponse) e.getMessage();
 
-            System.out.println("STATUS: " + response.getStatus());
-            System.out.println("VERSION: " + response.getProtocolVersion());
-            System.out.println();
+            System.err.println("STATUS: " + response.getStatus());
+            System.err.println("VERSION: " + response.getProtocolVersion());
+            System.err.println();
 
             if (!response.headers().names().isEmpty()) {
                 for (String name: response.headers().names()) {
                     for (String value: response.headers().getAll(name)) {
-                        System.out.println("HEADER: " + name + " = " + value);
+                        System.err.println("HEADER: " + name + " = " + value);
                     }
                 }
-                System.out.println();
+                System.err.println();
             }
 
             if (response.isChunked()) {
                 readingChunks = true;
-                System.out.println("CHUNKED CONTENT {");
+                System.err.println("CHUNKED CONTENT {");
             } else {
                 ChannelBuffer content = response.getContent();
                 if (content.readable()) {
-                    System.out.println("CONTENT {");
-                    System.out.println(content.toString(CharsetUtil.UTF_8));
-                    System.out.println("} END OF CONTENT");
+                    System.err.println("CONTENT {");
+                    System.err.println(content.toString(CharsetUtil.UTF_8));
+                    System.err.println("} END OF CONTENT");
                 }
             }
         } else {
             HttpChunk chunk = (HttpChunk) e.getMessage();
             if (chunk.isLast()) {
                 readingChunks = false;
-                System.out.println("} END OF CHUNKED CONTENT");
+                System.err.println("} END OF CHUNKED CONTENT");
             } else {
-                System.out.print(chunk.getContent().toString(CharsetUtil.UTF_8));
-                System.out.flush();
+                System.err.print(chunk.getContent().toString(CharsetUtil.UTF_8));
+                System.err.flush();
             }
         }
     }

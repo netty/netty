@@ -15,25 +15,26 @@
  */
 package org.jboss.netty.example.http.websocketx.autobahn;
 
-import java.net.InetSocketAddress;
-import java.util.concurrent.Executors;
-
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
+
+import java.net.InetSocketAddress;
+import java.util.concurrent.Executors;
 
 /**
  * A Web Socket echo server for running the <a href="http://www.tavendo.de/autobahn/testsuite.html">autobahn</a> test
  * suite
  */
-public class AutobahnServer {
+public final class AutobahnServer {
 
-    private final int port;
+    public static void main(String[] args) {
+        int port;
+        if (args.length > 0) {
+            port = Integer.parseInt(args[0]);
+        } else {
+            port = 9000;
+        }
 
-    public AutobahnServer(int port) {
-        this.port = port;
-    }
-
-    public void run() {
         // Configure the server.
         ServerBootstrap bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(
                 Executors.newCachedThreadPool(), Executors.newCachedThreadPool()));
@@ -46,16 +47,6 @@ public class AutobahnServer {
         // Bind and start to accept incoming connections.
         bootstrap.bind(new InetSocketAddress(port));
 
-        System.out.println("Web Socket Server started at port " + port);
-    }
-
-    public static void main(String[] args) {
-        int port;
-        if (args.length > 0) {
-            port = Integer.parseInt(args[0]);
-        } else {
-            port = 9000;
-        }
-        new AutobahnServer(port).run();
+        System.err.println("Web Socket Server started at port " + port);
     }
 }

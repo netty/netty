@@ -34,14 +34,9 @@ import java.util.Formatter;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
 public class LocalTimeClientHandler extends SimpleChannelUpstreamHandler {
-
-    private static final Logger logger = Logger.getLogger(
-            LocalTimeClientHandler.class.getName());
 
     private static final Pattern DELIM = Pattern.compile("/");
 
@@ -94,35 +89,27 @@ public class LocalTimeClientHandler extends SimpleChannelUpstreamHandler {
     }
 
     @Override
-    public void handleUpstream(
-            ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
+    public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
         if (e instanceof ChannelStateEvent) {
-            logger.info(e.toString());
+            System.err.println(e);
         }
         super.handleUpstream(ctx, e);
     }
 
     @Override
-    public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e)
-            throws Exception {
+    public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
         channel = e.getChannel();
         super.channelOpen(ctx, e);
     }
 
     @Override
-    public void messageReceived(
-            ChannelHandlerContext ctx, final MessageEvent e) {
-        boolean offered = answer.offer((LocalTimes) e.getMessage());
-        assert offered;
+    public void messageReceived(ChannelHandlerContext ctx, final MessageEvent e) {
+        answer.add((LocalTimes) e.getMessage());
     }
 
     @Override
-    public void exceptionCaught(
-            ChannelHandlerContext ctx, ExceptionEvent e) {
-        logger.log(
-                Level.WARNING,
-                "Unexpected exception from downstream.",
-                e.getCause());
+    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
+        e.getCause().printStackTrace();
         e.getChannel().close();
     }
 }

@@ -33,17 +33,15 @@ import java.util.concurrent.Executors;
  * Because SSL and GZIP are enabled on demand, 5 combinations per protocol
  * are possible: none, SSL only, GZIP only, SSL + GZIP, and GZIP + SSL.
  */
-public class PortUnificationServer {
+public final class PortUnificationServer {
 
-    private final SslContext sslCtx;
-    private final int port;
+    static final int PORT = Integer.parseInt(System.getProperty("port", "8080"));
 
-    public PortUnificationServer(SslContext sslCtx, int port) {
-        this.sslCtx = sslCtx;
-        this.port = port;
-    }
+    public static void main(String[] args) throws Exception {
+        // Configure SSL context
+        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        final SslContext sslCtx = SslContext.newServerContext(ssc.certificate(), ssc.privateKey());
 
-    public void run() {
         // Configure the server.
         ServerBootstrap bootstrap = new ServerBootstrap(
                 new NioServerSocketChannelFactory(
@@ -52,28 +50,12 @@ public class PortUnificationServer {
 
         // Set up the event pipeline factory.
         bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
-            public ChannelPipeline getPipeline() throws Exception {
+            public ChannelPipeline getPipeline() {
                 return Channels.pipeline(new PortUnificationServerHandler(sslCtx));
             }
         });
 
         // Bind and start to accept incoming connections.
-        bootstrap.bind(new InetSocketAddress(port));
-    }
-
-    public static void main(String[] args) throws Exception {
-        int port;
-        if (args.length > 0) {
-            port = Integer.parseInt(args[0]);
-        } else {
-            port = 8080;
-        }
-
-        // Configure SSL context
-        SelfSignedCertificate ssc = new SelfSignedCertificate();
-        final SslContext sslCtx = SslContext.newServerContext(ssc.certificate(), ssc.privateKey());
-
-        // Start the server.
-        new PortUnificationServer(sslCtx, port).run();
+        bootstrap.bind(new InetSocketAddress(PORT));
     }
 }

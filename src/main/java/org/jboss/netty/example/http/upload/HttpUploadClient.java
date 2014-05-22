@@ -31,54 +31,38 @@ import org.jboss.netty.handler.codec.http.multipart.DiskAttribute;
 import org.jboss.netty.handler.codec.http.multipart.DiskFileUpload;
 import org.jboss.netty.handler.codec.http.multipart.HttpDataFactory;
 import org.jboss.netty.handler.codec.http.multipart.HttpPostRequestEncoder;
-import org.jboss.netty.handler.codec.http.multipart.HttpPostRequestEncoder.ErrorDataEncoderException;
 import org.jboss.netty.handler.codec.http.multipart.InterfaceHttpData;
 import org.jboss.netty.handler.ssl.SslContext;
 import org.jboss.netty.handler.ssl.util.SelfSignedCertificate;
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.Executors;
 
-public class HttpUploadClient {
+public final class HttpUploadClient {
 
-    private static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(HttpUploadClient.class);
+    static final String BASE_URL = System.getProperty("baseUrl", "http://127.0.0.1:8080/");
+    static final String FILE = System.getProperty("file", "upload.txt");
 
-    private final String baseUri;
-    private final String filePath;
-
-    public HttpUploadClient(String baseUri, String filePath) {
-        this.baseUri = baseUri;
-        this.filePath = filePath;
-    }
-
-    public void run() throws Exception {
+    public static void main(String[] args) throws Exception {
         String postSimple, postFile, get;
-        if (baseUri.endsWith("/")) {
-            postSimple = baseUri + "formpost";
-            postFile = baseUri + "formpostmultipart";
-            get = baseUri + "formget";
+        if (BASE_URL.endsWith("/")) {
+            postSimple = BASE_URL + "formpost";
+            postFile = BASE_URL + "formpostmultipart";
+            get = BASE_URL + "formget";
         } else {
-            postSimple = baseUri + "/formpost";
-            postFile = baseUri + "/formpostmultipart";
-            get = baseUri + "/formget";
+            postSimple = BASE_URL + "/formpost";
+            postFile = BASE_URL + "/formpostmultipart";
+            get = BASE_URL + "/formget";
         }
-        URI uriSimple;
-        try {
-            uriSimple = new URI(postSimple);
-        } catch (URISyntaxException e) {
-            logger.error("Invalid URI syntax" + e.getCause());
-            return;
-        }
+
+        URI uriSimple = new URI(postSimple);
         String scheme = uriSimple.getScheme() == null? "http" : uriSimple.getScheme();
-        String host = uriSimple.getHost() == null? "localhost" : uriSimple.getHost();
+        String host = uriSimple.getHost() == null? "127.0.0.1" : uriSimple.getHost();
         int port = uriSimple.getPort();
         if (port == -1) {
             if ("http".equalsIgnoreCase(scheme)) {
@@ -89,7 +73,7 @@ public class HttpUploadClient {
         }
 
         if (!"http".equalsIgnoreCase(scheme) && !"https".equalsIgnoreCase(scheme)) {
-            logger.error("Only HTTP(S) is supported.");
+            System.err.println("Only HTTP(S) is supported.");
             return;
         }
 
@@ -102,17 +86,10 @@ public class HttpUploadClient {
             sslCtx = null;
         }
 
-        URI uriFile;
-        try {
-            uriFile = new URI(postFile);
-        } catch (URISyntaxException e) {
-            logger.error("Error: " + e.getMessage());
-            return;
-        }
-        File file = new File(filePath);
-        if (! file.canRead()) {
-            logger.error("A correct path is needed");
-            return;
+        URI uriFile = new URI(postFile);
+        File file = new File(FILE);
+        if (!file.canRead()) {
+            throw new FileNotFoundException(FILE);
         }
 
         // Configure the client.
@@ -121,58 +98,50 @@ public class HttpUploadClient {
                         Executors.newCachedThreadPool(),
                         Executors.newCachedThreadPool()));
 
-        // Set up the event pipeline factory.
-        bootstrap.setPipelineFactory(new HttpUploadClientPipelineFactory(sslCtx));
+        // Set up the factory: here using a mixed memory/disk based on size threshold
+        HttpDataFactory factory =
+                new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE); // Disk if size exceed MINSIZE
 
-        // setup the factory: here using a mixed memory/disk based on size threshold
-        HttpDataFactory factory = new DefaultHttpDataFactory(
-                DefaultHttpDataFactory.MINSIZE); // Disk if size exceed MINSIZE
-        DiskFileUpload.deleteOnExitTemporaryFile = true; // should delete file on exit (in normal exit)
-        DiskFileUpload.baseDirectory = null; // system temp directory
-        DiskAttribute.deleteOnExitTemporaryFile = true; // should delete file on exit (in normal exit)
-        DiskAttribute.baseDirectory = null; // system temp directory
+        try {
+            // Set up the event pipeline factory.
+            bootstrap.setPipelineFactory(new HttpUploadClientPipelineFactory(sslCtx, host, port));
 
-        // Simple Get form: no factory used (not usable)
-        List<Entry<String, String>> headers =
-            formget(bootstrap, host, port, get, uriSimple);
-        if (headers == null) {
+            DiskFileUpload.deleteOnExitTemporaryFile = true; // should delete file on exit (in normal exit)
+            DiskFileUpload.baseDirectory = null; // system temp directory
+            DiskAttribute.deleteOnExitTemporaryFile = true; // should delete file on exit (in normal exit)
+            DiskAttribute.baseDirectory = null; // system temp directory
+
+            // Simple Get form: no factory used (not usable)
+            List<Entry<String, String>> headers = formget(bootstrap, host, port, get, uriSimple);
+
+            // Simple Post form: factory used for big attributes
+            List<InterfaceHttpData> bodylist = formpost(bootstrap, host, port, uriSimple, file, factory, headers);
+
+            // Multipart Post form: factory used
+            formpostmultipart(bootstrap, host, port, uriFile, factory, headers, bodylist);
+        } finally {
+            // Shut down executor threads to exit.
+            bootstrap.releaseExternalResources();
+            // Really clean all temporary files if they still exist
             factory.cleanAllHttpDatas();
-            return;
         }
-        // Simple Post form: factory used for big attributes
-        List<InterfaceHttpData> bodylist =
-            formpost(bootstrap, host, port, uriSimple, file, factory, headers);
-        if (bodylist == null) {
-            factory.cleanAllHttpDatas();
-            return;
-        }
-        // Multipart Post form: factory used
-        formpostmultipart(bootstrap, host, port, uriFile, factory, headers, bodylist);
-
-        // Shut down executor threads to exit.
-        bootstrap.releaseExternalResources();
-        // Really clean all temporary files if they still exist
-        factory.cleanAllHttpDatas();
     }
 
     /**
      * Standard usage of HTTP API in Netty without file Upload (get is not able to achieve File upload
      * due to limitation on request size).
+     *
      * @return the list of headers that will be used in every example after
     **/
-    private static List<Entry<String, String>> formget(ClientBootstrap bootstrap, String host, int port, String get,
-            URI uriSimple) {
+    private static List<Entry<String, String>> formget(
+            ClientBootstrap bootstrap, String host, int port, String get, URI uriSimple) throws Exception {
         // XXX /formget
         // No use of HttpPostRequestEncoder since not a POST
         // Start the connection attempt.
         ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
+
         // Wait until the connection attempt succeeds or fails.
-        Channel channel = future.awaitUninterruptibly().getChannel();
-        if (!future.isSuccess()) {
-            future.getCause().printStackTrace();
-            bootstrap.releaseExternalResources();
-            return null;
-        }
+        Channel channel = future.sync().getChannel();
 
         // Prepare the HTTP request.
         QueryStringEncoder encoder = new QueryStringEncoder(get);
@@ -185,28 +154,22 @@ public class HttpUploadClient {
         encoder.addParam("thirdinfo", "third value\r\ntest second line\r\n\r\nnew line\r\n");
         encoder.addParam("Send", "Send");
 
-        URI uriGet;
-        try {
-            uriGet = new URI(encoder.toString());
-        } catch (URISyntaxException e) {
-            logger.error("Error: " + e.getMessage());
-            bootstrap.releaseExternalResources();
-            return null;
-        }
-
-        HttpRequest request = new DefaultHttpRequest(
-                HttpVersion.HTTP_1_1, HttpMethod.GET, uriGet.toASCIIString());
+        URI uriGet = new URI(encoder.toString());
+        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, uriGet.toASCIIString());
         request.headers().set(HttpHeaders.Names.HOST, host);
         request.headers().set(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
-        request.headers().set(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP + ',' +
-                HttpHeaders.Values.DEFLATE);
+        request.headers().set(
+                HttpHeaders.Names.ACCEPT_ENCODING,
+                HttpHeaders.Values.GZIP + ',' + HttpHeaders.Values.DEFLATE);
 
         request.headers().set(HttpHeaders.Names.ACCEPT_CHARSET, "ISO-8859-1,utf-8;q=0.7,*;q=0.7");
         request.headers().set(HttpHeaders.Names.ACCEPT_LANGUAGE, "fr");
         request.headers().set(HttpHeaders.Names.REFERER, uriSimple.toString());
         request.headers().set(HttpHeaders.Names.USER_AGENT, "Netty Simple Http Client side");
-        request.headers().set(HttpHeaders.Names.ACCEPT,
+        request.headers().set(
+                HttpHeaders.Names.ACCEPT,
                 "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+
         //connection will not close but needed
         // request.headers().set("Connection","keep-alive");
         // request.headers().set("Keep-Alive","300");
@@ -221,7 +184,7 @@ public class HttpUploadClient {
         channel.write(request);
 
         // Wait for the server to close the connection.
-        channel.getCloseFuture().awaitUninterruptibly();
+        channel.getCloseFuture().sync();
 
         return headers;
     }
@@ -231,24 +194,18 @@ public class HttpUploadClient {
      *
      * @return the list of HttpData object (attribute and file) to be reused on next post
      */
-    private static List<InterfaceHttpData> formpost(ClientBootstrap bootstrap,
-            String host, int port,
-            URI uriSimple, File file, HttpDataFactory factory,
-            List<Entry<String, String>> headers) throws ErrorDataEncoderException {
+    private static List<InterfaceHttpData> formpost(
+            ClientBootstrap bootstrap,
+            String host, int port, URI uriSimple, File file, HttpDataFactory factory,
+            List<Entry<String, String>> headers) throws Exception {
         // XXX /formpost
         // Start the connection attempt.
         ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
         // Wait until the connection attempt succeeds or fails.
-        Channel channel = future.awaitUninterruptibly().getChannel();
-        if (!future.isSuccess()) {
-            future.getCause().printStackTrace();
-            bootstrap.releaseExternalResources();
-            return null;
-        }
+        Channel channel = future.sync().getChannel();
 
         // Prepare the HTTP request.
-        HttpRequest request = new DefaultHttpRequest(
-                HttpVersion.HTTP_1_1, HttpMethod.POST, uriSimple.toASCIIString());
+        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, uriSimple.toASCIIString());
 
         // Use the PostBody encoder
         HttpPostRequestEncoder bodyRequestEncoder =
@@ -264,6 +221,7 @@ public class HttpUploadClient {
         bodyRequestEncoder.addBodyAttribute("info", "first value");
         bodyRequestEncoder.addBodyAttribute("secondinfo", "secondvalue ���&");
         bodyRequestEncoder.addBodyAttribute("thirdinfo", textArea);
+        bodyRequestEncoder.addBodyAttribute("fourthinfo", textAreaLong);
         bodyRequestEncoder.addBodyFileUpload("myfile", file, "application/x-zip-compressed", false);
 
         // finalize request
@@ -278,7 +236,7 @@ public class HttpUploadClient {
         // test if request was chunked and if so, finish the write
         if (bodyRequestEncoder.isChunked()) { // could do either request.isChunked()
             // either do it through ChunkedWriteHandler
-            channel.write(bodyRequestEncoder).awaitUninterruptibly();
+            channel.write(bodyRequestEncoder).sync();
         }
 
         // Do not clear here since we will reuse the InterfaceHttpData on the next request
@@ -289,30 +247,24 @@ public class HttpUploadClient {
         // bodyRequestEncoder.cleanFiles();
 
         // Wait for the server to close the connection.
-        channel.getCloseFuture().awaitUninterruptibly();
+        channel.getCloseFuture().sync();
         return bodylist;
     }
 
     /**
      * Multipart example
      */
-    private static void formpostmultipart(ClientBootstrap bootstrap, String host, int port,
-            URI uriFile, HttpDataFactory factory,
-            List<Entry<String, String>> headers, List<InterfaceHttpData> bodylist) throws ErrorDataEncoderException {
+    private static void formpostmultipart(
+            ClientBootstrap bootstrap, String host, int port, URI uriFile, HttpDataFactory factory,
+            List<Entry<String, String>> headers, List<InterfaceHttpData> bodylist) throws Exception {
         // XXX /formpostmultipart
         // Start the connection attempt.
         ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
         // Wait until the connection attempt succeeds or fails.
-        Channel channel = future.awaitUninterruptibly().getChannel();
-        if (!future.isSuccess()) {
-            future.getCause().printStackTrace();
-            bootstrap.releaseExternalResources();
-            return;
-        }
+        Channel channel = future.sync().getChannel();
 
         // Prepare the HTTP request.
-        HttpRequest request = new DefaultHttpRequest(
-                HttpVersion.HTTP_1_1, HttpMethod.POST, uriFile.toASCIIString());
+        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, uriFile.toASCIIString());
 
         // Use the PostBody encoder
         HttpPostRequestEncoder bodyRequestEncoder =
@@ -334,28 +286,14 @@ public class HttpUploadClient {
 
         // test if request was chunked and if so, finish the write
         if (bodyRequestEncoder.isChunked()) {
-            channel.write(bodyRequestEncoder).awaitUninterruptibly();
+            channel.write(bodyRequestEncoder).sync();
         }
 
         // Now no more use of file representation (and list of HttpData)
         bodyRequestEncoder.cleanFiles();
 
         // Wait for the server to close the connection.
-        channel.getCloseFuture().awaitUninterruptibly();
-    }
-
-    public static void main(String[] args) throws Exception {
-        if (args.length != 2) {
-            logger.error(
-                    "Usage: " + HttpUploadClient.class.getSimpleName() +
-                    " baseURI filePath");
-            return;
-        }
-
-        String baseUri = args[0];
-        String filePath = args[1];
-
-        new HttpUploadClient(baseUri, filePath).run();
+        channel.getCloseFuture().sync();
     }
 
     // use to simulate a small TEXTAREA field in a form

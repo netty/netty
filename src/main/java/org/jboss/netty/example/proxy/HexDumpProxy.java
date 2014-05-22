@@ -15,62 +15,34 @@
  */
 package org.jboss.netty.example.proxy;
 
-import java.net.InetSocketAddress;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
-
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 
-public class HexDumpProxy {
+import java.net.InetSocketAddress;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
-    private final int localPort;
-    private final String remoteHost;
-    private final int remotePort;
+public final class HexDumpProxy {
 
-    public HexDumpProxy(int localPort, String remoteHost, int remotePort) {
-        this.localPort = localPort;
-        this.remoteHost = remoteHost;
-        this.remotePort = remotePort;
-    }
+    static final int LOCAL_PORT = Integer.parseInt(System.getProperty("localPort", "8443"));
+    static final String REMOTE_HOST = System.getProperty("remoteHost", "www.google.com");
+    static final int REMOTE_PORT = Integer.parseInt(System.getProperty("remotePort", "443"));
 
-    public void run() {
-        System.err.println(
-                "Proxying *:" + localPort + " to " +
-                remoteHost + ':' + remotePort + " ...");
+    public static void main(String[] args) {
+        System.err.println("Proxying *:" + LOCAL_PORT + " to " + REMOTE_HOST + ':' + REMOTE_PORT + " ...");
 
         // Configure the bootstrap.
         Executor executor = Executors.newCachedThreadPool();
-        ServerBootstrap sb = new ServerBootstrap(
-                new NioServerSocketChannelFactory(executor, executor));
+        ServerBootstrap sb = new ServerBootstrap(new NioServerSocketChannelFactory(executor, executor));
 
         // Set up the event pipeline factory.
-        ClientSocketChannelFactory cf =
-                new NioClientSocketChannelFactory(executor, executor);
+        ClientSocketChannelFactory cf = new NioClientSocketChannelFactory(executor, executor);
 
-        sb.setPipelineFactory(
-                new HexDumpProxyPipelineFactory(cf, remoteHost, remotePort));
+        sb.setPipelineFactory(new HexDumpProxyPipelineFactory(cf));
 
         // Start up the server.
-        sb.bind(new InetSocketAddress(localPort));
-    }
-
-    public static void main(String[] args) throws Exception {
-        // Validate command line options.
-        if (args.length != 3) {
-            System.err.println(
-                    "Usage: " + HexDumpProxy.class.getSimpleName() +
-                    " <local port> <remote host> <remote port>");
-            return;
-        }
-
-        // Parse command line options.
-        int localPort = Integer.parseInt(args[0]);
-        String remoteHost = args[1];
-        int remotePort = Integer.parseInt(args[2]);
-
-        new HexDumpProxy(localPort, remoteHost, remotePort).run();
+        sb.bind(new InetSocketAddress(LOCAL_PORT));
     }
 }

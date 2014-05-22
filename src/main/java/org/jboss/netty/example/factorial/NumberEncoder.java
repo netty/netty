@@ -15,13 +15,13 @@
  */
 package org.jboss.netty.example.factorial;
 
-import java.math.BigInteger;
-
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
+
+import java.math.BigInteger;
 
 /**
  * Encodes a {@link Number} into the binary representation prepended with
@@ -31,8 +31,7 @@ import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
 public class NumberEncoder extends OneToOneEncoder {
 
     @Override
-    protected Object encode(
-            ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
+    protected Object encode(ChannelHandlerContext ctx, Channel channel, Object msg) {
         if (!(msg instanceof Number)) {
             // Ignore what this encoder can't encode.
             return msg;
