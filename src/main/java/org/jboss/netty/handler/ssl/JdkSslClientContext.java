@@ -20,7 +20,6 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferInputStream;
 
 import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLSessionContext;
 import javax.net.ssl.TrustManagerFactory;
@@ -29,6 +28,7 @@ import java.io.File;
 import java.security.KeyStore;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -38,7 +38,7 @@ import java.util.List;
 public final class JdkSslClientContext extends JdkSslContext {
 
     private final SSLContext ctx;
-    private final ApplicationProtocolSelector nextProtocolSelector;
+    private final List<String> nextProtocols;
 
     /**
      * Creates a new instance.
@@ -93,9 +93,8 @@ public final class JdkSslClientContext extends JdkSslContext {
      *                            {@code null} to use the default.
      * @param ciphers the cipher suites to enable, in the order of preference.
      *                {@code null} to use the default cipher suites.
-     * @param nextProtocolSelector the {@link ApplicationProtocolSelector} that chooses one of the application layer
-     *                             protocols returned by a TLS server.
-     *                             {@code null} to disable TLS NPN/ALPN extension.
+     * @param nextProtocols the application layer protocols to accept, in the order of preference.
+     *                      {@code null} to disable TLS NPN/ALPN extension.
      * @param sessionCacheSize the size of the cache used for storing SSL session objects.
      *                         {@code 0} to use the default value.
      * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
@@ -103,16 +102,23 @@ public final class JdkSslClientContext extends JdkSslContext {
      */
     public JdkSslClientContext(
             SslBufferPool bufPool, File certChainFile, TrustManagerFactory trustManagerFactory,
-            Iterable<String> ciphers, ApplicationProtocolSelector nextProtocolSelector,
+            Iterable<String> ciphers, Iterable<String> nextProtocols,
             long sessionCacheSize, long sessionTimeout) throws SSLException {
 
         super(bufPool, ciphers);
 
-        if (nextProtocolSelector != null && !JettyNpnSslEngine.isAvailable()) {
-            throw new SSLException("NPN/ALPN unsupported: " + nextProtocolSelector);
+        if (nextProtocols != null && nextProtocols.iterator().hasNext() && !JettyNpnSslEngine.isAvailable()) {
+            throw new SSLException("NPN/ALPN unsupported: " + nextProtocols);
         }
 
-        this.nextProtocolSelector = nextProtocolSelector;
+        List<String> nextProtoList = new ArrayList<String>();
+        for (String p: nextProtocols) {
+            if (p == null) {
+                break;
+            }
+            nextProtoList.add(p);
+        }
+        this.nextProtocols = Collections.unmodifiableList(nextProtoList);
 
         try {
             if (certChainFile == null) {
@@ -163,26 +169,12 @@ public final class JdkSslClientContext extends JdkSslContext {
     }
 
     @Override
-    public ApplicationProtocolSelector nextProtocolSelector() {
-        return nextProtocolSelector;
-    }
-
-    @Override
     public List<String> nextProtocols() {
-        return Collections.emptyList();
+        return nextProtocols;
     }
 
     @Override
     public SSLContext context() {
         return ctx;
-    }
-
-    @Override
-    SSLEngine wrapEngine(SSLEngine engine) {
-        if (nextProtocolSelector == null) {
-            return engine;
-        } else {
-            return new JettyNpnSslEngine(engine, nextProtocolSelector);
-        }
     }
 }

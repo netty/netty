@@ -64,8 +64,7 @@ public final class OpenSslServerContext extends SslContext {
     private final List<String> unmodifiableCiphers = Collections.unmodifiableList(ciphers);
     private final long sessionCacheSize;
     private final long sessionTimeout;
-    private final List<String> nextProtocols = new ArrayList<String>();
-    private final List<String> unmodifiableNextProtocols = Collections.unmodifiableList(nextProtocols);
+    private final List<String> nextProtocols;
 
     /** The OpenSSL SSL_CTX object */
     private final long ctx;
@@ -151,12 +150,14 @@ public final class OpenSslServerContext extends SslContext {
             this.ciphers.add(c);
         }
 
+        List<String> nextProtoList = new ArrayList<String>();
         for (String p: nextProtocols) {
             if (p == null) {
                 break;
             }
-            this.nextProtocols.add(p);
+            nextProtoList.add(p);
         }
+        this.nextProtocols = Collections.unmodifiableList(nextProtoList);
 
         // Allocate a new APR pool.
         aprPool = Pool.create(0);
@@ -221,10 +222,10 @@ public final class OpenSslServerContext extends SslContext {
                 }
 
                 /* Set next protocols for next protocol negotiation extension, if specified */
-                if (!this.nextProtocols.isEmpty()) {
+                if (!nextProtoList.isEmpty()) {
                     // Convert the protocol list into a comma-separated string.
                     StringBuilder nextProtocolBuf = new StringBuilder();
-                    for (String p: this.nextProtocols) {
+                    for (String p: nextProtoList) {
                         nextProtocolBuf.append(p);
                         nextProtocolBuf.append(',');
                     }
@@ -291,13 +292,8 @@ public final class OpenSslServerContext extends SslContext {
     }
 
     @Override
-    public ApplicationProtocolSelector nextProtocolSelector() {
-        return null;
-    }
-
-    @Override
     public List<String> nextProtocols() {
-        return unmodifiableNextProtocols;
+        return nextProtocols;
     }
 
     /**
@@ -319,11 +315,11 @@ public final class OpenSslServerContext extends SslContext {
      */
     @Override
     public SSLEngine newEngine() {
-        if (unmodifiableNextProtocols.isEmpty()) {
+        if (nextProtocols.isEmpty()) {
             return new OpenSslEngine(ctx, bufferPool(), null);
         } else {
             return new OpenSslEngine(
-                    ctx, bufferPool(), unmodifiableNextProtocols.get(unmodifiableNextProtocols.size() - 1));
+                    ctx, bufferPool(), nextProtocols.get(nextProtocols.size() - 1));
         }
     }
 

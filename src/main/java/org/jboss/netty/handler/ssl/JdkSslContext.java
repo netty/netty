@@ -161,7 +161,13 @@ public abstract class JdkSslContext extends SslContext {
         return wrapEngine(engine);
     }
 
-    abstract SSLEngine wrapEngine(SSLEngine engine);
+    private SSLEngine wrapEngine(SSLEngine engine) {
+        if (nextProtocols().isEmpty()) {
+            return engine;
+        } else {
+            return new JettyNpnSslEngine(engine, nextProtocols(), isServer());
+        }
+    }
 
     private static String[] toCipherSuiteArray(Iterable<String> ciphers) {
         if (ciphers == null) {

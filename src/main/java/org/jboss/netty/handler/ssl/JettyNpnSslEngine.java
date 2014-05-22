@@ -19,8 +19,6 @@ package org.jboss.netty.handler.ssl;
 import org.eclipse.jetty.npn.NextProtoNego;
 import org.eclipse.jetty.npn.NextProtoNego.ClientProvider;
 import org.eclipse.jetty.npn.NextProtoNego.ServerProvider;
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
@@ -32,8 +30,6 @@ import java.nio.ByteBuffer;
 import java.util.List;
 
 final class JettyNpnSslEngine extends SSLEngine {
-
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(JettyNpnSslEngine.class);
 
     private static boolean available;
 
@@ -64,51 +60,49 @@ final class JettyNpnSslEngine extends SSLEngine {
     private final SSLEngine engine;
     private final JettyNpnSslSession session;
 
-    JettyNpnSslEngine(SSLEngine engine, final List<String> nextProtocols) {
+    JettyNpnSslEngine(SSLEngine engine, final List<String> nextProtocols, boolean server) {
         assert !nextProtocols.isEmpty();
 
         this.engine = engine;
         session = new JettyNpnSslSession(engine);
 
-        NextProtoNego.put(engine, new ServerProvider() {
-            public void unsupported() {
-                getSession().setApplicationProtocol(nextProtocols.get(nextProtocols.size() - 1));
-            }
-
-            public List<String> protocols() {
-                return nextProtocols;
-            }
-
-            public void protocolSelected(String protocol) {
-                getSession().setApplicationProtocol(protocol);
-            }
-        });
-    }
-
-    JettyNpnSslEngine(SSLEngine engine, final ApplicationProtocolSelector nextProtocolSelector) {
-        this.engine = engine;
-        session = new JettyNpnSslSession(engine);
-
-        NextProtoNego.put(engine, new ClientProvider() {
-            public boolean supports() {
-                return true;
-            }
-
-            public void unsupported() {
-                session.setApplicationProtocol(null);
-            }
-
-            public String selectProtocol(List<String> protocols) {
-                String p = null;
-                try {
-                    p = nextProtocolSelector.selectProtocol(protocols);
-                } catch (Exception e) {
-                    logger.warn("Failed to select the next protocol:", e);
+        if (server) {
+            NextProtoNego.put(engine, new ServerProvider() {
+                public void unsupported() {
+                    getSession().setApplicationProtocol(nextProtocols.get(nextProtocols.size() - 1));
                 }
-                session.setApplicationProtocol(p);
-                return p;
-            }
-        });
+
+                public List<String> protocols() {
+                    return nextProtocols;
+                }
+
+                public void protocolSelected(String protocol) {
+                    getSession().setApplicationProtocol(protocol);
+                }
+            });
+        } else {
+            final String[] list = nextProtocols.toArray(new String[nextProtocols.size()]);
+            final String fallback = list[list.length - 1];
+
+            NextProtoNego.put(engine, new ClientProvider() {
+                public boolean supports() {
+                    return true;
+                }
+
+                public void unsupported() {
+                    session.setApplicationProtocol(null);
+                }
+
+                public String selectProtocol(List<String> protocols) {
+                    for (String p: list) {
+                        if (protocols.contains(p)) {
+                            return p;
+                        }
+                    }
+                    return fallback;
+                }
+            });
+        }
     }
 
     @Override
