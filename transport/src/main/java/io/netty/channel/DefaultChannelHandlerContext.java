@@ -519,7 +519,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         DefaultChannelHandlerContext ctx = this;
         do {
             ctx = ctx.next;
-        } while ((ctx.skipFlags & MASKGROUP_INBOUND) != 0);
+        } while ((ctx.skipFlags & MASKGROUP_INBOUND) == MASKGROUP_INBOUND);
         return ctx;
     }
 
@@ -527,7 +527,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         DefaultChannelHandlerContext ctx = this;
         do {
             ctx = ctx.prev;
-        } while ((ctx.skipFlags & MASKGROUP_OUTBOUND) != 0);
+        } while ((ctx.skipFlags & MASKGROUP_OUTBOUND) == MASKGROUP_OUTBOUND);
         return ctx;
     }
 
