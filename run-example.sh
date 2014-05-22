@@ -1,9 +1,9 @@
 #!/bin/bash -e
 EXAMPLE_MAP=(
-  'spdy-server:io.netty.example.spdy.server.SpdyServer'
   'spdy-client:io.netty.example.spdy.client.SpdyClient'
-  'http2-server:io.netty.example.http2.server.Http2Server'
+  'spdy-server:io.netty.example.spdy.server.SpdyServer'
   'http2-client:io.netty.example.http2.client.Http2Client'
+  'http2-server:io.netty.example.http2.server.Http2Server'
 )
 
 EXAMPLE=''
@@ -37,14 +37,28 @@ if [[ -z "$EXAMPLE" ]] || [[ -z "$EXAMPLE_CLASS" ]] || [[ $# -ne 0 ]]; then
   echo >&2
   echo "Available examples:" >&2
   echo >&2
+  I=0
   for E in "${EXAMPLE_MAP[@]}"; do
-    echo "  ${E%%:*}"
-  done | sort >&2
+    if [[ $I -eq 0 ]]; then
+      echo -n '  '
+    fi
+
+    printf '%-24s' "${E%%:*}"
+    ((I++)) || true
+
+    if [[ $I -eq 2 ]]; then
+      I=0
+      echo
+    fi
+  done >&2
+  if [[ $I -ne 0 ]]; then
+    echo >&2
+  fi
   echo >&2
   exit 1
 fi
 
-cd "`dirname "$0"`"/example
+cd "`dirname "$0"`"
 echo "[INFO] Running: $EXAMPLE ($EXAMPLE_CLASS $EXAMPLE_ARGS)"
 exec mvn -nsu compile exec:exec -DargLine.example="$EXAMPLE_ARGS" -DexampleClass="$EXAMPLE_CLASS"
 
