@@ -423,7 +423,7 @@ final class DefaultChannelId implements ChannelId {
     }
 
     private String newLongValue() {
-        StringBuilder buf = new StringBuilder(data.length + 4);
+        StringBuilder buf = new StringBuilder(2 * data.length + 5);
         int i = 0;
         i = appendHexDumpField(buf, i, MACHINE_ID_LEN);
         i = appendHexDumpField(buf, i, PROCESS_ID_LEN);
