@@ -413,7 +413,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-resources-plugin</artifactId>
-        <version>2.5</version>
+        <version>2.6</version>
         <configuration>
           <encoding>UTF-8</encoding>
         </configuration>
@@ -515,8 +515,8 @@
             <goals>
               <goal>run</goal>
             </goals>
-            <configuration>
-              <tasks>
+            <configuration combine.self="override">
+              <target>
                 <taskdef resource="net/sf/antcontrib/antlib.xml" />
                 <exec executable="git" outputproperty="gitOutput" resultproperty="gitExitCode" failonerror="false" failifexecutionfails="false">
                   <arg value="log" />
@@ -536,7 +536,7 @@
                 <mkdir dir="${project.build.directory}" />
                 <echo message="${project.version}" file="${project.build.directory}/version.txt" />
                 <echo message="// DO NOT MODIFY - WILL BE OVERWRITTEN DURING THE BUILD PROCESS${line.separator}package org.jboss.netty.util;${line.separator}/**${line.separator} * Provides the version information of Netty.${line.separator} * @apiviz.landmark${line.separator} */${line.separator}@SuppressWarnings(&quot;all&quot;)${line.separator}public final class Version {${line.separator} /** The version identifier. */${line.separator} public static final String ID = &quot;${project.version}-${buildNumber}&quot;;${line.separator} /** Prints out the version identifier to stdout. */${line.separator} public static void main(String[] args) { System.out.println(ID); }${line.separator} private Version() { }${line.separator}}${line.separator}" file="${basedir}/src/main/java/org/jboss/netty/util/Version.java" />
-              </tasks>
+              </target>
             </configuration>
           </execution>
           <execution>
@@ -545,8 +545,8 @@
             <goals>
               <goal>run</goal>
             </goals>
-            <configuration>
-              <tasks>
+            <configuration combine.self="override">
+              <target>
                 <taskdef resource="net/sf/antcontrib/antlib.xml" />
                 <if>
                   <or>
@@ -582,7 +582,7 @@
                     <checksum file="${project.build.directory}/${project.build.finalName}-sources.jar" algorithm="sha1" forceoverwrite="yes" />
                   </then>
                 </if>
-              </tasks>
+              </target>
             </configuration>
           </execution>
         </executions>
