@@ -31,7 +31,7 @@
   <properties>
     <quickbuild>true</quickbuild>
     <generatedSourceDir>${project.build.directory}/src</generatedSourceDir>
-    <dependencyVersionDir>${project.build.directory}/versions</dependencyVersionDir>
+    <dependencyVersionsDir>${project.build.directory}/versions</dependencyVersionsDir>
   </properties>
 
   <profiles>
@@ -256,7 +256,7 @@
             </goals>
             <configuration>
               <classifier>sources</classifier>
-              <includes>io/netty/**,META-INF/native/**</includes>
+              <includes>io/netty/**</includes>
               <includeGroupIds>${project.groupId}</includeGroupIds>
               <outputDirectory>${generatedSourceDir}</outputDirectory>
             </configuration>
@@ -270,8 +270,9 @@
               <goal>unpack-dependencies</goal>
             </goals>
             <configuration>
+              <excludes>io/netty/example/**,META-INF/native/libnetty-tcnative*</excludes>
               <includes>io/netty/**,META-INF/native/**</includes>
-              <excludes>io/netty/example/**</excludes>
+              <includeGroupIds>${project.groupId}</includeGroupIds>
               <outputDirectory>${project.build.outputDirectory}</outputDirectory>
             </configuration>
           </execution>
@@ -323,7 +324,7 @@
             <configuration>
               <target>
                 <delete dir="${generatedSourceDir}" quiet="true" />
-                <delete dir="${dependencyVersionDir}" quiet="true" />
+                <delete dir="${dependencyVersionsDir}" quiet="true" />
                 <delete dir="${project.build.outputDirectory}" quiet="true" />
               </target>
             </configuration>
