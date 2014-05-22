@@ -14,10 +14,6 @@
  */
 package io.netty.example.http2.client;
 
-import static io.netty.example.http2.Http2ExampleUtil.parseEndpointConfig;
-import static io.netty.handler.codec.http.HttpHeaders.Names.HOST;
-import static io.netty.handler.codec.http.HttpMethod.GET;
-import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -25,16 +21,21 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.example.http2.Http2ExampleUtil.EndpointConfig;
+import io.netty.example.http2.Http2ExampleUtil.*;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http2.Http2OrHttpChooser.SelectedProtocol;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
-import java.net.InetSocketAddress;
-
 import javax.net.ssl.SSLException;
+import java.net.InetSocketAddress;
+import java.util.Arrays;
+
+import static io.netty.example.http2.Http2ExampleUtil.*;
+import static io.netty.handler.codec.http.HttpHeaders.Names.*;
+import static io.netty.handler.codec.http.HttpMethod.*;
+import static io.netty.handler.codec.http.HttpVersion.*;
 
 /**
  * An HTTP2 client that allows you to send HTTP2 frames to a server. Inbound and outbound frames are
@@ -58,9 +59,7 @@ public class Http2Client {
         if (config.isSsl()) {
             sslCtx = SslContext.newClientContext(
                     null, InsecureTrustManagerFactory.INSTANCE, null,
-                    SslContext.newApplicationProtocolSelector(
-                            SelectedProtocol.HTTP_2.protocolName(),
-                            SelectedProtocol.HTTP_1_1.protocolName()),
+                    Arrays.asList(SelectedProtocol.HTTP_2.protocolName(), SelectedProtocol.HTTP_1_1.protocolName()),
                     0, 0);
         } else {
             sslCtx = null;
