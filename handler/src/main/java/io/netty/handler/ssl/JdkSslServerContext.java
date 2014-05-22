@@ -21,7 +21,6 @@ import io.netty.buffer.ByteBufInputStream;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLSessionContext;
 import java.io.File;
@@ -183,11 +182,6 @@ public final class JdkSslServerContext extends JdkSslContext {
     }
 
     @Override
-    public ApplicationProtocolSelector nextProtocolSelector() {
-        return null;
-    }
-
-    @Override
     public List<String> nextProtocols() {
         return nextProtocols;
     }
@@ -195,14 +189,5 @@ public final class JdkSslServerContext extends JdkSslContext {
     @Override
     public SSLContext context() {
         return ctx;
-    }
-
-    @Override
-    SSLEngine wrapEngine(SSLEngine engine) {
-        if (nextProtocols.isEmpty()) {
-            return engine;
-        } else {
-            return new JettyNpnSslEngine(engine, nextProtocols);
-        }
     }
 }
