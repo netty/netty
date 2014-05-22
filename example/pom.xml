@@ -104,20 +104,17 @@
   <build>
     <plugins>
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>exec-maven-plugin</artifactId>
+        <artifactId>maven-antrun-plugin</artifactId>
         <configuration>
-          <executable>${java.home}/bin/java</executable>
-          <commandlineArgs>
-            ${argLine.common}
-            ${argLine.bootcp}
-            ${argLine.leak}
-            ${argLine.coverage}
-            -classpath %classpath
-            ${argLine.example}
-            ${exampleClass}
-          </commandlineArgs>
-          <classpathScope>runtime</classpathScope>
+          <target>
+            <taskdef resource="net/sf/antcontrib/antlib.xml" />
+            <propertyregex
+              property="mergedArgs" regexp="[\r\n\s]+" replace=" " global="true"
+              input="${argLine.common} ${argLine.bootcp} ${argLine.leak} ${argLine.coverage} ${argLine.example}" />
+            <java classname="${exampleClass}" classpathref="maven.runtime.classpath" fork="true">
+              <jvmarg line="${mergedArgs}"/>
+            </java>
+          </target>
         </configuration>
       </plugin>
     </plugins>
