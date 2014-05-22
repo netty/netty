@@ -106,18 +106,22 @@ public final class JdkSslClientContext extends JdkSslContext {
 
         super(ciphers);
 
-        if (nextProtocols != null && nextProtocols.iterator().hasNext() && !JettyNpnSslEngine.isAvailable()) {
-            throw new SSLException("NPN/ALPN unsupported: " + nextProtocols);
-        }
-
-        List<String> nextProtoList = new ArrayList<String>();
-        for (String p: nextProtocols) {
-            if (p == null) {
-                break;
+        if (nextProtocols != null && nextProtocols.iterator().hasNext()) {
+            if (!JettyNpnSslEngine.isAvailable()) {
+                throw new SSLException("NPN/ALPN unsupported: " + nextProtocols);
             }
-            nextProtoList.add(p);
+
+            List<String> nextProtoList = new ArrayList<String>();
+            for (String p: nextProtocols) {
+                if (p == null) {
+                    break;
+                }
+                nextProtoList.add(p);
+            }
+            this.nextProtocols = Collections.unmodifiableList(nextProtoList);
+        } else {
+            this.nextProtocols = Collections.emptyList();
         }
-        this.nextProtocols = Collections.unmodifiableList(nextProtoList);
 
         try {
             if (certChainFile == null) {
