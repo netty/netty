@@ -33,6 +33,7 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
 import javax.net.ssl.SSLException;
 import java.net.InetSocketAddress;
+import java.util.Arrays;
 import java.util.concurrent.BlockingQueue;
 
 import static java.util.concurrent.TimeUnit.*;
@@ -62,9 +63,7 @@ public class SpdyClient {
     public SpdyClient(String host, int port) throws SSLException {
         sslCtx = SslContext.newClientContext(
                 null, InsecureTrustManagerFactory.INSTANCE, null,
-                SslContext.newApplicationProtocolSelector(
-                        SelectedProtocol.SPDY_3_1.protocolName(),
-                        SelectedProtocol.HTTP_1_1.protocolName()),
+                Arrays.asList(SelectedProtocol.SPDY_3_1.protocolName(), SelectedProtocol.HTTP_1_1.protocolName()),
                 0, 0);
 
         this.host = host;
