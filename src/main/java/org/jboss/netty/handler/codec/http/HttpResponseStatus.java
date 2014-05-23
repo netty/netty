@@ -234,6 +234,16 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
     public static final HttpResponseStatus UPGRADE_REQUIRED = new HttpResponseStatus(426, "Upgrade Required");
 
     /**
+     * 428 Precondition Required (RFC6585)
+     */
+    public static final HttpResponseStatus PRECONDITION_REQUIRED = new HttpResponseStatus(428, "Precondition Required");
+
+    /**
+     * 429 Too Many Requests (RFC6585)
+     */
+    public static final HttpResponseStatus TOO_MANY_REQUESTS = new HttpResponseStatus(429, "Too Many Requests");
+
+    /**
      * 431 Request Header Fields Too Large (RFC6585)
      */
     public static final HttpResponseStatus REQUEST_HEADER_FIELDS_TOO_LARGE =
@@ -286,6 +296,12 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
      * 510 Not Extended (RFC2774)
      */
     public static final HttpResponseStatus NOT_EXTENDED = new HttpResponseStatus(510, "Not Extended");
+
+    /**
+     * 511 Network Authentication Required (RFC6585)
+     */
+    public static final HttpResponseStatus NETWORK_AUTHENTICATION_REQUIRED =
+            new HttpResponseStatus(511, "Network Authentication Required");
 
     /**
      * Returns the {@link HttpResponseStatus} represented by the specified code.
@@ -376,6 +392,12 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
             return UNORDERED_COLLECTION;
         case 426:
             return UPGRADE_REQUIRED;
+        case 428:
+            return PRECONDITION_REQUIRED;
+        case 429:
+            return TOO_MANY_REQUESTS;
+        case 431:
+            return REQUEST_HEADER_FIELDS_TOO_LARGE;
         case 500:
             return INTERNAL_SERVER_ERROR;
         case 501:
@@ -394,6 +416,8 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
             return INSUFFICIENT_STORAGE;
         case 510:
             return NOT_EXTENDED;
+        case 511:
+            return NETWORK_AUTHENTICATION_REQUIRED;
         }
 
         final String reasonPhrase;
