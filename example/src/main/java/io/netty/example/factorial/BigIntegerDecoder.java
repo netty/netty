@@ -44,8 +44,7 @@ public class BigIntegerDecoder extends ByteToMessageDecoder {
         int magicNumber = in.readUnsignedByte();
         if (magicNumber != 'F') {
             in.resetReaderIndex();
-            throw new CorruptedFrameException(
-                    "Invalid magic number: " + magicNumber);
+            throw new CorruptedFrameException("Invalid magic number: " + magicNumber);
         }
 
         // Wait until the whole data is available.

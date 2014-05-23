@@ -29,6 +29,8 @@ import static io.netty.util.internal.logging.InternalLogLevel.*;
 
 public class SpdyClientInitializer extends ChannelInitializer<SocketChannel> {
 
+    private static final int MAX_SPDY_CONTENT_LENGTH = 1024 * 1024; // 1 MB
+
     private final SslContext sslCtx;
     private final HttpResponseClientHandler httpResponseHandler;
 
@@ -37,10 +39,8 @@ public class SpdyClientInitializer extends ChannelInitializer<SocketChannel> {
         this.httpResponseHandler = httpResponseHandler;
     }
 
-    private static final int MAX_SPDY_CONTENT_LENGTH = 1024 * 1024; // 1 MB
-
     @Override
-    public void initChannel(SocketChannel ch) throws Exception {
+    public void initChannel(SocketChannel ch) {
         ChannelPipeline pipeline = ch.pipeline();
         pipeline.addLast("ssl", sslCtx.newHandler(ch.alloc()));
         pipeline.addLast("spdyFrameCodec", new SpdyFrameCodec(SPDY_3_1));
