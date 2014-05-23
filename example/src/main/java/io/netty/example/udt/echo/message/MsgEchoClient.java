@@ -21,13 +21,11 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.udt.UdtChannel;
 import io.netty.channel.udt.nio.NioUdtProvider;
-import io.netty.example.udt.util.UtilConsoleReporter;
-import io.netty.example.udt.util.UtilThreadFactory;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.util.concurrent.DefaultThreadFactory;
 
 import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 /**
@@ -38,24 +36,18 @@ import java.util.logging.Logger;
  * between the echo client and server by sending the first message to the
  * server.
  */
-public class MsgEchoClient {
+public final class MsgEchoClient {
 
     private static final Logger log = Logger.getLogger(MsgEchoClient.class.getName());
 
-    private final String host;
-    private final int port;
-    private final int messageSize;
+    static final String HOST = System.getProperty("host", "127.0.0.1");
+    static final int PORT = Integer.parseInt(System.getProperty("port", "8007"));
+    static final int SIZE = Integer.parseInt(System.getProperty("size", "256"));
 
-    public MsgEchoClient(final String host, final int port,
-            final int messageSize) {
-        this.host = host;
-        this.port = port;
-        this.messageSize = messageSize;
-    }
+    public static void main(String[] args) throws Exception {
 
-    public void run() throws Exception {
         // Configure the client.
-        final ThreadFactory connectFactory = new UtilThreadFactory("connect");
+        final ThreadFactory connectFactory = new DefaultThreadFactory("connect");
         final NioEventLoopGroup connectGroup = new NioEventLoopGroup(1,
                 connectFactory, NioUdtProvider.MESSAGE_PROVIDER);
         try {
@@ -68,11 +60,11 @@ public class MsgEchoClient {
                                 throws Exception {
                             ch.pipeline().addLast(
                                     new LoggingHandler(LogLevel.INFO),
-                                    new MsgEchoClientHandler(messageSize));
+                                    new MsgEchoClientHandler());
                         }
                     });
             // Start the client.
-            final ChannelFuture f = boot.connect(host, port).sync();
+            final ChannelFuture f = boot.connect(HOST, PORT).sync();
             // Wait until the connection is closed.
             f.channel().closeFuture().sync();
         } finally {
@@ -80,21 +72,4 @@ public class MsgEchoClient {
             connectGroup.shutdownGracefully();
         }
     }
-
-    public static void main(final String[] args) throws Exception {
-        log.info("init");
-
-        // client is reporting metrics
-        UtilConsoleReporter.enable(3, TimeUnit.SECONDS);
-
-        final String host = "localhost";
-
-        final int port = 1234;
-        final int messageSize = 64 * 1024;
-
-        new MsgEchoClient(host, port, messageSize).run();
-
-        log.info("done");
-    }
-
 }

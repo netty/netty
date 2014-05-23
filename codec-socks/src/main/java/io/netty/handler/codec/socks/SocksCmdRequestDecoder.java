@@ -27,11 +27,6 @@ import java.util.List;
  * Before returning SocksRequest decoder removes itself from pipeline.
  */
 public class SocksCmdRequestDecoder extends ReplayingDecoder<SocksCmdRequestDecoder.State> {
-    private static final String name = "SOCKS_CMD_REQUEST_DECODER";
-
-    public static String getName() {
-        return name;
-    }
 
     private SocksProtocolVersion version;
     private int fieldLength;

@@ -26,15 +26,10 @@ import io.netty.example.worldclock.WorldClockProtocol.Locations;
 
 import java.util.Calendar;
 import java.util.TimeZone;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import static java.util.Calendar.*;
 
 public class WorldClockServerHandler extends SimpleChannelInboundHandler<Locations> {
-
-    private static final Logger logger = Logger.getLogger(
-            WorldClockServerHandler.class.getName());
 
     @Override
     public void channelRead0(ChannelHandlerContext ctx, Locations locations) throws Exception {
@@ -61,15 +56,13 @@ public class WorldClockServerHandler extends SimpleChannelInboundHandler<Locatio
     }
 
     @Override
-    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+    public void channelReadComplete(ChannelHandlerContext ctx) {
         ctx.flush();
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        logger.log(
-                Level.WARNING,
-                "Unexpected exception from downstream.", cause);
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+        cause.printStackTrace();
         ctx.close();
     }
 

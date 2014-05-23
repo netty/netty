@@ -36,17 +36,14 @@ import java.net.URI;
  * A simple HTTP client that prints out the content of the HTTP response to
  * {@link System#out} to test {@link HttpSnoopServer}.
  */
-public class HttpSnoopClient {
+public final class HttpSnoopClient {
 
-    private final URI uri;
+    static final String URL = System.getProperty("url", "http://127.0.0.1:8080/");
 
-    public HttpSnoopClient(URI uri) {
-        this.uri = uri;
-    }
-
-    public void run() throws Exception {
+    public static void main(String[] args) throws Exception {
+        URI uri = new URI(URL);
         String scheme = uri.getScheme() == null? "http" : uri.getScheme();
-        String host = uri.getHost() == null? "localhost" : uri.getHost();
+        String host = uri.getHost() == null? "127.0.0.1" : uri.getHost();
         int port = uri.getPort();
         if (port == -1) {
             if ("http".equalsIgnoreCase(scheme)) {
@@ -61,8 +58,9 @@ public class HttpSnoopClient {
             return;
         }
 
+        // Configure SSL context if necessary.
+        final boolean ssl = "https".equalsIgnoreCase(scheme);
         final SslContext sslCtx;
-        boolean ssl = "https".equalsIgnoreCase(scheme);
         if (ssl) {
             sslCtx = SslContext.newClientContext(InsecureTrustManagerFactory.INSTANCE);
         } else {
@@ -103,17 +101,5 @@ public class HttpSnoopClient {
             // Shut down executor threads to exit.
             group.shutdownGracefully();
         }
-    }
-
-    public static void main(String[] args) throws Exception {
-        if (args.length != 1) {
-            System.err.println(
-                    "Usage: " + HttpSnoopClient.class.getSimpleName() +
-                    " <URL>");
-            return;
-        }
-
-        URI uri = new URI(args[0]);
-        new HttpSnoopClient(uri).run();
     }
 }

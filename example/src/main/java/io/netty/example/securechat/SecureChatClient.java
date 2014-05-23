@@ -31,19 +31,15 @@ import java.io.InputStreamReader;
 /**
  * Simple SSL chat client modified from {@link TelnetClient}.
  */
-public class SecureChatClient {
+public final class SecureChatClient {
 
-    private final SslContext sslCtx;
-    private final String host;
-    private final int port;
+    static final String HOST = System.getProperty("host", "127.0.0.1");
+    static final int PORT = Integer.parseInt(System.getProperty("port", "8992"));
 
-    public SecureChatClient(SslContext sslCtx, String host, int port) {
-        this.sslCtx = sslCtx;
-        this.host = host;
-        this.port = port;
-    }
+    public static void main(String[] args) throws Exception {
+        // Configure SSL.
+        final SslContext sslCtx = SslContext.newClientContext(InsecureTrustManagerFactory.INSTANCE);
 
-    public void run() throws Exception {
         EventLoopGroup group = new NioEventLoopGroup();
         try {
             Bootstrap b = new Bootstrap();
@@ -52,7 +48,7 @@ public class SecureChatClient {
              .handler(new SecureChatClientInitializer(sslCtx));
 
             // Start the connection attempt.
-            Channel ch = b.connect(host, port).sync().channel();
+            Channel ch = b.connect(HOST, PORT).sync().channel();
 
             // Read commands from the stdin.
             ChannelFuture lastWriteFuture = null;
@@ -82,23 +78,5 @@ public class SecureChatClient {
             // The connection is closed automatically on shutdown.
             group.shutdownGracefully();
         }
-    }
-
-    public static void main(String[] args) throws Exception {
-        // Print usage if no argument is specified.
-        if (args.length != 2) {
-            System.err.println(
-                    "Usage: " + SecureChatClient.class.getSimpleName() +
-                    " <host> <port>");
-            return;
-        }
-
-        // Parse options.
-        String host = args[0];
-        int port = Integer.parseInt(args[1]);
-
-        // Configure SSL.
-        SslContext sslCtx = SslContext.newClientContext(InsecureTrustManagerFactory.INSTANCE);
-        new SecureChatClient(sslCtx, host, port).run();
     }
 }

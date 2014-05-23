@@ -23,6 +23,7 @@ import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.cors.CorsConfig;
 import io.netty.handler.codec.http.cors.CorsHandler;
+import io.netty.handler.ssl.SslContext;
 import io.netty.handler.stream.ChunkedWriteHandler;
 
 /**
@@ -68,19 +69,27 @@ import io.netty.handler.stream.ChunkedWriteHandler;
  * corsConfig.exposedHeaders("custom-response-header");
  * </pre>
  */
-public class HttpServerInitializer extends ChannelInitializer<SocketChannel> {
+public class HttpCorsServerInitializer extends ChannelInitializer<SocketChannel> {
+
+    private final SslContext sslCtx;
+
+    public HttpCorsServerInitializer(SslContext sslCtx) {
+        this.sslCtx = sslCtx;
+    }
 
     @Override
-    public void initChannel(SocketChannel ch) throws Exception {
-        ChannelPipeline pipeline = ch.pipeline();
-
+    public void initChannel(SocketChannel ch) {
         CorsConfig corsConfig = CorsConfig.withAnyOrigin().build();
-        pipeline.addLast("encoder", new HttpResponseEncoder());
-        pipeline.addLast("decoder", new HttpRequestDecoder());
-        pipeline.addLast("aggregator", new HttpObjectAggregator(65536));
-        pipeline.addLast("chunkedWriter", new ChunkedWriteHandler());
-        pipeline.addLast("cors", new CorsHandler(corsConfig));
-        pipeline.addLast("handler", new OkResponseHandler());
+        ChannelPipeline pipeline = ch.pipeline();
+        if (sslCtx != null) {
+            pipeline.addLast(sslCtx.newHandler(ch.alloc()));
+        }
+        pipeline.addLast(new HttpResponseEncoder());
+        pipeline.addLast(new HttpRequestDecoder());
+        pipeline.addLast(new HttpObjectAggregator(65536));
+        pipeline.addLast(new ChunkedWriteHandler());
+        pipeline.addLast(new CorsHandler(corsConfig));
+        pipeline.addLast(new OkResponseHandler());
     }
 
 }

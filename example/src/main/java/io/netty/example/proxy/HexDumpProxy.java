@@ -20,23 +20,17 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.logging.LogLevel;
+import io.netty.handler.logging.LoggingHandler;
 
-public class HexDumpProxy {
+public final class HexDumpProxy {
 
-    private final int localPort;
-    private final String remoteHost;
-    private final int remotePort;
+    static final int LOCAL_PORT = Integer.parseInt(System.getProperty("localPort", "8443"));
+    static final String REMOTE_HOST = System.getProperty("remoteHost", "www.google.com");
+    static final int REMOTE_PORT = Integer.parseInt(System.getProperty("remotePort", "443"));
 
-    public HexDumpProxy(int localPort, String remoteHost, int remotePort) {
-        this.localPort = localPort;
-        this.remoteHost = remoteHost;
-        this.remotePort = remotePort;
-    }
-
-    public void run() throws Exception {
-        System.err.println(
-                "Proxying *:" + localPort + " to " +
-                remoteHost + ':' + remotePort + " ...");
+    public static void main(String[] args) throws Exception {
+        System.err.println("Proxying *:" + LOCAL_PORT + " to " + REMOTE_HOST + ':' + REMOTE_PORT + " ...");
 
         // Configure the bootstrap.
         EventLoopGroup bossGroup = new NioEventLoopGroup(1);
@@ -45,29 +39,13 @@ public class HexDumpProxy {
             ServerBootstrap b = new ServerBootstrap();
             b.group(bossGroup, workerGroup)
              .channel(NioServerSocketChannel.class)
-             .childHandler(new HexDumpProxyInitializer(remoteHost, remotePort))
+             .handler(new LoggingHandler(LogLevel.INFO))
+             .childHandler(new HexDumpProxyInitializer(REMOTE_HOST, REMOTE_PORT))
              .childOption(ChannelOption.AUTO_READ, false)
-             .bind(localPort).sync().channel().closeFuture().sync();
+             .bind(LOCAL_PORT).sync().channel().closeFuture().sync();
         } finally {
             bossGroup.shutdownGracefully();
             workerGroup.shutdownGracefully();
         }
-    }
-
-    public static void main(String[] args) throws Exception {
-        // Validate command line options.
-        if (args.length != 3) {
-            System.err.println(
-                    "Usage: " + HexDumpProxy.class.getSimpleName() +
-                    " <local port> <remote host> <remote port>");
-            return;
-        }
-
-        // Parse command line options.
-        int localPort = Integer.parseInt(args[0]);
-        String remoteHost = args[1];
-        int remotePort = Integer.parseInt(args[2]);
-
-        new HexDumpProxy(localPort, remoteHost, remotePort).run();
     }
 }

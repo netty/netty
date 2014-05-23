@@ -18,16 +18,10 @@ package io.netty.example.securechat;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 /**
  * Handles a client-side channel.
  */
 public class SecureChatClientHandler extends SimpleChannelInboundHandler<String> {
-
-    private static final Logger logger = Logger.getLogger(
-            SecureChatClientHandler.class.getName());
 
     @Override
     public void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
@@ -35,10 +29,8 @@ public class SecureChatClientHandler extends SimpleChannelInboundHandler<String>
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        logger.log(
-                Level.WARNING,
-                "Unexpected exception from downstream.", cause);
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+        cause.printStackTrace();
         ctx.close();
     }
 }

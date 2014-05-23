@@ -32,10 +32,10 @@ public class SpdyServerInitializer extends ChannelInitializer<SocketChannel> {
     }
 
     @Override
-    public void initChannel(SocketChannel ch) throws Exception {
+    public void initChannel(SocketChannel ch) {
         ChannelPipeline p = ch.pipeline();
-        p.addLast("ssl", sslCtx.newHandler(ch.alloc()));
+        p.addLast(sslCtx.newHandler(ch.alloc()));
         // Negotiates with the browser if SPDY or HTTP is going to be used
-        p.addLast("handler", new SpdyOrHttpHandler());
+        p.addLast(new SpdyOrHttpHandler());
     }
 }

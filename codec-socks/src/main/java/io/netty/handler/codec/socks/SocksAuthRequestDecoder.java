@@ -27,11 +27,6 @@ import java.util.List;
  * Before returning SocksRequest decoder removes itself from pipeline.
  */
 public class SocksAuthRequestDecoder extends ReplayingDecoder<SocksAuthRequestDecoder.State> {
-    private static final String name = "SOCKS_AUTH_REQUEST_DECODER";
-
-    public static String getName() {
-        return name;
-    }
 
     private SocksSubnegotiationVersion version;
     private int fieldLength;

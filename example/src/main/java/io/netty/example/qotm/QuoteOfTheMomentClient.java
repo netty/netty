@@ -28,20 +28,17 @@ import io.netty.util.CharsetUtil;
 import java.net.InetSocketAddress;
 
 /**
- * A UDP broadcast client that asks for a quote of the moment (QOTM) to
- * {@link QuoteOfTheMomentServer}.
+ * A UDP broadcast client that asks for a quote of the moment (QOTM) to {@link QuoteOfTheMomentServer}.
  *
- * Inspired by <a href="http://goo.gl/BsXVR">the official Java tutorial</a>.
+ * Inspired by <a href="http://docs.oracle.com/javase/tutorial/networking/datagrams/clientServer.html">the official
+ * Java tutorial</a>.
  */
-public class QuoteOfTheMomentClient {
+public final class QuoteOfTheMomentClient {
 
-    private final int port;
+    static final int PORT = Integer.parseInt(System.getProperty("port", "7686"));
 
-    public QuoteOfTheMomentClient(int port) {
-        this.port = port;
-    }
+    public static void main(String[] args) throws Exception {
 
-    public void run() throws Exception {
         EventLoopGroup group = new NioEventLoopGroup();
         try {
             Bootstrap b = new Bootstrap();
@@ -55,7 +52,7 @@ public class QuoteOfTheMomentClient {
             // Broadcast the QOTM request to port 8080.
             ch.writeAndFlush(new DatagramPacket(
                     Unpooled.copiedBuffer("QOTM?", CharsetUtil.UTF_8),
-                    new InetSocketAddress("255.255.255.255", port))).sync();
+                    new InetSocketAddress("255.255.255.255", PORT))).sync();
 
             // QuoteOfTheMomentClientHandler will close the DatagramChannel when a
             // response is received.  If the channel is not closed within 5 seconds,
@@ -66,15 +63,5 @@ public class QuoteOfTheMomentClient {
         } finally {
             group.shutdownGracefully();
         }
-    }
-
-    public static void main(String[] args) throws Exception {
-        int port;
-        if (args.length > 0) {
-            port = Integer.parseInt(args[0]);
-        } else {
-            port = 8080;
-        }
-        new QuoteOfTheMomentClient(port).run();
     }
 }

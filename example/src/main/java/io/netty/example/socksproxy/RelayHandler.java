@@ -21,13 +21,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.ReferenceCountUtil;
 
-
 public final class RelayHandler extends ChannelInboundHandlerAdapter {
-    private static final String name = "RELAY_HANDLER";
-
-    public static String getName() {
-        return name;
-    }
 
     private final Channel relayChannel;
 
@@ -36,12 +30,12 @@ public final class RelayHandler extends ChannelInboundHandlerAdapter {
     }
 
     @Override
-    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+    public void channelActive(ChannelHandlerContext ctx) {
         ctx.writeAndFlush(Unpooled.EMPTY_BUFFER);
     }
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void channelRead(ChannelHandlerContext ctx, Object msg) {
         if (relayChannel.isActive()) {
             relayChannel.writeAndFlush(msg);
         } else {
@@ -50,16 +44,15 @@ public final class RelayHandler extends ChannelInboundHandlerAdapter {
     }
 
     @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+    public void channelInactive(ChannelHandlerContext ctx) {
         if (relayChannel.isActive()) {
             SocksServerUtils.closeOnFlush(relayChannel);
         }
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         cause.printStackTrace();
         ctx.close();
     }
-
 }

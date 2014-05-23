@@ -33,7 +33,7 @@ public class MemcacheClientHandler extends ChannelDuplexHandler {
      * Transforms basic string requests to binary memcache requests
      */
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
         String command = (String) msg;
         if (command.startsWith("get ")) {
             String key = command.substring("get ".length());
@@ -68,13 +68,13 @@ public class MemcacheClientHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void channelRead(ChannelHandlerContext ctx, Object msg) {
         FullBinaryMemcacheResponse res = (FullBinaryMemcacheResponse) msg;
         System.out.println(res.content().toString(CharsetUtil.UTF_8));
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         cause.printStackTrace();
         ctx.close();
     }
