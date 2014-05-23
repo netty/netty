@@ -29,6 +29,10 @@ import java.util.List;
 public class SocksCmdResponseDecoder extends ReplayingDecoder<SocksCmdResponseDecoder.State> {
     private static final String name = "SOCKS_CMD_RESPONSE_DECODER";
 
+    /**
+     * @deprecated Will be removed at the next minor version bump.
+     */
+    @Deprecated
     public static String getName() {
         return name;
     }

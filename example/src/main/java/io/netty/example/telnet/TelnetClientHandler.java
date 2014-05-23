@@ -19,16 +19,11 @@ import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 /**
  * Handles a client-side channel.
  */
 @Sharable
 public class TelnetClientHandler extends SimpleChannelInboundHandler<String> {
-
-    private static final Logger logger = Logger.getLogger(TelnetClientHandler.class.getName());
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
@@ -36,10 +31,8 @@ public class TelnetClientHandler extends SimpleChannelInboundHandler<String> {
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        logger.log(
-                Level.WARNING,
-                "Unexpected exception from downstream.", cause);
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+        cause.printStackTrace();
         ctx.close();
     }
 }

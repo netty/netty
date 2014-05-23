@@ -29,6 +29,10 @@ import java.util.List;
 public class SocksInitRequestDecoder extends ReplayingDecoder<SocksInitRequestDecoder.State> {
     private static final String name = "SOCKS_INIT_REQUEST_DECODER";
 
+    /**
+     * @deprecated Will be removed at the next minor version bump.
+     */
+    @Deprecated
     public static String getName() {
         return name;
     }

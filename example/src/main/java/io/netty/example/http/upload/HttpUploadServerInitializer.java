@@ -32,21 +32,19 @@ public class HttpUploadServerInitializer extends ChannelInitializer<SocketChanne
     }
 
     @Override
-    public void initChannel(SocketChannel ch) throws Exception {
-        // Create a default pipeline implementation.
+    public void initChannel(SocketChannel ch) {
         ChannelPipeline pipeline = ch.pipeline();
 
         if (sslCtx != null) {
-            pipeline.addLast("ssl", sslCtx.newHandler(ch.alloc()));
+            pipeline.addLast(sslCtx.newHandler(ch.alloc()));
         }
 
-        pipeline.addLast("decoder", new HttpRequestDecoder());
-        pipeline.addLast("encoder", new HttpResponseEncoder());
+        pipeline.addLast(new HttpRequestDecoder());
+        pipeline.addLast(new HttpResponseEncoder());
 
-        // Remove the following line if you don't want automatic content
-        // compression.
-        pipeline.addLast("deflater", new HttpContentCompressor());
+        // Remove the following line if you don't want automatic content compression.
+        pipeline.addLast(new HttpContentCompressor());
 
-        pipeline.addLast("handler", new HttpUploadServerHandler());
+        pipeline.addLast(new HttpUploadServerHandler());
     }
 }

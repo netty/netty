@@ -32,17 +32,13 @@ import io.netty.handler.logging.LoggingHandler;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 
-public class LocalEcho {
+public final class LocalEcho {
 
-    private final String port;
+    static final String PORT = System.getProperty("port", "test_port");
 
-    public LocalEcho(String port) {
-        this.port = port;
-    }
-
-    public void run() throws Exception {
+    public static void main(String[] args) throws Exception {
         // Address to bind on / connect to.
-        final LocalAddress addr = new LocalAddress(port);
+        final LocalAddress addr = new LocalAddress(PORT);
 
         EventLoopGroup serverGroup = new LocalEventLoopGroup();
         EventLoopGroup clientGroup = new NioEventLoopGroup(); // NIO event loops are also OK
@@ -108,9 +104,5 @@ public class LocalEcho {
             serverGroup.shutdownGracefully();
             clientGroup.shutdownGracefully();
         }
-    }
-
-    public static void main(String[] args) throws Exception {
-        new LocalEcho("1").run();
     }
 }

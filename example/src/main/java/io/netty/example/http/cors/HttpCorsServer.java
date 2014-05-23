@@ -19,6 +19,10 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.logging.LogLevel;
+import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 
 /**
  * This example server aims to demonstrate
@@ -27,7 +31,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
  * a html page that is loaded to try out CORS support in a web brower.
  * <p>
  *
- * CORS is configured in {@link HttpServerInitializer} and by updating the config you can
+ * CORS is configured in {@link HttpCorsServerInitializer} and by updating the config you can
  * try out various combinations, like using a specific origin instead of a
  * wildcard origin ('*').
  * <p>
@@ -63,40 +67,37 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
  * If you inspect the headers being sent using your browser you'll see that the 'Origin'
  * request header is {@code 'null'}. This is expected and happens when you load a file from the
  * local file system. Netty can handle this by configuring the CorsHandler which is done
- * in the {@link HttpServerInitializer}.
+ * in the {@link HttpCorsServerInitializer}.
  *
  */
-public class HttpServer {
+public final class HttpCorsServer {
 
-    private final int port;
+    static final boolean SSL = System.getProperty("ssl") != null;
+    static final int PORT = Integer.parseInt(System.getProperty("port", SSL? "8443" : "8080"));
 
-    public HttpServer(int port) {
-        this.port = port;
-    }
+    public static void main(String[] args) throws Exception {
+        // Configure SSL.
+        final SslContext sslCtx;
+        if (SSL) {
+            SelfSignedCertificate ssc = new SelfSignedCertificate();
+            sslCtx = SslContext.newServerContext(ssc.certificate(), ssc.privateKey());
+        } else {
+            sslCtx = null;
+        }
 
-    public void run() throws Exception {
         EventLoopGroup bossGroup = new NioEventLoopGroup(1);
         EventLoopGroup workerGroup = new NioEventLoopGroup();
         try {
             ServerBootstrap b = new ServerBootstrap();
             b.group(bossGroup, workerGroup)
              .channel(NioServerSocketChannel.class)
-             .childHandler(new HttpServerInitializer());
+             .handler(new LoggingHandler(LogLevel.INFO))
+             .childHandler(new HttpCorsServerInitializer(sslCtx));
 
-            b.bind(port).sync().channel().closeFuture().sync();
+            b.bind(PORT).sync().channel().closeFuture().sync();
         } finally {
             bossGroup.shutdownGracefully();
             workerGroup.shutdownGracefully();
         }
-    }
-
-    public static void main(String[] args) throws Exception {
-        int port;
-        if (args.length > 0) {
-            port = Integer.parseInt(args[0]);
-        } else {
-            port = 8080;
-        }
-        new HttpServer(port).run();
     }
 }

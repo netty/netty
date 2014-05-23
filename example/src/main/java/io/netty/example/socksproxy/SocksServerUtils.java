@@ -21,10 +21,6 @@ import io.netty.channel.ChannelFutureListener;
 
 public final class SocksServerUtils {
 
-    private SocksServerUtils() {
-        //NOOP
-    }
-
     /**
      * Closes the specified channel after all queued write requests are flushed.
      */
@@ -33,4 +29,6 @@ public final class SocksServerUtils {
             ch.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
         }
     }
+
+    private SocksServerUtils() { }
 }

@@ -21,43 +21,27 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 /**
  * Handles a client-side channel.
  */
 public class DiscardClientHandler extends SimpleChannelInboundHandler<Object> {
 
-    private static final Logger logger = Logger.getLogger(
-            DiscardClientHandler.class.getName());
-
-    private final int messageSize;
     private ByteBuf content;
     private ChannelHandlerContext ctx;
 
-    public DiscardClientHandler(int messageSize) {
-        if (messageSize <= 0) {
-            throw new IllegalArgumentException(
-                    "messageSize: " + messageSize);
-        }
-        this.messageSize = messageSize;
-    }
-
     @Override
-    public void channelActive(ChannelHandlerContext ctx)
-            throws Exception {
+    public void channelActive(ChannelHandlerContext ctx) {
         this.ctx = ctx;
 
         // Initialize the message.
-        content = ctx.alloc().directBuffer(messageSize).writeZero(messageSize);
+        content = ctx.alloc().directBuffer(DiscardClient.SIZE).writeZero(DiscardClient.SIZE);
 
         // Send the initial messages.
         generateTraffic();
     }
 
     @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+    public void channelInactive(ChannelHandlerContext ctx) {
         content.release();
     }
 
@@ -67,13 +51,9 @@ public class DiscardClientHandler extends SimpleChannelInboundHandler<Object> {
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx,
-            Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         // Close the connection when an exception is raised.
-        logger.log(
-                Level.WARNING,
-                "Unexpected exception from downstream.",
-                cause);
+        cause.printStackTrace();
         ctx.close();
     }
 
@@ -87,9 +67,12 @@ public class DiscardClientHandler extends SimpleChannelInboundHandler<Object> {
 
     private final ChannelFutureListener trafficGenerator = new ChannelFutureListener() {
         @Override
-        public void operationComplete(ChannelFuture future) throws Exception {
+        public void operationComplete(ChannelFuture future) {
             if (future.isSuccess()) {
                 generateTraffic();
+            } else {
+                future.cause().printStackTrace();
+                future.channel().close();
             }
         }
     };

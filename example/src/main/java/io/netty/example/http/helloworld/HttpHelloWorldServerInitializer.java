@@ -19,18 +19,23 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.handler.ssl.SslContext;
 
 public class HttpHelloWorldServerInitializer extends ChannelInitializer<SocketChannel> {
+
+    private final SslContext sslCtx;
+
+    public HttpHelloWorldServerInitializer(SslContext sslCtx) {
+        this.sslCtx = sslCtx;
+    }
+
     @Override
-    public void initChannel(SocketChannel ch) throws Exception {
+    public void initChannel(SocketChannel ch) {
         ChannelPipeline p = ch.pipeline();
-
-        // Uncomment the following line if you want HTTPS
-        //SSLEngine engine = SecureChatSslContextFactory.getServerContext().createSSLEngine();
-        //engine.setUseClientMode(false);
-        //p.addLast("ssl", new SslHandler(engine));
-
-        p.addLast("codec", new HttpServerCodec());
-        p.addLast("handler", new HttpHelloWorldServerHandler());
+        if (sslCtx != null) {
+            p.addLast(sslCtx.newHandler(ch.alloc()));
+        }
+        p.addLast(new HttpServerCodec());
+        p.addLast(new HttpHelloWorldServerHandler());
     }
 }
