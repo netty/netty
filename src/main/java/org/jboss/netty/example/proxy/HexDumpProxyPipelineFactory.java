@@ -18,6 +18,8 @@ package org.jboss.netty.example.proxy;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
+import org.jboss.netty.handler.logging.LoggingHandler;
+import org.jboss.netty.logging.InternalLogLevel;
 
 import static org.jboss.netty.channel.Channels.*;
 
@@ -31,6 +33,7 @@ public class HexDumpProxyPipelineFactory implements ChannelPipelineFactory {
 
     public ChannelPipeline getPipeline() {
         ChannelPipeline p = pipeline(); // Note the static import.
+        p.addLast("logger", new LoggingHandler(InternalLogLevel.INFO));
         p.addLast("handler", new HexDumpProxyInboundHandler(cf));
         return p;
     }
