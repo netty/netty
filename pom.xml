@@ -502,12 +502,6 @@
       <plugin>
         <artifactId>maven-antrun-plugin</artifactId>
         <version>1.7</version>
-        <configuration>
-          <target>
-            <property name="runtime_classpath" refid="maven.runtime.classpath"/>
-            <ant antfile="${antfile}"/>
-          </target>
-        </configuration>
         <executions>
           <execution>
             <id>write-version</id>
@@ -515,7 +509,7 @@
             <goals>
               <goal>run</goal>
             </goals>
-            <configuration combine.self="override">
+            <configuration>
               <target>
                 <taskdef resource="net/sf/antcontrib/antlib.xml" />
                 <exec executable="git" outputproperty="gitOutput" resultproperty="gitExitCode" failonerror="false" failifexecutionfails="false">
@@ -545,7 +539,7 @@
             <goals>
               <goal>run</goal>
             </goals>
-            <configuration combine.self="override">
+            <configuration>
               <target>
                 <taskdef resource="net/sf/antcontrib/antlib.xml" />
                 <if>
@@ -735,6 +729,20 @@
             <version>21</version>
           </dependency>
         </dependencies>
+      </plugin>
+      <!-- run-example.sh invokes this plugin to launch an example. -->
+      <plugin>
+        <groupId>kr.motd.maven</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>1.0.0.Final</version>
+        <configuration>
+          <executable>${java.home}/bin/java</executable>
+          <commandlineArgs>
+            -classpath %classpath
+            ${argLine.example}
+            ${exampleClass}
+          </commandlineArgs>
+        </configuration>
       </plugin>
     </plugins>
   </build>

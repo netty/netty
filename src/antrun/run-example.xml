@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project default="run-example">
-  <target name="run-example">
-    <java classname="${exampleClass}" classpath="${runtime_classpath}" fork="true">
-      <jvmarg line="${argLine.example}" />
-    </java>
-  </target>
-</project>
-
