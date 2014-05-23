@@ -71,10 +71,8 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
 
     private final StringBuilder responseContent = new StringBuilder();
 
-    private static final HttpDataFactory factory = new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE); //Disk
-                                                                                                              // if
-                                                                                                              // size
-                                                                                                              // exceed
+    private static final HttpDataFactory factory =
+            new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE); // Disk if size exceed
 
     private HttpPostRequestDecoder decoder;
     static {
@@ -128,7 +126,7 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
                 cookies = CookieDecoder.decode(value);
             }
             for (Cookie cookie : cookies) {
-                responseContent.append("COOKIE: " + cookie.toString() + "\r\n");
+                responseContent.append("COOKIE: " + cookie + "\r\n");
             }
             responseContent.append("\r\n\r\n");
 
@@ -247,10 +245,10 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
                         + attribute.getName() + " data too long\r\n");
             } else {
                 responseContent.append("\r\nBODY Attribute: " + attribute.getHttpDataType().name() + ": "
-                        + attribute.toString() + "\r\n");
+                        + attribute + "\r\n");
             }
         } else {
-            responseContent.append("\r\nBODY FileUpload: " + data.getHttpDataType().name() + ": " + data.toString()
+            responseContent.append("\r\nBODY FileUpload: " + data.getHttpDataType().name() + ": " + data
                     + "\r\n");
             if (data.getHttpDataType() == HttpDataType.FileUpload) {
                 FileUpload fileUpload = (FileUpload) data;

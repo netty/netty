@@ -16,7 +16,6 @@
 package io.netty.example.udt.echo.rendezvous;
 
 import java.net.InetSocketAddress;
-import java.util.logging.Logger;
 
 /**
  * UDT Message Flow Peer
@@ -26,30 +25,14 @@ import java.util.logging.Logger;
  */
 public class MsgEchoPeerOne extends MsgEchoPeerBase {
 
-    private static final Logger log = Logger.getLogger(MsgEchoPeerOne.class.getName());
-
-    public MsgEchoPeerOne(final InetSocketAddress self,
-            final InetSocketAddress peer, final int messageSize) {
+    public MsgEchoPeerOne(final InetSocketAddress self, final InetSocketAddress peer, final int messageSize) {
         super(self, peer, messageSize);
     }
 
     public static void main(final String[] args) throws Exception {
-        log.info("init");
-
-        // peer one is not reporting metrics
-        // ConsoleReporterUDT.enable(3, TimeUnit.SECONDS);
-
         final int messageSize = 64 * 1024;
-
-        final InetSocketAddress self = new InetSocketAddress(Config.hostOne,
-                Config.portOne);
-
-        final InetSocketAddress peer = new InetSocketAddress(Config.hostTwo,
-                Config.portTwo);
-
+        final InetSocketAddress self = new InetSocketAddress(Config.hostOne, Config.portOne);
+        final InetSocketAddress peer = new InetSocketAddress(Config.hostTwo, Config.portTwo);
         new MsgEchoPeerOne(self, peer, messageSize).run();
-
-        log.info("done");
     }
-
 }

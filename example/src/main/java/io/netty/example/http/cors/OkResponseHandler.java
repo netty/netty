@@ -29,7 +29,7 @@ import io.netty.handler.codec.http.HttpVersion;
 public class OkResponseHandler extends ChannelHandlerAdapter {
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void channelRead(ChannelHandlerContext ctx, Object msg) {
         final DefaultHttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         response.headers().set("custom-response-header", "Some value");
         ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);

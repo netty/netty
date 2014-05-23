@@ -21,9 +21,9 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.udt.UdtChannel;
 import io.netty.channel.udt.nio.NioUdtProvider;
-import io.netty.example.udt.util.UtilThreadFactory;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.util.concurrent.DefaultThreadFactory;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.ThreadFactory;
@@ -48,7 +48,7 @@ public abstract class MsgEchoPeerBase {
 
     public void run() throws Exception {
         // Configure the peer.
-        final ThreadFactory connectFactory = new UtilThreadFactory("rendezvous");
+        final ThreadFactory connectFactory = new DefaultThreadFactory("rendezvous");
         final NioEventLoopGroup connectGroup = new NioEventLoopGroup(1,
                 connectFactory, NioUdtProvider.MESSAGE_PROVIDER);
         try {
@@ -73,5 +73,4 @@ public abstract class MsgEchoPeerBase {
             connectGroup.shutdownGracefully();
         }
     }
-
 }

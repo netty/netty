@@ -15,8 +15,6 @@
 
 package io.netty.example.http2.server;
 
-import static io.netty.example.http2.Http2ExampleUtil.UPGRADE_RESPONSE_HEADER;
-import static io.netty.util.internal.logging.InternalLogLevel.INFO;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.example.http2.client.Http2ClientConnectionHandler;
@@ -36,6 +34,9 @@ import io.netty.handler.codec.http2.Http2OutboundFrameLogger;
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+
+import static io.netty.example.http2.Http2ExampleUtil.*;
+import static io.netty.util.internal.logging.InternalLogLevel.*;
 
 /**
  * A simple handler that responds with the message "Hello World!".
@@ -84,7 +85,7 @@ public class HelloWorldHttp2Handler extends AbstractHttp2ConnectionHandler {
      */
     @Override
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId,
-            io.netty.handler.codec.http2.Http2Headers headers, int padding, boolean endStream,
+            Http2Headers headers, int padding, boolean endStream,
             boolean endSegment) throws Http2Exception {
         if (endStream) {
             sendResponse(ctx(), streamId);
@@ -96,7 +97,7 @@ public class HelloWorldHttp2Handler extends AbstractHttp2ConnectionHandler {
      */
     @Override
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId,
-            io.netty.handler.codec.http2.Http2Headers headers, int streamDependency, short weight,
+            Http2Headers headers, int streamDependency, short weight,
             boolean exclusive, int padding, boolean endStream, boolean endSegment)
             throws Http2Exception {
         if (endStream) {
@@ -133,7 +134,7 @@ public class HelloWorldHttp2Handler extends AbstractHttp2ConnectionHandler {
 
     @Override
     public void onPushPromiseRead(ChannelHandlerContext ctx, int streamId, int promisedStreamId,
-            io.netty.handler.codec.http2.Http2Headers headers, int padding) throws Http2Exception {
+            Http2Headers headers, int padding) throws Http2Exception {
     }
 
     @Override
@@ -156,15 +157,15 @@ public class HelloWorldHttp2Handler extends AbstractHttp2ConnectionHandler {
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         cause.printStackTrace();
-        super.exceptionCaught(ctx, cause);
+        ctx.close();
     }
 
     /**
      * Sends a "Hello World" DATA frame to the client.
      */
-    private void sendResponse(ChannelHandlerContext ctx, int streamId) throws Http2Exception {
+    private void sendResponse(ChannelHandlerContext ctx, int streamId) {
         // Send a frame for the response status
         Http2Headers headers = DefaultHttp2Headers.newBuilder().status("200").build();
         writeHeaders(ctx(), ctx().newPromise(), streamId, headers, 0, false, false);

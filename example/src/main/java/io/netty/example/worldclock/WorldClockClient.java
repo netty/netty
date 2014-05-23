@@ -20,101 +20,58 @@ import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
+import java.util.Arrays;
 import java.util.List;
-import java.util.regex.Pattern;
 
 /**
  * Sends a list of continent/city pairs to a {@link WorldClockServer} to
  * get the local times of the specified cities.
  */
-public class WorldClockClient {
+public final class WorldClockClient {
 
-    private final String host;
-    private final int port;
-    private final Collection<String> cities;
+    static final boolean SSL = System.getProperty("ssl") != null;
+    static final String HOST = System.getProperty("host", "127.0.0.1");
+    static final int PORT = Integer.parseInt(System.getProperty("port", "8463"));
+    static final List<String> CITIES = Arrays.asList(System.getProperty(
+            "cities", "Asia/Seoul,Europe/Berlin,America/Los_Angeles").split(","));
 
-    public WorldClockClient(String host, int port, Collection<String> cities) {
-        this.host = host;
-        this.port = port;
-        this.cities = new ArrayList<String>();
-        this.cities.addAll(cities);
-    }
+    public static void main(String[] args) throws Exception {
+        // Configure SSL.
+        final SslContext sslCtx;
+        if (SSL) {
+            sslCtx = SslContext.newClientContext(InsecureTrustManagerFactory.INSTANCE);
+        } else {
+            sslCtx = null;
+        }
 
-    public void run() throws Exception {
         EventLoopGroup group = new NioEventLoopGroup();
         try {
             Bootstrap b = new Bootstrap();
             b.group(group)
              .channel(NioSocketChannel.class)
-             .handler(new WorldClockClientInitializer());
+             .handler(new WorldClockClientInitializer(sslCtx));
 
             // Make a new connection.
-            Channel ch = b.connect(host, port).sync().channel();
+            Channel ch = b.connect(HOST, PORT).sync().channel();
 
             // Get the handler instance to initiate the request.
-            WorldClockClientHandler handler =
-                ch.pipeline().get(WorldClockClientHandler.class);
+            WorldClockClientHandler handler = ch.pipeline().get(WorldClockClientHandler.class);
 
             // Request and get the response.
-            List<String> response = handler.getLocalTimes(cities);
+            List<String> response = handler.getLocalTimes(CITIES);
 
             // Close the connection.
             ch.close();
 
             // Print the response at last but not least.
-            Iterator<String> i1 = cities.iterator();
-            Iterator<String> i2 = response.iterator();
-            while (i1.hasNext()) {
-                System.out.format("%28s: %s%n", i1.next(), i2.next());
+            for (int i = 0; i < CITIES.size(); i ++) {
+                System.out.format("%28s: %s%n", CITIES.get(i), response.get(i));
             }
         } finally {
             group.shutdownGracefully();
         }
-    }
-
-    public static void main(String[] args) throws Exception {
-        // Print usage if necessary.
-        if (args.length < 3) {
-            printUsage();
-            return;
-        }
-
-        // Parse options.
-        String host = args[0];
-        int port = Integer.parseInt(args[1]);
-        Collection<String> cities = parseCities(args, 2);
-        if (cities == null) {
-            return;
-        }
-
-        new WorldClockClient(host, port, cities).run();
-    }
-
-    private static void printUsage() {
-        System.err.println(
-                "Usage: " + WorldClockClient.class.getSimpleName() +
-                " <host> <port> <continent/city_name> ...");
-        System.err.println(
-                "Example: " + WorldClockClient.class.getSimpleName() +
-                " localhost 8080 America/New_York Asia/Seoul");
-    }
-
-    private static final Pattern CITY_PATTERN = Pattern.compile("^[_A-Za-z]+/[_A-Za-z]+$");
-
-    private static List<String> parseCities(String[] args, int offset) {
-        List<String> cities = new ArrayList<String>();
-        for (int i = offset; i < args.length; i ++) {
-            if (!CITY_PATTERN.matcher(args[i]).matches()) {
-                System.err.println("Syntax error: '" + args[i] + '\'');
-                printUsage();
-                return null;
-            }
-            cities.add(args[i].trim());
-        }
-        return cities;
     }
 }

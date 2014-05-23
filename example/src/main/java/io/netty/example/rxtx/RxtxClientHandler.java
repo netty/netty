@@ -26,7 +26,7 @@ public class RxtxClientHandler extends SimpleChannelInboundHandler<String> {
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, String msg) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, String msg) {
         if ("OK".equals(msg)) {
             System.out.println("Serial port responded to AT");
         } else {

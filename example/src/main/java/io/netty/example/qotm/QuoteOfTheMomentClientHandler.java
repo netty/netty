@@ -23,7 +23,7 @@ import io.netty.util.CharsetUtil;
 public class QuoteOfTheMomentClientHandler extends SimpleChannelInboundHandler<DatagramPacket> {
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, DatagramPacket msg) {
         String response = msg.content().toString(CharsetUtil.UTF_8);
         if (response.startsWith("QOTM: ")) {
             System.out.println("Quote of the Moment: " + response.substring(6));
@@ -32,7 +32,7 @@ public class QuoteOfTheMomentClientHandler extends SimpleChannelInboundHandler<D
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         cause.printStackTrace();
         ctx.close();
     }

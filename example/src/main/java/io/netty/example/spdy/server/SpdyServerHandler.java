@@ -23,7 +23,6 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.ssl.SslHandler;
 import io.netty.util.CharsetUtil;
 
 import java.util.Date;
@@ -37,15 +36,9 @@ import static io.netty.handler.codec.http.HttpVersion.*;
  * HTTP handler that responds with a "Hello World"
  */
 public class SpdyServerHandler extends SimpleChannelInboundHandler<Object> {
-    @Override
-    public void channelReadComplete(ChannelHandlerContext ctx) {
-        ctx.flush();
-    }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
-        SslHandler h = ctx.pipeline().get(SslHandler.class);
-        System.err.println(h.engine().getSession().getProtocol());
+    public void messageReceived(ChannelHandlerContext ctx, Object msg) {
         if (msg instanceof HttpRequest) {
             HttpRequest req = (HttpRequest) msg;
 
@@ -70,7 +63,12 @@ public class SpdyServerHandler extends SimpleChannelInboundHandler<Object> {
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void channelReadComplete(ChannelHandlerContext ctx) {
+        ctx.flush();
+    }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         cause.printStackTrace();
         ctx.close();
     }

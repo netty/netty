@@ -13,17 +13,14 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.example.filetransfer;
+package io.netty.example.file;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.DefaultFileRegion;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.FileRegion;
-import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -32,23 +29,30 @@ import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.util.CharsetUtil;
-
-import java.io.File;
-import java.io.FileInputStream;
 
 /**
  * Server that accept the path of a file an echo back its content.
  */
-public class FileServer {
+public final class FileServer {
 
-    private final int port;
+    static final boolean SSL = System.getProperty("ssl") != null;
+    // Use the same default port with the telnet example so that we can use the telnet client example to access it.
+    static final int PORT = Integer.parseInt(System.getProperty("port", SSL? "8992" : "8023"));
 
-    public FileServer(int port) {
-        this.port = port;
-    }
+    public static void main(String[] args) throws Exception {
+        // Configure SSL.
+        final SslContext sslCtx;
+        if (SSL) {
+            SelfSignedCertificate ssc = new SelfSignedCertificate();
+            sslCtx = SslContext.newServerContext(ssc.certificate(), ssc.privateKey());
+        } else {
+            sslCtx = null;
+        }
 
-    public void run() throws Exception {
         // Configure the server.
         EventLoopGroup bossGroup = new NioEventLoopGroup(1);
         EventLoopGroup workerGroup = new NioEventLoopGroup();
@@ -61,16 +65,21 @@ public class FileServer {
              .childHandler(new ChannelInitializer<SocketChannel>() {
                  @Override
                  public void initChannel(SocketChannel ch) throws Exception {
-                     ch.pipeline().addLast(
+                     ChannelPipeline p = ch.pipeline();
+                     if (sslCtx != null) {
+                         p.addLast(sslCtx.newHandler(ch.alloc()));
+                     }
+                     p.addLast(
                              new StringEncoder(CharsetUtil.UTF_8),
                              new LineBasedFrameDecoder(8192),
                              new StringDecoder(CharsetUtil.UTF_8),
-                             new FileHandler());
+                             new ChunkedWriteHandler(),
+                             new FileServerHandler());
                  }
              });
 
             // Start the server.
-            ChannelFuture f = b.bind(port).sync();
+            ChannelFuture f = b.bind(PORT).sync();
 
             // Wait until the server socket is closed.
             f.channel().closeFuture().sync();
@@ -78,43 +87,6 @@ public class FileServer {
             // Shut down all event loops to terminate all threads.
             bossGroup.shutdownGracefully();
             workerGroup.shutdownGracefully();
-        }
-    }
-
-    public static void main(String[] args) throws Exception {
-        int port;
-        if (args.length > 0) {
-            port = Integer.parseInt(args[0]);
-        } else {
-            port = 8080;
-        }
-        new FileServer(port).run();
-    }
-
-    private static final class FileHandler extends SimpleChannelInboundHandler<String> {
-        @Override
-        public void messageReceived(ChannelHandlerContext ctx, String msg) throws Exception {
-            File file = new File(msg);
-            if (file.exists()) {
-                if (!file.isFile()) {
-                    ctx.writeAndFlush("Not a file: " + file + '\n');
-                    return;
-                }
-                ctx.write(file + " " + file.length() + '\n');
-                FileInputStream fis = new FileInputStream(file);
-                FileRegion region = new DefaultFileRegion(fis.getChannel(), 0, file.length());
-                ctx.write(region);
-                ctx.writeAndFlush("\n");
-                fis.close();
-            } else {
-                ctx.writeAndFlush("File not found: " + file + '\n');
-            }
-        }
-
-        @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-            cause.printStackTrace();
-            ctx.close();
         }
     }
 }

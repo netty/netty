@@ -16,15 +16,15 @@
 
 package io.netty.example.http2.server;
 
-import static io.netty.example.http2.Http2ExampleUtil.parseEndpointConfig;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.example.http2.Http2ExampleUtil.EndpointConfig;
 import io.netty.handler.codec.http2.Http2OrHttpChooser.SelectedProtocol;
+import io.netty.handler.logging.LogLevel;
+import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 
@@ -33,54 +33,46 @@ import java.util.Arrays;
 /**
  * A HTTP/2 Server that responds to requests with a Hello World. Once started, you can test the
  * server with the example client.
- * <p>
- * To server accepts command-line arguments for {@code -port=<port number>} <i>(default: http=8080,
- * https=8443)</i>, and {@code -ssl=<true/false>} <i>(default=false)</i>.
  */
-public class Http2Server {
+public final class Http2Server {
 
-    private final EndpointConfig config;
+    static final boolean SSL = System.getProperty("ssl") != null;
+    static final int PORT = Integer.parseInt(System.getProperty("port", SSL? "8443" : "8080"));
 
-    public Http2Server(EndpointConfig config) {
-        this.config = config;
-    }
-
-    public void run() throws Exception {
+    public static void main(String[] args) throws Exception {
+        // Configure SSL.
+        final SslContext sslCtx;
+        if (SSL) {
+            SelfSignedCertificate ssc = new SelfSignedCertificate();
+            sslCtx = SslContext.newServerContext(
+                    ssc.certificate(), ssc.privateKey(), null, null,
+                    Arrays.asList(
+                            SelectedProtocol.HTTP_2.protocolName(),
+                            SelectedProtocol.HTTP_1_1.protocolName()),
+                    0, 0);
+        } else {
+            sslCtx = null;
+        }
         // Configure the server.
         EventLoopGroup bossGroup = new NioEventLoopGroup(1);
         EventLoopGroup workerGroup = new NioEventLoopGroup();
         try {
             ServerBootstrap b = new ServerBootstrap();
             b.option(ChannelOption.SO_BACKLOG, 1024);
+            b.group(bossGroup, workerGroup)
+             .channel(NioServerSocketChannel.class)
+             .handler(new LoggingHandler(LogLevel.INFO))
+             .childHandler(new Http2ServerInitializer(sslCtx));
 
-            // If SSL was selected, configure the SSL context.
-            SslContext sslCtx = null;
-            if (config.isSsl()) {
-                SelfSignedCertificate ssc = new SelfSignedCertificate();
-                sslCtx = SslContext.newServerContext(
-                        ssc.certificate(), ssc.privateKey(), null, null,
-                        Arrays.asList(
-                                SelectedProtocol.HTTP_2.protocolName(),
-                                SelectedProtocol.HTTP_1_1.protocolName()),
-                        0, 0);
-            }
+            Channel ch = b.bind(PORT).sync().channel();
 
-            b.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class)
-                    .childHandler(new Http2ServerInitializer(sslCtx));
+            System.err.println("Open your HTTP/2-enabled web browser and navigate to " +
+                    (SSL? "https" : "http") + "://127.0.0.1:" + PORT + '/');
 
-            Channel ch = b.bind(config.port()).sync().channel();
             ch.closeFuture().sync();
         } finally {
             bossGroup.shutdownGracefully();
             workerGroup.shutdownGracefully();
         }
-    }
-
-    public static void main(String[] args) throws Exception {
-        EndpointConfig config = parseEndpointConfig(args);
-        System.out.println(config);
-
-        System.out.println("HTTP2 server started at port " + config.port() + '.');
-        new Http2Server(config).run();
     }
 }

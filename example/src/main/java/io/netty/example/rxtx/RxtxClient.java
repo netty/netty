@@ -31,6 +31,8 @@ import io.netty.handler.codec.string.StringEncoder;
  */
 public final class RxtxClient {
 
+    static final String PORT = System.getProperty("port", "/dev/ttyUSB0");
+
     public static void main(String[] args) throws Exception {
         EventLoopGroup group = new OioEventLoopGroup();
         try {
@@ -49,14 +51,11 @@ public final class RxtxClient {
                  }
              });
 
-            ChannelFuture f = b.connect(new RxtxDeviceAddress("/dev/ttyUSB0")).sync();
+            ChannelFuture f = b.connect(new RxtxDeviceAddress(PORT)).sync();
 
             f.channel().closeFuture().sync();
         } finally {
             group.shutdownGracefully();
         }
-    }
-
-    private RxtxClient() {
     }
 }

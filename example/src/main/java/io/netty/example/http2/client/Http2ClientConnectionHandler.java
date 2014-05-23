@@ -14,8 +14,6 @@
  */
 package io.netty.example.http2.client;
 
-import static io.netty.example.http2.Http2ExampleUtil.UPGRADE_RESPONSE_HEADER;
-import static io.netty.util.internal.logging.InternalLogLevel.INFO;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
@@ -41,13 +39,18 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import static io.netty.example.http2.Http2ExampleUtil.*;
+import static io.netty.util.internal.logging.InternalLogLevel.*;
+
 /**
  * A subclass of the connection handler that interprets response messages as text and prints it out
  * to the console.
  */
 public class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler {
-    private static final Http2FrameLogger logger = new Http2FrameLogger(INFO,
-            InternalLoggerFactory.getInstance(Http2ClientConnectionHandler.class));
+
+    private static final Http2FrameLogger logger =
+            new Http2FrameLogger(INFO, InternalLoggerFactory.getInstance(Http2ClientConnectionHandler.class));
+
     private final ChannelPromise initPromise;
     private final ChannelPromise responsePromise;
     private ByteBuf collectedData;
@@ -88,8 +91,7 @@ public class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler
      * Handles conversion of a {@link FullHttpMessage} to HTTP/2 frames.
      */
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise)
-            throws Exception {
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
         if (msg instanceof FullHttpMessage) {
             FullHttpMessage httpMsg = (FullHttpMessage) msg;
             boolean hasData = httpMsg.content().isReadable();
@@ -105,7 +107,7 @@ public class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler
                 writeData(ctx, promise, streamId, httpMsg.content(), 0, true, true, false);
             }
         } else {
-            super.write(ctx, msg, promise);
+            ctx.write(msg, promise);
         }
     }
 
@@ -170,8 +172,7 @@ public class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler
     }
 
     @Override
-    public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings)
-            throws Http2Exception {
+    public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings) throws Http2Exception {
         if (!initPromise.isDone()) {
             initPromise.setSuccess();
         }

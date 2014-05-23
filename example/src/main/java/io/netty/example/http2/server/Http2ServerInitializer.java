@@ -20,7 +20,6 @@ import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerAppender;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
@@ -29,7 +28,7 @@ import io.netty.handler.codec.http.HttpServerUpgradeHandler;
 import io.netty.handler.codec.http2.Http2ServerUpgradeCodec;
 import io.netty.handler.ssl.SslContext;
 
-import java.util.Arrays;
+import java.util.Collections;
 
 /**
  * Sets up the Netty pipeline for the example server. Depending on the endpoint config, sets up the
@@ -43,7 +42,7 @@ public class Http2ServerInitializer extends ChannelInitializer<SocketChannel> {
     }
 
     @Override
-    public void initChannel(SocketChannel ch) throws Exception {
+    public void initChannel(SocketChannel ch) {
         if (sslCtx != null) {
             configureSsl(ch);
         } else {
@@ -61,12 +60,12 @@ public class Http2ServerInitializer extends ChannelInitializer<SocketChannel> {
     /**
      * Configure the pipeline for a cleartext upgrade from HTTP to HTTP/2.
      */
-    private void configureClearText(SocketChannel ch) {
+    private static void configureClearText(SocketChannel ch) {
         HttpCodec sourceCodec = new HttpCodec();
         HttpServerUpgradeHandler.UpgradeCodec upgradeCodec =
                 new Http2ServerUpgradeCodec(new HelloWorldHttp2Handler());
         HttpServerUpgradeHandler upgradeHandler =
-                new HttpServerUpgradeHandler(sourceCodec, Arrays.asList(upgradeCodec), 65536);
+                new HttpServerUpgradeHandler(sourceCodec, Collections.singletonList(upgradeCodec), 65536);
 
         ch.pipeline().addLast(sourceCodec);
         ch.pipeline().addLast(upgradeHandler);
@@ -76,8 +75,8 @@ public class Http2ServerInitializer extends ChannelInitializer<SocketChannel> {
     /**
      * Source codec for HTTP cleartext upgrade.
      */
-    private static final class HttpCodec extends ChannelHandlerAppender implements
-            HttpServerUpgradeHandler.SourceCodec {
+    private static final class HttpCodec
+            extends ChannelHandlerAppender implements HttpServerUpgradeHandler.SourceCodec {
         HttpCodec() {
             add("httpRequestDecoder", new HttpRequestDecoder());
             add("httpResponseEncoder", new HttpResponseEncoder());
@@ -98,9 +97,9 @@ public class Http2ServerInitializer extends ChannelInitializer<SocketChannel> {
      */
     private static class UserEventLogger extends ChannelHandlerAdapter {
         @Override
-        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
             System.out.println("User Event Triggered: " + evt);
-            super.userEventTriggered(ctx, evt);
+            ctx.fireUserEventTriggered(evt);
         }
     }
 }

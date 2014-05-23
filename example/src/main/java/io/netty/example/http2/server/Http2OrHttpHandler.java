@@ -18,14 +18,12 @@ import io.netty.channel.ChannelHandler;
 import io.netty.handler.codec.http2.Http2OrHttpChooser;
 
 import javax.net.ssl.SSLEngine;
-import java.util.logging.Logger;
 
 /**
  * Negotiates with the browser if HTTP2 or HTTP is going to be used. Once decided, the Netty
  * pipeline is setup with the correct handlers for the selected protocol.
  */
 public class Http2OrHttpHandler extends Http2OrHttpChooser {
-    private static final Logger logger = Logger.getLogger(Http2OrHttpHandler.class.getName());
     private static final int MAX_CONTENT_LENGTH = 1024 * 100;
 
     public Http2OrHttpHandler() {
@@ -40,8 +38,7 @@ public class Http2OrHttpHandler extends Http2OrHttpChooser {
     protected SelectedProtocol getProtocol(SSLEngine engine) {
         String[] protocol = engine.getSession().getProtocol().split(":");
         SelectedProtocol selectedProtocol = SelectedProtocol.protocol(protocol[1]);
-
-        logger.info("Selected Protocol is " + selectedProtocol);
+        System.err.println("Selected Protocol is " + selectedProtocol);
         return selectedProtocol;
     }
 

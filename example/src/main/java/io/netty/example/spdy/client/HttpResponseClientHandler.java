@@ -38,7 +38,7 @@ public class HttpResponseClientHandler extends SimpleChannelInboundHandler<HttpO
     private final BlockingQueue<ChannelFuture> queue = new LinkedBlockingQueue<ChannelFuture>();
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, HttpObject msg) {
         if (msg instanceof HttpResponse) {
             HttpResponse response = (HttpResponse) msg;
 
@@ -75,7 +75,7 @@ public class HttpResponseClientHandler extends SimpleChannelInboundHandler<HttpO
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         queue.add(ctx.channel().newFailedFuture(cause));
         cause.printStackTrace();
         ctx.close();
@@ -84,5 +84,4 @@ public class HttpResponseClientHandler extends SimpleChannelInboundHandler<HttpO
     public BlockingQueue<ChannelFuture> queue() {
         return queue;
     }
-
 }
