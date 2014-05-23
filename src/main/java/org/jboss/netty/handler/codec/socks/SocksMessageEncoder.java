@@ -33,6 +33,10 @@ public class SocksMessageEncoder extends OneToOneEncoder {
     private static final String name = "SOCKS_MESSAGE_ENCODER";
     private static final int DEFAULT_ENCODER_BUFFER_SIZE = 1024;
 
+    /**
+     * @deprecated Will be removed at the next minor version bump.
+     */
+    @Deprecated
     public static String getName() {
         return name;
     }

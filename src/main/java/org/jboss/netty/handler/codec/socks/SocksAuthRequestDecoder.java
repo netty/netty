@@ -28,6 +28,10 @@ import org.jboss.netty.util.CharsetUtil;
 public class SocksAuthRequestDecoder extends ReplayingDecoder<SocksAuthRequestDecoder.State> {
     private static final String name = "SOCKS_AUTH_REQUEST_DECODER";
 
+    /**
+     * @deprecated Will be removed at the next minor version bump.
+     */
+    @Deprecated
     public static String getName() {
         return name;
     }
