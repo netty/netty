@@ -91,5 +91,5 @@ fi
 
 cd "`dirname "$0"`"/example
 echo "[INFO] Running: $EXAMPLE ($EXAMPLE_CLASS $EXAMPLE_ARGS)"
-exec mvn -nsu compile antrun:run -Dcheckstyle.skip=true -Dantfile=src/antrun/run-example.xml -DargLine.example="$EXAMPLE_ARGS" -DexampleClass="$EXAMPLE_CLASS"
+exec mvn -q -nsu compile exec:exec -Dcheckstyle.skip=true -DargLine.example="$EXAMPLE_ARGS" -DexampleClass="$EXAMPLE_CLASS"
 

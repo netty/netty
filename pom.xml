@@ -857,7 +857,7 @@
             <goals>
               <goal>run</goal>
             </goals>
-            <configuration combine.self="override">
+            <configuration>
               <target>
                 <taskdef resource="net/sf/antcontrib/antlib.xml" />
 
@@ -1069,6 +1069,11 @@
           <groupId>org.fusesource.hawtjni</groupId>
           <artifactId>maven-hawtjni-plugin</artifactId>
           <version>1.10</version>
+        </plugin>
+        <plugin>
+          <groupId>kr.motd.maven</groupId>
+          <artifactId>exec-maven-plugin</artifactId>
+          <version>1.0.0.Final</version>
         </plugin>
 
         <!-- Workaround for the 'M2E plugin execution not covered' problem.

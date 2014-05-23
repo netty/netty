@@ -103,18 +103,21 @@
 
   <build>
     <plugins>
+      <!-- run-example.sh invokes this plugin to launch an example. -->
       <plugin>
-        <artifactId>maven-antrun-plugin</artifactId>
+        <groupId>kr.motd.maven</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
         <configuration>
-          <target>
-            <taskdef resource="net/sf/antcontrib/antlib.xml" />
-            <propertyregex
-              property="mergedArgs" regexp="[\r\n\s]+" replace=" " global="true"
-              input="${argLine.common} ${argLine.bootcp} ${argLine.leak} ${argLine.coverage} ${argLine.example}" />
-            <java classname="${exampleClass}" classpathref="maven.runtime.classpath" fork="true">
-              <jvmarg line="${mergedArgs}"/>
-            </java>
-          </target>
+          <executable>${java.home}/bin/java</executable>
+          <commandlineArgs>
+            ${argLine.common}
+            ${argLine.bootcp}
+            -classpath %classpath
+            ${argLine.leak}
+            ${argLine.coverage}
+            ${argLine.example}
+            ${exampleClass}
+          </commandlineArgs>
         </configuration>
       </plugin>
     </plugins>
