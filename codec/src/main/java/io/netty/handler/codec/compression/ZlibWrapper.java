@@ -23,18 +23,43 @@ public enum ZlibWrapper {
     /**
      * The ZLIB wrapper as specified in <a href="http://tools.ietf.org/html/rfc1950">RFC 1950</a>.
      */
-    ZLIB,
+    ZLIB {
+        @Override
+        public CompressionFormat asCompressionFormat() {
+            return CompressionFormat.ZLIB;
+        }
+    },
     /**
      * The GZIP wrapper as specified in <a href="http://tools.ietf.org/html/rfc1952">RFC 1952</a>.
      */
-    GZIP,
+    GZIP {
+        @Override
+        public CompressionFormat asCompressionFormat() {
+            return CompressionFormat.GZIP;
+        }
+    },
     /**
      * Raw DEFLATE stream only (no header and no footer).
      */
-    NONE,
+    NONE {
+        @Override
+        public CompressionFormat asCompressionFormat() {
+            return CompressionFormat.DEFLATE;
+        }
+    },
     /**
      * Try {@link #ZLIB} first and then {@link #NONE} if the first attempt fails.
      * Please note that you can specify this wrapper type only when decompressing.
      */
-    ZLIB_OR_NONE
+    ZLIB_OR_NONE {
+        @Override
+        public CompressionFormat asCompressionFormat() {
+            return CompressionFormat.ZLIB_OR_NONE;
+        }
+    };
+
+    /**
+     * Returns a {@link CompressionFormat} of current {@link ZlibWrapper}
+     */
+    public abstract CompressionFormat asCompressionFormat();
 }

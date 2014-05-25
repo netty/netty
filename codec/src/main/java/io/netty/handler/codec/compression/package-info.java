@@ -15,9 +15,16 @@
  */
 
 /**
- * Encoder and decoder which compresses and decompresses {@link io.netty.buffer.ByteBuf}s
- * in a compression format such as <a href="http://en.wikipedia.org/wiki/Zlib">zlib</a>,
- * <a href="http://en.wikipedia.org/wiki/Gzip">gzip</a>, and
- * <a href="http://code.google.com/p/snappy/">Snappy</a>.
+ * <p>Encoder and decoder which compresses and decompresses {@link io.netty.buffer.ByteBuf}s
+ * in a compression format such as</p>
+ *
+ *      <a href="http://en.wikipedia.org/wiki/Zlib">zlib</a><br>
+ *      <a href="http://en.wikipedia.org/wiki/Gzip">gzip</a><br>
+ *      <a href="http://code.google.com/p/snappy/">Snappy</a><br>
+ *      <a href="http://en.wikipedia.org/wiki/Bzip2">bzip2</a><br>
+ *      <a href="https://github.com/ning/compress/wiki">LZF</a><br>
+ *      <a href="http://en.wikipedia.org/wiki/LZ4_%28compression_algorithm%29">LZ4</a><br>
+ *      <a href="http://fastlz.org/">FastLZ</a><br>
+ *      <a href="http://en.wikipedia.org/wiki/Lempel%E2%80%93Ziv%E2%80%93Markov_chain_algorithm">LZMA</a><br>
  */
 package io.netty.handler.codec.compression;

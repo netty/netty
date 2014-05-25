@@ -17,14 +17,9 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.ChannelPromiseNotifier;
-import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.internal.OneTimeTask;
 
-import java.util.concurrent.TimeUnit;
 import java.util.zip.CRC32;
 import java.util.zip.Deflater;
 
@@ -36,7 +31,6 @@ public class JdkZlibEncoder extends ZlibEncoder {
     private final ZlibWrapper wrapper;
     private final Deflater deflater;
     private volatile boolean finished;
-    private volatile ChannelHandlerContext ctx;
 
     /*
      * GZIP support
@@ -92,17 +86,11 @@ public class JdkZlibEncoder extends ZlibEncoder {
      * @throws CompressionException if failed to initialize zlib
      */
     public JdkZlibEncoder(ZlibWrapper wrapper, int compressionLevel) {
+        super(wrapper.asCompressionFormat());
+
         if (compressionLevel < 0 || compressionLevel > 9) {
             throw new IllegalArgumentException(
                     "compressionLevel: " + compressionLevel + " (expected: 0-9)");
-        }
-        if (wrapper == null) {
-            throw new NullPointerException("wrapper");
-        }
-        if (wrapper == ZlibWrapper.ZLIB_OR_NONE) {
-            throw new IllegalArgumentException(
-                    "wrapper '" + ZlibWrapper.ZLIB_OR_NONE + "' is not " +
-                    "allowed for compression.");
         }
 
         this.wrapper = wrapper;
@@ -138,6 +126,8 @@ public class JdkZlibEncoder extends ZlibEncoder {
      * @throws CompressionException if failed to initialize zlib
      */
     public JdkZlibEncoder(int compressionLevel, byte[] dictionary) {
+        super(CompressionFormat.ZLIB);
+
         if (compressionLevel < 0 || compressionLevel > 9) {
             throw new IllegalArgumentException(
                     "compressionLevel: " + compressionLevel + " (expected: 0-9)");
@@ -149,38 +139,6 @@ public class JdkZlibEncoder extends ZlibEncoder {
         wrapper = ZlibWrapper.ZLIB;
         deflater = new Deflater(compressionLevel);
         deflater.setDictionary(dictionary);
-    }
-
-    @Override
-    public ChannelFuture close() {
-        return close(ctx().newPromise());
-    }
-
-    @Override
-    public ChannelFuture close(final ChannelPromise promise) {
-        ChannelHandlerContext ctx = ctx();
-        EventExecutor executor = ctx.executor();
-        if (executor.inEventLoop()) {
-            return finishEncode(ctx, promise);
-        } else {
-            final ChannelPromise p = ctx.newPromise();
-            executor.execute(new OneTimeTask() {
-                @Override
-                public void run() {
-                    ChannelFuture f = finishEncode(ctx(), p);
-                    f.addListener(new ChannelPromiseNotifier(promise));
-                }
-            });
-            return p;
-        }
-    }
-
-    private ChannelHandlerContext ctx() {
-        ChannelHandlerContext ctx = this.ctx;
-        if (ctx == null) {
-            throw new IllegalStateException("not added to a pipeline");
-        }
-        return ctx;
     }
 
     @Override
@@ -231,6 +189,16 @@ public class JdkZlibEncoder extends ZlibEncoder {
         }
     }
 
+    private void deflate(ByteBuf out) {
+        int numBytes;
+        do {
+            int writerIndex = out.writerIndex();
+            numBytes = deflater.deflate(
+                    out.array(), out.arrayOffset() + writerIndex, out.writableBytes(), Deflater.SYNC_FLUSH);
+            out.writerIndex(writerIndex + numBytes);
+        } while (numBytes > 0);
+    }
+
     @Override
     protected final ByteBuf allocateBuffer(ChannelHandlerContext ctx, ByteBuf msg,
                                            boolean preferDirect) throws Exception {
@@ -249,27 +217,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
     }
 
     @Override
-    public void close(final ChannelHandlerContext ctx, final ChannelPromise promise) throws Exception {
-        ChannelFuture f = finishEncode(ctx, ctx.newPromise());
-        f.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture f) throws Exception {
-                ctx.close(promise);
-            }
-        });
-
-        if (!f.isDone()) {
-            // Ensure the channel is closed even if the write operation completes in time.
-            ctx.executor().schedule(new OneTimeTask() {
-                @Override
-                public void run() {
-                    ctx.close(promise);
-                }
-            }, 10, TimeUnit.SECONDS); // FIXME: Magic number
-        }
-    }
-
-    private ChannelFuture finishEncode(final ChannelHandlerContext ctx, ChannelPromise promise) {
+    protected ChannelFuture finishEncode(final ChannelHandlerContext ctx, ChannelPromise promise) {
         if (finished) {
             promise.setSuccess();
             return promise;
@@ -307,20 +255,5 @@ public class JdkZlibEncoder extends ZlibEncoder {
         }
         deflater.end();
         return ctx.writeAndFlush(footer, promise);
-    }
-
-    private void deflate(ByteBuf out) {
-        int numBytes;
-        do {
-            int writerIndex = out.writerIndex();
-            numBytes = deflater.deflate(
-                    out.array(), out.arrayOffset() + writerIndex, out.writableBytes(), Deflater.SYNC_FLUSH);
-            out.writerIndex(writerIndex + numBytes);
-        } while (numBytes > 0);
-    }
-
-    @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        this.ctx = ctx;
     }
 }

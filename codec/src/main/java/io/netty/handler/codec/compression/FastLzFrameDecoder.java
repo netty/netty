@@ -17,7 +17,6 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.util.internal.EmptyArrays;
 
 import java.util.List;
@@ -31,7 +30,7 @@ import static io.netty.handler.codec.compression.FastLz.*;
  *
  * See <a href="https://github.com/netty/netty/issues/2750">FastLZ format</a>.
  */
-public class FastLzFrameDecoder extends ByteToMessageDecoder {
+public class FastLzFrameDecoder extends CompressionDecoder {
     /**
      * Current state of decompression.
      */
@@ -104,6 +103,7 @@ public class FastLzFrameDecoder extends ByteToMessageDecoder {
      *        You may set {@code null} if you do not want to validate checksum of each block.
      */
     public FastLzFrameDecoder(Checksum checksum) {
+        super(CompressionFormat.FASTLZ);
         this.checksum = checksum;
     }
 
@@ -219,5 +219,10 @@ public class FastLzFrameDecoder extends ByteToMessageDecoder {
             currentState = State.CORRUPTED;
             throw e;
         }
+    }
+
+    @Override
+    public boolean isClosed() {
+        return false;
     }
 }

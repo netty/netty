@@ -20,8 +20,9 @@ import com.ning.compress.lzf.ChunkEncoder;
 import com.ning.compress.lzf.LZFEncoder;
 import com.ning.compress.lzf.util.ChunkEncoderFactory;
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.MessageToByteEncoder;
+import io.netty.channel.ChannelPromise;
 
 import static com.ning.compress.lzf.LZFChunk.*;
 
@@ -31,7 +32,7 @@ import static com.ning.compress.lzf.LZFChunk.*;
  * See original <a href="http://oldhome.schmorp.de/marc/liblzf.html">LZF package</a>
  * and <a href="https://github.com/ning/compress/wiki/LZFFormat">LZF format</a> for full description.
  */
-public class LzfEncoder extends MessageToByteEncoder<ByteBuf> {
+public class LzfEncoder extends CompressionEncoder {
     /**
      * Minimum block size ready for compression. Blocks with length
      * less than {@link #MIN_BLOCK_TO_COMPRESS} will write as uncompressed.
@@ -96,7 +97,7 @@ public class LzfEncoder extends MessageToByteEncoder<ByteBuf> {
      *        than maximum chunk size (64k), to optimize encoding hash tables.
      */
     public LzfEncoder(boolean safeInstance, int totalLength) {
-        super(false);
+        super(CompressionFormat.LZF, false);
         if (totalLength < MIN_BLOCK_TO_COMPRESS || totalLength > MAX_CHUNK_LEN) {
             throw new IllegalArgumentException("totalLength: " + totalLength +
                     " (expected: " + MIN_BLOCK_TO_COMPRESS + '-' + MAX_CHUNK_LEN + ')');
@@ -136,5 +137,30 @@ public class LzfEncoder extends MessageToByteEncoder<ByteBuf> {
         if (!in.hasArray()) {
             recycler.releaseInputBuffer(input);
         }
+    }
+
+    @Override
+    public boolean isClosed() {
+        return false;
+    }
+
+    @Override
+    public ChannelFuture close() {
+        return ctx().newFailedFuture(new UnsupportedOperationException());
+    }
+
+    @Override
+    public ChannelFuture close(ChannelPromise promise) {
+        return promise.setFailure(new UnsupportedOperationException());
+    }
+
+    @Override
+    public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        ctx.close(promise);
+    }
+
+    @Override
+    protected ChannelFuture finishEncode(ChannelHandlerContext ctx, ChannelPromise promise) {
+        return promise.setFailure(new UnsupportedOperationException());
     }
 }

@@ -16,8 +16,9 @@
 package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.MessageToByteEncoder;
+import io.netty.channel.ChannelPromise;
 
 import java.util.zip.Adler32;
 import java.util.zip.Checksum;
@@ -29,7 +30,7 @@ import static io.netty.handler.codec.compression.FastLz.*;
  *
  * See <a href="https://github.com/netty/netty/issues/2750">FastLZ format</a>.
  */
-public class FastLzFrameEncoder extends MessageToByteEncoder<ByteBuf> {
+public class FastLzFrameEncoder extends CompressionEncoder {
     /**
      * Compression level.
      */
@@ -85,7 +86,8 @@ public class FastLzFrameEncoder extends MessageToByteEncoder<ByteBuf> {
      *        You may set {@code null} if you don't want to validate checksum of each block.
      */
     public FastLzFrameEncoder(int level, Checksum checksum) {
-        super(false);
+        super(CompressionFormat.FASTLZ, false);
+
         if (level != LEVEL_AUTO && level != LEVEL_1 && level != LEVEL_2) {
             throw new IllegalArgumentException(String.format(
                     "level: %d (expected: %d or %d or %d)", level, LEVEL_AUTO, LEVEL_1, LEVEL_2));
@@ -182,5 +184,30 @@ public class FastLzFrameEncoder extends MessageToByteEncoder<ByteBuf> {
             out.writerIndex(outputOffset + 2 + chunkLength);
             in.skipBytes(length);
         }
+    }
+
+    @Override
+    public boolean isClosed() {
+        return false;
+    }
+
+    @Override
+    public ChannelFuture close() {
+        return ctx().newFailedFuture(new UnsupportedOperationException());
+    }
+
+    @Override
+    public ChannelFuture close(ChannelPromise promise) {
+        return promise.setFailure(new UnsupportedOperationException());
+    }
+
+    @Override
+    public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        ctx.close(promise);
+    }
+
+    @Override
+    protected ChannelFuture finishEncode(ChannelHandlerContext ctx, ChannelPromise promise) {
+        return promise.setFailure(new UnsupportedOperationException());
     }
 }

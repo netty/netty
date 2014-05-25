@@ -17,15 +17,8 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.ChannelPromiseNotifier;
-import io.netty.handler.codec.MessageToByteEncoder;
-import io.netty.util.concurrent.EventExecutor;
-
-import java.util.concurrent.TimeUnit;
 
 import static io.netty.handler.codec.compression.Bzip2Constants.*;
 
@@ -34,7 +27,7 @@ import static io.netty.handler.codec.compression.Bzip2Constants.*;
  *
  * See <a href="http://en.wikipedia.org/wiki/Bzip2">Bzip2</a>.
  */
-public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
+public class Bzip2Encoder extends CompressionEncoder {
     /**
      * Current state of stream.
      */
@@ -73,11 +66,6 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
     private volatile boolean finished;
 
     /**
-     * Used to interact with its {@link ChannelPipeline} and other handlers.
-     */
-    private volatile ChannelHandlerContext ctx;
-
-    /**
      * Creates a new bzip2 encoder with the maximum (900,000 byte) block size.
      */
     public Bzip2Encoder() {
@@ -92,6 +80,8 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
      *        but give better compression ratios. {@code 9} will usually be the best value to use.
      */
     public Bzip2Encoder(final int blockSizeMultiplier) {
+        super(CompressionFormat.BZIP2);
+
         if (blockSizeMultiplier < MIN_BLOCK_SIZE || blockSizeMultiplier > MAX_BLOCK_SIZE) {
             throw new IllegalArgumentException(
                     "blockSizeMultiplier: " + blockSizeMultiplier + " (expected: 1-9)");
@@ -165,66 +155,13 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
         }
     }
 
-    /**
-     * Returns {@code true} if and only if the end of the compressed stream has been reached.
-     */
+    @Override
     public boolean isClosed() {
         return finished;
     }
 
-    /**
-     * Close this {@link Bzip2Encoder} and so finish the encoding.
-     *
-     * The returned {@link ChannelFuture} will be notified once the operation completes.
-     */
-    public ChannelFuture close() {
-        return close(ctx().newPromise());
-    }
-
-    /**
-     * Close this {@link Bzip2Encoder} and so finish the encoding.
-     * The given {@link ChannelFuture} will be notified once the operation
-     * completes and will also be returned.
-     */
-    public ChannelFuture close(final ChannelPromise promise) {
-        ChannelHandlerContext ctx = ctx();
-        EventExecutor executor = ctx.executor();
-        if (executor.inEventLoop()) {
-            return finishEncode(ctx, promise);
-        } else {
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    ChannelFuture f = finishEncode(ctx(), promise);
-                    f.addListener(new ChannelPromiseNotifier(promise));
-                }
-            });
-            return promise;
-        }
-    }
-
     @Override
-    public void close(final ChannelHandlerContext ctx, final ChannelPromise promise) throws Exception {
-        ChannelFuture f = finishEncode(ctx, ctx.newPromise());
-        f.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture f) throws Exception {
-                ctx.close(promise);
-            }
-        });
-
-        if (!f.isDone()) {
-            // Ensure the channel is closed even if the write operation completes in time.
-            ctx.executor().schedule(new Runnable() {
-                @Override
-                public void run() {
-                    ctx.close(promise);
-                }
-            }, 10, TimeUnit.SECONDS); // FIXME: Magic number
-        }
-    }
-
-    private ChannelFuture finishEncode(final ChannelHandlerContext ctx, ChannelPromise promise) {
+    protected ChannelFuture finishEncode(final ChannelHandlerContext ctx, ChannelPromise promise) {
         if (finished) {
             promise.setSuccess();
             return promise;
@@ -245,18 +182,5 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
             blockCompressor = null;
         }
         return ctx.writeAndFlush(footer, promise);
-    }
-
-    private ChannelHandlerContext ctx() {
-        ChannelHandlerContext ctx = this.ctx;
-        if (ctx == null) {
-            throw new IllegalStateException("not added to a pipeline");
-        }
-        return ctx;
-    }
-
-    @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        this.ctx = ctx;
     }
 }

@@ -13,24 +13,17 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.ChannelPromiseNotifier;
-import io.netty.handler.codec.MessageToByteEncoder;
-import io.netty.util.concurrent.EventExecutor;
 import net.jpountz.lz4.LZ4Compressor;
 import net.jpountz.lz4.LZ4Exception;
 import net.jpountz.lz4.LZ4Factory;
 import net.jpountz.xxhash.XXHashFactory;
 
-import java.util.concurrent.TimeUnit;
 import java.util.zip.Checksum;
 
 import static io.netty.handler.codec.compression.Lz4Constants.*;
@@ -51,7 +44,7 @@ import static io.netty.handler.codec.compression.Lz4Constants.*;
  *  *       *       *    length   *     length    *           *     *      block      *
  *  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *     * * * * * * * * * *
  */
-public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
+public class Lz4FrameEncoder extends CompressionEncoder {
     /**
      * Underlying compressor in use.
      */
@@ -88,11 +81,6 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
     private volatile boolean finished;
 
     /**
-     * Used to interact with its {@link ChannelPipeline} and other handlers.
-     */
-    private volatile ChannelHandlerContext ctx;
-
-    /**
      * Creates the fastest LZ4 encoder with default block size (64 KB)
      * and xxhash hashing for Java, based on Yann Collet's work available at
      * <a href="http://code.google.com/p/xxhash/">Google Code</a>.
@@ -127,7 +115,7 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
      * @param checksum        the {@link Checksum} instance to use to check data for integrity
      */
     public Lz4FrameEncoder(LZ4Factory factory, boolean highCompressor, int blockSize, Checksum checksum) {
-        super(false);
+        super(CompressionFormat.LZ4, false);
         if (factory == null) {
             throw new NullPointerException("factory");
         }
@@ -221,7 +209,8 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
         this.currentBlockLength = currentBlockLength;
     }
 
-    private ChannelFuture finishEncode(final ChannelHandlerContext ctx, ChannelPromise promise) {
+    @Override
+    protected ChannelFuture finishEncode(final ChannelHandlerContext ctx, ChannelPromise promise) {
         if (finished) {
             promise.setSuccess();
             return promise;
@@ -259,75 +248,8 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
         buf[off]   = (byte) (i >>> 24);
     }
 
-    /**
-     * Returns {@code true} if and only if the compressed stream has been finished.
-     */
+    @Override
     public boolean isClosed() {
         return finished;
-    }
-
-    /**
-     * Close this {@link Lz4FrameEncoder} and so finish the encoding.
-     *
-     * The returned {@link ChannelFuture} will be notified once the operation completes.
-     */
-    public ChannelFuture close() {
-        return close(ctx().newPromise());
-    }
-
-    /**
-     * Close this {@link Lz4FrameEncoder} and so finish the encoding.
-     * The given {@link ChannelFuture} will be notified once the operation
-     * completes and will also be returned.
-     */
-    public ChannelFuture close(final ChannelPromise promise) {
-        ChannelHandlerContext ctx = ctx();
-        EventExecutor executor = ctx.executor();
-        if (executor.inEventLoop()) {
-            return finishEncode(ctx, promise);
-        } else {
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    ChannelFuture f = finishEncode(ctx(), promise);
-                    f.addListener(new ChannelPromiseNotifier(promise));
-                }
-            });
-            return promise;
-        }
-    }
-
-    @Override
-    public void close(final ChannelHandlerContext ctx, final ChannelPromise promise) throws Exception {
-        ChannelFuture f = finishEncode(ctx, ctx.newPromise());
-        f.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture f) throws Exception {
-                ctx.close(promise);
-            }
-        });
-
-        if (!f.isDone()) {
-            // Ensure the channel is closed even if the write operation completes in time.
-            ctx.executor().schedule(new Runnable() {
-                @Override
-                public void run() {
-                    ctx.close(promise);
-                }
-            }, 10, TimeUnit.SECONDS); // FIXME: Magic number
-        }
-    }
-
-    private ChannelHandlerContext ctx() {
-        ChannelHandlerContext ctx = this.ctx;
-        if (ctx == null) {
-            throw new IllegalStateException("not added to a pipeline");
-        }
-        return ctx;
-    }
-
-    @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        this.ctx = ctx;
     }
 }

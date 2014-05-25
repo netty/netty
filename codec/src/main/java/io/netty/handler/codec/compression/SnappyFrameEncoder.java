@@ -17,8 +17,9 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.MessageToByteEncoder;
+import io.netty.channel.ChannelPromise;
 
 import static io.netty.handler.codec.compression.Snappy.*;
 
@@ -27,7 +28,7 @@ import static io.netty.handler.codec.compression.Snappy.*;
  *
  * See http://code.google.com/p/snappy/source/browse/trunk/framing_format.txt
  */
-public class SnappyFrameEncoder extends MessageToByteEncoder<ByteBuf> {
+public class SnappyFrameEncoder extends CompressionEncoder {
     /**
      * The minimum amount that we'll consider actually attempting to compress.
      * This value is preamble + the minimum length our Snappy service will
@@ -45,6 +46,10 @@ public class SnappyFrameEncoder extends MessageToByteEncoder<ByteBuf> {
 
     private final Snappy snappy = new Snappy();
     private boolean started;
+
+    public SnappyFrameEncoder() {
+        super(CompressionFormat.SNAPPY);
+    }
 
     @Override
     protected void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
@@ -120,5 +125,30 @@ public class SnappyFrameEncoder extends MessageToByteEncoder<ByteBuf> {
      */
     private static void calculateAndWriteChecksum(ByteBuf slice, ByteBuf out) {
         out.writeInt(ByteBufUtil.swapInt(calculateChecksum(slice)));
+    }
+
+    @Override
+    public boolean isClosed() {
+        return false;
+    }
+
+    @Override
+    public ChannelFuture close() {
+        return ctx().newFailedFuture(new UnsupportedOperationException());
+    }
+
+    @Override
+    public ChannelFuture close(ChannelPromise promise) {
+        return promise.setFailure(new UnsupportedOperationException());
+    }
+
+    @Override
+    public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        ctx.close(promise);
+    }
+
+    @Override
+    protected ChannelFuture finishEncode(ChannelHandlerContext ctx, ChannelPromise promise) {
+        return promise.setFailure(new UnsupportedOperationException());
     }
 }

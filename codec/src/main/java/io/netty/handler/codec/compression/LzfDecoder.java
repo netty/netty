@@ -20,7 +20,6 @@ import com.ning.compress.lzf.ChunkDecoder;
 import com.ning.compress.lzf.util.ChunkDecoderFactory;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.ByteToMessageDecoder;
 
 import java.util.List;
 
@@ -36,7 +35,7 @@ import static com.ning.compress.lzf.LZFChunk.BLOCK_TYPE_COMPRESSED;
  * See original <a href="http://oldhome.schmorp.de/marc/liblzf.html">LZF package</a>
  * and <a href="https://github.com/ning/compress/wiki/LZFFormat">LZF format</a> for full description.
  */
-public class LzfDecoder extends ByteToMessageDecoder {
+public class LzfDecoder extends CompressionDecoder {
     /**
      * Current state of decompression.
      */
@@ -100,6 +99,8 @@ public class LzfDecoder extends ByteToMessageDecoder {
      *        Sun JDK's {@link sun.misc.Unsafe} class (which may be included by other JDK's as well).
      */
     public LzfDecoder(boolean safeInstance) {
+        super(CompressionFormat.LZF);
+
         decoder = safeInstance ?
                 ChunkDecoderFactory.safeInstance()
               : ChunkDecoderFactory.optimalInstance();
@@ -206,5 +207,10 @@ public class LzfDecoder extends ByteToMessageDecoder {
             recycler = null;
             throw e;
         }
+    }
+
+    @Override
+    public boolean isClosed() {
+        return false;
     }
 }

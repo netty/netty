@@ -17,7 +17,6 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.ByteToMessageDecoder;
 
 import java.util.List;
 
@@ -28,7 +27,7 @@ import static io.netty.handler.codec.compression.Bzip2Constants.*;
  *
  * See <a href="http://en.wikipedia.org/wiki/Bzip2">Bzip2</a>.
  */
-public class Bzip2Decoder extends ByteToMessageDecoder {
+public class Bzip2Decoder extends CompressionDecoder {
     /**
      * Current state of stream.
      */
@@ -75,6 +74,10 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
      * The merged CRC of all blocks decompressed so far.
      */
     private int streamCRC;
+
+    public Bzip2Decoder() {
+        super(CompressionFormat.BZIP2);
+    }
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
@@ -312,10 +315,7 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
         }
     }
 
-    /**
-     * Returns {@code true} if and only if the end of the compressed stream
-     * has been reached.
-     */
+    @Override
     public boolean isClosed() {
         return currentState == State.EOF;
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2015 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,14 +15,18 @@
  */
 package io.netty.handler.codec.compression;
 
-import io.netty.buffer.ByteBuf;
-
 /**
- * Decompresses a {@link ByteBuf} using the deflate algorithm.
+ * Enumeration of possible compression formats.
  */
-public abstract class ZlibDecoder extends CompressionDecoder {
-
-    protected ZlibDecoder(CompressionFormat format) {
-        super(format);
-    }
+public enum CompressionFormat {
+    ZLIB,
+    GZIP,
+    DEFLATE,
+    ZLIB_OR_NONE,
+    SNAPPY,
+    BZIP2,
+    LZF,
+    LZ4,
+    FASTLZ,
+    LZMA
 }

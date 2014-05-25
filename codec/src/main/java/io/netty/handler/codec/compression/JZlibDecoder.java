@@ -22,6 +22,9 @@ import io.netty.channel.ChannelHandlerContext;
 
 import java.util.List;
 
+/**
+ * Decompress a {@link ByteBuf} using the inflate algorithm.
+ */
 public class JZlibDecoder extends ZlibDecoder {
 
     private final Inflater z = new Inflater();
@@ -43,9 +46,7 @@ public class JZlibDecoder extends ZlibDecoder {
      * @throws DecompressionException if failed to initialize zlib
      */
     public JZlibDecoder(ZlibWrapper wrapper) {
-        if (wrapper == null) {
-            throw new NullPointerException("wrapper");
-        }
+        super(wrapper.asCompressionFormat());
 
         int resultCode = z.init(ZlibUtil.convertWrapperType(wrapper));
         if (resultCode != JZlib.Z_OK) {
@@ -61,6 +62,8 @@ public class JZlibDecoder extends ZlibDecoder {
      * @throws DecompressionException if failed to initialize zlib
      */
     public JZlibDecoder(byte[] dictionary) {
+        super(CompressionFormat.ZLIB);
+
         if (dictionary == null) {
             throw new NullPointerException("dictionary");
         }
@@ -71,15 +74,6 @@ public class JZlibDecoder extends ZlibDecoder {
         if (resultCode != JZlib.Z_OK) {
             ZlibUtil.fail(z, "initialization failure", resultCode);
         }
-    }
-
-    /**
-     * Returns {@code true} if and only if the end of the compressed stream
-     * has been reached.
-     */
-    @Override
-    public boolean isClosed() {
-        return finished;
     }
 
     @Override
@@ -170,5 +164,10 @@ public class JZlibDecoder extends ZlibDecoder {
             z.next_in = null;
             z.next_out = null;
         }
+    }
+
+    @Override
+    public boolean isClosed() {
+        return finished;
     }
 }

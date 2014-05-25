@@ -85,9 +85,8 @@ public class JdkZlibDecoder extends ZlibDecoder {
     }
 
     private JdkZlibDecoder(ZlibWrapper wrapper, byte[] dictionary) {
-        if (wrapper == null) {
-            throw new NullPointerException("wrapper");
-        }
+        super(wrapper.asCompressionFormat());
+
         switch (wrapper) {
             case GZIP:
                 inflater = new Inflater(true);
@@ -110,11 +109,6 @@ public class JdkZlibDecoder extends ZlibDecoder {
                 throw new IllegalArgumentException("Only GZIP or ZLIB is supported, but you used " + wrapper);
         }
         this.dictionary = dictionary;
-    }
-
-    @Override
-    public boolean isClosed() {
-        return finished;
     }
 
     @Override
@@ -389,5 +383,10 @@ public class JdkZlibDecoder extends ZlibDecoder {
     private static boolean looksLikeZlib(short cmf_flg) {
         return (cmf_flg & 0x7800) == 0x7800 &&
                 cmf_flg % 31 == 0;
+    }
+
+    @Override
+    public boolean isClosed() {
+        return finished;
     }
 }
