@@ -264,7 +264,7 @@
       <extension>
         <groupId>kr.motd.maven</groupId>
         <artifactId>os-maven-plugin</artifactId>
-        <version>1.2.2.Final</version>
+        <version>1.2.3.Final</version>
       </extension>
     </extensions>
 
