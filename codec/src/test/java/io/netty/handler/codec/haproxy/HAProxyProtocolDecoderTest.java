@@ -767,7 +767,7 @@ public class HAProxyProtocolDecoderTest {
         header[10] = (byte) 0x54; // -----
         header[11] = (byte) 0x0A; // -----
 
-        header[12] = (byte) 0x22; // v2, cmd=PROXY
+        header[12] = (byte) 0x22; // v2, Bogus command
         header[13] = (byte) 0x11; // TCP over IPv4
 
         header[14] = (byte) 0x00; // Remaining Bytes

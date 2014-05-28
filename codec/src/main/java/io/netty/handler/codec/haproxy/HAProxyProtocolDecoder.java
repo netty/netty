@@ -115,7 +115,7 @@ public class HAProxyProtocolDecoder extends ByteToMessageDecoder {
      * <p>
      * <b>Note:</b> limiting TLV size only affects processing of v2, binary headers. Also, as allowed by the 1.5 spec
      * TLV data is currently ignored. For maximum performance it would be best to configure your upstream proxy host to
-     * <b>NOTE</b> send TLV data and instantiate with a max TLV size of {@code 0}.
+     * <b>NOT</b> send TLV data and instantiate with a max TLV size of {@code 0}.
      * </p>
      *
      * @param maxTlvSize maximum number of bytes allowed for additional data (Type-Length-Value vectors) in a v2 header
