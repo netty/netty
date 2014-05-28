@@ -30,10 +30,24 @@ import java.util.List;
 public class HAProxyProtocolDecoder extends ByteToMessageDecoder {
 
     /**
-     * Maximum possible length of a proxy protocol header
+     * Maximum possible length of a v1 proxy protocol header per spec
      */
     private static final int V1_MAX_LENGTH = 108;
-    private static final int V2_MAX_LENGTH = 271;
+
+    /**
+     * Maximum possible length of a v2 proxy protocol header (fixed 16 bytes + max unsigned short)
+     */
+    private static final int V2_MAX_LENGTH = 16 + 65535;
+
+    /**
+     * Minimum possible length of a fully functioning v2 proxy protocol header (fixed 16 bytes + v2 address info space)
+     */
+    private static final int V2_MIN_LENGTH = 16 + 216;
+
+    /**
+     * Maximum possible length for v2 additional TLV data (max unsigned short - max v2 address info space)
+     */
+    private static final int V2_MAX_TLV = 65535 - 216;
 
     /**
      * Version 1 header delimiter is always '\r\n' per spec
@@ -84,9 +98,41 @@ public class HAProxyProtocolDecoder extends ByteToMessageDecoder {
     private int version = -1;
 
     /**
-     * Creates a new decoder
+     * The latest v2 spec (2014/05/18) allows for additional data to be sent in the proxy protocol header beyond the
+     * address information block so now we need a configurable max header size
+     */
+    private int v2MaxHeaderSize;
+
+    /**
+     * Creates a new decoder with no additional data (TLV) restrictions
      */
     public HAProxyProtocolDecoder() {
+        this.v2MaxHeaderSize = V2_MAX_LENGTH;
+    }
+
+    /**
+     * Creates a new decoder with restricted additional data (TLV) size
+     * <p>
+     * <b>Note:</b> limiting TLV size only affects processing of v2, binary headers. Also, as allowed by the 1.5 spec
+     * TLV data is currently ignored. For maximum performance it would be best to configure your upstream proxy host to
+     * <b>NOTE</b> send TLV data and instantiate with a max TLV size of {@code 0}.
+     * </p>
+     *
+     * @param maxTlvSize maximum number of bytes allowed for additional data (Type-Length-Value vectors) in a v2 header
+     */
+    public HAProxyProtocolDecoder(int maxTlvSize) {
+        if (maxTlvSize < 1) {
+            this.v2MaxHeaderSize = V2_MIN_LENGTH;
+        } else if (maxTlvSize > V2_MAX_TLV) {
+            this.v2MaxHeaderSize = V2_MAX_LENGTH;
+        } else {
+            int calcMax = maxTlvSize + V2_MIN_LENGTH;
+            if (calcMax > V2_MAX_LENGTH) {
+                this.v2MaxHeaderSize = V2_MAX_LENGTH;
+            } else {
+                this.v2MaxHeaderSize = calcMax;
+            }
+        }
     }
 
     /**
@@ -119,15 +165,15 @@ public class HAProxyProtocolDecoder extends ByteToMessageDecoder {
     private static int findEndOfHeader(final ByteBuf buffer) {
         final int n = buffer.readableBytes();
 
-        // per spec, the 16th byte contains the address length in bytes
+        // per spec, the 15th and 16th bytes contain the address length in bytes
         if (n < 16) {
             return -1;
         }
 
-        int offset = buffer.readerIndex() + 15;
+        int offset = buffer.readerIndex() + 14;
 
-        // the total header length will be a fixed 16 byte sequence + the dynamic address length
-        int totalHeaderBytes = 16 + buffer.getByte(offset);
+        // the total header length will be a fixed 16 byte sequence + the dynamic address information block
+        int totalHeaderBytes = 16 + buffer.getUnsignedShort(offset);
 
         // ensure we actually have the full header available
         if (n >= totalHeaderBytes) {
@@ -213,7 +259,7 @@ public class HAProxyProtocolDecoder extends ByteToMessageDecoder {
         if (!discarding) {
             if (eoh >= 0) {
                 final int length = eoh - buffer.readerIndex();
-                if (length > V2_MAX_LENGTH) {
+                if (length > v2MaxHeaderSize) {
                     buffer.readerIndex(eoh);
                     failOverLimit(ctx, length);
                     return null;
@@ -221,7 +267,7 @@ public class HAProxyProtocolDecoder extends ByteToMessageDecoder {
                 return buffer.readSlice(length);
             } else {
                 final int length = buffer.readableBytes();
-                if (length > V2_MAX_LENGTH) {
+                if (length > v2MaxHeaderSize) {
                     discardedBytes = length;
                     buffer.skipBytes(length);
                     discarding = true;
@@ -295,7 +341,7 @@ public class HAProxyProtocolDecoder extends ByteToMessageDecoder {
     }
 
     private void failOverLimit(final ChannelHandlerContext ctx, String length) {
-        int maxLength = version == 1 ? V1_MAX_LENGTH : V2_MAX_LENGTH;
+        int maxLength = version == 1 ? V1_MAX_LENGTH : v2MaxHeaderSize;
         fail(ctx, "header length (" + length + ") exceeds the allowed maximum (" + maxLength + ")", null);
     }
 

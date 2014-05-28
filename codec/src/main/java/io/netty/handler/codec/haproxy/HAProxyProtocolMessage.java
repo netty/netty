@@ -16,13 +16,21 @@
 package io.netty.handler.codec.haproxy;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufProcessor;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.NetUtil;
+
+import java.net.InetAddress;
+import java.nio.charset.Charset;
 
 /**
  * Message container for decoded HAProxy proxy protocol parameters
  */
 public final class HAProxyProtocolMessage {
+    /**
+     * The default system character encoding
+     */
+    private static final Charset SYSTEM_CHARSET = Charset.defaultCharset();
 
     /**
      * Version 1 proxy protocol message for 'UNKNOWN' proxied protocols. Per spec, when the proxied protocol is
@@ -30,6 +38,20 @@ public final class HAProxyProtocolMessage {
      */
     private static final HAProxyProtocolMessage V1_UNKNOWN_MSG = new HAProxyProtocolMessage(HAProxyProtocolVersion.ONE,
             HAProxyProtocolCommand.PROXY, ProxiedProtocolAndFamily.UNKNOWN, null, null, 0, 0);
+
+    /**
+     * Version 2 proxy protocol message for 'UNKNOWN' proxied protocols. Per spec, when the proxied protocol is
+     * 'UNKNOWN' we must discard all other header values.
+     */
+    private static final HAProxyProtocolMessage V2_UNKNOWN_MSG = new HAProxyProtocolMessage(HAProxyProtocolVersion.TWO,
+        HAProxyProtocolCommand.PROXY, ProxiedProtocolAndFamily.UNKNOWN, null, null, 0, 0);
+
+    /**
+     * Version 2 proxy protocol message for local requests. Per spec, we should use an unspecified protocol and family
+     * for 'LOCAL' commands. Per spec, when the proxied protocol is 'UNKNOWN' we must discard all other header values.
+     */
+    private static final HAProxyProtocolMessage V2_LOCAL_MSG = new HAProxyProtocolMessage(HAProxyProtocolVersion.TWO,
+        HAProxyProtocolCommand.LOCAL, ProxiedProtocolAndFamily.UNKNOWN, null, null, 0, 0);
 
     private final HAProxyProtocolVersion version;
     private final HAProxyProtocolCommand command;
@@ -82,7 +104,115 @@ public final class HAProxyProtocolMessage {
      * @throws HAProxyProtocolException  if any portion of the header is invalid
      */
     static HAProxyProtocolMessage decodeHeader(ByteBuf header) throws HAProxyProtocolException {
-        throw new HAProxyProtocolException("version 2 headers are currently not supported");
+
+        if (header == null) {
+            throw new HAProxyProtocolException("null header");
+        }
+
+        if (header.readableBytes() < 16) {
+            throw new HAProxyProtocolException("incomplete header (header must be at least 16 bytes)");
+        }
+
+        // Per spec, the 13th byte is the protocol version and command byte
+        header.skipBytes(12);
+        final byte verCmdByte = header.readByte();
+
+        HAProxyProtocolVersion ver = HAProxyProtocolVersion.valueOf(verCmdByte);
+
+        if (ver == null || !HAProxyProtocolVersion.TWO.equals(ver)) {
+            throw new HAProxyProtocolException("unsupported header version");
+        }
+
+        HAProxyProtocolCommand cmd = HAProxyProtocolCommand.valueOf(verCmdByte);
+
+        if (cmd == null) {
+            throw new HAProxyProtocolException("unkown command");
+        }
+
+        if (HAProxyProtocolCommand.LOCAL.equals(cmd)) {
+            return V2_LOCAL_MSG;
+        }
+
+        // Per spec, the 14th byte is the protocol and address family byte
+        ProxiedProtocolAndFamily protAndFam = ProxiedProtocolAndFamily.valueOf(header.readByte());
+
+        if (protAndFam == null) {
+            throw new HAProxyProtocolException("unkown protocol and family");
+        }
+
+        if (ProxiedProtocolAndFamily.UNKNOWN.equals(protAndFam)) {
+            return V2_UNKNOWN_MSG;
+        }
+
+        int addressInfoLen = header.readUnsignedShort();
+
+        String srcAddress;
+        String dstAddress;
+        int addressLen;
+        int srcPort = 0;
+        int dstPort = 0;
+
+        ProxiedAddressFamily addressFamily = protAndFam.proxiedAddressFamily();
+
+        if (ProxiedAddressFamily.UNIX.equals(addressFamily)) {
+            // unix sockets require 216 bytes for address information
+            if (addressInfoLen < 216 || header.readableBytes() < 216) {
+                throw new HAProxyProtocolException(
+                    "incomplete address information (unix socket address info must be at least 216 bytes)");
+            }
+            int startIdx = header.readerIndex();
+            int addressEnd = header.forEachByte(startIdx, 108, ByteBufProcessor.FIND_NUL);
+            if (addressEnd == -1) {
+                addressLen = 108;
+            } else {
+                addressLen = addressEnd - startIdx;
+            }
+            srcAddress = header.toString(startIdx, addressLen, SYSTEM_CHARSET);
+
+            startIdx = startIdx + 108;
+
+            addressEnd = header.forEachByte(startIdx, 108, ByteBufProcessor.FIND_NUL);
+            if (addressEnd == -1) {
+                addressLen = 108;
+            } else {
+                addressLen = addressEnd - startIdx;
+            }
+            dstAddress = header.toString(startIdx, addressLen, SYSTEM_CHARSET);
+        } else {
+            if (ProxiedAddressFamily.IPV4.equals(addressFamily)) {
+                // IPv4 requires 12 bytes for address information
+                if (addressInfoLen < 12 || header.readableBytes() < 12) {
+                    throw new HAProxyProtocolException(
+                        "incomplete address information (IPv4 address info must be at least 12 bytes)");
+                }
+                addressLen = 4;
+            } else if (ProxiedAddressFamily.IPV6.equals(addressFamily)) {
+                // IPv6 requires 36 bytes for address information
+                if (addressInfoLen < 36 || header.readableBytes() < 36) {
+                    throw new HAProxyProtocolException(
+                        "incomplete address information (IPv6 address info must be at least 36 bytes)");
+                }
+                addressLen = 16;
+            } else {
+                throw new HAProxyProtocolException(
+                    "unable to parse address information (unkown address family " + addressFamily + ")");
+            }
+
+            byte[] addressBytes = new byte[addressLen];
+            try {
+                // Per spec, the src address begins at the 17th byte
+                header.readBytes(addressBytes);
+                srcAddress = InetAddress.getByAddress(addressBytes).getHostAddress();
+                header.readBytes(addressBytes);
+                dstAddress = InetAddress.getByAddress(addressBytes).getHostAddress();
+                srcPort = header.readUnsignedShort();
+                dstPort = header.readUnsignedShort();
+            } catch (Exception e) {
+                throw new HAProxyProtocolException("unable to parse source and destination address", e);
+            }
+        }
+
+        return new HAProxyProtocolMessage(ver, cmd, protAndFam, srcAddress, dstAddress, srcPort, dstPort);
     }
 
     /**

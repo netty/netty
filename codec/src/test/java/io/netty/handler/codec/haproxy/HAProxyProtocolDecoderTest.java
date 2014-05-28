@@ -96,6 +96,12 @@ public class HAProxyProtocolDecoderTest {
     }
 
     @Test(expected = HAProxyProtocolException.class)
+    public void testV1NoUDP() {
+        String header = "PROXY UDP4 192.168.0.1 192.168.0.11 56324 443\r\n";
+        ch.writeInbound(copiedBuffer(header, CharsetUtil.US_ASCII));
+    }
+
+    @Test(expected = HAProxyProtocolException.class)
     public void testInvalidPort() {
         String header = "PROXY TCP4 192.168.0.1 192.168.0.11 80000 443\r\n";
         ch.writeInbound(copiedBuffer(header, CharsetUtil.US_ASCII));
@@ -200,39 +206,700 @@ public class HAProxyProtocolDecoderTest {
         assertEquals(ProxiedAddressFamily.UNIX, ProxiedAddressFamily.valueOf(unix_dgram));
     }
 
-    @Test(expected = HAProxyProtocolException.class)
-    public void testV2Unsupported() {
-        byte[] header = new byte[] {
-                (byte) 0x0D, // Binary Prefix
-                (byte) 0x0A, // -----
-                (byte) 0x0D, // -----
-                (byte) 0x0A, // -----
-                (byte) 0x00, // -----
-                (byte) 0x0D, // -----
-                (byte) 0x0A, // -----
-                (byte) 0x51, // -----
-                (byte) 0x55, // -----
-                (byte) 0x49, // -----
-                (byte) 0x54, // -----
-                (byte) 0x0A, // -----
-                (byte) 0x02, // v2
-                (byte) 0x01, // PROXY
-                (byte) 0x11, // TCP over IPv4
-                (byte) 0x0c, // Remaining Bytes
-                (byte) 0xc0, // Source Address
-                (byte) 0xa8, // -----
-                (byte) 0x00, // -----
-                (byte) 0x01, // -----
-                (byte) 0xc0, // Destination Address
-                (byte) 0xa8, // -----
-                (byte) 0x00, // -----
-                (byte) 0x0b, // -----
-                (byte) 0xdc, // Source Port
-                (byte) 0x04, // -----
-                (byte) 0x01, // Destination Port
-                (byte) 0xbb  // -----
-        };
+    @Test
+    public void testV2IPV4Decode() {
+        byte[] header = new byte[28];
+        header[0]  = (byte) 0x0D; // Binary Prefix
+        header[1]  = (byte) 0x0A; // -----
+        header[2]  = (byte) 0x0D; // -----
+        header[3]  = (byte) 0x0A; // -----
+        header[4]  = (byte) 0x00; // -----
+        header[5]  = (byte) 0x0D; // -----
+        header[6]  = (byte) 0x0A; // -----
+        header[7]  = (byte) 0x51; // -----
+        header[8]  = (byte) 0x55; // -----
+        header[9]  = (byte) 0x49; // -----
+        header[10] = (byte) 0x54; // -----
+        header[11] = (byte) 0x0A; // -----
+
+        header[12] = (byte) 0x21; // v2, cmd=PROXY
+        header[13] = (byte) 0x11; // TCP over IPv4
+
+        header[14] = (byte) 0x00; // Remaining Bytes
+        header[15] = (byte) 0x0c; // -----
+
+        header[16] = (byte) 0xc0; // Source Address
+        header[17] = (byte) 0xa8; // -----
+        header[18] = (byte) 0x00; // -----
+        header[19] = (byte) 0x01; // -----
+
+        header[20] = (byte) 0xc0; // Destination Address
+        header[21] = (byte) 0xa8; // -----
+        header[22] = (byte) 0x00; // -----
+        header[23] = (byte) 0x0b; // -----
+
+        header[24] = (byte) 0xdc; // Source Port
+        header[25] = (byte) 0x04; // -----
+
+        header[26] = (byte) 0x01; // Destination Port
+        header[27] = (byte) 0xbb; // -----
+
+        int startChannels = ch.pipeline().names().size();
         ch.writeInbound(copiedBuffer(header));
+        Object msgObj = ch.readInbound();
+        assertEquals(startChannels - 1, ch.pipeline().names().size());
+        assertTrue(msgObj instanceof HAProxyProtocolMessage);
+        HAProxyProtocolMessage msg = (HAProxyProtocolMessage) msgObj;
+        assertEquals(HAProxyProtocolVersion.TWO, msg.version());
+        assertEquals(HAProxyProtocolCommand.PROXY, msg.command());
+        assertEquals(ProxiedProtocolAndFamily.TCP4, msg.protocolAndFamily());
+        assertEquals("192.168.0.1", msg.sourceAddress());
+        assertEquals("192.168.0.11", msg.destinationAddress());
+        assertEquals(56324, msg.sourcePort());
+        assertEquals(443, msg.destinationPort());
+        assertNull(ch.readInbound());
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testV2UDPDecode() {
+        byte[] header = new byte[28];
+        header[0]  = (byte) 0x0D; // Binary Prefix
+        header[1]  = (byte) 0x0A; // -----
+        header[2]  = (byte) 0x0D; // -----
+        header[3]  = (byte) 0x0A; // -----
+        header[4]  = (byte) 0x00; // -----
+        header[5]  = (byte) 0x0D; // -----
+        header[6]  = (byte) 0x0A; // -----
+        header[7]  = (byte) 0x51; // -----
+        header[8]  = (byte) 0x55; // -----
+        header[9]  = (byte) 0x49; // -----
+        header[10] = (byte) 0x54; // -----
+        header[11] = (byte) 0x0A; // -----
+
+        header[12] = (byte) 0x21; // v2, cmd=PROXY
+        header[13] = (byte) 0x12; // UDP over IPv4
+
+        header[14] = (byte) 0x00; // Remaining Bytes
+        header[15] = (byte) 0x0c; // -----
+
+        header[16] = (byte) 0xc0; // Source Address
+        header[17] = (byte) 0xa8; // -----
+        header[18] = (byte) 0x00; // -----
+        header[19] = (byte) 0x01; // -----
+
+        header[20] = (byte) 0xc0; // Destination Address
+        header[21] = (byte) 0xa8; // -----
+        header[22] = (byte) 0x00; // -----
+        header[23] = (byte) 0x0b; // -----
+
+        header[24] = (byte) 0xdc; // Source Port
+        header[25] = (byte) 0x04; // -----
+
+        header[26] = (byte) 0x01; // Destination Port
+        header[27] = (byte) 0xbb; // -----
+
+        int startChannels = ch.pipeline().names().size();
+        ch.writeInbound(copiedBuffer(header));
+        Object msgObj = ch.readInbound();
+        assertEquals(startChannels - 1, ch.pipeline().names().size());
+        assertTrue(msgObj instanceof HAProxyProtocolMessage);
+        HAProxyProtocolMessage msg = (HAProxyProtocolMessage) msgObj;
+        assertEquals(HAProxyProtocolVersion.TWO, msg.version());
+        assertEquals(HAProxyProtocolCommand.PROXY, msg.command());
+        assertEquals(ProxiedProtocolAndFamily.UDP4, msg.protocolAndFamily());
+        assertEquals("192.168.0.1", msg.sourceAddress());
+        assertEquals("192.168.0.11", msg.destinationAddress());
+        assertEquals(56324, msg.sourcePort());
+        assertEquals(443, msg.destinationPort());
+        assertNull(ch.readInbound());
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testv2IPV6Decode() {
+        byte[] header = new byte[52];
+        header[0]  = (byte) 0x0D; // Binary Prefix
+        header[1]  = (byte) 0x0A; // -----
+        header[2]  = (byte) 0x0D; // -----
+        header[3]  = (byte) 0x0A; // -----
+        header[4]  = (byte) 0x00; // -----
+        header[5]  = (byte) 0x0D; // -----
+        header[6]  = (byte) 0x0A; // -----
+        header[7]  = (byte) 0x51; // -----
+        header[8]  = (byte) 0x55; // -----
+        header[9]  = (byte) 0x49; // -----
+        header[10] = (byte) 0x54; // -----
+        header[11] = (byte) 0x0A; // -----
+
+        header[12] = (byte) 0x21; // v2, cmd=PROXY
+        header[13] = (byte) 0x21; // TCP over IPv6
+
+        header[14] = (byte) 0x00; // Remaining Bytes
+        header[15] = (byte) 0x24; // -----
+
+        header[16] = (byte) 0x20; // Source Address
+        header[17] = (byte) 0x01; // -----
+        header[18] = (byte) 0x0d; // -----
+        header[19] = (byte) 0xb8; // -----
+        header[20] = (byte) 0x85; // -----
+        header[21] = (byte) 0xa3; // -----
+        header[22] = (byte) 0x00; // -----
+        header[23] = (byte) 0x00; // -----
+        header[24] = (byte) 0x00; // -----
+        header[25] = (byte) 0x00; // -----
+        header[26] = (byte) 0x8a; // -----
+        header[27] = (byte) 0x2e; // -----
+        header[28] = (byte) 0x03; // -----
+        header[29] = (byte) 0x70; // -----
+        header[30] = (byte) 0x73; // -----
+        header[31] = (byte) 0x34; // -----
+
+        header[32] = (byte) 0x10; // Destination Address
+        header[33] = (byte) 0x50; // -----
+        header[34] = (byte) 0x00; // -----
+        header[35] = (byte) 0x00; // -----
+        header[36] = (byte) 0x00; // -----
+        header[37] = (byte) 0x00; // -----
+        header[38] = (byte) 0x00; // -----
+        header[39] = (byte) 0x00; // -----
+        header[40] = (byte) 0x00; // -----
+        header[41] = (byte) 0x05; // -----
+        header[42] = (byte) 0x06; // -----
+        header[43] = (byte) 0x00; // -----
+        header[44] = (byte) 0x30; // -----
+        header[45] = (byte) 0x0c; // -----
+        header[46] = (byte) 0x32; // -----
+        header[47] = (byte) 0x6b; // -----
+
+        header[48] = (byte) 0xdc; // Source Port
+        header[49] = (byte) 0x04; // -----
+
+        header[50] = (byte) 0x01; // Destination Port
+        header[51] = (byte) 0xbb; // -----
+
+        int startChannels = ch.pipeline().names().size();
+        ch.writeInbound(copiedBuffer(header));
+        Object msgObj = ch.readInbound();
+        assertEquals(startChannels - 1, ch.pipeline().names().size());
+        assertTrue(msgObj instanceof HAProxyProtocolMessage);
+        HAProxyProtocolMessage msg = (HAProxyProtocolMessage) msgObj;
+        assertEquals(HAProxyProtocolVersion.TWO, msg.version());
+        assertEquals(HAProxyProtocolCommand.PROXY, msg.command());
+        assertEquals(ProxiedProtocolAndFamily.TCP6, msg.protocolAndFamily());
+        assertEquals("2001:db8:85a3:0:0:8a2e:370:7334", msg.sourceAddress());
+        assertEquals("1050:0:0:0:5:600:300c:326b", msg.destinationAddress());
+        assertEquals(56324, msg.sourcePort());
+        assertEquals(443, msg.destinationPort());
+        assertNull(ch.readInbound());
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testv2UnixDecode() {
+        byte[] header = new byte[232];
+        header[0]  = (byte) 0x0D; // Binary Prefix
+        header[1]  = (byte) 0x0A; // -----
+        header[2]  = (byte) 0x0D; // -----
+        header[3]  = (byte) 0x0A; // -----
+        header[4]  = (byte) 0x00; // -----
+        header[5]  = (byte) 0x0D; // -----
+        header[6]  = (byte) 0x0A; // -----
+        header[7]  = (byte) 0x51; // -----
+        header[8]  = (byte) 0x55; // -----
+        header[9]  = (byte) 0x49; // -----
+        header[10] = (byte) 0x54; // -----
+        header[11] = (byte) 0x0A; // -----
+
+        header[12] = (byte) 0x21; // v2, cmd=PROXY
+        header[13] = (byte) 0x31; // UNIX_STREAM
+
+        header[14] = (byte) 0x00; // Remaining Bytes
+        header[15] = (byte) 0xd8; // -----
+
+        header[16] = (byte) 0x2f; // Source Address
+        header[17] = (byte) 0x76; // -----
+        header[18] = (byte) 0x61; // -----
+        header[19] = (byte) 0x72; // -----
+        header[20] = (byte) 0x2f; // -----
+        header[21] = (byte) 0x72; // -----
+        header[22] = (byte) 0x75; // -----
+        header[23] = (byte) 0x6e; // -----
+        header[24] = (byte) 0x2f; // -----
+        header[25] = (byte) 0x73; // -----
+        header[26] = (byte) 0x72; // -----
+        header[27] = (byte) 0x63; // -----
+        header[28] = (byte) 0x2e; // -----
+        header[29] = (byte) 0x73; // -----
+        header[30] = (byte) 0x6f; // -----
+        header[31] = (byte) 0x63; // -----
+        header[32] = (byte) 0x6b; // -----
+        header[33] = (byte) 0x00; // -----
+
+        header[124] = (byte) 0x2f; // Destination Address
+        header[125] = (byte) 0x76; // -----
+        header[126] = (byte) 0x61; // -----
+        header[127] = (byte) 0x72; // -----
+        header[128] = (byte) 0x2f; // -----
+        header[129] = (byte) 0x72; // -----
+        header[130] = (byte) 0x75; // -----
+        header[131] = (byte) 0x6e; // -----
+        header[132] = (byte) 0x2f; // -----
+        header[133] = (byte) 0x64; // -----
+        header[134] = (byte) 0x65; // -----
+        header[135] = (byte) 0x73; // -----
+        header[136] = (byte) 0x74; // -----
+        header[137] = (byte) 0x2e; // -----
+        header[138] = (byte) 0x73; // -----
+        header[139] = (byte) 0x6f; // -----
+        header[140] = (byte) 0x63; // -----
+        header[141] = (byte) 0x6b; // -----
+        header[142] = (byte) 0x00; // -----
+
+        int startChannels = ch.pipeline().names().size();
+        ch.writeInbound(copiedBuffer(header));
+        Object msgObj = ch.readInbound();
+        assertEquals(startChannels - 1, ch.pipeline().names().size());
+        assertTrue(msgObj instanceof HAProxyProtocolMessage);
+        HAProxyProtocolMessage msg = (HAProxyProtocolMessage) msgObj;
+        assertEquals(HAProxyProtocolVersion.TWO, msg.version());
+        assertEquals(HAProxyProtocolCommand.PROXY, msg.command());
+        assertEquals(ProxiedProtocolAndFamily.UNIX_STREAM, msg.protocolAndFamily());
+        assertEquals("/var/run/src.sock", msg.sourceAddress());
+        assertEquals("/var/run/dest.sock", msg.destinationAddress());
+        assertEquals(0, msg.sourcePort());
+        assertEquals(0, msg.destinationPort());
+        assertNull(ch.readInbound());
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testV2LocalProtocolDecode() {
+        byte[] header = new byte[28];
+        header[0]  = (byte) 0x0D; // Binary Prefix
+        header[1]  = (byte) 0x0A; // -----
+        header[2]  = (byte) 0x0D; // -----
+        header[3]  = (byte) 0x0A; // -----
+        header[4]  = (byte) 0x00; // -----
+        header[5]  = (byte) 0x0D; // -----
+        header[6]  = (byte) 0x0A; // -----
+        header[7]  = (byte) 0x51; // -----
+        header[8]  = (byte) 0x55; // -----
+        header[9]  = (byte) 0x49; // -----
+        header[10] = (byte) 0x54; // -----
+        header[11] = (byte) 0x0A; // -----
+
+        header[12] = (byte) 0x20; // v2, cmd=LOCAL
+        header[13] = (byte) 0x00; // Unspecified transport protocol and address family
+
+        header[14] = (byte) 0x00; // Remaining Bytes
+        header[15] = (byte) 0x0c; // -----
+
+        header[16] = (byte) 0xc0; // Source Address
+        header[17] = (byte) 0xa8; // -----
+        header[18] = (byte) 0x00; // -----
+        header[19] = (byte) 0x01; // -----
+
+        header[20] = (byte) 0xc0; // Destination Address
+        header[21] = (byte) 0xa8; // -----
+        header[22] = (byte) 0x00; // -----
+        header[23] = (byte) 0x0b; // -----
+
+        header[24] = (byte) 0xdc; // Source Port
+        header[25] = (byte) 0x04; // -----
+
+        header[26] = (byte) 0x01; // Destination Port
+        header[27] = (byte) 0xbb; // -----
+
+        int startChannels = ch.pipeline().names().size();
+        ch.writeInbound(copiedBuffer(header));
+        Object msgObj = ch.readInbound();
+        assertEquals(startChannels - 1, ch.pipeline().names().size());
+        assertTrue(msgObj instanceof HAProxyProtocolMessage);
+        HAProxyProtocolMessage msg = (HAProxyProtocolMessage) msgObj;
+        assertEquals(HAProxyProtocolVersion.TWO, msg.version());
+        assertEquals(HAProxyProtocolCommand.LOCAL, msg.command());
+        assertEquals(ProxiedProtocolAndFamily.UNKNOWN, msg.protocolAndFamily());
+        assertNull(msg.sourceAddress());
+        assertNull(msg.destinationAddress());
+        assertEquals(0, msg.sourcePort());
+        assertEquals(0, msg.destinationPort());
+        assertNull(ch.readInbound());
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testV2UnknownProtocolDecode() {
+        byte[] header = new byte[28];
+        header[0]  = (byte) 0x0D; // Binary Prefix
+        header[1]  = (byte) 0x0A; // -----
+        header[2]  = (byte) 0x0D; // -----
+        header[3]  = (byte) 0x0A; // -----
+        header[4]  = (byte) 0x00; // -----
+        header[5]  = (byte) 0x0D; // -----
+        header[6]  = (byte) 0x0A; // -----
+        header[7]  = (byte) 0x51; // -----
+        header[8]  = (byte) 0x55; // -----
+        header[9]  = (byte) 0x49; // -----
+        header[10] = (byte) 0x54; // -----
+        header[11] = (byte) 0x0A; // -----
+
+        header[12] = (byte) 0x21; // v2, cmd=PROXY
+        header[13] = (byte) 0x00; // Unspecified transport protocol and address family
+
+        header[14] = (byte) 0x00; // Remaining Bytes
+        header[15] = (byte) 0x0c; // -----
+
+        header[16] = (byte) 0xc0; // Source Address
+        header[17] = (byte) 0xa8; // -----
+        header[18] = (byte) 0x00; // -----
+        header[19] = (byte) 0x01; // -----
+
+        header[20] = (byte) 0xc0; // Destination Address
+        header[21] = (byte) 0xa8; // -----
+        header[22] = (byte) 0x00; // -----
+        header[23] = (byte) 0x0b; // -----
+
+        header[24] = (byte) 0xdc; // Source Port
+        header[25] = (byte) 0x04; // -----
+
+        header[26] = (byte) 0x01; // Destination Port
+        header[27] = (byte) 0xbb; // -----
+
+        int startChannels = ch.pipeline().names().size();
+        ch.writeInbound(copiedBuffer(header));
+        Object msgObj = ch.readInbound();
+        assertEquals(startChannels - 1, ch.pipeline().names().size());
+        assertTrue(msgObj instanceof HAProxyProtocolMessage);
+        HAProxyProtocolMessage msg = (HAProxyProtocolMessage) msgObj;
+        assertEquals(HAProxyProtocolVersion.TWO, msg.version());
+        assertEquals(HAProxyProtocolCommand.PROXY, msg.command());
+        assertEquals(ProxiedProtocolAndFamily.UNKNOWN, msg.protocolAndFamily());
+        assertNull(msg.sourceAddress());
+        assertNull(msg.destinationAddress());
+        assertEquals(0, msg.sourcePort());
+        assertEquals(0, msg.destinationPort());
+        assertNull(ch.readInbound());
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testV2WithTLV() {
+        ch = new EmbeddedChannel(new HAProxyProtocolDecoder(4));
+
+        byte[] header = new byte[236];
+        header[0]  = (byte) 0x0D; // Binary Prefix
+        header[1]  = (byte) 0x0A; // -----
+        header[2]  = (byte) 0x0D; // -----
+        header[3]  = (byte) 0x0A; // -----
+        header[4]  = (byte) 0x00; // -----
+        header[5]  = (byte) 0x0D; // -----
+        header[6]  = (byte) 0x0A; // -----
+        header[7]  = (byte) 0x51; // -----
+        header[8]  = (byte) 0x55; // -----
+        header[9]  = (byte) 0x49; // -----
+        header[10] = (byte) 0x54; // -----
+        header[11] = (byte) 0x0A; // -----
+
+        header[12] = (byte) 0x21; // v2, cmd=PROXY
+        header[13] = (byte) 0x31; // UNIX_STREAM
+
+        header[14] = (byte) 0x00; // Remaining Bytes
+        header[15] = (byte) 0xdc; // -----
+
+        header[16] = (byte) 0x2f; // Source Address
+        header[17] = (byte) 0x76; // -----
+        header[18] = (byte) 0x61; // -----
+        header[19] = (byte) 0x72; // -----
+        header[20] = (byte) 0x2f; // -----
+        header[21] = (byte) 0x72; // -----
+        header[22] = (byte) 0x75; // -----
+        header[23] = (byte) 0x6e; // -----
+        header[24] = (byte) 0x2f; // -----
+        header[25] = (byte) 0x73; // -----
+        header[26] = (byte) 0x72; // -----
+        header[27] = (byte) 0x63; // -----
+        header[28] = (byte) 0x2e; // -----
+        header[29] = (byte) 0x73; // -----
+        header[30] = (byte) 0x6f; // -----
+        header[31] = (byte) 0x63; // -----
+        header[32] = (byte) 0x6b; // -----
+        header[33] = (byte) 0x00; // -----
+
+        header[124] = (byte) 0x2f; // Destination Address
+        header[125] = (byte) 0x76; // -----
+        header[126] = (byte) 0x61; // -----
+        header[127] = (byte) 0x72; // -----
+        header[128] = (byte) 0x2f; // -----
+        header[129] = (byte) 0x72; // -----
+        header[130] = (byte) 0x75; // -----
+        header[131] = (byte) 0x6e; // -----
+        header[132] = (byte) 0x2f; // -----
+        header[133] = (byte) 0x64; // -----
+        header[134] = (byte) 0x65; // -----
+        header[135] = (byte) 0x73; // -----
+        header[136] = (byte) 0x74; // -----
+        header[137] = (byte) 0x2e; // -----
+        header[138] = (byte) 0x73; // -----
+        header[139] = (byte) 0x6f; // -----
+        header[140] = (byte) 0x63; // -----
+        header[141] = (byte) 0x6b; // -----
+        header[142] = (byte) 0x00; // -----
+
+        // ---- Additional data (TLV) ---- \\
+
+        header[232] = (byte) 0x01; // Type
+        header[233] = (byte) 0x00; // Remaining bytes
+        header[234] = (byte) 0x01; // -----
+        header[235] = (byte) 0x01; // Payload
+
+        int startChannels = ch.pipeline().names().size();
+        ch.writeInbound(copiedBuffer(header));
+        Object msgObj = ch.readInbound();
+        assertEquals(startChannels - 1, ch.pipeline().names().size());
+        assertTrue(msgObj instanceof HAProxyProtocolMessage);
+        HAProxyProtocolMessage msg = (HAProxyProtocolMessage) msgObj;
+        assertEquals(HAProxyProtocolVersion.TWO, msg.version());
+        assertEquals(HAProxyProtocolCommand.PROXY, msg.command());
+        assertEquals(ProxiedProtocolAndFamily.UNIX_STREAM, msg.protocolAndFamily());
+        assertEquals("/var/run/src.sock", msg.sourceAddress());
+        assertEquals("/var/run/dest.sock", msg.destinationAddress());
+        assertEquals(0, msg.sourcePort());
+        assertEquals(0, msg.destinationPort());
+        assertNull(ch.readInbound());
+        assertFalse(ch.finish());
+    }
+
+    @Test(expected = HAProxyProtocolException.class)
+    public void testV2InvalidProtocol() {
+        byte[] header = new byte[28];
+        header[0]  = (byte) 0x0D; // Binary Prefix
+        header[1]  = (byte) 0x0A; // -----
+        header[2]  = (byte) 0x0D; // -----
+        header[3]  = (byte) 0x0A; // -----
+        header[4]  = (byte) 0x00; // -----
+        header[5]  = (byte) 0x0D; // -----
+        header[6]  = (byte) 0x0A; // -----
+        header[7]  = (byte) 0x51; // -----
+        header[8]  = (byte) 0x55; // -----
+        header[9]  = (byte) 0x49; // -----
+        header[10] = (byte) 0x54; // -----
+        header[11] = (byte) 0x0A; // -----
+
+        header[12] = (byte) 0x21; // v2, cmd=PROXY
+        header[13] = (byte) 0x41; // Bogus transport protocol
+
+        header[14] = (byte) 0x00; // Remaining Bytes
+        header[15] = (byte) 0x0c; // -----
+
+        header[16] = (byte) 0xc0; // Source Address
+        header[17] = (byte) 0xa8; // -----
+        header[18] = (byte) 0x00; // -----
+        header[19] = (byte) 0x01; // -----
+
+        header[20] = (byte) 0xc0; // Destination Address
+        header[21] = (byte) 0xa8; // -----
+        header[22] = (byte) 0x00; // -----
+        header[23] = (byte) 0x0b; // -----
+
+        header[24] = (byte) 0xdc; // Source Port
+        header[25] = (byte) 0x04; // -----
+
+        header[26] = (byte) 0x01; // Destination Port
+        header[27] = (byte) 0xbb; // -----
+
+        int startChannels = ch.pipeline().names().size();
+        ch.writeInbound(copiedBuffer(header));
+    }
+
+    @Test(expected = HAProxyProtocolException.class)
+    public void testV2MissingParams() {
+        byte[] header = new byte[26];
+        header[0]  = (byte) 0x0D; // Binary Prefix
+        header[1]  = (byte) 0x0A; // -----
+        header[2]  = (byte) 0x0D; // -----
+        header[3]  = (byte) 0x0A; // -----
+        header[4]  = (byte) 0x00; // -----
+        header[5]  = (byte) 0x0D; // -----
+        header[6]  = (byte) 0x0A; // -----
+        header[7]  = (byte) 0x51; // -----
+        header[8]  = (byte) 0x55; // -----
+        header[9]  = (byte) 0x49; // -----
+        header[10] = (byte) 0x54; // -----
+        header[11] = (byte) 0x0A; // -----
+
+        header[12] = (byte) 0x21; // v2, cmd=PROXY
+        header[13] = (byte) 0x11; // TCP over IPv4
+
+        header[14] = (byte) 0x00; // Remaining Bytes
+        header[15] = (byte) 0x0a; // -----
+
+        header[16] = (byte) 0xc0; // Source Address
+        header[17] = (byte) 0xa8; // -----
+        header[18] = (byte) 0x00; // -----
+        header[19] = (byte) 0x01; // -----
+
+        header[20] = (byte) 0xc0; // Destination Address
+        header[21] = (byte) 0xa8; // -----
+        header[22] = (byte) 0x00; // -----
+        header[23] = (byte) 0x0b; // -----
+
+        header[24] = (byte) 0xdc; // Source Port
+        header[25] = (byte) 0x04; // -----
+
+        int startChannels = ch.pipeline().names().size();
+        ch.writeInbound(copiedBuffer(header));
+    }
+
+    @Test(expected = HAProxyProtocolException.class)
+    public void testV2InvalidCommand() {
+        byte[] header = new byte[28];
+        header[0]  = (byte) 0x0D; // Binary Prefix
+        header[1]  = (byte) 0x0A; // -----
+        header[2]  = (byte) 0x0D; // -----
+        header[3]  = (byte) 0x0A; // -----
+        header[4]  = (byte) 0x00; // -----
+        header[5]  = (byte) 0x0D; // -----
+        header[6]  = (byte) 0x0A; // -----
+        header[7]  = (byte) 0x51; // -----
+        header[8]  = (byte) 0x55; // -----
+        header[9]  = (byte) 0x49; // -----
+        header[10] = (byte) 0x54; // -----
+        header[11] = (byte) 0x0A; // -----
+
+        header[12] = (byte) 0x22; // v2, cmd=PROXY
+        header[13] = (byte) 0x11; // TCP over IPv4
+
+        header[14] = (byte) 0x00; // Remaining Bytes
+        header[15] = (byte) 0x0c; // -----
+
+        header[16] = (byte) 0xc0; // Source Address
+        header[17] = (byte) 0xa8; // -----
+        header[18] = (byte) 0x00; // -----
+        header[19] = (byte) 0x01; // -----
+
+        header[20] = (byte) 0xc0; // Destination Address
+        header[21] = (byte) 0xa8; // -----
+        header[22] = (byte) 0x00; // -----
+        header[23] = (byte) 0x0b; // -----
+
+        header[24] = (byte) 0xdc; // Source Port
+        header[25] = (byte) 0x04; // -----
+
+        header[26] = (byte) 0x01; // Destination Port
+        header[27] = (byte) 0xbb; // -----
+
+        int startChannels = ch.pipeline().names().size();
+        ch.writeInbound(copiedBuffer(header));
+    }
+
+    @Test(expected = HAProxyProtocolException.class)
+    public void testV2InvalidVersion() {
+        byte[] header = new byte[28];
+        header[0]  = (byte) 0x0D; // Binary Prefix
+        header[1]  = (byte) 0x0A; // -----
+        header[2]  = (byte) 0x0D; // -----
+        header[3]  = (byte) 0x0A; // -----
+        header[4]  = (byte) 0x00; // -----
+        header[5]  = (byte) 0x0D; // -----
+        header[6]  = (byte) 0x0A; // -----
+        header[7]  = (byte) 0x51; // -----
+        header[8]  = (byte) 0x55; // -----
+        header[9]  = (byte) 0x49; // -----
+        header[10] = (byte) 0x54; // -----
+        header[11] = (byte) 0x0A; // -----
+
+        header[12] = (byte) 0x31; // Bogus version, cmd=PROXY
+        header[13] = (byte) 0x11; // TCP over IPv4
+
+        header[14] = (byte) 0x00; // Remaining Bytes
+        header[15] = (byte) 0x0c; // -----
+
+        header[16] = (byte) 0xc0; // Source Address
+        header[17] = (byte) 0xa8; // -----
+        header[18] = (byte) 0x00; // -----
+        header[19] = (byte) 0x01; // -----
+
+        header[20] = (byte) 0xc0; // Destination Address
+        header[21] = (byte) 0xa8; // -----
+        header[22] = (byte) 0x00; // -----
+        header[23] = (byte) 0x0b; // -----
+
+        header[24] = (byte) 0xdc; // Source Port
+        header[25] = (byte) 0x04; // -----
+
+        header[26] = (byte) 0x01; // Destination Port
+        header[27] = (byte) 0xbb; // -----
+
+        int startChannels = ch.pipeline().names().size();
+        ch.writeInbound(copiedBuffer(header));
+    }
+
+    @Test(expected = HAProxyProtocolException.class)
+    public void testV2HeaderTooLong() {
+        ch = new EmbeddedChannel(new HAProxyProtocolDecoder(0));
+
+        byte[] header = new byte[248];
+        header[0]  = (byte) 0x0D; // Binary Prefix
+        header[1]  = (byte) 0x0A; // -----
+        header[2]  = (byte) 0x0D; // -----
+        header[3]  = (byte) 0x0A; // -----
+        header[4]  = (byte) 0x00; // -----
+        header[5]  = (byte) 0x0D; // -----
+        header[6]  = (byte) 0x0A; // -----
+        header[7]  = (byte) 0x51; // -----
+        header[8]  = (byte) 0x55; // -----
+        header[9]  = (byte) 0x49; // -----
+        header[10] = (byte) 0x54; // -----
+        header[11] = (byte) 0x0A; // -----
+
+        header[12] = (byte) 0x21; // v2, cmd=PROXY
+        header[13] = (byte) 0x11; // TCP over IPv4
+
+        header[14] = (byte) 0x00; // Remaining Bytes
+        header[15] = (byte) 0xe8; // -----
+
+        header[16] = (byte) 0xc0; // Source Address
+        header[17] = (byte) 0xa8; // -----
+        header[18] = (byte) 0x00; // -----
+        header[19] = (byte) 0x01; // -----
+
+        header[20] = (byte) 0xc0; // Destination Address
+        header[21] = (byte) 0xa8; // -----
+        header[22] = (byte) 0x00; // -----
+        header[23] = (byte) 0x0b; // -----
+
+        header[24] = (byte) 0xdc; // Source Port
+        header[25] = (byte) 0x04; // -----
+
+        header[26] = (byte) 0x01; // Destination Port
+        header[27] = (byte) 0xbb; // -----
+
+        int startChannels = ch.pipeline().names().size();
+        ch.writeInbound(copiedBuffer(header));
+    }
+
+    @Test
+    public void testV2IncompleteHeader() {
+        byte[] header = new byte[13];
+        header[0]  = (byte) 0x0D; // Binary Prefix
+        header[1]  = (byte) 0x0A; // -----
+        header[2]  = (byte) 0x0D; // -----
+        header[3]  = (byte) 0x0A; // -----
+        header[4]  = (byte) 0x00; // -----
+        header[5]  = (byte) 0x0D; // -----
+        header[6]  = (byte) 0x0A; // -----
+        header[7]  = (byte) 0x51; // -----
+        header[8]  = (byte) 0x55; // -----
+        header[9]  = (byte) 0x49; // -----
+        header[10] = (byte) 0x54; // -----
+        header[11] = (byte) 0x0A; // -----
+
+        header[12] = (byte) 0x21; // v2, cmd=PROXY
+
+        int startChannels = ch.pipeline().names().size();
+        ch.writeInbound(copiedBuffer(header));
+        assertNull(ch.readInbound());
         assertFalse(ch.finish());
     }
 }

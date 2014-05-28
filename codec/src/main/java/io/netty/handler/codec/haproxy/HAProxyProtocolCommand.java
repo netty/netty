@@ -20,6 +20,11 @@ package io.netty.handler.codec.haproxy;
  */
 public final class HAProxyProtocolCommand implements Comparable<HAProxyProtocolCommand> {
     /**
+     * The command is specified in the lowest 4 bits of the protocol version and command byte
+     */
+    private static final byte COMMAND_MASK = (byte) 0x0f;
+
+    /**
      * Version byte constants
      */
     private static final byte LOCAL_BYTE = (byte) 0x00;
@@ -49,13 +54,13 @@ public final class HAProxyProtocolCommand implements Comparable<HAProxyProtocolC
     }
 
     /**
-     * Returns the {@link HAProxyProtocolCommand} represented by the specified command byte
+     * Returns the {@link HAProxyProtocolCommand} represented by the specified protocol version and command byte
      *
-     * @param cmdByte  command byte
-     * @return         {@link HAProxyProtocolCommand} instance OR {@code null} if the command is not recognized
+     * @param verCmdByte protocol version and command byte
+     * @return           {@link HAProxyProtocolCommand} instance OR {@code null} if the command is not recognized
      */
-    public static HAProxyProtocolCommand valueOf(byte cmdByte) {
-        switch (cmdByte) {
+    public static HAProxyProtocolCommand valueOf(byte verCmdByte) {
+        switch ((byte) (verCmdByte & COMMAND_MASK)) {
             case PROXY_BYTE:
                 return PROXY;
             case LOCAL_BYTE:

@@ -20,10 +20,15 @@ package io.netty.handler.codec.haproxy;
  */
 public final class HAProxyProtocolVersion implements Comparable<HAProxyProtocolVersion> {
     /**
+     * The highest 4 bits of the protocol version and command byte contain the version
+     */
+    private static final byte VERSION_MASK = (byte) 0xf0;
+
+    /**
      * Version byte constants
      */
-    private static final byte ONE_BYTE = (byte) 0x01;
-    private static final byte TWO_BYTE = (byte) 0x02;
+    private static final byte ONE_BYTE = (byte) 0x10;
+    private static final byte TWO_BYTE = (byte) 0x20;
 
     /**
      * The ONE proxy protocol version represents a version 1 (human-readable) header
@@ -47,14 +52,14 @@ public final class HAProxyProtocolVersion implements Comparable<HAProxyProtocolV
     }
 
     /**
-     * Returns the {@link HAProxyProtocolVersion} represented by the specified version byte
+     * Returns the {@link HAProxyProtocolVersion} represented by the specified protocol version and command byte
      *
-     * @param versionByte  version byte
-     * @return             {@link HAProxyProtocolVersion} instance OR {@code null} if the
-     *                     version is not recognized
+     * @param verCmdByte  protocol version and command byte
+     * @return            {@link HAProxyProtocolVersion} instance OR {@code null} if the
+     *                    version is not recognized
      */
-    public static HAProxyProtocolVersion valueOf(byte versionByte) {
-        switch (versionByte) {
+    public static HAProxyProtocolVersion valueOf(byte verCmdByte) {
+        switch ((byte) (verCmdByte & VERSION_MASK)) {
             case TWO_BYTE:
                 return TWO;
             case ONE_BYTE:
