@@ -24,11 +24,13 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.util.CharsetUtil;
+import io.netty.util.NetUtil;
 import org.junit.Test;
 
 import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.InputStream;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
@@ -68,8 +70,7 @@ public class NioSocketChannelTest {
 
             SocketAddress address = sb.bind(0).sync().channel().localAddress();
 
-            Socket s = new Socket();
-            s.connect(address);
+            Socket s = new Socket(NetUtil.LOCALHOST, ((InetSocketAddress) address).getPort());
 
             InputStream in = s.getInputStream();
             byte[] buf = new byte[8192];
@@ -127,8 +128,7 @@ public class NioSocketChannelTest {
 
             SocketAddress address = sb.bind(0).sync().channel().localAddress();
 
-            Socket s = new Socket();
-            s.connect(address);
+            Socket s = new Socket(NetUtil.LOCALHOST, ((InetSocketAddress) address).getPort());
 
             DataInput in = new DataInputStream(s.getInputStream());
             byte[] buf = new byte[3];
