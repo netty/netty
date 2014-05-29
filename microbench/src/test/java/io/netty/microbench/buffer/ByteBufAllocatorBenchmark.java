@@ -23,41 +23,64 @@ import io.netty.microbench.util.AbstractMicrobenchmark;
 import org.openjdk.jmh.annotations.GenerateMicroBenchmark;
 import org.openjdk.jmh.annotations.Param;
 
+import java.util.Random;
+
 /**
  * This class benchmarks different allocators with different allocation sizes.
  */
 public class ByteBufAllocatorBenchmark extends AbstractMicrobenchmark {
 
-    private final ByteBufAllocator unpooledHeapAllocator = new UnpooledByteBufAllocator(false);
-    private final ByteBufAllocator unpooledDirectAllocator = new UnpooledByteBufAllocator(true);
-    private final ByteBufAllocator pooledHeapAllocator = new PooledByteBufAllocator(false);
-    private final ByteBufAllocator pooledDirectAllocator = new PooledByteBufAllocator(true);
+    private static final ByteBufAllocator unpooledAllocator = new UnpooledByteBufAllocator(true);
+    private static final ByteBufAllocator pooledAllocator =
+            new PooledByteBufAllocator(true, 4, 4, 8192, 11, 0, 0, 0); // Disable thread-local cache
+
+    private static final int MAX_LIVE_BUFFERS = 8192;
+    private static final Random rand = new Random();
+    private static final ByteBuf[] unpooledHeapBuffers = new ByteBuf[MAX_LIVE_BUFFERS];
+    private static final ByteBuf[] unpooledDirectBuffers = new ByteBuf[MAX_LIVE_BUFFERS];
+    private static final ByteBuf[] pooledHeapBuffers = new ByteBuf[MAX_LIVE_BUFFERS];
+    private static final ByteBuf[] pooledDirectBuffers = new ByteBuf[MAX_LIVE_BUFFERS];
 
     @Param({ "00000", "00256", "01024", "04096", "16384", "65536" })
     public int size;
 
     @GenerateMicroBenchmark
     public void unpooledHeapAllocAndFree() {
-        ByteBuf buffer = unpooledHeapAllocator.buffer(size);
-        buffer.release();
+        int idx = rand.nextInt(unpooledHeapBuffers.length);
+        ByteBuf oldBuf = unpooledHeapBuffers[idx];
+        if (oldBuf != null) {
+            oldBuf.release();
+        }
+        unpooledHeapBuffers[idx] = unpooledAllocator.heapBuffer(size);
     }
 
     @GenerateMicroBenchmark
     public void unpooledDirectAllocAndFree() {
-        ByteBuf buffer = unpooledDirectAllocator.buffer(size);
-        buffer.release();
+        int idx = rand.nextInt(unpooledDirectBuffers.length);
+        ByteBuf oldBuf = unpooledDirectBuffers[idx];
+        if (oldBuf != null) {
+            oldBuf.release();
+        }
+        unpooledDirectBuffers[idx] = unpooledAllocator.directBuffer(size);
     }
 
     @GenerateMicroBenchmark
     public void pooledHeapAllocAndFree() {
-        ByteBuf buffer = pooledHeapAllocator.buffer(size);
-        buffer.release();
+        int idx = rand.nextInt(pooledHeapBuffers.length);
+        ByteBuf oldBuf = pooledHeapBuffers[idx];
+        if (oldBuf != null) {
+            oldBuf.release();
+        }
+        pooledHeapBuffers[idx] = pooledAllocator.heapBuffer(size);
     }
 
     @GenerateMicroBenchmark
     public void pooledDirectAllocAndFree() {
-        ByteBuf buffer = pooledDirectAllocator.buffer(size);
-        buffer.release();
+        int idx = rand.nextInt(pooledDirectBuffers.length);
+        ByteBuf oldBuf = pooledDirectBuffers[idx];
+        if (oldBuf != null) {
+            oldBuf.release();
+        }
+        pooledDirectBuffers[idx] = pooledAllocator.directBuffer(size);
     }
-
 }
