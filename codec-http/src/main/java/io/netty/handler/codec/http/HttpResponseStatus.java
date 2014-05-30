@@ -515,6 +515,10 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
         return code();
     }
 
+    /**
+     * Equality of HttpResponseStatus only depends on {@code code}. The
+     * reason phrase is not considered for equality.
+     */
     @Override
     public boolean equals(Object o) {
         if (!(o instanceof HttpResponseStatus)) {
@@ -524,6 +528,10 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
         return code() == ((HttpResponseStatus) o).code();
     }
 
+    /**
+     * Comparison of HttpResponseStatus only depends on {@code code}. The
+     * reason phrase is not considered for comparison.
+     */
     @Override
     public int compareTo(HttpResponseStatus o) {
         return code() - o.code();
