@@ -16,18 +16,13 @@
 
 package io.netty.buffer;
 
-import io.netty.util.concurrent.GlobalEventExecutor;
-import io.netty.util.concurrent.ScheduledFuture;
+import io.netty.util.ThreadDeathWatcher;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.nio.ByteBuffer;
-import java.util.IdentityHashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class PooledByteBufAllocator extends AbstractByteBufAllocator {
@@ -44,7 +39,6 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
     private static final int DEFAULT_NORMAL_CACHE_SIZE;
     private static final int DEFAULT_MAX_CACHED_BUFFER_CAPACITY;
     private static final int DEFAULT_CACHE_TRIM_INTERVAL;
-    private static final long DEFAULT_CACHE_CLEANUP_INTERVAL;
 
     private static final int MIN_PAGE_SIZE = 4096;
     private static final int MAX_CHUNK_SIZE = (int) (((long) Integer.MAX_VALUE + 1) / 2);
@@ -101,9 +95,6 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         DEFAULT_CACHE_TRIM_INTERVAL = SystemPropertyUtil.getInt(
                 "io.netty.allocator.cacheTrimInterval", 8192);
 
-        // the default interval at which we check for caches that are assigned to Threads that are not alive anymore
-        DEFAULT_CACHE_CLEANUP_INTERVAL = SystemPropertyUtil.getLong(
-                "io.netty.allocator.cacheCleanupInterval", 5000);
         if (logger.isDebugEnabled()) {
             logger.debug("-Dio.netty.allocator.numHeapArenas: {}", DEFAULT_NUM_HEAP_ARENA);
             logger.debug("-Dio.netty.allocator.numDirectArenas: {}", DEFAULT_NUM_DIRECT_ARENA);
@@ -122,10 +113,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             logger.debug("-Dio.netty.allocator.smallCacheSize: {}", DEFAULT_SMALL_CACHE_SIZE);
             logger.debug("-Dio.netty.allocator.normalCacheSize: {}", DEFAULT_NORMAL_CACHE_SIZE);
             logger.debug("-Dio.netty.allocator.maxCachedBufferCapacity: {}", DEFAULT_MAX_CACHED_BUFFER_CAPACITY);
-            logger.debug("-Dio.netty.allocator.cacheTrimInterval: {}",
-                    DEFAULT_CACHE_TRIM_INTERVAL);
-            logger.debug("-Dio.netty.allocator.cacheCleanupInterval: {} ms",
-                    DEFAULT_CACHE_CLEANUP_INTERVAL);
+            logger.debug("-Dio.netty.allocator.cacheTrimInterval: {}", DEFAULT_CACHE_TRIM_INTERVAL);
         }
     }
 
@@ -159,15 +147,8 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
 
     public PooledByteBufAllocator(boolean preferDirect, int nHeapArena, int nDirectArena, int pageSize, int maxOrder,
                                   int tinyCacheSize, int smallCacheSize, int normalCacheSize) {
-        this(preferDirect, nHeapArena, nDirectArena, pageSize, maxOrder, tinyCacheSize, smallCacheSize,
-                normalCacheSize, DEFAULT_CACHE_CLEANUP_INTERVAL);
-    }
-
-    public PooledByteBufAllocator(boolean preferDirect, int nHeapArena, int nDirectArena, int pageSize, int maxOrder,
-                                  int tinyCacheSize, int smallCacheSize, int normalCacheSize,
-                                  long cacheThreadAliveCheckInterval) {
         super(preferDirect);
-        threadCache = new PoolThreadLocalCache(cacheThreadAliveCheckInterval);
+        threadCache = new PoolThreadLocalCache();
         this.tinyCacheSize = tinyCacheSize;
         this.smallCacheSize = smallCacheSize;
         this.normalCacheSize = normalCacheSize;
@@ -199,6 +180,15 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         } else {
             directArenas = null;
         }
+    }
+
+    @Deprecated
+    @SuppressWarnings("UnusedParameters")
+    public PooledByteBufAllocator(boolean preferDirect, int nHeapArena, int nDirectArena, int pageSize, int maxOrder,
+                                  int tinyCacheSize, int smallCacheSize, int normalCacheSize,
+                                  long cacheThreadAliveCheckInterval) {
+        this(preferDirect, nHeapArena, nDirectArena, pageSize, maxOrder,
+                tinyCacheSize, smallCacheSize, normalCacheSize);
     }
 
     @SuppressWarnings("unchecked")
@@ -293,68 +283,46 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
     }
 
     final class PoolThreadLocalCache extends ThreadLocal<PoolThreadCache> {
-        private final Map<Thread, PoolThreadCache> caches = new IdentityHashMap<Thread, PoolThreadCache>();
-        private final ReleaseCacheTask task = new ReleaseCacheTask();
         private final AtomicInteger index = new AtomicInteger();
-        private final long cacheThreadAliveCheckInterval;
-
-        PoolThreadLocalCache(long cacheThreadAliveCheckInterval) {
-            this.cacheThreadAliveCheckInterval = cacheThreadAliveCheckInterval;
-        }
+        private boolean initialized;
 
         @Override
-        public PoolThreadCache get() {
-            PoolThreadCache cache = super.get();
-            if (cache == null) {
-                final int idx = index.getAndIncrement();
-                final PoolArena<byte[]> heapArena;
-                final PoolArena<ByteBuffer> directArena;
+        protected PoolThreadCache initialValue() {
+            final int idx = index.getAndIncrement();
+            final PoolArena<byte[]> heapArena;
+            final PoolArena<ByteBuffer> directArena;
 
-                if (heapArenas != null) {
-                    heapArena = heapArenas[Math.abs(idx % heapArenas.length)];
-                } else {
-                    heapArena = null;
-                }
-
-                if (directArenas != null) {
-                    directArena = directArenas[Math.abs(idx % directArenas.length)];
-                } else {
-                    directArena = null;
-                }
-                // If the current Thread is assigned to an EventExecutor we can
-                // easily free the cached stuff again once the EventExecutor completes later.
-                cache = new PoolThreadCache(
-                        heapArena, directArena, tinyCacheSize, smallCacheSize, normalCacheSize,
-                        DEFAULT_MAX_CACHED_BUFFER_CAPACITY, DEFAULT_CACHE_TRIM_INTERVAL);
-                set(cache);
+            if (heapArenas != null) {
+                heapArena = heapArenas[Math.abs(idx % heapArenas.length)];
+            } else {
+                heapArena = null;
             }
+
+            if (directArenas != null) {
+                directArena = directArenas[Math.abs(idx % directArenas.length)];
+            } else {
+                directArena = null;
+            }
+
+            final PoolThreadCache cache = new PoolThreadCache(
+                    heapArena, directArena, tinyCacheSize, smallCacheSize, normalCacheSize,
+                    DEFAULT_MAX_CACHED_BUFFER_CAPACITY, DEFAULT_CACHE_TRIM_INTERVAL);
+
+            // The thread-local cache will keep a list of pooled buffers which must be returned to
+            // the pool when the thread is not alive anymore.
+            final Thread thread = Thread.currentThread();
+            ThreadDeathWatcher.watch(thread, new Runnable() {
+                @Override
+                public void run() {
+                    int numFreed = cache.free();
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("Freed {} thread-local buffer(s) from thread: {}", numFreed, thread.getName());
+                    }
+                }
+            });
+
+            initialized = true;
             return cache;
-        }
-
-        @Override
-        public void set(PoolThreadCache value) {
-            Thread current = Thread.currentThread();
-            synchronized (caches) {
-                caches.put(current, value);
-                if (task.releaseTaskFuture == null) {
-                    task.releaseTaskFuture = GlobalEventExecutor.INSTANCE.scheduleWithFixedDelay(task,
-                            cacheThreadAliveCheckInterval, cacheThreadAliveCheckInterval, TimeUnit.MILLISECONDS);
-                }
-            }
-            super.set(value);
-        }
-
-        @Override
-        public void remove() {
-            super.remove();
-            PoolThreadCache cache;
-            Thread current = Thread.currentThread();
-            synchronized (caches) {
-                cache = caches.remove(current);
-            }
-            if (cache != null) {
-                cache.free();
-            }
         }
 
         /**
@@ -363,7 +331,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
          */
         @Deprecated
         public boolean exists() {
-            return super.get() != null;
+            return initialized;
         }
 
         /**
@@ -371,37 +339,9 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
          */
         @Deprecated
         public void free() {
-            PoolThreadCache cache = super.get();
-            if (cache != null) {
+            if (exists()) {
+                PoolThreadCache cache = get();
                 cache.free();
-            }
-        }
-
-        private final class ReleaseCacheTask implements Runnable {
-            private ScheduledFuture<?> releaseTaskFuture;
-
-            @Override
-            public void run() {
-                synchronized (caches) {
-                    for (Iterator<Map.Entry<Thread, PoolThreadCache>> i = caches.entrySet().iterator();
-                         i.hasNext();) {
-                        Map.Entry<Thread, PoolThreadCache> cache = i.next();
-                        if (cache.getKey().isAlive()) {
-                            // Thread is still alive...
-                            continue;
-                        }
-                        cache.getValue().free();
-                        i.remove();
-                    }
-                    if (caches.isEmpty()) {
-                        // Nothing in the caches anymore so no need to continue to check if something needs to be
-                        // released periodically. The task will be rescheduled if there is any need later.
-                        if (releaseTaskFuture != null) {
-                            releaseTaskFuture.cancel(true);
-                            releaseTaskFuture = null;
-                        }
-                    }
-                }
             }
         }
     }
