@@ -20,7 +20,6 @@ import io.netty.buffer.ByteBufProcessor;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.NetUtil;
 
-import java.net.InetAddress;
 import java.nio.charset.Charset;
 
 /**
@@ -104,7 +103,6 @@ public final class HAProxyProtocolMessage {
      * @throws HAProxyProtocolException  if any portion of the header is invalid
      */
     static HAProxyProtocolMessage decodeHeader(ByteBuf header) throws HAProxyProtocolException {
-
         if (header == null) {
             throw new HAProxyProtocolException("null header");
         }
@@ -120,13 +118,13 @@ public final class HAProxyProtocolMessage {
         HAProxyProtocolVersion ver = HAProxyProtocolVersion.valueOf(verCmdByte);
 
         if (ver == null || !HAProxyProtocolVersion.TWO.equals(ver)) {
-            throw new HAProxyProtocolException("unsupported header version");
+            throw new HAProxyProtocolException("unsupported header version 0x" + Integer.toHexString(verCmdByte));
         }
 
         HAProxyProtocolCommand cmd = HAProxyProtocolCommand.valueOf(verCmdByte);
 
         if (cmd == null) {
-            throw new HAProxyProtocolException("unkown command");
+            throw new HAProxyProtocolException("unkown command 0x" + Integer.toHexString(verCmdByte));
         }
 
         if (HAProxyProtocolCommand.LOCAL.equals(cmd)) {
@@ -198,18 +196,11 @@ public final class HAProxyProtocolMessage {
                     "unable to parse address information (unkown address family " + addressFamily + ")");
             }
 
-            byte[] addressBytes = new byte[addressLen];
-            try {
-                // Per spec, the src address begins at the 17th byte
-                header.readBytes(addressBytes);
-                srcAddress = InetAddress.getByAddress(addressBytes).getHostAddress();
-                header.readBytes(addressBytes);
-                dstAddress = InetAddress.getByAddress(addressBytes).getHostAddress();
-                srcPort = header.readUnsignedShort();
-                dstPort = header.readUnsignedShort();
-            } catch (Exception e) {
-                throw new HAProxyProtocolException("unable to parse source and destination address", e);
-            }
+            // Per spec, the src address begins at the 17th byte
+            srcAddress = ipBytestoString(header, addressLen);
+            dstAddress = ipBytestoString(header, addressLen);
+            srcPort = header.readUnsignedShort();
+            dstPort = header.readUnsignedShort();
         }
 
         return new HAProxyProtocolMessage(ver, cmd, protAndFam, srcAddress, dstAddress, srcPort, dstPort);
@@ -223,7 +214,6 @@ public final class HAProxyProtocolMessage {
      * @throws HAProxyProtocolException  if any portion of the header is invalid
      */
     static HAProxyProtocolMessage decodeHeader(String header) throws HAProxyProtocolException {
-
         if (header == null) {
             throw new HAProxyProtocolException("null header");
         }
@@ -263,6 +253,43 @@ public final class HAProxyProtocolMessage {
     }
 
     /**
+     * Convert ip address bytes to string representation
+     *
+     * @param header     buffer containing ip address bytes
+     * @param addressLen number of bytes to read (4 bytes for IPv4, 16 bytes for IPv6)
+     * @return           string representation of the ip address
+     */
+    private static String ipBytestoString(ByteBuf header, int addressLen) {
+        StringBuilder sb = new StringBuilder();
+        if (addressLen == 4) {
+            sb.append(header.readByte() & 0xff);
+            sb.append(".");
+            sb.append(header.readByte() & 0xff);
+            sb.append(".");
+            sb.append(header.readByte() & 0xff);
+            sb.append(".");
+            sb.append(header.readByte() & 0xff);
+        } else {
+            sb.append(Integer.toHexString(header.readUnsignedShort()));
+            sb.append(":");
+            sb.append(Integer.toHexString(header.readUnsignedShort()));
+            sb.append(":");
+            sb.append(Integer.toHexString(header.readUnsignedShort()));
+            sb.append(":");
+            sb.append(Integer.toHexString(header.readUnsignedShort()));
+            sb.append(":");
+            sb.append(Integer.toHexString(header.readUnsignedShort()));
+            sb.append(":");
+            sb.append(Integer.toHexString(header.readUnsignedShort()));
+            sb.append(":");
+            sb.append(Integer.toHexString(header.readUnsignedShort()));
+            sb.append(":");
+            sb.append(Integer.toHexString(header.readUnsignedShort()));
+        }
+        return sb.toString();
+    }
+
+    /**
      * Convert port to integer
      *
      * @param port                       the port
@@ -285,7 +312,6 @@ public final class HAProxyProtocolMessage {
      * @throws HAProxyProtocolException  if the address is invalid
      */
     private static void checkAddress(String address, ProxiedAddressFamily addrFamily) throws HAProxyProtocolException {
-
         if (addrFamily == null) {
             throw new HAProxyProtocolException("unable to validate address because no address family is set");
         }

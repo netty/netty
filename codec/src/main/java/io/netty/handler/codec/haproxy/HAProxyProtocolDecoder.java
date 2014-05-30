@@ -28,7 +28,6 @@ import java.util.List;
  * @see <a href="http://haproxy.1wt.eu/download/1.5/doc/proxy-protocol.txt">Proxy Protocol Specification</a>
  */
 public class HAProxyProtocolDecoder extends ByteToMessageDecoder {
-
     /**
      * Maximum possible length of a v1 proxy protocol header per spec
      */
@@ -215,7 +214,6 @@ public class HAProxyProtocolDecoder extends ByteToMessageDecoder {
 
     @Override
     protected final void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-
         // determine the specification version
         if (version == -1) {
             if ((version = findVersion(in)) == -1) {
@@ -254,7 +252,7 @@ public class HAProxyProtocolDecoder extends ByteToMessageDecoder {
      * @return frame  the {@link ByteBuf} which represent the frame or {@code null} if no frame could
      *                be created
      */
-    protected ByteBuf decodeStruct(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
+    private ByteBuf decodeStruct(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
         final int eoh = findEndOfHeader(buffer);
         if (!discarding) {
             if (eoh >= 0) {
@@ -298,7 +296,7 @@ public class HAProxyProtocolDecoder extends ByteToMessageDecoder {
      * @return frame  the {@link ByteBuf} which represent the frame or {@code null} if no frame could
      *                be created
      */
-    protected ByteBuf decodeLine(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
+    private ByteBuf decodeLine(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
         final int eol = findEndOfLine(buffer);
         if (!discarding) {
             if (eol >= 0) {
