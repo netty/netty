@@ -15,18 +15,9 @@
  */
 package io.netty.util;
 
-import io.netty.util.concurrent.GlobalEventExecutor;
-import io.netty.util.concurrent.ScheduledFuture;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-
-import java.util.ArrayList;
-import java.util.IdentityHashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Collection of method to handle objects that may implement {@link ReferenceCounted}.
@@ -81,8 +72,6 @@ public final class ReferenceCountUtil {
         return false;
     }
 
-    private static final Map<Thread, List<Entry>> pendingReleases = new IdentityHashMap<Thread, List<Entry>>();
-
     /**
      * Schedules the specified object to be released when the caller thread terminates. Note that this operation is
      * intended to simplify reference counting of ephemeral objects during unit tests. Do not use it beyond the
@@ -99,82 +88,40 @@ public final class ReferenceCountUtil {
      */
     public static <T> T releaseLater(T msg, int decrement) {
         if (msg instanceof ReferenceCounted) {
-            synchronized (pendingReleases) {
-                Thread thread = Thread.currentThread();
-                List<Entry> entries = pendingReleases.get(thread);
-                if (entries == null) {
-                    // Start the periodic releasing task (if not started yet.)
-                    if (pendingReleases.isEmpty()) {
-                        ReleasingTask task = new ReleasingTask();
-                        task.future = GlobalEventExecutor.INSTANCE.scheduleWithFixedDelay(task, 1, 1, TimeUnit.SECONDS);
-                    }
-
-                    // Create a new entry.
-                    entries = new ArrayList<Entry>();
-                    pendingReleases.put(thread, entries);
-                }
-
-                entries.add(new Entry((ReferenceCounted) msg, decrement));
-            }
+            ThreadDeathWatcher.watch(Thread.currentThread(), new ReleasingTask((ReferenceCounted) msg, decrement));
         }
         return msg;
-    }
-
-    private static final class Entry {
-        final ReferenceCounted obj;
-        final int decrement;
-
-        Entry(ReferenceCounted obj, int decrement) {
-            this.obj = obj;
-            this.decrement = decrement;
-        }
-
-        public String toString() {
-            return StringUtil.simpleClassName(obj) + ".release(" + decrement + ") refCnt: " + obj.refCnt();
-        }
     }
 
     /**
      * Releases the objects when the thread that called {@link #releaseLater(Object)} has been terminated.
      */
     private static final class ReleasingTask implements Runnable {
-        volatile ScheduledFuture<?> future;
+
+        private final ReferenceCounted obj;
+        private final int decrement;
+
+        ReleasingTask(ReferenceCounted obj, int decrement) {
+            this.obj = obj;
+            this.decrement = decrement;
+        }
 
         @Override
         public void run() {
-            synchronized (pendingReleases) {
-                for (Iterator<Map.Entry<Thread, List<Entry>>> i = pendingReleases.entrySet().iterator();
-                     i.hasNext();) {
-
-                    Map.Entry<Thread, List<Entry>> e = i.next();
-                    if (e.getKey().isAlive()) {
-                        continue;
-                    }
-
-                    releaseAll(e.getValue());
-
-                    // Remove from the map since the thread is not alive anymore.
-                    i.remove();
+            try {
+                if (!obj.release(decrement)) {
+                    logger.warn("Non-zero refCnt: {}", this);
+                } else {
+                    logger.debug("Released: {}", this);
                 }
-
-                if (pendingReleases.isEmpty()) {
-                    future.cancel(false);
-                }
+            } catch (Exception ex) {
+                logger.warn("Failed to release an object: {}", obj, ex);
             }
         }
 
-        private static void releaseAll(Iterable<Entry> entries) {
-            for (Entry e: entries) {
-                try {
-                    if (!e.obj.release(e.decrement)) {
-                        logger.warn("Non-zero refCnt: {}", e);
-                    } else {
-                        logger.warn("Released: {}", e);
-                    }
-                } catch (Exception ex) {
-                    logger.warn("Failed to release an object: {}", e.obj, ex);
-                }
-            }
+        @Override
+        public String toString() {
+            return StringUtil.simpleClassName(obj) + ".release(" + decrement + ") refCnt: " + obj.refCnt();
         }
     }
 
