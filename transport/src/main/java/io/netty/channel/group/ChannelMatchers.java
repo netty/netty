@@ -121,10 +121,10 @@ public final class ChannelMatchers {
         public boolean matches(Channel channel) {
             for (int i = 0; i < matchers.length; i++) {
                 if (!matchers[i].matches(channel)) {
-                    return true;
+                    return false;
                 }
             }
-            return false;
+            return true;
         }
     }
 
