@@ -108,9 +108,21 @@ public abstract class MessageToMessageEncoder<I> extends ChannelOutboundHandlerA
         } finally {
             if (out != null) {
                 final int sizeMinusOne = out.size() - 1;
-                if (sizeMinusOne >= 0) {
+                if (sizeMinusOne == 0) {
+                    ctx.write(out.get(0), promise);
+                } else if (sizeMinusOne > 0) {
+                    // Check if we can use a voidPromise for our extra writes to reduce GC-Pressure
+                    // See https://github.com/netty/netty/issues/2525
+                    ChannelPromise voidPromise = ctx.voidPromise();
+                    boolean isVoidPromise = promise == voidPromise;
                     for (int i = 0; i < sizeMinusOne; i ++) {
-                        ctx.write(out.get(i));
+                        ChannelPromise p;
+                        if (isVoidPromise) {
+                            p = voidPromise;
+                        } else {
+                            p = ctx.newPromise();
+                        }
+                        ctx.write(out.get(i), p);
                     }
                     ctx.write(out.get(sizeMinusOne), promise);
                 }
