@@ -90,6 +90,9 @@ public class DefaultAttributeMap implements AttributeMap {
                     DefaultAttribute<T> attr = new DefaultAttribute<T>(head, key);
                     curr.next =  attr;
                     attr.prev = curr;
+                    return attr;
+                } else {
+                    curr = next;
                 }
             }
         }
