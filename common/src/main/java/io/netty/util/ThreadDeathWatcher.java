@@ -76,7 +76,6 @@ public final class ThreadDeathWatcher {
         }
     }
 
-
     /**
      * Waits until the thread of this watcher has no threads to watch and terminates itself.
      * Because a new watcher thread will be started again on {@link #watch(Thread, Runnable)},
