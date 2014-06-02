@@ -23,7 +23,6 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ThreadFactory;
@@ -119,15 +118,18 @@ public final class ThreadDeathWatcher {
         }
 
         private void notifyWatchees() {
-            for (Iterator<Entry> i = watchees.iterator(); i.hasNext();) {
-                Entry e = i.next();
+            List<Entry> watchees = this.watchees;
+            for (int i = 0; i < watchees.size();) {
+                Entry e = watchees.get(i);
                 if (!e.thread.isAlive()) {
-                    i.remove();
+                    watchees.remove(i);
                     try {
                         e.task.run();
                     } catch (Throwable t) {
                         logger.warn("Thread death watcher task raised an exception:", t);
                     }
+                } else {
+                    i ++;
                 }
             }
         }
