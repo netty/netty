@@ -27,6 +27,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class ThreadDeathWatcher {
 
@@ -34,14 +35,9 @@ public final class ThreadDeathWatcher {
     private static final ThreadFactory threadFactory =
             new DefaultThreadFactory(ThreadDeathWatcher.class, true, Thread.MIN_PRIORITY);
 
-    private static final int ST_NOT_STARTED = 1;
-    private static final int ST_STARTED = 2;
-
     private static final Queue<Entry> pendingEntries = PlatformDependent.newMpscQueue();
     private static final Watcher watcher = new Watcher();
-
-    private static final Object stateLock = new Object();
-    private static int state = ST_NOT_STARTED;
+    private static final AtomicBoolean started = new AtomicBoolean();
 
     public static void watch(Thread thread, Runnable task) {
         if (thread == null) {
@@ -56,12 +52,9 @@ public final class ThreadDeathWatcher {
 
         pendingEntries.add(new Entry(thread, task));
 
-        synchronized (stateLock) {
-            if (state == ST_NOT_STARTED) {
-                state = ST_STARTED;
-                Thread watcherThread = threadFactory.newThread(watcher);
-                watcherThread.start();
-            }
+        if (started.compareAndSet(false, true)) {
+            Thread watcherThread = threadFactory.newThread(watcher);
+            watcherThread.start();
         }
     }
 
@@ -84,13 +77,32 @@ public final class ThreadDeathWatcher {
                 }
 
                 if (watchees.isEmpty() && pendingEntries.isEmpty()) {
-                    synchronized (stateLock) {
-                        // Terminate if there is no task in the queue (except the purge task).
-                        if (pendingEntries.isEmpty()) {
-                            state = ST_NOT_STARTED;
-                            break;
-                        }
+
+                    // Mark the current worker thread as stopped.
+                    // The following CAS must always success and must be uncontended,
+                    // because only one watcher thread should be running at the same time.
+                    boolean stopped = started.compareAndSet(true, false);
+                    assert stopped;
+
+                    // Check if there are pending entries added by watch() while we do CAS above.
+                    if (pendingEntries.isEmpty()) {
+                        // A) watch() was not invoked and thus there's nothing to handle
+                        //    -> safe to terminate because there's nothing left to do
+                        // B) a new watcher thread started and handled them all
+                        //    -> safe to terminate the new watcher thread will take care the rest
+                        break;
                     }
+
+                    // There are pending entries again, added by watch()
+                    if (!started.compareAndSet(false, true)) {
+                        // watch() started a new watcher thread and set 'started' to true.
+                        // -> terminate this thread so that the new watcher reads from pendingEntries exclusively.
+                        break;
+                    }
+
+                    // watch() added an entry, but this worker was faster to set 'started' to true.
+                    // i.e. a new watcher thread was not started
+                    // -> keep this thread alive to handle the newly added entries.
                 }
             }
         }
