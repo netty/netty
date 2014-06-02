@@ -182,15 +182,6 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         }
     }
 
-    @Deprecated
-    @SuppressWarnings("UnusedParameters")
-    public PooledByteBufAllocator(boolean preferDirect, int nHeapArena, int nDirectArena, int pageSize, int maxOrder,
-                                  int tinyCacheSize, int smallCacheSize, int normalCacheSize,
-                                  long cacheThreadAliveCheckInterval) {
-        this(preferDirect, nHeapArena, nDirectArena, pageSize, maxOrder,
-                tinyCacheSize, smallCacheSize, normalCacheSize);
-    }
-
     @SuppressWarnings("unchecked")
     private static <T> PoolArena<T>[] newArenaArray(int size) {
         return new PoolArena[size];
