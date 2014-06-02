@@ -30,14 +30,6 @@ public class MqttFixedHeader {
     private final boolean isRetain;
     private final int remainingLength;
 
-    public MqttFixedHeader(MqttMessageType messageType, boolean isDup, QoS qosLevel, boolean isRetain) {
-        this.messageType = messageType;
-        this.isDup = isDup;
-        this.qosLevel = qosLevel;
-        this.isRetain = isRetain;
-        remainingLength = 0; // this is ignored and the real value is calculated while encoding
-    }
-
     public MqttFixedHeader(
             MqttMessageType messageType,
             boolean isDup,

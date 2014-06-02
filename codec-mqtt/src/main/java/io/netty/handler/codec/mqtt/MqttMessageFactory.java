@@ -69,7 +69,7 @@ public final class MqttMessageFactory {
             case PUBREC:
             case PUBREL:
             case PUBCOMP:
-                return new MqttMessage(mqttFixedHeader, (MqttMessageIdVariableHeader) variableHeader);
+                return new MqttMessage(mqttFixedHeader, variableHeader);
 
             case PINGREQ:
             case PINGRESP:

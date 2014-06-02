@@ -21,7 +21,7 @@ public enum QoS {
     EXACTLY_ONCE(2);
 
     private final int value;
-    private QoS(int value) {
+    QoS(int value) {
         this.value = value;
     }
 

@@ -19,7 +19,7 @@ package io.netty.handler.codec.mqtt;
 /**
  * See <a href="http://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html#connack">MQTTV3.1/connack</a>
  */
-public class MqttConnAckMessage extends MqttMessage {
+public final class MqttConnAckMessage extends MqttMessage {
 
     public MqttConnAckMessage(MqttFixedHeader mqttFixedHeader, MqttConnAckVariableHeader variableHeader) {
         super(mqttFixedHeader, variableHeader);
@@ -29,4 +29,5 @@ public class MqttConnAckMessage extends MqttMessage {
     public MqttConnAckVariableHeader variableHeader() {
         return (MqttConnAckVariableHeader) super.variableHeader();
     }
+
 }

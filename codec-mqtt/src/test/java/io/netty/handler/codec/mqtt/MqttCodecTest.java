@@ -239,7 +239,13 @@ public class MqttCodecTest {
     }
 
     private static MqttMessage createMessageWithFixedHeaderAndMessageIdVariableHeader(MqttMessageType messageType) {
-        MqttFixedHeader mqttFixedHeader = new MqttFixedHeader(messageType, false, QoS.AT_LEAST_ONCE, false, 0);
+        MqttFixedHeader mqttFixedHeader =
+                new MqttFixedHeader(
+                        messageType,
+                        false,
+                        messageType == MqttMessageType.PUBREL ? QoS.AT_LEAST_ONCE :  QoS.AT_MOST_ONCE,
+                        false,
+                        0);
         MqttMessageIdVariableHeader mqttMessageIdVariableHeader = MqttMessageIdVariableHeader.from(12345);
         return new MqttMessage(mqttFixedHeader, mqttMessageIdVariableHeader);
     }
@@ -297,7 +303,7 @@ public class MqttCodecTest {
 
     private static MqttSubAckMessage createSubAckMessage() {
         MqttFixedHeader mqttFixedHeader =
-                new MqttFixedHeader(MqttMessageType.SUBACK, false, QoS.AT_LEAST_ONCE, false, 0);
+                new MqttFixedHeader(MqttMessageType.SUBACK, false, QoS.AT_MOST_ONCE, false, 0);
         MqttMessageIdVariableHeader mqttMessageIdVariableHeader = MqttMessageIdVariableHeader.from(12345);
         List<Integer> grantedQosLevels = new LinkedList<Integer>();
         grantedQosLevels.add(1);

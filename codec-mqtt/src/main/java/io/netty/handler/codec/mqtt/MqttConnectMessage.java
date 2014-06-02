@@ -37,4 +37,5 @@ public final class MqttConnectMessage extends MqttMessage {
     public MqttConnectPayload payload() {
         return (MqttConnectPayload) super.payload();
     }
+
 }
