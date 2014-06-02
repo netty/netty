@@ -207,8 +207,8 @@ final class PoolThreadCache {
         }
 
         int numFreed = 0;
-        for (int i = 0; i < caches.length; i++) {
-            numFreed += free(caches[i]);
+        for (MemoryRegionCache<?> c: caches) {
+            numFreed += free(c);
         }
         return numFreed;
     }
@@ -233,8 +233,8 @@ final class PoolThreadCache {
         if (caches == null) {
             return;
         }
-        for (int i = 0; i < caches.length; i++) {
-            trim(caches[i]);
+        for (MemoryRegionCache<?> c: caches) {
+            trim(c);
         }
     }
 
