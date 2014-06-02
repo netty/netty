@@ -28,6 +28,14 @@ import java.util.Queue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * Checks if a thread is alive periodically and runs a task when a thread dies.
+ * <p>
+ * This thread starts a daemon thread to check the state of the threads being watched and to invoke their
+ * associated {@link Runnable}s.  When there is no thread to watch (i.e. all threads are dead), the daemon thread
+ * will terminate itself, and a new daemon thread will be started again when a new watch is added.
+ * </p>
+ */
 public final class ThreadDeathWatcher {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ThreadDeathWatcher.class);
@@ -38,6 +46,14 @@ public final class ThreadDeathWatcher {
     private static final Watcher watcher = new Watcher();
     private static final AtomicBoolean started = new AtomicBoolean();
 
+    /**
+     * Schedules the specified {@code task} to run when the specified {@code thread} dies.
+     *
+     * @param thread the {@link Thread} to watch
+     * @param task the {@link Runnable} to run when the {@code thread} dies
+     *
+     * @throws IllegalArgumentException if the specified {@code thread} is not alive
+     */
     public static void watch(Thread thread, Runnable task) {
         if (thread == null) {
             throw new NullPointerException("thread");
