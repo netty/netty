@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -45,6 +46,7 @@ public final class ThreadDeathWatcher {
     private static final Queue<Entry> pendingEntries = PlatformDependent.newMpscQueue();
     private static final Watcher watcher = new Watcher();
     private static final AtomicBoolean started = new AtomicBoolean();
+    private static volatile Thread watcherThread;
 
     /**
      * Schedules the specified {@code task} to run when the specified {@code thread} dies.
@@ -70,7 +72,30 @@ public final class ThreadDeathWatcher {
         if (started.compareAndSet(false, true)) {
             Thread watcherThread = threadFactory.newThread(watcher);
             watcherThread.start();
+            ThreadDeathWatcher.watcherThread = watcherThread;
         }
+    }
+
+
+    /**
+     * Waits until the thread of this watcher has no threads to watch and terminates itself.
+     * Because a new watcher thread will be started again on {@link #watch(Thread, Runnable)},
+     * this operation is only useful when you want to ensure that the watcher thread is terminated
+     * <strong>after</strong> your application is shut down and there's no chance of calling
+     * {@link #watch(Thread, Runnable)} afterwards.
+     *
+     * @return {@code true} if and only if the watcher thread has been terminated
+     */
+    public boolean awaitInactivity(long timeout, TimeUnit unit) throws InterruptedException {
+        if (unit == null) {
+            throw new NullPointerException("unit");
+        }
+
+        Thread watcherThread = ThreadDeathWatcher.watcherThread;
+        if (watcherThread != null) {
+            watcherThread.join(unit.toMillis(timeout));
+        }
+        return !watcherThread.isAlive();
     }
 
     private ThreadDeathWatcher() { }

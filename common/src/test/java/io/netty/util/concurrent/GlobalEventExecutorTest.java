@@ -86,7 +86,7 @@ public class GlobalEventExecutorTest {
 
         Thread.sleep(1500);
 
-        // Not it should be stopped.
+        // Now it should be stopped.
         assertThat(thread.isAlive(), is(false));
         assertThat(e.thread, sameInstance(thread));
     }
