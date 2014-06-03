@@ -171,5 +171,4 @@ public class DnsHeader {
         this.id = id;
         return this;
     }
-
 }

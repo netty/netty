@@ -105,7 +105,7 @@ public enum DnsResponseCode {
      *
      * @param responseCode
      *            the error code's id
-     * @return corresponding {@link DnsResponseCode}
+     * @return corresponding {@link DnsResponseCode} or {@code null} if none can be found.
      */
     public static DnsResponseCode valueOf(int responseCode) {
         DnsResponseCode[] errors = DnsResponseCode.values();
@@ -136,5 +136,4 @@ public enum DnsResponseCode {
     public String toString() {
         return name() + ": type " + errorCode + ", " + message;
     }
-
 }

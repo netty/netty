@@ -41,7 +41,7 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
      *            the byte buffer containing the DNS packet
      * @return the domain name for an entry
      */
-    static String readName(ByteBuf buf) {
+    private static String readName(ByteBuf buf) {
         int position = -1;
         StringBuilder name = new StringBuilder();
         for (int len = buf.readUnsignedByte(); buf.isReadable() && len != 0; len = buf.readUnsignedByte()) {
@@ -127,6 +127,7 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
         header.setReadAdditionalResources(buf.readUnsignedShort());
         return header;
     }
+
     /**
      * Decodes a response from a {@link io.netty.channel.socket.DatagramPacket} containing a
      * {@link io.netty.buffer.ByteBuf} with a DNS packet. Responses are sent from a DNS server
@@ -169,5 +170,4 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
         }
         out.add(response);
     }
-
 }

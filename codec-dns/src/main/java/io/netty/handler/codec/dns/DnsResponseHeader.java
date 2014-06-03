@@ -246,5 +246,4 @@ public final class DnsResponseHeader extends DnsHeader {
         super.setType(type);
         return this;
     }
-
 }
