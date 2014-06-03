@@ -13,20 +13,21 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package io.netty.util.internal;
 
-import io.netty.util.concurrent.EventExecutor;
+import java.util.concurrent.atomic.AtomicReference;
 
-/**
- * {@link Runnable} which represent a one time task which may allow the {@link EventExecutor} to reduce the amount of
- * produced garbage when queue it for execution.
- *
- * <strong>It is important this will not be reused. After submitted it is not allowed to get submitted again!</strong>
- */
-public abstract class OneTimeTask extends MpscLinkedQueueNode<Runnable> implements Runnable {
+public final class RightPaddedReference<T> extends AtomicReference<T> {
+    private static final long serialVersionUID = -467619563034125237L;
 
-    @Override
-    public Runnable value() {
-        return this;
+    // cache line padding (must be public)
+    public transient long rp1, rp2, rp3, rp4, rp5; // 40 bytes (excluding AtomicReference.value and object header)
+    public transient long rpA, rpB, rpC, rpD, rpE, rpF, rpG, rpH; // 64 bytes
+
+    public RightPaddedReference() { }
+
+    public RightPaddedReference(T initialValue) {
+        super(initialValue);
     }
 }

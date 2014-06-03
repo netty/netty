@@ -15,7 +15,7 @@
  */
 package io.netty.util;
 
-import io.netty.util.internal.MpscLinkedQueue;
+import io.netty.util.internal.MpscLinkedQueueNode;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -444,7 +444,7 @@ public class HashedWheelTimer implements Timer {
         }
     }
 
-    private static final class HashedWheelTimeout extends MpscLinkedQueue.Node<Timeout>
+    private static final class HashedWheelTimeout extends MpscLinkedQueueNode<Timeout>
             implements Timeout {
 
         private static final int ST_INIT = 0;
