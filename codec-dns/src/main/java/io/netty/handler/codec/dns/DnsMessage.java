@@ -15,8 +15,8 @@
  */
 package io.netty.handler.codec.dns;
 
-import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -25,10 +25,10 @@ import java.util.List;
  */
 public abstract class DnsMessage<H extends DnsHeader> {
 
-    private final List<DnsQuestion> questions = new ArrayList<DnsQuestion>();
-    private final List<DnsResource> answers = new ArrayList<DnsResource>();
-    private final List<DnsResource> authority = new ArrayList<DnsResource>();
-    private final List<DnsResource> additional = new ArrayList<DnsResource>();
+    private List<DnsQuestion> questions;
+    private List<DnsResource> answers;
+    private List<DnsResource> authority;
+    private List<DnsResource> additional;
 
     private H header;
 
@@ -46,6 +46,9 @@ public abstract class DnsMessage<H extends DnsHeader> {
      * Returns a list of all the questions in this message.
      */
     public List<DnsQuestion> getQuestions() {
+        if (questions == null) {
+            return Collections.emptyList();
+        }
         return Collections.unmodifiableList(questions);
     }
 
@@ -53,6 +56,9 @@ public abstract class DnsMessage<H extends DnsHeader> {
      * Returns a list of all the answer resource records in this message.
      */
     public List<DnsResource> getAnswers() {
+        if (answers == null) {
+            return Collections.emptyList();
+        }
         return Collections.unmodifiableList(answers);
     }
 
@@ -60,6 +66,9 @@ public abstract class DnsMessage<H extends DnsHeader> {
      * Returns a list of all the authority resource records in this message.
      */
     public List<DnsResource> getAuthorityResources() {
+        if (authority == null) {
+            return Collections.emptyList();
+        }
         return Collections.unmodifiableList(authority);
     }
 
@@ -67,6 +76,9 @@ public abstract class DnsMessage<H extends DnsHeader> {
      * Returns a list of all the additional resource records in this message.
      */
     public List<DnsResource> getAdditionalResources() {
+        if (additional == null) {
+            return Collections.emptyList();
+        }
         return Collections.unmodifiableList(additional);
     }
 
@@ -78,6 +90,9 @@ public abstract class DnsMessage<H extends DnsHeader> {
      * @return the message to allow method chaining
      */
     public DnsMessage<H> addAnswer(DnsResource answer) {
+        if (answers == null) {
+            answers = new LinkedList<DnsResource>();
+        }
         answers.add(answer);
         return this;
     }
@@ -90,6 +105,9 @@ public abstract class DnsMessage<H extends DnsHeader> {
      * @return the message to allow method chaining
      */
     public DnsMessage<H> addQuestion(DnsQuestion question) {
+        if (questions == null) {
+            questions = new LinkedList<DnsQuestion>();
+        }
         questions.add(question);
         return this;
     }
@@ -102,6 +120,9 @@ public abstract class DnsMessage<H extends DnsHeader> {
      * @return the message to allow method chaining
      */
     public DnsMessage<H> addAuthorityResource(DnsResource resource) {
+        if (authority == null) {
+            authority = new LinkedList<DnsResource>();
+        }
         authority.add(resource);
         return this;
     }
@@ -114,6 +135,9 @@ public abstract class DnsMessage<H extends DnsHeader> {
      * @return the message to allow method chaining
      */
     public DnsMessage<H> addAdditionalResource(DnsResource resource) {
+        if (additional == null) {
+            additional = new LinkedList<DnsResource>();
+        }
         additional.add(resource);
         return this;
     }
