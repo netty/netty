@@ -13,20 +13,14 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package io.netty.util.internal;
 
-import io.netty.util.concurrent.EventExecutor;
+import java.io.Serializable;
 
-/**
- * {@link Runnable} which represent a one time task which may allow the {@link EventExecutor} to reduce the amount of
- * produced garbage when queue it for execution.
- *
- * <strong>It is important this will not be reused. After submitted it is not allowed to get submitted again!</strong>
- */
-public abstract class OneTimeTask extends MpscLinkedQueueNode<Runnable> implements Runnable {
-
-    @Override
-    public Runnable value() {
-        return this;
-    }
+abstract class LeftPadding implements Serializable {
+    private static final long serialVersionUID = -9129166504419549394L;
+    // cache line padding (must be public)
+    public transient long lp1, lp2, lp3, lp4, lp5, lp6;           // 48 bytes (excluding 16-byte object header)
+    public transient long lpA, lpB, lpC, lpD, lpE, lpF, lpG, lpH; // 64 bytes
 }
