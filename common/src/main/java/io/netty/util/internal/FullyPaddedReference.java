@@ -13,20 +13,12 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package io.netty.util.internal;
 
-import io.netty.util.concurrent.EventExecutor;
-
-/**
- * {@link Runnable} which represent a one time task which may allow the {@link EventExecutor} to reduce the amount of
- * produced garbage when queue it for execution.
- *
- * <strong>It is important this will not be reused. After submitted it is not allowed to get submitted again!</strong>
- */
-public abstract class OneTimeTask extends MpscLinkedQueueNode<Runnable> implements Runnable {
-
-    @Override
-    public Runnable value() {
-        return this;
-    }
+public final class FullyPaddedReference<T> extends LeftPaddedReference<T> {
+    private static final long serialVersionUID = -5986650399506826641L;
+    // cache line padding (must be public)
+    public transient long rp1, rp2, rp3, rp4, rp5, rp6, rp7;      // 56 bytes (excluding LeftPaddedReference.referent)
+    public transient long rpA, rpB, rpC, rpD, rpE, rpF, rpG, rpH; // 64 bytes
 }
