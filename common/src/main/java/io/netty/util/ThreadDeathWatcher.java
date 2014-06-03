@@ -17,7 +17,7 @@
 package io.netty.util;
 
 import io.netty.util.concurrent.DefaultThreadFactory;
-import io.netty.util.internal.MpscLinkedQueue;
+import io.netty.util.internal.MpscLinkedQueueNode;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -175,7 +175,7 @@ public final class ThreadDeathWatcher {
         }
     }
 
-    private static final class Entry extends MpscLinkedQueue.Node<Entry> {
+    private static final class Entry extends MpscLinkedQueueNode<Entry> {
         final Thread thread;
         final Runnable task;
 
