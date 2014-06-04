@@ -15,70 +15,64 @@
  */
 package io.netty.handler.codec.stomp;
 
-import java.util.Iterator;
-import java.util.List;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.util.CharsetUtil;
 
+import java.util.List;
+
 /**
- * Encodes a {@link StompFrame} or a {@link FullStompFrame} or a {@link StompContent} into a {@link ByteBuf}.
+ * Encodes a {@link StompFrame} or a {@link StompSubframe} into a {@link ByteBuf}.
  */
-public class StompEncoder extends MessageToMessageEncoder<StompObject> {
+public class StompSubframeEncoder extends MessageToMessageEncoder<StompSubframe> {
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, StompObject msg, List<Object> out) throws Exception {
-        if (msg instanceof  FullStompFrame) {
-            FullStompFrame frame = (FullStompFrame) msg;
+    protected void encode(ChannelHandlerContext ctx, StompSubframe msg, List<Object> out) throws Exception {
+        if (msg instanceof StompFrame) {
+            StompFrame frame = (StompFrame) msg;
             ByteBuf frameBuf = encodeFrame(frame, ctx);
             out.add(frameBuf);
             ByteBuf contentBuf = encodeContent(frame, ctx);
             out.add(contentBuf);
-        } else if (msg instanceof StompFrame) {
-            StompFrame frame = (StompFrame) msg;
+        } else if (msg instanceof StompHeadersSubframe) {
+            StompHeadersSubframe frame = (StompHeadersSubframe) msg;
             ByteBuf buf = encodeFrame(frame, ctx);
             out.add(buf);
-        } else if (msg instanceof StompContent) {
-            StompContent stompContent = (StompContent) msg;
-            ByteBuf buf = encodeContent(stompContent, ctx);
+        } else if (msg instanceof StompContentSubframe) {
+            StompContentSubframe stompContentSubframe = (StompContentSubframe) msg;
+            ByteBuf buf = encodeContent(stompContentSubframe, ctx);
             out.add(buf);
         }
     }
 
-    private ByteBuf encodeContent(StompContent content, ChannelHandlerContext ctx) {
-        if (content instanceof LastStompContent) {
+    private static ByteBuf encodeContent(StompContentSubframe content, ChannelHandlerContext ctx) {
+        if (content instanceof LastStompContentSubframe) {
             ByteBuf buf = ctx.alloc().buffer(content.content().readableBytes() + 1);
             buf.writeBytes(content.content());
-            buf.writeByte(StompConstants.NULL);
+            buf.writeByte(StompConstants.NUL);
             return buf;
         } else {
-            ByteBuf buf = ctx.alloc().buffer(content.content().readableBytes());
-            buf.writeBytes(content.content());
-            return buf;
+            return content.content().retain();
         }
     }
 
-    private ByteBuf encodeFrame(StompFrame frame, ChannelHandlerContext ctx) {
+    private static ByteBuf encodeFrame(StompHeadersSubframe frame, ChannelHandlerContext ctx) {
         ByteBuf buf = ctx.alloc().buffer();
 
         buf.writeBytes(frame.command().toString().getBytes(CharsetUtil.US_ASCII));
         buf.writeByte(StompConstants.CR).writeByte(StompConstants.LF);
 
         StompHeaders headers = frame.headers();
-        for (Iterator<String> iterator = headers.keySet().iterator(); iterator.hasNext();) {
-            String key = iterator.next();
-            List<String> values = headers.getAll(key);
-            for (Iterator<String> stringIterator = values.iterator(); stringIterator.hasNext();) {
-                String value = stringIterator.next();
-                buf.writeBytes(key.getBytes(CharsetUtil.US_ASCII)).
-                        writeByte(StompConstants.COLON).writeBytes(value.getBytes(CharsetUtil.US_ASCII));
+        for (String k: headers.keySet()) {
+            List<String> values = headers.getAll(k);
+            for (String v: values) {
+                buf.writeBytes(k.getBytes(CharsetUtil.US_ASCII)).
+                        writeByte(StompConstants.COLON).writeBytes(v.getBytes(CharsetUtil.US_ASCII));
                 buf.writeByte(StompConstants.CR).writeByte(StompConstants.LF);
             }
         }
         buf.writeByte(StompConstants.CR).writeByte(StompConstants.LF);
         return buf;
     }
-
 }
