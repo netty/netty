@@ -18,16 +18,16 @@ package io.netty.handler.codec.stomp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 /**
  * Provides the constants for the standard STOMP header names and values and
- * commonly used utility methods that accesses an {@link StompFrame}.
+ * commonly used utility methods that accesses an {@link StompHeadersSubframe}.
  */
 public class StompHeaders {
+
     public static final String ACCEPT_VERSION = "accept-version";
     public static final String HOST = "host";
     public static final String LOGIN = "login";
@@ -48,28 +48,16 @@ public class StompHeaders {
     public static final String CONTENT_LENGTH = "content-length";
     public static final String CONTENT_TYPE = "content-type";
 
-    public static long getContentLength(StompHeaders headers, long defaultValue) {
-        String contentLength = headers.get(CONTENT_LENGTH);
-        if (contentLength != null) {
-            try {
-                return Long.parseLong(contentLength);
-            } catch (NumberFormatException e) {
-                return defaultValue;
-            }
-        }
-        return defaultValue;
-    }
-
     private final Map<String, List<String>> headers = new HashMap<String, List<String>>();
 
     public boolean has(String key) {
         List<String> values = headers.get(key);
-        return values != null && values.size() > 0;
+        return values != null && !values.isEmpty();
     }
 
     public String get(String key) {
         List<String> values = headers.get(key);
-        if (values != null && values.size() > 0) {
+        if (values != null && !values.isEmpty()) {
             return values.get(0);
         } else {
             return null;
@@ -85,6 +73,7 @@ public class StompHeaders {
         values.add(value);
     }
 
+    @SuppressWarnings("ArraysAsListWithZeroOrOneArgument")
     public void set(String key, String value) {
         headers.put(key, Arrays.asList(value));
     }
@@ -110,8 +99,7 @@ public class StompHeaders {
     }
 
     public void set(StompHeaders headers) {
-        for (Iterator<String> iterator = headers.keySet().iterator(); iterator.hasNext();) {
-            String key = iterator.next();
+        for (String key: headers.keySet()) {
             List<String> values = headers.getAll(key);
             this.headers.put(key, values);
         }

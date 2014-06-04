@@ -18,52 +18,52 @@ package io.netty.handler.codec.stomp;
 import io.netty.buffer.ByteBuf;
 
 /**
- * The default implementation for the {@link LastStompContent}.
+ * The default implementation for the {@link LastStompContentSubframe}.
  */
-public class DefaultLastStompContent extends DefaultStompContent implements LastStompContent {
-    public DefaultLastStompContent(ByteBuf content) {
+public class DefaultLastStompContentSubframe extends DefaultStompContentSubframe implements LastStompContentSubframe {
+
+    public DefaultLastStompContentSubframe(ByteBuf content) {
         super(content);
     }
 
     @Override
-    public DefaultLastStompContent retain() {
+    public DefaultLastStompContentSubframe retain() {
         super.retain();
         return this;
     }
 
     @Override
-    public LastStompContent retain(int increment) {
+    public LastStompContentSubframe retain(int increment) {
         super.retain(increment);
         return this;
     }
 
     @Override
-    public LastStompContent touch() {
+    public LastStompContentSubframe touch() {
         super.touch();
         return this;
     }
 
     @Override
-    public LastStompContent touch(Object hint) {
+    public LastStompContentSubframe touch(Object hint) {
         super.touch(hint);
         return this;
     }
 
     @Override
-    public LastStompContent copy() {
-        return new DefaultLastStompContent(content().copy());
+    public LastStompContentSubframe copy() {
+        return new DefaultLastStompContentSubframe(content().copy());
     }
 
     @Override
-    public LastStompContent duplicate() {
-        return new DefaultLastStompContent(content().duplicate());
+    public LastStompContentSubframe duplicate() {
+        return new DefaultLastStompContentSubframe(content().duplicate());
     }
 
     @Override
     public String toString() {
         return "DefaultLastStompContent{" +
-                "decoderResult=" + getDecoderResult() +
+                "decoderResult=" + decoderResult() +
                 '}';
     }
-
 }

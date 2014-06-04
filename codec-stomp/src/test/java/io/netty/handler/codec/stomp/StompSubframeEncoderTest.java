@@ -15,49 +15,48 @@
  */
 package io.netty.handler.codec.stomp;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.channel.embedded.EmbeddedChannel;
-import org.junit.Assert;
+import static org.junit.Assert.*;
 
-public class StompEncoderTest {
+public class StompSubframeEncoderTest {
 
     private EmbeddedChannel channel;
 
     @Before
     public void setup() throws Exception {
-        channel = new EmbeddedChannel(new StompEncoder());
+        channel = new EmbeddedChannel(new StompSubframeEncoder());
     }
 
     @After
     public void teardown() throws Exception {
-        Assert.assertFalse(channel.finish());
+        assertFalse(channel.finish());
     }
 
     @Test
     public void testFrameAndContentEncoding() {
-        StompFrame frame = new DefaultStompFrame(StompCommand.CONNECT);
+        StompHeadersSubframe frame = new DefaultStompHeadersSubframe(StompCommand.CONNECT);
         StompHeaders headers = frame.headers();
         headers.set(StompHeaders.ACCEPT_VERSION, "1.1,1.2");
         headers.set(StompHeaders.HOST, "stomp.github.org");
         channel.writeOutbound(frame);
-        channel.writeOutbound(LastStompContent.EMPTY_LAST_CONTENT);
+        channel.writeOutbound(LastStompContentSubframe.EMPTY_LAST_CONTENT);
         ByteBuf aggregatedBuffer = Unpooled.buffer();
         ByteBuf byteBuf = channel.readOutbound();
-        Assert.assertNotNull(byteBuf);
+        assertNotNull(byteBuf);
         aggregatedBuffer.writeBytes(byteBuf);
 
         byteBuf = channel.readOutbound();
-        Assert.assertNotNull(byteBuf);
+        assertNotNull(byteBuf);
         aggregatedBuffer.writeBytes(byteBuf);
         aggregatedBuffer.resetReaderIndex();
         String content = aggregatedBuffer.toString(CharsetUtil.UTF_8);
-        Assert.assertEquals(StompTestConstants.CONNECT_FRAME, content);
+        assertEquals(StompTestConstants.CONNECT_FRAME, content);
     }
-
 }

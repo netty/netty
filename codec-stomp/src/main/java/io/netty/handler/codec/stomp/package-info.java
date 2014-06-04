@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 The Netty Project
+ * Copyright 2014 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,6 +15,6 @@
  */
 
 /**
- * Common superset of ascii and binary classes.
+ * <a href="http://en.wikipedia.org/wiki/Streaming_Text_Oriented_Messaging_Protocol">STOMP</a> codec
  */
 package io.netty.handler.codec.stomp;
