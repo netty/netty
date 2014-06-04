@@ -338,6 +338,7 @@
     <module>codec-http</module>
     <module>codec-http2</module>
     <module>codec-memcache</module>
+    <module>codec-stomp</module>
     <module>codec-socks</module>
     <module>transport</module>
     <module>transport-rxtx</module>
