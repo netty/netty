@@ -180,6 +180,11 @@ public class HttpSnoopServerHandler extends SimpleChannelInboundHandler<Object> 
         // Write the response.
         ctx.write(response);
 
+        /* FIXED BUG on 'ab' Apache Bench, because HTTP/1.0 automatically close the connection by default */
+        if (keepAlive == false) {
+			ctx.close();
+		}
+
         return keepAlive;
     }
 
