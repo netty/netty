@@ -47,7 +47,6 @@ public class DnsQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
         out.add(new DatagramPacket(buf, query.recipient(), null));
     }
 
-
     /**
      * Encodes the information in a {@link DnsHeader} and writes it to the
      * specified {@link ByteBuf}. The header is always 12 bytes long.

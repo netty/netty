@@ -58,7 +58,6 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
         out.add(response);
     }
 
-
     /**
      * Retrieves a domain name given a buffer containing a DNS packet. If the
      * name contains a pointer, the position of the buffer will be set to

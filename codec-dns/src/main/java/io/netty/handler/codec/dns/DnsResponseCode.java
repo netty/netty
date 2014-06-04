@@ -19,82 +19,82 @@ package io.netty.handler.codec.dns;
  * Represents the possible response codes a server may send after receiving a
  * query. A response code of 0 indicates no error.
  */
-public enum DnsResponseCode {
+public final class DnsResponseCode implements Comparable<DnsResponseCode> {
 
     /**
      * ID 0, no error
      */
-    NOERROR(0, "no error"),
+    public static final DnsResponseCode NOERROR = new DnsResponseCode(0, "no error");
 
     /**
      * ID 1, format error
      */
-    FORMERROR(1, "format error"),
+    public static final DnsResponseCode FORMERROR = new DnsResponseCode(1, "format error");
 
     /**
      * ID 2, server failure
      */
-    SERVFAIL(2, "server failure"),
+    public static final DnsResponseCode SERVFAIL = new DnsResponseCode(2, "server failure");
 
     /**
      * ID 3, name error
      */
-    NXDOMAIN(3, "name error"),
+    public static final DnsResponseCode NXDOMAIN = new DnsResponseCode(3, "name error");
 
     /**
      * ID 4, not implemented
      */
-    NOTIMPL(4, "not implemented"),
+    public static final DnsResponseCode NOTIMPL = new DnsResponseCode(4, "not implemented");
 
     /**
      * ID 5, operation refused
      */
-    REFUSED(5, "operation refused"),
+    public static final DnsResponseCode REFUSED = new DnsResponseCode(5, "operation refused");
 
     /**
      * ID 6, domain name should not exist
      */
-    YXDOMAIN(6, "domain name should not exist"),
+    public static final DnsResponseCode YXDOMAIN = new DnsResponseCode(6, "domain name should not exist");
 
     /**
      * ID 7, resource record set should not exist
      */
-    YXRRSET(7, "resource record set should not exist"),
+    public static final DnsResponseCode YXRRSET = new DnsResponseCode(7, "resource record set should not exist");
 
     /**
      * ID 8, rrset does not exist
      */
-    NXRRSET(8, "rrset does not exist"),
+    public static final DnsResponseCode NXRRSET = new DnsResponseCode(8, "rrset does not exist");
 
     /**
      * ID 9, not authoritative for zone
      */
-    NOTAUTH(9, "not authoritative for zone"),
+    public static final DnsResponseCode NOTAUTH = new DnsResponseCode(9, "not authoritative for zone");
 
     /**
      * ID 10, name not in zone
      */
-    NOTZONE(10, "name not in zone"),
+    public static final DnsResponseCode NOTZONE = new DnsResponseCode(10, "name not in zone");
 
     /**
      * ID 11, bad extension mechanism for version
      */
-    BADVERS(11, "bad extension mechanism for version"),
+    public static final DnsResponseCode BADVERS = new DnsResponseCode(11, "bad extension mechanism for version");
 
     /**
      * ID 12, bad signature
      */
-    BADSIG(12, "bad signature"),
+    public static final DnsResponseCode BADSIG = new DnsResponseCode(12, "bad signature");
 
     /**
      * ID 13, bad key
      */
-    BADKEY(13, "bad key"),
+    public static final DnsResponseCode BADKEY = new DnsResponseCode(13, "bad key");
 
     /**
      * ID 14, bad timestamp
      */
-    BADTIME(14, "bad timestamp");
+    public static final DnsResponseCode BADTIME = new DnsResponseCode(14, "bad timestamp");
 
     private final int errorCode;
     private final String message;
@@ -108,16 +108,43 @@ public enum DnsResponseCode {
      * @return corresponding {@link DnsResponseCode} or {@code null} if none can be found.
      */
     public static DnsResponseCode valueOf(int responseCode) {
-        DnsResponseCode[] errors = DnsResponseCode.values();
-        for (DnsResponseCode e : errors) {
-            if (e.errorCode == responseCode) {
-                return e;
-            }
+        switch (responseCode) {
+            case 0:
+                return NOERROR;
+            case 1:
+                return FORMERROR;
+            case 2:
+                return SERVFAIL;
+            case 3:
+                return NXDOMAIN;
+            case 4:
+                return NOTIMPL;
+            case 5:
+                return REFUSED;
+            case 6:
+                return YXDOMAIN;
+            case 7:
+                return YXRRSET;
+            case 8:
+                return NXRRSET;
+            case 9:
+                return NOTAUTH;
+            case 10:
+                return NOTZONE;
+            case 11:
+                return BADVERS;
+            case 12:
+                return BADSIG;
+            case 13:
+                return BADKEY;
+            case 14:
+                return BADTIME;
+            default:
+                return new DnsResponseCode(responseCode, null);
         }
-        return null;
     }
 
-    DnsResponseCode(int errorCode, String message) {
+    public DnsResponseCode(int errorCode, String message) {
         this.errorCode = errorCode;
         this.message = message;
     }
@@ -129,11 +156,36 @@ public enum DnsResponseCode {
         return errorCode;
     }
 
+    @Override
+    public int compareTo(DnsResponseCode o) {
+        return code() - o.code();
+    }
+
+    @Override
+    public int hashCode() {
+        return code();
+    }
+
+    /**
+     * Equality of {@link DnsResponseCode} only depends on {@link #code()}.
+     */
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof DnsResponseCode)) {
+            return false;
+        }
+
+        return code() == ((DnsResponseCode) o).code();
+    }
+
     /**
      * Returns a formatted error message for this {@link DnsResponseCode}.
      */
     @Override
     public String toString() {
-        return name() + ": type " + errorCode + ", " + message;
+        if (message == null) {
+            return errorCode + "()";
+        }
+        return errorCode + '(' + message + ')';
     }
 }
