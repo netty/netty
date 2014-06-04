@@ -42,7 +42,7 @@ public class SwappedByteBufBenchmark extends AbstractMicrobenchmark {
         }
     }
 
-    @Param({ "00000", "00256", "01024", "04096", "16384", "65536" })
+    @Param("16384")
     public int size;
 
     @GenerateMicroBenchmark
@@ -74,5 +74,4 @@ public class SwappedByteBufBenchmark extends AbstractMicrobenchmark {
     public void unsafeSwappedByteBufSetLong() {
         unsafeSwappedByteBuf.setLong(0, size);
     }
-
 }
