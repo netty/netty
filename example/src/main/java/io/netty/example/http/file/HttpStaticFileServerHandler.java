@@ -111,7 +111,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
 
     @Override
     public void channelRead0(ChannelHandlerContext ctx, FullHttpRequest request) throws Exception {
-        if (!request.getDecoderResult().isSuccess()) {
+        if (!request.decoderResult().isSuccess()) {
             sendError(ctx, BAD_REQUEST);
             return;
         }

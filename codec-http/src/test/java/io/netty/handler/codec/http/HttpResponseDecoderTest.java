@@ -524,8 +524,8 @@ public class HttpResponseDecoderTest {
         HttpResponse res = ch.readInbound();
         assertThat(res.getProtocolVersion(), sameInstance(HttpVersion.HTTP_1_0));
         assertThat(res.getStatus().code(), is(999));
-        assertThat(res.getDecoderResult().isFailure(), is(true));
-        assertThat(res.getDecoderResult().isFinished(), is(true));
+        assertThat(res.decoderResult().isFailure(), is(true));
+        assertThat(res.decoderResult().isFinished(), is(true));
         assertThat(ch.readInbound(), is(nullValue()));
 
         // More garbage should not generate anything (i.e. the decoder discards anything beyond this point.)
@@ -554,7 +554,7 @@ public class HttpResponseDecoderTest {
 
         // Ensure that the decoder generates the last chunk with correct decoder result.
         LastHttpContent invalidChunk = channel.readInbound();
-        assertThat(invalidChunk.getDecoderResult().isFailure(), is(true));
+        assertThat(invalidChunk.decoderResult().isFailure(), is(true));
         invalidChunk.release();
 
         // And no more messages should be produced by the decoder.
