@@ -33,7 +33,20 @@ import java.util.regex.Pattern;
  */
 @ChannelHandler.Sharable
 public class DnsQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
+
     private static final Pattern QUESTION_PATTERN = Pattern.compile("\\.");
+
+    @Override
+    protected void encode(ChannelHandlerContext ctx, DnsQuery query, List<Object> out) throws Exception {
+        ByteBuf buf = ctx.alloc().buffer();
+        encodeHeader(query.getHeader(), buf);
+        List<DnsQuestion> questions = query.getQuestions();
+        for (DnsQuestion question : questions) {
+            encodeQuestion(question, CharsetUtil.UTF_8, buf);
+        }
+        out.add(new DatagramPacket(buf, query.recipient(), null));
+    }
+
 
     /**
      * Encodes the information in a {@link DnsHeader} and writes it to the
@@ -77,21 +90,5 @@ public class DnsQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
         buf.writeByte(0); // marks end of name field
         buf.writeShort(question.type());
         buf.writeShort(question.dnsClass());
-    }
-
-    /**
-     * Encodes a query and writes it to a {@link ByteBuf}. Queries are sent to a
-     * DNS server and a response will be returned from the server. The encoded
-     * ByteBuf is written to the specified {@link ByteBuf}.
-     */
-    @Override
-    protected void encode(ChannelHandlerContext ctx, DnsQuery query, List<Object> out) throws Exception {
-        ByteBuf buf = ctx.alloc().buffer();
-        encodeHeader(query.getHeader(), buf);
-        List<DnsQuestion> questions = query.getQuestions();
-        for (DnsQuestion question : questions) {
-            encodeQuestion(question, CharsetUtil.UTF_8, buf);
-        }
-        out.add(new DatagramPacket(buf, query.recipient(), null));
     }
 }

@@ -32,6 +32,33 @@ import java.util.List;
 @ChannelHandler.Sharable
 public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> {
 
+    @Override
+    protected void decode(ChannelHandlerContext ctx, DatagramPacket packet, List<Object> out) throws Exception {
+        ByteBuf buf = packet.content().retain();
+        DnsResponse response = new DnsResponse(packet.sender());
+        DnsResponseHeader header = decodeHeader(response, buf);
+        response.setHeader(header);
+        for (int i = 0; i < header.getReadQuestions(); i++) {
+            response.addQuestion(decodeQuestion(buf));
+        }
+        if (header.getResponseCode() != DnsResponseCode.NOERROR) {
+            // response code for error
+            out.add(response);
+            return;
+        }
+        for (int i = 0; i < header.getReadAnswers(); i++) {
+            response.addAnswer(decodeResource(buf));
+        }
+        for (int i = 0; i < header.getReadAuthorityResources(); i++) {
+            response.addAuthorityResource(decodeResource(buf));
+        }
+        for (int i = 0; i < header.getReadAdditionalResources(); i++) {
+            response.addAdditionalResource(decodeResource(buf));
+        }
+        out.add(response);
+    }
+
+
     /**
      * Retrieves a domain name given a buffer containing a DNS packet. If the
      * name contains a pointer, the position of the buffer will be set to
@@ -128,46 +155,4 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
         return header;
     }
 
-    /**
-     * Decodes a response from a {@link io.netty.channel.socket.DatagramPacket} containing a
-     * {@link io.netty.buffer.ByteBuf} with a DNS packet. Responses are sent from a DNS server
-     * to a client in response to a query. This method writes the decoded
-     * response to the specified {@link java.util.List} to be handled by a specialized
-     * message handler.
-     *
-     * @param ctx
-     *            the {@link io.netty.channel.ChannelHandlerContext} this
-     *            {@link DnsResponseDecoder} belongs to
-     * @param packet
-     *            the message being decoded, a {@link io.netty.channel.socket.DatagramPacket} containing
-     *            a DNS packet
-     * @param out
-     *            the {@link java.util.List} to which decoded messages should be added
-     * @throws Exception
-     */
-    @Override
-    protected void decode(ChannelHandlerContext ctx, DatagramPacket packet, List<Object> out) throws Exception {
-        ByteBuf buf = packet.content().retain();
-        DnsResponse response = new DnsResponse(packet.sender());
-        DnsResponseHeader header = decodeHeader(response, buf);
-        response.setHeader(header);
-        for (int i = 0; i < header.getReadQuestions(); i++) {
-            response.addQuestion(decodeQuestion(buf));
-        }
-        if (header.getResponseCode() != DnsResponseCode.NOERROR) {
-            // response code for error
-            out.add(response);
-            return;
-        }
-        for (int i = 0; i < header.getReadAnswers(); i++) {
-            response.addAnswer(decodeResource(buf));
-        }
-        for (int i = 0; i < header.getReadAuthorityResources(); i++) {
-            response.addAuthorityResource(decodeResource(buf));
-        }
-        for (int i = 0; i < header.getReadAdditionalResources(); i++) {
-            response.addAdditionalResource(decodeResource(buf));
-        }
-        out.add(response);
-    }
 }
