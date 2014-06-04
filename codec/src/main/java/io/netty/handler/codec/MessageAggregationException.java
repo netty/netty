@@ -13,11 +13,27 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.stomp;
 
-import io.netty.handler.codec.DecoderResultProvider;
+package io.netty.handler.codec;
 
 /**
- * Defines a common interface for all {@link StompSubframe} implementations.
+ * Raised by {@link MessageAggregator} when aggregation fails due to an unexpected message sequence.
  */
-public interface StompSubframe extends DecoderResultProvider { }
+public class MessageAggregationException extends IllegalStateException {
+
+    private static final long serialVersionUID = -1995826182950310255L;
+
+    public MessageAggregationException() { }
+
+    public MessageAggregationException(String s) {
+        super(s);
+    }
+
+    public MessageAggregationException(String message, Throwable cause) {
+        super(message, cause);
+    }
+
+    public MessageAggregationException(Throwable cause) {
+        super(cause);
+    }
+}

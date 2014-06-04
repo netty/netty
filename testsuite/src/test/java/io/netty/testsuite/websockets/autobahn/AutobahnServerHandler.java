@@ -71,7 +71,7 @@ public class AutobahnServerHandler extends ChannelHandlerAdapter {
     private void handleHttpRequest(ChannelHandlerContext ctx, FullHttpRequest req)
             throws Exception {
         // Handle a bad request.
-        if (!req.getDecoderResult().isSuccess()) {
+        if (!req.decoderResult().isSuccess()) {
             sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, BAD_REQUEST));
             req.release();
             return;
@@ -106,11 +106,9 @@ public class AutobahnServerHandler extends ChannelHandlerAdapter {
             handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame);
         } else if (frame instanceof PingWebSocketFrame) {
             ctx.write(new PongWebSocketFrame(frame.isFinalFragment(), frame.rsv(), frame.content()));
-        } else if (frame instanceof TextWebSocketFrame) {
-            ctx.write(frame);
-        } else if (frame instanceof BinaryWebSocketFrame) {
-            ctx.write(frame);
-        } else if (frame instanceof ContinuationWebSocketFrame) {
+        } else if (frame instanceof TextWebSocketFrame ||
+                frame instanceof BinaryWebSocketFrame ||
+                frame instanceof ContinuationWebSocketFrame) {
             ctx.write(frame);
         } else if (frame instanceof PongWebSocketFrame) {
             frame.release();
