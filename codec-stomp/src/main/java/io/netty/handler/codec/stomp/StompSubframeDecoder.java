@@ -15,23 +15,25 @@
  */
 package io.netty.handler.codec.stomp;
 
-import java.util.List;
-
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.TooLongFrameException;
-import io.netty.handler.codec.stomp.StompDecoder.State;
+import io.netty.handler.codec.stomp.StompSubframeDecoder.State;
+import io.netty.util.internal.AppendableCharSequence;
+import io.netty.util.internal.StringUtil;
 
-import static io.netty.buffer.ByteBufUtil.readBytes;
+import java.util.List;
+import java.util.Locale;
+
+import static io.netty.buffer.ByteBufUtil.*;
 
 /**
- * Decodes {@link ByteBuf}s into {@link StompFrame}s and
- * {@link StompContent}s.
+ * Decodes {@link ByteBuf}s into {@link StompHeadersSubframe}s and
+ * {@link StompContentSubframe}s.
  *
  * <h3>Parameters to control memory consumption: </h3>
  * {@code maxLineLength} the maximum length of line -
@@ -42,31 +44,42 @@ import static io.netty.buffer.ByteBufUtil.readBytes;
  * {@code maxChunkSize}
  * The maximum length of the content or each chunk.  If the content length
  * (or the length of each chunk) exceeds this value, the content or chunk
- * ill be split into multiple {@link StompContent}s whose length is
+ * ill be split into multiple {@link StompContentSubframe}s whose length is
  * {@code maxChunkSize} at maximum.
  *
  * <h3>Chunked Content</h3>
  *
  * If the content of a stomp message is greater than {@code maxChunkSize}
  * the transfer encoding of the HTTP message is 'chunked', this decoder
- * generates multiple {@link StompContent} instances to avoid excessive memory
+ * generates multiple {@link StompContentSubframe} instances to avoid excessive memory
  * consumption. Note, that every message, even with no content decodes with
- * {@link LastStompContent} at the end to simplify upstream message parsing.
+ * {@link LastStompContentSubframe} at the end to simplify upstream message parsing.
  */
-public class StompDecoder extends ReplayingDecoder<State> {
-    public static final int DEFAULT_CHUNK_SIZE = 8132;
-    public static final int DEFAULT_MAX_LINE_LENGTH = 1024;
-    private int maxLineLength;
-    private int maxChunkSize;
+public class StompSubframeDecoder extends ReplayingDecoder<State> {
+
+    private static final int DEFAULT_CHUNK_SIZE = 8132;
+    private static final int DEFAULT_MAX_LINE_LENGTH = 1024;
+
+    enum State {
+        SKIP_CONTROL_CHARACTERS,
+        READ_HEADERS,
+        READ_CONTENT,
+        FINALIZE_FRAME_READ,
+        BAD_FRAME,
+        INVALID_CHUNK
+    }
+
+    private final int maxLineLength;
+    private final int maxChunkSize;
     private int alreadyReadChunkSize;
-    private LastStompContent lastContent;
+    private LastStompContentSubframe lastContent;
     private long contentLength;
 
-    public StompDecoder() {
+    public StompSubframeDecoder() {
         this(DEFAULT_MAX_LINE_LENGTH, DEFAULT_CHUNK_SIZE);
     }
 
-    public StompDecoder(int maxLineLength, int maxChunkSize) {
+    public StompSubframeDecoder(int maxLineLength, int maxChunkSize) {
         super(State.SKIP_CONTROL_CHARACTERS);
         if (maxLineLength <= 0) {
             throw new IllegalArgumentException(
@@ -88,17 +101,18 @@ public class StompDecoder extends ReplayingDecoder<State> {
             case SKIP_CONTROL_CHARACTERS:
                 skipControlCharacters(in);
                 checkpoint(State.READ_HEADERS);
+                // Fall through.
             case READ_HEADERS:
                 StompCommand command = StompCommand.UNKNOWN;
-                StompFrame frame = null;
+                StompHeadersSubframe frame = null;
                 try {
                     command = readCommand(in);
-                    frame = new DefaultStompFrame(command);
+                    frame = new DefaultStompHeadersSubframe(command);
                     checkpoint(readHeaders(in, frame.headers()));
                     out.add(frame);
                 } catch (Exception e) {
                     if (frame == null) {
-                        frame = new DefaultStompFrame(command);
+                        frame = new DefaultStompHeadersSubframe(command);
                     }
                     frame.setDecoderResult(DecoderResult.failure(e));
                     out.add(frame);
@@ -126,27 +140,27 @@ public class StompDecoder extends ReplayingDecoder<State> {
                     }
                     ByteBuf chunkBuffer = readBytes(ctx.alloc(), in, toRead);
                     if ((alreadyReadChunkSize += toRead) >= contentLength) {
-                        lastContent = new DefaultLastStompContent(chunkBuffer);
+                        lastContent = new DefaultLastStompContentSubframe(chunkBuffer);
                         checkpoint(State.FINALIZE_FRAME_READ);
                     } else {
-                        DefaultStompContent chunk;
-                        chunk = new DefaultStompContent(chunkBuffer);
+                        DefaultStompContentSubframe chunk;
+                        chunk = new DefaultStompContentSubframe(chunkBuffer);
                         out.add(chunk);
                     }
                     if (alreadyReadChunkSize < contentLength) {
                         return;
                     }
-                    //fall through
+                    // Fall through.
                 case FINALIZE_FRAME_READ:
                     skipNullCharacter(in);
                     if (lastContent == null) {
-                        lastContent = LastStompContent.EMPTY_LAST_CONTENT;
+                        lastContent = LastStompContentSubframe.EMPTY_LAST_CONTENT;
                     }
                     out.add(lastContent);
                     resetDecoder();
             }
         } catch (Exception e) {
-            StompContent errorContent = new DefaultLastStompContent(Unpooled.EMPTY_BUFFER);
+            StompContentSubframe errorContent = new DefaultLastStompContentSubframe(Unpooled.EMPTY_BUFFER);
             errorContent.setDecoderResult(DecoderResult.failure(e));
             out.add(errorContent);
             checkpoint(State.BAD_FRAME);
@@ -162,7 +176,7 @@ public class StompDecoder extends ReplayingDecoder<State> {
             //do nothing
         }
         if (command == null) {
-            commandStr = commandStr.toUpperCase();
+            commandStr = commandStr.toUpperCase(Locale.US);
             try {
                 command = StompCommand.valueOf(commandStr);
             } catch (IllegalArgumentException iae) {
@@ -176,20 +190,20 @@ public class StompDecoder extends ReplayingDecoder<State> {
     }
 
     private State readHeaders(ByteBuf buffer, StompHeaders headers) {
-        while (true) {
+        for (;;) {
             String line = readLine(buffer, maxLineLength);
-            if (line.length() > 0) {
-                String[] split = line.split(":");
+            if (!line.isEmpty()) {
+                String[] split = StringUtil.split(line, ':');
                 if (split.length == 2) {
                     headers.add(split[0], split[1]);
                 }
             } else {
                 long contentLength = -1;
                 if (headers.has(StompHeaders.CONTENT_LENGTH))  {
-                    contentLength = StompHeaders.getContentLength(headers, 0);
+                    contentLength = getContentLength(headers, 0);
                 } else {
-                    int globalIndex = ByteBufUtil.indexOf(buffer, buffer.readerIndex(),
-                        buffer.writerIndex(), StompConstants.NULL);
+                    int globalIndex = indexOf(buffer, buffer.readerIndex(),
+                            buffer.writerIndex(), StompConstants.NUL);
                     if (globalIndex != -1) {
                         contentLength = globalIndex - buffer.readerIndex();
                     }
@@ -204,16 +218,28 @@ public class StompDecoder extends ReplayingDecoder<State> {
         }
     }
 
+    private static long getContentLength(StompHeaders headers, long defaultValue) {
+        String contentLength = headers.get(StompHeaders.CONTENT_LENGTH);
+        if (contentLength != null) {
+            try {
+                return Long.parseLong(contentLength);
+            } catch (NumberFormatException ignored) {
+                return defaultValue;
+            }
+        }
+        return defaultValue;
+    }
+
     private static void skipNullCharacter(ByteBuf buffer) {
         byte b = buffer.readByte();
-        if (b != StompConstants.NULL) {
+        if (b != StompConstants.NUL) {
             throw new IllegalStateException("unexpected byte in buffer " + b + " while expecting NULL byte");
         }
     }
 
     private static void skipControlCharacters(ByteBuf buffer) {
         byte b;
-        while (true) {
+        for (;;) {
             b = buffer.readByte();
             if (b != StompConstants.CR && b != StompConstants.LF) {
                 buffer.readerIndex(buffer.readerIndex() - 1);
@@ -223,23 +249,23 @@ public class StompDecoder extends ReplayingDecoder<State> {
     }
 
     private static String readLine(ByteBuf buffer, int maxLineLength) {
-        StringBuilder sb = new StringBuilder();
+        AppendableCharSequence buf = new AppendableCharSequence(128);
         int lineLength = 0;
-        while (true) {
+        for (;;) {
             byte nextByte = buffer.readByte();
             if (nextByte == StompConstants.CR) {
                 nextByte = buffer.readByte();
                 if (nextByte == StompConstants.LF) {
-                    return sb.toString();
+                    return buf.toString();
                 }
             } else if (nextByte == StompConstants.LF) {
-                return sb.toString();
+                return buf.toString();
             } else {
                 if (lineLength >= maxLineLength) {
                     throw new TooLongFrameException("An STOMP line is larger than " + maxLineLength + " bytes.");
                 }
-                lineLength++;
-                sb.append((char) nextByte);
+                lineLength ++;
+                buf.append((char) nextByte);
             }
         }
     }
@@ -250,14 +276,4 @@ public class StompDecoder extends ReplayingDecoder<State> {
         alreadyReadChunkSize = 0;
         lastContent = null;
     }
-
-    enum State {
-        SKIP_CONTROL_CHARACTERS,
-        READ_HEADERS,
-        READ_CONTENT,
-        FINALIZE_FRAME_READ,
-        BAD_FRAME,
-        INVALID_CHUNK
-    }
-
 }

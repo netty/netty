@@ -13,13 +13,22 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.example.stomp;
-
-import io.netty.handler.codec.stomp.FullStompFrame;
+package io.netty.handler.codec.stomp;
 
 /**
- * STOMP frame listener which used as a callback in {@link StompClientHandler}
+ * An interface that defines a {@link StompFrame}'s command and headers.
+ *
+ * @see StompCommand
+ * @see StompHeaders
  */
-public interface StompFrameListener {
-    void onFrame(FullStompFrame frame);
+public interface StompHeadersSubframe extends StompSubframe {
+    /**
+     * Returns command of this frame.
+     */
+    StompCommand command();
+
+    /**
+     * Returns headers of this frame.
+     */
+    StompHeaders headers();
 }

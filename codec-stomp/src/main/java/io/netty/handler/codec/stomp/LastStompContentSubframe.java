@@ -20,47 +20,47 @@ import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.DecoderResult;
 
 /**
- * The last {@link StompContent} which signals the end of the content batch
+ * The last {@link StompContentSubframe} which signals the end of the content batch
  * <p/>
  * Note, even when no content is emitted by the protocol, an
- * empty {@link LastStompContent} is issued to make the upstream parsing
+ * empty {@link LastStompContentSubframe} is issued to make the upstream parsing
  * easier.
  */
-public interface LastStompContent extends StompContent {
+public interface LastStompContentSubframe extends StompContentSubframe {
 
-    LastStompContent EMPTY_LAST_CONTENT = new LastStompContent() {
+    LastStompContentSubframe EMPTY_LAST_CONTENT = new LastStompContentSubframe() {
         @Override
         public ByteBuf content() {
             return Unpooled.EMPTY_BUFFER;
         }
 
         @Override
-        public LastStompContent copy() {
+        public LastStompContentSubframe copy() {
             return EMPTY_LAST_CONTENT;
         }
 
         @Override
-        public LastStompContent duplicate() {
+        public LastStompContentSubframe duplicate() {
             return this;
         }
 
         @Override
-        public LastStompContent retain() {
+        public LastStompContentSubframe retain() {
             return this;
         }
 
         @Override
-        public LastStompContent retain(int increment) {
+        public LastStompContentSubframe retain(int increment) {
             return this;
         }
 
         @Override
-        public LastStompContent touch() {
+        public LastStompContentSubframe touch() {
             return this;
         }
 
         @Override
-        public LastStompContent touch(Object hint) {
+        public LastStompContentSubframe touch(Object hint) {
             return this;
         }
 
@@ -80,7 +80,7 @@ public interface LastStompContent extends StompContent {
         }
 
         @Override
-        public DecoderResult getDecoderResult() {
+        public DecoderResult decoderResult() {
             return DecoderResult.SUCCESS;
         }
 
@@ -91,21 +91,20 @@ public interface LastStompContent extends StompContent {
     };
 
     @Override
-    LastStompContent copy();
+    LastStompContentSubframe copy();
 
     @Override
-    LastStompContent duplicate();
+    LastStompContentSubframe duplicate();
 
     @Override
-    LastStompContent retain();
+    LastStompContentSubframe retain();
 
     @Override
-    LastStompContent retain(int increment);
+    LastStompContentSubframe retain(int increment);
 
     @Override
-    LastStompContent touch();
+    LastStompContentSubframe touch();
 
     @Override
-    LastStompContent touch(Object hint);
-
+    LastStompContentSubframe touch(Object hint);
 }

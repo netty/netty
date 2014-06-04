@@ -16,32 +16,31 @@
 package io.netty.handler.codec.stomp;
 
 import io.netty.buffer.ByteBufHolder;
+import io.netty.channel.ChannelPipeline;
 
 /**
- * An STOMP chunk which is used for STOMP chunked transfer-encoding.
- * {@link StompDecoder} generates {@link StompContent} after
- * {@link StompFrame} when the content is large or the encoding of the content
- * is 'chunked.  If you prefer not to receive {@link StompContent} in your handler,
- * place {@link StompAggregator} after {@link StompDecoder} in the
- * {@link io.netty.channel.ChannelPipeline}.
+ * An STOMP chunk which is used for STOMP chunked transfer-encoding. {@link StompSubframeDecoder} generates
+ * {@link StompContentSubframe} after {@link StompHeadersSubframe} when the content is large or the encoding of
+ * the content is 'chunked.  If you prefer not to receive multiple {@link StompSubframe}s for a single
+ * {@link StompFrame}, place {@link StompSubframeAggregator} after {@link StompSubframeDecoder} in the
+ * {@link ChannelPipeline}.
  */
-public interface StompContent extends ByteBufHolder, StompObject {
+public interface StompContentSubframe extends ByteBufHolder, StompSubframe {
     @Override
-    StompContent copy();
+    StompContentSubframe copy();
 
     @Override
-    StompContent duplicate();
+    StompContentSubframe duplicate();
 
     @Override
-    StompContent retain();
+    StompContentSubframe retain();
 
     @Override
-    StompContent retain(int increment);
+    StompContentSubframe retain(int increment);
 
     @Override
-    StompContent touch();
+    StompContentSubframe touch();
 
     @Override
-    StompContent touch(Object hint);
-
+    StompContentSubframe touch(Object hint);
 }
