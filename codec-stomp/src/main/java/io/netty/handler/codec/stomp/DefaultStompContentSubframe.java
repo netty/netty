@@ -23,7 +23,7 @@ import io.netty.handler.codec.DecoderResult;
  * The default {@link StompContentSubframe} implementation.
  */
 public class DefaultStompContentSubframe implements StompContentSubframe {
-    private DecoderResult decoderResult;
+    private DecoderResult decoderResult = DecoderResult.SUCCESS;
     private final ByteBuf content;
 
     public DefaultStompContentSubframe(ByteBuf content) {

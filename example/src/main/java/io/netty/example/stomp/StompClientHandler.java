@@ -48,7 +48,7 @@ public class StompClientHandler extends SimpleChannelInboundHandler<StompFrame> 
     }
 
     @Override
-    protected void messageReceived(ChannelHandlerContext ctx, StompFrame frame) throws Exception {
+    protected void channelRead0(ChannelHandlerContext ctx, StompFrame frame) throws Exception {
         String subscrReceiptId = "001";
         String disconReceiptId = "002";
         switch (frame.command()) {

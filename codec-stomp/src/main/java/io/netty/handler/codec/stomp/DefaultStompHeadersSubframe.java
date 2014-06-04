@@ -23,7 +23,7 @@ import io.netty.handler.codec.DecoderResult;
 public class DefaultStompHeadersSubframe implements StompHeadersSubframe {
 
     protected final StompCommand command;
-    protected DecoderResult decoderResult;
+    protected DecoderResult decoderResult = DecoderResult.SUCCESS;
     protected final StompHeaders headers = new StompHeaders();
 
     public DefaultStompHeadersSubframe(StompCommand command) {

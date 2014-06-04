@@ -133,7 +133,7 @@ public class HttpSnoopServerHandler extends SimpleChannelInboundHandler<Object> 
     }
 
     private static void appendDecoderResult(StringBuilder buf, HttpObject o) {
-        DecoderResult result = o.getDecoderResult();
+        DecoderResult result = o.decoderResult();
         if (result.isSuccess()) {
             return;
         }
@@ -148,7 +148,7 @@ public class HttpSnoopServerHandler extends SimpleChannelInboundHandler<Object> 
         boolean keepAlive = isKeepAlive(request);
         // Build the response object.
         FullHttpResponse response = new DefaultFullHttpResponse(
-                HTTP_1_1, currentObj.getDecoderResult().isSuccess()? OK : BAD_REQUEST,
+                HTTP_1_1, currentObj.decoderResult().isSuccess()? OK : BAD_REQUEST,
                 Unpooled.copiedBuffer(buf.toString(), CharsetUtil.UTF_8));
 
         response.headers().set(CONTENT_TYPE, "text/plain; charset=UTF-8");

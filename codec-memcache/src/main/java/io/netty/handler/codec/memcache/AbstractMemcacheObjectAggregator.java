@@ -16,9 +16,8 @@
 package io.netty.handler.codec.memcache;
 
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.handler.codec.MessageToMessageDecoder;
+import io.netty.handler.codec.MessageAggregator;
 import io.netty.handler.codec.memcache.binary.BinaryMemcacheRequestDecoder;
 import io.netty.handler.codec.memcache.binary.BinaryMemcacheResponseEncoder;
 
@@ -42,91 +41,40 @@ import io.netty.handler.codec.memcache.binary.BinaryMemcacheResponseEncoder;
  * p.addLast("handler", new YourMemcacheRequestHandler());
  * </pre>
  */
-public abstract class AbstractMemcacheObjectAggregator extends MessageToMessageDecoder<MemcacheObject> {
-
-    /**
-     * Contains the current message that gets aggregated.
-     */
-    protected FullMemcacheMessage currentMessage;
-
-    /**
-     * Holds the current channel handler context if set.
-     */
-    protected ChannelHandlerContext ctx;
-
-    public static final int DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS = 1024;
-
-    private int maxCumulationBufferComponents = DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS;
-
-    private final int maxContentLength;
+public abstract class AbstractMemcacheObjectAggregator<H extends MemcacheMessage> extends
+        MessageAggregator<MemcacheObject, H, MemcacheContent, FullMemcacheMessage> {
 
     protected AbstractMemcacheObjectAggregator(int maxContentLength) {
-        if (maxContentLength <= 0) {
-            throw new IllegalArgumentException("maxContentLength must be a positive integer: " + maxContentLength);
-        }
-
-        this.maxContentLength = maxContentLength;
-    }
-
-    /**
-     * Returns the maximum number of components in the cumulation buffer.  If the number of
-     * the components in the cumulation buffer exceeds this value, the components of the
-     * cumulation buffer are consolidated into a single component, involving memory copies.
-     * The default value of this property is {@link #DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS}.
-     */
-    public final int getMaxCumulationBufferComponents() {
-        return maxCumulationBufferComponents;
-    }
-
-    /**
-     * Sets the maximum number of components in the cumulation buffer.  If the number of
-     * the components in the cumulation buffer exceeds this value, the components of the
-     * cumulation buffer are consolidated into a single component, involving memory copies.
-     * The default value of this property is {@link #DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS}
-     * and its minimum allowed value is {@code 2}.
-     */
-    public final void setMaxCumulationBufferComponents(int maxCumulationBufferComponents) {
-        if (maxCumulationBufferComponents < 2) {
-            throw new IllegalArgumentException(
-                "maxCumulationBufferComponents: " + maxCumulationBufferComponents +
-                    " (expected: >= 2)");
-        }
-
-        if (ctx == null) {
-            this.maxCumulationBufferComponents = maxCumulationBufferComponents;
-        } else {
-            throw new IllegalStateException(
-                "decoder properties cannot be changed once the decoder is added to a pipeline.");
-        }
-    }
-
-    public int getMaxContentLength() {
-        return maxContentLength;
+        super(maxContentLength);
     }
 
     @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        super.channelInactive(ctx);
-
-        if (currentMessage != null) {
-            currentMessage.release();
-            currentMessage = null;
-        }
+    protected boolean isContentMessage(MemcacheObject msg) throws Exception {
+        return msg instanceof MemcacheContent;
     }
 
     @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        this.ctx = ctx;
+    protected boolean isLastContentMessage(MemcacheContent msg) throws Exception {
+        return msg instanceof LastMemcacheContent;
     }
 
     @Override
-    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        super.handlerRemoved(ctx);
-
-        if (currentMessage != null) {
-            currentMessage.release();
-            currentMessage = null;
-        }
+    protected boolean isAggregated(MemcacheObject msg) throws Exception {
+        return msg instanceof FullMemcacheMessage;
     }
 
+    @Override
+    protected boolean hasContentLength(H start) throws Exception {
+        return false;
+    }
+
+    @Override
+    protected long contentLength(H start) throws Exception {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected Object newContinueResponse(H start) throws Exception {
+        return null;
+    }
 }

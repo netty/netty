@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2014 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,15 +13,21 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.http;
 
-import io.netty.handler.codec.DecoderResult;
-import io.netty.handler.codec.DecoderResultProvider;
+package io.netty.handler.codec;
 
-public interface HttpObject extends DecoderResultProvider {
+/**
+ * Provides the accessor methods for the {@link DecoderResult} property of a decoded message.
+ */
+public interface DecoderResultProvider {
     /**
-     * @deprecated Use {@link #decoderResult()} instead.
+     * Returns the result of decoding this object.
      */
-    @Deprecated
-    DecoderResult getDecoderResult();
+    DecoderResult decoderResult();
+
+    /**
+     * Updates the result of decoding this object. This method is supposed to be invoked by a decoder.
+     * Do not call this method unless you know what you are doing.
+     */
+    void setDecoderResult(DecoderResult result);
 }
