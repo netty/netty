@@ -27,7 +27,7 @@ import java.nio.charset.Charset;
 /**
  * Wrapper which swap the {@link ByteOrder} of a {@link ByteBuf}.
  */
-public final class SwappedByteBuf extends ByteBuf {
+public class SwappedByteBuf extends ByteBuf {
 
     private final ByteBuf buf;
     private final ByteOrder order;
