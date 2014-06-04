@@ -15,24 +15,23 @@
  */
 package io.netty.handler.codec.stomp;
 
-import io.netty.util.CharsetUtil;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.TooLongFrameException;
+import io.netty.util.CharsetUtil;
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
-public class StompAggregatorTest {
+public class StompSubframeAggregatorTest {
 
     private EmbeddedChannel channel;
 
     @Before
     public void setup() throws Exception {
-        channel = new EmbeddedChannel(new StompDecoder(), new StompAggregator(100000));
+        channel = new EmbeddedChannel(new StompSubframeDecoder(), new StompSubframeAggregator(100000));
     }
 
     @After
@@ -45,8 +44,8 @@ public class StompAggregatorTest {
         ByteBuf incoming = Unpooled.buffer();
         incoming.writeBytes(StompTestConstants.CONNECT_FRAME.getBytes());
         channel.writeInbound(incoming);
-        StompFrame frame = channel.readInbound();
-        Assert.assertTrue(frame instanceof FullStompFrame);
+        StompHeadersSubframe frame = channel.readInbound();
+        Assert.assertTrue(frame instanceof StompFrame);
         Assert.assertNull(channel.readInbound());
     }
 
@@ -55,7 +54,7 @@ public class StompAggregatorTest {
         ByteBuf incoming = Unpooled.buffer();
         incoming.writeBytes(StompTestConstants.SEND_FRAME_2.getBytes());
         channel.writeInbound(incoming);
-        FullStompFrame frame = channel.readInbound();
+        StompFrame frame = channel.readInbound();
         Assert.assertNotNull(frame);
         Assert.assertEquals(StompCommand.SEND, frame.command());
         Assert.assertEquals("hello, queue a!!!", frame.content().toString(CharsetUtil.UTF_8));
@@ -64,11 +63,12 @@ public class StompAggregatorTest {
 
     @Test
     public void testSingleFrameChunked() {
-        EmbeddedChannel channel = new EmbeddedChannel(new StompDecoder(10000, 5), new StompAggregator(100000));
+        EmbeddedChannel channel = new EmbeddedChannel(
+                new StompSubframeDecoder(10000, 5), new StompSubframeAggregator(100000));
         ByteBuf incoming = Unpooled.buffer();
         incoming.writeBytes(StompTestConstants.SEND_FRAME_2.getBytes());
         channel.writeInbound(incoming);
-        FullStompFrame frame = channel.readInbound();
+        StompFrame frame = channel.readInbound();
         Assert.assertNotNull(frame);
         Assert.assertEquals(StompCommand.SEND, frame.command());
         Assert.assertNull(channel.readInbound());
@@ -81,7 +81,7 @@ public class StompAggregatorTest {
         incoming.writeBytes(StompTestConstants.CONNECTED_FRAME.getBytes());
         channel.writeInbound(incoming);
         channel.writeInbound(Unpooled.wrappedBuffer(StompTestConstants.SEND_FRAME_1.getBytes()));
-        FullStompFrame frame = channel.readInbound();
+        StompFrame frame = channel.readInbound();
         Assert.assertEquals(StompCommand.CONNECT, frame.command());
         frame = channel.readInbound();
         Assert.assertEquals(StompCommand.CONNECTED, frame.command());
@@ -92,8 +92,7 @@ public class StompAggregatorTest {
 
     @Test(expected = TooLongFrameException.class)
     public void testTooLongFrameException() {
-        EmbeddedChannel channel = new EmbeddedChannel(new StompDecoder(), new StompAggregator(10));
+        EmbeddedChannel channel = new EmbeddedChannel(new StompSubframeDecoder(), new StompSubframeAggregator(10));
         channel.writeInbound(Unpooled.wrappedBuffer(StompTestConstants.SEND_FRAME_1.getBytes()));
     }
-
 }

@@ -15,28 +15,30 @@
  */
 package io.netty.handler.codec.stomp;
 
-import java.util.List;
-
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.TooLongFrameException;
 
+import java.util.List;
+
 /**
- * A {@link io.netty.channel.ChannelHandler} that aggregates an {@link StompFrame}
- * and its following {@link StompContent}s into a single {@link StompFrame} with
- * no following {@link StompContent}s.  It is useful when you don't want to take
- * care of STOMP frames whose content is 'chunked'.  Insert this
- * handler after {@link StompDecoder} in the {@link io.netty.channel.ChannelPipeline}:
+ * A {@link ChannelHandler} that aggregates an {@link StompHeadersSubframe}
+ * and its following {@link StompContentSubframe}s into a single {@link StompFrame}.
+ * It is useful when you don't want to take care of STOMP frames whose content is 'chunked'.  Insert this
+ * handler after {@link StompSubframeDecoder} in the {@link ChannelPipeline}:
  */
-public class StompAggregator extends MessageToMessageDecoder<StompObject> {
-    public static final int DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS = 1024;
+public class StompSubframeAggregator extends MessageToMessageDecoder<StompSubframe> {
+
+    private static final int DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS = 1024;
 
     private int maxCumulationBufferComponents = DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS;
 
     private final int maxContentLength;
-    private FullStompFrame currentFrame;
+    private StompFrame currentFrame;
     private boolean tooLongFrameFound;
     private volatile boolean handlerAdded;
 
@@ -48,7 +50,7 @@ public class StompAggregator extends MessageToMessageDecoder<StompObject> {
      *        If the length of the aggregated content exceeds this value,
      *        a {@link TooLongFrameException} will be raised.
      */
-    public StompAggregator(int maxContentLength) {
+    public StompSubframeAggregator(int maxContentLength) {
         if (maxContentLength <= 0) {
             throw new IllegalArgumentException(
                     "maxContentLength must be a positive integer: " +
@@ -80,23 +82,23 @@ public class StompAggregator extends MessageToMessageDecoder<StompObject> {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, StompObject msg, List<Object> out) throws Exception {
-        FullStompFrame currentFrame = this.currentFrame;
-        if (msg instanceof StompFrame) {
+    protected void decode(ChannelHandlerContext ctx, StompSubframe msg, List<Object> out) throws Exception {
+        StompFrame currentFrame = this.currentFrame;
+        if (msg instanceof StompHeadersSubframe) {
             assert currentFrame == null;
-            StompFrame frame = (StompFrame) msg;
-            this.currentFrame = currentFrame = new DefaultFullStompFrame(frame.command(),
+            StompHeadersSubframe frame = (StompHeadersSubframe) msg;
+            this.currentFrame = currentFrame = new DefaultStompFrame(frame.command(),
                 Unpooled.compositeBuffer(maxCumulationBufferComponents));
             currentFrame.headers().set(frame.headers());
-        } else if (msg instanceof StompContent) {
+        } else if (msg instanceof StompContentSubframe) {
             if (tooLongFrameFound) {
-                if (msg instanceof LastStompContent) {
+                if (msg instanceof LastStompContentSubframe) {
                     this.currentFrame = null;
                 }
                 return;
             }
             assert currentFrame != null;
-            StompContent chunk = (StompContent) msg;
+            StompContentSubframe chunk = (StompContentSubframe) msg;
             CompositeByteBuf contentBuf = (CompositeByteBuf) currentFrame.content();
             if (contentBuf.readableBytes() > maxContentLength - chunk.content().readableBytes()) {
                 tooLongFrameFound = true;
@@ -109,7 +111,7 @@ public class StompAggregator extends MessageToMessageDecoder<StompObject> {
 
             contentBuf.addComponent(chunk.retain().content());
             contentBuf.writerIndex(contentBuf.writerIndex() + chunk.content().readableBytes());
-            if (chunk instanceof LastStompContent) {
+            if (chunk instanceof LastStompContentSubframe) {
                 out.add(currentFrame);
                 this.currentFrame = null;
             }
@@ -121,7 +123,7 @@ public class StompAggregator extends MessageToMessageDecoder<StompObject> {
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
         super.handlerAdded(ctx);
-        this.handlerAdded = true;
+        handlerAdded = true;
     }
 
     @Override
@@ -136,7 +138,7 @@ public class StompAggregator extends MessageToMessageDecoder<StompObject> {
     @Override
     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
         super.handlerRemoved(ctx);
-        this.handlerAdded = false;
+        handlerAdded = false;
         if (currentFrame != null) {
             currentFrame.release();
             currentFrame = null;

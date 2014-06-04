@@ -20,13 +20,13 @@ import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.DecoderResult;
 
 /**
- * The default {@link StompContent} implementation.
+ * The default {@link StompContentSubframe} implementation.
  */
-public class DefaultStompContent implements StompContent {
+public class DefaultStompContentSubframe implements StompContentSubframe {
     private DecoderResult decoderResult;
     private final ByteBuf content;
 
-    public DefaultStompContent(ByteBuf content) {
+    public DefaultStompContentSubframe(ByteBuf content) {
         if (content == null) {
             throw new NullPointerException("content");
         }
@@ -39,13 +39,13 @@ public class DefaultStompContent implements StompContent {
     }
 
     @Override
-    public StompContent copy() {
-        return new DefaultStompContent(content().copy());
+    public StompContentSubframe copy() {
+        return new DefaultStompContentSubframe(content().copy());
     }
 
     @Override
-    public StompContent duplicate() {
-        return new DefaultStompContent(content().duplicate());
+    public StompContentSubframe duplicate() {
+        return new DefaultStompContentSubframe(content().duplicate());
     }
 
     @Override
@@ -54,25 +54,25 @@ public class DefaultStompContent implements StompContent {
     }
 
     @Override
-    public StompContent retain() {
+    public StompContentSubframe retain() {
         content().retain();
         return this;
     }
 
     @Override
-    public StompContent retain(int increment) {
+    public StompContentSubframe retain(int increment) {
         content().retain(increment);
         return this;
     }
 
     @Override
-    public StompContent touch() {
-        content.toString();
+    public StompContentSubframe touch() {
+        content.touch();
         return this;
     }
 
     @Override
-    public StompContent touch(Object hint) {
+    public StompContentSubframe touch(Object hint) {
         content.touch(hint);
         return this;
     }
@@ -88,13 +88,13 @@ public class DefaultStompContent implements StompContent {
     }
 
     @Override
-    public DecoderResult getDecoderResult() {
+    public DecoderResult decoderResult() {
         return decoderResult;
     }
 
     @Override
-    public void setDecoderResult(DecoderResult result) {
-        this.decoderResult = result;
+    public void setDecoderResult(DecoderResult decoderResult) {
+        this.decoderResult = decoderResult;
     }
 
     @Override

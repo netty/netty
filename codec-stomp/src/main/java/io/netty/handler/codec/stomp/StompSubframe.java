@@ -15,27 +15,20 @@
  */
 package io.netty.handler.codec.stomp;
 
+import io.netty.handler.codec.DecoderResult;
+
 /**
- * Combines {@link StompFrame} and {@link LastStompContent} into one
- * frame. So it represent a <i>complete</i> STOMP frame.
+ * Defines a common interface for all {@link StompSubframe} implementations.
  */
-public interface FullStompFrame extends StompFrame, LastStompContent {
-    @Override
-    FullStompFrame copy();
+public interface StompSubframe {
+    /**
+     * Returns the result of decoding this object.
+     */
+    DecoderResult decoderResult();
 
-    @Override
-    FullStompFrame duplicate();
-
-    @Override
-    FullStompFrame retain();
-
-    @Override
-    FullStompFrame retain(int increment);
-
-    @Override
-    FullStompFrame touch();
-
-    @Override
-    FullStompFrame touch(Object hint);
-
+    /**
+     * Updates the result of decoding this object. This method is supposed to be invoked by
+     * {@link StompSubframeDecoder}. Do not call this method unless you know what you are doing.
+     */
+    void setDecoderResult(DecoderResult result);
 }

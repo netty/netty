@@ -21,7 +21,7 @@ public final class StompTestConstants {
             "host:stomp.github.org\r\n" +
             "accept-version:1.1,1.2\r\n" +
             "\r\n" +
-            "\0";
+            '\0';
     public static final String CONNECTED_FRAME =
         "CONNECTED\r\n" +
             "version:1.2\n" +
@@ -43,6 +43,5 @@ public final class StompTestConstants {
             "hello, queue a!!!" +
             "\0\n";
 
-    private StompTestConstants() {
-    }
+    private StompTestConstants() { }
 }

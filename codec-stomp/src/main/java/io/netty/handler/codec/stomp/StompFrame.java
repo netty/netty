@@ -16,23 +16,25 @@
 package io.netty.handler.codec.stomp;
 
 /**
- * An interface that defines a Stomp frame
- *
- * @see StompFrame
- * @see FullStompFrame
- * @see StompHeaders
+ * Combines {@link StompHeadersSubframe} and {@link LastStompContentSubframe} into one
+ * frame. So it represent a <i>complete</i> STOMP frame.
  */
-public interface StompFrame extends StompObject {
-    /**
-     * returns command of this frame
-     * @return the command
-     */
-    StompCommand command();
+public interface StompFrame extends StompHeadersSubframe, LastStompContentSubframe {
+    @Override
+    StompFrame copy();
 
-    /**
-     * returns headers of this frame
-     * @return the headers object
-     */
-    StompHeaders headers();
+    @Override
+    StompFrame duplicate();
 
+    @Override
+    StompFrame retain();
+
+    @Override
+    StompFrame retain(int increment);
+
+    @Override
+    StompFrame touch();
+
+    @Override
+    StompFrame touch(Object hint);
 }

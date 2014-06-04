@@ -15,48 +15,92 @@
  */
 package io.netty.handler.codec.stomp;
 
-import io.netty.handler.codec.DecoderResult;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.util.CharsetUtil;
 
 /**
  * Default implementation of {@link StompFrame}.
  */
-public class DefaultStompFrame implements StompFrame {
-    protected final StompCommand command;
-    protected DecoderResult decoderResult;
-    protected final StompHeaders headers = new StompHeaders();
+public class DefaultStompFrame extends DefaultStompHeadersSubframe implements StompFrame {
+
+    private final ByteBuf content;
 
     public DefaultStompFrame(StompCommand command) {
+        this(command, Unpooled.buffer(0));
         if (command == null) {
             throw new NullPointerException("command");
         }
-        this.command = command;
+    }
+
+    public DefaultStompFrame(StompCommand command, ByteBuf content) {
+        super(command);
+        if (content == null) {
+            throw new NullPointerException("content");
+        }
+        this.content = content;
     }
 
     @Override
-    public StompCommand command() {
-        return command;
+    public ByteBuf content() {
+        return content;
     }
 
     @Override
-    public StompHeaders headers() {
-        return headers;
+    public StompFrame copy() {
+        return new DefaultStompFrame(command, content.copy());
     }
 
     @Override
-    public DecoderResult getDecoderResult() {
-        return decoderResult;
+    public StompFrame duplicate() {
+        return new DefaultStompFrame(command, content.duplicate());
     }
 
     @Override
-    public void setDecoderResult(DecoderResult decoderResult) {
-        this.decoderResult = decoderResult;
+    public int refCnt() {
+        return content.refCnt();
+    }
+
+    @Override
+    public StompFrame retain() {
+        content.retain();
+        return this;
+    }
+
+    @Override
+    public StompFrame retain(int increment) {
+        content.retain();
+        return this;
+    }
+
+    @Override
+    public StompFrame touch() {
+        content.touch();
+        return this;
+    }
+
+    @Override
+    public StompFrame touch(Object hint) {
+        content.touch(hint);
+        return this;
+    }
+
+    @Override
+    public boolean release() {
+        return content.release();
+    }
+
+    @Override
+    public boolean release(int decrement) {
+        return content.release(decrement);
     }
 
     @Override
     public String toString() {
-        return "StompFrame{" +
+        return "DefaultFullStompFrame{" +
             "command=" + command +
             ", headers=" + headers +
+            ", content=" + content.toString(CharsetUtil.UTF_8) +
             '}';
     }
 }

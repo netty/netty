@@ -15,28 +15,28 @@
  */
 package io.netty.handler.codec.stomp;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.channel.embedded.EmbeddedChannel;
-import org.junit.Assert;
+import static org.junit.Assert.*;
 
-public class StompDecoderTest {
+public class StompSubframeDecoderTest {
 
     private EmbeddedChannel channel;
 
     @Before
     public void setup() throws Exception {
-        channel = new EmbeddedChannel(new StompDecoder());
+        channel = new EmbeddedChannel(new StompSubframeDecoder());
     }
 
     @After
     public void teardown() throws Exception {
-        Assert.assertFalse(channel.finish());
+        assertFalse(channel.finish());
     }
 
     @Test
@@ -44,13 +44,13 @@ public class StompDecoderTest {
         ByteBuf incoming = Unpooled.buffer();
         incoming.writeBytes(StompTestConstants.CONNECT_FRAME.getBytes());
         channel.writeInbound(incoming);
-        StompFrame frame = channel.readInbound();
-        Assert.assertNotNull(frame);
-        Assert.assertEquals(StompCommand.CONNECT, frame.command());
-        StompContent content = channel.readInbound();
-        Assert.assertTrue(content == LastStompContent.EMPTY_LAST_CONTENT);
+        StompHeadersSubframe frame = channel.readInbound();
+        assertNotNull(frame);
+        assertEquals(StompCommand.CONNECT, frame.command());
+        StompContentSubframe content = channel.readInbound();
+        assertSame(content, LastStompContentSubframe.EMPTY_LAST_CONTENT);
         Object o = channel.readInbound();
-        Assert.assertNull(o);
+        assertNull(o);
     }
 
     @Test
@@ -58,14 +58,14 @@ public class StompDecoderTest {
         ByteBuf incoming = Unpooled.buffer();
         incoming.writeBytes(StompTestConstants.SEND_FRAME_2.getBytes());
         channel.writeInbound(incoming);
-        StompFrame frame = channel.readInbound();
-        Assert.assertNotNull(frame);
-        Assert.assertEquals(StompCommand.SEND, frame.command());
-        StompContent content = channel.readInbound();
-        Assert.assertTrue(content instanceof LastStompContent);
+        StompHeadersSubframe frame = channel.readInbound();
+        assertNotNull(frame);
+        assertEquals(StompCommand.SEND, frame.command());
+        StompContentSubframe content = channel.readInbound();
+        assertTrue(content instanceof LastStompContentSubframe);
         String s = content.content().toString(CharsetUtil.UTF_8);
-        Assert.assertEquals("hello, queue a!!!", s);
-        Assert.assertNull(channel.readInbound());
+        assertEquals("hello, queue a!!!", s);
+        assertNull(channel.readInbound());
     }
 
     @Test
@@ -73,43 +73,43 @@ public class StompDecoderTest {
         ByteBuf incoming = Unpooled.buffer();
         incoming.writeBytes(StompTestConstants.SEND_FRAME_1.getBytes());
         channel.writeInbound(incoming);
-        StompFrame frame = (StompFrame) channel.readInbound();
-        Assert.assertNotNull(frame);
-        Assert.assertEquals(StompCommand.SEND, frame.command());
-        StompContent content = (StompContent) channel.readInbound();
-        Assert.assertTrue(content instanceof LastStompContent);
+        StompHeadersSubframe frame = channel.readInbound();
+        assertNotNull(frame);
+        assertEquals(StompCommand.SEND, frame.command());
+        StompContentSubframe content = channel.readInbound();
+        assertTrue(content instanceof LastStompContentSubframe);
         String s = content.content().toString(CharsetUtil.UTF_8);
-        Assert.assertEquals("hello, queue a!", s);
-        Assert.assertNull(channel.readInbound());
+        assertEquals("hello, queue a!", s);
+        assertNull(channel.readInbound());
     }
 
     @Test
     public void testSingleFrameChunked() {
-        EmbeddedChannel channel = new EmbeddedChannel(new StompDecoder(10000, 5));
+        EmbeddedChannel channel = new EmbeddedChannel(new StompSubframeDecoder(10000, 5));
 
         ByteBuf incoming = Unpooled.buffer();
         incoming.writeBytes(StompTestConstants.SEND_FRAME_2.getBytes());
         channel.writeInbound(incoming);
-        StompFrame frame = channel.readInbound();
-        Assert.assertNotNull(frame);
-        Assert.assertEquals(StompCommand.SEND, frame.command());
-        StompContent content = channel.readInbound();
+        StompHeadersSubframe frame = channel.readInbound();
+        assertNotNull(frame);
+        assertEquals(StompCommand.SEND, frame.command());
+        StompContentSubframe content = channel.readInbound();
         String s = content.content().toString(CharsetUtil.UTF_8);
-        Assert.assertEquals("hello", s);
+        assertEquals("hello", s);
 
         content = channel.readInbound();
         s = content.content().toString(CharsetUtil.UTF_8);
-        Assert.assertEquals(", que", s);
+        assertEquals(", que", s);
 
         content = channel.readInbound();
         s = content.content().toString(CharsetUtil.UTF_8);
-        Assert.assertEquals("ue a!", s);
+        assertEquals("ue a!", s);
 
         content = channel.readInbound();
         s = content.content().toString(CharsetUtil.UTF_8);
-        Assert.assertEquals("!!", s);
+        assertEquals("!!", s);
 
-        Assert.assertNull(channel.readInbound());
+        assertNull(channel.readInbound());
     }
 
     @Test
@@ -119,17 +119,17 @@ public class StompDecoderTest {
         incoming.writeBytes(StompTestConstants.CONNECTED_FRAME.getBytes());
         channel.writeInbound(incoming);
 
-        StompFrame frame = channel.readInbound();
-        Assert.assertNotNull(frame);
-        Assert.assertEquals(StompCommand.CONNECT, frame.command());
-        StompContent content = channel.readInbound();
-        Assert.assertTrue(content == LastStompContent.EMPTY_LAST_CONTENT);
+        StompHeadersSubframe frame = channel.readInbound();
+        assertNotNull(frame);
+        assertEquals(StompCommand.CONNECT, frame.command());
+        StompContentSubframe content = channel.readInbound();
+        assertSame(content, LastStompContentSubframe.EMPTY_LAST_CONTENT);
 
-        StompFrame frame2 = channel.readInbound();
-        Assert.assertNotNull(frame2);
-        Assert.assertEquals(StompCommand.CONNECTED, frame2.command());
-        StompContent content2 = channel.readInbound();
-        Assert.assertTrue(content2 == LastStompContent.EMPTY_LAST_CONTENT);
-        Assert.assertNull(channel.readInbound());
+        StompHeadersSubframe frame2 = channel.readInbound();
+        assertNotNull(frame2);
+        assertEquals(StompCommand.CONNECTED, frame2.command());
+        StompContentSubframe content2 = channel.readInbound();
+        assertSame(content2, LastStompContentSubframe.EMPTY_LAST_CONTENT);
+        assertNull(channel.readInbound());
     }
 }
