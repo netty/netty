@@ -179,6 +179,11 @@ public class HttpSnoopServerHandler extends SimpleChannelInboundHandler<Object> 
 
         // Write the response.
         ctx.write(response);
+        
+        // Bug fix: HTTP/1.0 compliant (keep-alive disabled)
+        if (keepAlive == false) {
+            ctx.close();
+        }
 
         return keepAlive;
     }
