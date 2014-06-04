@@ -1149,8 +1149,8 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
         }
 
         @Override
-        public DecoderResult getDecoderResult() {
-            return request.getDecoderResult();
+        public DecoderResult decoderResult() {
+            return request.decoderResult();
         }
 
         @Override

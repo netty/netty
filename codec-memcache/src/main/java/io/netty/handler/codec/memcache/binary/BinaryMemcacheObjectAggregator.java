@@ -16,20 +16,10 @@
 package io.netty.handler.codec.memcache.binary;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.CompositeByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.DecoderResult;
-import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.memcache.AbstractMemcacheObjectAggregator;
 import io.netty.handler.codec.memcache.FullMemcacheMessage;
-import io.netty.handler.codec.memcache.LastMemcacheContent;
 import io.netty.handler.codec.memcache.MemcacheContent;
-import io.netty.handler.codec.memcache.MemcacheMessage;
 import io.netty.handler.codec.memcache.MemcacheObject;
-import io.netty.util.ReferenceCountUtil;
-
-import java.util.List;
 
 /**
  * An object aggregator for the memcache binary protocol.
@@ -37,111 +27,34 @@ import java.util.List;
  * It aggregates {@link BinaryMemcacheMessage}s and {@link MemcacheContent} into {@link FullBinaryMemcacheRequest}s
  * or {@link FullBinaryMemcacheResponse}s.
  */
-public class BinaryMemcacheObjectAggregator extends AbstractMemcacheObjectAggregator {
-
-    private boolean tooLongFrameFound;
+public class BinaryMemcacheObjectAggregator extends AbstractMemcacheObjectAggregator<BinaryMemcacheMessage> {
 
     public BinaryMemcacheObjectAggregator(int maxContentLength) {
         super(maxContentLength);
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, MemcacheObject msg, List<Object> out) throws Exception {
-        FullMemcacheMessage currentMessage = this.currentMessage;
-
-        if (msg instanceof MemcacheMessage) {
-            tooLongFrameFound = false;
-            MemcacheMessage m = (MemcacheMessage) msg;
-
-            if (!m.getDecoderResult().isSuccess()) {
-                out.add(toFullMessage(m));
-                this.currentMessage = null;
-                return;
-            }
-
-            if (msg instanceof BinaryMemcacheRequest) {
-                this.currentMessage = toFullRequest((BinaryMemcacheRequest) msg,
-                    Unpooled.compositeBuffer(getMaxCumulationBufferComponents()));
-            } else if (msg instanceof BinaryMemcacheResponse) {
-                this.currentMessage = toFullResponse((BinaryMemcacheResponse) msg,
-                    Unpooled.compositeBuffer(getMaxCumulationBufferComponents()));
-            } else {
-                throw new Error();
-            }
-        } else if (msg instanceof MemcacheContent) {
-            if (tooLongFrameFound) {
-                if (msg instanceof LastMemcacheContent) {
-                    this.currentMessage = null;
-                }
-                return;
-            }
-
-            MemcacheContent chunk = (MemcacheContent) msg;
-            CompositeByteBuf content = (CompositeByteBuf) currentMessage.content();
-
-            if (content.readableBytes() > getMaxContentLength() - chunk.content().readableBytes()) {
-                tooLongFrameFound = true;
-
-                currentMessage.release();
-                this.currentMessage = null;
-
-                throw new TooLongFrameException("Memcache content length exceeded " + getMaxContentLength()
-                    + " bytes.");
-            }
-
-            if (chunk.content().isReadable()) {
-                chunk.retain();
-                content.addComponent(chunk.content());
-                content.writerIndex(content.writerIndex() + chunk.content().readableBytes());
-            }
-
-            final boolean last;
-            if (!chunk.getDecoderResult().isSuccess()) {
-                currentMessage.setDecoderResult(
-                    DecoderResult.failure(chunk.getDecoderResult().cause()));
-                last = true;
-            } else {
-                last = chunk instanceof LastMemcacheContent;
-            }
-
-            if (last) {
-                this.currentMessage = null;
-                out.add(currentMessage);
-            }
-        } else {
-            throw new Error();
-        }
+    protected boolean isStartMessage(MemcacheObject msg) throws Exception {
+        return msg instanceof BinaryMemcacheMessage;
     }
 
-    /**
-     * Convert a invalid message into a full message.
-     *
-     * This method makes sure that upstream handlers always get a full message returned, even
-     * when invalid chunks are failing.
-     *
-     * @param msg the message to transform.
-     * @return a full message containing parts of the original message.
-     */
-    private static FullMemcacheMessage toFullMessage(final MemcacheMessage msg) {
-        if (msg instanceof FullMemcacheMessage) {
-            return ((FullMemcacheMessage) msg).retain();
+    @Override
+    protected FullMemcacheMessage beginAggregation(BinaryMemcacheMessage start, ByteBuf content) throws Exception {
+        if (start instanceof BinaryMemcacheRequest) {
+            return toFullRequest((BinaryMemcacheRequest) start, content);
         }
 
-        FullMemcacheMessage fullMsg;
-        if (msg instanceof BinaryMemcacheRequest) {
-            fullMsg = toFullRequest((BinaryMemcacheRequest) msg, Unpooled.EMPTY_BUFFER);
-        } else if (msg instanceof BinaryMemcacheResponse) {
-            fullMsg = toFullResponse((BinaryMemcacheResponse) msg, Unpooled.EMPTY_BUFFER);
-        } else {
-            throw new IllegalStateException();
+        if (start instanceof BinaryMemcacheResponse) {
+            return toFullResponse((BinaryMemcacheResponse) start, content);
         }
 
-        return fullMsg;
+        // Should not reach here.
+        throw new Error();
     }
 
     private static FullBinaryMemcacheRequest toFullRequest(BinaryMemcacheRequest request, ByteBuf content) {
-        FullBinaryMemcacheRequest fullRequest = new DefaultFullBinaryMemcacheRequest(request.getKey(),
-            request.getExtras(), content);
+        FullBinaryMemcacheRequest fullRequest =
+                new DefaultFullBinaryMemcacheRequest(request.getKey(), request.getExtras(), content);
 
         fullRequest.setMagic(request.getMagic());
         fullRequest.setOpcode(request.getOpcode());
@@ -157,8 +70,8 @@ public class BinaryMemcacheObjectAggregator extends AbstractMemcacheObjectAggreg
     }
 
     private static FullBinaryMemcacheResponse toFullResponse(BinaryMemcacheResponse response, ByteBuf content) {
-        FullBinaryMemcacheResponse fullResponse = new DefaultFullBinaryMemcacheResponse(response.getKey(),
-            response.getExtras(), content);
+        FullBinaryMemcacheResponse fullResponse =
+                new DefaultFullBinaryMemcacheResponse(response.getKey(), response.getExtras(), content);
 
         fullResponse.setMagic(response.getMagic());
         fullResponse.setOpcode(response.getOpcode());
@@ -172,5 +85,4 @@ public class BinaryMemcacheObjectAggregator extends AbstractMemcacheObjectAggreg
 
         return fullResponse;
     }
-
 }

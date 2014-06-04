@@ -50,7 +50,7 @@ public interface LastHttpContent extends HttpContent {
         }
 
         @Override
-        public DecoderResult getDecoderResult() {
+        public DecoderResult decoderResult() {
             return DecoderResult.SUCCESS;
         }
 
