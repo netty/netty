@@ -43,39 +43,36 @@ public class SwappedByteBufBenchmark extends AbstractMicrobenchmark {
     }
 
     @Param({ "00000", "00256", "01024", "04096", "16384", "65536" })
-    public int intSize;
-
-    @Param({ "00000", "00256", "01024", "04096", "16384", "65536" })
-    public long longSize;
+    public int size;
 
     @GenerateMicroBenchmark
     public void swappedByteBufSetInt() {
-        swappedByteBuf.setLong(0, intSize);
+        swappedByteBuf.setLong(0, size);
     }
 
     @GenerateMicroBenchmark
     public void swappedByteBufSetShort() {
-        swappedByteBuf.setShort(0, intSize);
+        swappedByteBuf.setShort(0, size);
     }
 
     @GenerateMicroBenchmark
     public void swappedByteBufSetLong() {
-        swappedByteBuf.setLong(0, longSize);
+        swappedByteBuf.setLong(0, size);
     }
 
     @GenerateMicroBenchmark
     public void unsafeSwappedByteBufSetInt() {
-        unsafeSwappedByteBuf.setInt(0, intSize);
+        unsafeSwappedByteBuf.setInt(0, size);
     }
 
     @GenerateMicroBenchmark
     public void unsafeSwappedByteBufSetShort() {
-        unsafeSwappedByteBuf.setShort(0, intSize);
+        unsafeSwappedByteBuf.setShort(0, size);
     }
 
     @GenerateMicroBenchmark
     public void unsafeSwappedByteBufSetLong() {
-        unsafeSwappedByteBuf.setLong(0, longSize);
+        unsafeSwappedByteBuf.setLong(0, size);
     }
 
 }
