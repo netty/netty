@@ -172,6 +172,12 @@ public class HttpPostRequestDecoder implements InterfaceHttpPostRequestDecoder {
             if (boundary.length != 2) {
                 throw new ErrorDataDecoderException("Needs a boundary value");
             }
+            if (boundary[1].charAt(0) == '"') {
+            	String bound = boundary[1].trim();
+            	if (bound.charAt(bound.length()-1) == '"') {
+            		boundary[1] = bound.substring(1, bound.length()-1);
+            	}
+            }
             if (headerContentType[crank].toLowerCase().startsWith(
                     HttpHeaders.Values.CHARSET.toString())) {
                 String[] charset = StringUtil.split(headerContentType[crank], '=');
