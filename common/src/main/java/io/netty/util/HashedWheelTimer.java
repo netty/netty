@@ -583,7 +583,7 @@ public class HashedWheelTimer implements Timer {
             return buf.append(')').toString();
         }
 
-        private class CancelTask extends MpscLinkedQueueNode<Runnable> implements Runnable {
+        private final class CancelTask extends MpscLinkedQueueNode<Runnable> implements Runnable {
 
             @Override
             public Runnable value() {
