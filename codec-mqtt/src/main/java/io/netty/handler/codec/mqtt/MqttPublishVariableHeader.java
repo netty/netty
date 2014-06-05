@@ -47,5 +47,4 @@ public class MqttPublishVariableHeader {
         builder.append(']');
         return builder.toString();
     }
-
 }
