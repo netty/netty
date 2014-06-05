@@ -50,6 +50,7 @@ public class DnsHeader {
     private int opcode;
     private int id;
     private int type;
+    private int z;
 
     // only allow to extend from within the same package
     DnsHeader(DnsMessage<? extends DnsHeader> parent) {
@@ -169,6 +170,25 @@ public class DnsHeader {
      */
     public DnsHeader setId(int id) {
         this.id = id;
+        return this;
+    }
+
+    /**
+     * Returns the 3 bit reserved field 'Z'.
+     */
+    public int getZ() {
+        return z;
+    }
+
+    /**
+     * Sets the field Z. This field is reserved and should remain as 0 if the
+     * DNS server does not make usage of this field.
+     *
+     * @param z
+     *            the value for the reserved field Z
+     */
+    public DnsHeader setZ(int z) {
+        this.z = z;
         return this;
     }
 }

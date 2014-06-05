@@ -25,10 +25,8 @@ public final class DnsQueryHeader extends DnsHeader {
      * Constructor for a DNS packet query header. The id is user generated and
      * will be replicated in the response packet by the server.
      *
-     * @param parent
-     *            the {@link DnsMessage} this header belongs to
-     * @param id
-     *            a 2 bit unsigned identification number for this query
+     * @param parent the {@link DnsMessage} this header belongs to
+     * @param id     a 2 bit unsigned identification number for this query
      */
     public DnsQueryHeader(DnsMessage<DnsQueryHeader> parent, int id) {
         super(parent);
@@ -49,8 +47,7 @@ public final class DnsQueryHeader extends DnsHeader {
     /**
      * Sets the {@link DnsHeader} type. Must be {@code TYPE_RESPONSE}.
      *
-     * @param type
-     *            message type
+     * @param type message type
      * @return the header to allow method chaining
      */
     @Override
@@ -59,6 +56,30 @@ public final class DnsQueryHeader extends DnsHeader {
             throw new IllegalArgumentException("type cannot be anything but TYPE_QUERY (0) for a query header.");
         }
         super.setType(type);
+        return this;
+    }
+
+    @Override
+    public DnsQueryHeader setId(int id) {
+        super.setId(id);
+        return this;
+    }
+
+    @Override
+    public DnsQueryHeader setRecursionDesired(boolean recursionDesired) {
+        super.setRecursionDesired(recursionDesired);
+        return this;
+    }
+
+    @Override
+    public DnsQueryHeader setOpcode(int opcode) {
+        super.setOpcode(opcode);
+        return this;
+    }
+
+    @Override
+    public DnsQueryHeader setZ(int z) {
+        super.setZ(z);
         return this;
     }
 }

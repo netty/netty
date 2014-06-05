@@ -26,7 +26,6 @@ public final class DnsResponseHeader extends DnsHeader {
     private boolean truncated;
     private boolean recursionAvailable;
 
-    private int z;
     private DnsResponseCode responseCode;
 
     /**
@@ -65,13 +64,6 @@ public final class DnsResponseHeader extends DnsHeader {
      */
     public boolean isRecursionAvailable() {
         return recursionAvailable;
-    }
-
-    /**
-     * Returns the 3 bit reserved field 'Z'.
-     */
-    public int getZ() {
-        return z;
     }
 
     /**
@@ -126,18 +118,6 @@ public final class DnsResponseHeader extends DnsHeader {
     }
 
     /**
-     * Sets the field Z. This field is reserved and should remain as 0 if the
-     * DNS server does not make usage of this field.
-     *
-     * @param z
-     *            the value for the reserved field Z
-     */
-    public DnsResponseHeader setZ(int z) {
-        this.z = z;
-        return this;
-    }
-
-    /**
      * Sets the response code for this message.
      *
      * @param responseCode
@@ -161,6 +141,29 @@ public final class DnsResponseHeader extends DnsHeader {
             throw new IllegalArgumentException("type cannot be anything but TYPE_RESPONSE (1) for a response header.");
         }
         super.setType(type);
+        return this;
+    }
+
+    @Override
+    public DnsResponseHeader setId(int id) {
+        super.setId(id);
+        return this;
+    }
+
+    @Override
+    public DnsHeader setRecursionDesired(boolean recursionDesired) {
+        return super.setRecursionDesired(recursionDesired);
+    }
+
+    @Override
+    public DnsResponseHeader setOpcode(int opcode) {
+        super.setOpcode(opcode);
+        return this;
+    }
+
+    @Override
+    public DnsResponseHeader setZ(int z) {
+        super.setZ(z);
         return this;
     }
 }

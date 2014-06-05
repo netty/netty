@@ -21,10 +21,10 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.StringUtil;
 
 import java.nio.charset.Charset;
 import java.util.List;
-import java.util.regex.Pattern;
 
 /**
  * DnsQueryEncoder accepts {@link DnsQuery} and encodes to {@link ByteBuf}. This
@@ -33,8 +33,6 @@ import java.util.regex.Pattern;
  */
 @ChannelHandler.Sharable
 public class DnsQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
-
-    private static final Pattern QUESTION_PATTERN = Pattern.compile("\\.");
 
     @Override
     protected void encode(ChannelHandlerContext ctx, DnsQuery query, List<Object> out) throws Exception {
@@ -81,7 +79,7 @@ public class DnsQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
      *            the buffer the encoded data should be written to
      */
     private static void encodeQuestion(DnsQuestion question, Charset charset, ByteBuf buf) {
-        String[] parts = QUESTION_PATTERN.split(question.name());
+        String[] parts = StringUtil.split(question.name(), '.');
         for (String part: parts) {
             buf.writeByte(part.length());
             buf.writeBytes(part.getBytes(charset));
