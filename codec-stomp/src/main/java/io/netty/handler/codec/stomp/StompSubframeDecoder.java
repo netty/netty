@@ -18,6 +18,7 @@ package io.netty.handler.codec.stomp;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.ReplayingDecoder;
@@ -199,7 +200,7 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
                 }
             } else {
                 long contentLength = -1;
-                if (headers.has(StompHeaders.CONTENT_LENGTH))  {
+                if (headers.contains(StompHeaders.CONTENT_LENGTH))  {
                     contentLength = getContentLength(headers, 0);
                 } else {
                     int globalIndex = indexOf(buffer, buffer.readerIndex(),
@@ -219,10 +220,14 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
     }
 
     private static long getContentLength(StompHeaders headers, long defaultValue) {
-        String contentLength = headers.get(StompHeaders.CONTENT_LENGTH);
+        CharSequence contentLength = headers.get(StompHeaders.CONTENT_LENGTH);
         if (contentLength != null) {
             try {
-                return Long.parseLong(contentLength);
+                if (contentLength instanceof AsciiString) {
+                    return ((AsciiString) contentLength).parseLong();
+                } else {
+                    return Long.parseLong(contentLength.toString());
+                }
             } catch (NumberFormatException ignored) {
                 return defaultValue;
             }

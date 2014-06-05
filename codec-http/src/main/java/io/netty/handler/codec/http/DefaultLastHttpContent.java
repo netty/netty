@@ -17,6 +17,8 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.DefaultHttpHeaders.NonValidatingTextHeaders;
+import io.netty.handler.codec.http.DefaultHttpHeaders.ValidatingTextHeaders;
 import io.netty.util.internal.StringUtil;
 
 import java.util.Map;
@@ -39,7 +41,8 @@ public class DefaultLastHttpContent extends DefaultHttpContent implements LastHt
 
     public DefaultLastHttpContent(ByteBuf content, boolean validateHeaders) {
         super(content);
-        trailingHeaders = new TrailingHeaders(validateHeaders);
+        trailingHeaders = new DefaultHttpHeaders(
+                validateHeaders? new ValidatingTrailingTextHeaders() : new NonValidatingTextHeaders());
         this.validateHeaders = validateHeaders;
     }
 
@@ -106,20 +109,17 @@ public class DefaultLastHttpContent extends DefaultHttpContent implements LastHt
         }
     }
 
-    private static final class TrailingHeaders extends DefaultHttpHeaders {
-        TrailingHeaders(boolean validate) {
-            super(validate);
-        }
-
+    private static final class ValidatingTrailingTextHeaders extends ValidatingTextHeaders {
         @Override
-        void validateHeaderName0(CharSequence name) {
-            super.validateHeaderName0(name);
-            if (equalsIgnoreCase(HttpHeaders.Names.CONTENT_LENGTH, name) ||
-                    equalsIgnoreCase(HttpHeaders.Names.TRANSFER_ENCODING, name) ||
-                    equalsIgnoreCase(HttpHeaders.Names.TRAILER, name)) {
+        protected CharSequence convertName(CharSequence name) {
+            name = super.convertName(name);
+            if (HttpHeaders.equalsIgnoreCase(HttpHeaders.Names.CONTENT_LENGTH, name) ||
+                    HttpHeaders.equalsIgnoreCase(HttpHeaders.Names.TRANSFER_ENCODING, name) ||
+                    HttpHeaders.equalsIgnoreCase(HttpHeaders.Names.TRAILER, name)) {
                 throw new IllegalArgumentException(
                         "prohibited trailing header: " + name);
             }
+            return name;
         }
     }
 }
