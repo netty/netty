@@ -34,7 +34,7 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
 
     @Override
     protected void decode(ChannelHandlerContext ctx, DatagramPacket packet, List<Object> out) throws Exception {
-        ByteBuf buf = packet.content().retain();
+        ByteBuf buf = packet.content();
 
         int id = buf.readUnsignedShort();
 
@@ -137,7 +137,7 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
         int len = buf.readUnsignedShort();
 
         int readerIndex = buf.readerIndex();
-        ByteBuf payload = buf.duplicate().setIndex(readerIndex, readerIndex + len);
+        ByteBuf payload = buf.duplicate().setIndex(readerIndex, readerIndex + len).retain();
         buf.readerIndex(readerIndex + len);
         return new DnsResource(name, type, aClass, ttl, payload);
     }

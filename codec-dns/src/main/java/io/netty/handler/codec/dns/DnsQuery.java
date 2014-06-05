@@ -68,6 +68,29 @@ public class DnsQuery extends DnsMessage<DnsQueryHeader> {
     }
 
     @Override
+    public DnsQuery touch(Object hint) {
+        super.touch(hint);
+        return this;
+    }
+
+    @Override
+    public DnsMessage<DnsQueryHeader> retain() {
+        return super.retain();
+    }
+
+    @Override
+    public DnsQuery retain(int increment) {
+        super.retain(increment);
+        return this;
+    }
+
+    @Override
+    public DnsQuery touch() {
+        super.touch();
+        return this;
+    }
+
+    @Override
     protected DnsQueryHeader newHeader(int id) {
         return new DnsQueryHeader(this, id);
     }

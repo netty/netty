@@ -65,6 +65,30 @@ public final class DnsResponse extends DnsMessage<DnsResponseHeader> {
     }
 
     @Override
+    public DnsResponse touch(Object hint) {
+        super.touch(hint);
+        return this;
+    }
+
+    @Override
+    public DnsResponse retain() {
+        super.retain();
+        return this;
+    }
+
+    @Override
+    public DnsResponse retain(int increment) {
+        super.retain(increment);
+        return this;
+    }
+
+    @Override
+    public DnsResponse touch() {
+        super.touch();
+        return this;
+    }
+
+    @Override
     protected DnsResponseHeader newHeader(int id) {
         return new DnsResponseHeader(this, id);
     }
