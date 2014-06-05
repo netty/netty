@@ -62,6 +62,7 @@ public class DnsResponseTest {
             Assert.assertEquals("Invalid resource count,  expected: " + raw.getUnsignedShort(10) + ", actual: "
                     + decoded.additionalResources().size(), raw.getUnsignedShort(10),
                     decoded.additionalResources().size());
+            decoded.release();
         }
     }
 }
