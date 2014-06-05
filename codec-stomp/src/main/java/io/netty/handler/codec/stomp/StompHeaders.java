@@ -17,7 +17,7 @@ package io.netty.handler.codec.stomp;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -48,7 +48,7 @@ public class StompHeaders {
     public static final String CONTENT_LENGTH = "content-length";
     public static final String CONTENT_TYPE = "content-type";
 
-    private final Map<String, List<String>> headers = new HashMap<String, List<String>>();
+    private final Map<String, List<String>> headers = new LinkedHashMap<String, List<String>>();
 
     public boolean has(String key) {
         List<String> values = headers.get(key);
