@@ -22,11 +22,6 @@ package io.netty.handler.codec.dns;
  */
 public final class DnsResponseHeader extends DnsHeader {
 
-    private int readQuestions;
-    private int readAnswers;
-    private int readAuthorityResources;
-    private int readAdditionalResources;
-
     private boolean authoritativeAnswer;
     private boolean truncated;
     private boolean recursionAvailable;
@@ -84,36 +79,6 @@ public final class DnsResponseHeader extends DnsHeader {
      */
     public DnsResponseCode getResponseCode() {
         return responseCode;
-    }
-
-    /**
-     * Returns the number of questions to read for this DNS response packet.
-     */
-    public int getReadQuestions() {
-        return readQuestions;
-    }
-
-    /**
-     * Returns the number of answers to read for this DNS response packet.
-     */
-    public int getReadAnswers() {
-        return readAnswers;
-    }
-
-    /**
-     * Returns the number of authority resource records to read for this DNS
-     * response packet.
-     */
-    public int getReadAuthorityResources() {
-        return readAuthorityResources;
-    }
-
-    /**
-     * Returns the number of additional resource records to read for this DNS
-     * response packet.
-     */
-    public int getReadAdditionalResources() {
-        return readAdditionalResources;
     }
 
     /**
@@ -180,54 +145,6 @@ public final class DnsResponseHeader extends DnsHeader {
      */
     public DnsResponseHeader setResponseCode(DnsResponseCode responseCode) {
         this.responseCode = responseCode;
-        return this;
-    }
-
-    /**
-     * Sets the number of questions that should be read after this header has
-     * been decoded.
-     *
-     * @param readQuestions
-     *            the number of questions to read
-     */
-    public DnsResponseHeader setReadQuestions(int readQuestions) {
-        this.readQuestions = readQuestions;
-        return this;
-    }
-
-    /**
-     * Sets the number of answers that should be read after this header has been
-     * decoded.
-     *
-     * @param readAnswers
-     *            the number of answers to read
-     */
-    public DnsResponseHeader setReadAnswers(int readAnswers) {
-        this.readAnswers = readAnswers;
-        return this;
-    }
-
-    /**
-     * Sets the number of authority resources to be read after this header has
-     * been decoded.
-     *
-     * @param readAuthorityResources
-     *            the number of authority resources to read
-     */
-    public DnsResponseHeader setReadAuthorityResources(int readAuthorityResources) {
-        this.readAuthorityResources = readAuthorityResources;
-        return this;
-    }
-
-    /**
-     * Sets the number of additional resources to be read after this header has
-     * been decoded.
-     *
-     * @param readAdditionalResources
-     *            the number of additional resources to read
-     */
-    public DnsResponseHeader setReadAdditionalResources(int readAdditionalResources) {
-        this.readAdditionalResources = readAdditionalResources;
         return this;
     }
 

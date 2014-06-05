@@ -39,8 +39,8 @@ public class DnsQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
     @Override
     protected void encode(ChannelHandlerContext ctx, DnsQuery query, List<Object> out) throws Exception {
         ByteBuf buf = ctx.alloc().buffer();
-        encodeHeader(query.getHeader(), buf);
-        List<DnsQuestion> questions = query.getQuestions();
+        encodeHeader(query.header(), buf);
+        List<DnsQuestion> questions = query.questions();
         for (DnsQuestion question : questions) {
             encodeQuestion(question, CharsetUtil.UTF_8, buf);
         }

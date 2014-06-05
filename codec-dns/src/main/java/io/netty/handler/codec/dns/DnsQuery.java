@@ -29,11 +29,11 @@ public class DnsQuery extends DnsMessage<DnsQueryHeader> {
      * Constructs a DNS query. By default recursion will be toggled on.
      */
     public DnsQuery(int id, InetSocketAddress recipient) {
+        super(id);
         if (recipient == null) {
             throw new NullPointerException("recipient");
         }
         this.recipient = recipient;
-        setHeader(new DnsQueryHeader(this, id));
     }
 
     /**
@@ -68,8 +68,7 @@ public class DnsQuery extends DnsMessage<DnsQueryHeader> {
     }
 
     @Override
-    public DnsQuery setHeader(DnsQueryHeader header) {
-        super.setHeader(header);
-        return this;
+    protected DnsQueryHeader newHeader(int id) {
+        return new DnsQueryHeader(this, id);
     }
 }

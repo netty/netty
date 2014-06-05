@@ -25,7 +25,8 @@ public final class DnsResponse extends DnsMessage<DnsResponseHeader> {
 
     private final InetSocketAddress sender;
 
-    public DnsResponse(InetSocketAddress sender) {
+    public DnsResponse(int id, InetSocketAddress sender) {
+        super(id);
         if (sender == null) {
             throw new NullPointerException("sender");
         }
@@ -64,8 +65,7 @@ public final class DnsResponse extends DnsMessage<DnsResponseHeader> {
     }
 
     @Override
-    public DnsResponse setHeader(DnsResponseHeader header) {
-        super.setHeader(header);
-        return this;
+    protected DnsResponseHeader newHeader(int id) {
+        return new DnsResponseHeader(this, id);
     }
 }

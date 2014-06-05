@@ -51,17 +51,17 @@ public class DnsResponseTest {
             packet.retain().readerIndex(0);
             ByteBuf raw = Unpooled.wrappedBuffer(p);
             Assert.assertEquals("Invalid id, expected: " + raw.getUnsignedShort(0) + ", actual: "
-                    + decoded.getHeader().getId(), raw.getUnsignedShort(0), decoded.getHeader().getId());
+                    + decoded.header().getId(), raw.getUnsignedShort(0), decoded.header().getId());
             Assert.assertEquals("Invalid resource count,  expected: " + raw.getUnsignedShort(4) + ", actual: "
-                    + decoded.getQuestions().size(), raw.getUnsignedShort(4), decoded.getQuestions().size());
+                    + decoded.questions().size(), raw.getUnsignedShort(4), decoded.questions().size());
             Assert.assertEquals("Invalid resource count,  expected: " + raw.getUnsignedShort(6) + ", actual: "
-                    + decoded.getAnswers().size(), raw.getUnsignedShort(6), decoded.getAnswers().size());
+                    + decoded.answers().size(), raw.getUnsignedShort(6), decoded.answers().size());
             Assert.assertEquals("Invalid resource count,  expected: " + raw.getUnsignedShort(8) + ", actual: "
-                    + decoded.getAuthorityResources().size(), raw.getUnsignedShort(8), decoded.getAuthorityResources()
+                    + decoded.authorityResources().size(), raw.getUnsignedShort(8), decoded.authorityResources()
                     .size());
             Assert.assertEquals("Invalid resource count,  expected: " + raw.getUnsignedShort(10) + ", actual: "
-                    + decoded.getAdditionalResources().size(), raw.getUnsignedShort(10),
-                    decoded.getAdditionalResources().size());
+                    + decoded.additionalResources().size(), raw.getUnsignedShort(10),
+                    decoded.additionalResources().size());
         }
     }
 }

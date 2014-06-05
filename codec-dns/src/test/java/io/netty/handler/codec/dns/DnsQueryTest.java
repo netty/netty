@@ -39,13 +39,13 @@ public class DnsQueryTest {
         queries.add(new DnsQuery(1, addr).addQuestion(new DnsQuestion("example.com", DnsEntry.TYPE_CNAME)));
 
         for (DnsQuery query: queries) {
-            Assert.assertEquals("Invalid question count, expected 1.", 1, query.getHeader().questionCount());
-            Assert.assertEquals("Invalid answer count, expected 0.", 0, query.getHeader().answerCount());
-            Assert.assertEquals("Invalid authority resource record count, expected 0.", 0, query.getHeader()
+            Assert.assertEquals("Invalid question count, expected 1.", 1, query.header().questionCount());
+            Assert.assertEquals("Invalid answer count, expected 0.", 0, query.header().answerCount());
+            Assert.assertEquals("Invalid authority resource record count, expected 0.", 0, query.header()
                     .authorityResourceCount());
-            Assert.assertEquals("Invalid additional resource record count, expected 0.", 0, query.getHeader()
+            Assert.assertEquals("Invalid additional resource record count, expected 0.", 0, query.header()
                     .additionalResourceCount());
-            Assert.assertEquals("Invalid type, should be TYPE_QUERY (0)", DnsHeader.TYPE_QUERY, query.getHeader()
+            Assert.assertEquals("Invalid type, should be TYPE_QUERY (0)", DnsHeader.TYPE_QUERY, query.header()
                     .getType());
             embedder.writeOutbound(query);
             DatagramPacket packet = embedder.readOutbound();

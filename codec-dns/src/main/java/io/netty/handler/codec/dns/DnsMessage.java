@@ -30,22 +30,24 @@ public abstract class DnsMessage<H extends DnsHeader> {
     private List<DnsResource> authority;
     private List<DnsResource> additional;
 
-    private H header;
+    private final H header;
 
     // Only allow to extend from same package
-    DnsMessage() { }
+    DnsMessage(int id) {
+        header = newHeader(id);
+    }
 
     /**
      * Returns the header belonging to this message.
      */
-    public H getHeader() {
+    public H header() {
         return header;
     }
 
     /**
      * Returns a list of all the questions in this message.
      */
-    public List<DnsQuestion> getQuestions() {
+    public List<DnsQuestion> questions() {
         if (questions == null) {
             return Collections.emptyList();
         }
@@ -55,7 +57,7 @@ public abstract class DnsMessage<H extends DnsHeader> {
     /**
      * Returns a list of all the answer resource records in this message.
      */
-    public List<DnsResource> getAnswers() {
+    public List<DnsResource> answers() {
         if (answers == null) {
             return Collections.emptyList();
         }
@@ -65,7 +67,7 @@ public abstract class DnsMessage<H extends DnsHeader> {
     /**
      * Returns a list of all the authority resource records in this message.
      */
-    public List<DnsResource> getAuthorityResources() {
+    public List<DnsResource> authorityResources() {
         if (authority == null) {
             return Collections.emptyList();
         }
@@ -75,7 +77,7 @@ public abstract class DnsMessage<H extends DnsHeader> {
     /**
      * Returns a list of all the additional resource records in this message.
      */
-    public List<DnsResource> getAdditionalResources() {
+    public List<DnsResource> additionalResources() {
         if (additional == null) {
             return Collections.emptyList();
         }
@@ -142,15 +144,5 @@ public abstract class DnsMessage<H extends DnsHeader> {
         return this;
     }
 
-    /**
-     * Sets this message's {@link DnsHeader}.
-     *
-     * @param header
-     *            the header being attached to this message
-     * @return the message to allow method chaining
-     */
-    public DnsMessage<H> setHeader(H header) {
-        this.header = header;
-        return this;
-    }
+    protected abstract H newHeader(int id);
 }

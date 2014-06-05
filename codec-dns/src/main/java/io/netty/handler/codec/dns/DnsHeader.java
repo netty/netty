@@ -63,14 +63,14 @@ public class DnsHeader {
      * Returns the number of questions in the {@link DnsMessage}.
      */
     public int questionCount() {
-        return parent.getQuestions().size();
+        return parent.questions().size();
     }
 
     /**
      * Returns the number of answer resource records in the {@link DnsMessage}.
      */
     public int answerCount() {
-        return parent.getAnswers().size();
+        return parent.answers().size();
     }
 
     /**
@@ -78,7 +78,7 @@ public class DnsHeader {
      * {@link DnsMessage}.
      */
     public int authorityResourceCount() {
-        return parent.getAuthorityResources().size();
+        return parent.authorityResources().size();
     }
 
     /**
@@ -86,7 +86,7 @@ public class DnsHeader {
      * {@link DnsMessage}.
      */
     public int additionalResourceCount() {
-        return parent.getAdditionalResources().size();
+        return parent.additionalResources().size();
     }
 
     /**

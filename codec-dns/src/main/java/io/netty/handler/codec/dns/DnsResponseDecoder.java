@@ -35,10 +35,27 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
     @Override
     protected void decode(ChannelHandlerContext ctx, DatagramPacket packet, List<Object> out) throws Exception {
         ByteBuf buf = packet.content().retain();
-        DnsResponse response = new DnsResponse(packet.sender());
-        DnsResponseHeader header = decodeHeader(response, buf);
-        response.setHeader(header);
-        for (int i = 0; i < header.getReadQuestions(); i++) {
+
+        int id = buf.readUnsignedShort();
+
+        DnsResponse response = new DnsResponse(id, packet.sender());
+        DnsResponseHeader header = response.header();
+        int flags = buf.readUnsignedShort();
+        header.setType(flags >> 15);
+        header.setOpcode(flags >> 11 & 0xf);
+        header.setRecursionDesired((flags >> 8 & 1) == 1);
+        header.setAuthoritativeAnswer((flags >> 10 & 1) == 1);
+        header.setTruncated((flags >> 9 & 1) == 1);
+        header.setRecursionAvailable((flags >> 7 & 1) == 1);
+        header.setZ(flags >> 4 & 0x7);
+        header.setResponseCode(DnsResponseCode.valueOf(flags & 0xf));
+
+        int questions = buf.readUnsignedShort();
+        int answers = buf.readUnsignedShort();
+        int authorities = buf.readUnsignedShort();
+        int additionals = buf.readUnsignedShort();
+
+        for (int i = 0; i < questions; i++) {
             response.addQuestion(decodeQuestion(buf));
         }
         if (header.getResponseCode() != DnsResponseCode.NOERROR) {
@@ -46,13 +63,13 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
             out.add(response);
             return;
         }
-        for (int i = 0; i < header.getReadAnswers(); i++) {
+        for (int i = 0; i < answers; i++) {
             response.addAnswer(decodeResource(buf));
         }
-        for (int i = 0; i < header.getReadAuthorityResources(); i++) {
+        for (int i = 0; i < authorities; i++) {
             response.addAuthorityResource(decodeResource(buf));
         }
-        for (int i = 0; i < header.getReadAdditionalResources(); i++) {
+        for (int i = 0; i < additionals; i++) {
             response.addAdditionalResource(decodeResource(buf));
         }
         out.add(response);
@@ -124,34 +141,4 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
         buf.readerIndex(readerIndex + len);
         return new DnsResource(name, type, aClass, ttl, payload);
     }
-
-    /**
-     * Decodes a DNS response header, given a DNS packet in a byte buffer.
-     *
-     * @param parent
-     *            the parent {@link DnsResponse} to this header
-     * @param buf
-     *            the byte buffer containing the DNS packet
-     * @return a {@link DnsResponseHeader} containing the response's header
-     *         information
-     */
-    private static DnsResponseHeader decodeHeader(DnsResponse parent, ByteBuf buf) {
-        int id = buf.readUnsignedShort();
-        DnsResponseHeader header = new DnsResponseHeader(parent, id);
-        int flags = buf.readUnsignedShort();
-        header.setType(flags >> 15);
-        header.setOpcode(flags >> 11 & 0xf);
-        header.setRecursionDesired((flags >> 8 & 1) == 1);
-        header.setAuthoritativeAnswer((flags >> 10 & 1) == 1);
-        header.setTruncated((flags >> 9 & 1) == 1);
-        header.setRecursionAvailable((flags >> 7 & 1) == 1);
-        header.setZ(flags >> 4 & 0x7);
-        header.setResponseCode(DnsResponseCode.valueOf(flags & 0xf));
-        header.setReadQuestions(buf.readUnsignedShort());
-        header.setReadAnswers(buf.readUnsignedShort());
-        header.setReadAuthorityResources(buf.readUnsignedShort());
-        header.setReadAdditionalResources(buf.readUnsignedShort());
-        return header;
-    }
-
 }
