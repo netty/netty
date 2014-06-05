@@ -43,8 +43,8 @@ public class StompSubframeEncoderTest {
     public void testFrameAndContentEncoding() {
         StompHeadersSubframe frame = new DefaultStompHeadersSubframe(StompCommand.CONNECT);
         StompHeaders headers = frame.headers();
-        headers.set(StompHeaders.ACCEPT_VERSION, "1.1,1.2");
         headers.set(StompHeaders.HOST, "stomp.github.org");
+        headers.set(StompHeaders.ACCEPT_VERSION, "1.1,1.2");
         channel.writeOutbound(frame);
         channel.writeOutbound(LastStompContentSubframe.EMPTY_LAST_CONTENT);
         ByteBuf aggregatedBuffer = Unpooled.buffer();
