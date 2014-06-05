@@ -17,6 +17,9 @@ package io.netty.handler.codec.stomp;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.AsciiHeadersEncoder;
+import io.netty.handler.codec.AsciiHeadersEncoder.NewlineType;
+import io.netty.handler.codec.AsciiHeadersEncoder.SeparatorType;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.util.CharsetUtil;
 
@@ -61,18 +64,9 @@ public class StompSubframeEncoder extends MessageToMessageEncoder<StompSubframe>
         ByteBuf buf = ctx.alloc().buffer();
 
         buf.writeBytes(frame.command().toString().getBytes(CharsetUtil.US_ASCII));
-        buf.writeByte(StompConstants.CR).writeByte(StompConstants.LF);
-
-        StompHeaders headers = frame.headers();
-        for (String k: headers.keySet()) {
-            List<String> values = headers.getAll(k);
-            for (String v: values) {
-                buf.writeBytes(k.getBytes(CharsetUtil.US_ASCII)).
-                        writeByte(StompConstants.COLON).writeBytes(v.getBytes(CharsetUtil.US_ASCII));
-                buf.writeByte(StompConstants.CR).writeByte(StompConstants.LF);
-            }
-        }
-        buf.writeByte(StompConstants.CR).writeByte(StompConstants.LF);
+        buf.writeByte(StompConstants.LF);
+        frame.headers().forEachEntry(new AsciiHeadersEncoder(buf, SeparatorType.COLON, NewlineType.LF));
+        buf.writeByte(StompConstants.LF);
         return buf;
     }
 }

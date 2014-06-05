@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.AsciiString;
 
 import java.text.ParseException;
 import java.util.Calendar;
@@ -1147,115 +1148,6 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     }
 
     /**
-     * Validates the name of a header
-     *
-     * @param headerName The header name being validated
-     */
-    static void validateHeaderName(CharSequence headerName) {
-        //Check to see if the name is null
-        if (headerName == null) {
-            throw new NullPointerException("Header names cannot be null");
-        }
-        //Go through each of the characters in the name
-        for (int index = 0; index < headerName.length(); index ++) {
-            //Actually get the character
-            char character = headerName.charAt(index);
-
-            //Check to see if the character is not an ASCII character
-            if (character > 127) {
-                throw new IllegalArgumentException(
-                        "Header name cannot contain non-ASCII characters: " + headerName);
-            }
-
-            //Check for prohibited characters.
-            switch (character) {
-                case '\t': case '\n': case 0x0b: case '\f': case '\r':
-                case ' ':  case ',':  case ':':  case ';':  case '=':
-                    throw new IllegalArgumentException(
-                            "Header name cannot contain the following prohibited characters: " +
-                                    "=,;: \\t\\r\\n\\v\\f: " + headerName);
-            }
-        }
-    }
-
-    /**
-     * Validates the specified header value
-     *
-     * @param headerValue The value being validated
-     */
-    static void validateHeaderValue(CharSequence headerValue) {
-        //Check to see if the value is null
-        if (headerValue == null) {
-            throw new NullPointerException("Header values cannot be null");
-        }
-
-        /*
-         * Set up the state of the validation
-         *
-         * States are as follows:
-         *
-         * 0: Previous character was neither CR nor LF
-         * 1: The previous character was CR
-         * 2: The previous character was LF
-         */
-        int state = 0;
-
-        //Start looping through each of the character
-
-        for (int index = 0; index < headerValue.length(); index ++) {
-            char character = headerValue.charAt(index);
-
-            //Check the absolutely prohibited characters.
-            switch (character) {
-                case 0x0b: // Vertical tab
-                    throw new IllegalArgumentException(
-                            "Header value contains a prohibited character '\\v': " + headerValue);
-                case '\f':
-                    throw new IllegalArgumentException(
-                            "Header value contains a prohibited character '\\f': " + headerValue);
-            }
-
-            // Check the CRLF (HT | SP) pattern
-            switch (state) {
-                case 0:
-                    switch (character) {
-                        case '\r':
-                            state = 1;
-                            break;
-                        case '\n':
-                            state = 2;
-                            break;
-                    }
-                    break;
-                case 1:
-                    switch (character) {
-                        case '\n':
-                            state = 2;
-                            break;
-                        default:
-                            throw new IllegalArgumentException(
-                                    "Only '\\n' is allowed after '\\r': " + headerValue);
-                    }
-                    break;
-                case 2:
-                    switch (character) {
-                        case '\t': case ' ':
-                            state = 0;
-                            break;
-                        default:
-                            throw new IllegalArgumentException(
-                                    "Only ' ' and '\\t' are allowed after '\\n': " + headerValue);
-                    }
-            }
-        }
-
-        if (state != 0) {
-            throw new IllegalArgumentException(
-                    "Header value must not end with '\\r' or '\\n':" + headerValue);
-        }
-    }
-
-    /**
      * Checks to see if the transfer encoding in a specified {@link HttpMessage} is chunked
      *
      * @param message The message to check
@@ -1329,28 +1221,6 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
         return true;
     }
 
-    static int hash(CharSequence name) {
-        if (name instanceof HttpHeaderEntity) {
-            return ((HttpHeaderEntity) name).hash();
-        }
-        int h = 0;
-        for (int i = name.length() - 1; i >= 0; i --) {
-            char c = name.charAt(i);
-            if (c >= 'A' && c <= 'Z') {
-                c += 32;
-            }
-            h = 31 * h + c;
-        }
-
-        if (h > 0) {
-            return h;
-        } else if (h == Integer.MIN_VALUE) {
-            return Integer.MAX_VALUE;
-        } else {
-            return -h;
-        }
-    }
-
     static void encode(HttpHeaders headers, ByteBuf buf) {
         if (headers instanceof DefaultHttpHeaders) {
             ((DefaultHttpHeaders) headers).encode(buf);
@@ -1361,7 +1231,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
         }
     }
 
-    static void encode(CharSequence key, CharSequence value, ByteBuf buf) {
+    private static void encode(CharSequence key, CharSequence value, ByteBuf buf) {
         encodeAscii(key, buf);
         buf.writeBytes(HEADER_SEPERATOR);
         encodeAscii(value, buf);
@@ -1369,8 +1239,8 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     }
 
     public static void encodeAscii(CharSequence seq, ByteBuf buf) {
-        if (seq instanceof HttpHeaderEntity) {
-            ((HttpHeaderEntity) seq).encode(buf);
+        if (seq instanceof AsciiString) {
+            ((AsciiString) seq).copy(0, buf, seq.length());
         } else {
             encodeAscii0(seq, buf);
         }
@@ -1391,7 +1261,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
         if (name == null) {
             throw new NullPointerException("name");
         }
-        return new HttpHeaderEntity(name);
+        return new AsciiString(name);
     }
 
     protected HttpHeaders() { }
@@ -1621,14 +1491,14 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     /**
      * @see {@link #contains(CharSequence, CharSequence, boolean)}
      */
-    public boolean contains(String name, String value, boolean ignoreCaseValue) {
+    public boolean contains(String name, String value, boolean ignoreCase) {
         List<String> values = getAll(name);
         if (values.isEmpty()) {
             return false;
         }
 
         for (String v: values) {
-            if (ignoreCaseValue) {
+            if (ignoreCase) {
                 if (equalsIgnoreCase(v, value)) {
                     return true;
                 }
@@ -1644,12 +1514,12 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     /**
      * Returns {@code true} if a header with the name and value exists.
      *
-     * @param name              the headername
-     * @param value             the value
-     * @param ignoreCaseValue   {@code true} if case should be ignored
-     * @return contains         {@code true} if it contains it {@code false} otherwise
+     * @param name         the headername
+     * @param value        the value
+     * @param ignoreCase   {@code true} if case should be ignored
+     * @return contains    {@code true} if it contains it {@code false} otherwise
      */
-    public boolean contains(CharSequence name, CharSequence value, boolean ignoreCaseValue) {
-        return contains(name.toString(), value.toString(), ignoreCaseValue);
+    public boolean contains(CharSequence name, CharSequence value, boolean ignoreCase) {
+        return contains(name.toString(), value.toString(), ignoreCase);
     }
 }

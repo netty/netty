@@ -15,13 +15,12 @@
  */
 package io.netty.handler.codec.http;
 
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.List;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.CoreMatchers.*;
+import static org.junit.Assert.*;
 
 public class HttpHeadersTest {
 
@@ -29,8 +28,9 @@ public class HttpHeadersTest {
     public void testRemoveTransferEncodingIgnoreCase() {
         HttpMessage message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         message.headers().set(HttpHeaders.Names.TRANSFER_ENCODING, "Chunked");
+        assertFalse(message.headers().isEmpty());
         HttpHeaders.removeTransferEncodingChunked(message);
-        Assert.assertTrue(message.headers().isEmpty());
+        assertTrue(message.headers().isEmpty());
     }
 
     // Test for https://github.com/netty/netty/issues/1690
@@ -40,12 +40,12 @@ public class HttpHeadersTest {
         headers.add("Foo", "1");
         headers.add("Foo", "2");
 
-        Assert.assertEquals("1", headers.get("Foo"));
+        assertEquals("1", headers.get("Foo"));
 
         List<String> values = headers.getAll("Foo");
-        Assert.assertEquals(2, values.size());
-        Assert.assertEquals("1", values.get(0));
-        Assert.assertEquals("2", values.get(1));
+        assertEquals(2, values.size());
+        assertEquals("1", values.get(0));
+        assertEquals("2", values.get(1));
     }
 
     @Test
