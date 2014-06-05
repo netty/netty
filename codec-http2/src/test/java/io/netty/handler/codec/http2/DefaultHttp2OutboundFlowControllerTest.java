@@ -41,9 +41,9 @@ import org.mockito.MockitoAnnotations;
  */
 public class DefaultHttp2OutboundFlowControllerTest {
     private static final int STREAM_A = 1;
-    private static final int STREAM_B = 2;
-    private static final int STREAM_C = 3;
-    private static final int STREAM_D = 4;
+    private static final int STREAM_B = 3;
+    private static final int STREAM_C = 5;
+    private static final int STREAM_D = 7;
 
     private DefaultHttp2OutboundFlowController controller;
 
@@ -53,15 +53,21 @@ public class DefaultHttp2OutboundFlowControllerTest {
     @Mock
     private FrameWriter frameWriter;
 
+    private DefaultHttp2Connection connection;
+
     @Before
     public void setup() throws Http2Exception {
         MockitoAnnotations.initMocks(this);
 
-        controller = new DefaultHttp2OutboundFlowController();
-        controller.addStream(STREAM_A, 0, DEFAULT_PRIORITY_WEIGHT, false);
-        controller.addStream(STREAM_B, 0, DEFAULT_PRIORITY_WEIGHT, false);
-        controller.addStream(STREAM_C, STREAM_A, DEFAULT_PRIORITY_WEIGHT, false);
-        controller.addStream(STREAM_D, STREAM_A, DEFAULT_PRIORITY_WEIGHT, false);
+        connection = new DefaultHttp2Connection(false, false);
+        controller = new DefaultHttp2OutboundFlowController(connection);
+
+        connection.local().createStream(STREAM_A, false);
+        connection.local().createStream(STREAM_B, false);
+        Http2Stream streamC = connection.local().createStream(STREAM_C, false);
+        Http2Stream streamD = connection.local().createStream(STREAM_D, false);
+        streamC.setPriority(STREAM_A, DEFAULT_PRIORITY_WEIGHT, false);
+        streamD.setPriority(STREAM_A, DEFAULT_PRIORITY_WEIGHT, false);
     }
 
     @Test
@@ -236,8 +242,8 @@ public class DefaultHttp2OutboundFlowControllerTest {
     @Test
     public void blockedStreamShouldSpreadDataToChildren() throws Http2Exception {
         // Block the connection
-        controller.updateOutboundWindowSize(CONNECTION_STREAM_ID,
-                -DEFAULT_FLOW_CONTROL_WINDOW_SIZE);
+        controller
+                .updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_FLOW_CONTROL_WINDOW_SIZE);
 
         // Block stream A
         controller.updateOutboundWindowSize(STREAM_A, -DEFAULT_FLOW_CONTROL_WINDOW_SIZE);
@@ -288,8 +294,8 @@ public class DefaultHttp2OutboundFlowControllerTest {
     @Test
     public void childrenShouldNotSendDataUntilParentBlocked() throws Http2Exception {
         // Block the connection
-        controller.updateOutboundWindowSize(CONNECTION_STREAM_ID,
-                -DEFAULT_FLOW_CONTROL_WINDOW_SIZE);
+        controller
+                .updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_FLOW_CONTROL_WINDOW_SIZE);
 
         // Block stream B
         controller.updateOutboundWindowSize(STREAM_B, -DEFAULT_FLOW_CONTROL_WINDOW_SIZE);
@@ -331,8 +337,8 @@ public class DefaultHttp2OutboundFlowControllerTest {
     @Test
     public void parentShouldWaterFallDataToChildren() throws Http2Exception {
         // Block the connection
-        controller.updateOutboundWindowSize(CONNECTION_STREAM_ID,
-                -DEFAULT_FLOW_CONTROL_WINDOW_SIZE);
+        controller
+                .updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_FLOW_CONTROL_WINDOW_SIZE);
 
         // Block stream B
         controller.updateOutboundWindowSize(STREAM_B, -DEFAULT_FLOW_CONTROL_WINDOW_SIZE);
@@ -378,8 +384,9 @@ public class DefaultHttp2OutboundFlowControllerTest {
      *     C   D
      * </pre>
      *
-     * We then re-prioritize D so that it's directly off of the connection and verify that A and D split the
-     * written bytes between them.
+     * We then re-prioritize D so that it's directly off of the connection and verify that A and D
+     * split the written bytes between them.
+     *
      * <pre>
      *           0
      *          /|\
@@ -392,8 +399,8 @@ public class DefaultHttp2OutboundFlowControllerTest {
     @Test
     public void reprioritizeShouldAdjustOutboundFlow() throws Http2Exception {
         // Block the connection
-        controller.updateOutboundWindowSize(CONNECTION_STREAM_ID,
-                -DEFAULT_FLOW_CONTROL_WINDOW_SIZE);
+        controller
+                .updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_FLOW_CONTROL_WINDOW_SIZE);
 
         // Block stream B
         controller.updateOutboundWindowSize(STREAM_B, -DEFAULT_FLOW_CONTROL_WINDOW_SIZE);
@@ -409,7 +416,7 @@ public class DefaultHttp2OutboundFlowControllerTest {
         verifyNoWrite(STREAM_D);
 
         // Re-prioritize D as a direct child of the connection.
-        controller.updateStream(STREAM_D, 0, DEFAULT_PRIORITY_WEIGHT, false);
+        setPriority(STREAM_D, 0, DEFAULT_PRIORITY_WEIGHT, false);
 
         // Verify that the entire frame was sent.
         controller.updateOutboundWindowSize(CONNECTION_STREAM_ID, 10);
@@ -425,8 +432,8 @@ public class DefaultHttp2OutboundFlowControllerTest {
     }
 
     /**
-     * In this test, we root all streams at the connection, and then verify that data
-     * is split appropriately based on weight (all available data is the same).
+     * In this test, we root all streams at the connection, and then verify that data is split
+     * appropriately based on weight (all available data is the same).
      *
      * <pre>
      *           0
@@ -437,14 +444,14 @@ public class DefaultHttp2OutboundFlowControllerTest {
     @Test
     public void writeShouldPreferHighestWeight() throws Http2Exception {
         // Block the connection
-        controller.updateOutboundWindowSize(CONNECTION_STREAM_ID,
-                -DEFAULT_FLOW_CONTROL_WINDOW_SIZE);
+        controller
+                .updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_FLOW_CONTROL_WINDOW_SIZE);
 
         // Root the streams at the connection and assign weights.
-        controller.updateStream(STREAM_A, 0, (short) 50, false);
-        controller.updateStream(STREAM_B, 0, (short) 200, false);
-        controller.updateStream(STREAM_C, 0, (short) 100, false);
-        controller.updateStream(STREAM_D, 0, (short) 100, false);
+        setPriority(STREAM_A, 0, (short) 50, false);
+        setPriority(STREAM_B, 0, (short) 200, false);
+        setPriority(STREAM_C, 0, (short) 100, false);
+        setPriority(STREAM_D, 0, (short) 100, false);
 
         // Send a bunch of data on each stream.
         send(STREAM_A, dummyData(1000));
@@ -489,8 +496,8 @@ public class DefaultHttp2OutboundFlowControllerTest {
     }
 
     /**
-     * In this test, we root all streams at the connection, and then verify that data
-     * is split equally among the stream, since they all have the same weight.
+     * In this test, we root all streams at the connection, and then verify that data is split
+     * equally among the stream, since they all have the same weight.
      *
      * <pre>
      *           0
@@ -501,14 +508,14 @@ public class DefaultHttp2OutboundFlowControllerTest {
     @Test
     public void samePriorityShouldWriteEqualData() throws Http2Exception {
         // Block the connection
-        controller.updateOutboundWindowSize(CONNECTION_STREAM_ID,
-                -DEFAULT_FLOW_CONTROL_WINDOW_SIZE);
+        controller
+                .updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_FLOW_CONTROL_WINDOW_SIZE);
 
         // Root the streams at the connection with the same weights.
-        controller.updateStream(STREAM_A, 0, DEFAULT_PRIORITY_WEIGHT, false);
-        controller.updateStream(STREAM_B, 0, DEFAULT_PRIORITY_WEIGHT, false);
-        controller.updateStream(STREAM_C, 0, DEFAULT_PRIORITY_WEIGHT, false);
-        controller.updateStream(STREAM_D, 0, DEFAULT_PRIORITY_WEIGHT, false);
+        setPriority(STREAM_A, 0, DEFAULT_PRIORITY_WEIGHT, false);
+        setPriority(STREAM_B, 0, DEFAULT_PRIORITY_WEIGHT, false);
+        setPriority(STREAM_C, 0, DEFAULT_PRIORITY_WEIGHT, false);
+        setPriority(STREAM_D, 0, DEFAULT_PRIORITY_WEIGHT, false);
 
         // Send a bunch of data on each stream.
         send(STREAM_A, dummyData(400));
@@ -565,6 +572,11 @@ public class DefaultHttp2OutboundFlowControllerTest {
     private void captureWrite(int streamId, ArgumentCaptor<ByteBuf> captor, boolean endStream) {
         verify(frameWriter).writeFrame(eq(streamId), captor.capture(), eq(0), eq(endStream),
                 eq(false), eq(false));
+    }
+
+    private void setPriority(int stream, int parent, int weight, boolean exclusive)
+            throws Http2Exception {
+        connection.stream(stream).setPriority(parent, (short) weight, exclusive);
     }
 
     private ByteBuf dummyData(int size) {

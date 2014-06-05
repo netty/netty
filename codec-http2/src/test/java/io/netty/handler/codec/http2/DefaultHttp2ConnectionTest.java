@@ -15,7 +15,9 @@
 
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import io.netty.handler.codec.http2.Http2Stream.State;
@@ -188,5 +190,230 @@ public class DefaultHttp2ConnectionTest {
         stream.closeLocalSide();
         assertEquals(State.CLOSED, stream.state());
         assertTrue(server.activeStreams().isEmpty());
+    }
+
+    @Test
+    public void prioritizeShouldUseDefaults() throws Exception {
+        Http2Stream stream = client.local().createStream(1, false);
+        assertEquals(1, client.connectionStream().numChildren());
+        assertEquals(stream, client.connectionStream().child(1));
+        assertEquals(DEFAULT_PRIORITY_WEIGHT, stream.weight());
+        assertEquals(0, stream.parent().id());
+        assertEquals(0, stream.numChildren());
+    }
+
+    @Test
+    public void reprioritizeWithNoChangeShouldDoNothing() throws Exception {
+        Http2Stream stream = client.local().createStream(1, false);
+        stream.setPriority(0, DEFAULT_PRIORITY_WEIGHT, false);
+        assertEquals(1, client.connectionStream().numChildren());
+        assertEquals(stream, client.connectionStream().child(1));
+        assertEquals(DEFAULT_PRIORITY_WEIGHT, stream.weight());
+        assertEquals(0, stream.parent().id());
+        assertEquals(0, stream.numChildren());
+    }
+
+    @Test
+    public void insertExclusiveShouldAddNewLevel() throws Exception {
+        Http2Stream streamA = client.local().createStream(1, false);
+        Http2Stream streamB = client.local().createStream(3, false);
+        Http2Stream streamC = client.local().createStream(5, false);
+        Http2Stream streamD = client.local().createStream(7, false);
+
+        streamB.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, false);
+        streamC.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, false);
+        streamD.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, true);
+
+        assertEquals(4, client.numActiveStreams());
+
+        // Level 0
+        Http2Stream p = client.connectionStream();
+        assertEquals(1, p.numChildren());
+        assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
+
+        // Level 1
+        p = p.child(streamA.id());
+        assertNotNull(p);
+        assertEquals(0, p.parent().id());
+        assertEquals(1, p.numChildren());
+        assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
+
+        // Level 2
+        p = p.child(streamD.id());
+        assertNotNull(p);
+        assertEquals(streamA.id(), p.parent().id());
+        assertEquals(2, p.numChildren());
+        assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
+
+        // Level 3
+        p = p.child(streamB.id());
+        assertNotNull(p);
+        assertEquals(streamD.id(), p.parent().id());
+        assertEquals(0, p.numChildren());
+        assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
+        p = p.parent().child(streamC.id());
+        assertNotNull(p);
+        assertEquals(streamD.id(), p.parent().id());
+        assertEquals(0, p.numChildren());
+        assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
+    }
+
+    @Test
+    public void removeShouldRestructureTree() throws Exception {
+        Http2Stream streamA = client.local().createStream(1, false);
+        Http2Stream streamB = client.local().createStream(3, false);
+        Http2Stream streamC = client.local().createStream(5, false);
+        Http2Stream streamD = client.local().createStream(7, false);
+
+        streamB.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, false);
+        streamC.setPriority(streamB.id(), DEFAULT_PRIORITY_WEIGHT, false);
+        streamD.setPriority(streamB.id(), DEFAULT_PRIORITY_WEIGHT, false);
+
+        // Default removal policy will cause it to be removed immediately.
+        streamB.close();
+
+        // Level 0
+        Http2Stream p = client.connectionStream();
+        assertEquals(1, p.numChildren());
+        assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
+
+        // Level 1
+        p = p.child(streamA.id());
+        assertNotNull(p);
+        assertEquals(0, p.parent().id());
+        assertEquals(2, p.numChildren());
+        assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
+
+        // Level 2
+        p = p.child(streamC.id());
+        assertNotNull(p);
+        assertEquals(streamA.id(), p.parent().id());
+        assertEquals(0, p.numChildren());
+        assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
+        p = p.parent().child(streamD.id());
+        assertNotNull(p);
+        assertEquals(streamA.id(), p.parent().id());
+        assertEquals(0, p.numChildren());
+        assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
+    }
+
+    @Test
+    public void circularDependencyShouldRestructureTree() throws Exception {
+        // Using example from http://tools.ietf.org/html/draft-ietf-httpbis-http2-12#section-5.3.3
+        Http2Stream streamA = client.local().createStream(1, false);
+        Http2Stream streamB = client.local().createStream(3, false);
+        Http2Stream streamC = client.local().createStream(5, false);
+        Http2Stream streamD = client.local().createStream(7, false);
+        Http2Stream streamE = client.local().createStream(9, false);
+        Http2Stream streamF = client.local().createStream(11, false);
+
+        streamB.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, false);
+        streamC.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, false);
+        streamD.setPriority(streamC.id(), DEFAULT_PRIORITY_WEIGHT, false);
+        streamE.setPriority(streamC.id(), DEFAULT_PRIORITY_WEIGHT, false);
+        streamF.setPriority(streamD.id(), DEFAULT_PRIORITY_WEIGHT, false);
+
+        assertEquals(6, client.numActiveStreams());
+
+        // Non-exclusive re-prioritization of a->d.
+        streamA.setPriority(streamD.id(), DEFAULT_PRIORITY_WEIGHT, false);
+
+        // Level 0
+        Http2Stream p = client.connectionStream();
+        assertEquals(1, p.numChildren());
+        assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
+
+        // Level 1
+        p = p.child(streamD.id());
+        assertNotNull(p);
+        assertEquals(2, p.numChildren());
+        assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
+
+        // Level 2
+        p = p.child(streamF.id());
+        assertNotNull(p);
+        assertEquals(0, p.numChildren());
+        assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
+        p = p.parent().child(streamA.id());
+        assertNotNull(p);
+        assertEquals(2, p.numChildren());
+        assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
+
+        // Level 3
+        p = p.child(streamB.id());
+        assertNotNull(p);
+        assertEquals(0, p.numChildren());
+        assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
+        p = p.parent().child(streamC.id());
+        assertNotNull(p);
+        assertEquals(1, p.numChildren());
+        assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
+
+        // Level 4;
+        p = p.child(streamE.id());
+        assertNotNull(p);
+        assertEquals(0, p.numChildren());
+        assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
+    }
+
+    @Test
+    public void circularDependencyWithExclusiveShouldRestructureTree() throws Exception {
+        // Using example from http://tools.ietf.org/html/draft-ietf-httpbis-http2-12#section-5.3.3
+        // Although the expected output for the exclusive case has an error in the document. The
+        // final dependency of C should be E (not F). This is fixed here.
+        Http2Stream streamA = client.local().createStream(1, false);
+        Http2Stream streamB = client.local().createStream(3, false);
+        Http2Stream streamC = client.local().createStream(5, false);
+        Http2Stream streamD = client.local().createStream(7, false);
+        Http2Stream streamE = client.local().createStream(9, false);
+        Http2Stream streamF = client.local().createStream(11, false);
+
+        streamB.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, false);
+        streamC.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, false);
+        streamD.setPriority(streamC.id(), DEFAULT_PRIORITY_WEIGHT, false);
+        streamE.setPriority(streamC.id(), DEFAULT_PRIORITY_WEIGHT, false);
+        streamF.setPriority(streamD.id(), DEFAULT_PRIORITY_WEIGHT, false);
+
+        assertEquals(6, client.numActiveStreams());
+
+        // Exclusive re-prioritization of a->d.
+        streamA.setPriority(streamD.id(), DEFAULT_PRIORITY_WEIGHT, true);
+
+        // Level 0
+        Http2Stream p = client.connectionStream();
+        assertEquals(1, p.numChildren());
+        assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
+
+        // Level 1
+        p = p.child(streamD.id());
+        assertNotNull(p);
+        assertEquals(1, p.numChildren());
+        assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
+
+        // Level 2
+        p = p.child(streamA.id());
+        assertNotNull(p);
+        assertEquals(3, p.numChildren());
+        assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
+
+        // Level 3
+        p = p.child(streamB.id());
+        assertNotNull(p);
+        assertEquals(0, p.numChildren());
+        assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
+        p = p.parent().child(streamF.id());
+        assertNotNull(p);
+        assertEquals(0, p.numChildren());
+        assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
+        p = p.parent().child(streamC.id());
+        assertNotNull(p);
+        assertEquals(1, p.numChildren());
+        assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
+
+        // Level 4;
+        p = p.child(streamE.id());
+        assertNotNull(p);
+        assertEquals(0, p.numChildren());
+        assertEquals(p.numChildren() * DEFAULT_PRIORITY_WEIGHT, p.totalChildWeights());
     }
 }

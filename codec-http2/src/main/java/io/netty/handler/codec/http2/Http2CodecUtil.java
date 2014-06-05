@@ -22,6 +22,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.http2.Http2StreamRemovalPolicy.Action;
 
 /**
  * Constants and utility method used for encoding/decoding HTTP2 frames.
@@ -75,6 +76,33 @@ public final class Http2CodecUtil {
         // Return a duplicate so that modifications to the reader index will not affect the original
         // buffer.
         return Unpooled.wrappedBuffer(EMPTY_PING);
+    }
+
+    /**
+     * Returns a simple {@link Http2StreamRemovalPolicy} that immediately calls back the
+     * {@link Action} when a stream is marked for removal.
+     */
+    public static Http2StreamRemovalPolicy immediateRemovalPolicy() {
+        return new Http2StreamRemovalPolicy() {
+            private Action action;
+
+            @Override
+            public void setAction(Action action) {
+                if (action == null) {
+                    throw new NullPointerException("action");
+                }
+                this.action = action;
+            }
+
+            @Override
+            public void markForRemoval(Http2Stream stream) {
+                if (action == null) {
+                    throw new IllegalStateException(
+                            "Action must be called before removing streams.");
+                }
+                action.removeStream(stream);
+            }
+        };
     }
 
     /**

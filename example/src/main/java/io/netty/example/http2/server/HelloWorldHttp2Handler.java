@@ -26,6 +26,7 @@ import io.netty.handler.codec.http2.DefaultHttp2FrameWriter;
 import io.netty.handler.codec.http2.DefaultHttp2Headers;
 import io.netty.handler.codec.http2.DefaultHttp2InboundFlowController;
 import io.netty.handler.codec.http2.DefaultHttp2OutboundFlowController;
+import io.netty.handler.codec.http2.Http2Connection;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2FrameLogger;
 import io.netty.handler.codec.http2.Http2Headers;
@@ -34,7 +35,6 @@ import io.netty.handler.codec.http2.Http2OutboundFrameLogger;
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-
 import static io.netty.example.http2.Http2ExampleUtil.*;
 import static io.netty.util.internal.logging.InternalLogLevel.*;
 
@@ -48,10 +48,14 @@ public class HelloWorldHttp2Handler extends AbstractHttp2ConnectionHandler {
     static final byte[] RESPONSE_BYTES = "Hello World".getBytes(CharsetUtil.UTF_8);
 
     public HelloWorldHttp2Handler() {
-        super(new DefaultHttp2Connection(true, false), new Http2InboundFrameLogger(
-                new DefaultHttp2FrameReader(), logger), new Http2OutboundFrameLogger(
-                new DefaultHttp2FrameWriter(), logger), new DefaultHttp2InboundFlowController(),
-                new DefaultHttp2OutboundFlowController());
+        this(new DefaultHttp2Connection(true, false));
+    }
+
+    private HelloWorldHttp2Handler(Http2Connection connection) {
+        super(connection, new Http2InboundFrameLogger(new DefaultHttp2FrameReader(), logger),
+                new Http2OutboundFrameLogger(new DefaultHttp2FrameWriter(), logger),
+                new DefaultHttp2InboundFlowController(connection),
+                new DefaultHttp2OutboundFlowController(connection));
     }
 
     /**

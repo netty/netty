@@ -25,6 +25,7 @@ import io.netty.handler.codec.http2.DefaultHttp2FrameWriter;
 import io.netty.handler.codec.http2.DefaultHttp2Headers;
 import io.netty.handler.codec.http2.DefaultHttp2InboundFlowController;
 import io.netty.handler.codec.http2.DefaultHttp2OutboundFlowController;
+import io.netty.handler.codec.http2.Http2Connection;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2FrameLogger;
 import io.netty.handler.codec.http2.Http2FrameReader;
@@ -56,8 +57,13 @@ public class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler
     private ByteBuf collectedData;
 
     public Http2ClientConnectionHandler(ChannelPromise initPromise, ChannelPromise responsePromise) {
-        super(new DefaultHttp2Connection(false, false), frameReader(), frameWriter(),
-                new DefaultHttp2InboundFlowController(), new DefaultHttp2OutboundFlowController());
+        this(initPromise, responsePromise, new DefaultHttp2Connection(false, false));
+    }
+
+    private Http2ClientConnectionHandler(ChannelPromise initPromise,
+            ChannelPromise responsePromise, Http2Connection connection) {
+        super(connection, frameReader(), frameWriter(), new DefaultHttp2InboundFlowController(
+                connection), new DefaultHttp2OutboundFlowController(connection));
         this.initPromise = initPromise;
         this.responsePromise = responsePromise;
     }

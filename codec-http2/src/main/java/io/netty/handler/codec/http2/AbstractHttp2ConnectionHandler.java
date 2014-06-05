@@ -82,7 +82,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
 
     protected AbstractHttp2ConnectionHandler(Http2Connection connection) {
         this(connection, new DefaultHttp2FrameReader(), new DefaultHttp2FrameWriter(),
-                new DefaultHttp2InboundFlowController(), new DefaultHttp2OutboundFlowController());
+                new DefaultHttp2InboundFlowController(connection), new DefaultHttp2OutboundFlowController(connection));
     }
 
     protected AbstractHttp2ConnectionHandler(Http2Connection connection,
@@ -283,18 +283,13 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
                     // Sending headers on a reserved push stream ... open it for push to the remote
                     // endpoint.
                     stream.openForPush();
-
-                    // Allow outbound traffic only.
-                    if (!endStream) {
-                        outboundFlow.addStream(streamId, streamDependency, weight, exclusive);
-                    }
                 } else {
                     // The stream already exists, make sure it's in an allowed state.
                     stream.verifyState(PROTOCOL_ERROR, OPEN, HALF_CLOSED_REMOTE);
 
                     // Update the priority for this stream only if we'll be sending more data.
                     if (!endStream) {
-                        outboundFlow.updateStream(stream.id(), streamDependency, weight, exclusive);
+                        stream.setPriority(streamDependency, weight, exclusive);
                     }
                 }
 
@@ -319,7 +314,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
             }
 
             // Update the priority on this stream.
-            outboundFlow.updateStream(streamId, streamDependency, weight, exclusive);
+            connection.requireStream(streamId).setPriority(streamDependency, weight, exclusive);
 
             return frameWriter.writePriority(ctx, promise, streamId, streamDependency, weight,
                     exclusive);
@@ -543,7 +538,6 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
             case HALF_CLOSED_LOCAL:
             case OPEN:
                 stream.closeLocalSide();
-                outboundFlow.removeStream(stream.id());
                 break;
             default:
                 close(stream, ctx, future);
@@ -556,7 +550,6 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
             case HALF_CLOSED_REMOTE:
             case OPEN:
                 stream.closeRemoteSide();
-                inboundFlow.removeStream(stream.id());
                 break;
             default:
                 close(stream, ctx, future);
@@ -566,10 +559,6 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
 
     private void close(Http2Stream stream, ChannelHandlerContext ctx, ChannelFuture future) {
         stream.close();
-
-        // Notify the flow controllers.
-        inboundFlow.removeStream(stream.id());
-        outboundFlow.removeStream(stream.id());
 
         // If this connection is closing and there are no longer any
         // active streams, close after the current operation completes.
@@ -670,12 +659,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
      */
     private Http2Stream createLocalStream(int streamId, boolean halfClosed, int streamDependency,
             short weight, boolean exclusive) throws Http2Exception {
-        Http2Stream stream = connection.local().createStream(streamId, halfClosed);
-        inboundFlow.addStream(streamId);
-        if (!halfClosed) {
-            outboundFlow.addStream(streamId, streamDependency, weight, exclusive);
-        }
-        return stream;
+        return connection.local().createStream(streamId, halfClosed);
     }
 
     /**
@@ -683,12 +667,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
      */
     private Http2Stream createRemoteStream(int streamId, boolean halfClosed, int streamDependency,
             short weight, boolean exclusive) throws Http2Exception {
-        Http2Stream stream = connection.remote().createStream(streamId, halfClosed);
-        outboundFlow.addStream(streamId, streamDependency, weight, exclusive);
-        if (!halfClosed) {
-            inboundFlow.addStream(streamId);
-        }
-        return stream;
+        return connection.remote().createStream(streamId, halfClosed);
     }
 
     /**
@@ -759,11 +738,6 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
                     // local endpoint.
                     stream.verifyState(PROTOCOL_ERROR, RESERVED_REMOTE);
                     stream.openForPush();
-
-                    // Allow inbound traffic only.
-                    if (!endStream) {
-                        inboundFlow.addStream(streamId);
-                    }
                 } else {
                     // Receiving headers on an existing stream. Make sure the stream is in an
                     // allowed
@@ -772,7 +746,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
 
                     // Update the outbound priority if outbound traffic is allowed.
                     if (stream.state() == OPEN) {
-                        outboundFlow.updateStream(streamId, streamDependency, weight, exclusive);
+                        stream.setPriority(streamDependency, weight, exclusive);
                     }
                 }
 
@@ -797,7 +771,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
             }
 
             // Set the priority for this stream on the flow controller.
-            outboundFlow.updateStream(streamId, streamDependency, weight, exclusive);
+            connection.requireStream(streamId).setPriority(streamDependency, weight, exclusive);
 
             AbstractHttp2ConnectionHandler.this.onPriorityRead(ctx, streamId, streamDependency,
                     weight, exclusive);

@@ -17,7 +17,74 @@ package io.netty.handler.codec.http2;
 
 import java.util.Collection;
 
+/**
+ * Manager for the state of an HTTP/2 connection with the remote end-point.
+ */
 public interface Http2Connection {
+
+    /**
+     * Listener for life-cycle events for streams in this connection.
+     */
+    interface Listener {
+        /**
+         * Notifies the listener that the given stream was added to the connection. This stream may
+         * not yet be active (i.e. open/half-closed).
+         */
+        void streamAdded(Http2Stream stream);
+
+        /**
+         * Notifies the listener that the given stream was made active (i.e. open in at least one
+         * direction).
+         */
+        void streamActive(Http2Stream stream);
+
+        /**
+         * Notifies the listener that the given stream is now half-closed. The stream can be
+         * inspected to determine which side is closed.
+         */
+        void streamHalfClosed(Http2Stream stream);
+
+        /**
+         * Notifies the listener that the given stream is now closed in both directions.
+         */
+        void streamInactive(Http2Stream stream);
+
+        /**
+         * Notifies the listener that the given stream has now been removed from the connection and
+         * will no longer be returned via {@link Http2Connection#stream(int)}. The connection may
+         * maintain inactive streams for some time before removing them.
+         */
+        void streamRemoved(Http2Stream stream);
+
+        /**
+         * Notifies the listener that the priority for the stream has changed. The parent of the
+         * stream may have changed, so the previous parent is also provided.
+         * <p>
+         * Either this method or {@link #streamPrioritySubtreeChanged} will be called, but not both
+         * for a single change. This method is called for simple priority changes. If a priority
+         * change causes a circular dependency between the stream and one of its descendants, the
+         * subtree must be restructured causing {@link #streamPrioritySubtreeChanged} instead.
+         *
+         * @param stream the stream for which the priority has changed.
+         * @param previousParent the previous parent of the stream. May be the same as its current
+         *            parent if unchanged.
+         */
+        void streamPriorityChanged(Http2Stream stream, Http2Stream previousParent);
+
+        /**
+         * Called when a priority change for a stream creates a circular dependency between the
+         * stream and one of its descendants. This requires a restructuring of the priority tree.
+         * <p>
+         * Either this method or {@link #streamPriorityChanged} will be called, but not both for a
+         * single change. For simple changes that do not cause the tree to be restructured,
+         * {@link #streamPriorityChanged} will be called instead.
+         *
+         * @param stream the stream for which the priority has changed, causing the tree to be
+         *            restructured.
+         * @param subtreeRoot the new root of the subtree that has changed.
+         */
+        void streamPrioritySubtreeChanged(Http2Stream stream, Http2Stream subtreeRoot);
+    }
 
     /**
      * A view of the connection from one endpoint (local or remote).
@@ -108,9 +175,14 @@ public interface Http2Connection {
     }
 
     /**
-     * Indicates whether or not the local endpoint for this connection is the server.
+     * Adds a listener of stream life-cycle events. Adding the same listener multiple times has no effect.
      */
-    boolean isServer();
+    void addListener(Listener listener);
+
+    /**
+     * Removes a listener of stream life-cycle events.
+     */
+    void removeListener(Listener listener);
 
     /**
      * Attempts to get the stream for the given ID. If it doesn't exist, throws.
@@ -123,7 +195,13 @@ public interface Http2Connection {
     Http2Stream stream(int streamId);
 
     /**
-     * Gets the number of active streams in this connection.
+     * Gets the stream object representing the connection, itself (i.e. stream zero). This object
+     * always exists.
+     */
+    Http2Stream connectionStream();
+
+    /**
+     * Gets the number of streams that are currently either open or half-closed.
      */
     int numActiveStreams();
 
@@ -132,6 +210,11 @@ public interface Http2Connection {
      * sorted by priority.
      */
     Collection<Http2Stream> activeStreams();
+
+    /**
+     * Indicates whether or not the local endpoint for this connection is the server.
+     */
+    boolean isServer();
 
     /**
      * Gets a view of this connection from the local {@link Endpoint}.

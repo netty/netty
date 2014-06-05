@@ -223,8 +223,6 @@ public class DelegatingHttp2ConnectionHandlerTest {
     public void channelInactiveShouldCloseStreams() throws Exception {
         handler.channelInactive(ctx);
         verify(stream).close();
-        verify(inboundFlow).removeStream(STREAM_ID);
-        verify(outboundFlow).removeStream(STREAM_ID);
     }
 
     @Test
@@ -232,8 +230,6 @@ public class DelegatingHttp2ConnectionHandlerTest {
         Http2Exception e = new Http2StreamException(STREAM_ID, PROTOCOL_ERROR);
         handler.exceptionCaught(ctx, e);
         verify(stream).close();
-        verify(inboundFlow).removeStream(STREAM_ID);
-        verify(outboundFlow).removeStream(STREAM_ID);
         verify(writer).writeRstStream(eq(ctx), eq(promise), eq(STREAM_ID),
                 eq((long) PROTOCOL_ERROR.code()));
     }
@@ -295,16 +291,13 @@ public class DelegatingHttp2ConnectionHandlerTest {
         // Verify that the event was absorbed and not propagated to the oberver.
         verify(observer, never()).onHeadersRead(eq(ctx), anyInt(), any(Http2Headers.class),
                 anyInt(), anyBoolean(), anyBoolean());
-        verify(outboundFlow, never()).updateStream(anyInt(), anyInt(), anyShort(), anyBoolean());
-        verify(inboundFlow, never()).addStream(anyInt());
+        verify(remote, never()).createStream(anyInt(), anyBoolean());
     }
 
     @Test
     public void headersReadForUnknownStreamShouldCreateStream() throws Exception {
         decode().onHeadersRead(ctx, 5, EMPTY_HEADERS, 0, false, false);
         verify(remote).createStream(eq(5), eq(false));
-        verify(outboundFlow).addStream(eq(5), eq(0), eq(DEFAULT_PRIORITY_WEIGHT), eq(false));
-        verify(inboundFlow).addStream(5);
         verify(observer).onHeadersRead(eq(ctx), eq(5), eq(EMPTY_HEADERS), eq(0),
                 eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(false), eq(false));
     }
@@ -313,8 +306,6 @@ public class DelegatingHttp2ConnectionHandlerTest {
     public void headersReadForUnknownStreamShouldCreateHalfClosedStream() throws Exception {
         decode().onHeadersRead(ctx, 5, EMPTY_HEADERS, 0, true, false);
         verify(remote).createStream(eq(5), eq(true));
-        verify(outboundFlow).addStream(eq(5), eq(0), eq(DEFAULT_PRIORITY_WEIGHT), eq(false));
-        verify(inboundFlow, never()).addStream(5);
         verify(observer).onHeadersRead(eq(ctx), eq(5), eq(EMPTY_HEADERS), eq(0),
                 eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(true), eq(false));
     }
@@ -324,8 +315,6 @@ public class DelegatingHttp2ConnectionHandlerTest {
         when(stream.state()).thenReturn(RESERVED_REMOTE);
         decode().onHeadersRead(ctx, STREAM_ID, EMPTY_HEADERS, 0, false, false);
         verify(stream).openForPush();
-        verify(outboundFlow, never()).addStream(anyInt(), anyInt(), anyShort(), anyBoolean());
-        verify(inboundFlow).addStream(STREAM_ID);
         verify(observer).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(EMPTY_HEADERS), eq(0),
                 eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(false), eq(false));
     }
@@ -336,10 +325,6 @@ public class DelegatingHttp2ConnectionHandlerTest {
         decode().onHeadersRead(ctx, STREAM_ID, EMPTY_HEADERS, 0, true, false);
         verify(stream).openForPush();
         verify(stream).close();
-        verify(outboundFlow, never()).addStream(anyInt(), anyInt(), anyShort(), anyBoolean());
-        verify(inboundFlow, never()).addStream(STREAM_ID);
-        verify(outboundFlow).removeStream(STREAM_ID);
-        verify(inboundFlow).removeStream(STREAM_ID);
         verify(observer).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(EMPTY_HEADERS), eq(0),
                 eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(true), eq(false));
     }
@@ -365,24 +350,14 @@ public class DelegatingHttp2ConnectionHandlerTest {
     public void priorityReadAfterGoAwayShouldBeIgnored() throws Exception {
         when(connection.isGoAwaySent()).thenReturn(true);
         decode().onPriorityRead(ctx, STREAM_ID, 0, (short) 255, true);
-        verify(outboundFlow, never()).updateStream(anyInt(), anyInt(), anyShort(), anyBoolean());
+        verify(stream, never()).setPriority(anyInt(), anyShort(), anyBoolean());
         verify(observer, never()).onPriorityRead(eq(ctx), anyInt(), anyInt(), anyShort(), anyBoolean());
-    }
-
-    @Test
-    public void priorityReadForUnknownStreamShouldUpdateFlowController() throws Exception {
-        // The outbound flow controller may keep a prioritized stream around for some time after
-        // being closed. Verify that the flow controller is updated regardless of the presence of
-        // the stream.
-        decode().onPriorityRead(ctx, 5, 0, (short) 255, true);
-        verify(outboundFlow).updateStream(eq(5), eq(0), eq((short) 255), eq(true));
-        verify(observer).onPriorityRead(eq(ctx), eq(5), eq(0), eq((short) 255), eq(true));
     }
 
     @Test
     public void priorityReadShouldSucceed() throws Exception {
         decode().onPriorityRead(ctx, STREAM_ID, 0, (short) 255, true);
-        verify(outboundFlow).updateStream(eq(STREAM_ID), eq(0), eq((short) 255), eq(true));
+        verify(stream).setPriority(eq(0), eq((short) 255), eq(true));
         verify(observer).onPriorityRead(eq(ctx), eq(STREAM_ID), eq(0), eq((short) 255), eq(true));
     }
 
@@ -535,10 +510,9 @@ public class DelegatingHttp2ConnectionHandlerTest {
         when(connection.isGoAway()).thenReturn(true);
         ChannelFuture future = handler.writeHeaders(
                 ctx, promise, 5, EMPTY_HEADERS, 0, (short) 255, false, 0, false, false);
+        verify(local, never()).createStream(anyInt(), anyBoolean());
         verify(writer, never()).writeHeaders(eq(ctx), eq(promise), anyInt(),
                 any(Http2Headers.class), anyInt(), anyBoolean(), anyBoolean());
-        verify(outboundFlow, never()).addStream(anyInt(), anyInt(), anyShort(), anyBoolean());
-        verify(inboundFlow, never()).addStream(anyInt());
         assertTrue(future.awaitUninterruptibly().cause() instanceof Http2Exception);
     }
 
@@ -548,8 +522,6 @@ public class DelegatingHttp2ConnectionHandlerTest {
         verify(local).createStream(eq(5), eq(false));
         verify(writer).writeHeaders(eq(ctx), eq(promise), eq(5), eq(EMPTY_HEADERS), eq(0),
                 eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(false), eq(false));
-        verify(outboundFlow).addStream(eq(5), eq(0), eq(DEFAULT_PRIORITY_WEIGHT), eq(false));
-        verify(inboundFlow).addStream(5);
     }
 
     @Test
@@ -558,8 +530,6 @@ public class DelegatingHttp2ConnectionHandlerTest {
         verify(local).createStream(eq(5), eq(true));
         verify(writer).writeHeaders(eq(ctx), eq(promise), eq(5), eq(EMPTY_HEADERS), eq(0),
                 eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(true), eq(false));
-        verify(outboundFlow, never()).addStream(anyInt(), anyInt(), anyShort(), anyBoolean());
-        verify(inboundFlow).addStream(5);
     }
 
     @Test
@@ -607,7 +577,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
     @Test
     public void priorityWriteShouldSetPriorityForStream() throws Exception {
         handler.writePriority(ctx, promise, STREAM_ID, 0, (short) 255, true);
-        verify(outboundFlow).updateStream(eq(STREAM_ID), eq(0), eq((short) 255), eq(true));
+        verify(stream).setPriority(eq(0), eq((short) 255), eq(true));
         verify(writer).writePriority(eq(ctx), eq(promise), eq(STREAM_ID), eq(0), eq((short) 255),
                 eq(true));
     }
