@@ -18,6 +18,7 @@ package io.netty.handler.codec.stomp;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelPipeline;
+import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.MessageAggregator;
 import io.netty.handler.codec.TooLongFrameException;
 
@@ -64,12 +65,17 @@ public class StompSubframeAggregator
 
     @Override
     protected boolean hasContentLength(StompHeadersSubframe start) throws Exception {
-        return start.headers().has(StompHeaders.CONTENT_LENGTH);
+        return start.headers().contains(StompHeaders.CONTENT_LENGTH);
     }
 
     @Override
     protected long contentLength(StompHeadersSubframe start) throws Exception {
-        return Long.parseLong(start.headers().get(StompHeaders.CONTENT_LENGTH));
+        CharSequence value = start.headers().get(StompHeaders.CONTENT_LENGTH);
+        if (value instanceof AsciiString) {
+            return ((AsciiString) value).parseLong();
+        }
+
+        return Long.parseLong(value.toString());
     }
 
     @Override

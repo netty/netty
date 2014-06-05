@@ -24,7 +24,7 @@ public class DefaultStompHeadersSubframe implements StompHeadersSubframe {
 
     protected final StompCommand command;
     protected DecoderResult decoderResult = DecoderResult.SUCCESS;
-    protected final StompHeaders headers = new StompHeaders();
+    protected final StompHeaders headers = new DefaultStompHeaders();
 
     public DefaultStompHeadersSubframe(StompCommand command) {
         if (command == null) {

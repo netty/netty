@@ -16,53 +16,37 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.AsciiString;
+import io.netty.handler.codec.DefaultTextHeaders;
+import io.netty.handler.codec.TextHeaders;
 
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.NoSuchElementException;
 import java.util.Set;
 
 public class DefaultHttpHeaders extends HttpHeaders {
 
-    private static final int BUCKET_SIZE = 17;
-
-    private static int index(int hash) {
-        return hash % BUCKET_SIZE;
-    }
-
-    private final HeaderEntry[] entries = new HeaderEntry[BUCKET_SIZE];
-    private final HeaderEntry head = new HeaderEntry();
-    protected final boolean validate;
+    private final TextHeaders headers;
 
     public DefaultHttpHeaders() {
         this(true);
     }
 
     public DefaultHttpHeaders(boolean validate) {
-        this.validate = validate;
-        head.before = head.after = head;
+        headers = validate? new ValidatingTextHeaders() : new NonValidatingTextHeaders();
     }
 
-    void validateHeaderName0(CharSequence headerName) {
-        validateHeaderName(headerName);
+    DefaultHttpHeaders(TextHeaders headers) {
+        this.headers = headers;
     }
 
     @Override
     public HttpHeaders add(HttpHeaders headers) {
         if (headers instanceof DefaultHttpHeaders) {
-            DefaultHttpHeaders defaultHttpHeaders = (DefaultHttpHeaders) headers;
-            HeaderEntry e = defaultHttpHeaders.head.after;
-            while (e != defaultHttpHeaders.head) {
-                add(e.key, e.value);
-                e = e.after;
-            }
+            this.headers.add(((DefaultHttpHeaders) headers).headers);
             return this;
         } else {
             return super.add(headers);
@@ -72,13 +56,7 @@ public class DefaultHttpHeaders extends HttpHeaders {
     @Override
     public HttpHeaders set(HttpHeaders headers) {
         if (headers instanceof DefaultHttpHeaders) {
-            clear();
-            DefaultHttpHeaders defaultHttpHeaders = (DefaultHttpHeaders) headers;
-            HeaderEntry e = defaultHttpHeaders.head.after;
-            while (e != defaultHttpHeaders.head) {
-                add(e.key, e.value);
-                e = e.after;
-            }
+            this.headers.set(((DefaultHttpHeaders) headers).headers);
             return this;
         } else {
             return super.set(headers);
@@ -86,413 +64,329 @@ public class DefaultHttpHeaders extends HttpHeaders {
     }
 
     @Override
-    public HttpHeaders add(final String name, final Object value) {
-        return add((CharSequence) name, value);
+    public HttpHeaders add(String name, Object value) {
+        headers.add(name, value);
+        return this;
     }
 
     @Override
-    public HttpHeaders add(final CharSequence name, final Object value) {
-        CharSequence strVal;
-        if (validate) {
-            validateHeaderName0(name);
-            strVal = toCharSequence(value);
-            validateHeaderValue(strVal);
-        } else {
-            strVal = toCharSequence(value);
-        }
-        int h = hash(name);
-        int i = index(h);
-        add0(h, i, name, strVal);
+    public HttpHeaders add(CharSequence name, Object value) {
+        headers.add(name, value);
         return this;
     }
 
     @Override
     public HttpHeaders add(String name, Iterable<?> values) {
-        return add((CharSequence) name, values);
+        headers.add(name, values);
+        return this;
     }
 
     @Override
     public HttpHeaders add(CharSequence name, Iterable<?> values) {
-        if (validate) {
-            validateHeaderName0(name);
-        }
-        int h = hash(name);
-        int i = index(h);
-        for (Object v: values) {
-            CharSequence vstr = toCharSequence(v);
-            if (validate) {
-                validateHeaderValue(vstr);
-            }
-            add0(h, i, name, vstr);
-        }
-        return this;
-    }
-
-    private void add0(int h, int i, final CharSequence name, final CharSequence value) {
-        // Update the hash table.
-        HeaderEntry e = entries[i];
-        HeaderEntry newEntry;
-        entries[i] = newEntry = new HeaderEntry(h, name, value);
-        newEntry.next = e;
-
-        // Update the linked list.
-        newEntry.addBefore(head);
-    }
-
-    @Override
-    public HttpHeaders remove(final String name) {
-        return remove((CharSequence) name);
-    }
-
-    @Override
-    public HttpHeaders remove(final CharSequence name) {
-        if (name == null) {
-            throw new NullPointerException("name");
-        }
-        int h = hash(name);
-        int i = index(h);
-        remove0(h, i, name);
-        return this;
-    }
-
-    private void remove0(int h, int i, CharSequence name) {
-        HeaderEntry e = entries[i];
-        if (e == null) {
-            return;
-        }
-
-        for (;;) {
-            if (e.hash == h && equalsIgnoreCase(name, e.key)) {
-                e.remove();
-                HeaderEntry next = e.next;
-                if (next != null) {
-                    entries[i] = next;
-                    e = next;
-                } else {
-                    entries[i] = null;
-                    return;
-                }
-            } else {
-                break;
-            }
-        }
-
-        for (;;) {
-            HeaderEntry next = e.next;
-            if (next == null) {
-                break;
-            }
-            if (next.hash == h && equalsIgnoreCase(name, next.key)) {
-                e.next = next.next;
-                next.remove();
-            } else {
-                e = next;
-            }
-        }
-    }
-
-    @Override
-    public HttpHeaders set(final String name, final Object value) {
-        return set((CharSequence) name, value);
-    }
-
-    @Override
-    public HttpHeaders set(final CharSequence name, final Object value) {
-        CharSequence strVal;
-        if (validate) {
-            validateHeaderName0(name);
-            strVal = toCharSequence(value);
-            validateHeaderValue(strVal);
-        } else {
-            strVal = toCharSequence(value);
-        }
-        int h = hash(name);
-        int i = index(h);
-        remove0(h, i, name);
-        add0(h, i, name, strVal);
+        headers.add(name, values);
         return this;
     }
 
     @Override
-    public HttpHeaders set(final String name, final Iterable<?> values) {
-        return set((CharSequence) name, values);
+    public HttpHeaders remove(String name) {
+        headers.remove(name);
+        return this;
     }
 
     @Override
-    public HttpHeaders set(final CharSequence name, final Iterable<?> values) {
-        if (values == null) {
-            throw new NullPointerException("values");
-        }
-        if (validate) {
-            validateHeaderName0(name);
-        }
+    public HttpHeaders remove(CharSequence name) {
+        headers.remove(name);
+        return this;
+    }
 
-        int h = hash(name);
-        int i = index(h);
+    @Override
+    public HttpHeaders set(String name, Object value) {
+        headers.set(name, value);
+        return this;
+    }
 
-        remove0(h, i, name);
-        for (Object v: values) {
-            if (v == null) {
-                break;
-            }
-            CharSequence strVal = toCharSequence(v);
-            if (validate) {
-                validateHeaderValue(strVal);
-            }
-            add0(h, i, name, strVal);
-        }
+    @Override
+    public HttpHeaders set(CharSequence name, Object value) {
+        headers.set(name, value);
+        return this;
+    }
 
+    @Override
+    public HttpHeaders set(String name, Iterable<?> values) {
+        headers.set(name, values);
+        return this;
+    }
+
+    @Override
+    public HttpHeaders set(CharSequence name, Iterable<?> values) {
+        headers.set(name, values);
         return this;
     }
 
     @Override
     public HttpHeaders clear() {
-        Arrays.fill(entries, null);
-        head.before = head.after = head;
+        headers.clear();
         return this;
     }
 
     @Override
-    public String get(final String name) {
-        return get((CharSequence) name);
+    public String get(String name) {
+        return headers.get(name);
     }
 
     @Override
-    public String get(final CharSequence name) {
-        if (name == null) {
-            throw new NullPointerException("name");
-        }
-
-        int h = hash(name);
-        int i = index(h);
-        HeaderEntry e = entries[i];
-        CharSequence value = null;
-        // loop until the first header was found
-        while (e != null) {
-            if (e.hash == h && equalsIgnoreCase(name, e.key)) {
-                value = e.value;
-            }
-
-            e = e.next;
-        }
-        if (value == null) {
-            return null;
-        }
-        return value.toString();
+    public String get(CharSequence name) {
+        return headers.get(name);
     }
 
     @Override
-    public List<String> getAll(final String name) {
-        return getAll((CharSequence) name);
+    public List<String> getAll(String name) {
+        return headers.getAll(name);
     }
 
     @Override
-    public List<String> getAll(final CharSequence name) {
-        if (name == null) {
-            throw new NullPointerException("name");
-        }
-
-        LinkedList<String> values = new LinkedList<String>();
-
-        int h = hash(name);
-        int i = index(h);
-        HeaderEntry e = entries[i];
-        while (e != null) {
-            if (e.hash == h && equalsIgnoreCase(name, e.key)) {
-                values.addFirst(e.getValue());
-            }
-            e = e.next;
-        }
-        return values;
+    public List<String> getAll(CharSequence name) {
+        return headers.getAll(name);
     }
 
     @Override
     public List<Map.Entry<String, String>> entries() {
-        List<Map.Entry<String, String>> all =
-            new LinkedList<Map.Entry<String, String>>();
-
-        HeaderEntry e = head.after;
-        while (e != head) {
-            all.add(e);
-            e = e.after;
-        }
-        return all;
+        return headers.entries();
     }
 
     @Override
     public Iterator<Map.Entry<String, String>> iterator() {
-        return new HeaderIterator();
+        return headers.iterator();
     }
 
     @Override
     public boolean contains(String name) {
-        return get(name) != null;
+        return headers.contains(name);
     }
 
     @Override
     public boolean contains(CharSequence name) {
-        return get(name) != null;
+        return headers.contains(name);
     }
 
     @Override
     public boolean isEmpty() {
-        return head == head.after;
+        return headers.isEmpty();
     }
 
     @Override
-    public boolean contains(String name, String value, boolean ignoreCaseValue) {
-        return contains((CharSequence) name, (CharSequence) value, ignoreCaseValue);
+    public boolean contains(String name, String value, boolean ignoreCase) {
+        return headers.contains(name, value, ignoreCase);
     }
 
     @Override
-    public boolean contains(CharSequence name, CharSequence value, boolean ignoreCaseValue) {
-        if (name == null) {
-            throw new NullPointerException("name");
-        }
-
-        int h = hash(name);
-        int i = index(h);
-        HeaderEntry e = entries[i];
-        while (e != null) {
-            if (e.hash == h && equalsIgnoreCase(name, e.key)) {
-                if (ignoreCaseValue) {
-                    if (equalsIgnoreCase(e.value, value)) {
-                        return true;
-                    }
-                } else {
-                    if (e.value.equals(value)) {
-                        return true;
-                    }
-                }
-            }
-            e = e.next;
-        }
-        return false;
+    public boolean contains(CharSequence name, CharSequence value, boolean ignoreCase) {
+        return headers.contains(name, value, ignoreCase);
     }
 
     @Override
     public Set<String> names() {
-        Set<String> names = new LinkedHashSet<String>();
-        HeaderEntry e = head.after;
-        while (e != head) {
-            names.add(e.getKey());
-            e = e.after;
-        }
-        return names;
+        return headers.names();
     }
 
     void encode(ByteBuf buf) {
-        HeaderEntry e = head.after;
-        while (e != head) {
-            e.encode(buf);
-            e = e.after;
-        }
+        headers.forEachEntry(new HttpHeadersEncoder(buf));
     }
 
-    private static CharSequence toCharSequence(Object value) {
-        if (value == null) {
-            return null;
-        }
-        if (value instanceof CharSequence) {
-            return (CharSequence) value;
-        }
-        if (value instanceof Number) {
-            return value.toString();
-        }
-        if (value instanceof Date) {
-            return HttpHeaderDateFormat.get().format((Date) value);
-        }
-        if (value instanceof Calendar) {
-            return HttpHeaderDateFormat.get().format(((Calendar) value).getTime());
-        }
-        return value.toString();
-    }
-
-    private final class HeaderIterator implements Iterator<Map.Entry<String, String>> {
-
-        private HeaderEntry current = head;
-
+    static class NonValidatingTextHeaders extends DefaultTextHeaders {
         @Override
-        public boolean hasNext() {
-            return current.after != head;
-        }
-
-        @Override
-        public Entry<String, String> next() {
-            current = current.after;
-
-            if (current == head) {
-                throw new NoSuchElementException();
-            }
-
-            return current;
-        }
-
-        @Override
-        public void remove() {
-            throw new UnsupportedOperationException();
-        }
-    }
-
-    private final class HeaderEntry implements Map.Entry<String, String> {
-        final int hash;
-        final CharSequence key;
-        CharSequence value;
-        HeaderEntry next;
-        HeaderEntry before, after;
-
-        HeaderEntry(int hash, CharSequence key, CharSequence value) {
-            this.hash = hash;
-            this.key = key;
-            this.value = value;
-        }
-
-        HeaderEntry() {
-            hash = -1;
-            key = null;
-            value = null;
-        }
-
-        void remove() {
-            before.after = after;
-            after.before = before;
-        }
-
-        void addBefore(HeaderEntry e) {
-            after  = e;
-            before = e.before;
-            before.after = this;
-            after.before = this;
-        }
-
-        @Override
-        public String getKey() {
-            return key.toString();
-        }
-
-        @Override
-        public String getValue() {
-            return value.toString();
-        }
-
-        @Override
-        public String setValue(String value) {
+        protected CharSequence convertValue(Object value) {
             if (value == null) {
                 throw new NullPointerException("value");
             }
-            validateHeaderValue(value);
-            CharSequence oldValue = this.value;
-            this.value = value;
-            return oldValue.toString();
+
+            CharSequence seq;
+            if (value instanceof CharSequence) {
+                seq = (CharSequence) value;
+            } else if (value instanceof Number) {
+                seq = value.toString();
+            } else if (value instanceof Date) {
+                seq = HttpHeaderDateFormat.get().format((Date) value);
+            } else if (value instanceof Calendar) {
+                seq = HttpHeaderDateFormat.get().format(((Calendar) value).getTime());
+            } else {
+                seq = value.toString();
+            }
+
+            return seq;
+        }
+    }
+
+    static class ValidatingTextHeaders extends NonValidatingTextHeaders {
+        private static final int HIGHEST_INVALID_NAME_CHAR_MASK = ~63;
+        private static final int HIGHEST_INVALID_VALUE_CHAR_MASK = ~15;
+
+        /**
+         * A look-up table used for checking if a character in a header name is prohibited.
+         */
+        private static final byte[] LOOKUP_TABLE = new byte[~HIGHEST_INVALID_NAME_CHAR_MASK + 1];
+
+        static {
+            LOOKUP_TABLE['\t'] = -1;
+            LOOKUP_TABLE['\n'] = -1;
+            LOOKUP_TABLE[0x0b] = -1;
+            LOOKUP_TABLE['\f'] = -1;
+            LOOKUP_TABLE[' '] = -1;
+            LOOKUP_TABLE[','] = -1;
+            LOOKUP_TABLE[':'] = -1;
+            LOOKUP_TABLE[';'] = -1;
+            LOOKUP_TABLE['='] = -1;
         }
 
         @Override
-        public String toString() {
-            return key.toString() + '=' + value.toString();
+        protected CharSequence convertName(CharSequence name) {
+            name = super.convertName(name);
+            if (name instanceof AsciiString) {
+                validateName((AsciiString) name);
+            } else {
+                validateName(name);
+            }
+
+            return name;
         }
 
-        void encode(ByteBuf buf) {
-            HttpHeaders.encode(key, value, buf);
+        private static void validateName(AsciiString name) {
+            // Go through each characters in the name
+            final int start = name.arrayOffset();
+            final int end = start + name.length();
+            final byte[] array = name.array();
+            for (int index = start; index < end; index ++) {
+                byte b = array[index];
+
+                // Check to see if the character is not an ASCII character
+                if (b < 0) {
+                    throw new IllegalArgumentException(
+                            "a header name cannot contain non-ASCII characters: " + name);
+                }
+
+                // Check for prohibited characters.
+                validateNameChar(name, b);
+            }
+        }
+
+        private static void validateName(CharSequence name) {
+            // Go through each characters in the name
+            for (int index = 0; index < name.length(); index ++) {
+                char character = name.charAt(index);
+
+                // Check to see if the character is not an ASCII character
+                if (character > 127) {
+                    throw new IllegalArgumentException(
+                            "a header name cannot contain non-ASCII characters: " + name);
+                }
+
+                // Check for prohibited characters.
+                validateNameChar(name, character);
+            }
+        }
+
+        private static void validateNameChar(CharSequence name, int character) {
+            if ((character & HIGHEST_INVALID_NAME_CHAR_MASK) == 0 && LOOKUP_TABLE[character] != 0) {
+                throw new IllegalArgumentException(
+                        "a header name cannot contain the following prohibited characters: " +
+                                "=,;: \\t\\r\\n\\v\\f: " + name);
+            }
+        }
+
+        @Override
+        protected CharSequence convertValue(Object value) {
+            CharSequence seq = super.convertValue(value);
+            if (value instanceof AsciiString) {
+                validateValue((AsciiString) seq);
+            } else {
+                validateValue(seq);
+            }
+
+            return seq;
+        }
+
+        private static void validateValue(AsciiString seq) {
+            int state = 0;
+            // Start looping through each of the character
+            final int start = seq.arrayOffset();
+            final int end = start + seq.length();
+            final byte[] array = seq.array();
+            for (int index = start; index < end; index ++) {
+                state = validateValueChar(seq, state, (char) (array[index] & 0xFF));
+            }
+
+            if (state != 0) {
+                throw new IllegalArgumentException(
+                        "a header value must not end with '\\r' or '\\n':" + seq);
+            }
+        }
+
+        private static void validateValue(CharSequence seq) {
+            int state = 0;
+            // Start looping through each of the character
+            for (int index = 0; index < seq.length(); index ++) {
+                state = validateValueChar(seq, state, seq.charAt(index));
+            }
+
+            if (state != 0) {
+                throw new IllegalArgumentException(
+                        "a header value must not end with '\\r' or '\\n':" + seq);
+            }
+        }
+
+        private static int validateValueChar(CharSequence seq, int state, char character) {
+            /*
+             * State:
+             *
+             * 0: Previous character was neither CR nor LF
+             * 1: The previous character was CR
+             * 2: The previous character was LF
+             */
+            if ((character & HIGHEST_INVALID_VALUE_CHAR_MASK) == 0) {
+                // Check the absolutely prohibited characters.
+                switch (character) {
+                    case 0x0b: // Vertical tab
+                        throw new IllegalArgumentException(
+                                "a header value contains a prohibited character '\\v': " + seq);
+                    case '\f':
+                        throw new IllegalArgumentException(
+                                "a header value contains a prohibited character '\\f': " + seq);
+                }
+            }
+
+            // Check the CRLF (HT | SP) pattern
+            switch (state) {
+                case 0:
+                    switch (character) {
+                        case '\r':
+                            state = 1;
+                            break;
+                        case '\n':
+                            state = 2;
+                            break;
+                    }
+                    break;
+                case 1:
+                    switch (character) {
+                        case '\n':
+                            state = 2;
+                            break;
+                        default:
+                            throw new IllegalArgumentException(
+                                    "only '\\n' is allowed after '\\r': " + seq);
+                    }
+                    break;
+                case 2:
+                    switch (character) {
+                        case '\t': case ' ':
+                            state = 0;
+                            break;
+                        default:
+                            throw new IllegalArgumentException(
+                                    "only ' ' and '\\t' are allowed after '\\n': " + seq);
+                    }
+            }
+            return state;
         }
     }
 }
