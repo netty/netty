@@ -138,10 +138,10 @@ public class HttpPostRequestDecoderTest {
         final DefaultHttpDataFactory inMemoryFactory = new DefaultHttpDataFactory(false);
         // Build test case
         String extradata = "aaaa";
-        String [] datas = new String[5];
+        String[] datas = new String[5];
         for (int i = 0; i < 4; i++) {
             datas[i] = extradata;
-            for (int j = 0; j < i ; j++) {
+            for (int j = 0; j < i; j++) {
                 datas[i] += '\r';
             }
         }
@@ -168,12 +168,44 @@ public class HttpPostRequestDecoderTest {
             InterfaceHttpData httpdata = decoder.getBodyHttpData("file" + i);
             assertNotNull(httpdata);
             Attribute attribute = (Attribute) httpdata;
-            byte []datar = attribute.get();
+            byte[] datar = attribute.get();
             assertNotNull(datar);
             assertEquals(datas[i].getBytes(CharsetUtil.UTF_8).length, datar.length);
 
             decoder.destroy();
         }
+    }
+
+    // See https://github.com/netty/netty/issues/2542
+    @Test
+    public void testQuotedBoundary() throws Exception {
+        final String boundary = "dLV9Wyq26L_-JQxk6ferf-RT153LhOO";
+
+        final DefaultFullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
+                "http://localhost");
+
+        req.setDecoderResult(DecoderResult.SUCCESS);
+        req.headers().add(HttpHeaders.Names.CONTENT_TYPE, "multipart/form-data; boundary=\"" + boundary + '"');
+        req.headers().add(HttpHeaders.Names.TRANSFER_ENCODING, HttpHeaders.Values.CHUNKED);
+
+        // Force to use memory-based data.
+        final DefaultHttpDataFactory inMemoryFactory = new DefaultHttpDataFactory(false);
+
+        for (String data : Arrays.asList("", "\r", "\r\r", "\r\r\r")) {
+            final String body =
+                    "--" + boundary + "\r\n" +
+                            "Content-Disposition: form-data; name=\"file\"; filename=\"tmp-0.txt\"\r\n" +
+                            "Content-Type: image/gif\r\n" +
+                            "\r\n" +
+                            data + "\r\n" +
+                            "--" + boundary + "--\r\n";
+
+            req.content().writeBytes(body.getBytes(CharsetUtil.UTF_8));
+        }
+        // Create decoder instance to test.
+        final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
+        assertFalse(decoder.getBodyHttpDatas().isEmpty());
+        decoder.destroy();
     }
 
     // See https://github.com/netty/netty/issues/1848
