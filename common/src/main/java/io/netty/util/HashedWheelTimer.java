@@ -106,6 +106,8 @@ public class HashedWheelTimer implements Timer {
     private final int mask;
     private final CountDownLatch startTimeInitialized = new CountDownLatch(1);
     private final Queue<HashedWheelTimeout> timeouts = PlatformDependent.newMpscQueue();
+    private final Queue<Runnable> cancelTasks = PlatformDependent.newMpscQueue();
+
     private volatile long startTime;
 
     /**
@@ -357,6 +359,7 @@ public class HashedWheelTimer implements Timer {
 
             do {
                 final long deadline = waitForNextTick();
+                processCancelTasks();
                 if (deadline > 0) {
                     transferTimeoutsToBuckets();
                     HashedWheelBucket bucket =
@@ -379,6 +382,16 @@ public class HashedWheelTimer implements Timer {
             }
         }
 
+        private void processCancelTasks() {
+            for (;;) {
+                Runnable cancelTask = cancelTasks.poll();
+                if (cancelTask == null) {
+                    return;
+                }
+                cancelTask.run();
+            }
+        }
+
         private void transferTimeoutsToBuckets() {
             // transfer only max. 100000 timeouts per tick to prevent a thread to stale the workerThread when it just
             // adds new timeouts in a loop.
@@ -388,6 +401,7 @@ public class HashedWheelTimer implements Timer {
                     // all processed
                     break;
                 }
+
                 long calculated = timeout.deadline / tickDuration;
                 long remainingRounds = (calculated - tick) / wheel.length;
                 timeout.remainingRounds = remainingRounds;
@@ -477,6 +491,9 @@ public class HashedWheelTimer implements Timer {
         HashedWheelTimeout next;
         HashedWheelTimeout prev;
 
+        // The bucket to which the timeout was added
+        HashedWheelBucket bucket;
+
         HashedWheelTimeout(HashedWheelTimer timer, TimerTask task, long deadline) {
             this.timer = timer;
             this.task = task;
@@ -499,6 +516,11 @@ public class HashedWheelTimer implements Timer {
             if (!STATE_UPDATER.compareAndSet(this, ST_INIT, ST_CANCELLED)) {
                 return false;
             }
+
+            // Add a new CancelTask to the called queued. This will be picked up on the next tick and will take care
+            // to remove this HashedTimeTask from the HashedWheelBucket. After this is done it is ready to get
+            // GC'ed once the user has no referenced to it anymore.
+            timer.cancelTasks.add(new CancelTask());
             return true;
         }
 
@@ -560,6 +582,22 @@ public class HashedWheelTimer implements Timer {
 
             return buf.append(')').toString();
         }
+
+        private class CancelTask extends MpscLinkedQueueNode<Runnable> implements Runnable {
+
+            @Override
+            public Runnable value() {
+                return this;
+            }
+
+            @Override
+            public void run() {
+                // Remove from the HashedWheelBucket if it was added to one already.
+                if (bucket != null) {
+                    bucket.remove(HashedWheelTimeout.this);
+                }
+            }
+        }
     }
 
     /**
@@ -577,6 +615,8 @@ public class HashedWheelTimer implements Timer {
          * Add {@link HashedWheelTimeout} to this bucket.
          */
         public void addTimeout(HashedWheelTimeout timeout) {
+            assert timeout.bucket == null;
+            timeout.bucket = this;
             if (head == null) {
                 head = tail = timeout;
             } else {
@@ -612,31 +652,38 @@ public class HashedWheelTimer implements Timer {
                 // store reference to next as we may null out timeout.next in the remove block.
                 HashedWheelTimeout next = timeout.next;
                 if (remove) {
-                    // remove timeout that was either processed or cancelled by updating the linked-list
-                    if (timeout.prev != null) {
-                        timeout.prev.next = timeout.next;
-                    }
-                    if (timeout.next != null) {
-                        timeout.next.prev = timeout.prev;
-                    }
-
-                    if (timeout == head) {
-                        // if timeout is head we need to replace the head with the next entry
-                        head = next;
-                        if (timeout == tail) {
-                            // if timeout is also the tail we need to adjust the entry too
-                            tail = timeout.next;
-                        }
-                    } else if (timeout == tail) {
-                        // if the timeout is the tail modify the tail to be the prev node.
-                        tail = timeout.prev;
-                    }
-                    // null out prev and next to allow for GC.
-                    timeout.prev = null;
-                    timeout.next = null;
+                    remove(timeout);
                 }
                 timeout = next;
             }
+        }
+
+        public void remove(HashedWheelTimeout timeout) {
+            HashedWheelTimeout next = timeout.next;
+            // remove timeout that was either processed or cancelled by updating the linked-list
+            if (timeout.prev != null) {
+                timeout.prev.next = next;
+            }
+            if (timeout.next != null) {
+                timeout.next.prev = timeout.prev;
+            }
+
+            if (timeout == head) {
+                // if timeout is also the tail we need to adjust the entry too
+                if (timeout == tail) {
+                    tail = null;
+                    head = null;
+                } else {
+                    head = next;
+                }
+            } else if (timeout == tail) {
+                // if the timeout is the tail modify the tail to be the prev node.
+                tail = timeout.prev;
+            }
+            // null out prev, next and bucket to allow for GC.
+            timeout.prev = null;
+            timeout.next = null;
+            timeout.bucket = null;
         }
 
         /**
@@ -671,6 +718,7 @@ public class HashedWheelTimer implements Timer {
             // null out prev and next to allow for GC.
             head.next = null;
             head.prev = null;
+            head.bucket = null;
             return head;
         }
     }
