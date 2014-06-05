@@ -184,8 +184,8 @@ public final class DnsResponseCode implements Comparable<DnsResponseCode> {
     @Override
     public String toString() {
         if (message == null) {
-            return errorCode + "()";
+            return "DnsResponseCode(" + errorCode + ')';
         }
-        return errorCode + '(' + message + ')';
+        return "DnsResponseCode(" + errorCode + ", " + message + ')';
     }
 }
