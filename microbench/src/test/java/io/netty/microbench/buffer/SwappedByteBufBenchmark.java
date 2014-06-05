@@ -23,20 +23,23 @@ import org.openjdk.jmh.annotations.GenerateMicroBenchmark;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
+import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 
 import java.nio.ByteOrder;
 
 @State(Scope.Benchmark)
-@Warmup(iterations = 25)
-@Measurement(iterations = 50)
+@Warmup(iterations = 10)
+@Measurement(iterations = 25)
 public class SwappedByteBufBenchmark extends AbstractMicrobenchmark {
-    private final ByteBuf buffer = Unpooled.directBuffer(8);
-    private final ByteBuf swappedByteBuf = new SwappedByteBuf(buffer);
-    private final ByteBuf unsafeSwappedByteBuf = buffer.order(ByteOrder.LITTLE_ENDIAN);
+    private ByteBuf swappedByteBuf;
+    private ByteBuf unsafeSwappedByteBuf;
 
-    public SwappedByteBufBenchmark() {
+    @Setup
+    public void setup() {
+        swappedByteBuf = new SwappedByteBuf(Unpooled.directBuffer(8));
+        unsafeSwappedByteBuf = Unpooled.directBuffer(8).order(ByteOrder.LITTLE_ENDIAN);
         if (unsafeSwappedByteBuf.getClass().equals(SwappedByteBuf.class)) {
             throw new IllegalStateException("Should not use " + SwappedByteBuf.class.getSimpleName());
         }
