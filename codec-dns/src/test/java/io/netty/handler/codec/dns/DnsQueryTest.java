@@ -46,7 +46,7 @@ public class DnsQueryTest {
             Assert.assertEquals("Invalid additional resource record count, expected 0.", 0, query.header()
                     .additionalResourceCount());
             Assert.assertEquals("Invalid type, should be TYPE_QUERY (0)", DnsHeader.TYPE_QUERY, query.header()
-                    .getType());
+                    .type());
             embedder.writeOutbound(query);
             DatagramPacket packet = embedder.readOutbound();
             Assert.assertTrue(packet.content().isReadable());

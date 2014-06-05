@@ -58,7 +58,7 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
         for (int i = 0; i < questions; i++) {
             response.addQuestion(decodeQuestion(buf));
         }
-        if (header.getResponseCode() != DnsResponseCode.NOERROR) {
+        if (header.responseCode() != DnsResponseCode.NOERROR) {
             // response code for error
             out.add(response);
             return;

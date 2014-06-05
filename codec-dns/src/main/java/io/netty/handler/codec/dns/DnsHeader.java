@@ -103,7 +103,7 @@ public class DnsHeader {
      * @see #OPCODE_QUERY
      * @see #OPCODE_IQUERY
      */
-    public int getOpcode() {
+    public int opcode() {
         return opcode;
     }
 
@@ -112,7 +112,7 @@ public class DnsHeader {
      *
      * @see #TYPE_QUERY
      */
-    public int getType() {
+    public int type() {
         return type;
     }
 
@@ -120,7 +120,7 @@ public class DnsHeader {
      * Returns the 2 byte unsigned identifier number used for the
      * {@link DnsMessage}.
      */
-    public int getId() {
+    public int id() {
         return id;
     }
 
@@ -176,7 +176,7 @@ public class DnsHeader {
     /**
      * Returns the 3 bit reserved field 'Z'.
      */
-    public int getZ() {
+    public int z() {
         return z;
     }
 

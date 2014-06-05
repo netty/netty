@@ -31,7 +31,6 @@ public final class DnsQueryHeader extends DnsHeader {
     public DnsQueryHeader(DnsMessage<DnsQueryHeader> parent, int id) {
         super(parent);
         setId(id);
-        setType(TYPE_QUERY);
         setRecursionDesired(true);
     }
 
@@ -40,7 +39,7 @@ public final class DnsQueryHeader extends DnsHeader {
      * {@code TYPE_QUERY}.
      */
     @Override
-    public int getType() {
+    public int type() {
         return TYPE_QUERY;
     }
 

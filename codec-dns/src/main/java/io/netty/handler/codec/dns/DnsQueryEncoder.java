@@ -55,10 +55,10 @@ public class DnsQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
      *            the buffer the encoded data should be written to
      */
     private static void encodeHeader(DnsHeader header, ByteBuf buf) {
-        buf.writeShort(header.getId());
+        buf.writeShort(header.id());
         int flags = 0;
-        flags |= header.getType() << 15;
-        flags |= header.getOpcode() << 14;
+        flags |= header.type() << 15;
+        flags |= header.opcode() << 14;
         flags |= header.isRecursionDesired() ? 1 << 8 : 0;
         buf.writeShort(flags);
         buf.writeShort(header.questionCount());

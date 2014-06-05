@@ -51,7 +51,7 @@ public class DnsResponseTest {
             packet.retain().readerIndex(0);
             ByteBuf raw = Unpooled.wrappedBuffer(p);
             Assert.assertEquals("Invalid id, expected: " + raw.getUnsignedShort(0) + ", actual: "
-                    + decoded.header().getId(), raw.getUnsignedShort(0), decoded.header().getId());
+                    + decoded.header().id(), raw.getUnsignedShort(0), decoded.header().id());
             Assert.assertEquals("Invalid resource count,  expected: " + raw.getUnsignedShort(4) + ", actual: "
                     + decoded.questions().size(), raw.getUnsignedShort(4), decoded.questions().size());
             Assert.assertEquals("Invalid resource count,  expected: " + raw.getUnsignedShort(6) + ", actual: "

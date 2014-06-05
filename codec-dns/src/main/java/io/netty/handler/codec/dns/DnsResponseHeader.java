@@ -40,7 +40,6 @@ public final class DnsResponseHeader extends DnsHeader {
     public DnsResponseHeader(DnsMessage<DnsResponseHeader> parent, int id) {
         super(parent);
         setId(id);
-        setType(TYPE_RESPONSE);
     }
 
     /**
@@ -69,7 +68,7 @@ public final class DnsResponseHeader extends DnsHeader {
     /**
      * Returns the 4 bit return code.
      */
-    public DnsResponseCode getResponseCode() {
+    public DnsResponseCode responseCode() {
         return responseCode;
     }
 
@@ -78,7 +77,7 @@ public final class DnsResponseHeader extends DnsHeader {
      * {@code TYPE_RESPONSE}.
      */
     @Override
-    public int getType() {
+    public int type() {
         return TYPE_RESPONSE;
     }
 
