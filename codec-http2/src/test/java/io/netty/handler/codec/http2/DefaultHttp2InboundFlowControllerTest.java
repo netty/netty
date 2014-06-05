@@ -45,12 +45,16 @@ public class DefaultHttp2InboundFlowControllerTest {
     @Mock
     private FrameWriter frameWriter;
 
+    private DefaultHttp2Connection connection;
+
     @Before
     public void setup() throws Http2Exception {
         MockitoAnnotations.initMocks(this);
 
-        controller = new DefaultHttp2InboundFlowController();
-        controller.addStream(STREAM_ID);
+        connection = new DefaultHttp2Connection(false, false);
+        controller = new DefaultHttp2InboundFlowController(connection);
+
+        connection.local().createStream(STREAM_ID, false);
     }
 
     @Test

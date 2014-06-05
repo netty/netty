@@ -34,18 +34,6 @@ public interface Http2InboundFlowController {
     }
 
     /**
-     * Informs the flow controller of the existence of a new stream, allowing it to allocate
-     * resources as needed.
-     */
-    void addStream(int streamId);
-
-    /**
-     * Removes the given stream from flow control processing logic and frees resources as
-     * appropriate.
-     */
-    void removeStream(int streamId);
-
-    /**
      * Sets the initial inbound flow control window size and updates all stream window sizes by the
      * delta. This is called as part of the processing for an outbound SETTINGS frame.
      *

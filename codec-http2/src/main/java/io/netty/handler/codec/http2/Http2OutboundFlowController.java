@@ -41,37 +41,6 @@ public interface Http2OutboundFlowController {
     }
 
     /**
-     * Creates a new priority for the a stream with respect to out-bound flow control.
-     *
-     * @param streamId the stream to be prioritized.
-     * @param parent an optional stream that the given stream should depend on. Zero, if no
-     *            dependency.
-     * @param weight the weight to be assigned to this stream relative to its parent. This value
-     *            must be between 1 and 256 (inclusive)
-     * @param exclusive indicates that the stream should be the exclusive dependent on its parent.
-     *            This only applies if the stream has a parent.
-     */
-    void addStream(int streamId, int parent, short weight, boolean exclusive);
-
-    /**
-     * Updates the priority for a stream with respect to out-bound flow control.
-     *
-     * @param streamId the stream to be prioritized.
-     * @param parent an optional stream that the given stream should depend on. Zero, if no
-     *            dependency.
-     * @param weight the weight to be assigned to this stream relative to its parent. This value
-     *            must be between 1 and 256 (inclusive)
-     * @param exclusive indicates that the stream should be the exclusive dependent on its parent.
-     *            This only applies if the stream has a parent.
-     */
-    void updateStream(int streamId, int parent, short weight, boolean exclusive);
-
-    /**
-     * Removes the given stream from those considered for out-bound flow control.
-     */
-    void removeStream(int streamId);
-
-    /**
      * Sets the initial size of the connection's outbound flow control window. The outbound flow
      * control windows for all streams are updated by the delta in the initial window size. This is
      * called as part of the processing of a SETTINGS frame received from the remote endpoint.

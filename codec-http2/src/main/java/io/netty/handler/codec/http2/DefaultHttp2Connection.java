@@ -15,16 +15,27 @@
 
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
+import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_WEIGHT;
+import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_WEIGHT;
+import static io.netty.handler.codec.http2.Http2CodecUtil.immediateRemovalPolicy;
 import static io.netty.handler.codec.http2.Http2Exception.format;
 import static io.netty.handler.codec.http2.Http2Exception.protocolError;
+import static io.netty.handler.codec.http2.Http2Stream.State.CLOSED;
 import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_LOCAL;
 import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_REMOTE;
+import static io.netty.handler.codec.http2.Http2Stream.State.IDLE;
 import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_LOCAL;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
+import io.netty.handler.codec.http2.Http2StreamRemovalPolicy.Action;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
@@ -34,21 +45,81 @@ import java.util.Set;
  */
 public class DefaultHttp2Connection implements Http2Connection {
 
+    private final Set<Listener> listeners = new HashSet<Listener>(4);
     private final Map<Integer, Http2Stream> streamMap = new HashMap<Integer, Http2Stream>();
+    private final ConnectionStream connectionStream = new ConnectionStream();
     private final Set<Http2Stream> activeStreams = new LinkedHashSet<Http2Stream>();
     private final DefaultEndpoint localEndpoint;
     private final DefaultEndpoint remoteEndpoint;
+    private final Http2StreamRemovalPolicy removalPolicy;
     private boolean goAwaySent;
     private boolean goAwayReceived;
 
+    /**
+     * Creates a connection with compression disabled and an immediate stream removal policy.
+     *
+     * @param server whether or not this end-point is the server-side of the HTTP/2 connection.
+     */
+    public DefaultHttp2Connection(boolean server) {
+        this(server, false);
+    }
+
+    /**
+     * Creates a connection with an immediate stream removal policy.
+     *
+     * @param server whether or not this end-point is the server-side of the HTTP/2 connection.
+     * @param allowCompressedData if true, compressed frames are allowed from the remote end-point.
+     */
     public DefaultHttp2Connection(boolean server, boolean allowCompressedData) {
+        this(server, allowCompressedData, immediateRemovalPolicy());
+    }
+
+    /**
+     * Creates a new connection with the given settings.
+     *
+     * @param server whether or not this end-point is the server-side of the HTTP/2 connection.
+     * @param allowCompressedData if true, compressed frames are allowed from the remote end-point.
+     * @param removalPolicy the policy to be used for removal of closed stream.
+     */
+    public DefaultHttp2Connection(boolean server, boolean allowCompressedData,
+            Http2StreamRemovalPolicy removalPolicy) {
+        if (removalPolicy == null) {
+            throw new NullPointerException("removalPolicy");
+        }
+        this.removalPolicy = removalPolicy;
         localEndpoint = new DefaultEndpoint(server, allowCompressedData);
         remoteEndpoint = new DefaultEndpoint(!server, false);
+
+        // Tell the removal policy how to remove a stream from this connection.
+        removalPolicy.setAction(new Action() {
+            @Override
+            public void removeStream(Http2Stream stream) {
+                DefaultHttp2Connection.this.removeStream((DefaultStream) stream);
+            }
+        });
+
+        // Add the connection stream to the map.
+        streamMap.put(connectionStream.id(), connectionStream);
+    }
+
+    @Override
+    public void addListener(Listener listener) {
+        listeners.add(listener);
+    }
+
+    @Override
+    public void removeListener(Listener listener) {
+        listeners.remove(listener);
     }
 
     @Override
     public boolean isServer() {
         return localEndpoint.isServer();
+    }
+
+    @Override
+    public Http2Stream connectionStream() {
+        return connectionStream;
     }
 
     @Override
@@ -110,29 +181,216 @@ public class DefaultHttp2Connection implements Http2Connection {
         return isGoAwaySent() || isGoAwayReceived();
     }
 
+    private void addStream(DefaultStream stream) {
+        // Add the stream to the map and priority tree.
+        streamMap.put(stream.id(), stream);
+        connectionStream.addChild(stream, false);
+
+        // Notify the observers of the event.
+        for (Listener listener : listeners) {
+            listener.streamAdded(stream);
+        }
+    }
+
+    private void removeStream(DefaultStream stream) {
+        // Notify the observers of the event first.
+        for (Listener listener : listeners) {
+            listener.streamRemoved(stream);
+        }
+
+        // Remove it from the map and priority tree.
+        streamMap.remove(stream.id());
+        ((DefaultStream) stream.parent()).removeChild(stream);
+    }
+
+    private void activate(Http2Stream stream) {
+        activeStreams.add(stream);
+        for (Listener listener : listeners) {
+            listener.streamActive(stream);
+        }
+    }
+
+    private void deactivate(Http2Stream stream) {
+        activeStreams.remove(stream);
+        for (Listener listener : listeners) {
+            listener.streamInactive(stream);
+        }
+    }
+
+    private void notifyHalfClosed(Http2Stream stream) {
+        for (Listener listener : listeners) {
+            listener.streamHalfClosed(stream);
+        }
+    }
+
+    private void notifyPriorityChanged(Http2Stream stream, Http2Stream previousParent) {
+        for (Listener listener : listeners) {
+            listener.streamPriorityChanged(stream, previousParent);
+        }
+    }
+
+    private void notifyPrioritySubtreeChanged(Http2Stream stream, Http2Stream subtreeRoot) {
+        for (Listener listener : listeners) {
+            listener.streamPrioritySubtreeChanged(stream, subtreeRoot);
+        }
+    }
+
     /**
      * Simple stream implementation. Streams can be compared to each other by priority.
      */
-    private final class DefaultStream implements Http2Stream {
+    private class DefaultStream implements Http2Stream {
         private final int id;
-        private State state = State.IDLE;
+        private State state = IDLE;
+        private short weight = DEFAULT_PRIORITY_WEIGHT;
+        private DefaultStream parent;
+        private Map<Integer, DefaultStream> children = newChildMap();
+        private int totalChildWeights;
+        private FlowState inboundFlow;
+        private FlowState outboundFlow;
 
         DefaultStream(int id) {
             this.id = id;
         }
 
         @Override
-        public int id() {
+        public final int id() {
             return id;
         }
 
         @Override
-        public State state() {
+        public final State state() {
             return state;
         }
 
         @Override
-        public Http2Stream verifyState(Http2Error error, State... allowedStates) throws Http2Exception {
+        public FlowState inboundFlow() {
+            return inboundFlow;
+        }
+
+        @Override
+        public void inboundFlow(FlowState state) {
+            inboundFlow = state;
+        }
+
+        @Override
+        public FlowState outboundFlow() {
+            return outboundFlow;
+        }
+
+        @Override
+        public void outboundFlow(FlowState state) {
+            outboundFlow = state;
+        }
+
+        @Override
+        public final boolean isRoot() {
+            return parent == null;
+        }
+
+        @Override
+        public final short weight() {
+            return weight;
+        }
+
+        @Override
+        public final int totalChildWeights() {
+            return totalChildWeights;
+        }
+
+        @Override
+        public final Http2Stream parent() {
+            return parent;
+        }
+
+        @Override
+        public final boolean isDescendantOf(Http2Stream stream) {
+            Http2Stream next = parent();
+            while (next != null) {
+                if (next == stream) {
+                    return true;
+                }
+                next = next.parent();
+            }
+            return false;
+        }
+
+        @Override
+        public final boolean isLeaf() {
+            return numChildren() == 0;
+        }
+
+        @Override
+        public final int numChildren() {
+            return children.size();
+        }
+
+        @Override
+        public final Collection<? extends Http2Stream> children() {
+            return Collections.unmodifiableCollection(children.values());
+        }
+
+        @Override
+        public final boolean hasChild(int streamId) {
+            return child(streamId) != null;
+        }
+
+        @Override
+        public final Http2Stream child(int streamId) {
+            return children.get(streamId);
+        }
+
+        @Override
+        public Http2Stream setPriority(int parentStreamId, short weight, boolean exclusive)
+                throws Http2Exception {
+            if (weight < MIN_WEIGHT || weight > MAX_WEIGHT) {
+                throw new IllegalArgumentException(String.format(
+                        "Invalid weight: %d.  Must be between %d and %d (inclusive).", weight,
+                        MIN_WEIGHT, MAX_WEIGHT));
+            }
+
+            // Get the parent stream.
+            DefaultStream newParent = (DefaultStream) requireStream(parentStreamId);
+            if (this == newParent) {
+                throw new IllegalArgumentException("A stream cannot depend on itself");
+            }
+
+            // Already have a priority. Re-prioritize the stream.
+            weight(weight);
+
+            boolean needToRestructure = newParent.isDescendantOf(this);
+            DefaultStream oldParent = (DefaultStream) parent();
+            try {
+                if (newParent == oldParent && !exclusive) {
+                    // No changes were made to the tree structure.
+                    return this;
+                }
+
+                // Break off the priority branch from it's current parent.
+                oldParent.removeChildBranch(this);
+
+                if (needToRestructure) {
+                    // Adding a circular dependency (priority<->newParent). Break off the new
+                    // parent's branch and add it above this priority.
+                    ((DefaultStream) newParent.parent()).removeChildBranch(newParent);
+                    oldParent.addChild(newParent, false);
+                }
+
+                // Add the priority under the new parent.
+                newParent.addChild(this, exclusive);
+                return this;
+            } finally {
+                // Notify observers.
+                if (needToRestructure) {
+                    notifyPrioritySubtreeChanged(this, newParent);
+                } else {
+                    notifyPriorityChanged(this, oldParent);
+                }
+            }
+        }
+
+        @Override
+        public Http2Stream verifyState(Http2Error error, State... allowedStates)
+                throws Http2Exception {
             for (State allowedState : allowedStates) {
                 if (state == allowedState) {
                     return this;
@@ -153,18 +411,21 @@ public class DefaultHttp2Connection implements Http2Connection {
                 default:
                     throw protocolError("Attempting to open non-reserved stream for push");
             }
+            activate(this);
             return this;
         }
 
         @Override
         public Http2Stream close() {
-            if (state == State.CLOSED) {
+            if (state == CLOSED) {
                 return this;
             }
 
-            state = State.CLOSED;
-            activeStreams.remove(this);
-            streamMap.remove(id);
+            state = CLOSED;
+            deactivate(this);
+
+            // Mark this stream for removal.
+            removalPolicy.markForRemoval(this);
             return this;
         }
 
@@ -173,6 +434,7 @@ public class DefaultHttp2Connection implements Http2Connection {
             switch (state) {
                 case OPEN:
                     state = HALF_CLOSED_LOCAL;
+                    notifyHalfClosed(this);
                     break;
                 case HALF_CLOSED_LOCAL:
                     break;
@@ -188,6 +450,7 @@ public class DefaultHttp2Connection implements Http2Connection {
             switch (state) {
                 case OPEN:
                     state = HALF_CLOSED_REMOTE;
+                    notifyHalfClosed(this);
                     break;
                 case HALF_CLOSED_REMOTE:
                     break;
@@ -199,13 +462,123 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         @Override
-        public boolean remoteSideOpen() {
+        public final boolean remoteSideOpen() {
             return state == HALF_CLOSED_LOCAL || state == OPEN || state == RESERVED_REMOTE;
         }
 
         @Override
-        public boolean localSideOpen() {
+        public final boolean localSideOpen() {
             return state == HALF_CLOSED_REMOTE || state == OPEN || state == RESERVED_LOCAL;
+        }
+
+        final void weight(short weight) {
+            if (parent != null && weight != this.weight) {
+                int delta = weight - this.weight;
+                parent.totalChildWeights += delta;
+            }
+            this.weight = weight;
+        }
+
+        final Map<Integer, DefaultStream> removeAllChildren() {
+            if (children.isEmpty()) {
+                return Collections.emptyMap();
+            }
+
+            totalChildWeights = 0;
+            Map<Integer, DefaultStream> prevChildren = children;
+            children = newChildMap();
+            return prevChildren;
+        }
+
+        /**
+         * Adds a child to this priority. If exclusive is set, any children of this node are moved
+         * to being dependent on the child.
+         */
+        final void addChild(DefaultStream child, boolean exclusive) {
+            if (exclusive) {
+                // If it was requested that this child be the exclusive dependency of this node,
+                // move any previous children to the child node, becoming grand children
+                // of this node.
+                for (DefaultStream grandchild : removeAllChildren().values()) {
+                    child.addChild(grandchild, false);
+                }
+            }
+
+            child.parent = this;
+            if (children.put(child.id(), child) == null) {
+                totalChildWeights += child.weight();
+            }
+        }
+
+        /**
+         * Removes the child priority and moves any of its dependencies to being direct dependencies
+         * on this node.
+         */
+        final void removeChild(DefaultStream child) {
+            if (children.remove(child.id()) != null) {
+                child.parent = null;
+                totalChildWeights -= child.weight();
+
+                // Move up any grand children to be directly dependent on this node.
+                for (DefaultStream grandchild : child.children.values()) {
+                    addChild(grandchild, false);
+                }
+            }
+        }
+
+        /**
+         * Removes the child priority but unlike {@link #removeChild}, leaves its branch unaffected.
+         */
+        final void removeChildBranch(DefaultStream child) {
+            if (children.remove(child.id()) != null) {
+                child.parent = null;
+                totalChildWeights -= child.weight();
+            }
+        }
+    }
+
+    private static <T> Map<Integer, DefaultStream> newChildMap() {
+        return new LinkedHashMap<Integer, DefaultStream>(4);
+    }
+
+    /**
+     * Stream class representing the connection, itself.
+     */
+    private final class ConnectionStream extends DefaultStream {
+        public ConnectionStream() {
+            super(CONNECTION_STREAM_ID);
+        }
+
+        @Override
+        public Http2Stream setPriority(int parentStreamId, short weight, boolean exclusive)
+                throws Http2Exception {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Http2Stream verifyState(Http2Error error, State... allowedStates)
+                throws Http2Exception {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Http2Stream openForPush() throws Http2Exception {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Http2Stream close() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Http2Stream closeLocalSide() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Http2Stream closeRemoteSide() {
+            throw new UnsupportedOperationException();
         }
     }
 
@@ -259,8 +632,8 @@ public class DefaultHttp2Connection implements Http2Connection {
             lastStreamCreated = streamId;
 
             // Register the stream and mark it as active.
-            streamMap.put(streamId, stream);
-            activeStreams.add(stream);
+            addStream(stream);
+            activate(stream);
             return stream;
         }
 
@@ -291,7 +664,7 @@ public class DefaultHttp2Connection implements Http2Connection {
             lastStreamCreated = streamId;
 
             // Register the stream.
-            streamMap.put(streamId, stream);
+            addStream(stream);
             return stream;
         }
 
