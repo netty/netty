@@ -21,12 +21,14 @@ import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpHeaderUtil;
+import io.netty.handler.codec.http.HttpHeaders.Values;
 import io.netty.handler.codec.http.HttpRequest;
 
 import static io.netty.handler.codec.http.HttpHeaders.Names.*;
-import static io.netty.handler.codec.http.HttpHeaders.*;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
+
 
 public class HttpHelloWorldServerHandler extends ChannelHandlerAdapter {
     private static final byte[] CONTENT = { 'H', 'e', 'l', 'l', 'o', ' ', 'W', 'o', 'r', 'l', 'd' };
@@ -41,10 +43,10 @@ public class HttpHelloWorldServerHandler extends ChannelHandlerAdapter {
         if (msg instanceof HttpRequest) {
             HttpRequest req = (HttpRequest) msg;
 
-            if (is100ContinueExpected(req)) {
+            if (HttpHeaderUtil.is100ContinueExpected(req)) {
                 ctx.write(new DefaultFullHttpResponse(HTTP_1_1, CONTINUE));
             }
-            boolean keepAlive = isKeepAlive(req);
+            boolean keepAlive = HttpHeaderUtil.isKeepAlive(req);
             FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, Unpooled.wrappedBuffer(CONTENT));
             response.headers().set(CONTENT_TYPE, "text/plain");
             response.headers().set(CONTENT_LENGTH, response.content().readableBytes());

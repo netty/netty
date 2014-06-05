@@ -17,29 +17,29 @@ package io.netty.handler.codec.stomp;
 
 public final class StompTestConstants {
     public static final String CONNECT_FRAME =
-        "CONNECT\r\n" +
-            "host:stomp.github.org\r\n" +
-            "accept-version:1.1,1.2\r\n" +
-            "\r\n" +
+        "CONNECT\n" +
+            "host:stomp.github.org\n" +
+            "accept-version:1.1,1.2\n" +
+            '\n' +
             '\0';
     public static final String CONNECTED_FRAME =
-        "CONNECTED\r\n" +
+        "CONNECTED\n" +
             "version:1.2\n" +
-            "\r\n" +
+            '\n' +
             "\0\n";
     public static final String SEND_FRAME_1 =
-        "SEND\r\n" +
+        "SEND\n" +
             "destination:/queue/a\n" +
             "content-type:text/plain\n" +
-            "\r\n" +
+            '\n' +
             "hello, queue a!" +
             "\0\n";
     public static final String SEND_FRAME_2 =
-        "SEND\r\n" +
+        "SEND\n" +
             "destination:/queue/a\n" +
             "content-type:text/plain\n" +
             "content-length:17\n" +
-            "\r\n" +
+            '\n' +
             "hello, queue a!!!" +
             "\0\n";
 

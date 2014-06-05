@@ -264,7 +264,7 @@ public class HttpVersion implements Comparable<HttpVersion> {
 
     void encode(ByteBuf buf) {
         if (bytes == null) {
-            HttpHeaders.encodeAscii0(text, buf);
+            HttpHeaderUtil.encodeAscii0(text, buf);
         } else {
             buf.writeBytes(bytes);
         }

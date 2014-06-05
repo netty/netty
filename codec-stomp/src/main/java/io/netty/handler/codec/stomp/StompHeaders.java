@@ -15,93 +15,63 @@
  */
 package io.netty.handler.codec.stomp;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import io.netty.handler.codec.AsciiString;
+import io.netty.handler.codec.TextHeaderProcessor;
+import io.netty.handler.codec.TextHeaders;
 
 /**
- * Provides the constants for the standard STOMP header names and values and
- * commonly used utility methods that accesses an {@link StompHeadersSubframe}.
+ * The multimap data structure for the STOMP header names and values. It also provides the constants for the standard
+ * STOMP header names and values.
  */
-public class StompHeaders {
+public interface StompHeaders extends TextHeaders {
 
-    public static final String ACCEPT_VERSION = "accept-version";
-    public static final String HOST = "host";
-    public static final String LOGIN = "login";
-    public static final String PASSCODE = "passcode";
-    public static final String HEART_BEAT = "heart-beat";
-    public static final String VERSION = "version";
-    public static final String SESSION = "session";
-    public static final String SERVER = "server";
-    public static final String DESTINATION = "destination";
-    public static final String ID = "id";
-    public static final String ACK = "ack";
-    public static final String TRANSACTION = "transaction";
-    public static final String RECEIPT = "receipt";
-    public static final String MESSAGE_ID = "message-id";
-    public static final String SUBSCRIPTION = "subscription";
-    public static final String RECEIPT_ID = "receipt-id";
-    public static final String MESSAGE = "message";
-    public static final String CONTENT_LENGTH = "content-length";
-    public static final String CONTENT_TYPE = "content-type";
-
-    private final Map<String, List<String>> headers = new LinkedHashMap<String, List<String>>();
-
-    public boolean has(String key) {
-        List<String> values = headers.get(key);
-        return values != null && !values.isEmpty();
-    }
-
-    public String get(String key) {
-        List<String> values = headers.get(key);
-        if (values != null && !values.isEmpty()) {
-            return values.get(0);
-        } else {
-            return null;
-        }
-    }
-
-    public void add(String key, String value) {
-        List<String> values = headers.get(key);
-        if (values == null) {
-            values = new ArrayList<String>();
-            headers.put(key, values);
-        }
-        values.add(value);
-    }
-
-    @SuppressWarnings("ArraysAsListWithZeroOrOneArgument")
-    public void set(String key, String value) {
-        headers.put(key, Arrays.asList(value));
-    }
-
-    public List<String> getAll(String key) {
-        List<String> values = headers.get(key);
-        if (values != null) {
-            return new ArrayList<String>(values);
-        } else {
-            return new ArrayList<String>();
-        }
-    }
-
-    public Set<String> keySet() {
-        return headers.keySet();
-    }
+    AsciiString ACCEPT_VERSION = new AsciiString("accept-version");
+    AsciiString HOST = new AsciiString("host");
+    AsciiString LOGIN = new AsciiString("login");
+    AsciiString PASSCODE = new AsciiString("passcode");
+    AsciiString HEART_BEAT = new AsciiString("heart-beat");
+    AsciiString VERSION = new AsciiString("version");
+    AsciiString SESSION = new AsciiString("session");
+    AsciiString SERVER = new AsciiString("server");
+    AsciiString DESTINATION = new AsciiString("destination");
+    AsciiString ID = new AsciiString("id");
+    AsciiString ACK = new AsciiString("ack");
+    AsciiString TRANSACTION = new AsciiString("transaction");
+    AsciiString RECEIPT = new AsciiString("receipt");
+    AsciiString MESSAGE_ID = new AsciiString("message-id");
+    AsciiString SUBSCRIPTION = new AsciiString("subscription");
+    AsciiString RECEIPT_ID = new AsciiString("receipt-id");
+    AsciiString MESSAGE = new AsciiString("message");
+    AsciiString CONTENT_LENGTH = new AsciiString("content-length");
+    AsciiString CONTENT_TYPE = new AsciiString("content-type");
 
     @Override
-    public String toString() {
-        return "StompHeaders{" +
-            headers +
-            '}';
-    }
+    StompHeaders add(CharSequence name, Object value);
 
-    public void set(StompHeaders headers) {
-        for (String key: headers.keySet()) {
-            List<String> values = headers.getAll(key);
-            this.headers.put(key, values);
-        }
-    }
+    @Override
+    StompHeaders add(CharSequence name, Iterable<?> values);
+
+    @Override
+    StompHeaders add(CharSequence name, Object... values);
+
+    @Override
+    StompHeaders add(TextHeaders headers);
+
+    @Override
+    StompHeaders set(CharSequence name, Object value);
+
+    @Override
+    StompHeaders set(CharSequence name, Iterable<?> values);
+
+    @Override
+    StompHeaders set(CharSequence name, Object... values);
+
+    @Override
+    StompHeaders set(TextHeaders headers);
+
+    @Override
+    StompHeaders clear();
+
+    @Override
+    StompHeaders forEachEntry(TextHeaderProcessor processor);
 }

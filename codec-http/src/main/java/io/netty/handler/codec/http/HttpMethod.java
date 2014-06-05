@@ -197,7 +197,7 @@ public class HttpMethod implements Comparable<HttpMethod> {
 
     void encode(ByteBuf buf) {
         if (bytes == null) {
-            HttpHeaders.encodeAscii0(name, buf);
+            HttpHeaderUtil.encodeAscii0(name, buf);
         } else {
             buf.writeBytes(bytes);
         }

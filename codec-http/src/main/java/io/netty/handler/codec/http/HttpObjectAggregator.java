@@ -95,17 +95,17 @@ public class HttpObjectAggregator
 
     @Override
     protected boolean hasContentLength(HttpMessage start) throws Exception {
-        return HttpHeaders.isContentLengthSet(start);
+        return HttpHeaderUtil.isContentLengthSet(start);
     }
 
     @Override
     protected long contentLength(HttpMessage start) throws Exception {
-        return HttpHeaders.getContentLength(start);
+        return HttpHeaderUtil.getContentLength(start);
     }
 
     @Override
     protected Object newContinueResponse(HttpMessage start) throws Exception {
-        if (HttpHeaders.is100ContinueExpected(start)) {
+        if (HttpHeaderUtil.is100ContinueExpected(start)) {
             return CONTINUE;
         } else {
             return null;
@@ -116,7 +116,7 @@ public class HttpObjectAggregator
     protected FullHttpMessage beginAggregation(HttpMessage start, ByteBuf content) throws Exception {
         assert !(start instanceof FullHttpMessage);
 
-        HttpHeaders.removeTransferEncodingChunked(start);
+        HttpHeaderUtil.setTransferEncodingChunked(start, false);
 
         FullHttpMessage ret;
         if (start instanceof HttpRequest) {
@@ -169,7 +169,7 @@ public class HttpObjectAggregator
             // If 'Expect: 100-continue' is missing, close becuase it's impossible to recover.
             // If keep-alive is off, no need to leave the connection open.
             if (oversized instanceof FullHttpMessage ||
-                    !HttpHeaders.is100ContinueExpected(oversized) || !HttpHeaders.isKeepAlive(oversized)) {
+                    !HttpHeaderUtil.is100ContinueExpected(oversized) || !HttpHeaderUtil.isKeepAlive(oversized)) {
                 future.addListener(ChannelFutureListener.CLOSE);
             }
 

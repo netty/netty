@@ -62,7 +62,7 @@ public abstract class DefaultHttpMessage extends DefaultHttpObject implements Ht
         buf.append("(version: ");
         buf.append(getProtocolVersion().text());
         buf.append(", keepAlive: ");
-        buf.append(HttpHeaders.isKeepAlive(this));
+        buf.append(HttpHeaderUtil.isKeepAlive(this));
         buf.append(')');
         buf.append(StringUtil.NEWLINE);
         appendHeaders(buf);

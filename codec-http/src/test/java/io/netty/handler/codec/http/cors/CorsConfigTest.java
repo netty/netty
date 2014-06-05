@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.http.cors;
 
-import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpMethod;
 import org.junit.Test;
@@ -115,7 +114,7 @@ public class CorsConfigTest {
     @Test
     public void emptyPreflightResponseHeaders() {
         final CorsConfig cors = withAnyOrigin().noPreflightResponseHeaders().build();
-        assertThat(cors.preflightResponseHeaders(), equalTo(HttpHeaders.EMPTY_HEADERS));
+        assertThat(cors.preflightResponseHeaders().size(), equalTo(0));
     }
 
     @Test (expected = IllegalArgumentException.class)
