@@ -138,7 +138,7 @@ public class HttpPostRequestDecoderTest {
                 "http://localhost");
 
         req.setDecoderResult(DecoderResult.SUCCESS);
-        req.headers().add(HttpHeaders.Names.CONTENT_TYPE, "multipart/form-data; boundary=\"" + boundary+"\"");
+        req.headers().add(HttpHeaders.Names.CONTENT_TYPE, "multipart/form-data; boundary=\"" + boundary + "\"");
         req.headers().add(HttpHeaders.Names.TRANSFER_ENCODING, HttpHeaders.Values.CHUNKED);
 
         // Force to use memory-based data.
