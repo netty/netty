@@ -528,7 +528,6 @@ public class HashedWheelTimer implements Timer {
                 timer.timeouts.add(this);
                 return true;
             }
-
         }
 
         public void remove() {
