@@ -181,7 +181,7 @@ public class ChannelHandlerAppender extends ChannelHandlerAdapter {
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
         added = true;
 
-        DefaultChannelHandlerContext dctx = (DefaultChannelHandlerContext) ctx;
+        AbstractChannelHandlerContext dctx = (AbstractChannelHandlerContext) ctx;
         DefaultChannelPipeline pipeline = (DefaultChannelPipeline) dctx.pipeline();
         String name = dctx.name();
         try {
