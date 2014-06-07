@@ -511,23 +511,22 @@ public class HashedWheelTimer implements Timer {
             if (state >= ST_CANCELLED) {
                 // fail fast if the task was cancelled or expired before.
                 return false;
-            } else {
-                if (state != ST_IN_BUCKET && compareAndSetState(ST_INIT, ST_CANCELLED)) {
-                    // Was cancelled before the HashedWheelTimeout was added to its HashedWheelBucket.
-                    // In this case we can just return here as it will be discarded by the WorkerThread when handling
-                    // the adding of HashedWheelTimeout to the HashedWheelBuckets.
-                    return true;
-                }
-                // only update the state it will be removed from HashedWheelBucket on next tick.
-                if (!compareAndSetState(ST_IN_BUCKET, ST_CANCELLED)) {
-                    return false;
-                }
-                // Add the HashedWheelTimeout back to the timeouts queue so it will be picked up on the next tick
-                // and remove this HashedTimeTask from the HashedWheelBucket. After this is done it is ready to get
-                // GC'ed once the user has no reference to it anymore.
-                timer.timeouts.add(this);
+            }
+            if (state != ST_IN_BUCKET && compareAndSetState(ST_INIT, ST_CANCELLED)) {
+                // Was cancelled before the HashedWheelTimeout was added to its HashedWheelBucket.
+                // In this case we can just return here as it will be discarded by the WorkerThread when handling
+                // the adding of HashedWheelTimeout to the HashedWheelBuckets.
                 return true;
             }
+            // only update the state it will be removed from HashedWheelBucket on next tick.
+            if (!compareAndSetState(ST_IN_BUCKET, ST_CANCELLED)) {
+                return false;
+            }
+            // Add the HashedWheelTimeout back to the timeouts queue so it will be picked up on the next tick
+            // and remove this HashedTimeTask from the HashedWheelBucket. After this is done it is ready to get
+            // GC'ed once the user has no reference to it anymore.
+            timer.timeouts.add(this);
+            return true;
         }
 
         public void remove() {
@@ -541,12 +540,12 @@ public class HashedWheelTimer implements Timer {
         }
 
         public int state() {
-            return STATE_UPDATER.get(this);
+            return state;
         }
 
         @Override
         public boolean isCancelled() {
-            return  state() == ST_CANCELLED;
+            return state() == ST_CANCELLED;
         }
 
         @Override
@@ -621,6 +620,7 @@ public class HashedWheelTimer implements Timer {
          */
         public void addTimeout(HashedWheelTimeout timeout) {
             assert timeout.bucket == null;
+            timeout.bucket = this;
             if (head == null) {
                 head = tail = timeout;
             } else {
