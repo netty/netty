@@ -20,24 +20,20 @@
   <parent>
     <groupId>org.sonatype.oss</groupId>
     <artifactId>oss-parent</artifactId>
-    <version>7</version>
+    <version>9</version>
   </parent>
 
   <groupId>io.netty</groupId>
-  <artifactId>netty</artifactId>
-  <packaging>bundle</packaging>
-  <version>3.8.2.Final-SNAPSHOT</version>
+  <artifactId>netty-parent</artifactId>
+  <packaging>pom</packaging>
+  <version>4.0.20.Final-SNAPSHOT</version>
 
-  <name>The Netty Project</name>
+  <name>Netty</name>
   <url>http://netty.io/</url>
   <description>
-    The Netty project is an effort to provide an asynchronous event-driven
-    network application framework and tools for rapid development of
-    maintainable high performance and high scalability protocol servers and
-    clients.  In other words, Netty is a NIO client server framework which
-    enables quick and easy development of network applications such as protocol
-    servers and clients. It greatly simplifies and streamlines network
-    programming such as TCP and UDP socket server.
+    Netty is an asynchronous event-driven network application framework for
+    rapid development of maintainable high performance protocol servers and
+    clients.
   </description>
 
   <organization>
@@ -57,6 +53,7 @@
     <url>https://github.com/netty/netty</url>
     <connection>scm:git:git://github.com/netty/netty.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/netty/netty.git</developerConnection>
+    <tag>HEAD</tag>
   </scm>
 
   <developers>
@@ -70,221 +67,520 @@
     </developer>
   </developers>
 
+  <profiles>
+    <profile>
+      <id>leak</id>
+      <properties>
+        <argLine.leak>-Dio.netty.leakDetectionLevel=paranoid</argLine.leak>
+      </properties>
+    </profile>
+    <profile>
+      <id>coverage</id>
+      <properties>
+        <argLine.coverage>${jacoco.argLine}</argLine.coverage>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.jacoco</groupId>
+            <artifactId>jacoco-maven-plugin</artifactId>
+            <version>0.6.4.201312101107</version>
+            <executions>
+              <execution>
+                <id>jacoco-prepare-agent</id>
+                <goals>
+                  <goal>prepare-agent</goal>
+                </goals>
+                <configuration>
+                  <propertyName>jacoco.argLine</propertyName>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>jdk8</id>
+      <activation>
+        <jdk>[1.8,)</jdk>
+      </activation>
+      <properties>
+        <!-- Our Javadoc has poor enough quality to fail the build thanks to JDK8 javadoc which got more strict. -->
+        <maven.javadoc.failOnError>false</maven.javadoc.failOnError>
+        <!-- npn-boot does not work with JDK 8 -->
+        <argLine.bootcp>-D_</argLine.bootcp>
+      </properties>
+    </profile>
+    <profile>
+      <id>linux</id>
+      <activation>
+        <os>
+          <family>linux</family>
+        </os>
+      </activation>
+      <modules>
+        <module>transport-native-epoll</module>
+      </modules>
+    </profile>
+    <!--
+      Netty must be released from RHEL 6.5 x86_64 or compatible so that:
+
+        1) we ship x86_64 version of epoll transport officially, and
+        2) we ensure the ABI compatibility with older GLIBC versions.
+
+           The shared library built on a distribution with newer GLIBC
+           will not run on older distributions.
+    -->
+    <profile>
+      <id>restricted-release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-enforcer-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>enforce-release-environment</id>
+                <goals>
+                  <goal>enforce</goal>
+                </goals>
+                <configuration>
+                  <rules>
+                    <requireProperty>
+                      <regexMessage>
+                        Release process must be performed on linux-x86_64.
+                      </regexMessage>
+                      <property>os.detected.classifier</property>
+                      <regex>^linux-x86_64$</regex>
+                    </requireProperty>
+                    <requireFilesContent>
+                      <message>
+                        Release process must be performed on RHEL 6.5 or its derivatives.
+                      </message>
+                      <files>
+                        <file>/etc/redhat-release</file>
+                      </files>
+                      <content>release 6.5</content>
+                    </requireFilesContent>
+                  </rules>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <!--
+      Profiles that assigns proper Jetty npn-boot version.
+      See: http://www.eclipse.org/jetty/documentation/current/npn-chapter.html#npn-versions
+    -->
+    <profile>
+      <id>npn-7u9</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.7.0_9</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.npn.version>1.1.3.v20130313</jetty.npn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>npn-7u10</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.7.0_10</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.npn.version>1.1.3.v20130313</jetty.npn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>npn-7u11</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.7.0_11</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.npn.version>1.1.3.v20130313</jetty.npn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>npn-7u13</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.7.0_13</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.npn.version>1.1.4.v20130313</jetty.npn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>npn-7u15</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.7.0_15</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.npn.version>1.1.5.v20130313</jetty.npn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>npn-7u17</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.7.0_17</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.npn.version>1.1.5.v20130313</jetty.npn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>npn-7u21</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.7.0_21</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.npn.version>1.1.5.v20130313</jetty.npn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>npn-7u25</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.7.0_25</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.npn.version>1.1.5.v20130313</jetty.npn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>npn-7u40</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.7.0_40</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.npn.version>1.1.6.v20130911</jetty.npn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>npn-7u45</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.7.0_45</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.npn.version>1.1.6.v20130911</jetty.npn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>npn-7u51</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.7.0_51</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.npn.version>1.1.6.v20130911</jetty.npn.version>
+      </properties>
+    </profile>
+  </profiles>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    <jboss.marshalling.version>1.3.18.GA</jboss.marshalling.version>
+    <jetty.npn.version>1.1.7.v20140316</jetty.npn.version>
+    <jetty.npn.path>${settings.localRepository}/org/mortbay/jetty/npn/npn-boot/${jetty.npn.version}/npn-boot-${jetty.npn.version}.jar</jetty.npn.path>
+    <argLine.common>
+      -server
+      -dsa -da -ea:io.netty...
+      -XX:+AggressiveOpts
+      -XX:+TieredCompilation
+      -XX:+UseBiasedLocking
+      -XX:+UseFastAccessorMethods
+      -XX:+OptimizeStringConcat
+      -XX:+HeapDumpOnOutOfMemoryError
+      -verbose:gc
+    </argLine.common>
+    <argLine.bootcp>-Xbootclasspath/p:${jetty.npn.path}</argLine.bootcp>
+    <argLine.leak>-D_</argLine.leak> <!-- Set when 'leak' profile is active -->
+    <argLine.coverage>-D_</argLine.coverage> <!-- Set when 'coverage' profile is active -->
+  </properties>
+
+  <modules>
+    <module>common</module>
+    <module>buffer</module>
+    <module>codec</module>
+    <module>codec-http</module>
+    <module>codec-socks</module>
+    <module>transport</module>
+    <module>transport-rxtx</module>
+    <module>transport-sctp</module>
+    <module>transport-udt</module>
+    <module>handler</module>
+    <module>example</module>
+    <module>testsuite</module>
+    <module>microbench</module>
+    <module>all</module>
+    <module>tarball</module>
+  </modules>
+
+  <dependencyManagement>
+    <dependencies>
+      <!-- Byte code generator - completely optional -->
+      <dependency>
+        <groupId>org.javassist</groupId>
+        <artifactId>javassist</artifactId>
+        <version>3.18.0-GA</version>
+        <scope>compile</scope>
+        <optional>true</optional>
+      </dependency>
+
+      <!-- JBoss Marshalling - completely optional -->
+      <dependency>
+        <groupId>org.jboss.marshalling</groupId>
+        <artifactId>jboss-marshalling</artifactId>
+        <version>${jboss.marshalling.version}</version>
+        <scope>compile</scope>
+        <optional>true</optional>
+      </dependency>
+
+      <!-- SPDY and HTTP/2 - completely optional -->
+      <dependency>
+        <groupId>org.eclipse.jetty.npn</groupId>
+        <artifactId>npn-api</artifactId>
+        <version>1.1.0.v20120525</version>
+      </dependency>
+      <dependency>
+        <groupId>org.mortbay.jetty.npn</groupId>
+        <artifactId>npn-boot</artifactId>
+        <version>${jetty.npn.version}</version>
+      </dependency>
+
+      <!-- Google Protocol Buffers - completely optional -->
+      <dependency>
+        <groupId>com.google.protobuf</groupId>
+        <artifactId>protobuf-java</artifactId>
+        <version>2.5.0</version>
+      </dependency>
+
+      <!-- Our own Tomcat Native fork - completely optional, used for acclerating SSL with OpenSSL. -->
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>netty-tcnative</artifactId>
+        <version>1.1.30.Fork2</version>
+        <classifier>${os.detected.classifier}</classifier>
+        <scope>compile</scope>
+        <optional>true</optional>
+      </dependency>
+
+      <!--
+        Bouncy Castle - completely optional, only needed when:
+        - you generate a temporary self-signed certificate using SelfSignedCertificate, and
+        - you don't use the JDK which doesn't provide sun.security.x509 package.
+      -->
+      <dependency>
+        <groupId>org.bouncycastle</groupId>
+        <artifactId>bcpkix-jdk15on</artifactId>
+        <version>1.50</version>
+        <scope>compile</scope>
+        <optional>true</optional>
+      </dependency>
+
+      <dependency>
+        <groupId>com.jcraft</groupId>
+        <artifactId>jzlib</artifactId>
+          <version>1.1.2</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.rxtx</groupId>
+        <artifactId>rxtx</artifactId>
+        <version>2.1.7</version>
+      </dependency>
+
+      <dependency>
+        <groupId>com.barchart.udt</groupId>
+        <artifactId>barchart-udt-bundle</artifactId>
+        <version>2.3.0</version>
+      </dependency>
+
+      <dependency>
+        <groupId>javax.servlet</groupId>
+        <artifactId>servlet-api</artifactId>
+        <version>2.5</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-api</artifactId>
+        <version>1.7.5</version>
+      </dependency>
+      <dependency>
+        <groupId>commons-logging</groupId>
+        <artifactId>commons-logging</artifactId>
+        <version>1.1.3</version>
+      </dependency>
+      <dependency>
+        <groupId>log4j</groupId>
+        <artifactId>log4j</artifactId>
+        <version>1.2.17</version>
+        <exclusions>
+          <exclusion>
+            <artifactId>mail</artifactId>
+            <groupId>javax.mail</groupId>
+          </exclusion>
+          <exclusion>
+            <artifactId>jms</artifactId>
+            <groupId>javax.jms</groupId>
+          </exclusion>
+          <exclusion>
+            <artifactId>jmxtools</artifactId>
+            <groupId>com.sun.jdmk</groupId>
+          </exclusion>
+          <exclusion>
+            <artifactId>jmxri</artifactId>
+            <groupId>com.sun.jmx</groupId>
+          </exclusion>
+        </exclusions>
+        <optional>true</optional>
+      </dependency>
+
+      <!-- Metrics providers -->
+      <dependency>
+        <groupId>com.yammer.metrics</groupId>
+        <artifactId>metrics-core</artifactId>
+        <version>2.2.0</version>
+      </dependency>
+
+      <!-- Common test dependencies -->
+      <dependency>
+        <groupId>junit</groupId>
+        <artifactId>junit</artifactId>
+        <version>4.11</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.easymock</groupId>
+        <artifactId>easymock</artifactId>
+        <version>3.2</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.easymock</groupId>
+        <artifactId>easymockclassextension</artifactId>
+        <version>3.2</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.jmock</groupId>
+        <artifactId>jmock-junit4</artifactId>
+        <version>2.6.0</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>ch.qos.logback</groupId>
+        <artifactId>logback-classic</artifactId>
+        <version>1.0.13</version>
+        <scope>test</scope>
+      </dependency>
+
+      <!-- Test dependencies for jboss marshalling encoder/decoder -->
+      <dependency>
+        <groupId>org.jboss.marshalling</groupId>
+        <artifactId>jboss-marshalling-serial</artifactId>
+        <version>${jboss.marshalling.version}</version>
+        <scope>test</scope>
+       </dependency>
+      <dependency>
+        <groupId>org.jboss.marshalling</groupId>
+        <artifactId>jboss-marshalling-river</artifactId>
+        <version>${jboss.marshalling.version}</version>
+        <scope>test</scope>
+      </dependency>
+
+      <!-- Test dependencies for microbench -->
+      <dependency>
+        <groupId>com.google.caliper</groupId>
+        <artifactId>caliper</artifactId>
+        <version>0.5-rc1</version>
+        <scope>test</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
   <dependencies>
-    <!-- JBoss Marshalling - completely optional -->
+    <!-- Enable Javassist support for all test runs -->
     <dependency>
-      <groupId>org.jboss.marshalling</groupId>
-      <artifactId>jboss-marshalling</artifactId>
-      <version>${jboss.marshalling.version}</version>
-      <scope>compile</scope>
-      <optional>true</optional>
-    </dependency>
-            
-    <!-- Google Protocol Buffers - completely optional -->
-    <dependency>
-      <groupId>com.google.protobuf</groupId>
-      <artifactId>protobuf-java</artifactId>
-      <version>2.5.0</version>
-      <scope>compile</scope>
-      <optional>true</optional>
-    </dependency>
-
-    <!-- Servlet API - completely optional -->
-    <!-- Used for HTTP tunneling transport -->
-    <dependency>
-      <groupId>javax.servlet</groupId>
-      <artifactId>servlet-api</artifactId>
-      <version>2.5</version>
-      <scope>compile</scope>
-      <optional>true</optional>
-    </dependency>
-    
-    <!-- Example dependencies - completely optional -->
-    <dependency>
-      <groupId>javax.activation</groupId>
-      <artifactId>activation</artifactId>
-      <version>1.1.1</version>
-      <scope>compile</scope>
-      <optional>true</optional>
-    </dependency>
-
-    <!-- IoC/DI containers - completely optional -->
-    <dependency>
-      <groupId>org.apache.felix</groupId>
-      <artifactId>org.osgi.core</artifactId>
-      <version>1.4.0</version>
-      <scope>compile</scope>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.felix</groupId>
-      <artifactId>org.osgi.compendium</artifactId>
-      <version>1.4.0</version>
-      <scope>compile</scope>
-      <optional>true</optional>
-      <exclusions>
-        <exclusion>
-          <groupId>org.apache.felix</groupId>
-          <artifactId>javax.servlet</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.apache.felix</groupId>
-          <artifactId>org.osgi.foundation</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-
-    <!-- Logging frameworks - completely optional -->
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-      <version>1.6.4</version>
-      <scope>compile</scope>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
-      <groupId>commons-logging</groupId>
-      <artifactId>commons-logging</artifactId>
-      <version>1.1.1</version>
-      <scope>compile</scope>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
-      <groupId>org.jboss.logging</groupId>
-      <artifactId>jboss-logging-spi</artifactId>
-      <version>2.1.2.GA</version>
-      <scope>compile</scope>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
-      <groupId>log4j</groupId>
-      <artifactId>log4j</artifactId>
-      <version>1.2.16</version>
-      <scope>compile</scope>
-      <exclusions>
-        <exclusion>
-          <artifactId>mail</artifactId>
-          <groupId>javax.mail</groupId>
-        </exclusion>
-        <exclusion>
-          <artifactId>jms</artifactId>
-          <groupId>javax.jms</groupId>
-        </exclusion>
-        <exclusion>
-          <artifactId>jmxtools</artifactId>
-          <groupId>com.sun.jdmk</groupId>
-        </exclusion>
-        <exclusion>
-          <artifactId>jmxri</artifactId>
-          <groupId>com.sun.jmx</groupId>
-        </exclusion>
-      </exclusions>
-      <optional>true</optional>
+      <groupId>org.javassist</groupId>
+      <artifactId>javassist</artifactId>
+      <scope>test</scope>
     </dependency>
 
     <!-- Testing frameworks and related dependencies -->
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <version>4.10</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.easymock</groupId>
       <artifactId>easymock</artifactId>
-      <version>3.1</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.easymock</groupId>
       <artifactId>easymockclassextension</artifactId>
-      <version>3.1</version>
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-simple</artifactId>
-      <version>1.6.4</version>
-      <scope>test</scope>
-    </dependency>
-    <!-- Test dependencies for jboss marshalling encoder/decoder -->
-    <dependency>
-      <groupId>org.jboss.marshalling</groupId>
-      <artifactId>jboss-marshalling-serial</artifactId>
-      <version>${jboss.marshalling.version}</version>
+      <groupId>org.jmock</groupId>
+      <artifactId>jmock-junit4</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.jboss.marshalling</groupId>
-      <artifactId>jboss-marshalling-river</artifactId>
-      <version>${jboss.marshalling.version}</version>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>
 
-  <properties>
-    <attach-distribution>false</attach-distribution>
-    <jboss.marshalling.version>1.3.14.GA</jboss.marshalling.version>
-  </properties>
-
   <build>
-    <resources>
-      <resource>
-        <directory>${basedir}/src/main/resources</directory>
-      </resource>
-      <resource>
-        <directory>${basedir}/target/license</directory>
-      </resource>
-    </resources>
-
-    <pluginManagement>
-      <plugins>
-        <!--This plugin's configuration is used to store Eclipse m2e settings only. 
-            It has no influence on the Maven build itself. -->
-        <plugin>
-          <groupId>org.eclipse.m2e</groupId>
-          <artifactId>lifecycle-mapping</artifactId>
-          <version>1.0.0</version>
-          <configuration>
-            <lifecycleMappingMetadata>
-              <pluginExecutions>
-                <pluginExecution>
-                  <pluginExecutionFilter>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-antrun-plugin</artifactId>
-                    <versionRange>[1.7,)</versionRange>
-                    <goals>
-                      <goal>run</goal>
-                    </goals>
-                  </pluginExecutionFilter>
-                  <action>
-                    <ignore />
-                  </action>
-                </pluginExecution>
-                <pluginExecution>
-                  <pluginExecutionFilter>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-checkstyle-plugin</artifactId>
-                    <versionRange>[2.8,)</versionRange>
-                    <goals>
-                      <goal>check</goal>
-                    </goals>
-                  </pluginExecutionFilter>
-                  <action>
-                    <ignore />
-                  </action>
-                </pluginExecution>
-              </pluginExecutions>
-            </lifecycleMappingMetadata>
-          </configuration>
-        </plugin>
-      </plugins>
-    </pluginManagement>
+    <extensions>
+      <extension>
+        <groupId>kr.motd.maven</groupId>
+        <artifactId>os-maven-plugin</artifactId>
+        <version>1.2.3.Final</version>
+      </extension>
+    </extensions>
 
     <plugins>
       <plugin>
         <artifactId>maven-enforcer-plugin</artifactId>
-        <version>1.0.1</version>
         <executions>
           <execution>
             <id>enforce-tools</id>
@@ -295,8 +591,7 @@
               <rules>
                 <requireJavaVersion>
                   <!-- Enforce java 1.7 as minimum for compiling -->
-                  <!-- This is needed because of the Unsafe detection code
-                       and java.util.zip.Deflater.deflate(). -->
+                  <!-- This is needed because of java.util.zip.Deflater and NIO UDP multicast-->
                   <version>[1.7.0,)</version>
                 </requireJavaVersion>
                 <requireMavenVersion>
@@ -309,42 +604,72 @@
       </plugin>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>2.3.2</version>
+        <version>3.1</version>
         <configuration>
-          <encoding>UTF-8</encoding>
-          <source>1.5</source>
-          <target>1.5</target>
+          <compilerVersion>1.7</compilerVersion>
+          <fork>true</fork>
+          <source>1.6</source>
+          <target>1.6</target>
           <debug>true</debug>
           <optimize>true</optimize>
           <showDeprecation>true</showDeprecation>
           <showWarnings>true</showWarnings>
+          <compilerArgument>-Xlint:-options</compilerArgument>
+          <!-- XXX: maven-release-plugin complains - MRELEASE-715 -->
+          <!--
+          <compilerArguments>
+            <Xlint:-options />
+            <Xlint:unchecked />
+            <Xlint:deprecation />
+          </compilerArguments>
+          -->
+          <meminitial>256m</meminitial>
+          <maxmem>1024m</maxmem>
+          <excludes>
+            <exclude>**/package-info.java</exclude>
+          </excludes>
         </configuration>
       </plugin>
       <plugin>
-        <!-- ensure that only methods available in java 1.5 can
-             be used even when compiling with java 1.6+ -->
+        <!-- ensure that only methods available in java 1.6 can
+             be used even when compiling with java 1.7+ -->
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>animal-sniffer-maven-plugin</artifactId>
-        <version>1.7</version>
+        <version>1.9</version>
         <configuration>
           <signature>
             <groupId>org.codehaus.mojo.signature</groupId>
-            <artifactId>java15</artifactId>
+            <artifactId>java16</artifactId>
             <version>1.0</version>
           </signature>
           <ignores>
             <ignore>sun.misc.Unsafe</ignore>
+            <ignore>sun.misc.Cleaner</ignore>
+            <ignore>sun.nio.ch.DirectBuffer</ignore>
+
             <ignore>java.util.zip.Deflater</ignore>
-            <ignore>java.util.concurrent.LinkedTransferQueue</ignore>
+
             <!-- Used for NIO UDP multicast -->
             <ignore>java.nio.channels.DatagramChannel</ignore>
             <ignore>java.nio.channels.MembershipKey</ignore>
-            <ignore>java.net.StandardSocketOptions</ignore>
             <ignore>java.net.StandardProtocolFamily</ignore>
-            <!-- Java Object Serialization -->
-            <ignore>java.io.ObjectStreamClass</ignore>
-            <!-- Socks Codec-->
-            <ignore>java.net.IDN</ignore>
+            <ignore>java.nio.channels.spi.SelectorProvider</ignore>
+
+            <!-- Self-signed certificate generation -->
+            <ignore>sun.security.x509.AlgorithmId</ignore>
+            <ignore>sun.security.x509.CertificateAlgorithmId</ignore>
+            <ignore>sun.security.x509.CertificateIssuerName</ignore>
+            <ignore>sun.security.x509.CertificateSerialNumber</ignore>
+            <ignore>sun.security.x509.CertificateSubjectName</ignore>
+            <ignore>sun.security.x509.CertificateValidity</ignore>
+            <ignore>sun.security.x509.CertificateVersion</ignore>
+            <ignore>sun.security.x509.CertificateX509Key</ignore>
+            <ignore>sun.security.x509.X500Name</ignore>
+            <ignore>sun.security.x509.X509CertInfo</ignore>
+            <ignore>sun.security.x509.X509CertImpl</ignore>
+
+            <!-- SSLSession implelementation -->
+            <ignore>javax.net.ssl.SSLEngine</ignore>
           </ignores>
         </configuration>
         <executions>
@@ -357,171 +682,274 @@
         </executions>
       </plugin>
       <plugin>
-        <artifactId>maven-resources-plugin</artifactId>
-        <version>2.5</version>
-        <configuration>
-          <encoding>UTF-8</encoding>
-        </configuration>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <version>2.10</version>
         <executions>
           <execution>
-            <id>copy-legal-info</id>
+            <id>check-style</id>
+            <goals>
+              <goal>check</goal>
+            </goals>
+            <phase>validate</phase>
+            <configuration>
+              <consoleOutput>true</consoleOutput>
+              <logViolationsToConsole>true</logViolationsToConsole>
+              <failsOnError>true</failsOnError>
+              <failOnViolation>true</failOnViolation>
+              <configLocation>io/netty/checkstyle.xml</configLocation>
+              <includeTestSourceDirectory>true</includeTestSourceDirectory>
+            </configuration>
+          </execution>
+        </executions>
+        <dependencies>
+          <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>netty-build</artifactId>
+            <version>21</version>
+          </dependency>
+        </dependencies>
+      </plugin>
+      <!-- Download the npn-boot.jar in advance to add it to the boot classpath. -->
+      <plugin>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>get-npn-boot</id>
             <phase>validate</phase>
             <goals>
-              <goal>copy-resources</goal>
+              <goal>get</goal>
             </goals>
             <configuration>
-              <outputDirectory>${basedir}/target/license/META-INF</outputDirectory>
-              <resources>
-                <resource>
-                  <directory>${basedir}</directory>
-                  <filtering>false</filtering>
-                  <includes>
-                    <include>LICENSE.txt</include>
-                    <include>NOTICE.txt</include>
-                    <include>license/*.txt</include>
-                  </includes>
-                </resource>
-              </resources>
+              <groupId>org.mortbay.jetty.npn</groupId>
+              <artifactId>npn-boot</artifactId>
+              <version>${jetty.npn.version}</version>
             </configuration>
           </execution>
         </executions>
       </plugin>
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>2.10</version>
         <configuration>
-          <forkMode>never</forkMode>
+          <includes>
+             <include>**/*Test*.java</include>
+             <include>**/*Benchmark*.java</include>
+          </includes>
           <excludes>
             <exclude>**/Abstract*</exclude>
             <exclude>**/TestUtil*</exclude>
           </excludes>
           <runOrder>random</runOrder>
+          <argLine>${argLine.common} ${argLine.bootcp} ${argLine.leak} ${argLine.coverage}</argLine>
         </configuration>
       </plugin>
+      <!-- always produce osgi bundles -->
       <plugin>
         <groupId>org.apache.felix</groupId>
         <artifactId>maven-bundle-plugin</artifactId>
-        <version>2.3.4</version>
-        <extensions>true</extensions>
-        <configuration>
-          <instructions>
-            <Bundle-SymbolicName>org.jboss.netty</Bundle-SymbolicName>
-            <Bundle-DocURL>${project.url}</Bundle-DocURL>
-            <Bundle-Activator>
-              org.jboss.netty.container.osgi.NettyBundleActivator
-            </Bundle-Activator>
-            <Export-Package>
-              !org.jboss.netty.example.*,
-              !org.jboss.netty.util.internal.*,
-              org.jboss.netty.*;version=${project.version}
-            </Export-Package>
-            <Private-Package>
-              org.jboss.netty.example.*,
-              org.jboss.netty.util.internal.*,
-            </Private-Package>
-            <Import-Package>
-              *;resolution:=optional
-            </Import-Package>
-            <Eclipse-BuddyPolicy>registered</Eclipse-BuddyPolicy>
-            <Bundle-BuddyPolicy>registered</Bundle-BuddyPolicy>
-            <Main-Class>org.jboss.netty.util.Version</Main-Class>
-          </instructions>
-        </configuration>
-      </plugin>
-      <plugin>
-        <artifactId>maven-source-plugin</artifactId>
-        <version>2.1.2</version>
+        <version>2.4.0</version>
         <executions>
           <execution>
-            <id>attach-source</id>
-            <phase>package</phase>
+            <id>generate-manifest</id>
+            <phase>process-classes</phase>
             <goals>
-              <goal>jar</goal>
+              <goal>manifest</goal>
             </goals>
             <configuration>
-              <attach>true</attach>
+              <supportedProjectTypes>
+                <supportedProjectType>jar</supportedProjectType>
+                <supportedProjectType>bundle</supportedProjectType>
+              </supportedProjectTypes>
+              <instructions>
+                <Export-Package>${project.groupId}.*</Export-Package>
+                <!-- enforce JVM vendor package as optional -->
+                <Import-Package>sun.misc.*;resolution:=optional,sun.nio.ch;resolution:=optional,*</Import-Package>
+                <!-- override "internal" private package convention -->
+                <Private-Package>!*</Private-Package>
+              </instructions>
             </configuration>
           </execution>
         </executions>
       </plugin>
       <plugin>
-        <artifactId>maven-antrun-plugin</artifactId>
-        <version>1.7</version>
+        <artifactId>maven-source-plugin</artifactId>
+        <version>2.2.1</version>
+        <configuration>
+          <!--
+            ~ Add generated MANIFEST.MF.
+            ~ See https://github.com/netty/netty/issues/2058
+          -->
+          <useDefaultManifestFile>true</useDefaultManifestFile>
+        </configuration>
         <executions>
+          <!--
+            ~ This workaround prevents Maven from executing the 'generate-sources' phase twice.
+            ~ See http://jira.codehaus.org/browse/MSOURCES-13
+            ~ and http://blog.peterlynch.ca/2010/05/maven-how-to-prevent-generate-sources.html
+            -->
           <execution>
-            <id>write-version</id>
-            <phase>validate</phase>
+            <id>attach-sources</id>
+            <phase>invalid</phase>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>attach-sources-no-fork</id>
+            <phase>package</phase>
+            <goals>
+              <goal>jar-no-fork</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>2.9.1</version>
+        <configuration>
+          <detectOfflineLinks>false</detectOfflineLinks>
+          <breakiterator>true</breakiterator>
+          <version>false</version>
+          <author>false</author>
+          <keywords>true</keywords>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-deploy-plugin</artifactId>
+        <version>2.7</version>
+        <configuration>
+          <retryFailedDeploymentCount>10</retryFailedDeploymentCount>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-release-plugin</artifactId>
+        <version>2.4.2</version>
+        <configuration>
+          <useReleaseProfile>false</useReleaseProfile>
+          <arguments>-P restricted-release,sonatype-oss-release,full</arguments>
+          <autoVersionSubmodules>true</autoVersionSubmodules>
+          <allowTimestampedSnapshots>false</allowTimestampedSnapshots>
+          <tagNameFormat>netty-@{project.version}</tagNameFormat>
+        </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>org.apache.maven.scm</groupId>
+            <artifactId>maven-scm-api</artifactId>
+            <version>1.8.1</version>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.maven.scm</groupId>
+            <artifactId>maven-scm-provider-gitexe</artifactId>
+            <version>1.8.1</version>
+          </dependency>
+        </dependencies>
+      </plugin>
+
+      <!-- Ensure to put maven-antrun-plugin at the end of the plugin list
+           so that they are run lastly in the same phase. -->
+      <plugin>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <executions>
+          <!-- Generate the version properties for all artifacts. -->
+          <execution>
+            <id>write-version-properties</id>
+            <phase>initialize</phase>
             <goals>
               <goal>run</goal>
             </goals>
             <configuration>
-              <tasks>
+              <target>
                 <taskdef resource="net/sf/antcontrib/antlib.xml" />
-                <exec executable="git" outputproperty="gitOutput" resultproperty="gitExitCode" failonerror="false" failifexecutionfails="false">
+
+                <!-- Get the information about the latest commit -->
+                <exec executable="git" outputproperty="gitOutput.shortCommitHash" resultproperty="gitExitCode.shortCommitHash" failonerror="false" failifexecutionfails="false">
                   <arg value="log" />
                   <arg value="-1" />
                   <arg value="--format=format:%h" />
                 </exec>
                 <if>
-                  <equals arg2="0" arg1="${gitExitCode}" />
+                  <equals arg2="0" arg1="${gitExitCode.shortCommitHash}" />
                   <then>
-                    <property name="buildNumber" value="${gitOutput}" />
+                    <property name="shortCommitHash" value="${gitOutput.shortCommitHash}" />
                   </then>
                   <else>
-                    <property name="buildNumber" value="unknown" />
+                    <property name="shortCommitHash" value="0" />
                   </else>
                 </if>
-                <echo>Build number: ${buildNumber}</echo>
-                <mkdir dir="${project.build.directory}" />
-                <echo message="${project.version}" file="${project.build.directory}/version.txt" />
-                <echo message="// DO NOT MODIFY - WILL BE OVERWRITTEN DURING THE BUILD PROCESS${line.separator}package org.jboss.netty.util;${line.separator}/**${line.separator} * Provides the version information of Netty.${line.separator} * @apiviz.landmark${line.separator} */${line.separator}@SuppressWarnings(&quot;all&quot;)${line.separator}public final class Version {${line.separator} /** The version identifier. */${line.separator} public static final String ID = &quot;${project.version}-${buildNumber}&quot;;${line.separator} /** Prints out the version identifier to stdout. */${line.separator} public static void main(String[] args) { System.out.println(ID); }${line.separator} private Version() { }${line.separator}}${line.separator}" file="${basedir}/src/main/java/org/jboss/netty/util/Version.java" />
-              </tasks>
-            </configuration>
-          </execution>
-          <execution>
-            <id>remove-examples</id>
-            <phase>package</phase>
-            <goals>
-              <goal>run</goal>
-            </goals>
-            <configuration>
-              <tasks>
-                <taskdef resource="net/sf/antcontrib/antlib.xml" />
+
+                <exec executable="git" outputproperty="gitOutput.longCommitHash" resultproperty="gitExitCode.longCommitHash" failonerror="false" failifexecutionfails="false">
+                  <arg value="log" />
+                  <arg value="-1" />
+                  <arg value="--format=format:%H" />
+                </exec>
                 <if>
-                  <or>
-                    <equals arg2="jar" arg1="${project.packaging}" />
-                    <equals arg2="bundle" arg1="${project.packaging}" />
-                  </or>
+                  <equals arg2="0" arg1="${gitExitCode.longCommitHash}" />
                   <then>
-                    <move file="${project.build.directory}/${project.build.finalName}.jar" tofile="${project.build.directory}/${project.build.finalName}.orig.jar" />
-                    <zip destfile="${project.build.directory}/${project.build.finalName}.jar">
-                      <zipfileset filemode="644" src="${project.build.directory}/${project.build.finalName}.orig.jar" dirmode="755">
-                        <include name="META-INF/MANIFEST.MF" />
-                      </zipfileset>
-                      <zipfileset filemode="644" src="${project.build.directory}/${project.build.finalName}.orig.jar" dirmode="755">
-                        <exclude name="META-INF/MANIFEST.MF" />
-                        <exclude name="*/*/*/example/**" />
-                      </zipfileset>
-                    </zip>
-                    <delete file="${project.build.directory}/${project.build.finalName}.orig.jar" />
-                    <checksum file="${project.build.directory}/${project.build.finalName}.jar" algorithm="md5" forceoverwrite="yes" />
-                    <checksum file="${project.build.directory}/${project.build.finalName}.jar" algorithm="sha1" forceoverwrite="yes" />
-                    <move file="${project.build.directory}/${project.build.finalName}-sources.jar" tofile="${project.build.directory}/${project.build.finalName}-sources.orig.jar" />
-                    <zip destfile="${project.build.directory}/${project.build.finalName}-sources.jar">
-                      <zipfileset filemode="644" src="${project.build.directory}/${project.build.finalName}-sources.orig.jar" dirmode="755">
-                        <include name="META-INF/MANIFEST.MF" />
-                      </zipfileset>
-                      <zipfileset filemode="644" src="${project.build.directory}/${project.build.finalName}-sources.orig.jar" dirmode="755">
-                        <exclude name="META-INF/MANIFEST.MF" />
-                        <exclude name="*/*/*/example/**" />
-                      </zipfileset>
-                    </zip>
-                    <delete file="${project.build.directory}/${project.build.finalName}-sources.orig.jar" />
-                    <checksum file="${project.build.directory}/${project.build.finalName}-sources.jar" algorithm="md5" forceoverwrite="yes" />
-                    <checksum file="${project.build.directory}/${project.build.finalName}-sources.jar" algorithm="sha1" forceoverwrite="yes" />
+                    <property name="longCommitHash" value="${gitOutput.longCommitHash}" />
                   </then>
+                  <else>
+                    <property name="longCommitHash" value="0000000000000000000000000000000000000000" />
+                  </else>
                 </if>
-              </tasks>
+
+                <exec executable="git" outputproperty="gitOutput.commitDate" resultproperty="gitExitCode.commitDate" failonerror="false" failifexecutionfails="false">
+                  <arg value="log" />
+                  <arg value="-1" />
+                  <arg value="--format=format:%cd" />
+                  <arg value="--date=iso" />
+                </exec>
+                <if>
+                  <equals arg2="0" arg1="${gitExitCode.commitDate}" />
+                  <then>
+                    <property name="commitDate" value="${gitOutput.commitDate}" />
+                  </then>
+                  <else>
+                    <property name="commitDate" value="1970-01-01 00:00:00 +0000" />
+                  </else>
+                </if>
+
+                <exec executable="git" outputproperty="gitOutput.repoStatus" resultproperty="gitExitCode.repoStatus" failonerror="false" failifexecutionfails="false">
+                  <arg value="status" />
+                  <arg value="--porcelain" />
+                </exec>
+                <if>
+                  <equals arg2="0" arg1="${gitExitCode.repoStatus}" />
+                  <then>
+                    <if>
+                      <equals arg2="" arg1="${gitOutput.repoStatus}" />
+                      <then>
+                        <property name="repoStatus" value="clean" />
+                      </then>
+                      <else>
+                        <property name="repoStatus" value="dirty" />
+                      </else>
+                    </if>
+                  </then>
+                  <else>
+                    <property name="repoStatus" value="unknown" />
+                  </else>
+                </if>
+
+                <!-- Print the obtained commit information. -->
+                <echo>Current commit: ${shortCommitHash} on ${commitDate}</echo>
+
+                <!-- Generate the .properties file. -->
+                <!--
+                <property name="metaInfDir" value="${project.basedir}/src/main/resources/META-INF" />
+                -->
+                <property name="metaInfDir" value="${project.build.outputDirectory}/META-INF" />
+                <property name="versionPropFile" value="${metaInfDir}/${project.groupId}.versions.properties" />
+                <mkdir dir="${metaInfDir}" />
+                <delete file="${versionPropFile}" quiet="true" />
+
+                <propertyfile file="${versionPropFile}" comment="Generated by netty-parent/pom.xml">
+                  <entry key="${project.artifactId}.version" value="${project.version}" />
+                  <entry key="${project.artifactId}.buildDate" type="date" value="now" pattern="yyyy-MM-dd HH:mm:ss Z" />
+                  <entry key="${project.artifactId}.commitDate" value="${commitDate}" />
+                  <entry key="${project.artifactId}.shortCommitHash" value="${shortCommitHash}" />
+                  <entry key="${project.artifactId}.longCommitHash" value="${longCommitHash}" />
+                  <entry key="${project.artifactId}.repoStatus" value="${repoStatus}" />
+                </propertyfile>
+              </target>
             </configuration>
           </execution>
         </executions>
@@ -549,133 +977,218 @@
           </dependency>
         </dependencies>
       </plugin>
-      <plugin>
-        <artifactId>maven-javadoc-plugin</artifactId>
-        <version>2.8</version>
-        <executions>
-          <execution>
-            <id>attach-javadoc</id>
-            <phase>package</phase>
-            <goals>
-              <goal>jar</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <doclet>org.jboss.apiviz.APIviz</doclet>
-          <docletArtifact>
-            <groupId>org.jboss.apiviz</groupId>
-            <artifactId>apiviz</artifactId>
-            <version>1.3.2.GA</version>
-          </docletArtifact>
-          <attach>true</attach>
-          <javadocDirectory>${basedir}/src/javadoc</javadocDirectory>
-          <docfilessubdirs>true</docfilessubdirs>
-          <useStandardDocletOptions>true</useStandardDocletOptions>
-          <outputDirectory>${project.build.directory}/api</outputDirectory>
-          <charset>UTF-8</charset>
-          <docencoding>UTF-8</docencoding>
-          <breakiterator>true</breakiterator>
-          <version>false</version>
-          <author>false</author>
-          <keywords>true</keywords>
-          <overview>${basedir}/src/javadoc/overview.html</overview>
-          <doctitle>${project.name} API Reference (${project.version})</doctitle>
-          <windowtitle>${project.name} API Reference (${project.version})</windowtitle>
-          <additionalparam>
-            -link http://docs.oracle.com/javase/7/docs/api/
-            -link http://code.google.com/apis/protocolbuffers/docs/reference/java/
-            -link http://docs.oracle.com/javaee/6/api/
-            -link http://www.osgi.org/javadoc/r4v43/core/
-            -link http://www.slf4j.org/apidocs/
-            -link http://commons.apache.org/logging/commons-logging-1.1.1/apidocs/
-            -link http://logging.apache.org/log4j/1.2/apidocs/
-
-            -group "Low-level data representation" org.jboss.netty.buffer*
-            -group "Central interface for all I/O operations" org.jboss.netty.channel*
-            -group "Client &amp; Server bootstrapping utilities" org.jboss.netty.bootstrap*
-            -group "Reusable I/O event interceptors" org.jboss.netty.handler*
-            -group "Miscellaneous" org.jboss.netty.logging*:org.jboss.netty.util*
-
-            -sourceclasspath ${project.build.outputDirectory}
-            -nopackagediagram
-          </additionalparam>
-          <encoding>UTF-8</encoding>
-          <locale>en_US</locale>
-          <excludePackageNames>org.jboss.netty.example*:org.jboss.netty.container*:org.jboss.netty.util.internal*</excludePackageNames>
-        </configuration>
-      </plugin>
-      <plugin>
-        <artifactId>maven-jxr-plugin</artifactId>
-        <version>2.2</version>
-        <executions>
-          <execution>
-            <id>generate-xref</id>
-            <phase>package</phase>
-            <goals>
-              <goal>jxr</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <inputEncoding>UTF-8</inputEncoding>
-          <outputEncoding>UTF-8</outputEncoding>
-          <linkJavadoc>true</linkJavadoc>
-          <destDir>${project.build.directory}/xref</destDir>
-          <javadocDir>${project.build.directory}/api</javadocDir>
-          <docTitle>${project.name} Source Xref (${project.version})</docTitle>
-          <windowTitle>${project.name} Source Xref (${project.version})</windowTitle>
-        </configuration>
-      </plugin>
-      <plugin>
-        <artifactId>maven-assembly-plugin</artifactId>
-        <version>2.2.1</version>
-        <executions>
-          <execution>
-            <id>generate-distribution</id>
-            <phase>package</phase>
-            <goals>
-              <goal>single</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <descriptors>
-            <descriptor>${basedir}/src/assembly/default.xml</descriptor>
-          </descriptors>
-          <attach>${attach-distribution}</attach>
-          <appendAssemblyId>true</appendAssemblyId>
-          <tarLongFileMode>gnu</tarLongFileMode>
-        </configuration>
-      </plugin>
-      <plugin>
-        <artifactId>maven-checkstyle-plugin</artifactId>
-        <version>2.9.1</version>
-        <executions>
-          <execution>
-            <id>check-style</id>
-            <goals>
-              <goal>check</goal>
-            </goals>
-            <phase>validate</phase>
-            <configuration>
-              <consoleOutput>true</consoleOutput>
-              <logViolationsToConsole>true</logViolationsToConsole>
-              <failsOnError>true</failsOnError>
-              <failOnViolation>true</failOnViolation>
-              <configLocation>io/netty/checkstyle.xml</configLocation>
-            </configuration>
-          </execution>
-        </executions>
-        <dependencies>
-          <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>netty-build</artifactId>
-            <version>16</version>
-          </dependency>
-        </dependencies>
-      </plugin>
     </plugins>
+
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <artifactId>maven-enforcer-plugin</artifactId>
+          <version>1.3.1</version>
+          <dependencies>
+            <!-- Provides the 'requireFilesContent' enforcer rule. -->
+            <dependency>
+              <groupId>com.ceilfors.maven.plugin</groupId>
+              <artifactId>enforcer-rules</artifactId>
+              <version>1.1.0</version>
+            </dependency>
+          </dependencies>
+        </plugin>
+        <!-- keep surefire and failsafe in sync -->
+        <plugin>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>2.15</version>
+        </plugin>
+        <!-- keep surefire and failsafe in sync -->
+        <plugin>
+          <artifactId>maven-failsafe-plugin</artifactId>
+          <version>2.15</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-clean-plugin</artifactId>
+          <version>2.5</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-resources-plugin</artifactId>
+          <version>2.6</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-jar-plugin</artifactId>
+          <version>2.4</version>
+          <executions>
+            <execution>
+              <id>default-jar</id>
+              <configuration>
+                <archive>
+                  <manifest>
+                    <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                  </manifest>
+                  <index>true</index>
+                  <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
+                </archive>
+              </configuration>
+            </execution>
+          </executions>
+        </plugin>
+        <plugin>
+          <artifactId>maven-dependency-plugin</artifactId>
+          <version>2.8</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-assembly-plugin</artifactId>
+          <version>2.4</version>
+        </plugin>
+        <plugin>
+          <!-- Do NOT upgrade -->
+          <artifactId>maven-jxr-plugin</artifactId>
+          <version>2.2</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-antrun-plugin</artifactId>
+          <version>1.7</version>
+          <dependencies>
+            <dependency>
+              <groupId>ant-contrib</groupId>
+              <artifactId>ant-contrib</artifactId>
+              <version>1.0b3</version>
+              <exclusions>
+                <exclusion>
+                  <groupId>ant</groupId>
+                  <artifactId>ant</artifactId>
+                </exclusion>
+              </exclusions>
+            </dependency>
+          </dependencies>
+        </plugin>
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>build-helper-maven-plugin</artifactId>
+          <version>1.8</version>
+        </plugin>
+        <plugin>
+          <groupId>org.fusesource.hawtjni</groupId>
+          <artifactId>maven-hawtjni-plugin</artifactId>
+          <version>1.10</version>
+        </plugin>
+        <plugin>
+          <groupId>kr.motd.maven</groupId>
+          <artifactId>exec-maven-plugin</artifactId>
+          <version>1.0.0.Final</version>
+        </plugin>
+
+        <!-- Workaround for the 'M2E plugin execution not covered' problem.
+             See: http://wiki.eclipse.org/M2E_plugin_execution_not_covered -->
+        <plugin>
+          <groupId>org.eclipse.m2e</groupId>
+          <artifactId>lifecycle-mapping</artifactId>
+          <version>1.0.0</version>
+          <configuration>
+            <lifecycleMappingMetadata>
+              <pluginExecutions>
+                <pluginExecution>
+                  <pluginExecutionFilter>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-antrun-plugin</artifactId>
+                    <versionRange>[1.7,)</versionRange>
+                    <goals>
+                      <goal>run</goal>
+                    </goals>
+                  </pluginExecutionFilter>
+                  <action>
+                    <ignore />
+                  </action>
+                </pluginExecution>
+                <pluginExecution>
+                  <pluginExecutionFilter>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-checkstyle-plugin</artifactId>
+                    <versionRange>[1.0,)</versionRange>
+                    <goals>
+                      <goal>check</goal>
+                    </goals>
+                  </pluginExecutionFilter>
+                  <action>
+                    <execute>
+                      <runOnIncremental>false</runOnIncremental>
+                    </execute>
+                  </action>
+                </pluginExecution>
+                <pluginExecution>
+                  <pluginExecutionFilter>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-enforcer-plugin</artifactId>
+                    <versionRange>[1.0,)</versionRange>
+                    <goals>
+                      <goal>enforce</goal>
+                    </goals>
+                  </pluginExecutionFilter>
+                  <action>
+                    <execute>
+                      <runOnIncremental>false</runOnIncremental>
+                    </execute>
+                  </action>
+                </pluginExecution>
+                <pluginExecution>
+                  <pluginExecutionFilter>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-clean-plugin</artifactId>
+                    <versionRange>[1.0,)</versionRange>
+                    <goals>
+                      <goal>clean</goal>
+                    </goals>
+                  </pluginExecutionFilter>
+                  <action>
+                    <execute>
+                      <runOnIncremental>false</runOnIncremental>
+                    </execute>
+                  </action>
+                </pluginExecution>
+                <pluginExecution>
+                  <pluginExecutionFilter>
+                    <groupId>org.apache.felix</groupId>
+                    <artifactId>maven-bundle-plugin</artifactId>
+                    <versionRange>[2.4,)</versionRange>
+                    <goals>
+                      <goal>manifest</goal>
+                    </goals>
+                  </pluginExecutionFilter>
+                  <action>
+                    <ignore />
+                  </action>
+                </pluginExecution>
+                <pluginExecution>
+                  <pluginExecutionFilter>
+                    <groupId>org.fusesource.hawtjni</groupId>
+                    <artifactId>maven-hawtjni-plugin</artifactId>
+                    <versionRange>[1.10,)</versionRange>
+                    <goals>
+                      <goal>generate</goal>
+                      <goal>build</goal>
+                    </goals>
+                  </pluginExecutionFilter>
+                  <action>
+                    <ignore></ignore>
+                  </action>
+                </pluginExecution>
+                <pluginExecution>
+                  <pluginExecutionFilter>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-dependency-plugin</artifactId>
+                    <versionRange>[2.8,)</versionRange>
+                    <goals>
+                      <goal>properties</goal>
+                      <goal>copy</goal>
+                    </goals>
+                  </pluginExecutionFilter>
+                  <action>
+                    <ignore></ignore>
+                  </action>
+                </pluginExecution>
+              </pluginExecutions>
+            </lifecycleMappingMetadata>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
   </build>
 </project>
 
