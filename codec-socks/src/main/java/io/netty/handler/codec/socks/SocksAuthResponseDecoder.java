@@ -15,11 +15,10 @@
  */
 package io.netty.handler.codec.socks;
 
+import java.util.List;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
-
-import java.util.List;
 
 /**
  * Decodes {@link ByteBuf}s into {@link SocksAuthResponse}.
@@ -28,6 +27,10 @@ import java.util.List;
 public class SocksAuthResponseDecoder extends ReplayingDecoder<SocksAuthResponseDecoder.State> {
     private static final String name = "SOCKS_AUTH_RESPONSE_DECODER";
 
+    /**
+     * @deprecated Will be removed at the next minor version bump.
+     */
+    @Deprecated
     public static String getName() {
         return name;
     }

@@ -23,7 +23,6 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
 
-import java.net.ConnectException;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -33,15 +32,10 @@ import java.util.concurrent.TimeUnit;
 @Sharable
 public class UptimeClientHandler extends SimpleChannelInboundHandler<Object> {
 
-    private final UptimeClient client;
-    private long startTime = -1;
-
-    public UptimeClientHandler(UptimeClient client) {
-        this.client = client;
-    }
+    long startTime = -1;
 
     @Override
-    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+    public void channelActive(ChannelHandlerContext ctx) {
         if (startTime < 0) {
             startTime = System.currentTimeMillis();
         }
@@ -54,7 +48,7 @@ public class UptimeClientHandler extends SimpleChannelInboundHandler<Object> {
     }
 
     @Override
-    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
         if (!(evt instanceof IdleStateEvent)) {
             return;
         }
@@ -68,31 +62,26 @@ public class UptimeClientHandler extends SimpleChannelInboundHandler<Object> {
     }
 
     @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+    public void channelInactive(final ChannelHandlerContext ctx) {
         println("Disconnected from: " + ctx.channel().remoteAddress());
     }
 
     @Override
-    public void channelUnregistered(final ChannelHandlerContext ctx)
-            throws Exception {
+    public void channelUnregistered(final ChannelHandlerContext ctx) throws Exception {
         println("Sleeping for: " + UptimeClient.RECONNECT_DELAY + 's');
 
         final EventLoop loop = ctx.channel().eventLoop();
         loop.schedule(new Runnable() {
             @Override
             public void run() {
-                println("Reconnecting to: " + ctx.channel().remoteAddress());
-                client.configureBootstrap(new Bootstrap(), loop).connect();
+                println("Reconnecting to: " + UptimeClient.HOST + ':' + UptimeClient.PORT);
+                UptimeClient.connect(UptimeClient.configureBootstrap(new Bootstrap(), loop));
             }
         }, UptimeClient.RECONNECT_DELAY, TimeUnit.SECONDS);
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        if (cause instanceof ConnectException) {
-            startTime = -1;
-            println("Failed to connect: " + cause.getMessage());
-        }
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         cause.printStackTrace();
         ctx.close();
     }

@@ -20,26 +20,38 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
+import io.netty.handler.ssl.SslContext;
 
 /**
  * Creates a newly configured {@link ChannelPipeline} for a server-side channel.
  */
 public class FactorialServerInitializer extends ChannelInitializer<SocketChannel> {
+
+    private final SslContext sslCtx;
+
+    public FactorialServerInitializer(SslContext sslCtx) {
+        this.sslCtx = sslCtx;
+    }
+
     @Override
-    public void initChannel(SocketChannel ch) throws Exception {
+    public void initChannel(SocketChannel ch) {
         ChannelPipeline pipeline = ch.pipeline();
 
+        if (sslCtx != null) {
+            pipeline.addLast(sslCtx.newHandler(ch.alloc()));
+        }
+
         // Enable stream compression (you can remove these two if unnecessary)
-        pipeline.addLast("deflater", ZlibCodecFactory.newZlibEncoder(ZlibWrapper.GZIP));
-        pipeline.addLast("inflater", ZlibCodecFactory.newZlibDecoder(ZlibWrapper.GZIP));
+        pipeline.addLast(ZlibCodecFactory.newZlibEncoder(ZlibWrapper.GZIP));
+        pipeline.addLast(ZlibCodecFactory.newZlibDecoder(ZlibWrapper.GZIP));
 
         // Add the number codec first,
-        pipeline.addLast("decoder", new BigIntegerDecoder());
-        pipeline.addLast("encoder", new NumberEncoder());
+        pipeline.addLast(new BigIntegerDecoder());
+        pipeline.addLast(new NumberEncoder());
 
         // and then business logic.
         // Please note we create a handler for every new channel
         // because it has stateful properties.
-        pipeline.addLast("handler", new FactorialServerHandler());
+        pipeline.addLast(new FactorialServerHandler());
     }
 }

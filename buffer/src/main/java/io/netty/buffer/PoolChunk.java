@@ -20,11 +20,7 @@ final class PoolChunk<T> {
     private static final int ST_UNUSED = 0;
     private static final int ST_BRANCH = 1;
     private static final int ST_ALLOCATED = 2;
-    private static final int ST_ALLOCATED_SUBPAGE = ST_ALLOCATED | 1;
-
-    private static final long multiplier = 0x5DEECE66DL;
-    private static final long addend = 0xBL;
-    private static final long mask = (1L << 48) - 1;
+    private static final int ST_ALLOCATED_SUBPAGE = 3;
 
     final PoolArena<T> arena;
     final T memory;
@@ -39,8 +35,6 @@ final class PoolChunk<T> {
 
     private final int chunkSize;
     private final int maxSubpageAllocs;
-
-    private long random = (System.nanoTime() ^ multiplier) & mask;
 
     private int freeBytes;
 
@@ -119,26 +113,66 @@ final class PoolChunk<T> {
     }
 
     private long allocateRun(int normCapacity, int curIdx, int val) {
-        for (;;) {
-            if ((val & ST_ALLOCATED) != 0) { // state == ST_ALLOCATED || state == ST_ALLOCATED_SUBPAGE
-                return -1;
-            }
+        switch (val & 3) {
+            case ST_UNUSED:
+                return allocateRunSimple(normCapacity, curIdx, val);
+            case ST_BRANCH:
+                // Try the right node first because it is more likely to be ST_UNUSED.
+                // It is because allocateRunSimple() always chooses the left node.
+                final int nextIdxLeft = curIdx << 1;
+                final int nextIdxRight = nextIdxLeft ^ 1;
+                final int nextValRight = memoryMap[nextIdxRight];
+                final boolean recurseRight;
 
-            if ((val & ST_BRANCH) != 0) { // state == ST_BRANCH
-                int nextIdx = curIdx << 1 ^ nextRandom();
-                long res = allocateRun(normCapacity, nextIdx, memoryMap[nextIdx]);
-                if (res > 0) {
-                    return res;
+                switch (nextValRight & 3) {
+                    case ST_UNUSED:
+                        return allocateRunSimple(normCapacity, nextIdxRight, nextValRight);
+                    case ST_BRANCH:
+                        recurseRight = true;
+                        break;
+                    default:
+                        recurseRight = false;
                 }
 
-                curIdx = nextIdx ^ 1;
-                val = memoryMap[curIdx];
-                continue;
-            }
+                final int nextValLeft = memoryMap[nextIdxLeft];
+                final boolean recurseLeft;
 
-            // state == ST_UNUSED
-            return allocateRunSimple(normCapacity, curIdx, val);
+                switch (nextValLeft & 3) {
+                    case ST_UNUSED:
+                        return allocateRunSimple(normCapacity, nextIdxLeft, nextValLeft);
+                    case ST_BRANCH:
+                        recurseLeft = true;
+                        break;
+                    default:
+                        recurseLeft = false;
+                }
+
+                if (recurseRight) {
+                    long res = branchRun(normCapacity, nextIdxRight);
+                    if (res > 0) {
+                        return res;
+                    }
+                }
+
+                if (recurseLeft) {
+                    return branchRun(normCapacity, nextIdxLeft);
+                }
         }
+
+        return -1;
+    }
+
+    private long branchRun(int normCapacity, int nextIdx) {
+        int nextNextIdx = nextIdx << 1;
+        int nextNextVal = memoryMap[nextNextIdx];
+        long res = allocateRun(normCapacity, nextNextIdx, nextNextVal);
+        if (res > 0) {
+            return res;
+        }
+
+        nextNextIdx ^= 1;
+        nextNextVal = memoryMap[nextNextIdx];
+        return allocateRun(normCapacity, nextNextIdx, nextNextVal);
     }
 
     private long allocateRunSimple(int normCapacity, int curIdx, int val) {
@@ -157,7 +191,7 @@ final class PoolChunk<T> {
                 return curIdx;
             }
 
-            int nextIdx = curIdx << 1 ^ nextRandom();
+            int nextIdx = curIdx << 1;
             int unusedIdx = nextIdx ^ 1;
 
             memoryMap[curIdx] = val & ~3 | ST_BRANCH;
@@ -171,29 +205,29 @@ final class PoolChunk<T> {
     }
 
     private long allocateSubpage(int normCapacity, int curIdx, int val) {
-        int state = val & 3;
-        if (state == ST_BRANCH) {
-            int nextIdx = curIdx << 1 ^ nextRandom();
-            long res = branchSubpage(normCapacity, nextIdx);
-            if (res > 0) {
-                return res;
-            }
+        switch (val & 3) {
+            case ST_UNUSED:
+                return allocateSubpageSimple(normCapacity, curIdx, val);
+            case ST_BRANCH:
+                // Try the right node first because it is more likely to be ST_UNUSED.
+                // It is because allocateSubpageSimple() always chooses the left node.
+                final int nextIdxLeft = curIdx << 1;
+                final int nextIdxRight = nextIdxLeft ^ 1;
 
-            return branchSubpage(normCapacity, nextIdx ^ 1);
-        }
+                long res = branchSubpage(normCapacity, nextIdxRight);
+                if (res > 0) {
+                    return res;
+                }
 
-        if (state == ST_UNUSED) {
-            return allocateSubpageSimple(normCapacity, curIdx, val);
-        }
+                return branchSubpage(normCapacity, nextIdxLeft);
+            case ST_ALLOCATED_SUBPAGE:
+                PoolSubpage<T> subpage = subpages[subpageIdx(curIdx)];
+                int elemSize = subpage.elemSize;
+                if (normCapacity != elemSize) {
+                    return -1;
+                }
 
-        if (state == ST_ALLOCATED_SUBPAGE) {
-            PoolSubpage<T> subpage = subpages[subpageIdx(curIdx)];
-            int elemSize = subpage.elemSize;
-            if (normCapacity != elemSize) {
-                return -1;
-            }
-
-            return subpage.allocate();
+                return subpage.allocate();
         }
 
         return -1;
@@ -217,7 +251,7 @@ final class PoolChunk<T> {
                 return subpage.allocate();
             }
 
-            int nextIdx = curIdx << 1 ^ nextRandom();
+            int nextIdx = curIdx << 1;
             int unusedIdx = nextIdx ^ 1;
 
             memoryMap[curIdx] = val & ~3 | ST_BRANCH;
@@ -325,11 +359,6 @@ final class PoolChunk<T> {
 
     private int subpageIdx(int memoryMapIdx) {
         return memoryMapIdx - maxSubpageAllocs;
-    }
-
-    private int nextRandom() {
-        random = random * multiplier + addend & mask;
-        return (int) (random >>> 47) & 1;
     }
 
     public String toString() {

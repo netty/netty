@@ -67,4 +67,16 @@ public class DefaultAttributeMapTest {
         one.remove();
         assertNull(one.get());
     }
+
+    // See https://github.com/netty/netty/issues/2523
+    @Test
+    public void testSetRemove() {
+        AttributeKey<Integer> key = AttributeKey.valueOf("key");
+
+        map.attr(key).set(1);
+        assertSame(1, map.attr(key).getAndRemove());
+
+        map.attr(key).set(2);
+        assertSame(2, map.attr(key).get());
+    }
 }

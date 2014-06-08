@@ -75,7 +75,7 @@ public class HttpResponseClientHandler extends SimpleChannelInboundHandler<HttpO
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         queue.add(ctx.channel().newFailedFuture(cause));
         cause.printStackTrace();
         ctx.close();
@@ -84,5 +84,4 @@ public class HttpResponseClientHandler extends SimpleChannelInboundHandler<HttpO
     public BlockingQueue<ChannelFuture> queue() {
         return queue;
     }
-
 }

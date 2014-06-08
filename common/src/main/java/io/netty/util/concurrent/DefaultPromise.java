@@ -624,6 +624,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
                     } finally {
                         LISTENER_STACK_DEPTH.set(stackDepth);
                     }
+                    return;
                 }
             } else {
                 LateListeners lateListeners = this.lateListeners;
@@ -632,13 +633,14 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
                 }
                 lateListeners.add(l);
                 execute(executor, lateListeners);
+                return;
             }
-        } else {
-            // Add the late listener to lateListeners in the executor thread for thread safety.
-            // We could just make LateListeners extend ConcurrentLinkedQueue, but it's an overkill considering
-            // that most asynchronous applications won't execute this code path.
-            execute(executor, new LateListenerNotifier(l));
         }
+
+        // Add the late listener to lateListeners in the executor thread for thread safety.
+        // We could just make LateListeners extend ConcurrentLinkedQueue, but it's an overkill considering
+        // that most asynchronous applications won't execute this code path.
+        execute(executor, new LateListenerNotifier(l));
     }
 
     protected static void notifyListener(

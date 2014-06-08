@@ -28,4 +28,5 @@ public class SocksAuthResponseTest extends AbstractSocksMessageTest {
 
         assertExceptionCounter(1);
     }
+
 }

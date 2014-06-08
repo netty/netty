@@ -35,7 +35,6 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
@@ -379,12 +378,8 @@ public final class PlatformDependent {
      * Create a new {@link Queue} which is safe to use for multiple producers (different threads) and a single
      * consumer (one thread!).
      */
-    public static Queue<Runnable> newMpscQueue() {
-        if (hasUnsafe()) {
-            return new MpscLinkedQueue();
-        } else {
-            return new ConcurrentLinkedQueue<Runnable>();
-        }
+    public static <T> Queue<T> newMpscQueue() {
+        return new MpscLinkedQueue<T>();
     }
 
     /**

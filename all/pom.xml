@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.0.19.Final-SNAPSHOT</version>
+    <version>4.0.20.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-all</artifactId>
@@ -31,24 +31,12 @@
   <properties>
     <quickbuild>true</quickbuild>
     <generatedSourceDir>${project.build.directory}/src</generatedSourceDir>
-    <dependencyVersionDir>${project.build.directory}/versions</dependencyVersionDir>
+    <dependencyVersionsDir>${project.build.directory}/versions</dependencyVersionsDir>
   </properties>
 
   <profiles>
     <profile>
       <id>full</id>
-      <properties>
-        <quickbuild>false</quickbuild>
-      </properties>
-    </profile>
-    <profile>
-      <id>sonatype-oss-release</id>
-      <properties>
-        <quickbuild>false</quickbuild>
-      </properties>
-    </profile>
-    <profile>
-      <id>release</id>
       <properties>
         <quickbuild>false</quickbuild>
       </properties>
@@ -94,7 +82,7 @@
       </build>
     </profile>
     <profile>
-      <id>linux-native</id>
+      <id>linux</id>
       <activation>
         <os>
           <family>linux</family>
@@ -106,6 +94,7 @@
           <groupId>${project.groupId}</groupId>
           <artifactId>netty-transport-native-epoll</artifactId>
           <version>${project.version}</version>
+          <classifier>${os.detected.classifier}</classifier>
           <scope>compile</scope>
           <optional>true</optional>
         </dependency>
@@ -260,7 +249,7 @@
             </goals>
             <configuration>
               <classifier>sources</classifier>
-              <includes>io/netty/**,META-INF/native/**</includes>
+              <includes>io/netty/**</includes>
               <includeGroupIds>${project.groupId}</includeGroupIds>
               <outputDirectory>${generatedSourceDir}</outputDirectory>
             </configuration>
@@ -274,8 +263,9 @@
               <goal>unpack-dependencies</goal>
             </goals>
             <configuration>
+              <excludes>io/netty/example/**,META-INF/native/libnetty-tcnative*</excludes>
               <includes>io/netty/**,META-INF/native/**</includes>
-              <excludes>io/netty/example/**</excludes>
+              <includeGroupIds>${project.groupId}</includeGroupIds>
               <outputDirectory>${project.build.outputDirectory}</outputDirectory>
             </configuration>
           </execution>
@@ -327,7 +317,7 @@
             <configuration>
               <target>
                 <delete dir="${generatedSourceDir}" quiet="true" />
-                <delete dir="${dependencyVersionDir}" quiet="true" />
+                <delete dir="${dependencyVersionsDir}" quiet="true" />
                 <delete dir="${project.build.outputDirectory}" quiet="true" />
               </target>
             </configuration>

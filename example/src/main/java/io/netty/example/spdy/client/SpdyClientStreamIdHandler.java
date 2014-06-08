@@ -28,12 +28,12 @@ public class SpdyClientStreamIdHandler extends ChannelOutboundHandlerAdapter {
 
     private int currentStreamId = 1;
 
-    public boolean acceptOutboundMessage(Object msg) throws Exception {
+    public boolean acceptOutboundMessage(Object msg) {
         return msg instanceof HttpMessage;
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
         if (acceptOutboundMessage(msg)) {
             HttpMessage httpMsg = (HttpMessage) msg;
             if (!httpMsg.headers().contains(SpdyHttpHeaders.Names.STREAM_ID)) {
@@ -42,6 +42,6 @@ public class SpdyClientStreamIdHandler extends ChannelOutboundHandlerAdapter {
                 currentStreamId += 2;
             }
         }
-        super.write(ctx, msg, promise);
+        ctx.write(msg, promise);
     }
 }

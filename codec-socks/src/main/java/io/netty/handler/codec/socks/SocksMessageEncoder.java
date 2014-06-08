@@ -30,6 +30,10 @@ import io.netty.handler.codec.MessageToByteEncoder;
 public class SocksMessageEncoder extends MessageToByteEncoder<SocksMessage> {
     private static final String name = "SOCKS_MESSAGE_ENCODER";
 
+    /**
+     * @deprecated Will be removed at the next minor version bump.
+     */
+    @Deprecated
     public static String getName() {
         return name;
     }

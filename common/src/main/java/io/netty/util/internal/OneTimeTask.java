@@ -23,34 +23,10 @@ import io.netty.util.concurrent.EventExecutor;
  *
  * <strong>It is important this will not be reused. After submitted it is not allowed to get submitted again!</strong>
  */
-public abstract class OneTimeTask implements Runnable {
+public abstract class OneTimeTask extends MpscLinkedQueueNode<Runnable> implements Runnable {
 
-    private static final long nextOffset;
-
-    static {
-        if (PlatformDependent0.hasUnsafe()) {
-            try {
-                nextOffset = PlatformDependent.objectFieldOffset(
-                        OneTimeTask.class.getDeclaredField("tail"));
-            } catch (Throwable t) {
-                throw new ExceptionInInitializerError(t);
-            }
-        } else {
-            nextOffset = -1;
-        }
-    }
-
-    @SuppressWarnings("unused")
-    private volatile OneTimeTask tail;
-
-    // Only use from MpscLinkedQueue and so we are sure Unsafe is present
-    @SuppressWarnings("unchecked")
-    final OneTimeTask next() {
-        return (OneTimeTask) PlatformDependent.getObjectVolatile(this, nextOffset);
-    }
-
-    // Only use from MpscLinkedQueue and so we are sure Unsafe is present
-    final void setNext(final OneTimeTask newNext) {
-        PlatformDependent.putOrderedObject(this, nextOffset, newNext);
+    @Override
+    public Runnable value() {
+        return this;
     }
 }

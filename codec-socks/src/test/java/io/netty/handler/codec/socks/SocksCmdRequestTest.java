@@ -39,19 +39,19 @@ public class SocksCmdRequestTest extends AbstractSocksMessageTest {
 
         // Socks5 constructors
         try {
-            new SocksCmdRequest(null, SocksAddressType.UNKNOWN, "", 0);
+            new SocksCmdRequest(null, SocksAddressType.UNKNOWN, "", 1);
         } catch (Exception e) {
             assertNullPointerException(e);
         }
 
         try {
-            new SocksCmdRequest(SocksCmdType.UNKNOWN, null, "", 0);
+            new SocksCmdRequest(SocksCmdType.UNKNOWN, null, "", 1);
         } catch (Exception e) {
             assertNullPointerException(e);
         }
 
         try {
-            new SocksCmdRequest(SocksCmdType.UNKNOWN, SocksAddressType.UNKNOWN, null, 0);
+            new SocksCmdRequest(SocksCmdType.UNKNOWN, SocksAddressType.UNKNOWN, null, 1);
         } catch (Exception e) {
             assertNullPointerException(e);
         }
@@ -82,7 +82,7 @@ public class SocksCmdRequestTest extends AbstractSocksMessageTest {
     @Test
     public void testIPv4CorrectAddress() {
         try {
-            new SocksCmdRequest(SocksCmdType.BIND, SocksAddressType.IPv4, "54.54.1111.253", 0);
+            new SocksCmdRequest(SocksCmdType.BIND, SocksAddressType.IPv4, "54.54.1111.253", 1);
         } catch (Exception e) {
             assertIllegalArgumentException(e);
         }
@@ -99,7 +99,7 @@ public class SocksCmdRequestTest extends AbstractSocksMessageTest {
     @Test
     public void testIPv6CorrectAddress() {
         try {
-            new SocksCmdRequest(SocksCmdType.BIND, SocksAddressType.IPv6, "xxx:xxx:xxx", 0);
+            new SocksCmdRequest(SocksCmdType.BIND, SocksAddressType.IPv6, "xxx:xxx:xxx", 1);
         } catch (Exception e) {
             assertIllegalArgumentException(e);
         }
@@ -127,7 +127,7 @@ public class SocksCmdRequestTest extends AbstractSocksMessageTest {
     public void testValidPortRange() {
         try {
             new SocksCmdRequest(SocksCmdType.BIND, SocksAddressType.DOMAIN,
-                    "παράδειγμα.δοκιμήπαράδει", -1);
+                    "παράδειγμα.δοκιμήπαράδει", 0);
         } catch (Exception e) {
             assertIllegalArgumentException(e);
         }

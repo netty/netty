@@ -38,7 +38,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
     static final ResourceLeakDetector<ByteBuf> leakDetector = new ResourceLeakDetector<ByteBuf>(ByteBuf.class);
 
     int readerIndex;
-    private int writerIndex;
+    int writerIndex;
     private int markedReaderIndex;
     private int markedWriterIndex;
 
@@ -321,9 +321,16 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
         SwappedByteBuf swappedBuf = this.swappedBuf;
         if (swappedBuf == null) {
-            this.swappedBuf = swappedBuf = new SwappedByteBuf(this);
+            this.swappedBuf = swappedBuf = newSwappedByteBuf();
         }
         return swappedBuf;
+    }
+
+    /**
+     * Creates a new {@link SwappedByteBuf} for this {@link ByteBuf} instance.
+     */
+    protected SwappedByteBuf newSwappedByteBuf() {
+        return new SwappedByteBuf(this);
     }
 
     @Override

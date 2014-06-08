@@ -17,6 +17,7 @@ package io.netty.example.objectecho;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
@@ -25,23 +26,28 @@ import io.netty.example.echo.EchoClient;
 import io.netty.handler.codec.serialization.ClassResolvers;
 import io.netty.handler.codec.serialization.ObjectDecoder;
 import io.netty.handler.codec.serialization.ObjectEncoder;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
 /**
  * Modification of {@link EchoClient} which utilizes Java object serialization.
  */
-public class ObjectEchoClient {
+public final class ObjectEchoClient {
 
-    private final String host;
-    private final int port;
-    private final int firstMessageSize;
+    static final boolean SSL = System.getProperty("ssl") != null;
+    static final String HOST = System.getProperty("host", "127.0.0.1");
+    static final int PORT = Integer.parseInt(System.getProperty("port", "8007"));
+    static final int SIZE = Integer.parseInt(System.getProperty("size", "256"));
 
-    public ObjectEchoClient(String host, int port, int firstMessageSize) {
-        this.host = host;
-        this.port = port;
-        this.firstMessageSize = firstMessageSize;
-    }
+    public static void main(String[] args) throws Exception {
+        // Configure SSL.
+        final SslContext sslCtx;
+        if (SSL) {
+            sslCtx = SslContext.newClientContext(InsecureTrustManagerFactory.INSTANCE);
+        } else {
+            sslCtx = null;
+        }
 
-    public void run() throws Exception {
         EventLoopGroup group = new NioEventLoopGroup();
         try {
             Bootstrap b = new Bootstrap();
@@ -50,40 +56,21 @@ public class ObjectEchoClient {
              .handler(new ChannelInitializer<SocketChannel>() {
                 @Override
                 public void initChannel(SocketChannel ch) throws Exception {
-                    ch.pipeline().addLast(
+                    ChannelPipeline p = ch.pipeline();
+                    if (sslCtx != null) {
+                        p.addLast(sslCtx.newHandler(ch.alloc(), HOST, PORT));
+                    }
+                    p.addLast(
                             new ObjectEncoder(),
                             new ObjectDecoder(ClassResolvers.cacheDisabled(null)),
-                            new ObjectEchoClientHandler(firstMessageSize));
+                            new ObjectEchoClientHandler());
                 }
              });
 
             // Start the connection attempt.
-            b.connect(host, port).sync().channel().closeFuture().sync();
+            b.connect(HOST, PORT).sync().channel().closeFuture().sync();
         } finally {
             group.shutdownGracefully();
         }
-    }
-
-    public static void main(String[] args) throws Exception {
-        // Print usage if no argument is specified.
-        if (args.length < 2 || args.length > 3) {
-            System.err.println(
-                    "Usage: " + ObjectEchoClient.class.getSimpleName() +
-                    " <host> <port> [<first message size>]");
-            return;
-        }
-
-        // Parse options.
-        final String host = args[0];
-        final int port = Integer.parseInt(args[1]);
-        final int firstMessageSize;
-
-        if (args.length == 3) {
-            firstMessageSize = Integer.parseInt(args[2]);
-        } else {
-            firstMessageSize = 256;
-        }
-
-        new ObjectEchoClient(host, port, firstMessageSize).run();
     }
 }

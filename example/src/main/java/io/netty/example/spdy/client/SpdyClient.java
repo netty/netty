@@ -17,7 +17,6 @@ package io.netty.example.spdy.client;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -27,11 +26,11 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.spdy.SpdyOrHttpChooser.SelectedProtocol;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
-import java.net.InetSocketAddress;
-import java.util.concurrent.BlockingQueue;
-
-import static java.util.concurrent.TimeUnit.*;
+import java.util.Arrays;
 
 /**
  * An SPDY client that allows you to send HTTP GET to a SPDY server.
@@ -41,100 +40,57 @@ import static java.util.concurrent.TimeUnit.*;
  * coordinates org.mortbay.jetty.npn:npn-boot. Different versions applies to different OpenJDK versions. See
  * <a href="http://www.eclipse.org/jetty/documentation/current/npn-chapter.html">Jetty docs</a> for more information.
  * <p>
- * You may also use maven to start the client from the command line:
+ * You may also use the {@code run-example.sh} script to start the client from the command line:
  * <pre>
- *     mvn exec:exec -Pspdy-client
+ *     ./run-example.sh spdy-client
  * </pre>
  */
 public class SpdyClient {
 
-    private final String host;
-    private final int port;
-    private final HttpResponseClientHandler httpResponseHandler;
-    private Channel channel;
-    private EventLoopGroup workerGroup;
+    static final boolean SSL = System.getProperty("ssl") != null;
+    static final String HOST = System.getProperty("host", "127.0.0.1");
+    static final int PORT = Integer.parseInt(System.getProperty("port", SSL? "8443" : "8080"));
 
-    public SpdyClient(String host, int port) {
-        this.host = host;
-        this.port = port;
-        httpResponseHandler = new HttpResponseClientHandler();
-    }
+    public static void main(String[] args) throws Exception {
+        // Configure SSL.
+        final SslContext sslCtx = SslContext.newClientContext(
+                null, InsecureTrustManagerFactory.INSTANCE, null,
+                Arrays.asList(SelectedProtocol.SPDY_3_1.protocolName(), SelectedProtocol.HTTP_1_1.protocolName()),
+                0, 0);
 
-    public void start() {
-        if (channel != null) {
-            System.out.println("Already running!");
-            return;
-        }
+        HttpResponseClientHandler httpResponseHandler = new HttpResponseClientHandler();
+        EventLoopGroup workerGroup = new NioEventLoopGroup();
 
-        workerGroup = new NioEventLoopGroup();
-
-        Bootstrap b = new Bootstrap();
-        b.group(workerGroup);
-        b.channel(NioSocketChannel.class);
-        b.option(ChannelOption.SO_KEEPALIVE, true);
-        b.remoteAddress(new InetSocketAddress(host, port));
-        b.handler(new SpdyClientInitializer(httpResponseHandler));
-
-        // Start the client.
-        channel = b.connect().syncUninterruptibly().channel();
-        System.out.println("Connected to [" + host + ':' + port + ']');
-    }
-
-    public void stop() {
         try {
+            Bootstrap b = new Bootstrap();
+            b.group(workerGroup);
+            b.channel(NioSocketChannel.class);
+            b.option(ChannelOption.SO_KEEPALIVE, true);
+            b.remoteAddress(HOST, PORT);
+            b.handler(new SpdyClientInitializer(sslCtx, httpResponseHandler));
+
+            // Start the client.
+            Channel channel = b.connect().syncUninterruptibly().channel();
+            System.out.println("Connected to " + HOST + ':' + PORT);
+
+            // Create a GET request.
+            HttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "");
+            request.headers().set(HttpHeaders.Names.HOST, HOST);
+            request.headers().set(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP);
+
+            // Send the GET request.
+            channel.writeAndFlush(request).sync();
+
+            // Waits for the complete HTTP response
+            httpResponseHandler.queue().take().sync();
+            System.out.println("Finished SPDY HTTP GET");
+
             // Wait until the connection is closed.
             channel.close().syncUninterruptibly();
         } finally {
             if (workerGroup != null) {
                 workerGroup.shutdownGracefully();
             }
-        }
-    }
-
-    public ChannelFuture send(HttpRequest request) {
-        // Sends the HTTP request.
-        return channel.writeAndFlush(request);
-    }
-
-    public HttpRequest get() {
-        HttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "");
-        request.headers().set(HttpHeaders.Names.HOST, host);
-        request.headers().set(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP);
-        return request;
-    }
-
-    public BlockingQueue<ChannelFuture> httpResponseQueue() {
-        return httpResponseHandler.queue();
-    }
-
-    public static void main(String[] args) throws Exception {
-        int port;
-        if (args.length > 0) {
-            port = Integer.parseInt(args[0]);
-        } else {
-            port = 8443;
-        }
-
-        final SpdyClient client = new SpdyClient("localhost", port);
-
-        try {
-            client.start();
-            ChannelFuture requestFuture = client.send(client.get()).sync();
-
-            if (!requestFuture.isSuccess()) {
-                requestFuture.cause().printStackTrace();
-            }
-
-            // Waits for the complete HTTP response
-            ChannelFuture responseFuture = client.httpResponseQueue().poll(5, SECONDS);
-
-            if (!responseFuture.isSuccess()) {
-                responseFuture.cause().printStackTrace();
-            }
-
-            System.out.println("Finished SPDY HTTP GET");
-        } finally {
-            client.stop();
         }
     }
 }

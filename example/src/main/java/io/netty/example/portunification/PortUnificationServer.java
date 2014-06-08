@@ -21,6 +21,10 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.logging.LogLevel;
+import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 
 /**
  * Serves two protocols (HTTP and Factorial) using only one port, enabling
@@ -29,43 +33,34 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
  * Because SSL and GZIP are enabled on demand, 5 combinations per protocol
  * are possible: none, SSL only, GZIP only, SSL + GZIP, and GZIP + SSL.
  */
-public class PortUnificationServer {
+public final class PortUnificationServer {
 
-    private final int port;
+    static final int PORT = Integer.parseInt(System.getProperty("port", "8080"));
 
-    public PortUnificationServer(int port) {
-        this.port = port;
-    }
+    public static void main(String[] args) throws Exception {
+        // Configure SSL context
+        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        final SslContext sslCtx = SslContext.newServerContext(ssc.certificate(), ssc.privateKey());
 
-    public void run() throws Exception {
         EventLoopGroup bossGroup = new NioEventLoopGroup(1);
         EventLoopGroup workerGroup = new NioEventLoopGroup();
         try {
             ServerBootstrap b = new ServerBootstrap();
             b.group(bossGroup, workerGroup)
              .channel(NioServerSocketChannel.class)
+             .handler(new LoggingHandler(LogLevel.INFO))
              .childHandler(new ChannelInitializer<SocketChannel>() {
                 @Override
                 public void initChannel(SocketChannel ch) throws Exception {
-                    ch.pipeline().addLast(new PortUnificationServerHandler());
+                    ch.pipeline().addLast(new PortUnificationServerHandler(sslCtx));
                 }
             });
 
             // Bind and start to accept incoming connections.
-            b.bind(port).sync().channel().closeFuture().sync();
+            b.bind(PORT).sync().channel().closeFuture().sync();
         } finally {
             bossGroup.shutdownGracefully();
             workerGroup.shutdownGracefully();
         }
-    }
-
-    public static void main(String[] args) throws Exception {
-        int port;
-        if (args.length > 0) {
-            port = Integer.parseInt(args[0]);
-        } else {
-            port = 8080;
-        }
-        new PortUnificationServer(port).run();
     }
 }

@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.0.19.Final-SNAPSHOT</version>
+    <version>4.0.20.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-testsuite</artifactId>
@@ -68,6 +68,12 @@
       <groupId>io.netty</groupId>
       <artifactId>netty-transport-udt</artifactId>
       <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-tcnative</artifactId>
+      <classifier>${os.detected.classifier}</classifier>
+      <optional>true</optional>
     </dependency>
   </dependencies>
 

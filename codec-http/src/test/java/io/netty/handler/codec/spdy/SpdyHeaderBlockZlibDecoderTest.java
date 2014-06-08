@@ -17,6 +17,8 @@ package io.netty.handler.codec.spdy;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.util.ReferenceCountUtil;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -46,9 +48,14 @@ public class SpdyHeaderBlockZlibDecoderTest {
         frame = new DefaultSpdyHeadersFrame(1);
     }
 
+    @After
+    public void tearDown() {
+        decoder.end();
+    }
+
     @Test
     public void testHeaderBlock() throws Exception {
-        ByteBuf headerBlock = Unpooled.buffer(37);
+        ByteBuf headerBlock = ReferenceCountUtil.releaseLater(Unpooled.buffer(37));
         headerBlock.writeBytes(zlibHeader);
         headerBlock.writeByte(0); // Non-compressed block
         headerBlock.writeByte(0x15); // little-endian length (21)
@@ -74,7 +81,7 @@ public class SpdyHeaderBlockZlibDecoderTest {
 
     @Test
     public void testHeaderBlockMultipleDecodes() throws Exception {
-        ByteBuf headerBlock = Unpooled.buffer(37);
+        ByteBuf headerBlock = ReferenceCountUtil.releaseLater(Unpooled.buffer(37));
         headerBlock.writeBytes(zlibHeader);
         headerBlock.writeByte(0); // Non-compressed block
         headerBlock.writeByte(0x15); // little-endian length (21)
@@ -92,6 +99,7 @@ public class SpdyHeaderBlockZlibDecoderTest {
         for (int i = 0; i < readableBytes; i++) {
             ByteBuf headerBlockSegment = headerBlock.slice(i, 1);
             decoder.decode(headerBlockSegment, frame);
+            assertFalse(headerBlockSegment.isReadable());
         }
         decoder.endHeaderBlock(frame);
 
@@ -104,7 +112,7 @@ public class SpdyHeaderBlockZlibDecoderTest {
 
     @Test
     public void testLargeHeaderName() throws Exception {
-        ByteBuf headerBlock = Unpooled.buffer(8220);
+        ByteBuf headerBlock = ReferenceCountUtil.releaseLater(Unpooled.buffer(8220));
         headerBlock.writeBytes(zlibHeader);
         headerBlock.writeByte(0); // Non-compressed block
         headerBlock.writeByte(0x0c); // little-endian length (8204)
@@ -129,7 +137,7 @@ public class SpdyHeaderBlockZlibDecoderTest {
 
     @Test
     public void testLargeHeaderValue() throws Exception {
-        ByteBuf headerBlock = Unpooled.buffer(8220);
+        ByteBuf headerBlock = ReferenceCountUtil.releaseLater(Unpooled.buffer(8220));
         headerBlock.writeBytes(zlibHeader);
         headerBlock.writeByte(0); // Non-compressed block
         headerBlock.writeByte(0x0c); // little-endian length (8204)
@@ -156,7 +164,7 @@ public class SpdyHeaderBlockZlibDecoderTest {
 
     @Test(expected = SpdyProtocolException.class)
     public void testHeaderBlockExtraData() throws Exception {
-        ByteBuf headerBlock = Unpooled.buffer(37);
+        ByteBuf headerBlock = ReferenceCountUtil.releaseLater(Unpooled.buffer(37));
         headerBlock.writeBytes(zlibHeader);
         headerBlock.writeByte(0); // Non-compressed block
         headerBlock.writeByte(0x15); // little-endian length (21)
@@ -178,7 +186,7 @@ public class SpdyHeaderBlockZlibDecoderTest {
 
     @Test(expected = SpdyProtocolException.class)
     public void testHeaderBlockInvalidDictionary() throws Exception {
-        ByteBuf headerBlock = Unpooled.buffer(7);
+        ByteBuf headerBlock = ReferenceCountUtil.releaseLater(Unpooled.buffer(7));
         headerBlock.writeByte(0x78);
         headerBlock.writeByte(0x3f);
         headerBlock.writeByte(0x01); // Unknown dictionary
@@ -191,7 +199,7 @@ public class SpdyHeaderBlockZlibDecoderTest {
 
     @Test(expected = SpdyProtocolException.class)
     public void testHeaderBlockInvalidDeflateBlock() throws Exception {
-        ByteBuf headerBlock = Unpooled.buffer(11);
+        ByteBuf headerBlock = ReferenceCountUtil.releaseLater(Unpooled.buffer(11));
         headerBlock.writeBytes(zlibHeader);
         headerBlock.writeByte(0); // Non-compressed block
         headerBlock.writeByte(0x00); // little-endian length (0)

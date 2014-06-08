@@ -17,6 +17,7 @@ package io.netty.channel.epoll;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.handler.ssl.SslContext;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.SocketSslEchoTest;
 
@@ -24,11 +25,13 @@ import java.util.List;
 
 public class EpollSocketSslEchoTest extends SocketSslEchoTest {
 
-    public EpollSocketSslEchoTest(boolean serverUsesDelegatedTaskExecutor,
-                                  boolean clientUsesDelegatedTaskExecutor,
-                                  boolean useChunkedWriteHandler,
-                                  boolean useCompositeByteBuf) {
-        super(serverUsesDelegatedTaskExecutor, clientUsesDelegatedTaskExecutor,
+    public EpollSocketSslEchoTest(
+            SslContext serverCtx, SslContext clientCtx,
+            boolean serverUsesDelegatedTaskExecutor, boolean clientUsesDelegatedTaskExecutor,
+            boolean useChunkedWriteHandler, boolean useCompositeByteBuf) {
+        super(
+                serverCtx, clientCtx,
+                serverUsesDelegatedTaskExecutor, clientUsesDelegatedTaskExecutor,
                 useChunkedWriteHandler, useCompositeByteBuf);
     }
 

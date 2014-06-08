@@ -27,6 +27,8 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
 import java.net.URI;
 
@@ -34,17 +36,14 @@ import java.net.URI;
  * A simple HTTP client that prints out the content of the HTTP response to
  * {@link System#out} to test {@link HttpSnoopServer}.
  */
-public class HttpSnoopClient {
+public final class HttpSnoopClient {
 
-    private final URI uri;
+    static final String URL = System.getProperty("url", "http://127.0.0.1:8080/");
 
-    public HttpSnoopClient(URI uri) {
-        this.uri = uri;
-    }
-
-    public void run() throws Exception {
+    public static void main(String[] args) throws Exception {
+        URI uri = new URI(URL);
         String scheme = uri.getScheme() == null? "http" : uri.getScheme();
-        String host = uri.getHost() == null? "localhost" : uri.getHost();
+        String host = uri.getHost() == null? "127.0.0.1" : uri.getHost();
         int port = uri.getPort();
         if (port == -1) {
             if ("http".equalsIgnoreCase(scheme)) {
@@ -59,7 +58,14 @@ public class HttpSnoopClient {
             return;
         }
 
-        boolean ssl = "https".equalsIgnoreCase(scheme);
+        // Configure SSL context if necessary.
+        final boolean ssl = "https".equalsIgnoreCase(scheme);
+        final SslContext sslCtx;
+        if (ssl) {
+            sslCtx = SslContext.newClientContext(InsecureTrustManagerFactory.INSTANCE);
+        } else {
+            sslCtx = null;
+        }
 
         // Configure the client.
         EventLoopGroup group = new NioEventLoopGroup();
@@ -67,7 +73,7 @@ public class HttpSnoopClient {
             Bootstrap b = new Bootstrap();
             b.group(group)
              .channel(NioSocketChannel.class)
-             .handler(new HttpSnoopClientInitializer(ssl));
+             .handler(new HttpSnoopClientInitializer(sslCtx));
 
             // Make the connection attempt.
             Channel ch = b.connect(host, port).sync().channel();
@@ -95,17 +101,5 @@ public class HttpSnoopClient {
             // Shut down executor threads to exit.
             group.shutdownGracefully();
         }
-    }
-
-    public static void main(String[] args) throws Exception {
-        if (args.length != 1) {
-            System.err.println(
-                    "Usage: " + HttpSnoopClient.class.getSimpleName() +
-                    " <URL>");
-            return;
-        }
-
-        URI uri = new URI(args[0]);
-        new HttpSnoopClient(uri).run();
     }
 }

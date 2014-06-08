@@ -553,12 +553,11 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
             ByteBuf byteBuf = null;
             boolean close = false;
             try {
-                int byteBufCapacity = allocHandle.guess();
                 int totalReadAmount = 0;
                 for (;;) {
                     // we use a direct buffer here as the native implementations only be able
                     // to handle direct buffers.
-                    byteBuf = allocator.directBuffer(byteBufCapacity);
+                    byteBuf = allocHandle.allocate(allocator);
                     int writable = byteBuf.writableBytes();
                     int localReadAmount = doReadBytes(byteBuf);
                     if (localReadAmount <= 0) {

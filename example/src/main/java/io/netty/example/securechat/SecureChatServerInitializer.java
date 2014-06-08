@@ -22,14 +22,18 @@ import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.Delimiters;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
-import io.netty.handler.ssl.SslHandler;
-
-import javax.net.ssl.SSLEngine;
+import io.netty.handler.ssl.SslContext;
 
 /**
  * Creates a newly configured {@link ChannelPipeline} for a new channel.
  */
 public class SecureChatServerInitializer extends ChannelInitializer<SocketChannel> {
+
+    private final SslContext sslCtx;
+
+    public SecureChatServerInitializer(SslContext sslCtx) {
+        this.sslCtx = sslCtx;
+    }
 
     @Override
     public void initChannel(SocketChannel ch) throws Exception {
@@ -40,23 +44,14 @@ public class SecureChatServerInitializer extends ChannelInitializer<SocketChanne
         // and accept any invalid certificates in the client side.
         // You will need something more complicated to identify both
         // and server in the real world.
-        //
-        // Read SecureChatSslContextFactory
-        // if you need client certificate authentication.
-
-        SSLEngine engine =
-            SecureChatSslContextFactory.getServerContext().createSSLEngine();
-        engine.setUseClientMode(false);
-
-        pipeline.addLast("ssl", new SslHandler(engine));
+        pipeline.addLast(sslCtx.newHandler(ch.alloc()));
 
         // On top of the SSL handler, add the text line codec.
-        pipeline.addLast("framer", new DelimiterBasedFrameDecoder(
-                8192, Delimiters.lineDelimiter()));
-        pipeline.addLast("decoder", new StringDecoder());
-        pipeline.addLast("encoder", new StringEncoder());
+        pipeline.addLast(new DelimiterBasedFrameDecoder(8192, Delimiters.lineDelimiter()));
+        pipeline.addLast(new StringDecoder());
+        pipeline.addLast(new StringEncoder());
 
         // and then business logic.
-        pipeline.addLast("handler", new SecureChatServerHandler());
+        pipeline.addLast(new SecureChatServerHandler());
     }
 }

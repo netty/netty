@@ -192,29 +192,32 @@ final class PoolThreadCache {
     /**
      *  Should be called if the Thread that uses this cache is about to exist to release resources out of the cache
      */
-    void free() {
-        free(tinySubPageDirectCaches);
-        free(smallSubPageDirectCaches);
-        free(normalDirectCaches);
-        free(tinySubPageHeapCaches);
-        free(smallSubPageHeapCaches);
-        free(normalHeapCaches);
+    int free() {
+        return free(tinySubPageDirectCaches) +
+                free(smallSubPageDirectCaches) +
+                free(normalDirectCaches) +
+                free(tinySubPageHeapCaches) +
+                free(smallSubPageHeapCaches) +
+                free(normalHeapCaches);
     }
 
-    private static void free(MemoryRegionCache<?>[] caches) {
+    private static int free(MemoryRegionCache<?>[] caches) {
         if (caches == null) {
-            return;
+            return 0;
         }
-        for (int i = 0; i < caches.length; i++) {
-            free(caches[i]);
+
+        int numFreed = 0;
+        for (MemoryRegionCache<?> c: caches) {
+            numFreed += free(c);
         }
+        return numFreed;
     }
 
-    private static void free(MemoryRegionCache<?> cache) {
+    private static int free(MemoryRegionCache<?> cache) {
         if (cache == null) {
-            return;
+            return 0;
         }
-        cache.free();
+        return cache.free();
     }
 
     void trim() {
@@ -230,8 +233,8 @@ final class PoolThreadCache {
         if (caches == null) {
             return;
         }
-        for (int i = 0; i < caches.length; i++) {
-            trim(caches[i]);
+        for (MemoryRegionCache<?> c: caches) {
+            trim(c);
         }
     }
 
@@ -384,13 +387,16 @@ final class PoolThreadCache {
         /**
          * Clear out this cache and free up all previous cached {@link PoolChunk}s and {@code handle}s.
          */
-        public void free() {
+        public int free() {
+            int numFreed = 0;
             entriesInUse = 0;
             maxEntriesInUse = 0;
             for (int i = head;; i = nextIdx(i)) {
-                if (!freeEntry(entries[i])) {
+                if (freeEntry(entries[i])) {
+                    numFreed++;
+                } else {
                     // all cleared
-                    return;
+                    return numFreed;
                 }
             }
         }
@@ -440,7 +446,7 @@ final class PoolThreadCache {
 
         private int nextIdx(int index) {
             // use bitwise operation as this is faster as using modulo.
-            return (index + 1) & entries.length - 1;
+            return index + 1 & entries.length - 1;
         }
 
         private static final class Entry<T> {
