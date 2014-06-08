@@ -75,8 +75,7 @@
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-tcnative</artifactId>
       <version>1.1.30.Fork2</version>
-      <classifier>${os.detected.classifier}</classifier>
-      <scope>compile</scope>
+      <classifier>windows-x86_64</classifier>
       <optional>true</optional>
     </dependency>
 
