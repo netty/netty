@@ -23,6 +23,8 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.util.IdentityHashMap;
 import java.util.Map;
 
+import io.netty.util.concurrent.FastThreadLocal;
+
 /**
  * Light-weight object pool based on a thread-local stack.
  *
@@ -54,23 +56,21 @@ public abstract class Recycler<T> {
     }
 
     private final int maxCapacity;
+    private final FastThreadLocal<Stack<T>> threadLocal;
 
-    private final ThreadLocal<Stack<T>> threadLocal = new ThreadLocal<Stack<T>>() {
-        @Override
-        protected Stack<T> initialValue() {
-            return new Stack<T>(Recycler.this, Thread.currentThread(), maxCapacity);
-        }
-    };
-
-    protected Recycler() {
-        this(DEFAULT_MAX_CAPACITY);
+    protected Recycler(FastThreadLocal.Type type) {
+        this(DEFAULT_MAX_CAPACITY, type);
     }
 
-    protected Recycler(int maxCapacity) {
-        if (maxCapacity <= 0) {
-            maxCapacity = 0;
-        }
-        this.maxCapacity = maxCapacity;
+    public Recycler(int maxCapacity, FastThreadLocal.Type type) {
+        super();
+        this.maxCapacity = Math.max(0, maxCapacity);
+        threadLocal = new FastThreadLocal<Stack<T>>(type) {
+            @Override
+            protected Stack<T> initialValue() {
+                return new Stack<T>(Recycler.this, Thread.currentThread(), Recycler.this.maxCapacity);
+            }
+        };
     }
 
     public final T get() {
