@@ -17,6 +17,7 @@
 package io.netty.buffer;
 
 import io.netty.util.ThreadDeathWatcher;
+import io.netty.util.internal.FastThreadLocal;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -28,7 +29,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class PooledByteBufAllocator extends AbstractByteBufAllocator {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PooledByteBufAllocator.class);
-
     private static final int DEFAULT_NUM_HEAP_ARENA;
     private static final int DEFAULT_NUM_DIRECT_ARENA;
 
@@ -273,7 +273,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         threadCache.free();
     }
 
-    final class PoolThreadLocalCache extends ThreadLocal<PoolThreadCache> {
+    final class PoolThreadLocalCache extends FastThreadLocal<PoolThreadCache> {
         private final AtomicInteger index = new AtomicInteger();
         private boolean initialized;
 
