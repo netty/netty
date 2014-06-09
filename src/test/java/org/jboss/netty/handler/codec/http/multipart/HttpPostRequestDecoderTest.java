@@ -72,6 +72,50 @@ public class HttpPostRequestDecoderTest {
         }
     }
 
+    // See https://github.com/netty/netty/issues/2544
+    @Test
+    public void testMultipartCodecWithCRasEndOfAttribute() throws Exception {
+        final String boundary = "dLV9Wyq26L_-JQxk6ferf-RT153LhOO";
+
+        // Force to use memory-based data.
+        final DefaultHttpDataFactory inMemoryFactory = new DefaultHttpDataFactory(false);
+        // Build test case
+        String extradata = "aaaa";
+        String[] datas = new String[5];
+        for (int i = 0; i < 4; i++) {
+            datas[i] = extradata;
+            for (int j = 0; j < i; j++) {
+                datas[i] += '\r';
+            }
+        }
+
+        for (int i = 0; i < 4; i++) {
+            final DefaultHttpRequest req = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
+                    "http://localhost");
+            req.headers().add(HttpHeaders.Names.CONTENT_TYPE, "multipart/form-data; boundary=" + boundary);
+
+            final String body =
+                    "--" + boundary + "\r\n" +
+                            "Content-Disposition: form-data; name=\"file" + i + "\"\r\n" +
+                            "Content-Type: image/gif\r\n" +
+                            "\r\n" +
+                            datas[i] + "\r\n" +
+                            "--" + boundary + "--\r\n";
+
+            req.setContent(ChannelBuffers.wrappedBuffer(body.getBytes(CharsetUtil.UTF_8.name())));
+            // Create decoder instance to test.
+            final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
+            assertFalse(decoder.getBodyHttpDatas().isEmpty());
+            // Check correctness: data size
+            InterfaceHttpData httpdata = decoder.getBodyHttpData("file" + i);
+            assertNotNull(httpdata);
+            Attribute attribute = (Attribute) httpdata;
+            byte[] datar = attribute.get();
+            assertNotNull(datar);
+            assertEquals(datas[i].getBytes(CharsetUtil.UTF_8.name()).length, datar.length);
+        }
+    }
+
     // See https://github.com/netty/netty/issues/2305
     @Test
     public void testChunkCorrect() throws Exception {
