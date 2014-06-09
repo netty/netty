@@ -16,6 +16,7 @@
 
 package io.netty.buffer;
 
+import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.ScheduledFuture;
 import io.netty.util.internal.PlatformDependent;
@@ -130,7 +131,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
     }
 
     public static final PooledByteBufAllocator DEFAULT =
-            new PooledByteBufAllocator(PlatformDependent.directBufferPreferred());
+            new PooledByteBufAllocator(FastThreadLocal.Type.PooledByteBufAllocator_DefaultAllocator);
 
     private final PoolArena<byte[]>[] heapArenas;
     private final PoolArena<ByteBuffer>[] directArenas;
@@ -166,8 +167,22 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
     public PooledByteBufAllocator(boolean preferDirect, int nHeapArena, int nDirectArena, int pageSize, int maxOrder,
                                   int tinyCacheSize, int smallCacheSize, int normalCacheSize,
                                   long cacheThreadAliveCheckInterval) {
+        this(preferDirect, nHeapArena, nDirectArena, pageSize, maxOrder, tinyCacheSize, smallCacheSize, normalCacheSize,
+             cacheThreadAliveCheckInterval, null);
+    }
+
+    private PooledByteBufAllocator(FastThreadLocal.Type fastThreadLocalType) {
+        this(PlatformDependent.directBufferPreferred(),
+             DEFAULT_NUM_HEAP_ARENA, DEFAULT_NUM_DIRECT_ARENA, DEFAULT_PAGE_SIZE, DEFAULT_MAX_ORDER,
+             DEFAULT_TINY_CACHE_SIZE, DEFAULT_SMALL_CACHE_SIZE, DEFAULT_NORMAL_CACHE_SIZE,
+             DEFAULT_CACHE_CLEANUP_INTERVAL, fastThreadLocalType);
+    }
+
+    private PooledByteBufAllocator(boolean preferDirect, int nHeapArena, int nDirectArena, int pageSize, int maxOrder,
+                                  int tinyCacheSize, int smallCacheSize, int normalCacheSize,
+                                  long cacheThreadAliveCheckInterval, FastThreadLocal.Type fastThreadLocalType) {
         super(preferDirect);
-        threadCache = new PoolThreadLocalCache(cacheThreadAliveCheckInterval);
+        threadCache = new PoolThreadLocalCache(fastThreadLocalType, cacheThreadAliveCheckInterval);
         this.tinyCacheSize = tinyCacheSize;
         this.smallCacheSize = smallCacheSize;
         this.normalCacheSize = normalCacheSize;
@@ -292,59 +307,50 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         threadCache.free();
     }
 
-    final class PoolThreadLocalCache extends ThreadLocal<PoolThreadCache> {
+    final class PoolThreadLocalCache extends FastThreadLocal<PoolThreadCache> {
         private final Map<Thread, PoolThreadCache> caches = new IdentityHashMap<Thread, PoolThreadCache>();
         private final ReleaseCacheTask task = new ReleaseCacheTask();
         private final AtomicInteger index = new AtomicInteger();
         private final long cacheThreadAliveCheckInterval;
 
-        PoolThreadLocalCache(long cacheThreadAliveCheckInterval) {
+        PoolThreadLocalCache(FastThreadLocal.Type fastThreadLocalType, long cacheThreadAliveCheckInterval) {
+            super(fastThreadLocalType);
             this.cacheThreadAliveCheckInterval = cacheThreadAliveCheckInterval;
         }
 
-        @Override
-        public PoolThreadCache get() {
-            PoolThreadCache cache = super.get();
-            if (cache == null) {
-                final int idx = index.getAndIncrement();
-                final PoolArena<byte[]> heapArena;
-                final PoolArena<ByteBuffer> directArena;
+        protected PoolThreadCache initialValue() {
+            final int idx = index.getAndIncrement();
+            final PoolArena<byte[]> heapArena;
+            final PoolArena<ByteBuffer> directArena;
 
-                if (heapArenas != null) {
-                    heapArena = heapArenas[Math.abs(idx % heapArenas.length)];
-                } else {
-                    heapArena = null;
-                }
-
-                if (directArenas != null) {
-                    directArena = directArenas[Math.abs(idx % directArenas.length)];
-                } else {
-                    directArena = null;
-                }
-                // If the current Thread is assigned to an EventExecutor we can
-                // easily free the cached stuff again once the EventExecutor completes later.
-                cache = new PoolThreadCache(
-                        heapArena, directArena, tinyCacheSize, smallCacheSize, normalCacheSize,
-                        DEFAULT_MAX_CACHED_BUFFER_CAPACITY, DEFAULT_CACHE_TRIM_INTERVAL);
-                set(cache);
+            if (heapArenas != null) {
+                heapArena = heapArenas[Math.abs(idx % heapArenas.length)];
+            } else {
+                heapArena = null;
             }
-            return cache;
-        }
 
-        @Override
-        public void set(PoolThreadCache value) {
+            if (directArenas != null) {
+                directArena = directArenas[Math.abs(idx % directArenas.length)];
+            } else {
+                directArena = null;
+            }
+
             Thread current = Thread.currentThread();
+            // If the current Thread is assigned to an EventExecutor we can
+            // easily free the cached stuff again once the EventExecutor completes later.
+            PoolThreadCache cache = new PoolThreadCache(heapArena, directArena, tinyCacheSize, smallCacheSize,
+                                                        normalCacheSize, DEFAULT_MAX_CACHED_BUFFER_CAPACITY,
+                                                        DEFAULT_CACHE_TRIM_INTERVAL);
             synchronized (caches) {
-                caches.put(current, value);
+                caches.put(current, cache);
                 if (task.releaseTaskFuture == null) {
                     task.releaseTaskFuture = GlobalEventExecutor.INSTANCE.scheduleWithFixedDelay(task,
                             cacheThreadAliveCheckInterval, cacheThreadAliveCheckInterval, TimeUnit.MILLISECONDS);
                 }
             }
-            super.set(value);
+            return cache;
         }
 
-        @Override
         public void remove() {
             super.remove();
             PoolThreadCache cache;

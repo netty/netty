@@ -15,6 +15,7 @@
 package io.netty.buffer;
 
 import io.netty.util.Recycler;
+import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
@@ -27,7 +28,8 @@ import java.nio.channels.ScatteringByteChannel;
 
 final class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
 
-    private static final Recycler<PooledHeapByteBuf> RECYCLER = new Recycler<PooledHeapByteBuf>() {
+    private static final Recycler<PooledHeapByteBuf> RECYCLER
+    = new Recycler<PooledHeapByteBuf>(FastThreadLocal.Type.PooledHeapByteBuf_Recycler) {
         @Override
         protected PooledHeapByteBuf newObject(Handle handle) {
             return new PooledHeapByteBuf(handle, 0);

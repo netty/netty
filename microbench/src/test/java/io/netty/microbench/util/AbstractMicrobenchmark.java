@@ -16,6 +16,7 @@
 package io.netty.microbench.util;
 
 import io.netty.util.ResourceLeakDetector;
+import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.internal.SystemPropertyUtil;
 import org.junit.Test;
 import org.openjdk.jmh.annotations.Fork;
@@ -30,6 +31,12 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 import org.openjdk.jmh.runner.options.VerboseMode;
 
 import java.io.File;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedTransferQueue;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Base class for all JMH benchmarks.
@@ -44,11 +51,23 @@ public class AbstractMicrobenchmark {
     protected static final int DEFAULT_MEASURE_ITERATIONS = 10;
     protected static final int DEFAULT_FORKS = 2;
 
+    public static final class HarnessExecutor extends ThreadPoolExecutor
+    {
+        public HarnessExecutor(int maxThreads, String prefix)
+        {
+            super(0, maxThreads, 1L, TimeUnit.DAYS, new SynchronousQueue<Runnable>(),
+                  new DefaultThreadFactory(prefix));
+            System.out.println("Using harness executor");
+        }
+    }
+
     protected static final String[] JVM_ARGS = new String[] {
         "-server", "-dsa", "-da", "-ea:io.netty...", "-Xms768m", "-Xmx768m",
         "-XX:MaxDirectMemorySize=768m", "-XX:+AggressiveOpts", "-XX:+UseBiasedLocking",
         "-XX:+UseFastAccessorMethods", "-XX:+UseStringCache", "-XX:+OptimizeStringConcat",
-        "-XX:+HeapDumpOnOutOfMemoryError", "-Dio.netty.noResourceLeakDetection"
+        "-XX:+HeapDumpOnOutOfMemoryError", "-Dio.netty.noResourceLeakDetection",
+        "-Dharness.executor=CUSTOM",
+        "-Dharness.executor.class=io.netty.microbench.util.AbstractMicrobenchmark$HarnessExecutor"
     };
 
     static {
