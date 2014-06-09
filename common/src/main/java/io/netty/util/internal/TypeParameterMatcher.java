@@ -31,7 +31,7 @@ public abstract class TypeParameterMatcher {
     private static final Object TEST_OBJECT = new Object();
 
     private static final ThreadLocal<Map<Class<?>, TypeParameterMatcher>> getCache =
-            new ThreadLocal<Map<Class<?>, TypeParameterMatcher>>() {
+            new FastThreadLocal<Map<Class<?>, TypeParameterMatcher>>() {
                 @Override
                 protected Map<Class<?>, TypeParameterMatcher> initialValue() {
                     return new IdentityHashMap<Class<?>, TypeParameterMatcher>();
@@ -69,7 +69,7 @@ public abstract class TypeParameterMatcher {
     }
 
     private static final ThreadLocal<Map<Class<?>, Map<String, TypeParameterMatcher>>> findCache =
-            new ThreadLocal<Map<Class<?>, Map<String, TypeParameterMatcher>>>() {
+            new FastThreadLocal<Map<Class<?>, Map<String, TypeParameterMatcher>>>() {
                 @Override
                 protected Map<Class<?>, Map<String, TypeParameterMatcher>> initialValue() {
                     return new IdentityHashMap<Class<?>, Map<String, TypeParameterMatcher>>();
