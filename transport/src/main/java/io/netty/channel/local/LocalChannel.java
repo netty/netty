@@ -28,6 +28,7 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
+import io.netty.util.internal.FastThreadLocal;
 
 import java.net.SocketAddress;
 import java.nio.channels.AlreadyConnectedException;
@@ -48,7 +49,7 @@ public class LocalChannel extends AbstractChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
     private static final int MAX_READER_STACK_DEPTH = 8;
-    private static final ThreadLocal<Integer> READER_STACK_DEPTH = new ThreadLocal<Integer>() {
+    private static final ThreadLocal<Integer> READER_STACK_DEPTH = new FastThreadLocal<Integer>() {
         @Override
         protected Integer initialValue() {
             return 0;

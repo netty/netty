@@ -17,6 +17,7 @@ package io.netty.util.concurrent;
 
 import io.netty.util.Signal;
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.FastThreadLocal;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -35,7 +36,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             InternalLoggerFactory.getInstance(DefaultPromise.class.getName() + ".rejectedExecution");
 
     private static final int MAX_LISTENER_STACK_DEPTH = 8;
-    private static final ThreadLocal<Integer> LISTENER_STACK_DEPTH = new ThreadLocal<Integer>() {
+    private static final ThreadLocal<Integer> LISTENER_STACK_DEPTH = new FastThreadLocal<Integer>() {
         @Override
         protected Integer initialValue() {
             return 0;
