@@ -335,6 +335,7 @@
     <module>common</module>
     <module>buffer</module>
     <module>codec</module>
+    <module>codec-dns</module>
     <module>codec-http</module>
     <module>codec-http2</module>
     <module>codec-memcache</module>
