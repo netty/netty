@@ -17,7 +17,6 @@
 package io.netty.buffer;
 
 import io.netty.util.Recycler;
-import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
@@ -33,8 +32,7 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
 
     private static final boolean NATIVE_ORDER = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
 
-    private static final Recycler<PooledUnsafeDirectByteBuf> RECYCLER
-    = new Recycler<PooledUnsafeDirectByteBuf>(FastThreadLocal.Type.PooledUnsafeDirectByteBuf_Recycler) {
+    private static final Recycler<PooledUnsafeDirectByteBuf> RECYCLER = new Recycler<PooledUnsafeDirectByteBuf>() {
         @Override
         protected PooledUnsafeDirectByteBuf newObject(Handle handle) {
             return new PooledUnsafeDirectByteBuf(handle, 0);

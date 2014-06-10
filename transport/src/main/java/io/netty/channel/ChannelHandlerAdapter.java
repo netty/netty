@@ -16,6 +16,8 @@
 
 package io.netty.channel;
 
+import io.netty.util.internal.FastThreadLocal;
+
 import java.util.Map;
 import java.util.WeakHashMap;
 
@@ -33,7 +35,7 @@ public abstract class ChannelHandlerAdapter implements ChannelHandler {
      * See <a href="See https://github.com/netty/netty/issues/2289">#2289</a>.
      */
     private static final ThreadLocal<Map<Class<?>, Boolean>> SHARABLE_CACHE =
-            new ThreadLocal<Map<Class<?>, Boolean>>() {
+            new FastThreadLocal<Map<Class<?>, Boolean>>() {
                 @Override
                 protected Map<Class<?>, Boolean> initialValue() {
                     // Start with small capacity to keep memory overhead as low as possible.

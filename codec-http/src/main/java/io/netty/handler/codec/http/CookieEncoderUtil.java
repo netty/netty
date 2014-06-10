@@ -16,9 +16,11 @@
 package io.netty.handler.codec.http;
 
 
+import io.netty.util.internal.FastThreadLocal;
+
 final class CookieEncoderUtil {
 
-    static final ThreadLocal<StringBuilder> buffer = new ThreadLocal<StringBuilder>() {
+    static final ThreadLocal<StringBuilder> buffer = new FastThreadLocal<StringBuilder>() {
         @Override
         public StringBuilder get() {
             StringBuilder buf = super.get();

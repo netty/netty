@@ -15,6 +15,8 @@
  */
 package io.netty.util;
 
+import io.netty.util.internal.FastThreadLocal;
+
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CharsetEncoder;
@@ -61,7 +63,7 @@ public final class CharsetUtil {
     public static final Charset US_ASCII = Charset.forName("US-ASCII");
 
     private static final ThreadLocal<Map<Charset, CharsetEncoder>> encoders =
-        new ThreadLocal<Map<Charset, CharsetEncoder>>() {
+        new FastThreadLocal<Map<Charset, CharsetEncoder>>() {
             @Override
             protected Map<Charset, CharsetEncoder> initialValue() {
                 return new IdentityHashMap<Charset, CharsetEncoder>();
@@ -69,7 +71,7 @@ public final class CharsetUtil {
         };
 
     private static final ThreadLocal<Map<Charset, CharsetDecoder>> decoders =
-        new ThreadLocal<Map<Charset, CharsetDecoder>>() {
+        new FastThreadLocal<Map<Charset, CharsetDecoder>>() {
             @Override
             protected Map<Charset, CharsetDecoder> initialValue() {
                 return new IdentityHashMap<Charset, CharsetDecoder>();
