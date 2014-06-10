@@ -16,6 +16,8 @@
 
 package io.netty.handler.ssl.util;
 
+import io.netty.util.internal.FastThreadLocal;
+
 import javax.net.ssl.ManagerFactoryParameters;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
@@ -43,7 +45,7 @@ public abstract class SimpleTrustManagerFactory extends TrustManagerFactory {
      * To work around this issue, we use an ugly hack which uses a {@link ThreadLocal}.
      */
     private static final ThreadLocal<SimpleTrustManagerFactorySpi> CURRENT_SPI =
-            new ThreadLocal<SimpleTrustManagerFactorySpi>() {
+            new FastThreadLocal<SimpleTrustManagerFactorySpi>() {
                 @Override
                 protected SimpleTrustManagerFactorySpi initialValue() {
                     return new SimpleTrustManagerFactorySpi();

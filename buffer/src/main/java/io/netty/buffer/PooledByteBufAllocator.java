@@ -17,7 +17,7 @@
 package io.netty.buffer;
 
 import io.netty.util.ThreadDeathWatcher;
-import io.netty.util.concurrent.FastThreadLocal;
+import io.netty.util.internal.FastThreadLocal;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -29,7 +29,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class PooledByteBufAllocator extends AbstractByteBufAllocator {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PooledByteBufAllocator.class);
-
     private static final int DEFAULT_NUM_HEAP_ARENA;
     private static final int DEFAULT_NUM_DIRECT_ARENA;
 
@@ -119,7 +118,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
     }
 
     public static final PooledByteBufAllocator DEFAULT =
-            new PooledByteBufAllocator(FastThreadLocal.Type.PooledByteBufAllocator_DefaultAllocator);
+            new PooledByteBufAllocator(PlatformDependent.directBufferPreferred());
 
     private final PoolArena<byte[]>[] heapArenas;
     private final PoolArena<ByteBuffer>[] directArenas;
@@ -148,21 +147,8 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
 
     public PooledByteBufAllocator(boolean preferDirect, int nHeapArena, int nDirectArena, int pageSize, int maxOrder,
                                   int tinyCacheSize, int smallCacheSize, int normalCacheSize) {
-        this(preferDirect, nHeapArena, nDirectArena, pageSize, maxOrder, tinyCacheSize, smallCacheSize,
-                normalCacheSize, null);
-    }
-
-    private PooledByteBufAllocator(FastThreadLocal.Type fastThreadLocalType) {
-        this(PlatformDependent.directBufferPreferred(),
-             DEFAULT_NUM_HEAP_ARENA, DEFAULT_NUM_DIRECT_ARENA, DEFAULT_PAGE_SIZE, DEFAULT_MAX_ORDER,
-             DEFAULT_TINY_CACHE_SIZE, DEFAULT_SMALL_CACHE_SIZE, DEFAULT_NORMAL_CACHE_SIZE, fastThreadLocalType);
-    }
-
-    private PooledByteBufAllocator(boolean preferDirect, int nHeapArena, int nDirectArena, int pageSize, int maxOrder,
-                                  int tinyCacheSize, int smallCacheSize, int normalCacheSize,
-                                  FastThreadLocal.Type fastThreadLocalType) {
         super(preferDirect);
-        threadCache = new PoolThreadLocalCache(fastThreadLocalType);
+        threadCache = new PoolThreadLocalCache();
         this.tinyCacheSize = tinyCacheSize;
         this.smallCacheSize = smallCacheSize;
         this.normalCacheSize = normalCacheSize;
@@ -202,7 +188,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
                                   int tinyCacheSize, int smallCacheSize, int normalCacheSize,
                                   long cacheThreadAliveCheckInterval) {
         this(preferDirect, nHeapArena, nDirectArena, pageSize, maxOrder,
-                tinyCacheSize, smallCacheSize, normalCacheSize, null);
+                tinyCacheSize, smallCacheSize, normalCacheSize);
     }
 
     @SuppressWarnings("unchecked")
@@ -299,10 +285,6 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
     final class PoolThreadLocalCache extends FastThreadLocal<PoolThreadCache> {
         private final AtomicInteger index = new AtomicInteger();
         private boolean initialized;
-
-        PoolThreadLocalCache(FastThreadLocal.Type fastThreadLocalType) {
-            super(fastThreadLocalType);
-        }
 
         @Override
         protected PoolThreadCache initialValue() {
