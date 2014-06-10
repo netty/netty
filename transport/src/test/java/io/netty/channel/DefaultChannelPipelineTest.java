@@ -255,7 +255,7 @@ public class DefaultChannelPipelineTest {
         pipeline.addBefore("1", "0", newHandler());
         pipeline.addAfter("10", "11", newHandler());
 
-        DefaultChannelHandlerContext ctx = (DefaultChannelHandlerContext) pipeline.firstContext();
+        AbstractChannelHandlerContext ctx = (AbstractChannelHandlerContext) pipeline.firstContext();
         assertNotNull(ctx);
         while (ctx != null) {
             int i = toInt(ctx.name());
@@ -535,8 +535,8 @@ public class DefaultChannelPipelineTest {
         assertNull(pipeline.last());
     }
 
-    private static int next(DefaultChannelHandlerContext ctx) {
-        DefaultChannelHandlerContext next = ctx.next;
+    private static int next(AbstractChannelHandlerContext ctx) {
+        AbstractChannelHandlerContext next = ctx.next;
         if (next == null) {
             return Integer.MAX_VALUE;
         }
@@ -553,7 +553,7 @@ public class DefaultChannelPipelineTest {
     }
 
     private static void verifyContextNumber(ChannelPipeline pipeline, int expectedNumber) {
-        DefaultChannelHandlerContext ctx = (DefaultChannelHandlerContext) pipeline.firstContext();
+        AbstractChannelHandlerContext ctx = (AbstractChannelHandlerContext) pipeline.firstContext();
         int handlerNumber = 0;
         while (ctx != ((DefaultChannelPipeline) pipeline).tail) {
             handlerNumber++;
