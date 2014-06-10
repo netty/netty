@@ -1268,8 +1268,18 @@ public class SslHandler extends FrameDecoder
                     // always contain at least one record in decode().  Therefore, if SSLEngine.unwrap() returns
                     // BUFFER_OVERFLOW, it is always resolved by retrying after emptying the application buffer.
                     for (;;) {
+                        final int outAppBufSize = engine.getSession().getApplicationBufferSize();
+                        final ByteBuffer outAppBuf;
+                        if (nioOutAppBuf.capacity() < outAppBufSize) {
+                            // SSLEngine wants a buffer larger than what the pool can provide.
+                            // Allocate a temporary heap buffer.
+                            outAppBuf = ByteBuffer.allocate(outAppBufSize);
+                        } else {
+                            outAppBuf = nioOutAppBuf;
+                        }
+
                         try {
-                            result = engine.unwrap(nioInNetBuf, nioOutAppBuf);
+                            result = engine.unwrap(nioInNetBuf, outAppBuf);
                             switch (result.getStatus()) {
                                 case CLOSED:
                                     // notify about the CLOSED state of the SSLEngine. See #137
@@ -1283,21 +1293,21 @@ public class SslHandler extends FrameDecoder
 
                             break;
                         } finally {
-                            nioOutAppBuf.flip();
+                            outAppBuf.flip();
 
                             // Sync the offset of the inbound buffer.
                             nettyInNetBuf.readerIndex(
                                     nettyInNetBufStartOffset + nioInNetBuf.position() - nioInNetBufStartOffset);
 
                             // Copy the unwrapped data into a smaller buffer.
-                            if (nioOutAppBuf.hasRemaining()) {
+                            if (outAppBuf.hasRemaining()) {
                                 if (nettyOutAppBuf == null) {
                                     ChannelBufferFactory factory = ctx.getChannel().getConfig().getBufferFactory();
                                     nettyOutAppBuf = factory.getBuffer(initialNettyOutAppBufCapacity);
                                 }
-                                nettyOutAppBuf.writeBytes(nioOutAppBuf);
+                                nettyOutAppBuf.writeBytes(outAppBuf);
                             }
-                            nioOutAppBuf.clear();
+                            outAppBuf.clear();
                         }
                     }
 
