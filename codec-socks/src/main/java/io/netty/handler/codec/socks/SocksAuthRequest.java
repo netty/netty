@@ -15,10 +15,9 @@
  */
 package io.netty.handler.codec.socks;
 
+import java.nio.charset.CharsetEncoder;
 import io.netty.buffer.ByteBuf;
 import io.netty.util.CharsetUtil;
-
-import java.nio.charset.CharsetEncoder;
 
 /**
  * An socks auth request.
@@ -33,7 +32,7 @@ public final class SocksAuthRequest extends SocksRequest {
     private final String password;
 
     public SocksAuthRequest(String username, String password) {
-        super(SocksRequestType.AUTH);
+        super(SocksProtocolVersion.SOCKS5, SocksRequestType.AUTH);
         if (username == null) {
             throw new NullPointerException("username");
         }

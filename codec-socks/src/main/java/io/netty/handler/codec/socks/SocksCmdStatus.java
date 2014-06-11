@@ -17,6 +17,12 @@
 package io.netty.handler.codec.socks;
 
 public enum SocksCmdStatus {
+// SOCKS4
+    SUCCESS4((byte) 0x5a),
+    FAILURE4((byte) 0x5b),
+    FAILURE4_IDENTD_NOT_RUN((byte) 0x5c),
+    FAILURE4_IDENTD_CONFIRM((byte) 0x5d),
+// SOCKS5
     SUCCESS((byte) 0x00),
     FAILURE((byte) 0x01),
     FORBIDDEN((byte) 0x02),

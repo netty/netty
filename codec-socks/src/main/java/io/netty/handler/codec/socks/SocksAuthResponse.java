@@ -28,7 +28,7 @@ public final class SocksAuthResponse extends SocksResponse {
     private final SocksAuthStatus authStatus;
 
     public SocksAuthResponse(SocksAuthStatus authStatus) {
-        super(SocksResponseType.AUTH);
+        super(SocksProtocolVersion.SOCKS5, SocksResponseType.AUTH);
         if (authStatus == null) {
             throw new NullPointerException("authStatus");
         }

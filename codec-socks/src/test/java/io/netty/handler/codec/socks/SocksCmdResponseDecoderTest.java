@@ -20,12 +20,20 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.Test;
 
+import static io.netty.handler.codec.socks.SocksCmdStatus.*;
 import static org.junit.Assert.*;
 
 public class SocksCmdResponseDecoderTest {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(SocksCmdResponseDecoderTest.class);
+    private static final SocksCmdStatus[] CMD_STATUSES_SOCKS4 = {
+            SUCCESS4, FAILURE4, FAILURE4_IDENTD_CONFIRM, FAILURE4_IDENTD_NOT_RUN
+    };
+    private static final SocksCmdStatus[] CMD_STATUSES_SOCKS5 = {
+            SUCCESS, FAILURE, FORBIDDEN, NETWORK_UNREACHABLE, HOST_UNREACHABLE, REFUSED, TTL_EXPIRED,
+            COMMAND_NOT_SUPPORTED, ADDRESS_NOT_SUPPORTED, UNASSIGNED
+    };
 
-    private static void testSocksCmdResponseDecoderWithDifferentParams(
+    private static void testSocks5CmdResponseDecoderWithDifferentParams(
             SocksCmdStatus cmdStatus, SocksAddressType addressType, String host, int port) {
         logger.debug("Testing cmdStatus: " + cmdStatus + " addressType: " + addressType);
         SocksResponse msg = new SocksCmdResponse(cmdStatus, addressType, host, port);
@@ -45,14 +53,26 @@ public class SocksCmdResponseDecoderTest {
         assertNull(embedder.readInbound());
     }
 
+    private static void testSocks4CmdResponseDecoderWithDifferentParams(
+            SocksCmdStatus cmdStatus) {
+        logger.debug("Testing cmdStatus: " + cmdStatus);
+        SocksResponse msg = new SocksCmdResponse(cmdStatus);
+        SocksCmdResponseDecoder decoder = new SocksCmdResponseDecoder();
+        EmbeddedChannel embedder = new EmbeddedChannel(decoder);
+        SocksCommonTestUtils.writeMessageIntoEmbedder(embedder, msg);
+        msg = (SocksResponse) embedder.readInbound();
+        assertEquals(((SocksCmdResponse) msg).cmdStatus(), cmdStatus);
+        assertNull(embedder.readInbound());
+    }
+
     /**
      * Verifies that sent socks messages are decoded correctly.
      */
     @Test
     public void testSocksCmdResponseDecoder() {
-        for (SocksCmdStatus cmdStatus : SocksCmdStatus.values()) {
+        for (SocksCmdStatus cmdStatus : CMD_STATUSES_SOCKS5) {
             for (SocksAddressType addressType : SocksAddressType.values()) {
-                testSocksCmdResponseDecoderWithDifferentParams(cmdStatus, addressType, null, 0);
+                testSocks5CmdResponseDecoderWithDifferentParams(cmdStatus, addressType, null, 1);
             }
         }
     }
@@ -62,7 +82,7 @@ public class SocksCmdResponseDecoderTest {
      */
     @Test(expected = IllegalArgumentException.class)
     public void testInvalidAddress() {
-        testSocksCmdResponseDecoderWithDifferentParams(SocksCmdStatus.SUCCESS, SocksAddressType.IPv4, "1", 80);
+        testSocks5CmdResponseDecoderWithDifferentParams(SUCCESS, SocksAddressType.IPv4, "1", 80);
     }
 
     /**
@@ -70,15 +90,19 @@ public class SocksCmdResponseDecoderTest {
      */
     @Test
     public void testSocksCmdResponseDecoderIncludingHost() {
-        for (SocksCmdStatus cmdStatus : SocksCmdStatus.values()) {
-            testSocksCmdResponseDecoderWithDifferentParams(cmdStatus, SocksAddressType.IPv4,
+        for (SocksCmdStatus cmdStatus : CMD_STATUSES_SOCKS5) {
+            testSocks5CmdResponseDecoderWithDifferentParams(cmdStatus, SocksAddressType.IPv4,
                     "127.0.0.1", 80);
-            testSocksCmdResponseDecoderWithDifferentParams(cmdStatus, SocksAddressType.DOMAIN,
+            testSocks5CmdResponseDecoderWithDifferentParams(cmdStatus, SocksAddressType.DOMAIN,
                     "testDomain.com", 80);
-            testSocksCmdResponseDecoderWithDifferentParams(cmdStatus, SocksAddressType.IPv6,
+            testSocks5CmdResponseDecoderWithDifferentParams(cmdStatus, SocksAddressType.IPv6,
                     "2001:db8:85a3:42:1000:8a2e:370:7334", 80);
-            testSocksCmdResponseDecoderWithDifferentParams(cmdStatus, SocksAddressType.IPv6,
+            testSocks5CmdResponseDecoderWithDifferentParams(cmdStatus, SocksAddressType.IPv6,
                     "1111:111:11:1:0:0:0:1", 80);
+        }
+
+        for (SocksCmdStatus cmdStatus : CMD_STATUSES_SOCKS4) {
+            testSocks4CmdResponseDecoderWithDifferentParams(cmdStatus);
         }
     }
 }

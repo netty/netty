@@ -15,10 +15,9 @@
  */
 package io.netty.handler.codec.socks;
 
-import io.netty.buffer.ByteBuf;
-
 import java.util.Collections;
 import java.util.List;
+import io.netty.buffer.ByteBuf;
 
 /**
  * An socks init request.
@@ -30,7 +29,7 @@ public final class SocksInitRequest extends SocksRequest {
     private final List<SocksAuthScheme> authSchemes;
 
     public SocksInitRequest(List<SocksAuthScheme> authSchemes) {
-        super(SocksRequestType.INIT);
+        super(SocksProtocolVersion.SOCKS5, SocksRequestType.INIT);
         if (authSchemes == null) {
             throw new NullPointerException("authSchemes");
         }

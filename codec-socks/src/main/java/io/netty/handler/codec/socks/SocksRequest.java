@@ -27,8 +27,8 @@ package io.netty.handler.codec.socks;
 public abstract class SocksRequest extends SocksMessage {
     private final SocksRequestType requestType;
 
-    protected SocksRequest(SocksRequestType requestType) {
-        super(SocksMessageType.REQUEST);
+    protected SocksRequest(SocksProtocolVersion protocolVersion, SocksRequestType requestType) {
+        super(protocolVersion, SocksMessageType.REQUEST);
         if (requestType == null) {
             throw new NullPointerException("requestType");
         }

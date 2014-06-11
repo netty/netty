@@ -15,11 +15,10 @@
  */
 package io.netty.handler.codec.socks;
 
+import java.util.List;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
-
-import java.util.List;
 
 /**
  * Decodes {@link ByteBuf}s into {@link SocksInitResponse}.
@@ -49,10 +48,16 @@ public class SocksInitResponseDecoder extends ReplayingDecoder<SocksInitResponse
     protected void decode(ChannelHandlerContext ctx, ByteBuf byteBuf, List<Object> out) throws Exception {
         switch (state()) {
             case CHECK_PROTOCOL_VERSION: {
-                version = SocksProtocolVersion.fromByte(byteBuf.readByte());
+                if (!ctx.channel().isOpen() && byteBuf.readableBytes() == 0) {
+                    break;            // Socks4 can answer on Socks5 InitResponse with EmptyByteBuf and close channel
+                }
+
+                byte firstOctet = byteBuf.readByte();
+                version = SocksProtocolVersion.fromByte(firstOctet == SocksCmdResponse.NULL ? 0x04 : firstOctet);
                 if (version != SocksProtocolVersion.SOCKS5) {
                     break;
                 }
+
                 checkpoint(State.READ_PREFFERED_AUTH_TYPE);
             }
             case READ_PREFFERED_AUTH_TYPE: {
