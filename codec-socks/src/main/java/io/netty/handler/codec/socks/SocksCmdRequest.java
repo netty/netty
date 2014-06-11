@@ -45,7 +45,7 @@ public final class SocksCmdRequest extends SocksRequest {
         if (!SocksCmdType.BIND.equals(cmdType) && !SocksCmdType.CONNECT.equals(cmdType)) {
             throw new IllegalArgumentException("Incorrect SocksCmdType for Socks4!");
         }
-        if (port <= 0 || port > 65535) {
+        if (port < 0 || port >= 65536) {
             throw new IllegalArgumentException(port + " is not in bounds 0 < x < 65536");
         }
         if (!NetUtil.isValidIpV4Address(host)) {
@@ -87,7 +87,7 @@ public final class SocksCmdRequest extends SocksRequest {
             case UNKNOWN:
                 break;
         }
-        if (port <= 0 || port > 65535) {
+        if (port < 0 || port >= 65536) {
             throw new IllegalArgumentException(port + " is not in bounds 0 < x < 65536");
         }
         this.cmdType = cmdType;

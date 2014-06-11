@@ -72,7 +72,7 @@ public class SocksCmdResponseDecoderTest {
     public void testSocksCmdResponseDecoder() {
         for (SocksCmdStatus cmdStatus : CMD_STATUSES_SOCKS5) {
             for (SocksAddressType addressType : SocksAddressType.values()) {
-                testSocks5CmdResponseDecoderWithDifferentParams(cmdStatus, addressType, null, 1);
+                testSocks5CmdResponseDecoderWithDifferentParams(cmdStatus, addressType, null, 0);
             }
         }
     }

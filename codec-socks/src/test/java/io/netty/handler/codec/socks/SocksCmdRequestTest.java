@@ -39,19 +39,19 @@ public class SocksCmdRequestTest extends AbstractSocksMessageTest {
 
         // Socks5 constructors
         try {
-            new SocksCmdRequest(null, SocksAddressType.UNKNOWN, "", 1);
+            new SocksCmdRequest(null, SocksAddressType.UNKNOWN, "", 0);
         } catch (Exception e) {
             assertNullPointerException(e);
         }
 
         try {
-            new SocksCmdRequest(SocksCmdType.UNKNOWN, null, "", 1);
+            new SocksCmdRequest(SocksCmdType.UNKNOWN, null, "", 0);
         } catch (Exception e) {
             assertNullPointerException(e);
         }
 
         try {
-            new SocksCmdRequest(SocksCmdType.UNKNOWN, SocksAddressType.UNKNOWN, null, 1);
+            new SocksCmdRequest(SocksCmdType.UNKNOWN, SocksAddressType.UNKNOWN, null, 0);
         } catch (Exception e) {
             assertNullPointerException(e);
         }
@@ -73,8 +73,8 @@ public class SocksCmdRequestTest extends AbstractSocksMessageTest {
             assertIllegalArgumentException(e);
         }
 
-        new SocksCmdRequest(SocksCmdType.CONNECT, 1, "54.54.111.253");
-        new SocksCmdRequest(SocksCmdType.BIND, 1, "54.54.111.253");
+        new SocksCmdRequest(SocksCmdType.CONNECT, 0, "54.54.111.253");
+        new SocksCmdRequest(SocksCmdType.BIND, 0, "54.54.111.253");
 
         assertExceptionCounter(2);
     }
@@ -82,7 +82,7 @@ public class SocksCmdRequestTest extends AbstractSocksMessageTest {
     @Test
     public void testIPv4CorrectAddress() {
         try {
-            new SocksCmdRequest(SocksCmdType.BIND, SocksAddressType.IPv4, "54.54.1111.253", 1);
+            new SocksCmdRequest(SocksCmdType.BIND, SocksAddressType.IPv4, "54.54.1111.253", 0);
         } catch (Exception e) {
             assertIllegalArgumentException(e);
         }
@@ -99,7 +99,7 @@ public class SocksCmdRequestTest extends AbstractSocksMessageTest {
     @Test
     public void testIPv6CorrectAddress() {
         try {
-            new SocksCmdRequest(SocksCmdType.BIND, SocksAddressType.IPv6, "xxx:xxx:xxx", 1);
+            new SocksCmdRequest(SocksCmdType.BIND, SocksAddressType.IPv6, "xxx:xxx:xxx", 0);
         } catch (Exception e) {
             assertIllegalArgumentException(e);
         }
@@ -127,7 +127,7 @@ public class SocksCmdRequestTest extends AbstractSocksMessageTest {
     public void testValidPortRange() {
         try {
             new SocksCmdRequest(SocksCmdType.BIND, SocksAddressType.DOMAIN,
-                    "παράδειγμα.δοκιμήπαράδει", 0);
+                    "παράδειγμα.δοκιμήπαράδει", -1);
         } catch (Exception e) {
             assertIllegalArgumentException(e);
         }

@@ -124,7 +124,7 @@ public class SocksCmdResponseTest extends AbstractSocksMessageTest {
     public void testEmptyDomain() {
         SocksCmdResponse socksCmdResponse = new SocksCmdResponse(SocksCmdStatus.SUCCESS, SocksAddressType.DOMAIN);
         assertNull(socksCmdResponse.host());
-        assertEquals(1, socksCmdResponse.port());
+        assertEquals(0, socksCmdResponse.port());
         ByteBuf buffer = Unpooled.buffer(20);
         socksCmdResponse.encodeAsByteBuf(buffer);
         byte[] expected = {
@@ -135,7 +135,7 @@ public class SocksCmdResponseTest extends AbstractSocksMessageTest {
                 0x01, // length of domain
                 0x00, // domain value
                 0x00, // port value
-                0x01
+                0x00
         };
         assertByteBufEquals(expected, buffer);
     }

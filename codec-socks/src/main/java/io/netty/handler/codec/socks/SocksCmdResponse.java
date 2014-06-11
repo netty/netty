@@ -67,7 +67,7 @@ public final class SocksCmdResponse extends SocksResponse {
         this.cmdStatus = cmdStatus;
         this.addressType = null;
         this.host = null;
-        this.port = 1;
+        this.port = 0;
     }
 
     /**
@@ -77,7 +77,7 @@ public final class SocksCmdResponse extends SocksResponse {
      * @param addressType type of host parameter
      */
     public SocksCmdResponse(SocksCmdStatus cmdStatus, SocksAddressType addressType) {
-        this(cmdStatus, addressType, null, 1);
+        this(cmdStatus, addressType, null, 0);
     }
 
     /**
@@ -124,8 +124,8 @@ public final class SocksCmdResponse extends SocksResponse {
             }
             host = IDN.toASCII(host);
         }
-        if (port <= 0 || port > 65535) {
-            throw new IllegalArgumentException(port + " is not in bounds 0 < x < 65536");
+        if (port < 0 || port > 65535) {
+            throw new IllegalArgumentException(port + " is not in bounds 0 <= x <= 65535");
         }
         if (SUCCESS4.equals(cmdStatus) || FAILURE4.equals(cmdStatus) || FAILURE4_IDENTD_CONFIRM.equals(cmdStatus)
                 || FAILURE4_IDENTD_NOT_RUN.equals(cmdStatus)) {
