@@ -121,12 +121,6 @@ public class DelegatingHttp2ConnectionHandler extends AbstractHttp2ConnectionHan
 
     @Override
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
-            int padding, boolean endStream, boolean endSegment) throws Http2Exception {
-        observer.onHeadersRead(ctx, streamId, headers, padding, endStream, endSegment);
-    }
-
-    @Override
-    public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
             int streamDependency, short weight, boolean exclusive, int padding, boolean endStream,
             boolean endSegment) throws Http2Exception {
         observer.onHeadersRead(ctx, streamId, headers, streamDependency, weight, exclusive,
