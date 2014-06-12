@@ -29,7 +29,8 @@ public interface Http2FrameObserver {
      * @param ctx the context from the handler where the frame was read.
      * @param streamId the subject stream for the frame.
      * @param data payload buffer for the frame. If this buffer needs to be retained by the observer
-     *            they must make a copy.
+     *            they must make a copy. This buffer does not need to be released
+     *            by the observer.
      * @param padding the number of padding bytes found at the end of the frame.
      * @param endOfStream Indicates whether this is the last frame to be sent from the remote
      *            endpoint for this stream.
@@ -113,7 +114,8 @@ public interface Http2FrameObserver {
      *
      * @param ctx the context from the handler where the frame was read.
      * @param data the payload of the frame. If this buffer needs to be retained by the observer
-     *            they must make a copy.
+     *            they must make a copy. This buffer does not need to be released
+     *            by the observer.
      */
     void onPingRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception;
 
@@ -122,7 +124,8 @@ public interface Http2FrameObserver {
      *
      * @param ctx the context from the handler where the frame was read.
      * @param data the payload of the frame. If this buffer needs to be retained by the observer
-     *            they must make a copy.
+     *            they must make a copy. This buffer does not need to be released
+     *            by the observer.
      */
     void onPingAckRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception;
 
@@ -145,7 +148,8 @@ public interface Http2FrameObserver {
      * @param lastStreamId the last known stream of the remote endpoint.
      * @param errorCode the error code, if abnormal closure.
      * @param debugData application-defined debug data. If this buffer needs to be retained by the
-     *            observer they must make a copy.
+     *            observer they must make a copy. This buffer does not need to be released
+     *            by the observer.
      */
     void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData)
             throws Http2Exception;
@@ -169,7 +173,8 @@ public interface Http2FrameObserver {
      * @param maxAge the freshness lifetime of the alternative service association.
      * @param port the port that the alternative service is available upon.
      * @param protocolId the ALPN protocol identifier of the alternative service. If this buffer
-     *            needs to be retained by the observer they must make a copy.
+     *            needs to be retained by the observer they must make a copy. This buffer does not
+     *            need to be released by the observer.
      * @param host the host that the alternative service is available upon.
      * @param origin an optional origin that the alternative service is available upon. May be
      *            {@code null}.

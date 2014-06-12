@@ -174,10 +174,6 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
         freeResources();
     }
 
-    protected final ChannelHandlerContext ctx() {
-        return ctx;
-    }
-
     @Override
     public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         // Avoid NotYetConnectedException
@@ -228,9 +224,128 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
     }
 
     /**
+     * Default implementation. Does nothing.
+     */
+    @Override
+    public void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
+            boolean endOfStream, boolean endOfSegment, boolean compressed) throws Http2Exception {
+    }
+
+    /**
+     * This will never actually be called, so marked as final. All received headers frames will be
+     * handled by
+     * {@link #onHeadersRead(ChannelHandlerContext, int, Http2Headers, int, short, boolean, int, boolean, boolean)}.
+     */
+    @Override
+    public final void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
+            int padding, boolean endStream, boolean endSegment) throws Http2Exception {
+    }
+
+    /**
+     * Default implementation. Does nothing.
+     */
+    @Override
+    public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
+            int streamDependency, short weight, boolean exclusive, int padding, boolean endStream,
+            boolean endSegment) throws Http2Exception {
+    }
+
+    /**
+     * Default implementation. Does nothing.
+     */
+    @Override
+    public void onPriorityRead(ChannelHandlerContext ctx, int streamId, int streamDependency,
+            short weight, boolean exclusive) throws Http2Exception {
+    }
+
+    /**
+     * Default implementation. Does nothing.
+     */
+    @Override
+    public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode)
+            throws Http2Exception {
+    }
+
+    /**
+     * Default implementation. Does nothing.
+     */
+    @Override
+    public void onSettingsAckRead(ChannelHandlerContext ctx) throws Http2Exception {
+    }
+
+    /**
+     * Default implementation. Does nothing.
+     */
+    @Override
+    public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings)
+            throws Http2Exception {
+    }
+
+    /**
+     * Default implementation. Does nothing.
+     */
+    @Override
+    public void onPingRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
+    }
+
+    /**
+     * Default implementation. Does nothing.
+     */
+    @Override
+    public void onPingAckRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
+    }
+
+    /**
+     * Default implementation. Does nothing.
+     */
+    @Override
+    public void onPushPromiseRead(ChannelHandlerContext ctx, int streamId, int promisedStreamId,
+            Http2Headers headers, int padding) throws Http2Exception {
+    }
+
+    /**
+     * Default implementation. Does nothing.
+     */
+    @Override
+    public void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode,
+            ByteBuf debugData) throws Http2Exception {
+    }
+
+    /**
+     * Default implementation. Does nothing.
+     */
+    @Override
+    public void onWindowUpdateRead(ChannelHandlerContext ctx, int streamId, int windowSizeIncrement)
+            throws Http2Exception {
+    }
+
+    /**
+     * Default implementation. Does nothing.
+     */
+    @Override
+    public void onAltSvcRead(ChannelHandlerContext ctx, int streamId, long maxAge, int port,
+            ByteBuf protocolId, String host, String origin) throws Http2Exception {
+    }
+
+    /**
+     * Default implementation. Does nothing.
+     */
+    @Override
+    public void onBlockedRead(ChannelHandlerContext ctx, int streamId) throws Http2Exception {
+    }
+
+    protected final ChannelHandlerContext ctx() {
+        return ctx;
+    }
+
+    protected final Http2Connection connection() {
+        return connection;
+    }
+
+    /**
      * Gets the next stream ID that can be created by the local endpoint.
      */
-    protected int nextStreamId() {
+    protected final int nextStreamId() {
         return connection.local().nextStreamId();
     }
 
