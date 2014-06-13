@@ -23,6 +23,7 @@ import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import io.netty.util.internal.FastThreadLocal;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -73,10 +74,10 @@ public abstract class Recycler<T> {
         this.maxCapacity = Math.max(0, maxCapacity);
     }
 
-
+    @SuppressWarnings("unchecked")
     public final T get() {
         Stack<T> stack = threadLocal.get();
-        Handle handle = stack.pop();
+        DefaultHandle handle = stack.pop();
         if (handle == null) {
             handle = stack.newHandle();
             handle.value = newObject(handle);
@@ -84,13 +85,27 @@ public abstract class Recycler<T> {
         return (T) handle.value;
     }
 
+    public final boolean recycle(T o, Handle handle) {
+        DefaultHandle h = (DefaultHandle) handle;
+        if (h.stack.parent != this) {
+            return false;
+        }
+        if (o != h.value) {
+            throw new IllegalArgumentException("o does not belong to handle");
+        }
+        h.recycle();
+        return true;
+    }
+
     protected abstract T newObject(Handle handle);
 
-    public static final class Handle {
+    public interface Handle { }
+
+    static final class DefaultHandle implements Handle {
         private final int id;
-        private Stack stack;
+        private Stack<?> stack;
         private Object value;
-        Handle(int id, Stack stack) {
+        DefaultHandle(int id, Stack<?> stack) {
             this.id = id;
             this.stack = stack;
         }
@@ -113,7 +128,8 @@ public abstract class Recycler<T> {
         }
     }
 
-    static final ThreadLocal<Map<Stack<?>, WeakOrderQueue>> DELAYED_RECYCLED = new FastThreadLocal<Map<Stack<?>, WeakOrderQueue>>() {
+    private static final ThreadLocal<Map<Stack<?>, WeakOrderQueue>> DELAYED_RECYCLED =
+            new FastThreadLocal<Map<Stack<?>, WeakOrderQueue>>() {
         @Override
         protected Map<Stack<?>, WeakOrderQueue> initialValue() {
             return new WeakHashMap<Stack<?>, WeakOrderQueue>();
@@ -125,13 +141,24 @@ public abstract class Recycler<T> {
     private static final class WeakOrderQueue {
         private static final int LINK_CAPACITY = 16;
         private static final class Link {
+            private final DefaultHandle[] elements = new DefaultHandle[LINK_CAPACITY];
+
             private int readIndex;
-            private volatile int writeIndex;
-            private final Handle[] elements = new Handle[LINK_CAPACITY];
             private Link next;
 
-            private static final AtomicIntegerFieldUpdater<Link> writeIndexUpdater
-                    = AtomicIntegerFieldUpdater.newUpdater(Link.class, "writeIndex");
+            @SuppressWarnings("unused")
+            private volatile int writeIndex;
+
+            private static final AtomicIntegerFieldUpdater<Link> writeIndexUpdater;
+
+            static {
+                AtomicIntegerFieldUpdater<Link> updater =
+                        PlatformDependent.newAtomicIntegerFieldUpdater(Link.class, "writeIndex");
+                if (updater == null) {
+                    updater = AtomicIntegerFieldUpdater.newUpdater(Link.class, "writeIndex");
+                }
+                writeIndexUpdater = updater;
+            }
         }
 
         // chain of data items
@@ -149,7 +176,7 @@ public abstract class Recycler<T> {
             }
         }
 
-        void add(Handle handle) {
+        void add(DefaultHandle handle) {
             Link tail = this.tail;
             int writeIndex;
             if ((writeIndex = tail.writeIndex) == LINK_CAPACITY) {
@@ -194,11 +221,11 @@ public abstract class Recycler<T> {
             }
 
             BitSet present = to.present;
-            Handle[] src = head.elements;
-            Handle[] trg = to.elements;
+            DefaultHandle[] src = head.elements;
+            DefaultHandle[] trg = to.elements;
             int size = to.size;
             while (start < end) {
-                Handle element = src[start];
+                DefaultHandle element = src[start];
                 if (!present.set(element.id)) {
                     throw new IllegalStateException("recycled already");
                 }
@@ -228,8 +255,9 @@ public abstract class Recycler<T> {
         private int maxId;
         final Recycler<T> parent;
         final Thread thread;
-        private Handle[] elements;
+        private DefaultHandle[] elements;
         private final BitSet present = new BitSet(256);
+        private final int maxCapacity;
         private int size;
 
         private volatile WeakOrderQueue head;
@@ -240,10 +268,11 @@ public abstract class Recycler<T> {
         Stack(Recycler<T> parent, Thread thread, int maxCapacity) {
             this.parent = parent;
             this.thread = thread;
-            elements = new Handle[INITIAL_CAPACITY];
+            this.maxCapacity = maxCapacity;
+            elements = new DefaultHandle[INITIAL_CAPACITY];
         }
 
-        Handle pop() {
+        DefaultHandle pop() {
             int size = this.size;
             if (size == 0) {
                 if (!scavenge()) {
@@ -252,7 +281,7 @@ public abstract class Recycler<T> {
                 size = this.size;
             }
             size --;
-            Handle ret = elements[size];
+            DefaultHandle ret = elements[size];
             present.clear(ret.id);
             this.size = size;
             return ret;
@@ -318,13 +347,17 @@ public abstract class Recycler<T> {
             return success;
         }
 
-        void push(Handle item) {
+        void push(DefaultHandle item) {
             if (!present.set(item.id)) {
                 throw new IllegalStateException("recycled already");
             }
 
             int size = this.size;
             if (size == elements.length) {
+                if (size == maxCapacity) {
+                    // Hit the maximum capacity - drop the possibly youngest object.
+                    return;
+                }
                 elements = Arrays.copyOf(elements, size << 1);
             }
 
@@ -332,8 +365,8 @@ public abstract class Recycler<T> {
             this.size = size + 1;
         }
 
-        Handle newHandle() {
-            return new Handle(maxId++, this);
+        DefaultHandle newHandle() {
+            return new DefaultHandle(maxId++, this);
         }
     }
 
