@@ -16,23 +16,16 @@
 
 package io.netty.util;
 
-<<<<<<< HEAD
-import io.netty.util.internal.SystemPropertyUtil;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
-
-import java.util.IdentityHashMap;
-=======
 import java.lang.ref.WeakReference;
 import java.util.Arrays;
->>>>>>> b5ceccf... FastThreadLocal and faster Recycler.recycle()
 import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
-import io.netty.util.concurrent.FastThreadLocal;
-
 import io.netty.util.internal.FastThreadLocal;
+import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 /**
  * Light-weight object pool based on a thread-local stack.
@@ -41,7 +34,6 @@ import io.netty.util.internal.FastThreadLocal;
  */
 public abstract class Recycler<T> {
 
-<<<<<<< HEAD
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Recycler.class);
 
     private static final int DEFAULT_MAX_CAPACITY;
@@ -72,27 +64,15 @@ public abstract class Recycler<T> {
             return new Stack<T>(Recycler.this, Thread.currentThread(), maxCapacity);
         }
     };
-=======
-    private final FastThreadLocal<Stack<T>> threadLocal;
-
-    public Recycler(FastThreadLocal.Type type) {
-        super();
-        threadLocal = new FastThreadLocal<Stack<T>>(type) {
-            @Override
-            protected Stack<T> initialValue() {
-                return new Stack<T>(Recycler.this, Thread.currentThread());
-            }
-        };
-    }
->>>>>>> b5ceccf... FastThreadLocal and faster Recycler.recycle()
 
     protected Recycler() {
         this(DEFAULT_MAX_CAPACITY);
     }
 
-    public Recycler(int maxCapacity) {
+    protected Recycler(int maxCapacity) {
         this.maxCapacity = Math.max(0, maxCapacity);
     }
+
 
     public final T get() {
         Stack<T> stack = threadLocal.get();
@@ -124,7 +104,7 @@ public abstract class Recycler<T> {
             // we don't want to have a ref to the queue as the value in our weak map
             // so we null it out; to ensure there are no races with restoring it later
             // we impose a memory ordering here (no-op on x86)
-            Map<Stack<?>, WeakOrderQueue> delayedRecycled = DELAYED_RECYCLED.get(thread);
+            Map<Stack<?>, WeakOrderQueue> delayedRecycled = DELAYED_RECYCLED.get();
             WeakOrderQueue queue = delayedRecycled.get(stack);
             if (queue == null) {
                 delayedRecycled.put(stack, queue = new WeakOrderQueue(stack));
@@ -133,8 +113,8 @@ public abstract class Recycler<T> {
         }
     }
 
-    static final FastThreadLocal<Map<Stack<?>, WeakOrderQueue>> DELAYED_RECYCLED
-    = new FastThreadLocal<Map<Stack<?>, WeakOrderQueue>>(FastThreadLocal.Type.Recycler_DelayedRecyle) {
+    static final ThreadLocal<Map<Stack<?>, WeakOrderQueue>> DELAYED_RECYCLED = new FastThreadLocal<Map<Stack<?>, WeakOrderQueue>>() {
+        @Override
         protected Map<Stack<?>, WeakOrderQueue> initialValue() {
             return new WeakHashMap<Stack<?>, WeakOrderQueue>();
         }
@@ -151,7 +131,7 @@ public abstract class Recycler<T> {
             private Link next;
 
             private static final AtomicIntegerFieldUpdater<Link> writeIndexUpdater
-            = AtomicIntegerFieldUpdater.newUpdater(Link.class, "writeIndex");
+                    = AtomicIntegerFieldUpdater.newUpdater(Link.class, "writeIndex");
         }
 
         // chain of data items
@@ -164,7 +144,7 @@ public abstract class Recycler<T> {
             head = tail = new Link();
             owner = new WeakReference<Thread>(Thread.currentThread());
             synchronized (stack) {
-                this.next = stack.head;
+                next = stack.head;
                 stack.head = this;
             }
         }
@@ -240,12 +220,6 @@ public abstract class Recycler<T> {
 
     static final class Stack<T> {
 
-        private T[] elements;
-        private int size;
-        private final int maxCapacity;
-
-        private final Map<T, Boolean> map;
-
         // we keep a queue of per-thread queues, which is appended to once only, each time a new thread other
         // than the stack owner recycles: when we run out of items in our stack we iterate this collection
         // to scavenge those that can be reused. this permits us to incur minimal thread synchronisation whilst
@@ -254,8 +228,6 @@ public abstract class Recycler<T> {
         private int maxId;
         final Recycler<T> parent;
         final Thread thread;
-<<<<<<< HEAD
-=======
         private Handle[] elements;
         private final BitSet present = new BitSet(256);
         private int size;
@@ -263,29 +235,12 @@ public abstract class Recycler<T> {
         private volatile WeakOrderQueue head;
         private WeakOrderQueue cursor, prev;
         private boolean scavenged;
->>>>>>> b5ceccf... FastThreadLocal and faster Recycler.recycle()
 
-        @SuppressWarnings("AssertWithSideEffects")
+        @SuppressWarnings({ "unchecked", "SuspiciousArrayCast" })
         Stack(Recycler<T> parent, Thread thread, int maxCapacity) {
             this.parent = parent;
             this.thread = thread;
-<<<<<<< HEAD
-            this.maxCapacity = maxCapacity;
-            elements = newArray(INITIAL_CAPACITY);
-
-            // *assigns* true if assertions are on.
-            @SuppressWarnings("UnusedAssignment")
-            boolean assertionEnabled = false;
-            assert assertionEnabled = true;
-
-            if (assertionEnabled) {
-                map = new IdentityHashMap<T, Boolean>(INITIAL_CAPACITY);
-            } else {
-                map = null;
-            }
-=======
             elements = new Handle[INITIAL_CAPACITY];
->>>>>>> b5ceccf... FastThreadLocal and faster Recycler.recycle()
         }
 
         Handle pop() {
@@ -297,33 +252,12 @@ public abstract class Recycler<T> {
                 size = this.size;
             }
             size --;
-<<<<<<< HEAD
-            T ret = elements[size];
-            elements[size] = null;
-            assert map == null || map.remove(ret) != null;
-=======
             Handle ret = elements[size];
             present.clear(ret.id);
->>>>>>> b5ceccf... FastThreadLocal and faster Recycler.recycle()
             this.size = size;
             return ret;
         }
 
-<<<<<<< HEAD
-        void push(T o) {
-            assert map == null || map.put(o, Boolean.TRUE) == null: "recycled already";
-
-            int size = this.size;
-            if (size == elements.length) {
-                if (size == maxCapacity) {
-                    // Hit the maximum capacity - drop the possibly youngest object.
-                    return;
-                }
-
-                T[] newElements = newArray(Math.min(maxCapacity, size << 1));
-                System.arraycopy(elements, 0, newElements, 0, size);
-                elements = newElements;
-=======
         boolean scavenge() {
             // continue an existing scavenge, if any
             if (scavengeSome()) {
@@ -392,7 +326,6 @@ public abstract class Recycler<T> {
             int size = this.size;
             if (size == elements.length) {
                 elements = Arrays.copyOf(elements, size << 1);
->>>>>>> b5ceccf... FastThreadLocal and faster Recycler.recycle()
             }
 
             elements[size] = item;
