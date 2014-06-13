@@ -20,10 +20,9 @@ import java.lang.ref.WeakReference;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.WeakHashMap;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import io.netty.util.internal.FastThreadLocal;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -140,25 +139,14 @@ public abstract class Recycler<T> {
     // but we aren't absolutely guaranteed to ever see anything at all, thereby keeping the queue cheap to maintain
     private static final class WeakOrderQueue {
         private static final int LINK_CAPACITY = 16;
-        private static final class Link {
+
+        // Let Link extend AtomicInteger for intrinsics. The Link itself will be used as writerIndex.
+        @SuppressWarnings("serial")
+        private static final class Link extends AtomicInteger {
             private final DefaultHandle[] elements = new DefaultHandle[LINK_CAPACITY];
 
             private int readIndex;
             private Link next;
-
-            @SuppressWarnings("unused")
-            private volatile int writeIndex;
-
-            private static final AtomicIntegerFieldUpdater<Link> writeIndexUpdater;
-
-            static {
-                AtomicIntegerFieldUpdater<Link> updater =
-                        PlatformDependent.newAtomicIntegerFieldUpdater(Link.class, "writeIndex");
-                if (updater == null) {
-                    updater = AtomicIntegerFieldUpdater.newUpdater(Link.class, "writeIndex");
-                }
-                writeIndexUpdater = updater;
-            }
         }
 
         // chain of data items
@@ -179,19 +167,19 @@ public abstract class Recycler<T> {
         void add(DefaultHandle handle) {
             Link tail = this.tail;
             int writeIndex;
-            if ((writeIndex = tail.writeIndex) == LINK_CAPACITY) {
+            if ((writeIndex = tail.get()) == LINK_CAPACITY) {
                 this.tail = tail = tail.next = new Link();
-                writeIndex = tail.writeIndex;
+                writeIndex = tail.get();
             }
             tail.elements[writeIndex] = handle;
             handle.stack = null;
             // we lazy set to ensure that setting stack to null appears before we unnull it in the owning thread;
             // this also means we guarantee visibility of an element in the queue if we see the index updated
-            Link.writeIndexUpdater.lazySet(tail, writeIndex + 1);
+            tail.lazySet(writeIndex + 1);
         }
 
         boolean hasFinalData() {
-            return tail.readIndex != tail.writeIndex;
+            return tail.readIndex != tail.get();
         }
 
         // transfer as many items as we can from this queue to the stack, returning true if any were transferred
@@ -210,7 +198,7 @@ public abstract class Recycler<T> {
             }
 
             int start = head.readIndex;
-            int end = head.writeIndex;
+            int end = head.get();
             if (start == end) {
                 return false;
             }
