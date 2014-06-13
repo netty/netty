@@ -149,7 +149,7 @@ final class MpscLinkedQueue<E> extends MpscLinkedQueueTailRef<E> implements Queu
         lazySetHeadRef(next);
 
         // Break the linkage between the old head and the new head.
-        oldHead.setNext(null);
+        oldHead.unlink();
 
         return next.clearMaybe();
     }
