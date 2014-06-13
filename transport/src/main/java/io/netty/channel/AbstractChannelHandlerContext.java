@@ -24,6 +24,7 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.internal.OneTimeTask;
+import io.netty.util.internal.RecyclableMpscLinkedQueueNode;
 import io.netty.util.internal.StringUtil;
 
 import java.net.SocketAddress;
@@ -892,16 +893,14 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap impleme
         }
     }
 
-    abstract static class AbstractWriteTask extends OneTimeTask {
-        private final Recycler.Handle handle;
-
+    abstract static class AbstractWriteTask extends RecyclableMpscLinkedQueueNode<Runnable> implements Runnable {
         private AbstractChannelHandlerContext ctx;
         private Object msg;
         private ChannelPromise promise;
         private int size;
 
         private AbstractWriteTask(Recycler.Handle handle) {
-            this.handle = handle;
+            super(handle);
         }
 
         protected static void init(AbstractWriteTask task, AbstractChannelHandlerContext ctx,
@@ -928,15 +927,17 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap impleme
                 ctx = null;
                 msg = null;
                 promise = null;
-                recycle(handle);
             }
+        }
+
+        @Override
+        public Runnable value() {
+            return this;
         }
 
         protected void write(AbstractChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
             ctx.invokeWrite(msg, promise);
         }
-
-        protected abstract void recycle(Recycler.Handle handle);
     }
 
     static final class WriteTask extends AbstractWriteTask implements SingleThreadEventLoop.NonWakeupRunnable {
