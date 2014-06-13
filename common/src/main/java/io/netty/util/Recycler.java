@@ -104,24 +104,25 @@ public abstract class Recycler<T> {
         private final int id;
         private Stack<?> stack;
         private Object value;
+
         DefaultHandle(int id, Stack<?> stack) {
             this.id = id;
             this.stack = stack;
         }
+
         public void recycle() {
             Thread thread = Thread.currentThread();
             if (thread == stack.thread) {
                 stack.push(this);
                 return;
             }
-
             // we don't want to have a ref to the queue as the value in our weak map
             // so we null it out; to ensure there are no races with restoring it later
             // we impose a memory ordering here (no-op on x86)
             Map<Stack<?>, WeakOrderQueue> delayedRecycled = DELAYED_RECYCLED.get();
             WeakOrderQueue queue = delayedRecycled.get(stack);
             if (queue == null) {
-                delayedRecycled.put(stack, queue = new WeakOrderQueue(stack));
+                delayedRecycled.put(stack, queue = new WeakOrderQueue(stack, thread));
             }
             queue.add(this);
         }
@@ -155,9 +156,9 @@ public abstract class Recycler<T> {
         private WeakOrderQueue next;
         private final WeakReference<Thread> owner;
 
-        public WeakOrderQueue(Stack<?> stack) {
+        public WeakOrderQueue(Stack<?> stack, Thread thread) {
             head = tail = new Link();
-            owner = new WeakReference<Thread>(Thread.currentThread());
+            owner = new WeakReference<Thread>(thread);
             synchronized (stack) {
                 next = stack.head;
                 stack.head = this;
@@ -316,7 +317,7 @@ public abstract class Recycler<T> {
                     // performing a volatile read to confirm there is no data left to collect
                     // we never unlink the first queue, as we don't want to synchronize on updating the head
                     if (cursor.hasFinalData()) {
-                        while (true) {
+                        for (;;) {
                             if (!cursor.transfer(this)) {
                                 break;
                             }
