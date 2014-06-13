@@ -766,7 +766,7 @@
               <instructions>
                 <Export-Package>${project.groupId}.*</Export-Package>
                 <!-- enforce JVM vendor package as optional -->
-                <Import-Package>sun.misc.*;resolution:=optional,sun.nio.ch;resolution:=optional,*</Import-Package>
+                <Import-Package>sun.misc.*;resolution:=optional,sun.nio.ch;resolution:=optional,sun.security.*;resolution:=optional,*</Import-Package>
                 <!-- override "internal" private package convention -->
                 <Private-Package>!*</Private-Package>
               </instructions>
