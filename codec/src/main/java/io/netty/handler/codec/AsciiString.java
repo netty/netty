@@ -35,8 +35,12 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
 
     public static final AsciiString EMPTY_STRING = new AsciiString("");
 
-    /** XXX: Make sure that this method and {@link #hashCode()} uses the same hashing algorithm */
-    static int hashCode(CharSequence value) {
+    /**
+     * Returns the case-insensitive hash code of the specified string.  Note that this method uses the same hashing
+     * algorithm with {@link #hashCode()} so that you can put both {@link AsciiString}s and arbitrary
+     * {@link CharSequence}s into the same {@link TextHeaders}.
+     */
+    public static int caseInsensitiveHashCode(CharSequence value) {
         if (value instanceof AsciiString) {
             return value.hashCode();
         }
@@ -48,6 +52,57 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
         }
 
         return hash;
+    }
+
+    /**
+     * Returns {@code true} if both {@link CharSequence}'s are equals when ignore the case.
+     * This only supports 8-bit ASCII.
+     */
+    public static boolean equalsIgnoreCase(CharSequence a, CharSequence b) {
+        if (a == b) {
+            return true;
+        }
+
+        if (a instanceof AsciiString) {
+            AsciiString aa = (AsciiString) a;
+            return aa.equalsIgnoreCase(b);
+        }
+
+        if (b instanceof AsciiString) {
+            AsciiString ab = (AsciiString) b;
+            return ab.equalsIgnoreCase(a);
+        }
+
+        if (a == null || b == null) {
+            return false;
+        }
+
+        return a.toString().equalsIgnoreCase(b.toString());
+    }
+
+    /**
+     * Returns {@code true} if both {@link CharSequence}'s are equals. This only supports 8-bit ASCII.
+     */
+    public static boolean equals(CharSequence a, CharSequence b) {
+        if (a == b) {
+            return true;
+        }
+
+        if (a instanceof AsciiString) {
+            AsciiString aa = (AsciiString) a;
+            return aa.equals(b);
+        }
+
+        if (b instanceof AsciiString) {
+            AsciiString ab = (AsciiString) b;
+            return ab.equals(a);
+        }
+
+        if (a == null || b == null) {
+            return false;
+        }
+
+        return a.equals(b);
     }
 
     private final byte[] value;

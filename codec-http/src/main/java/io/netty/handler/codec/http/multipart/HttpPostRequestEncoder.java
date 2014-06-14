@@ -17,6 +17,7 @@ package io.netty.handler.codec.http.multipart;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpContent;
@@ -741,7 +742,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
             if (transferEncoding != null) {
                 headers.remove(HttpHeaders.Names.TRANSFER_ENCODING);
                 for (String v : transferEncoding) {
-                    if (HttpHeaders.equalsIgnoreCase(v, HttpHeaders.Values.CHUNKED)) {
+                    if (AsciiString.equalsIgnoreCase(v, HttpHeaders.Values.CHUNKED)) {
                         // ignore
                     } else {
                         headers.add(HttpHeaders.Names.TRANSFER_ENCODING, v);

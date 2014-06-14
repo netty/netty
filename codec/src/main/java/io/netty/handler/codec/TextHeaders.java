@@ -41,8 +41,11 @@ public interface TextHeaders extends Iterable<Map.Entry<String, String>> {
     String get(CharSequence name);
 
     String get(CharSequence name, String defaultValue);
+    int getInt(CharSequence name);
     int getInt(CharSequence name, int defaultValue);
+    long getLong(CharSequence name);
     long getLong(CharSequence name, long defaultValue);
+    long getTimeMillis(CharSequence name);
     long getTimeMillis(CharSequence name, long defaultValue);
 
     /**

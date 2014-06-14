@@ -20,6 +20,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.NoSuchElementException;
 import java.util.Set;
 
 public class EmptyTextHeaders implements TextHeaders {
@@ -37,13 +38,28 @@ public class EmptyTextHeaders implements TextHeaders {
     }
 
     @Override
+    public int getInt(CharSequence name) {
+        throw new NoSuchElementException(String.valueOf(name));
+    }
+
+    @Override
     public int getInt(CharSequence name, int defaultValue) {
         return defaultValue;
     }
 
     @Override
+    public long getLong(CharSequence name) {
+        throw new NoSuchElementException(String.valueOf(name));
+    }
+
+    @Override
     public long getLong(CharSequence name, long defaultValue) {
         return defaultValue;
+    }
+
+    @Override
+    public long getTimeMillis(CharSequence name) {
+        throw new NoSuchElementException(String.valueOf(name));
     }
 
     @Override
