@@ -567,14 +567,14 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      */
     public static boolean isKeepAlive(HttpMessage message) {
         String connection = message.headers().get(CONNECTION_ENTITY);
-        if (connection != null && equalsIgnoreCase(CLOSE_ENTITY, connection)) {
+        if (connection != null && AsciiString.equalsIgnoreCase(CLOSE_ENTITY, connection)) {
             return false;
         }
 
         if (message.getProtocolVersion().isKeepAliveDefault()) {
-            return !equalsIgnoreCase(CLOSE_ENTITY, connection);
+            return !AsciiString.equalsIgnoreCase(CLOSE_ENTITY, connection);
         } else {
-            return equalsIgnoreCase(KEEP_ALIVE_ENTITY, connection);
+            return AsciiString.equalsIgnoreCase(KEEP_ALIVE_ENTITY, connection);
         }
     }
 
@@ -1115,7 +1115,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
         if (value == null) {
             return false;
         }
-        if (equalsIgnoreCase(CONTINUE_ENTITY, value)) {
+        if (AsciiString.equalsIgnoreCase(CONTINUE_ENTITY, value)) {
             return true;
         }
 
@@ -1165,7 +1165,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
         Iterator<String> valuesIt = values.iterator();
         while (valuesIt.hasNext()) {
             String value = valuesIt.next();
-            if (equalsIgnoreCase(value, CHUNKED_ENTITY)) {
+            if (AsciiString.equalsIgnoreCase(value, CHUNKED_ENTITY)) {
                 valuesIt.remove();
             }
         }
@@ -1186,39 +1186,11 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     }
 
     /**
-     * Returns {@code true} if both {@link CharSequence}'s are equals when ignore the case.
-     * This only supports US_ASCII.
+     * @deprecated Use {@link AsciiString#equalsIgnoreCase(CharSequence, CharSequence)} instead.
      */
+    @Deprecated
     public static boolean equalsIgnoreCase(CharSequence name1, CharSequence name2) {
-        if (name1 == name2) {
-            return true;
-        }
-
-        if (name1 == null || name2 == null) {
-            return false;
-        }
-
-        int nameLen = name1.length();
-        if (nameLen != name2.length()) {
-            return false;
-        }
-
-        for (int i = nameLen - 1; i >= 0; i --) {
-            char c1 = name1.charAt(i);
-            char c2 = name2.charAt(i);
-            if (c1 != c2) {
-                if (c1 >= 'A' && c1 <= 'Z') {
-                    c1 += 32;
-                }
-                if (c2 >= 'A' && c2 <= 'Z') {
-                    c2 += 32;
-                }
-                if (c1 != c2) {
-                    return false;
-                }
-            }
-        }
-        return true;
+        return AsciiString.equalsIgnoreCase(name1, name2);
     }
 
     static void encode(HttpHeaders headers, ByteBuf buf) {
@@ -1238,6 +1210,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
         buf.writeBytes(CRLF);
     }
 
+    @Deprecated
     public static void encodeAscii(CharSequence seq, ByteBuf buf) {
         if (seq instanceof AsciiString) {
             ((AsciiString) seq).copy(0, buf, seq.length());
@@ -1499,7 +1472,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
 
         for (String v: values) {
             if (ignoreCase) {
-                if (equalsIgnoreCase(v, value)) {
+                if (AsciiString.equalsIgnoreCase(v, value)) {
                     return true;
                 }
             } else {

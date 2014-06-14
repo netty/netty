@@ -17,6 +17,7 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.http.DefaultHttpHeaders.NonValidatingTextHeaders;
 import io.netty.handler.codec.http.DefaultHttpHeaders.ValidatingTextHeaders;
 import io.netty.util.internal.StringUtil;
@@ -113,9 +114,9 @@ public class DefaultLastHttpContent extends DefaultHttpContent implements LastHt
         @Override
         protected CharSequence convertName(CharSequence name) {
             name = super.convertName(name);
-            if (HttpHeaders.equalsIgnoreCase(HttpHeaders.Names.CONTENT_LENGTH, name) ||
-                    HttpHeaders.equalsIgnoreCase(HttpHeaders.Names.TRANSFER_ENCODING, name) ||
-                    HttpHeaders.equalsIgnoreCase(HttpHeaders.Names.TRAILER, name)) {
+            if (AsciiString.equalsIgnoreCase(HttpHeaders.Names.CONTENT_LENGTH, name) ||
+                    AsciiString.equalsIgnoreCase(HttpHeaders.Names.TRANSFER_ENCODING, name) ||
+                    AsciiString.equalsIgnoreCase(HttpHeaders.Names.TRAILER, name)) {
                 throw new IllegalArgumentException(
                         "prohibited trailing header: " + name);
             }

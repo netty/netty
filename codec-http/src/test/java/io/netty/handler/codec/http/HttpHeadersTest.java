@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.handler.codec.AsciiString;
 import org.junit.Test;
 
 import java.util.List;
@@ -50,9 +51,9 @@ public class HttpHeadersTest {
 
     @Test
     public void testEquansIgnoreCase() {
-        assertThat(HttpHeaders.equalsIgnoreCase(null, null), is(true));
-        assertThat(HttpHeaders.equalsIgnoreCase(null, "foo"), is(false));
-        assertThat(HttpHeaders.equalsIgnoreCase("bar", null), is(false));
-        assertThat(HttpHeaders.equalsIgnoreCase("FoO", "fOo"), is(true));
+        assertThat(AsciiString.equalsIgnoreCase(null, null), is(true));
+        assertThat(AsciiString.equalsIgnoreCase(null, "foo"), is(false));
+        assertThat(AsciiString.equalsIgnoreCase("bar", null), is(false));
+        assertThat(AsciiString.equalsIgnoreCase("FoO", "fOo"), is(true));
     }
 }

@@ -19,6 +19,7 @@ package io.netty.handler.codec;
 import io.netty.util.internal.PlatformDependent;
 
 import java.text.DateFormat;
+import java.text.ParseException;
 import java.text.ParsePosition;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -59,7 +60,7 @@ public class DefaultTextHeaders implements TextHeaders {
     }
 
     protected int hashCode(CharSequence name) {
-        return AsciiString.hashCode(name);
+        return AsciiString.caseInsensitiveHashCode(name);
     }
 
     protected CharSequence convertName(CharSequence name) {
@@ -377,6 +378,20 @@ public class DefaultTextHeaders implements TextHeaders {
     }
 
     @Override
+    public int getInt(CharSequence name) {
+        CharSequence v = getUnconverted(name);
+        if (v == null) {
+            throw new NoSuchElementException(String.valueOf(name));
+        }
+
+        if (v instanceof AsciiString) {
+            return ((AsciiString) v).parseInt();
+        } else {
+            return Integer.parseInt(v.toString());
+        }
+    }
+
+    @Override
     public int getInt(CharSequence name, int defaultValue) {
         CharSequence v = getUnconverted(name);
         if (v == null) {
@@ -391,6 +406,20 @@ public class DefaultTextHeaders implements TextHeaders {
             }
         } catch (NumberFormatException ignored) {
             return defaultValue;
+        }
+    }
+
+    @Override
+    public long getLong(CharSequence name) {
+        CharSequence v = getUnconverted(name);
+        if (v == null) {
+            throw new NoSuchElementException(String.valueOf(name));
+        }
+
+        if (v instanceof AsciiString) {
+            return ((AsciiString) v).parseLong();
+        } else {
+            return Long.parseLong(v.toString());
         }
     }
 
@@ -410,6 +439,16 @@ public class DefaultTextHeaders implements TextHeaders {
         } catch (NumberFormatException ignored) {
             return defaultValue;
         }
+    }
+
+    @Override
+    public long getTimeMillis(CharSequence name) {
+        CharSequence v = getUnconverted(name);
+        if (v == null) {
+            throw new NoSuchElementException(String.valueOf(name));
+        }
+
+        return HttpHeaderDateFormat.get().parse(v.toString());
     }
 
     @Override
@@ -784,6 +823,20 @@ public class DefaultTextHeaders implements TextHeaders {
             dateFormat1.setTimeZone(tz);
             dateFormat2.setTimeZone(tz);
             dateFormat3.setTimeZone(tz);
+        }
+
+        long parse(String text) {
+            Date date = dateFormat1.parse(text, parsePos);
+            if (date == null) {
+                date = dateFormat2.parse(text, parsePos);
+            }
+            if (date == null) {
+                date = dateFormat3.parse(text, parsePos);
+            }
+            if (date == null) {
+                PlatformDependent.throwException(new ParseException(text, 0));
+            }
+            return date.getTime();
         }
 
         long parse(String text, long defaultValue) {

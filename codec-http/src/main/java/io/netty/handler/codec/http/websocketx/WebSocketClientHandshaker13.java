@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
+import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -184,12 +185,12 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
         }
 
         String upgrade = headers.get(Names.UPGRADE);
-        if (!HttpHeaders.equalsIgnoreCase(Values.WEBSOCKET, upgrade)) {
+        if (!AsciiString.equalsIgnoreCase(Values.WEBSOCKET, upgrade)) {
             throw new WebSocketHandshakeException("Invalid handshake response upgrade: " + upgrade);
         }
 
         String connection = headers.get(Names.CONNECTION);
-        if (!HttpHeaders.equalsIgnoreCase(Values.UPGRADE, connection)) {
+        if (!AsciiString.equalsIgnoreCase(Values.UPGRADE, connection)) {
             throw new WebSocketHandshakeException("Invalid handshake response connection: " + connection);
         }
 

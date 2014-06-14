@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http;
 
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.util.internal.StringUtil;
@@ -96,7 +97,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
     protected Result beginEncode(HttpResponse headers, String acceptEncoding) throws Exception {
         String contentEncoding = headers.headers().get(HttpHeaders.Names.CONTENT_ENCODING);
         if (contentEncoding != null &&
-            !HttpHeaders.equalsIgnoreCase(HttpHeaders.Values.IDENTITY, contentEncoding)) {
+            !AsciiString.equalsIgnoreCase(HttpHeaders.Values.IDENTITY, contentEncoding)) {
             return null;
         }
 

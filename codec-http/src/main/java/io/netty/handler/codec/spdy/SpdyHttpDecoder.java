@@ -28,6 +28,7 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.spdy.SpdyHttpHeaders.Names;
 
 import java.util.HashMap;
 import java.util.List;
@@ -138,10 +139,11 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
                             createHttpResponse(spdyVersion, spdySynStreamFrame);
 
                     // Set the Stream-ID, Associated-To-Stream-ID, Priority, and URL as headers
-                    SpdyHttpHeaders.setStreamId(httpResponseWithEntity, streamId);
-                    SpdyHttpHeaders.setAssociatedToStreamId(httpResponseWithEntity, associatedToStreamId);
-                    SpdyHttpHeaders.setPriority(httpResponseWithEntity, spdySynStreamFrame.getPriority());
-                    SpdyHttpHeaders.setUrl(httpResponseWithEntity, URL);
+                    HttpHeaders.setIntHeader(httpResponseWithEntity, Names.STREAM_ID, streamId);
+                    HttpHeaders.setIntHeader(
+                            httpResponseWithEntity, Names.ASSOCIATED_TO_STREAM_ID, associatedToStreamId);
+                    HttpHeaders.setIntHeader(httpResponseWithEntity, Names.PRIORITY, spdySynStreamFrame.getPriority());
+                    httpResponseWithEntity.headers().set(Names.URL, URL);
 
                     if (spdySynStreamFrame.isLast()) {
                         HttpHeaders.setContentLength(httpResponseWithEntity, 0);
@@ -174,7 +176,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
                     FullHttpRequest httpRequestWithEntity = createHttpRequest(spdyVersion, spdySynStreamFrame);
 
                     // Set the Stream-ID as a header
-                    SpdyHttpHeaders.setStreamId(httpRequestWithEntity, streamId);
+                    HttpHeaders.setIntHeader(httpRequestWithEntity, Names.STREAM_ID, streamId);
 
                     if (spdySynStreamFrame.isLast()) {
                         out.add(httpRequestWithEntity);
@@ -213,7 +215,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
                 FullHttpResponse httpResponseWithEntity = createHttpResponse(spdyVersion, spdySynReplyFrame);
 
                 // Set the Stream-ID as a header
-                SpdyHttpHeaders.setStreamId(httpResponseWithEntity, streamId);
+                HttpHeaders.setIntHeader(httpResponseWithEntity, Names.STREAM_ID, streamId);
 
                 if (spdySynReplyFrame.isLast()) {
                     HttpHeaders.setContentLength(httpResponseWithEntity, 0);
