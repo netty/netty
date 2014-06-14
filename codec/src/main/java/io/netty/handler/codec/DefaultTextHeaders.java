@@ -16,6 +16,7 @@
 
 package io.netty.handler.codec;
 
+import io.netty.util.internal.FastThreadLocal;
 import io.netty.util.internal.PlatformDependent;
 
 import java.text.DateFormat;
@@ -791,7 +792,7 @@ public class DefaultTextHeaders implements TextHeaders {
 
         private static final ParsePosition parsePos = new ParsePosition(0);
         private static final ThreadLocal<HttpHeaderDateFormat> dateFormatThreadLocal =
-                new ThreadLocal<HttpHeaderDateFormat>() {
+                new FastThreadLocal<HttpHeaderDateFormat>() {
                     @Override
                     protected HttpHeaderDateFormat initialValue() {
                         return new HttpHeaderDateFormat();
