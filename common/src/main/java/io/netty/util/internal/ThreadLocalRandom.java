@@ -207,7 +207,7 @@ public class ThreadLocalRandom extends Random {
      * The actual ThreadLocal
      */
     private static final ThreadLocal<ThreadLocalRandom> localRandom =
-            new ThreadLocal<ThreadLocalRandom>() {
+            new FastThreadLocal<ThreadLocalRandom>() {
                 protected ThreadLocalRandom initialValue() {
                     return new ThreadLocalRandom();
                 }

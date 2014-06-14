@@ -22,6 +22,8 @@
 
 package io.netty.util.internal.chmv8;
 
+import io.netty.util.internal.FastThreadLocal;
+
 import java.io.ObjectStreamField;
 import java.io.Serializable;
 import java.lang.reflect.ParameterizedType;
@@ -6032,7 +6034,7 @@ public class ConcurrentHashMapV8<K,V>
      * Per-thread counter hash codes. Shared across all instances.
      */
     static final ThreadLocal<CounterHashCode> threadCounterHashCode =
-            new ThreadLocal<CounterHashCode>();
+            new FastThreadLocal<CounterHashCode>();
 
 
     final long sumCount() {
