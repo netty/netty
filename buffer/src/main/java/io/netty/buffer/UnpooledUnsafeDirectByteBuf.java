@@ -355,7 +355,7 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
         if (length != 0) {
             if (src.hasMemoryAddress()) {
                 PlatformDependent.copyMemory(src.memoryAddress() + srcIndex, addr(index), length);
-            } else if (buffer.hasArray()) {
+            } else if (src.hasArray()) {
                 PlatformDependent.copyMemory(src.array(), src.arrayOffset() + srcIndex, addr(index), length);
             } else {
                 src.getBytes(srcIndex, this, index, length);
