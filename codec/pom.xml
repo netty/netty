@@ -49,7 +49,7 @@
       <artifactId>jzlib</artifactId>
       <optional>true</optional>
     </dependency>
-    
+
     <!-- Test dependencies for jboss marshalling encoder/decoder -->
     <dependency>
       <groupId>org.jboss.marshalling</groupId>
@@ -59,6 +59,12 @@
     <dependency>
       <groupId>org.jboss.marshalling</groupId>
       <artifactId>jboss-marshalling-river</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-compress</artifactId>
+      <version>1.8.1</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
