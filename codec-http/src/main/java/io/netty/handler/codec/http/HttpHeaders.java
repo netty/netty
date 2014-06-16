@@ -354,6 +354,10 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
          */
         public static final String SEC_WEBSOCKET_EXTENSIONS = "Sec-WebSocket-Extensions";
         /**
+         * {@code "Sec-WebSocket-Protocol"}
+         */
+        public static final String SEC_WEBSOCKET_EXTENSIONS = "Sec-WebSocket-Extensions";
+        /**
          * {@code "Server"}
          */
         public static final CharSequence SERVER = newEntity("Server");
