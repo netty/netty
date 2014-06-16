@@ -57,6 +57,20 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
     }
 
     /**
+     * Creates a new continuation frame with the specified text data
+     *
+     * @param finalFragment
+     *            flag indicating if this frame is the final fragment
+     * @param rsv
+     *            reserved bits used for protocol extensions
+     * @param text
+     *            text content of the frame.
+     */
+    public ContinuationWebSocketFrame(boolean finalFragment, int rsv, String text) {
+        this(finalFragment, rsv, fromText(text));
+    }
+
+    /**
      * Returns the text data in this frame
      */
     public String text() {

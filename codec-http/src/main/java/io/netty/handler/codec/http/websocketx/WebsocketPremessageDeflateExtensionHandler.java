@@ -104,12 +104,16 @@ public class WebsocketPremessageDeflateExtensionHandler extends ChannelHandlerAd
                         while (deflateEnabled && parametersIterator.hasNext()) {
                             String parameter = parametersIterator.next().getKey();
                             if (CLIENT_MAX_WINDOW.equalsIgnoreCase(parameter)) {
-                                // ignore
+                                // TODO: handle client_max_window_bits - nothing to do if ignored
                             } else if (SERVER_MAX_WINDOW.equalsIgnoreCase(parameter)) {
+                                // TODO: handle server_max_window_bits
                                 deflateEnabled = false;
                             } else if (CLIENT_NO_CONTEXT.equalsIgnoreCase(parameter)) {
-                                // ignore
+                                // TODO: handle client_no_context_takeover - nothing to do if ignored
                             } else if (SERVER_NO_CONTEXT.equalsIgnoreCase(parameter)) {
+                                // TODO: handle server_no_context_takeover
+                                deflateEnabled = false;
+                            } else {
                                 deflateEnabled = false;
                             }
                         }
