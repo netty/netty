@@ -18,7 +18,6 @@ package io.netty.handler.codec.compression;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 
-import java.nio.ByteOrder;
 import java.util.List;
 import java.util.zip.CRC32;
 import java.util.zip.DataFormatException;
@@ -173,8 +172,9 @@ public class JdkZlibDecoder extends ZlibDecoder {
             boolean readFooter = false;
             byte[] outArray = decompressed.array();
             while (!inflater.needsInput()) {
-                int outIndex = decompressed.arrayOffset() + decompressed.writerIndex();
-                int length = outArray.length - outIndex;
+                int writerIndex = decompressed.writerIndex();
+                int outIndex = decompressed.arrayOffset() + writerIndex;
+                int length = decompressed.writableBytes();
 
                 if (length == 0) {
                     // completely filled the buffer allocate a new one and start to fill it
@@ -186,7 +186,7 @@ public class JdkZlibDecoder extends ZlibDecoder {
 
                 int outputLength = inflater.inflate(outArray, outIndex, length);
                 if (outputLength > 0) {
-                    decompressed.writerIndex(decompressed.writerIndex() + outputLength);
+                    decompressed.writerIndex(writerIndex + outputLength);
                     if (crc != null) {
                         crc.update(outArray, outIndex, outputLength);
                     }
