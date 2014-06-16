@@ -16,6 +16,7 @@
 package io.netty.channel.oio;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelPipeline;
 
 import java.io.IOException;
@@ -35,19 +36,34 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
 
     @Override
     protected void doRead() {
+        final ChannelConfig config = config();
         final ChannelPipeline pipeline = pipeline();
         boolean closed = false;
+        final int maxMessagesPerRead = config.getMaxMessagesPerRead();
+
         Throwable exception = null;
+        int localRead = 0;
         try {
-            int localReadAmount = doReadMessages(readBuf);
-            if (localReadAmount < 0) {
-                closed = true;
+            for (;;) {
+                localRead = doReadMessages(readBuf);
+                if (localRead == 0) {
+                    break;
+                }
+                if (localRead < 0) {
+                    closed = true;
+                    break;
+                }
+
+                if (readBuf.size() >= maxMessagesPerRead || !config.isAutoRead()) {
+                    break;
+                }
             }
         } catch (Throwable t) {
             exception = t;
         }
 
-        for (int i = 0; i < readBuf.size(); i ++) {
+        int size = readBuf.size();
+        for (int i = 0; i < size; i ++) {
             pipeline.fireChannelRead(readBuf.get(i));
         }
         readBuf.clear();
@@ -65,6 +81,14 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
             if (isOpen()) {
                 unsafe().close(unsafe().voidPromise());
             }
+        } else if (localRead == 0 && isActive()) {
+            // If the read amount was 0 and the channel is still active we need to trigger a new read()
+            // as otherwise we will never try to read again and the user will never know.
+            // Just call read() is ok here as it will be submitted to the EventLoop as a task and so we are
+            // able to process the rest of the tasks in the queue first.
+            //
+            // See https://github.com/netty/netty/issues/2404
+            read();
         }
     }
 

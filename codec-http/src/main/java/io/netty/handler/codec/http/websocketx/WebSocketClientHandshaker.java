@@ -24,6 +24,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpClientCodec;
+import io.netty.handler.codec.http.HttpContentDecompressor;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.codec.http.HttpResponseDecoder;
@@ -39,11 +40,11 @@ public abstract class WebSocketClientHandshaker {
 
     private final WebSocketVersion version;
 
-    private boolean handshakeComplete;
+    private volatile boolean handshakeComplete;
 
     private final String expectedSubprotocol;
 
-    private String actualSubprotocol;
+    private volatile String actualSubprotocol;
 
     protected final HttpHeaders customHeaders;
 
@@ -147,6 +148,7 @@ public abstract class WebSocketClientHandshaker {
      */
     public final ChannelFuture handshake(Channel channel, final ChannelPromise promise) {
         FullHttpRequest request =  newHandshakeRequest();
+
         HttpResponseDecoder decoder = channel.pipeline().get(HttpResponseDecoder.class);
         if (decoder == null) {
             HttpClientCodec codec = channel.pipeline().get(HttpClientCodec.class);
@@ -155,10 +157,8 @@ public abstract class WebSocketClientHandshaker {
                        "a HttpResponseDecoder or HttpClientCodec"));
                return promise;
             }
-            codec.setSingleDecode(true);
-        } else {
-            decoder.setSingleDecode(true);
         }
+
         channel.writeAndFlush(request).addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) {
@@ -203,6 +203,12 @@ public abstract class WebSocketClientHandshaker {
         setHandshakeComplete();
 
         ChannelPipeline p = channel.pipeline();
+        // Remove decompressor from pipeline if its in use
+        HttpContentDecompressor decompressor = p.get(HttpContentDecompressor.class);
+        if (decompressor != null) {
+            p.remove(decompressor);
+        }
+
         ChannelHandlerContext ctx = p.context(HttpResponseDecoder.class);
         if (ctx == null) {
             ctx = p.context(HttpClientCodec.class);

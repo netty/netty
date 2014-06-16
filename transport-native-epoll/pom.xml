@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="ISO-8859-15"?>
+<!--
+  ~ Copyright 2014 The Netty Project
+  ~
+  ~ The Netty Project licenses this file to you under the Apache License,
+  ~ version 2.0 (the "License"); you may not use this file except in compliance
+  ~ with the License. You may obtain a copy of the License at:
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+  ~ WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+  ~ License for the specific language governing permissions and limitations
+  ~ under the License.
+  -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>io.netty</groupId>
+    <artifactId>netty-parent</artifactId>
+    <version>5.0.0.Alpha2-SNAPSHOT</version>
+  </parent>
+  <artifactId>netty-transport-native-epoll</artifactId>
+
+  <name>Netty/Transport/Native/Epoll</name>
+  <packaging>jar</packaging>
+
+  <dependencies>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-common</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-buffer</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-transport</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-testsuite</artifactId>
+      <version>${project.version}</version>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.fusesource.hawtjni</groupId>
+        <artifactId>maven-hawtjni-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>build-native-lib</id>
+            <configuration>
+              <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
+              <libDirectory>${project.build.outputDirectory}</libDirectory>
+              <!-- We use Maven's artifact classifier instead.
+                   This hack will make the hawtjni plugin to put the native library
+                   under 'META-INF/native' rather than 'META-INF/native/${platform}'. -->
+              <platform>.</platform>
+              <forceConfigure>true</forceConfigure>
+              <forceAutogen>true</forceAutogen>
+            </configuration>
+            <goals>
+              <goal>generate</goal>
+              <goal>build</goal>
+            </goals>
+            <phase>compile</phase>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <artifactId>maven-jar-plugin</artifactId>
+        <executions>
+          <!-- Generate the fallback JAR that does not contain the native library. -->
+          <execution>
+            <id>default-jar</id>
+            <configuration>
+              <excludes>
+                <exclude>META-INF/native/**</exclude>
+              </excludes>
+            </configuration>
+          </execution>
+          <!-- Generate the JAR that contains the native library in it. -->
+          <execution>
+            <id>native-jar</id>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+            <configuration>
+              <classifier>${os.detected.classifier}</classifier>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>
+

@@ -31,7 +31,18 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
      * @param status  the getStatus of this response
      */
     public DefaultHttpResponse(HttpVersion version, HttpResponseStatus status) {
-        super(version);
+        this(version, status, true);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param version           the HTTP version of this response
+     * @param status            the getStatus of this response
+     * @param validateHeaders   validate the header names and values when adding them to the {@link HttpHeaders}
+     */
+    public DefaultHttpResponse(HttpVersion version, HttpResponseStatus status, boolean validateHeaders) {
+        super(version, validateHeaders);
         if (status == null) {
             throw new NullPointerException("status");
         }
@@ -45,6 +56,9 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
 
     @Override
     public HttpResponse setStatus(HttpResponseStatus status) {
+        if (status == null) {
+            throw new NullPointerException("status");
+        }
         this.status = status;
         return this;
     }
@@ -58,14 +72,14 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
     @Override
     public String toString() {
         StringBuilder buf = new StringBuilder();
-        buf.append(getClass().getSimpleName());
+        buf.append(StringUtil.simpleClassName(this));
         buf.append("(decodeResult: ");
-        buf.append(getDecoderResult());
+        buf.append(decoderResult());
         buf.append(')');
         buf.append(StringUtil.NEWLINE);
         buf.append(getProtocolVersion().text());
         buf.append(' ');
-        buf.append(getStatus().toString());
+        buf.append(getStatus());
         buf.append(StringUtil.NEWLINE);
         appendHeaders(buf);
 

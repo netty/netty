@@ -18,6 +18,7 @@ package io.netty.channel.socket;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 
 import java.net.InetAddress;
@@ -172,4 +173,7 @@ public interface DatagramChannelConfig extends ChannelConfig {
 
     @Override
     DatagramChannelConfig setAutoRead(boolean autoRead);
+
+    @Override
+    DatagramChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator);
 }

@@ -28,12 +28,6 @@ import io.netty.handler.codec.MessageToByteEncoder;
  */
 @ChannelHandler.Sharable
 public class SocksMessageEncoder extends MessageToByteEncoder<SocksMessage> {
-    private static final String name = "SOCKS_MESSAGE_ENCODER";
-
-    public static String getName() {
-        return name;
-    }
-
     @Override
     protected void encode(ChannelHandlerContext ctx, SocksMessage msg, ByteBuf out) throws Exception {
         msg.encodeAsByteBuf(out);

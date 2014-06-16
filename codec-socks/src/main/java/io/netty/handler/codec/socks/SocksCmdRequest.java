@@ -63,7 +63,7 @@ public final class SocksCmdRequest extends SocksRequest {
             case UNKNOWN:
                 break;
         }
-        if (port < 0 && port >= 65535) {
+        if (port <= 0 || port >= 65536) {
             throw new IllegalArgumentException(port + " is not in bounds 0 < x < 65536");
         }
         this.cmdType = cmdType;

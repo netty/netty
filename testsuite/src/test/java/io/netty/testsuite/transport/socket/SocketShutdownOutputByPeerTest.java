@@ -127,7 +127,7 @@ public class SocketShutdownOutputByPeerTest extends AbstractServerSocketTest {
         }
 
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
             queue.offer(msg.readByte());
         }
 

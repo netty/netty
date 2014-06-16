@@ -82,9 +82,8 @@ public class LocalServerChannel extends AbstractServerChannel {
     }
 
     @Override
-    protected Runnable doRegister() throws Exception {
+    protected void doRegister() throws Exception {
         ((SingleThreadEventExecutor) eventLoop()).addShutdownHook(shutdownHook);
-        return null;
     }
 
     @Override
@@ -94,27 +93,18 @@ public class LocalServerChannel extends AbstractServerChannel {
     }
 
     @Override
-    protected void doPreClose() throws Exception {
-        if (state > 1) {
-            // Closed already.
-            return;
-        }
-
-        // Update all internal state before the closeFuture is notified.
-        LocalChannelRegistry.unregister(localAddress);
-        localAddress = null;
-        state = 2;
-    }
-
-    @Override
     protected void doClose() throws Exception {
-        // All internal state was updated already at doPreClose().
+        if (state <= 1) {
+            // Update all internal state before the closeFuture is notified.
+            LocalChannelRegistry.unregister(localAddress);
+            localAddress = null;
+            state = 2;
+        }
     }
 
     @Override
-    protected Runnable doDeregister() throws Exception {
+    protected void doDeregister() throws Exception {
         ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
-        return null;
     }
 
     @Override
@@ -123,13 +113,13 @@ public class LocalServerChannel extends AbstractServerChannel {
             return;
         }
 
-        ChannelPipeline pipeline = pipeline();
         Queue<Object> inboundBuffer = this.inboundBuffer;
         if (inboundBuffer.isEmpty()) {
             acceptInProgress = true;
             return;
         }
 
+        ChannelPipeline pipeline = pipeline();
         for (;;) {
             Object m = inboundBuffer.poll();
             if (m == null) {
@@ -141,33 +131,33 @@ public class LocalServerChannel extends AbstractServerChannel {
     }
 
     LocalChannel serve(final LocalChannel peer) {
-        LocalChannel child = new LocalChannel(this, peer);
-        serve0(child);
+        final LocalChannel child = new LocalChannel(this, peer);
+        if (eventLoop().inEventLoop()) {
+            serve0(child);
+        } else {
+            eventLoop().execute(new Runnable() {
+              @Override
+              public void run() {
+                serve0(child);
+              }
+            });
+        }
         return child;
     }
 
     private void serve0(final LocalChannel child) {
-        if (eventLoop().inEventLoop()) {
-            final ChannelPipeline pipeline = pipeline();
-            inboundBuffer.add(child);
-            if (acceptInProgress) {
-                acceptInProgress = false;
-                for (;;) {
-                    Object m = inboundBuffer.poll();
-                    if (m == null) {
-                        break;
-                    }
-                    pipeline.fireChannelRead(m);
+        inboundBuffer.add(child);
+        if (acceptInProgress) {
+            acceptInProgress = false;
+            ChannelPipeline pipeline = pipeline();
+            for (;;) {
+                Object m = inboundBuffer.poll();
+                if (m == null) {
+                    break;
                 }
-                pipeline.fireChannelReadComplete();
+                pipeline.fireChannelRead(m);
             }
-        } else {
-            eventLoop().execute(new Runnable() {
-                @Override
-                public void run() {
-                    serve0(child);
-                }
-            });
+            pipeline.fireChannelReadComplete();
         }
     }
 }

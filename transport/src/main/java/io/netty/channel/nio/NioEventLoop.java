@@ -21,6 +21,7 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.EventLoopException;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.channel.nio.AbstractNioChannel.NioUnsafe;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -38,8 +39,7 @@ import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.Queue;
 import java.util.Set;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -67,7 +67,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     static {
         String key = "sun.nio.ch.bugLevel";
         try {
-            String buglevel = System.getProperty(key);
+            String buglevel = SystemPropertyUtil.get(key);
             if (buglevel == null) {
                 System.setProperty(key, "");
             }
@@ -111,8 +111,8 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     private int cancelledKeys;
     private boolean needsToSelectAgain;
 
-    NioEventLoop(NioEventLoopGroup parent, ThreadFactory threadFactory, SelectorProvider selectorProvider) {
-        super(parent, threadFactory, false);
+    NioEventLoop(NioEventLoopGroup parent, Executor executor, SelectorProvider selectorProvider) {
+        super(parent, executor, false);
         if (selectorProvider == null) {
             throw new NullPointerException("selectorProvider");
         }
@@ -136,8 +136,13 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             SelectedSelectionKeySet selectedKeySet = new SelectedSelectionKeySet();
 
             Class<?> selectorImplClass =
-                    Class.forName("sun.nio.ch.SelectorImpl", false, ClassLoader.getSystemClassLoader());
-            selectorImplClass.isAssignableFrom(selector.getClass());
+                    Class.forName("sun.nio.ch.SelectorImpl", false, PlatformDependent.getSystemClassLoader());
+
+            // Ensure the current selector implementation is what we can instrument.
+            if (!selectorImplClass.isAssignableFrom(selector.getClass())) {
+                return selector;
+            }
+
             Field selectedKeysField = selectorImplClass.getDeclaredField("selectedKeys");
             Field publicSelectedKeysField = selectorImplClass.getDeclaredField("publicSelectedKeys");
 
@@ -160,7 +165,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     @Override
     protected Queue<Runnable> newTaskQueue() {
         // This event loop never calls takeTask()
-        return new ConcurrentLinkedQueue<Runnable>();
+        return PlatformDependent.newMpscQueue();
     }
 
     /**
@@ -194,24 +199,6 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
     }
 
-    void executeWhenWritable(AbstractNioChannel channel, NioTask<SelectableChannel> task) {
-        if (channel == null) {
-            throw new NullPointerException("channel");
-        }
-
-        if (isShutdown()) {
-            throw new IllegalStateException("event loop shut down");
-        }
-
-        SelectionKey key = channel.selectionKey();
-        channel.writableTasks.offer(task);
-
-        int interestOps = key.interestOps();
-        if ((interestOps & SelectionKey.OP_WRITE) == 0) {
-            key.interestOps(interestOps | SelectionKey.OP_WRITE);
-        }
-    }
-
     /**
      * Returns the percentage of the desired amount of time spent for I/O in the event loop.
      */
@@ -224,8 +211,8 @@ public final class NioEventLoop extends SingleThreadEventLoop {
      * {@code 50}, which means the event loop will try to spend the same amount of time for I/O as for non-I/O tasks.
      */
     public void setIoRatio(int ioRatio) {
-        if (ioRatio <= 0 || ioRatio >= 100) {
-            throw new IllegalArgumentException("ioRatio: " + ioRatio + " (expected: 0 < ioRatio < 100)");
+        if (ioRatio <= 0 || ioRatio > 100) {
+            throw new IllegalArgumentException("ioRatio: " + ioRatio + " (expected: 0 < ioRatio <= 100)");
         }
         this.ioRatio = ioRatio;
     }
@@ -266,7 +253,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 for (SelectionKey key: oldSelector.keys()) {
                     Object a = key.attachment();
                     try {
-                        if (key.channel().keyFor(newSelector) != null) {
+                        if (!key.isValid() || key.channel().keyFor(newSelector) != null) {
                             continue;
                         }
 
@@ -352,18 +339,19 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 }
 
                 cancelledKeys = 0;
-
-                final long ioStartTime = System.nanoTime();
                 needsToSelectAgain = false;
-                if (selectedKeys != null) {
-                    processSelectedKeysOptimized(selectedKeys.flip());
-                } else {
-                    processSelectedKeysPlain(selector.selectedKeys());
-                }
-                final long ioTime = System.nanoTime() - ioStartTime;
-
                 final int ioRatio = this.ioRatio;
-                runAllTasks(ioTime * (100 - ioRatio) / ioRatio);
+                if (ioRatio == 100) {
+                    processSelectedKeys();
+                    runAllTasks();
+                } else {
+                    final long ioStartTime = System.nanoTime();
+
+                    processSelectedKeys();
+
+                    final long ioTime = System.nanoTime() - ioStartTime;
+                    runAllTasks(ioTime * (100 - ioRatio) / ioRatio);
+                }
 
                 if (isShuttingDown()) {
                     closeAll();
@@ -382,6 +370,14 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     // Ignore.
                 }
             }
+        }
+    }
+
+    private void processSelectedKeys() {
+        if (selectedKeys != null) {
+            processSelectedKeysOptimized(selectedKeys.flip());
+        } else {
+            processSelectedKeysPlain(selector.selectedKeys());
         }
     }
 
@@ -458,6 +454,9 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             if (k == null) {
                 break;
             }
+            // null out entry in the array to allow to have it GC'ed once the Channel close
+            // See https://github.com/netty/netty/issues/2363
+            selectedKeys[i] = null;
 
             final Object a = k.attachment();
 
@@ -470,6 +469,16 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             }
 
             if (needsToSelectAgain) {
+                // null out entrys in the array to allow to have it GC'ed once the Channel close
+                // See https://github.com/netty/netty/issues/2363
+                for (;;) {
+                    if (selectedKeys[i] == null) {
+                        break;
+                    }
+                    selectedKeys[i] = null;
+                    i++;
+                }
+
                 selectAgain();
                 // Need to flip the optimized selectedKeys to get the right reference to the array
                 // and reset the index to -1 which will then set to 0 on the for loop
@@ -490,9 +499,10 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             return;
         }
 
-        int readyOps = -1;
         try {
-            readyOps = k.readyOps();
+            int readyOps = k.readyOps();
+            // Also check for readOps of 0 to workaround possible JDK bug which may otherwise lead
+            // to a spin loop
             if ((readyOps & (SelectionKey.OP_READ | SelectionKey.OP_ACCEPT)) != 0 || readyOps == 0) {
                 unsafe.read();
                 if (!ch.isOpen()) {
@@ -501,7 +511,8 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 }
             }
             if ((readyOps & SelectionKey.OP_WRITE) != 0) {
-                processWritable(ch);
+                // Call forceFlush which will also take care of clear the OP_WRITE once there is nothing left to write
+                ch.unsafe().forceFlush();
             }
             if ((readyOps & SelectionKey.OP_CONNECT) != 0) {
                 // remove OP_CONNECT as otherwise Selector.select(..) will always return without blocking
@@ -513,34 +524,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 unsafe.finishConnect();
             }
         } catch (CancelledKeyException e) {
-            if (readyOps != -1 && (readyOps & SelectionKey.OP_WRITE) != 0) {
-                unregisterWritableTasks(ch);
-            }
             unsafe.close(unsafe.voidPromise());
-        }
-    }
-
-    private static void processWritable(AbstractNioChannel ch) {
-        NioTask<SelectableChannel> task;
-        for (;;) {
-            task = ch.writableTasks.poll();
-            if (task == null) { break; }
-            processSelectedKey(ch.selectionKey(), task);
-        }
-
-        // Call forceFlush which will also take care of clear the OP_WRITE once there is nothing left to write
-        ch.unsafe().forceFlush();
-    }
-
-    private static void unregisterWritableTasks(AbstractNioChannel ch) {
-        NioTask<SelectableChannel> task;
-        for (;;) {
-            task = ch.writableTasks.poll();
-            if (task == null) {
-                break;
-            } else {
-                invokeChannelUnregistered(task, ch.selectionKey(), null);
-            }
         }
     }
 
@@ -585,7 +569,6 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
 
         for (AbstractNioChannel ch: channels) {
-            unregisterWritableTasks(ch);
             ch.unsafe().close(ch.unsafe().voidPromise());
         }
     }
@@ -641,7 +624,20 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     // the task queue has a pending task.
                     break;
                 }
-
+                if (selectedKeys == 0 && Thread.interrupted()) {
+                    // Thread was interrupted so reset selected keys and break so we not run into a busy loop.
+                    // As this is most likely a bug in the handler of the user or it's client library we will
+                    // also log it.
+                    //
+                    // See https://github.com/netty/netty/issues/2426
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("Selector.select() returned prematurely because " +
+                                "Thread.currentThread().interrupt() was called. Use " +
+                                "NioEventLoop.shutdownGracefully() to shutdown the NioEventLoop.");
+                    }
+                    selectCnt = 1;
+                    break;
+                }
                 if (SELECTOR_AUTO_REBUILD_THRESHOLD > 0 &&
                         selectCnt >= SELECTOR_AUTO_REBUILD_THRESHOLD) {
                     // The selector returned prematurely many times in a row.

@@ -80,7 +80,7 @@ public class DefaultSpdyHeadersFrame extends DefaultSpdyStreamFrame
     @Override
     public String toString() {
         StringBuilder buf = new StringBuilder();
-        buf.append(getClass().getSimpleName());
+        buf.append(StringUtil.simpleClassName(this));
         buf.append("(last: ");
         buf.append(isLast());
         buf.append(')');
@@ -98,7 +98,7 @@ public class DefaultSpdyHeadersFrame extends DefaultSpdyStreamFrame
     }
 
     protected void appendHeaders(StringBuilder buf) {
-        for (Map.Entry<String, String> e: headers().entries()) {
+        for (Map.Entry<String, String> e: headers()) {
             buf.append("    ");
             buf.append(e.getKey());
             buf.append(": ");

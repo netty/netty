@@ -16,14 +16,16 @@
 package io.netty.handler.codec.string;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.LineBasedFrameDecoder;
-import io.netty.handler.codec.MessageToByteEncoder;
+import io.netty.handler.codec.MessageToMessageEncoder;
 
+import java.nio.CharBuffer;
 import java.nio.charset.Charset;
+import java.util.List;
 
 /**
  * Encodes the requested {@link String} into a {@link ByteBuf}.
@@ -47,7 +49,7 @@ import java.nio.charset.Charset;
  * </pre>
  */
 @Sharable
-public class StringEncoder extends MessageToByteEncoder<CharSequence> {
+public class StringEncoder extends MessageToMessageEncoder<CharSequence> {
 
     // TODO Use CharsetEncoder instead.
     private final Charset charset;
@@ -70,16 +72,11 @@ public class StringEncoder extends MessageToByteEncoder<CharSequence> {
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, CharSequence msg, ByteBuf out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, CharSequence msg, List<Object> out) throws Exception {
         if (msg.length() == 0) {
             return;
         }
 
-        ByteBuf encoded = Unpooled.copiedBuffer(msg, charset);
-        try {
-            out.writeBytes(encoded);
-        } finally {
-            encoded.release();
-        }
+        out.add(ByteBufUtil.encodeString(ctx.alloc(), CharBuffer.wrap(msg), charset));
     }
 }

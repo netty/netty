@@ -17,7 +17,6 @@ package io.netty.buffer;
 
 import io.netty.util.ResourceLeak;
 import io.netty.util.internal.EmptyArrays;
-import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -45,6 +44,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
     private final boolean direct;
     private final List<Component> components = new ArrayList<Component>();
     private final int maxNumComponents;
+    private static final ByteBuffer FULL_BYTEBUFFER = (ByteBuffer) ByteBuffer.allocate(1).position(1);
 
     private boolean freed;
 
@@ -323,7 +323,8 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     private void updateComponentOffsets(int cIndex) {
-        if (components.isEmpty()) {
+        int size = components.size();
+        if (size <= cIndex) {
             return;
         }
 
@@ -334,7 +335,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
             cIndex ++;
         }
 
-        for (int i = cIndex; i < components.size(); i ++) {
+        for (int i = cIndex; i < size; i ++) {
             Component prev = components.get(i - 1);
             Component cur = components.get(i);
             cur.offset = prev.endOffset;
@@ -429,10 +430,16 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public boolean isDirect() {
-        if (components.size() == 1) {
-            return components.get(0).buf.isDirect();
+        int size = components.size();
+        if (size == 0) {
+            return false;
         }
-        return false;
+        for (int i = 0; i < size; i++) {
+           if (!components.get(i).buf.isDirect()) {
+               return false;
+           }
+        }
+        return true;
     }
 
     @Override
@@ -698,6 +705,10 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public CompositeByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
         checkDstIndex(index, length, dstIndex, dst.capacity());
+        if (length == 0) {
+            return this;
+        }
+
         int i = toComponentIndex(index);
         while (length > 0) {
             Component c = components.get(i);
@@ -716,10 +727,9 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public int getBytes(int index, GatheringByteChannel out, int length)
             throws IOException {
-        if (PlatformDependent.javaVersion() < 7) {
-            // XXX Gathering write is not supported because of a known issue.
-            //     See http://bugs.sun.com/view_bug.do?bug_id=6210541
-            return out.write(copiedNioBuffer(index, length));
+        int count = nioBufferCount();
+        if (count == 1) {
+            return out.write(internalNioBuffer(index, length));
         } else {
             long writtenBytes = out.write(nioBuffers(index, length));
             if (writtenBytes > Integer.MAX_VALUE) {
@@ -842,6 +852,9 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public CompositeByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
         checkSrcIndex(index, length, srcIndex, src.length);
+        if (length == 0) {
+            return this;
+        }
 
         int i = toComponentIndex(index);
         while (length > 0) {
@@ -864,6 +877,10 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
         int length = src.remaining();
 
         checkIndex(index, length);
+        if (length == 0) {
+            return this;
+        }
+
         int i = toComponentIndex(index);
         try {
             while (length > 0) {
@@ -886,6 +903,9 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public CompositeByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
         checkSrcIndex(index, length, srcIndex, src.capacity());
+        if (length == 0) {
+            return this;
+        }
 
         int i = toComponentIndex(index);
         while (length > 0) {
@@ -905,6 +925,9 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public int setBytes(int index, InputStream in, int length) throws IOException {
         checkIndex(index, length);
+        if (length == 0) {
+            return in.read(EmptyArrays.EMPTY_BYTES);
+        }
 
         int i = toComponentIndex(index);
         int readBytes = 0;
@@ -941,6 +964,9 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public int setBytes(int index, ScatteringByteChannel in, int length) throws IOException {
         checkIndex(index, length);
+        if (length == 0) {
+            return in.read(FULL_BYTEBUFFER);
+        }
 
         int i = toComponentIndex(index);
         int readBytes = 0;
@@ -982,7 +1008,9 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
     public ByteBuf copy(int index, int length) {
         checkIndex(index, length);
         ByteBuf dst = Unpooled.buffer(length);
-        copyTo(index, length, toComponentIndex(index), dst);
+        if (length != 0) {
+            copyTo(index, length, toComponentIndex(index), dst);
+        }
         return dst;
     }
 
@@ -1050,9 +1078,6 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
         assert !freed;
         checkIndex(offset);
 
-        assert !freed;
-        checkIndex(offset);
-
         for (int low = 0, high = components.size(); low <= high;) {
             int mid = low + high >>> 1;
             Component c = components.get(mid);
@@ -1092,17 +1117,22 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
         throw new UnsupportedOperationException();
     }
 
-    private ByteBuffer copiedNioBuffer(int index, int length) {
-        assert !freed;
+    @Override
+    public ByteBuffer nioBuffer(int index, int length) {
         if (components.size() == 1) {
-            return toNioBuffer(components.get(0).buf, index, length);
+            ByteBuf buf = components.get(0).buf;
+            if (buf.nioBufferCount() == 1) {
+                return components.get(0).buf.nioBuffer(index, length);
+            }
+        }
+        ByteBuffer merged = ByteBuffer.allocate(length).order(order());
+        ByteBuffer[] buffers = nioBuffers(index, length);
+
+        //noinspection ForLoopReplaceableByForEach
+        for (int i = 0; i < buffers.length; i++) {
+            merged.put(buffers[i]);
         }
 
-        ByteBuffer[] buffers = nioBuffers(index, length);
-        ByteBuffer merged = ByteBuffer.allocate(length).order(order());
-        for (ByteBuffer b: buffers) {
-            merged.put(b);
-        }
         merged.flip();
         return merged;
     }
@@ -1137,14 +1167,6 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
         }
 
         return buffers.toArray(new ByteBuffer[buffers.size()]);
-    }
-
-    private static ByteBuffer toNioBuffer(ByteBuf buf, int index, int length) {
-        if (buf.nioBufferCount() == 1) {
-            return buf.nioBuffer(index, length);
-        } else {
-            return buf.copy(index, length).nioBuffer(0, length);
-        }
     }
 
     /**
@@ -1235,9 +1257,10 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
 
         // Update indexes and markers.
         Component first = components.get(0);
+        int offset = first.offset;
         updateComponentOffsets(0);
-        setIndex(readerIndex - first.offset, writerIndex - first.offset);
-        adjustMarkers(first.offset);
+        setIndex(readerIndex - offset, writerIndex - offset);
+        adjustMarkers(offset);
         return this;
     }
 
@@ -1548,6 +1571,22 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    public CompositeByteBuf touch() {
+        if (leak != null) {
+            leak.record();
+        }
+        return this;
+    }
+
+    @Override
+    public CompositeByteBuf touch(Object hint) {
+        if (leak != null) {
+            leak.record(hint);
+        }
+        return this;
+    }
+
+    @Override
     public ByteBuffer[] nioBuffers() {
         return nioBuffers(readerIndex(), readableBytes());
     }
@@ -1568,7 +1607,9 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
             c.freeIfNecessary();
         }
 
-        leak.close();
+        if (leak != null) {
+            leak.close();
+        }
     }
 
     @Override

@@ -102,7 +102,7 @@ public final class Unpooled {
     }
 
     /**
-     * Creates a new big-endian direct buffer with resaonably small initial capacity, which
+     * Creates a new big-endian direct buffer with reasonably small initial capacity, which
      * expands its capacity boundlessly on demand.
      */
     public static ByteBuf directBuffer() {
@@ -129,8 +129,9 @@ public final class Unpooled {
 
     /**
      * Creates a new big-endian Java heap buffer with the specified
-     * {@code capacity}.  The new buffer's {@code readerIndex} and
-     * {@code writerIndex} are {@code 0}.
+     * {@code initialCapacity}, that may grow up to {@code maxCapacity}
+     * The new buffer's {@code readerIndex} and {@code writerIndex} are
+     * {@code 0}.
      */
     public static ByteBuf buffer(int initialCapacity, int maxCapacity) {
         return ALLOC.heapBuffer(initialCapacity, maxCapacity);
@@ -138,8 +139,9 @@ public final class Unpooled {
 
     /**
      * Creates a new big-endian direct buffer with the specified
-     * {@code capacity}.  The new buffer's {@code readerIndex} and
-     * {@code writerIndex} are {@code 0}.
+     * {@code initialCapacity}, that may grow up to {@code maxCapacity}.
+     * The new buffer's {@code readerIndex} and {@code writerIndex} are
+     * {@code 0}.
      */
     public static ByteBuf directBuffer(int initialCapacity, int maxCapacity) {
         return ALLOC.directBuffer(initialCapacity, maxCapacity);
@@ -408,8 +410,16 @@ public final class Unpooled {
      * respectively.
      */
     public static ByteBuf copiedBuffer(ByteBuf buffer) {
-        if (buffer.isReadable()) {
-            return buffer.copy();
+        int readable = buffer.readableBytes();
+        if (readable > 0) {
+            ByteBuf copy;
+            if (buffer.isDirect()) {
+                copy = directBuffer(readable);
+            } else {
+                copy = buffer(readable);
+            }
+            copy.writeBytes(buffer, buffer.readerIndex(), readable);
+            return copy;
         } else {
             return EMPTY_BUFFER;
         }
@@ -647,10 +657,7 @@ public final class Unpooled {
     }
 
     private static ByteBuf copiedBuffer(CharBuffer buffer, Charset charset) {
-        ByteBuffer dst = ByteBufUtil.encodeString(buffer, charset);
-        ByteBuf result = wrappedBuffer(dst.array());
-        result.writerIndex(dst.remaining());
-        return result;
+        return ByteBufUtil.encodeString(ALLOC, buffer, charset);
     }
 
     /**
@@ -848,6 +855,14 @@ public final class Unpooled {
      */
     public static ByteBuf unreleasableBuffer(ByteBuf buf) {
         return new UnreleasableByteBuf(buf);
+    }
+
+    /**
+     * Wrap the given {@link ByteBuf}s in an unmodifiable {@link ByteBuf}. Be aware the returned {@link ByteBuf} will
+     * not try to slice the given {@link ByteBuf}s to reduce GC-Pressure.
+     */
+    public static ByteBuf unmodifiableBuffer(ByteBuf... buffers) {
+        return new FixedCompositeByteBuf(ALLOC, buffers);
     }
 
     private Unpooled() {

@@ -2672,7 +2672,7 @@ public class ConcurrentHashMapV8<K,V>
                         return;
                     }
                 }
-                else if ((s | WAITER) == 0) {
+                else if ((s & WAITER) == 0) {
                     if (U.compareAndSwapInt(this, LOCKSTATE, s, s | WAITER)) {
                         waiting = true;
                         waiter = Thread.currentThread();
@@ -4406,7 +4406,7 @@ public class ConcurrentHashMapV8<K,V>
                             (containsAll(c) && c.containsAll(this))));
         }
 
-        public ConcurrentHashMapSpliterator<K> spliterator() {
+        public ConcurrentHashMapSpliterator<K> spliterator166() {
             Node<K,V>[] t;
             ConcurrentHashMapV8<K,V> m = map;
             long n = m.sumCount();
@@ -4464,7 +4464,7 @@ public class ConcurrentHashMapV8<K,V>
             throw new UnsupportedOperationException();
         }
 
-        public ConcurrentHashMapSpliterator<V> spliterator() {
+        public ConcurrentHashMapSpliterator<V> spliterator166() {
             Node<K,V>[] t;
             ConcurrentHashMapV8<K,V> m = map;
             long n = m.sumCount();
@@ -4552,7 +4552,7 @@ public class ConcurrentHashMapV8<K,V>
                             (containsAll(c) && c.containsAll(this))));
         }
 
-        public ConcurrentHashMapSpliterator<Map.Entry<K,V>> spliterator() {
+        public ConcurrentHashMapSpliterator<Map.Entry<K,V>> spliterator166() {
             Node<K,V>[] t;
             ConcurrentHashMapV8<K,V> m = map;
             long n = m.sumCount();

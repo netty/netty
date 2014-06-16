@@ -32,11 +32,12 @@ public abstract class AbstractHttpData extends AbstractReferenceCounted implemen
     private static final Pattern STRIP_PATTERN = Pattern.compile("(?:^\\s+|\\s+$|\\n)");
     private static final Pattern REPLACE_PATTERN = Pattern.compile("[\\r\\t]");
 
-    protected final String name;
+    private final String name;
     protected long definedSize;
     protected long size;
-    protected Charset charset = HttpConstants.DEFAULT_CHARSET;
-    protected boolean completed;
+    private Charset charset = HttpConstants.DEFAULT_CHARSET;
+    private boolean completed;
+    private long maxSize = DefaultHttpDataFactory.MAXSIZE;
 
     protected AbstractHttpData(String name, Charset charset, long size) {
         if (name == null) {
@@ -58,6 +59,21 @@ public abstract class AbstractHttpData extends AbstractReferenceCounted implemen
     }
 
     @Override
+    public long getMaxSize() { return maxSize; }
+
+    @Override
+    public void setMaxSize(long maxSize) {
+        this.maxSize = maxSize;
+    }
+
+    @Override
+    public void checkSize(long newSize) throws IOException {
+        if (maxSize >= 0 && newSize > maxSize) {
+            throw new IOException("Size exceed allowed maximum capacity");
+        }
+    }
+
+    @Override
     public String getName() {
         return name;
     }
@@ -65,6 +81,10 @@ public abstract class AbstractHttpData extends AbstractReferenceCounted implemen
     @Override
     public boolean isCompleted() {
         return completed;
+    }
+
+    protected void setCompleted() {
+        completed = true;
     }
 
     @Override
@@ -110,4 +130,10 @@ public abstract class AbstractHttpData extends AbstractReferenceCounted implemen
         super.retain(increment);
         return this;
     }
+
+    @Override
+    public abstract HttpData touch();
+
+    @Override
+    public abstract HttpData touch(Object hint);
 }

@@ -19,9 +19,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 
 import java.math.BigInteger;
-import java.util.Formatter;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Handler for a server-side channel.  This handler maintains stateful
@@ -32,14 +29,11 @@ import java.util.logging.Logger;
  */
 public class FactorialServerHandler extends SimpleChannelInboundHandler<BigInteger> {
 
-    private static final Logger logger = Logger.getLogger(
-            FactorialServerHandler.class.getName());
-
     private BigInteger lastMultiplier = new BigInteger("1");
     private BigInteger factorial = new BigInteger("1");
 
     @Override
-    public void channelRead0(ChannelHandlerContext ctx, BigInteger msg) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, BigInteger msg) {
         // Calculate the cumulative factorial and send it to the client.
         lastMultiplier = msg;
         factorial = factorial.multiply(msg);
@@ -48,15 +42,12 @@ public class FactorialServerHandler extends SimpleChannelInboundHandler<BigInteg
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        logger.info(new Formatter().format(
-                "Factorial of %,d is: %,d", lastMultiplier, factorial).toString());
+        System.err.printf("Factorial of %,d is: %,d%n", lastMultiplier, factorial);
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        logger.log(
-                Level.WARNING,
-                "Unexpected exception from downstream.", cause);
+        cause.printStackTrace();
         ctx.close();
     }
 }

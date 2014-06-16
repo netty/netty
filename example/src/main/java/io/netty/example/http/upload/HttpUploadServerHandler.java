@@ -27,6 +27,7 @@ import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -43,7 +44,6 @@ import io.netty.handler.codec.http.multipart.HttpDataFactory;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.EndOfDataDecoderException;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.ErrorDataDecoderException;
-import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.IncompatibleDataDecoderException;
 import io.netty.handler.codec.http.multipart.InterfaceHttpData;
 import io.netty.handler.codec.http.multipart.InterfaceHttpData.HttpDataType;
 import io.netty.util.CharsetUtil;
@@ -71,10 +71,8 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
 
     private final StringBuilder responseContent = new StringBuilder();
 
-    private static final HttpDataFactory factory = new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE); //Disk
-                                                                                                              // if
-                                                                                                              // size
-                                                                                                              // exceed
+    private static final HttpDataFactory factory =
+            new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE); // Disk if size exceed
 
     private HttpPostRequestDecoder decoder;
     static {
@@ -88,14 +86,14 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
     }
 
     @Override
-    public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         if (decoder != null) {
             decoder.cleanFiles();
         }
     }
 
     @Override
-    public void channelRead0(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
         if (msg instanceof HttpRequest) {
             HttpRequest request = this.request = (HttpRequest) msg;
             URI uri = new URI(request.getUri());
@@ -114,8 +112,7 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
             responseContent.append("\r\n\r\n");
 
             // new getMethod
-            List<Entry<String, String>> headers = request.headers().entries();
-            for (Entry<String, String> entry : headers) {
+            for (Entry<String, String> entry : request.headers()) {
                 responseContent.append("HEADER: " + entry.getKey() + '=' + entry.getValue() + "\r\n");
             }
             responseContent.append("\r\n\r\n");
@@ -129,7 +126,7 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
                 cookies = CookieDecoder.decode(value);
             }
             for (Cookie cookie : cookies) {
-                responseContent.append("COOKIE: " + cookie.toString() + "\r\n");
+                responseContent.append("COOKIE: " + cookie + "\r\n");
             }
             responseContent.append("\r\n\r\n");
 
@@ -143,6 +140,13 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
             responseContent.append("\r\n\r\n");
 
             // if GET Method: should not try to create a HttpPostRequestDecoder
+            if (request.getMethod().equals(HttpMethod.GET)) {
+                // GET Method: should not try to create a HttpPostRequestDecoder
+                // So stop here
+                responseContent.append("\r\n\r\nEND OF GET CONTENT\r\n");
+                writeResponse(ctx.channel());
+                return;
+            }
             try {
                 decoder = new HttpPostRequestDecoder(factory, request);
             } catch (ErrorDataDecoderException e1) {
@@ -150,13 +154,6 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
                 responseContent.append(e1.getMessage());
                 writeResponse(ctx.channel());
                 ctx.channel().close();
-                return;
-            } catch (IncompatibleDataDecoderException e1) {
-                // GET Method: should not try to create a HttpPostRequestDecoder
-                // So OK but stop here
-                responseContent.append(e1.getMessage());
-                responseContent.append("\r\n\r\nEND OF GET CONTENT\r\n");
-                writeResponse(ctx.channel());
                 return;
             }
 
@@ -248,10 +245,10 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
                         + attribute.getName() + " data too long\r\n");
             } else {
                 responseContent.append("\r\nBODY Attribute: " + attribute.getHttpDataType().name() + ": "
-                        + attribute.toString() + "\r\n");
+                        + attribute + "\r\n");
             }
         } else {
-            responseContent.append("\r\nBODY FileUpload: " + data.getHttpDataType().name() + ": " + data.toString()
+            responseContent.append("\r\nBODY FileUpload: " + data.getHttpDataType().name() + ": " + data
                     + "\r\n");
             if (data.getHttpDataType() == HttpDataType.FileUpload) {
                 FileUpload fileUpload = (FileUpload) data;
@@ -287,9 +284,9 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
         responseContent.setLength(0);
 
         // Decide whether to close the connection or not.
-        boolean close = HttpHeaders.Values.CLOSE.equalsIgnoreCase(request.headers().get(CONNECTION))
+        boolean close = request.headers().contains(CONNECTION, HttpHeaders.Values.CLOSE, true)
                 || request.getProtocolVersion().equals(HttpVersion.HTTP_1_0)
-                && !HttpHeaders.Values.KEEP_ALIVE.equalsIgnoreCase(request.headers().get(CONNECTION));
+                && !request.headers().contains(CONNECTION, HttpHeaders.Values.KEEP_ALIVE, true);
 
         // Build the response object.
         FullHttpResponse response = new DefaultFullHttpResponse(

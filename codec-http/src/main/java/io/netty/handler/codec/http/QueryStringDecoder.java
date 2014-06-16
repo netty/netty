@@ -113,8 +113,7 @@ public class QueryStringDecoder {
                     "maxParams: " + maxParams + " (expected: a positive integer)");
         }
 
-        // http://en.wikipedia.org/wiki/Query_string
-        this.uri = uri.replace(';', '&');
+        this.uri = uri;
         this.charset = charset;
         this.maxParams = maxParams;
         this.hasPath = hasPath;
@@ -160,10 +159,8 @@ public class QueryStringDecoder {
             hasPath = false;
         }
         // Also take care of cut of things like "http://localhost"
-        String newUri = rawPath + '?' + uri.getRawQuery();
+        this.uri = rawPath + '?' + uri.getRawQuery();
 
-        // http://en.wikipedia.org/wiki/Query_string
-        this.uri = newUri.replace(';', '&');
         this.charset = charset;
         this.maxParams = maxParams;
     }
@@ -222,7 +219,8 @@ public class QueryStringDecoder {
                     name = decodeComponent(s.substring(pos, i), charset);
                 }
                 pos = i + 1;
-            } else if (c == '&') {
+            // http://www.w3.org/TR/html401/appendix/notes.html#h-B.2.2
+            } else if (c == '&' || c == ';') {
                 if (name == null && pos != i) {
                     // We haven't seen an `=' so far but moved forward.
                     // Must be a param of the form '&a&' so add it with
@@ -313,13 +311,9 @@ public class QueryStringDecoder {
         boolean modified = false;
         for (int i = 0; i < size; i++) {
             final char c = s.charAt(i);
-            switch (c) {
-                case '%':
-                    i++;  // We can skip at least one char, e.g. `%%'.
-                    // Fall through.
-                case '+':
-                    modified = true;
-                    break;
+            if (c == '%' || c == '+') {
+                modified = true;
+                break;
             }
         }
         if (!modified) {

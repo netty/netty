@@ -15,17 +15,21 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.channel.CombinedChannelDuplexHandler;
+import io.netty.channel.ChannelHandlerAppender;
+import io.netty.channel.ChannelHandlerContext;
 
 
 /**
  * A combination of {@link HttpRequestDecoder} and {@link HttpResponseEncoder}
- * which enables easier server side HTTP implementation.
+ * which enables easier server side HTTP implementation. Also supports use with
+ * a {@link HttpServerUpgradeHandler} to support upgrading to another protocol
+ * from HTTP.
  *
  * @see HttpClientCodec
+ * @see HttpServerUpgradeHandler
  */
-public final class HttpServerCodec
-        extends CombinedChannelDuplexHandler<HttpRequestDecoder, HttpResponseEncoder> {
+public final class HttpServerCodec extends ChannelHandlerAppender implements
+        HttpServerUpgradeHandler.SourceCodec {
 
     /**
      * Creates a new instance with the default decoder options
@@ -41,5 +45,23 @@ public final class HttpServerCodec
      */
     public HttpServerCodec(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize) {
         super(new HttpRequestDecoder(maxInitialLineLength, maxHeaderSize, maxChunkSize), new HttpResponseEncoder());
+    }
+
+    /**
+     * Creates a new instance with the specified decoder options.
+     */
+    public HttpServerCodec(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean validateHeaders) {
+        super(new HttpRequestDecoder(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders),
+                new HttpResponseEncoder());
+    }
+
+    /**
+     * Upgrades to another protocol from HTTP. Removes the {@link HttpRequestDecoder} and
+     * {@link HttpResponseEncoder} from the pipeline.
+     */
+    @Override
+    public void upgradeFrom(ChannelHandlerContext ctx) {
+        ctx.pipeline().remove(HttpRequestDecoder.class);
+        ctx.pipeline().remove(HttpResponseEncoder.class);
     }
 }

@@ -70,15 +70,21 @@ public class HttpRequestDecoder extends HttpObjectDecoder {
         super(maxInitialLineLength, maxHeaderSize, maxChunkSize, true);
     }
 
+    public HttpRequestDecoder(
+            int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean validateHeaders) {
+        super(maxInitialLineLength, maxHeaderSize, maxChunkSize, true, validateHeaders);
+    }
+
     @Override
     protected HttpMessage createMessage(String[] initialLine) throws Exception {
         return new DefaultHttpRequest(
-                HttpVersion.valueOf(initialLine[2]), HttpMethod.valueOf(initialLine[0]), initialLine[1]);
+                HttpVersion.valueOf(initialLine[2]),
+                HttpMethod.valueOf(initialLine[0]), initialLine[1], validateHeaders);
     }
 
     @Override
     protected HttpMessage createInvalidMessage() {
-        return new DefaultHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.GET, "/bad-request");
+        return new DefaultHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.GET, "/bad-request", validateHeaders);
     }
 
     @Override

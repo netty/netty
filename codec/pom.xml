@@ -20,11 +20,11 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.0.4.Final-SNAPSHOT</version>
+    <version>5.0.0.Alpha2-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-codec</artifactId>
-  <packaging>bundle</packaging>
+  <packaging>jar</packaging>
 
   <name>Netty/Codec</name>
 
@@ -62,6 +62,5 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
-      
 </project>
 

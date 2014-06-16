@@ -80,4 +80,16 @@ public interface FileRegion extends ReferenceCounted {
      *                  byte of the region transferred.
      */
     long transferTo(WritableByteChannel target, long position) throws IOException;
+
+    @Override
+    FileRegion retain();
+
+    @Override
+    FileRegion retain(int increment);
+
+    @Override
+    FileRegion touch();
+
+    @Override
+    FileRegion touch(Object hint);
 }

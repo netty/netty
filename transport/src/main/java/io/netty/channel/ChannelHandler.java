@@ -24,27 +24,17 @@ import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.net.SocketAddress;
 
 /**
- * Handles or intercepts a {@link ChannelInboundInvoker} or {@link ChannelOutboundInvoker} operation, and forwards it
- * to the next handler in a {@link ChannelPipeline}.
+ * Handles an I/O event or intercepts an I/O operation, and forwards it to its next handler in
+ * its {@link ChannelPipeline}.
  *
- * <h3>Sub-types</h3>
+ * <h3>Extend {@link ChannelHandlerAdapter} instead</h3>
  * <p>
- * {@link ChannelHandler} itself does not provide many methods.  To handle a
- * a {@link ChannelInboundInvoker} or {@link ChannelOutboundInvoker} operation
- * you need to implement its sub-interfaces.  There are many different sub-interfaces
- * which handles inbound and outbound operations.
- *
- * But the most useful for developers may be:
- * <ul>
- * <li>{@link ChannelInboundHandlerAdapter} handles and intercepts inbound operations</li>
- * <li>{@link ChannelOutboundHandlerAdapter} handles and intercepts outbound operations</li>
- * </ul>
- *
- * You will also find more detailed explanation from the documentation of
- * each sub-interface on how an event is interpreted when it goes upstream and
- * downstream respectively.
+ * Because this interface has many methods to implement, you might want to extend {@link ChannelHandlerAdapter}
+ * instead.
+ * </p>
  *
  * <h3>The context object</h3>
  * <p>
@@ -53,7 +43,7 @@ import java.lang.annotation.Target;
  * {@link ChannelPipeline} it belongs to via a context object.  Using the
  * context object, the {@link ChannelHandler} can pass events upstream or
  * downstream, modify the pipeline dynamically, or store the information
- * (attachment) which is specific to the handler.
+ * (using {@link AttributeKey}s) which is specific to the handler.
  *
  * <h3>State management</h3>
  *
@@ -69,7 +59,7 @@ import java.lang.annotation.Target;
  *     <b>private boolean loggedIn;</b>
  *
  *     {@code @Override}
- *     public void channelRead({@link ChannelHandlerContext} ctx, Message message) {
+ *     protected void messageReceived({@link ChannelHandlerContext} ctx, Message message) {
  *         {@link Channel} ch = e.getChannel();
  *         if (message instanceof LoginMessage) {
  *             authenticate((LoginMessage) message);
@@ -101,11 +91,11 @@ import java.lang.annotation.Target;
  *
  * </pre>
  *
- * <h4>Using an attachment</h4>
+ * <h4>Using {@link AttributeKey}s</h4>
  *
  * Although it's recommended to use member variables to store the state of a
  * handler, for some reason you might not want to create many handler instances.
- * In such a case, you can use an <em>attachment</em> which is provided by
+ * In such a case, you can use {@link AttributeKey}s which are attached to the
  * {@link ChannelHandlerContext}:
  * <pre>
  * public interface Message {
@@ -114,18 +104,14 @@ import java.lang.annotation.Target;
  *
  * {@code @Sharable}
  * public class DataServerHandler extends {@link SimpleChannelInboundHandler}&lt;Message&gt; {
- *   private final {@link AttributeKey}&lt{@link Boolean}&gt auth =
- *           new {@link AttributeKey}&lt{@link Boolean}&gt("auth");
- *
- *   // This handler will receive a sequence of increasing integers starting
- *   // from 1.
- *   {@code @Override}
- *   public void channelRead({@link ChannelHandlerContext} ctx, {@link Integer} integer) {
- *     {@link Attribute}&lt{@link Boolean}&gt attr = ctx.getAttr(auth);
+ *     private final {@link AttributeKey}&lt{@link Boolean}&gt auth =
+ *           {@link AttributeKey#valueOf(String) AttributeKey.valueOf("auth")};
  *
  *     {@code @Override}
- *     public void channelRead({@link ChannelHandlerContext} ctx, Message message) {
+ *     protected void messageReceived({@link ChannelHandlerContext} ctx, Message message) {
+ *         {@link Attribute}&lt{@link Boolean}&gt attr = ctx.attr(auth);
  *         {@link Channel} ch = ctx.channel();
+ *
  *         if (message instanceof LoginMessage) {
  *             authenticate((LoginMessage) o);
  *             <b>attr.set(true)</b>;
@@ -140,7 +126,7 @@ import java.lang.annotation.Target;
  *     ...
  * }
  * </pre>
- * Now that the state of the handler is stored as an attachment, you can add the
+ * Now that the state of the handler is attached to the {@link ChannelHandlerContext}, you can add the
  * same handler instance to different pipelines:
  * <pre>
  * public class DataServerInitializer extends {@link ChannelInitializer}&lt{@link Channel}&gt {
@@ -157,7 +143,7 @@ import java.lang.annotation.Target;
  *
  * <h4>The {@code @Sharable} annotation</h4>
  * <p>
- * In the examples above which used an attachment,
+ * In the example above which used an {@link AttributeKey},
  * you might have noticed the {@code @Sharable} annotation.
  * <p>
  * If a {@link ChannelHandler} is annotated with the {@code @Sharable}
@@ -181,6 +167,10 @@ import java.lang.annotation.Target;
  */
 public interface ChannelHandler {
 
+    ////////////////////////////////
+    // Handler life cycle methods //
+    ////////////////////////////////
+
     /**
      * Gets called after the {@link ChannelHandler} was added to the actual context and it's ready to handle events.
      */
@@ -192,10 +182,143 @@ public interface ChannelHandler {
      */
     void handlerRemoved(ChannelHandlerContext ctx) throws Exception;
 
+    ///////////////////////////////////
+    // Inbound event handler methods //
+    ///////////////////////////////////
+
     /**
      * Gets called if a {@link Throwable} was thrown.
      */
     void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception;
+
+    /**
+     * The {@link Channel} of the {@link ChannelHandlerContext} was registered with its {@link EventLoop}
+     */
+    void channelRegistered(ChannelHandlerContext ctx) throws Exception;
+
+    /**
+     * The {@link Channel} of the {@link ChannelHandlerContext} was unregistered from its {@link EventLoop}
+     */
+    void channelUnregistered(ChannelHandlerContext ctx) throws Exception;
+
+    /**
+     * The {@link Channel} of the {@link ChannelHandlerContext} is now active
+     */
+    void channelActive(ChannelHandlerContext ctx) throws Exception;
+
+    /**
+     * The {@link Channel} of the {@link ChannelHandlerContext} was registered is now inactive and reached its
+     * end of lifetime.
+     */
+    void channelInactive(ChannelHandlerContext ctx) throws Exception;
+
+    /**
+     * Invoked when the current {@link Channel} has read a message from the peer.
+     */
+    void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception;
+
+    /**
+     * Invoked when the last message read by the current read operation has been consumed by
+     * {@link #channelRead(ChannelHandlerContext, Object)}.  If {@link ChannelOption#AUTO_READ} is off, no further
+     * attempt to read an inbound data from the current {@link Channel} will be made until
+     * {@link ChannelHandlerContext#read()} is called.
+     */
+    void channelReadComplete(ChannelHandlerContext ctx) throws Exception;
+
+    /**
+     * Gets called if an user event was triggered.
+     */
+    void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception;
+
+    /**
+     * Gets called once the writable state of a {@link Channel} changed. You can check the state with
+     * {@link Channel#isWritable()}.
+     */
+    void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception;
+
+    ////////////////////////////////////
+    // Outbound event handler methods //
+    ////////////////////////////////////
+
+    /**
+     * Called once a bind operation is made.
+     *
+     * @param ctx           the {@link ChannelHandlerContext} for which the bind operation is made
+     * @param localAddress  the {@link java.net.SocketAddress} to which it should bound
+     * @param promise       the {@link ChannelPromise} to notify once the operation completes
+     * @throws Exception    thrown if an error accour
+     */
+    void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) throws Exception;
+
+    /**
+     * Called once a connect operation is made.
+     *
+     * @param ctx               the {@link ChannelHandlerContext} for which the connect operation is made
+     * @param remoteAddress     the {@link SocketAddress} to which it should connect
+     * @param localAddress      the {@link SocketAddress} which is used as source on connect
+     * @param promise           the {@link ChannelPromise} to notify once the operation completes
+     * @throws Exception        thrown if an error accour
+     */
+    void connect(
+            ChannelHandlerContext ctx,
+            SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) throws Exception;
+
+    /**
+     * Called once a disconnect operation is made.
+     *
+     * @param ctx               the {@link ChannelHandlerContext} for which the disconnect operation is made
+     * @param promise           the {@link ChannelPromise} to notify once the operation completes
+     * @throws Exception        thrown if an error accour
+     */
+    void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception;
+
+    /**
+     * Called once a close operation is made.
+     *
+     * @param ctx               the {@link ChannelHandlerContext} for which the close operation is made
+     * @param promise           the {@link ChannelPromise} to notify once the operation completes
+     * @throws Exception        thrown if an error accour
+     */
+    void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception;
+
+    /**
+     * Called once a deregister operation is made from the current registered {@link EventLoop}.
+     *
+     * @param ctx               the {@link ChannelHandlerContext} for which the close operation is made
+     * @param promise           the {@link ChannelPromise} to notify once the operation completes
+     * @throws Exception        thrown if an error accour
+     */
+    void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception;
+
+    /**
+     * Intercepts {@link ChannelHandlerContext#read()}.
+     */
+    void read(ChannelHandlerContext ctx) throws Exception;
+
+    /**
+     * Called once a write operation is made. The write operation will write the messages through the
+     * {@link ChannelPipeline}. Those are then ready to be flushed to the actual {@link Channel} once
+     * {@link Channel#flush()} is called
+     *
+     * @param ctx               the {@link ChannelHandlerContext} for which the write operation is made
+     * @param msg               the message to write
+     * @param promise           the {@link ChannelPromise} to notify once the operation completes
+     * @throws Exception        thrown if an error accour
+     */
+    void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception;
+
+    /**
+     * Called once a flush operation is made. The flush operation will try to flush out all previous written messages
+     * that are pending.
+     *
+     * @param ctx               the {@link ChannelHandlerContext} for which the flush operation is made
+     * @throws Exception        thrown if an error accour
+     */
+    void flush(ChannelHandlerContext ctx) throws Exception;
+
+    /////////////////
+    // Annotations //
+    /////////////////
 
     /**
      * Indicates that the same instance of the annotated {@link ChannelHandler}
@@ -214,6 +337,43 @@ public interface ChannelHandler {
     @Target(ElementType.TYPE)
     @Retention(RetentionPolicy.RUNTIME)
     @interface Sharable {
+        // no value
+    }
+
+    /**
+     * Indicates that the annotated event handler method in {@link ChannelHandler} will not be invoked by
+     * {@link ChannelPipeline}.  This annotation is only useful when your handler method implementation
+     * only passes the event through to the next handler, like the following:
+     *
+     * <pre>
+     * {@code @Skip}
+     * {@code @Override}
+     * public void channelActive({@link ChannelHandlerContext} ctx) {
+     *     ctx.fireChannelActive(); // do nothing but passing through to the next handler
+     * }
+     * </pre>
+     *
+     * {@link #handlerAdded(ChannelHandlerContext)} and {@link #handlerRemoved(ChannelHandlerContext)} are not able to
+     * pass the event through to the next handler, so they must do nothing when annotated.
+     *
+     * <pre>
+     * {@code @Skip}
+     * {@code @Override}
+     * public void handlerAdded({@link ChannelHandlerContext} ctx) {
+     *     // do nothing
+     * }
+     * </pre>
+     *
+     * <p>
+     * Note that this annotation is not {@linkplain Inherited inherited}.  If you override a method annotated with
+     * {@link Skip}, it will not be skipped anymore.  Similarly, you can override a method not annotated with
+     * {@link Skip} and simply pass the event through to the next handler, which reverses the behavior of the
+     * supertype.
+     * </p>
+     */
+    @Target(ElementType.METHOD)
+    @Retention(RetentionPolicy.RUNTIME)
+    @interface Skip {
         // no value
     }
 }

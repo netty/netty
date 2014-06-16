@@ -17,15 +17,16 @@ package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.internal.RecyclableArrayList;
 import io.netty.util.internal.StringUtil;
 
 import java.util.List;
 
 /**
- * {@link ChannelInboundHandlerAdapter} which decodes bytes in a stream-like fashion from one {@link ByteBuf} to an
+ * A {@link ChannelHandler} which decodes bytes in a stream-like fashion from one {@link ByteBuf} to an
  * other Message type.
  *
  * For example here is an implementation which reads all readable bytes from
@@ -44,14 +45,15 @@ import java.util.List;
  * Be aware that sub-classes of {@link ByteToMessageDecoder} <strong>MUST NOT</strong>
  * annotated with {@link @Sharable}.
  */
-public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter {
+public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
 
     ByteBuf cumulation;
     private boolean singleDecode;
     private boolean decodeWasNull;
+    private boolean first;
 
     protected ByteToMessageDecoder() {
-        if (getClass().isAnnotationPresent(Sharable.class)) {
+        if (isSharable()) {
             throw new IllegalStateException("@Sharable annotation is not allowed");
         }
     }
@@ -107,6 +109,8 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
             ByteBuf bytes = buf.readBytes(readable);
             buf.release();
             ctx.fireChannelRead(bytes);
+        } else {
+            buf.release();
         }
         cumulation = null;
         ctx.fireChannelReadComplete();
@@ -121,64 +125,70 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        RecyclableArrayList out = RecyclableArrayList.newInstance();
-        try {
-            if (msg instanceof ByteBuf) {
+        if (msg instanceof ByteBuf) {
+            RecyclableArrayList out = RecyclableArrayList.newInstance();
+            try {
                 ByteBuf data = (ByteBuf) msg;
-                if (cumulation == null) {
+                first = cumulation == null;
+                if (first) {
                     cumulation = data;
-                    try {
-                        callDecode(ctx, cumulation, out);
-                    } finally {
-                        if (cumulation != null && !cumulation.isReadable()) {
-                            cumulation.release();
-                            cumulation = null;
-                        }
-                    }
                 } else {
-                    try {
-                        if (cumulation.writerIndex() > cumulation.maxCapacity() - data.readableBytes()) {
-                            ByteBuf oldCumulation = cumulation;
-                            cumulation = ctx.alloc().buffer(oldCumulation.readableBytes() + data.readableBytes());
-                            cumulation.writeBytes(oldCumulation);
-                            oldCumulation.release();
-                        }
-                        cumulation.writeBytes(data);
-                        callDecode(ctx, cumulation, out);
-                    } finally {
-                        if (cumulation != null) {
-                            if (!cumulation.isReadable()) {
-                                cumulation.release();
-                                cumulation = null;
-                            } else {
-                                cumulation.discardSomeReadBytes();
-                            }
-                        }
-                        data.release();
+                    if (cumulation.writerIndex() > cumulation.maxCapacity() - data.readableBytes()
+                            || cumulation.refCnt() > 1) {
+                        // Expand cumulation (by replace it) when either there is not more room in the buffer
+                        // or if the refCnt is greater then 1 which may happen when the user use slice().retain() or
+                        // duplicate().retain().
+                        //
+                        // See:
+                        // - https://github.com/netty/netty/issues/2327
+                        // - https://github.com/netty/netty/issues/1764
+                        expandCumulation(ctx, data.readableBytes());
                     }
+                    cumulation.writeBytes(data);
+                    data.release();
                 }
-            } else {
-                out.add(msg);
-            }
-        } catch (DecoderException e) {
-            throw e;
-        } catch (Throwable t) {
-            throw new DecoderException(t);
-        } finally {
-            if (out.isEmpty()) {
-                decodeWasNull = true;
-            }
+                callDecode(ctx, cumulation, out);
+            } catch (DecoderException e) {
+                throw e;
+            } catch (Throwable t) {
+                throw new DecoderException(t);
+            } finally {
+                if (cumulation != null && !cumulation.isReadable()) {
+                    cumulation.release();
+                    cumulation = null;
+                }
+                int size = out.size();
+                decodeWasNull = size == 0;
 
-            for (int i = 0; i < out.size(); i ++) {
-                ctx.fireChannelRead(out.get(i));
+                for (int i = 0; i < size; i ++) {
+                    ctx.fireChannelRead(out.get(i));
+                }
+                out.recycle();
             }
-
-            out.recycle();
+        } else {
+            ctx.fireChannelRead(msg);
         }
+    }
+
+    private void expandCumulation(ChannelHandlerContext ctx, int readable) {
+        ByteBuf oldCumulation = cumulation;
+        cumulation = ctx.alloc().buffer(oldCumulation.readableBytes() + readable);
+        cumulation.writeBytes(oldCumulation);
+        oldCumulation.release();
     }
 
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        if (cumulation != null && !first && cumulation.refCnt() == 1) {
+            // discard some bytes if possible to make more room in the
+            // buffer but only if the refCnt == 1  as otherwise the user may have
+            // used slice().retain() or duplicate().retain().
+            //
+            // See:
+            // - https://github.com/netty/netty/issues/2327
+            // - https://github.com/netty/netty/issues/1764
+            cumulation.discardSomeReadBytes();
+        }
         if (decodeWasNull) {
             decodeWasNull = false;
             if (!ctx.channel().config().isAutoRead()) {
@@ -207,11 +217,12 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                 cumulation.release();
                 cumulation = null;
             }
-
-            for (int i = 0; i < out.size(); i ++) {
+            int size = out.size();
+            for (int i = 0; i < size; i ++) {
                 ctx.fireChannelRead(out.get(i));
             }
             ctx.fireChannelInactive();
+            out.recycle();
         }
     }
 
@@ -229,6 +240,15 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                 int outSize = out.size();
                 int oldInputLength = in.readableBytes();
                 decode(ctx, in, out);
+
+                // Check if this handler was removed before continuing the loop.
+                // If it was removed, it is not safe to continue to operate on the buffer.
+                //
+                // See https://github.com/netty/netty/issues/1664
+                if (ctx.isRemoved()) {
+                    break;
+                }
+
                 if (outSize == out.size()) {
                     if (oldInputLength == in.readableBytes()) {
                         break;

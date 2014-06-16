@@ -38,18 +38,22 @@ public final class JavassistTypeParameterMatcherGenerator {
         classPool.appendClassPath(new ClassClassPath(NoOpTypeParameterMatcher.class));
     }
 
-    public void appendClassPath(ClassPath classpath) {
+    public static void appendClassPath(ClassPath classpath) {
         classPool.appendClassPath(classpath);
     }
 
-    public void appendClassPath(String pathname) throws NotFoundException {
+    public static void appendClassPath(String pathname) throws NotFoundException {
         classPool.appendClassPath(pathname);
     }
 
+    public static ClassPool classPool() {
+        return classPool;
+    }
+
     public static TypeParameterMatcher generate(Class<?> type) {
-        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+        ClassLoader classLoader = PlatformDependent.getContextClassLoader();
         if (classLoader == null) {
-            classLoader = ClassLoader.getSystemClassLoader();
+            classLoader = PlatformDependent.getSystemClassLoader();
         }
         return generate(type, classLoader);
     }

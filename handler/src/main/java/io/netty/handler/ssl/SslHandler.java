@@ -16,15 +16,15 @@
 package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
-import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.ByteToMessageDecoder;
@@ -32,19 +32,18 @@ import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
-import io.netty.util.concurrent.ImmediateExecutor;
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.PendingWrite;
 import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.RecyclableArrayList;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
+import javax.net.ssl.SSLEngineResult.HandshakeStatus;
 import javax.net.ssl.SSLEngineResult.Status;
 import javax.net.ssl.SSLException;
 import java.io.IOException;
-import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.DatagramChannel;
@@ -52,10 +51,10 @@ import java.nio.channels.SocketChannel;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
-import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
+
 
 /**
  * Adds <a href="http://en.wikipedia.org/wiki/Transport_Layer_Security">SSL
@@ -72,7 +71,7 @@ import java.util.regex.Pattern;
  * <p>
  * Beside using the handshake {@link ChannelFuture} to get notified about the completation of the handshake it's
  * also possible to detect it by implement the
- * {@link ChannelInboundHandler#userEventTriggered(ChannelHandlerContext, Object)}
+ * {@link ChannelHandler#userEventTriggered(ChannelHandlerContext, Object)}
  * method and check for a {@link SslHandshakeCompletionEvent}.
  *
  * <h3>Handshake</h3>
@@ -152,7 +151,7 @@ import java.util.regex.Pattern;
  * For more details see
  * <a href="https://github.com/netty/netty/issues/832">#832</a> in our issue tracker.
  */
-public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundHandler {
+public class SslHandler extends ByteToMessageDecoder {
 
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(SslHandler.class);
@@ -174,17 +173,45 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
     private volatile ChannelHandlerContext ctx;
     private final SSLEngine engine;
-    private final Executor delegatedTaskExecutor;
+    private final int maxPacketBufferSize;
+
+    // BEGIN Platform-dependent flags
+
+    /**
+     * {@code trus} if and only if {@link SSLEngine} expects a direct buffer.
+     */
+    private final boolean wantsDirectBuffer;
+    /**
+     * {@code true} if and only if {@link SSLEngine#wrap(ByteBuffer, ByteBuffer)} requires the output buffer
+     * to be always as large as {@link #maxPacketBufferSize} even if the input buffer contains small amount of data.
+     * <p>
+     * If this flag is {@code false}, we allocate a smaller output buffer.
+     * </p>
+     */
+    private final boolean wantsLargeOutboundNetworkBuffer;
+    /**
+     * {@code true} if and only if {@link SSLEngine#unwrap(ByteBuffer, ByteBuffer)} expects a heap buffer rather than
+     * a direct buffer.  For an unknown reason, JDK8 SSLEngine causes JVM to crash when its cipher suite uses Galois
+     * Counter Mode (GCM).
+     */
+    private boolean wantsInboundHeapBuffer;
+
+    // END Platform-dependent flags
 
     private final boolean startTls;
     private boolean sentFirstMessage;
-
+    private boolean flushedBeforeHandshakeDone;
     private final LazyChannelPromise handshakePromise = new LazyChannelPromise();
     private final LazyChannelPromise sslCloseFuture = new LazyChannelPromise();
     private final Deque<PendingWrite> pendingUnencryptedWrites = new ArrayDeque<PendingWrite>();
 
+    /**
+     * Set by wrap*() methods when something is produced.
+     * {@link #channelReadComplete(ChannelHandlerContext)} will check this flag, clear it, and call ctx.flush().
+     */
+    private boolean needsFlush;
+
     private int packetLength;
-    private ByteBuf decodeOut;
 
     private volatile long handshakeTimeoutMillis = 10000;
     private volatile long closeNotifyTimeoutMillis = 3000;
@@ -195,7 +222,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * @param engine  the {@link SSLEngine} this handler will use
      */
     public SslHandler(SSLEngine engine) {
-        this(engine, ImmediateExecutor.INSTANCE);
+        this(engine, false);
     }
 
     /**
@@ -206,44 +233,15 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      *                  encrypted by the {@link SSLEngine}
      */
     public SslHandler(SSLEngine engine, boolean startTls) {
-        this(engine, startTls, ImmediateExecutor.INSTANCE);
-    }
-
-    /**
-     * Creates a new instance.
-     *
-     * @param engine
-     *        the {@link SSLEngine} this handler will use
-     * @param delegatedTaskExecutor
-     *        the {@link Executor} which will execute the delegated task
-     *        that {@link SSLEngine#getDelegatedTask()} will return
-     */
-    public SslHandler(SSLEngine engine, Executor delegatedTaskExecutor) {
-        this(engine, false, delegatedTaskExecutor);
-    }
-
-    /**
-     * Creates a new instance.
-     *
-     * @param engine
-     *        the {@link SSLEngine} this handler will use
-     * @param startTls
-     *        {@code true} if the first write request shouldn't be encrypted
-     *        by the {@link SSLEngine}
-     * @param delegatedTaskExecutor
-     *        the {@link Executor} which will execute the delegated task
-     *        that {@link SSLEngine#getDelegatedTask()} will return
-     */
-    public SslHandler(SSLEngine engine, boolean startTls, Executor delegatedTaskExecutor) {
         if (engine == null) {
             throw new NullPointerException("engine");
         }
-        if (delegatedTaskExecutor == null) {
-            throw new NullPointerException("delegatedTaskExecutor");
-        }
         this.engine = engine;
-        this.delegatedTaskExecutor = delegatedTaskExecutor;
         this.startTls = startTls;
+        maxPacketBufferSize = engine.getSession().getPacketBufferSize();
+
+        wantsDirectBuffer = engine instanceof OpenSslEngine;
+        wantsLargeOutboundNetworkBuffer = !(engine instanceof OpenSslEngine);
     }
 
     public long getHandshakeTimeoutMillis() {
@@ -345,33 +343,13 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
     @Override
     public void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
-        if (decodeOut != null) {
-            decodeOut.release();
-            decodeOut = null;
-        }
         for (;;) {
             PendingWrite write = pendingUnencryptedWrites.poll();
             if (write == null) {
                 break;
             }
-            write.fail(new ChannelException("Pending write on removal of SslHandler"));
+            write.failAndRecycle(new ChannelException("Pending write on removal of SslHandler"));
         }
-    }
-
-    @Override
-    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) throws Exception {
-        ctx.bind(localAddress, promise);
-    }
-
-    @Override
-    public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-                        ChannelPromise promise) throws Exception {
-        ctx.connect(remoteAddress, localAddress, promise);
-    }
-
-    @Override
-    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-        ctx.deregister(promise);
     }
 
     @Override
@@ -387,13 +365,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     @Override
-    public void read(ChannelHandlerContext ctx) {
-        ctx.read();
-    }
-
-    @Override
     public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-        pendingUnencryptedWrites.add(new PendingWrite((ByteBuf) msg, promise));
+        pendingUnencryptedWrites.add(PendingWrite.newInstance(msg, promise));
     }
 
     @Override
@@ -407,18 +380,22 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 if (pendingWrite == null) {
                     break;
                 }
-                ctx.write(pendingWrite.buf, pendingWrite.promise);
+                ctx.write(pendingWrite.msg(), (ChannelPromise) pendingWrite.recycleAndGet());
             }
             ctx.flush();
             return;
         }
         if (pendingUnencryptedWrites.isEmpty()) {
-            pendingUnencryptedWrites.add(new PendingWrite(Unpooled.EMPTY_BUFFER, null));
+            pendingUnencryptedWrites.add(PendingWrite.newInstance(Unpooled.EMPTY_BUFFER, null));
         }
-        flush0(ctx);
+        if (!handshakePromise.isDone()) {
+            flushedBeforeHandshakeDone = true;
+        }
+        wrap(ctx, false);
+        ctx.flush();
     }
 
-    private void flush0(ChannelHandlerContext ctx) throws SSLException {
+    private void wrap(ChannelHandlerContext ctx, boolean inUnwrap) throws SSLException {
         ByteBuf out = null;
         ChannelPromise promise = null;
         try {
@@ -427,14 +404,23 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 if (pending == null) {
                     break;
                 }
-                if (out == null) {
-                    out = ctx.alloc().buffer();
-                }
-                SSLEngineResult result = wrap(engine, pending.buf, out);
 
-                if (!pending.buf.isReadable()) {
-                    pending.buf.release();
-                    promise = pending.promise;
+                if (!(pending.msg() instanceof ByteBuf)) {
+                    ctx.write(pending.msg(), (ChannelPromise) pending.recycleAndGet());
+                    pendingUnencryptedWrites.remove();
+                    continue;
+                }
+
+                ByteBuf buf = (ByteBuf) pending.msg();
+                if (out == null) {
+                    out = allocateOutNetBuf(ctx, buf.readableBytes());
+                }
+
+                SSLEngineResult result = wrap(engine, buf, out);
+
+                if (!buf.isReadable()) {
+                    buf.release();
+                    promise = (ChannelPromise) pending.recycleAndGet();
                     pendingUnencryptedWrites.remove();
                 } else {
                     promise = null;
@@ -448,7 +434,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         if (w == null) {
                             break;
                         }
-                        w.fail(SSLENGINE_CLOSED);
+                        w.failAndRecycle(SSLENGINE_CLOSED);
                     }
                     return;
                 } else {
@@ -460,19 +446,18 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                             setHandshakeSuccess();
                             // deliberate fall-through
                         case NOT_HANDSHAKING:
+                            setHandshakeSuccessIfStillHandshaking();
+                            // deliberate fall-through
                         case NEED_WRAP:
-                            if (promise != null) {
-                                ctx.writeAndFlush(out, promise);
-                                promise = null;
-                            } else {
-                                ctx.writeAndFlush(out);
-                            }
-                            out = ctx.alloc().buffer();
+                            finishWrap(ctx, out, promise, inUnwrap);
+                            promise = null;
+                            out = null;
                             break;
                         case NEED_UNWRAP:
                             return;
                         default:
-                            throw new IllegalStateException("Unknown handshake status: " + result.getHandshakeStatus());
+                            throw new IllegalStateException(
+                                    "Unknown handshake status: " + result.getHandshakeStatus());
                     }
                 }
             }
@@ -480,33 +465,43 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             setHandshakeFailure(e);
             throw e;
         } finally {
-            if (out != null && out.isReadable()) {
-                if (promise != null) {
-                    ctx.writeAndFlush(out, promise);
-                } else {
-                    ctx.writeAndFlush(out);
-                }
-                out = null;
-            } else if (promise != null) {
-                promise.trySuccess();
-            }
-            if (out != null) {
-                out.release();
-            }
+            finishWrap(ctx, out, promise, inUnwrap);
         }
     }
 
-    private void flushNonAppData0(ChannelHandlerContext ctx, boolean inUnwrap) throws SSLException {
+    private void finishWrap(ChannelHandlerContext ctx, ByteBuf out, ChannelPromise promise, boolean inUnwrap) {
+        if (out == null) {
+            out = Unpooled.EMPTY_BUFFER;
+        } else if (!out.isReadable()) {
+            out.release();
+            out = Unpooled.EMPTY_BUFFER;
+        }
+
+        if (promise != null) {
+            ctx.write(out, promise);
+        } else {
+            ctx.write(out);
+        }
+
+        if (inUnwrap) {
+            needsFlush = true;
+        }
+    }
+
+    private void wrapNonAppData(ChannelHandlerContext ctx, boolean inUnwrap) throws SSLException {
         ByteBuf out = null;
         try {
             for (;;) {
                 if (out == null) {
-                    out = ctx.alloc().buffer();
+                    out = allocateOutNetBuf(ctx, 0);
                 }
                 SSLEngineResult result = wrap(engine, Unpooled.EMPTY_BUFFER, out);
 
                 if (result.bytesProduced() > 0) {
-                    ctx.writeAndFlush(out);
+                    ctx.write(out);
+                    if (inUnwrap) {
+                        needsFlush = true;
+                    }
                     out = null;
                 }
 
@@ -519,16 +514,17 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         break;
                     case NEED_UNWRAP:
                         if (!inUnwrap) {
-                            unwrap(ctx);
+                            unwrapNonAppData(ctx);
                         }
                         break;
                     case NEED_WRAP:
                         break;
                     case NOT_HANDSHAKING:
+                        setHandshakeSuccessIfStillHandshaking();
                         // Workaround for TLS False Start problem reported at:
                         // https://github.com/netty/netty/issues/1108#issuecomment-14266970
                         if (!inUnwrap) {
-                            unwrap(ctx);
+                            unwrapNonAppData(ctx);
                         }
                         break;
                     default:
@@ -549,17 +545,26 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         }
     }
 
-    private static SSLEngineResult wrap(SSLEngine engine, ByteBuf in, ByteBuf out) throws SSLException {
+    private SSLEngineResult wrap(SSLEngine engine, ByteBuf in, ByteBuf out) throws SSLException {
         ByteBuffer in0 = in.nioBuffer();
+        if (!in0.isDirect()) {
+            ByteBuffer newIn0 = ByteBuffer.allocateDirect(in0.remaining());
+            newIn0.put(in0).flip();
+            in0 = newIn0;
+        }
+
         for (;;) {
             ByteBuffer out0 = out.nioBuffer(out.writerIndex(), out.writableBytes());
             SSLEngineResult result = engine.wrap(in0, out0);
             in.skipBytes(result.bytesConsumed());
             out.writerIndex(out.writerIndex() + result.bytesProduced());
-            if (result.getStatus() == Status.BUFFER_OVERFLOW) {
-                out.ensureWritable(engine.getSession().getPacketBufferSize());
-            } else {
-                return result;
+
+            switch (result.getStatus()) {
+                case BUFFER_OVERFLOW:
+                    out.ensureWritable(maxPacketBufferSize);
+                    break;
+                default:
+                    return result;
             }
         }
     }
@@ -638,7 +643,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     // No match by now.. Try to load the class via classloader and inspect it.
                     // This is mainly done as other JDK implementations may differ in name of
                     // the impl.
-                    Class<?> clazz = getClass().getClassLoader().loadClass(classname);
+                    Class<?> clazz = PlatformDependent.getClassLoader(getClass()).loadClass(classname);
 
                     if (SocketChannel.class.isAssignableFrom(clazz)
                             || DatagramChannel.class.isAssignableFrom(clazz)) {
@@ -675,7 +680,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         if (buffer.readableBytes() < 5) {
             throw new IllegalArgumentException("buffer must have at least 5 readable bytes");
         }
-        return getEncryptedPacketLength(buffer) != -1;
+        return getEncryptedPacketLength(buffer, buffer.readerIndex()) != -1;
     }
 
     /**
@@ -691,13 +696,12 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * @throws IllegalArgumentException
      *                  Is thrown if the given {@link ByteBuf} has not at least 5 bytes to read.
      */
-    private static int getEncryptedPacketLength(ByteBuf buffer) {
-        int first = buffer.readerIndex();
+    private static int getEncryptedPacketLength(ByteBuf buffer, int offset) {
         int packetLength = 0;
 
         // SSLv3 or TLS - Check ContentType
         boolean tls;
-        switch (buffer.getUnsignedByte(first)) {
+        switch (buffer.getUnsignedByte(offset)) {
             case 20:  // change_cipher_spec
             case 21:  // alert
             case 22:  // handshake
@@ -711,10 +715,10 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
         if (tls) {
             // SSLv3 or TLS - Check ProtocolVersion
-            int majorVersion = buffer.getUnsignedByte(first + 1);
+            int majorVersion = buffer.getUnsignedByte(offset + 1);
             if (majorVersion == 3) {
                 // SSLv3 or TLS
-                packetLength = (buffer.getUnsignedShort(first + 3)) + 5;
+                packetLength = buffer.getUnsignedShort(offset + 3) + 5;
                 if (packetLength <= 5) {
                     // Neither SSLv3 or TLSv1 (i.e. SSLv2 or bad data)
                     tls = false;
@@ -728,14 +732,14 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         if (!tls) {
             // SSLv2 or bad data - Check the version
             boolean sslv2 = true;
-            int headerLength = (buffer.getUnsignedByte(first) & 0x80) != 0 ? 2 : 3;
-            int majorVersion = buffer.getUnsignedByte(first + headerLength + 1);
+            int headerLength = (buffer.getUnsignedByte(offset) & 0x80) != 0 ? 2 : 3;
+            int majorVersion = buffer.getUnsignedByte(offset + headerLength + 1);
             if (majorVersion == 2 || majorVersion == 3) {
                 // SSLv2
                 if (headerLength == 2) {
-                    packetLength = (buffer.getShort(first) & 0x7FFF) + 2;
+                    packetLength = (buffer.getShort(offset) & 0x7FFF) + 2;
                 } else {
-                    packetLength = (buffer.getShort(first) & 0x3FFF) + 3;
+                    packetLength = (buffer.getShort(offset) & 0x3FFF) + 3;
                 }
                 if (packetLength <= headerLength) {
                     sslv2 = false;
@@ -753,91 +757,142 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws SSLException {
-        int packetLength = this.packetLength;
-        final int readableBytes = in.readableBytes();
 
-        if (packetLength == 0) {
-            // the previous packet was consumed so try to read the length of the next packet
-            if (readableBytes < 5) {
-                // not enough bytes readable to read the packet length
+        final int startOffset = in.readerIndex();
+        final int endOffset = in.writerIndex();
+        int offset = startOffset;
+        int totalLength = 0;
+
+        // If we calculated the length of the current SSL record before, use that information.
+        if (packetLength > 0) {
+            if (endOffset - startOffset < packetLength) {
                 return;
+            } else {
+                offset += packetLength;
+                totalLength = packetLength;
+                packetLength = 0;
+            }
+        }
+
+        boolean nonSslRecord = false;
+
+        while (totalLength < OpenSslEngine.MAX_ENCRYPTED_PACKET_LENGTH) {
+            final int readableBytes = endOffset - offset;
+            if (readableBytes < 5) {
+                break;
             }
 
-            packetLength = getEncryptedPacketLength(in);
+            final int packetLength = getEncryptedPacketLength(in, offset);
             if (packetLength == -1) {
-                // Not an SSL/TLS packet
-                NotSslRecordException e = new NotSslRecordException(
-                        "not an SSL/TLS record: " + ByteBufUtil.hexDump(in));
-                in.skipBytes(readableBytes);
-                ctx.fireExceptionCaught(e);
-                setHandshakeFailure(e);
-                return;
+                nonSslRecord = true;
+                break;
             }
 
             assert packetLength > 0;
-            this.packetLength = packetLength;
-        }
 
-        if (readableBytes < packetLength) {
-            // wait until the whole packet can be read
-            return;
-        }
-
-        // Slice out the whole packet so unwrap will only be called with complete packets.
-        // Also directly reset the packetLength. This is needed as unwrap(..) may trigger
-        // decode(...) again via:
-        // 1) unwrap(..) is called
-        // 2) wrap(...) is called from within unwrap(...)
-        // 3) wrap(...) calls unwrapLater(...)
-        // 4) unwrapLater(...) calls decode(...)
-        //
-        // See https://github.com/netty/netty/issues/1534
-        int readerIndex = in.readerIndex();
-        in.skipBytes(packetLength);
-        ByteBuffer buffer = in.nioBuffer(readerIndex, packetLength);
-        this.packetLength = 0;
-
-        unwrap(ctx, buffer, out);
-    }
-
-    private void unwrap(ChannelHandlerContext ctx) throws SSLException {
-        RecyclableArrayList out = RecyclableArrayList.newInstance();
-        try {
-            unwrap(ctx, Unpooled.EMPTY_BUFFER.nioBuffer(), out);
-            final int size = out.size();
-            for (int i = 0; i < size; i++) {
-                ctx.fireChannelRead(out.get(i));
+            if (packetLength > readableBytes) {
+                // wait until the whole packet can be read
+                this.packetLength = packetLength;
+                break;
             }
-        } finally {
-            out.recycle();
+
+            int newTotalLength = totalLength + packetLength;
+            if (newTotalLength > OpenSslEngine.MAX_ENCRYPTED_PACKET_LENGTH) {
+                // Don't read too much.
+                break;
+            }
+
+            // We have a whole packet.
+            // Increment the offset to handle the next packet.
+            offset += packetLength;
+            totalLength = newTotalLength;
+        }
+
+        if (totalLength > 0) {
+            // The buffer contains one or more full SSL records.
+            // Slice out the whole packet so unwrap will only be called with complete packets.
+            // Also directly reset the packetLength. This is needed as unwrap(..) may trigger
+            // decode(...) again via:
+            // 1) unwrap(..) is called
+            // 2) wrap(...) is called from within unwrap(...)
+            // 3) wrap(...) calls unwrapLater(...)
+            // 4) unwrapLater(...) calls decode(...)
+            //
+            // See https://github.com/netty/netty/issues/1534
+
+            in.skipBytes(totalLength);
+            final ByteBuffer inNetBuf = in.nioBuffer(startOffset, totalLength);
+            unwrap(ctx, inNetBuf, totalLength);
+            assert !inNetBuf.hasRemaining() || engine.isInboundDone();
+        }
+
+        if (nonSslRecord) {
+            // Not an SSL/TLS packet
+            NotSslRecordException e = new NotSslRecordException(
+                    "not an SSL/TLS record: " + ByteBufUtil.hexDump(in));
+            in.skipBytes(in.readableBytes());
+            ctx.fireExceptionCaught(e);
+            setHandshakeFailure(e);
         }
     }
 
-    private void unwrap(ChannelHandlerContext ctx, ByteBuffer packet, List<Object> out) throws SSLException {
+    @Override
+    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        if (needsFlush) {
+            needsFlush = false;
+            ctx.flush();
+        }
+        super.channelReadComplete(ctx);
+    }
+
+    /**
+     * Calls {@link SSLEngine#unwrap(ByteBuffer, ByteBuffer)} with an empty buffer to handle handshakes, etc.
+     */
+    private void unwrapNonAppData(ChannelHandlerContext ctx) throws SSLException {
+        unwrap(ctx, Unpooled.EMPTY_BUFFER.nioBuffer(), 0);
+    }
+
+    /**
+     * Unwraps inbound SSL records.
+     */
+    private void unwrap(
+            ChannelHandlerContext ctx, ByteBuffer packet, int initialOutAppBufCapacity) throws SSLException {
+
+        // If SSLEngine expects a heap buffer for unwrapping, do the conversion.
+        final ByteBuffer oldPacket;
+        final ByteBuf newPacket;
+        final int oldPos = packet.position();
+        if (wantsInboundHeapBuffer && packet.isDirect()) {
+            newPacket = ctx.alloc().heapBuffer(packet.limit() - oldPos);
+            newPacket.writeBytes(packet);
+            oldPacket = packet;
+            packet = newPacket.nioBuffer();
+        } else {
+            oldPacket = null;
+            newPacket = null;
+        }
+
         boolean wrapLater = false;
-        int bytesProduced = 0;
+        ByteBuf decodeOut = allocate(ctx, initialOutAppBufCapacity);
         try {
-            loop:
             for (;;) {
-                if (decodeOut == null) {
-                    decodeOut = ctx.alloc().buffer();
-                }
-                SSLEngineResult result = unwrap(engine, packet, decodeOut);
-                bytesProduced += result.bytesProduced();
-                switch (result.getStatus()) {
-                    case CLOSED:
-                        // notify about the CLOSED state of the SSLEngine. See #137
-                        sslCloseFuture.trySuccess(ctx.channel());
-                        break;
-                    case BUFFER_UNDERFLOW:
-                        break loop;
+                final SSLEngineResult result = unwrap(engine, packet, decodeOut);
+                final Status status = result.getStatus();
+                final HandshakeStatus handshakeStatus = result.getHandshakeStatus();
+                final int produced = result.bytesProduced();
+                final int consumed = result.bytesConsumed();
+
+                if (status == Status.CLOSED) {
+                    // notify about the CLOSED state of the SSLEngine. See #137
+                    sslCloseFuture.trySuccess(ctx.channel());
+                    break;
                 }
 
-                switch (result.getHandshakeStatus()) {
+                switch (handshakeStatus) {
                     case NEED_UNWRAP:
                         break;
                     case NEED_WRAP:
-                        flushNonAppData0(ctx, true);
+                        wrapNonAppData(ctx, true);
                         break;
                     case NEED_TASK:
                         runDelegatedTasks();
@@ -847,40 +902,66 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         wrapLater = true;
                         continue;
                     case NOT_HANDSHAKING:
+                        if (setHandshakeSuccessIfStillHandshaking()) {
+                            wrapLater = true;
+                            continue;
+                        }
+                        if (flushedBeforeHandshakeDone) {
+                            // We need to call wrap(...) in case there was a flush done before the handshake completed.
+                            //
+                            // See https://github.com/netty/netty/pull/2437
+                            flushedBeforeHandshakeDone = false;
+                            wrapLater = true;
+                        }
+
                         break;
                     default:
-                        throw new IllegalStateException(
-                                "Unknown handshake status: " + result.getHandshakeStatus());
+                        throw new IllegalStateException("Unknown handshake status: " + handshakeStatus);
                 }
 
-                if (result.bytesConsumed() == 0 && result.bytesProduced() == 0) {
+                if (status == Status.BUFFER_UNDERFLOW || consumed == 0 && produced == 0) {
                     break;
                 }
             }
 
             if (wrapLater) {
-                flush0(ctx);
+                wrap(ctx, true);
             }
         } catch (SSLException e) {
             setHandshakeFailure(e);
             throw e;
         } finally {
-            if (bytesProduced > 0) {
-                ByteBuf decodeOut = this.decodeOut;
-                this.decodeOut = null;
-                out.add(decodeOut);
+            // If we converted packet into a heap buffer at the beginning of this method,
+            // we should synchronize the position of the original buffer.
+            if (newPacket != null) {
+                oldPacket.position(oldPos + packet.position());
+                newPacket.release();
+            }
+
+            if (decodeOut.isReadable()) {
+                ctx.fireChannelRead(decodeOut);
+            } else {
+                decodeOut.release();
             }
         }
     }
 
     private static SSLEngineResult unwrap(SSLEngine engine, ByteBuffer in, ByteBuf out) throws SSLException {
+        int overflows = 0;
         for (;;) {
             ByteBuffer out0 = out.nioBuffer(out.writerIndex(), out.writableBytes());
             SSLEngineResult result = engine.unwrap(in, out0);
             out.writerIndex(out.writerIndex() + result.bytesProduced());
             switch (result.getStatus()) {
                 case BUFFER_OVERFLOW:
-                    out.ensureWritable(engine.getSession().getApplicationBufferSize());
+                    int max = engine.getSession().getApplicationBufferSize();
+                    switch (overflows ++) {
+                        case 0:
+                            out.ensureWritable(Math.min(max, in.remaining()));
+                            break;
+                        default:
+                            out.ensureWritable(max);
+                    }
                     break;
                 default:
                     return result;
@@ -888,6 +969,9 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         }
     }
 
+    /**
+     * Fetches all delegated tasks from the {@link SSLEngine} and runs them by invoking them directly.
+     */
     private void runDelegatedTasks() {
         for (;;) {
             Runnable task = engine.getDelegatedTask();
@@ -895,15 +979,39 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 break;
             }
 
-            delegatedTaskExecutor.execute(task);
+            task.run();
         }
+    }
+
+    /**
+     * Works around some Android {@link SSLEngine} implementations that skip {@link HandshakeStatus#FINISHED} and
+     * go straight into {@link HandshakeStatus#NOT_HANDSHAKING} when handshake is finished.
+     *
+     * @return {@code true} if and only if the workaround has been applied and thus {@link #handshakeFuture} has been
+     *         marked as success by this method
+     */
+    private boolean setHandshakeSuccessIfStillHandshaking() {
+        if (!handshakePromise.isDone()) {
+            setHandshakeSuccess();
+            return true;
+        }
+        return false;
     }
 
     /**
      * Notify all the handshake futures about the successfully handshake
      */
     private void setHandshakeSuccess() {
+        // Work around the JVM crash which occurs when a cipher suite with GCM enabled.
+        final String cipherSuite = String.valueOf(engine.getSession().getCipherSuite());
+        if (!wantsDirectBuffer && (cipherSuite.contains("_GCM_") || cipherSuite.contains("-GCM-"))) {
+            wantsInboundHeapBuffer = true;
+        }
+
         if (handshakePromise.trySuccess(ctx.channel())) {
+            if (logger.isDebugEnabled()) {
+                logger.debug(ctx.channel() + " HANDSHAKEN: " + engine.getSession().getCipherSuite());
+            }
             ctx.fireUserEventTriggered(SslHandshakeCompletionEvent.SUCCESS);
         }
     }
@@ -934,7 +1042,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             if (write == null) {
                 break;
             }
-            write.fail(cause);
+            write.failAndRecycle(cause);
         }
     }
 
@@ -968,17 +1076,17 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     public void handlerAdded(final ChannelHandlerContext ctx) throws Exception {
         this.ctx = ctx;
 
-        if (ctx.channel().isActive()) {
+        if (ctx.channel().isActive() && engine.getUseClientMode()) {
             // channelActive() event has been fired already, which means this.channelActive() will
             // not be invoked. We have to initialize here instead.
-            handshake0();
+            handshake();
         } else {
             // channelActive() event has not been fired yet.  this.channelOpen() will be invoked
             // and initialization will occur there.
         }
     }
 
-    private Future<Channel> handshake0() {
+    private Future<Channel> handshake() {
         final ScheduledFuture<?> timeoutFuture;
         if (handshakeTimeoutMillis > 0) {
             timeoutFuture = ctx.executor().schedule(new Runnable() {
@@ -1004,7 +1112,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         });
         try {
             engine.beginHandshake();
-            flushNonAppData0(ctx, false);
+            wrapNonAppData(ctx, false);
+            ctx.flush();
         } catch (Exception e) {
             notifyHandshakeFailure(e);
         }
@@ -1019,11 +1128,11 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         if (!startTls && engine.getUseClientMode()) {
             // issue and handshake and add a listener to it which will fire an exception event if
             // an exception was thrown while doing the handshake
-            handshake0().addListener(new GenericFutureListener<Future<Channel>>() {
+            handshake().addListener(new GenericFutureListener<Future<Channel>>() {
                 @Override
                 public void operationComplete(Future<Channel> future) throws Exception {
                     if (!future.isSuccess()) {
-                        future.cause().printStackTrace();
+                        logger.debug("Failed to complete handshake", future.cause());
                         ctx.close();
                     }
                 }
@@ -1031,6 +1140,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         }
         ctx.fireChannelActive();
     }
+
     private void safeClose(
             final ChannelHandlerContext ctx, ChannelFuture flushFuture,
             final ChannelPromise promise) {
@@ -1063,11 +1173,38 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 if (timeoutFuture != null) {
                     timeoutFuture.cancel(false);
                 }
-                if (ctx.channel().isActive()) {
-                    ctx.close(promise);
-                }
+                // Trigger the close in all cases to make sure the promise is notified
+                // See https://github.com/netty/netty/issues/2358
+                ctx.close(promise);
             }
         });
+    }
+
+    /**
+     * Always prefer a direct buffer when it's pooled, so that we reduce the number of memory copies
+     * in {@link OpenSslEngine}.
+     */
+    private ByteBuf allocate(ChannelHandlerContext ctx, int capacity) {
+        ByteBufAllocator alloc = ctx.alloc();
+        if (wantsDirectBuffer) {
+            return alloc.directBuffer(capacity);
+        } else {
+            return alloc.buffer(capacity);
+        }
+    }
+
+    /**
+     * Allocates an outbound network buffer for {@link SSLEngine#wrap(ByteBuffer, ByteBuffer)} which can encrypt
+     * the specified amount of pending bytes.
+     */
+    private ByteBuf allocateOutNetBuf(ChannelHandlerContext ctx, int pendingBytes) {
+        if (wantsLargeOutboundNetworkBuffer) {
+            return allocate(ctx, maxPacketBufferSize);
+        } else {
+            return allocate(ctx, Math.min(
+                    pendingBytes + OpenSslEngine.MAX_ENCRYPTION_OVERHEAD_LENGTH,
+                    maxPacketBufferSize));
+        }
     }
 
     private final class LazyChannelPromise extends DefaultPromise<Channel> {
@@ -1078,27 +1215,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 throw new IllegalStateException();
             }
             return ctx.executor();
-        }
-    }
-
-    private static final class PendingWrite {
-        final ByteBuf buf;
-        final ChannelPromise promise;
-
-        PendingWrite(ByteBuf buf, ChannelPromise promise) {
-            this.buf = buf;
-            this.promise = promise;
-        }
-
-        PendingWrite(ByteBuf buf) {
-            this(buf, null);
-        }
-
-        void fail(Throwable cause) {
-            buf.release();
-            if (promise != null) {
-                promise.setFailure(cause);
-            }
         }
     }
 }

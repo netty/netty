@@ -24,7 +24,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import static io.netty.buffer.Unpooled.*;
-import static org.hamcrest.core.Is.*;
 import static org.junit.Assert.*;
 
 public class LengthFieldPrependerTest {
@@ -40,8 +39,13 @@ public class LengthFieldPrependerTest {
     public void testPrependLength() throws Exception {
         final EmbeddedChannel ch = new EmbeddedChannel(new LengthFieldPrepender(4));
         ch.writeOutbound(msg);
-        final ByteBuf buf = (ByteBuf) ch.readOutbound();
-        assertThat(buf, is(wrappedBuffer(new byte[]{0, 0, 0, 1, 'A'})));
+        ByteBuf buf = ch.readOutbound();
+        assertEquals(4, buf.readableBytes());
+        assertEquals(msg.readableBytes(), buf.readInt());
+        buf.release();
+
+        buf = ch.readOutbound();
+        assertSame(buf, msg);
         buf.release();
     }
 
@@ -49,8 +53,13 @@ public class LengthFieldPrependerTest {
     public void testPrependLengthIncludesLengthFieldLength() throws Exception {
         final EmbeddedChannel ch = new EmbeddedChannel(new LengthFieldPrepender(4, true));
         ch.writeOutbound(msg);
-        final ByteBuf buf = (ByteBuf) ch.readOutbound();
-        assertThat(buf, is(wrappedBuffer(new byte[]{0, 0, 0, 5, 'A'})));
+        ByteBuf buf = ch.readOutbound();
+        assertEquals(4, buf.readableBytes());
+        assertEquals(5, buf.readInt());
+        buf.release();
+
+        buf = ch.readOutbound();
+        assertSame(buf, msg);
         buf.release();
     }
 
@@ -58,8 +67,13 @@ public class LengthFieldPrependerTest {
     public void testPrependAdjustedLength() throws Exception {
         final EmbeddedChannel ch = new EmbeddedChannel(new LengthFieldPrepender(4, -1));
         ch.writeOutbound(msg);
-        final ByteBuf buf = (ByteBuf) ch.readOutbound();
-        assertThat(buf, is(wrappedBuffer(new byte[]{0, 0, 0, 0, 'A'})));
+        ByteBuf buf = ch.readOutbound();
+        assertEquals(4, buf.readableBytes());
+        assertEquals(msg.readableBytes() - 1, buf.readInt());
+        buf.release();
+
+        buf = ch.readOutbound();
+        assertSame(buf, msg);
         buf.release();
     }
 

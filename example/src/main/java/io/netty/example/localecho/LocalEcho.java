@@ -20,10 +20,10 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
-import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.handler.logging.LogLevel;
@@ -32,19 +32,15 @@ import io.netty.handler.logging.LoggingHandler;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 
-public class LocalEcho {
+public final class LocalEcho {
 
-    private final String port;
+    static final String PORT = System.getProperty("port", "test_port");
 
-    public LocalEcho(String port) {
-        this.port = port;
-    }
-
-    public void run() throws Exception {
+    public static void main(String[] args) throws Exception {
         // Address to bind on / connect to.
-        final LocalAddress addr = new LocalAddress(port);
+        final LocalAddress addr = new LocalAddress(PORT);
 
-        EventLoopGroup serverGroup = new LocalEventLoopGroup();
+        EventLoopGroup serverGroup = new DefaultEventLoopGroup();
         EventLoopGroup clientGroup = new NioEventLoopGroup(); // NIO event loops are also OK
         try {
             // Note that we can use any event loop to ensure certain local channels
@@ -108,9 +104,5 @@ public class LocalEcho {
             serverGroup.shutdownGracefully();
             clientGroup.shutdownGracefully();
         }
-    }
-
-    public static void main(String[] args) throws Exception {
-        new LocalEcho("1").run();
     }
 }

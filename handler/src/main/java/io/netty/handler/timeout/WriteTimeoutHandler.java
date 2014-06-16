@@ -17,12 +17,11 @@ package io.netty.handler.timeout;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 
 import java.util.concurrent.ScheduledFuture;
@@ -44,7 +43,7 @@ import java.util.concurrent.TimeUnit;
  * }
  *
  * // Handler should handle the {@link WriteTimeoutException}.
- * public class MyHandler extends {@link ChannelDuplexHandler} {
+ * public class MyHandler extends {@link ChannelHandlerAdapter} {
  *     {@code @Override}
  *     public void exceptionCaught({@link ChannelHandlerContext} ctx, {@link Throwable} cause)
  *             throws {@link Exception} {
@@ -64,9 +63,10 @@ import java.util.concurrent.TimeUnit;
  * @see ReadTimeoutHandler
  * @see IdleStateHandler
  */
-public class WriteTimeoutHandler extends ChannelOutboundHandlerAdapter {
+public class WriteTimeoutHandler extends ChannelHandlerAdapter {
+    private static final long MIN_TIMEOUT_NANOS = TimeUnit.MILLISECONDS.toNanos(1);
 
-    private final long timeoutMillis;
+    private final long timeoutNanos;
 
     private boolean closed;
 
@@ -94,9 +94,9 @@ public class WriteTimeoutHandler extends ChannelOutboundHandlerAdapter {
         }
 
         if (timeout <= 0) {
-            timeoutMillis = 0;
+            timeoutNanos = 0;
         } else {
-            timeoutMillis = Math.max(unit.toMillis(timeout), 1);
+            timeoutNanos = Math.max(unit.toNanos(timeout), MIN_TIMEOUT_NANOS);
         }
     }
 
@@ -107,13 +107,15 @@ public class WriteTimeoutHandler extends ChannelOutboundHandlerAdapter {
     }
 
     private void scheduleTimeout(final ChannelHandlerContext ctx, final ChannelPromise future) {
-        if (timeoutMillis > 0) {
+        if (timeoutNanos > 0) {
             // Schedule a timeout.
             final ScheduledFuture<?> sf = ctx.executor().schedule(new Runnable() {
                 @Override
                 public void run() {
-                    if (future.tryFailure(WriteTimeoutException.INSTANCE)) {
-                        // If succeeded to mark as failure, notify the pipeline, too.
+                    // Was not written yet so issue a write timeout
+                    // The future itself will be failed with a ClosedChannelException once the close() was issued
+                    // See https://github.com/netty/netty/issues/2159
+                    if (!future.isDone()) {
                         try {
                             writeTimedOut(ctx);
                         } catch (Throwable t) {
@@ -121,7 +123,7 @@ public class WriteTimeoutHandler extends ChannelOutboundHandlerAdapter {
                         }
                     }
                 }
-            }, timeoutMillis, TimeUnit.MILLISECONDS);
+            }, timeoutNanos, TimeUnit.NANOSECONDS);
 
             // Cancel the scheduled timeout if the flush future is complete.
             future.addListener(new ChannelFutureListener() {

@@ -35,4 +35,16 @@ public interface InterfaceHttpData extends Comparable<InterfaceHttpData>, Refere
      * @return The HttpDataType
      */
     HttpDataType getHttpDataType();
+
+    @Override
+    InterfaceHttpData retain();
+
+    @Override
+    InterfaceHttpData retain(int increment);
+
+    @Override
+    InterfaceHttpData touch();
+
+    @Override
+    InterfaceHttpData touch(Object hint);
 }

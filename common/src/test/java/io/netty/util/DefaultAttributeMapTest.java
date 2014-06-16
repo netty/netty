@@ -15,10 +15,10 @@
  */
 package io.netty.util;
 
-import static org.junit.Assert.*;
-
 import org.junit.Before;
 import org.junit.Test;
+
+import static org.junit.Assert.*;
 
 public class DefaultAttributeMapTest {
 
@@ -36,7 +36,7 @@ public class DefaultAttributeMapTest {
 
     @Test
     public void testGetSetString() {
-        AttributeKey<String> key = new AttributeKey<String>("Nothing");
+        AttributeKey<String> key = AttributeKey.valueOf("Nothing");
         Attribute<String> one = map.attr(key);
 
         assertSame(one, map.attr(key));
@@ -53,7 +53,7 @@ public class DefaultAttributeMapTest {
 
     @Test
     public void testGetSetInt() {
-        AttributeKey<Integer> key = new AttributeKey<Integer>("Nada");
+        AttributeKey<Integer> key = AttributeKey.valueOf("Nada");
         Attribute<Integer> one = map.attr(key);
 
         assertSame(one, map.attr(key));
@@ -66,5 +66,17 @@ public class DefaultAttributeMapTest {
 
         one.remove();
         assertNull(one.get());
+    }
+
+    // See https://github.com/netty/netty/issues/2523
+    @Test
+    public void testSetRemove() {
+        AttributeKey<Integer> key = AttributeKey.valueOf("key");
+
+        map.attr(key).set(1);
+        assertSame(1, map.attr(key).getAndRemove());
+
+        map.attr(key).set(2);
+        assertSame(2, map.attr(key).get());
     }
 }

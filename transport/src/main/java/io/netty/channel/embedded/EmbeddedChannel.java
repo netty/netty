@@ -20,8 +20,8 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
@@ -44,21 +44,32 @@ import java.util.Queue;
  */
 public class EmbeddedChannel extends AbstractChannel {
 
+    private static final SocketAddress LOCAL_ADDRESS = new EmbeddedSocketAddress();
+    private static final SocketAddress REMOTE_ADDRESS = new EmbeddedSocketAddress();
+
+    private static final ChannelHandler[] EMPTY_HANDLERS = new ChannelHandler[0];
+    private enum State { OPEN, ACTIVE, CLOSED }
+
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(EmbeddedChannel.class);
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
     private final EmbeddedEventLoop loop = new EmbeddedEventLoop();
     private final ChannelConfig config = new DefaultChannelConfig(this);
-    private final SocketAddress localAddress = new EmbeddedSocketAddress();
-    private final SocketAddress remoteAddress = new EmbeddedSocketAddress();
-    private final Queue<Object> lastInboundBuffer = new ArrayDeque<Object>();
-    private final Queue<Object> lastOutboundBuffer = new ArrayDeque<Object>();
+    private final Queue<Object> inboundMessages = new ArrayDeque<Object>();
+    private final Queue<Object> outboundMessages = new ArrayDeque<Object>();
     private Throwable lastException;
-    private int state; // 0 = OPEN, 1 = ACTIVE, 2 = CLOSED
+    private State state;
 
     /**
-     * Create a new instance
+     * Create a new instance with an empty pipeline.
+     */
+    public EmbeddedChannel() {
+        this(EMPTY_HANDLERS);
+    }
+
+    /**
+     * Create a new instance with the pipeline initialized with the specified handlers.
      *
      * @param handlers the @link ChannelHandler}s which will be add in the {@link ChannelPipeline}
      */
@@ -69,18 +80,12 @@ public class EmbeddedChannel extends AbstractChannel {
             throw new NullPointerException("handlers");
         }
 
-        int nHandlers = 0;
         ChannelPipeline p = pipeline();
         for (ChannelHandler h: handlers) {
             if (h == null) {
                 break;
             }
-            nHandlers ++;
             p.addLast(h);
-        }
-
-        if (nHandlers == 0) {
-            throw new IllegalArgumentException("handlers is empty.");
         }
 
         p.addLast(new LastInboundHandler());
@@ -99,40 +104,58 @@ public class EmbeddedChannel extends AbstractChannel {
 
     @Override
     public boolean isOpen() {
-        return state < 2;
+        return state != State.CLOSED;
     }
 
     @Override
     public boolean isActive() {
-        return state == 1;
+        return state == State.ACTIVE;
     }
 
     /**
-     * Returns the buffer which holds all the {@link Object}s that were received by this {@link Channel}.
+     * Returns the {@link Queue} which holds all the {@link Object}s that were received by this {@link Channel}.
      */
+    public Queue<Object> inboundMessages() {
+        return inboundMessages;
+    }
+
+    /**
+     * @deprecated use {@link #inboundMessages()}
+     */
+    @Deprecated
     public Queue<Object> lastInboundBuffer() {
-        return lastInboundBuffer;
+        return inboundMessages();
     }
 
     /**
-     * Returns the buffer which holds all the {@link Object}s that were written by this {@link Channel}.
+     * Returns the {@link Queue} which holds all the {@link Object}s that were written by this {@link Channel}.
      */
+    public Queue<Object> outboundMessages() {
+        return outboundMessages;
+    }
+
+    /**
+     * @deprecated use {@link #outboundMessages()}
+     */
+    @Deprecated
     public Queue<Object> lastOutboundBuffer() {
-        return lastOutboundBuffer;
+        return outboundMessages();
     }
 
     /**
      * Return received data from this {@link Channel}
      */
-    public Object readInbound() {
-        return lastInboundBuffer.poll();
+    @SuppressWarnings("unchecked")
+    public <T> T readInbound() {
+        return (T) inboundMessages.poll();
     }
 
     /**
      * Read data froum the outbound. This may return {@code null} if nothing is readable.
      */
-    public Object readOutbound() {
-        return lastOutboundBuffer.poll();
+    @SuppressWarnings("unchecked")
+    public <T> T readOutbound() {
+        return (T) outboundMessages.poll();
     }
 
     /**
@@ -145,7 +168,7 @@ public class EmbeddedChannel extends AbstractChannel {
     public boolean writeInbound(Object... msgs) {
         ensureOpen();
         if (msgs.length == 0) {
-            return !lastInboundBuffer.isEmpty();
+            return !inboundMessages.isEmpty();
         }
 
         ChannelPipeline p = pipeline();
@@ -155,7 +178,7 @@ public class EmbeddedChannel extends AbstractChannel {
         p.fireChannelReadComplete();
         runPendingTasks();
         checkException();
-        return !lastInboundBuffer.isEmpty();
+        return !inboundMessages.isEmpty();
     }
 
     /**
@@ -167,7 +190,7 @@ public class EmbeddedChannel extends AbstractChannel {
     public boolean writeOutbound(Object... msgs) {
         ensureOpen();
         if (msgs.length == 0) {
-            return !lastOutboundBuffer.isEmpty();
+            return !outboundMessages.isEmpty();
         }
 
         RecyclableArrayList futures = RecyclableArrayList.newInstance(msgs.length);
@@ -181,7 +204,8 @@ public class EmbeddedChannel extends AbstractChannel {
 
             flush();
 
-            for (int i = 0; i < futures.size(); i++) {
+            int size = futures.size();
+            for (int i = 0; i < size; i++) {
                 ChannelFuture future = (ChannelFuture) futures.get(i);
                 assert future.isDone();
                 if (future.cause() != null) {
@@ -191,7 +215,7 @@ public class EmbeddedChannel extends AbstractChannel {
 
             runPendingTasks();
             checkException();
-            return !lastOutboundBuffer.isEmpty();
+            return !outboundMessages.isEmpty();
         } finally {
             futures.recycle();
         }
@@ -207,7 +231,7 @@ public class EmbeddedChannel extends AbstractChannel {
         close();
         runPendingTasks();
         checkException();
-        return !lastInboundBuffer.isEmpty() || !lastOutboundBuffer.isEmpty();
+        return !inboundMessages.isEmpty() || !outboundMessages.isEmpty();
     }
 
     /**
@@ -262,18 +286,17 @@ public class EmbeddedChannel extends AbstractChannel {
 
     @Override
     protected SocketAddress localAddress0() {
-        return isActive()? localAddress : null;
+        return isActive()? LOCAL_ADDRESS : null;
     }
 
     @Override
     protected SocketAddress remoteAddress0() {
-        return isActive()? remoteAddress : null;
+        return isActive()? REMOTE_ADDRESS : null;
     }
 
     @Override
-    protected Runnable doRegister() throws Exception {
-        state = 1;
-        return null;
+    protected void doRegister() throws Exception {
+        state = State.ACTIVE;
     }
 
     @Override
@@ -288,12 +311,7 @@ public class EmbeddedChannel extends AbstractChannel {
 
     @Override
     protected void doClose() throws Exception {
-        state = 2;
-    }
-
-    @Override
-    protected Runnable doDeregister() throws Exception {
-        return null;
+        state = State.CLOSED;
     }
 
     @Override
@@ -315,7 +333,7 @@ public class EmbeddedChannel extends AbstractChannel {
             }
 
             ReferenceCountUtil.retain(msg);
-            lastOutboundBuffer.add(msg);
+            outboundMessages.add(msg);
             in.remove();
         }
     }
@@ -323,14 +341,14 @@ public class EmbeddedChannel extends AbstractChannel {
     private class DefaultUnsafe extends AbstractUnsafe {
         @Override
         public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-            promise.setSuccess();
+            safeSetSuccess(promise);
         }
     }
 
-    private final class LastInboundHandler extends ChannelInboundHandlerAdapter {
+    private final class LastInboundHandler extends ChannelHandlerAdapter {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-            lastInboundBuffer.add(msg);
+            inboundMessages.add(msg);
         }
 
         @Override

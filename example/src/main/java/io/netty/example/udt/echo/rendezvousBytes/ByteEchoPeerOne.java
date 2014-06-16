@@ -19,7 +19,6 @@ import io.netty.example.udt.echo.rendezvous.Config;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.logging.Logger;
 
 /**
  * UDT Byte Stream Peer
@@ -31,19 +30,15 @@ import java.util.logging.Logger;
  * <p/>
  */
 public class ByteEchoPeerOne extends ByteEchoPeerBase {
-    private static final Logger log = Logger.getLogger(ByteEchoPeerOne.class.getName());
 
     public ByteEchoPeerOne(int messageSize, SocketAddress myAddress, SocketAddress peerAddress) {
         super(messageSize, myAddress, peerAddress);
     }
 
     public static void main(String[] args) throws Exception {
-        log.info("init");
         final int messageSize = 64 * 1024;
-        final InetSocketAddress myAddress = new InetSocketAddress(
-                Config.hostOne, Config.portOne);
-        final InetSocketAddress peerAddress = new InetSocketAddress(
-                Config.hostTwo, Config.portTwo);
+        final InetSocketAddress myAddress = new InetSocketAddress(Config.hostOne, Config.portOne);
+        final InetSocketAddress peerAddress = new InetSocketAddress(Config.hostTwo, Config.portTwo);
         new ByteEchoPeerOne(messageSize, myAddress, peerAddress).run();
     }
 }

@@ -23,6 +23,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpContentCompressor;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
@@ -155,33 +156,41 @@ public abstract class WebSocketServerHandshaker {
                                             HttpHeaders responseHeaders, final ChannelPromise promise) {
 
         if (logger.isDebugEnabled()) {
-            logger.debug(String.format("%s WS Version %s server handshake", channel, version()));
+            logger.debug("{} WebSocket version {} server handshake", channel, version());
         }
         FullHttpResponse response = newHandshakeResponse(req, responseHeaders);
+        ChannelPipeline p = channel.pipeline();
+        if (p.get(HttpObjectAggregator.class) != null) {
+            p.remove(HttpObjectAggregator.class);
+        }
+        if (p.get(HttpContentCompressor.class) != null) {
+            p.remove(HttpContentCompressor.class);
+        }
+        ChannelHandlerContext ctx = p.context(HttpRequestDecoder.class);
+        final String encoderName;
+        if (ctx == null) {
+            // this means the user use a HttpServerCodec
+            ctx = p.context(HttpServerCodec.class);
+            if (ctx == null) {
+                promise.setFailure(
+                        new IllegalStateException("No HttpDecoder and no HttpServerCodec in the pipeline"));
+                return promise;
+            }
+            p.addBefore(ctx.name(), "wsdecoder", newWebsocketDecoder());
+            p.addBefore(ctx.name(), "wsencoder", newWebSocketEncoder());
+            encoderName = ctx.name();
+        } else {
+            p.replace(ctx.name(), "wsdecoder", newWebsocketDecoder());
+
+            encoderName = p.context(HttpResponseEncoder.class).name();
+            p.addBefore(encoderName, "wsencoder", newWebSocketEncoder());
+        }
         channel.writeAndFlush(response).addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
                 if (future.isSuccess()) {
                     ChannelPipeline p = future.channel().pipeline();
-                    if (p.get(HttpObjectAggregator.class) != null) {
-                        p.remove(HttpObjectAggregator.class);
-                    }
-                    ChannelHandlerContext ctx = p.context(HttpRequestDecoder.class);
-                    if (ctx == null) {
-                        // this means the user use a HttpServerCodec
-                        ctx = p.context(HttpServerCodec.class);
-                        if (ctx == null) {
-                            promise.setFailure(
-                                    new IllegalStateException("No HttpDecoder and no HttpServerCodec in the pipeline"));
-                            return;
-                        }
-                        p.addBefore(ctx.name(), "wsdecoder", newWebsocketDecoder());
-                        p.replace(ctx.name(), "wsencoder", newWebSocketEncoder());
-                    } else {
-                        p.replace(ctx.name(), "wsdecoder", newWebsocketDecoder());
-
-                        p.replace(HttpResponseEncoder.class, "wsencoder", newWebSocketEncoder());
-                    }
+                    p.remove(encoderName);
                     promise.setSuccess();
                 } else {
                     promise.setFailure(future.cause());

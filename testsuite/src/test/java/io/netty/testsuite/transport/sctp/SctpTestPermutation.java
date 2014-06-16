@@ -25,12 +25,13 @@ import io.netty.channel.sctp.nio.NioSctpServerChannel;
 import io.netty.channel.sctp.oio.OioSctpChannel;
 import io.netty.channel.sctp.oio.OioSctpServerChannel;
 import io.netty.testsuite.util.TestUtils;
+import io.netty.testsuite.transport.TestsuitePermutation.BootstrapComboFactory;
+import io.netty.testsuite.transport.TestsuitePermutation.BootstrapFactory;
 import io.netty.util.concurrent.DefaultThreadFactory;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 public final class SctpTestPermutation {
 
@@ -45,14 +46,14 @@ public final class SctpTestPermutation {
     private static final EventLoopGroup oioWorkerGroup =
             new OioEventLoopGroup(Integer.MAX_VALUE, new DefaultThreadFactory("testsuite-sctp-oio-worker", true));
 
-    static List<Factory<ServerBootstrap>> sctpServerChannel() {
+    static List<BootstrapFactory<ServerBootstrap>> sctpServerChannel() {
         if (!TestUtils.isSctpSupported()) {
             return Collections.emptyList();
         }
 
-        List<Factory<ServerBootstrap>> list = new ArrayList<Factory<ServerBootstrap>>();
+        List<BootstrapFactory<ServerBootstrap>> list = new ArrayList<BootstrapFactory<ServerBootstrap>>();
         // Make the list of ServerBootstrap factories.
-        list.add(new Factory<ServerBootstrap>() {
+        list.add(new BootstrapFactory<ServerBootstrap>() {
             @Override
             public ServerBootstrap newInstance() {
                 return new ServerBootstrap().
@@ -60,7 +61,7 @@ public final class SctpTestPermutation {
                         channel(NioSctpServerChannel.class);
             }
         });
-        list.add(new Factory<ServerBootstrap>() {
+        list.add(new BootstrapFactory<ServerBootstrap>() {
             @Override
             public ServerBootstrap newInstance() {
                 return new ServerBootstrap().
@@ -72,19 +73,19 @@ public final class SctpTestPermutation {
         return list;
     }
 
-    static List<Factory<Bootstrap>> sctpClientChannel() {
+    static List<BootstrapFactory<Bootstrap>> sctpClientChannel() {
         if (!TestUtils.isSctpSupported()) {
             return Collections.emptyList();
         }
 
-        List<Factory<Bootstrap>> list = new ArrayList<Factory<Bootstrap>>();
-        list.add(new Factory<Bootstrap>() {
+        List<BootstrapFactory<Bootstrap>> list = new ArrayList<BootstrapFactory<Bootstrap>>();
+        list.add(new BootstrapFactory<Bootstrap>() {
             @Override
             public Bootstrap newInstance() {
                 return new Bootstrap().group(nioWorkerGroup).channel(NioSctpChannel.class);
             }
         });
-        list.add(new Factory<Bootstrap>() {
+        list.add(new BootstrapFactory<Bootstrap>() {
             @Override
             public Bootstrap newInstance() {
                 return new Bootstrap().group(oioWorkerGroup).channel(OioSctpChannel.class);
@@ -93,35 +94,30 @@ public final class SctpTestPermutation {
         return list;
     }
 
-    static List<Map.Entry<Factory<ServerBootstrap>, Factory<Bootstrap>>> sctpChannel() {
-        List<Map.Entry<Factory<ServerBootstrap>, Factory<Bootstrap>>> list =
-                new ArrayList<Map.Entry<Factory<ServerBootstrap>, Factory<Bootstrap>>>();
+    static List<BootstrapComboFactory<ServerBootstrap, Bootstrap>> sctpChannel() {
+        List<BootstrapComboFactory<ServerBootstrap, Bootstrap>> list =
+                new ArrayList<BootstrapComboFactory<ServerBootstrap, Bootstrap>>();
 
         // Make the list of SCTP ServerBootstrap factories.
-        List<Factory<ServerBootstrap>> sbfs = sctpServerChannel();
+        List<BootstrapFactory<ServerBootstrap>> sbfs = sctpServerChannel();
 
         // Make the list of SCTP Bootstrap factories.
-        List<Factory<Bootstrap>> cbfs = sctpClientChannel();
+        List<BootstrapFactory<Bootstrap>> cbfs = sctpClientChannel();
 
         // Populate the combinations
-        for (Factory<ServerBootstrap> sbf: sbfs) {
-            for (Factory<Bootstrap> cbf: cbfs) {
-                final Factory<ServerBootstrap> sbf0 = sbf;
-                final Factory<Bootstrap> cbf0 = cbf;
-                list.add(new Map.Entry<Factory<ServerBootstrap>, Factory<Bootstrap>>() {
+        for (BootstrapFactory<ServerBootstrap> sbf: sbfs) {
+            for (BootstrapFactory<Bootstrap> cbf: cbfs) {
+                final BootstrapFactory<ServerBootstrap> sbf0 = sbf;
+                final BootstrapFactory<Bootstrap> cbf0 = cbf;
+                list.add(new BootstrapComboFactory<ServerBootstrap, Bootstrap>() {
                     @Override
-                    public Factory<ServerBootstrap> getKey() {
-                        return sbf0;
+                    public ServerBootstrap newServerInstance() {
+                        return sbf0.newInstance();
                     }
 
                     @Override
-                    public Factory<Bootstrap> getValue() {
-                        return cbf0;
-                    }
-
-                    @Override
-                    public Factory<Bootstrap> setValue(Factory<Bootstrap> value) {
-                        throw new UnsupportedOperationException();
+                    public Bootstrap newClientInstance() {
+                        return cbf0.newInstance();
                     }
                 });
             }
@@ -131,8 +127,4 @@ public final class SctpTestPermutation {
     }
 
     private SctpTestPermutation() { }
-
-    interface Factory<T> {
-        T newInstance();
-    }
 }

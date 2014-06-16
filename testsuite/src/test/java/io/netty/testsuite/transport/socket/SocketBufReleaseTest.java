@@ -64,6 +64,9 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
 
         serverHandler.check();
         clientHandler.check();
+
+        serverHandler.release();
+        clientHandler.release();
     }
 
     private static class BufWriterHandler extends SimpleChannelInboundHandler<Object> {
@@ -84,7 +87,8 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
             random.nextBytes(data);
 
             buf = ctx.alloc().buffer();
-            buf.writeBytes(data);
+            // call retain on it so it can't be put back on the pool
+            buf.writeBytes(data).retain();
 
             ctx.channel().writeAndFlush(buf).addListener(new ChannelFutureListener() {
                 @Override
@@ -95,13 +99,17 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
             // discard
         }
 
         public void check() throws InterruptedException {
             latch.await();
-            assertEquals(0, buf.refCnt());
+            assertEquals(1, buf.refCnt());
+        }
+
+        void release() {
+            buf.release();
         }
     }
 }

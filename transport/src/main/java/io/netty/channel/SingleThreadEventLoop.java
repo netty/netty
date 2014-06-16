@@ -15,22 +15,25 @@
  */
 package io.netty.channel;
 
-import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
 
+import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 
 /**
- * Abstract base class for {@link EventLoop}'s that execute all its submitted tasks in a single thread.
+ * Abstract base class for {@link EventLoop}s that execute all its submitted tasks in a single thread.
  *
  */
 public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor implements EventLoop {
 
-    /**
-     * @see {@link SingleThreadEventExecutor#SingleThreadEventExecutor(EventExecutorGroup, ThreadFactory, boolean)}
-     */
+    private final ChannelHandlerInvoker invoker = new DefaultChannelHandlerInvoker(this);
+
     protected SingleThreadEventLoop(EventLoopGroup parent, ThreadFactory threadFactory, boolean addTaskWakesUp) {
         super(parent, threadFactory, addTaskWakesUp);
+    }
+
+    protected SingleThreadEventLoop(EventLoopGroup parent, Executor executor, boolean addTaskWakesUp) {
+        super(parent, executor, addTaskWakesUp);
     }
 
     @Override
@@ -44,8 +47,13 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
     }
 
     @Override
+    public ChannelHandlerInvoker asInvoker() {
+        return invoker;
+    }
+
+    @Override
     public ChannelFuture register(Channel channel) {
-        return register(channel, channel.newPromise());
+        return register(channel, new DefaultChannelPromise(channel, this));
     }
 
     @Override
@@ -60,4 +68,14 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
         channel.unsafe().register(this, promise);
         return promise;
     }
+
+    @Override
+    protected boolean wakesUpForTask(Runnable task) {
+        return !(task instanceof NonWakeupRunnable);
+    }
+
+    /**
+     * Marker interface for {@link Runnable} that will not trigger an {@link #wakeup(boolean)} in all cases.
+     */
+    interface NonWakeupRunnable extends Runnable { }
 }

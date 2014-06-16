@@ -18,9 +18,8 @@ package io.netty.handler.codec.http.websocketx;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -45,7 +44,7 @@ import static io.netty.handler.codec.http.HttpVersion.*;
  * to the <tt>io.netty.example.http.websocketx.server.WebSocketServer</tt> example.
  *
  * To know once a handshake was done you can intercept the
- * {@link ChannelInboundHandler#userEventTriggered(ChannelHandlerContext, Object)} and check if the event was of type
+ * {@link ChannelHandler#userEventTriggered(ChannelHandlerContext, Object)} and check if the event was of type
  * {@link ServerHandshakeStateEvent#HANDSHAKE_COMPLETE}.
  */
 public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
@@ -61,11 +60,12 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
     }
 
     private static final AttributeKey<WebSocketServerHandshaker> HANDSHAKER_ATTR_KEY =
-            new AttributeKey<WebSocketServerHandshaker>(WebSocketServerHandshaker.class.getName());
+            AttributeKey.valueOf(WebSocketServerHandshaker.class, "HANDSHAKER");
 
     private final String websocketPath;
     private final String subprotocols;
     private final boolean allowExtensions;
+    private final int maxFramePayloadLength;
 
     public WebSocketServerProtocolHandler(String websocketPath) {
         this(websocketPath, null, false);
@@ -76,9 +76,15 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
     }
 
     public WebSocketServerProtocolHandler(String websocketPath, String subprotocols, boolean allowExtensions) {
+        this(websocketPath, subprotocols, allowExtensions, 65536);
+    }
+
+    public WebSocketServerProtocolHandler(String websocketPath, String subprotocols,
+            boolean allowExtensions, int maxFrameSize) {
         this.websocketPath = websocketPath;
         this.subprotocols = subprotocols;
         this.allowExtensions = allowExtensions;
+        this.maxFramePayloadLength = maxFrameSize;
     }
 
     @Override
@@ -87,7 +93,8 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
         if (cp.get(WebSocketServerProtocolHandshakeHandler.class) == null) {
             // Add the WebSocketHandshakeHandler before this one.
             ctx.pipeline().addBefore(ctx.name(), WebSocketServerProtocolHandshakeHandler.class.getName(),
-                    new WebSocketServerProtocolHandshakeHandler(websocketPath, subprotocols, allowExtensions));
+                    new WebSocketServerProtocolHandshakeHandler(websocketPath, subprotocols,
+                            allowExtensions, maxFramePayloadLength));
         }
     }
 
@@ -95,8 +102,12 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
     protected void decode(ChannelHandlerContext ctx, WebSocketFrame frame, List<Object> out) throws Exception {
         if (frame instanceof CloseWebSocketFrame) {
             WebSocketServerHandshaker handshaker = getHandshaker(ctx);
-            frame.retain();
-            handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame);
+            if (handshaker != null) {
+                frame.retain();
+                handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame);
+            } else {
+                ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
+            }
             return;
         }
         super.decode(ctx, frame, out);
@@ -122,7 +133,7 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
     }
 
     static ChannelHandler forbiddenHttpRequestResponder() {
-        return new ChannelInboundHandlerAdapter() {
+        return new ChannelHandlerAdapter() {
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                 if (msg instanceof FullHttpRequest) {

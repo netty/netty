@@ -27,11 +27,6 @@ import java.util.List;
  * Before returning SocksResponse decoder removes itself from pipeline.
  */
 public class SocksCmdResponseDecoder extends ReplayingDecoder<SocksCmdResponseDecoder.State> {
-    private static final String name = "SOCKS_CMD_RESPONSE_DECODER";
-
-    public static String getName() {
-        return name;
-    }
 
     private SocksProtocolVersion version;
     private int fieldLength;
@@ -67,20 +62,20 @@ public class SocksCmdResponseDecoder extends ReplayingDecoder<SocksCmdResponseDe
                     case IPv4: {
                         host = SocksCommonUtils.intToIp(byteBuf.readInt());
                         port = byteBuf.readUnsignedShort();
-                        msg = new SocksCmdResponse(cmdStatus, addressType);
+                        msg = new SocksCmdResponse(cmdStatus, addressType, host, port);
                         break;
                     }
                     case DOMAIN: {
                         fieldLength = byteBuf.readByte();
                         host = byteBuf.readBytes(fieldLength).toString(CharsetUtil.US_ASCII);
                         port = byteBuf.readUnsignedShort();
-                        msg = new SocksCmdResponse(cmdStatus, addressType);
+                        msg = new SocksCmdResponse(cmdStatus, addressType, host, port);
                         break;
                     }
                     case IPv6: {
                         host = SocksCommonUtils.ipv6toStr(byteBuf.readBytes(16).array());
                         port = byteBuf.readUnsignedShort();
-                        msg = new SocksCmdResponse(cmdStatus, addressType);
+                        msg = new SocksCmdResponse(cmdStatus, addressType, host, port);
                         break;
                     }
                     case UNKNOWN:

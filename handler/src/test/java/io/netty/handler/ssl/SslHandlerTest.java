@@ -38,7 +38,7 @@ public class SslHandlerTest {
         EmbeddedChannel ch = new EmbeddedChannel(new SslHandler(engine));
 
         // Push the first part of a 5-byte handshake message.
-        ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 22, 3, 1, 0, 5 }));
+        ch.writeInbound(Unpooled.wrappedBuffer(new byte[]{22, 3, 1, 0, 5}));
 
         // Should decode nothing yet.
         assertThat(ch.readInbound(), is(nullValue()));
@@ -51,5 +51,23 @@ public class SslHandlerTest {
             // The pushed message is invalid, so it should raise an exception if it decoded the message correctly.
             assertThat(e.getCause(), is(instanceOf(SSLProtocolException.class)));
         }
+    }
+
+    @Test
+    public void testNonByteBufPassthrough() throws Exception {
+        SSLEngine engine = SSLContext.getDefault().createSSLEngine();
+        engine.setUseClientMode(false);
+
+        EmbeddedChannel ch = new EmbeddedChannel(new SslHandler(engine));
+
+        Object msg1 = new Object();
+        ch.writeOutbound(msg1);
+        assertThat(ch.readOutbound(), is(sameInstance(msg1)));
+
+        Object msg2 = new Object();
+        ch.writeInbound(msg2);
+        assertThat(ch.readInbound(), is(sameInstance(msg2)));
+
+        ch.finish();
     }
 }

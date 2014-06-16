@@ -31,12 +31,17 @@ public abstract class AbstractOioChannel extends AbstractChannel {
 
     protected static final int SO_TIMEOUT = 1000;
 
-    private boolean readInProgress;
+    private volatile boolean readPending;
 
     private final Runnable readTask = new Runnable() {
         @Override
         public void run() {
-            readInProgress = false;
+            if (!isReadPending() && !config().isAutoRead()) {
+                // ChannelConfig.setAutoRead(false) was called in the meantime so just return
+                return;
+            }
+
+            setReadPending(false);
             doRead();
         }
     };
@@ -58,19 +63,14 @@ public abstract class AbstractOioChannel extends AbstractChannel {
         public void connect(
                 final SocketAddress remoteAddress,
                 final SocketAddress localAddress, final ChannelPromise promise) {
-            if (!ensureOpen(promise)) {
-                return;
-            }
-
-            if (!promise.setUncancellable()) {
-                close(voidPromise());
+            if (!promise.setUncancellable() || !ensureOpen(promise)) {
                 return;
             }
 
             try {
                 boolean wasActive = isActive();
                 doConnect(remoteAddress, localAddress);
-                promise.setSuccess();
+                safeSetSuccess(promise);
                 if (!wasActive && isActive()) {
                     pipeline().fireChannelActive();
                 }
@@ -80,8 +80,8 @@ public abstract class AbstractOioChannel extends AbstractChannel {
                     newT.setStackTrace(t.getStackTrace());
                     t = newT;
                 }
+                safeSetFailure(promise, t);
                 closeIfClosed();
-                promise.setFailure(t);
             }
         }
     }
@@ -99,13 +99,21 @@ public abstract class AbstractOioChannel extends AbstractChannel {
 
     @Override
     protected void doBeginRead() throws Exception {
-        if (readInProgress) {
+        if (isReadPending()) {
             return;
         }
 
-        readInProgress = true;
+        setReadPending(true);
         eventLoop().execute(readTask);
     }
 
     protected abstract void doRead();
+
+    protected boolean isReadPending() {
+        return readPending;
+    }
+
+    protected void setReadPending(boolean readPending) {
+        this.readPending = readPending;
+    }
 }

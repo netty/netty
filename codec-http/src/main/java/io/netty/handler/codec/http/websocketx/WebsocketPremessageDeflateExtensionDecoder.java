@@ -61,11 +61,10 @@ import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
-import io.netty.util.ReferenceCountUtil;
 
 import java.util.List;
 
-public class WebsocketPremessageDeflateExtensionDecoder extends
+class WebsocketPremessageDeflateExtensionDecoder extends
         MessageToMessageDecoder<WebSocketFrame> {
 
     private EmbeddedChannel decoder;

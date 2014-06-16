@@ -16,35 +16,29 @@
 package io.netty.example.sctp;
 
 import io.netty.channel.ChannelHandler.Sharable;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Handler implementation for the SCTP echo server.
  */
 @Sharable
-public class SctpEchoServerHandler extends ChannelInboundHandlerAdapter {
-
-    private static final Logger logger = Logger.getLogger(
-            SctpEchoServerHandler.class.getName());
+public class SctpEchoServerHandler extends ChannelHandlerAdapter {
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        // Close the connection when an exception is raised.
-        logger.log(Level.WARNING, "Unexpected exception from downstream.", cause);
-        ctx.close();
-    }
-
-    @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void channelRead(ChannelHandlerContext ctx, Object msg) {
         ctx.write(msg);
     }
 
     @Override
-    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+    public void channelReadComplete(ChannelHandlerContext ctx) {
         ctx.flush();
+    }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+        // Close the connection when an exception is raised.
+        cause.printStackTrace();
+        ctx.close();
     }
 }

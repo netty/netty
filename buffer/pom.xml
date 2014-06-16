@@ -20,11 +20,11 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.0.4.Final-SNAPSHOT</version>
+    <version>5.0.0.Alpha2-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-buffer</artifactId>
-  <packaging>bundle</packaging>
+  <packaging>jar</packaging>
 
   <name>Netty/Buffer</name>
 
@@ -35,5 +35,4 @@
       <version>${project.version}</version>
     </dependency>
   </dependencies>
-  
 </project>

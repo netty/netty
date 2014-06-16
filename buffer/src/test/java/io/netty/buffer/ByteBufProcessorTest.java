@@ -19,12 +19,14 @@ package io.netty.buffer;
 import io.netty.util.CharsetUtil;
 import org.junit.Test;
 
+import static io.netty.util.ReferenceCountUtil.releaseLater;
 import static org.junit.Assert.*;
 
 public class ByteBufProcessorTest {
     @Test
     public void testForward() {
-        final ByteBuf buf = Unpooled.copiedBuffer("abc\r\n\ndef\r\rghi\n\njkl\0\0mno  \t\tx", CharsetUtil.ISO_8859_1);
+        final ByteBuf buf = releaseLater(
+                Unpooled.copiedBuffer("abc\r\n\ndef\r\rghi\n\njkl\0\0mno  \t\tx", CharsetUtil.ISO_8859_1));
         final int length = buf.readableBytes();
 
         assertEquals(3,  buf.forEachByte(0,  length, ByteBufProcessor.FIND_CRLF));
@@ -42,7 +44,8 @@ public class ByteBufProcessorTest {
 
     @Test
     public void testBackward() {
-        final ByteBuf buf = Unpooled.copiedBuffer("abc\r\n\ndef\r\rghi\n\njkl\0\0mno  \t\tx", CharsetUtil.ISO_8859_1);
+        final ByteBuf buf = releaseLater(
+                Unpooled.copiedBuffer("abc\r\n\ndef\r\rghi\n\njkl\0\0mno  \t\tx", CharsetUtil.ISO_8859_1));
         final int length = buf.readableBytes();
 
         assertEquals(27, buf.forEachByteDesc(0, length, ByteBufProcessor.FIND_LINEAR_WHITESPACE));

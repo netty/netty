@@ -23,18 +23,26 @@ import io.netty.buffer.Unpooled;
  */
 public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHttpRequest {
     private final ByteBuf content;
-    private final HttpHeaders trailingHeader = new DefaultHttpHeaders();
+    private final HttpHeaders trailingHeader;
+    private final boolean validateHeaders;
 
     public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri) {
         this(httpVersion, method, uri, Unpooled.buffer(0));
     }
 
     public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri, ByteBuf content) {
-        super(httpVersion, method, uri);
+        this(httpVersion, method, uri, content, true);
+    }
+
+    public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri,
+                                  ByteBuf content, boolean validateHeaders) {
+        super(httpVersion, method, uri, validateHeaders);
         if (content == null) {
             throw new NullPointerException("content");
         }
         this.content = content;
+        trailingHeader = new DefaultHttpHeaders(validateHeaders);
+        this.validateHeaders = validateHeaders;
     }
 
     @Override
@@ -61,6 +69,18 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
     @Override
     public FullHttpRequest retain(int increment) {
         content.retain(increment);
+        return this;
+    }
+
+    @Override
+    public FullHttpRequest touch() {
+        content.touch();
+        return this;
+    }
+
+    @Override
+    public FullHttpRequest touch(Object hint) {
+        content.touch(hint);
         return this;
     }
 
@@ -95,7 +115,7 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
     @Override
     public FullHttpRequest copy() {
         DefaultFullHttpRequest copy = new DefaultFullHttpRequest(
-                getProtocolVersion(), getMethod(), getUri(), content().copy());
+                getProtocolVersion(), getMethod(), getUri(), content().copy(), validateHeaders);
         copy.headers().set(headers());
         copy.trailingHeaders().set(trailingHeaders());
         return copy;
@@ -104,7 +124,7 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
     @Override
     public FullHttpRequest duplicate() {
         DefaultFullHttpRequest duplicate = new DefaultFullHttpRequest(
-                getProtocolVersion(), getMethod(), getUri(), content().duplicate());
+                getProtocolVersion(), getMethod(), getUri(), content().duplicate(), validateHeaders);
         duplicate.headers().set(headers());
         duplicate.trailingHeaders().set(trailingHeaders());
         return duplicate;

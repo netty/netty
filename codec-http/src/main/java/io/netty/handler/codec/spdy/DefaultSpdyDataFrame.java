@@ -110,6 +110,18 @@ public class DefaultSpdyDataFrame extends DefaultSpdyStreamFrame implements Spdy
     }
 
     @Override
+    public SpdyDataFrame touch() {
+        data.touch();
+        return this;
+    }
+
+    @Override
+    public SpdyDataFrame touch(Object hint) {
+        data.touch(hint);
+        return this;
+    }
+
+    @Override
     public boolean release() {
         return data.release();
     }
@@ -122,7 +134,7 @@ public class DefaultSpdyDataFrame extends DefaultSpdyStreamFrame implements Spdy
     @Override
     public String toString() {
         StringBuilder buf = new StringBuilder();
-        buf.append(getClass().getSimpleName());
+        buf.append(StringUtil.simpleClassName(this));
         buf.append("(last: ");
         buf.append(isLast());
         buf.append(')');

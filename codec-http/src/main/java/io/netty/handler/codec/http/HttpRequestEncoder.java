@@ -35,23 +35,29 @@ public class HttpRequestEncoder extends HttpObjectEncoder<HttpRequest> {
 
     @Override
     protected void encodeInitialLine(ByteBuf buf, HttpRequest request) throws Exception {
-        encodeAscii(request.getMethod().toString(), buf);
+        request.getMethod().encode(buf);
         buf.writeByte(SP);
 
         // Add / as absolute path if no is present.
         // See http://tools.ietf.org/html/rfc2616#section-5.1.2
         String uri = request.getUri();
-        int start = uri.indexOf("://");
-        if (start != -1) {
-            int startIndex = start + 3;
-            if (uri.lastIndexOf(SLASH) <= startIndex) {
-                uri += SLASH;
+
+        if (uri.length() == 0) {
+            uri += SLASH;
+        } else {
+            int start = uri.indexOf("://");
+            if (start != -1 && uri.charAt(0) != SLASH) {
+                int startIndex = start + 3;
+                if (uri.lastIndexOf(SLASH) <= startIndex) {
+                    uri += SLASH;
+                }
             }
         }
+
         buf.writeBytes(uri.getBytes(CharsetUtil.UTF_8));
 
         buf.writeByte(SP);
-        encodeAscii(request.getProtocolVersion().toString(), buf);
+        request.getProtocolVersion().encode(buf);
         buf.writeBytes(CRLF);
     }
 }

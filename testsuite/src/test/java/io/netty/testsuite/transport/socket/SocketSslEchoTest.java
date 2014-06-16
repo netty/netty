@@ -25,62 +25,129 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.handler.ssl.JdkSslClientContext;
+import io.netty.handler.ssl.JdkSslServerContext;
+import io.netty.handler.ssl.OpenSsl;
+import io.netty.handler.ssl.OpenSslServerContext;
+import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.handler.stream.ChunkedWriteHandler;
-import io.netty.testsuite.util.BogusSslContextFactory;
 import io.netty.util.concurrent.Future;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
-import javax.net.ssl.SSLEngine;
+import java.io.File;
 import java.io.IOException;
+import java.security.cert.CertificateException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.*;
 
+@RunWith(Parameterized.class)
 public class SocketSslEchoTest extends AbstractSocketTest {
+
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(SocketSslEchoTest.class);
 
     private static final int FIRST_MESSAGE_SIZE = 16384;
     private static final Random random = new Random();
+    private static final File CERT_FILE;
+    private static final File KEY_FILE;
     static final byte[] data = new byte[1048576];
 
     static {
         random.nextBytes(data);
+
+        SelfSignedCertificate ssc;
+        try {
+            ssc = new SelfSignedCertificate();
+        } catch (CertificateException e) {
+            throw new Error(e);
+        }
+        CERT_FILE = ssc.certificate();
+        KEY_FILE = ssc.privateKey();
     }
 
-    @Test
+    @Parameters(name =
+            "{index}: serverEngine = {0}, clientEngine = {1}, useChunkedWriteHandler = {2}, useCompositeByteBuf = {3}")
+    public static Collection<Object[]> data() throws Exception {
+        List<SslContext> serverContexts = new ArrayList<SslContext>();
+        serverContexts.add(new JdkSslServerContext(CERT_FILE, KEY_FILE));
+
+        List<SslContext> clientContexts = new ArrayList<SslContext>();
+        clientContexts.add(new JdkSslClientContext(CERT_FILE));
+
+        boolean hasOpenSsl = OpenSsl.isAvailable();
+        if (hasOpenSsl) {
+            serverContexts.add(new OpenSslServerContext(CERT_FILE, KEY_FILE));
+
+            // TODO: Client mode is not supported yet.
+            // clientContexts.add(new OpenSslContext(CERT_FILE));
+        } else {
+            logger.warn("OpenSSL is unavailable and thus will not be tested.", OpenSsl.unavailabilityCause());
+        }
+
+        List<Object[]> params = new ArrayList<Object[]>();
+        for (SslContext sc: serverContexts) {
+            for (SslContext cc: clientContexts) {
+                for (int i = 0; i < 4; i ++) {
+                    params.add(new Object[] { sc, cc, (i & 2) != 0, (i & 1) != 0 });
+                }
+            }
+        }
+
+        return params;
+    }
+
+    private final SslContext serverCtx;
+    private final SslContext clientCtx;
+    private final boolean useChunkedWriteHandler;
+    private final boolean useCompositeByteBuf;
+
+    public SocketSslEchoTest(
+            SslContext serverCtx, SslContext clientCtx, boolean useChunkedWriteHandler, boolean useCompositeByteBuf) {
+        this.serverCtx = serverCtx;
+        this.clientCtx = clientCtx;
+        this.useChunkedWriteHandler = useChunkedWriteHandler;
+        this.useCompositeByteBuf = useCompositeByteBuf;
+    }
+
+    @Test(timeout = 30000)
     public void testSslEcho() throws Throwable {
         run();
     }
 
     public void testSslEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSslEcho0(sb, cb, false);
+        testSslEcho(sb, cb, true);
     }
 
-    @Test
-    public void testSslEchoWithChunkHandler() throws Throwable {
+    @Test(timeout = 30000)
+    public void testSslEchoNotAutoRead() throws Throwable {
         run();
     }
 
-    public void testSslEchoWithChunkHandler(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSslEcho0(sb, cb, true);
+    public void testSslEchoNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        testSslEcho(sb, cb, false);
     }
 
-    private void testSslEcho0(ServerBootstrap sb, Bootstrap cb, final boolean chunkWriteHandler) throws Throwable {
-        final EchoHandler sh = new EchoHandler(true);
-        final EchoHandler ch = new EchoHandler(false);
-
-        final SSLEngine sse = BogusSslContextFactory.getServerContext().createSSLEngine();
-        final SSLEngine cse = BogusSslContextFactory.getClientContext().createSSLEngine();
-        sse.setUseClientMode(false);
-        cse.setUseClientMode(true);
+    private void testSslEcho(ServerBootstrap sb, Bootstrap cb, boolean autoRead) throws Throwable {
+        final EchoHandler sh = new EchoHandler(true, useCompositeByteBuf, autoRead);
+        final EchoHandler ch = new EchoHandler(false, useCompositeByteBuf, autoRead);
 
         sb.childHandler(new ChannelInitializer<SocketChannel>() {
             @Override
             public void initChannel(SocketChannel sch) throws Exception {
-                sch.pipeline().addFirst("ssl", new SslHandler(sse));
-                if (chunkWriteHandler) {
+                sch.pipeline().addLast("ssl", serverCtx.newHandler(sch.alloc()));
+                if (useChunkedWriteHandler) {
                     sch.pipeline().addLast(new ChunkedWriteHandler());
                 }
                 sch.pipeline().addLast("handler", sh);
@@ -90,8 +157,8 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         cb.handler(new ChannelInitializer<SocketChannel>() {
             @Override
             public void initChannel(SocketChannel sch) throws Exception {
-                sch.pipeline().addFirst("ssl", new SslHandler(cse));
-                if (chunkWriteHandler) {
+                sch.pipeline().addLast("ssl", clientCtx.newHandler(sch.alloc()));
+                if (useChunkedWriteHandler) {
                     sch.pipeline().addLast(new ChunkedWriteHandler());
                 }
                 sch.pipeline().addLast("handler", ch);
@@ -110,7 +177,11 @@ public class SocketSslEchoTest extends AbstractSocketTest {
 
         for (int i = FIRST_MESSAGE_SIZE; i < data.length;) {
             int length = Math.min(random.nextInt(1024 * 64), data.length - i);
-            ChannelFuture future = cc.writeAndFlush(Unpooled.wrappedBuffer(data, i, length));
+            ByteBuf buf = Unpooled.wrappedBuffer(data, i, length);
+            if (useCompositeByteBuf) {
+                buf = Unpooled.compositeBuffer().addComponent(buf).writerIndex(buf.writerIndex());
+            }
+            ChannelFuture future = cc.writeAndFlush(buf);
             future.sync();
             i += length;
         }
@@ -163,14 +234,18 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         }
     }
 
-    private class EchoHandler extends SimpleChannelInboundHandler<ByteBuf> {
+    private static class EchoHandler extends SimpleChannelInboundHandler<ByteBuf> {
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;
         private final boolean server;
+        private final boolean composite;
+        private final boolean autoRead;
 
-        EchoHandler(boolean server) {
+        EchoHandler(boolean server, boolean composite, boolean autoRead) {
             this.server = server;
+            this.composite = composite;
+            this.autoRead = autoRead;
         }
 
         @Override
@@ -180,7 +255,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
             byte[] actual = new byte[in.readableBytes()];
             in.readBytes(actual);
 
@@ -190,7 +265,11 @@ public class SocketSslEchoTest extends AbstractSocketTest {
             }
 
             if (channel.parent() != null) {
-                channel.write(Unpooled.wrappedBuffer(actual));
+                ByteBuf buf = Unpooled.wrappedBuffer(actual);
+                if (composite) {
+                    buf = Unpooled.compositeBuffer().addComponent(buf).writerIndex(buf.writerIndex());
+                }
+                channel.write(buf);
             }
 
             counter += actual.length;
@@ -198,7 +277,13 @@ public class SocketSslEchoTest extends AbstractSocketTest {
 
         @Override
         public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-            ctx.flush();
+            try {
+                ctx.flush();
+            } finally {
+                if (!autoRead) {
+                    ctx.read();
+                }
+            }
         }
 
         @Override

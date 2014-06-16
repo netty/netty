@@ -23,6 +23,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import org.junit.Test;
+
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -30,6 +31,7 @@ import java.io.IOException;
 import java.nio.channels.Channels;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static io.netty.util.ReferenceCountUtil.*;
 import static org.junit.Assert.*;
 
 public class ChunkedWriteHandlerTest {
@@ -102,7 +104,7 @@ public class ChunkedWriteHandlerTest {
 
         ChunkedInput<ByteBuf> input = new ChunkedInput<ByteBuf>() {
             private boolean done;
-            private final ByteBuf buffer = Unpooled.copiedBuffer("Test", CharsetUtil.ISO_8859_1);
+            private final ByteBuf buffer = releaseLater(Unpooled.copiedBuffer("Test", CharsetUtil.ISO_8859_1));
 
             @Override
             public boolean isEndOfInput() throws Exception {
@@ -141,7 +143,7 @@ public class ChunkedWriteHandlerTest {
         // the listener should have been notified
         assertTrue(listenerNotified.get());
 
-        assertEquals(buffer, ch.readOutbound());
+        assertEquals(releaseLater(buffer), releaseLater(ch.readOutbound()));
         assertNull(ch.readOutbound());
     }
 
@@ -192,7 +194,7 @@ public class ChunkedWriteHandlerTest {
         int i = 0;
         int read = 0;
         for (;;) {
-            ByteBuf buffer = (ByteBuf) ch.readOutbound();
+            ByteBuf buffer = ch.readOutbound();
             if (buffer == null) {
                 break;
             }
@@ -203,6 +205,7 @@ public class ChunkedWriteHandlerTest {
                     i = 0;
                 }
             }
+            buffer.release();
         }
 
         assertEquals(BYTES.length * inputs.length, read);

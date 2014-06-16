@@ -19,7 +19,6 @@ import com.jcraft.jzlib.Deflater;
 import com.jcraft.jzlib.JZlib;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.compression.CompressionException;
 
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
@@ -30,8 +29,8 @@ class SpdyHeaderBlockJZlibEncoder extends SpdyHeaderBlockRawEncoder {
 
     private boolean finished;
 
-    public SpdyHeaderBlockJZlibEncoder(
-            int version, int compressionLevel, int windowBits, int memLevel) {
+    SpdyHeaderBlockJZlibEncoder(
+            SpdyVersion version, int compressionLevel, int windowBits, int memLevel) {
         super(version);
         if (compressionLevel < 0 || compressionLevel > 9) {
             throw new IllegalArgumentException(
@@ -52,11 +51,7 @@ class SpdyHeaderBlockJZlibEncoder extends SpdyHeaderBlockRawEncoder {
             throw new CompressionException(
                     "failed to initialize an SPDY header block deflater: " + resultCode);
         } else {
-            if (version < 3) {
-                resultCode = z.deflateSetDictionary(SPDY2_DICT, SPDY2_DICT.length);
-            } else {
-                resultCode = z.deflateSetDictionary(SPDY_DICT, SPDY_DICT.length);
-            }
+            resultCode = z.deflateSetDictionary(SPDY_DICT, SPDY_DICT.length);
             if (resultCode != JZlib.Z_OK) {
                 throw new CompressionException(
                         "failed to set the SPDY dictionary: " + resultCode);
@@ -98,7 +93,7 @@ class SpdyHeaderBlockJZlibEncoder extends SpdyHeaderBlockRawEncoder {
     }
 
     @Override
-    public synchronized ByteBuf encode(ChannelHandlerContext ctx, SpdyHeadersFrame frame) throws Exception {
+    public ByteBuf encode(SpdyHeadersFrame frame) throws Exception {
         if (frame == null) {
             throw new IllegalArgumentException("frame");
         }
@@ -107,19 +102,19 @@ class SpdyHeaderBlockJZlibEncoder extends SpdyHeaderBlockRawEncoder {
             return Unpooled.EMPTY_BUFFER;
         }
 
-        ByteBuf decompressed = super.encode(ctx, frame);
+        ByteBuf decompressed = super.encode(frame);
         if (decompressed.readableBytes() == 0) {
             return Unpooled.EMPTY_BUFFER;
         }
 
-        ByteBuf compressed = ctx.alloc().buffer();
+        ByteBuf compressed = decompressed.alloc().buffer();
         setInput(decompressed);
         encode(compressed);
         return compressed;
     }
 
     @Override
-    public synchronized void end() {
+    public void end() {
         if (finished) {
             return;
         }

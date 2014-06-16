@@ -16,6 +16,10 @@
 package io.netty.buffer;
 
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -25,13 +29,18 @@ import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CharsetEncoder;
 import java.nio.charset.CoderResult;
+import java.util.Locale;
 
 /**
  * A collection of utility methods that is related with handling {@link ByteBuf}.
  */
 public final class ByteBufUtil {
 
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(ByteBufUtil.class);
+
     private static final char[] HEXDUMP_TABLE = new char[256 * 4];
+
+    static final ByteBufAllocator DEFAULT_ALLOCATOR;
 
     static {
         final char[] DIGITS = "0123456789abcdef".toCharArray();
@@ -39,6 +48,24 @@ public final class ByteBufUtil {
             HEXDUMP_TABLE[ i << 1     ] = DIGITS[i >>> 4 & 0x0F];
             HEXDUMP_TABLE[(i << 1) + 1] = DIGITS[i       & 0x0F];
         }
+
+        String allocType = SystemPropertyUtil.get(
+                "io.netty.allocator.type", PlatformDependent.isAndroid() ? "unpooled" : "pooled");
+        allocType = allocType.toLowerCase(Locale.US).trim();
+
+        ByteBufAllocator alloc;
+        if ("unpooled".equals(allocType)) {
+            alloc = UnpooledByteBufAllocator.DEFAULT;
+            logger.debug("-Dio.netty.allocator.type: {}", allocType);
+        } else if ("pooled".equals(allocType)) {
+            alloc = PooledByteBufAllocator.DEFAULT;
+            logger.debug("-Dio.netty.allocator.type: {}", allocType);
+        } else {
+            alloc = PooledByteBufAllocator.DEFAULT;
+            logger.debug("-Dio.netty.allocator.type: pooled (unknown: {})", allocType);
+        }
+
+        DEFAULT_ALLOCATOR = alloc;
     }
 
     /**
@@ -70,6 +97,38 @@ public final class ByteBufUtil {
             System.arraycopy(
                     HEXDUMP_TABLE, buffer.getUnsignedByte(srcIdx) << 1,
                     buf, dstIdx, 2);
+        }
+
+        return new String(buf);
+    }
+
+    /**
+     * Returns a <a href="http://en.wikipedia.org/wiki/Hex_dump">hex dump</a>
+     * of the specified byte array.
+     */
+    public static String hexDump(byte[] array) {
+        return hexDump(array, 0, array.length);
+    }
+
+    /**
+     * Returns a <a href="http://en.wikipedia.org/wiki/Hex_dump">hex dump</a>
+     * of the specified byte array's sub-region.
+     */
+    public static String hexDump(byte[] array, int fromIndex, int length) {
+        if (length < 0) {
+            throw new IllegalArgumentException("length: " + length);
+        }
+        if (length == 0) {
+            return "";
+        }
+
+        int endIndex = fromIndex + length;
+        char[] buf = new char[length << 1];
+
+        int srcIdx = fromIndex;
+        int dstIdx = 0;
+        for (; srcIdx < endIndex; srcIdx ++, dstIdx += 2) {
+            System.arraycopy(HEXDUMP_TABLE, (array[srcIdx] & 0xFF) << 1, buf, dstIdx, 2);
         }
 
         return new String(buf);
@@ -257,6 +316,23 @@ public final class ByteBufUtil {
         return Long.reverseBytes(value);
     }
 
+    /**
+     * Read the given amount of bytes into a new {@link ByteBuf} that is allocated from the {@link ByteBufAllocator}.
+     */
+    public static ByteBuf readBytes(ByteBufAllocator alloc, ByteBuf buffer, int length) {
+        boolean release = true;
+        ByteBuf dst = alloc.buffer(length);
+        try {
+            buffer.readBytes(dst);
+            release = false;
+            return dst;
+        } finally {
+            if (release) {
+                dst.release();
+            }
+        }
+    }
+
     private static int firstIndexOf(ByteBuf buffer, int fromIndex, int toIndex, byte value) {
         fromIndex = Math.max(fromIndex, 0);
         if (fromIndex >= toIndex || buffer.capacity() == 0) {
@@ -287,24 +363,36 @@ public final class ByteBufUtil {
         return -1;
     }
 
-    static ByteBuffer encodeString(CharBuffer src, Charset charset) {
+    /**
+     * Encode the given {@link CharBuffer} using the given {@link Charset} into a new {@link ByteBuf} which
+     * is allocated via the {@link ByteBufAllocator}.
+     */
+    public static ByteBuf encodeString(ByteBufAllocator alloc, CharBuffer src, Charset charset) {
         final CharsetEncoder encoder = CharsetUtil.getEncoder(charset);
-        final ByteBuffer dst = ByteBuffer.allocate(
-                (int) ((double) src.remaining() * encoder.maxBytesPerChar()));
+        int length = (int) ((double) src.remaining() * encoder.maxBytesPerChar());
+        boolean release = true;
+        final ByteBuf dst = alloc.buffer(length);
         try {
-            CoderResult cr = encoder.encode(src, dst, true);
+            final ByteBuffer dstBuf = dst.internalNioBuffer(0, length);
+            final int pos = dstBuf.position();
+            CoderResult cr = encoder.encode(src, dstBuf, true);
             if (!cr.isUnderflow()) {
                 cr.throwException();
             }
-            cr = encoder.flush(dst);
+            cr = encoder.flush(dstBuf);
             if (!cr.isUnderflow()) {
                 cr.throwException();
             }
+            dst.writerIndex(dst.writerIndex() + dstBuf.position() - pos);
+            release = false;
+            return dst;
         } catch (CharacterCodingException x) {
             throw new IllegalStateException(x);
+        } finally {
+            if (release) {
+                dst.release();
+            }
         }
-        dst.flip();
-        return dst;
     }
 
     static String decodeString(ByteBuffer src, Charset charset) {

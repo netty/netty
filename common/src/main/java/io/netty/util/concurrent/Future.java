@@ -162,7 +162,7 @@ public interface Future<V> extends java.util.concurrent.Future<V> {
     /**
      * {@inheritDoc}
      *
-     * If the cancelation was successful it will fail the future with an {@link CancellationException}.
+     * If the cancellation was successful it will fail the future with an {@link CancellationException}.
      */
     @Override
     boolean cancel(boolean mayInterruptIfRunning);

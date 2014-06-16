@@ -19,7 +19,7 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.TypeParameterMatcher;
 
 /**
- * {@link ChannelInboundHandlerAdapter} which allows to explicit only handle a specific type of messages.
+ * {@link ChannelHandler} which allows to explicit only handle a specific type of messages.
  *
  * For example here is an implementation which only handle {@link String} messages.
  *
@@ -28,7 +28,7 @@ import io.netty.util.internal.TypeParameterMatcher;
  *             {@link SimpleChannelInboundHandler}&lt;{@link String}&gt; {
  *
  *         {@code @Override}
- *         public void messageReceived({@link ChannelHandlerContext} ctx, {@link String} message)
+ *         protected void messageReceived({@link ChannelHandlerContext} ctx, {@link String} message)
  *                 throws {@link Exception} {
  *             System.out.println(message);
  *         }
@@ -37,8 +37,13 @@ import io.netty.util.internal.TypeParameterMatcher;
  *
  * Be aware that depending of the constructor parameters it will release all handled messages.
  *
+ * <h3>Backward compatibility consideration</h3>
+ * <p>
+ * Since 5.0, {@code channelRead0(ChannelHandlerContext, I)} has been renamed to
+ * {@link #messageReceived(ChannelHandlerContext, I)}.
+ * </p>
  */
-public abstract class SimpleChannelInboundHandler<I> extends ChannelInboundHandlerAdapter {
+public abstract class SimpleChannelInboundHandler<I> extends ChannelHandlerAdapter {
 
     private final TypeParameterMatcher matcher;
     private final boolean autoRelease;
@@ -82,7 +87,7 @@ public abstract class SimpleChannelInboundHandler<I> extends ChannelInboundHandl
 
     /**
      * Returns {@code true} if the given message should be handled. If {@code false} it will be passed to the next
-     * {@link ChannelInboundHandler} in the {@link ChannelPipeline}.
+     * {@link ChannelHandler} in the {@link ChannelPipeline}.
      */
     public boolean acceptInboundMessage(Object msg) throws Exception {
         return matcher.match(msg);
@@ -95,7 +100,7 @@ public abstract class SimpleChannelInboundHandler<I> extends ChannelInboundHandl
             if (acceptInboundMessage(msg)) {
                 @SuppressWarnings("unchecked")
                 I imsg = (I) msg;
-                channelRead0(ctx, imsg);
+                messageReceived(ctx, imsg);
             } else {
                 release = false;
                 ctx.fireChannelRead(msg);
@@ -113,7 +118,7 @@ public abstract class SimpleChannelInboundHandler<I> extends ChannelInboundHandl
      * @param ctx           the {@link ChannelHandlerContext} which this {@link SimpleChannelInboundHandler}
      *                      belongs to
      * @param msg           the message to handle
-     * @throws Exception    is thrown if an error accour
+     * @throws Exception    is thrown if an error occurred
      */
-    protected abstract void channelRead0(ChannelHandlerContext ctx, I msg) throws Exception;
+    protected abstract void messageReceived(ChannelHandlerContext ctx, I msg) throws Exception;
 }

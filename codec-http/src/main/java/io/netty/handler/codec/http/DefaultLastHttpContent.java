@@ -26,37 +26,33 @@ import java.util.Map;
  */
 public class DefaultLastHttpContent extends DefaultHttpContent implements LastHttpContent {
 
-    private final HttpHeaders trailingHeaders = new DefaultHttpHeaders() {
-        @Override
-        void validateHeaderName0(String name) {
-            super.validateHeaderName0(name);
-            if (name.equalsIgnoreCase(HttpHeaders.Names.CONTENT_LENGTH) ||
-                name.equalsIgnoreCase(HttpHeaders.Names.TRANSFER_ENCODING) ||
-                name.equalsIgnoreCase(HttpHeaders.Names.TRAILER)) {
-                throw new IllegalArgumentException(
-                        "prohibited trailing header: " + name);
-            }
-        }
-    };
+    private final HttpHeaders trailingHeaders;
+    private final boolean validateHeaders;
 
     public DefaultLastHttpContent() {
         this(Unpooled.buffer(0));
     }
 
     public DefaultLastHttpContent(ByteBuf content) {
+        this(content, true);
+    }
+
+    public DefaultLastHttpContent(ByteBuf content, boolean validateHeaders) {
         super(content);
+        trailingHeaders = new TrailingHeaders(validateHeaders);
+        this.validateHeaders = validateHeaders;
     }
 
     @Override
     public LastHttpContent copy() {
-        DefaultLastHttpContent copy = new DefaultLastHttpContent(content().copy());
+        DefaultLastHttpContent copy = new DefaultLastHttpContent(content().copy(), validateHeaders);
         copy.trailingHeaders().set(trailingHeaders());
         return copy;
     }
 
     @Override
     public LastHttpContent duplicate() {
-        DefaultLastHttpContent copy = new DefaultLastHttpContent(content().duplicate());
+        DefaultLastHttpContent copy = new DefaultLastHttpContent(content().duplicate(), validateHeaders);
         copy.trailingHeaders().set(trailingHeaders());
         return copy;
     }
@@ -70,6 +66,18 @@ public class DefaultLastHttpContent extends DefaultHttpContent implements LastHt
     @Override
     public LastHttpContent retain() {
         super.retain();
+        return this;
+    }
+
+    @Override
+    public LastHttpContent touch() {
+        super.touch();
+        return this;
+    }
+
+    @Override
+    public LastHttpContent touch(Object hint) {
+        super.touch(hint);
         return this;
     }
 
@@ -95,6 +103,23 @@ public class DefaultLastHttpContent extends DefaultHttpContent implements LastHt
             buf.append(": ");
             buf.append(e.getValue());
             buf.append(StringUtil.NEWLINE);
+        }
+    }
+
+    private static final class TrailingHeaders extends DefaultHttpHeaders {
+        TrailingHeaders(boolean validate) {
+            super(validate);
+        }
+
+        @Override
+        void validateHeaderName0(CharSequence name) {
+            super.validateHeaderName0(name);
+            if (equalsIgnoreCase(HttpHeaders.Names.CONTENT_LENGTH, name) ||
+                    equalsIgnoreCase(HttpHeaders.Names.TRANSFER_ENCODING, name) ||
+                    equalsIgnoreCase(HttpHeaders.Names.TRAILER, name)) {
+                throw new IllegalArgumentException(
+                        "prohibited trailing header: " + name);
+            }
         }
     }
 }

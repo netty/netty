@@ -15,6 +15,7 @@
  */
 package io.netty.util.concurrent;
 
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -27,12 +28,14 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
+import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 /**
  * Abstract base class for {@link EventExecutor}'s that execute all its submitted tasks in a single thread.
@@ -56,18 +59,32 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
         }
     };
 
-    private final EventExecutorGroup parent;
+    private static final AtomicIntegerFieldUpdater<SingleThreadEventExecutor> STATE_UPDATER;
+
+    static {
+        AtomicIntegerFieldUpdater<SingleThreadEventExecutor> updater =
+                PlatformDependent.newAtomicIntegerFieldUpdater(SingleThreadEventExecutor.class, "state");
+        if (updater == null) {
+            updater = AtomicIntegerFieldUpdater.newUpdater(SingleThreadEventExecutor.class, "state");
+        }
+        STATE_UPDATER = updater;
+    }
+
     private final Queue<Runnable> taskQueue;
     final Queue<ScheduledFutureTask<?>> delayedTaskQueue = new PriorityQueue<ScheduledFutureTask<?>>();
 
-    private final Thread thread;
-    private final Object stateLock = new Object();
+    private volatile Thread thread;
+    private final Executor executor;
+    private volatile boolean interrupted;
     private final Semaphore threadLock = new Semaphore(0);
     private final Set<Runnable> shutdownHooks = new LinkedHashSet<Runnable>();
     private final boolean addTaskWakesUp;
 
     private long lastExecutionTime;
+
+    @SuppressWarnings({ "FieldMayBeFinal", "unused" })
     private volatile int state = ST_NOT_STARTED;
+
     private volatile long gracefulShutdownQuietPeriod;
     private volatile long gracefulShutdownTimeout;
     private long gracefulShutdownStartTime;
@@ -84,65 +101,26 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
      */
     protected SingleThreadEventExecutor(
             EventExecutorGroup parent, ThreadFactory threadFactory, boolean addTaskWakesUp) {
+        this(parent, new ThreadPerTaskExecutor(threadFactory), addTaskWakesUp);
+    }
 
-        if (threadFactory == null) {
-            throw new NullPointerException("threadFactory");
+    /**
+     * Create a new instance
+     *
+     * @param parent            the {@link EventExecutorGroup} which is the parent of this instance and belongs to it
+     * @param executor          the {@link Executor} which will be used for executing
+     * @param addTaskWakesUp    {@code true} if and only if invocation of {@link #addTask(Runnable)} will wake up the
+     *                          executor thread
+     */
+    protected SingleThreadEventExecutor(EventExecutorGroup parent, Executor executor, boolean addTaskWakesUp) {
+        super(parent);
+
+        if (executor == null) {
+            throw new NullPointerException("executor");
         }
 
-        this.parent = parent;
         this.addTaskWakesUp = addTaskWakesUp;
-
-        thread = threadFactory.newThread(new Runnable() {
-            @Override
-            public void run() {
-                boolean success = false;
-                updateLastExecutionTime();
-                try {
-                    SingleThreadEventExecutor.this.run();
-                    success = true;
-                } catch (Throwable t) {
-                    logger.warn("Unexpected exception from an event executor: ", t);
-                } finally {
-                    if (state < ST_SHUTTING_DOWN) {
-                        state = ST_SHUTTING_DOWN;
-                    }
-
-                    // Check if confirmShutdown() was called at the end of the loop.
-                    if (success && gracefulShutdownStartTime == 0) {
-                        logger.error(
-                                "Buggy " + EventExecutor.class.getSimpleName() + " implementation; " +
-                                SingleThreadEventExecutor.class.getSimpleName() + ".confirmShutdown() must be called " +
-                                "before run() implementation terminates.");
-                    }
-
-                    try {
-                        // Run all remaining tasks and shutdown hooks.
-                        for (;;) {
-                            if (confirmShutdown()) {
-                                break;
-                            }
-                        }
-                    } finally {
-                        try {
-                            cleanup();
-                        } finally {
-                            synchronized (stateLock) {
-                                state = ST_TERMINATED;
-                            }
-                            threadLock.release();
-                            if (!taskQueue.isEmpty()) {
-                                logger.warn(
-                                        "An event executor terminated with " +
-                                        "non-empty task queue (" + taskQueue.size() + ')');
-                            }
-
-                            terminationFuture.setSuccess(null);
-                        }
-                    }
-                }
-            }
-        });
-
+        this.executor = executor;
         taskQueue = newTaskQueue();
     }
 
@@ -156,16 +134,16 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
         return new LinkedBlockingQueue<Runnable>();
     }
 
-    @Override
-    public EventExecutorGroup parent() {
-        return parent;
-    }
-
     /**
      * Interrupt the current running {@link Thread}.
      */
     protected void interruptThread() {
-        thread.interrupt();
+        Thread currentThread = thread;
+        if (currentThread == null) {
+            interrupted = true;
+        } else {
+            currentThread.interrupt();
+        }
     }
 
     /**
@@ -218,6 +196,7 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
                     try {
                         task = taskQueue.poll(delayNanos, TimeUnit.NANOSECONDS);
                     } catch (InterruptedException e) {
+                        // Waken up.
                         return null;
                     }
                 }
@@ -379,7 +358,7 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
     }
 
     /**
-     * Returns the ammount of time left until the scheduled task with the closest dead line is executed.
+     * Returns the amount of time left until the scheduled task with the closest dead line is executed.
      */
     protected long delayNanos(long currentTimeNanos) {
         ScheduledFutureTask<?> delayedTask = delayedTaskQueue.peek();
@@ -414,7 +393,7 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
     }
 
     protected void wakeup(boolean inEventLoop) {
-        if (!inEventLoop || state == ST_SHUTTING_DOWN) {
+        if (!inEventLoop || STATE_UPDATER.get(this) == ST_SHUTTING_DOWN) {
             taskQueue.add(WAKEUP_TASK);
         }
     }
@@ -498,32 +477,37 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
         }
 
         boolean inEventLoop = inEventLoop();
-        boolean wakeup = true;
-
-        synchronized (stateLock) {
+        boolean wakeup;
+        int oldState;
+        for (;;) {
             if (isShuttingDown()) {
                 return terminationFuture();
             }
-
-            gracefulShutdownQuietPeriod = unit.toNanos(quietPeriod);
-            gracefulShutdownTimeout = unit.toNanos(timeout);
-
+            int newState;
+            wakeup = true;
+            oldState = STATE_UPDATER.get(this);
             if (inEventLoop) {
-                assert state == ST_STARTED;
-                state = ST_SHUTTING_DOWN;
+                newState = ST_SHUTTING_DOWN;
             } else {
-                switch (state) {
+                switch (oldState) {
                     case ST_NOT_STARTED:
-                        state = ST_SHUTTING_DOWN;
-                        thread.start();
-                        break;
                     case ST_STARTED:
-                        state = ST_SHUTTING_DOWN;
+                        newState = ST_SHUTTING_DOWN;
                         break;
                     default:
+                        newState = oldState;
                         wakeup = false;
                 }
             }
+            if (STATE_UPDATER.compareAndSet(this, oldState, newState)) {
+                break;
+            }
+        }
+        gracefulShutdownQuietPeriod = unit.toNanos(quietPeriod);
+        gracefulShutdownTimeout = unit.toNanos(timeout);
+
+        if (oldState == ST_NOT_STARTED) {
+            doStartThread();
         }
 
         if (wakeup) {
@@ -546,30 +530,36 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
         }
 
         boolean inEventLoop = inEventLoop();
-        boolean wakeup = true;
-
-        synchronized (stateLock) {
-            if (isShutdown()) {
+        boolean wakeup;
+        int oldState;
+        for (;;) {
+            if (isShuttingDown()) {
                 return;
             }
-
+            int newState;
+            wakeup = true;
+            oldState = STATE_UPDATER.get(this);
             if (inEventLoop) {
-                assert state == ST_STARTED || state == ST_SHUTTING_DOWN;
-                state = ST_SHUTDOWN;
+                newState = ST_SHUTDOWN;
             } else {
-                switch (state) {
-                case ST_NOT_STARTED:
-                    state = ST_SHUTDOWN;
-                    thread.start();
-                    break;
-                case ST_STARTED:
-                case ST_SHUTTING_DOWN:
-                    state = ST_SHUTDOWN;
-                    break;
-                default:
-                    wakeup = false;
+                switch (oldState) {
+                    case ST_NOT_STARTED:
+                    case ST_STARTED:
+                    case ST_SHUTTING_DOWN:
+                        newState = ST_SHUTDOWN;
+                        break;
+                    default:
+                        newState = oldState;
+                        wakeup = false;
                 }
             }
+            if (STATE_UPDATER.compareAndSet(this, oldState, newState)) {
+                break;
+            }
+        }
+
+        if (oldState == ST_NOT_STARTED) {
+            doStartThread();
         }
 
         if (wakeup) {
@@ -579,17 +569,17 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
 
     @Override
     public boolean isShuttingDown() {
-        return state >= ST_SHUTTING_DOWN;
+        return STATE_UPDATER.get(this) >= ST_SHUTTING_DOWN;
     }
 
     @Override
     public boolean isShutdown() {
-        return state >= ST_SHUTDOWN;
+        return STATE_UPDATER.get(this) >= ST_SHUTDOWN;
     }
 
     @Override
     public boolean isTerminated() {
-        return state == ST_TERMINATED;
+        return STATE_UPDATER.get(this) == ST_TERMINATED;
     }
 
     /**
@@ -694,9 +684,14 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
             }
         }
 
-        if (!addTaskWakesUp) {
+        if (!addTaskWakesUp && wakesUpForTask(task)) {
             wakeup(inEventLoop);
         }
+    }
+
+    @SuppressWarnings("unused")
+    protected boolean wakesUpForTask(Runnable task) {
+        return true;
     }
 
     protected static void reject() {
@@ -803,15 +798,74 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
     }
 
     private void startThread() {
-        synchronized (stateLock) {
-            if (state == ST_NOT_STARTED) {
-                state = ST_STARTED;
+        if (STATE_UPDATER.get(this) == ST_NOT_STARTED) {
+            if (STATE_UPDATER.compareAndSet(this, ST_NOT_STARTED, ST_STARTED)) {
                 delayedTaskQueue.add(new ScheduledFutureTask<Void>(
                         this, delayedTaskQueue, Executors.<Void>callable(new PurgeTask(), null),
                         ScheduledFutureTask.deadlineNanos(SCHEDULE_PURGE_INTERVAL), -SCHEDULE_PURGE_INTERVAL));
-                thread.start();
+                doStartThread();
             }
         }
+    }
+
+    private void doStartThread() {
+        assert thread == null;
+        executor.execute(new Runnable() {
+            @Override
+            public void run() {
+                thread = Thread.currentThread();
+                if (interrupted) {
+                    thread.interrupt();
+                }
+
+                boolean success = false;
+                updateLastExecutionTime();
+                try {
+                    SingleThreadEventExecutor.this.run();
+                    success = true;
+                } catch (Throwable t) {
+                    logger.warn("Unexpected exception from an event executor: ", t);
+                } finally {
+                    for (;;) {
+                        int oldState = STATE_UPDATER.get(SingleThreadEventExecutor.this);
+                        if (oldState >= ST_SHUTTING_DOWN || STATE_UPDATER.compareAndSet(
+                                SingleThreadEventExecutor.this, oldState, ST_SHUTTING_DOWN)) {
+                            break;
+                        }
+                    }
+
+                    // Check if confirmShutdown() was called at the end of the loop.
+                    if (success && gracefulShutdownStartTime == 0) {
+                        logger.error("Buggy " + EventExecutor.class.getSimpleName() + " implementation; " +
+                                SingleThreadEventExecutor.class.getSimpleName() + ".confirmShutdown() must be called " +
+                                "before run() implementation terminates.");
+                    }
+
+                    try {
+                        // Run all remaining tasks and shutdown hooks.
+                        for (;;) {
+                            if (confirmShutdown()) {
+                                break;
+                            }
+                        }
+                    } finally {
+                        try {
+                            cleanup();
+                        } finally {
+                            STATE_UPDATER.set(SingleThreadEventExecutor.this, ST_TERMINATED);
+                            threadLock.release();
+                            if (!taskQueue.isEmpty()) {
+                                logger.warn(
+                                        "An event executor terminated with " +
+                                                "non-empty task queue (" + taskQueue.size() + ')');
+                            }
+
+                            terminationFuture.setSuccess(null);
+                        }
+                    }
+                }
+            }
+        });
     }
 
     private final class PurgeTask implements Runnable {

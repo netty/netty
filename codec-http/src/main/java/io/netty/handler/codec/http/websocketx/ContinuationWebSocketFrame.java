@@ -29,7 +29,7 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
      * Creates a new empty continuation frame.
      */
     public ContinuationWebSocketFrame() {
-        super(Unpooled.buffer(0));
+        this(Unpooled.buffer(0));
     }
 
     /**
@@ -54,6 +54,20 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
      */
     public ContinuationWebSocketFrame(boolean finalFragment, int rsv, ByteBuf binaryData) {
         super(finalFragment, rsv, binaryData);
+    }
+
+    /**
+     * Creates a new continuation frame with the specified text data
+     *
+     * @param finalFragment
+     *            flag indicating if this frame is the final fragment
+     * @param rsv
+     *            reserved bits used for protocol extensions
+     * @param text
+     *            text content of the frame.
+     */
+    public ContinuationWebSocketFrame(boolean finalFragment, int rsv, String text) {
+        this(finalFragment, rsv, fromText(text));
     }
 
     /**
@@ -96,6 +110,18 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
     @Override
     public ContinuationWebSocketFrame retain(int increment) {
         super.retain(increment);
+        return this;
+    }
+
+    @Override
+    public ContinuationWebSocketFrame touch() {
+        super.touch();
+        return this;
+    }
+
+    @Override
+    public ContinuationWebSocketFrame touch(Object hint) {
+        super.touch(hint);
         return this;
     }
 }

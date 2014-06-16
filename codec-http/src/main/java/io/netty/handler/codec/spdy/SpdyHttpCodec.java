@@ -15,17 +15,16 @@
  */
 package io.netty.handler.codec.spdy;
 
-import io.netty.channel.CombinedChannelDuplexHandler;
+import io.netty.channel.ChannelHandlerAppender;
 
 /**
  * A combination of {@link SpdyHttpDecoder} and {@link SpdyHttpEncoder}
  */
-public final class SpdyHttpCodec
-        extends CombinedChannelDuplexHandler<SpdyHttpDecoder, SpdyHttpEncoder> {
+public final class SpdyHttpCodec extends ChannelHandlerAppender {
     /**
      * Creates a new instance with the specified decoder options.
      */
-    public SpdyHttpCodec(int version, int maxContentLength) {
+    public SpdyHttpCodec(SpdyVersion version, int maxContentLength) {
         super(new SpdyHttpDecoder(version, maxContentLength), new SpdyHttpEncoder(version));
     }
 }

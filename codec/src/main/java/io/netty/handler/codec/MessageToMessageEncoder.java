@@ -15,9 +15,9 @@
  */
 package io.netty.handler.codec;
 
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandler;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.ReferenceCountUtil;
@@ -29,7 +29,7 @@ import io.netty.util.internal.TypeParameterMatcher;
 import java.util.List;
 
 /**
- * {@link ChannelOutboundHandlerAdapter} which encodes from one message to an other message
+ * A {@link ChannelHandler} which encodes from one message to an other message
  *
  * For example here is an implementation which decodes an {@link Integer} to an {@link String}.
  *
@@ -49,7 +49,7 @@ import java.util.List;
  * are of type {@link ReferenceCounted}. This is needed as the {@link MessageToMessageEncoder} will call
  * {@link ReferenceCounted#release()} on encoded messages.
  */
-public abstract class MessageToMessageEncoder<I> extends ChannelOutboundHandlerAdapter {
+public abstract class MessageToMessageEncoder<I> extends ChannelHandlerAdapter {
 
     private final TypeParameterMatcher matcher;
 
@@ -71,7 +71,7 @@ public abstract class MessageToMessageEncoder<I> extends ChannelOutboundHandlerA
 
     /**
      * Returns {@code true} if the given message should be handled. If {@code false} it will be passed to the next
-     * {@link ChannelOutboundHandler} in the {@link ChannelPipeline}.
+     * {@link ChannelHandler} in the {@link ChannelPipeline}.
      */
     public boolean acceptOutboundMessage(Object msg) throws Exception {
         return matcher.match(msg);
@@ -108,10 +108,24 @@ public abstract class MessageToMessageEncoder<I> extends ChannelOutboundHandlerA
         } finally {
             if (out != null) {
                 final int sizeMinusOne = out.size() - 1;
-                for (int i = 0; i < sizeMinusOne; i ++) {
-                    ctx.write(out.get(i));
+                if (sizeMinusOne == 0) {
+                    ctx.write(out.get(0), promise);
+                } else if (sizeMinusOne > 0) {
+                    // Check if we can use a voidPromise for our extra writes to reduce GC-Pressure
+                    // See https://github.com/netty/netty/issues/2525
+                    ChannelPromise voidPromise = ctx.voidPromise();
+                    boolean isVoidPromise = promise == voidPromise;
+                    for (int i = 0; i < sizeMinusOne; i ++) {
+                        ChannelPromise p;
+                        if (isVoidPromise) {
+                            p = voidPromise;
+                        } else {
+                            p = ctx.newPromise();
+                        }
+                        ctx.write(out.get(i), p);
+                    }
+                    ctx.write(out.get(sizeMinusOne), promise);
                 }
-                ctx.write(out.get(sizeMinusOne), promise);
                 out.recycle();
             }
         }

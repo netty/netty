@@ -18,10 +18,11 @@ package io.netty.channel;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
-import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.ReferenceCountUtil;
@@ -43,7 +44,7 @@ import static org.junit.Assert.*;
 
 public class DefaultChannelPipelineTest {
 
-    private static final EventLoopGroup group = new LocalEventLoopGroup(1);
+    private static final EventLoopGroup group = new DefaultEventLoopGroup(1);
 
     private Channel self;
     private Channel peer;
@@ -57,7 +58,7 @@ public class DefaultChannelPipelineTest {
         final AtomicReference<Channel> peerRef = new AtomicReference<Channel>();
         ServerBootstrap sb = new ServerBootstrap();
         sb.group(group).channel(LocalServerChannel.class);
-        sb.childHandler(new ChannelInboundHandlerAdapter() {
+        sb.childHandler(new ChannelHandlerAdapter() {
             @Override
             public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
                 peerRef.set(ctx.channel());
@@ -106,6 +107,11 @@ public class DefaultChannelPipelineTest {
             protected void deallocate() {
                 free.countDown();
             }
+
+            @Override
+            public ReferenceCounted touch(Object hint) {
+                return this;
+            }
         };
 
         StringInboundHandler handler = new StringInboundHandler();
@@ -117,7 +123,7 @@ public class DefaultChannelPipelineTest {
         assertTrue(handler.called);
     }
 
-    private static final class StringInboundHandler extends ChannelInboundHandlerAdapter {
+    private static final class StringInboundHandler extends ChannelHandlerAdapter {
         boolean called;
 
         @Override
@@ -145,8 +151,11 @@ public class DefaultChannelPipelineTest {
         assertSame(pipeline.get("handler3"), handler3);
 
         pipeline.remove(handler1);
+        assertNull(pipeline.get("handler1"));
         pipeline.remove(handler2);
+        assertNull(pipeline.get("handler2"));
         pipeline.remove(handler3);
+        assertNull(pipeline.get("handler3"));
     }
 
     @Test
@@ -186,6 +195,25 @@ public class DefaultChannelPipelineTest {
         pipeline.addLast(lastHandlers);
 
         verifyContextNumber(pipeline, HANDLER_ARRAY_LEN * 2);
+    }
+
+    @Test
+    public void testFireChannelRegistered() throws Exception {
+        final CountDownLatch latch = new CountDownLatch(1);
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        pipeline.addLast(new ChannelInitializer<Channel>() {
+            @Override
+            protected void initChannel(Channel ch) throws Exception {
+                ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+                        latch.countDown();
+                    }
+                });
+            }
+        });
+        group.register(pipeline.channel());
+        assertTrue(latch.await(2, TimeUnit.SECONDS));
     }
 
     @Test
@@ -231,7 +259,7 @@ public class DefaultChannelPipelineTest {
         pipeline.addBefore("1", "0", newHandler());
         pipeline.addAfter("10", "11", newHandler());
 
-        DefaultChannelHandlerContext ctx = (DefaultChannelHandlerContext) pipeline.firstContext();
+        AbstractChannelHandlerContext ctx = (AbstractChannelHandlerContext) pipeline.firstContext();
         assertNotNull(ctx);
         while (ctx != null) {
             int i = toInt(ctx.name());
@@ -412,8 +440,116 @@ public class DefaultChannelPipelineTest {
         }).sync();
     }
 
-    private static int next(DefaultChannelHandlerContext ctx) {
-        DefaultChannelHandlerContext next = ctx.next;
+    // Tests for https://github.com/netty/netty/issues/2349
+    @Test
+    public void testCancelBind() throws Exception {
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        group.register(pipeline.channel());
+
+        ChannelPromise promise = pipeline.channel().newPromise();
+        assertTrue(promise.cancel(false));
+        ChannelFuture future = pipeline.bind(new LocalAddress("test"), promise);
+        assertTrue(future.isCancelled());
+    }
+
+    @Test
+    public void testCancelConnect() throws Exception {
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        group.register(pipeline.channel());
+
+        ChannelPromise promise = pipeline.channel().newPromise();
+        assertTrue(promise.cancel(false));
+        ChannelFuture future = pipeline.connect(new LocalAddress("test"), promise);
+        assertTrue(future.isCancelled());
+    }
+
+    @Test
+    public void testCancelDisconnect() throws Exception {
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        group.register(pipeline.channel());
+
+        ChannelPromise promise = pipeline.channel().newPromise();
+        assertTrue(promise.cancel(false));
+        ChannelFuture future = pipeline.disconnect(promise);
+        assertTrue(future.isCancelled());
+    }
+
+    @Test
+    public void testCancelClose() throws Exception {
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        group.register(pipeline.channel());
+
+        ChannelPromise promise = pipeline.channel().newPromise();
+        assertTrue(promise.cancel(false));
+        ChannelFuture future = pipeline.close(promise);
+        assertTrue(future.isCancelled());
+    }
+
+    @Test
+    public void testCancelDeregister() throws Exception {
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        group.register(pipeline.channel());
+
+        ChannelPromise promise = pipeline.channel().newPromise();
+        assertTrue(promise.cancel(false));
+        ChannelFuture future = pipeline.deregister(promise);
+        assertTrue(future.isCancelled());
+    }
+
+    @Test
+    public void testCancelWrite() throws Exception {
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        group.register(pipeline.channel());
+
+        ChannelPromise promise = pipeline.channel().newPromise();
+        assertTrue(promise.cancel(false));
+        ByteBuf buffer = Unpooled.buffer();
+        assertEquals(1, buffer.refCnt());
+        ChannelFuture future = pipeline.write(buffer, promise);
+        assertTrue(future.isCancelled());
+        assertEquals(0, buffer.refCnt());
+    }
+
+    @Test
+    public void testCancelWriteAndFlush() throws Exception {
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        group.register(pipeline.channel());
+
+        ChannelPromise promise = pipeline.channel().newPromise();
+        assertTrue(promise.cancel(false));
+        ByteBuf buffer = Unpooled.buffer();
+        assertEquals(1, buffer.refCnt());
+        ChannelFuture future = pipeline.writeAndFlush(buffer, promise);
+        assertTrue(future.isCancelled());
+        assertEquals(0, buffer.refCnt());
+    }
+
+    @Test
+    public void testFirstContextEmptyPipeline() throws Exception {
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        assertNull(pipeline.firstContext());
+    }
+
+    @Test
+    public void testLastContextEmptyPipeline() throws Exception {
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        assertNull(pipeline.lastContext());
+    }
+
+    @Test
+    public void testFirstHandlerEmptyPipeline() throws Exception {
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        assertNull(pipeline.first());
+    }
+
+    @Test
+    public void testLastHandlerEmptyPipeline() throws Exception {
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        assertNull(pipeline.last());
+    }
+
+    private static int next(AbstractChannelHandlerContext ctx) {
+        AbstractChannelHandlerContext next = ctx.next;
         if (next == null) {
             return Integer.MAX_VALUE;
         }
@@ -430,7 +566,7 @@ public class DefaultChannelPipelineTest {
     }
 
     private static void verifyContextNumber(ChannelPipeline pipeline, int expectedNumber) {
-        DefaultChannelHandlerContext ctx = (DefaultChannelHandlerContext) pipeline.firstContext();
+        AbstractChannelHandlerContext ctx = (AbstractChannelHandlerContext) pipeline.firstContext();
         int handlerNumber = 0;
         while (ctx != ((DefaultChannelPipeline) pipeline).tail) {
             handlerNumber++;
@@ -455,9 +591,9 @@ public class DefaultChannelPipelineTest {
     }
 
     @Sharable
-    private static class TestHandler extends ChannelDuplexHandler { }
+    private static class TestHandler extends ChannelHandlerAdapter { }
 
-    private static class BufferedTestHandler extends ChannelDuplexHandler {
+    private static class BufferedTestHandler extends ChannelHandlerAdapter {
         final Queue<Object> inboundBuffer = new ArrayDeque<Object>();
         final Queue<Object> outboundBuffer = new ArrayDeque<Object>();
 

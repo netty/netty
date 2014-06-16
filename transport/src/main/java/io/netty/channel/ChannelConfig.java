@@ -120,14 +120,14 @@ public interface ChannelConfig {
 
     /**
      * Returns the maximum number of messages to read per read loop.
-     * a {@link ChannelInboundHandler#channelRead(ChannelHandlerContext, Object) channelRead()} event.
-     * If this value is greater than 1, an event loop might attempt to read multiple times to procude multiple messages.
+     * a {@link ChannelHandler#channelRead(ChannelHandlerContext, Object) channelRead()} event.
+     * If this value is greater than 1, an event loop might attempt to read multiple times to procure multiple messages.
      */
     int getMaxMessagesPerRead();
 
     /**
      * Sets the maximum number of messages to read per read loop.
-     * If this value is greater than 1, an event loop might attempt to read multiple times toprocude multiple messages.
+     * If this value is greater than 1, an event loop might attempt to read multiple times to procure multiple messages.
      */
     ChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead);
 
@@ -215,8 +215,20 @@ public interface ChannelConfig {
      * Sets the low water mark of the write buffer.  Once the number of bytes
      * queued in the write buffer exceeded the
      * {@linkplain #setWriteBufferHighWaterMark(int) high water mark} and then
-     * dropped down below this value, {@link Channel#isWritable()} will start toreturn
+     * dropped down below this value, {@link Channel#isWritable()} will start to return
      * {@code true} again.
      */
     ChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark);
+
+    /**
+     * Returns {@link MessageSizeEstimator} which is used for the channel
+     * to detect the size of a message.
+     */
+    MessageSizeEstimator getMessageSizeEstimator();
+
+    /**
+     * Set the {@link ByteBufAllocator} which is used for the channel
+     * to detect the size of a message.
+     */
+    ChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator);
 }

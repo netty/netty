@@ -184,4 +184,27 @@ public class ReadOnlyDirectByteBufferBufTest {
 
         Assert.assertEquals(buf.slice(1, 9), copy);
     }
+
+    // Test for https://github.com/netty/netty/issues/1708
+    @Test
+    public void testWrapBufferWithNonZeroPosition() {
+        ByteBuf buf = buffer(((ByteBuffer) allocate(16).putLong(1).flip().position(1)).asReadOnlyBuffer());
+        buffers.add(buf);
+
+        ByteBuf slice = buf.slice();
+        Assert.assertEquals(buf, slice);
+    }
+
+    @Test
+    public void testWrapBufferRoundTrip() {
+        ByteBuf buf = buffer(((ByteBuffer) allocate(16).putInt(1).putInt(2).flip()).asReadOnlyBuffer());
+        buffers.add(buf);
+
+        Assert.assertEquals(1, buf.readInt());
+
+        ByteBuffer nioBuffer = buf.nioBuffer();
+
+        // Ensure this can be accessed without throwing a BufferUnderflowException
+        Assert.assertEquals(2, nioBuffer.getInt());
+    }
 }

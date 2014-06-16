@@ -24,6 +24,7 @@ import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.CharsetUtil;
 import org.junit.Test;
 
+import static io.netty.util.ReferenceCountUtil.releaseLater;
 import static org.junit.Assert.*;
 
 public class LengthFieldBasedFrameDecoderTest {
@@ -42,7 +43,7 @@ public class LengthFieldBasedFrameDecoderTest {
             }
 
             ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 0, 0, 0, 1, 'A' }));
-            ByteBuf buf = (ByteBuf) ch.readInbound();
+            ByteBuf buf = releaseLater((ByteBuf) ch.readInbound());
             assertEquals("A", buf.toString(CharsetUtil.ISO_8859_1));
             buf.release();
         }
@@ -62,7 +63,7 @@ public class LengthFieldBasedFrameDecoderTest {
             }
 
             ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 0, 0, 0, 0, 0, 1, 'A' }));
-            ByteBuf buf = (ByteBuf) ch.readInbound();
+            ByteBuf buf = releaseLater((ByteBuf) ch.readInbound());
             assertEquals("A", buf.toString(CharsetUtil.ISO_8859_1));
             buf.release();
         }

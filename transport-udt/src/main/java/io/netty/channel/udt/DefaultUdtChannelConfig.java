@@ -21,11 +21,13 @@ import com.barchart.udt.nio.ChannelUDT;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
+import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 
 import java.io.IOException;
 import java.util.Map;
 
+import static io.netty.channel.ChannelOption.*;
 import static io.netty.channel.udt.UdtChannelOption.*;
 
 /**
@@ -270,11 +272,19 @@ public class DefaultUdtChannelConfig extends DefaultChannelConfig implements
 
     @Override
     public UdtChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
-        return (UdtChannelConfig) super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
+        super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
+        return this;
     }
 
     @Override
     public UdtChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
-        return (UdtChannelConfig) super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
+        super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
+        return this;
+    }
+
+    @Override
+    public UdtChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
+        super.setMessageSizeEstimator(estimator);
+        return this;
     }
 }

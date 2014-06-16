@@ -22,6 +22,4 @@ import io.netty.channel.socket.ServerSocketChannel;
  * its child {@link Channel}s by accepting them.  {@link ServerSocketChannel} is
  * a good example.
  */
-public interface ServerChannel extends Channel {
-    // This is a tag interface.
-}
+public interface ServerChannel extends Channel { }

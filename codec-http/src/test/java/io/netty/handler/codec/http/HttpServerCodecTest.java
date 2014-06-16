@@ -19,8 +19,11 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
-import org.junit.Assert;
 import org.junit.Test;
+
+import static io.netty.handler.codec.http.HttpHeaders.Names.*;
+import static org.hamcrest.CoreMatchers.*;
+import static org.junit.Assert.*;
 
 public class HttpServerCodecTest {
 
@@ -44,22 +47,71 @@ public class HttpServerCodecTest {
         decoderEmbedder.writeInbound(prepareDataChunk(offeredContentLength));
         decoderEmbedder.finish();
 
-        HttpMessage httpMessage = (HttpMessage) decoderEmbedder.readInbound();
-        Assert.assertNotNull(httpMessage);
+        HttpMessage httpMessage = decoderEmbedder.readInbound();
+        assertNotNull(httpMessage);
 
         boolean empty = true;
         int totalBytesPolled = 0;
         for (;;) {
-            HttpContent httpChunk = (HttpContent) decoderEmbedder.readInbound();
+            HttpContent httpChunk = decoderEmbedder.readInbound();
             if (httpChunk == null) {
                 break;
             }
             empty = false;
             totalBytesPolled += httpChunk.content().readableBytes();
-            Assert.assertFalse(httpChunk instanceof LastHttpContent);
+            assertFalse(httpChunk instanceof LastHttpContent);
+            httpChunk.release();
         }
-        Assert.assertFalse(empty);
-        Assert.assertEquals(offeredContentLength, totalBytesPolled);
+        assertFalse(empty);
+        assertEquals(offeredContentLength, totalBytesPolled);
+    }
+
+    @Test
+    public void test100Continue() throws Exception {
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpServerCodec(), new HttpObjectAggregator(1024));
+
+        // Send the request headers.
+        ch.writeInbound(Unpooled.copiedBuffer(
+                "PUT /upload-large HTTP/1.1\r\n" +
+                "Expect: 100-continue\r\n" +
+                "Content-Length: 1\r\n\r\n", CharsetUtil.UTF_8));
+
+        // Ensure the aggregator generates nothing.
+        assertThat(ch.readInbound(), is(nullValue()));
+
+        // Ensure the aggregator writes a 100 Continue response.
+        ByteBuf continueResponse = ch.readOutbound();
+        assertThat(continueResponse.toString(CharsetUtil.UTF_8), is("HTTP/1.1 100 Continue\r\n\r\n"));
+        continueResponse.release();
+
+        // But nothing more.
+        assertThat(ch.readOutbound(), is(nullValue()));
+
+        // Send the content of the request.
+        ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 42 }));
+
+        // Ensure the aggregator generates a full request.
+        FullHttpRequest req = ch.readInbound();
+        assertThat(req.headers().get(CONTENT_LENGTH), is("1"));
+        assertThat(req.content().readableBytes(), is(1));
+        assertThat(req.content().readByte(), is((byte) 42));
+        req.release();
+
+        // But nothing more.
+        assertThat(ch.readInbound(), is(nullValue()));
+
+        // Send the actual response.
+        FullHttpResponse res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CREATED);
+        res.content().writeBytes("OK".getBytes(CharsetUtil.UTF_8));
+        res.headers().set(CONTENT_LENGTH, 2);
+        ch.writeOutbound(res);
+
+        // Ensure the encoder handles the response after handling 100 Continue.
+        ByteBuf encodedRes = ch.readOutbound();
+        assertThat(encodedRes.toString(CharsetUtil.UTF_8), is("HTTP/1.1 201 Created\r\nContent-Length: 2\r\n\r\nOK"));
+        encodedRes.release();
+
+        ch.finish();
     }
 
     private static ByteBuf prepareDataChunk(int size) {

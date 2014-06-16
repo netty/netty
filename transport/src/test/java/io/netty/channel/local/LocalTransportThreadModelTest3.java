@@ -17,12 +17,12 @@ package io.netty.channel.local;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
@@ -62,14 +62,14 @@ public class LocalTransportThreadModelTest3 {
     @BeforeClass
     public static void init() {
         // Configure a test server
-        group = new LocalEventLoopGroup();
+        group = new DefaultEventLoopGroup();
         ServerBootstrap sb = new ServerBootstrap();
         sb.group(group)
                 .channel(LocalServerChannel.class)
                 .childHandler(new ChannelInitializer<LocalChannel>() {
                     @Override
                     public void initChannel(LocalChannel ch) throws Exception {
-                        ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                        ch.pipeline().addLast(new ChannelHandlerAdapter() {
                             @Override
                             public void channelRead(ChannelHandlerContext ctx, Object msg) {
                                 // Discard
@@ -116,14 +116,14 @@ public class LocalTransportThreadModelTest3 {
     }
 
     private static void testConcurrentAddRemove(boolean inbound) throws Exception {
-        EventLoopGroup l = new LocalEventLoopGroup(4, new DefaultThreadFactory("l"));
+        EventLoopGroup l = new DefaultEventLoopGroup(4, new DefaultThreadFactory("l"));
         EventExecutorGroup e1 = new DefaultEventExecutorGroup(4, new DefaultThreadFactory("e1"));
         EventExecutorGroup e2 = new DefaultEventExecutorGroup(4, new DefaultThreadFactory("e2"));
         EventExecutorGroup e3 = new DefaultEventExecutorGroup(4, new DefaultThreadFactory("e3"));
         EventExecutorGroup e4 = new DefaultEventExecutorGroup(4, new DefaultThreadFactory("e4"));
         EventExecutorGroup e5 = new DefaultEventExecutorGroup(4, new DefaultThreadFactory("e5"));
 
-        final EventExecutorGroup[] groups = {e1, e2, e3, e4, e5};
+        final EventExecutorGroup[] groups = { e1, e2, e3, e4, e5 };
         try {
             Deque<EventType> events = new ConcurrentLinkedDeque<EventType>();
             final EventForwarder h1 = new EventForwarder();
@@ -210,7 +210,7 @@ public class LocalTransportThreadModelTest3 {
             for (;;) {
                 EventType event = events.poll();
                 if (event == null) {
-                    Assert.assertTrue("Missing events:" + expectedEvents.toString(), expectedEvents.isEmpty());
+                    Assert.assertTrue("Missing events:" + expectedEvents, expectedEvents.isEmpty());
                     break;
                 }
                 Assert.assertEquals(event, expectedEvents.poll());
@@ -252,13 +252,13 @@ public class LocalTransportThreadModelTest3 {
     }
 
     @ChannelHandler.Sharable
-    private static final class EventForwarder extends ChannelDuplexHandler { }
+    private static final class EventForwarder extends ChannelHandlerAdapter { }
 
-    private static final class EventRecorder extends ChannelDuplexHandler {
+    private static final class EventRecorder extends ChannelHandlerAdapter {
         private final Queue<EventType> events;
         private final boolean inbound;
 
-        public EventRecorder(Queue<EventType> events, boolean inbound) {
+        EventRecorder(Queue<EventType> events, boolean inbound) {
             this.events = events;
             this.inbound = inbound;
         }

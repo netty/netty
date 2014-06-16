@@ -17,9 +17,8 @@ package io.netty.handler.timeout;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelDuplexHandler;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 
 import java.util.concurrent.ScheduledFuture;
@@ -41,7 +40,7 @@ import java.util.concurrent.TimeUnit;
  * }
  *
  * // Handler should handle the {@link ReadTimeoutException}.
- * public class MyHandler extends {@link ChannelDuplexHandler} {
+ * public class MyHandler extends {@link ChannelHandlerAdapter} {
  *     {@code @Override}
  *     public void exceptionCaught({@link ChannelHandlerContext} ctx, {@link Throwable} cause)
  *             throws {@link Exception} {
@@ -61,9 +60,10 @@ import java.util.concurrent.TimeUnit;
  * @see WriteTimeoutHandler
  * @see IdleStateHandler
  */
-public class ReadTimeoutHandler extends ChannelInboundHandlerAdapter {
+public class ReadTimeoutHandler extends ChannelHandlerAdapter {
+    private static final long MIN_TIMEOUT_NANOS = TimeUnit.MILLISECONDS.toNanos(1);
 
-    private final long timeoutMillis;
+    private final long timeoutNanos;
 
     private volatile ScheduledFuture<?> timeout;
     private volatile long lastReadTime;
@@ -96,9 +96,9 @@ public class ReadTimeoutHandler extends ChannelInboundHandlerAdapter {
         }
 
         if (timeout <= 0) {
-            timeoutMillis = 0;
+            timeoutNanos = 0;
         } else {
-            timeoutMillis = Math.max(unit.toMillis(timeout), 1);
+            timeoutNanos = Math.max(unit.toNanos(timeout), MIN_TIMEOUT_NANOS);
         }
     }
 
@@ -145,7 +145,7 @@ public class ReadTimeoutHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        lastReadTime = System.currentTimeMillis();
+        lastReadTime = System.nanoTime();
         ctx.fireChannelRead(msg);
     }
 
@@ -160,11 +160,11 @@ public class ReadTimeoutHandler extends ChannelInboundHandlerAdapter {
 
         state = 1;
 
-        lastReadTime = System.currentTimeMillis();
-        if (timeoutMillis > 0) {
+        lastReadTime = System.nanoTime();
+        if (timeoutNanos > 0) {
             timeout = ctx.executor().schedule(
                     new ReadTimeoutTask(ctx),
-                    timeoutMillis, TimeUnit.MILLISECONDS);
+                    timeoutNanos, TimeUnit.NANOSECONDS);
         }
     }
 
@@ -202,11 +202,11 @@ public class ReadTimeoutHandler extends ChannelInboundHandlerAdapter {
                 return;
             }
 
-            long currentTime = System.currentTimeMillis();
-            long nextDelay = timeoutMillis - (currentTime - lastReadTime);
+            long currentTime = System.nanoTime();
+            long nextDelay = timeoutNanos - (currentTime - lastReadTime);
             if (nextDelay <= 0) {
                 // Read timed out - set a new timeout and notify the callback.
-                timeout = ctx.executor().schedule(this, timeoutMillis, TimeUnit.MILLISECONDS);
+                timeout = ctx.executor().schedule(this, timeoutNanos, TimeUnit.NANOSECONDS);
                 try {
                     readTimedOut(ctx);
                 } catch (Throwable t) {
@@ -214,7 +214,7 @@ public class ReadTimeoutHandler extends ChannelInboundHandlerAdapter {
                 }
             } else {
                 // Read occurred before the timeout - set a new timeout with shorter delay.
-                timeout = ctx.executor().schedule(this, nextDelay, TimeUnit.MILLISECONDS);
+                timeout = ctx.executor().schedule(this, nextDelay, TimeUnit.NANOSECONDS);
             }
         }
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 The Netty Project
+ * Copyright 2014 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -22,7 +22,16 @@
 
 package io.netty.util.internal;
 
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
+
+import java.lang.Thread.UncaughtExceptionHandler;
+import java.security.SecureRandom;
 import java.util.Random;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * A random number generator isolated to the current thread.  Like the
@@ -50,6 +59,119 @@ import java.util.Random;
  */
 @SuppressWarnings("all")
 public class ThreadLocalRandom extends Random {
+
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(ThreadLocalRandom.class);
+
+    private static final AtomicLong seedUniquifier = new AtomicLong();
+
+    private static volatile long initialSeedUniquifier;
+
+    public static void setInitialSeedUniquifier(long initialSeedUniquifier) {
+        ThreadLocalRandom.initialSeedUniquifier = initialSeedUniquifier;
+    }
+
+    public static synchronized long getInitialSeedUniquifier() {
+        // Use the value set via the setter.
+        long initialSeedUniquifier = ThreadLocalRandom.initialSeedUniquifier;
+        if (initialSeedUniquifier == 0) {
+            // Use the system property value.
+            ThreadLocalRandom.initialSeedUniquifier = initialSeedUniquifier =
+                    SystemPropertyUtil.getLong("io.netty.initialSeedUniquifier", 0);
+        }
+
+        // Otherwise, generate one.
+        if (initialSeedUniquifier == 0) {
+            // Try to generate a real random number from /dev/random.
+            // Get from a different thread to avoid blocking indefinitely on a machine without much entrophy.
+            final BlockingQueue<byte[]> queue = new LinkedBlockingQueue<byte[]>();
+            Thread generatorThread = new Thread("initialSeedUniquifierGenerator") {
+                @Override
+                public void run() {
+                    SecureRandom random = new SecureRandom(); // Get the real random seed from /dev/random
+                    queue.add(random.generateSeed(8));
+                }
+            };
+            generatorThread.setDaemon(true);
+            generatorThread.start();
+            generatorThread.setUncaughtExceptionHandler(new UncaughtExceptionHandler() {
+                @Override
+                public void uncaughtException(Thread t, Throwable e) {
+                    logger.debug("An exception has been raised by {}", t.getName(), e);
+                }
+            });
+
+            // Get the random seed from the thread with timeout.
+            final long timeoutSeconds = 3;
+            final long deadLine = System.nanoTime() + TimeUnit.SECONDS.toNanos(timeoutSeconds);
+            boolean interrupted = false;
+            for (;;) {
+                long waitTime = deadLine - System.nanoTime();
+                if (waitTime <= 0) {
+                    generatorThread.interrupt();
+                    logger.warn(
+                            "Failed to generate a seed from SecureRandom within {} seconds. " +
+                                    "Not enough entrophy?", timeoutSeconds
+                    );
+                    break;
+                }
+
+                try {
+                    byte[] seed = queue.poll(waitTime, TimeUnit.NANOSECONDS);
+                    if (seed != null) {
+                        initialSeedUniquifier =
+                                ((long) seed[0] & 0xff) << 56 |
+                                ((long) seed[1] & 0xff) << 48 |
+                                ((long) seed[2] & 0xff) << 40 |
+                                ((long) seed[3] & 0xff) << 32 |
+                                ((long) seed[4] & 0xff) << 24 |
+                                ((long) seed[5] & 0xff) << 16 |
+                                ((long) seed[6] & 0xff) <<  8 |
+                                 (long) seed[7] & 0xff;
+                        break;
+                    }
+                } catch (InterruptedException e) {
+                    interrupted = true;
+                    logger.warn("Failed to generate a seed from SecureRandom due to an InterruptedException.");
+                    break;
+                }
+            }
+
+            // Just in case the initialSeedUniquifier is zero or some other constant
+            initialSeedUniquifier ^= 0x3255ecdc33bae119L; // just a meaningless random number
+            initialSeedUniquifier ^= Long.reverse(System.nanoTime());
+
+            ThreadLocalRandom.initialSeedUniquifier = initialSeedUniquifier;
+
+            if (interrupted) {
+                // Restore the interrupt status because we don't know how to/don't need to handle it here.
+                Thread.currentThread().interrupt();
+
+                // Interrupt the generator thread if it's still running,
+                // in the hope that the SecureRandom provider raises an exception on interruption.
+                generatorThread.interrupt();
+            }
+        }
+
+        return initialSeedUniquifier;
+    }
+
+    private static long newSeed() {
+        for (;;) {
+            final long current = seedUniquifier.get();
+            final long actualCurrent = current != 0? current : getInitialSeedUniquifier();
+
+            // L'Ecuyer, "Tables of Linear Congruential Generators of Different Sizes and Good Lattice Structure", 1999
+            final long next = actualCurrent * 181783497276652981L;
+
+            if (seedUniquifier.compareAndSet(current, next)) {
+                if (current == 0 && logger.isDebugEnabled()) {
+                    logger.debug(String.format("-Dio.netty.initialSeedUniquifier: 0x%016x", actualCurrent));
+                }
+                return next ^ System.nanoTime();
+            }
+        }
+    }
+
     // same constants as Random, but must be redeclared because private
     private static final long multiplier = 0x5DEECE66DL;
     private static final long addend = 0xBL;
@@ -74,22 +196,22 @@ public class ThreadLocalRandom extends Random {
     private long pad0, pad1, pad2, pad3, pad4, pad5, pad6, pad7;
 
     /**
-     * The actual ThreadLocal
-     */
-    private static final ThreadLocal<ThreadLocalRandom> localRandom =
-        new ThreadLocal<ThreadLocalRandom>() {
-            protected ThreadLocalRandom initialValue() {
-                return new ThreadLocalRandom();
-            }
-    };
-
-    /**
      * Constructor called only by localRandom.initialValue.
      */
     ThreadLocalRandom() {
-        super();
+        super(newSeed());
         initialized = true;
     }
+
+    /**
+     * The actual ThreadLocal
+     */
+    private static final ThreadLocal<ThreadLocalRandom> localRandom =
+            new ThreadLocal<ThreadLocalRandom>() {
+                protected ThreadLocalRandom initialValue() {
+                    return new ThreadLocalRandom();
+                }
+            };
 
     /**
      * Returns the current thread's {@code ThreadLocalRandom}.

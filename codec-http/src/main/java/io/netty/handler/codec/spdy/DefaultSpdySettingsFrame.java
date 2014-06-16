@@ -57,7 +57,7 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
 
     @Override
     public SpdySettingsFrame setValue(int id, int value, boolean persistValue, boolean persisted) {
-        if (id <= 0 || id > SpdyCodecUtil.SPDY_SETTINGS_MAX_ID) {
+        if (id < 0 || id > SpdyCodecUtil.SPDY_SETTINGS_MAX_ID) {
             throw new IllegalArgumentException("Setting ID is not valid: " + id);
         }
         Integer key = Integer.valueOf(id);
@@ -153,7 +153,7 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
     @Override
     public String toString() {
         StringBuilder buf = new StringBuilder();
-        buf.append(getClass().getSimpleName());
+        buf.append(StringUtil.simpleClassName(this));
         buf.append(StringUtil.NEWLINE);
         appendSettings(buf);
         buf.setLength(buf.length() - StringUtil.NEWLINE.length());

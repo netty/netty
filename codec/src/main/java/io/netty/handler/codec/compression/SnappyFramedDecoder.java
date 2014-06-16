@@ -198,7 +198,7 @@ public class SnappyFramedDecoder extends ByteToMessageDecoder {
             return ChunkType.COMPRESSED_DATA;
         } else if (type == 1) {
             return ChunkType.UNCOMPRESSED_DATA;
-        } else if (type == -0x80) {
+        } else if (type == (byte) 0xff) {
             return ChunkType.STREAM_IDENTIFIER;
         } else if ((type & 0x80) == 0x80) {
             return ChunkType.RESERVED_SKIPPABLE;

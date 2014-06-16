@@ -53,9 +53,9 @@
 
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -67,8 +67,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
-public class WebsocketPremessageDeflateExtensionHandler extends
-        ChannelDuplexHandler {
+public class WebsocketPremessageDeflateExtensionHandler extends ChannelHandlerAdapter {
 
     public static final int RSV1 = 0x04;
     public static final byte[] FRAME_TAIL = new byte[] {0x00, 0x00, (byte) 0xff, (byte) 0xff};
@@ -88,9 +87,9 @@ public class WebsocketPremessageDeflateExtensionHandler extends
             HttpRequest request = (HttpRequest) msg;
 
             if (request.headers().contains(HttpHeaders.Names.CONNECTION) &&
-                    HttpHeaders.Values.UPGRADE.equalsIgnoreCase(request.headers().get(HttpHeaders.Names.CONNECTION)) &&
+                    HttpHeaders.Values.UPGRADE.equals(request.headers().get(HttpHeaders.Names.CONNECTION)) &&
                     request.headers().contains(HttpHeaders.Names.UPGRADE) &&
-                    HttpHeaders.Values.WEBSOCKET.equalsIgnoreCase(request.headers().get(HttpHeaders.Names.UPGRADE))) {
+                    HttpHeaders.Values.WEBSOCKET.equals(request.headers().get(HttpHeaders.Names.UPGRADE))) {
 
                 String extensionsHeader = request.headers().get(HttpHeaders.Names.SEC_WEBSOCKET_EXTENSIONS);
                 if (extensionsHeader != null) {

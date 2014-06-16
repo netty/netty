@@ -35,12 +35,15 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ConnectionPendingException;
 import java.nio.channels.NotYetConnectedException;
 import java.util.ArrayDeque;
+import java.util.Collections;
 import java.util.Queue;
 
 /**
  * A {@link Channel} for the local transport.
  */
 public class LocalChannel extends AbstractChannel {
+
+    private enum State { OPEN, BOUND, CONNECTED, CLOSED }
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
@@ -76,12 +79,13 @@ public class LocalChannel extends AbstractChannel {
         }
     };
 
-    private volatile int state; // 0 - open, 1 - bound, 2 - connected, 3 - closed
+    private volatile State state;
     private volatile LocalChannel peer;
     private volatile LocalAddress localAddress;
     private volatile LocalAddress remoteAddress;
     private volatile ChannelPromise connectPromise;
     private volatile boolean readInProgress;
+    private volatile boolean registerInProgress;
 
     public LocalChannel() {
         super(null);
@@ -121,12 +125,12 @@ public class LocalChannel extends AbstractChannel {
 
     @Override
     public boolean isOpen() {
-        return state < 3;
+        return state != State.CLOSED;
     }
 
     @Override
     public boolean isActive() {
-        return state == 2;
+        return state == State.CONNECTED;
     }
 
     @Override
@@ -150,39 +154,40 @@ public class LocalChannel extends AbstractChannel {
     }
 
     @Override
-    protected Runnable doRegister() throws Exception {
-        final LocalChannel peer = this.peer;
-        Runnable postRegisterTask;
+    protected void doRegister() throws Exception {
+        // Check if both peer and parent are non-null because this channel was created by a LocalServerChannel.
+        // This is needed as a peer may not be null also if a LocalChannel was connected before and
+        // deregistered / registered later again.
+        //
+        // See https://github.com/netty/netty/issues/2400
+        if (peer != null && parent() != null) {
+            // Store the peer in a local variable as it may be set to null if doClose() is called.
+            // Because of this we also set registerInProgress to true as we check for this in doClose() and make sure
+            // we delay the fireChannelInactive() to be fired after the fireChannelActive() and so keep the correct
+            // order of events.
+            //
+            // See https://github.com/netty/netty/issues/2144
+            final LocalChannel peer = this.peer;
+            registerInProgress = true;
+            state = State.CONNECTED;
 
-        if (peer != null) {
-            state = 2;
+            peer.remoteAddress = parent() == null ? null : parent().localAddress();
+            peer.state = State.CONNECTED;
 
-            peer.remoteAddress = parent().localAddress();
-            peer.state = 2;
-
-            // Ensure the peer's channelActive event is triggered *after* this channel's
-            // channelRegistered event is triggered, so that this channel's pipeline is fully
-            // initialized by ChannelInitializer.
-            final EventLoop peerEventLoop = peer.eventLoop();
-            postRegisterTask = new Runnable() {
+            // Always call peer.eventLoop().execute() even if peer.eventLoop().inEventLoop() is true.
+            // This ensures that if both channels are on the same event loop, the peer's channelActive
+            // event is triggered *after* this channel's channelRegistered event, so that this channel's
+            // pipeline is fully initialized by ChannelInitializer before any channelRead events.
+            peer.eventLoop().execute(new Runnable() {
                 @Override
                 public void run() {
-                    peerEventLoop.execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            peer.connectPromise.setSuccess();
-                            peer.pipeline().fireChannelActive();
-                        }
-                    });
+                    registerInProgress = false;
+                    peer.pipeline().fireChannelActive();
+                    peer.connectPromise.setSuccess();
                 }
-            };
-        } else {
-            postRegisterTask = null;
+            });
         }
-
         ((SingleThreadEventExecutor) eventLoop()).addShutdownHook(shutdownHook);
-
-        return postRegisterTask;
     }
 
     @Override
@@ -190,7 +195,7 @@ public class LocalChannel extends AbstractChannel {
         this.localAddress =
                 LocalChannelRegistry.register(this, this.localAddress,
                         localAddress);
-        state = 1;
+        state = State.BOUND;
     }
 
     @Override
@@ -199,38 +204,46 @@ public class LocalChannel extends AbstractChannel {
     }
 
     @Override
-    protected void doPreClose() throws Exception {
-        if (state > 2) {
-            // Closed already
-            return;
-        }
-
-        // Update all internal state before the closeFuture is notified.
-        if (localAddress != null) {
-            if (parent() == null) {
-                LocalChannelRegistry.unregister(localAddress);
-            }
-            localAddress = null;
-        }
-        state = 3;
-    }
-
-    @Override
     protected void doClose() throws Exception {
-        LocalChannel peer = this.peer;
+        if (state != State.CLOSED) {
+            // Update all internal state before the closeFuture is notified.
+            if (localAddress != null) {
+                if (parent() == null) {
+                    LocalChannelRegistry.unregister(localAddress);
+                }
+                localAddress = null;
+            }
+            state = State.CLOSED;
+        }
+
+        final LocalChannel peer = this.peer;
         if (peer != null && peer.isActive()) {
-            peer.unsafe().close(unsafe().voidPromise());
+            // Need to execute the close in the correct EventLoop
+            // See https://github.com/netty/netty/issues/1777
+            EventLoop eventLoop = peer.eventLoop();
+
+            // Also check if the registration was not done yet. In this case we submit the close to the EventLoop
+            // to make sure it is run after the registration completes.
+            //
+            // See https://github.com/netty/netty/issues/2144
+            if (eventLoop.inEventLoop() && !registerInProgress) {
+                peer.unsafe().close(unsafe().voidPromise());
+            } else {
+                peer.eventLoop().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        peer.unsafe().close(unsafe().voidPromise());
+                    }
+                });
+            }
             this.peer = null;
         }
     }
 
     @Override
-    protected Runnable doDeregister() throws Exception {
-        if (isOpen()) {
-            unsafe().close(unsafe().voidPromise());
-        }
+    protected void doDeregister() throws Exception {
+        // Just remove the shutdownHook as this Channel may be closed later or registered to another EventLoop
         ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
-        return null;
     }
 
     @Override
@@ -268,10 +281,11 @@ public class LocalChannel extends AbstractChannel {
 
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
-        if (state < 2) {
+        switch (state) {
+        case OPEN:
+        case BOUND:
             throw new NotYetConnectedException();
-        }
-        if (state > 2) {
+        case CLOSED:
             throw new ClosedChannelException();
         }
 
@@ -301,9 +315,7 @@ public class LocalChannel extends AbstractChannel {
             peerLoop.execute(new Runnable() {
                 @Override
                 public void run() {
-                    for (Object o: msgsCopy) {
-                        peer.inboundBuffer.add(o);
-                    }
+                    Collections.addAll(peer.inboundBuffer, msgsCopy);
                     finishPeerRead(peer, peerPipeline);
                 }
             });
@@ -329,13 +341,13 @@ public class LocalChannel extends AbstractChannel {
         @Override
         public void connect(final SocketAddress remoteAddress,
                 SocketAddress localAddress, final ChannelPromise promise) {
-            if (!ensureOpen(promise)) {
+            if (!promise.setUncancellable() || !ensureOpen(promise)) {
                 return;
             }
 
-            if (state == 2) {
+            if (state == State.CONNECTED) {
                 Exception cause = new AlreadyConnectedException();
-                promise.setFailure(cause);
+                safeSetFailure(promise, cause);
                 pipeline().fireExceptionCaught(cause);
                 return;
             }
@@ -346,7 +358,7 @@ public class LocalChannel extends AbstractChannel {
 
             connectPromise = promise;
 
-            if (state != 1) {
+            if (state != State.BOUND) {
                 // Not bound yet and no localAddress specified - get one.
                 if (localAddress == null) {
                     localAddress = new LocalAddress(LocalChannel.this);
@@ -357,8 +369,7 @@ public class LocalChannel extends AbstractChannel {
                 try {
                     doBind(localAddress);
                 } catch (Throwable t) {
-                    promise.setFailure(t);
-                    pipeline().fireExceptionCaught(t);
+                    safeSetFailure(promise, t);
                     close(voidPromise());
                     return;
                 }
@@ -367,7 +378,7 @@ public class LocalChannel extends AbstractChannel {
             Channel boundChannel = LocalChannelRegistry.get(remoteAddress);
             if (!(boundChannel instanceof LocalServerChannel)) {
                 Exception cause = new ChannelException("connection refused");
-                promise.setFailure(cause);
+                safeSetFailure(promise, cause);
                 close(voidPromise());
                 return;
             }

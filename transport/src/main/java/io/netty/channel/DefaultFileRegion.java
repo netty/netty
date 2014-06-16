@@ -25,6 +25,9 @@ import java.nio.channels.WritableByteChannel;
 
 /**
  * Default {@link FileRegion} implementation which transfer data from a {@link FileChannel}.
+ *
+ * Be aware that the {@link FileChannel} will be automatically closed once {@link #refCnt()} returns
+ * {@code 0}.
  */
 public class DefaultFileRegion extends AbstractReferenceCounted implements FileRegion {
 
@@ -100,5 +103,27 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
                 logger.warn("Failed to close a file.", e);
             }
         }
+    }
+
+    @Override
+    public FileRegion retain() {
+        super.retain();
+        return this;
+    }
+
+    @Override
+    public FileRegion retain(int increment) {
+        super.retain(increment);
+        return this;
+    }
+
+    @Override
+    public FileRegion touch() {
+        return this;
+    }
+
+    @Override
+    public FileRegion touch(Object hint) {
+        return this;
     }
 }

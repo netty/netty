@@ -16,13 +16,12 @@
 package io.netty.handler.codec.spdy;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.internal.PlatformDependent;
 
 abstract class SpdyHeaderBlockEncoder {
 
     static SpdyHeaderBlockEncoder newInstance(
-            int version, int compressionLevel, int windowBits, int memLevel) {
+            SpdyVersion version, int compressionLevel, int windowBits, int memLevel) {
 
         if (PlatformDependent.javaVersion() >= 7) {
             return new SpdyHeaderBlockZlibEncoder(
@@ -33,6 +32,6 @@ abstract class SpdyHeaderBlockEncoder {
         }
     }
 
-    abstract ByteBuf encode(ChannelHandlerContext ctx, SpdyHeadersFrame frame) throws Exception;
+    abstract ByteBuf encode(SpdyHeadersFrame frame) throws Exception;
     abstract void end();
 }

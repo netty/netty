@@ -52,4 +52,16 @@ public final class UdtMessage extends DefaultByteBufHolder {
         super.retain(increment);
         return this;
     }
+
+    @Override
+    public UdtMessage touch() {
+        super.touch();
+        return this;
+    }
+
+    @Override
+    public UdtMessage touch(Object hint) {
+        super.touch(hint);
+        return this;
+    }
 }

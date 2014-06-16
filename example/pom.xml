@@ -17,11 +17,10 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
   <modelVersion>4.0.0</modelVersion>
-
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.0.4.Final-SNAPSHOT</version>
+    <version>5.0.0.Alpha2-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-example</artifactId>
@@ -52,12 +51,36 @@
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
+      <artifactId>netty-codec-memcache</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-codec-http2</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
       <artifactId>netty-codec-socks</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-codec-stomp</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>com.google.protobuf</groupId>
       <artifactId>protobuf-java</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-tcnative</artifactId>
+      <classifier>${os.detected.classifier}</classifier>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty.npn</groupId>
+      <artifactId>npn-api</artifactId>
     </dependency>
     <dependency>
       <groupId>com.jcraft</groupId>
@@ -86,4 +109,27 @@
       <version>${project.version}</version>
     </dependency>
   </dependencies>
+
+  <build>
+    <plugins>
+      <!-- run-example.sh invokes this plugin to launch an example. -->
+      <plugin>
+        <groupId>kr.motd.maven</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <configuration>
+          <executable>${java.home}/bin/java</executable>
+          <commandlineArgs>
+            ${argLine.common}
+            ${argLine.bootcp}
+            -classpath %classpath
+            ${argLine.leak}
+            ${argLine.coverage}
+            ${argLine.example}
+            ${exampleClass}
+          </commandlineArgs>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
 </project>
+

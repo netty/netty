@@ -23,11 +23,9 @@ import io.netty.channel.udt.UdtMessage;
  * <p>
  * Note: send/receive must use {@link UdtMessage} in the pipeline
  */
-public class NioUdtMessageRendezvousChannel extends
-        NioUdtMessageConnectorChannel {
+public class NioUdtMessageRendezvousChannel extends NioUdtMessageConnectorChannel {
 
     public NioUdtMessageRendezvousChannel() {
         super(NioUdtProvider.newRendezvousChannelUDT(TypeUDT.DATAGRAM));
     }
-
 }

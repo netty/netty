@@ -17,6 +17,7 @@ package io.netty.example.http.snoop;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.DecoderResult;
@@ -50,12 +51,12 @@ public class HttpSnoopServerHandler extends SimpleChannelInboundHandler<Object> 
     private final StringBuilder buf = new StringBuilder();
 
     @Override
-    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+    public void channelReadComplete(ChannelHandlerContext ctx) {
         ctx.flush();
     }
 
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, Object msg) {
+    protected void messageReceived(ChannelHandlerContext ctx, Object msg) {
         if (msg instanceof HttpRequest) {
             HttpRequest request = this.request = (HttpRequest) msg;
 
@@ -71,9 +72,9 @@ public class HttpSnoopServerHandler extends SimpleChannelInboundHandler<Object> 
             buf.append("HOSTNAME: ").append(getHost(request, "unknown")).append("\r\n");
             buf.append("REQUEST_URI: ").append(request.getUri()).append("\r\n\r\n");
 
-            List<Map.Entry<String, String>> headers = request.headers().entries();
+            HttpHeaders headers = request.headers();
             if (!headers.isEmpty()) {
-                for (Map.Entry<String, String> h: request.headers().entries()) {
+                for (Map.Entry<String, String> h: headers) {
                     String key = h.getKey();
                     String value = h.getValue();
                     buf.append("HEADER: ").append(key).append(" = ").append(value).append("\r\n");
@@ -123,13 +124,16 @@ public class HttpSnoopServerHandler extends SimpleChannelInboundHandler<Object> 
                     buf.append("\r\n");
                 }
 
-                writeResponse(trailer, ctx);
+                if (!writeResponse(trailer, ctx)) {
+                    // If keep-alive is off, close the connection once the content is fully written.
+                    ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
+                }
             }
         }
     }
 
     private static void appendDecoderResult(StringBuilder buf, HttpObject o) {
-        DecoderResult result = o.getDecoderResult();
+        DecoderResult result = o.decoderResult();
         if (result.isSuccess()) {
             return;
         }
@@ -144,7 +148,7 @@ public class HttpSnoopServerHandler extends SimpleChannelInboundHandler<Object> 
         boolean keepAlive = isKeepAlive(request);
         // Build the response object.
         FullHttpResponse response = new DefaultFullHttpResponse(
-                HTTP_1_1, currentObj.getDecoderResult().isSuccess()? OK : BAD_REQUEST,
+                HTTP_1_1, currentObj.decoderResult().isSuccess()? OK : BAD_REQUEST,
                 Unpooled.copiedBuffer(buf.toString(), CharsetUtil.UTF_8));
 
         response.headers().set(CONTENT_TYPE, "text/plain; charset=UTF-8");
@@ -185,7 +189,7 @@ public class HttpSnoopServerHandler extends SimpleChannelInboundHandler<Object> 
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         cause.printStackTrace();
         ctx.close();
     }

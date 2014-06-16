@@ -46,4 +46,52 @@ public class SlicedByteBufTest extends AbstractByteBufTest {
     public void shouldNotAllowNullInConstructor() {
         new SlicedByteBuf(null, 0, 0);
     }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    @Override
+    public void testInternalNioBuffer() {
+        super.testInternalNioBuffer();
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    @Override
+    public void testDuplicateReadGatheringByteChannelMultipleThreads() throws Exception {
+        super.testDuplicateReadGatheringByteChannelMultipleThreads();
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    @Override
+    public void testSliceReadGatheringByteChannelMultipleThreads() throws Exception {
+        super.testSliceReadGatheringByteChannelMultipleThreads();
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    @Override
+    public void testDuplicateReadOutputStreamMultipleThreads() throws Exception {
+        super.testDuplicateReadOutputStreamMultipleThreads();
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    @Override
+    public void testSliceReadOutputStreamMultipleThreads() throws Exception {
+        super.testSliceReadOutputStreamMultipleThreads();
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    @Override
+    public void testDuplicateBytesInArrayMultipleThreads() throws Exception {
+        super.testDuplicateBytesInArrayMultipleThreads();
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    @Override
+    public void testSliceBytesInArrayMultipleThreads() throws Exception {
+        super.testSliceBytesInArrayMultipleThreads();
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    @Override
+    public void testNioBufferExposeOnlyRegion() {
+        super.testNioBufferExposeOnlyRegion();
+    }
 }

@@ -91,13 +91,13 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
                 if (contentEncoding != null) {
                     contentEncoding = contentEncoding.trim();
                 } else {
-                    contentEncoding = HttpHeaders.Values.IDENTITY;
+                    contentEncoding = HttpHeaders.Values.IDENTITY.toString();
                 }
 
                 if ((decoder = newContentDecoder(contentEncoding)) != null) {
                     // Decode the content and remove or replace the existing headers
                     // so that the message looks like a decoded message.
-                    String targetContentEncoding = getTargetContentEncoding(contentEncoding);
+                    CharSequence targetContentEncoding = getTargetContentEncoding(contentEncoding);
                     if (HttpHeaders.Values.IDENTITY.equals(targetContentEncoding)) {
                         // Do NOT set the 'Content-Encoding' header if the target encoding is 'identity'
                         // as per: http://tools.ietf.org/html/rfc2616#section-14.11
@@ -153,9 +153,15 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
         if (c instanceof LastHttpContent) {
             finishDecode(out);
 
+            LastHttpContent last = (LastHttpContent) c;
             // Generate an additional chunk if the decoder produced
             // the last product on closure,
-            out.add(LastHttpContent.EMPTY_LAST_CONTENT);
+            HttpHeaders headers = last.trailingHeaders();
+            if (headers.isEmpty()) {
+                out.add(LastHttpContent.EMPTY_LAST_CONTENT);
+            } else {
+                out.add(new ComposedLastHttpContent(headers));
+            }
         }
     }
 
@@ -179,7 +185,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
      * @return the expected content encoding of the new content
      */
     @SuppressWarnings("unused")
-    protected String getTargetContentEncoding(String contentEncoding) throws Exception {
+    protected CharSequence getTargetContentEncoding(String contentEncoding) throws Exception {
         return HttpHeaders.Values.IDENTITY;
     }
 
@@ -200,7 +206,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
             // Clean-up the previous encoder if not cleaned up correctly.
             if (decoder.finish()) {
                 for (;;) {
-                    ByteBuf buf = (ByteBuf) decoder.readOutbound();
+                    ByteBuf buf = decoder.readOutbound();
                     if (buf == null) {
                         break;
                     }
@@ -228,7 +234,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
 
     private void fetchDecoderOutput(List<Object> out) {
         for (;;) {
-            ByteBuf buf = (ByteBuf) decoder.readInbound();
+            ByteBuf buf = decoder.readInbound();
             if (buf == null) {
                 break;
             }

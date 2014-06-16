@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>Cross Origin Resource Sharing (CORS) Example</title>
+        <link rel="stylesheet" href="css/cors.css">
+    </head>
+    <body onload="simpleGetRequest();">
+        <h1>Repsonse from Server</h1>
+        <textarea id="responseText"></textarea>
+        <script>
+            function simpleGetRequest() {
+                var xhr = new XMLHttpRequest()
+                xhr.open('GET', 'http://localhost:8080/cors');
+
+                // Uncomment to force a CORS preflight request.
+                //xhr.setRequestHeader('custom-request-header', 'dummy value');
+
+                xhr.onerror = function() {
+                    getTextAreaElement().value = 'CORS is NOT working';
+                }
+
+                xhr.onload = function() {
+                    getTextAreaElement().value = 'CORS is working';
+                    //var header = xhr.getResponseHeader("custom-response-header");
+                    //appendTextArea('custom-response-header=' + header);
+                }
+
+                function getTextAreaElement() {
+                    return document.getElementById('responseText');
+                }
+
+                function appendTextArea(newData) {
+                    var el = getTextAreaElement();
+                    el.value = el.value + '\n' + newData;
+                }
+
+                xhr.send();
+            }
+        </script>
+    </body>
+</html>

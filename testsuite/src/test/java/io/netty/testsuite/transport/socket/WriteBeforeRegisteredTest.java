@@ -17,8 +17,8 @@ package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.socket.SocketChannel;
 import org.junit.Test;
 
@@ -42,8 +42,7 @@ public class WriteBeforeRegisteredTest extends AbstractClientSocketTest {
         }
     }
 
-    private static class TestHandler extends ChannelInboundHandlerAdapter {
-
+    private static class TestHandler extends ChannelHandlerAdapter {
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             cause.printStackTrace();

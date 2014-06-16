@@ -186,8 +186,14 @@ public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFr
                 }
                 out.add(buf);
             } else {
-                out.add(buf);
-                out.add(data.retain());
+                if (buf.writableBytes() >= data.readableBytes()) {
+                    // merge buffers as this is cheaper then a gathering write if the payload is small enough
+                    buf.writeBytes(data);
+                    out.add(buf);
+                } else {
+                    out.add(buf);
+                    out.add(data.retain());
+                }
             }
             release = false;
         } finally {

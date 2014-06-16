@@ -16,9 +16,9 @@
 package io.netty.util.concurrent;
 
 import java.util.Collections;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -30,31 +30,50 @@ import java.util.concurrent.atomic.AtomicInteger;
 public abstract class MultithreadEventExecutorGroup extends AbstractEventExecutorGroup {
 
     private final EventExecutor[] children;
+    private final Set<EventExecutor> readonlyChildren;
     private final AtomicInteger childIndex = new AtomicInteger();
     private final AtomicInteger terminatedChildren = new AtomicInteger();
     private final Promise<?> terminationFuture = new DefaultPromise(GlobalEventExecutor.INSTANCE);
+    private final EventExecutorChooser chooser;
 
     /**
      * Create a new instance.
      *
      * @param nThreads          the number of threads that will be used by this instance.
      * @param threadFactory     the ThreadFactory to use, or {@code null} if the default should be used.
-     * @param args              arguments which will passed to each {@link #newChild(ThreadFactory, Object...)} call
+     * @param args              arguments which will passed to each {@link #newChild(Executor, Object...)} call
      */
     protected MultithreadEventExecutorGroup(int nThreads, ThreadFactory threadFactory, Object... args) {
+        this(nThreads, threadFactory == null ? null : new ThreadPerTaskExecutor(threadFactory), args);
+    }
+
+    /**
+     * Create a new instance.
+     *
+     * @param nThreads          the number of threads that will be used by this instance.
+     * @param executor          the Executor to use, or {@code null} if the default should be used.
+     * @param args              arguments which will passed to each {@link #newChild(Executor, Object...)} call
+     */
+    protected MultithreadEventExecutorGroup(int nThreads, Executor executor, Object... args) {
         if (nThreads <= 0) {
             throw new IllegalArgumentException(String.format("nThreads: %d (expected: > 0)", nThreads));
         }
 
-        if (threadFactory == null) {
-            threadFactory = newDefaultThreadFactory();
+        if (executor == null) {
+            executor = new ThreadPerTaskExecutor(newDefaultThreadFactory());
         }
 
-        children = new SingleThreadEventExecutor[nThreads];
+        children = new EventExecutor[nThreads];
+        if (isPowerOfTwo(children.length)) {
+            chooser = new PowerOfTwoEventExecutorChooser();
+        } else {
+            chooser = new GenericEventExecutorChooser();
+        }
+
         for (int i = 0; i < nThreads; i ++) {
             boolean success = false;
             try {
-                children[i] = newChild(threadFactory, args);
+                children[i] = newChild(executor, args);
                 success = true;
             } catch (Exception e) {
                 // TODO: Think about if this is a good exception type
@@ -72,6 +91,7 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
                                 e.awaitTermination(Integer.MAX_VALUE, TimeUnit.SECONDS);
                             }
                         } catch (InterruptedException interrupted) {
+                            // Let the caller handle the interruption.
                             Thread.currentThread().interrupt();
                             break;
                         }
@@ -92,6 +112,10 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
         for (EventExecutor e: children) {
             e.terminationFuture().addListener(terminationListener);
         }
+
+        Set<EventExecutor> childrenSet = new LinkedHashSet<EventExecutor>(children.length);
+        Collections.addAll(childrenSet, children);
+        readonlyChildren = Collections.unmodifiableSet(childrenSet);
     }
 
     protected ThreadFactory newDefaultThreadFactory() {
@@ -100,12 +124,7 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
 
     @Override
     public EventExecutor next() {
-        return children[Math.abs(childIndex.getAndIncrement() % children.length)];
-    }
-
-    @Override
-    public Iterator<EventExecutor> iterator() {
-        return children().iterator();
+        return chooser.next();
     }
 
     /**
@@ -116,22 +135,18 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
         return children.length;
     }
 
-    /**
-     * Return a safe-copy of all of the children of this group.
-     */
-    protected Set<EventExecutor> children() {
-        Set<EventExecutor> children = Collections.newSetFromMap(new LinkedHashMap<EventExecutor, Boolean>());
-        Collections.addAll(children, this.children);
-        return children;
+    @Override
+    @SuppressWarnings("unchecked")
+    public final <E extends EventExecutor> Set<E> children() {
+        return (Set<E>) readonlyChildren;
     }
 
     /**
-     * Create a new EventExecutor which will later then accessable via the {@link #next()}  method. This method will be
+     * Create a new EventExecutor which will later then accessible via the {@link #next()}  method. This method will be
      * called for each thread that will serve this {@link MultithreadEventExecutorGroup}.
      *
      */
-    protected abstract EventExecutor newChild(
-            ThreadFactory threadFactory, Object... args) throws Exception;
+    protected abstract EventExecutor newChild(Executor executor, Object... args) throws Exception;
 
     @Override
     public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
@@ -200,5 +215,27 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
             }
         }
         return isTerminated();
+    }
+
+    private static boolean isPowerOfTwo(int val) {
+        return (val & -val) == val;
+    }
+
+    private interface EventExecutorChooser {
+        EventExecutor next();
+    }
+
+    private final class PowerOfTwoEventExecutorChooser implements EventExecutorChooser {
+        @Override
+        public EventExecutor next() {
+            return children[childIndex.getAndIncrement() & children.length - 1];
+        }
+    }
+
+    private final class GenericEventExecutorChooser implements EventExecutorChooser {
+        @Override
+        public EventExecutor next() {
+            return children[Math.abs(childIndex.getAndIncrement() % children.length)];
+        }
     }
 }
