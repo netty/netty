@@ -411,9 +411,7 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
         checkSrcIndex(index, length, srcIndex, src.capacity());
-        if (buffer.hasArray()) {
-            src.getBytes(srcIndex, buffer.array(), index + buffer.arrayOffset(), length);
-        } else if (src.nioBufferCount() > 0) {
+        if (src.nioBufferCount() > 0) {
             for (ByteBuffer bb: src.nioBuffers(srcIndex, length)) {
                 int bbLen = bb.remaining();
                 setBytes(index, bb);
