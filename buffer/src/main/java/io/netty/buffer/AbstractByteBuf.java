@@ -245,7 +245,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
         }
 
         // Normalize the current capacity to the power of 2.
-        int newCapacity = calculateNewCapacity(writerIndex + minWritableBytes);
+        int newCapacity = alloc().calculateNewCapacity(writerIndex + minWritableBytes, maxCapacity);
 
         // Adjust to the new capacity.
         capacity(newCapacity);
@@ -275,39 +275,11 @@ public abstract class AbstractByteBuf extends ByteBuf {
         }
 
         // Normalize the current capacity to the power of 2.
-        int newCapacity = calculateNewCapacity(writerIndex + minWritableBytes);
+        int newCapacity = alloc().calculateNewCapacity(writerIndex + minWritableBytes, maxCapacity);
 
         // Adjust to the new capacity.
         capacity(newCapacity);
         return 2;
-    }
-
-    private int calculateNewCapacity(int minNewCapacity) {
-        final int maxCapacity = this.maxCapacity;
-        final int threshold = 1048576 * 4; // 4 MiB page
-
-        if (minNewCapacity == threshold) {
-            return threshold;
-        }
-
-        // If over threshold, do not double but just increase by threshold.
-        if (minNewCapacity > threshold) {
-            int newCapacity = minNewCapacity / threshold * threshold;
-            if (newCapacity > maxCapacity - threshold) {
-                newCapacity = maxCapacity;
-            } else {
-                newCapacity += threshold;
-            }
-            return newCapacity;
-        }
-
-        // Not over threshold. Double up to 4 MiB, starting from 64.
-        int newCapacity = 64;
-        while (newCapacity < minNewCapacity) {
-            newCapacity <<= 1;
-        }
-
-        return Math.min(newCapacity, maxCapacity);
     }
 
     @Override
