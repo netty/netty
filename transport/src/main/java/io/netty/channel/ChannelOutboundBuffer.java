@@ -206,16 +206,8 @@ public final class ChannelOutboundBuffer {
             return;
         }
 
-        long oldValue = totalPendingSize;
-        long newWriteBufferSize = oldValue + size;
-        while (!TOTAL_PENDING_SIZE_UPDATER.compareAndSet(this, oldValue, newWriteBufferSize)) {
-            oldValue = totalPendingSize;
-            newWriteBufferSize = oldValue + size;
-        }
-
-        int highWaterMark = channel.config().getWriteBufferHighWaterMark();
-
-        if (newWriteBufferSize > highWaterMark) {
+        long newWriteBufferSize = TOTAL_PENDING_SIZE_UPDATER.addAndGet(this, size);
+        if (newWriteBufferSize > channel.config().getWriteBufferHighWaterMark()) {
             if (WRITABLE_UPDATER.compareAndSet(this, 1, 0)) {
                 channel.pipeline().fireChannelWritabilityChanged();
             }
@@ -234,16 +226,8 @@ public final class ChannelOutboundBuffer {
             return;
         }
 
-        long oldValue = totalPendingSize;
-        long newWriteBufferSize = oldValue - size;
-        while (!TOTAL_PENDING_SIZE_UPDATER.compareAndSet(this, oldValue, newWriteBufferSize)) {
-            oldValue = totalPendingSize;
-            newWriteBufferSize = oldValue - size;
-        }
-
-        int lowWaterMark = channel.config().getWriteBufferLowWaterMark();
-
-        if (newWriteBufferSize == 0 || newWriteBufferSize < lowWaterMark) {
+        long newWriteBufferSize = TOTAL_PENDING_SIZE_UPDATER.addAndGet(this, -size);
+        if (newWriteBufferSize == 0 || newWriteBufferSize < channel.config().getWriteBufferLowWaterMark()) {
             if (WRITABLE_UPDATER.compareAndSet(this, 0, 1)) {
                 channel.pipeline().fireChannelWritabilityChanged();
             }
@@ -579,12 +563,7 @@ public final class ChannelOutboundBuffer {
 
                 // Just decrease; do not trigger any events via decrementPendingOutboundBytes()
                 int size = e.pendingSize;
-                long oldValue = totalPendingSize;
-                long newWriteBufferSize = oldValue - size;
-                while (!TOTAL_PENDING_SIZE_UPDATER.compareAndSet(this, oldValue, newWriteBufferSize)) {
-                    oldValue = totalPendingSize;
-                    newWriteBufferSize = oldValue - size;
-                }
+                TOTAL_PENDING_SIZE_UPDATER.addAndGet(this, -size);
 
                 e.pendingSize = 0;
                 if (!e.cancelled) {
