@@ -64,8 +64,10 @@ import io.netty.handler.codec.compression.ZlibWrapper;
 
 import java.util.List;
 
-class WebsocketPremessageDeflateExtensionDecoder extends
-        MessageToMessageDecoder<WebSocketFrame> {
+class WebsocketPremessageDeflateExtensionDecoder extends MessageToMessageDecoder<WebSocketFrame> {
+
+    static final int RSV1 = 0x04;
+    static final byte[] FRAME_TAIL = new byte[] {0x00, 0x00, (byte) 0xff, (byte) 0xff};
 
     private EmbeddedChannel decoder;
 
@@ -75,8 +77,7 @@ class WebsocketPremessageDeflateExtensionDecoder extends
 
     @Override
     public boolean acceptInboundMessage(Object msg) throws Exception {
-        return msg instanceof WebSocketFrame
-                && (((WebSocketFrame) msg).rsv() & WebsocketPremessageDeflateExtensionHandler.RSV1) > 0;
+        return msg instanceof WebSocketFrame && (((WebSocketFrame) msg).rsv() & RSV1) > 0;
     }
 
     @Override
@@ -84,8 +85,7 @@ class WebsocketPremessageDeflateExtensionDecoder extends
         List<Object> out) throws Exception {
 
         decoder.writeInbound(Unpooled.wrappedBuffer(
-                msg.content().retain(),
-                Unpooled.wrappedBuffer(WebsocketPremessageDeflateExtensionHandler.FRAME_TAIL)));
+                msg.content().retain(), Unpooled.wrappedBuffer(FRAME_TAIL)));
 
         ByteBuf decodedContent = (ByteBuf) decoder.readInbound();
         if (decodedContent == null) {
@@ -95,13 +95,13 @@ class WebsocketPremessageDeflateExtensionDecoder extends
         WebSocketFrame outMsg;
         if (msg instanceof TextWebSocketFrame) {
             outMsg = new TextWebSocketFrame(msg.isFinalFragment(),
-                    msg.rsv(), decodedContent.retain());
+                    msg.rsv(), decodedContent);
         } else if (msg instanceof BinaryWebSocketFrame) {
             outMsg = new BinaryWebSocketFrame(msg.isFinalFragment(),
-                    msg.rsv(), decodedContent.retain());
+                    msg.rsv(), decodedContent);
         } else if (msg instanceof ContinuationWebSocketFrame) {
             outMsg = new ContinuationWebSocketFrame(msg.isFinalFragment(),
-                    msg.rsv(), decodedContent.retain());
+                    msg.rsv(), decodedContent);
         } else {
             throw new CodecException();
         }

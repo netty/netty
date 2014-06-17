@@ -15,34 +15,42 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
+import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpMessage;
+import io.netty.util.internal.StringUtil;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
-public final class WebSocketExtensionUtil {
+final class WebSocketExtensionUtil {
 
-    private static final String EXTENSION_SEPARATOR = ",";
-    private static final String PARAMETER_SEPARATOR = ";";
-    private static final String PARAMETER_EQUAL = "=";
+    private static final char EXTENSION_SEPARATOR = ',';
+    private static final char PARAMETER_SEPARATOR = ';';
+    private static final char PARAMETER_EQUAL = '=';
 
-    private WebSocketExtensionUtil() {
-        // TODO Auto-generated constructor stub
+    static boolean isWebsocketUpgrade(HttpMessage httpMessage) {
+        if (httpMessage == null) {
+            throw new NullPointerException("httpMessage");
+        }
+        return httpMessage.headers().contains(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.UPGRADE, true) &&
+                httpMessage.headers().contains(HttpHeaders.Names.UPGRADE, HttpHeaders.Values.WEBSOCKET, true);
     }
 
-    public static Map<String, Map<String, String>> extractExtensions(String extensionHeader) {
-        String[] rawExtensions = extensionHeader.split(EXTENSION_SEPARATOR);
+    static Map<String, Map<String, String>> extractExtensions(String extensionHeader) {
+        String[] rawExtensions = StringUtil.split(extensionHeader, EXTENSION_SEPARATOR);
         if (rawExtensions.length > 0) {
             Map<String, Map<String, String>> extensions =
                     new HashMap<String, Map<String, String>>(rawExtensions.length);
             for (String rawExtension : rawExtensions) {
-                String[] extensionParameters = rawExtension.split(PARAMETER_SEPARATOR);
+                String[] extensionParameters = StringUtil.split(rawExtension, PARAMETER_SEPARATOR);
                 String name = extensionParameters[0].trim();
                 HashMap<String, String> parameters =
                         new HashMap<String, String>(extensionParameters.length - 1);
                 if (extensionParameters.length > 1) {
                     for (int i = 1; i < extensionParameters.length; i++) {
-                        String[] parameterSplited = extensionParameters[i].split(PARAMETER_EQUAL);
+                        String[] parameterSplited = StringUtil.split(extensionParameters[i], PARAMETER_EQUAL);
                         parameters.put(parameterSplited[0].trim(),
                                 parameterSplited.length > 1 ? parameterSplited[1].trim() : null);
                     }
@@ -55,7 +63,7 @@ public final class WebSocketExtensionUtil {
         }
     }
 
-    public static String appendExtension(String currentHeaderValue, String extensionName,
+    static String appendExtension(String currentHeaderValue, String extensionName,
             Map<String, String> extensionParameters) {
 
         StringBuilder newHeaderValue = new StringBuilder();
@@ -78,6 +86,13 @@ public final class WebSocketExtensionUtil {
             }
         }
         return newHeaderValue.toString();
+    }
+
+    /**
+     * A private constructor to ensure that instances of this class cannot be made
+     */
+    private WebSocketExtensionUtil() {
+        // Unused
     }
 
 }

@@ -53,6 +53,7 @@
 
 package io.netty.handler.codec.http.websocketx;
 
+import static io.netty.handler.codec.http.websocketx.WebsocketPremessageDeflateExtensionDecoder.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -68,8 +69,9 @@ class WebsocketPremessageDeflateExtensionEncoder extends
 
     private EmbeddedChannel encoder;
 
-    public WebsocketPremessageDeflateExtensionEncoder() {
-        this.encoder = new EmbeddedChannel(ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE));
+    public WebsocketPremessageDeflateExtensionEncoder(int compressionLevel, int windowSize) {
+        this.encoder = new EmbeddedChannel(ZlibCodecFactory.newZlibEncoder(
+                ZlibWrapper.NONE, compressionLevel, windowSize, 8));
     }
 
     @Override
@@ -87,39 +89,26 @@ class WebsocketPremessageDeflateExtensionEncoder extends
             throw new CodecException();
         }
 
-        ByteBuf encodedContentTruncated = null;
-        try {
-            int rsv = msg.rsv()
-                    | WebsocketPremessageDeflateExtensionHandler.RSV1;
-            int realLength = encodedContent.readableBytes() -
-                    WebsocketPremessageDeflateExtensionHandler.FRAME_TAIL.length;
+        int rsv = msg.rsv() | RSV1;
+        int realLength = encodedContent.readableBytes() - FRAME_TAIL.length;
 
-            encodedContentTruncated = ctx.alloc().heapBuffer(realLength);
-            encodedContentTruncated.writeBytes(encodedContent, realLength);
+        ByteBuf encodedContentWithoutTail = encodedContent.slice(0, realLength);
 
-            WebSocketFrame outMsg;
-            if (msg instanceof TextWebSocketFrame) {
-                outMsg = new TextWebSocketFrame(msg.isFinalFragment(), rsv,
-                        encodedContentTruncated.retain());
-            } else if (msg instanceof BinaryWebSocketFrame) {
-                outMsg = new BinaryWebSocketFrame(msg.isFinalFragment(), rsv,
-                        encodedContentTruncated.retain());
-            } else if (msg instanceof ContinuationWebSocketFrame) {
-                outMsg = new ContinuationWebSocketFrame(msg.isFinalFragment(),
-                        rsv, encodedContentTruncated.retain());
-            } else {
-                throw new CodecException();
-            }
-
-            out.add(outMsg);
-
-        } catch (Exception ex) {
-            if (encodedContentTruncated != null) {
-                encodedContentTruncated.release();
-            }
-        } finally {
-            encodedContent.release();
+        WebSocketFrame outMsg;
+        if (msg instanceof TextWebSocketFrame) {
+            outMsg = new TextWebSocketFrame(msg.isFinalFragment(), rsv,
+                    encodedContentWithoutTail);
+        } else if (msg instanceof BinaryWebSocketFrame) {
+            outMsg = new BinaryWebSocketFrame(msg.isFinalFragment(), rsv,
+                    encodedContentWithoutTail);
+        } else if (msg instanceof ContinuationWebSocketFrame) {
+            outMsg = new ContinuationWebSocketFrame(msg.isFinalFragment(),
+                    rsv, encodedContentWithoutTail);
+        } else {
+            throw new CodecException();
         }
+
+        out.add(outMsg);
     }
 
 }
