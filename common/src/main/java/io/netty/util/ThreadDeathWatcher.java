@@ -85,7 +85,7 @@ public final class ThreadDeathWatcher {
      *
      * @return {@code true} if and only if the watcher thread has been terminated
      */
-    public boolean awaitInactivity(long timeout, TimeUnit unit) throws InterruptedException {
+    public static boolean awaitInactivity(long timeout, TimeUnit unit) throws InterruptedException {
         if (unit == null) {
             throw new NullPointerException("unit");
         }
