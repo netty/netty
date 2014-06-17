@@ -13,17 +13,16 @@
 * License for the specific language governing permissions and limitations
 * under the License.
 */
-package io.netty.util.internal;
+package io.netty.util.concurrent;
 
-import java.util.Arrays;
+import io.netty.util.internal.InternalThreadLocalMap;
 
 /**
- * To utilise the {@link FastThreadLocal} fast-path, all threads accessing a {@link FastThreadLocal} must extend this
- * class.
+ * A special {@link Thread} that provides fast access to {@link FastThreadLocal} variables.
  */
 public class FastThreadLocalThread extends Thread {
 
-    Object[] lookup = newArray();
+    private InternalThreadLocalMap threadLocalMap;
 
     public FastThreadLocalThread() { }
 
@@ -55,28 +54,19 @@ public class FastThreadLocalThread extends Thread {
         super(group, target, name, stackSize);
     }
 
-    private static Object[] newArray() {
-        Object[] array = new Object[32];
-        Arrays.fill(array, FastThreadLocal.EMPTY);
-        return array;
+    /**
+     * Returns the internal data structure that keeps the thread-local variables bound to this thread.
+     * Note that this method is for internal use only, and thus is subject to change at any time.
+     */
+    public final InternalThreadLocalMap threadLocalMap() {
+        return threadLocalMap;
     }
 
-    Object[] expandArray(int length) {
-        int newCapacity = lookup.length;
-        do {
-            // double capacity until it is big enough
-            newCapacity <<= 1;
-
-            if (newCapacity < 0) {
-                throw new IllegalStateException();
-            }
-
-        } while (length > newCapacity);
-
-        Object[] array = new Object[newCapacity];
-        System.arraycopy(lookup, 0, array, 0, lookup.length);
-        Arrays.fill(array, lookup.length, array.length, FastThreadLocal.EMPTY);
-        lookup = array;
-        return lookup;
+    /**
+     * Sets the internal data structure that keeps the thread-local variables bound to this thread.
+     * Note that this method is for internal use only, and thus is subject to change at any time.
+     */
+    public final void setThreadLocalMap(InternalThreadLocalMap threadLocalMap) {
+        this.threadLocalMap = threadLocalMap;
     }
 }

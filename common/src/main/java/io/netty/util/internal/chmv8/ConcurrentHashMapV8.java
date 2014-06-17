@@ -22,7 +22,8 @@
 
 package io.netty.util.internal.chmv8;
 
-import io.netty.util.internal.FastThreadLocal;
+import io.netty.util.internal.IntegerHolder;
+import io.netty.util.internal.InternalThreadLocalMap;
 
 import java.io.ObjectStreamField;
 import java.io.Serializable;
@@ -2238,14 +2239,15 @@ public class ConcurrentHashMapV8<K,V>
         CounterCell[] as; long b, s;
         if ((as = counterCells) != null ||
                 !U.compareAndSwapLong(this, BASECOUNT, b = baseCount, s = b + x)) {
-            CounterHashCode hc; CounterCell a; long v; int m;
+            IntegerHolder hc; CounterCell a; long v; int m;
             boolean uncontended = true;
-            if ((hc = threadCounterHashCode.get()) == null ||
+            InternalThreadLocalMap threadLocals = InternalThreadLocalMap.get();
+            if ((hc = threadLocals.counterHashCode()) == null ||
                     as == null || (m = as.length - 1) < 0 ||
-                    (a = as[m & hc.code]) == null ||
+                    (a = as[m & hc.value]) == null ||
                     !(uncontended =
                             U.compareAndSwapLong(a, CELLVALUE, v = a.value, v + x))) {
-                fullAddCount(x, hc, uncontended);
+                fullAddCount(threadLocals, x, hc, uncontended);
                 return;
             }
             if (check <= 1)
@@ -6030,13 +6032,6 @@ public class ConcurrentHashMapV8<K,V>
      */
     static final int SEED_INCREMENT = 0x61c88647;
 
-    /**
-     * Per-thread counter hash codes. Shared across all instances.
-     */
-    static final ThreadLocal<CounterHashCode> threadCounterHashCode =
-            new FastThreadLocal<CounterHashCode>();
-
-
     final long sumCount() {
         CounterCell[] as = counterCells; CounterCell a;
         long sum = baseCount;
@@ -6050,17 +6045,18 @@ public class ConcurrentHashMapV8<K,V>
     }
 
     // See LongAdder version for explanation
-    private final void fullAddCount(long x, CounterHashCode hc,
+    private final void fullAddCount(InternalThreadLocalMap threadLocals,
+                                    long x, IntegerHolder hc,
                                     boolean wasUncontended) {
         int h;
         if (hc == null) {
-            hc = new CounterHashCode();
+            hc = new IntegerHolder();
             int s = counterHashCodeGenerator.addAndGet(SEED_INCREMENT);
-            h = hc.code = (s == 0) ? 1 : s; // Avoid zero
-            threadCounterHashCode.set(hc);
+            h = hc.value = (s == 0) ? 1 : s; // Avoid zero
+            threadLocals.setCounterHashCode(hc);
         }
         else
-            h = hc.code;
+            h = hc.value;
         boolean collide = false;                // True if last slot nonempty
         for (;;) {
             CounterCell[] as; CounterCell a; int n; long v;
@@ -6135,7 +6131,7 @@ public class ConcurrentHashMapV8<K,V>
             else if (U.compareAndSwapLong(this, BASECOUNT, v = baseCount, v + x))
                 break;                          // Fall back on using base
         }
-        hc.code = h;                            // Record index for next time
+        hc.value = h;                           // Record index for next time
     }
 
     // Unsafe mechanics

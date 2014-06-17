@@ -17,7 +17,7 @@ package io.netty.util.concurrent;
 
 import io.netty.util.Signal;
 import io.netty.util.internal.EmptyArrays;
-import io.netty.util.internal.FastThreadLocal;
+import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -36,12 +36,6 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             InternalLoggerFactory.getInstance(DefaultPromise.class.getName() + ".rejectedExecution");
 
     private static final int MAX_LISTENER_STACK_DEPTH = 8;
-    private static final ThreadLocal<Integer> LISTENER_STACK_DEPTH = new FastThreadLocal<Integer>() {
-        @Override
-        protected Integer initialValue() {
-            return 0;
-        }
-    };
     private static final Signal SUCCESS = Signal.valueOf(DefaultPromise.class.getName() + ".SUCCESS");
     private static final Signal UNCANCELLABLE = Signal.valueOf(DefaultPromise.class.getName() + ".UNCANCELLABLE");
     private static final CauseHolder CANCELLATION_CAUSE_HOLDER = new CauseHolder(new CancellationException());
@@ -557,9 +551,10 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
-            final Integer stackDepth = LISTENER_STACK_DEPTH.get();
+            final InternalThreadLocalMap threadLocals = InternalThreadLocalMap.get();
+            final int stackDepth = threadLocals.futureListenerStackDepth();
             if (stackDepth < MAX_LISTENER_STACK_DEPTH) {
-                LISTENER_STACK_DEPTH.set(stackDepth + 1);
+                threadLocals.setFutureListenerStackDepth(stackDepth + 1);
                 try {
                     if (listeners instanceof DefaultFutureListeners) {
                         notifyListeners0(this, (DefaultFutureListeners) listeners);
@@ -571,7 +566,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
                     }
                 } finally {
                     this.listeners = null;
-                    LISTENER_STACK_DEPTH.set(stackDepth);
+                    threadLocals.setFutureListenerStackDepth(stackDepth);
                 }
                 return;
             }
@@ -617,13 +612,14 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         final EventExecutor executor = executor();
         if (executor.inEventLoop()) {
             if (listeners == null && lateListeners == null) {
-                final Integer stackDepth = LISTENER_STACK_DEPTH.get();
+                final InternalThreadLocalMap threadLocals = InternalThreadLocalMap.get();
+                final int stackDepth = threadLocals.futureListenerStackDepth();
                 if (stackDepth < MAX_LISTENER_STACK_DEPTH) {
-                    LISTENER_STACK_DEPTH.set(stackDepth + 1);
+                    threadLocals.setFutureListenerStackDepth(stackDepth + 1);
                     try {
                         notifyListener0(this, l);
                     } finally {
-                        LISTENER_STACK_DEPTH.set(stackDepth);
+                        threadLocals.setFutureListenerStackDepth(stackDepth);
                     }
                     return;
                 }
@@ -648,13 +644,14 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             final EventExecutor eventExecutor, final Future<?> future, final GenericFutureListener<?> l) {
 
         if (eventExecutor.inEventLoop()) {
-            final Integer stackDepth = LISTENER_STACK_DEPTH.get();
+            final InternalThreadLocalMap threadLocals = InternalThreadLocalMap.get();
+            final int stackDepth = threadLocals.futureListenerStackDepth();
             if (stackDepth < MAX_LISTENER_STACK_DEPTH) {
-                LISTENER_STACK_DEPTH.set(stackDepth + 1);
+                threadLocals.setFutureListenerStackDepth(stackDepth + 1);
                 try {
                     notifyListener0(future, l);
                 } finally {
-                    LISTENER_STACK_DEPTH.set(stackDepth);
+                    threadLocals.setFutureListenerStackDepth(stackDepth);
                 }
                 return;
             }

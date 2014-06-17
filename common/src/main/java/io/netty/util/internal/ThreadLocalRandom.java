@@ -58,7 +58,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * //author Doug Lea
  */
 @SuppressWarnings("all")
-public class ThreadLocalRandom extends Random {
+public final class ThreadLocalRandom extends Random {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ThreadLocalRandom.class);
 
@@ -204,22 +204,12 @@ public class ThreadLocalRandom extends Random {
     }
 
     /**
-     * The actual ThreadLocal
-     */
-    private static final ThreadLocal<ThreadLocalRandom> localRandom =
-            new FastThreadLocal<ThreadLocalRandom>() {
-                protected ThreadLocalRandom initialValue() {
-                    return new ThreadLocalRandom();
-                }
-            };
-
-    /**
      * Returns the current thread's {@code ThreadLocalRandom}.
      *
      * @return the current thread's {@code ThreadLocalRandom}
      */
     public static ThreadLocalRandom current() {
-        return localRandom.get();
+        return InternalThreadLocalMap.get().random();
     }
 
     /**

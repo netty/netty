@@ -17,7 +17,7 @@ package io.netty.microbench.internal;
 
 import io.netty.microbench.util.AbstractMicrobenchmark;
 import io.netty.util.internal.RecyclableArrayList;
-import org.openjdk.jmh.annotations.GenerateMicroBenchmark;
+import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Threads;
@@ -32,7 +32,7 @@ public class RecyclableArrayListBenchmark extends AbstractMicrobenchmark {
     @Param({ "00000", "00256", "01024", "04096", "16384", "65536" })
     public int size;
 
-    @GenerateMicroBenchmark
+    @Benchmark
     public void recycleSameThread() {
         RecyclableArrayList list = RecyclableArrayList.newInstance(size);
         list.recycle();

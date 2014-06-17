@@ -16,7 +16,6 @@
 
 package io.netty.util.concurrent;
 
-import io.netty.util.internal.FastThreadLocalThread;
 import io.netty.util.internal.StringUtil;
 
 import java.util.Locale;
@@ -99,7 +98,7 @@ public class DefaultThreadFactory implements ThreadFactory {
 
     @Override
     public Thread newThread(Runnable r) {
-        Thread t = newThread(r, prefix + nextId.incrementAndGet());
+        Thread t = newThread(new DefaultRunnableDecorator(r), prefix + nextId.incrementAndGet());
         try {
             if (t.isDaemon()) {
                 if (!daemon) {
@@ -122,5 +121,23 @@ public class DefaultThreadFactory implements ThreadFactory {
 
     protected Thread newThread(Runnable r, String name) {
         return new FastThreadLocalThread(r, name);
+    }
+
+    private static final class DefaultRunnableDecorator implements Runnable {
+
+        private final Runnable r;
+
+        DefaultRunnableDecorator(Runnable r) {
+            this.r = r;
+        }
+
+        @Override
+        public void run() {
+            try {
+                r.run();
+            } finally {
+                FastThreadLocal.removeAll();
+            }
+        }
     }
 }
