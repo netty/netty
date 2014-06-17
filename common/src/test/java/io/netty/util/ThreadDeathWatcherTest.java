@@ -20,6 +20,7 @@ import org.junit.Test;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
@@ -27,7 +28,7 @@ import static org.junit.Assert.*;
 public class ThreadDeathWatcherTest {
 
     @Test(timeout = 10000)
-    public void testSimple() throws Exception {
+    public void testWatch() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
         final Thread t = new Thread() {
             @Override
@@ -69,5 +70,47 @@ public class ThreadDeathWatcherTest {
 
         // The task must be run on termination.
         latch.await();
+    }
+
+    @Test(timeout = 10000)
+    public void testUnwatch() throws Exception {
+        final AtomicBoolean run = new AtomicBoolean();
+        final Thread t = new Thread() {
+            @Override
+            public void run() {
+                for (;;) {
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException ignore) {
+                        break;
+                    }
+                }
+            }
+        };
+
+        final Runnable task = new Runnable() {
+            @Override
+            public void run() {
+                run.set(true);
+            }
+        };
+
+        t.start();
+
+        // Watch and then unwatch.
+        ThreadDeathWatcher.watch(t, task);
+        ThreadDeathWatcher.unwatch(t, task);
+
+        // Interrupt the thread to terminate it.
+        t.interrupt();
+
+        // Wait until the thread dies.
+        t.join();
+
+        // Wait until the watcher thread terminates itself.
+        assertThat(ThreadDeathWatcher.awaitInactivity(Long.MAX_VALUE, TimeUnit.SECONDS), is(true));
+
+        // And the task should not run.
+        assertThat(run.get(), is(false));
     }
 }

@@ -42,7 +42,7 @@ public final class ClientCookieEncoder {
             throw new NullPointerException("cookie");
         }
 
-        StringBuilder buf = buffer.get();
+        StringBuilder buf = stringBuilder();
         encode(buf, cookie);
         return stripTrailingSeparator(buf);
     }
@@ -52,7 +52,7 @@ public final class ClientCookieEncoder {
             throw new NullPointerException("cookies");
         }
 
-        StringBuilder buf = buffer.get();
+        StringBuilder buf = stringBuilder();
         for (Cookie c: cookies) {
             if (c == null) {
                 break;
@@ -68,7 +68,7 @@ public final class ClientCookieEncoder {
             throw new NullPointerException("cookies");
         }
 
-        StringBuilder buf = buffer.get();
+        StringBuilder buf = stringBuilder();
         for (Cookie c: cookies) {
             if (c == null) {
                 break;
