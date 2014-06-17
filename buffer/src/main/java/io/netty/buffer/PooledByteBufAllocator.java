@@ -16,8 +16,7 @@
 
 package io.netty.buffer;
 
-import io.netty.util.ThreadDeathWatcher;
-import io.netty.util.internal.FastThreadLocal;
+import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -271,7 +270,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
      */
     @Deprecated
     public boolean hasThreadLocalCache() {
-        return threadCache.exists();
+        return threadCache.isSet();
     }
 
     /**
@@ -279,12 +278,11 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
      */
     @Deprecated
     public void freeThreadLocalCache() {
-        threadCache.free();
+        threadCache.remove();
     }
 
     final class PoolThreadLocalCache extends FastThreadLocal<PoolThreadCache> {
         private final AtomicInteger index = new AtomicInteger();
-        private boolean initialized;
 
         @Override
         protected PoolThreadCache initialValue() {
@@ -304,45 +302,14 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
                 directArena = null;
             }
 
-            final PoolThreadCache cache = new PoolThreadCache(
+            return new PoolThreadCache(
                     heapArena, directArena, tinyCacheSize, smallCacheSize, normalCacheSize,
                     DEFAULT_MAX_CACHED_BUFFER_CAPACITY, DEFAULT_CACHE_TRIM_INTERVAL);
-
-            // The thread-local cache will keep a list of pooled buffers which must be returned to
-            // the pool when the thread is not alive anymore.
-            final Thread thread = Thread.currentThread();
-            ThreadDeathWatcher.watch(thread, new Runnable() {
-                @Override
-                public void run() {
-                    int numFreed = cache.free();
-                    if (logger.isDebugEnabled()) {
-                        logger.debug("Freed {} thread-local buffer(s) from thread: {}", numFreed, thread.getName());
-                    }
-                }
-            });
-
-            initialized = true;
-            return cache;
         }
 
-        /**
-         * Returns {@code true} if the calling {@link Thread} has a {@link ThreadLocal} cache for the allocated
-         * buffers.
-         */
-        @Deprecated
-        public boolean exists() {
-            return initialized;
-        }
-
-        /**
-         * Free all cached buffers for the calling {@link Thread}.
-         */
-        @Deprecated
-        public void free() {
-            if (exists()) {
-                PoolThreadCache cache = get();
-                cache.free();
-            }
+        @Override
+        protected void onRemoval(PoolThreadCache value) {
+            value.free();
         }
     }
 

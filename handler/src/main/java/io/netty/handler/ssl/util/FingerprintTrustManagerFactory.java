@@ -19,7 +19,7 @@ package io.netty.handler.ssl.util;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.util.internal.EmptyArrays;
-import io.netty.util.internal.FastThreadLocal;
+import io.netty.util.concurrent.FastThreadLocal;
 
 import javax.net.ssl.ManagerFactoryParameters;
 import javax.net.ssl.TrustManager;
@@ -68,7 +68,7 @@ public final class FingerprintTrustManagerFactory extends SimpleTrustManagerFact
     private static final int SHA1_BYTE_LEN = 20;
     private static final int SHA1_HEX_LEN = SHA1_BYTE_LEN * 2;
 
-    private static final ThreadLocal<MessageDigest> tlmd = new FastThreadLocal<MessageDigest>() {
+    private static final FastThreadLocal<MessageDigest> tlmd = new FastThreadLocal<MessageDigest>() {
         @Override
         protected MessageDigest initialValue() {
             try {

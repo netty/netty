@@ -28,7 +28,7 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
-import io.netty.util.internal.FastThreadLocal;
+import io.netty.util.internal.InternalThreadLocalMap;
 
 import java.net.SocketAddress;
 import java.nio.channels.AlreadyConnectedException;
@@ -47,12 +47,6 @@ public class LocalChannel extends AbstractChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
     private static final int MAX_READER_STACK_DEPTH = 8;
-    private static final ThreadLocal<Integer> READER_STACK_DEPTH = new FastThreadLocal<Integer>() {
-        @Override
-        protected Integer initialValue() {
-            return 0;
-        }
-    };
 
     private final ChannelConfig config = new DefaultChannelConfig(this);
     private final Queue<Object> inboundBuffer = new ArrayDeque<Object>();
@@ -258,9 +252,10 @@ public class LocalChannel extends AbstractChannel {
             return;
         }
 
-        final Integer stackDepth = READER_STACK_DEPTH.get();
+        final InternalThreadLocalMap threadLocals = InternalThreadLocalMap.get();
+        final Integer stackDepth = threadLocals.localChannelReaderStackDepth();
         if (stackDepth < MAX_READER_STACK_DEPTH) {
-            READER_STACK_DEPTH.set(stackDepth + 1);
+            threadLocals.setLocalChannelReaderStackDepth(stackDepth + 1);
             try {
                 for (;;) {
                     Object received = inboundBuffer.poll();
@@ -271,7 +266,7 @@ public class LocalChannel extends AbstractChannel {
                 }
                 pipeline.fireChannelReadComplete();
             } finally {
-                READER_STACK_DEPTH.set(stackDepth);
+                threadLocals.setLocalChannelReaderStackDepth(stackDepth);
             }
         } else {
             eventLoop().execute(readTask);
