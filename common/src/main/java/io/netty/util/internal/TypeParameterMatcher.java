@@ -22,7 +22,6 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 import java.util.HashMap;
-import java.util.IdentityHashMap;
 import java.util.Map;
 
 public abstract class TypeParameterMatcher {
@@ -30,16 +29,9 @@ public abstract class TypeParameterMatcher {
     private static final TypeParameterMatcher NOOP = new NoOpTypeParameterMatcher();
     private static final Object TEST_OBJECT = new Object();
 
-    private static final ThreadLocal<Map<Class<?>, TypeParameterMatcher>> getCache =
-            new FastThreadLocal<Map<Class<?>, TypeParameterMatcher>>() {
-                @Override
-                protected Map<Class<?>, TypeParameterMatcher> initialValue() {
-                    return new IdentityHashMap<Class<?>, TypeParameterMatcher>();
-                }
-            };
-
     public static TypeParameterMatcher get(final Class<?> parameterType) {
-        final Map<Class<?>, TypeParameterMatcher> getCache = TypeParameterMatcher.getCache.get();
+        final Map<Class<?>, TypeParameterMatcher> getCache =
+                InternalThreadLocalMap.get().typeParameterMatcherGetCache();
 
         TypeParameterMatcher matcher = getCache.get(parameterType);
         if (matcher == null) {
@@ -68,18 +60,11 @@ public abstract class TypeParameterMatcher {
         return matcher;
     }
 
-    private static final ThreadLocal<Map<Class<?>, Map<String, TypeParameterMatcher>>> findCache =
-            new FastThreadLocal<Map<Class<?>, Map<String, TypeParameterMatcher>>>() {
-                @Override
-                protected Map<Class<?>, Map<String, TypeParameterMatcher>> initialValue() {
-                    return new IdentityHashMap<Class<?>, Map<String, TypeParameterMatcher>>();
-                }
-            };
-
     public static TypeParameterMatcher find(
             final Object object, final Class<?> parameterizedSuperclass, final String typeParamName) {
 
-        final Map<Class<?>, Map<String, TypeParameterMatcher>> findCache = TypeParameterMatcher.findCache.get();
+        final Map<Class<?>, Map<String, TypeParameterMatcher>> findCache =
+                InternalThreadLocalMap.get().typeParameterMatcherFindCache();
         final Class<?> thisClass = object.getClass();
 
         Map<String, TypeParameterMatcher> map = findCache.get(thisClass);

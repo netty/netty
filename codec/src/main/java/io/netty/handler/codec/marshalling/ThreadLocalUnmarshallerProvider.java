@@ -17,7 +17,7 @@ package io.netty.handler.codec.marshalling;
 
 import io.netty.channel.ChannelHandlerContext;
 
-import io.netty.util.internal.FastThreadLocal;
+import io.netty.util.concurrent.FastThreadLocal;
 import org.jboss.marshalling.MarshallerFactory;
 import org.jboss.marshalling.MarshallingConfiguration;
 import org.jboss.marshalling.Unmarshaller;
@@ -28,7 +28,7 @@ import org.jboss.marshalling.Unmarshaller;
  * many small {@link Object}'s.
  */
 public class ThreadLocalUnmarshallerProvider implements UnmarshallerProvider {
-    private final ThreadLocal<Unmarshaller> unmarshallers = new FastThreadLocal<Unmarshaller>();
+    private final FastThreadLocal<Unmarshaller> unmarshallers = new FastThreadLocal<Unmarshaller>();
 
     private final MarshallerFactory factory;
     private final MarshallingConfiguration config;

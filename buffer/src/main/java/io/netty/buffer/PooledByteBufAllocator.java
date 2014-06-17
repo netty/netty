@@ -16,8 +16,7 @@
 
 package io.netty.buffer;
 
-import io.netty.util.ThreadDeathWatcher;
-import io.netty.util.internal.FastThreadLocal;
+import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -277,24 +276,14 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
                 directArena = null;
             }
 
-            final PoolThreadCache cache = new PoolThreadCache(
+            return new PoolThreadCache(
                     heapArena, directArena, tinyCacheSize, smallCacheSize, normalCacheSize,
                     DEFAULT_MAX_CACHED_BUFFER_CAPACITY, DEFAULT_CACHE_TRIM_INTERVAL);
+        }
 
-            // The thread-local cache will keep a list of pooled buffers which must be returned to
-            // the pool when the thread is not alive anymore.
-            final Thread thread = Thread.currentThread();
-            ThreadDeathWatcher.watch(thread, new Runnable() {
-                @Override
-                public void run() {
-                    int numFreed = cache.free();
-                    if (logger.isDebugEnabled()) {
-                        logger.debug("Freed {} thread-local buffer(s) from thread: {}", numFreed, thread.getName());
-                    }
-                }
-            });
-
-            return cache;
+        @Override
+        protected void onRemoval(PoolThreadCache value) {
+            value.free();
         }
     }
 
