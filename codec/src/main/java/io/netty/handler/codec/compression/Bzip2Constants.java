@@ -53,17 +53,17 @@ final class Bzip2Constants {
     static final int HUFFMAN_MAX_ALPHABET_SIZE = 258;
 
     /**
-     * The longest Huffman code length created by the encoder
+     * The longest Huffman code length created by the encoder.
      */
     static final int HUFFMAN_ENCODE_MAX_CODE_LENGTH = 20;
 
     /**
-     * The longest Huffman code length accepted by the decoder
+     * The longest Huffman code length accepted by the decoder.
      */
     static final int HUFFMAN_DECODE_MAX_CODE_LENGTH = 23;
 
     /**
-     * Huffman symbols used for run-length encoding
+     * Huffman symbols used for run-length encoding.
      */
     static final int HUFFMAN_SYMBOL_RUNA = 0;
     static final int HUFFMAN_SYMBOL_RUNB = 1;
@@ -74,17 +74,17 @@ final class Bzip2Constants {
     static final int HUFFMAN_GROUP_RUN_LENGTH = 50;
 
     /**
-     * Maximum possible number of Huffman table selectors
+     * Maximum possible number of Huffman table selectors.
      */
     static final int MAX_SELECTORS = 2 + 900000 / HUFFMAN_GROUP_RUN_LENGTH; // 18002
 
     /**
-     * Minimum number of alternative Huffman tables
+     * Minimum number of alternative Huffman tables.
      */
     static final int HUFFMAN_MINIMUM_TABLES = 2;
 
     /**
-     * Maximum number of alternative Huffman tables
+     * Maximum number of alternative Huffman tables.
      */
     static final int HUFFMAN_MAXIMUM_TABLES = 6;
 

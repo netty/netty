@@ -26,7 +26,7 @@ import static io.netty.handler.codec.compression.Bzip2Constants.*;
 /**
  * Uncompresses a {@link ByteBuf} encoded with the Bzip2 format.
  *
- * See http://en.wikipedia.org/wiki/Bzip2
+ * See <a href="http://en.wikipedia.org/wiki/Bzip2">Bzip2</a>.
  */
 public class Bzip2Decoder extends ByteToMessageDecoder {
     /**
@@ -45,7 +45,6 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
         END_BLOCK,
         EOF
     }
-
     private State currentState = State.INIT;
 
     /**
@@ -59,13 +58,30 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
     private Bzip2HuffmanStageDecoder huffmanStageDecoder;
 
     /**
-     * always: in the range 0 .. 9. The current block size is 100000 * this
-     * number.
+     * Always: in the range 0 .. 9. The current block size is 100000 * this number.
      */
     private int blockSize;
 
+    /**
+     * The CRC of the current block as read from the block header.
+     */
     private int blockCRC;
+
+    /**
+     * The merged CRC of all blocks decompressed so far.
+     */
     private int streamCRC;
+
+    // For bitwise access
+    /**
+     * A buffer of bits read from the input stream that have not yet been returned.
+     */
+    private int bitBuffer;
+
+    /**
+     * The number of bits currently buffered in {@link #bitBuffer}.
+     */
+    private int bitCount;
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
@@ -185,7 +201,7 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
                     int currSelector = 0;
                     int currSelectorMtf = 0;
                     try {
-                        //get zero-terminated bit runs (0..62) of MTF'ed Huffman table. length = 1..6
+                        // Get zero-terminated bit runs (0..62) of MTF'ed Huffman table. length = 1..6
                         for (currSelector = huffmanStageDecoder.currentSelector;
                                     currSelector < totalSelectors; currSelector++) {
                             currSelectorMtf = huffmanStageDecoder.currentSelectorMtf;
@@ -196,7 +212,7 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
                             huffmanStageDecoder.currentSelectorMtf = 0;
                         }
                     } catch (IndexOutOfBoundsException e) {
-                        //save state if end of current ByteBuf was reached
+                        // Save state if end of current ByteBuf was reached
                         huffmanStageDecoder.currentSelector = currSelector;
                         huffmanStageDecoder.currentSelectorMtf = currSelectorMtf;
                         return;
@@ -237,7 +253,7 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
                             modifyLength = false;
                         }
                     } catch (IndexOutOfBoundsException e) {
-                        //save state if end of current ByteBuf was reached
+                        // Save state if end of current ByteBuf was reached
                         huffmanStageDecoder.currentGroup = currGroup;
                         huffmanStageDecoder.currentLength = currLength;
                         huffmanStageDecoder.currentAlpha = currAlpha;
@@ -245,7 +261,7 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
                         return;
                     }
 
-                    // finally create the Huffman tables
+                    // Finally create the Huffman tables
                     huffmanStageDecoder.createHuffmanDecodingTables();
                     currentState = State.DECODE_HUFFMAN_DATA;
                 case DECODE_HUFFMAN_DATA:
@@ -283,17 +299,6 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
     public boolean isClosed() {
         return currentState == State.EOF;
     }
-
-    //for bitwise access
-    /**
-     * A buffer of bits read from the input stream that have not yet been returned
-     */
-    private int bitBuffer;
-
-    /**
-     * The number of bits currently buffered in {@link #bitBuffer}
-     */
-    private int bitCount;
 
     int readBits(ByteBuf in, final int n) {
         int bitCount = this.bitCount;

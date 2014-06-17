@@ -245,7 +245,7 @@ final class Bzip2BlockDecompressor {
 
     /**
      * Decodes a byte from the final Run-Length Encoding stage, pulling a new byte from the
-     * Burrows-Wheeler Transform stage when required
+     * Burrows-Wheeler Transform stage when required.
      * @return The decoded byte, or -1 if there are no more bytes
      */
     public int read() {
@@ -281,7 +281,7 @@ final class Bzip2BlockDecompressor {
 
     /**
      * Decodes a byte from the Burrows-Wheeler Transform stage. If the block has randomisation
-     * applied, reverses the randomisation
+     * applied, reverses the randomisation.
      * @return The decoded byte
      */
     private int decodeNextBWTByte() {

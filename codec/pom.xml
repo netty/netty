@@ -61,10 +61,11 @@
       <artifactId>jboss-marshalling-river</artifactId>
       <scope>test</scope>
     </dependency>
+
+    <!-- Test dependency for Bzip2Decoder -->
     <dependency>
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-compress</artifactId>
-      <version>1.8.1</version>
       <scope>test</scope>
     </dependency>
   </dependencies>

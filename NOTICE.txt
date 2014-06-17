@@ -146,7 +146,7 @@ can be obtained at:
   * HOMEPAGE:
     * http://logging.apache.org/log4j/
 
-This product optionally depends on 'jbzip2', a Java bzip2 compression/decompression
+This product is optionally based on 'jbzip2', a Java bzip2 compression/decompression
 library written by Matthew J. Francis. It can be obtained at:
 
   * LICENSE:

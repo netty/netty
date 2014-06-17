@@ -80,7 +80,7 @@ final class Bzip2HuffmanStageDecoder {
      */
     final Bzip2MoveToFrontTable tableMTF = new Bzip2MoveToFrontTable();
 
-    // for saving state if end of current ByteBuf was reached
+    // For saving state if end of current ByteBuf was reached
     int currentSelector;
     int currentSelectorMtf;
 
@@ -89,7 +89,7 @@ final class Bzip2HuffmanStageDecoder {
      */
     final byte[][] tableCodeLengths;
 
-    // for saving state if end of current ByteBuf was reached
+    // For saving state if end of current ByteBuf was reached
     int currentGroup;
     int currentLength = -1;
     int currentAlpha;
@@ -110,7 +110,7 @@ final class Bzip2HuffmanStageDecoder {
     }
 
     /**
-     * Constructs Huffman decoding tables from lists of Canonical Huffman code lengths
+     * Constructs Huffman decoding tables from lists of Canonical Huffman code lengths.
      */
     void createHuffmanDecodingTables() {
         final int alphabetSize = this.alphabetSize;
@@ -165,7 +165,7 @@ final class Bzip2HuffmanStageDecoder {
     }
 
     /**
-     * Decodes and returns the next symbol
+     * Decodes and returns the next symbol.
      * @return The decoded symbol
      */
     int nextSymbol(ByteBuf in) {

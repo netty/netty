@@ -86,7 +86,7 @@ public class Bzip2DecoderTest {
         in.writeByte('1');  //block size
         in.writeInt(11111); //random value
         in.writeShort(111); //random value
-        in.writeInt(111); //block CRC
+        in.writeInt(111);   //block CRC
 
         channel.writeInbound(in);
     }
