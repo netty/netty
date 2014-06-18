@@ -25,6 +25,7 @@ import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.STREAM_CLOSED;
 import static io.netty.handler.codec.http2.Http2Exception.protocolError;
+import static io.netty.handler.codec.http2.Http2Stream.State.CLOSED;
 import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_LOCAL;
 import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_REMOTE;
 import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
@@ -189,7 +190,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         ChannelFuture future = ctx.newSucceededFuture();
         for (Http2Stream stream : connection.activeStreams().toArray(new Http2Stream[0])) {
-            close(stream, ctx, future);
+            close(stream, future);
         }
         super.channelInactive(ctx);
     }
@@ -201,7 +202,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         if (cause instanceof Http2Exception) {
-            processHttp2Exception(ctx, (Http2Exception) cause);
+            onHttp2Exception(ctx, (Http2Exception) cause);
         }
 
         super.exceptionCaught(ctx, cause);
@@ -410,7 +411,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
 
                 // If the headers are the end of the stream, close it now.
                 if (endStream) {
-                    closeLocalSide(stream, ctx, promise);
+                    closeLocalSide(stream, promise);
                 }
             }
 
@@ -447,7 +448,8 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
             return promise;
         }
 
-        close(stream, ctx, promise);
+        stream.terminateSent();
+        close(stream, promise);
 
         return frameWriter.writeRstStream(ctx, promise, streamId, errorCode);
     }
@@ -525,7 +527,113 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
 
             frameReader.readFrame(ctx, in, internalFrameObserver);
         } catch (Http2Exception e) {
-            processHttp2Exception(ctx, e);
+            onHttp2Exception(ctx, e);
+        }
+    }
+
+    /**
+     * Processes the given exception. Depending on the type of exception, delegates to either
+     * {@link #processConnectionError} or {@link #processStreamError}.
+     */
+    protected final void onHttp2Exception(ChannelHandlerContext ctx, Http2Exception e) {
+        if (e instanceof Http2StreamException) {
+            onStreamError(ctx, (Http2StreamException) e);
+        } else {
+            onConnectionError(ctx, e);
+        }
+    }
+
+    /**
+     * Handler for a connection error. Sends a GO_AWAY frame to the remote endpoint and waits until
+     * all streams are closed before shutting down the connection.
+     */
+    protected void onConnectionError(ChannelHandlerContext ctx, Http2Exception cause) {
+        sendGoAway(ctx, ctx.newPromise(), cause);
+    }
+
+    /**
+     * Handler for a stream error. Sends a RST_STREAM frame to the remote endpoint and closes the stream.
+     */
+    protected void onStreamError(ChannelHandlerContext ctx, Http2StreamException cause) {
+        // Send the RST_STREAM frame to the remote endpoint.
+        int streamId = cause.streamId();
+        frameWriter.writeRstStream(ctx, ctx.newPromise(), streamId, cause.error().code());
+
+        // Mark the stream as terminated and close it.
+        Http2Stream stream = connection.stream(streamId);
+        if (stream != null) {
+            stream.terminateSent();
+            close(stream, null);
+        }
+    }
+
+    /**
+     * Sends a GO_AWAY frame to the remote endpoint. Waits until all streams are closed before
+     * shutting down the connection.
+     *
+     * @param ctx the handler context
+     * @param promise the promise used to create the close listener.
+     * @param cause connection error that caused this GO_AWAY, or {@code null} if normal
+     *            termination.
+     */
+    protected final void sendGoAway(ChannelHandlerContext ctx, ChannelPromise promise,
+            Http2Exception cause) {
+        ChannelFuture future = null;
+        ChannelPromise closePromise = promise;
+        if (!connection.isGoAway()) {
+            int errorCode = cause != null ? cause.error().code() : NO_ERROR.code();
+            ByteBuf debugData = toByteBuf(ctx, cause);
+
+            int lastKnownStream = connection.remote().lastStreamCreated();
+            future = frameWriter.writeGoAway(ctx, promise, lastKnownStream, errorCode, debugData);
+            closePromise = null;
+            connection.remote().goAwayReceived(lastKnownStream);
+        }
+
+        closeListener = getOrCreateCloseListener(ctx, closePromise);
+
+        // If there are no active streams, close immediately after the send is complete.
+        // Otherwise wait until all streams are inactive.
+        if (cause != null || connection.numActiveStreams() == 0) {
+            if (future == null) {
+                future = ctx.newSucceededFuture();
+            }
+            future.addListener(closeListener);
+        }
+    }
+
+    /**
+     * If not already created, creates a new listener for the given promise which, when complete,
+     * closes the connection and frees any resources.
+     */
+    private ChannelFutureListener getOrCreateCloseListener(final ChannelHandlerContext ctx,
+            ChannelPromise promise) {
+        final ChannelPromise closePromise = promise == null? ctx.newPromise() : promise;
+        if (closeListener == null) {
+            // If no promise was provided, create a new one.
+            closeListener = new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    ctx.close(closePromise);
+                    freeResources();
+                }
+            };
+        } else {
+            closePromise.setSuccess();
+        }
+
+        return closeListener;
+    }
+
+    /**
+     * Frees any resources maintained by this handler.
+     */
+    private void freeResources() {
+        frameReader.close();
+        frameWriter.close();
+        if (clientPrefaceString != null) {
+            clientPrefaceString.release();
+            clientPrefaceString = null;
         }
     }
 
@@ -566,113 +674,52 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
     }
 
     /**
-     * Processes the given exception. Depending on the type of exception, delegates to either
-     * {@link #processConnectionError} or {@link #processStreamError}.
+     * Closes the remote side of the given stream. If this causes the stream to be closed, adds a
+     * hook to close the channel after the given future completes.
+     *
+     * @param stream the stream to be half closed.
+     * @param future If closing, the future after which to close the channel. If {@code null},
+     *            ignored.
      */
-    private void processHttp2Exception(ChannelHandlerContext ctx, Http2Exception e) {
-        if (e instanceof Http2StreamException) {
-            processStreamError(ctx, (Http2StreamException) e);
-        } else {
-            processConnectionError(ctx, e);
-        }
-    }
-
-    private void processConnectionError(ChannelHandlerContext ctx, Http2Exception cause) {
-        sendGoAway(ctx, ctx.newPromise(), cause);
-    }
-
-    private void processStreamError(ChannelHandlerContext ctx, Http2StreamException cause) {
-        // Close the stream if it was open.
-        int streamId = cause.streamId();
-        Http2Stream stream = connection.stream(streamId);
-        if (stream != null) {
-            close(stream, ctx, null);
-        }
-
-        // Send the Rst frame to the remote endpoint.
-        frameWriter.writeRstStream(ctx, ctx.newPromise(), streamId, cause.error().code());
-    }
-
-    private void sendGoAway(ChannelHandlerContext ctx, ChannelPromise promise,
-            Http2Exception cause) {
-        ChannelFuture future = null;
-        ChannelPromise closePromise = promise;
-        if (!connection.isGoAway()) {
-            connection.goAwaySent();
-
-            int errorCode = cause != null ? cause.error().code() : NO_ERROR.code();
-            ByteBuf debugData = toByteBuf(ctx, cause);
-
-            future = frameWriter.writeGoAway(ctx, promise, connection.remote().lastStreamCreated(),
-                            errorCode, debugData);
-            closePromise = null;
-        }
-
-        closeListener = getOrCreateCloseListener(ctx, closePromise);
-
-        // If there are no active streams, close immediately after the send is complete.
-        // Otherwise wait until all streams are inactive.
-        if (cause != null || connection.numActiveStreams() == 0) {
-            if (future == null) {
-                future = ctx.newSucceededFuture();
-            }
-            future.addListener(closeListener);
-        }
-    }
-
-    private ChannelFutureListener getOrCreateCloseListener(final ChannelHandlerContext ctx,
-            ChannelPromise promise) {
-        final ChannelPromise closePromise = promise == null? ctx.newPromise() : promise;
-        if (closeListener == null) {
-            // If no promise was provided, create a new one.
-            closeListener = new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    ctx.close(closePromise);
-                    freeResources();
-                }
-            };
-        } else {
-            closePromise.setSuccess();
-        }
-
-        return closeListener;
-    }
-
-    private void freeResources() {
-        frameReader.close();
-        frameWriter.close();
-        if (clientPrefaceString != null) {
-            clientPrefaceString.release();
-            clientPrefaceString = null;
-        }
-    }
-
-    private void closeLocalSide(Http2Stream stream, ChannelHandlerContext ctx, ChannelFuture future) {
+    private void closeLocalSide(Http2Stream stream, ChannelFuture future) {
         switch (stream.state()) {
             case HALF_CLOSED_LOCAL:
             case OPEN:
                 stream.closeLocalSide();
                 break;
             default:
-                close(stream, ctx, future);
+                close(stream, future);
                 break;
         }
     }
 
-    private void closeRemoteSide(Http2Stream stream, ChannelHandlerContext ctx, ChannelFuture future) {
+    /**
+     * Closes the remote side of the given stream. If this causes the stream to be closed, adds a
+     * hook to close the channel after the given future completes.
+     *
+     * @param stream the stream to be half closed.
+     * @param future If closing, the future after which to close the channel. If {@code null},
+     *            ignored.
+     */
+    private void closeRemoteSide(Http2Stream stream, ChannelFuture future) {
         switch (stream.state()) {
             case HALF_CLOSED_REMOTE:
             case OPEN:
                 stream.closeRemoteSide();
                 break;
             default:
-                close(stream, ctx, future);
+                close(stream, future);
                 break;
         }
     }
 
-    private void close(Http2Stream stream, ChannelHandlerContext ctx, ChannelFuture future) {
+    /**
+     * Closes the given stream and adds a hook to close the channel after the given future completes.
+     *
+     * @param stream the stream to be closed.
+     * @param future the future after which to close the channel. If {@code null}, ignored.
+     */
+    private void close(Http2Stream stream, ChannelFuture future) {
         stream.close();
 
         // If this connection is closing and there are no longer any
@@ -815,12 +862,15 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
                         }
                     });
 
-            if (isInboundStreamAfterGoAway(streamId)) {
+            verifyGoAwayNotReceived();
+            verifyRstStreamNotReceived(stream);
+            if (shouldIgnoreFrame(stream)) {
+                // Ignore this frame.
                 return;
             }
 
             if (endOfStream) {
-                closeRemoteSide(stream, ctx, ctx.newSucceededFuture());
+                closeRemoteSide(stream, ctx.newSucceededFuture());
             }
 
             AbstractHttp2ConnectionHandler.this.onDataRead(ctx, streamId, data, padding, endOfStream,
@@ -840,11 +890,14 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
                 boolean endStream, boolean endSegment) throws Http2Exception {
             verifyPrefaceReceived();
 
-            if (isInboundStreamAfterGoAway(streamId)) {
+            Http2Stream stream = connection.stream(streamId);
+            verifyGoAwayNotReceived();
+            verifyRstStreamNotReceived(stream);
+            if (connection.remote().isGoAwayReceived() || (stream != null && shouldIgnoreFrame(stream))) {
+                // Ignore this frame.
                 return;
             }
 
-            Http2Stream stream = connection.stream(streamId);
             if (stream == null) {
                 createRemoteStream(streamId, endStream, streamDependency, weight, exclusive);
             } else {
@@ -867,7 +920,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
 
                 // If the headers completes this stream, close it.
                 if (endStream) {
-                    closeRemoteSide(stream, ctx, ctx.newSucceededFuture());
+                    closeRemoteSide(stream, ctx.newSucceededFuture());
                 }
             }
 
@@ -880,13 +933,15 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
                 short weight, boolean exclusive) throws Http2Exception {
             verifyPrefaceReceived();
 
-            if (isInboundStreamAfterGoAway(streamId)) {
+            Http2Stream stream = connection.requireStream(streamId);
+            verifyGoAwayNotReceived();
+            verifyRstStreamNotReceived(stream);
+            if (stream.state() == CLOSED || shouldIgnoreFrame(stream)) {
                 // Ignore frames for any stream created after we sent a go-away.
                 return;
             }
 
-            // Set the priority for this stream on the flow controller.
-            connection.requireStream(streamId).setPriority(streamDependency, weight, exclusive);
+            stream.setPriority(streamDependency, weight, exclusive);
 
             AbstractHttp2ConnectionHandler.this.onPriorityRead(ctx, streamId, streamDependency,
                     weight, exclusive);
@@ -897,18 +952,15 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
                 throws Http2Exception {
             verifyPrefaceReceived();
 
-            if (isInboundStreamAfterGoAway(streamId)) {
-                // Ignore frames for any stream created after we sent a go-away.
-                return;
-            }
-
-            Http2Stream stream = connection.stream(streamId);
-            if (stream == null) {
+            Http2Stream stream = connection.requireStream(streamId);
+            verifyRstStreamNotReceived(stream);
+            if (stream.state() == CLOSED) {
                 // RstStream frames must be ignored for closed streams.
                 return;
             }
 
-            close(stream, ctx, ctx.newSucceededFuture());
+            stream.terminateReceived();
+            close(stream, ctx.newSucceededFuture());
 
             AbstractHttp2ConnectionHandler.this.onRstStreamRead(ctx, streamId, errorCode);
         }
@@ -963,13 +1015,15 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
                 int promisedStreamId, Http2Headers headers, int padding) throws Http2Exception {
             verifyPrefaceReceived();
 
-            if (isInboundStreamAfterGoAway(streamId)) {
+            Http2Stream parentStream = connection.requireStream(streamId);
+            verifyGoAwayNotReceived();
+            verifyRstStreamNotReceived(parentStream);
+            if (shouldIgnoreFrame(parentStream)) {
                 // Ignore frames for any stream created after we sent a go-away.
                 return;
             }
 
             // Reserve the push stream based with a priority based on the current stream's priority.
-            Http2Stream parentStream = connection.requireStream(streamId);
             connection.remote().reservePushStream(promisedStreamId, parentStream);
 
             AbstractHttp2ConnectionHandler.this.onPushPromiseRead(ctx, streamId, promisedStreamId,
@@ -980,7 +1034,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
         public void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData)
                 throws Http2Exception {
             // Don't allow any more connections to be created.
-            connection.goAwayReceived();
+            connection.local().goAwayReceived(lastStreamId);
 
             AbstractHttp2ConnectionHandler.this.onGoAwayRead(ctx, lastStreamId, errorCode, debugData);
         }
@@ -990,18 +1044,12 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
                 int windowSizeIncrement) throws Http2Exception {
             verifyPrefaceReceived();
 
-            if (isInboundStreamAfterGoAway(streamId)) {
+            Http2Stream stream = connection.requireStream(streamId);
+            verifyGoAwayNotReceived();
+            verifyRstStreamNotReceived(stream);
+            if (stream.state() == CLOSED || shouldIgnoreFrame(stream)) {
                 // Ignore frames for any stream created after we sent a go-away.
                 return;
-            }
-
-            if (streamId > 0) {
-                Http2Stream stream = connection.stream(streamId);
-                if (stream == null) {
-                    // Window Update frames must be ignored for closed streams.
-                    return;
-                }
-                stream.verifyState(PROTOCOL_ERROR, OPEN, HALF_CLOSED_REMOTE);
             }
 
             // Update the outbound flow controller.
@@ -1024,18 +1072,12 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
         public void onBlockedRead(ChannelHandlerContext ctx, int streamId) throws Http2Exception {
             verifyPrefaceReceived();
 
-            if (isInboundStreamAfterGoAway(streamId)) {
-                // Ignore frames for any stream created after we sent a go-away.
+            Http2Stream stream = connection.requireStream(streamId);
+            verifyGoAwayNotReceived();
+            verifyRstStreamNotReceived(stream);
+            if (stream.state() == CLOSED || shouldIgnoreFrame(stream)) {
+                // Ignored for closed streams.
                 return;
-            }
-
-            if (streamId > 0) {
-                Http2Stream stream = connection.stream(streamId);
-                if (stream == null) {
-                    // Window Update frames must be ignored for closed streams.
-                    return;
-                }
-                stream.verifyState(PROTOCOL_ERROR, OPEN, HALF_CLOSED_REMOTE);
             }
 
             // Update the outbound flow controller.
@@ -1045,12 +1087,39 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
         }
 
         /**
-         * Determines whether or not the stream was created after we sent a go-away frame. Frames
-         * from streams created after we sent a go-away should be ignored. Frames for the connection
-         * stream ID (i.e. 0) will always be allowed.
+         * Indicates whether or not frames for the given stream should be ignored based on the state
+         * of the stream/connection.
          */
-        private boolean isInboundStreamAfterGoAway(int streamId) {
-            return connection.isGoAwaySent() && connection.remote().lastStreamCreated() <= streamId;
+        private boolean shouldIgnoreFrame(Http2Stream stream) {
+            if (connection.remote().isGoAwayReceived() && connection.remote().lastStreamCreated() <= stream.id()) {
+                // Frames from streams created after we sent a go-away should be ignored.
+                // Frames for the connection stream ID (i.e. 0) will always be allowed.
+                return true;
+            }
+
+            // Also ignore inbound frames after we sent a RST_STREAM frame.
+            return stream.isTerminateSent();
+        }
+
+        /**
+         * Verifies that a GO_AWAY frame was not previously received from the remote endpoint. If it
+         * was, throws an exception.
+         */
+        private void verifyGoAwayNotReceived() throws Http2Exception {
+            if (connection.local().isGoAwayReceived()) {
+                throw protocolError("Received frames after receiving GO_AWAY");
+            }
+        }
+
+        /**
+         * Verifies that a RST_STREAM frame was not previously received for the given stream. If it
+         * was, throws an exception.
+         */
+        private void verifyRstStreamNotReceived(Http2Stream stream) throws Http2Exception {
+            if (stream != null && stream.isTerminateReceived()) {
+                throw new Http2StreamException(stream.id(), STREAM_CLOSED,
+                        "Frame received after receiving RST_STREAM for stream: " + stream.id());
+            }
         }
     }
 
@@ -1120,7 +1189,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
                         // original
                         // future that was returned to the caller.
                         failAllPromises(future.cause());
-                        processHttp2Exception(ctx,
+                        onHttp2Exception(ctx,
                                 toHttp2Exception(future.cause()));
                     }
                 }
@@ -1129,7 +1198,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
             // Close the local side of the stream if this is the last frame
             if (endStream) {
                 Http2Stream stream = connection.stream(streamId);
-                closeLocalSide(stream, ctx, ctx.newPromise());
+                closeLocalSide(stream, ctx.newPromise());
             }
         }
 

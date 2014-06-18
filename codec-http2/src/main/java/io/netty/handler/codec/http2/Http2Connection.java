@@ -84,6 +84,11 @@ public interface Http2Connection {
          * @param subtreeRoot the new root of the subtree that has changed.
          */
         void streamPrioritySubtreeChanged(Http2Stream stream, Http2Stream subtreeRoot);
+
+        /**
+         * Called when a GO_AWAY frame has either been sent or received for the connection.
+         */
+        void goingAway();
     }
 
     /**
@@ -92,9 +97,23 @@ public interface Http2Connection {
     interface Endpoint {
 
         /**
-         * Returns the next valid streamId for this endpoint.
+         * Returns the next valid streamId for this endpoint. If negative, the stream IDs are
+         * exhausted for this endpoint an no further streams may be created.
          */
         int nextStreamId();
+
+        /**
+         * Indicates whether the given streamId is from the set of IDs used by this endpoint to
+         * create new streams.
+         */
+        boolean createdStreamId(int streamId);
+
+        /**
+         * Indicates whether or not this endpoint is currently accepting new streams. This will be
+         * be false if {@link #numActiveStreams()} + 1 >= {@link #maxStreams()} or if the stream IDs
+         * for this endpoint have been exhausted (i.e. {@link #nextStreamId()} < 0).
+         */
+        boolean acceptingNewStreams();
 
         /**
          * Creates a stream initiated by this endpoint. This could fail for the following reasons:
@@ -144,6 +163,11 @@ public interface Http2Connection {
         boolean allowPushTo();
 
         /**
+         * Gets the number of currently active streams that were created by this endpoint.
+         */
+        int numActiveStreams();
+
+        /**
          * Gets the maximum number of concurrent streams allowed by this endpoint.
          */
         int maxStreams();
@@ -167,6 +191,24 @@ public interface Http2Connection {
          * Gets the ID of the stream last successfully created by this endpoint.
          */
         int lastStreamCreated();
+
+        /**
+         * Gets the last stream created by this endpoint that is "known" by the opposite endpoint.
+         * If a GOAWAY was received for this endpoint, this will be the last stream ID from the
+         * GOAWAY frame. Otherwise, this will be same as {@link #lastStreamCreated()}.
+         */
+        int lastKnownStream();
+
+        /**
+         * Indicates whether or not a GOAWAY was received by this endpoint.
+         */
+        boolean isGoAwayReceived();
+
+        /**
+         * Indicates that a GOAWAY was received from the opposite endpoint and sets the last known stream
+         * created by this endpoint.
+         */
+        void goAwayReceived(int lastKnownStream);
 
         /**
          * Gets the {@link Endpoint} opposite this one.
@@ -227,30 +269,7 @@ public interface Http2Connection {
     Endpoint remote();
 
     /**
-     * Marks that a GoAway frame has been sent on this connection. After calling this, both
-     * {@link #isGoAwaySent()} and {@link #isGoAway()} will be {@code true}.
-     */
-    void goAwaySent();
-
-    /**
-     * Marks that a GoAway frame has been received on this connection. After calling this, both
-     * {@link #isGoAwayReceived()} and {@link #isGoAway()} will be {@code true}.
-     */
-    void goAwayReceived();
-
-    /**
-     * Indicates that this connection received a GoAway message.
-     */
-    boolean isGoAwaySent();
-
-    /**
-     * Indicates that this connection send a GoAway message.
-     */
-    boolean isGoAwayReceived();
-
-    /**
-     * Indicates whether or not this endpoint is going away. This is a short form for
-     * {@link #isGoAwaySent()} || {@link #isGoAwayReceived()}.
+     * Indicates whether or not either endpoint has received a GOAWAY.
      */
     boolean isGoAway();
 }

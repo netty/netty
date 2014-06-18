@@ -73,6 +73,34 @@ public interface Http2Stream {
     Http2Stream closeRemoteSide();
 
     /**
+     * Indicates whether a RST_STREAM frame has been received from the remote endpoint for this stream.
+     */
+    boolean isTerminateReceived();
+
+    /**
+     * Sets the flag indicating that a RST_STREAM frame has been received from the remote endpoint
+     * for this stream. This does not affect the stream state.
+     */
+    void terminateReceived();
+
+    /**
+     * Indicates whether a RST_STREAM frame has been sent from the local endpoint for this stream.
+     */
+    boolean isTerminateSent();
+
+    /**
+     * Sets the flag indicating that a RST_STREAM frame has been sent from the local endpoint
+     * for this stream. This does not affect the stream state.
+     */
+    void terminateSent();
+
+    /**
+     * Indicates whether or not this stream has been terminated. This is a short form for
+     * {@link #isTerminateSent()} || {@link #isTerminateReceived()}.
+     */
+    boolean isTerminated();
+
+    /**
      * Indicates whether the remote side of this stream is open (i.e. the state is either
      * {@link State#OPEN} or {@link State#HALF_CLOSED_LOCAL}).
      */
@@ -83,6 +111,16 @@ public interface Http2Stream {
      * {@link State#OPEN} or {@link State#HALF_CLOSED_REMOTE}).
      */
     boolean localSideOpen();
+
+    /**
+     * Associates the application-defined data with this stream.
+     */
+    void data(Object data);
+
+    /**
+     * Returns application-defined data if any was associated with this stream.
+     */
+    <T> T data();
 
     /**
      * Gets the in-bound flow control state for this stream.
