@@ -53,7 +53,7 @@
 
 package io.netty.handler.codec.http.websocketx;
 
-import static io.netty.handler.codec.http.websocketx.WebsocketServerPremessageDeflateExtensionHandler.*;
+import static io.netty.handler.codec.http.websocketx.WebsocketServerCompressionHandler.*;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
@@ -66,17 +66,17 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
-public class WebsocketClientPremessageDeflateExtensionHandler extends ChannelHandlerAdapter {
+public class WebsocketClientCompressionHandler extends ChannelHandlerAdapter {
 
     private final int compressionLevel;
     private final boolean allowCustomClientWindowSize;
     private final int preferedServerWindowSize;
 
-    public WebsocketClientPremessageDeflateExtensionHandler() {
+    public WebsocketClientCompressionHandler() {
         this(DEFAULT_COMPRESSION_LEVEL, false, DEFAULT_WINDOW_SIZE);
     }
 
-    public WebsocketClientPremessageDeflateExtensionHandler(int compressionLevel,
+    public WebsocketClientCompressionHandler(int compressionLevel,
             boolean allowCustomClientWindowSize, int preferedServerWindowSize) {
         if (preferedServerWindowSize > MAX_WINDOW_SIZE || preferedServerWindowSize < MIN_WINDOW_SIZE) {
             throw new IllegalArgumentException("preferedServerWindowSize");

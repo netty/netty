@@ -66,7 +66,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
-public class WebsocketServerPremessageDeflateExtensionHandler extends ChannelHandlerAdapter {
+public class WebsocketServerCompressionHandler extends ChannelHandlerAdapter {
 
     static final int MIN_WINDOW_SIZE = 8;
     static final int MAX_WINDOW_SIZE = 15;
@@ -87,11 +87,11 @@ public class WebsocketServerPremessageDeflateExtensionHandler extends ChannelHan
     private int clientWindowSize = DEFAULT_WINDOW_SIZE;
     private int serverWindowSize = DEFAULT_WINDOW_SIZE;
 
-    public WebsocketServerPremessageDeflateExtensionHandler() {
+    public WebsocketServerCompressionHandler() {
         this(DEFAULT_COMPRESSION_LEVEL, false, DEFAULT_WINDOW_SIZE);
     }
 
-    public WebsocketServerPremessageDeflateExtensionHandler(int compressionLevel,
+    public WebsocketServerCompressionHandler(int compressionLevel,
             boolean allowCustomServerWindowSize, int preferedClientWindowSize) {
         if (preferedClientWindowSize > MAX_WINDOW_SIZE || preferedClientWindowSize < MIN_WINDOW_SIZE) {
             throw new IllegalArgumentException("preferedClientWindowSize");
@@ -184,7 +184,7 @@ public class WebsocketServerPremessageDeflateExtensionHandler extends ChannelHan
                                 new WebsocketPremessageDeflateExtensionEncoder(compressionLevel, serverWindowSize));
                     }
 
-                    ctx.pipeline().remove(WebsocketServerPremessageDeflateExtensionHandler.this);
+                    ctx.pipeline().remove(WebsocketServerCompressionHandler.this);
                 }
             });
         }

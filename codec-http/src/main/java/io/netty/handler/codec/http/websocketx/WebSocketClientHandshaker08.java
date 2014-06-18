@@ -47,6 +47,7 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
     private String expectedChallengeResponseString;
 
     private final boolean allowExtensions;
+    private final boolean disableUTF8Checking;
 
     /**
      * Creates a new instance.
@@ -66,9 +67,11 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
      *            Maximum length of a frame's payload
      */
     public WebSocketClientHandshaker08(URI webSocketURL, WebSocketVersion version, String subprotocol,
-            boolean allowExtensions, HttpHeaders customHeaders, int maxFramePayloadLength) {
+            boolean allowExtensions, HttpHeaders customHeaders, int maxFramePayloadLength,
+            boolean disableUTF8Checking) {
         super(webSocketURL, version, subprotocol, customHeaders, maxFramePayloadLength);
         this.allowExtensions = allowExtensions;
+        this.disableUTF8Checking = disableUTF8Checking;
     }
 
     /**
@@ -192,7 +195,7 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
 
     @Override
     protected WebSocketFrameDecoder newWebsocketDecoder() {
-        return new WebSocket08FrameDecoder(false, allowExtensions, maxFramePayloadLength());
+        return new WebSocket08FrameDecoder(false, allowExtensions, maxFramePayloadLength(), disableUTF8Checking);
     }
 
     @Override

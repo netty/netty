@@ -47,6 +47,7 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
     private String expectedChallengeResponseString;
 
     private final boolean allowExtensions;
+    private final boolean disableUTF8Checking;
 
     /**
      * Creates a new instance.
@@ -66,9 +67,11 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
      *            Maximum length of a frame's payload
      */
     public WebSocketClientHandshaker13(URI webSocketURL, WebSocketVersion version, String subprotocol,
-            boolean allowExtensions, HttpHeaders customHeaders, int maxFramePayloadLength) {
+            boolean allowExtensions, HttpHeaders customHeaders, int maxFramePayloadLength,
+            boolean disableUTF8Checking) {
         super(webSocketURL, version, subprotocol, customHeaders, maxFramePayloadLength);
         this.allowExtensions = allowExtensions;
+        this.disableUTF8Checking = disableUTF8Checking;
     }
 
     /**
@@ -111,9 +114,8 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
         expectedChallengeResponseString = WebSocketUtil.base64(sha1);
 
         if (logger.isDebugEnabled()) {
-            logger.debug(
-                    "WebSocket version 13 client handshake key: {}, expected response: {}",
-                    key, expectedChallengeResponseString);
+            logger.debug(String.format("WS Version 13 Client Handshake key: %s. Expected response: %s.", key,
+                    expectedChallengeResponseString));
         }
 
         // Format request
@@ -202,7 +204,7 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
 
     @Override
     protected WebSocketFrameDecoder newWebsocketDecoder() {
-        return new WebSocket13FrameDecoder(false, allowExtensions, maxFramePayloadLength());
+        return new WebSocket13FrameDecoder(false, allowExtensions, maxFramePayloadLength(), disableUTF8Checking);
     }
 
     @Override

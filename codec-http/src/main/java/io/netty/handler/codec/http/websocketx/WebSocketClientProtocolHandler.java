@@ -76,9 +76,10 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
      */
     public WebSocketClientProtocolHandler(URI webSocketURL, WebSocketVersion version, String subprotocol,
                                                    boolean allowExtensions, HttpHeaders customHeaders,
-                                                   int maxFramePayloadLength, boolean handleCloseFrames) {
+                                                   int maxFramePayloadLength, boolean handleCloseFrames,
+                                                   boolean disableUTF8Checking) {
         this(WebSocketClientHandshakerFactory.newHandshaker(webSocketURL, version, subprotocol,
-                allowExtensions, customHeaders, maxFramePayloadLength), handleCloseFrames);
+                allowExtensions, customHeaders, maxFramePayloadLength, disableUTF8Checking), handleCloseFrames);
     }
 
     /**
@@ -100,7 +101,7 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
                                           boolean allowExtensions, HttpHeaders customHeaders,
                                           int maxFramePayloadLength) {
         this(webSocketURL, version, subprotocol,
-                allowExtensions, customHeaders, maxFramePayloadLength, true);
+                allowExtensions, customHeaders, maxFramePayloadLength, true, false);
     }
 
     /**

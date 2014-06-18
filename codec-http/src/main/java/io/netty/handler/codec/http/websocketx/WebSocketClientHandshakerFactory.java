@@ -50,7 +50,7 @@ public final class WebSocketClientHandshakerFactory {
     public static WebSocketClientHandshaker newHandshaker(
             URI webSocketURL, WebSocketVersion version, String subprotocol,
             boolean allowExtensions, HttpHeaders customHeaders) {
-        return newHandshaker(webSocketURL, version, subprotocol, allowExtensions, customHeaders, 65536);
+        return newHandshaker(webSocketURL, version, subprotocol, allowExtensions, customHeaders, 65536, false);
     }
 
     /**
@@ -72,19 +72,22 @@ public final class WebSocketClientHandshakerFactory {
      *            requirement may reduce denial of service attacks using long data frames.
      */
     public static WebSocketClientHandshaker newHandshaker(
-            URI webSocketURL, WebSocketVersion version, String subprotocol,
-            boolean allowExtensions, HttpHeaders customHeaders, int maxFramePayloadLength) {
+            URI webSocketURL, WebSocketVersion version, String subprotocol, boolean allowExtensions,
+            HttpHeaders customHeaders, int maxFramePayloadLength, boolean disableUTF8Checking) {
         if (version == V13) {
             return new WebSocketClientHandshaker13(
-                    webSocketURL, V13, subprotocol, allowExtensions, customHeaders, maxFramePayloadLength);
+                    webSocketURL, V13, subprotocol, allowExtensions, customHeaders,
+                    maxFramePayloadLength, disableUTF8Checking);
         }
         if (version == V08) {
             return new WebSocketClientHandshaker08(
-                    webSocketURL, V08, subprotocol, allowExtensions, customHeaders, maxFramePayloadLength);
+                    webSocketURL, V08, subprotocol, allowExtensions, customHeaders,
+                    maxFramePayloadLength, disableUTF8Checking);
         }
         if (version == V07) {
             return new WebSocketClientHandshaker07(
-                    webSocketURL, V07, subprotocol, allowExtensions, customHeaders, maxFramePayloadLength);
+                    webSocketURL, V07, subprotocol, allowExtensions, customHeaders,
+                    maxFramePayloadLength, disableUTF8Checking);
         }
         if (version == V00) {
             return new WebSocketClientHandshaker00(

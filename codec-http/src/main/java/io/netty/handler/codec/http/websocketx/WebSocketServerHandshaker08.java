@@ -40,6 +40,7 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
     public static final String WEBSOCKET_08_ACCEPT_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
     private final boolean allowExtensions;
+    private final boolean disableUTF8Checking;
 
     /**
      * Constructor specifying the destination web socket location
@@ -56,9 +57,11 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
      *            requirement may reduce denial of service attacks using long data frames.
      */
     public WebSocketServerHandshaker08(
-            String webSocketURL, String subprotocols, boolean allowExtensions, int maxFramePayloadLength) {
+            String webSocketURL, String subprotocols, boolean allowExtensions,
+            int maxFramePayloadLength, boolean disableUTF8Checking) {
         super(WebSocketVersion.V08, webSocketURL, subprotocols, maxFramePayloadLength);
         this.allowExtensions = allowExtensions;
+        this.disableUTF8Checking = disableUTF8Checking;
     }
 
     /**
@@ -134,7 +137,7 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
 
     @Override
     protected WebSocketFrameDecoder newWebsocketDecoder() {
-        return new WebSocket08FrameDecoder(true, allowExtensions, maxFramePayloadLength());
+        return new WebSocket08FrameDecoder(true, allowExtensions, maxFramePayloadLength(), disableUTF8Checking);
     }
 
     @Override
