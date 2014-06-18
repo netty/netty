@@ -74,6 +74,9 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
 
         this.loadFactor = loadFactor;
 
+        // Adjust the initial capacity if necessary.
+        initialCapacity = adjustCapacity(initialCapacity);
+
         // Allocate the arrays.
         states = new byte[initialCapacity];
         keys = new int[initialCapacity];
@@ -336,13 +339,20 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
 
         if (size > maxSize) {
             // Need to grow the arrays.
-            // TODO: consider using the next prime greater than capacity * 2.
-            rehash(capacity() * 2);
+            rehash(adjustCapacity(capacity() * 2));
         } else if (available == 0) {
             // Open addressing requires that we have at least 1 slot available. Need to refresh
             // the arrays to clear any removed elements.
             rehash(capacity());
         }
+    }
+
+    /**
+     * Adjusts the given capacity value to ensure that it's odd. Even capacities can break probing.
+     * TODO: would be better to ensure it's prime as well.
+     */
+    private int adjustCapacity(int capacity) {
+        return capacity |= 1;
     }
 
     /**
