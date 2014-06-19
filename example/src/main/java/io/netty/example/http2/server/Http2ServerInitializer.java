@@ -17,13 +17,10 @@
 package io.netty.example.http2.server;
 
 import io.netty.channel.ChannelHandlerAdapter;
-import io.netty.channel.ChannelHandlerAppender;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.handler.codec.http.HttpObjectAggregator;
-import io.netty.handler.codec.http.HttpRequestDecoder;
-import io.netty.handler.codec.http.HttpResponseEncoder;
+import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler;
 import io.netty.handler.codec.http2.Http2ServerUpgradeCodec;
 import io.netty.handler.ssl.SslContext;
@@ -61,7 +58,7 @@ public class Http2ServerInitializer extends ChannelInitializer<SocketChannel> {
      * Configure the pipeline for a cleartext upgrade from HTTP to HTTP/2.
      */
     private static void configureClearText(SocketChannel ch) {
-        HttpCodec sourceCodec = new HttpCodec();
+        HttpServerCodec sourceCodec = new HttpServerCodec();
         HttpServerUpgradeHandler.UpgradeCodec upgradeCodec =
                 new Http2ServerUpgradeCodec(new HelloWorldHttp2Handler());
         HttpServerUpgradeHandler upgradeHandler =
@@ -70,26 +67,6 @@ public class Http2ServerInitializer extends ChannelInitializer<SocketChannel> {
         ch.pipeline().addLast(sourceCodec);
         ch.pipeline().addLast(upgradeHandler);
         ch.pipeline().addLast(new UserEventLogger());
-    }
-
-    /**
-     * Source codec for HTTP cleartext upgrade.
-     */
-    private static final class HttpCodec
-            extends ChannelHandlerAppender implements HttpServerUpgradeHandler.SourceCodec {
-        HttpCodec() {
-            add("httpRequestDecoder", new HttpRequestDecoder());
-            add("httpResponseEncoder", new HttpResponseEncoder());
-            add("httpRequestAggregator", new HttpObjectAggregator(65536));
-        }
-
-        @Override
-        public void upgradeFrom(ChannelHandlerContext ctx) {
-            System.out.println("removing HTTP handlers");
-            ctx.pipeline().remove("httpRequestAggregator");
-            ctx.pipeline().remove("httpResponseEncoder");
-            ctx.pipeline().remove("httpRequestDecoder");
-        }
     }
 
     /**

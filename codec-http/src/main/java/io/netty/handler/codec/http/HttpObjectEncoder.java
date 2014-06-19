@@ -69,9 +69,9 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
             buf = ctx.alloc().buffer();
             // Encode the message.
             encodeInitialLine(buf, m);
-            HttpHeaders.encode(m.headers(), buf);
+            m.headers().forEachEntry(new HttpHeadersEncoder(buf));
             buf.writeBytes(CRLF);
-            state = HttpHeaders.isTransferEncodingChunked(m) ? ST_CONTENT_CHUNK : ST_CONTENT_NON_CHUNK;
+            state = HttpHeaderUtil.isTransferEncodingChunked(m) ? ST_CONTENT_CHUNK : ST_CONTENT_NON_CHUNK;
         }
         if (msg instanceof HttpContent || msg instanceof ByteBuf || msg instanceof FileRegion) {
             if (state == ST_INIT) {
@@ -137,7 +137,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
             } else {
                 ByteBuf buf = ctx.alloc().buffer();
                 buf.writeBytes(ZERO_CRLF);
-                HttpHeaders.encode(headers, buf);
+                headers.forEachEntry(new HttpHeadersEncoder(buf));
                 buf.writeBytes(CRLF);
                 out.add(buf);
             }

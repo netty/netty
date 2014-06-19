@@ -16,6 +16,7 @@
 
 package io.netty.util;
 
+import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -54,8 +55,7 @@ public abstract class Recycler<T> {
     }
 
     private final int maxCapacity;
-
-    private final ThreadLocal<Stack<T>> threadLocal = new ThreadLocal<Stack<T>>() {
+    private final FastThreadLocal<Stack<T>> threadLocal = new FastThreadLocal<Stack<T>>() {
         @Override
         protected Stack<T> initialValue() {
             return new Stack<T>(Recycler.this, Thread.currentThread(), maxCapacity);
@@ -67,10 +67,7 @@ public abstract class Recycler<T> {
     }
 
     protected Recycler(int maxCapacity) {
-        if (maxCapacity <= 0) {
-            maxCapacity = 0;
-        }
-        this.maxCapacity = maxCapacity;
+        this.maxCapacity = Math.max(0, maxCapacity);
     }
 
     public final T get() {

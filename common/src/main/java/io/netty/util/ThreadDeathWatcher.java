@@ -67,7 +67,25 @@ public final class ThreadDeathWatcher {
             throw new IllegalArgumentException("thread must be alive.");
         }
 
-        pendingEntries.add(new Entry(thread, task));
+        schedule(thread, task, true);
+    }
+
+    /**
+     * Cancels the task scheduled via {@link #watch(Thread, Runnable)}.
+     */
+    public static void unwatch(Thread thread, Runnable task) {
+        if (thread == null) {
+            throw new NullPointerException("thread");
+        }
+        if (task == null) {
+            throw new NullPointerException("task");
+        }
+
+        schedule(thread, task, false);
+    }
+
+    private static void schedule(Thread thread, Runnable task, boolean isWatch) {
+        pendingEntries.add(new Entry(thread, task, isWatch));
 
         if (started.compareAndSet(false, true)) {
             Thread watcherThread = threadFactory.newThread(watcher);
@@ -85,7 +103,7 @@ public final class ThreadDeathWatcher {
      *
      * @return {@code true} if and only if the watcher thread has been terminated
      */
-    public boolean awaitInactivity(long timeout, TimeUnit unit) throws InterruptedException {
+    public static boolean awaitInactivity(long timeout, TimeUnit unit) throws InterruptedException {
         if (unit == null) {
             throw new NullPointerException("unit");
         }
@@ -93,8 +111,10 @@ public final class ThreadDeathWatcher {
         Thread watcherThread = ThreadDeathWatcher.watcherThread;
         if (watcherThread != null) {
             watcherThread.join(unit.toMillis(timeout));
+            return !watcherThread.isAlive();
+        } else {
+            return true;
         }
-        return !watcherThread.isAlive();
     }
 
     private ThreadDeathWatcher() { }
@@ -106,6 +126,10 @@ public final class ThreadDeathWatcher {
         @Override
         public void run() {
             for (;;) {
+                fetchWatchees();
+                notifyWatchees();
+
+                // Try once again just in case notifyWatchees() triggered watch() or unwatch().
                 fetchWatchees();
                 notifyWatchees();
 
@@ -153,7 +177,11 @@ public final class ThreadDeathWatcher {
                     break;
                 }
 
-                watchees.add(e);
+                if (e.isWatch) {
+                    watchees.add(e);
+                } else {
+                    watchees.remove(e);
+                }
             }
         }
 
@@ -178,15 +206,36 @@ public final class ThreadDeathWatcher {
     private static final class Entry extends MpscLinkedQueueNode<Entry> {
         final Thread thread;
         final Runnable task;
+        final boolean isWatch;
 
-        Entry(Thread thread, Runnable task) {
+        Entry(Thread thread, Runnable task, boolean isWatch) {
             this.thread = thread;
             this.task = task;
+            this.isWatch = isWatch;
         }
 
         @Override
         public Entry value() {
             return this;
+        }
+
+        @Override
+        public int hashCode() {
+            return thread.hashCode() ^ task.hashCode();
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj == this) {
+                return true;
+            }
+
+            if (!(obj instanceof Entry)) {
+                return false;
+            }
+
+            Entry that = (Entry) obj;
+            return thread == that.thread && task == that.task;
         }
     }
 }

@@ -15,404 +15,324 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.ByteBuf;
-
-import java.text.ParseException;
-import java.util.Calendar;
-import java.util.Collections;
-import java.util.Date;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-
-import static io.netty.handler.codec.http.HttpConstants.*;
+import io.netty.handler.codec.AsciiString;
+import io.netty.handler.codec.TextHeaderProcessor;
+import io.netty.handler.codec.TextHeaders;
 
 
 /**
  * Provides the constants for the standard HTTP header names and values and
  * commonly used utility methods that accesses an {@link HttpMessage}.
  */
-public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>> {
-
-    private static final byte[] HEADER_SEPERATOR = { COLON, SP };
-    private static final byte[] CRLF = { CR, LF };
-
-    public static final HttpHeaders EMPTY_HEADERS = new HttpHeaders() {
-        @Override
-        public String get(CharSequence name) {
-            return null;
-        }
-
-        @Override
-        public List<String> getAll(CharSequence name) {
-            return Collections.emptyList();
-        }
-
-        @Override
-        public List<Entry<String, String>> entries() {
-            return Collections.emptyList();
-        }
-
-        @Override
-        public boolean contains(CharSequence name) {
-            return false;
-        }
-
-        @Override
-        public boolean isEmpty() {
-            return true;
-        }
-
-        @Override
-        public Set<String> names() {
-            return Collections.emptySet();
-        }
-
-        @Override
-        public HttpHeaders add(CharSequence name, Object value) {
-            throw new UnsupportedOperationException("read only");
-        }
-
-        @Override
-        public HttpHeaders add(CharSequence name, Iterable<?> values) {
-            throw new UnsupportedOperationException("read only");
-        }
-
-        @Override
-        public HttpHeaders set(CharSequence name, Object value) {
-            throw new UnsupportedOperationException("read only");
-        }
-
-        @Override
-        public HttpHeaders set(CharSequence name, Iterable<?> values) {
-            throw new UnsupportedOperationException("read only");
-        }
-
-        @Override
-        public HttpHeaders remove(CharSequence name) {
-            throw new UnsupportedOperationException("read only");
-        }
-
-        @Override
-        public HttpHeaders clear() {
-            throw new UnsupportedOperationException("read only");
-        }
-
-        @Override
-        public Iterator<Entry<String, String>> iterator() {
-            return entries().iterator();
-        }
-    };
+public interface HttpHeaders extends TextHeaders {
 
     /**
      * Standard HTTP header names.
      */
-    public static final class Names {
+    final class Names {
         /**
          * {@code "Accept"}
          */
-        public static final CharSequence ACCEPT = newEntity("Accept");
+        public static final AsciiString ACCEPT = new AsciiString("Accept");
         /**
          * {@code "Accept-Charset"}
          */
-        public static final CharSequence ACCEPT_CHARSET = newEntity("Accept-Charset");
+        public static final AsciiString ACCEPT_CHARSET = new AsciiString("Accept-Charset");
         /**
          * {@code "Accept-Encoding"}
          */
-        public static final CharSequence ACCEPT_ENCODING = newEntity("Accept-Encoding");
+        public static final AsciiString ACCEPT_ENCODING = new AsciiString("Accept-Encoding");
         /**
          * {@code "Accept-Language"}
          */
-        public static final CharSequence ACCEPT_LANGUAGE = newEntity("Accept-Language");
+        public static final AsciiString ACCEPT_LANGUAGE = new AsciiString("Accept-Language");
         /**
          * {@code "Accept-Ranges"}
          */
-        public static final CharSequence ACCEPT_RANGES = newEntity("Accept-Ranges");
+        public static final AsciiString ACCEPT_RANGES = new AsciiString("Accept-Ranges");
         /**
          * {@code "Accept-Patch"}
          */
-        public static final CharSequence ACCEPT_PATCH = newEntity("Accept-Patch");
+        public static final AsciiString ACCEPT_PATCH = new AsciiString("Accept-Patch");
         /**
          * {@code "Access-Control-Allow-Credentials"}
          */
-        public static final CharSequence ACCESS_CONTROL_ALLOW_CREDENTIALS =
-                newEntity("Access-Control-Allow-Credentials");
+        public static final AsciiString ACCESS_CONTROL_ALLOW_CREDENTIALS =
+                new AsciiString("Access-Control-Allow-Credentials");
         /**
          * {@code "Access-Control-Allow-Headers"}
          */
-        public static final CharSequence ACCESS_CONTROL_ALLOW_HEADERS =
-                newEntity("Access-Control-Allow-Headers");
+        public static final AsciiString ACCESS_CONTROL_ALLOW_HEADERS =
+                new AsciiString("Access-Control-Allow-Headers");
         /**
          * {@code "Access-Control-Allow-Methods"}
          */
-        public static final CharSequence ACCESS_CONTROL_ALLOW_METHODS =
-                newEntity("Access-Control-Allow-Methods");
+        public static final AsciiString ACCESS_CONTROL_ALLOW_METHODS =
+                new AsciiString("Access-Control-Allow-Methods");
         /**
          * {@code "Access-Control-Allow-Origin"}
          */
-        public static final CharSequence ACCESS_CONTROL_ALLOW_ORIGIN =
-                newEntity("Access-Control-Allow-Origin");
+        public static final AsciiString ACCESS_CONTROL_ALLOW_ORIGIN =
+                new AsciiString("Access-Control-Allow-Origin");
         /**
          * {@code "Access-Control-Expose-Headers"}
          */
-        public static final CharSequence ACCESS_CONTROL_EXPOSE_HEADERS =
-                newEntity("Access-Control-Expose-Headers");
+        public static final AsciiString ACCESS_CONTROL_EXPOSE_HEADERS =
+                new AsciiString("Access-Control-Expose-Headers");
         /**
          * {@code "Access-Control-Max-Age"}
          */
-        public static final CharSequence ACCESS_CONTROL_MAX_AGE = newEntity("Access-Control-Max-Age");
+        public static final AsciiString ACCESS_CONTROL_MAX_AGE = new AsciiString("Access-Control-Max-Age");
         /**
          * {@code "Access-Control-Request-Headers"}
          */
-        public static final CharSequence ACCESS_CONTROL_REQUEST_HEADERS =
-                newEntity("Access-Control-Request-Headers");
+        public static final AsciiString ACCESS_CONTROL_REQUEST_HEADERS =
+                new AsciiString("Access-Control-Request-Headers");
         /**
          * {@code "Access-Control-Request-Method"}
          */
-        public static final CharSequence ACCESS_CONTROL_REQUEST_METHOD =
-                newEntity("Access-Control-Request-Method");
+        public static final AsciiString ACCESS_CONTROL_REQUEST_METHOD =
+                new AsciiString("Access-Control-Request-Method");
         /**
          * {@code "Age"}
          */
-        public static final CharSequence AGE = newEntity("Age");
+        public static final AsciiString AGE = new AsciiString("Age");
         /**
          * {@code "Allow"}
          */
-        public static final CharSequence ALLOW = newEntity("Allow");
+        public static final AsciiString ALLOW = new AsciiString("Allow");
         /**
          * {@code "Authorization"}
          */
-        public static final CharSequence AUTHORIZATION = newEntity("Authorization");
+        public static final AsciiString AUTHORIZATION = new AsciiString("Authorization");
         /**
          * {@code "Cache-Control"}
          */
-        public static final CharSequence CACHE_CONTROL = newEntity("Cache-Control");
+        public static final AsciiString CACHE_CONTROL = new AsciiString("Cache-Control");
         /**
          * {@code "Connection"}
          */
-        public static final CharSequence CONNECTION = newEntity("Connection");
+        public static final AsciiString CONNECTION = new AsciiString("Connection");
         /**
          * {@code "Content-Base"}
          */
-        public static final CharSequence CONTENT_BASE = newEntity("Content-Base");
+        public static final AsciiString CONTENT_BASE = new AsciiString("Content-Base");
         /**
          * {@code "Content-Encoding"}
          */
-        public static final CharSequence CONTENT_ENCODING = newEntity("Content-Encoding");
+        public static final AsciiString CONTENT_ENCODING = new AsciiString("Content-Encoding");
         /**
          * {@code "Content-Language"}
          */
-        public static final CharSequence CONTENT_LANGUAGE = newEntity("Content-Language");
+        public static final AsciiString CONTENT_LANGUAGE = new AsciiString("Content-Language");
         /**
          * {@code "Content-Length"}
          */
-        public static final CharSequence CONTENT_LENGTH = newEntity("Content-Length");
+        public static final AsciiString CONTENT_LENGTH = new AsciiString("Content-Length");
         /**
          * {@code "Content-Location"}
          */
-        public static final CharSequence CONTENT_LOCATION = newEntity("Content-Location");
+        public static final AsciiString CONTENT_LOCATION = new AsciiString("Content-Location");
         /**
          * {@code "Content-Transfer-Encoding"}
          */
-        public static final CharSequence CONTENT_TRANSFER_ENCODING = newEntity("Content-Transfer-Encoding");
+        public static final AsciiString CONTENT_TRANSFER_ENCODING = new AsciiString("Content-Transfer-Encoding");
         /**
          * {@code "Content-MD5"}
          */
-        public static final CharSequence CONTENT_MD5 = newEntity("Content-MD5");
+        public static final AsciiString CONTENT_MD5 = new AsciiString("Content-MD5");
         /**
          * {@code "Content-Range"}
          */
-        public static final CharSequence CONTENT_RANGE = newEntity("Content-Range");
+        public static final AsciiString CONTENT_RANGE = new AsciiString("Content-Range");
         /**
          * {@code "Content-Type"}
          */
-        public static final CharSequence CONTENT_TYPE = newEntity("Content-Type");
+        public static final AsciiString CONTENT_TYPE = new AsciiString("Content-Type");
         /**
          * {@code "Cookie"}
          */
-        public static final CharSequence COOKIE = newEntity("Cookie");
+        public static final AsciiString COOKIE = new AsciiString("Cookie");
         /**
          * {@code "Date"}
          */
-        public static final CharSequence DATE = newEntity("Date");
+        public static final AsciiString DATE = new AsciiString("Date");
         /**
          * {@code "ETag"}
          */
-        public static final CharSequence ETAG = newEntity("ETag");
+        public static final AsciiString ETAG = new AsciiString("ETag");
         /**
          * {@code "Expect"}
          */
-        public static final CharSequence EXPECT = newEntity("Expect");
+        public static final AsciiString EXPECT = new AsciiString("Expect");
         /**
          * {@code "Expires"}
          */
-        public static final CharSequence EXPIRES = newEntity("Expires");
+        public static final AsciiString EXPIRES = new AsciiString("Expires");
         /**
          * {@code "From"}
          */
-        public static final CharSequence FROM = newEntity("From");
+        public static final AsciiString FROM = new AsciiString("From");
         /**
          * {@code "Host"}
          */
-        public static final CharSequence HOST = newEntity("Host");
+        public static final AsciiString HOST = new AsciiString("Host");
         /**
          * {@code "If-Match"}
          */
-        public static final CharSequence IF_MATCH = newEntity("If-Match");
+        public static final AsciiString IF_MATCH = new AsciiString("If-Match");
         /**
          * {@code "If-Modified-Since"}
          */
-        public static final CharSequence IF_MODIFIED_SINCE = newEntity("If-Modified-Since");
+        public static final AsciiString IF_MODIFIED_SINCE = new AsciiString("If-Modified-Since");
         /**
          * {@code "If-None-Match"}
          */
-        public static final CharSequence IF_NONE_MATCH = newEntity("If-None-Match");
+        public static final AsciiString IF_NONE_MATCH = new AsciiString("If-None-Match");
         /**
          * {@code "If-Range"}
          */
-        public static final CharSequence IF_RANGE = newEntity("If-Range");
+        public static final AsciiString IF_RANGE = new AsciiString("If-Range");
         /**
          * {@code "If-Unmodified-Since"}
          */
-        public static final CharSequence IF_UNMODIFIED_SINCE = newEntity("If-Unmodified-Since");
+        public static final AsciiString IF_UNMODIFIED_SINCE = new AsciiString("If-Unmodified-Since");
         /**
          * {@code "Last-Modified"}
          */
-        public static final CharSequence LAST_MODIFIED = newEntity("Last-Modified");
+        public static final AsciiString LAST_MODIFIED = new AsciiString("Last-Modified");
         /**
          * {@code "Location"}
          */
-        public static final CharSequence LOCATION = newEntity("Location");
+        public static final AsciiString LOCATION = new AsciiString("Location");
         /**
          * {@code "Max-Forwards"}
          */
-        public static final CharSequence MAX_FORWARDS = newEntity("Max-Forwards");
+        public static final AsciiString MAX_FORWARDS = new AsciiString("Max-Forwards");
         /**
          * {@code "Origin"}
          */
-        public static final CharSequence ORIGIN = newEntity("Origin");
+        public static final AsciiString ORIGIN = new AsciiString("Origin");
         /**
          * {@code "Pragma"}
          */
-        public static final CharSequence PRAGMA = newEntity("Pragma");
+        public static final AsciiString PRAGMA = new AsciiString("Pragma");
         /**
          * {@code "Proxy-Authenticate"}
          */
-        public static final CharSequence PROXY_AUTHENTICATE = newEntity("Proxy-Authenticate");
+        public static final AsciiString PROXY_AUTHENTICATE = new AsciiString("Proxy-Authenticate");
         /**
          * {@code "Proxy-Authorization"}
          */
-        public static final CharSequence PROXY_AUTHORIZATION = newEntity("Proxy-Authorization");
+        public static final AsciiString PROXY_AUTHORIZATION = new AsciiString("Proxy-Authorization");
         /**
          * {@code "Range"}
          */
-        public static final CharSequence RANGE = newEntity("Range");
+        public static final AsciiString RANGE = new AsciiString("Range");
         /**
          * {@code "Referer"}
          */
-        public static final CharSequence REFERER = newEntity("Referer");
+        public static final AsciiString REFERER = new AsciiString("Referer");
         /**
          * {@code "Retry-After"}
          */
-        public static final CharSequence RETRY_AFTER = newEntity("Retry-After");
+        public static final AsciiString RETRY_AFTER = new AsciiString("Retry-After");
         /**
          * {@code "Sec-WebSocket-Key1"}
          */
-        public static final CharSequence SEC_WEBSOCKET_KEY1 = newEntity("Sec-WebSocket-Key1");
+        public static final AsciiString SEC_WEBSOCKET_KEY1 = new AsciiString("Sec-WebSocket-Key1");
         /**
          * {@code "Sec-WebSocket-Key2"}
          */
-        public static final CharSequence SEC_WEBSOCKET_KEY2 = newEntity("Sec-WebSocket-Key2");
+        public static final AsciiString SEC_WEBSOCKET_KEY2 = new AsciiString("Sec-WebSocket-Key2");
         /**
          * {@code "Sec-WebSocket-Location"}
          */
-        public static final CharSequence SEC_WEBSOCKET_LOCATION = newEntity("Sec-WebSocket-Location");
+        public static final AsciiString SEC_WEBSOCKET_LOCATION = new AsciiString("Sec-WebSocket-Location");
         /**
          * {@code "Sec-WebSocket-Origin"}
          */
-        public static final CharSequence SEC_WEBSOCKET_ORIGIN = newEntity("Sec-WebSocket-Origin");
+        public static final AsciiString SEC_WEBSOCKET_ORIGIN = new AsciiString("Sec-WebSocket-Origin");
         /**
          * {@code "Sec-WebSocket-Protocol"}
          */
-        public static final CharSequence SEC_WEBSOCKET_PROTOCOL = newEntity("Sec-WebSocket-Protocol");
+        public static final AsciiString SEC_WEBSOCKET_PROTOCOL = new AsciiString("Sec-WebSocket-Protocol");
         /**
          * {@code "Sec-WebSocket-Version"}
          */
-        public static final CharSequence SEC_WEBSOCKET_VERSION = newEntity("Sec-WebSocket-Version");
+        public static final AsciiString SEC_WEBSOCKET_VERSION = new AsciiString("Sec-WebSocket-Version");
         /**
          * {@code "Sec-WebSocket-Key"}
          */
-        public static final CharSequence SEC_WEBSOCKET_KEY = newEntity("Sec-WebSocket-Key");
+        public static final AsciiString SEC_WEBSOCKET_KEY = new AsciiString("Sec-WebSocket-Key");
         /**
          * {@code "Sec-WebSocket-Accept"}
          */
-        public static final CharSequence SEC_WEBSOCKET_ACCEPT = newEntity("Sec-WebSocket-Accept");
+        public static final AsciiString SEC_WEBSOCKET_ACCEPT = new AsciiString("Sec-WebSocket-Accept");
         /**
          * {@code "Sec-WebSocket-Protocol"}
          */
-        public static final CharSequence SEC_WEBSOCKET_EXTENSIONS = newEntity("Sec-WebSocket-Extensions");
+        public static final AsciiString SEC_WEBSOCKET_EXTENSIONS = new AsciiString("Sec-WebSocket-Extensions");
         /**
          * {@code "Server"}
          */
-        public static final CharSequence SERVER = newEntity("Server");
+        public static final AsciiString SERVER = new AsciiString("Server");
         /**
          * {@code "Set-Cookie"}
          */
-        public static final CharSequence SET_COOKIE = newEntity("Set-Cookie");
+        public static final AsciiString SET_COOKIE = new AsciiString("Set-Cookie");
         /**
          * {@code "Set-Cookie2"}
          */
-        public static final CharSequence SET_COOKIE2 = newEntity("Set-Cookie2");
+        public static final AsciiString SET_COOKIE2 = new AsciiString("Set-Cookie2");
         /**
          * {@code "TE"}
          */
-        public static final CharSequence TE = newEntity("TE");
+        public static final AsciiString TE = new AsciiString("TE");
         /**
          * {@code "Trailer"}
          */
-        public static final CharSequence TRAILER = newEntity("Trailer");
+        public static final AsciiString TRAILER = new AsciiString("Trailer");
         /**
          * {@code "Transfer-Encoding"}
          */
-        public static final CharSequence TRANSFER_ENCODING = newEntity("Transfer-Encoding");
+        public static final AsciiString TRANSFER_ENCODING = new AsciiString("Transfer-Encoding");
         /**
          * {@code "Upgrade"}
          */
-        public static final CharSequence UPGRADE = newEntity("Upgrade");
+        public static final AsciiString UPGRADE = new AsciiString("Upgrade");
         /**
          * {@code "User-Agent"}
          */
-        public static final CharSequence USER_AGENT = newEntity("User-Agent");
+        public static final AsciiString USER_AGENT = new AsciiString("User-Agent");
         /**
          * {@code "Vary"}
          */
-        public static final CharSequence VARY = newEntity("Vary");
+        public static final AsciiString VARY = new AsciiString("Vary");
         /**
          * {@code "Via"}
          */
-        public static final CharSequence VIA = newEntity("Via");
+        public static final AsciiString VIA = new AsciiString("Via");
         /**
          * {@code "Warning"}
          */
-        public static final CharSequence WARNING = newEntity("Warning");
+        public static final AsciiString WARNING = new AsciiString("Warning");
         /**
          * {@code "WebSocket-Location"}
          */
-        public static final CharSequence WEBSOCKET_LOCATION = newEntity("WebSocket-Location");
+        public static final AsciiString WEBSOCKET_LOCATION = new AsciiString("WebSocket-Location");
         /**
          * {@code "WebSocket-Origin"}
          */
-        public static final CharSequence WEBSOCKET_ORIGIN = newEntity("WebSocket-Origin");
+        public static final AsciiString WEBSOCKET_ORIGIN = new AsciiString("WebSocket-Origin");
         /**
          * {@code "WebSocket-Protocol"}
          */
-        public static final CharSequence WEBSOCKET_PROTOCOL = newEntity("WebSocket-Protocol");
+        public static final AsciiString WEBSOCKET_PROTOCOL = new AsciiString("WebSocket-Protocol");
         /**
          * {@code "WWW-Authenticate"}
          */
-        public static final CharSequence WWW_AUTHENTICATE = newEntity("WWW-Authenticate");
+        public static final AsciiString WWW_AUTHENTICATE = new AsciiString("WWW-Authenticate");
 
         private Names() {
         }
@@ -421,1049 +341,168 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     /**
      * Standard HTTP header values.
      */
-    public static final class Values {
+    final class Values {
         /**
          * {@code "application/x-www-form-urlencoded"}
          */
-         public static final CharSequence APPLICATION_X_WWW_FORM_URLENCODED =
-                newEntity("application/x-www-form-urlencoded");
+         public static final AsciiString APPLICATION_X_WWW_FORM_URLENCODED =
+                new AsciiString("application/x-www-form-urlencoded");
         /**
          * {@code "base64"}
          */
-        public static final CharSequence BASE64 = newEntity("base64");
+        public static final AsciiString BASE64 = new AsciiString("base64");
         /**
          * {@code "binary"}
          */
-        public static final CharSequence BINARY = newEntity("binary");
+        public static final AsciiString BINARY = new AsciiString("binary");
         /**
          * {@code "boundary"}
          */
-        public static final CharSequence BOUNDARY = newEntity("boundary");
+        public static final AsciiString BOUNDARY = new AsciiString("boundary");
         /**
          * {@code "bytes"}
          */
-        public static final CharSequence BYTES = newEntity("bytes");
+        public static final AsciiString BYTES = new AsciiString("bytes");
         /**
          * {@code "charset"}
          */
-        public static final CharSequence CHARSET = newEntity("charset");
+        public static final AsciiString CHARSET = new AsciiString("charset");
         /**
          * {@code "chunked"}
          */
-        public static final CharSequence CHUNKED = newEntity("chunked");
+        public static final AsciiString CHUNKED = new AsciiString("chunked");
         /**
          * {@code "close"}
          */
-        public static final CharSequence CLOSE = newEntity("close");
+        public static final AsciiString CLOSE = new AsciiString("close");
         /**
          * {@code "compress"}
          */
-        public static final CharSequence COMPRESS = newEntity("compress");
+        public static final AsciiString COMPRESS = new AsciiString("compress");
         /**
          * {@code "100-continue"}
          */
-        public static final CharSequence CONTINUE =  newEntity("100-continue");
+        public static final AsciiString CONTINUE = new AsciiString("100-continue");
         /**
          * {@code "deflate"}
          */
-        public static final CharSequence DEFLATE = newEntity("deflate");
+        public static final AsciiString DEFLATE = new AsciiString("deflate");
         /**
          * {@code "gzip"}
          */
-        public static final CharSequence GZIP = newEntity("gzip");
+        public static final AsciiString GZIP = new AsciiString("gzip");
         /**
          * {@code "identity"}
          */
-        public static final CharSequence IDENTITY = newEntity("identity");
+        public static final AsciiString IDENTITY = new AsciiString("identity");
         /**
          * {@code "keep-alive"}
          */
-        public static final CharSequence KEEP_ALIVE = newEntity("keep-alive");
+        public static final AsciiString KEEP_ALIVE = new AsciiString("keep-alive");
         /**
          * {@code "max-age"}
          */
-        public static final CharSequence MAX_AGE = newEntity("max-age");
+        public static final AsciiString MAX_AGE = new AsciiString("max-age");
         /**
          * {@code "max-stale"}
          */
-        public static final CharSequence MAX_STALE = newEntity("max-stale");
+        public static final AsciiString MAX_STALE = new AsciiString("max-stale");
         /**
          * {@code "min-fresh"}
          */
-        public static final CharSequence MIN_FRESH = newEntity("min-fresh");
+        public static final AsciiString MIN_FRESH = new AsciiString("min-fresh");
         /**
          * {@code "multipart/form-data"}
          */
-        public static final CharSequence MULTIPART_FORM_DATA = newEntity("multipart/form-data");
+        public static final AsciiString MULTIPART_FORM_DATA = new AsciiString("multipart/form-data");
         /**
          * {@code "must-revalidate"}
          */
-        public static final CharSequence MUST_REVALIDATE = newEntity("must-revalidate");
+        public static final AsciiString MUST_REVALIDATE = new AsciiString("must-revalidate");
         /**
          * {@code "no-cache"}
          */
-        public static final CharSequence NO_CACHE = newEntity("no-cache");
+        public static final AsciiString NO_CACHE = new AsciiString("no-cache");
         /**
          * {@code "no-store"}
          */
-        public static final CharSequence NO_STORE = newEntity("no-store");
+        public static final AsciiString NO_STORE = new AsciiString("no-store");
         /**
          * {@code "no-transform"}
          */
-        public static final CharSequence NO_TRANSFORM = newEntity("no-transform");
+        public static final AsciiString NO_TRANSFORM = new AsciiString("no-transform");
         /**
          * {@code "none"}
          */
-        public static final CharSequence NONE = newEntity("none");
+        public static final AsciiString NONE = new AsciiString("none");
         /**
          * {@code "only-if-cached"}
          */
-        public static final CharSequence ONLY_IF_CACHED = newEntity("only-if-cached");
+        public static final AsciiString ONLY_IF_CACHED = new AsciiString("only-if-cached");
         /**
          * {@code "private"}
          */
-        public static final CharSequence PRIVATE = newEntity("private");
+        public static final AsciiString PRIVATE = new AsciiString("private");
         /**
          * {@code "proxy-revalidate"}
          */
-        public static final CharSequence PROXY_REVALIDATE = newEntity("proxy-revalidate");
+        public static final AsciiString PROXY_REVALIDATE = new AsciiString("proxy-revalidate");
         /**
          * {@code "public"}
          */
-        public static final CharSequence PUBLIC = newEntity("public");
+        public static final AsciiString PUBLIC = new AsciiString("public");
         /**
          * {@code "quoted-printable"}
          */
-        public static final CharSequence QUOTED_PRINTABLE = newEntity("quoted-printable");
+        public static final AsciiString QUOTED_PRINTABLE = new AsciiString("quoted-printable");
         /**
          * {@code "s-maxage"}
          */
-        public static final CharSequence S_MAXAGE = newEntity("s-maxage");
+        public static final AsciiString S_MAXAGE = new AsciiString("s-maxage");
         /**
          * {@code "trailers"}
          */
-        public static final CharSequence TRAILERS = newEntity("trailers");
+        public static final AsciiString TRAILERS = new AsciiString("trailers");
         /**
          * {@code "Upgrade"}
          */
-        public static final CharSequence UPGRADE = newEntity("Upgrade");
+        public static final AsciiString UPGRADE = new AsciiString("Upgrade");
         /**
          * {@code "WebSocket"}
          */
-        public static final CharSequence WEBSOCKET = newEntity("WebSocket");
+        public static final AsciiString WEBSOCKET = new AsciiString("WebSocket");
 
         private Values() {
         }
     }
 
-    /**
-     * Returns {@code true} if and only if the connection can remain open and
-     * thus 'kept alive'.  This methods respects the value of the
-     * {@code "Connection"} header first and then the return value of
-     * {@link HttpVersion#isKeepAliveDefault()}.
-     */
-    public static boolean isKeepAlive(HttpMessage message) {
-        String connection = message.headers().get(Names.CONNECTION);
-        if (connection != null && equalsIgnoreCase(Values.CLOSE, connection)) {
-            return false;
-        }
+    @Override
+    HttpHeaders add(CharSequence name, Object value);
 
-        if (message.getProtocolVersion().isKeepAliveDefault()) {
-            return !equalsIgnoreCase(Values.CLOSE, connection);
-        } else {
-            return equalsIgnoreCase(Values.KEEP_ALIVE, connection);
-        }
-    }
+    @Override
+    HttpHeaders add(CharSequence name, Iterable<?> values);
 
-    /**
-     * Sets the value of the {@code "Connection"} header depending on the
-     * protocol version of the specified message.  This getMethod sets or removes
-     * the {@code "Connection"} header depending on what the default keep alive
-     * mode of the message's protocol version is, as specified by
-     * {@link HttpVersion#isKeepAliveDefault()}.
-     * <ul>
-     * <li>If the connection is kept alive by default:
-     *     <ul>
-     *     <li>set to {@code "close"} if {@code keepAlive} is {@code false}.</li>
-     *     <li>remove otherwise.</li>
-     *     </ul></li>
-     * <li>If the connection is closed by default:
-     *     <ul>
-     *     <li>set to {@code "keep-alive"} if {@code keepAlive} is {@code true}.</li>
-     *     <li>remove otherwise.</li>
-     *     </ul></li>
-     * </ul>
-     */
-    public static void setKeepAlive(HttpMessage message, boolean keepAlive) {
-        HttpHeaders h = message.headers();
-        if (message.getProtocolVersion().isKeepAliveDefault()) {
-            if (keepAlive) {
-                h.remove(Names.CONNECTION);
-            } else {
-                h.set(Names.CONNECTION, Values.CLOSE);
-            }
-        } else {
-            if (keepAlive) {
-                h.set(Names.CONNECTION, Values.KEEP_ALIVE);
-            } else {
-                h.remove(Names.CONNECTION);
-            }
-        }
-    }
+    @Override
+    HttpHeaders add(CharSequence name, Object... values);
 
-    /**
-     * Returns the header value with the specified header name.  If there are
-     * more than one header value for the specified header name, the first
-     * value is returned.
-     *
-     * @return the header value or {@code null} if there is no such header
-     */
-    public static String getHeader(HttpMessage message, CharSequence name) {
-        return message.headers().get(name);
-    }
+    @Override
+    HttpHeaders add(TextHeaders headers);
 
-    /**
-     * Returns the header value with the specified header name.  If there are
-     * more than one header value for the specified header name, the first
-     * value is returned.
-     *
-     * @return the header value or the {@code defaultValue} if there is no such
-     *         header
-     */
-    public static String getHeader(HttpMessage message, CharSequence name, String defaultValue) {
-        String value = message.headers().get(name);
-        if (value == null) {
-            return defaultValue;
-        }
-        return value;
-    }
+    @Override
+    HttpHeaders set(CharSequence name, Object value);
 
-    /**
-     * Sets a new header with the specified name and value.  If there is an
-     * existing header with the same name, the existing header is removed.
-     * If the specified value is not a {@link String}, it is converted into a
-     * {@link String} by {@link Object#toString()}, except for {@link Date}
-     * and {@link Calendar} which are formatted to the date format defined in
-     * <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.3.1">RFC2616</a>.
-     */
-    public static void setHeader(HttpMessage message, CharSequence name, Object value) {
-        message.headers().set(name, value);
-    }
+    @Override
+    HttpHeaders set(CharSequence name, Iterable<?> values);
 
-    /**
-     * Sets a new header with the specified name and values.  If there is an
-     * existing header with the same name, the existing header is removed.
-     * This getMethod can be represented approximately as the following code:
-     * <pre>
-     * removeHeader(message, name);
-     * for (Object v: values) {
-     *     if (v == null) {
-     *         break;
-     *     }
-     *     addHeader(message, name, v);
-     * }
-     * </pre>
-     */
-    public static void setHeader(HttpMessage message, CharSequence name, Iterable<?> values) {
-        message.headers().set(name, values);
-    }
+    @Override
+    HttpHeaders set(CharSequence name, Object... values);
 
-    /**
-     * Adds a new header with the specified name and value.
-     * If the specified value is not a {@link String}, it is converted into a
-     * {@link String} by {@link Object#toString()}, except for {@link Date}
-     * and {@link Calendar} which are formatted to the date format defined in
-     * <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.3.1">RFC2616</a>.
-     */
-    public static void addHeader(HttpMessage message, CharSequence name, Object value) {
-        message.headers().add(name, value);
-    }
+    @Override
+    HttpHeaders set(TextHeaders headers);
 
-    /**
-     * Removes the header with the specified name.
-     */
-    public static void removeHeader(HttpMessage message, CharSequence name) {
-        message.headers().remove(name);
-    }
+    @Override
+    HttpHeaders clear();
 
-    /**
-     * Removes all headers from the specified message.
-     */
-    public static void clearHeaders(HttpMessage message) {
-        message.headers().clear();
-    }
-
-    /**
-     * Returns the integer header value with the specified header name.  If
-     * there are more than one header value for the specified header name, the
-     * first value is returned.
-     *
-     * @return the header value
-     * @throws NumberFormatException
-     *         if there is no such header or the header value is not a number
-     */
-    public static int getIntHeader(HttpMessage message, CharSequence name) {
-        String value = getHeader(message, name);
-        if (value == null) {
-            throw new NumberFormatException("header not found: " + name);
-        }
-        return Integer.parseInt(value);
-    }
-
-    /**
-     * Returns the integer header value with the specified header name.  If
-     * there are more than one header value for the specified header name, the
-     * first value is returned.
-     *
-     * @return the header value or the {@code defaultValue} if there is no such
-     *         header or the header value is not a number
-     */
-    public static int getIntHeader(HttpMessage message, CharSequence name, int defaultValue) {
-        String value = getHeader(message, name);
-        if (value == null) {
-            return defaultValue;
-        }
-
-        try {
-            return Integer.parseInt(value);
-        } catch (NumberFormatException ignored) {
-            return defaultValue;
-        }
-    }
-
-    /**
-     * Sets a new integer header with the specified name and value.  If there
-     * is an existing header with the same name, the existing header is removed.
-     */
-    public static void setIntHeader(HttpMessage message, CharSequence name, int value) {
-        message.headers().set(name, value);
-    }
-
-    /**
-     * Sets a new integer header with the specified name and values.  If there
-     * is an existing header with the same name, the existing header is removed.
-     */
-    public static void setIntHeader(HttpMessage message, CharSequence name, Iterable<Integer> values) {
-        message.headers().set(name, values);
-    }
-
-    /**
-     * Adds a new integer header with the specified name and value.
-     */
-    public static void addIntHeader(HttpMessage message, CharSequence name, int value) {
-        message.headers().add(name, value);
-    }
-
-    /**
-     * Returns the date header value with the specified header name.  If
-     * there are more than one header value for the specified header name, the
-     * first value is returned.
-     *
-     * @return the header value
-     * @throws ParseException
-     *         if there is no such header or the header value is not a formatted date
-     */
-    public static Date getDateHeader(HttpMessage message, CharSequence name) throws ParseException {
-        String value = getHeader(message, name);
-        if (value == null) {
-            throw new ParseException("header not found: " + name, 0);
-        }
-        return HttpHeaderDateFormat.get().parse(value);
-    }
-
-    /**
-     * Returns the date header value with the specified header name.  If
-     * there are more than one header value for the specified header name, the
-     * first value is returned.
-     *
-     * @return the header value or the {@code defaultValue} if there is no such
-     *         header or the header value is not a formatted date
-     */
-    public static Date getDateHeader(HttpMessage message, CharSequence name, Date defaultValue) {
-        final String value = getHeader(message, name);
-        if (value == null) {
-            return defaultValue;
-        }
-
-        try {
-            return HttpHeaderDateFormat.get().parse(value);
-        } catch (ParseException ignored) {
-            return defaultValue;
-        }
-    }
-
-    /**
-     * Sets a new date header with the specified name and value.  If there
-     * is an existing header with the same name, the existing header is removed.
-     * The specified value is formatted as defined in
-     * <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.3.1">RFC2616</a>
-     */
-    public static void setDateHeader(HttpMessage message, CharSequence name, Date value) {
-        if (value != null) {
-            message.headers().set(name, HttpHeaderDateFormat.get().format(value));
-        } else {
-            message.headers().set(name, null);
-        }
-    }
-
-    /**
-     * Sets a new date header with the specified name and values.  If there
-     * is an existing header with the same name, the existing header is removed.
-     * The specified values are formatted as defined in
-     * <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.3.1">RFC2616</a>
-     */
-    public static void setDateHeader(HttpMessage message, CharSequence name, Iterable<Date> values) {
-        message.headers().set(name, values);
-    }
-
-    /**
-     * Adds a new date header with the specified name and value.  The specified
-     * value is formatted as defined in
-     * <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.3.1">RFC2616</a>
-     */
-    public static void addDateHeader(HttpMessage message, CharSequence name, Date value) {
-        message.headers().add(name, value);
-    }
-
-    /**
-     * Returns the length of the content.  Please note that this value is
-     * not retrieved from {@link HttpContent#content()} but from the
-     * {@code "Content-Length"} header, and thus they are independent from each
-     * other.
-     *
-     * @return the content length
-     *
-     * @throws NumberFormatException
-     *         if the message does not have the {@code "Content-Length"} header
-     *         or its value is not a number
-     */
-    public static long getContentLength(HttpMessage message) {
-        String value = getHeader(message, Names.CONTENT_LENGTH);
-        if (value != null) {
-            return Long.parseLong(value);
-        }
-
-        // We know the content length if it's a Web Socket message even if
-        // Content-Length header is missing.
-        long webSocketContentLength = getWebSocketContentLength(message);
-        if (webSocketContentLength >= 0) {
-            return webSocketContentLength;
-        }
-
-        // Otherwise we don't.
-        throw new NumberFormatException("header not found: " + Names.CONTENT_LENGTH);
-    }
-
-    /**
-     * Returns the length of the content.  Please note that this value is
-     * not retrieved from {@link HttpContent#content()} but from the
-     * {@code "Content-Length"} header, and thus they are independent from each
-     * other.
-     *
-     * @return the content length or {@code defaultValue} if this message does
-     *         not have the {@code "Content-Length"} header or its value is not
-     *         a number
-     */
-    public static long getContentLength(HttpMessage message, long defaultValue) {
-        String contentLength = message.headers().get(Names.CONTENT_LENGTH);
-        if (contentLength != null) {
-            try {
-                return Long.parseLong(contentLength);
-            } catch (NumberFormatException ignored) {
-                return defaultValue;
-            }
-        }
-
-        // We know the content length if it's a Web Socket message even if
-        // Content-Length header is missing.
-        long webSocketContentLength = getWebSocketContentLength(message);
-        if (webSocketContentLength >= 0) {
-            return webSocketContentLength;
-        }
-
-        // Otherwise we don't.
-        return defaultValue;
-    }
-
-    /**
-     * Returns the content length of the specified web socket message.  If the
-     * specified message is not a web socket message, {@code -1} is returned.
-     */
-    private static int getWebSocketContentLength(HttpMessage message) {
-        // WebSockset messages have constant content-lengths.
-        HttpHeaders h = message.headers();
-        if (message instanceof HttpRequest) {
-            HttpRequest req = (HttpRequest) message;
-            if (HttpMethod.GET.equals(req.getMethod()) &&
-                h.contains(Names.SEC_WEBSOCKET_KEY1) &&
-                h.contains(Names.SEC_WEBSOCKET_KEY2)) {
-                return 8;
-            }
-        } else if (message instanceof HttpResponse) {
-            HttpResponse res = (HttpResponse) message;
-            if (res.getStatus().code() == 101 &&
-                h.contains(Names.SEC_WEBSOCKET_ORIGIN) &&
-                h.contains(Names.SEC_WEBSOCKET_LOCATION)) {
-                return 16;
-            }
-        }
-
-        // Not a web socket message
-        return -1;
-    }
-
-    /**
-     * Sets the {@code "Content-Length"} header.
-     */
-    public static void setContentLength(HttpMessage message, long length) {
-        message.headers().set(Names.CONTENT_LENGTH, length);
-    }
-
-    /**
-     * Returns the value of the {@code "Host"} header.
-     */
-    public static String getHost(HttpMessage message) {
-        return message.headers().get(Names.HOST);
-    }
-
-    /**
-     * Returns the value of the {@code "Host"} header.  If there is no such
-     * header, the {@code defaultValue} is returned.
-     */
-    public static String getHost(HttpMessage message, String defaultValue) {
-        return getHeader(message, Names.HOST, defaultValue);
-    }
-
-    /**
-     * Sets the {@code "Host"} header.
-     */
-    public static void setHost(HttpMessage message, CharSequence value) {
-        message.headers().set(Names.HOST, value);
-    }
-
-    /**
-     * Returns the value of the {@code "Date"} header.
-     *
-     * @throws ParseException
-     *         if there is no such header or the header value is not a formatted date
-     */
-    public static Date getDate(HttpMessage message) throws ParseException {
-        return getDateHeader(message, Names.DATE);
-    }
-
-    /**
-     * Returns the value of the {@code "Date"} header. If there is no such
-     * header or the header is not a formatted date, the {@code defaultValue}
-     * is returned.
-     */
-    public static Date getDate(HttpMessage message, Date defaultValue) {
-        return getDateHeader(message, Names.DATE, defaultValue);
-    }
-
-    /**
-     * Sets the {@code "Date"} header.
-     */
-    public static void setDate(HttpMessage message, Date value) {
-        if (value != null) {
-            message.headers().set(Names.DATE, HttpHeaderDateFormat.get().format(value));
-        } else {
-            message.headers().set(Names.DATE, null);
-        }
-    }
-
-    /**
-     * Returns {@code true} if and only if the specified message contains the
-     * {@code "Expect: 100-continue"} header.
-     */
-    public static boolean is100ContinueExpected(HttpMessage message) {
-        // Expect: 100-continue is for requests only.
-        if (!(message instanceof HttpRequest)) {
-            return false;
-        }
-
-        // It works only on HTTP/1.1 or later.
-        if (message.getProtocolVersion().compareTo(HttpVersion.HTTP_1_1) < 0) {
-            return false;
-        }
-
-        // In most cases, there will be one or zero 'Expect' header.
-        String value = message.headers().get(Names.EXPECT);
-        if (value == null) {
-            return false;
-        }
-        if (equalsIgnoreCase(Values.CONTINUE, value)) {
-            return true;
-        }
-
-        // Multiple 'Expect' headers.  Search through them.
-        return message.headers().contains(Names.EXPECT, Values.CONTINUE, true);
-    }
-
-    /**
-     * Sets the {@code "Expect: 100-continue"} header to the specified message.
-     * If there is any existing {@code "Expect"} header, they are replaced with
-     * the new one.
-     */
-    public static void set100ContinueExpected(HttpMessage message) {
-        set100ContinueExpected(message, true);
-    }
-
-    /**
-     * Sets or removes the {@code "Expect: 100-continue"} header to / from the
-     * specified message.  If the specified {@code value} is {@code true},
-     * the {@code "Expect: 100-continue"} header is set and all other previous
-     * {@code "Expect"} headers are removed.  Otherwise, all {@code "Expect"}
-     * headers are removed completely.
-     */
-    public static void set100ContinueExpected(HttpMessage message, boolean set) {
-        if (set) {
-            message.headers().set(Names.EXPECT, Values.CONTINUE);
-        } else {
-            message.headers().remove(Names.EXPECT);
-        }
-    }
-
-    /**
-     * Validates the name of a header
-     *
-     * @param headerName The header name being validated
-     */
-    static void validateHeaderName(CharSequence headerName) {
-        //Check to see if the name is null
-        if (headerName == null) {
-            throw new NullPointerException("Header names cannot be null");
-        }
-        //Go through each of the characters in the name
-        for (int index = 0; index < headerName.length(); index ++) {
-            //Actually get the character
-            char character = headerName.charAt(index);
-
-            //Check to see if the character is not an ASCII character
-            if (character > 127) {
-                throw new IllegalArgumentException(
-                        "Header name cannot contain non-ASCII characters: " + headerName);
-            }
-
-            //Check for prohibited characters.
-            switch (character) {
-                case '\t': case '\n': case 0x0b: case '\f': case '\r':
-                case ' ':  case ',':  case ':':  case ';':  case '=':
-                    throw new IllegalArgumentException(
-                            "Header name cannot contain the following prohibited characters: " +
-                                    "=,;: \\t\\r\\n\\v\\f: " + headerName);
-            }
-        }
-    }
-
-    /**
-     * Validates the specified header value
-     *
-     * @param headerValue The value being validated
-     */
-    static void validateHeaderValue(CharSequence headerValue) {
-        //Check to see if the value is null
-        if (headerValue == null) {
-            throw new NullPointerException("Header values cannot be null");
-        }
-
-        /*
-         * Set up the state of the validation
-         *
-         * States are as follows:
-         *
-         * 0: Previous character was neither CR nor LF
-         * 1: The previous character was CR
-         * 2: The previous character was LF
-         */
-        int state = 0;
-
-        //Start looping through each of the character
-
-        for (int index = 0; index < headerValue.length(); index ++) {
-            char character = headerValue.charAt(index);
-
-            //Check the absolutely prohibited characters.
-            switch (character) {
-                case 0x0b: // Vertical tab
-                    throw new IllegalArgumentException(
-                            "Header value contains a prohibited character '\\v': " + headerValue);
-                case '\f':
-                    throw new IllegalArgumentException(
-                            "Header value contains a prohibited character '\\f': " + headerValue);
-            }
-
-            // Check the CRLF (HT | SP) pattern
-            switch (state) {
-                case 0:
-                    switch (character) {
-                        case '\r':
-                            state = 1;
-                            break;
-                        case '\n':
-                            state = 2;
-                            break;
-                    }
-                    break;
-                case 1:
-                    switch (character) {
-                        case '\n':
-                            state = 2;
-                            break;
-                        default:
-                            throw new IllegalArgumentException(
-                                    "Only '\\n' is allowed after '\\r': " + headerValue);
-                    }
-                    break;
-                case 2:
-                    switch (character) {
-                        case '\t': case ' ':
-                            state = 0;
-                            break;
-                        default:
-                            throw new IllegalArgumentException(
-                                    "Only ' ' and '\\t' are allowed after '\\n': " + headerValue);
-                    }
-            }
-        }
-
-        if (state != 0) {
-            throw new IllegalArgumentException(
-                    "Header value must not end with '\\r' or '\\n':" + headerValue);
-        }
-    }
-
-    /**
-     * Checks to see if the transfer encoding in a specified {@link HttpMessage} is chunked
-     *
-     * @param message The message to check
-     * @return True if transfer encoding is chunked, otherwise false
-     */
-    public static boolean isTransferEncodingChunked(HttpMessage message) {
-        return message.headers().contains(Names.TRANSFER_ENCODING, Values.CHUNKED, true);
-    }
-
-    public static void removeTransferEncodingChunked(HttpMessage m) {
-        List<String> values = m.headers().getAll(Names.TRANSFER_ENCODING);
-        if (values.isEmpty()) {
-            return;
-        }
-        Iterator<String> valuesIt = values.iterator();
-        while (valuesIt.hasNext()) {
-            String value = valuesIt.next();
-            if (equalsIgnoreCase(value, Values.CHUNKED)) {
-                valuesIt.remove();
-            }
-        }
-        if (values.isEmpty()) {
-            m.headers().remove(Names.TRANSFER_ENCODING);
-        } else {
-            m.headers().set(Names.TRANSFER_ENCODING, values);
-        }
-    }
-
-    public static void setTransferEncodingChunked(HttpMessage m) {
-        addHeader(m, Names.TRANSFER_ENCODING, Values.CHUNKED);
-        removeHeader(m, Names.CONTENT_LENGTH);
-    }
-
-    public static boolean isContentLengthSet(HttpMessage m) {
-        return m.headers().contains(Names.CONTENT_LENGTH);
-    }
-
-    /**
-     * Returns {@code true} if both {@link CharSequence}'s are equals when ignore the case.
-     * This only supports US_ASCII.
-     */
-    public static boolean equalsIgnoreCase(CharSequence name1, CharSequence name2) {
-        if (name1 == name2) {
-            return true;
-        }
-
-        if (name1 == null || name2 == null) {
-            return false;
-        }
-
-        int nameLen = name1.length();
-        if (nameLen != name2.length()) {
-            return false;
-        }
-
-        for (int i = nameLen - 1; i >= 0; i --) {
-            char c1 = name1.charAt(i);
-            char c2 = name2.charAt(i);
-            if (c1 != c2) {
-                if (c1 >= 'A' && c1 <= 'Z') {
-                    c1 += 32;
-                }
-                if (c2 >= 'A' && c2 <= 'Z') {
-                    c2 += 32;
-                }
-                if (c1 != c2) {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
-
-    static int hash(CharSequence name) {
-        if (name instanceof HttpHeaderEntity) {
-            return ((HttpHeaderEntity) name).hash();
-        }
-        int h = 0;
-        for (int i = name.length() - 1; i >= 0; i --) {
-            char c = name.charAt(i);
-            if (c >= 'A' && c <= 'Z') {
-                c += 32;
-            }
-            h = 31 * h + c;
-        }
-
-        if (h > 0) {
-            return h;
-        } else if (h == Integer.MIN_VALUE) {
-            return Integer.MAX_VALUE;
-        } else {
-            return -h;
-        }
-    }
-
-    static void encode(HttpHeaders headers, ByteBuf buf) {
-        if (headers instanceof DefaultHttpHeaders) {
-            ((DefaultHttpHeaders) headers).encode(buf);
-        } else {
-            for (Entry<String, String> header: headers) {
-                encode(header.getKey(), header.getValue(), buf);
-            }
-        }
-    }
-
-    static void encode(CharSequence key, CharSequence value, ByteBuf buf) {
-        encodeAscii(key, buf);
-        buf.writeBytes(HEADER_SEPERATOR);
-        encodeAscii(value, buf);
-        buf.writeBytes(CRLF);
-    }
-
-    public static void encodeAscii(CharSequence seq, ByteBuf buf) {
-        if (seq instanceof HttpHeaderEntity) {
-            ((HttpHeaderEntity) seq).encode(buf);
-        } else {
-            encodeAscii0(seq, buf);
-        }
-    }
-
-    static void encodeAscii0(CharSequence seq, ByteBuf buf) {
-        int length = seq.length();
-        for (int i = 0 ; i < length; i++) {
-            buf.writeByte((byte) seq.charAt(i));
-        }
-    }
-
-    /**
-     * Create a new {@link CharSequence} which is optimized for reuse as {@link HttpHeaders} name or value.
-     * So if you have a Header name or value that you want to reuse you should make use of this.
-     */
-    public static CharSequence newEntity(String name) {
-        if (name == null) {
-            throw new NullPointerException("name");
-        }
-        return new HttpHeaderEntity(name);
-    }
-
-    protected HttpHeaders() { }
-
-    /**
-     * Returns the value of a header with the specified name.  If there are
-     * more than one values for the specified name, the first value is returned.
-     *
-     * @param name The name of the header to search
-     * @return The first header value or {@code null} if there is no such header
-     */
-    public abstract String get(CharSequence name);
-
-    /**
-     * Returns the values of headers with the specified name
-     *
-     * @param name The name of the headers to search
-     * @return A {@link List} of header values which will be empty if no values
-     *         are found
-     */
-    public abstract List<String> getAll(CharSequence name);
-
-    /**
-     * Returns a new {@link List} that contains all headers in this object.  Note that modifying the
-     * returned {@link List} will not affect the state of this object.  If you intend to enumerate over the header
-     * entries only, use {@link #iterator()} instead, which has much less overhead.
-     */
-    public abstract List<Map.Entry<String, String>> entries();
-
-    /**
-     * Checks to see if there is a header with the specified name
-     *
-     * @param name The name of the header to search for
-     * @return True if at least one header is found
-     */
-    public abstract boolean contains(CharSequence name);
-
-    /**
-     * Checks if no header exists.
-     */
-    public abstract boolean isEmpty();
-
-    /**
-     * Returns a new {@link Set} that contains the names of all headers in this object.  Note that modifying the
-     * returned {@link Set} will not affect the state of this object.  If you intend to enumerate over the header
-     * entries only, use {@link #iterator()} instead, which has much less overhead.
-     */
-    public abstract Set<String> names();
-
-    /**
-     * Adds a new header with the specified name and value.
-     *
-     * If the specified value is not a {@link String}, it is converted
-     * into a {@link String} by {@link Object#toString()}, except in the cases
-     * of {@link Date} and {@link Calendar}, which are formatted to the date
-     * format defined in <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.3.1">RFC2616</a>.
-     *
-     * @param name The name of the header being added
-     * @param value The value of the header being added
-     *
-     * @return {@code this}
-     */
-    public abstract HttpHeaders add(CharSequence name, Object value);
-
-    /**
-     * Adds a new header with the specified name and values.
-     *
-     * This getMethod can be represented approximately as the following code:
-     * <pre>
-     * for (Object v: values) {
-     *     if (v == null) {
-     *         break;
-     *     }
-     *     headers.add(name, v);
-     * }
-     * </pre>
-     *
-     * @param name The name of the headers being set
-     * @param values The values of the headers being set
-     * @return {@code this}
-     */
-    public abstract HttpHeaders add(CharSequence name, Iterable<?> values);
-
-    /**
-     * Adds all header entries of the specified {@code headers}.
-     *
-     * @return {@code this}
-     */
-    public HttpHeaders add(HttpHeaders headers) {
-        if (headers == null) {
-            throw new NullPointerException("headers");
-        }
-        for (Map.Entry<String, String> e: headers) {
-            add(e.getKey(), e.getValue());
-        }
-        return this;
-    }
-
-    /**
-     * Sets a header with the specified name and value.
-     *
-     * If there is an existing header with the same name, it is removed.
-     * If the specified value is not a {@link String}, it is converted into a
-     * {@link String} by {@link Object#toString()}, except for {@link Date}
-     * and {@link Calendar}, which are formatted to the date format defined in
-     * <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.3.1">RFC2616</a>.
-     *
-     * @param name The name of the header being set
-     * @param value The value of the header being set
-     * @return {@code this}
-     */
-    public abstract HttpHeaders set(CharSequence name, Object value);
-
-    /**
-     * Sets a header with the specified name and values.
-     *
-     * If there is an existing header with the same name, it is removed.
-     * This getMethod can be represented approximately as the following code:
-     * <pre>
-     * headers.remove(name);
-     * for (Object v: values) {
-     *     if (v == null) {
-     *         break;
-     *     }
-     *     headers.add(name, v);
-     * }
-     * </pre>
-     *
-     * @param name The name of the headers being set
-     * @param values The values of the headers being set
-     * @return {@code this}
-     */
-    public abstract HttpHeaders set(CharSequence name, Iterable<?> values);
-
-    /**
-     * Cleans the current header entries and copies all header entries of the specified {@code headers}.
-     *
-     * @return {@code this}
-     */
-    public HttpHeaders set(HttpHeaders headers) {
-        if (headers == null) {
-            throw new NullPointerException("headers");
-        }
-
-        clear();
-        if (headers.isEmpty()) {
-            return this;
-        }
-
-        for (Map.Entry<String, String> e: headers) {
-            add(e.getKey(), e.getValue());
-        }
-        return this;
-    }
-
-    /**
-     * Removes the header with the specified name.
-     *
-     * @param name The name of the header to remove
-     * @return {@code this}
-     */
-    public abstract HttpHeaders remove(CharSequence name);
-
-    /**
-     * Removes all headers from this {@link HttpMessage}.
-     *
-     * @return {@code this}
-     */
-    public abstract HttpHeaders clear();
-
-    /**
-     * Returns {@code true} if a header with the name and value exists.
-     *
-     * @param name              the headername
-     * @param value             the value
-     * @param ignoreCaseValue   {@code true} if case should be ignored
-     * @return contains         {@code true} if it contains it {@code false} otherwise
-     */
-    public boolean contains(CharSequence name, CharSequence value, boolean ignoreCaseValue) {
-        List<String> values = getAll(name);
-        if (values.isEmpty()) {
-            return false;
-        }
-
-        for (String v: values) {
-            if (ignoreCaseValue) {
-                if (equalsIgnoreCase(v, value)) {
-                    return true;
-                }
-            } else {
-                if (v.equals(value)) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
+    @Override
+    HttpHeaders forEachEntry(TextHeaderProcessor processor);
 }

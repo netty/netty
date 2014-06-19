@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBufProcessor;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
+import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.TooLongFrameException;
@@ -520,9 +521,9 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         State nextState;
 
         if (isContentAlwaysEmpty(message)) {
-            HttpHeaders.removeTransferEncodingChunked(message);
+            HttpHeaderUtil.setTransferEncodingChunked(message, false);
             nextState = State.SKIP_CONTROL_CHARS;
-        } else if (HttpHeaders.isTransferEncodingChunked(message)) {
+        } else if (HttpHeaderUtil.isTransferEncodingChunked(message)) {
             nextState = State.READ_CHUNK_SIZE;
         } else if (contentLength() >= 0) {
             nextState = State.READ_FIXED_LENGTH_CONTENT;
@@ -534,7 +535,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
 
     private long contentLength() {
         if (contentLength == Long.MIN_VALUE) {
-            contentLength = HttpHeaders.getContentLength(message, -1);
+            contentLength = HttpHeaderUtil.getContentLength(message, -1);
         }
         return contentLength;
     }
@@ -559,9 +560,9 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
                 } else {
                     String[] header = splitHeader(line);
                     String name = header[0];
-                    if (!HttpHeaders.equalsIgnoreCase(name, HttpHeaders.Names.CONTENT_LENGTH) &&
-                        !HttpHeaders.equalsIgnoreCase(name, HttpHeaders.Names.TRANSFER_ENCODING) &&
-                        !HttpHeaders.equalsIgnoreCase(name, HttpHeaders.Names.TRAILER)) {
+                    if (!AsciiString.equalsIgnoreCase(name, HttpHeaders.Names.CONTENT_LENGTH) &&
+                        !AsciiString.equalsIgnoreCase(name, HttpHeaders.Names.TRANSFER_ENCODING) &&
+                        !AsciiString.equalsIgnoreCase(name, HttpHeaders.Names.TRAILER)) {
                         trailer.trailingHeaders().add(name, header[1]);
                     }
                     lastHeader = name;

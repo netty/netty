@@ -15,6 +15,8 @@
 
 package io.netty.example.http2.server;
 
+import static io.netty.example.http2.Http2ExampleUtil.UPGRADE_RESPONSE_HEADER;
+import static io.netty.util.internal.logging.InternalLogLevel.INFO;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.example.http2.client.Http2ClientConnectionHandler;
@@ -32,11 +34,8 @@ import io.netty.handler.codec.http2.Http2FrameLogger;
 import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.handler.codec.http2.Http2InboundFrameLogger;
 import io.netty.handler.codec.http2.Http2OutboundFrameLogger;
-import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-import static io.netty.example.http2.Http2ExampleUtil.*;
-import static io.netty.util.internal.logging.InternalLogLevel.*;
 
 /**
  * A simple handler that responds with the message "Hello World!".
@@ -89,75 +88,12 @@ public class HelloWorldHttp2Handler extends AbstractHttp2ConnectionHandler {
      */
     @Override
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId,
-            Http2Headers headers, int padding, boolean endStream,
-            boolean endSegment) throws Http2Exception {
-        if (endStream) {
-            sendResponse(ctx(), streamId);
-        }
-    }
-
-    /**
-     * If receive a frame with end-of-stream set, send a pre-canned response.
-     */
-    @Override
-    public void onHeadersRead(ChannelHandlerContext ctx, int streamId,
             Http2Headers headers, int streamDependency, short weight,
             boolean exclusive, int padding, boolean endStream, boolean endSegment)
             throws Http2Exception {
         if (endStream) {
             sendResponse(ctx(), streamId);
         }
-    }
-
-    @Override
-    public void onPriorityRead(ChannelHandlerContext ctx, int streamId, int streamDependency,
-            short weight, boolean exclusive) throws Http2Exception {
-    }
-
-    @Override
-    public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode)
-            throws Http2Exception {
-    }
-
-    @Override
-    public void onSettingsAckRead(ChannelHandlerContext ctx) throws Http2Exception {
-    }
-
-    @Override
-    public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings)
-            throws Http2Exception {
-    }
-
-    @Override
-    public void onPingRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
-    }
-
-    @Override
-    public void onPingAckRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
-    }
-
-    @Override
-    public void onPushPromiseRead(ChannelHandlerContext ctx, int streamId, int promisedStreamId,
-            Http2Headers headers, int padding) throws Http2Exception {
-    }
-
-    @Override
-    public void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode,
-            ByteBuf debugData) throws Http2Exception {
-    }
-
-    @Override
-    public void onWindowUpdateRead(ChannelHandlerContext ctx, int streamId, int windowSizeIncrement)
-                    throws Http2Exception {
-    }
-
-    @Override
-    public void onAltSvcRead(ChannelHandlerContext ctx, int streamId, long maxAge, int port,
-            ByteBuf protocolId, String host, String origin) throws Http2Exception {
-    }
-
-    @Override
-    public void onBlockedRead(ChannelHandlerContext ctx, int streamId) throws Http2Exception {
     }
 
     @Override

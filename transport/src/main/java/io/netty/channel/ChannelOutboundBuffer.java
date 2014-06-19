@@ -182,18 +182,24 @@ public class ChannelOutboundBuffer {
      * Mark all messages in this {@link ChannelOutboundBuffer} as flushed.
      */
     public final void addFlush() {
-        unflushed = tail;
+        // There is no need to process all entries if there was already a flush before and no new messages
+        // where added in the meantime.
+        //
+        // See https://github.com/netty/netty/issues/2577
+        if (unflushed != tail) {
+            unflushed = tail;
 
-        final int mask = buffer.length - 1;
-        int i = flushed;
-        while (i != unflushed && buffer[i].msg != null) {
-            Entry entry = buffer[i];
-            if (!entry.promise.setUncancellable()) {
-                // Was cancelled so make sure we free up memory and notify about the freed bytes
-                int pending = entry.cancel();
-                decrementPendingOutboundBytes(pending);
+            final int mask = buffer.length - 1;
+            int i = flushed;
+            while (i != unflushed && buffer[i].msg != null) {
+                Entry entry = buffer[i];
+                if (!entry.promise.setUncancellable()) {
+                    // Was cancelled so make sure we free up memory and notify about the freed bytes
+                    int pending = entry.cancel();
+                    decrementPendingOutboundBytes(pending);
+                }
+                i = i + 1 & mask;
             }
-            i = i + 1 & mask;
         }
     }
 
@@ -209,16 +215,8 @@ public class ChannelOutboundBuffer {
             return;
         }
 
-        long oldValue = totalPendingSize;
-        long newWriteBufferSize = oldValue + size;
-        while (!TOTAL_PENDING_SIZE_UPDATER.compareAndSet(this, oldValue, newWriteBufferSize)) {
-            oldValue = totalPendingSize;
-            newWriteBufferSize = oldValue + size;
-        }
-
-        int highWaterMark = channel.config().getWriteBufferHighWaterMark();
-
-        if (newWriteBufferSize > highWaterMark) {
+        long newWriteBufferSize = TOTAL_PENDING_SIZE_UPDATER.addAndGet(this, size);
+        if (newWriteBufferSize > channel.config().getWriteBufferHighWaterMark()) {
             if (WRITABLE_UPDATER.compareAndSet(this, 1, 0)) {
                 channel.pipeline().fireChannelWritabilityChanged();
             }
@@ -237,16 +235,8 @@ public class ChannelOutboundBuffer {
             return;
         }
 
-        long oldValue = totalPendingSize;
-        long newWriteBufferSize = oldValue - size;
-        while (!TOTAL_PENDING_SIZE_UPDATER.compareAndSet(this, oldValue, newWriteBufferSize)) {
-            oldValue = totalPendingSize;
-            newWriteBufferSize = oldValue - size;
-        }
-
-        int lowWaterMark = channel.config().getWriteBufferLowWaterMark();
-
-        if (newWriteBufferSize == 0 || newWriteBufferSize < lowWaterMark) {
+        long newWriteBufferSize = TOTAL_PENDING_SIZE_UPDATER.addAndGet(this, -size);
+        if (newWriteBufferSize == 0 || newWriteBufferSize < channel.config().getWriteBufferLowWaterMark()) {
             if (WRITABLE_UPDATER.compareAndSet(this, 0, 1)) {
                 channel.pipeline().fireChannelWritabilityChanged();
             }
@@ -430,12 +420,7 @@ public class ChannelOutboundBuffer {
 
                 // Just decrease; do not trigger any events via decrementPendingOutboundBytes()
                 int size = e.pendingSize;
-                long oldValue = totalPendingSize;
-                long newWriteBufferSize = oldValue - size;
-                while (!TOTAL_PENDING_SIZE_UPDATER.compareAndSet(this, oldValue, newWriteBufferSize)) {
-                    oldValue = totalPendingSize;
-                    newWriteBufferSize = oldValue - size;
-                }
+                TOTAL_PENDING_SIZE_UPDATER.addAndGet(this, -size);
 
                 e.pendingSize = 0;
                 if (!e.cancelled) {

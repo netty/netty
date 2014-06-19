@@ -16,21 +16,13 @@
 package io.netty.handler.codec.http;
 
 
+import io.netty.util.internal.InternalThreadLocalMap;
+
 final class CookieEncoderUtil {
 
-    static final ThreadLocal<StringBuilder> buffer = new ThreadLocal<StringBuilder>() {
-        @Override
-        public StringBuilder get() {
-            StringBuilder buf = super.get();
-            buf.setLength(0);
-            return buf;
-        }
-
-        @Override
-        protected StringBuilder initialValue() {
-            return new StringBuilder(512);
-        }
-    };
+    static StringBuilder stringBuilder() {
+        return InternalThreadLocalMap.get().stringBuilder();
+    }
 
     static String stripTrailingSeparator(StringBuilder buf) {
         if (buf.length() > 0) {

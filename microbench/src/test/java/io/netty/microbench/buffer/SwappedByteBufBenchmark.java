@@ -19,7 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.SwappedByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.microbench.util.AbstractMicrobenchmark;
-import org.openjdk.jmh.annotations.GenerateMicroBenchmark;
+import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
@@ -48,32 +48,32 @@ public class SwappedByteBufBenchmark extends AbstractMicrobenchmark {
     @Param("16384")
     public int size;
 
-    @GenerateMicroBenchmark
+    @Benchmark
     public void swappedByteBufSetInt() {
         swappedByteBuf.setLong(0, size);
     }
 
-    @GenerateMicroBenchmark
+    @Benchmark
     public void swappedByteBufSetShort() {
         swappedByteBuf.setShort(0, size);
     }
 
-    @GenerateMicroBenchmark
+    @Benchmark
     public void swappedByteBufSetLong() {
         swappedByteBuf.setLong(0, size);
     }
 
-    @GenerateMicroBenchmark
+    @Benchmark
     public void unsafeSwappedByteBufSetInt() {
         unsafeSwappedByteBuf.setInt(0, size);
     }
 
-    @GenerateMicroBenchmark
+    @Benchmark
     public void unsafeSwappedByteBufSetShort() {
         unsafeSwappedByteBuf.setShort(0, size);
     }
 
-    @GenerateMicroBenchmark
+    @Benchmark
     public void unsafeSwappedByteBufSetLong() {
         unsafeSwappedByteBuf.setLong(0, size);
     }

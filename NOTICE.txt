@@ -64,6 +64,14 @@ Bloch of Google, Inc:
   * LICENSE:
     * license/LICENSE.deque.txt (Public Domain)
 
+This product contains a modified portion of 'Apache Harmony', an open source
+Java SE, which can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.harmony.txt (Apache License 2.0)
+  * HOMEPAGE:
+    * http://archive.apache.org/dist/harmony/
+
 This product contains a modified version of Roland Kuhn's ASL2
 AbstractNodeQueue, which is based on Dmitriy Vyukov's non-intrusive MPSC queue.
 It can be obtained at:
@@ -137,3 +145,4 @@ can be obtained at:
     * license/LICENSE.log4j.txt (Apache License 2.0)
   * HOMEPAGE:
     * http://logging.apache.org/log4j/
+

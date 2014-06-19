@@ -16,7 +16,7 @@
 
 package io.netty.buffer;
 
-import io.netty.util.ThreadDeathWatcher;
+import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -28,7 +28,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class PooledByteBufAllocator extends AbstractByteBufAllocator {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PooledByteBufAllocator.class);
-
     private static final int DEFAULT_NUM_HEAP_ARENA;
     private static final int DEFAULT_NUM_DIRECT_ARENA;
 
@@ -256,7 +255,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         return directArenas != null;
     }
 
-    final class PoolThreadLocalCache extends ThreadLocal<PoolThreadCache> {
+    final class PoolThreadLocalCache extends FastThreadLocal<PoolThreadCache> {
         private final AtomicInteger index = new AtomicInteger();
 
         @Override
@@ -277,24 +276,14 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
                 directArena = null;
             }
 
-            final PoolThreadCache cache = new PoolThreadCache(
+            return new PoolThreadCache(
                     heapArena, directArena, tinyCacheSize, smallCacheSize, normalCacheSize,
                     DEFAULT_MAX_CACHED_BUFFER_CAPACITY, DEFAULT_CACHE_TRIM_INTERVAL);
+        }
 
-            // The thread-local cache will keep a list of pooled buffers which must be returned to
-            // the pool when the thread is not alive anymore.
-            final Thread thread = Thread.currentThread();
-            ThreadDeathWatcher.watch(thread, new Runnable() {
-                @Override
-                public void run() {
-                    int numFreed = cache.free();
-                    if (logger.isDebugEnabled()) {
-                        logger.debug("Freed {} thread-local buffer(s) from thread: {}", numFreed, thread.getName());
-                    }
-                }
-            });
-
-            return cache;
+        @Override
+        protected void onRemoval(PoolThreadCache value) {
+            value.free();
         }
     }
 
