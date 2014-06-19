@@ -82,7 +82,6 @@ final class Bzip2HuffmanStageDecoder {
 
     // For saving state if end of current ByteBuf was reached
     int currentSelector;
-    int currentSelectorMtf;
 
     /**
      * The Canonical Huffman code lengths for each table.

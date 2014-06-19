@@ -150,7 +150,7 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
                     final int bitNumber = Integer.bitCount(inUse16);
                     final byte[] huffmanSymbolMap = blockDecompressor.huffmanSymbolMap;
 
-                    if (in.readableBytes() < bitNumber * 16 / 8) {
+                    if (in.readableBytes() < bitNumber * 16 / 8 + 1) {
                         return;
                     }
 
@@ -189,39 +189,29 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
                     huffmanStageDecoder.selectors = new byte[totalSelectors];
 
                     currentState = State.RECEIVE_SELECTORS;
-                    if (!in.isReadable()) {
-                        return;
-                    }
                 case RECEIVE_SELECTORS:
                     Bzip2HuffmanStageDecoder huffmanStageDecoder = this.huffmanStageDecoder;
                     byte[] selectors = huffmanStageDecoder.selectors;
                     totalSelectors = selectors.length;
                     final Bzip2MoveToFrontTable tableMtf = huffmanStageDecoder.tableMTF;
 
-                    int currSelector = 0;
-                    int currSelectorMtf = 0;
-                    try {
-                        // Get zero-terminated bit runs (0..62) of MTF'ed Huffman table. length = 1..6
-                        for (currSelector = huffmanStageDecoder.currentSelector;
-                                    currSelector < totalSelectors; currSelector++) {
-                            currSelectorMtf = huffmanStageDecoder.currentSelectorMtf;
-                            while (readBoolean(in)) {
-                                currSelectorMtf++;
-                            }
-                            selectors[currSelector] = tableMtf.indexToFront(currSelectorMtf);
-                            huffmanStageDecoder.currentSelectorMtf = 0;
+                    int currSelector;
+                    // Get zero-terminated bit runs (0..62) of MTF'ed Huffman table. length = 1..6
+                    for (currSelector = huffmanStageDecoder.currentSelector;
+                                currSelector < totalSelectors; currSelector++) {
+                        if (!in.isReadable()) {
+                            // Save state if end of current ByteBuf was reached
+                            huffmanStageDecoder.currentSelector = currSelector;
+                            return;
                         }
-                    } catch (IndexOutOfBoundsException e) {
-                        // Save state if end of current ByteBuf was reached
-                        huffmanStageDecoder.currentSelector = currSelector;
-                        huffmanStageDecoder.currentSelectorMtf = currSelectorMtf;
-                        return;
+                        int index = 0;
+                        while (readBoolean(in)) {
+                            index++;
+                        }
+                        selectors[currSelector] = tableMtf.indexToFront(index);
                     }
 
                     currentState = State.RECEIVE_HUFFMAN_LENGTH;
-                    if (!in.isReadable()) {
-                        return;
-                    }
                 case RECEIVE_HUFFMAN_LENGTH:
                     huffmanStageDecoder = this.huffmanStageDecoder;
                     totalTables = huffmanStageDecoder.totalTables;
@@ -229,30 +219,46 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
                     alphaSize = huffmanStageDecoder.alphabetSize;
 
                     /* Now the coding tables */
-                    int currGroup = 0;
+                    int currGroup;
                     int currLength = huffmanStageDecoder.currentLength;
                     int currAlpha = 0;
                     boolean modifyLength = huffmanStageDecoder.modifyLength;
-                    try {
-                        for (currGroup = huffmanStageDecoder.currentGroup; currGroup < totalTables; currGroup++) {
-                            // start_huffman_length
-                            if (currLength < 0) {
-                                currLength = readBits(in, 5);
-                            }
-                            for (currAlpha = huffmanStageDecoder.currentAlpha; currAlpha < alphaSize; currAlpha++) {
-                                // delta_bit_length: 1..40
-                                while (modifyLength || readBoolean(in)) {  // 0=>next symbol; 1=>alter length
-                                    modifyLength = true;
-                                    currLength += readBoolean(in) ? -1 : 1; // 1=>decrement length;  0=>increment length
-                                    modifyLength = false;
-                                }
-                                codeLength[currGroup][currAlpha] = (byte) currLength;
-                            }
-                            currLength = -1;
-                            currAlpha = huffmanStageDecoder.currentAlpha = 0;
-                            modifyLength = false;
+                    boolean saveStateAndReturn = false;
+                    loop: for (currGroup = huffmanStageDecoder.currentGroup; currGroup < totalTables; currGroup++) {
+                        // start_huffman_length
+                        if (!in.isReadable()) {
+                            saveStateAndReturn = true;
+                            break;
                         }
-                    } catch (IndexOutOfBoundsException e) {
+                        if (currLength < 0) {
+                            currLength = readBits(in, 5);
+                        }
+                        for (currAlpha = huffmanStageDecoder.currentAlpha; currAlpha < alphaSize; currAlpha++) {
+                            // delta_bit_length: 1..40
+                            if (!hasBit(in)) {
+                                saveStateAndReturn = true;
+                                break loop;
+                            }
+                            while (modifyLength || readBoolean(in)) {  // 0=>next symbol; 1=>alter length
+                                if (!hasBit(in)) {
+                                    modifyLength = true;
+                                    saveStateAndReturn = true;
+                                    break loop;
+                                }
+                                currLength += readBoolean(in) ? -1 : 1; // 1=>decrement length;  0=>increment length
+                                modifyLength = false;
+                                if (!hasBit(in)) {
+                                    saveStateAndReturn = true;
+                                    break loop;
+                                }
+                            }
+                            codeLength[currGroup][currAlpha] = (byte) currLength;
+                        }
+                        currLength = -1;
+                        currAlpha = huffmanStageDecoder.currentAlpha = 0;
+                        modifyLength = false;
+                    }
+                    if (saveStateAndReturn) {
                         // Save state if end of current ByteBuf was reached
                         huffmanStageDecoder.currentGroup = currGroup;
                         huffmanStageDecoder.currentLength = currLength;
@@ -324,5 +330,9 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
 
     private int readInt(ByteBuf in) {
         return readBits(in, 16) << 16 | readBits(in, 16);
+    }
+
+    private boolean hasBit(ByteBuf in) {
+        return bitCount > 0 || in.isReadable();
     }
 }
