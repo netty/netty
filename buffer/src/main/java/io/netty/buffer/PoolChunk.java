@@ -195,6 +195,7 @@ final class PoolChunk<T> {
             if (handle >= 0) {
                 return handle;
             }
+            // if subpage full (i.e., handle < 0) then replace in elemSubpage with new subpage
         }
         return allocateSubpageSimple(normCapacity);
     }
@@ -227,7 +228,6 @@ final class PoolChunk<T> {
             PoolSubpage<T> subpage = subpages[subpageIdx(memoryMapIdx)];
             assert subpage != null && subpage.doNotDestroy;
             if (subpage.free(bitmapIdx & 0x3FFFFFFF)) {
-                elemSubpages.put(subpage.elemSize, null); // remove subpage from elemSubpages array
                 return;
             }
         }
@@ -297,4 +297,3 @@ final class PoolChunk<T> {
         return buf.toString();
     }
 }
-
