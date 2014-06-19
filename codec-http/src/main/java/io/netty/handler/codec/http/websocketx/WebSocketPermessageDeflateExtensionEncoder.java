@@ -53,7 +53,7 @@
 
 package io.netty.handler.codec.http.websocketx;
 
-import static io.netty.handler.codec.http.websocketx.WebsocketPremessageDeflateExtensionDecoder.*;
+import static io.netty.handler.codec.http.websocketx.WebSocketPermessageDeflateExtensionDecoder.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -64,12 +64,12 @@ import io.netty.handler.codec.compression.ZlibWrapper;
 
 import java.util.List;
 
-class WebsocketPremessageDeflateExtensionEncoder extends
+class WebSocketPermessageDeflateExtensionEncoder extends
         MessageToMessageEncoder<WebSocketFrame> {
 
     private EmbeddedChannel encoder;
 
-    public WebsocketPremessageDeflateExtensionEncoder(int compressionLevel, int windowSize) {
+    public WebSocketPermessageDeflateExtensionEncoder(int compressionLevel, int windowSize) {
         this.encoder = new EmbeddedChannel(ZlibCodecFactory.newZlibEncoder(
                 ZlibWrapper.NONE, compressionLevel, windowSize, 8));
     }

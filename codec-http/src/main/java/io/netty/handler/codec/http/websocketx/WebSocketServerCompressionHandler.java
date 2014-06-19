@@ -66,14 +66,14 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
-public class WebsocketServerCompressionHandler extends ChannelHandlerAdapter {
+public class WebSocketServerCompressionHandler extends ChannelHandlerAdapter {
 
     static final int MIN_WINDOW_SIZE = 8;
     static final int MAX_WINDOW_SIZE = 15;
     static final int DEFAULT_WINDOW_SIZE = MAX_WINDOW_SIZE;
     static final int DEFAULT_COMPRESSION_LEVEL = 9;
 
-    static final String DEFLATE_HEADER = "permessage-deflate";
+    static final String PERMESSAGE_DEFLATE_EXTENSION = "permessage-deflate";
     static final String CLIENT_MAX_WINDOW = "client_max_window_bits";
     static final String SERVER_MAX_WINDOW = "server_max_window_bits";
     static final String CLIENT_NO_CONTEXT = "client_no_context_takeover";
@@ -87,11 +87,11 @@ public class WebsocketServerCompressionHandler extends ChannelHandlerAdapter {
     private int clientWindowSize = DEFAULT_WINDOW_SIZE;
     private int serverWindowSize = DEFAULT_WINDOW_SIZE;
 
-    public WebsocketServerCompressionHandler() {
+    public WebSocketServerCompressionHandler() {
         this(DEFAULT_COMPRESSION_LEVEL, false, DEFAULT_WINDOW_SIZE);
     }
 
-    public WebsocketServerCompressionHandler(int compressionLevel,
+    public WebSocketServerCompressionHandler(int compressionLevel,
             boolean allowCustomServerWindowSize, int preferedClientWindowSize) {
         if (preferedClientWindowSize > MAX_WINDOW_SIZE || preferedClientWindowSize < MIN_WINDOW_SIZE) {
             throw new IllegalArgumentException("preferedClientWindowSize");
@@ -114,9 +114,9 @@ public class WebsocketServerCompressionHandler extends ChannelHandlerAdapter {
                     Map<String, Map<String, String>> extensions =
                             WebSocketExtensionUtil.extractExtensions(extensionsHeader);
 
-                    if (extensions.containsKey(DEFLATE_HEADER)) {
+                    if (extensions.containsKey(PERMESSAGE_DEFLATE_EXTENSION)) {
                         deflateEnabled = true;
-                        Map<String, String> parameters = extensions.get(DEFLATE_HEADER);
+                        Map<String, String> parameters = extensions.get(PERMESSAGE_DEFLATE_EXTENSION);
                         Iterator<Entry<String, String>> parametersIterator = parameters.entrySet().iterator();
 
                         while (deflateEnabled && parametersIterator.hasNext()) {
@@ -168,7 +168,7 @@ public class WebsocketServerCompressionHandler extends ChannelHandlerAdapter {
 
             String currentHeaderValue = response.headers().get(HttpHeaders.Names.SEC_WEBSOCKET_EXTENSIONS);
             String newHeaderValue = WebSocketExtensionUtil.appendExtension(currentHeaderValue,
-                    DEFLATE_HEADER, parameters);
+                    PERMESSAGE_DEFLATE_EXTENSION, parameters);
 
             response.headers().set(HttpHeaders.Names.SEC_WEBSOCKET_EXTENSIONS, newHeaderValue);
 
@@ -177,14 +177,14 @@ public class WebsocketServerCompressionHandler extends ChannelHandlerAdapter {
                 public void operationComplete(ChannelFuture future) throws Exception {
                     if (future.isSuccess()) {
                         ctx.pipeline().addAfter(ctx.name(),
-                                WebsocketPremessageDeflateExtensionDecoder.class.getName(),
-                                new WebsocketPremessageDeflateExtensionDecoder());
+                                WebSocketPermessageDeflateExtensionDecoder.class.getName(),
+                                new WebSocketPermessageDeflateExtensionDecoder());
                         ctx.pipeline().addAfter(ctx.name(),
-                                WebsocketPremessageDeflateExtensionEncoder.class.getName(),
-                                new WebsocketPremessageDeflateExtensionEncoder(compressionLevel, serverWindowSize));
+                                WebSocketPermessageDeflateExtensionEncoder.class.getName(),
+                                new WebSocketPermessageDeflateExtensionEncoder(compressionLevel, serverWindowSize));
                     }
 
-                    ctx.pipeline().remove(WebsocketServerCompressionHandler.this);
+                    ctx.pipeline().remove(WebSocketServerCompressionHandler.this);
                 }
             });
         }

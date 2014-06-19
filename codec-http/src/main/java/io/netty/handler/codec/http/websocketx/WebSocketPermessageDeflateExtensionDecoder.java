@@ -64,14 +64,14 @@ import io.netty.handler.codec.compression.ZlibWrapper;
 
 import java.util.List;
 
-class WebsocketPremessageDeflateExtensionDecoder extends MessageToMessageDecoder<WebSocketFrame> {
+class WebSocketPermessageDeflateExtensionDecoder extends MessageToMessageDecoder<WebSocketFrame> {
 
     static final int RSV1 = 0x04;
     static final byte[] FRAME_TAIL = new byte[] {0x00, 0x00, (byte) 0xff, (byte) 0xff};
 
     private EmbeddedChannel decoder;
 
-    public WebsocketPremessageDeflateExtensionDecoder() {
+    public WebSocketPermessageDeflateExtensionDecoder() {
         this.decoder = new EmbeddedChannel(ZlibCodecFactory.newZlibDecoder(ZlibWrapper.NONE));
     }
 
