@@ -16,24 +16,26 @@
 
 package io.netty.buffer;
 
+import io.netty.util.collection.IntObjectHashMap;
+
 final class PoolChunk<T> {
-    private static final int ST_UNUSED = 0;
-    private static final int ST_BRANCH = 1;
-    private static final int ST_ALLOCATED = 2;
-    private static final int ST_ALLOCATED_SUBPAGE = 3;
 
     final PoolArena<T> arena;
     final T memory;
     final boolean unpooled;
 
-    private final int[] memoryMap;
+    private final byte[] memoryMap;
+    private final byte[] depths;
     private final PoolSubpage<T>[] subpages;
+    private final IntObjectHashMap<PoolSubpage<T>> elemSubpages;
     /** Used to determine if the requested capacity is equal to or greater than pageSize. */
     private final int subpageOverflowMask;
     private final int pageSize;
     private final int pageShifts;
+    private final int maxOrder;
 
     private final int chunkSize;
+    private final int log2ChunkSize;
     private final int maxSubpageAllocs;
 
     private int freeBytes;
@@ -45,31 +47,40 @@ final class PoolChunk<T> {
     // TODO: Test if adding padding helps under contention
     //private long pad0, pad1, pad2, pad3, pad4, pad5, pad6, pad7;
 
+    @SuppressWarnings("unchecked")
     PoolChunk(PoolArena<T> arena, T memory, int pageSize, int maxOrder, int pageShifts, int chunkSize) {
         unpooled = false;
         this.arena = arena;
         this.memory = memory;
         this.pageSize = pageSize;
         this.pageShifts = pageShifts;
+        this.maxOrder = maxOrder;
         this.chunkSize = chunkSize;
+        log2ChunkSize = Integer.SIZE - 1 - Integer.numberOfLeadingZeros(chunkSize);
         subpageOverflowMask = ~(pageSize - 1);
         freeBytes = chunkSize;
 
-        int chunkSizeInPages = chunkSize >>> pageShifts;
+        assert maxOrder < 30 : "maxOrder should be < 30, but is : " + maxOrder;
         maxSubpageAllocs = 1 << maxOrder;
 
         // Generate the memory map.
-        memoryMap = new int[maxSubpageAllocs << 1];
+        memoryMap = new byte[maxSubpageAllocs << 1];
+        // store depths for ids of memoryMap
+        depths = new byte[maxSubpageAllocs << 1];
         int memoryMapIndex = 1;
-        for (int i = 0; i <= maxOrder; i ++) {
-            int runSizeInPages = chunkSizeInPages >>> i;
-            for (int j = 0; j < chunkSizeInPages; j += runSizeInPages) {
-                //noinspection PointlessBitwiseExpression
-                memoryMap[memoryMapIndex ++] = j << 17 | runSizeInPages << 2 | ST_UNUSED;
+        for (int d = 0; d <= maxOrder; ++d) { // move down the tree one level at a time
+            byte depth = (byte) d;
+            for (int p = 0; p < (1 << d); ++p) {
+                depths[memoryMapIndex] = depth;
+                // in each level traverse left to right and set the height of subtree
+                // that is completely free to be my height since I am totally free to start with
+                memoryMap[memoryMapIndex] = depth;
+                memoryMapIndex += 1;
             }
         }
 
-        subpages = newSubpageArray(maxSubpageAllocs);
+        subpages = new PoolSubpage[maxSubpageAllocs];
+        elemSubpages = new IntObjectHashMap<PoolSubpage<T>>(pageShifts);
     }
 
     /** Creates a special chunk that is not pooled. */
@@ -78,17 +89,16 @@ final class PoolChunk<T> {
         this.arena = arena;
         this.memory = memory;
         memoryMap = null;
+        depths = null;
         subpages = null;
+        elemSubpages = null;
         subpageOverflowMask = 0;
         pageSize = 0;
         pageShifts = 0;
+        maxOrder = 0;
         chunkSize = size;
+        log2ChunkSize = Integer.SIZE - 1 - Integer.numberOfLeadingZeros(chunkSize);
         maxSubpageAllocs = 0;
-    }
-
-    @SuppressWarnings("unchecked")
-    private PoolSubpage<T>[] newSubpageArray(int size) {
-        return new PoolSubpage[size];
     }
 
     int usage() {
@@ -104,218 +114,128 @@ final class PoolChunk<T> {
     }
 
     long allocate(int normCapacity) {
-        int firstVal = memoryMap[1];
         if ((normCapacity & subpageOverflowMask) != 0) { // >= pageSize
-            return allocateRun(normCapacity, 1, firstVal);
+            return allocateRun(normCapacity);
         } else {
-            return allocateSubpage(normCapacity, 1, firstVal);
+            return allocateSubpage(normCapacity);
         }
     }
 
-    private long allocateRun(int normCapacity, int curIdx, int val) {
-        switch (val & 3) {
-            case ST_UNUSED:
-                return allocateRunSimple(normCapacity, curIdx, val);
-            case ST_BRANCH:
-                // Try the right node first because it is more likely to be ST_UNUSED.
-                // It is because allocateRunSimple() always chooses the left node.
-                final int nextIdxLeft = curIdx << 1;
-                final int nextIdxRight = nextIdxLeft ^ 1;
-                final int nextValRight = memoryMap[nextIdxRight];
-                final boolean recurseRight;
-
-                switch (nextValRight & 3) {
-                    case ST_UNUSED:
-                        return allocateRunSimple(normCapacity, nextIdxRight, nextValRight);
-                    case ST_BRANCH:
-                        recurseRight = true;
-                        break;
-                    default:
-                        recurseRight = false;
-                }
-
-                final int nextValLeft = memoryMap[nextIdxLeft];
-                final boolean recurseLeft;
-
-                switch (nextValLeft & 3) {
-                    case ST_UNUSED:
-                        return allocateRunSimple(normCapacity, nextIdxLeft, nextValLeft);
-                    case ST_BRANCH:
-                        recurseLeft = true;
-                        break;
-                    default:
-                        recurseLeft = false;
-                }
-
-                if (recurseRight) {
-                    long res = branchRun(normCapacity, nextIdxRight);
-                    if (res > 0) {
-                        return res;
-                    }
-                }
-
-                if (recurseLeft) {
-                    return branchRun(normCapacity, nextIdxLeft);
-                }
+    /**
+     * Update method used by allocate
+     * This is triggered only when a successor is allocated and all its predecessors
+     * need to update their state
+     * The minimal height at which subtree rooted at id has some free space
+     * @param id id
+     */
+    private void updateParentsAlloc(int id) {
+        while (id > 1) {
+            int parentId = id >>> 1;
+            memoryMap[parentId] = memoryMap[id] < memoryMap[id ^ 1] ? memoryMap[id] : memoryMap[id ^ 1];
+            id = parentId;
         }
-
-        return -1;
     }
 
-    private long branchRun(int normCapacity, int nextIdx) {
-        int nextNextIdx = nextIdx << 1;
-        int nextNextVal = memoryMap[nextNextIdx];
-        long res = allocateRun(normCapacity, nextNextIdx, nextNextVal);
-        if (res > 0) {
-            return res;
+    /**
+     * Update method used by free
+     * This needs to handle the special case when both children are completely free
+     * in which case parent be directly allocated on request of size = child-size * 2
+     * @param id id
+     */
+    private void updateParentsFree(int id) {
+        int logChild = depths[id] + 1;
+        while (id > 1) {
+            int parentId = id >>> 1;
+            memoryMap[parentId] = memoryMap[id] < memoryMap[id ^ 1] ? memoryMap[id] : memoryMap[id ^ 1];
+            logChild -= 1; // in first iteration equals log, subsequently reduce 1 from logChild as we traverse up
+            memoryMap[parentId] = (byte) (memoryMap[id] == logChild && memoryMap[id ^ 1] == logChild ?
+                logChild - 1 : memoryMap[parentId]);
+            id = parentId;
         }
-
-        nextNextIdx ^= 1;
-        nextNextVal = memoryMap[nextNextIdx];
-        return allocateRun(normCapacity, nextNextIdx, nextNextVal);
     }
 
-    private long allocateRunSimple(int normCapacity, int curIdx, int val) {
-        int runLength = runLength(val);
-        if (normCapacity > runLength) {
+    private int allocateNode(int h) {
+        int id = 1;
+        if (memoryMap[id] > h) { // unusable
             return -1;
         }
-
-        for (;;) {
-            if (normCapacity == runLength) {
-                // Found the run that fits.
-                // Note that capacity has been normalized already, so we don't need to deal with
-                // the values that are not power of 2.
-                memoryMap[curIdx] = val & ~3 | ST_ALLOCATED;
-                freeBytes -= runLength;
-                return curIdx;
+        while (memoryMap[id] < h || (id & (1 << h)) == 0) {
+            id = id << 1;
+            if (memoryMap[id] > h) {
+                id = id ^ 1;
             }
-
-            int nextIdx = curIdx << 1;
-            int unusedIdx = nextIdx ^ 1;
-
-            memoryMap[curIdx] = val & ~3 | ST_BRANCH;
-            //noinspection PointlessBitwiseExpression
-            memoryMap[unusedIdx] = memoryMap[unusedIdx] & ~3 | ST_UNUSED;
-
-            runLength >>>= 1;
-            curIdx = nextIdx;
-            val = memoryMap[curIdx];
         }
+        memoryMap[id] = (byte) (maxOrder + 1); // mark as unusable : because, maximum input h = maxOrder
+        updateParentsAlloc(id);
+        return id;
     }
 
-    private long allocateSubpage(int normCapacity, int curIdx, int val) {
-        switch (val & 3) {
-            case ST_UNUSED:
-                return allocateSubpageSimple(normCapacity, curIdx, val);
-            case ST_BRANCH:
-                // Try the right node first because it is more likely to be ST_UNUSED.
-                // It is because allocateSubpageSimple() always chooses the left node.
-                final int nextIdxLeft = curIdx << 1;
-                final int nextIdxRight = nextIdxLeft ^ 1;
-
-                long res = branchSubpage(normCapacity, nextIdxRight);
-                if (res > 0) {
-                    return res;
-                }
-
-                return branchSubpage(normCapacity, nextIdxLeft);
-            case ST_ALLOCATED_SUBPAGE:
-                PoolSubpage<T> subpage = subpages[subpageIdx(curIdx)];
-                int elemSize = subpage.elemSize;
-                if (normCapacity != elemSize) {
-                    return -1;
-                }
-
-                return subpage.allocate();
+    private long allocateRun(int normCapacity) {
+        int numPages = normCapacity >>> pageShifts;
+        int h = maxOrder -  (Integer.SIZE - 1 - Integer.numberOfLeadingZeros(numPages));
+        int id = allocateNode(h);
+        if (id < 0) {
+            return id;
         }
-
-        return -1;
+        freeBytes -= runLength(id);
+        return id;
     }
 
-    private long allocateSubpageSimple(int normCapacity, int curIdx, int val) {
-        int runLength = runLength(val);
-        for (;;) {
-            if (runLength == pageSize) {
-                memoryMap[curIdx] = val & ~3 | ST_ALLOCATED_SUBPAGE;
-                freeBytes -= runLength;
-
-                int subpageIdx = subpageIdx(curIdx);
-                PoolSubpage<T> subpage = subpages[subpageIdx];
-                if (subpage == null) {
-                    subpage = new PoolSubpage<T>(this, curIdx, runOffset(val), pageSize, normCapacity);
-                    subpages[subpageIdx] = subpage;
-                } else {
-                    subpage.init(normCapacity);
-                }
-                return subpage.allocate();
+    private long allocateSubpage(int normCapacity) {
+        if (elemSubpages.get(normCapacity) != null) {
+            long handle = elemSubpages.get(normCapacity).allocate();
+            if (handle >= 0) {
+                return handle;
             }
-
-            int nextIdx = curIdx << 1;
-            int unusedIdx = nextIdx ^ 1;
-
-            memoryMap[curIdx] = val & ~3 | ST_BRANCH;
-            //noinspection PointlessBitwiseExpression
-            memoryMap[unusedIdx] = memoryMap[unusedIdx] & ~3 | ST_UNUSED;
-
-            runLength >>>= 1;
-            curIdx = nextIdx;
-            val = memoryMap[curIdx];
         }
+        return allocateSubpageSimple(normCapacity);
     }
 
-    private long branchSubpage(int normCapacity, int nextIdx) {
-        int nextVal = memoryMap[nextIdx];
-        if ((nextVal & 3) != ST_ALLOCATED) {
-            return allocateSubpage(normCapacity, nextIdx, nextVal);
+    private long allocateSubpageSimple(int normCapacity) {
+        int h = maxOrder; // subpages are only be allocated from pages i.e., leaves
+        int id = allocateNode(h);
+        if (id < 0) {
+            return id;
         }
-        return -1;
+        freeBytes -= pageSize;
+
+        int subpageIdx = subpageIdx(id);
+        PoolSubpage<T> subpage = subpages[subpageIdx];
+        if (subpage == null) {
+            subpage = new PoolSubpage<T>(this, id, runOffset(id), pageSize, normCapacity);
+            subpages[subpageIdx] = subpage;
+        } else {
+            subpage.init(normCapacity);
+        }
+        elemSubpages.put(normCapacity, subpage); // store subpage at proper elemSize pos
+        return subpage.allocate();
     }
 
     void free(long handle) {
         int memoryMapIdx = (int) handle;
         int bitmapIdx = (int) (handle >>> 32);
 
-        int val = memoryMap[memoryMapIdx];
-        int state = val & 3;
-        if (state == ST_ALLOCATED_SUBPAGE) {
-            assert bitmapIdx != 0;
+        if (bitmapIdx != 0) { // free a subpage
             PoolSubpage<T> subpage = subpages[subpageIdx(memoryMapIdx)];
             assert subpage != null && subpage.doNotDestroy;
             if (subpage.free(bitmapIdx & 0x3FFFFFFF)) {
+                elemSubpages.put(subpage.elemSize, null); // remove subpage from elemSubpages array
                 return;
             }
-        } else {
-            assert state == ST_ALLOCATED : "state: " + state;
-            assert bitmapIdx == 0;
         }
 
-        freeBytes += runLength(val);
-
-        for (;;) {
-            //noinspection PointlessBitwiseExpression
-            memoryMap[memoryMapIdx] = val & ~3 | ST_UNUSED;
-            if (memoryMapIdx == 1) {
-                assert freeBytes == chunkSize;
-                return;
-            }
-
-            if ((memoryMap[siblingIdx(memoryMapIdx)] & 3) != ST_UNUSED) {
-                break;
-            }
-
-            memoryMapIdx = parentIdx(memoryMapIdx);
-            val = memoryMap[memoryMapIdx];
-        }
+        freeBytes += runLength(memoryMapIdx);
+        memoryMap[memoryMapIdx] = depths[memoryMapIdx];
+        updateParentsFree(memoryMapIdx);
     }
 
     void initBuf(PooledByteBuf<T> buf, long handle, int reqCapacity) {
         int memoryMapIdx = (int) handle;
         int bitmapIdx = (int) (handle >>> 32);
         if (bitmapIdx == 0) {
-            int val = memoryMap[memoryMapIdx];
-            assert (val & 3) == ST_ALLOCATED : String.valueOf(val & 3);
-            buf.init(this, handle, runOffset(val), reqCapacity, runLength(val));
+            byte val = memoryMap[memoryMapIdx];
+            assert val == (maxOrder + 1) : String.valueOf(val);
+            buf.init(this, handle, runOffset(memoryMapIdx), reqCapacity, runLength(memoryMapIdx));
         } else {
             initBufWithSubpage(buf, handle, bitmapIdx, reqCapacity);
         }
@@ -329,38 +249,32 @@ final class PoolChunk<T> {
         assert bitmapIdx != 0;
 
         int memoryMapIdx = (int) handle;
-        int val = memoryMap[memoryMapIdx];
-        assert (val & 3) == ST_ALLOCATED_SUBPAGE;
 
         PoolSubpage<T> subpage = subpages[subpageIdx(memoryMapIdx)];
         assert subpage.doNotDestroy;
         assert reqCapacity <= subpage.elemSize;
 
         buf.init(
-                this, handle,
-                runOffset(val) + (bitmapIdx & 0x3FFFFFFF) * subpage.elemSize, reqCapacity, subpage.elemSize);
+            this, handle,
+            runOffset(memoryMapIdx) + (bitmapIdx & 0x3FFFFFFF) * subpage.elemSize, reqCapacity, subpage.elemSize);
     }
 
-    private static int parentIdx(int memoryMapIdx) {
-        return memoryMapIdx >>> 1;
+    private int runLength(int id) {
+        // represents the size in #bytes supported by node 'id' in the tree
+        return 1 << (log2ChunkSize - depths[id]);
     }
 
-    private static int siblingIdx(int memoryMapIdx) {
-        return memoryMapIdx ^ 1;
-    }
-
-    private int runLength(int val) {
-        return (val >>> 2 & 0x7FFF) << pageShifts;
-    }
-
-    private int runOffset(int val) {
-        return val >>> 17 << pageShifts;
+    private int runOffset(int id) {
+        // represents the 0-based offset in #bytes from start of the byte-array chunk
+        int shift = id - (1 << depths[id]);
+        return shift * runLength(id);
     }
 
     private int subpageIdx(int memoryMapIdx) {
         return memoryMapIdx - maxSubpageAllocs;
     }
 
+    @Override
     public String toString() {
         StringBuilder buf = new StringBuilder();
         buf.append("Chunk(");
@@ -375,3 +289,4 @@ final class PoolChunk<T> {
         return buf.toString();
     }
 }
+
