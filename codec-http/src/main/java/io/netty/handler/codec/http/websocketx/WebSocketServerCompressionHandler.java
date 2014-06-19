@@ -61,17 +61,24 @@ import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
+
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
+/**
+ * This server handler negotiates the WebSocket compression and initialize the deflater and inflater
+ * according the client capabilities.
+ *
+ * See <tt>io.netty.example.http.websocketx.html5.WebSocketServer</tt> for usage.
+ */
 public class WebSocketServerCompressionHandler extends ChannelHandlerAdapter {
 
-    static final int MIN_WINDOW_SIZE = 8;
+    static final int MIN_WINDOW_SIZE = 9;
     static final int MAX_WINDOW_SIZE = 15;
     static final int DEFAULT_WINDOW_SIZE = MAX_WINDOW_SIZE;
-    static final int DEFAULT_COMPRESSION_LEVEL = 9;
+    static final int DEFAULT_COMPRESSION_LEVEL = 6;
 
     static final String PERMESSAGE_DEFLATE_EXTENSION = "permessage-deflate";
     static final String CLIENT_MAX_WINDOW = "client_max_window_bits";
@@ -81,24 +88,43 @@ public class WebSocketServerCompressionHandler extends ChannelHandlerAdapter {
 
     private final int compressionLevel;
     private final boolean allowCustomServerWindowSize;
-    private final int preferedClientWindowSize;
+    private final int preferredClientWindowSize;
 
     private boolean deflateEnabled;
     private int clientWindowSize = DEFAULT_WINDOW_SIZE;
     private int serverWindowSize = DEFAULT_WINDOW_SIZE;
 
+    /**
+     * Constructor with default configuration.
+     */
     public WebSocketServerCompressionHandler() {
         this(DEFAULT_COMPRESSION_LEVEL, false, DEFAULT_WINDOW_SIZE);
     }
 
+    /**
+     * Constructor with custom configuration.
+     *
+     * @param compressionLevel
+     *            Compression level between 0 and 9 (default is 6).
+     * @param allowCustomServerWindowSize
+     *            true to allow WebSocket client to customize the server inflater window size
+     *            (default is false).
+     * @param preferredClientWindowSize
+     *            indicate the preferred client window size to use if client inflater is customizable.
+     */
     public WebSocketServerCompressionHandler(int compressionLevel,
-            boolean allowCustomServerWindowSize, int preferedClientWindowSize) {
-        if (preferedClientWindowSize > MAX_WINDOW_SIZE || preferedClientWindowSize < MIN_WINDOW_SIZE) {
-            throw new IllegalArgumentException("preferedClientWindowSize");
+            boolean allowCustomServerWindowSize, int preferredClientWindowSize) {
+        if (preferredClientWindowSize > MAX_WINDOW_SIZE || preferredClientWindowSize < MIN_WINDOW_SIZE) {
+            throw new IllegalArgumentException(
+                    "preferredServerWindowSize: " + preferredClientWindowSize + " (expected: 9-15)");
+        }
+        if (compressionLevel < 0 || compressionLevel > 9) {
+            throw new IllegalArgumentException(
+                    "compressionLevel: " + compressionLevel + " (expected: 0-9)");
         }
         this.compressionLevel = compressionLevel;
         this.allowCustomServerWindowSize = allowCustomServerWindowSize;
-        this.preferedClientWindowSize = preferedClientWindowSize;
+        this.preferredClientWindowSize = preferredClientWindowSize;
     }
 
     @Override
@@ -123,7 +149,7 @@ public class WebSocketServerCompressionHandler extends ChannelHandlerAdapter {
                             Entry<String, String> parameter = parametersIterator.next();
 
                             if (CLIENT_MAX_WINDOW.equalsIgnoreCase(parameter.getKey())) {
-                                clientWindowSize = preferedClientWindowSize;
+                                clientWindowSize = preferredClientWindowSize;
                             } else if (SERVER_MAX_WINDOW.equalsIgnoreCase(parameter.getKey())) {
                                 if (allowCustomServerWindowSize) {
                                     serverWindowSize = Integer.valueOf(parameter.getValue());

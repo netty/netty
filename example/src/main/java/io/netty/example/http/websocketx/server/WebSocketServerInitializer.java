@@ -20,6 +20,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.handler.codec.http.websocketx.WebSocketServerCompressionHandler;
 import io.netty.handler.ssl.SslContext;
 
 /**
@@ -40,6 +41,7 @@ public class WebSocketServerInitializer extends ChannelInitializer<SocketChannel
         }
         pipeline.addLast(new HttpServerCodec());
         pipeline.addLast(new HttpObjectAggregator(65536));
+        pipeline.addLast(new WebSocketServerCompressionHandler());
         pipeline.addLast(new WebSocketServerHandler());
     }
 }

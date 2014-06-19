@@ -57,6 +57,7 @@ import static io.netty.handler.codec.http.websocketx.WebSocketServerCompressionH
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.compression.ZlibDecoder;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
@@ -66,24 +67,49 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
+/**
+ * This client handler negotiates the WebSocket compression and initialize the deflater and inflater
+ * according the server capabilities.
+ *
+ * See <tt>io.netty.example.http.websocketx.client.WebSocketClient</tt> for usage.
+ */
 public class WebSocketClientCompressionHandler extends ChannelHandlerAdapter {
 
     private final int compressionLevel;
     private final boolean allowCustomClientWindowSize;
-    private final int preferedServerWindowSize;
+    private final int preferredServerWindowSize;
 
+    /**
+     * Constructor with default configuration.
+     */
     public WebSocketClientCompressionHandler() {
         this(DEFAULT_COMPRESSION_LEVEL, false, DEFAULT_WINDOW_SIZE);
     }
 
+    /**
+     * Constructor with custom configuration.
+     *
+     * @param compressionLevel
+     *            Compression level between 0 and 9 (default is 6).
+     * @param allowCustomClientWindowSize
+     *            true to allow WebSocket client to customize the server inflater window size
+     *            (default is false).
+     * @param preferredServerWindowSize
+     *            indicate the preferred server window size to use if server inflater is customizable.
+     */
     public WebSocketClientCompressionHandler(int compressionLevel,
-            boolean allowCustomClientWindowSize, int preferedServerWindowSize) {
-        if (preferedServerWindowSize > MAX_WINDOW_SIZE || preferedServerWindowSize < MIN_WINDOW_SIZE) {
-            throw new IllegalArgumentException("preferedServerWindowSize");
+            boolean allowCustomClientWindowSize, int preferredServerWindowSize) {
+        if (preferredServerWindowSize > MAX_WINDOW_SIZE || preferredServerWindowSize < MIN_WINDOW_SIZE) {
+            throw new IllegalArgumentException(
+                    "preferredServerWindowSize: " + preferredServerWindowSize + " (expected: 9-15)");
+        }
+        if (compressionLevel < 0 || compressionLevel > 9) {
+            throw new IllegalArgumentException(
+                    "compressionLevel: " + compressionLevel + " (expected: 0-9)");
         }
         this.compressionLevel = compressionLevel;
         this.allowCustomClientWindowSize = allowCustomClientWindowSize;
-        this.preferedServerWindowSize = preferedServerWindowSize;
+        this.preferredServerWindowSize = preferredServerWindowSize;
     }
 
     @Override
@@ -96,8 +122,8 @@ public class WebSocketClientCompressionHandler extends ChannelHandlerAdapter {
                 if (allowCustomClientWindowSize) {
                     parameters.put(CLIENT_MAX_WINDOW, null);
                 }
-                if (preferedServerWindowSize != DEFAULT_WINDOW_SIZE) {
-                    parameters.put(SERVER_MAX_WINDOW, Integer.toString(preferedServerWindowSize));
+                if (preferredServerWindowSize != DEFAULT_WINDOW_SIZE) {
+                    parameters.put(SERVER_MAX_WINDOW, Integer.toString(preferredServerWindowSize));
                 }
 
                 String currentHeaderValue = request.headers().get(HttpHeaders.Names.SEC_WEBSOCKET_EXTENSIONS);
@@ -145,7 +171,7 @@ public class WebSocketClientCompressionHandler extends ChannelHandlerAdapter {
                                     throw new IllegalStateException("unexpected parameter " + parameter.getKey());
                                 }
                             } else if (SERVER_MAX_WINDOW.equalsIgnoreCase(parameter.getKey())) {
-                                if (preferedServerWindowSize != Integer.parseInt(parameter.getValue())) {
+                                if (preferredServerWindowSize != Integer.parseInt(parameter.getValue())) {
                                     throw new IllegalStateException("unexpected parameter " + parameter.getKey());
                                 }
                             } else {
