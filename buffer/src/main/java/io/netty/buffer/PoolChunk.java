@@ -131,7 +131,9 @@ final class PoolChunk<T> {
     private void updateParentsAlloc(int id) {
         while (id > 1) {
             int parentId = id >>> 1;
-            memoryMap[parentId] = memoryMap[id] < memoryMap[id ^ 1] ? memoryMap[id] : memoryMap[id ^ 1];
+            byte mem1 = memoryMap[id];
+            byte mem2 = memoryMap[id ^ 1];
+            memoryMap[parentId] = mem1 < mem2 ? mem1 : mem2;
             id = parentId;
         }
     }
@@ -146,9 +148,11 @@ final class PoolChunk<T> {
         int logChild = depths[id] + 1;
         while (id > 1) {
             int parentId = id >>> 1;
-            memoryMap[parentId] = memoryMap[id] < memoryMap[id ^ 1] ? memoryMap[id] : memoryMap[id ^ 1];
+            byte mem1 = memoryMap[id];
+            byte mem2 = memoryMap[id ^ 1];
+            memoryMap[parentId] = mem1 < mem2 ? mem1 : mem2;
             logChild -= 1; // in first iteration equals log, subsequently reduce 1 from logChild as we traverse up
-            memoryMap[parentId] = (byte) (memoryMap[id] == logChild && memoryMap[id ^ 1] == logChild ?
+            memoryMap[parentId] = (byte) (mem1 == logChild && mem2 == logChild ?
                 logChild - 1 : memoryMap[parentId]);
             id = parentId;
         }
@@ -156,13 +160,16 @@ final class PoolChunk<T> {
 
     private int allocateNode(int h) {
         int id = 1;
-        if (memoryMap[id] > h) { // unusable
+        byte mem = memoryMap[id];
+        if (mem > h) { // unusable
             return -1;
         }
-        while (memoryMap[id] < h || (id & (1 << h)) == 0) {
+        while (mem < h || (id & (1 << h)) == 0) {
             id = id << 1;
-            if (memoryMap[id] > h) {
+            mem = memoryMap[id];
+            if (mem > h) {
                 id = id ^ 1;
+                mem = memoryMap[id];
             }
         }
         memoryMap[id] = (byte) (maxOrder + 1); // mark as unusable : because, maximum input h = maxOrder
@@ -182,8 +189,9 @@ final class PoolChunk<T> {
     }
 
     private long allocateSubpage(int normCapacity) {
-        if (elemSubpages.get(normCapacity) != null) {
-            long handle = elemSubpages.get(normCapacity).allocate();
+        PoolSubpage<T> subpage = elemSubpages.get(normCapacity);
+        if (subpage != null) {
+            long handle = subpage.allocate();
             if (handle >= 0) {
                 return handle;
             }
