@@ -33,10 +33,11 @@ final class PoolChunk<T> {
     private final int pageSize;
     private final int pageShifts;
     private final int maxOrder;
-
     private final int chunkSize;
     private final int log2ChunkSize;
     private final int maxSubpageAllocs;
+    // Used to mark memory as unusable
+    private final byte unusable;
 
     private int freeBytes;
 
@@ -56,6 +57,7 @@ final class PoolChunk<T> {
         this.pageShifts = pageShifts;
         this.maxOrder = maxOrder;
         this.chunkSize = chunkSize;
+        unusable = (byte) (maxOrder + 1);
         log2ChunkSize = Integer.SIZE - 1 - Integer.numberOfLeadingZeros(chunkSize);
         subpageOverflowMask = ~(pageSize - 1);
         freeBytes = chunkSize;
@@ -96,6 +98,7 @@ final class PoolChunk<T> {
         pageSize = 0;
         pageShifts = 0;
         maxOrder = 0;
+        unusable = (byte) (maxOrder + 1);
         chunkSize = size;
         log2ChunkSize = Integer.SIZE - 1 - Integer.numberOfLeadingZeros(chunkSize);
         maxSubpageAllocs = 0;
@@ -152,8 +155,11 @@ final class PoolChunk<T> {
             byte mem2 = memoryMap[id ^ 1];
             memoryMap[parentId] = mem1 < mem2 ? mem1 : mem2;
             logChild -= 1; // in first iteration equals log, subsequently reduce 1 from logChild as we traverse up
-            memoryMap[parentId] = (byte) (mem1 == logChild && mem2 == logChild ?
-                logChild - 1 : memoryMap[parentId]);
+
+            if (mem1 == logChild && mem2 == logChild) {
+                memoryMap[parentId] = (byte) (logChild - 1);
+            }
+
             id = parentId;
         }
     }
@@ -172,14 +178,14 @@ final class PoolChunk<T> {
                 mem = memoryMap[id];
             }
         }
-        memoryMap[id] = (byte) (maxOrder + 1); // mark as unusable : because, maximum input h = maxOrder
+        memoryMap[id] = unusable; // mark as unusable : because, maximum input h = maxOrder
         updateParentsAlloc(id);
         return id;
     }
 
     private long allocateRun(int normCapacity) {
         int numPages = normCapacity >>> pageShifts;
-        int h = maxOrder -  (Integer.SIZE - 1 - Integer.numberOfLeadingZeros(numPages));
+        int h = maxOrder - (Integer.SIZE - 1 - Integer.numberOfLeadingZeros(numPages));
         int id = allocateNode(h);
         if (id < 0) {
             return id;
