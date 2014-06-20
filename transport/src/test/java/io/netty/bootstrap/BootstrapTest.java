@@ -27,7 +27,6 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
-import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.util.concurrent.Future;
 import org.junit.Assert;
@@ -156,6 +155,32 @@ public class BootstrapTest {
                 }
             });
             Assert.assertTrue(queue.take());
+        } finally {
+            group.shutdownGracefully();
+            group.terminationFuture().sync();
+        }
+    }
+
+    @Test
+    public void testLateRegisterFailed() throws Exception {
+        final TestEventLoopGroup group = new TestEventLoopGroup();
+        try {
+            ServerBootstrap bootstrap = new ServerBootstrap();
+            bootstrap.group(group);
+            bootstrap.channel(LocalServerChannel.class);
+            bootstrap.childHandler(new DummyHandler());
+            bootstrap.localAddress(new LocalAddress("1"));
+            ChannelFuture future = bootstrap.bind();
+            Assert.assertFalse(future.isDone());
+            group.promise.setFailure(new IllegalStateException());
+            final BlockingQueue<Boolean> queue = new LinkedBlockingQueue<Boolean>();
+            future.addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    queue.add(group.next().inEventLoop(Thread.currentThread()));
+                }
+            });
+            Assert.assertFalse(queue.take());
         } finally {
             group.shutdownGracefully();
             group.terminationFuture().sync();
