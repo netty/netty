@@ -389,6 +389,6 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
 
     @Override
     protected SwappedByteBuf newSwappedByteBuf() {
-        return new UnsafeDirectSwappedByteBuf(this, memoryAddress);
+        return new UnsafeDirectSwappedByteBuf(this);
     }
 }
