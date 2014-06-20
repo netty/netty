@@ -27,6 +27,7 @@ import io.netty.channel.DefaultChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.AttributeKey;
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.internal.StringUtil;
 
@@ -281,7 +282,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
             doBind0(regFuture, channel, localAddress, promise);
         } else {
             // Registration future is almost always fulfilled already, but just in case it's not.
-            promise = new DefaultChannelPromise(channel, GlobalEventExecutor.INSTANCE);
+            promise = new PendingRegistrationPromise(channel);
             regFuture.addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(ChannelFuture future) throws Exception {
@@ -449,6 +450,23 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         @Override
         public String toString() {
             return StringUtil.simpleClassName(clazz) + ".class";
+        }
+    }
+
+    private static final class PendingRegistrationPromise extends DefaultChannelPromise {
+        private PendingRegistrationPromise(Channel channel) {
+            super(channel);
+        }
+
+        @Override
+        protected EventExecutor executor() {
+            if (isSuccess()) {
+                // If the registration was a success we can just call super.executor() which will return
+                // channel.eventLoop().
+                return super.executor();
+            }
+            // The registration failed so we can only use the GlobalEventExecutor as last resort to notify.
+            return GlobalEventExecutor.INSTANCE;
         }
     }
 }

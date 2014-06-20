@@ -16,18 +16,26 @@
 
 package io.netty.bootstrap;
 
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalEventLoopGroup;
+import io.netty.channel.local.LocalServerChannel;
 import io.netty.util.concurrent.Future;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 public class BootstrapTest {
 
@@ -124,6 +132,51 @@ public class BootstrapTest {
             groupB.shutdownGracefully();
             groupA.terminationFuture().sync();
             groupB.terminationFuture().sync();
+        }
+    }
+
+    @Test
+    public void testLateRegisterSuccess() throws Exception {
+        TestLocalEventLoopGroup group = new TestLocalEventLoopGroup();
+        try {
+            ServerBootstrap bootstrap = new ServerBootstrap();
+            bootstrap.group(group);
+            bootstrap.channel(LocalServerChannel.class);
+            bootstrap.childHandler(new DummyHandler());
+            bootstrap.localAddress(new LocalAddress("1"));
+            ChannelFuture future = bootstrap.bind();
+            Assert.assertFalse(future.isDone());
+            group.promise.setSuccess();
+            final BlockingQueue<Boolean> queue = new LinkedBlockingQueue<Boolean>();
+            future.addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    queue.add(future.channel().eventLoop().inEventLoop(Thread.currentThread()));
+                }
+            });
+            Assert.assertTrue(queue.take());
+        } finally {
+            group.shutdownGracefully();
+            group.terminationFuture().sync();
+        }
+    }
+
+    private static final class TestLocalEventLoopGroup extends LocalEventLoopGroup {
+        ChannelPromise promise;
+        TestLocalEventLoopGroup() {
+            super(1);
+        }
+
+        @Override
+        public ChannelFuture register(Channel channel) {
+            super.register(channel).syncUninterruptibly();
+            promise = channel.newPromise();
+            return promise;
+        }
+
+        @Override
+        public ChannelFuture register(Channel channel, ChannelPromise promise) {
+            throw new UnsupportedOperationException();
         }
     }
 
