@@ -15,6 +15,8 @@
  */
 package io.netty.buffer;
 
+import static io.netty.buffer.Unpooled.LITTLE_ENDIAN;
+import static io.netty.util.ReferenceCountUtil.releaseLater;
 import static org.junit.Assert.*;
 
 import java.util.Random;
@@ -93,5 +95,11 @@ public class SlicedByteBufTest extends AbstractByteBufTest {
     @Override
     public void testNioBufferExposeOnlyRegion() {
         super.testNioBufferExposeOnlyRegion();
+    }
+
+    @Test
+    @Override
+    public void testLittleEndianWithExpand() {
+       // ignore for SlicedByteBuf
     }
 }
