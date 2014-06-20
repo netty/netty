@@ -81,6 +81,11 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
     }
 
     public WebSocketServerProtocolHandler(String websocketPath, String subprotocols,
+            boolean allowExtensions, int maxFrameSize) {
+        this(websocketPath, subprotocols, allowExtensions, maxFrameSize, false);
+    }
+
+    public WebSocketServerProtocolHandler(String websocketPath, String subprotocols,
             boolean allowExtensions, int maxFrameSize, boolean disableUTF8Checking) {
         this.websocketPath = websocketPath;
         this.subprotocols = subprotocols;

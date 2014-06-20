@@ -66,6 +66,8 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
      *            Map of custom headers to add to the client request
      * @param maxFramePayloadLength
      *            Maximum length of a frame's payload
+     * @param disableUTF8Checking
+     *            {@code true} to disable UTF8 checking while decoding text frames
      */
     public WebSocketClientHandshaker13(URI webSocketURL, WebSocketVersion version, String subprotocol,
             boolean allowExtensions, HttpHeaders customHeaders, int maxFramePayloadLength,
@@ -73,6 +75,28 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
         super(webSocketURL, version, subprotocol, customHeaders, maxFramePayloadLength);
         this.allowExtensions = allowExtensions;
         this.disableUTF8Checking = disableUTF8Checking;
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param webSocketURL
+     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
+     *            sent to this URL.
+     * @param version
+     *            Version of web socket specification to use to connect to the server
+     * @param subprotocol
+     *            Sub protocol request sent to the server.
+     * @param allowExtensions
+     *            Allow extensions to be used in the reserved bits of the web socket frame
+     * @param customHeaders
+     *            Map of custom headers to add to the client request
+     * @param maxFramePayloadLength
+     *            Maximum length of a frame's payload
+     */
+    public WebSocketClientHandshaker13(URI webSocketURL, WebSocketVersion version, String subprotocol,
+            boolean allowExtensions, HttpHeaders customHeaders, int maxFramePayloadLength) {
+        this(webSocketURL, version, subprotocol, allowExtensions, customHeaders, maxFramePayloadLength, false);
     }
 
     /**

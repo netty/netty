@@ -119,6 +119,8 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
      * @param maxFramePayloadLength
      *            Maximum length of a frame's payload. Setting this to an appropriate value for you application
      *            helps check for denial of services attacks.
+     * @param disableUTF8Checking
+     *            {@code true} to disable UTF8 checking while decoding text frames.
      */
     public WebSocket08FrameDecoder(boolean maskedPayload, boolean allowExtensions, int maxFramePayloadLength,
             boolean disableUTF8Checking) {
@@ -126,6 +128,22 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
         this.allowExtensions = allowExtensions;
         this.maxFramePayloadLength = maxFramePayloadLength;
         this.disableUTF8Checking = disableUTF8Checking;
+    }
+
+    /**
+     * Constructor
+     *
+     * @param maskedPayload
+     *            Web socket servers must set this to true processed incoming masked payload. Client implementations
+     *            must set this to false.
+     * @param allowExtensions
+     *            Flag to allow reserved extension bits to be used or not
+     * @param maxFramePayloadLength
+     *            Maximum length of a frame's payload. Setting this to an appropriate value for you application
+     *            helps check for denial of services attacks.
+     */
+    public WebSocket08FrameDecoder(boolean maskedPayload, boolean allowExtensions, int maxFramePayloadLength) {
+        this(maskedPayload, allowExtensions, maxFramePayloadLength, false);
     }
 
     @Override

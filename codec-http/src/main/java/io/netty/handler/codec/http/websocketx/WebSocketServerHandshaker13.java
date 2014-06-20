@@ -55,12 +55,33 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
      * @param maxFramePayloadLength
      *        Maximum allowable frame payload length. Setting this value to your application's
      *        requirement may reduce denial of service attacks using long data frames.
+     * @param disableUTF8Checking
+     *        {@code true} to disable UTF8 checking while decoding text frames.
      */
     public WebSocketServerHandshaker13(String webSocketURL, String subprotocols, boolean allowExtensions,
             int maxFramePayloadLength, boolean disableUTF8Checking) {
         super(WebSocketVersion.V13, webSocketURL, subprotocols, maxFramePayloadLength);
         this.allowExtensions = allowExtensions;
         this.disableUTF8Checking = disableUTF8Checking;
+    }
+
+    /**
+     * Constructor specifying the destination web socket location
+     *
+     * @param webSocketURL
+     *        URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web
+     *        socket frames will be sent to this URL.
+     * @param subprotocols
+     *        CSV of supported protocols
+     * @param allowExtensions
+     *        Allow extensions to be used in the reserved bits of the web socket frame
+     * @param maxFramePayloadLength
+     *        Maximum allowable frame payload length. Setting this value to your application's
+     *        requirement may reduce denial of service attacks using long data frames.
+     */
+    public WebSocketServerHandshaker13(String webSocketURL, String subprotocols, boolean allowExtensions,
+            int maxFramePayloadLength) {
+        this(webSocketURL, subprotocols, allowExtensions, maxFramePayloadLength, false);
     }
 
     /**

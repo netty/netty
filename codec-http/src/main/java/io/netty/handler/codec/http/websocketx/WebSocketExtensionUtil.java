@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 The Netty Project
+ * Copyright 2014 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -23,12 +23,16 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 final class WebSocketExtensionUtil {
 
     private static final char EXTENSION_SEPARATOR = ',';
     private static final char PARAMETER_SEPARATOR = ';';
     private static final char PARAMETER_EQUAL = '=';
+
+    private static final Pattern PARAMETER = Pattern.compile("^([^=]+)(=[\\\"]?([^\\\"]+)[\\\"]?)?$");
 
     static boolean isWebsocketUpgrade(HttpMessage httpMessage) {
         if (httpMessage == null) {
@@ -50,9 +54,11 @@ final class WebSocketExtensionUtil {
                         new HashMap<String, String>(extensionParameters.length - 1);
                 if (extensionParameters.length > 1) {
                     for (int i = 1; i < extensionParameters.length; i++) {
-                        String[] parameterSplited = StringUtil.split(extensionParameters[i], PARAMETER_EQUAL);
-                        parameters.put(parameterSplited[0].trim(),
-                                parameterSplited.length > 1 ? parameterSplited[1].trim() : null);
+                        String parameter = extensionParameters[i].trim();
+                        Matcher parameterMatcher = PARAMETER.matcher(parameter);
+                        if (parameterMatcher.matches() && parameterMatcher.group(1) != null) {
+                            parameters.put(parameterMatcher.group(1), parameterMatcher.group(3));
+                        }
                     }
                 }
                 extensions.put(name, parameters);
@@ -66,7 +72,8 @@ final class WebSocketExtensionUtil {
     static String appendExtension(String currentHeaderValue, String extensionName,
             Map<String, String> extensionParameters) {
 
-        StringBuilder newHeaderValue = new StringBuilder();
+        StringBuilder newHeaderValue = new StringBuilder(
+                currentHeaderValue != null ? currentHeaderValue.length() : 0 + extensionName.length() + 1);
         if (currentHeaderValue != null && !currentHeaderValue.trim().isEmpty()) {
             newHeaderValue.append(currentHeaderValue);
             newHeaderValue.append(EXTENSION_SEPARATOR);

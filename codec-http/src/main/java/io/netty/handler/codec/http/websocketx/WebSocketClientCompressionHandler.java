@@ -118,7 +118,7 @@ public class WebSocketClientCompressionHandler extends ChannelHandlerAdapter {
             HttpRequest request = (HttpRequest) msg;
 
             if (WebSocketExtensionUtil.isWebsocketUpgrade(request)) {
-                Map<String, String> parameters = new HashMap<String, String>();
+                Map<String, String> parameters = new HashMap<String, String>(2);
                 if (allowCustomClientWindowSize) {
                     parameters.put(CLIENT_MAX_WINDOW, null);
                 }

@@ -91,7 +91,6 @@ class WebSocketPermessageDeflateExtensionEncoder extends
 
         int rsv = msg.rsv() | RSV1;
         int realLength = encodedContent.readableBytes() - FRAME_TAIL.length;
-
         ByteBuf encodedContentWithoutTail = encodedContent.slice(0, realLength);
 
         WebSocketFrame outMsg;
@@ -104,10 +103,18 @@ class WebSocketPermessageDeflateExtensionEncoder extends
         } else if (msg instanceof ContinuationWebSocketFrame) {
             outMsg = new ContinuationWebSocketFrame(msg.isFinalFragment(),
                     rsv, encodedContentWithoutTail);
+        } else if (msg instanceof CloseWebSocketFrame) {
+            outMsg = new CloseWebSocketFrame(msg.isFinalFragment(),
+                    rsv, encodedContentWithoutTail);
+        } else if (msg instanceof PingWebSocketFrame) {
+            outMsg = new PingWebSocketFrame(msg.isFinalFragment(),
+                    rsv, encodedContentWithoutTail);
+        } else if (msg instanceof PongWebSocketFrame) {
+            outMsg = new PongWebSocketFrame(msg.isFinalFragment(),
+                    rsv, encodedContentWithoutTail);
         } else {
-            throw new CodecException();
+            throw new CodecException("unexpected frame type: " + msg.getClass().getName());
         }
-
         out.add(outMsg);
     }
 

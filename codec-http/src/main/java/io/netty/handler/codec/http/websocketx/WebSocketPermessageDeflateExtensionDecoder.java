@@ -84,8 +84,8 @@ class WebSocketPermessageDeflateExtensionDecoder extends MessageToMessageDecoder
     protected void decode(ChannelHandlerContext ctx, WebSocketFrame msg,
         List<Object> out) throws Exception {
 
-        decoder.writeInbound(Unpooled.wrappedBuffer(
-                msg.content().retain(), Unpooled.wrappedBuffer(FRAME_TAIL)));
+        decoder.writeInbound(msg.content().retain());
+        decoder.writeInbound(Unpooled.wrappedBuffer(FRAME_TAIL));
 
         ByteBuf decodedContent = (ByteBuf) decoder.readInbound();
         if (decodedContent == null) {
@@ -102,10 +102,18 @@ class WebSocketPermessageDeflateExtensionDecoder extends MessageToMessageDecoder
         } else if (msg instanceof ContinuationWebSocketFrame) {
             outMsg = new ContinuationWebSocketFrame(msg.isFinalFragment(),
                     msg.rsv(), decodedContent);
-        } else {
-            throw new CodecException();
+        } else if (msg instanceof CloseWebSocketFrame) {
+            outMsg = new CloseWebSocketFrame(msg.isFinalFragment(),
+                    msg.rsv(), decodedContent);
+        } else if (msg instanceof PingWebSocketFrame) {
+            outMsg = new PingWebSocketFrame(msg.isFinalFragment(),
+                    msg.rsv(), decodedContent);
+        } else if (msg instanceof PongWebSocketFrame) {
+            outMsg = new PongWebSocketFrame(msg.isFinalFragment(),
+                    msg.rsv(), decodedContent);
+        }  else {
+            throw new CodecException("unexpected frame type: " + msg.getClass().getName());
         }
-
         out.add(outMsg);
     }
 
