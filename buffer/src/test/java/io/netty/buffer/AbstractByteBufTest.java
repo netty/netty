@@ -1943,6 +1943,18 @@ public abstract class AbstractByteBufTest {
         }
     }
 
+    // See:
+    // - https://github.com/netty/netty/issues/2587
+    // - https://github.com/netty/netty/issues/2580
+    @Test
+    public void testLittleEndianWithExpand() {
+        ByteBuf buffer = releaseLater(newBuffer(0)).order(LITTLE_ENDIAN);
+        System.out.println(buffer.getClass());
+        buffer.writeInt(0x12345678);
+        System.out.println(ByteBufUtil.hexDump(buffer));
+        assertEquals("78563412", ByteBufUtil.hexDump(buffer));
+    }
+
     static final class TestGatheringByteChannel implements GatheringByteChannel {
         private final ByteArrayOutputStream out = new ByteArrayOutputStream();
         private final WritableByteChannel channel = Channels.newChannel(out);

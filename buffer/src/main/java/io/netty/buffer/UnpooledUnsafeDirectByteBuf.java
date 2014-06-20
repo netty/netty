@@ -517,6 +517,6 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
 
     @Override
     protected SwappedByteBuf newSwappedByteBuf() {
-        return new UnsafeDirectSwappedByteBuf(this, memoryAddress);
+        return new UnsafeDirectSwappedByteBuf(this);
     }
 }

@@ -27,17 +27,19 @@ final class UnsafeDirectSwappedByteBuf extends SwappedByteBuf {
     private static final boolean NATIVE_ORDER = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
     private final boolean nativeByteOrder;
     private final AbstractByteBuf wrapped;
-    private final long memoryAddress;
 
-    UnsafeDirectSwappedByteBuf(AbstractByteBuf buf, long memoryAddress) {
+    UnsafeDirectSwappedByteBuf(AbstractByteBuf buf) {
         super(buf);
         wrapped = buf;
-        this.memoryAddress = memoryAddress;
         nativeByteOrder = NATIVE_ORDER == (order() == ByteOrder.BIG_ENDIAN);
     }
 
     private long addr(int index) {
-        return memoryAddress + index;
+        // We need to call wrapped.memoryAddress() everytime and NOT cache it as it may change if the buffer expand.
+        // See:
+        // - https://github.com/netty/netty/issues/2587
+        // - https://github.com/netty/netty/issues/2580
+        return wrapped.memoryAddress() + index;
     }
 
     @Override
