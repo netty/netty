@@ -25,15 +25,14 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.lang.reflect.Array;
-import java.util.AbstractQueue;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-// CHECKSTYLE:OFF
-abstract class MpscLinkedQueuePad0<E> extends AbstractQueue<E> {
+
+abstract class MpscLinkedQueuePad0<E> {
     long p00, p01, p02, p03, p04, p05, p06, p07;
     long p30, p31, p32, p33, p34, p35, p36, p37;
 }
@@ -76,7 +75,6 @@ abstract class MpscLinkedQueueTailRef<E> extends MpscLinkedQueuePad1<E> {
         return (MpscLinkedQueueNode<E>) UPDATER.getAndSet(this, newVal);
     }
 }
-// CHECKSTYLE:ON
 
 /**
  * A lock-free concurrent single-consumer multi-producer {@link Queue}.
