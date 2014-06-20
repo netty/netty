@@ -1949,9 +1949,7 @@ public abstract class AbstractByteBufTest {
     @Test
     public void testLittleEndianWithExpand() {
         ByteBuf buffer = releaseLater(newBuffer(0)).order(LITTLE_ENDIAN);
-        System.out.println(buffer.getClass());
         buffer.writeInt(0x12345678);
-        System.out.println(ByteBufUtil.hexDump(buffer));
         assertEquals("78563412", ByteBufUtil.hexDump(buffer));
     }
 
