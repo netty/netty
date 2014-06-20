@@ -230,8 +230,8 @@ final class PoolChunk<T> {
     private void updateParentsAlloc(int id) {
         while (id > 1) {
             int parentId = id >>> 1;
-            byte mem1 = getVal(id);
-            byte mem2 = getVal(id ^ 1);
+            byte mem1 = value(id);
+            byte mem2 = value(id ^ 1);
             byte mem = mem1 < mem2 ? mem1 : mem2;
             setVal(parentId, mem);
             id = parentId;
@@ -245,11 +245,11 @@ final class PoolChunk<T> {
      * @param id id
      */
     private void updateParentsFree(int id) {
-        int logChild = getDepth(id) + 1;
+        int logChild = depth(id) + 1;
         while (id > 1) {
             int parentId = id >>> 1;
-            byte mem1 = getVal(id);
-            byte mem2 = getVal(id ^ 1);
+            byte mem1 = value(id);
+            byte mem2 = value(id ^ 1);
             byte mem = mem1 < mem2 ? mem1 : mem2;
             setVal(parentId, mem);
             logChild -= 1; // in first iteration equals log, subsequently reduce 1 from logChild as we traverse up
@@ -264,16 +264,16 @@ final class PoolChunk<T> {
 
     private int allocateNode(int d) {
         int id = 1;
-        byte mem = getVal(id);
+        byte mem = value(id);
         if (mem > d) { // unusable
             return -1;
         }
         while (mem < d || (id & (1 << d)) == 0) {
             id = id << 1;
-            mem = getVal(id);
+            mem = value(id);
             if (mem > d) {
                 id = id ^ 1;
-                mem = getVal(id);
+                mem = value(id);
             }
         }
         setVal(id, unusable); // mark as unusable : because, maximum input d = maxOrder
@@ -337,7 +337,7 @@ final class PoolChunk<T> {
         }
 
         freeBytes += runLength(memoryMapIdx);
-        setVal(memoryMapIdx, getDepth(memoryMapIdx));
+        setVal(memoryMapIdx, depth(memoryMapIdx));
         updateParentsFree(memoryMapIdx);
     }
 
@@ -345,7 +345,7 @@ final class PoolChunk<T> {
         int memoryMapIdx = (int) handle;
         int bitmapIdx = (int) (handle >>> 32);
         if (bitmapIdx == 0) {
-            byte val = getVal(memoryMapIdx);
+            byte val = value(memoryMapIdx);
             assert val == (maxOrder + 1) : String.valueOf(val);
             buf.init(this, handle, runOffset(memoryMapIdx), reqCapacity, runLength(memoryMapIdx));
         } else {
@@ -371,7 +371,7 @@ final class PoolChunk<T> {
             runOffset(memoryMapIdx) + (bitmapIdx & 0x3FFFFFFF) * subpage.elemSize, reqCapacity, subpage.elemSize);
     }
 
-    private byte getVal(int id) {
+    private byte value(int id) {
         return (byte) (memoryMap[id] & BYTE_MASK);
     }
 
@@ -379,19 +379,19 @@ final class PoolChunk<T> {
         memoryMap[id] = (short) ((memoryMap[id] & INV_BYTE_MASK) | val);
     }
 
-    private byte getDepth(int id) {
+    private byte depth(int id) {
         short val = memoryMap[id];
         return (byte) (val >>> BYTE_LENGTH);
     }
 
     private int runLength(int id) {
         // represents the size in #bytes supported by node 'id' in the tree
-        return 1 << (log2ChunkSize - getDepth(id));
+        return 1 << (log2ChunkSize - depth(id));
     }
 
     private int runOffset(int id) {
         // represents the 0-based offset in #bytes from start of the byte-array chunk
-        int shift = id - (1 << getDepth(id));
+        int shift = id - (1 << depth(id));
         return shift * runLength(id);
     }
 
