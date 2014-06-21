@@ -27,8 +27,7 @@ public class HAProxyProtocolException extends DecoderException {
     /**
      * Creates a new instance
      */
-    public HAProxyProtocolException() {
-    }
+    public HAProxyProtocolException() { }
 
     /**
      * Creates a new instance
