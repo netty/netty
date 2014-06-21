@@ -15,11 +15,9 @@
  */
 package io.netty.handler.codec.haproxy;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
-
 import org.junit.Before;
 import org.junit.Test;
 
