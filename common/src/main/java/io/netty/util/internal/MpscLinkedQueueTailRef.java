@@ -48,6 +48,7 @@ abstract class MpscLinkedQueueTailRef<E> extends MpscLinkedQueuePad1<E> {
 
     @SuppressWarnings("unchecked")
     protected final MpscLinkedQueueNode<E> getAndSetTailRef(MpscLinkedQueueNode<E> tailRef) {
+        // LOCK XCHG in JDK8, a CAS loop in JDK 7/6
         return (MpscLinkedQueueNode<E>) UPDATER.getAndSet(this, tailRef);
     }
 }
