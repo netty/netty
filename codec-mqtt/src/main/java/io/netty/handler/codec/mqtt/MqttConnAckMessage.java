@@ -29,5 +29,4 @@ public final class MqttConnAckMessage extends MqttMessage {
     public MqttConnAckVariableHeader variableHeader() {
         return (MqttConnAckVariableHeader) super.variableHeader();
     }
-
 }

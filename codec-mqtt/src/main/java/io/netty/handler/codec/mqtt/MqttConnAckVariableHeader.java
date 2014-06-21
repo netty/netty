@@ -19,7 +19,7 @@ package io.netty.handler.codec.mqtt;
 import io.netty.util.internal.StringUtil;
 
 /**
- * Variable header of {@link MqttConnectMessage }
+ * Variable header of {@link MqttConnectMessage}
  */
 public class MqttConnAckVariableHeader {
 
