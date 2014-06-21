@@ -69,6 +69,9 @@ final class MpscLinkedQueue<E> extends MpscLinkedQueueTailRef<E> implements Queu
 
     private static final long serialVersionUID = -1878402552271506449L;
 
+    long p00, p01, p02, p03, p04, p05, p06, p07;
+    long p30, p31, p32, p33, p34, p35, p36, p37;
+
     // offer() occurs at the tail of the linked list.
     // poll() occurs at the head of the linked list.
     //
