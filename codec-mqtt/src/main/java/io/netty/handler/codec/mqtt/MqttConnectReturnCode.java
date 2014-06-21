@@ -35,26 +35,26 @@ public enum MqttConnectReturnCode {
 
     static {
         final Map<Byte, MqttConnectReturnCode> valueMap = new HashMap<Byte, MqttConnectReturnCode>();
-        for (MqttConnectReturnCode code : values()) {
-            valueMap.put(code.value, code);
+        for (MqttConnectReturnCode code: values()) {
+            valueMap.put(code.byteValue, code);
         }
         valueToCodeMap = Collections.unmodifiableMap(valueMap);
     }
 
-    private final byte value;
+    private final byte byteValue;
 
-    MqttConnectReturnCode(byte value) {
-        this.value = value;
+    MqttConnectReturnCode(byte byteValue) {
+        this.byteValue = byteValue;
     }
 
-    public byte value() {
-        return value;
+    public byte byteValue() {
+        return byteValue;
     }
 
     public static MqttConnectReturnCode valueOf(byte b) {
         if (valueToCodeMap.containsKey(b)) {
             return valueToCodeMap.get(b);
         }
-        throw new IllegalArgumentException("connect retirn code " + b + " unsupported");
+        throw new IllegalArgumentException("unknown connect return code: " + (b & 0xFF));
     }
 }

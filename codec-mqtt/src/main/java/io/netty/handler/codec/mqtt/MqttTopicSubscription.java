@@ -25,9 +25,9 @@ import io.netty.util.internal.StringUtil;
 public class MqttTopicSubscription {
 
     private final String topicFilter;
-    private final QoS qualityOfService;
+    private final MqttQoS qualityOfService;
 
-    public MqttTopicSubscription(String topicFilter, QoS qualityOfService) {
+    public MqttTopicSubscription(String topicFilter, MqttQoS qualityOfService) {
         this.topicFilter = topicFilter;
         this.qualityOfService = qualityOfService;
     }
@@ -36,7 +36,7 @@ public class MqttTopicSubscription {
         return topicFilter;
     }
 
-    public QoS qualityOfService() {
+    public MqttQoS qualityOfService() {
         return qualityOfService;
     }
 

@@ -26,14 +26,14 @@ public class MqttFixedHeader {
 
     private final MqttMessageType messageType;
     private final boolean isDup;
-    private final QoS qosLevel;
+    private final MqttQoS qosLevel;
     private final boolean isRetain;
     private final int remainingLength;
 
     public MqttFixedHeader(
             MqttMessageType messageType,
             boolean isDup,
-            QoS qosLevel,
+            MqttQoS qosLevel,
             boolean isRetain,
             int remainingLength) {
         this.messageType = messageType;
@@ -51,7 +51,7 @@ public class MqttFixedHeader {
         return isDup;
     }
 
-    public QoS qosLevel() {
+    public MqttQoS qosLevel() {
         return qosLevel;
     }
 
@@ -74,5 +74,4 @@ public class MqttFixedHeader {
         builder.append(']');
         return builder.toString();
     }
-
 }

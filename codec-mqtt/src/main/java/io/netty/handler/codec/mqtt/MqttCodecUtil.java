@@ -16,9 +16,45 @@
 
 package io.netty.handler.codec.mqtt;
 
-public final class MqttCommonUtil {
+import io.netty.handler.codec.DecoderException;
 
-    public static MqttFixedHeader resetUnusedFields(MqttFixedHeader mqttFixedHeader) {
+final class MqttCodecUtil {
+
+    private static final char[] TOPIC_WILDCARDS = {'#', '+'};
+    private static final int MAX_CLIENT_ID_LENGTH = 23;
+
+    static boolean isValidPublishTopicName(String topicName) {
+        // publish topic name must not contain any wildcard
+        for (char c : TOPIC_WILDCARDS) {
+            if (topicName.indexOf(c) >= 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    static boolean isValidMessageId(int messageId) {
+        return messageId != 0;
+    }
+
+    static boolean isValidClientId(String clientId) {
+        return clientId != null && clientId.length() <= MAX_CLIENT_ID_LENGTH;
+    }
+
+    static MqttFixedHeader validateFixedHeader(MqttFixedHeader mqttFixedHeader) {
+        switch (mqttFixedHeader.messageType()) {
+            case PUBREL:
+            case SUBSCRIBE:
+            case UNSUBSCRIBE:
+                if (mqttFixedHeader.qosLevel() != MqttQoS.AT_LEAST_ONCE) {
+                    throw new DecoderException(mqttFixedHeader.messageType().name() + " message must have QoS 1");
+                }
+            default:
+                return mqttFixedHeader;
+        }
+    }
+
+    static MqttFixedHeader resetUnusedFields(MqttFixedHeader mqttFixedHeader) {
         switch (mqttFixedHeader.messageType()) {
             case CONNECT:
             case CONNACK:
@@ -31,12 +67,12 @@ public final class MqttCommonUtil {
             case PINGRESP:
             case DISCONNECT:
                 if (mqttFixedHeader.isDup() ||
-                    mqttFixedHeader.qosLevel() != QoS.AT_MOST_ONCE ||
-                    mqttFixedHeader.isRetain()) {
+                        mqttFixedHeader.qosLevel() != MqttQoS.AT_MOST_ONCE ||
+                        mqttFixedHeader.isRetain()) {
                     return new MqttFixedHeader(
                             mqttFixedHeader.messageType(),
                             false,
-                            QoS.AT_MOST_ONCE,
+                            MqttQoS.AT_MOST_ONCE,
                             false,
                             mqttFixedHeader.remainingLength());
                 }
@@ -58,5 +94,5 @@ public final class MqttCommonUtil {
         }
     }
 
-    private MqttCommonUtil() { }
+    private MqttCodecUtil() { }
 }

@@ -51,7 +51,7 @@ public enum MqttMessageType {
                 return t;
             }
         }
-        throw new IllegalArgumentException("message type " + type + " unsupported");
+        throw new IllegalArgumentException("unknown message type: " + type);
     }
 }
 
