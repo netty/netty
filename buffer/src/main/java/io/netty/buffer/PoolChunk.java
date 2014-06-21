@@ -334,7 +334,9 @@ final class PoolChunk<T> {
             if (subpage.free(bitmapIdx & 0x3FFFFFFF)) {
                 return;
             }
-            elemSubpages.put(subpage.elemSize, null);
+            if (elemSubpages.get(subpage.elemSize) == subpage) {
+              elemSubpages.put(subpage.elemSize, null); // evict from elemSubpages if present there
+            }
         }
         freeBytes += runLength(memoryMapIdx);
         setVal(memoryMapIdx, depth(memoryMapIdx));
