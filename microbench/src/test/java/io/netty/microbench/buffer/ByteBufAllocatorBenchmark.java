@@ -40,6 +40,8 @@ public class ByteBufAllocatorBenchmark extends AbstractMicrobenchmark {
     private static final ByteBuf[] unpooledDirectBuffers = new ByteBuf[MAX_LIVE_BUFFERS];
     private static final ByteBuf[] pooledHeapBuffers = new ByteBuf[MAX_LIVE_BUFFERS];
     private static final ByteBuf[] pooledDirectBuffers = new ByteBuf[MAX_LIVE_BUFFERS];
+    private static final ByteBuf[] defaultPooledHeapBuffers = new ByteBuf[MAX_LIVE_BUFFERS];
+    private static final ByteBuf[] defaultPooledDirectBuffers = new ByteBuf[MAX_LIVE_BUFFERS];
 
     @Param({ "00000", "00256", "01024", "04096", "16384", "65536" })
     public int size;
@@ -86,13 +88,21 @@ public class ByteBufAllocatorBenchmark extends AbstractMicrobenchmark {
 
     @Benchmark
     public void defaultPooledHeapAllocAndFree() {
-        ByteBuf buffer = PooledByteBufAllocator.DEFAULT.heapBuffer(size);
-        buffer.release();
+        int idx = rand.nextInt(defaultPooledHeapBuffers.length);
+        ByteBuf oldBuf = defaultPooledHeapBuffers[idx];
+        if (oldBuf != null) {
+            oldBuf.release();
+        }
+        defaultPooledHeapBuffers[idx] = PooledByteBufAllocator.DEFAULT.heapBuffer(size);
     }
 
     @Benchmark
     public void defaultPooledDirectAllocAndFree() {
-        ByteBuf buffer = PooledByteBufAllocator.DEFAULT.directBuffer(size);
-        buffer.release();
+        int idx = rand.nextInt(defaultPooledDirectBuffers.length);
+        ByteBuf oldBuf = defaultPooledDirectBuffers[idx];
+        if (oldBuf != null) {
+            oldBuf.release();
+        }
+        defaultPooledDirectBuffers[idx] = PooledByteBufAllocator.DEFAULT.directBuffer(size);
     }
 }
