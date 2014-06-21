@@ -179,7 +179,6 @@ public enum HAProxyProxiedProtocol {
         }
     }
 
-
     /**
      * The transport protocol of an HAProxy proxy protocol header
      */
