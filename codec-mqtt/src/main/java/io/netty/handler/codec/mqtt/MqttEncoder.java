@@ -102,8 +102,7 @@ public class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
         String clientIdentifier = payload.clientIdentifier();
         if (!isValidClientIdentifier(clientIdentifier)) {
             throw new IllegalArgumentException(
-                    String.format("Invalid clientIdentifier %s. Must be less than 23 chars long",
-                            clientIdentifier != null ? clientIdentifier : "null"));
+                    "invalid clientIdentifier: " + clientIdentifier + " (expected: less than 23 chars long)");
         }
         byte[] clientIdentifierBytes = encodeStringUtf8(clientIdentifier);
         payloadBufferSize += 2 + clientIdentifierBytes.length;
@@ -191,7 +190,7 @@ public class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
         buf.writeByte(getFixedHeaderByte1(message.fixedHeader()));
         buf.writeByte(2);
         buf.writeByte(0);
-        buf.writeByte(message.variableHeader().connectReturnCode().value());
+        buf.writeByte(message.variableHeader().connectReturnCode().byteValue());
 
         return buf;
     }
@@ -391,5 +390,4 @@ public class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
         int length = clientIdentifier.length();
         return length >= 1 && length <= 23;
     }
-
 }

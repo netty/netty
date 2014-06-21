@@ -26,9 +26,7 @@ import io.netty.util.CharsetUtil;
 import java.util.ArrayList;
 import java.util.List;
 
-import static io.netty.handler.codec.mqtt.MqttValidationUtil.*;
-import static io.netty.handler.codec.mqtt.MqttCommonUtil.*;
-
+import static io.netty.handler.codec.mqtt.MqttCodecUtil.*;
 import static io.netty.handler.codec.mqtt.MqttVersion.*;
 
 /**
@@ -79,10 +77,7 @@ public class MqttDecoder extends ReplayingDecoder<DecoderState> {
 
             case READ_VARIABLE_HEADER:  try {
                 if (bytesRemainingInVariablePart > maxBytesInMessage) {
-                    throw new DecoderException(
-                            String.format(
-                                    "Client tried to send very large message: %d bytes",
-                                    bytesRemainingInVariablePart));
+                    throw new DecoderException("too large message: " + bytesRemainingInVariablePart + " bytes");
                 }
                 final Result<?> decodedVariableHeader = decodeVariableHeader(buffer, mqttFixedHeader);
                 variableHeader = decodedVariableHeader.value;
@@ -105,15 +100,11 @@ public class MqttDecoder extends ReplayingDecoder<DecoderState> {
                 bytesRemainingInVariablePart -= decodedPayload.numberOfBytesConsumed;
                 if (bytesRemainingInVariablePart != 0) {
                     throw new DecoderException(
-                            String.format(
-                                    "Non-zero bytes remaining (%d) should never happen. "
-                                            + "Message type: %s. Channel: %s",
-                                    bytesRemainingInVariablePart,
-                                    mqttFixedHeader.messageType(),
-                                    ctx.channel()));
+                            "non-zero remaining payload bytes: " +
+                                    bytesRemainingInVariablePart + " (" + mqttFixedHeader.messageType() + ')');
                 }
                 checkpoint(DecoderState.READ_FIXED_HEADER);
-                MqttMessage message = MqttMessageFactory.create(mqttFixedHeader, variableHeader, payload);
+                MqttMessage message = MqttMessageFactory.newMessage(mqttFixedHeader, variableHeader, payload);
                 mqttFixedHeader = null;
                 variableHeader = null;
                 payload = null;
@@ -130,13 +121,14 @@ public class MqttDecoder extends ReplayingDecoder<DecoderState> {
                 break;
 
             default:
-                throw new Error("Shouldn't reach here");
+                // Shouldn't reach here.
+                throw new Error();
         }
     }
 
     private MqttMessage invalidMessage(Throwable cause) {
       checkpoint(DecoderState.BAD_MESSAGE);
-      return MqttMessageFactory.createInvalidMessage(cause);
+      return MqttMessageFactory.newInvalidMessage(cause);
     }
 
     /**
@@ -166,15 +158,10 @@ public class MqttDecoder extends ReplayingDecoder<DecoderState> {
 
         // MQTT protocol limits Remaining Length to 4 bytes
         if (loops == 4 && (digit & 128) != 0) {
-            throw new DecoderException(
-                    String.format(
-                            "Failed to read fixed header of MQTT message. " +
-                                    "It has more than 4 digits for Remaining Length. " +
-                                    "MqttMessageType: %s.",
-                            messageType));
+            throw new DecoderException("remaining length exceeds 4 digits (" + messageType + ')');
         }
         MqttFixedHeader decodedFixedHeader =
-                new MqttFixedHeader(messageType, dupFlag, QoS.valueOf(qosLevel), retain, remainingLength);
+                new MqttFixedHeader(messageType, dupFlag, MqttQoS.valueOf(qosLevel), retain, remainingLength);
         return validateFixedHeader(resetUnusedFields(decodedFixedHeader));
     }
 
@@ -217,7 +204,7 @@ public class MqttDecoder extends ReplayingDecoder<DecoderState> {
     private static Result<MqttConnectVariableHeader> decodeConnectionVariableHeader(ByteBuf buffer) {
         final Result<String> protoString = decodeString(buffer);
         if (!PROTOCOL_NAME.equals(protoString.value)) {
-            throw new DecoderException(PROTOCOL_NAME + " signature is missing. Closing channel.");
+            throw new DecoderException("missing " + PROTOCOL_NAME + " signature");
         }
 
         int numberOfBytesConsumed = protoString.numberOfBytesConsumed;
@@ -270,7 +257,7 @@ public class MqttDecoder extends ReplayingDecoder<DecoderState> {
             MqttFixedHeader mqttFixedHeader) {
         final Result<String> decodedTopic = decodeString(buffer);
         if (!isValidPublishTopicName(decodedTopic.value)) {
-            throw new DecoderException(String.format("Publish topic name %s contains wildcards.", decodedTopic.value));
+            throw new DecoderException("invalid publish topic name: " + decodedTopic.value + " (contains wildcards)");
         }
         int numberOfBytesConsumed = decodedTopic.numberOfBytesConsumed;
 
@@ -288,7 +275,7 @@ public class MqttDecoder extends ReplayingDecoder<DecoderState> {
     private static Result<Integer> decodeMessageId(ByteBuf buffer) {
         final Result<Integer> messageId = decodeMsbLsb(buffer);
         if (!isValidMessageId(messageId.value)) {
-            throw new DecoderException(String.format("Invalid messageId %d", messageId.value));
+            throw new DecoderException("invalid messageId: " + messageId.value);
         }
         return messageId;
     }
@@ -335,9 +322,7 @@ public class MqttDecoder extends ReplayingDecoder<DecoderState> {
         final Result<String> decodedClientId = decodeString(buffer);
         final String decodedClientIdValue = decodedClientId.value;
         if (!isValidClientId(decodedClientIdValue)) {
-            throw new DecoderException(
-                    String.format("Invalid clientIdentifier %s ",
-                                  decodedClientIdValue != null ? decodedClientIdValue : "null"));
+            throw new DecoderException("invalid clientIdentifier: " + decodedClientIdValue);
         }
         int numberOfBytesConsumed = decodedClientId.numberOfBytesConsumed;
 
@@ -380,7 +365,7 @@ public class MqttDecoder extends ReplayingDecoder<DecoderState> {
             numberOfBytesConsumed += decodedTopicName.numberOfBytesConsumed;
             int qos = buffer.readUnsignedByte() & 0x03;
             numberOfBytesConsumed++;
-            subscribeTopics.add(new MqttTopicSubscription(decodedTopicName.value, QoS.valueOf(qos)));
+            subscribeTopics.add(new MqttTopicSubscription(decodedTopicName.value, MqttQoS.valueOf(qos)));
         }
         return new Result<MqttSubscribePayload>(new MqttSubscribePayload(subscribeTopics), numberOfBytesConsumed);
     }

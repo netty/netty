@@ -28,9 +28,7 @@ public final class MqttMessageIdVariableHeader {
 
     public static MqttMessageIdVariableHeader from(int messageId) {
       if (messageId < 1 || messageId > 0xffff) {
-        throw new IllegalArgumentException(
-            String.format("Message id must be in the range of 1 - 0xffff but %d given ",
-                          messageId));
+        throw new IllegalArgumentException("messageId: " + messageId + " (expected: 1 ~ 65535)");
       }
       return new MqttMessageIdVariableHeader(messageId);
     }

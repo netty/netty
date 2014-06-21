@@ -24,7 +24,7 @@ import io.netty.handler.codec.DecoderResult;
  */
 public final class MqttMessageFactory {
 
-    public static MqttMessage create(MqttFixedHeader mqttFixedHeader, Object variableHeader, Object payload) {
+    public static MqttMessage newMessage(MqttFixedHeader mqttFixedHeader, Object variableHeader, Object payload) {
         switch (mqttFixedHeader.messageType()) {
             case CONNECT :
                 return new MqttConnectMessage(
@@ -77,11 +77,11 @@ public final class MqttMessageFactory {
                 return new MqttMessage(mqttFixedHeader);
 
             default:
-                throw new IllegalArgumentException("Unknown message type: " + mqttFixedHeader.messageType());
+                throw new IllegalArgumentException("unknown message type: " + mqttFixedHeader.messageType());
         }
     }
 
-    public static MqttMessage createInvalidMessage(Throwable cause) {
+    public static MqttMessage newInvalidMessage(Throwable cause) {
         return new MqttMessage(null, null, null, DecoderResult.failure(cause));
     }
 

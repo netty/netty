@@ -15,13 +15,14 @@
 
 package io.netty.handler.codec.mqtt;
 
-public enum QoS {
+public enum MqttQoS {
     AT_MOST_ONCE(0),
     AT_LEAST_ONCE(1),
     EXACTLY_ONCE(2);
 
     private final int value;
-    QoS(int value) {
+
+    MqttQoS(int value) {
         this.value = value;
     }
 
@@ -29,12 +30,12 @@ public enum QoS {
         return value;
     }
 
-    public static QoS valueOf(int value) {
-        for (QoS q : values()) {
+    public static MqttQoS valueOf(int value) {
+        for (MqttQoS q: values()) {
             if (q.value == value) {
                 return q;
             }
         }
-        throw new IllegalArgumentException(String.format("Invalid QoS: %d", value));
+        throw new IllegalArgumentException("invalid QoS: " + value);
     }
 }
