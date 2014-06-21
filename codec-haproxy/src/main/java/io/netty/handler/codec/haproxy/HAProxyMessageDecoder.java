@@ -18,6 +18,7 @@ package io.netty.handler.codec.haproxy;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.util.CharsetUtil;
 
 import java.util.List;
@@ -27,7 +28,7 @@ import java.util.List;
  *
  * @see <a href="http://haproxy.1wt.eu/download/1.5/doc/proxy-protocol.txt">Proxy Protocol Specification</a>
  */
-public class HAProxyProtocolDecoder extends ByteToMessageDecoder {
+public class HAProxyMessageDecoder extends ByteToMessageDecoder {
     /**
      * Maximum possible length of a v1 proxy protocol header per spec
      */
@@ -56,7 +57,7 @@ public class HAProxyProtocolDecoder extends ByteToMessageDecoder {
     /**
      * Binary header prefix
      */
-    private static final byte[] BINARY_PREFIX = new byte[] {
+    private static final byte[] BINARY_PREFIX = {
             (byte) 0x0D,
             (byte) 0x0A,
             (byte) 0x0D,
@@ -100,13 +101,13 @@ public class HAProxyProtocolDecoder extends ByteToMessageDecoder {
      * The latest v2 spec (2014/05/18) allows for additional data to be sent in the proxy protocol header beyond the
      * address information block so now we need a configurable max header size
      */
-    private int v2MaxHeaderSize;
+    private final int v2MaxHeaderSize;
 
     /**
      * Creates a new decoder with no additional data (TLV) restrictions
      */
-    public HAProxyProtocolDecoder() {
-        this.v2MaxHeaderSize = V2_MAX_LENGTH;
+    public HAProxyMessageDecoder() {
+        v2MaxHeaderSize = V2_MAX_LENGTH;
     }
 
     /**
@@ -119,17 +120,17 @@ public class HAProxyProtocolDecoder extends ByteToMessageDecoder {
      *
      * @param maxTlvSize maximum number of bytes allowed for additional data (Type-Length-Value vectors) in a v2 header
      */
-    public HAProxyProtocolDecoder(int maxTlvSize) {
+    public HAProxyMessageDecoder(int maxTlvSize) {
         if (maxTlvSize < 1) {
-            this.v2MaxHeaderSize = V2_MIN_LENGTH;
+            v2MaxHeaderSize = V2_MIN_LENGTH;
         } else if (maxTlvSize > V2_MAX_TLV) {
-            this.v2MaxHeaderSize = V2_MAX_LENGTH;
+            v2MaxHeaderSize = V2_MAX_LENGTH;
         } else {
             int calcMax = maxTlvSize + V2_MIN_LENGTH;
             if (calcMax > V2_MAX_LENGTH) {
-                this.v2MaxHeaderSize = V2_MAX_LENGTH;
+                v2MaxHeaderSize = V2_MAX_LENGTH;
             } else {
-                this.v2MaxHeaderSize = calcMax;
+                v2MaxHeaderSize = calcMax;
             }
         }
     }
@@ -233,9 +234,9 @@ public class HAProxyProtocolDecoder extends ByteToMessageDecoder {
             finished = true;
             try {
                 if (version == 1) {
-                    out.add(HAProxyProtocolMessage.decodeHeader(decoded.toString(CharsetUtil.US_ASCII)));
+                    out.add(HAProxyMessage.decodeHeader(decoded.toString(CharsetUtil.US_ASCII)));
                 } else {
-                    out.add(HAProxyProtocolMessage.decodeHeader(decoded));
+                    out.add(HAProxyMessage.decodeHeader(decoded));
                 }
             } catch (HAProxyProtocolException e) {
                 fail(ctx, null, e);
@@ -247,7 +248,7 @@ public class HAProxyProtocolDecoder extends ByteToMessageDecoder {
      * Create a frame out of the {@link ByteBuf} and return it.
      * Based on code from {@link LineBasedFrameDecoder#decode(ChannelHandlerContext, ByteBuf)}.
      *
-     * @param ctx     the {@link ChannelHandlerContext} which this {@link HAProxyProtocolDecoder} belongs to
+     * @param ctx     the {@link ChannelHandlerContext} which this {@link HAProxyMessageDecoder} belongs to
      * @param buffer  the {@link ByteBuf} from which to read data
      * @return frame  the {@link ByteBuf} which represent the frame or {@code null} if no frame could
      *                be created
@@ -275,7 +276,6 @@ public class HAProxyProtocolDecoder extends ByteToMessageDecoder {
             }
         } else {
             if (eoh >= 0) {
-                final int length = discardedBytes + eoh - buffer.readerIndex();
                 buffer.readerIndex(eoh);
                 discardedBytes = 0;
                 discarding = false;
@@ -291,7 +291,7 @@ public class HAProxyProtocolDecoder extends ByteToMessageDecoder {
      * Create a frame out of the {@link ByteBuf} and return it.
      * Based on code from {@link LineBasedFrameDecoder#decode(ChannelHandlerContext, ByteBuf)}.
      *
-     * @param ctx     the {@link ChannelHandlerContext} which this {@link HAProxyProtocolDecoder} belongs to
+     * @param ctx     the {@link ChannelHandlerContext} which this {@link HAProxyMessageDecoder} belongs to
      * @param buffer  the {@link ByteBuf} from which to read data
      * @return frame  the {@link ByteBuf} which represent the frame or {@code null} if no frame could
      *                be created
@@ -321,7 +321,6 @@ public class HAProxyProtocolDecoder extends ByteToMessageDecoder {
             }
         } else {
             if (eol >= 0) {
-                final int length = discardedBytes + eol - buffer.readerIndex();
                 final int delimLength = buffer.getByte(eol) == '\r' ? 2 : 1;
                 buffer.readerIndex(eol + delimLength);
                 discardedBytes = 0;
@@ -340,7 +339,7 @@ public class HAProxyProtocolDecoder extends ByteToMessageDecoder {
 
     private void failOverLimit(final ChannelHandlerContext ctx, String length) {
         int maxLength = version == 1 ? V1_MAX_LENGTH : v2MaxHeaderSize;
-        fail(ctx, "header length (" + length + ") exceeds the allowed maximum (" + maxLength + ")", null);
+        fail(ctx, "header length (" + length + ") exceeds the allowed maximum (" + maxLength + ')', null);
     }
 
     private void fail(final ChannelHandlerContext ctx, String errMsg, Throwable t) {

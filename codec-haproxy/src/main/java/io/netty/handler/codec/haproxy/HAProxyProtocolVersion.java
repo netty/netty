@@ -15,100 +15,56 @@
  */
 package io.netty.handler.codec.haproxy;
 
+import static io.netty.handler.codec.haproxy.HAProxyConstants.*;
+
 /**
- * The HAProxy proxy protocol specification version
+ * The HAProxy proxy protocol specification version.
  */
-public final class HAProxyProtocolVersion implements Comparable<HAProxyProtocolVersion> {
+public enum HAProxyProtocolVersion {
+    /**
+     * The ONE proxy protocol version represents a version 1 (human-readable) header.
+     */
+    V1(VERSION_ONE_BYTE),
+    /**
+     * The TWO proxy protocol version represents a version 2 (binary) header.
+     */
+    V2(VERSION_TWO_BYTE);
+
     /**
      * The highest 4 bits of the protocol version and command byte contain the version
      */
     private static final byte VERSION_MASK = (byte) 0xf0;
 
-    /**
-     * Version byte constants
-     */
-    private static final byte ONE_BYTE = (byte) 0x10;
-    private static final byte TWO_BYTE = (byte) 0x20;
-
-    /**
-     * The ONE proxy protocol version represents a version 1 (human-readable) header
-     */
-    public static final HAProxyProtocolVersion ONE = new HAProxyProtocolVersion("ONE", ONE_BYTE);
-
-    /**
-     * The TWO proxy protocol version represents a version 2 (binary) header
-     */
-    public static final HAProxyProtocolVersion TWO = new HAProxyProtocolVersion("TWO", TWO_BYTE);
-
-    private final String name;
-    private final byte versionByte;
+    private final byte byteValue;
 
     /**
      * Creates a new instance
      */
-    private HAProxyProtocolVersion(String name, byte versionByte) {
-        this.name = name;
-        this.versionByte = versionByte;
+    HAProxyProtocolVersion(byte byteValue) {
+        this.byteValue = byteValue;
     }
 
     /**
-     * Returns the {@link HAProxyProtocolVersion} represented by the specified protocol version and command byte
+     * Returns the {@link HAProxyProtocolVersion} represented by the higest 4 bits of the specified byte.
      *
-     * @param verCmdByte  protocol version and command byte
-     * @return            {@link HAProxyProtocolVersion} instance OR {@code null} if the
-     *                    version is not recognized
+     * @param verCmdByte protocol version and command byte
      */
     public static HAProxyProtocolVersion valueOf(byte verCmdByte) {
-        switch ((byte) (verCmdByte & VERSION_MASK)) {
-            case TWO_BYTE:
-                return TWO;
-            case ONE_BYTE:
-                return ONE;
+        int version = verCmdByte & VERSION_MASK;
+        switch ((byte) version) {
+            case VERSION_TWO_BYTE:
+                return V2;
+            case VERSION_ONE_BYTE:
+                return V1;
             default:
-                return null;
+                throw new IllegalArgumentException("unknown version: " + version);
         }
     }
 
     /**
-     * Returns the name of this version
-     *
-     * @return the name of this version
-     */
-    public String name() {
-        return name;
-    }
-
-    /**
-     * Returns the byte value of this version
-     *
-     * @return the byte value of this version
+     * Returns the byte value of this version.
      */
     public byte byteValue() {
-        return versionByte;
-    }
-
-    @Override
-    public int hashCode() {
-        return byteValue();
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (!(o instanceof HAProxyProtocolVersion)) {
-            return false;
-        }
-
-        HAProxyProtocolVersion that = (HAProxyProtocolVersion) o;
-        return byteValue() == that.byteValue();
-    }
-
-    @Override
-    public String toString() {
-        return name();
-    }
-
-    @Override
-    public int compareTo(HAProxyProtocolVersion o) {
-        return byteValue() - o.byteValue();
+        return byteValue;
     }
 }
