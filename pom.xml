@@ -336,6 +336,7 @@
     <module>buffer</module>
     <module>codec</module>
     <module>codec-dns</module>
+    <module>codec-haproxy</module>
     <module>codec-http</module>
     <module>codec-memcache</module>
     <module>codec-stomp</module>
