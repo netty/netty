@@ -296,7 +296,7 @@ final class PoolChunk<T> {
         PoolSubpage<T> subpage = elemSubpages.get(normCapacity);
         if (subpage != null) {
             long handle = subpage.allocate();
-            if (handle >= 0) {
+            if (handle > 0) {
                 return handle;
             }
             // if subpage full (i.e., handle < 0) then replace in elemSubpage with new subpage
@@ -334,8 +334,8 @@ final class PoolChunk<T> {
             if (subpage.free(bitmapIdx & 0x3FFFFFFF)) {
                 return;
             }
+            elemSubpages.put(subpage.elemSize, null);
         }
-
         freeBytes += runLength(memoryMapIdx);
         setVal(memoryMapIdx, depth(memoryMapIdx));
         updateParentsFree(memoryMapIdx);
@@ -346,7 +346,7 @@ final class PoolChunk<T> {
         int bitmapIdx = (int) (handle >>> 32);
         if (bitmapIdx == 0) {
             byte val = value(memoryMapIdx);
-            assert val == (maxOrder + 1) : String.valueOf(val);
+            assert val == unusable : String.valueOf(val);
             buf.init(this, handle, runOffset(memoryMapIdx), reqCapacity, runLength(memoryMapIdx));
         } else {
             initBufWithSubpage(buf, handle, bitmapIdx, reqCapacity);
