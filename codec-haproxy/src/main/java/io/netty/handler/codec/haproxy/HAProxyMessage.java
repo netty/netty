@@ -334,32 +334,37 @@ public final class HAProxyMessage {
      * @throws HAProxyProtocolException  if the address is invalid
      */
     private static void checkAddress(String address, AddressFamily addrFamily) {
-        if (address == null) {
-            throw new NullPointerException("address");
-        }
-
         if (addrFamily == null) {
             throw new NullPointerException("addrFamily");
         }
 
-        if (addrFamily == AddressFamily.AF_UNSPEC) {
-            throw new HAProxyProtocolException("unable to validate an AF_UNSPEC address: " + address);
+        switch (addrFamily) {
+            case AF_UNSPEC:
+                if (address != null) {
+                    throw new HAProxyProtocolException("unable to validate an AF_UNSPEC address: " + address);
+                }
+                return;
+            case AF_UNIX:
+                return;
         }
 
-        if (addrFamily == AddressFamily.AF_UNIX) {
-            return;
+        if (address == null) {
+            throw new NullPointerException("address");
         }
 
-        boolean isValid = true;
-
-        if (addrFamily == AddressFamily.AF_IPv4) {
-            isValid = NetUtil.isValidIpV4Address(address);
-        } else if (addrFamily == AddressFamily.AF_IPv6) {
-            isValid = NetUtil.isValidIpV6Address(address);
-        }
-
-        if (!isValid) {
-            throw new HAProxyProtocolException("invalid " + addrFamily + " address: " + address);
+        switch (addrFamily) {
+            case AF_IPv4:
+                if (!NetUtil.isValidIpV4Address(address)) {
+                    throw new HAProxyProtocolException("invalid IPv4 address: " + address);
+                }
+                break;
+            case AF_IPv6:
+                if (!NetUtil.isValidIpV6Address(address)) {
+                    throw new HAProxyProtocolException("invalid IPv6 address: " + address);
+                }
+                break;
+            default:
+                throw new Error();
         }
     }
 
