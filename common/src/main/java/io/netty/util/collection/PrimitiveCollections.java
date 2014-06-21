@@ -14,16 +14,20 @@
  */
 package io.netty.util.collection;
 
+import io.netty.util.internal.EmptyArrays;
+
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 /**
- * Utility methods for collections.
+ * Utility methods for primitive collections.
  */
-public final class Collections {
+public final class PrimitiveCollections {
+
     private static final IntObjectMap<Object> EMPTY_INT_OBJECT_MAP = new EmptyIntObjectMap();
 
-    private Collections() {
+    private PrimitiveCollections() {
     }
 
     /**
@@ -37,14 +41,12 @@ public final class Collections {
     /**
      * Creates an unmodifiable wrapper around the given map.
      */
-    public static <V> IntObjectMap<V> unmodifiable(final IntObjectMap<V> map) {
+    public static <V> IntObjectMap<V> unmodifiableIntObjectMap(final IntObjectMap<V> map) {
         return new UnmodifiableIntObjectMap<V>(map);
     }
 
     /**
      * An empty map. All operations that attempt to modify the map are unsupported.
-     *
-     * @param <V> the value type for the map.
      */
     private static final class EmptyIntObjectMap implements IntObjectMap<Object> {
 
@@ -95,17 +97,17 @@ public final class Collections {
 
         @Override
         public Iterable<Entry<Object>> entries() {
-            return java.util.Collections.emptySet();
+            return Collections.emptySet();
         }
 
         @Override
         public int[] keys() {
-            return new int[0];
+            return EmptyArrays.EMPTY_INTS;
         }
 
         @Override
         public Object[] values(Class<Object> clazz) {
-            return new Object[0];
+            return EmptyArrays.EMPTY_OBJECTS;
         }
     }
 
@@ -241,5 +243,5 @@ public final class Collections {
                 throw new UnsupportedOperationException("setValue");
             }
         }
-    };
+    }
 }
