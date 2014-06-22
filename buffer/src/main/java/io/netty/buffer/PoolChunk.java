@@ -16,8 +16,6 @@
 
 package io.netty.buffer;
 
-import io.netty.util.collection.IntObjectHashMap;
-
 /**
  * Description of algorithm for PageRun/PoolSubpage allocation from PoolChunk
  *
@@ -89,17 +87,9 @@ import io.netty.util.collection.IntObjectHashMap;
  *
  * Algorithm: [allocateSubpage(size)]
  * ----------
- * All subpages allocated are stored in a map at key = elemSize
- * 1) if subpage at elemSize != null: try allocating from it.
- *      if it fails: allocateSubpageSimple
- * 2) else: just allocateSubpageSimple
- *
- * Algorithm: [allocateSubpageSimple(size)]
- * ----------
- * 1) use allocateRun(maxOrder) to find an empty (i.e., unused) leaf (i.e., page)
- * 2) use this handle to construct the poolsubpage object or if it already exists just initialize it
- *    with required normCapacity
- * 3) store (insert/ overwrite) the subpage in elemSubpages map for easier access
+ * 1) use allocateNode(maxOrder) to find an empty (i.e., unused) leaf (i.e., page)
+ * 2) use this handle to construct the PoolSubpage object or if it already exists just call init(normCapacity)
+ *    note that this PoolSubpage object is added to subpagesPool in the PoolArena when we init() it
  *
  * Note:
  * -----
@@ -123,7 +113,6 @@ final class PoolChunk<T> {
 
     private final short[] memoryMap;
     private final PoolSubpage<T>[] subpages;
-    private final IntObjectHashMap<PoolSubpage<T>> elemSubpages;
     /** Used to determine if the requested capacity is equal to or greater than pageSize. */
     private final int subpageOverflowMask;
     private final int pageSize;
@@ -153,7 +142,7 @@ final class PoolChunk<T> {
         this.maxOrder = maxOrder;
         this.chunkSize = chunkSize;
         unusable = (byte) (maxOrder + 1);
-        log2ChunkSize = Integer.SIZE - 1 - Integer.numberOfLeadingZeros(chunkSize);
+        log2ChunkSize = log2(chunkSize);
         subpageOverflowMask = ~(pageSize - 1);
         freeBytes = chunkSize;
 
@@ -174,7 +163,6 @@ final class PoolChunk<T> {
         }
 
         subpages = newSubpageArray(maxSubpageAllocs);
-        elemSubpages = new IntObjectHashMap<PoolSubpage<T>>(pageShifts);
     }
 
     /** Creates a special chunk that is not pooled. */
@@ -184,14 +172,13 @@ final class PoolChunk<T> {
         this.memory = memory;
         memoryMap = null;
         subpages = null;
-        elemSubpages = null;
         subpageOverflowMask = 0;
         pageSize = 0;
         pageShifts = 0;
         maxOrder = 0;
         unusable = (byte) (maxOrder + 1);
         chunkSize = size;
-        log2ChunkSize = Integer.SIZE - 1 - Integer.numberOfLeadingZeros(chunkSize);
+        log2ChunkSize = log2(chunkSize);
         maxSubpageAllocs = 0;
     }
 
@@ -283,7 +270,7 @@ final class PoolChunk<T> {
 
     private long allocateRun(int normCapacity) {
         int numPages = normCapacity >>> pageShifts;
-        int d = maxOrder - (Integer.SIZE - 1 - Integer.numberOfLeadingZeros(numPages));
+        int d = maxOrder - log2(numPages);
         int id = allocateNode(d);
         if (id < 0) {
             return id;
@@ -293,18 +280,6 @@ final class PoolChunk<T> {
     }
 
     private long allocateSubpage(int normCapacity) {
-        PoolSubpage<T> subpage = elemSubpages.get(normCapacity);
-        if (subpage != null) {
-            long handle = subpage.allocate();
-            if (handle > 0) {
-                return handle;
-            }
-            // if subpage full (i.e., handle < 0) then replace in elemSubpage with new subpage
-        }
-        return allocateSubpageSimple(normCapacity);
-    }
-
-    private long allocateSubpageSimple(int normCapacity) {
         int d = maxOrder; // subpages are only be allocated from pages i.e., leaves
         int id = allocateNode(d);
         if (id < 0) {
@@ -320,7 +295,6 @@ final class PoolChunk<T> {
         } else {
             subpage.init(normCapacity);
         }
-        elemSubpages.put(normCapacity, subpage); // store subpage at proper elemSize pos
         return subpage.allocate();
     }
 
@@ -333,9 +307,6 @@ final class PoolChunk<T> {
             assert subpage != null && subpage.doNotDestroy;
             if (subpage.free(bitmapIdx & 0x3FFFFFFF)) {
                 return;
-            }
-            if (elemSubpages.get(subpage.elemSize) == subpage) {
-              elemSubpages.put(subpage.elemSize, null); // evict from elemSubpages if present there
             }
         }
         freeBytes += runLength(memoryMapIdx);
@@ -386,6 +357,11 @@ final class PoolChunk<T> {
         return (byte) (val >>> BYTE_LENGTH);
     }
 
+    private int log2(int val) {
+        // compute position of highest set bit i.e, log2
+        return Integer.SIZE - 1 - Integer.numberOfLeadingZeros(val);
+    }
+
     private int runLength(int id) {
         // represents the size in #bytes supported by node 'id' in the tree
         return 1 << (log2ChunkSize - depth(id));
@@ -393,12 +369,12 @@ final class PoolChunk<T> {
 
     private int runOffset(int id) {
         // represents the 0-based offset in #bytes from start of the byte-array chunk
-        int shift = id - (1 << depth(id));
+        int shift = id ^ (1 << depth(id));
         return shift * runLength(id);
     }
 
     private int subpageIdx(int memoryMapIdx) {
-        return memoryMapIdx - maxSubpageAllocs;
+        return memoryMapIdx ^ maxSubpageAllocs; // remove highest set bit, to get offset
     }
 
     @Override
