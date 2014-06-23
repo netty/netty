@@ -154,7 +154,8 @@ final class PoolChunk<T> {
         int memoryMapIndex = 1;
         for (int d = 0; d <= maxOrder; ++d) { // move down the tree one level at a time
             short dd = (short) ((d << BYTE_LENGTH) | d);
-            for (int p = 0; p < (1 << d); ++p) {
+            int depth = 1 << d;
+            for (int p = 0; p < depth; ++p) {
                 // in each level traverse left to right and set the depth of subtree
                 // that is completely free to be my depth since I am totally free to start with
                 memoryMap[memoryMapIndex] = dd;
@@ -237,12 +238,13 @@ final class PoolChunk<T> {
             int parentId = id >>> 1;
             byte mem1 = value(id);
             byte mem2 = value(id ^ 1);
-            byte mem = mem1 < mem2 ? mem1 : mem2;
-            setVal(parentId, mem);
             logChild -= 1; // in first iteration equals log, subsequently reduce 1 from logChild as we traverse up
 
             if (mem1 == logChild && mem2 == logChild) {
                 setVal(parentId, (byte) (logChild - 1));
+            } else {
+                byte mem = mem1 < mem2 ? mem1 : mem2;
+                setVal(parentId, mem);
             }
 
             id = parentId;
