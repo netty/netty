@@ -102,11 +102,7 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundHandlerAdap
             if (acceptOutboundMessage(msg)) {
                 @SuppressWarnings("unchecked")
                 I cast = (I) msg;
-                if (preferDirect) {
-                    buf = ctx.alloc().ioBuffer();
-                } else {
-                    buf = ctx.alloc().heapBuffer();
-                }
+                buf = allocateBuffer(ctx, cast, preferDirect);
                 try {
                     encode(ctx, cast, buf);
                 } finally {
@@ -131,6 +127,19 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundHandlerAdap
             if (buf != null) {
                 buf.release();
             }
+        }
+    }
+
+    /**
+     * Allocate a {@link ByteBuf} which will be used as argument of {@link #encode(ChannelHandlerContext, I, ByteBuf)}.
+     * Sub-classes may override this method to returna {@link ByteBuf} with a perfect matching {@code initialCapacity}.
+     */
+    protected ByteBuf allocateBuffer(ChannelHandlerContext ctx, @SuppressWarnings("unused") I msg,
+                               boolean preferDirect) throws Exception {
+        if (preferDirect) {
+            return ctx.alloc().ioBuffer();
+        } else {
+            return ctx.alloc().heapBuffer();
         }
     }
 
