@@ -43,7 +43,7 @@ public interface ByteBufAllocator {
     ByteBuf buffer(int initialCapacity, int maxCapacity);
 
     /**
-     * Allocate a {@link ByteBuf} whose initial capacity is 0, preferably a direct buffer which is suitable for I/O.
+     * Allocate a {@link ByteBuf}, preferably a direct buffer which is suitable for I/O.
      */
     ByteBuf ioBuffer();
 
