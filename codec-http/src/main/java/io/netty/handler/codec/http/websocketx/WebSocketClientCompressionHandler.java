@@ -53,17 +53,24 @@
 
 package io.netty.handler.codec.http.websocketx;
 
-import static io.netty.handler.codec.http.websocketx.WebSocketServerCompressionHandler.*;
+import static io.netty.handler.codec.http.websocketx.WebSocketServerCompressionHandler.CLIENT_MAX_WINDOW;
+import static io.netty.handler.codec.http.websocketx.WebSocketServerCompressionHandler.DEFAULT_COMPRESSION_LEVEL;
+import static io.netty.handler.codec.http.websocketx.WebSocketServerCompressionHandler.DEFAULT_WINDOW_SIZE;
+import static io.netty.handler.codec.http.websocketx.WebSocketServerCompressionHandler.MAX_WINDOW_SIZE;
+import static io.netty.handler.codec.http.websocketx.WebSocketServerCompressionHandler.MIN_WINDOW_SIZE;
+import static io.netty.handler.codec.http.websocketx.WebSocketServerCompressionHandler.PERMESSAGE_DEFLATE_EXTENSION;
+import static io.netty.handler.codec.http.websocketx.WebSocketServerCompressionHandler.SERVER_MAX_WINDOW;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.compression.ZlibDecoder;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.websocketx.WebSocketExtensionUtil.WebSocketExtensionData;
 
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -147,35 +154,46 @@ public class WebSocketClientCompressionHandler extends ChannelHandlerAdapter {
                 String extensionsHeader = response.headers().get(HttpHeaders.Names.SEC_WEBSOCKET_EXTENSIONS);
 
                 if (extensionsHeader != null) {
-                    Map<String, Map<String, String>> extensions =
+                    List<WebSocketExtensionData> extensions =
                             WebSocketExtensionUtil.extractExtensions(extensionsHeader);
+                    boolean deflateEnabled = false;
+                    int clientWindowSize = DEFAULT_WINDOW_SIZE;
+                    Iterator<WebSocketExtensionData> extensionsIterator = extensions.iterator();
 
-                    if (extensions.containsKey(PERMESSAGE_DEFLATE_EXTENSION)) {
-                        Map<String, String> parameters = extensions.get(PERMESSAGE_DEFLATE_EXTENSION);
-                        Iterator<Entry<String, String>> parametersIterator = parameters.entrySet().iterator();
-                        boolean deflateEnabled = true;
-                        int clientWindowSize = DEFAULT_WINDOW_SIZE;
-                        int serverWindowSize = DEFAULT_WINDOW_SIZE;
+                    // find the first compression extension available
+                    while (!deflateEnabled && extensionsIterator.hasNext()) {
+                        WebSocketExtensionData extension = extensionsIterator.next();
 
-                        while (deflateEnabled && parametersIterator.hasNext()) {
-                            Entry<String, String> parameter = parametersIterator.next();
+                        if (PERMESSAGE_DEFLATE_EXTENSION.equals(extension.getName())) {
+                            Iterator<Entry<String, String>> parametersIterator =
+                                    extension.getParameters().entrySet().iterator();
 
-                            if (CLIENT_MAX_WINDOW.equalsIgnoreCase(parameter.getKey())) {
-                                if (allowCustomClientWindowSize) {
-                                    clientWindowSize = Integer.valueOf(parameter.getValue());
-                                    if (clientWindowSize > MAX_WINDOW_SIZE || clientWindowSize < MIN_WINDOW_SIZE) {
-                                        throw new IllegalStateException(
-                                                "expected client_window_size=" + clientWindowSize + " out of range");
+                            deflateEnabled = true;
+                            clientWindowSize = DEFAULT_WINDOW_SIZE;
+
+                            // iterator over each extension parameters to configure the encoder/decoder
+                            // else we use the default one
+                            while (deflateEnabled && parametersIterator.hasNext()) {
+                                Entry<String, String> parameter = parametersIterator.next();
+
+                                if (CLIENT_MAX_WINDOW.equalsIgnoreCase(parameter.getKey())) {
+                                    if (allowCustomClientWindowSize) {
+                                        clientWindowSize = Integer.valueOf(parameter.getValue());
+                                        if (clientWindowSize > MAX_WINDOW_SIZE || clientWindowSize < MIN_WINDOW_SIZE) {
+                                            throw new IllegalStateException(
+                                                    "expected client_window_size=" + clientWindowSize +
+                                                    " out of range");
+                                        }
+                                    } else {
+                                        throw new IllegalStateException("unexpected parameter " + parameter.getKey());
+                                    }
+                                } else if (SERVER_MAX_WINDOW.equalsIgnoreCase(parameter.getKey())) {
+                                    if (preferredServerWindowSize != Integer.parseInt(parameter.getValue())) {
+                                        throw new IllegalStateException("unexpected parameter " + parameter.getKey());
                                     }
                                 } else {
                                     throw new IllegalStateException("unexpected parameter " + parameter.getKey());
                                 }
-                            } else if (SERVER_MAX_WINDOW.equalsIgnoreCase(parameter.getKey())) {
-                                if (preferredServerWindowSize != Integer.parseInt(parameter.getValue())) {
-                                    throw new IllegalStateException("unexpected parameter " + parameter.getKey());
-                                }
-                            } else {
-                                throw new IllegalStateException("unexpected parameter " + parameter.getKey());
                             }
                         }
 

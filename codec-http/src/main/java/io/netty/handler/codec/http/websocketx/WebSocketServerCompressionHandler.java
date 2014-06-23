@@ -61,9 +61,11 @@ import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.websocketx.WebSocketExtensionUtil.WebSocketExtensionData;
 
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -137,13 +139,17 @@ public class WebSocketServerCompressionHandler extends ChannelHandlerAdapter {
                 String extensionsHeader = request.headers().get(HttpHeaders.Names.SEC_WEBSOCKET_EXTENSIONS);
 
                 if (extensionsHeader != null) {
-                    Map<String, Map<String, String>> extensions =
+                    List<WebSocketExtensionData> extensions =
                             WebSocketExtensionUtil.extractExtensions(extensionsHeader);
+                    Iterator<WebSocketExtensionData> extensionsIterator = extensions.iterator();
 
-                    if (extensions.containsKey(PERMESSAGE_DEFLATE_EXTENSION)) {
+                    // find the first compression extension available
+                    while (!deflateEnabled && extensionsIterator.hasNext()) {
+                        WebSocketExtensionData extension = extensionsIterator.next();
+                        Iterator<Entry<String, String>> parametersIterator =
+                                extension.getParameters().entrySet().iterator();
+
                         deflateEnabled = true;
-                        Map<String, String> parameters = extensions.get(PERMESSAGE_DEFLATE_EXTENSION);
-                        Iterator<Entry<String, String>> parametersIterator = parameters.entrySet().iterator();
 
                         while (deflateEnabled && parametersIterator.hasNext()) {
                             Entry<String, String> parameter = parametersIterator.next();
@@ -161,9 +167,11 @@ public class WebSocketServerCompressionHandler extends ChannelHandlerAdapter {
                                     deflateEnabled = false;
                                 }
                             } else if (CLIENT_NO_CONTEXT.equalsIgnoreCase(parameter.getKey())) {
-                                // CLIENT_NO_CONTEXT is not supported: no impact
+                                // CLIENT_NO_CONTEXT is not supported
+                                // there is no impact because we can choose to not acknowledge it
                             } else if (SERVER_NO_CONTEXT.equalsIgnoreCase(parameter.getKey())) {
-                                // SERVER_NO_CONTEXT is not supported: negotiation fails
+                                // SERVER_NO_CONTEXT is not supported
+                                // negotiation fails
                                 deflateEnabled = false;
                             } else {
                                 // Unknown parameter

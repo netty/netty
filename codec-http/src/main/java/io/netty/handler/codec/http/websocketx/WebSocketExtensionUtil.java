@@ -19,8 +19,10 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.util.internal.StringUtil;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.regex.Matcher;
@@ -42,11 +44,10 @@ final class WebSocketExtensionUtil {
                 httpMessage.headers().contains(HttpHeaders.Names.UPGRADE, HttpHeaders.Values.WEBSOCKET, true);
     }
 
-    static Map<String, Map<String, String>> extractExtensions(String extensionHeader) {
+    static List<WebSocketExtensionData> extractExtensions(String extensionHeader) {
         String[] rawExtensions = StringUtil.split(extensionHeader, EXTENSION_SEPARATOR);
         if (rawExtensions.length > 0) {
-            Map<String, Map<String, String>> extensions =
-                    new HashMap<String, Map<String, String>>(rawExtensions.length);
+            List<WebSocketExtensionData> extensions = new ArrayList<WebSocketExtensionData>(rawExtensions.length);
             for (String rawExtension : rawExtensions) {
                 String[] extensionParameters = StringUtil.split(rawExtension, PARAMETER_SEPARATOR);
                 String name = extensionParameters[0].trim();
@@ -61,11 +62,11 @@ final class WebSocketExtensionUtil {
                         }
                     }
                 }
-                extensions.put(name, parameters);
+                extensions.add(new WebSocketExtensionData(name, parameters));
             }
             return extensions;
         } else {
-            return Collections.emptyMap();
+            return Collections.emptyList();
         }
     }
 
@@ -95,11 +96,29 @@ final class WebSocketExtensionUtil {
         return newHeaderValue.toString();
     }
 
-    /**
-     * A private constructor to ensure that instances of this class cannot be made
-     */
+    static final class WebSocketExtensionData {
+
+        private final String name;
+        private final Map<String, String> parameters;
+
+        private WebSocketExtensionData(String name, Map<String, String> parameters) {
+            if (name == null) {
+                throw new NullPointerException("name");
+            }
+            this.name = name;
+            this.parameters = Collections.unmodifiableMap(parameters);
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public Map<String, String> getParameters() {
+            return parameters;
+        }
+    }
+
     private WebSocketExtensionUtil() {
         // Unused
     }
-
 }
