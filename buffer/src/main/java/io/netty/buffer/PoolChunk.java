@@ -103,9 +103,8 @@ package io.netty.buffer;
 
 final class PoolChunk<T> {
 
-    private static final int BYTE_LENGTH = 8;
-    private static final int BYTE_MASK = 0xFF;
-    private static final int INV_BYTE_MASK = ~ BYTE_MASK;
+    private static final int BYTE_LENGTH = Byte.SIZE;
+    private static final int UPPER_BYTE_MASK = - (1 << BYTE_LENGTH);
 
     final PoolArena<T> arena;
     final T memory;
@@ -156,8 +155,7 @@ final class PoolChunk<T> {
             short dd = (short) ((d << BYTE_LENGTH) | d);
             int depth = 1 << d;
             for (int p = 0; p < depth; ++p) {
-                // in each level traverse left to right and set the depth of subtree
-                // that is completely free to be my depth since I am totally free to start with
+                // in each level traverse left to right and set value to the depth of subtree
                 memoryMap[memoryMapIndex] = dd;
                 memoryMapIndex += 1;
             }
@@ -213,15 +211,16 @@ final class PoolChunk<T> {
      * This is triggered only when a successor is allocated and all its predecessors
      * need to update their state
      * The minimal depth at which subtree rooted at id has some free space
+     *
      * @param id id
      */
     private void updateParentsAlloc(int id) {
         while (id > 1) {
             int parentId = id >>> 1;
-            byte mem1 = value(id);
-            byte mem2 = value(id ^ 1);
-            byte mem = mem1 < mem2 ? mem1 : mem2;
-            setVal(parentId, mem);
+            byte val1 = value(id);
+            byte val2 = value(id ^ 1);
+            byte val = val1 < val2 ? val1 : val2;
+            setValue(parentId, val);
             id = parentId;
         }
     }
@@ -230,46 +229,64 @@ final class PoolChunk<T> {
      * Update method used by free
      * This needs to handle the special case when both children are completely free
      * in which case parent be directly allocated on request of size = child-size * 2
+     *
      * @param id id
      */
     private void updateParentsFree(int id) {
         int logChild = depth(id) + 1;
         while (id > 1) {
             int parentId = id >>> 1;
-            byte mem1 = value(id);
-            byte mem2 = value(id ^ 1);
+            byte val1 = value(id);
+            byte val2 = value(id ^ 1);
             logChild -= 1; // in first iteration equals log, subsequently reduce 1 from logChild as we traverse up
 
-            if (mem1 == logChild && mem2 == logChild) {
-                setVal(parentId, (byte) (logChild - 1));
+            if (val1 == logChild && val2 == logChild) {
+                setValue(parentId, (byte) (logChild - 1));
             } else {
-                byte mem = mem1 < mem2 ? mem1 : mem2;
-                setVal(parentId, mem);
+                byte val = val1 < val2 ? val1 : val2;
+                setValue(parentId, val);
             }
 
             id = parentId;
         }
     }
 
+    /**
+     * Algorithm to allocate an index in memoryMap when we query for a free node
+     * at depth d
+     *
+     * @param d depth
+     * @return index in memoryMap
+     */
     private int allocateNode(int d) {
         int id = 1;
-        byte mem = value(id);
-        if (mem > d) { // unusable
+        int initial = - (1 << d); // has last d bits = 0 and rest all = 1
+        byte val = value(id);
+        if (val > d) { // unusable
             return -1;
         }
-        while (mem < d || (id & (1 << d)) == 0) {
+        while (val < d || (id & initial) == 0) { // id & initial == 1 << d for all ids at depth d, for < d it is 0
             id = id << 1;
-            mem = value(id);
-            if (mem > d) {
+            val = value(id);
+            if (val > d) {
                 id = id ^ 1;
-                mem = value(id);
+                val = value(id);
             }
         }
-        setVal(id, unusable); // mark as unusable : because, maximum input d = maxOrder
+        byte value = value(id);
+        assert value == d && ((id & initial) == 1 << d) : String.format("val = %d, id & initial = %d, d = %d",
+                value, id & initial, d);
+        setValue(id, unusable); // mark as unusable
         updateParentsAlloc(id);
         return id;
     }
 
+    /**
+     * Allocate a run of pages (>=1)
+     *
+     * @param normCapacity normalized capacity
+     * @return index in memoryMap
+     */
     private long allocateRun(int normCapacity) {
         int numPages = normCapacity >>> pageShifts;
         int d = maxOrder - log2(numPages);
@@ -281,6 +298,13 @@ final class PoolChunk<T> {
         return id;
     }
 
+    /**
+     * Create/ initialize a new PoolSubpage of normCapacity
+     * Any PoolSubpage created/ initialized here is added to subpage pool in the PoolArena that owns this PoolChunk
+     *
+     * @param normCapacity normalized capacity
+     * @return index in memoryMap
+     */
     private long allocateSubpage(int normCapacity) {
         int d = maxOrder; // subpages are only be allocated from pages i.e., leaves
         int id = allocateNode(d);
@@ -300,9 +324,17 @@ final class PoolChunk<T> {
         return subpage.allocate();
     }
 
+    /**
+     * Free a subpage or a run of pages
+     * When a subpage is freed from PoolSubpage, it might be added back to subpage pool of the owning PoolArena
+     * If the subpage pool in PoolArena has at least one other PoolSubpage of given elemSize, we can
+     * completely free the owning Page so it is available for subsequent allocations
+     *
+     * @param handle handle to free
+     */
     void free(long handle) {
         int memoryMapIdx = (int) handle;
-        int bitmapIdx = (int) (handle >>> 32);
+        int bitmapIdx = (int) (handle >>> Integer.SIZE);
 
         if (bitmapIdx != 0) { // free a subpage
             PoolSubpage<T> subpage = subpages[subpageIdx(memoryMapIdx)];
@@ -312,13 +344,13 @@ final class PoolChunk<T> {
             }
         }
         freeBytes += runLength(memoryMapIdx);
-        setVal(memoryMapIdx, depth(memoryMapIdx));
+        setValue(memoryMapIdx, depth(memoryMapIdx));
         updateParentsFree(memoryMapIdx);
     }
 
     void initBuf(PooledByteBuf<T> buf, long handle, int reqCapacity) {
         int memoryMapIdx = (int) handle;
-        int bitmapIdx = (int) (handle >>> 32);
+        int bitmapIdx = (int) (handle >>> Integer.SIZE);
         if (bitmapIdx == 0) {
             byte val = value(memoryMapIdx);
             assert val == unusable : String.valueOf(val);
@@ -329,7 +361,7 @@ final class PoolChunk<T> {
     }
 
     void initBufWithSubpage(PooledByteBuf<T> buf, long handle, int reqCapacity) {
-        initBufWithSubpage(buf, handle, (int) (handle >>> 32), reqCapacity);
+        initBufWithSubpage(buf, handle, (int) (handle >>> Integer.SIZE), reqCapacity);
     }
 
     private void initBufWithSubpage(PooledByteBuf<T> buf, long handle, int bitmapIdx, int reqCapacity) {
@@ -347,11 +379,11 @@ final class PoolChunk<T> {
     }
 
     private byte value(int id) {
-        return (byte) (memoryMap[id] & BYTE_MASK);
+        return (byte) memoryMap[id];
     }
 
-    private void setVal(int id, byte val) {
-        memoryMap[id] = (short) ((memoryMap[id] & INV_BYTE_MASK) | val);
+    private void setValue(int id, byte val) {
+        memoryMap[id] = (short) ((memoryMap[id] & UPPER_BYTE_MASK) | val);
     }
 
     private byte depth(int id) {
@@ -360,7 +392,7 @@ final class PoolChunk<T> {
     }
 
     private int log2(int val) {
-        // compute position of highest set bit i.e, log2
+        // compute the (0-based, with lsb = 0) position of highest set bit i.e, log2
         return Integer.SIZE - 1 - Integer.numberOfLeadingZeros(val);
     }
 
