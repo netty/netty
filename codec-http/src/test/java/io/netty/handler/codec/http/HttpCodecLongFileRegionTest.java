@@ -89,7 +89,7 @@ public class HttpCodecLongFileRegionTest {
 
         cc.writeAndFlush(new DefaultFullHttpRequest(HTTP_1_1, HttpMethod.GET, "/"));
 
-        while (ch.response == null) {
+        while (ch.response == null) { // if this timeouts, we have a problem
             safeSleep(50);
         }
 
@@ -103,14 +103,12 @@ public class HttpCodecLongFileRegionTest {
     }
 
     private static class ServerHandler extends BaseHandler<FullHttpRequest> {
-
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, FullHttpRequest in) throws Exception {
+        protected void messageReceived(ChannelHandlerContext ctx, FullHttpRequest msg) throws Exception {
             ctx.write(new DefaultHttpResponse(HTTP_1_1, OK));
             ctx.write(new DummyLongFileRegion());
             ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
         }
-
     }
 
     private static class ClientHandler extends BaseHandler<HttpObject> {
@@ -118,7 +116,7 @@ public class HttpCodecLongFileRegionTest {
         private volatile byte[] response;
 
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, HttpObject in) throws Exception {
+        protected void messageReceived(ChannelHandlerContext ctx, HttpObject in) throws Exception {
             if (in instanceof HttpContent) {
                 final HttpContent content = (HttpContent) in;
                 final ByteBuf buf = content.content();
@@ -129,7 +127,6 @@ public class HttpCodecLongFileRegionTest {
                 }
             }
         }
-
     }
 
     private static class DummyLongFileRegion extends AbstractReferenceCounted implements FileRegion {
@@ -164,9 +161,31 @@ public class HttpCodecLongFileRegionTest {
         protected void deallocate() {
             // nothing to deallocate
         }
+
+        @Override
+        public FileRegion touch(Object hint) {
+            return this;
+        }
+
+        @Override
+        public FileRegion touch() {
+            return this;
+        }
+
+        @Override
+        public FileRegion retain() {
+            super.retain();
+            return this;
+        }
+
+        @Override
+        public FileRegion retain(int increment) {
+            super.retain(increment);
+            return this;
+        }
     }
 
-    private static class BaseHandler<T> extends SimpleChannelInboundHandler<T> {
+    private abstract static class BaseHandler<T> extends SimpleChannelInboundHandler<T> {
         protected volatile Channel channel;
         protected final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
 
@@ -176,15 +195,12 @@ public class HttpCodecLongFileRegionTest {
         }
 
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, T in) throws Exception {
-        }
-
-        @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             if (exception.compareAndSet(null, cause)) {
                 ctx.close();
             }
         }
+
     }
 
     @Before
@@ -203,7 +219,7 @@ public class HttpCodecLongFileRegionTest {
     private static void safeSleep(long millis) {
         try {
             Thread.sleep(millis);
-        } catch (InterruptedException e) {
+        } catch (InterruptedException ignored) {
             // Ignore.
         }
     }
@@ -222,9 +238,9 @@ public class HttpCodecLongFileRegionTest {
     }
 
     /**
-     * only acceptable to call once
+     * careful, might be very slow
      */
-    public static int getFreePort() {
+    private static int getFreePort() {
         for (int port = 32768; port < 65536; port ++) {
             try {
                 // Ensure it is possible to bind on both wildcard and loopback.
@@ -240,7 +256,7 @@ public class HttpCodecLongFileRegionTest {
                 ss.close();
 
                 return port;
-            } catch (IOException e) {
+            } catch (IOException ignored) {
                 // ignore
             }
         }
