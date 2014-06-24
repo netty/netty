@@ -37,8 +37,8 @@ public abstract class AbstractBinaryMemcacheEncoder<M extends BinaryMemcacheMess
         ByteBuf buf = ctx.alloc().buffer(DEFAULT_BUFFER_SIZE);
 
         encodeHeader(buf, msg);
-        encodeExtras(buf, msg.getExtras());
-        encodeKey(buf, msg.getKey());
+        encodeExtras(buf, msg.extras());
+        encodeKey(buf, msg.key());
 
         return buf;
     }

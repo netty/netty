@@ -66,7 +66,7 @@ public class DefaultBinaryMemcacheRequest extends AbstractBinaryMemcacheMessage 
     }
 
     @Override
-    public short getReserved() {
+    public short reserved() {
         return reserved;
     }
 

@@ -25,7 +25,7 @@ public interface BinaryMemcacheResponse extends BinaryMemcacheMessage {
      *
      * @return the status of the response.
      */
-    short getStatus();
+    short status();
 
     /**
      * Sets the status of the response.

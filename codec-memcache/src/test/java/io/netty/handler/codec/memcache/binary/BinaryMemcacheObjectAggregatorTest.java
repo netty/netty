@@ -61,8 +61,8 @@ public class BinaryMemcacheObjectAggregatorTest {
 
         assertThat(request, instanceOf(FullBinaryMemcacheRequest.class));
         assertThat(request, notNullValue());
-        assertThat(request.getKey(), notNullValue());
-        assertThat(request.getExtras(), nullValue());
+        assertThat(request.key(), notNullValue());
+        assertThat(request.extras(), nullValue());
 
         assertThat(request.content().readableBytes(), is(8));
         assertThat(request.content().readByte(), is((byte) 0x01));

@@ -29,7 +29,7 @@ public abstract class AbstractMemcacheObject implements MemcacheObject {
     }
 
     @Override
-    public DecoderResult getDecoderResult() {
+    public DecoderResult decoderResult() {
         return decoderResult;
     }
 
@@ -41,5 +41,4 @@ public abstract class AbstractMemcacheObject implements MemcacheObject {
 
         decoderResult = result;
     }
-
 }
