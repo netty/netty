@@ -28,7 +28,15 @@ public enum SocksCmdType {
         this.b = b;
     }
 
+    /**
+     * @deprecated Use {@link #valueOf(byte)} instead.
+     */
+    @Deprecated
     public static SocksCmdType fromByte(byte b) {
+        return valueOf(b);
+    }
+
+    public static SocksCmdType valueOf(byte b) {
         for (SocksCmdType code : values()) {
             if (code.b == b) {
                 return code;

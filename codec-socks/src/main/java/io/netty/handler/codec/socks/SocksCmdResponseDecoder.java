@@ -45,16 +45,16 @@ public class SocksCmdResponseDecoder extends ReplayingDecoder<SocksCmdResponseDe
     protected void decode(ChannelHandlerContext ctx, ByteBuf byteBuf, List<Object> out) throws Exception {
         switch (state()) {
             case CHECK_PROTOCOL_VERSION: {
-                version = SocksProtocolVersion.fromByte(byteBuf.readByte());
+                version = SocksProtocolVersion.valueOf(byteBuf.readByte());
                 if (version != SocksProtocolVersion.SOCKS5) {
                     break;
                 }
                 checkpoint(State.READ_CMD_HEADER);
             }
             case READ_CMD_HEADER: {
-                cmdStatus = SocksCmdStatus.fromByte(byteBuf.readByte());
+                cmdStatus = SocksCmdStatus.valueOf(byteBuf.readByte());
                 reserved = byteBuf.readByte();
-                addressType = SocksAddressType.fromByte(byteBuf.readByte());
+                addressType = SocksAddressType.valueOf(byteBuf.readByte());
                 checkpoint(State.READ_CMD_ADDRESS);
             }
             case READ_CMD_ADDRESS: {

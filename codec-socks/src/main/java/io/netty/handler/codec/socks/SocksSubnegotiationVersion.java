@@ -26,7 +26,15 @@ public enum SocksSubnegotiationVersion {
         this.b = b;
     }
 
+    /**
+     * @deprecated Use {@link #valueOf(byte)} instead.
+     */
+    @Deprecated
     public static SocksSubnegotiationVersion fromByte(byte b) {
+        return valueOf(b);
+    }
+
+    public static SocksSubnegotiationVersion valueOf(byte b) {
         for (SocksSubnegotiationVersion code : values()) {
             if (code.b == b) {
                 return code;

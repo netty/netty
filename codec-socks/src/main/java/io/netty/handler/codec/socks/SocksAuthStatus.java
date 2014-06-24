@@ -26,7 +26,15 @@ public enum SocksAuthStatus {
         this.b = b;
     }
 
+    /**
+     * @deprecated Use {@link #valueOf(byte)} instead.
+     */
+    @Deprecated
     public static SocksAuthStatus fromByte(byte b) {
+        return valueOf(b);
+    }
+
+    public static SocksAuthStatus valueOf(byte b) {
         for (SocksAuthStatus code : values()) {
             if (code.b == b) {
                 return code;
