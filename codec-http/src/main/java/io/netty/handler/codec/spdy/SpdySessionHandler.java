@@ -120,7 +120,7 @@ public class SpdySessionHandler extends ChannelHandlerAdapter {
              * a RST_STREAM frame with the getStatus PROTOCOL_ERROR.
              */
             SpdyDataFrame spdyDataFrame = (SpdyDataFrame) msg;
-            int streamId = spdyDataFrame.getStreamId();
+            int streamId = spdyDataFrame.streamId();
 
             int deltaWindowSize = -1 * spdyDataFrame.content().readableBytes();
             int newSessionWindowSize =
@@ -229,7 +229,7 @@ public class SpdySessionHandler extends ChannelHandlerAdapter {
              */
 
             SpdySynStreamFrame spdySynStreamFrame = (SpdySynStreamFrame) msg;
-            int streamId = spdySynStreamFrame.getStreamId();
+            int streamId = spdySynStreamFrame.streamId();
 
             // Check if we received a valid SYN_STREAM frame
             if (spdySynStreamFrame.isInvalid() ||
@@ -246,7 +246,7 @@ public class SpdySessionHandler extends ChannelHandlerAdapter {
             }
 
             // Try to accept the stream
-            byte priority = spdySynStreamFrame.getPriority();
+            byte priority = spdySynStreamFrame.priority();
             boolean remoteSideClosed = spdySynStreamFrame.isLast();
             boolean localSideClosed = spdySynStreamFrame.isUnidirectional();
             if (!acceptStream(streamId, priority, remoteSideClosed, localSideClosed)) {
@@ -264,7 +264,7 @@ public class SpdySessionHandler extends ChannelHandlerAdapter {
              */
 
             SpdySynReplyFrame spdySynReplyFrame = (SpdySynReplyFrame) msg;
-            int streamId = spdySynReplyFrame.getStreamId();
+            int streamId = spdySynReplyFrame.streamId();
 
             // Check if we received a valid SYN_REPLY frame
             if (spdySynReplyFrame.isInvalid() ||
@@ -299,7 +299,7 @@ public class SpdySessionHandler extends ChannelHandlerAdapter {
              */
 
             SpdyRstStreamFrame spdyRstStreamFrame = (SpdyRstStreamFrame) msg;
-            removeStream(spdyRstStreamFrame.getStreamId(), ctx.newSucceededFuture());
+            removeStream(spdyRstStreamFrame.streamId(), ctx.newSucceededFuture());
 
         } else if (msg instanceof SpdySettingsFrame) {
 
@@ -345,7 +345,7 @@ public class SpdySessionHandler extends ChannelHandlerAdapter {
 
             SpdyPingFrame spdyPingFrame = (SpdyPingFrame) msg;
 
-            if (isRemoteInitiatedId(spdyPingFrame.getId())) {
+            if (isRemoteInitiatedId(spdyPingFrame.id())) {
                 ctx.writeAndFlush(spdyPingFrame);
                 return;
             }
@@ -363,7 +363,7 @@ public class SpdySessionHandler extends ChannelHandlerAdapter {
         } else if (msg instanceof SpdyHeadersFrame) {
 
             SpdyHeadersFrame spdyHeadersFrame = (SpdyHeadersFrame) msg;
-            int streamId = spdyHeadersFrame.getStreamId();
+            int streamId = spdyHeadersFrame.streamId();
 
             // Check if we received a valid HEADERS frame
             if (spdyHeadersFrame.isInvalid()) {
@@ -394,8 +394,8 @@ public class SpdySessionHandler extends ChannelHandlerAdapter {
              */
 
             SpdyWindowUpdateFrame spdyWindowUpdateFrame = (SpdyWindowUpdateFrame) msg;
-            int streamId = spdyWindowUpdateFrame.getStreamId();
-            int deltaWindowSize = spdyWindowUpdateFrame.getDeltaWindowSize();
+            int streamId = spdyWindowUpdateFrame.streamId();
+            int deltaWindowSize = spdyWindowUpdateFrame.deltaWindowSize();
 
             // Ignore frames for half-closed streams
             if (streamId != SPDY_SESSION_STREAM_ID && spdySession.isLocalSideClosed(streamId)) {
@@ -462,7 +462,7 @@ public class SpdySessionHandler extends ChannelHandlerAdapter {
         if (msg instanceof SpdyDataFrame) {
 
             SpdyDataFrame spdyDataFrame = (SpdyDataFrame) msg;
-            int streamId = spdyDataFrame.getStreamId();
+            int streamId = spdyDataFrame.streamId();
 
             // Frames must not be sent on half-closed streams
             if (spdySession.isLocalSideClosed(streamId)) {
@@ -545,14 +545,14 @@ public class SpdySessionHandler extends ChannelHandlerAdapter {
         } else if (msg instanceof SpdySynStreamFrame) {
 
             SpdySynStreamFrame spdySynStreamFrame = (SpdySynStreamFrame) msg;
-            int streamId = spdySynStreamFrame.getStreamId();
+            int streamId = spdySynStreamFrame.streamId();
 
             if (isRemoteInitiatedId(streamId)) {
                 promise.setFailure(PROTOCOL_EXCEPTION);
                 return;
             }
 
-            byte priority = spdySynStreamFrame.getPriority();
+            byte priority = spdySynStreamFrame.priority();
             boolean remoteSideClosed = spdySynStreamFrame.isUnidirectional();
             boolean localSideClosed = spdySynStreamFrame.isLast();
             if (!acceptStream(streamId, priority, remoteSideClosed, localSideClosed)) {
@@ -563,7 +563,7 @@ public class SpdySessionHandler extends ChannelHandlerAdapter {
         } else if (msg instanceof SpdySynReplyFrame) {
 
             SpdySynReplyFrame spdySynReplyFrame = (SpdySynReplyFrame) msg;
-            int streamId = spdySynReplyFrame.getStreamId();
+            int streamId = spdySynReplyFrame.streamId();
 
             // Frames must not be sent on half-closed streams
             if (!isRemoteInitiatedId(streamId) || spdySession.isLocalSideClosed(streamId)) {
@@ -579,7 +579,7 @@ public class SpdySessionHandler extends ChannelHandlerAdapter {
         } else if (msg instanceof SpdyRstStreamFrame) {
 
             SpdyRstStreamFrame spdyRstStreamFrame = (SpdyRstStreamFrame) msg;
-            removeStream(spdyRstStreamFrame.getStreamId(), promise);
+            removeStream(spdyRstStreamFrame.streamId(), promise);
 
         } else if (msg instanceof SpdySettingsFrame) {
 
@@ -615,9 +615,9 @@ public class SpdySessionHandler extends ChannelHandlerAdapter {
         } else if (msg instanceof SpdyPingFrame) {
 
             SpdyPingFrame spdyPingFrame = (SpdyPingFrame) msg;
-            if (isRemoteInitiatedId(spdyPingFrame.getId())) {
+            if (isRemoteInitiatedId(spdyPingFrame.id())) {
                 ctx.fireExceptionCaught(new IllegalArgumentException(
-                            "invalid PING ID: " + spdyPingFrame.getId()));
+                            "invalid PING ID: " + spdyPingFrame.id()));
                 return;
             }
             pings.getAndIncrement();
@@ -632,7 +632,7 @@ public class SpdySessionHandler extends ChannelHandlerAdapter {
         } else if (msg instanceof SpdyHeadersFrame) {
 
             SpdyHeadersFrame spdyHeadersFrame = (SpdyHeadersFrame) msg;
-            int streamId = spdyHeadersFrame.getStreamId();
+            int streamId = spdyHeadersFrame.streamId();
 
             // Frames must not be sent on half-closed streams
             if (spdySession.isLocalSideClosed(streamId)) {
@@ -698,7 +698,7 @@ public class SpdySessionHandler extends ChannelHandlerAdapter {
      */
 
     private boolean isRemoteInitiatedId(int id) {
-        boolean serverId = SpdyCodecUtil.isServerId(id);
+        boolean serverId = isServerId(id);
         return server && !serverId || !server && serverId;
     }
 
@@ -774,7 +774,7 @@ public class SpdySessionHandler extends ChannelHandlerAdapter {
 
                 SpdyDataFrame spdyDataFrame = pendingWrite.spdyDataFrame;
                 int dataFrameSize = spdyDataFrame.content().readableBytes();
-                int writeStreamId = spdyDataFrame.getStreamId();
+                int writeStreamId = spdyDataFrame.streamId();
                 if (streamId == SPDY_SESSION_STREAM_ID) {
                     newWindowSize = Math.min(newWindowSize, spdySession.getSendWindowSize(writeStreamId));
                 }

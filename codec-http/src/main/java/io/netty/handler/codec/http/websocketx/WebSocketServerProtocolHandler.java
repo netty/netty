@@ -84,7 +84,7 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
         this.websocketPath = websocketPath;
         this.subprotocols = subprotocols;
         this.allowExtensions = allowExtensions;
-        this.maxFramePayloadLength = maxFrameSize;
+        maxFramePayloadLength = maxFrameSize;
     }
 
     @Override

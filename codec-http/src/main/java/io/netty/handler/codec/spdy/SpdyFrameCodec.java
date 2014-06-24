@@ -101,7 +101,7 @@ public class SpdyFrameCodec extends ByteToMessageDecoder implements SpdyFrameDec
             SpdyDataFrame spdyDataFrame = (SpdyDataFrame) msg;
             frame = spdyFrameEncoder.encodeDataFrame(
                     ctx.alloc(),
-                    spdyDataFrame.getStreamId(),
+                    spdyDataFrame.streamId(),
                     spdyDataFrame.isLast(),
                     spdyDataFrame.content()
             );
@@ -115,9 +115,9 @@ public class SpdyFrameCodec extends ByteToMessageDecoder implements SpdyFrameDec
             try {
                 frame = spdyFrameEncoder.encodeSynStreamFrame(
                         ctx.alloc(),
-                        spdySynStreamFrame.getStreamId(),
-                        spdySynStreamFrame.getAssociatedToStreamId(),
-                        spdySynStreamFrame.getPriority(),
+                        spdySynStreamFrame.streamId(),
+                        spdySynStreamFrame.associatedStreamId(),
+                        spdySynStreamFrame.priority(),
                         spdySynStreamFrame.isLast(),
                         spdySynStreamFrame.isUnidirectional(),
                         headerBlock
@@ -134,7 +134,7 @@ public class SpdyFrameCodec extends ByteToMessageDecoder implements SpdyFrameDec
             try {
                 frame = spdyFrameEncoder.encodeSynReplyFrame(
                         ctx.alloc(),
-                        spdySynReplyFrame.getStreamId(),
+                        spdySynReplyFrame.streamId(),
                         spdySynReplyFrame.isLast(),
                         headerBlock
                 );
@@ -148,8 +148,8 @@ public class SpdyFrameCodec extends ByteToMessageDecoder implements SpdyFrameDec
             SpdyRstStreamFrame spdyRstStreamFrame = (SpdyRstStreamFrame) msg;
             frame = spdyFrameEncoder.encodeRstStreamFrame(
                     ctx.alloc(),
-                    spdyRstStreamFrame.getStreamId(),
-                    spdyRstStreamFrame.getStatus().getCode()
+                    spdyRstStreamFrame.streamId(),
+                    spdyRstStreamFrame.status().code()
             );
             ctx.write(frame, promise);
 
@@ -167,7 +167,7 @@ public class SpdyFrameCodec extends ByteToMessageDecoder implements SpdyFrameDec
             SpdyPingFrame spdyPingFrame = (SpdyPingFrame) msg;
             frame = spdyFrameEncoder.encodePingFrame(
                     ctx.alloc(),
-                    spdyPingFrame.getId()
+                    spdyPingFrame.id()
             );
             ctx.write(frame, promise);
 
@@ -176,8 +176,8 @@ public class SpdyFrameCodec extends ByteToMessageDecoder implements SpdyFrameDec
             SpdyGoAwayFrame spdyGoAwayFrame = (SpdyGoAwayFrame) msg;
             frame = spdyFrameEncoder.encodeGoAwayFrame(
                     ctx.alloc(),
-                    spdyGoAwayFrame.getLastGoodStreamId(),
-                    spdyGoAwayFrame.getStatus().getCode()
+                    spdyGoAwayFrame.lastGoodStreamId(),
+                    spdyGoAwayFrame.status().code()
             );
             ctx.write(frame, promise);
 
@@ -188,7 +188,7 @@ public class SpdyFrameCodec extends ByteToMessageDecoder implements SpdyFrameDec
             try {
                 frame = spdyFrameEncoder.encodeHeadersFrame(
                         ctx.alloc(),
-                        spdyHeadersFrame.getStreamId(),
+                        spdyHeadersFrame.streamId(),
                         spdyHeadersFrame.isLast(),
                         headerBlock
                 );
@@ -202,8 +202,8 @@ public class SpdyFrameCodec extends ByteToMessageDecoder implements SpdyFrameDec
             SpdyWindowUpdateFrame spdyWindowUpdateFrame = (SpdyWindowUpdateFrame) msg;
             frame = spdyFrameEncoder.encodeWindowUpdateFrame(
                     ctx.alloc(),
-                    spdyWindowUpdateFrame.getStreamId(),
-                    spdyWindowUpdateFrame.getDeltaWindowSize()
+                    spdyWindowUpdateFrame.streamId(),
+                    spdyWindowUpdateFrame.deltaWindowSize()
             );
             ctx.write(frame, promise);
         } else {

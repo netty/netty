@@ -79,14 +79,14 @@ final class SpdyHeaderBlockZlibDecoder extends SpdyHeaderBlockRawDecoder {
             if (numBytes == 0 && decompressor.needsDictionary()) {
                 try {
                     decompressor.setDictionary(SPDY_DICT);
-                } catch (IllegalArgumentException e) {
+                } catch (IllegalArgumentException ignored) {
                     throw INVALID_HEADER_BLOCK;
                 }
                 numBytes = decompressor.inflate(out, off, decompressed.writableBytes());
             }
             if (frame != null) {
                 decompressed.writerIndex(decompressed.writerIndex() + numBytes);
-                super.decodeHeaderBlock(decompressed, frame);
+                decodeHeaderBlock(decompressed, frame);
                 decompressed.discardReadBytes();
             }
 

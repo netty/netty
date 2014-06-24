@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
-import static org.junit.Assert.*;
+import org.junit.Test;
 
 import java.util.Calendar;
 import java.util.Date;
@@ -23,7 +23,7 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.TimeZone;
 
-import org.junit.Test;
+import static org.junit.Assert.*;
 
 public class CookieDecoderTest {
     @Test
@@ -36,27 +36,27 @@ public class CookieDecoderTest {
         assertEquals(1, cookies.size());
         Cookie cookie = cookies.iterator().next();
         assertNotNull(cookie);
-        assertEquals("myValue", cookie.getValue());
-        assertNull(cookie.getComment());
-        assertNull(cookie.getCommentUrl());
-        assertEquals(".adomainsomewhere", cookie.getDomain());
+        assertEquals("myValue", cookie.value());
+        assertNull(cookie.comment());
+        assertNull(cookie.commentUrl());
+        assertEquals(".adomainsomewhere", cookie.domain());
         assertFalse(cookie.isDiscard());
 
         boolean fail = true;
         for (int i = 40; i <= 60; i ++) {
-            if (cookie.getMaxAge() == i) {
+            if (cookie.maxAge() == i) {
                 fail = false;
                 break;
             }
         }
         if (fail) {
-            fail("expected: 50, actual: " + cookie.getMaxAge());
+            fail("expected: 50, actual: " + cookie.maxAge());
         }
 
-        assertEquals("/apathsomewhere", cookie.getPath());
-        assertTrue(cookie.getPorts().isEmpty());
+        assertEquals("/apathsomewhere", cookie.path());
+        assertTrue(cookie.ports().isEmpty());
         assertTrue(cookie.isSecure());
-        assertEquals(0, cookie.getVersion());
+        assertEquals(0, cookie.version());
     }
 
     @Test
@@ -68,16 +68,16 @@ public class CookieDecoderTest {
         assertEquals(1, cookies.size());
         Cookie cookie = cookies.iterator().next();
         assertNotNull(cookie);
-        assertEquals("myValue", cookie.getValue());
-        assertNull(cookie.getComment());
-        assertNull(cookie.getCommentUrl());
-        assertEquals(".adomainsomewhere", cookie.getDomain());
+        assertEquals("myValue", cookie.value());
+        assertNull(cookie.comment());
+        assertNull(cookie.commentUrl());
+        assertEquals(".adomainsomewhere", cookie.domain());
         assertFalse(cookie.isDiscard());
-        assertEquals(50, cookie.getMaxAge());
-        assertEquals("/apathsomewhere", cookie.getPath());
-        assertTrue(cookie.getPorts().isEmpty());
+        assertEquals(50, cookie.maxAge());
+        assertEquals("/apathsomewhere", cookie.path());
+        assertTrue(cookie.ports().isEmpty());
         assertTrue(cookie.isSecure());
-        assertEquals(0, cookie.getVersion());
+        assertEquals(0, cookie.version());
     }
     @Test
     public void testDecodingSingleCookieV1() {
@@ -86,17 +86,17 @@ public class CookieDecoderTest {
         Set<Cookie> cookies = CookieDecoder.decode(cookieString);
         assertEquals(1, cookies.size());
         Cookie cookie = cookies.iterator().next();
-        assertEquals("myValue", cookie.getValue());
+        assertEquals("myValue", cookie.value());
         assertNotNull(cookie);
-        assertEquals("this is a comment", cookie.getComment());
-        assertNull(cookie.getCommentUrl());
-        assertEquals(".adomainsomewhere", cookie.getDomain());
+        assertEquals("this is a comment", cookie.comment());
+        assertNull(cookie.commentUrl());
+        assertEquals(".adomainsomewhere", cookie.domain());
         assertFalse(cookie.isDiscard());
-        assertEquals(50, cookie.getMaxAge());
-        assertEquals("/apathsomewhere", cookie.getPath());
-        assertTrue(cookie.getPorts().isEmpty());
+        assertEquals(50, cookie.maxAge());
+        assertEquals("/apathsomewhere", cookie.path());
+        assertTrue(cookie.ports().isEmpty());
         assertTrue(cookie.isSecure());
-        assertEquals(1, cookie.getVersion());
+        assertEquals(1, cookie.version());
     }
 
     @Test
@@ -108,16 +108,16 @@ public class CookieDecoderTest {
         assertEquals(1, cookies.size());
         Cookie cookie = cookies.iterator().next();
         assertNotNull(cookie);
-        assertEquals("myValue", cookie.getValue());
-        assertEquals("this is a comment", cookie.getComment());
-        assertNull(cookie.getCommentUrl());
-        assertEquals(".adomainsomewhere", cookie.getDomain());
+        assertEquals("myValue", cookie.value());
+        assertEquals("this is a comment", cookie.comment());
+        assertNull(cookie.commentUrl());
+        assertEquals(".adomainsomewhere", cookie.domain());
         assertFalse(cookie.isDiscard());
-        assertEquals(50, cookie.getMaxAge());
-        assertEquals("/apathsomewhere", cookie.getPath());
-        assertTrue(cookie.getPorts().isEmpty());
+        assertEquals(50, cookie.maxAge());
+        assertEquals("/apathsomewhere", cookie.path());
+        assertTrue(cookie.ports().isEmpty());
         assertTrue(cookie.isSecure());
-        assertEquals(1, cookie.getVersion());
+        assertEquals(1, cookie.version());
     }
     @Test
     public void testDecodingSingleCookieV2() {
@@ -128,18 +128,18 @@ public class CookieDecoderTest {
         assertEquals(1, cookies.size());
         Cookie cookie = cookies.iterator().next();
         assertNotNull(cookie);
-        assertEquals("myValue", cookie.getValue());
-        assertEquals("this is a comment", cookie.getComment());
-        assertEquals("http://aurl.com", cookie.getCommentUrl());
-        assertEquals(".adomainsomewhere", cookie.getDomain());
+        assertEquals("myValue", cookie.value());
+        assertEquals("this is a comment", cookie.comment());
+        assertEquals("http://aurl.com", cookie.commentUrl());
+        assertEquals(".adomainsomewhere", cookie.domain());
         assertTrue(cookie.isDiscard());
-        assertEquals(50, cookie.getMaxAge());
-        assertEquals("/apathsomewhere", cookie.getPath());
-        assertEquals(2, cookie.getPorts().size());
-        assertTrue(cookie.getPorts().contains(80));
-        assertTrue(cookie.getPorts().contains(8080));
+        assertEquals(50, cookie.maxAge());
+        assertEquals("/apathsomewhere", cookie.path());
+        assertEquals(2, cookie.ports().size());
+        assertTrue(cookie.ports().contains(80));
+        assertTrue(cookie.ports().contains(8080));
         assertTrue(cookie.isSecure());
-        assertEquals(2, cookie.getVersion());
+        assertEquals(2, cookie.version());
     }
 
     @Test
@@ -157,42 +157,42 @@ public class CookieDecoderTest {
         Iterator<Cookie> it = cookies.iterator();
         Cookie cookie = it.next();
         assertNotNull(cookie);
-        assertEquals("myValue", cookie.getValue());
-        assertEquals("this is a comment", cookie.getComment());
-        assertEquals("http://aurl.com", cookie.getCommentUrl());
-        assertEquals(".adomainsomewhere", cookie.getDomain());
+        assertEquals("myValue", cookie.value());
+        assertEquals("this is a comment", cookie.comment());
+        assertEquals("http://aurl.com", cookie.commentUrl());
+        assertEquals(".adomainsomewhere", cookie.domain());
         assertTrue(cookie.isDiscard());
-        assertEquals(50, cookie.getMaxAge());
-        assertEquals("/apathsomewhere", cookie.getPath());
-        assertEquals(2, cookie.getPorts().size());
-        assertTrue(cookie.getPorts().contains(80));
-        assertTrue(cookie.getPorts().contains(8080));
+        assertEquals(50, cookie.maxAge());
+        assertEquals("/apathsomewhere", cookie.path());
+        assertEquals(2, cookie.ports().size());
+        assertTrue(cookie.ports().contains(80));
+        assertTrue(cookie.ports().contains(8080));
         assertTrue(cookie.isSecure());
-        assertEquals(2, cookie.getVersion());
+        assertEquals(2, cookie.version());
         cookie = it.next();
         assertNotNull(cookie);
-        assertEquals("myValue2", cookie.getValue());
-        assertEquals("this is another comment", cookie.getComment());
-        assertEquals("http://anotherurl.com", cookie.getCommentUrl());
-        assertEquals(".anotherdomainsomewhere", cookie.getDomain());
+        assertEquals("myValue2", cookie.value());
+        assertEquals("this is another comment", cookie.comment());
+        assertEquals("http://anotherurl.com", cookie.commentUrl());
+        assertEquals(".anotherdomainsomewhere", cookie.domain());
         assertFalse(cookie.isDiscard());
-        assertEquals(0, cookie.getMaxAge());
-        assertEquals("/anotherpathsomewhere", cookie.getPath());
-        assertTrue(cookie.getPorts().isEmpty());
+        assertEquals(0, cookie.maxAge());
+        assertEquals("/anotherpathsomewhere", cookie.path());
+        assertTrue(cookie.ports().isEmpty());
         assertFalse(cookie.isSecure());
-        assertEquals(2, cookie.getVersion());
+        assertEquals(2, cookie.version());
         cookie = it.next();
         assertNotNull(cookie);
-        assertEquals("myValue3", cookie.getValue());
-        assertNull(cookie.getComment());
-        assertNull(cookie.getCommentUrl());
-        assertNull(cookie.getDomain());
+        assertEquals("myValue3", cookie.value());
+        assertNull(cookie.comment());
+        assertNull(cookie.commentUrl());
+        assertNull(cookie.domain());
         assertFalse(cookie.isDiscard());
-        assertEquals(0, cookie.getMaxAge());
-        assertNull(cookie.getPath());
-        assertTrue(cookie.getPorts().isEmpty());
+        assertEquals(0, cookie.maxAge());
+        assertNull(cookie.path());
+        assertTrue(cookie.ports().isEmpty());
         assertFalse(cookie.isSecure());
-        assertEquals(2, cookie.getVersion());
+        assertEquals(2, cookie.version());
     }
 
     @Test
@@ -206,26 +206,26 @@ public class CookieDecoderTest {
         Cookie c;
 
         c = it.next();
-        assertEquals(1, c.getVersion());
-        assertEquals("Part_Number", c.getName());
-        assertEquals("Rocket_Launcher_0001", c.getValue());
-        assertEquals("/acme", c.getPath());
-        assertNull(c.getComment());
-        assertNull(c.getCommentUrl());
-        assertNull(c.getDomain());
-        assertTrue(c.getPorts().isEmpty());
-        assertEquals(Long.MIN_VALUE, c.getMaxAge());
+        assertEquals(1, c.version());
+        assertEquals("Part_Number", c.name());
+        assertEquals("Rocket_Launcher_0001", c.value());
+        assertEquals("/acme", c.path());
+        assertNull(c.comment());
+        assertNull(c.commentUrl());
+        assertNull(c.domain());
+        assertTrue(c.ports().isEmpty());
+        assertEquals(Long.MIN_VALUE, c.maxAge());
 
         c = it.next();
-        assertEquals(1, c.getVersion());
-        assertEquals("Part_Number", c.getName());
-        assertEquals("Riding_Rocket_0023", c.getValue());
-        assertEquals("/acme/ammo", c.getPath());
-        assertNull(c.getComment());
-        assertNull(c.getCommentUrl());
-        assertNull(c.getDomain());
-        assertTrue(c.getPorts().isEmpty());
-        assertEquals(Long.MIN_VALUE, c.getMaxAge());
+        assertEquals(1, c.version());
+        assertEquals("Part_Number", c.name());
+        assertEquals("Riding_Rocket_0023", c.value());
+        assertEquals("/acme/ammo", c.path());
+        assertNull(c.comment());
+        assertNull(c.commentUrl());
+        assertNull(c.domain());
+        assertTrue(c.ports().isEmpty());
+        assertEquals(Long.MIN_VALUE, c.maxAge());
 
         assertFalse(it.hasNext());
     }
@@ -242,27 +242,27 @@ public class CookieDecoderTest {
 
         assertTrue(it.hasNext());
         c = it.next();
-        assertEquals(1, c.getVersion());
-        assertEquals("session_id", c.getName());
-        assertEquals("1234", c.getValue());
-        assertNull(c.getPath());
-        assertNull(c.getComment());
-        assertNull(c.getCommentUrl());
-        assertNull(c.getDomain());
-        assertTrue(c.getPorts().isEmpty());
-        assertEquals(Long.MIN_VALUE, c.getMaxAge());
+        assertEquals(1, c.version());
+        assertEquals("session_id", c.name());
+        assertEquals("1234", c.value());
+        assertNull(c.path());
+        assertNull(c.comment());
+        assertNull(c.commentUrl());
+        assertNull(c.domain());
+        assertTrue(c.ports().isEmpty());
+        assertEquals(Long.MIN_VALUE, c.maxAge());
 
         assertTrue(it.hasNext());
         c = it.next();
-        assertEquals(1, c.getVersion());
-        assertEquals("session_id", c.getName());
-        assertEquals("1111", c.getValue());
-        assertEquals(".cracker.edu", c.getDomain());
-        assertNull(c.getPath());
-        assertNull(c.getComment());
-        assertNull(c.getCommentUrl());
-        assertTrue(c.getPorts().isEmpty());
-        assertEquals(Long.MIN_VALUE, c.getMaxAge());
+        assertEquals(1, c.version());
+        assertEquals("session_id", c.name());
+        assertEquals("1111", c.value());
+        assertEquals(".cracker.edu", c.domain());
+        assertNull(c.path());
+        assertNull(c.comment());
+        assertNull(c.commentUrl());
+        assertTrue(c.ports().isEmpty());
+        assertEquals(Long.MIN_VALUE, c.maxAge());
 
         assertFalse(it.hasNext());
     }
@@ -284,36 +284,36 @@ public class CookieDecoderTest {
         Cookie c;
 
         c = it.next();
-        assertEquals("a", c.getName());
-        assertEquals("", c.getValue());
+        assertEquals("a", c.name());
+        assertEquals("", c.value());
 
         c = it.next();
-        assertEquals("b", c.getName());
-        assertEquals("1", c.getValue());
+        assertEquals("b", c.name());
+        assertEquals("1", c.value());
 
         c = it.next();
-        assertEquals("c", c.getName());
-        assertEquals("\"1\"2\"", c.getValue());
+        assertEquals("c", c.name());
+        assertEquals("\"1\"2\"", c.value());
 
         c = it.next();
-        assertEquals("d", c.getName());
-        assertEquals("1\"2\"3", c.getValue());
+        assertEquals("d", c.name());
+        assertEquals("1\"2\"3", c.value());
 
         c = it.next();
-        assertEquals("e", c.getName());
-        assertEquals("\"\"", c.getValue());
+        assertEquals("e", c.name());
+        assertEquals("\"\"", c.value());
 
         c = it.next();
-        assertEquals("f", c.getName());
-        assertEquals("1\"\"2", c.getValue());
+        assertEquals("f", c.name());
+        assertEquals("1\"\"2", c.value());
 
         c = it.next();
-        assertEquals("g", c.getName());
-        assertEquals("\\", c.getValue());
+        assertEquals("g", c.name());
+        assertEquals("\\", c.value());
 
         c = it.next();
-        assertEquals("h", c.getName());
-        assertEquals("';,\\x", c.getValue());
+        assertEquals("h", c.name());
+        assertEquals("';,\\x", c.value());
 
         assertFalse(it.hasNext());
     }
@@ -332,30 +332,30 @@ public class CookieDecoderTest {
         Cookie c;
 
         c = it.next();
-        assertEquals("__utma", c.getName());
-        assertEquals("48461872.1094088325.1258140131.1258140131.1258140131.1", c.getValue());
+        assertEquals("__utma", c.name());
+        assertEquals("48461872.1094088325.1258140131.1258140131.1258140131.1", c.value());
 
         c = it.next();
-        assertEquals("__utmb", c.getName());
-        assertEquals("48461872.13.10.1258140131", c.getValue());
+        assertEquals("__utmb", c.name());
+        assertEquals("48461872.13.10.1258140131", c.value());
 
         c = it.next();
-        assertEquals("__utmc", c.getName());
-        assertEquals("48461872", c.getValue());
+        assertEquals("__utmc", c.name());
+        assertEquals("48461872", c.value());
 
         c = it.next();
-        assertEquals("__utmz", c.getName());
+        assertEquals("__utmz", c.name());
         assertEquals("48461872.1258140131.1.1.utmcsr=overstock.com|" +
                 "utmccn=(referral)|utmcmd=referral|utmcct=/Home-Garden/Furniture/Clearance,/clearance,/32/dept.html",
-                c.getValue());
+                c.value());
 
         c = it.next();
-        assertEquals("ARPT", c.getName());
-        assertEquals("LWUKQPSWRTUN04CKKJI", c.getValue());
+        assertEquals("ARPT", c.name());
+        assertEquals("LWUKQPSWRTUN04CKKJI", c.value());
 
         c = it.next();
-        assertEquals("kw-2E343B92-B097-442c-BFA5-BE371E0325A2", c.getName());
-        assertEquals("unfinished furniture", c.getValue());
+        assertEquals("kw-2E343B92-B097-442c-BFA5-BE371E0325A2", c.name());
+        assertEquals("unfinished furniture", c.value());
 
         assertFalse(it.hasNext());
     }
@@ -371,7 +371,7 @@ public class CookieDecoderTest {
         Set<Cookie> cookies = CookieDecoder.decode(source);
 
         Cookie c = cookies.iterator().next();
-        assertTrue(Math.abs(expectedMaxAge - c.getMaxAge()) < 2);
+        assertTrue(Math.abs(expectedMaxAge - c.maxAge()) < 2);
     }
 
     @Test
@@ -382,7 +382,7 @@ public class CookieDecoderTest {
         Set<Cookie> cookies = CookieDecoder.decode(source);
 
         Cookie c = cookies.iterator().next();
-        assertEquals("timeZoneName=(GMT+04:00) Moscow, St. Petersburg, Volgograd&promocode=&region=BE", c.getValue());
+        assertEquals("timeZoneName=(GMT+04:00) Moscow, St. Petersburg, Volgograd&promocode=&region=BE", c.value());
     }
 
     @Test
@@ -390,9 +390,9 @@ public class CookieDecoderTest {
         String src = "path=; expires=Mon, 01-Jan-1990 00:00:00 GMT; path=/; domain=.www.google.com";
         Set<Cookie> cookies = CookieDecoder.decode(src);
         Cookie c = cookies.iterator().next();
-        assertEquals("path", c.getName());
-        assertEquals("", c.getValue());
-        assertEquals("/", c.getPath());
+        assertEquals("path", c.name());
+        assertEquals("", c.value());
+        assertEquals("/", c.path());
     }
 
     @Test
@@ -400,8 +400,8 @@ public class CookieDecoderTest {
         String src = "HTTPOnly=";
         Set<Cookie> cookies = CookieDecoder.decode(src);
         Cookie c = cookies.iterator().next();
-        assertEquals("HTTPOnly", c.getName());
-        assertEquals("", c.getValue());
+        assertEquals("HTTPOnly", c.name());
+        assertEquals("", c.value());
     }
 
     @Test
@@ -410,11 +410,11 @@ public class CookieDecoderTest {
         Set<Cookie> cookies = CookieDecoder.decode(src);
         Iterator<Cookie> i = cookies.iterator();
         Cookie c = i.next();
-        assertEquals("A", c.getName());
-        assertEquals("v=1&lg=en-US,it-IT,it&intl=it&np=1", c.getValue());
+        assertEquals("A", c.name());
+        assertEquals("v=1&lg=en-US,it-IT,it&intl=it&np=1", c.value());
         c = i.next();
-        assertEquals("T", c.getName());
-        assertEquals("z=E", c.getValue());
+        assertEquals("T", c.name());
+        assertEquals("z=E", c.value());
     }
 
     @Test
@@ -468,7 +468,7 @@ public class CookieDecoderTest {
         Set<Cookie> cookies = CookieDecoder.decode("bh=\"" + longValue + "\";");
         assertEquals(1, cookies.size());
         Cookie c = cookies.iterator().next();
-        assertEquals("bh", c.getName());
-        assertEquals(longValue, c.getValue());
+        assertEquals("bh", c.name());
+        assertEquals(longValue, c.value());
     }
 }

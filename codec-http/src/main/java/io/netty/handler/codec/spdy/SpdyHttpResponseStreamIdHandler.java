@@ -60,7 +60,7 @@ public class SpdyHttpResponseStreamIdHandler extends
                 ids.add(((HttpMessage) msg).headers().getInt(Names.STREAM_ID));
             }
         } else if (msg instanceof SpdyRstStreamFrame) {
-            ids.remove(((SpdyRstStreamFrame) msg).getStreamId());
+            ids.remove(((SpdyRstStreamFrame) msg).streamId());
         }
 
         out.add(ReferenceCountUtil.retain(msg));

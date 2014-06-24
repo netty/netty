@@ -21,9 +21,15 @@ package io.netty.handler.codec.spdy;
 public interface SpdyWindowUpdateFrame extends SpdyFrame {
 
     /**
+     * @deprecated Use {@link #streamId()} instead.
+     */
+    @Deprecated
+    int getStreamId();
+
+    /**
      * Returns the Stream-ID of this frame.
      */
-    int getStreamId();
+    int streamId();
 
     /**
      * Sets the Stream-ID of this frame.  The Stream-ID cannot be negative.
@@ -31,9 +37,15 @@ public interface SpdyWindowUpdateFrame extends SpdyFrame {
     SpdyWindowUpdateFrame setStreamId(int streamID);
 
     /**
+     * @deprecated Use {@link #deltaWindowSize()} instead.
+     */
+    @Deprecated
+    int getDeltaWindowSize();
+
+    /**
      * Returns the Delta-Window-Size of this frame.
      */
-    int getDeltaWindowSize();
+    int deltaWindowSize();
 
     /**
      * Sets the Delta-Window-Size of this frame.

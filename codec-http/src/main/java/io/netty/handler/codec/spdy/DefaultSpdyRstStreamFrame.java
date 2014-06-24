@@ -59,7 +59,13 @@ public class DefaultSpdyRstStreamFrame extends DefaultSpdyStreamFrame
     }
 
     @Override
+    @Deprecated
     public SpdyStreamStatus getStatus() {
+        return status();
+    }
+
+    @Override
+    public SpdyStreamStatus status() {
         return status;
     }
 
@@ -75,10 +81,10 @@ public class DefaultSpdyRstStreamFrame extends DefaultSpdyStreamFrame
         buf.append(StringUtil.simpleClassName(this));
         buf.append(StringUtil.NEWLINE);
         buf.append("--> Stream-ID = ");
-        buf.append(getStreamId());
+        buf.append(streamId());
         buf.append(StringUtil.NEWLINE);
         buf.append("--> Status: ");
-        buf.append(getStatus().toString());
+        buf.append(status());
         return buf.toString();
     }
 }

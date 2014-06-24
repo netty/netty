@@ -80,27 +80,27 @@ public final class ClientCookieEncoder {
     }
 
     private static void encode(StringBuilder buf, Cookie c) {
-        if (c.getVersion() >= 1) {
+        if (c.version() >= 1) {
             add(buf, '$' + CookieHeaderNames.VERSION, 1);
         }
 
-        add(buf, c.getName(), c.getValue());
+        add(buf, c.name(), c.value());
 
-        if (c.getPath() != null) {
-            add(buf, '$' + CookieHeaderNames.PATH, c.getPath());
+        if (c.path() != null) {
+            add(buf, '$' + CookieHeaderNames.PATH, c.path());
         }
 
-        if (c.getDomain() != null) {
-            add(buf, '$' + CookieHeaderNames.DOMAIN, c.getDomain());
+        if (c.domain() != null) {
+            add(buf, '$' + CookieHeaderNames.DOMAIN, c.domain());
         }
 
-        if (c.getVersion() >= 1) {
-            if (!c.getPorts().isEmpty()) {
+        if (c.version() >= 1) {
+            if (!c.ports().isEmpty()) {
                 buf.append('$');
                 buf.append(CookieHeaderNames.PORT);
                 buf.append((char) HttpConstants.EQUALS);
                 buf.append((char) HttpConstants.DOUBLE_QUOTE);
-                for (int port: c.getPorts()) {
+                for (int port: c.ports()) {
                     buf.append(port);
                     buf.append((char) HttpConstants.COMMA);
                 }
