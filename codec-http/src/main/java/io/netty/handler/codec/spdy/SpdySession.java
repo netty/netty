@@ -37,7 +37,7 @@ final class SpdySession {
     private final AtomicInteger sendWindowSize;
     private final AtomicInteger receiveWindowSize;
 
-    public SpdySession(int sendWindowSize, int receiveWindowSize) {
+    SpdySession(int sendWindowSize, int receiveWindowSize) {
         this.sendWindowSize = new AtomicInteger(sendWindowSize);
         this.receiveWindowSize = new AtomicInteger(receiveWindowSize);
     }

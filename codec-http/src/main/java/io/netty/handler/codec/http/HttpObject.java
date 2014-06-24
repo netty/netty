@@ -18,10 +18,17 @@ package io.netty.handler.codec.http;
 import io.netty.handler.codec.DecoderResult;
 
 public interface HttpObject {
+
+    /**
+     * @deprecated Use {@link #getDecoderResult()} instead.
+     */
+    @Deprecated
+    DecoderResult getDecoderResult();
+
     /**
      * Returns the result of decoding this message.
      */
-    DecoderResult getDecoderResult();
+    DecoderResult decoderResult();
 
     /**
      * Updates the result of decoding this message. This method is supposed to be invoked by {@link HttpObjectDecoder}.

@@ -229,15 +229,15 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
         // Unfold the first line of the message into name/value pairs
         if (httpMessage instanceof FullHttpRequest) {
             HttpRequest httpRequest = (HttpRequest) httpMessage;
-            SpdyHeaders.setMethod(spdyVersion, spdySynStreamFrame, httpRequest.getMethod());
-            SpdyHeaders.setUrl(spdyVersion, spdySynStreamFrame, httpRequest.getUri());
-            SpdyHeaders.setVersion(spdyVersion, spdySynStreamFrame, httpMessage.getProtocolVersion());
+            SpdyHeaders.setMethod(spdyVersion, spdySynStreamFrame, httpRequest.method());
+            SpdyHeaders.setUrl(spdyVersion, spdySynStreamFrame, httpRequest.uri());
+            SpdyHeaders.setVersion(spdyVersion, spdySynStreamFrame, httpMessage.protocolVersion());
         }
         if (httpMessage instanceof HttpResponse) {
             HttpResponse httpResponse = (HttpResponse) httpMessage;
-            SpdyHeaders.setStatus(spdyVersion, spdySynStreamFrame, httpResponse.getStatus());
+            SpdyHeaders.setStatus(spdyVersion, spdySynStreamFrame, httpResponse.status());
             SpdyHeaders.setUrl(spdyVersion, spdySynStreamFrame, URL);
-            SpdyHeaders.setVersion(spdyVersion, spdySynStreamFrame, httpMessage.getProtocolVersion());
+            SpdyHeaders.setVersion(spdyVersion, spdySynStreamFrame, httpMessage.protocolVersion());
             spdySynStreamFrame.setUnidirectional(true);
         }
 
@@ -258,7 +258,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
         for (Map.Entry<String, String> entry: httpMessage.headers()) {
             spdySynStreamFrame.headers().add(entry.getKey(), entry.getValue());
         }
-        currentStreamId = spdySynStreamFrame.getStreamId();
+        currentStreamId = spdySynStreamFrame.streamId();
         spdySynStreamFrame.setLast(isLast(httpMessage));
 
         return spdySynStreamFrame;
@@ -280,8 +280,8 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
         SpdySynReplyFrame spdySynReplyFrame = new DefaultSpdySynReplyFrame(streamID);
 
         // Unfold the first line of the response into name/value pairs
-        SpdyHeaders.setStatus(spdyVersion, spdySynReplyFrame, httpResponse.getStatus());
-        SpdyHeaders.setVersion(spdyVersion, spdySynReplyFrame, httpResponse.getProtocolVersion());
+        SpdyHeaders.setStatus(spdyVersion, spdySynReplyFrame, httpResponse.status());
+        SpdyHeaders.setVersion(spdyVersion, spdySynReplyFrame, httpResponse.protocolVersion());
 
         // Transfer the remaining HTTP headers
         for (Map.Entry<String, String> entry: httpResponse.headers()) {

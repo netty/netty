@@ -60,8 +60,14 @@ final class ComposedLastHttpContent implements LastHttpContent {
     }
 
     @Override
-    public DecoderResult getDecoderResult() {
+    public DecoderResult decoderResult() {
         return result;
+    }
+
+    @Override
+    @Deprecated
+    public DecoderResult getDecoderResult() {
+        return decoderResult();
     }
 
     @Override

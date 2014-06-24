@@ -331,7 +331,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
 
                             // Check text for UTF8 correctness
                             if (frameOpcode == OPCODE_TEXT ||
-                                    (utf8Validator != null && utf8Validator.isChecking())) {
+                                    utf8Validator != null && utf8Validator.isChecking()) {
                                 // Check UTF-8 correctness for this payload
                                 checkUTF8String(ctx, framePayload);
 

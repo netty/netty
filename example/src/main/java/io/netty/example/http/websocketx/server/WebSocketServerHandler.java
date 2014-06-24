@@ -70,13 +70,13 @@ public class WebSocketServerHandler extends SimpleChannelInboundHandler<Object> 
         }
 
         // Allow only GET methods.
-        if (req.getMethod() != GET) {
+        if (req.method() != GET) {
             sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, FORBIDDEN));
             return;
         }
 
         // Send the demo page and favicon.ico
-        if ("/".equals(req.getUri())) {
+        if ("/".equals(req.uri())) {
             ByteBuf content = WebSocketServerIndexPage.getContent(getWebSocketLocation(req));
             FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, OK, content);
 
@@ -86,7 +86,7 @@ public class WebSocketServerHandler extends SimpleChannelInboundHandler<Object> 
             sendHttpResponse(ctx, req, res);
             return;
         }
-        if ("/favicon.ico".equals(req.getUri())) {
+        if ("/favicon.ico".equals(req.uri())) {
             FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, NOT_FOUND);
             sendHttpResponse(ctx, req, res);
             return;
@@ -128,8 +128,8 @@ public class WebSocketServerHandler extends SimpleChannelInboundHandler<Object> 
     private static void sendHttpResponse(
             ChannelHandlerContext ctx, FullHttpRequest req, FullHttpResponse res) {
         // Generate an error page if response getStatus code is not OK (200).
-        if (res.getStatus().code() != 200) {
-            ByteBuf buf = Unpooled.copiedBuffer(res.getStatus().toString(), CharsetUtil.UTF_8);
+        if (res.status().code() != 200) {
+            ByteBuf buf = Unpooled.copiedBuffer(res.status().toString(), CharsetUtil.UTF_8);
             res.content().writeBytes(buf);
             buf.release();
             setContentLength(res, res.content().readableBytes());
@@ -137,7 +137,7 @@ public class WebSocketServerHandler extends SimpleChannelInboundHandler<Object> 
 
         // Send the response and close the connection if necessary.
         ChannelFuture f = ctx.channel().writeAndFlush(res);
-        if (!isKeepAlive(req) || res.getStatus().code() != 200) {
+        if (!isKeepAlive(req) || res.status().code() != 200) {
             f.addListener(ChannelFutureListener.CLOSE);
         }
     }

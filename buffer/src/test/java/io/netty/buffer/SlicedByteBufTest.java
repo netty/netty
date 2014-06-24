@@ -15,13 +15,11 @@
  */
 package io.netty.buffer;
 
-import static io.netty.buffer.Unpooled.LITTLE_ENDIAN;
-import static io.netty.util.ReferenceCountUtil.releaseLater;
-import static org.junit.Assert.*;
+import org.junit.Test;
 
 import java.util.Random;
 
-import org.junit.Test;
+import static org.junit.Assert.*;
 
 /**
  * Tests sliced channel buffers

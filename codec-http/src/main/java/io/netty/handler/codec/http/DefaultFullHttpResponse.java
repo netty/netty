@@ -99,7 +99,7 @@ public class DefaultFullHttpResponse extends DefaultHttpResponse implements Full
     @Override
     public FullHttpResponse copy() {
         DefaultFullHttpResponse copy = new DefaultFullHttpResponse(
-                getProtocolVersion(), getStatus(), content().copy(), validateHeaders);
+                protocolVersion(), status(), content().copy(), validateHeaders);
         copy.headers().set(headers());
         copy.trailingHeaders().set(trailingHeaders());
         return copy;
@@ -107,7 +107,7 @@ public class DefaultFullHttpResponse extends DefaultHttpResponse implements Full
 
     @Override
     public FullHttpResponse duplicate() {
-        DefaultFullHttpResponse duplicate = new DefaultFullHttpResponse(getProtocolVersion(), getStatus(),
+        DefaultFullHttpResponse duplicate = new DefaultFullHttpResponse(protocolVersion(), status(),
                 content().duplicate(), validateHeaders);
         duplicate.headers().set(headers());
         duplicate.trailingHeaders().set(trailingHeaders());

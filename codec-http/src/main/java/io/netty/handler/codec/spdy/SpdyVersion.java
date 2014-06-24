@@ -21,7 +21,7 @@ public enum SpdyVersion {
     private final int version;
     private final int minorVersion;
 
-    private SpdyVersion(int version, int minorVersion) {
+    SpdyVersion(int version, int minorVersion) {
         this.version = version;
         this.minorVersion = minorVersion;
     }

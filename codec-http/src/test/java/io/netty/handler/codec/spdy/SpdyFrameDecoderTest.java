@@ -371,7 +371,7 @@ public class SpdyFrameDecoderTest {
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(streamId | 0x80000000); // should ignore reserved bit
         buf.writeInt(associatedToStreamId | 0x80000000); // should ignore reserved bit
-        buf.writeByte((priority << 5) | 0x1F); // should ignore reserved bits
+        buf.writeByte(priority << 5 | 0x1F); // should ignore reserved bits
         buf.writeByte(0xFF); // should ignore reserved bits
 
         delegate.readSynStreamFrame(streamId, associatedToStreamId, priority, false, false);

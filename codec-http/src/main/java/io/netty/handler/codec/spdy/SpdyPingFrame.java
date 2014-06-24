@@ -21,9 +21,15 @@ package io.netty.handler.codec.spdy;
 public interface SpdyPingFrame extends SpdyFrame {
 
     /**
+     * @deprecated Use {@link #id()} instead.
+     */
+    @Deprecated
+    int getId();
+
+    /**
      * Returns the ID of this frame.
      */
-    int getId();
+    int id();
 
     /**
      * Sets the ID of this frame.
