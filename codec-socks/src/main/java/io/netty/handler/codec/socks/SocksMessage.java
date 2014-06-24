@@ -55,7 +55,8 @@ public abstract class SocksMessage {
     }
 
     /**
-     * Encode socks message into its byte representation and write it into byteBuf
+     * @deprecated Do not use; this method was intended for an internal use only.
      */
+    @Deprecated
     public abstract void encodeAsByteBuf(ByteBuf byteBuf);
 }
