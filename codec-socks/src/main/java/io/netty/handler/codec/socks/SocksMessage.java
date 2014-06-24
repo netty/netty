@@ -57,5 +57,5 @@ public abstract class SocksMessage {
     /**
      * Encode socks message into its byte representation and write it into byteBuf
      */
-    public abstract void encodeAsByteBuf(ByteBuf byteBuf);
+    abstract void encodeAsByteBuf(ByteBuf byteBuf);
 }

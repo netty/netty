@@ -109,7 +109,7 @@ public final class SocksCmdRequest extends SocksRequest {
     }
 
     @Override
-    public void encodeAsByteBuf(ByteBuf byteBuf) {
+    void encodeAsByteBuf(ByteBuf byteBuf) {
         byteBuf.writeByte(protocolVersion().byteValue());
         byteBuf.writeByte(cmdType.byteValue());
         byteBuf.writeByte(0x00);

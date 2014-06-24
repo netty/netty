@@ -144,7 +144,7 @@ public final class SocksCmdResponse extends SocksResponse {
     }
 
     @Override
-    public void encodeAsByteBuf(ByteBuf byteBuf) {
+    void encodeAsByteBuf(ByteBuf byteBuf) {
         byteBuf.writeByte(protocolVersion().byteValue());
         byteBuf.writeByte(cmdStatus.byteValue());
         byteBuf.writeByte(0x00);
