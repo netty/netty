@@ -121,12 +121,12 @@ public class HttpObjectAggregator
         FullHttpMessage ret;
         if (start instanceof HttpRequest) {
             HttpRequest req = (HttpRequest) start;
-            ret = new DefaultFullHttpRequest(req.getProtocolVersion(),
-                    req.getMethod(), req.getUri(), content);
+            ret = new DefaultFullHttpRequest(req.protocolVersion(),
+                    req.method(), req.uri(), content);
         } else  if (start instanceof HttpResponse) {
             HttpResponse res = (HttpResponse) start;
             ret = new DefaultFullHttpResponse(
-                    res.getProtocolVersion(), res.getStatus(), content);
+                    res.protocolVersion(), res.status(), content);
         } else {
             throw new Error();
         }

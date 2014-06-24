@@ -39,11 +39,11 @@ public class RtspRequestEncoder extends RtspObjectEncoder<HttpRequest> {
     @Override
     protected void encodeInitialLine(ByteBuf buf, HttpRequest request)
             throws Exception {
-        HttpHeaders.encodeAscii(request.getMethod().toString(), buf);
+        HttpHeaders.encodeAscii(request.method().toString(), buf);
         buf.writeByte(SP);
-        buf.writeBytes(request.getUri().getBytes(CharsetUtil.UTF_8));
+        buf.writeBytes(request.uri().getBytes(CharsetUtil.UTF_8));
         buf.writeByte(SP);
-        HttpHeaders.encodeAscii(request.getProtocolVersion().toString(), buf);
+        HttpHeaders.encodeAscii(request.protocolVersion().toString(), buf);
         buf.writeBytes(CRLF);
     }
 }

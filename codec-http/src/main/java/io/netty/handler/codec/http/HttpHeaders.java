@@ -571,7 +571,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
             return false;
         }
 
-        if (message.getProtocolVersion().isKeepAliveDefault()) {
+        if (message.protocolVersion().isKeepAliveDefault()) {
             return !AsciiString.equalsIgnoreCase(CLOSE_ENTITY, connection);
         } else {
             return AsciiString.equalsIgnoreCase(KEEP_ALIVE_ENTITY, connection);
@@ -599,7 +599,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      */
     public static void setKeepAlive(HttpMessage message, boolean keepAlive) {
         HttpHeaders h = message.headers();
-        if (message.getProtocolVersion().isKeepAliveDefault()) {
+        if (message.protocolVersion().isKeepAliveDefault()) {
             if (keepAlive) {
                 h.remove(CONNECTION_ENTITY);
             } else {
@@ -1011,14 +1011,14 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
         HttpHeaders h = message.headers();
         if (message instanceof HttpRequest) {
             HttpRequest req = (HttpRequest) message;
-            if (HttpMethod.GET.equals(req.getMethod()) &&
+            if (HttpMethod.GET.equals(req.method()) &&
                 h.contains(SEC_WEBSOCKET_KEY1_ENTITY) &&
                 h.contains(SEC_WEBSOCKET_KEY2_ENTITY)) {
                 return 8;
             }
         } else if (message instanceof HttpResponse) {
             HttpResponse res = (HttpResponse) message;
-            if (res.getStatus().code() == 101 &&
+            if (res.status().code() == 101 &&
                 h.contains(SEC_WEBSOCKET_ORIGIN_ENTITY) &&
                 h.contains(SEC_WEBSOCKET_LOCATION_ENTITY)) {
                 return 16;
@@ -1106,7 +1106,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
         }
 
         // It works only on HTTP/1.1 or later.
-        if (message.getProtocolVersion().compareTo(HttpVersion.HTTP_1_1) < 0) {
+        if (message.protocolVersion().compareTo(HttpVersion.HTTP_1_1) < 0) {
             return false;
         }
 

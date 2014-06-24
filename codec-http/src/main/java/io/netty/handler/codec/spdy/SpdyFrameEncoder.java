@@ -97,7 +97,7 @@ public class SpdyFrameEncoder {
     }
 
     public ByteBuf encodeSettingsFrame(ByteBufAllocator allocator, SpdySettingsFrame spdySettingsFrame) {
-        Set<Integer> ids = spdySettingsFrame.getIds();
+        Set<Integer> ids = spdySettingsFrame.ids();
         int numSettings = ids.size();
 
         byte flags = spdySettingsFrame.clearPreviouslyPersistedSettings() ?

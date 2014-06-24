@@ -96,7 +96,7 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
     public void channelRead0(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
         if (msg instanceof HttpRequest) {
             HttpRequest request = this.request = (HttpRequest) msg;
-            URI uri = new URI(request.getUri());
+            URI uri = new URI(request.uri());
             if (!uri.getPath().startsWith("/form")) {
                 // Write Menu
                 writeMenu(ctx);
@@ -106,9 +106,9 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
             responseContent.append("WELCOME TO THE WILD WILD WEB SERVER\r\n");
             responseContent.append("===================================\r\n");
 
-            responseContent.append("VERSION: " + request.getProtocolVersion().text() + "\r\n");
+            responseContent.append("VERSION: " + request.protocolVersion().text() + "\r\n");
 
-            responseContent.append("REQUEST_URI: " + request.getUri() + "\r\n\r\n");
+            responseContent.append("REQUEST_URI: " + request.uri() + "\r\n\r\n");
             responseContent.append("\r\n\r\n");
 
             // new getMethod
@@ -130,7 +130,7 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
             }
             responseContent.append("\r\n\r\n");
 
-            QueryStringDecoder decoderQuery = new QueryStringDecoder(request.getUri());
+            QueryStringDecoder decoderQuery = new QueryStringDecoder(request.uri());
             Map<String, List<String>> uriAttributes = decoderQuery.parameters();
             for (Entry<String, List<String>> attr: uriAttributes.entrySet()) {
                 for (String attrVal: attr.getValue()) {
@@ -140,7 +140,7 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
             responseContent.append("\r\n\r\n");
 
             // if GET Method: should not try to create a HttpPostRequestDecoder
-            if (request.getMethod().equals(HttpMethod.GET)) {
+            if (request.method().equals(HttpMethod.GET)) {
                 // GET Method: should not try to create a HttpPostRequestDecoder
                 // So stop here
                 responseContent.append("\r\n\r\nEND OF GET CONTENT\r\n");
@@ -285,7 +285,7 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
 
         // Decide whether to close the connection or not.
         boolean close = request.headers().contains(CONNECTION, HttpHeaders.Values.CLOSE, true)
-                || request.getProtocolVersion().equals(HttpVersion.HTTP_1_0)
+                || request.protocolVersion().equals(HttpVersion.HTTP_1_0)
                 && !request.headers().contains(CONNECTION, HttpHeaders.Values.KEEP_ALIVE, true);
 
         // Build the response object.

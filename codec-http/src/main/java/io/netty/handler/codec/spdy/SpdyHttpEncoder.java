@@ -234,15 +234,15 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
         SpdyHeaders frameHeaders = spdySynStreamFrame.headers();
         if (httpMessage instanceof FullHttpRequest) {
             HttpRequest httpRequest = (HttpRequest) httpMessage;
-            frameHeaders.set(METHOD, httpRequest.getMethod());
-            frameHeaders.set(PATH, httpRequest.getUri());
-            frameHeaders.set(VERSION, httpMessage.getProtocolVersion());
+            frameHeaders.set(METHOD, httpRequest.method());
+            frameHeaders.set(PATH, httpRequest.uri());
+            frameHeaders.set(VERSION, httpMessage.protocolVersion());
         }
         if (httpMessage instanceof HttpResponse) {
             HttpResponse httpResponse = (HttpResponse) httpMessage;
-            frameHeaders.set(STATUS, httpResponse.getStatus());
+            frameHeaders.set(STATUS, httpResponse.status());
             frameHeaders.set(PATH, URL);
-            frameHeaders.set(VERSION, httpMessage.getProtocolVersion());
+            frameHeaders.set(VERSION, httpMessage.protocolVersion());
             spdySynStreamFrame.setUnidirectional(true);
         }
 
@@ -263,7 +263,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
         for (Map.Entry<String, String> entry: httpHeaders) {
             frameHeaders.add(entry.getKey(), entry.getValue());
         }
-        currentStreamId = spdySynStreamFrame.getStreamId();
+        currentStreamId = spdySynStreamFrame.streamId();
         spdySynStreamFrame.setLast(isLast(httpMessage));
 
         return spdySynStreamFrame;
@@ -286,8 +286,8 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
         SpdySynReplyFrame spdySynReplyFrame = new DefaultSpdySynReplyFrame(streamID);
         SpdyHeaders frameHeaders = spdySynReplyFrame.headers();
         // Unfold the first line of the response into name/value pairs
-        frameHeaders.set(STATUS, httpResponse.getStatus());
-        frameHeaders.set(VERSION, httpResponse.getProtocolVersion());
+        frameHeaders.set(STATUS, httpResponse.status());
+        frameHeaders.set(VERSION, httpResponse.protocolVersion());
 
         // Transfer the remaining HTTP headers
         for (Map.Entry<String, String> entry: httpHeaders) {

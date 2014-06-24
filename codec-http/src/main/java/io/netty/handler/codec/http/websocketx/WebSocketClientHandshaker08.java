@@ -170,8 +170,8 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
         final HttpResponseStatus status = HttpResponseStatus.SWITCHING_PROTOCOLS;
         final HttpHeaders headers = response.headers();
 
-        if (!response.getStatus().equals(status)) {
-            throw new WebSocketHandshakeException("Invalid handshake response getStatus: " + response.getStatus());
+        if (!response.status().equals(status)) {
+            throw new WebSocketHandshakeException("Invalid handshake response getStatus: " + response.status());
         }
 
         String upgrade = headers.get(Names.UPGRADE);

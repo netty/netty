@@ -51,7 +51,7 @@ public class SpdyHeaderBlockRawDecoder extends SpdyHeaderBlockDecoder {
             throw new NullPointerException("spdyVersion");
         }
         this.maxHeaderSize = maxHeaderSize;
-        this.state = State.READ_NUM_HEADERS;
+        state = State.READ_NUM_HEADERS;
     }
 
     private static int readLengthField(ByteBuf buffer) {

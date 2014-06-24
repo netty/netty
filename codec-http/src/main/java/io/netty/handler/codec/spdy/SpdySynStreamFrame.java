@@ -21,20 +21,38 @@ package io.netty.handler.codec.spdy;
 public interface SpdySynStreamFrame extends SpdyHeadersFrame {
 
     /**
+     * @deprecated Use {@link #associatedStreamId()} instead.
+     */
+    @Deprecated
+    int getAssociatedToStreamId();
+
+    /**
      * Returns the Associated-To-Stream-ID of this frame.
      */
-    int getAssociatedToStreamId();
+    int associatedStreamId();
+
+    /**
+     * @deprecated Use {@link #setAssociatedStreamId(int)} instead.
+     */
+    @Deprecated
+    SpdySynStreamFrame setAssociatedToStreamId(int associatedToStreamId);
 
     /**
      * Sets the Associated-To-Stream-ID of this frame.
      * The Associated-To-Stream-ID cannot be negative.
      */
-    SpdySynStreamFrame setAssociatedToStreamId(int associatedToStreamId);
+    SpdySynStreamFrame setAssociatedStreamId(int associatedStreamId);
+
+    /**
+     * Use {@link #priority()} instead.
+     */
+    @Deprecated
+    byte getPriority();
 
     /**
      * Returns the priority of the stream.
      */
-    byte getPriority();
+    byte priority();
 
     /**
      * Sets the priority of the stream.
