@@ -57,19 +57,19 @@ public class HttpContentEncoderTest {
         assertEncodedResponse(ch);
 
         HttpContent chunk;
-        chunk = (HttpContent) ch.readOutbound();
+        chunk = ch.readOutbound();
         assertThat(chunk.content().toString(CharsetUtil.US_ASCII), is("3"));
         chunk.release();
 
-        chunk = (HttpContent) ch.readOutbound();
+        chunk = ch.readOutbound();
         assertThat(chunk.content().toString(CharsetUtil.US_ASCII), is("2"));
         chunk.release();
 
-        chunk = (HttpContent) ch.readOutbound();
+        chunk = ch.readOutbound();
         assertThat(chunk.content().toString(CharsetUtil.US_ASCII), is("1"));
         chunk.release();
 
-        chunk = (HttpContent) ch.readOutbound();
+        chunk = ch.readOutbound();
         assertThat(chunk.content().isReadable(), is(false));
         assertThat(chunk, is(instanceOf(LastHttpContent.class)));
         chunk.release();
@@ -93,20 +93,20 @@ public class HttpContentEncoderTest {
         ch.writeOutbound(new DefaultLastHttpContent(Unpooled.wrappedBuffer(new byte[1])));
 
         HttpContent chunk;
-        chunk = (HttpContent) ch.readOutbound();
+        chunk = ch.readOutbound();
         assertThat(chunk.content().toString(CharsetUtil.US_ASCII), is("3"));
         chunk.release();
 
-        chunk = (HttpContent) ch.readOutbound();
+        chunk = ch.readOutbound();
         assertThat(chunk.content().toString(CharsetUtil.US_ASCII), is("2"));
         chunk.release();
 
-        chunk = (HttpContent) ch.readOutbound();
+        chunk = ch.readOutbound();
         assertThat(chunk.content().toString(CharsetUtil.US_ASCII), is("1"));
         assertThat(chunk, is(instanceOf(HttpContent.class)));
         chunk.release();
 
-        chunk = (HttpContent) ch.readOutbound();
+        chunk = ch.readOutbound();
         assertThat(chunk.content().isReadable(), is(false));
         assertThat(chunk, is(instanceOf(LastHttpContent.class)));
         chunk.release();
@@ -132,20 +132,20 @@ public class HttpContentEncoderTest {
         ch.writeOutbound(content);
 
         HttpContent chunk;
-        chunk = (HttpContent) ch.readOutbound();
+        chunk = ch.readOutbound();
         assertThat(chunk.content().toString(CharsetUtil.US_ASCII), is("3"));
         chunk.release();
 
-        chunk = (HttpContent) ch.readOutbound();
+        chunk = ch.readOutbound();
         assertThat(chunk.content().toString(CharsetUtil.US_ASCII), is("2"));
         chunk.release();
 
-        chunk = (HttpContent) ch.readOutbound();
+        chunk = ch.readOutbound();
         assertThat(chunk.content().toString(CharsetUtil.US_ASCII), is("1"));
         assertThat(chunk, is(instanceOf(HttpContent.class)));
         chunk.release();
 
-        chunk = (HttpContent) ch.readOutbound();
+        chunk = ch.readOutbound();
         assertThat(chunk.content().isReadable(), is(false));
         assertThat(chunk, is(instanceOf(LastHttpContent.class)));
         assertEquals("Netty", ((LastHttpContent) chunk).trailingHeaders().get("X-Test"));
@@ -165,12 +165,12 @@ public class HttpContentEncoderTest {
         ch.writeOutbound(res);
 
         assertEncodedResponse(ch);
-        HttpContent c = (HttpContent) ch.readOutbound();
+        HttpContent c = ch.readOutbound();
         assertThat(c.content().readableBytes(), is(2));
         assertThat(c.content().toString(CharsetUtil.US_ASCII), is("42"));
         c.release();
 
-        LastHttpContent last = (LastHttpContent) ch.readOutbound();
+        LastHttpContent last = ch.readOutbound();
         assertThat(last.content().readableBytes(), is(0));
         last.release();
 
@@ -190,12 +190,12 @@ public class HttpContentEncoderTest {
         assertEncodedResponse(ch);
 
         ch.writeOutbound(LastHttpContent.EMPTY_LAST_CONTENT);
-        HttpContent chunk = (HttpContent) ch.readOutbound();
+        HttpContent chunk = ch.readOutbound();
         assertThat(chunk.content().toString(CharsetUtil.US_ASCII), is("0"));
         assertThat(chunk, is(instanceOf(HttpContent.class)));
         chunk.release();
 
-        chunk = (HttpContent) ch.readOutbound();
+        chunk = ch.readOutbound();
         assertThat(chunk.content().isReadable(), is(false));
         assertThat(chunk, is(instanceOf(LastHttpContent.class)));
         chunk.release();

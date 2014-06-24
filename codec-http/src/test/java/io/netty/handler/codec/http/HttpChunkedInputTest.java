@@ -98,10 +98,9 @@ public class HttpChunkedInputTest {
             HttpContent httpContent = ch.readOutbound();
             if (httpContent == null) {
                 break;
-            } else {
-                if (lastHttpContent != null) {
-                    assertTrue("Chunk must be DefaultHttpContent", lastHttpContent instanceof DefaultHttpContent);
-                }
+            }
+            if (lastHttpContent != null) {
+                assertTrue("Chunk must be DefaultHttpContent", lastHttpContent instanceof DefaultHttpContent);
             }
 
             ByteBuf buffer = httpContent.content();

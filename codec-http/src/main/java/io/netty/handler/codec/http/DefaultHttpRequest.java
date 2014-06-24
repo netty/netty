@@ -57,12 +57,24 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
     }
 
     @Override
+    @Deprecated
     public HttpMethod getMethod() {
+        return method();
+    }
+
+    @Override
+    public HttpMethod method() {
         return method;
     }
 
     @Override
+    @Deprecated
     public String getUri() {
+        return uri();
+    }
+
+    @Override
+    public String uri() {
         return uri;
     }
 
@@ -98,11 +110,11 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
         buf.append(decoderResult());
         buf.append(')');
         buf.append(StringUtil.NEWLINE);
-        buf.append(getMethod());
+        buf.append(method());
         buf.append(' ');
-        buf.append(getUri());
+        buf.append(uri());
         buf.append(' ');
-        buf.append(getProtocolVersion().text());
+        buf.append(protocolVersion().text());
         buf.append(StringUtil.NEWLINE);
         appendHeaders(buf);
 

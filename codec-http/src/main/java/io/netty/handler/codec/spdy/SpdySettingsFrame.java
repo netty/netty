@@ -33,10 +33,16 @@ public interface SpdySettingsFrame extends SpdyFrame {
     int SETTINGS_CLIENT_CERTIFICATE_VECTOR_SIZE = 8;
 
     /**
+     * @deprecated Use {@link #ids()} instead.
+     */
+    @Deprecated
+    Set<Integer> getIds();
+
+    /**
      * Returns a {@code Set} of the setting IDs.
      * The set's iterator will return the IDs in ascending order.
      */
-    Set<Integer> getIds();
+    Set<Integer> ids();
 
     /**
      * Returns {@code true} if the setting ID has a value.

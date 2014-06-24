@@ -24,7 +24,7 @@ import io.netty.handler.codec.http.FullHttpResponse;
 class WebSocketClientProtocolHandshakeHandler extends ChannelInboundHandlerAdapter {
     private final WebSocketClientHandshaker handshaker;
 
-    public WebSocketClientProtocolHandshakeHandler(WebSocketClientHandshaker handshaker) {
+    WebSocketClientProtocolHandshakeHandler(WebSocketClientHandshaker handshaker) {
         this.handshaker = handshaker;
     }
 
