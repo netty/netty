@@ -34,14 +34,6 @@ public enum SocksCmdStatus {
         this.b = b;
     }
 
-    /**
-     * @deprecated Use {@link #valueOf(byte)} instead.
-     */
-    @Deprecated
-    public static SocksCmdStatus fromByte(byte b) {
-        return valueOf(b);
-    }
-
     public static SocksCmdStatus valueOf(byte b) {
         for (SocksCmdStatus code : values()) {
             if (code.b == b) {

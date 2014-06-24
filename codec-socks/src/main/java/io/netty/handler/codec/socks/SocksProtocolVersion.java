@@ -27,14 +27,6 @@ public enum SocksProtocolVersion {
         this.b = b;
     }
 
-    /**
-     * @deprecated Use {@link #valueOf(byte)} instead.
-     */
-    @Deprecated
-    public static SocksProtocolVersion fromByte(byte b) {
-        return valueOf(b);
-    }
-
     public static SocksProtocolVersion valueOf(byte b) {
         for (SocksProtocolVersion code : values()) {
             if (code.b == b) {
