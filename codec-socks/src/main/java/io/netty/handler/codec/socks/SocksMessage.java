@@ -27,13 +27,17 @@ import io.netty.buffer.ByteBuf;
 
 public abstract class SocksMessage {
     private final SocksMessageType type;
-    private final SocksProtocolVersion protocolVersion = SocksProtocolVersion.SOCKS5;
+    private final SocksProtocolVersion protocolVersion;
 
-    protected SocksMessage(SocksMessageType type) {
+    protected SocksMessage(SocksProtocolVersion protocolVersion, SocksMessageType type) {
         if (type == null) {
             throw new NullPointerException("type");
         }
+        if (protocolVersion == null) {
+            throw new NullPointerException("protocolVersion");
+        }
         this.type = type;
+        this.protocolVersion = protocolVersion;
     }
 
     /**

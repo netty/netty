@@ -16,16 +16,17 @@
 package io.netty.handler.codec.socks;
 
 import org.junit.Test;
-import static org.junit.Assert.assertTrue;
 
-public class SocksAuthResponseTest {
+public class SocksAuthResponseTest extends AbstractSocksMessageTest {
     @Test
     public void testConstructorParamsAreNotNull() {
         try {
             new SocksAuthResponse(null);
         } catch (Exception e) {
-            assertTrue(e instanceof NullPointerException);
+            assertNullPointerException(e);
         }
+
+        assertExceptionCounter(1);
     }
 
 }

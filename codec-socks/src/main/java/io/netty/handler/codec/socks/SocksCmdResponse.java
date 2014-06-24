@@ -15,19 +15,26 @@
  */
 package io.netty.handler.codec.socks;
 
+import java.net.IDN;
 import io.netty.buffer.ByteBuf;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
+import static io.netty.handler.codec.socks.SocksCmdStatus.FAILURE4;
+import static io.netty.handler.codec.socks.SocksCmdStatus.FAILURE4_IDENTD_CONFIRM;
+import static io.netty.handler.codec.socks.SocksCmdStatus.FAILURE4_IDENTD_NOT_RUN;
+import static io.netty.handler.codec.socks.SocksCmdStatus.SUCCESS4;
+import static io.netty.handler.codec.socks.SocksCmdStatus.UNASSIGNED;
 
-import java.net.IDN;
 
 /**
  * A socks cmd response.
+ * For backward compatibility was created 2 different constructor: one for Socks4 and another one for Socks5
  *
  * @see SocksCmdRequest
  * @see SocksCmdResponseDecoder
  */
 public final class SocksCmdResponse extends SocksResponse {
+    static final byte NULL = 0x00;
     private final SocksCmdStatus cmdStatus;
 
     private final SocksAddressType addressType;
@@ -42,25 +49,52 @@ public final class SocksCmdResponse extends SocksResponse {
             0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00};
 
+    /**
+     * Construct new response for Socks4 protocol.
+     *
+     * @param cmdStatus status of the response
+     * @throws java.lang.NullPointerException in case cmdStatus are missing
+     */
+    public SocksCmdResponse(SocksCmdStatus cmdStatus) {
+        super(SocksProtocolVersion.SOCKS4, SocksResponseType.CMD);
+        if (cmdStatus == null) {
+            throw new NullPointerException("cmdStatus");
+        }
+        if (!SUCCESS4.equals(cmdStatus) && !FAILURE4.equals(cmdStatus) && !FAILURE4_IDENTD_CONFIRM.equals(cmdStatus)
+                && !FAILURE4_IDENTD_NOT_RUN.equals(cmdStatus) && !UNASSIGNED.equals(cmdStatus)) {
+            throw new IllegalArgumentException("Incorrect cmdStatus for Socks4: " + cmdStatus);
+        }
+        this.cmdStatus = cmdStatus;
+        this.addressType = null;
+        this.host = null;
+        this.port = 0;
+    }
+
+    /**
+     * Socks5
+     *
+     * @param cmdStatus   status of the response
+     * @param addressType type of host parameter
+     */
     public SocksCmdResponse(SocksCmdStatus cmdStatus, SocksAddressType addressType) {
         this(cmdStatus, addressType, null, 0);
     }
 
     /**
-     * Constructs new response and includes provided host and port as part of it.
+     * Constructs new response (Socks5) and includes provided host and port as part of it.
      *
-     * @param cmdStatus status of the response
+     * @param cmdStatus   status of the response
      * @param addressType type of host parameter
-     * @param host host (BND.ADDR field) is address that server used when connecting to the target host.
-     *             When null a value of 4/8 0x00 octets will be used for IPv4/IPv6 and a single 0x00 byte will be
-     *             used for domain addressType. Value is converted to ASCII using {@link IDN#toASCII(String)}.
-     * @param port port (BND.PORT field) that the server assigned to connect to the target host
-     * @throws NullPointerException in case cmdStatus or addressType are missing
+     * @param host        host (BND.ADDR field) is address that server used when connecting to the target host.
+     *                    When null a value of 4/8 0x00 octets will be used for IPv4/IPv6 and a single 0x00 byte will be
+     *                    used for domain addressType. Value is converted to ASCII using {@link IDN#toASCII(String)}.
+     * @param port        port (BND.PORT field) that the server assigned to connect to the target host
+     * @throws NullPointerException     in case cmdStatus or addressType are missing
      * @throws IllegalArgumentException in case host or port cannot be validated
      * @see IDN#toASCII(String)
      */
     public SocksCmdResponse(SocksCmdStatus cmdStatus, SocksAddressType addressType, String host, int port) {
-        super(SocksResponseType.CMD);
+        super(SocksProtocolVersion.SOCKS5, SocksResponseType.CMD);
         if (cmdStatus == null) {
             throw new NullPointerException("cmdStatus");
         }
@@ -92,6 +126,10 @@ public final class SocksCmdResponse extends SocksResponse {
         }
         if (port < 0 || port > 65535) {
             throw new IllegalArgumentException(port + " is not in bounds 0 <= x <= 65535");
+        }
+        if (SUCCESS4.equals(cmdStatus) || FAILURE4.equals(cmdStatus) || FAILURE4_IDENTD_CONFIRM.equals(cmdStatus)
+                || FAILURE4_IDENTD_NOT_RUN.equals(cmdStatus)) {
+            throw new IllegalArgumentException("Incorrect cmdStatus for Socks5: " + cmdStatus);
         }
         this.cmdStatus = cmdStatus;
         this.addressType = addressType;
@@ -145,31 +183,43 @@ public final class SocksCmdResponse extends SocksResponse {
 
     @Override
     public void encodeAsByteBuf(ByteBuf byteBuf) {
-        byteBuf.writeByte(protocolVersion().byteValue());
-        byteBuf.writeByte(cmdStatus.byteValue());
-        byteBuf.writeByte(0x00);
-        byteBuf.writeByte(addressType.byteValue());
-        switch (addressType) {
-            case IPv4: {
-                byte[] hostContent = host == null ?
-                        IPv4_HOSTNAME_ZEROED : NetUtil.createByteArrayFromIpAddressString(host);
-                byteBuf.writeBytes(hostContent);
-                byteBuf.writeShort(port);
+        switch (protocolVersion()) {
+            case SOCKS4: {
+                byteBuf.writeByte(NULL);        // 0x00
+                byteBuf.writeByte(cmdStatus.byteValue());
+                // 2 and 4 arbitrary bytes, that should be ignored
+                byteBuf.writeBytes(new byte[]{0x11, 0x22, 0x33, 0x44, 0x55, 0x66});
                 break;
             }
-            case DOMAIN: {
-                byte[] hostContent = host == null ?
-                        DOMAIN_ZEROED : host.getBytes(CharsetUtil.US_ASCII);
-                byteBuf.writeByte(hostContent.length);   // domain length
-                byteBuf.writeBytes(hostContent);   // domain value
-                byteBuf.writeShort(port);  // port value
-                break;
-            }
-            case IPv6: {
-                byte[] hostContent = host == null
-                        ? IPv6_HOSTNAME_ZEROED : NetUtil.createByteArrayFromIpAddressString(host);
-                byteBuf.writeBytes(hostContent);
-                byteBuf.writeShort(port);
+            case SOCKS5: {
+                byteBuf.writeByte(protocolVersion().byteValue());
+                byteBuf.writeByte(cmdStatus.byteValue());
+                byteBuf.writeByte(0x00);
+                byteBuf.writeByte(addressType().byteValue());
+                switch (addressType()) {
+                    case IPv4: {
+                        byte[] hostContent = host == null ?
+                                IPv4_HOSTNAME_ZEROED : NetUtil.createByteArrayFromIpAddressString(host);
+                        byteBuf.writeBytes(hostContent);
+                        byteBuf.writeShort(port);
+                        break;
+                    }
+                    case DOMAIN: {
+                        byte[] hostContent = host == null ?
+                                DOMAIN_ZEROED : host.getBytes(CharsetUtil.US_ASCII);
+                        byteBuf.writeByte(hostContent.length);   // domain length
+                        byteBuf.writeBytes(hostContent);   // domain value
+                        byteBuf.writeShort(port);  // port value
+                        break;
+                    }
+                    case IPv6: {
+                        byte[] hostContent = host == null
+                                ? IPv6_HOSTNAME_ZEROED : NetUtil.createByteArrayFromIpAddressString(host);
+                        byteBuf.writeBytes(hostContent);
+                        byteBuf.writeShort(port);
+                        break;
+                    }
+                }
                 break;
             }
         }

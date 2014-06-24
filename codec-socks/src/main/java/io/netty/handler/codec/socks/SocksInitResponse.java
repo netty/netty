@@ -27,7 +27,7 @@ public final class SocksInitResponse extends SocksResponse {
     private final SocksAuthScheme authScheme;
 
     public SocksInitResponse(SocksAuthScheme authScheme) {
-        super(SocksResponseType.INIT);
+        super(SocksProtocolVersion.SOCKS5, SocksResponseType.INIT);
         if (authScheme == null) {
             throw new NullPointerException("authScheme");
         }

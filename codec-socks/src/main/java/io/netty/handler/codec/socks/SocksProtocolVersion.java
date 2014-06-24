@@ -17,7 +17,7 @@
 package io.netty.handler.codec.socks;
 
 public enum SocksProtocolVersion {
-    SOCKS4a((byte) 0x04),
+    SOCKS4((byte) 0x04),
     SOCKS5((byte) 0x05),
     UNKNOWN((byte) 0xff);
 

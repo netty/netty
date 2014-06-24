@@ -27,7 +27,11 @@ import io.netty.buffer.ByteBuf;
 public final class UnknownSocksResponse extends SocksResponse {
 
     public UnknownSocksResponse() {
-        super(SocksResponseType.UNKNOWN);
+        super(SocksProtocolVersion.UNKNOWN, SocksResponseType.UNKNOWN);
+    }
+
+    public UnknownSocksResponse(SocksProtocolVersion protocolVersion) {
+        super(protocolVersion, SocksResponseType.UNKNOWN);
     }
 
     @Override

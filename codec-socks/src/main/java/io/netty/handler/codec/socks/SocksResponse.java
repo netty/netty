@@ -27,8 +27,8 @@ package io.netty.handler.codec.socks;
 public abstract class SocksResponse extends SocksMessage {
     private final SocksResponseType responseType;
 
-    protected SocksResponse(SocksResponseType responseType) {
-        super(SocksMessageType.RESPONSE);
+    protected SocksResponse(SocksProtocolVersion protocolVersion, SocksResponseType responseType) {
+        super(protocolVersion, SocksMessageType.RESPONSE);
         if (responseType == null) {
             throw new NullPointerException("responseType");
         }
