@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.http.websocketx;
+package io.netty.handler.codec.http.websocketx.extensions;
 
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMessage;
@@ -28,7 +28,7 @@ import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-final class WebSocketExtensionUtil {
+public final class WebSocketExtensionUtil {
 
     private static final char EXTENSION_SEPARATOR = ',';
     private static final char PARAMETER_SEPARATOR = ';';
@@ -96,12 +96,12 @@ final class WebSocketExtensionUtil {
         return newHeaderValue.toString();
     }
 
-    static final class WebSocketExtensionData {
+    public static final class WebSocketExtensionData {
 
         private final String name;
         private final Map<String, String> parameters;
 
-        private WebSocketExtensionData(String name, Map<String, String> parameters) {
+        public WebSocketExtensionData(String name, Map<String, String> parameters) {
             if (name == null) {
                 throw new NullPointerException("name");
             }

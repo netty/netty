@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2014 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -51,7 +51,7 @@
 // OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-package io.netty.handler.codec.http.websocketx;
+package io.netty.handler.codec.http.websocketx.extensions.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -61,31 +61,43 @@ import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
+import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.ContinuationWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketFrame;
+import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtension;
+import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionDecoder;
 
 import java.util.List;
 
-class WebSocketPermessageDeflateExtensionDecoder extends MessageToMessageDecoder<WebSocketFrame> {
+abstract class DeflateDecoder extends WebSocketExtensionDecoder {
 
-    static final int RSV1 = 0x04;
     static final byte[] FRAME_TAIL = new byte[] {0x00, 0x00, (byte) 0xff, (byte) 0xff};
+
+    private final boolean noContext;
 
     private EmbeddedChannel decoder;
 
-    public WebSocketPermessageDeflateExtensionDecoder() {
-        this.decoder = new EmbeddedChannel(ZlibCodecFactory.newZlibDecoder(ZlibWrapper.NONE));
+    public DeflateDecoder(boolean noContext) {
+        this.noContext = noContext;
     }
 
-    @Override
-    public boolean acceptInboundMessage(Object msg) throws Exception {
-        return msg instanceof WebSocketFrame && (((WebSocketFrame) msg).rsv() & RSV1) > 0;
-    }
+    protected abstract boolean appendFrameTail(WebSocketFrame msg);
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, WebSocketFrame msg,
-        List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, WebSocketFrame msg, List<Object> out) throws Exception {
+
+        if (decoder == null) {
+            if (!(msg instanceof TextWebSocketFrame) && !(msg instanceof BinaryWebSocketFrame)) {
+                throw new CodecException("unexpected initial frame type: " + msg.getClass().getName());
+            }
+            decoder = new EmbeddedChannel(ZlibCodecFactory.newZlibDecoder(ZlibWrapper.NONE));
+        }
 
         decoder.writeInbound(msg.content().retain());
-        decoder.writeInbound(Unpooled.wrappedBuffer(FRAME_TAIL));
+        if (appendFrameTail(msg)) {
+            decoder.writeInbound(Unpooled.wrappedBuffer(FRAME_TAIL));
+        }
 
         ByteBuf decodedContent = (ByteBuf) decoder.readInbound();
         if (decodedContent == null) {
@@ -102,19 +114,14 @@ class WebSocketPermessageDeflateExtensionDecoder extends MessageToMessageDecoder
         } else if (msg instanceof ContinuationWebSocketFrame) {
             outMsg = new ContinuationWebSocketFrame(msg.isFinalFragment(),
                     msg.rsv(), decodedContent);
-        } else if (msg instanceof CloseWebSocketFrame) {
-            outMsg = new CloseWebSocketFrame(msg.isFinalFragment(),
-                    msg.rsv(), decodedContent);
-        } else if (msg instanceof PingWebSocketFrame) {
-            outMsg = new PingWebSocketFrame(msg.isFinalFragment(),
-                    msg.rsv(), decodedContent);
-        } else if (msg instanceof PongWebSocketFrame) {
-            outMsg = new PongWebSocketFrame(msg.isFinalFragment(),
-                    msg.rsv(), decodedContent);
-        }  else {
+        } else {
             throw new CodecException("unexpected frame type: " + msg.getClass().getName());
         }
         out.add(outMsg);
+
+        if (msg.isFinalFragment() && noContext) {
+            decoder = null;
+        }
     }
 
 }
