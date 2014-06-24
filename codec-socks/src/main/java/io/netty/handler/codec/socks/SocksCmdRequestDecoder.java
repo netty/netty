@@ -61,9 +61,9 @@ public class SocksCmdRequestDecoder extends ReplayingDecoder<SocksCmdRequestDeco
                 checkpoint(State.READ_CMD_HEADER);
             }
             case READ_CMD_HEADER: {
-                cmdType = SocksCmdType.fromByte(byteBuf.readByte());
+                cmdType = SocksCmdType.valueOf(byteBuf.readByte());
                 reserved = byteBuf.readByte();
-                addressType = SocksAddressType.fromByte(byteBuf.readByte());
+                addressType = SocksAddressType.valueOf(byteBuf.readByte());
                 checkpoint(State.READ_CMD_ADDRESS);
             }
             case READ_CMD_ADDRESS: {

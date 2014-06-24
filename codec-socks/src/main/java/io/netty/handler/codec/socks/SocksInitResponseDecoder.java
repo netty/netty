@@ -49,14 +49,14 @@ public class SocksInitResponseDecoder extends ReplayingDecoder<SocksInitResponse
     protected void decode(ChannelHandlerContext ctx, ByteBuf byteBuf, List<Object> out) throws Exception {
         switch (state()) {
             case CHECK_PROTOCOL_VERSION: {
-                version = SocksProtocolVersion.fromByte(byteBuf.readByte());
+                version = SocksProtocolVersion.valueOf(byteBuf.readByte());
                 if (version != SocksProtocolVersion.SOCKS5) {
                     break;
                 }
                 checkpoint(State.READ_PREFFERED_AUTH_TYPE);
             }
             case READ_PREFFERED_AUTH_TYPE: {
-                authScheme = SocksAuthScheme.fromByte(byteBuf.readByte());
+                authScheme = SocksAuthScheme.valueOf(byteBuf.readByte());
                 msg = new SocksInitResponse(authScheme);
                 break;
             }

@@ -28,7 +28,15 @@ public enum SocksAddressType {
         this.b = b;
     }
 
+    /**
+     * @deprecated Use {@link #valueOf(byte)} instead.
+     */
+    @Deprecated
     public static SocksAddressType fromByte(byte b) {
+        return valueOf(b);
+    }
+
+    public static SocksAddressType valueOf(byte b) {
         for (SocksAddressType code : values()) {
             if (code.b == b) {
                 return code;

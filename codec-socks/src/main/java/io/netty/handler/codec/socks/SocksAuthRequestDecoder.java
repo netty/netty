@@ -51,7 +51,7 @@ public class SocksAuthRequestDecoder extends ReplayingDecoder<SocksAuthRequestDe
     protected void decode(ChannelHandlerContext ctx, ByteBuf byteBuf, List<Object> out) throws Exception {
         switch (state()) {
             case CHECK_PROTOCOL_VERSION: {
-                version = SocksSubnegotiationVersion.fromByte(byteBuf.readByte());
+                version = SocksSubnegotiationVersion.valueOf(byteBuf.readByte());
                 if (version != SocksSubnegotiationVersion.AUTH_PASSWORD) {
                     break;
                 }

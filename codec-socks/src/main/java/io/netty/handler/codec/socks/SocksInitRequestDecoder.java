@@ -50,7 +50,7 @@ public class SocksInitRequestDecoder extends ReplayingDecoder<SocksInitRequestDe
     protected void decode(ChannelHandlerContext ctx, ByteBuf byteBuf, List<Object> out) throws Exception {
         switch (state()) {
             case CHECK_PROTOCOL_VERSION: {
-                version = SocksProtocolVersion.fromByte(byteBuf.readByte());
+                version = SocksProtocolVersion.valueOf(byteBuf.readByte());
                 if (version != SocksProtocolVersion.SOCKS5) {
                     break;
                 }
@@ -60,7 +60,7 @@ public class SocksInitRequestDecoder extends ReplayingDecoder<SocksInitRequestDe
                 authSchemes.clear();
                 authSchemeNum = byteBuf.readByte();
                 for (int i = 0; i < authSchemeNum; i++) {
-                    authSchemes.add(SocksAuthScheme.fromByte(byteBuf.readByte()));
+                    authSchemes.add(SocksAuthScheme.valueOf(byteBuf.readByte()));
                 }
                 msg = new SocksInitRequest(authSchemes);
                 break;
