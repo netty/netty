@@ -40,14 +40,14 @@ public class SocksAuthResponseDecoder extends ReplayingDecoder<SocksAuthResponse
             throws Exception {
         switch (state()) {
             case CHECK_PROTOCOL_VERSION: {
-                version = SocksSubnegotiationVersion.fromByte(byteBuf.readByte());
+                version = SocksSubnegotiationVersion.valueOf(byteBuf.readByte());
                 if (version != SocksSubnegotiationVersion.AUTH_PASSWORD) {
                     break;
                 }
                 checkpoint(State.READ_AUTH_RESPONSE);
             }
             case READ_AUTH_RESPONSE: {
-                authStatus = SocksAuthStatus.fromByte(byteBuf.readByte());
+                authStatus = SocksAuthStatus.valueOf(byteBuf.readByte());
                 msg = new SocksAuthResponse(authStatus);
             }
         }
