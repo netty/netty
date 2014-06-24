@@ -25,15 +25,15 @@ public class BinaryMemcacheRequestEncoder
 
     @Override
     protected void encodeHeader(ByteBuf buf, BinaryMemcacheRequest msg) {
-        buf.writeByte(msg.getMagic());
-        buf.writeByte(msg.getOpcode());
-        buf.writeShort(msg.getKeyLength());
-        buf.writeByte(msg.getExtrasLength());
-        buf.writeByte(msg.getDataType());
-        buf.writeShort(msg.getReserved());
-        buf.writeInt(msg.getTotalBodyLength());
-        buf.writeInt(msg.getOpaque());
-        buf.writeLong(msg.getCAS());
+        buf.writeByte(msg.magic());
+        buf.writeByte(msg.opcode());
+        buf.writeShort(msg.keyLength());
+        buf.writeByte(msg.extrasLength());
+        buf.writeByte(msg.dataType());
+        buf.writeShort(msg.reserved());
+        buf.writeInt(msg.totalBodyLength());
+        buf.writeInt(msg.opaque());
+        buf.writeLong(msg.cas());
     }
 
 }

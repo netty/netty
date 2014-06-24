@@ -66,7 +66,7 @@ public interface LastMemcacheContent extends MemcacheContent {
         }
 
         @Override
-        public DecoderResult getDecoderResult() {
+        public DecoderResult decoderResult() {
             return DecoderResult.SUCCESS;
         }
 

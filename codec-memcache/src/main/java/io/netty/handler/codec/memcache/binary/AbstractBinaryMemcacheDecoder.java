@@ -24,7 +24,6 @@ import io.netty.handler.codec.memcache.DefaultLastMemcacheContent;
 import io.netty.handler.codec.memcache.DefaultMemcacheContent;
 import io.netty.handler.codec.memcache.LastMemcacheContent;
 import io.netty.handler.codec.memcache.MemcacheContent;
-import io.netty.handler.codec.memcache.MemcacheMessage;
 import io.netty.util.CharsetUtil;
 
 import java.util.List;
@@ -84,7 +83,7 @@ public abstract class AbstractBinaryMemcacheDecoder<M extends BinaryMemcacheMess
                 return;
             }
             case READ_EXTRAS: try {
-                byte extrasLength = currentMessage.getExtrasLength();
+                byte extrasLength = currentMessage.extrasLength();
                 if (extrasLength > 0) {
                     if (in.readableBytes() < extrasLength) {
                         return;
@@ -99,7 +98,7 @@ public abstract class AbstractBinaryMemcacheDecoder<M extends BinaryMemcacheMess
                 return;
             }
             case READ_KEY: try {
-                short keyLength = currentMessage.getKeyLength();
+                short keyLength = currentMessage.keyLength();
                 if (keyLength > 0) {
                     if (in.readableBytes() < keyLength) {
                         return;
@@ -116,9 +115,9 @@ public abstract class AbstractBinaryMemcacheDecoder<M extends BinaryMemcacheMess
                 return;
             }
             case READ_CONTENT: try {
-                int valueLength = currentMessage.getTotalBodyLength()
-                    - currentMessage.getKeyLength()
-                    - currentMessage.getExtrasLength();
+                int valueLength = currentMessage.totalBodyLength()
+                    - currentMessage.keyLength()
+                    - currentMessage.extrasLength();
                 int toRead = in.readableBytes();
                 if (valueLength > 0) {
                     if (toRead == 0) {
@@ -201,8 +200,8 @@ public abstract class AbstractBinaryMemcacheDecoder<M extends BinaryMemcacheMess
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         super.channelInactive(ctx);
 
-        if (currentMessage != null && currentMessage.getExtras() != null) {
-            currentMessage.getExtras().release();
+        if (currentMessage != null && currentMessage.extras() != null) {
+            currentMessage.extras().release();
         }
 
         resetDecoder();
