@@ -35,7 +35,7 @@ public interface BinaryMemcacheMessage extends MemcacheMessage {
      *
      * @return the magic byte.
      */
-    byte getMagic();
+    byte magic();
 
     /**
      * Sets the magic byte.
@@ -50,7 +50,7 @@ public interface BinaryMemcacheMessage extends MemcacheMessage {
      *
      * @return the opcode.
      */
-    byte getOpcode();
+    byte opcode();
 
     /**
      * Sets the opcode for the message.
@@ -66,7 +66,7 @@ public interface BinaryMemcacheMessage extends MemcacheMessage {
      *
      * @return the key length.
      */
-    short getKeyLength();
+    short keyLength();
 
     /**
      * Set the key length of the message.
@@ -84,7 +84,7 @@ public interface BinaryMemcacheMessage extends MemcacheMessage {
      *
      * @return the extras length.
      */
-    byte getExtrasLength();
+    byte extrasLength();
 
     /**
      * Set the extras length of the message.
@@ -100,7 +100,7 @@ public interface BinaryMemcacheMessage extends MemcacheMessage {
      *
      * @return the data type of the message.
      */
-    byte getDataType();
+    byte dataType();
 
     /**
      * Sets the data type of the message.
@@ -116,7 +116,7 @@ public interface BinaryMemcacheMessage extends MemcacheMessage {
      *
      * @return the total body length.
      */
-    int getTotalBodyLength();
+    int totalBodyLength();
 
     /**
      * Sets the total body length.
@@ -132,7 +132,7 @@ public interface BinaryMemcacheMessage extends MemcacheMessage {
      *
      * @return the opaque value.
      */
-    int getOpaque();
+    int opaque();
 
     /**
      * Sets the opaque value.
@@ -146,21 +146,21 @@ public interface BinaryMemcacheMessage extends MemcacheMessage {
      *
      * @return the CAS identifier.
      */
-    long getCAS();
+    long cas();
 
     /**
      * Sets the CAS identifier.
      *
      * @param cas the CAS identifier to use.
      */
-    BinaryMemcacheMessage setCAS(long cas);
+    BinaryMemcacheMessage setCas(long cas);
 
     /**
      * Returns the optional key of the document.
      *
      * @return the key of the document.
      */
-    String getKey();
+    String key();
 
     /**
      * Sets the key of the document.
@@ -174,7 +174,7 @@ public interface BinaryMemcacheMessage extends MemcacheMessage {
      *
      * @return the optional extras.
      */
-    ByteBuf getExtras();
+    ByteBuf extras();
 
     /**
      * Sets the extras buffer on the message.

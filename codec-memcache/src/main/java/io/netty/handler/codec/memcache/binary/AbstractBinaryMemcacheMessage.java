@@ -56,12 +56,12 @@ public abstract class AbstractBinaryMemcacheMessage
     }
 
     @Override
-    public String getKey() {
+    public String key() {
         return key;
     }
 
     @Override
-    public ByteBuf getExtras() {
+    public ByteBuf extras() {
         return extras;
     }
 
@@ -78,7 +78,7 @@ public abstract class AbstractBinaryMemcacheMessage
     }
 
     @Override
-    public byte getMagic() {
+    public byte magic() {
         return magic;
     }
 
@@ -89,18 +89,18 @@ public abstract class AbstractBinaryMemcacheMessage
     }
 
     @Override
-    public long getCAS() {
+    public long cas() {
         return cas;
     }
 
     @Override
-    public BinaryMemcacheMessage setCAS(long cas) {
+    public BinaryMemcacheMessage setCas(long cas) {
         this.cas = cas;
         return this;
     }
 
     @Override
-    public int getOpaque() {
+    public int opaque() {
         return opaque;
     }
 
@@ -111,7 +111,7 @@ public abstract class AbstractBinaryMemcacheMessage
     }
 
     @Override
-    public int getTotalBodyLength() {
+    public int totalBodyLength() {
         return totalBodyLength;
     }
 
@@ -122,7 +122,7 @@ public abstract class AbstractBinaryMemcacheMessage
     }
 
     @Override
-    public byte getDataType() {
+    public byte dataType() {
         return dataType;
     }
 
@@ -133,7 +133,7 @@ public abstract class AbstractBinaryMemcacheMessage
     }
 
     @Override
-    public byte getExtrasLength() {
+    public byte extrasLength() {
         return extrasLength;
     }
 
@@ -144,7 +144,7 @@ public abstract class AbstractBinaryMemcacheMessage
     }
 
     @Override
-    public short getKeyLength() {
+    public short keyLength() {
         return keyLength;
     }
 
@@ -155,7 +155,7 @@ public abstract class AbstractBinaryMemcacheMessage
     }
 
     @Override
-    public byte getOpcode() {
+    public byte opcode() {
         return opcode;
     }
 

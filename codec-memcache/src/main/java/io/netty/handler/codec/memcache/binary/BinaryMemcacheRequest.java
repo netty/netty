@@ -25,7 +25,7 @@ public interface BinaryMemcacheRequest extends BinaryMemcacheMessage {
      *
      * @return the reserved field value.
      */
-    short getReserved();
+    short reserved();
 
     /**
      * Sets the reserved field value.

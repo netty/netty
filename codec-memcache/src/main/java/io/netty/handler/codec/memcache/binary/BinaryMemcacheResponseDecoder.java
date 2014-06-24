@@ -43,7 +43,7 @@ public class BinaryMemcacheResponseDecoder
         header.setStatus(in.readShort());
         header.setTotalBodyLength(in.readInt());
         header.setOpaque(in.readInt());
-        header.setCAS(in.readLong());
+        header.setCas(in.readLong());
         return header;
     }
 

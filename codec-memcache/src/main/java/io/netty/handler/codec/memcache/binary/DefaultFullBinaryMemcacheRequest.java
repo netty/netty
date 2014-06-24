@@ -105,19 +105,19 @@ public class DefaultFullBinaryMemcacheRequest extends DefaultBinaryMemcacheReque
 
     @Override
     public FullBinaryMemcacheRequest copy() {
-        ByteBuf extras = getExtras();
+        ByteBuf extras = extras();
         if (extras != null) {
             extras = extras.copy();
         }
-        return new DefaultFullBinaryMemcacheRequest(getKey(), extras, content().copy());
+        return new DefaultFullBinaryMemcacheRequest(key(), extras, content().copy());
     }
 
     @Override
     public FullBinaryMemcacheRequest duplicate() {
-        ByteBuf extras = getExtras();
+        ByteBuf extras = extras();
         if (extras != null) {
             extras = extras.duplicate();
         }
-        return new DefaultFullBinaryMemcacheRequest(getKey(), extras, content().duplicate());
+        return new DefaultFullBinaryMemcacheRequest(key(), extras, content().duplicate());
     }
 }

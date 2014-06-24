@@ -66,7 +66,7 @@ public class DefaultBinaryMemcacheResponse extends AbstractBinaryMemcacheMessage
     }
 
     @Override
-    public short getStatus() {
+    public short status() {
         return status;
     }
 

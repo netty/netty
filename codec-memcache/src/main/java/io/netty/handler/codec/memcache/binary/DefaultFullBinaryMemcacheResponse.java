@@ -105,19 +105,19 @@ public class DefaultFullBinaryMemcacheResponse extends DefaultBinaryMemcacheResp
 
     @Override
     public FullBinaryMemcacheResponse copy() {
-        ByteBuf extras = getExtras();
+        ByteBuf extras = extras();
         if (extras != null) {
             extras = extras.copy();
         }
-        return new DefaultFullBinaryMemcacheResponse(getKey(), extras, content().copy());
+        return new DefaultFullBinaryMemcacheResponse(key(), extras, content().copy());
     }
 
     @Override
     public FullBinaryMemcacheResponse duplicate() {
-        ByteBuf extras = getExtras();
+        ByteBuf extras = extras();
         if (extras != null) {
             extras = extras.duplicate();
         }
-        return new DefaultFullBinaryMemcacheResponse(getKey(), extras, content().duplicate());
+        return new DefaultFullBinaryMemcacheResponse(key(), extras, content().duplicate());
     }
 }

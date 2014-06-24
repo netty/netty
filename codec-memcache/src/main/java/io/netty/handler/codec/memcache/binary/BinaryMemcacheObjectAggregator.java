@@ -54,34 +54,34 @@ public class BinaryMemcacheObjectAggregator extends AbstractMemcacheObjectAggreg
 
     private static FullBinaryMemcacheRequest toFullRequest(BinaryMemcacheRequest request, ByteBuf content) {
         FullBinaryMemcacheRequest fullRequest =
-                new DefaultFullBinaryMemcacheRequest(request.getKey(), request.getExtras(), content);
+                new DefaultFullBinaryMemcacheRequest(request.key(), request.extras(), content);
 
-        fullRequest.setMagic(request.getMagic());
-        fullRequest.setOpcode(request.getOpcode());
-        fullRequest.setKeyLength(request.getKeyLength());
-        fullRequest.setExtrasLength(request.getExtrasLength());
-        fullRequest.setDataType(request.getDataType());
-        fullRequest.setTotalBodyLength(request.getTotalBodyLength());
-        fullRequest.setOpaque(request.getOpaque());
-        fullRequest.setCAS(request.getCAS());
-        fullRequest.setReserved(request.getReserved());
+        fullRequest.setMagic(request.magic());
+        fullRequest.setOpcode(request.opcode());
+        fullRequest.setKeyLength(request.keyLength());
+        fullRequest.setExtrasLength(request.extrasLength());
+        fullRequest.setDataType(request.dataType());
+        fullRequest.setTotalBodyLength(request.totalBodyLength());
+        fullRequest.setOpaque(request.opaque());
+        fullRequest.setCas(request.cas());
+        fullRequest.setReserved(request.reserved());
 
         return fullRequest;
     }
 
     private static FullBinaryMemcacheResponse toFullResponse(BinaryMemcacheResponse response, ByteBuf content) {
         FullBinaryMemcacheResponse fullResponse =
-                new DefaultFullBinaryMemcacheResponse(response.getKey(), response.getExtras(), content);
+                new DefaultFullBinaryMemcacheResponse(response.key(), response.extras(), content);
 
-        fullResponse.setMagic(response.getMagic());
-        fullResponse.setOpcode(response.getOpcode());
-        fullResponse.setKeyLength(response.getKeyLength());
-        fullResponse.setExtrasLength(response.getExtrasLength());
-        fullResponse.setDataType(response.getDataType());
-        fullResponse.setTotalBodyLength(response.getTotalBodyLength());
-        fullResponse.setOpaque(response.getOpaque());
-        fullResponse.setCAS(response.getCAS());
-        fullResponse.setStatus(response.getStatus());
+        fullResponse.setMagic(response.magic());
+        fullResponse.setOpcode(response.opcode());
+        fullResponse.setKeyLength(response.keyLength());
+        fullResponse.setExtrasLength(response.extrasLength());
+        fullResponse.setDataType(response.dataType());
+        fullResponse.setTotalBodyLength(response.totalBodyLength());
+        fullResponse.setOpaque(response.opaque());
+        fullResponse.setCas(response.cas());
+        fullResponse.setStatus(response.status());
 
         return fullResponse;
     }
