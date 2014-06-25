@@ -16,6 +16,7 @@
 package io.netty.handler.codec.spdy;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.After;
@@ -52,7 +53,7 @@ public class SpdyHeaderBlockRawDecoderTest {
     @Test
     public void testEmptyHeaderBlock() throws Exception {
         ByteBuf headerBlock = ReferenceCountUtil.releaseLater(Unpooled.EMPTY_BUFFER);
-        decoder.decode(headerBlock, frame);
+        decoder.decode(ByteBufAllocator.DEFAULT, headerBlock, frame);
         decoder.endHeaderBlock(frame);
 
         assertFalse(headerBlock.isReadable());
@@ -64,7 +65,7 @@ public class SpdyHeaderBlockRawDecoderTest {
     public void testZeroNameValuePairs() throws Exception {
         ByteBuf headerBlock = ReferenceCountUtil.releaseLater(Unpooled.buffer(4));
         headerBlock.writeInt(0);
-        decoder.decode(headerBlock, frame);
+        decoder.decode(ByteBufAllocator.DEFAULT, headerBlock, frame);
         decoder.endHeaderBlock(frame);
 
         assertFalse(headerBlock.isReadable());
@@ -76,7 +77,7 @@ public class SpdyHeaderBlockRawDecoderTest {
     public void testNegativeNameValuePairs() throws Exception {
         ByteBuf headerBlock = ReferenceCountUtil.releaseLater(Unpooled.buffer(4));
         headerBlock.writeInt(-1);
-        decoder.decode(headerBlock, frame);
+        decoder.decode(ByteBufAllocator.DEFAULT, headerBlock, frame);
 
         assertFalse(headerBlock.isReadable());
         assertTrue(frame.isInvalid());
@@ -91,7 +92,7 @@ public class SpdyHeaderBlockRawDecoderTest {
         headerBlock.writeBytes(nameBytes);
         headerBlock.writeInt(5);
         headerBlock.writeBytes(valueBytes);
-        decoder.decode(headerBlock, frame);
+        decoder.decode(ByteBufAllocator.DEFAULT, headerBlock, frame);
         decoder.endHeaderBlock(frame);
 
         assertFalse(headerBlock.isReadable());
@@ -106,7 +107,7 @@ public class SpdyHeaderBlockRawDecoderTest {
     public void testMissingNameLength() throws Exception {
         ByteBuf headerBlock = ReferenceCountUtil.releaseLater(Unpooled.buffer(4));
         headerBlock.writeInt(1);
-        decoder.decode(headerBlock, frame);
+        decoder.decode(ByteBufAllocator.DEFAULT, headerBlock, frame);
         decoder.endHeaderBlock(frame);
 
         assertFalse(headerBlock.isReadable());
@@ -119,7 +120,7 @@ public class SpdyHeaderBlockRawDecoderTest {
         ByteBuf headerBlock = ReferenceCountUtil.releaseLater(Unpooled.buffer(8));
         headerBlock.writeInt(1);
         headerBlock.writeInt(0);
-        decoder.decode(headerBlock, frame);
+        decoder.decode(ByteBufAllocator.DEFAULT, headerBlock, frame);
 
         assertFalse(headerBlock.isReadable());
         assertTrue(frame.isInvalid());
@@ -131,7 +132,7 @@ public class SpdyHeaderBlockRawDecoderTest {
         ByteBuf headerBlock = ReferenceCountUtil.releaseLater(Unpooled.buffer(8));
         headerBlock.writeInt(1);
         headerBlock.writeInt(-1);
-        decoder.decode(headerBlock, frame);
+        decoder.decode(ByteBufAllocator.DEFAULT, headerBlock, frame);
 
         assertFalse(headerBlock.isReadable());
         assertTrue(frame.isInvalid());
@@ -143,7 +144,7 @@ public class SpdyHeaderBlockRawDecoderTest {
         ByteBuf headerBlock = ReferenceCountUtil.releaseLater(Unpooled.buffer(8));
         headerBlock.writeInt(1);
         headerBlock.writeInt(4);
-        decoder.decode(headerBlock, frame);
+        decoder.decode(ByteBufAllocator.DEFAULT, headerBlock, frame);
         decoder.endHeaderBlock(frame);
 
         assertFalse(headerBlock.isReadable());
@@ -159,7 +160,7 @@ public class SpdyHeaderBlockRawDecoderTest {
         headerBlock.writeByte(0);
         headerBlock.writeInt(5);
         headerBlock.writeBytes(valueBytes);
-        decoder.decode(headerBlock, frame);
+        decoder.decode(ByteBufAllocator.DEFAULT, headerBlock, frame);
 
         assertFalse(headerBlock.isReadable());
         assertTrue(frame.isInvalid());
@@ -172,7 +173,7 @@ public class SpdyHeaderBlockRawDecoderTest {
         headerBlock.writeInt(1);
         headerBlock.writeInt(4);
         headerBlock.writeBytes(nameBytes);
-        decoder.decode(headerBlock, frame);
+        decoder.decode(ByteBufAllocator.DEFAULT, headerBlock, frame);
         decoder.endHeaderBlock(frame);
 
         assertFalse(headerBlock.isReadable());
@@ -187,7 +188,7 @@ public class SpdyHeaderBlockRawDecoderTest {
         headerBlock.writeInt(4);
         headerBlock.writeBytes(nameBytes);
         headerBlock.writeInt(0);
-        decoder.decode(headerBlock, frame);
+        decoder.decode(ByteBufAllocator.DEFAULT, headerBlock, frame);
         decoder.endHeaderBlock(frame);
 
         assertFalse(headerBlock.isReadable());
@@ -205,7 +206,7 @@ public class SpdyHeaderBlockRawDecoderTest {
         headerBlock.writeInt(4);
         headerBlock.writeBytes(nameBytes);
         headerBlock.writeInt(-1);
-        decoder.decode(headerBlock, frame);
+        decoder.decode(ByteBufAllocator.DEFAULT, headerBlock, frame);
 
         assertFalse(headerBlock.isReadable());
         assertTrue(frame.isInvalid());
@@ -219,7 +220,7 @@ public class SpdyHeaderBlockRawDecoderTest {
         headerBlock.writeInt(4);
         headerBlock.writeBytes(nameBytes);
         headerBlock.writeInt(5);
-        decoder.decode(headerBlock, frame);
+        decoder.decode(ByteBufAllocator.DEFAULT, headerBlock, frame);
         decoder.endHeaderBlock(frame);
 
         assertFalse(headerBlock.isReadable());
@@ -235,7 +236,7 @@ public class SpdyHeaderBlockRawDecoderTest {
         headerBlock.writeBytes(nameBytes);
         headerBlock.writeInt(1);
         headerBlock.writeByte(0);
-        decoder.decode(headerBlock, frame);
+        decoder.decode(ByteBufAllocator.DEFAULT, headerBlock, frame);
 
         assertFalse(headerBlock.isReadable());
         assertTrue(frame.isInvalid());
@@ -251,7 +252,7 @@ public class SpdyHeaderBlockRawDecoderTest {
         headerBlock.writeInt(6);
         headerBlock.writeByte(0);
         headerBlock.writeBytes(valueBytes);
-        decoder.decode(headerBlock, frame);
+        decoder.decode(ByteBufAllocator.DEFAULT, headerBlock, frame);
 
         assertFalse(headerBlock.isReadable());
         assertTrue(frame.isInvalid());
@@ -267,7 +268,7 @@ public class SpdyHeaderBlockRawDecoderTest {
         headerBlock.writeInt(6);
         headerBlock.writeBytes(valueBytes);
         headerBlock.writeByte(0);
-        decoder.decode(headerBlock, frame);
+        decoder.decode(ByteBufAllocator.DEFAULT, headerBlock, frame);
 
         assertFalse(headerBlock.isReadable());
         assertTrue(frame.isInvalid());
@@ -284,7 +285,7 @@ public class SpdyHeaderBlockRawDecoderTest {
         headerBlock.writeBytes(valueBytes);
         headerBlock.writeByte(0);
         headerBlock.writeBytes(valueBytes);
-        decoder.decode(headerBlock, frame);
+        decoder.decode(ByteBufAllocator.DEFAULT, headerBlock, frame);
         decoder.endHeaderBlock(frame);
 
         assertFalse(headerBlock.isReadable());
@@ -307,7 +308,7 @@ public class SpdyHeaderBlockRawDecoderTest {
         headerBlock.writeByte(0);
         headerBlock.writeBytes(valueBytes);
         headerBlock.writeByte(0);
-        decoder.decode(headerBlock, frame);
+        decoder.decode(ByteBufAllocator.DEFAULT, headerBlock, frame);
 
         assertFalse(headerBlock.isReadable());
         assertTrue(frame.isInvalid());
@@ -328,7 +329,7 @@ public class SpdyHeaderBlockRawDecoderTest {
         headerBlock.writeByte(0);
         headerBlock.writeByte(0);
         headerBlock.writeBytes(valueBytes);
-        decoder.decode(headerBlock, frame);
+        decoder.decode(ByteBufAllocator.DEFAULT, headerBlock, frame);
         decoder.endHeaderBlock(frame);
 
         assertFalse(headerBlock.isReadable());
@@ -344,7 +345,7 @@ public class SpdyHeaderBlockRawDecoderTest {
         headerBlock.writeBytes(nameBytes);
         headerBlock.writeInt(5);
         headerBlock.writeBytes(valueBytes);
-        decoder.decode(headerBlock, frame);
+        decoder.decode(ByteBufAllocator.DEFAULT, headerBlock, frame);
         decoder.endHeaderBlock(frame);
 
         assertFalse(headerBlock.isReadable());
@@ -367,7 +368,7 @@ public class SpdyHeaderBlockRawDecoderTest {
         headerBlock.writeBytes(nameBytes);
         headerBlock.writeInt(5);
         headerBlock.writeBytes(valueBytes);
-        decoder.decode(headerBlock, frame);
+        decoder.decode(ByteBufAllocator.DEFAULT, headerBlock, frame);
 
         assertFalse(headerBlock.isReadable());
         assertTrue(frame.isInvalid());
@@ -386,7 +387,7 @@ public class SpdyHeaderBlockRawDecoderTest {
         headerBlock.writeInt(5);
         headerBlock.writeBytes(valueBytes);
         headerBlock.writeByte(0);
-        decoder.decode(headerBlock, frame);
+        decoder.decode(ByteBufAllocator.DEFAULT, headerBlock, frame);
 
         assertFalse(headerBlock.isReadable());
         assertTrue(frame.isInvalid());
@@ -408,7 +409,7 @@ public class SpdyHeaderBlockRawDecoderTest {
         int readableBytes = headerBlock.readableBytes();
         for (int i = 0; i < readableBytes; i++) {
             ByteBuf headerBlockSegment = headerBlock.slice(i, 1);
-            decoder.decode(headerBlockSegment, frame);
+            decoder.decode(ByteBufAllocator.DEFAULT, headerBlockSegment, frame);
             assertFalse(headerBlockSegment.isReadable());
         }
         decoder.endHeaderBlock(frame);
@@ -433,10 +434,10 @@ public class SpdyHeaderBlockRawDecoderTest {
         valueBlock.writeInt(5);
         valueBlock.writeBytes(valueBytes);
 
-        decoder.decode(numHeaders, frame);
-        decoder.decode(nameBlock, frame);
+        decoder.decode(ByteBufAllocator.DEFAULT, numHeaders, frame);
+        decoder.decode(ByteBufAllocator.DEFAULT, nameBlock, frame);
         frame.setInvalid();
-        decoder.decode(valueBlock, frame);
+        decoder.decode(ByteBufAllocator.DEFAULT, valueBlock, frame);
         decoder.endHeaderBlock(frame);
 
         assertFalse(numHeaders.isReadable());
@@ -458,7 +459,7 @@ public class SpdyHeaderBlockRawDecoderTest {
         }
         headerBlock.writeInt(5);
         headerBlock.writeBytes(valueBytes);
-        decoder.decode(headerBlock, frame);
+        decoder.decode(ByteBufAllocator.DEFAULT, headerBlock, frame);
         decoder.endHeaderBlock(frame);
 
         assertFalse(headerBlock.isReadable());
@@ -477,7 +478,7 @@ public class SpdyHeaderBlockRawDecoderTest {
         for (int i = 0; i < maxHeaderSize - 3; i++) {
             headerBlock.writeByte('a');
         }
-        decoder.decode(headerBlock, frame);
+        decoder.decode(ByteBufAllocator.DEFAULT, headerBlock, frame);
         decoder.endHeaderBlock(frame);
 
         assertFalse(headerBlock.isReadable());
