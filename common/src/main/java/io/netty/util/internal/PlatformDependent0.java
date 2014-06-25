@@ -19,7 +19,6 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import sun.misc.Cleaner;
 import sun.misc.Unsafe;
-import sun.nio.ch.DirectBuffer;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -41,6 +40,7 @@ final class PlatformDependent0 {
     private static final Unsafe UNSAFE;
     private static final boolean BIG_ENDIAN = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
     private static final long ADDRESS_FIELD_OFFSET;
+    private static final long CLEANER_FIELD_OFFSET;
 
     /**
      * Limits the number of bytes to copy per {@link Unsafe#copyMemory(long, long, long)} to allow safepoint polling
@@ -56,17 +56,19 @@ final class PlatformDependent0 {
     private static final boolean UNALIGNED;
 
     static {
-        boolean directBufferFreeable = false;
+        ByteBuffer direct = ByteBuffer.allocateDirect(1);
+        Field cleanerField;
         try {
-            Class<?> cls = Class.forName("sun.nio.ch.DirectBuffer", false, getClassLoader(PlatformDependent0.class));
-            Method method = cls.getMethod("cleaner");
-            if ("sun.misc.Cleaner".equals(method.getReturnType().getName())) {
-                directBufferFreeable = true;
-            }
+            cleanerField = direct.getClass().getDeclaredField("cleaner");
+            cleanerField.setAccessible(true);
+            Cleaner cleaner = (Cleaner) cleanerField.get(direct);
+            cleaner.clean();
         } catch (Throwable t) {
-            // We don't have sun.nio.ch.DirectBuffer.cleaner().
+            // We don't have ByteBuffer.cleaner().
+            cleanerField = null;
         }
-        logger.debug("sun.nio.ch.DirectBuffer.cleaner(): {}", directBufferFreeable? "available" : "unavailable");
+
+        logger.debug("java.nio.ByteBuffer.cleaner(): {}", cleanerField != null? "available" : "unavailable");
 
         Field addressField;
         try {
@@ -76,7 +78,6 @@ final class PlatformDependent0 {
                 // A heap buffer must have 0 address.
                 addressField = null;
             } else {
-                ByteBuffer direct = ByteBuffer.allocateDirect(1);
                 if (addressField.getLong(direct) == 0) {
                     // A direct buffer must have non-zero address.
                     addressField = null;
@@ -89,7 +90,7 @@ final class PlatformDependent0 {
         logger.debug("java.nio.Buffer.address: {}", addressField != null? "available" : "unavailable");
 
         Unsafe unsafe;
-        if (addressField != null && directBufferFreeable) {
+        if (addressField != null && cleanerField != null) {
             try {
                 Field unsafeField = Unsafe.class.getDeclaredField("theUnsafe");
                 unsafeField.setAccessible(true);
@@ -126,9 +127,11 @@ final class PlatformDependent0 {
 
         if (unsafe == null) {
             ADDRESS_FIELD_OFFSET = -1;
+            CLEANER_FIELD_OFFSET = -1;
             UNALIGNED = false;
         } else {
             ADDRESS_FIELD_OFFSET = objectFieldOffset(addressField);
+            CLEANER_FIELD_OFFSET = objectFieldOffset(cleanerField);
             boolean unaligned;
             try {
                 Class<?> bitsClass = Class.forName("java.nio.Bits", false, ClassLoader.getSystemClassLoader());
@@ -145,6 +148,9 @@ final class PlatformDependent0 {
             UNALIGNED = unaligned;
             logger.debug("java.nio.Bits.unaligned: {}", UNALIGNED);
         }
+
+        // free temporary buffer if possible
+        freeDirectBuffer(direct);
     }
 
     static boolean hasUnsafe() {
@@ -156,11 +162,11 @@ final class PlatformDependent0 {
     }
 
     static void freeDirectBuffer(ByteBuffer buffer) {
-        if (!(buffer instanceof DirectBuffer)) {
+        if (CLEANER_FIELD_OFFSET == -1 || !buffer.isDirect()) {
             return;
         }
         try {
-            Cleaner cleaner = ((DirectBuffer) buffer).cleaner();
+            Cleaner cleaner = (Cleaner) getObject(buffer, CLEANER_FIELD_OFFSET);
             if (cleaner != null) {
                 cleaner.clean();
             }
