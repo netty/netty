@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2014 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,7 +15,9 @@
  */
 
 /**
+ * Encoder, decoder, handshakers to handle
+ * <a href="http://tools.ietf.org/html/rfc6455#section-9.1">WebSocket Extensions</a>.
  *
+ * See <tt>WebSocketServerExtensionHandler</tt> for more details.
  */
 package io.netty.handler.codec.http.websocketx.extensions;
-

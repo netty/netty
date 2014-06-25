@@ -44,7 +44,7 @@ public final class WebSocketExtensionUtil {
                 httpMessage.headers().contains(HttpHeaders.Names.UPGRADE, HttpHeaders.Values.WEBSOCKET, true);
     }
 
-    static List<WebSocketExtensionData> extractExtensions(String extensionHeader) {
+    public static List<WebSocketExtensionData> extractExtensions(String extensionHeader) {
         String[] rawExtensions = StringUtil.split(extensionHeader, EXTENSION_SEPARATOR);
         if (rawExtensions.length > 0) {
             List<WebSocketExtensionData> extensions = new ArrayList<WebSocketExtensionData>(rawExtensions.length);
