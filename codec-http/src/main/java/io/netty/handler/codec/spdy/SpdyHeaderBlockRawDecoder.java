@@ -16,6 +16,7 @@
 package io.netty.handler.codec.spdy;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 
@@ -61,7 +62,7 @@ public class SpdyHeaderBlockRawDecoder extends SpdyHeaderBlockDecoder {
     }
 
     @Override
-    void decode(ByteBuf headerBlock, SpdyHeadersFrame frame) throws Exception {
+    void decode(ByteBufAllocator alloc, ByteBuf headerBlock, SpdyHeadersFrame frame) throws Exception {
         if (headerBlock == null) {
             throw new NullPointerException("headerBlock");
         }
@@ -72,7 +73,7 @@ public class SpdyHeaderBlockRawDecoder extends SpdyHeaderBlockDecoder {
         if (cumulation == null) {
             decodeHeaderBlock(headerBlock, frame);
             if (headerBlock.isReadable()) {
-                cumulation = headerBlock.alloc().buffer(headerBlock.readableBytes());
+                cumulation = alloc.buffer(headerBlock.readableBytes());
                 cumulation.writeBytes(headerBlock);
             }
         } else {
