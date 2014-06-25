@@ -32,7 +32,7 @@ public class SocksCmdRequestDecoderTest {
                                                                        int port) {
         logger.debug("Testing cmdType: " + cmdType + " addressType: " + addressType + " host: " + host +
                 " port: " + port);
-        SocksCmdRequest msg = new SocksCmdRequest(cmdType, addressType, host, port);
+        SocksCmdRequest msg = new Socks5CmdRequest(cmdType, addressType, host, port);
         SocksCmdRequestDecoder decoder = new SocksCmdRequestDecoder();
         EmbeddedChannel embedder = new EmbeddedChannel(decoder);
         SocksCommonTestUtils.writeMessageIntoEmbedder(embedder, msg);
@@ -53,7 +53,7 @@ public class SocksCmdRequestDecoderTest {
                                                                        int port,
                                                                        String host) {
         logger.debug("Testing cmdType: " + cmdType + " host: " + host + " port: " + port);
-        SocksCmdRequest msg = new SocksCmdRequest(cmdType, port, host);
+        SocksCmdRequest msg = new Socks4CmdRequest(cmdType, port, host);
         SocksCmdRequestDecoder decoder = new SocksCmdRequestDecoder();
         EmbeddedChannel embedder = new EmbeddedChannel(decoder);
         SocksCommonTestUtils.writeMessageIntoEmbedder(embedder, msg);

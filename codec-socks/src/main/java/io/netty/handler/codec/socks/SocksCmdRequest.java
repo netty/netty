@@ -28,71 +28,22 @@ import io.netty.util.NetUtil;
  * @see SocksCmdResponse
  * @see SocksCmdRequestDecoder
  */
-public final class SocksCmdRequest extends SocksRequest {
-    private final SocksCmdType cmdType;
-    private final SocksAddressType addressType;
-    private final String host;
-    private final int port;
+public abstract class SocksCmdRequest extends SocksRequest {
+    protected SocksCmdType cmdType;
+    protected String host;
+    protected int port;
+    protected SocksAddressType addressType;
 
-    public SocksCmdRequest(SocksCmdType cmdType, int port, String host) {
-        super(SocksProtocolVersion.SOCKS4, SocksRequestType.CMD);
+    public SocksCmdRequest(SocksProtocolVersion protocolVersion, SocksRequestType requestType,
+                           SocksCmdType cmdType, int port) {
+        super(protocolVersion, requestType);
         if (cmdType == null) {
             throw new NullPointerException("cmdType");
-        }
-        if (host == null) {
-            throw new NullPointerException("host");
-        }
-        if (!SocksCmdType.BIND.equals(cmdType) && !SocksCmdType.CONNECT.equals(cmdType)) {
-            throw new IllegalArgumentException("Incorrect SocksCmdType for Socks4!");
-        }
-        if (port < 0 || port >= 65536) {
-            throw new IllegalArgumentException(port + " is not in bounds 0 < x < 65536");
-        }
-        if (!NetUtil.isValidIpV4Address(host)) {
-            throw new IllegalArgumentException(host + " is not a valid IPv4 address");
-        }
-        this.cmdType = cmdType;
-        this.host = host;
-        this.port = port;
-        this.addressType = null;
-    }
-
-    public SocksCmdRequest(SocksCmdType cmdType, SocksAddressType addressType, String host, int port) {
-        super(SocksProtocolVersion.SOCKS5, SocksRequestType.CMD);
-        if (cmdType == null) {
-            throw new NullPointerException("cmdType");
-        }
-        if (addressType == null) {
-            throw new NullPointerException("addressType");
-        }
-        if (host == null) {
-            throw new NullPointerException("host");
-        }
-        switch (addressType) {
-            case IPv4:
-                if (!NetUtil.isValidIpV4Address(host)) {
-                    throw new IllegalArgumentException(host + " is not a valid IPv4 address");
-                }
-                break;
-            case DOMAIN:
-                if (IDN.toASCII(host).length() > 255) {
-                    throw new IllegalArgumentException(host + " IDN: " + IDN.toASCII(host) + " exceeds 255 char limit");
-                }
-                break;
-            case IPv6:
-                if (!NetUtil.isValidIpV6Address(host)) {
-                    throw new IllegalArgumentException(host + " is not a valid IPv6 address");
-                }
-                break;
-            case UNKNOWN:
-                break;
         }
         if (port < 0 || port >= 65536) {
             throw new IllegalArgumentException(port + " is not in bounds 0 < x < 65536");
         }
         this.cmdType = cmdType;
-        this.addressType = addressType;
-        this.host = IDN.toASCII(host);
         this.port = port;
     }
 
@@ -111,6 +62,9 @@ public final class SocksCmdRequest extends SocksRequest {
      * @return The {@link SocksAddressType} of this {@link SocksCmdRequest} for Socks5
      */
     public SocksAddressType addressType() {
+        if (SocksProtocolVersion.SOCKS4.equals(protocolVersion())) {
+            throw new IllegalStateException("SocksAddressType doesn't support in Socks4 protocol.");
+        }
         return addressType;
     }
 

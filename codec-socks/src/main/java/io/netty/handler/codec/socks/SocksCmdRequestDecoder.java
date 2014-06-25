@@ -76,20 +76,20 @@ public class SocksCmdRequestDecoder extends ReplayingDecoder<SocksCmdRequestDeco
                         case IPv4: {
                             host = SocksCommonUtils.intToIp(byteBuf.readInt());
                             port = byteBuf.readUnsignedShort();
-                            msg = new SocksCmdRequest(cmdType, addressType, host, port);
+                            msg = new Socks5CmdRequest(cmdType, addressType, host, port);
                             break;
                         }
                         case DOMAIN: {
                             fieldLength = byteBuf.readByte();
                             host = byteBuf.readBytes(fieldLength).toString(CharsetUtil.US_ASCII);
                             port = byteBuf.readUnsignedShort();
-                            msg = new SocksCmdRequest(cmdType, addressType, host, port);
+                            msg = new Socks5CmdRequest(cmdType, addressType, host, port);
                             break;
                         }
                         case IPv6: {
                             host = SocksCommonUtils.ipv6toStr(byteBuf.readBytes(16).array());
                             port = byteBuf.readUnsignedShort();
-                            msg = new SocksCmdRequest(cmdType, addressType, host, port);
+                            msg = new Socks5CmdRequest(cmdType, addressType, host, port);
                             break;
                         }
                         case UNKNOWN:
@@ -105,7 +105,7 @@ public class SocksCmdRequestDecoder extends ReplayingDecoder<SocksCmdRequestDeco
                         b = byteBuf.readByte();
                     }
                     userId = buf.toString(CharsetUtil.US_ASCII);
-                    msg = new SocksCmdRequest(cmdType, port, host);
+                    msg = new Socks4CmdRequest(cmdType, port, host);
                 }
             }
         }
