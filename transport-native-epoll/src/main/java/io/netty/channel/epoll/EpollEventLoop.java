@@ -19,6 +19,8 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.channel.epoll.AbstractEpollChannel.AbstractEpollUnsafe;
+import io.netty.util.collection.IntObjectHashMap;
+import io.netty.util.collection.IntObjectMap;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -26,8 +28,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
@@ -50,7 +50,7 @@ final class EpollEventLoop extends SingleThreadEventLoop {
 
     private final int epollFd;
     private final int eventFd;
-    private final Map<Integer, AbstractEpollChannel> ids = new HashMap<Integer, AbstractEpollChannel>();
+    private final IntObjectMap<AbstractEpollChannel> ids = new IntObjectHashMap<AbstractEpollChannel>();
     private final long[] events;
 
     private int id;
@@ -292,8 +292,8 @@ final class EpollEventLoop extends SingleThreadEventLoop {
         Native.epollWait(epollFd, events, 0);
         Collection<AbstractEpollChannel> channels = new ArrayList<AbstractEpollChannel>(ids.size());
 
-        for (AbstractEpollChannel ch: ids.values()) {
-            channels.add(ch);
+        for (IntObjectMap.Entry<AbstractEpollChannel> entry: ids.entries()) {
+            channels.add(entry.value());
         }
 
         for (AbstractEpollChannel ch: channels) {
