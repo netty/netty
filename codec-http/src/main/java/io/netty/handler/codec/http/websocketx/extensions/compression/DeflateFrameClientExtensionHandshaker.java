@@ -19,9 +19,9 @@ import static io.netty.handler.codec.http.websocketx.extensions.compression.
         DeflateFrameServerExtensionHandshaker.*;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketClientExtension;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketClientExtensionHandshaker;
+import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionData;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionDecoder;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionEncoder;
-import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionUtil.WebSocketExtensionData;
 
 import java.util.Collections;
 
@@ -73,7 +73,7 @@ public class DeflateFrameClientExtensionHandshaker implements WebSocketClientExt
         if (extensionData.getParameters().isEmpty()) {
             return new DeflateFrameClientExtension(compressionLevel);
         } else {
-            throw new IllegalArgumentException(extensionData.getParameters().get(0).toString());
+            return null;
         }
     }
 

@@ -23,7 +23,6 @@ import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
-import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionUtil.WebSocketExtensionData;
 
 import java.util.ArrayList;
 import java.util.Arrays;

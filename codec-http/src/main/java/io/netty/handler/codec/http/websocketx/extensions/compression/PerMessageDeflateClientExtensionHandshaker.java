@@ -19,12 +19,13 @@ import static io.netty.handler.codec.http.websocketx.extensions.compression.
         PerMessageDeflateServerExtensionHandshaker.*;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketClientExtension;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketClientExtensionHandshaker;
+import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionData;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionDecoder;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionEncoder;
-import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionUtil.WebSocketExtensionData;
 
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Map.Entry;
 
 /**
@@ -105,7 +106,7 @@ public class PerMessageDeflateClientExtensionHandshaker implements WebSocketClie
             return null;
         }
 
-        boolean deflateEnabled = true;
+        boolean succeed = true;
         int clientWindowSize = MAX_WINDOW_SIZE;
         int serverWindowSize = MAX_WINDOW_SIZE;
         boolean serverNoContext = false;
@@ -113,42 +114,48 @@ public class PerMessageDeflateClientExtensionHandshaker implements WebSocketClie
 
         Iterator<Entry<String, String>> parametersIterator =
                 extensionData.getParameters().entrySet().iterator();
-        while (deflateEnabled && parametersIterator.hasNext()) {
+        while (succeed && parametersIterator.hasNext()) {
             Entry<String, String> parameter = parametersIterator.next();
 
             if (CLIENT_MAX_WINDOW.equalsIgnoreCase(parameter.getKey())) {
+                // allowed client_window_size_bits
                 if (allowClientWindowSize) {
                     clientWindowSize = Integer.valueOf(parameter.getValue());
-                    if (clientWindowSize > MAX_WINDOW_SIZE || clientWindowSize < MIN_WINDOW_SIZE) {
-                        throw new IllegalArgumentException(CLIENT_MAX_WINDOW);
-                    }
                 } else {
-                    deflateEnabled = false;
+                    succeed = false;
                 }
             } else if (SERVER_MAX_WINDOW.equalsIgnoreCase(parameter.getKey())) {
-                // check server_window_size_bits acknowledge
-                if (requestedServerWindowSize != Integer.parseInt(parameter.getValue())) {
-                    throw new IllegalArgumentException(SERVER_MAX_WINDOW);
+                // acknowledged server_window_size_bits
+                serverWindowSize = Integer.parseInt(parameter.getValue());
+                if (clientWindowSize > MAX_WINDOW_SIZE || clientWindowSize < MIN_WINDOW_SIZE) {
+                    succeed = false;
                 }
             } else if (CLIENT_NO_CONTEXT.equalsIgnoreCase(parameter.getKey())) {
+                // allowed client_no_context_takeover
                 if (allowClientNoContext) {
                     clientNoContext = true;
                 } else {
-                    throw new IllegalArgumentException(CLIENT_NO_CONTEXT);
+                    succeed = false;
                 }
             } else if (SERVER_NO_CONTEXT.equalsIgnoreCase(parameter.getKey())) {
-                // check server_no_context_takeover acknowledge
-                if (!requestedServerNoContext) {
-                    throw new IllegalArgumentException(SERVER_NO_CONTEXT);
+                // acknowledged server_no_context_takeover
+                if (requestedServerNoContext) {
+                    serverNoContext = true;
+                } else {
+                    succeed = false;
                 }
-                serverNoContext = true;
             } else {
                 // unknown parameter
-                throw new IllegalArgumentException(parameter.getKey());
+                succeed = false;
             }
         }
 
-        if (deflateEnabled) {
+        if ((requestedServerNoContext && !serverNoContext) ||
+                requestedServerWindowSize != serverWindowSize) {
+            succeed = false;
+        }
+
+        if (succeed) {
             return new PermessageDeflateExtension(serverNoContext, serverWindowSize,
                     clientNoContext, clientWindowSize);
         } else {

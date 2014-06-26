@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.http.websocketx.extensions;
 
-import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionUtil.WebSocketExtensionData;
 
 /**
  * Created once the handshake phase is done.

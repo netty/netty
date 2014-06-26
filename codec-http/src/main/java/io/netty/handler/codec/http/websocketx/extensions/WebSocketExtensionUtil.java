@@ -96,28 +96,6 @@ public final class WebSocketExtensionUtil {
         return newHeaderValue.toString();
     }
 
-    public static final class WebSocketExtensionData {
-
-        private final String name;
-        private final Map<String, String> parameters;
-
-        public WebSocketExtensionData(String name, Map<String, String> parameters) {
-            if (name == null) {
-                throw new NullPointerException("name");
-            }
-            this.name = name;
-            this.parameters = Collections.unmodifiableMap(parameters);
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public Map<String, String> getParameters() {
-            return parameters;
-        }
-    }
-
     private WebSocketExtensionUtil() {
         // Unused
     }

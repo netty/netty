@@ -18,11 +18,12 @@ package io.netty.handler.codec.http.websocketx.extensions;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
-import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionUtil.WebSocketExtensionData;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
@@ -85,6 +86,8 @@ public class WebSocketClientExtensionHandler extends ChannelHandlerAdapter {
                 if (extensionsHeader != null) {
                     List<WebSocketExtensionData> extensions =
                             WebSocketExtensionUtil.extractExtensions(extensionsHeader);
+                    List<WebSocketClientExtension> validExtensions =
+                            new ArrayList<WebSocketClientExtension>(extensions.size());
                     int rsv = 0;
 
                     for (WebSocketExtensionData extensionData : extensions) {
@@ -100,12 +103,18 @@ public class WebSocketClientExtensionHandler extends ChannelHandlerAdapter {
 
                         if (validExtension != null && ((validExtension.rsv() & rsv) == 0)) {
                             rsv = rsv | validExtension.rsv();
-
-                            WebSocketExtensionDecoder decoder = validExtension.createExtensionDecoder();
-                            WebSocketExtensionEncoder encoder = validExtension.createExtensionEncoder();
-                            ctx.pipeline().addAfter(ctx.name(), decoder.getClass().getName(), decoder);
-                            ctx.pipeline().addAfter(ctx.name(), encoder.getClass().getName(), encoder);
+                            validExtensions.add(validExtension);
+                        } else {
+                            throw new CodecException(
+                                    "invalid WebSocket Extension handhshake for \"" + extensionsHeader + "\"");
                         }
+                    }
+
+                    for (WebSocketClientExtension validExtension : validExtensions) {
+                        WebSocketExtensionDecoder decoder = validExtension.createExtensionDecoder();
+                        WebSocketExtensionEncoder encoder = validExtension.createExtensionEncoder();
+                        ctx.pipeline().addAfter(ctx.name(), decoder.getClass().getName(), decoder);
+                        ctx.pipeline().addAfter(ctx.name(), encoder.getClass().getName(), encoder);
                     }
                 }
 

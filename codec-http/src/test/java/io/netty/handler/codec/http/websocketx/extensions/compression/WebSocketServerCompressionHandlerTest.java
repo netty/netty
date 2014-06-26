@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2014 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -17,20 +17,14 @@ package io.netty.handler.codec.http.websocketx.extensions.compression;
 
 import static io.netty.handler.codec.http.websocketx.extensions.compression.
         PerMessageDeflateServerExtensionHandshaker.*;
+import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionTestUtil.*;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.handler.codec.http.DefaultHttpRequest;
-import io.netty.handler.codec.http.DefaultHttpResponse;
-import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionData;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionUtil;
-import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionUtil.WebSocketExtensionData;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketServerExtensionHandler;
 import io.netty.handler.codec.http.HttpHeaders.Names;
-import io.netty.handler.codec.http.HttpHeaders.Values;
-import io.netty.util.ReferenceCountUtil;
 
 import java.util.List;
 
@@ -197,36 +191,6 @@ public class WebSocketServerCompressionHandlerTest {
         Assert.assertTrue(exts.get(0).getParameters().isEmpty());
         Assert.assertTrue(ch.pipeline().get(PerMessageDeflateDecoder.class) != null);
         Assert.assertTrue(ch.pipeline().get(PerMessageDeflateEncoder.class) != null);
-    }
-
-    static HttpRequest createUpgradeRequest(String ext) {
-        HttpRequest req = ReferenceCountUtil.releaseLater(new DefaultHttpRequest(
-                HttpVersion.HTTP_1_1, HttpMethod.GET, "/chat"));
-
-        req.headers().set(Names.HOST, "server.example.com");
-        req.headers().set(Names.UPGRADE, Values.WEBSOCKET.toString().toLowerCase());
-        req.headers().set(Names.CONNECTION, "Upgrade");
-        req.headers().set(Names.ORIGIN, "http://example.com");
-        if (ext != null) {
-            req.headers().set(Names.SEC_WEBSOCKET_EXTENSIONS, ext);
-        }
-
-        return req;
-    }
-
-    static HttpResponse createUpgradeResponse(String ext) {
-        HttpResponse res = ReferenceCountUtil.releaseLater(new DefaultHttpResponse(
-                HttpVersion.HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS));
-
-        res.headers().set(Names.HOST, "server.example.com");
-        res.headers().set(Names.UPGRADE, Values.WEBSOCKET.toString().toLowerCase());
-        res.headers().set(Names.CONNECTION, "Upgrade");
-        res.headers().set(Names.ORIGIN, "http://example.com");
-        if (ext != null) {
-            res.headers().set(Names.SEC_WEBSOCKET_EXTENSIONS, ext);
-        }
-
-        return res;
     }
 
 }

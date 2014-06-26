@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.http.websocketx.extensions;
 
-import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionUtil.WebSocketExtensionData;
 
 /**
  * Handshakes a client extension with the server.
