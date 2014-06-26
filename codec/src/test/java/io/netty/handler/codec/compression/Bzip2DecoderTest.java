@@ -119,7 +119,18 @@ public class Bzip2DecoderTest {
                               0x4E, 0x14, 0x24, 0x1D, (byte) 0xDD, (byte) 0xF2, (byte) 0xB0, 0x00 };
 
         ByteBuf in = Unpooled.wrappedBuffer(data);
-        channel.writeInbound(in);
+        try {
+            channel.writeInbound(in);
+        } finally {
+            for (;;) {
+                ByteBuf inflated = channel.readInbound();
+                if (inflated == null) {
+                    break;
+                }
+                inflated.release();
+            }
+            channel.finish();
+        }
     }
 
     @Test
