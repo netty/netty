@@ -17,7 +17,6 @@ package io.netty.util.internal;
 
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-import sun.misc.Cleaner;
 import sun.misc.Unsafe;
 
 import java.lang.reflect.Field;
@@ -40,7 +39,6 @@ final class PlatformDependent0 {
     private static final Unsafe UNSAFE;
     private static final boolean BIG_ENDIAN = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
     private static final long ADDRESS_FIELD_OFFSET;
-    private static final long CLEANER_FIELD_OFFSET;
 
     /**
      * Limits the number of bytes to copy per {@link Unsafe#copyMemory(long, long, long)} to allow safepoint polling
@@ -57,19 +55,6 @@ final class PlatformDependent0 {
 
     static {
         ByteBuffer direct = ByteBuffer.allocateDirect(1);
-        Field cleanerField;
-        try {
-            cleanerField = direct.getClass().getDeclaredField("cleaner");
-            cleanerField.setAccessible(true);
-            Cleaner cleaner = (Cleaner) cleanerField.get(direct);
-            cleaner.clean();
-        } catch (Throwable t) {
-            // We don't have ByteBuffer.cleaner().
-            cleanerField = null;
-        }
-
-        logger.debug("java.nio.ByteBuffer.cleaner(): {}", cleanerField != null? "available" : "unavailable");
-
         Field addressField;
         try {
             addressField = Buffer.class.getDeclaredField("address");
@@ -90,7 +75,7 @@ final class PlatformDependent0 {
         logger.debug("java.nio.Buffer.address: {}", addressField != null? "available" : "unavailable");
 
         Unsafe unsafe;
-        if (addressField != null && cleanerField != null) {
+        if (addressField != null) {
             try {
                 Field unsafeField = Unsafe.class.getDeclaredField("theUnsafe");
                 unsafeField.setAccessible(true);
@@ -127,11 +112,9 @@ final class PlatformDependent0 {
 
         if (unsafe == null) {
             ADDRESS_FIELD_OFFSET = -1;
-            CLEANER_FIELD_OFFSET = -1;
             UNALIGNED = false;
         } else {
             ADDRESS_FIELD_OFFSET = objectFieldOffset(addressField);
-            CLEANER_FIELD_OFFSET = objectFieldOffset(cleanerField);
             boolean unaligned;
             try {
                 Class<?> bitsClass = Class.forName("java.nio.Bits", false, ClassLoader.getSystemClassLoader());
@@ -148,9 +131,6 @@ final class PlatformDependent0 {
             UNALIGNED = unaligned;
             logger.debug("java.nio.Bits.unaligned: {}", UNALIGNED);
         }
-
-        // free temporary buffer if possible
-        freeDirectBuffer(direct);
     }
 
     static boolean hasUnsafe() {
@@ -162,17 +142,9 @@ final class PlatformDependent0 {
     }
 
     static void freeDirectBuffer(ByteBuffer buffer) {
-        if (CLEANER_FIELD_OFFSET == -1 || !buffer.isDirect()) {
-            return;
-        }
-        try {
-            Cleaner cleaner = (Cleaner) getObject(buffer, CLEANER_FIELD_OFFSET);
-            if (cleaner != null) {
-                cleaner.clean();
-            }
-        } catch (Throwable t) {
-            // Nothing we can do here.
-        }
+        // Delegate to other class to not break on android
+        // See https://github.com/netty/netty/issues/2604
+        Cleaner0.freeDirectBuffer(buffer);
     }
 
     static long directBufferAddress(ByteBuffer buffer) {
