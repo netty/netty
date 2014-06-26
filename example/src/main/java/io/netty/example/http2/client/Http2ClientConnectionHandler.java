@@ -128,8 +128,8 @@ public class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler
             collectedData.writeBytes(data);
         } else {
             // Expand the buffer
-            ByteBuf newBuffer = ctx().alloc().buffer(data.readableBytes() + available);
-            newBuffer.writeBytes(data);
+            ByteBuf newBuffer = ctx().alloc().buffer(collectedData.readableBytes() + available);
+            newBuffer.writeBytes(collectedData);
             newBuffer.writeBytes(data);
             collectedData.release();
             collectedData = newBuffer;
