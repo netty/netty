@@ -276,7 +276,7 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
                     if (!decoded) {
                         return;
                     }
-                    
+
                     final int blockLength = blockDecompressor.blockLength();
                     final ByteBuf uncompressed = ctx.alloc().buffer(blockLength);
                     boolean success = false;
