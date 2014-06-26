@@ -229,9 +229,11 @@ public class Bzip2DecoderTest {
         ByteBuf msg;
         while ((msg = channel.readInbound()) != null) {
             uncompressed.writeBytes(msg);
+            msg.release();
         }
         final byte[] result = new byte[uncompressed.readableBytes()];
         uncompressed.readBytes(result);
+        uncompressed.release();
 
         assertArrayEquals(BYTES_LARGE, result);
     }
