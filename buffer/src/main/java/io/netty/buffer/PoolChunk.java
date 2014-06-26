@@ -103,14 +103,12 @@ package io.netty.buffer;
 
 final class PoolChunk<T> {
 
-    private static final int BYTE_LENGTH = Byte.SIZE;
-    private static final int UPPER_BYTE_MASK = - (1 << BYTE_LENGTH);
-
     final PoolArena<T> arena;
     final T memory;
     final boolean unpooled;
 
-    private final short[] memoryMap;
+    private final byte[] memoryMap;
+    private final byte[] depthMap;
     private final PoolSubpage<T>[] subpages;
     /** Used to determine if the requested capacity is equal to or greater than pageSize. */
     private final int subpageOverflowMask;
@@ -145,19 +143,20 @@ final class PoolChunk<T> {
         subpageOverflowMask = ~(pageSize - 1);
         freeBytes = chunkSize;
 
-        assert maxOrder < 30 : "maxOrder should be < 30, but is : " + maxOrder;
+        assert maxOrder < 30 : "maxOrder should be < 30, but is: " + maxOrder;
         maxSubpageAllocs = 1 << maxOrder;
 
         // Generate the memory map.
-        memoryMap = new short[maxSubpageAllocs << 1];
+        memoryMap = new byte[maxSubpageAllocs << 1];
+        depthMap = new byte[memoryMap.length];
         int memoryMapIndex = 1;
-        for (int d = 0; d <= maxOrder; ++d) { // move down the tree one level at a time
-            short dd = (short) (d << BYTE_LENGTH | d);
+        for (int d = 0; d <= maxOrder; ++ d) { // move down the tree one level at a time
             int depth = 1 << d;
-            for (int p = 0; p < depth; ++p) {
+            for (int p = 0; p < depth; ++ p) {
                 // in each level traverse left to right and set value to the depth of subtree
-                memoryMap[memoryMapIndex] = dd;
-                memoryMapIndex += 1;
+                memoryMap[memoryMapIndex] = (byte) d;
+                depthMap[memoryMapIndex] = (byte) d;
+                memoryMapIndex ++;
             }
         }
 
@@ -170,6 +169,7 @@ final class PoolChunk<T> {
         this.arena = arena;
         this.memory = memory;
         memoryMap = null;
+        depthMap = null;
         subpages = null;
         subpageOverflowMask = 0;
         pageSize = 0;
@@ -187,6 +187,7 @@ final class PoolChunk<T> {
     }
 
     int usage() {
+        final int freeBytes = this.freeBytes;
         if (freeBytes == 0) {
             return 100;
         }
@@ -288,8 +289,7 @@ final class PoolChunk<T> {
      * @return index in memoryMap
      */
     private long allocateRun(int normCapacity) {
-        int numPages = normCapacity >>> pageShifts;
-        int d = maxOrder - log2(numPages);
+        int d = maxOrder - (log2(normCapacity) - pageShifts);
         int id = allocateNode(d);
         if (id < 0) {
             return id;
@@ -311,6 +311,10 @@ final class PoolChunk<T> {
         if (id < 0) {
             return id;
         }
+
+        final PoolSubpage<T>[] subpages = this.subpages;
+        final int pageSize = this.pageSize;
+
         freeBytes -= pageSize;
 
         int subpageIdx = subpageIdx(id);
@@ -379,16 +383,15 @@ final class PoolChunk<T> {
     }
 
     private byte value(int id) {
-        return (byte) memoryMap[id];
+        return memoryMap[id];
     }
 
     private void setValue(int id, byte val) {
-        memoryMap[id] = (short) (memoryMap[id] & UPPER_BYTE_MASK | val);
+        memoryMap[id] = val;
     }
 
     private byte depth(int id) {
-        short val = memoryMap[id];
-        return (byte) (val >>> BYTE_LENGTH);
+        return depthMap[id];
     }
 
     private static int log2(int val) {
