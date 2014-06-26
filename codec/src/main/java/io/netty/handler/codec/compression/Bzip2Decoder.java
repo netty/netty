@@ -276,17 +276,26 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
                     if (!decoded) {
                         return;
                     }
-                    int blockLength = blockDecompressor.blockLength();
-                    ByteBuf uncompressed = ctx.alloc().buffer(blockLength);
-                    int uncByte;
-                    while ((uncByte = blockDecompressor.read()) >= 0) {
-                        uncompressed.writeByte(uncByte);
+                    
+                    final int blockLength = blockDecompressor.blockLength();
+                    final ByteBuf uncompressed = ctx.alloc().buffer(blockLength);
+                    boolean success = false;
+                    try {
+                        int uncByte;
+                        while ((uncByte = blockDecompressor.read()) >= 0) {
+                            uncompressed.writeByte(uncByte);
+                        }
+
+                        int currentBlockCRC = blockDecompressor.checkCRC();
+                        streamCRC = (streamCRC << 1 | streamCRC >>> 31) ^ currentBlockCRC;
+
+                        out.add(uncompressed);
+                        success = true;
+                    } finally {
+                        if (!success) {
+                            uncompressed.release();
+                        }
                     }
-
-                    int currentBlockCRC = blockDecompressor.checkCRC();
-                    streamCRC = (streamCRC << 1 | streamCRC >>> 31) ^ currentBlockCRC;
-
-                    out.add(uncompressed);
                     currentState = State.INIT_BLOCK;
                     break;
                 case EOF:
