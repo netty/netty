@@ -16,9 +16,11 @@
 package io.netty.channel.epoll;
 
 import org.junit.Assert;
+import org.junit.Test;
 
 public class EpollTest {
 
+    @Test
     public void testIsAvailable() {
         Assert.assertTrue(Epoll.isAvailable());
     }
