@@ -37,12 +37,6 @@ public class DefaultSpdyWindowUpdateFrame implements SpdyWindowUpdateFrame {
     }
 
     @Override
-    @Deprecated
-    public int getStreamId() {
-        return streamId();
-    }
-
-    @Override
     public int streamId() {
         return streamId;
     }
@@ -55,12 +49,6 @@ public class DefaultSpdyWindowUpdateFrame implements SpdyWindowUpdateFrame {
         }
         this.streamId = streamId;
         return this;
-    }
-
-    @Override
-    @Deprecated
-    public int getDeltaWindowSize() {
-        return deltaWindowSize();
     }
 
     @Override
