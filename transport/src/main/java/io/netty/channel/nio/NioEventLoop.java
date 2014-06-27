@@ -259,7 +259,11 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
                         int interestOps = key.interestOps();
                         key.cancel();
-                        key.channel().register(newSelector, interestOps, a);
+                        SelectionKey newKey = key.channel().register(newSelector, interestOps, a);
+                        if (a instanceof AbstractNioChannel) {
+                            // Update SelectionKey
+                            ((AbstractNioChannel) a).selectionKey = newKey;
+                        }
                         nChannels ++;
                     } catch (Exception e) {
                         logger.warn("Failed to re-register a Channel to the new Selector.", e);
