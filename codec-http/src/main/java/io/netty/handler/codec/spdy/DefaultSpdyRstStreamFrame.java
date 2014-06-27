@@ -59,12 +59,6 @@ public class DefaultSpdyRstStreamFrame extends DefaultSpdyStreamFrame
     }
 
     @Override
-    @Deprecated
-    public SpdyStreamStatus getStatus() {
-        return status();
-    }
-
-    @Override
     public SpdyStreamStatus status() {
         return status;
     }

@@ -33,12 +33,6 @@ public abstract class DefaultSpdyStreamFrame implements SpdyStreamFrame {
     }
 
     @Override
-    @Deprecated
-    public int getStreamId() {
-        return streamId();
-    }
-
-    @Override
     public int streamId() {
         return streamId;
     }

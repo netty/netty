@@ -74,26 +74,10 @@ public class SpdySessionStatus implements Comparable<SpdySessionStatus> {
     }
 
     /**
-     * @deprecated Use {@link #code()} instead.
-     */
-    @Deprecated
-    public int getCode() {
-        return code();
-    }
-
-    /**
      * Returns the code of this status.
      */
     public int code() {
         return code;
-    }
-
-    /**
-     * @deprecated Use {@link #statusPhrase()} instead.
-     */
-    @Deprecated
-    public String getStatusPhrase() {
-        return statusPhrase();
     }
 
     /**
