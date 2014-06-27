@@ -30,12 +30,6 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
     private final Map<Integer, Setting> settingsMap = new TreeMap<Integer, Setting>();
 
     @Override
-    @Deprecated
-    public Set<Integer> getIds() {
-        return ids();
-    }
-
-    @Override
     public Set<Integer> ids() {
         return settingsMap.keySet();
     }

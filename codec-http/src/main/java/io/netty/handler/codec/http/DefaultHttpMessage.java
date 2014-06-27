@@ -51,12 +51,6 @@ public abstract class DefaultHttpMessage extends DefaultHttpObject implements Ht
     }
 
     @Override
-    @Deprecated
-    public HttpVersion getProtocolVersion() {
-        return protocolVersion();
-    }
-
-    @Override
     public HttpVersion protocolVersion() {
         return version;
     }

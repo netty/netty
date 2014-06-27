@@ -78,20 +78,8 @@ public class DefaultCookie implements Cookie {
     }
 
     @Override
-    @Deprecated
-    public String getName() {
-        return name();
-    }
-
-    @Override
     public String name() {
         return name;
-    }
-
-    @Override
-    @Deprecated
-    public String getValue() {
-        return value();
     }
 
     @Override
@@ -108,12 +96,6 @@ public class DefaultCookie implements Cookie {
     }
 
     @Override
-    @Deprecated
-    public String getDomain() {
-        return domain();
-    }
-
-    @Override
     public String domain() {
         return domain;
     }
@@ -121,12 +103,6 @@ public class DefaultCookie implements Cookie {
     @Override
     public void setDomain(String domain) {
         this.domain = validateValue("domain", domain);
-    }
-
-    @Override
-    @Deprecated
-    public String getPath() {
-        return path();
     }
 
     @Override
@@ -140,12 +116,6 @@ public class DefaultCookie implements Cookie {
     }
 
     @Override
-    @Deprecated
-    public String getComment() {
-        return comment();
-    }
-
-    @Override
     public String comment() {
         return comment;
     }
@@ -153,12 +123,6 @@ public class DefaultCookie implements Cookie {
     @Override
     public void setComment(String comment) {
         this.comment = validateValue("comment", comment);
-    }
-
-    @Override
-    @Deprecated
-    public String getCommentUrl() {
-        return commentUrl();
     }
 
     @Override
@@ -179,12 +143,6 @@ public class DefaultCookie implements Cookie {
     @Override
     public void setDiscard(boolean discard) {
         this.discard = discard;
-    }
-
-    @Override
-    @Deprecated
-    public Set<Integer> getPorts() {
-        return ports();
     }
 
     @Override
@@ -235,12 +193,6 @@ public class DefaultCookie implements Cookie {
     }
 
     @Override
-    @Deprecated
-    public long getMaxAge() {
-        return maxAge();
-    }
-
-    @Override
     public long maxAge() {
         return maxAge;
     }
@@ -248,12 +200,6 @@ public class DefaultCookie implements Cookie {
     @Override
     public void setMaxAge(long maxAge) {
         this.maxAge = maxAge;
-    }
-
-    @Override
-    @Deprecated
-    public int getVersion() {
-        return version();
     }
 
     @Override

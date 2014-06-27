@@ -50,12 +50,6 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
     }
 
     @Override
-    @Deprecated
-    public HttpResponseStatus getStatus() {
-        return status();
-    }
-
-    @Override
     public HttpResponseStatus status() {
         return status;
     }

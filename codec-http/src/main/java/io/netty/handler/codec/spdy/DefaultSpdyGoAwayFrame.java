@@ -56,12 +56,6 @@ public class DefaultSpdyGoAwayFrame implements SpdyGoAwayFrame {
     }
 
     @Override
-    @Deprecated
-    public int getLastGoodStreamId() {
-        return lastGoodStreamId();
-    }
-
-    @Override
     public int lastGoodStreamId() {
         return lastGoodStreamId;
     }
@@ -74,12 +68,6 @@ public class DefaultSpdyGoAwayFrame implements SpdyGoAwayFrame {
         }
         this.lastGoodStreamId = lastGoodStreamId;
         return this;
-    }
-
-    @Override
-    @Deprecated
-    public SpdySessionStatus getStatus() {
-        return status();
     }
 
     @Override

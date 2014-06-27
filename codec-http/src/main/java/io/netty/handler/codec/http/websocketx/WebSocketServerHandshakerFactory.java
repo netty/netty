@@ -110,14 +110,6 @@ public class WebSocketServerHandshakerFactory {
     }
 
     /**
-     * @deprecated use {@link #sendUnsupportedVersionResponse(Channel)}
-     */
-    @Deprecated
-    public static void sendUnsupportedWebSocketVersionResponse(Channel channel) {
-        sendUnsupportedVersionResponse(channel);
-    }
-
-    /**
      * Return that we need cannot not support the web socket version
      */
     public static ChannelFuture sendUnsupportedVersionResponse(Channel channel) {
