@@ -96,7 +96,7 @@ public class ChannelHandlerAdapter implements ChannelHandler {
     }
 
     /**
-     * Calls {@link ChannelHandlerContext#fireChannelRegistered()} to forward
+     * Calls {@link ChannelHandlerContext#fireChannelUnregistered()} to forward
      * to the next {@link ChannelHandler} in the {@link ChannelPipeline}.
      *
      * Sub-classes may override this method to change behavior.
