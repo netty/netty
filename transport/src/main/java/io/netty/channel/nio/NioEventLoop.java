@@ -473,7 +473,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             }
 
             if (needsToSelectAgain) {
-                // null out entrys in the array to allow to have it GC'ed once the Channel close
+                // null out entries in the array to allow to have it GC'ed once the Channel close
                 // See https://github.com/netty/netty/issues/2363
                 for (;;) {
                     if (selectedKeys[i] == null) {
@@ -628,7 +628,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     // the task queue has a pending task.
                     break;
                 }
-                if (selectedKeys == 0 && Thread.interrupted()) {
+                if (Thread.interrupted()) {
                     // Thread was interrupted so reset selected keys and break so we not run into a busy loop.
                     // As this is most likely a bug in the handler of the user or it's client library we will
                     // also log it.
