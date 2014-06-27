@@ -84,7 +84,7 @@
           <plugin>
             <groupId>org.jacoco</groupId>
             <artifactId>jacoco-maven-plugin</artifactId>
-            <version>0.6.4.201312101107</version>
+            <version>0.7.1.201405082137</version>
             <executions>
               <execution>
                 <id>jacoco-prepare-agent</id>
