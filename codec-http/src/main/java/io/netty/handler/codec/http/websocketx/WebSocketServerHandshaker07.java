@@ -57,8 +57,7 @@ public class WebSocketServerHandshaker07 extends WebSocketServerHandshaker {
      *            requirement may reduce denial of service attacks using long data frames.
      */
     public WebSocketServerHandshaker07(
-            String webSocketURL, String subprotocols, boolean allowExtensions,
-            int maxFramePayloadLength) {
+            String webSocketURL, String subprotocols, boolean allowExtensions, int maxFramePayloadLength) {
         super(WebSocketVersion.V07, webSocketURL, subprotocols, maxFramePayloadLength);
         this.allowExtensions = allowExtensions;
     }

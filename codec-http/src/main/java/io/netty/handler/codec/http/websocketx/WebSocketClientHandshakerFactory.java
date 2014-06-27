@@ -72,8 +72,8 @@ public final class WebSocketClientHandshakerFactory {
      *            requirement may reduce denial of service attacks using long data frames.
      */
     public static WebSocketClientHandshaker newHandshaker(
-            URI webSocketURL, WebSocketVersion version, String subprotocol, boolean allowExtensions,
-            HttpHeaders customHeaders, int maxFramePayloadLength) {
+            URI webSocketURL, WebSocketVersion version, String subprotocol,
+            boolean allowExtensions, HttpHeaders customHeaders, int maxFramePayloadLength) {
         if (version == V13) {
             return new WebSocketClientHandshaker13(
                     webSocketURL, V13, subprotocol, allowExtensions, customHeaders, maxFramePayloadLength);
