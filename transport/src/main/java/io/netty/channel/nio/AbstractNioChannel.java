@@ -46,7 +46,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
     private final SelectableChannel ch;
     protected final int readInterestOp;
-    private volatile SelectionKey selectionKey;
+    volatile SelectionKey selectionKey;
     private volatile boolean inputShutdown;
     private volatile boolean readPending;
 
