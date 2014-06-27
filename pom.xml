@@ -324,11 +324,10 @@
       -XX:+UseFastAccessorMethods
       -XX:+OptimizeStringConcat
       -XX:+HeapDumpOnOutOfMemoryError
-      -verbose:gc
     </argLine.common>
     <argLine.bootcp>-Xbootclasspath/p:${jetty.npn.path}</argLine.bootcp>
-    <argLine.leak>-D_</argLine.leak> <!-- Set when 'leak' profile is active -->
-    <argLine.coverage>-D_</argLine.coverage> <!-- Set when 'coverage' profile is active -->
+    <argLine.leak>-verbose:gc</argLine.leak> <!-- Overridden when 'leak' profile is active -->
+    <argLine.coverage>-D_</argLine.coverage> <!-- Overridden when 'coverage' profile is active -->
   </properties>
 
   <modules>
