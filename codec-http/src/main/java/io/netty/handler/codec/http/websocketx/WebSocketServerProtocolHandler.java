@@ -66,7 +66,6 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
     private final String subprotocols;
     private final boolean allowExtensions;
     private final int maxFramePayloadLength;
-    private final boolean disableUTF8Checking;
 
     public WebSocketServerProtocolHandler(String websocketPath) {
         this(websocketPath, null, false);
@@ -77,21 +76,15 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
     }
 
     public WebSocketServerProtocolHandler(String websocketPath, String subprotocols, boolean allowExtensions) {
-        this(websocketPath, subprotocols, allowExtensions, 65536, false);
+        this(websocketPath, subprotocols, allowExtensions, 65536);
     }
 
     public WebSocketServerProtocolHandler(String websocketPath, String subprotocols,
             boolean allowExtensions, int maxFrameSize) {
-        this(websocketPath, subprotocols, allowExtensions, maxFrameSize, false);
-    }
-
-    public WebSocketServerProtocolHandler(String websocketPath, String subprotocols,
-            boolean allowExtensions, int maxFrameSize, boolean disableUTF8Checking) {
         this.websocketPath = websocketPath;
         this.subprotocols = subprotocols;
         this.allowExtensions = allowExtensions;
         this.maxFramePayloadLength = maxFrameSize;
-        this.disableUTF8Checking = disableUTF8Checking;
     }
 
     @Override
@@ -101,7 +94,7 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
             // Add the WebSocketHandshakeHandler before this one.
             ctx.pipeline().addBefore(ctx.name(), WebSocketServerProtocolHandshakeHandler.class.getName(),
                     new WebSocketServerProtocolHandshakeHandler(websocketPath, subprotocols,
-                            allowExtensions, maxFramePayloadLength, disableUTF8Checking));
+                            allowExtensions, maxFramePayloadLength));
         }
     }
 

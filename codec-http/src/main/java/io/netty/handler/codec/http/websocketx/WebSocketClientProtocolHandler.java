@@ -73,39 +73,12 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
      *            Maximum length of a frame's payload
      * @param handleCloseFrames
      *            {@code true} if close frames should not be forwarded and just close the channel
-     * @param disableUTF8Checking
-     *            {@code true} to disable UTF8 checking while decoding text frames.
-     */
-    public WebSocketClientProtocolHandler(URI webSocketURL, WebSocketVersion version, String subprotocol,
-                                                   boolean allowExtensions, HttpHeaders customHeaders,
-                                                   int maxFramePayloadLength, boolean handleCloseFrames,
-                                                   boolean disableUTF8Checking) {
-        this(WebSocketClientHandshakerFactory.newHandshaker(webSocketURL, version, subprotocol,
-                allowExtensions, customHeaders, maxFramePayloadLength, disableUTF8Checking), handleCloseFrames);
-    }
-
-    /**
-     * Base constructor
-     *
-     * @param webSocketURL
-     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
-     *            sent to this URL.
-     * @param version
-     *            Version of web socket specification to use to connect to the server
-     * @param subprotocol
-     *            Sub protocol request sent to the server.
-     * @param customHeaders
-     *            Map of custom headers to add to the client request
-     * @param maxFramePayloadLength
-     *            Maximum length of a frame's payload
-     * @param handleCloseFrames
-     *            {@code true} if close frames should not be forwarded and just close the channel
      */
     public WebSocketClientProtocolHandler(URI webSocketURL, WebSocketVersion version, String subprotocol,
                                                    boolean allowExtensions, HttpHeaders customHeaders,
                                                    int maxFramePayloadLength, boolean handleCloseFrames) {
-        this(webSocketURL, version, subprotocol,
-                allowExtensions, customHeaders, maxFramePayloadLength, handleCloseFrames, false);
+        this(WebSocketClientHandshakerFactory.newHandshaker(webSocketURL, version, subprotocol,
+                allowExtensions, customHeaders, maxFramePayloadLength), handleCloseFrames);
     }
 
     /**
@@ -127,7 +100,7 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
                                           boolean allowExtensions, HttpHeaders customHeaders,
                                           int maxFramePayloadLength) {
         this(webSocketURL, version, subprotocol,
-                allowExtensions, customHeaders, maxFramePayloadLength, true, false);
+                allowExtensions, customHeaders, maxFramePayloadLength, true);
     }
 
     /**
@@ -171,6 +144,11 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
             // Add the WebSocketClientProtocolHandshakeHandler before this one.
             ctx.pipeline().addBefore(ctx.name(), WebSocketClientProtocolHandshakeHandler.class.getName(),
                     new WebSocketClientProtocolHandshakeHandler(handshaker));
+        }
+        if (cp.get(Utf8FrameValidator.class) == null) {
+            // Add the UFT8 checking before this one.
+            ctx.pipeline().addBefore(ctx.name(), Utf8FrameValidator.class.getName(),
+                    new Utf8FrameValidator());
         }
     }
 }

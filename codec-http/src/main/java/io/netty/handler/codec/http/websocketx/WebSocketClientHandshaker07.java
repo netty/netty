@@ -47,34 +47,6 @@ public class WebSocketClientHandshaker07 extends WebSocketClientHandshaker {
     private String expectedChallengeResponseString;
 
     private final boolean allowExtensions;
-    private final boolean disableUTF8Checking;
-
-    /**
-     * Creates a new instance.
-     *
-     * @param webSocketURL
-     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
-     *            sent to this URL.
-     * @param version
-     *            Version of web socket specification to use to connect to the server
-     * @param subprotocol
-     *            Sub protocol request sent to the server.
-     * @param allowExtensions
-     *            Allow extensions to be used in the reserved bits of the web socket frame
-     * @param customHeaders
-     *            Map of custom headers to add to the client request
-     * @param maxFramePayloadLength
-     *            Maximum length of a frame's payload
-     * @param disableUTF8Checking
-     *            {@code true} to disable UTF8 checking while decoding text frames.
-     */
-    public WebSocketClientHandshaker07(URI webSocketURL, WebSocketVersion version, String subprotocol,
-            boolean allowExtensions, HttpHeaders customHeaders, int maxFramePayloadLength,
-            boolean disableUTF8Checking) {
-        super(webSocketURL, version, subprotocol, customHeaders, maxFramePayloadLength);
-        this.allowExtensions = allowExtensions;
-        this.disableUTF8Checking = disableUTF8Checking;
-    }
 
     /**
      * Creates a new instance.
@@ -95,7 +67,8 @@ public class WebSocketClientHandshaker07 extends WebSocketClientHandshaker {
      */
     public WebSocketClientHandshaker07(URI webSocketURL, WebSocketVersion version, String subprotocol,
             boolean allowExtensions, HttpHeaders customHeaders, int maxFramePayloadLength) {
-        this(webSocketURL, version, subprotocol, allowExtensions, customHeaders, maxFramePayloadLength, false);
+        super(webSocketURL, version, subprotocol, customHeaders, maxFramePayloadLength);
+        this.allowExtensions = allowExtensions;
     }
 
     /**
@@ -219,7 +192,7 @@ public class WebSocketClientHandshaker07 extends WebSocketClientHandshaker {
 
     @Override
     protected WebSocketFrameDecoder newWebsocketDecoder() {
-        return new WebSocket07FrameDecoder(false, allowExtensions, maxFramePayloadLength(), disableUTF8Checking);
+        return new WebSocket07FrameDecoder(false, allowExtensions, maxFramePayloadLength());
     }
 
     @Override

@@ -41,15 +41,13 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelHandlerAdapter {
     private final String subprotocols;
     private final boolean allowExtensions;
     private final int maxFramePayloadSize;
-    private final boolean disableUTF8Checking;
 
     WebSocketServerProtocolHandshakeHandler(String websocketPath, String subprotocols,
-            boolean allowExtensions, int maxFrameSize, boolean disableUTF8Checking) {
+            boolean allowExtensions, int maxFrameSize) {
         this.websocketPath = websocketPath;
         this.subprotocols = subprotocols;
         this.allowExtensions = allowExtensions;
         maxFramePayloadSize = maxFrameSize;
-        this.disableUTF8Checking = disableUTF8Checking;
     }
 
     @Override
@@ -63,7 +61,7 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelHandlerAdapter {
 
             final WebSocketServerHandshakerFactory wsFactory = new WebSocketServerHandshakerFactory(
                     getWebSocketLocation(ctx.pipeline(), req, websocketPath), subprotocols,
-                            allowExtensions, maxFramePayloadSize, disableUTF8Checking);
+                            allowExtensions, maxFramePayloadSize);
             final WebSocketServerHandshaker handshaker = wsFactory.newHandshaker(req);
             if (handshaker == null) {
                 WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(ctx.channel());
