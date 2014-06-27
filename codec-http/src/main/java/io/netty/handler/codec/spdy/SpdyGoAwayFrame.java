@@ -21,12 +21,6 @@ package io.netty.handler.codec.spdy;
 public interface SpdyGoAwayFrame extends SpdyFrame {
 
     /**
-     * @deprecated Use {@link #lastGoodStreamId()} instead.
-     */
-    @Deprecated
-    int getLastGoodStreamId();
-
-    /**
      * Returns the Last-good-stream-ID of this frame.
      */
     int lastGoodStreamId();
@@ -36,12 +30,6 @@ public interface SpdyGoAwayFrame extends SpdyFrame {
      * cannot be negative.
      */
     SpdyGoAwayFrame setLastGoodStreamId(int lastGoodStreamId);
-
-    /**
-     * @deprecated Use {@link #status()} instead.
-     */
-    @Deprecated
-    SpdySessionStatus getStatus();
 
     /**
      * Returns the status of this frame.

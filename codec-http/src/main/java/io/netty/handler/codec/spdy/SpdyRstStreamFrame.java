@@ -21,12 +21,6 @@ package io.netty.handler.codec.spdy;
 public interface SpdyRstStreamFrame extends SpdyStreamFrame {
 
     /**
-     * @deprecated Use {@link #status()} instead.
-     */
-    @Deprecated
-    SpdyStreamStatus getStatus();
-
-    /**
      * Returns the status of this frame.
      */
     SpdyStreamStatus status();

@@ -34,12 +34,6 @@ public class DefaultSpdyPingFrame implements SpdyPingFrame {
     }
 
     @Override
-    @Deprecated
-    public int getId() {
-        return id();
-    }
-
-    @Override
     public int id() {
         return id;
     }

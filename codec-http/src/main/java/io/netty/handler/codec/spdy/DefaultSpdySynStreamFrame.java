@@ -59,20 +59,8 @@ public class DefaultSpdySynStreamFrame extends DefaultSpdyHeadersFrame
     }
 
     @Override
-    @Deprecated
-    public int getAssociatedToStreamId() {
-        return associatedStreamId();
-    }
-
-    @Override
     public int associatedStreamId() {
         return associatedStreamId;
-    }
-
-    @Override
-    @Deprecated
-    public SpdySynStreamFrame setAssociatedToStreamId(int associatedToStreamId) {
-        return setAssociatedStreamId(associatedToStreamId);
     }
 
     @Override
@@ -84,12 +72,6 @@ public class DefaultSpdySynStreamFrame extends DefaultSpdyHeadersFrame
         }
         this.associatedStreamId = associatedStreamId;
         return this;
-    }
-
-    @Override
-    @Deprecated
-    public byte getPriority() {
-        return priority();
     }
 
     @Override
