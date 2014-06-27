@@ -136,7 +136,7 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
                 });
             }
 
-            if (!m.decoderResult().isSuccess()) {
+            if (!m.getDecoderResult().isSuccess()) {
                 removeTransferEncodingChunked(m);
                 out.add(toFullMessage(m));
                 this.currentMessage = null;
@@ -144,12 +144,12 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
             }
             if (msg instanceof HttpRequest) {
                 HttpRequest header = (HttpRequest) msg;
-                this.currentMessage = currentMessage = new DefaultFullHttpRequest(header.protocolVersion(),
-                        header.method(), header.uri(), Unpooled.compositeBuffer(maxCumulationBufferComponents));
+                this.currentMessage = currentMessage = new DefaultFullHttpRequest(header.getProtocolVersion(),
+                        header.getMethod(), header.getUri(), Unpooled.compositeBuffer(maxCumulationBufferComponents));
             } else if (msg instanceof HttpResponse) {
                 HttpResponse header = (HttpResponse) msg;
                 this.currentMessage = currentMessage = new DefaultFullHttpResponse(
-                        header.protocolVersion(), header.status(),
+                        header.getProtocolVersion(), header.getStatus(),
                         Unpooled.compositeBuffer(maxCumulationBufferComponents));
             } else {
                 throw new Error();
@@ -193,9 +193,9 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
             }
 
             final boolean last;
-            if (!chunk.decoderResult().isSuccess()) {
+            if (!chunk.getDecoderResult().isSuccess()) {
                 currentMessage.setDecoderResult(
-                        DecoderResult.failure(chunk.decoderResult().cause()));
+                        DecoderResult.failure(chunk.getDecoderResult().cause()));
                 last = true;
             } else {
                 last = chunk instanceof LastHttpContent;
@@ -259,11 +259,11 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
         if (msg instanceof HttpRequest) {
             HttpRequest req = (HttpRequest) msg;
             fullMsg = new DefaultFullHttpRequest(
-                    req.protocolVersion(), req.method(), req.uri(), Unpooled.EMPTY_BUFFER, false);
+                    req.getProtocolVersion(), req.getMethod(), req.getUri(), Unpooled.EMPTY_BUFFER, false);
         } else if (msg instanceof HttpResponse) {
             HttpResponse res = (HttpResponse) msg;
             fullMsg = new DefaultFullHttpResponse(
-                    res.protocolVersion(), res.status(), Unpooled.EMPTY_BUFFER, false);
+                    res.getProtocolVersion(), res.getStatus(), Unpooled.EMPTY_BUFFER, false);
         } else {
             throw new IllegalStateException();
         }

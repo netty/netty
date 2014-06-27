@@ -24,30 +24,18 @@ import java.util.Set;
 public interface Cookie extends Comparable<Cookie> {
 
     /**
-     * @deprecated Use {@link #name()} instead.
-     */
-    @Deprecated
-    String getName();
-
-    /**
      * Returns the name of this {@link Cookie}.
      *
      * @return The name of this {@link Cookie}
      */
-    String name();
-
-    /**
-     * @deprecated Use {@link #value()} instead.
-     */
-    @Deprecated
-    String getValue();
+    String getName();
 
     /**
      * Returns the value of this {@link Cookie}.
      *
      * @return The value of this {@link Cookie}
      */
-    String value();
+    String getValue();
 
     /**
      * Sets the value of this {@link Cookie}.
@@ -57,17 +45,11 @@ public interface Cookie extends Comparable<Cookie> {
     void setValue(String value);
 
     /**
-     * @deprecated Use {@link #domain()} instead.
-     */
-    @Deprecated
-    String getDomain();
-
-    /**
      * Returns the domain of this {@link Cookie}.
      *
      * @return The domain of this {@link Cookie}
      */
-    String domain();
+    String getDomain();
 
     /**
      * Sets the domain of this {@link Cookie}.
@@ -77,17 +59,11 @@ public interface Cookie extends Comparable<Cookie> {
     void setDomain(String domain);
 
     /**
-     * @deprecated Use {@link #path()} instead.
-     */
-    @Deprecated
-    String getPath();
-
-    /**
      * Returns the path of this {@link Cookie}.
      *
      * @return The {@link Cookie}'s path
      */
-    String path();
+    String getPath();
 
     /**
      * Sets the path of this {@link Cookie}.
@@ -97,17 +73,11 @@ public interface Cookie extends Comparable<Cookie> {
     void setPath(String path);
 
     /**
-     * @deprecated Use {@link #comment()} instead.
-     */
-    @Deprecated
-    String getComment();
-
-    /**
      * Returns the comment of this {@link Cookie}.
      *
      * @return The comment of this {@link Cookie}
      */
-    String comment();
+    String getComment();
 
     /**
      * Sets the comment of this {@link Cookie}.
@@ -117,17 +87,11 @@ public interface Cookie extends Comparable<Cookie> {
     void setComment(String comment);
 
     /**
-     * @deprecated Use {@link #maxAge()} instead.
-     */
-    @Deprecated
-    long getMaxAge();
-
-    /**
      * Returns the maximum age of this {@link Cookie} in seconds or {@link Long#MIN_VALUE} if unspecified
      *
      * @return The maximum age of this {@link Cookie}
      */
-    long maxAge();
+    long getMaxAge();
 
     /**
      * Sets the maximum age of this {@link Cookie} in seconds.
@@ -141,17 +105,11 @@ public interface Cookie extends Comparable<Cookie> {
     void setMaxAge(long maxAge);
 
     /**
-     * @deprecated Use {@link #version()} instead.
-     */
-    @Deprecated
-    int getVersion();
-
-    /**
      * Returns the version of this {@link Cookie}.
      *
      * @return The version of this {@link Cookie}
      */
-    int version();
+    int getVersion();
 
     /**
      * Sets the version of this {@link Cookie}.
@@ -196,17 +154,11 @@ public interface Cookie extends Comparable<Cookie> {
     void setHttpOnly(boolean httpOnly);
 
     /**
-     * @deprecated Use {@link #commentUrl()} instead.
-     */
-    @Deprecated
-    String getCommentUrl();
-
-    /**
      * Returns the comment URL of this {@link Cookie}.
      *
      * @return The comment URL of this {@link Cookie}
      */
-    String commentUrl();
+    String getCommentUrl();
 
     /**
      * Sets the comment URL of this {@link Cookie}.
@@ -233,17 +185,11 @@ public interface Cookie extends Comparable<Cookie> {
     void setDiscard(boolean discard);
 
     /**
-     * @deprecated Use {@link #ports()} instead.
-     */
-    @Deprecated
-    Set<Integer> getPorts();
-
-    /**
      * Returns the ports that this {@link Cookie} can be accessed on.
      *
      * @return The {@link Set} of ports that this {@link Cookie} can use
      */
-    Set<Integer> ports();
+    Set<Integer> getPorts();
 
     /**
      * Sets the ports that this {@link Cookie} can be accessed on.

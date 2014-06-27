@@ -191,8 +191,8 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
     protected void verify(FullHttpResponse response) {
         final HttpResponseStatus status = new HttpResponseStatus(101, "WebSocket Protocol Handshake");
 
-        if (!response.status().equals(status)) {
-            throw new WebSocketHandshakeException("Invalid handshake response getStatus: " + response.status());
+        if (!response.getStatus().equals(status)) {
+            throw new WebSocketHandshakeException("Invalid handshake response getStatus: " + response.getStatus());
         }
 
         HttpHeaders headers = response.headers();

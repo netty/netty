@@ -218,14 +218,14 @@ public class CorsHandlerTest {
     public void simpleRequestShortCurcuit() {
         final CorsConfig config = CorsConfig.withOrigin("http://localhost:8080").shortCurcuit().build();
         final HttpResponse response = simpleRequest(config, "http://localhost:7777");
-        assertThat(response.status(), is(FORBIDDEN));
+        assertThat(response.getStatus(), is(FORBIDDEN));
     }
 
     @Test
     public void simpleRequestNoShortCurcuit() {
         final CorsConfig config = CorsConfig.withOrigin("http://localhost:8080").build();
         final HttpResponse response = simpleRequest(config, "http://localhost:7777");
-        assertThat(response.status(), is(OK));
+        assertThat(response.getStatus(), is(OK));
         assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN), is(nullValue()));
     }
 
@@ -233,7 +233,7 @@ public class CorsHandlerTest {
     public void shortCurcuitNonCorsRequest() {
         final CorsConfig config = CorsConfig.withOrigin("https://localhost").shortCurcuit().build();
         final HttpResponse response = simpleRequest(config, null);
-        assertThat(response.status(), is(OK));
+        assertThat(response.getStatus(), is(OK));
         assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN), is(nullValue()));
     }
 
@@ -269,7 +269,7 @@ public class CorsHandlerTest {
         final EmbeddedChannel channel = new EmbeddedChannel(new CorsHandler(config));
         final FullHttpRequest httpRequest = createHttpRequest(OPTIONS);
         httpRequest.headers().set(ORIGIN, origin);
-        httpRequest.headers().set(ACCESS_CONTROL_REQUEST_METHOD, httpRequest.method().toString());
+        httpRequest.headers().set(ACCESS_CONTROL_REQUEST_METHOD, httpRequest.getMethod().toString());
         httpRequest.headers().set(ACCESS_CONTROL_REQUEST_HEADERS, requestHeaders);
         channel.writeInbound(httpRequest);
         return (HttpResponse) channel.readOutbound();

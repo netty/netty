@@ -78,24 +78,12 @@ public class DefaultCookie implements Cookie {
     }
 
     @Override
-    @Deprecated
     public String getName() {
-        return name();
-    }
-
-    @Override
-    public String name() {
         return name;
     }
 
     @Override
-    @Deprecated
     public String getValue() {
-        return value();
-    }
-
-    @Override
-    public String value() {
         return value;
     }
 
@@ -108,13 +96,7 @@ public class DefaultCookie implements Cookie {
     }
 
     @Override
-    @Deprecated
     public String getDomain() {
-        return domain();
-    }
-
-    @Override
-    public String domain() {
         return domain;
     }
 
@@ -124,13 +106,7 @@ public class DefaultCookie implements Cookie {
     }
 
     @Override
-    @Deprecated
     public String getPath() {
-        return path();
-    }
-
-    @Override
-    public String path() {
         return path;
     }
 
@@ -140,13 +116,7 @@ public class DefaultCookie implements Cookie {
     }
 
     @Override
-    @Deprecated
     public String getComment() {
-        return comment();
-    }
-
-    @Override
-    public String comment() {
         return comment;
     }
 
@@ -156,13 +126,7 @@ public class DefaultCookie implements Cookie {
     }
 
     @Override
-    @Deprecated
     public String getCommentUrl() {
-        return commentUrl();
-    }
-
-    @Override
-    public String commentUrl() {
         return commentUrl;
     }
 
@@ -182,13 +146,7 @@ public class DefaultCookie implements Cookie {
     }
 
     @Override
-    @Deprecated
     public Set<Integer> getPorts() {
-        return ports();
-    }
-
-    @Override
-    public Set<Integer> ports() {
         if (unmodifiablePorts == null) {
             unmodifiablePorts = Collections.unmodifiableSet(ports);
         }
@@ -235,13 +193,7 @@ public class DefaultCookie implements Cookie {
     }
 
     @Override
-    @Deprecated
     public long getMaxAge() {
-        return maxAge();
-    }
-
-    @Override
-    public long maxAge() {
         return maxAge;
     }
 
@@ -251,13 +203,7 @@ public class DefaultCookie implements Cookie {
     }
 
     @Override
-    @Deprecated
     public int getVersion() {
-        return version();
-    }
-
-    @Override
-    public int version() {
         return version;
     }
 
@@ -288,7 +234,7 @@ public class DefaultCookie implements Cookie {
 
     @Override
     public int hashCode() {
-        return name().hashCode();
+        return getName().hashCode();
     }
 
     @Override
@@ -298,28 +244,28 @@ public class DefaultCookie implements Cookie {
         }
 
         Cookie that = (Cookie) o;
-        if (!name().equalsIgnoreCase(that.name())) {
+        if (!getName().equalsIgnoreCase(that.getName())) {
             return false;
         }
 
-        if (path() == null) {
-            if (that.path() != null) {
+        if (getPath() == null) {
+            if (that.getPath() != null) {
                 return false;
             }
-        } else if (that.path() == null) {
+        } else if (that.getPath() == null) {
             return false;
-        } else if (!path().equals(that.path())) {
+        } else if (!getPath().equals(that.getPath())) {
             return false;
         }
 
-        if (domain() == null) {
-            if (that.domain() != null) {
+        if (getDomain() == null) {
+            if (that.getDomain() != null) {
                 return false;
             }
-        } else if (that.domain() == null) {
+        } else if (that.getDomain() == null) {
             return false;
         } else {
-            return domain().equalsIgnoreCase(that.domain());
+            return getDomain().equalsIgnoreCase(that.getDomain());
         }
 
         return true;
@@ -328,32 +274,32 @@ public class DefaultCookie implements Cookie {
     @Override
     public int compareTo(Cookie c) {
         int v;
-        v = name().compareToIgnoreCase(c.name());
+        v = getName().compareToIgnoreCase(c.getName());
         if (v != 0) {
             return v;
         }
 
-        if (path() == null) {
-            if (c.path() != null) {
+        if (getPath() == null) {
+            if (c.getPath() != null) {
                 return -1;
             }
-        } else if (c.path() == null) {
+        } else if (c.getPath() == null) {
             return 1;
         } else {
-            v = path().compareTo(c.path());
+            v = getPath().compareTo(c.getPath());
             if (v != 0) {
                 return v;
             }
         }
 
-        if (domain() == null) {
-            if (c.domain() != null) {
+        if (getDomain() == null) {
+            if (c.getDomain() != null) {
                 return -1;
             }
-        } else if (c.domain() == null) {
+        } else if (c.getDomain() == null) {
             return 1;
         } else {
-            v = domain().compareToIgnoreCase(c.domain());
+            v = getDomain().compareToIgnoreCase(c.getDomain());
             return v;
         }
 
@@ -363,24 +309,24 @@ public class DefaultCookie implements Cookie {
     @Override
     public String toString() {
         StringBuilder buf = new StringBuilder();
-        buf.append(name());
+        buf.append(getName());
         buf.append('=');
-        buf.append(value());
-        if (domain() != null) {
+        buf.append(getValue());
+        if (getDomain() != null) {
             buf.append(", domain=");
-            buf.append(domain());
+            buf.append(getDomain());
         }
-        if (path() != null) {
+        if (getPath() != null) {
             buf.append(", path=");
-            buf.append(path());
+            buf.append(getPath());
         }
-        if (comment() != null) {
+        if (getComment() != null) {
             buf.append(", comment=");
-            buf.append(comment());
+            buf.append(getComment());
         }
-        if (maxAge() >= 0) {
+        if (getMaxAge() >= 0) {
             buf.append(", maxAge=");
-            buf.append(maxAge());
+            buf.append(getMaxAge());
             buf.append('s');
         }
         if (isSecure()) {

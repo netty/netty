@@ -117,12 +117,12 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
             return;
         }
 
-        if (request.method() != GET) {
+        if (request.getMethod() != GET) {
             sendError(ctx, METHOD_NOT_ALLOWED);
             return;
         }
 
-        final String uri = request.uri();
+        final String uri = request.getUri();
         final String path = sanitizeUri(uri);
         if (path == null) {
             sendError(ctx, FORBIDDEN);

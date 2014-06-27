@@ -26,12 +26,6 @@ public class DefaultHttpObject implements HttpObject {
     }
 
     @Override
-    public DecoderResult decoderResult() {
-        return decoderResult;
-    }
-
-    @Override
-    @Deprecated
     public DecoderResult getDecoderResult() {
         return decoderResult;
     }

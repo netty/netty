@@ -36,8 +36,8 @@ public class HttpUploadClientHandler extends SimpleChannelInboundHandler<HttpObj
         if (msg instanceof HttpResponse) {
             HttpResponse response = (HttpResponse) msg;
 
-            System.err.println("STATUS: " + response.status());
-            System.err.println("VERSION: " + response.protocolVersion());
+            System.err.println("STATUS: " + response.getStatus());
+            System.err.println("VERSION: " + response.getProtocolVersion());
 
             if (!response.headers().isEmpty()) {
                 for (String name : response.headers().names()) {
@@ -47,7 +47,7 @@ public class HttpUploadClientHandler extends SimpleChannelInboundHandler<HttpObj
                 }
             }
 
-            if (response.status().code() == 200 && HttpHeaders.isTransferEncodingChunked(response)) {
+            if (response.getStatus().code() == 200 && HttpHeaders.isTransferEncodingChunked(response)) {
                 readingChunks = true;
                 System.err.println("CHUNKED CONTENT {");
             } else {

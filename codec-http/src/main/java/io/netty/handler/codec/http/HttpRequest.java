@@ -34,17 +34,11 @@ package io.netty.handler.codec.http;
 public interface HttpRequest extends HttpMessage {
 
     /**
-     * @deprecated Use {@link #method()} instead.
-     */
-    @Deprecated
-    HttpMethod getMethod();
-
-    /**
      * Returns the {@link HttpMethod} of this {@link HttpRequest}.
      *
      * @return The {@link HttpMethod} of this {@link HttpRequest}
      */
-    HttpMethod method();
+    HttpMethod getMethod();
 
     /**
      * Set the {@link HttpMethod} of this {@link HttpRequest}.
@@ -52,17 +46,11 @@ public interface HttpRequest extends HttpMessage {
     HttpRequest setMethod(HttpMethod method);
 
     /**
-     * @deprecated Use {@link #uri()} instead.
-     */
-    @Deprecated
-    String getUri();
-
-    /**
      * Returns the requested URI (or alternatively, path)
      *
      * @return The URI being requested
      */
-    String uri();
+    String getUri();
 
     /**
      *  Set the requested URI (or alternatively, path)

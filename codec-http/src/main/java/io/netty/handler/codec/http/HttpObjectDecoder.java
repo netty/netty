@@ -404,7 +404,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
     protected boolean isContentAlwaysEmpty(HttpMessage msg) {
         if (msg instanceof HttpResponse) {
             HttpResponse res = (HttpResponse) msg;
-            int code = res.status().code();
+            int code = res.getStatus().code();
 
             // Correctly handle return codes of 1xx.
             //
@@ -430,7 +430,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         contentLength = Long.MIN_VALUE;
         if (!isDecodingRequest()) {
             HttpResponse res = (HttpResponse) message;
-            if (res != null && res.status().code() == 101) {
+            if (res != null && res.getStatus().code() == 101) {
                 checkpoint(State.UPGRADED);
                 return;
             }

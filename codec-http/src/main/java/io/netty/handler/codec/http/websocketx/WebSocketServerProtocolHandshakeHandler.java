@@ -55,7 +55,7 @@ class WebSocketServerProtocolHandshakeHandler
     public void channelRead(final ChannelHandlerContext ctx, Object msg) throws Exception {
         FullHttpRequest req = (FullHttpRequest) msg;
         try {
-            if (req.method() != GET) {
+            if (req.getMethod() != GET) {
                 sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, FORBIDDEN));
                 return;
             }
@@ -90,7 +90,7 @@ class WebSocketServerProtocolHandshakeHandler
 
     private static void sendHttpResponse(ChannelHandlerContext ctx, HttpRequest req, HttpResponse res) {
         ChannelFuture f = ctx.channel().writeAndFlush(res);
-        if (!isKeepAlive(req) || res.status().code() != 200) {
+        if (!isKeepAlive(req) || res.getStatus().code() != 200) {
             f.addListener(ChannelFutureListener.CLOSE);
         }
     }

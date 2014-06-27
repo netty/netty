@@ -54,7 +54,7 @@ public class WebSocketServerProtocolHandlerTest {
         EmbeddedChannel ch = createChannel(new MockOutboundHandler());
         ChannelHandlerContext handshakerCtx = ch.pipeline().context(WebSocketServerProtocolHandshakeHandler.class);
         writeUpgradeRequest(ch);
-        assertEquals(SWITCHING_PROTOCOLS, ReferenceCountUtil.releaseLater(responses.remove()).status());
+        assertEquals(SWITCHING_PROTOCOLS, ReferenceCountUtil.releaseLater(responses.remove()).getStatus());
         assertNotNull(WebSocketServerProtocolHandler.getHandshaker(handshakerCtx));
     }
 
@@ -63,10 +63,10 @@ public class WebSocketServerProtocolHandlerTest {
         EmbeddedChannel ch = createChannel();
 
         writeUpgradeRequest(ch);
-        assertEquals(SWITCHING_PROTOCOLS, ReferenceCountUtil.releaseLater(responses.remove()).status());
+        assertEquals(SWITCHING_PROTOCOLS, ReferenceCountUtil.releaseLater(responses.remove()).getStatus());
 
         ch.writeInbound(new DefaultFullHttpRequest(HTTP_1_1, HttpMethod.GET, "/test"));
-        assertEquals(FORBIDDEN, ReferenceCountUtil.releaseLater(responses.remove()).status());
+        assertEquals(FORBIDDEN, ReferenceCountUtil.releaseLater(responses.remove()).getStatus());
     }
 
     @Test
@@ -83,7 +83,7 @@ public class WebSocketServerProtocolHandlerTest {
         ch.writeInbound(httpRequestWithEntity);
 
         FullHttpResponse response = ReferenceCountUtil.releaseLater(responses.remove());
-        assertEquals(BAD_REQUEST, response.status());
+        assertEquals(BAD_REQUEST, response.getStatus());
         assertEquals("not a WebSocket handshake request: missing upgrade", getResponseMessage(response));
     }
 
@@ -102,7 +102,7 @@ public class WebSocketServerProtocolHandlerTest {
         ch.writeInbound(httpRequest);
 
         FullHttpResponse response = ReferenceCountUtil.releaseLater(responses.remove());
-        assertEquals(BAD_REQUEST, response.status());
+        assertEquals(BAD_REQUEST, response.getStatus());
         assertEquals("not a WebSocket request: missing key", getResponseMessage(response));
     }
 

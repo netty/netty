@@ -50,13 +50,7 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
     }
 
     @Override
-    @Deprecated
     public HttpResponseStatus getStatus() {
-        return status();
-    }
-
-    @Override
-    public HttpResponseStatus status() {
         return status;
     }
 
@@ -80,12 +74,12 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
         StringBuilder buf = new StringBuilder();
         buf.append(StringUtil.simpleClassName(this));
         buf.append("(decodeResult: ");
-        buf.append(decoderResult());
+        buf.append(getDecoderResult());
         buf.append(')');
         buf.append(StringUtil.NEWLINE);
-        buf.append(protocolVersion().text());
+        buf.append(getProtocolVersion().text());
         buf.append(' ');
-        buf.append(status());
+        buf.append(getStatus());
         buf.append(StringUtil.NEWLINE);
         appendHeaders(buf);
 

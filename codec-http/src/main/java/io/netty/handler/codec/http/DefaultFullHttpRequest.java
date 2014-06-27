@@ -103,7 +103,7 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
     @Override
     public FullHttpRequest copy() {
         DefaultFullHttpRequest copy = new DefaultFullHttpRequest(
-                protocolVersion(), method(), uri(), content().copy(), validateHeaders);
+                getProtocolVersion(), getMethod(), getUri(), content().copy(), validateHeaders);
         copy.headers().set(headers());
         copy.trailingHeaders().set(trailingHeaders());
         return copy;
@@ -112,7 +112,7 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
     @Override
     public FullHttpRequest duplicate() {
         DefaultFullHttpRequest duplicate = new DefaultFullHttpRequest(
-                protocolVersion(), method(), uri(), content().duplicate(), validateHeaders);
+                getProtocolVersion(), getMethod(), getUri(), content().duplicate(), validateHeaders);
         duplicate.headers().set(headers());
         duplicate.trailingHeaders().set(trailingHeaders());
         return duplicate;

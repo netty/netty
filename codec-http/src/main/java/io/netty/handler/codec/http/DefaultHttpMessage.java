@@ -48,13 +48,7 @@ public abstract class DefaultHttpMessage extends DefaultHttpObject implements Ht
     }
 
     @Override
-    @Deprecated
     public HttpVersion getProtocolVersion() {
-        return protocolVersion();
-    }
-
-    @Override
-    public HttpVersion protocolVersion() {
         return version;
     }
 
@@ -63,7 +57,7 @@ public abstract class DefaultHttpMessage extends DefaultHttpObject implements Ht
         StringBuilder buf = new StringBuilder();
         buf.append(StringUtil.simpleClassName(this));
         buf.append("(version: ");
-        buf.append(protocolVersion().text());
+        buf.append(getProtocolVersion().text());
         buf.append(", keepAlive: ");
         buf.append(HttpHeaders.isKeepAlive(this));
         buf.append(')');

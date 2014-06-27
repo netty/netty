@@ -188,7 +188,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
         if (charset == null) {
             throw new NullPointerException("charset");
         }
-        if (request.method() != HttpMethod.POST) {
+        if (request.getMethod() != HttpMethod.POST) {
             throw new ErrorDataEncoderException("Cannot create a Encoder if not a POST");
         }
         this.request = request;
@@ -1116,32 +1116,17 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
 
         @Override
         public HttpMethod getMethod() {
-            return request.method();
-        }
-
-        @Override
-        public HttpMethod method() {
-            return request.method();
+            return request.getMethod();
         }
 
         @Override
         public String getUri() {
-            return request.uri();
-        }
-
-        @Override
-        public String uri() {
-            return request.uri();
+            return request.getUri();
         }
 
         @Override
         public HttpVersion getProtocolVersion() {
-            return request.protocolVersion();
-        }
-
-        @Override
-        public HttpVersion protocolVersion() {
-            return request.protocolVersion();
+            return request.getProtocolVersion();
         }
 
         @Override
@@ -1150,14 +1135,8 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
         }
 
         @Override
-        public DecoderResult decoderResult() {
-            return request.decoderResult();
-        }
-
-        @Override
-        @Deprecated
         public DecoderResult getDecoderResult() {
-            return request.decoderResult();
+            return request.getDecoderResult();
         }
 
         @Override

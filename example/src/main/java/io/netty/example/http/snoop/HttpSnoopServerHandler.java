@@ -68,9 +68,9 @@ public class HttpSnoopServerHandler extends SimpleChannelInboundHandler<Object> 
             buf.append("WELCOME TO THE WILD WILD WEB SERVER\r\n");
             buf.append("===================================\r\n");
 
-            buf.append("VERSION: ").append(request.protocolVersion()).append("\r\n");
+            buf.append("VERSION: ").append(request.getProtocolVersion()).append("\r\n");
             buf.append("HOSTNAME: ").append(getHost(request, "unknown")).append("\r\n");
-            buf.append("REQUEST_URI: ").append(request.uri()).append("\r\n\r\n");
+            buf.append("REQUEST_URI: ").append(request.getUri()).append("\r\n\r\n");
 
             HttpHeaders headers = request.headers();
             if (!headers.isEmpty()) {
@@ -82,7 +82,7 @@ public class HttpSnoopServerHandler extends SimpleChannelInboundHandler<Object> 
                 buf.append("\r\n");
             }
 
-            QueryStringDecoder queryStringDecoder = new QueryStringDecoder(request.uri());
+            QueryStringDecoder queryStringDecoder = new QueryStringDecoder(request.getUri());
             Map<String, List<String>> params = queryStringDecoder.parameters();
             if (!params.isEmpty()) {
                 for (Entry<String, List<String>> p: params.entrySet()) {

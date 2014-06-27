@@ -100,7 +100,7 @@ public final class HttpClientCodec
         protected void encode(
                 ChannelHandlerContext ctx, Object msg, List<Object> out) throws Exception {
             if (msg instanceof HttpRequest && !done) {
-                queue.offer(((HttpRequest) msg).method());
+                queue.offer(((HttpRequest) msg).getMethod());
             }
 
             super.encode(ctx, msg, out);
@@ -156,7 +156,7 @@ public final class HttpClientCodec
 
         @Override
         protected boolean isContentAlwaysEmpty(HttpMessage msg) {
-            final int statusCode = ((HttpResponse) msg).status().code();
+            final int statusCode = ((HttpResponse) msg).getStatus().code();
             if (statusCode == 100) {
                 // 100-continue response should be excluded from paired comparison.
                 return true;

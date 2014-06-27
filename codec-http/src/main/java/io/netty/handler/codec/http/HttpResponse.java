@@ -32,17 +32,11 @@ package io.netty.handler.codec.http;
 public interface HttpResponse extends HttpMessage {
 
     /**
-     * @deprecated Use {@link #status()} instead.
-     */
-    @Deprecated
-    HttpResponseStatus getStatus();
-
-    /**
      * Returns the status of this {@link HttpResponse}.
      *
      * @return The {@link HttpResponseStatus} of this {@link HttpResponse}
      */
-    HttpResponseStatus status();
+    HttpResponseStatus getStatus();
 
     /**
      * Set the status of this {@link HttpResponse}.

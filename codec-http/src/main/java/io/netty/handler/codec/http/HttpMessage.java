@@ -27,15 +27,11 @@ package io.netty.handler.codec.http;
 public interface HttpMessage extends HttpObject {
 
     /**
-     * @deprecated Use {@link #protocolVersion()} instead.
-     */
-    @Deprecated
-    HttpVersion getProtocolVersion();
-
-    /**
      * Returns the protocol version of this {@link HttpMessage}
+     *
+     * @return The protocol version
      */
-    HttpVersion protocolVersion();
+    HttpVersion getProtocolVersion();
 
     /**
      * Set the protocol version of this {@link HttpMessage}
