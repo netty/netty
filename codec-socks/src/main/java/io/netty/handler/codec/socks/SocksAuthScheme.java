@@ -28,7 +28,7 @@ public enum SocksAuthScheme {
         this.b = b;
     }
 
-    public static SocksAuthScheme fromByte(byte b) {
+    public static SocksAuthScheme valueOf(byte b) {
         for (SocksAuthScheme code : values()) {
             if (code.b == b) {
                 return code;

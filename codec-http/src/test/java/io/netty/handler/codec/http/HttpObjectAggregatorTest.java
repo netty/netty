@@ -117,7 +117,7 @@ public class HttpObjectAggregatorTest {
         assertFalse(embedder.writeInbound(chunk2));
 
         FullHttpResponse response = embedder.readOutbound();
-        assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.getStatus());
+        assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.status());
         assertEquals("0", response.headers().get(Names.CONTENT_LENGTH));
         assertFalse(embedder.isOpen());
 
@@ -164,7 +164,7 @@ public class HttpObjectAggregatorTest {
 
         // The agregator should respond with '413 Request Entity Too Large.'
         FullHttpResponse response = embedder.readOutbound();
-        assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.getStatus());
+        assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.status());
         assertEquals("0", response.headers().get(Names.CONTENT_LENGTH));
 
         // An ill-behaving client could continue to send data without a respect, and such data should be discarded.
@@ -204,7 +204,7 @@ public class HttpObjectAggregatorTest {
         assertNull(embedder.readInbound());
 
         FullHttpResponse response = embedder.readOutbound();
-        assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.getStatus());
+        assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.status());
         assertEquals("0", response.headers().get(Names.CONTENT_LENGTH));
 
         // Keep-alive is on by default in HTTP/1.1, so the connection should be still alive.
@@ -214,8 +214,8 @@ public class HttpObjectAggregatorTest {
         embedder.writeInbound(Unpooled.copiedBuffer("GET /max-upload-size HTTP/1.1\r\n\r\n", CharsetUtil.US_ASCII));
 
         FullHttpRequest request = embedder.readInbound();
-        assertThat(request.getMethod(), is(HttpMethod.GET));
-        assertThat(request.getUri(), is("/max-upload-size"));
+        assertThat(request.method(), is(HttpMethod.GET));
+        assertThat(request.uri(), is("/max-upload-size"));
         assertThat(request.content().readableBytes(), is(0));
         request.release();
 
@@ -227,7 +227,7 @@ public class HttpObjectAggregatorTest {
 
         assertFalse(embedder.writeInbound(message));
         HttpResponse response = embedder.readOutbound();
-        assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.getStatus());
+        assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.status());
         assertEquals("0", response.headers().get(Names.CONTENT_LENGTH));
         assertFalse(embedder.isOpen());
         assertFalse(embedder.finish());

@@ -38,7 +38,7 @@ public interface HttpRequest extends HttpMessage {
      *
      * @return The {@link HttpMethod} of this {@link HttpRequest}
      */
-    HttpMethod getMethod();
+    HttpMethod method();
 
     /**
      * Set the {@link HttpMethod} of this {@link HttpRequest}.
@@ -50,7 +50,7 @@ public interface HttpRequest extends HttpMessage {
      *
      * @return The URI being requested
      */
-    String getUri();
+    String uri();
 
     /**
      *  Set the requested URI (or alternatively, path)

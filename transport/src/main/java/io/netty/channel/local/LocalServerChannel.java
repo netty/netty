@@ -96,8 +96,10 @@ public class LocalServerChannel extends AbstractServerChannel {
     protected void doClose() throws Exception {
         if (state <= 1) {
             // Update all internal state before the closeFuture is notified.
-            LocalChannelRegistry.unregister(localAddress);
-            localAddress = null;
+            if (localAddress != null) {
+                LocalChannelRegistry.unregister(localAddress);
+                localAddress = null;
+            }
             state = 2;
         }
     }

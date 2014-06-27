@@ -115,7 +115,7 @@ public final class HttpClientCodec extends ChannelHandlerAppender implements
         protected void encode(
                 ChannelHandlerContext ctx, Object msg, List<Object> out) throws Exception {
             if (msg instanceof HttpRequest && !done) {
-                queue.offer(((HttpRequest) msg).getMethod());
+                queue.offer(((HttpRequest) msg).method());
             }
 
             super.encode(ctx, msg, out);
@@ -171,7 +171,7 @@ public final class HttpClientCodec extends ChannelHandlerAppender implements
 
         @Override
         protected boolean isContentAlwaysEmpty(HttpMessage msg) {
-            final int statusCode = ((HttpResponse) msg).getStatus().code();
+            final int statusCode = ((HttpResponse) msg).status().code();
             if (statusCode == 100) {
                 // 100-continue response should be excluded from paired comparison.
                 return true;

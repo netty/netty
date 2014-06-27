@@ -21,14 +21,12 @@ package io.netty.util.internal;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Queue;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * A lock-free concurrent single-consumer multi-producer {@link Queue}.
@@ -64,10 +62,15 @@ import java.util.concurrent.atomic.AtomicReference;
  * <ul>
  * <li><a href="http://goo.gl/bD5ZUV">MpscPaddedQueue</a> from RxJava</li>
  * </ul>
+ * data structure modified to avoid false sharing between head and tail Ref as per implementation of MpscLinkedQueue
+ * on <a href="https://github.com/JCTools/JCTools">JCTools project</a>.
  */
-final class MpscLinkedQueue<E> extends AtomicReference<MpscLinkedQueueNode<E>> implements Queue<E> {
+final class MpscLinkedQueue<E> extends MpscLinkedQueueTailRef<E> implements Queue<E> {
 
-    private static final long serialVersionUID = -7505862422018495345L;
+    private static final long serialVersionUID = -1878402552271506449L;
+
+    long p00, p01, p02, p03, p04, p05, p06, p07;
+    long p30, p31, p32, p33, p34, p35, p36, p37;
 
     // offer() occurs at the tail of the linked list.
     // poll() occurs at the head of the linked list.
@@ -84,26 +87,10 @@ final class MpscLinkedQueue<E> extends AtomicReference<MpscLinkedQueueNode<E>> i
     //
     // Also note that this class extends AtomicReference for the "tail" slot (which is the one that is appended to)
     // since Unsafe does not expose XCHG operation intrinsically.
-
-    private final FullyPaddedReference<MpscLinkedQueueNode<E>> headRef;
-
     MpscLinkedQueue() {
         MpscLinkedQueueNode<E> tombstone = new DefaultNode<E>(null);
-        headRef = new FullyPaddedReference<MpscLinkedQueueNode<E>>();
-        headRef.set(tombstone);
-        setTail(tombstone);
-    }
-
-    private MpscLinkedQueueNode<E> getTail() {
-        return get();
-    }
-
-    private void setTail(MpscLinkedQueueNode<E> tail) {
-        set(tail);
-    }
-
-    private MpscLinkedQueueNode<E> replaceTail(MpscLinkedQueueNode<E> node) {
-        return getAndSet(node);
+        setHeadRef(tombstone);
+        setTailRef(tombstone);
     }
 
     /**
@@ -111,12 +98,12 @@ final class MpscLinkedQueue<E> extends AtomicReference<MpscLinkedQueueNode<E>> i
      */
     private MpscLinkedQueueNode<E> peekNode() {
         for (;;) {
-            final MpscLinkedQueueNode<E> head = headRef.get();
+            final MpscLinkedQueueNode<E> head = headRef();
             final MpscLinkedQueueNode<E> next = head.next();
             if (next != null) {
                 return next;
             }
-            if (head == getTail()) {
+            if (head == tailRef()) {
                 return null;
             }
 
@@ -142,7 +129,7 @@ final class MpscLinkedQueue<E> extends AtomicReference<MpscLinkedQueueNode<E>> i
             newTail = new DefaultNode<E>(value);
         }
 
-        MpscLinkedQueueNode<E> oldTail = replaceTail(newTail);
+        MpscLinkedQueueNode<E> oldTail = getAndSetTailRef(newTail);
         oldTail.setNext(newTail);
         return true;
     }
@@ -155,13 +142,14 @@ final class MpscLinkedQueue<E> extends AtomicReference<MpscLinkedQueueNode<E>> i
         }
 
         // next becomes a new head.
-        MpscLinkedQueueNode<E> oldHead = headRef.get();
+        MpscLinkedQueueNode<E> oldHead = headRef();
         // Similar to 'headRef.node = next', but slightly faster (storestore vs loadstore)
         // See: http://robsjava.blogspot.com/2013/06/a-faster-volatile.html
-        headRef.lazySet(next);
+        // See: http://psy-lob-saw.blogspot.com/2012/12/atomiclazyset-is-performance-win-for.html
+        lazySetHeadRef(next);
 
         // Break the linkage between the old head and the new head.
-        oldHead.setNext(null);
+        oldHead.unlink();
 
         return next.clearMaybe();
     }
@@ -373,8 +361,8 @@ final class MpscLinkedQueue<E> extends AtomicReference<MpscLinkedQueueNode<E>> i
         in.defaultReadObject();
 
         final MpscLinkedQueueNode<E> tombstone = new DefaultNode<E>(null);
-        headRef.set(tombstone);
-        setTail(tombstone);
+        setHeadRef(tombstone);
+        setTailRef(tombstone);
 
         for (;;) {
             @SuppressWarnings("unchecked")
@@ -386,9 +374,7 @@ final class MpscLinkedQueue<E> extends AtomicReference<MpscLinkedQueueNode<E>> i
         }
     }
 
-    private static final class DefaultNode<T> extends MpscLinkedQueueNode<T> implements Serializable {
-
-        private static final long serialVersionUID = 1006745279405945948L;
+    private static final class DefaultNode<T> extends MpscLinkedQueueNode<T> {
 
         private T value;
 

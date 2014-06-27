@@ -23,18 +23,18 @@ public interface SpdySynStreamFrame extends SpdyHeadersFrame {
     /**
      * Returns the Associated-To-Stream-ID of this frame.
      */
-    int getAssociatedToStreamId();
+    int associatedStreamId();
 
     /**
      * Sets the Associated-To-Stream-ID of this frame.
      * The Associated-To-Stream-ID cannot be negative.
      */
-    SpdySynStreamFrame setAssociatedToStreamId(int associatedToStreamId);
+    SpdySynStreamFrame setAssociatedStreamId(int associatedStreamId);
 
     /**
      * Returns the priority of the stream.
      */
-    byte getPriority();
+    byte priority();
 
     /**
      * Sets the priority of the stream.

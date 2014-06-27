@@ -6,7 +6,7 @@ Please visit the Netty web site for more information:
 
   * http://netty.io/
 
-Copyright 2011 The Netty Project
+Copyright 2014 The Netty Project
 
 The Netty Project licenses this file to you under the Apache License,
 version 2.0 (the "License"); you may not use this file except in compliance
@@ -80,6 +80,14 @@ It can be obtained at:
     * license/LICENSE.abstractnodequeue.txt (Public Domain)
   * HOMEPAGE:
     * https://github.com/akka/akka/blob/wip-2.2.3-for-scala-2.11/akka-actor/src/main/java/akka/dispatch/AbstractNodeQueue.java
+
+This product contains a modified portion of 'jbzip2', a Java bzip2 compression
+and decompression library written by Matthew J. Francis. It can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.jbzip2.txt (MIT License)
+  * HOMEPAGE:
+    * https://code.google.com/p/jbzip2/
 
 This product optionally depends on 'JZlib', a re-implementation of zlib in
 pure Java, which can be obtained at:

@@ -14,11 +14,14 @@
  * under the License.
  */
 
-package io.netty.util.internal;
+package io.netty.handler.codec.mqtt;
 
-public final class FullyPaddedReference<T> extends LeftPaddedReference<T> {
-    private static final long serialVersionUID = -5986650399506826641L;
-    // cache line padding (must be public)
-    public transient long rp1, rp2, rp3, rp4, rp5, rp6, rp7;      // 56 bytes (excluding LeftPaddedReference.referent)
-    public transient long rpA, rpB, rpC, rpD, rpE, rpF, rpG, rpH; // 64 bytes
+/**
+ * Holds Constant values used by multiple classes in mqtt-codec.
+ */
+final class MqttVersion {
+
+    static final String PROTOCOL_NAME = "MQIsdp";
+
+    private MqttVersion() { }
 }

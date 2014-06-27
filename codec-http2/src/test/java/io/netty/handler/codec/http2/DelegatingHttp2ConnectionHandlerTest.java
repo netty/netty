@@ -21,6 +21,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuf;
 import static io.netty.handler.codec.http2.Http2CodecUtil.emptyPingBuf;
 import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
+import static io.netty.handler.codec.http2.Http2Exception.protocolError;
 import static io.netty.handler.codec.http2.Http2Headers.EMPTY_HEADERS;
 import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_LOCAL;
 import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
@@ -51,6 +52,7 @@ import java.util.Arrays;
 import java.util.Collections;
 
 import io.netty.channel.DefaultChannelPromise;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -216,7 +218,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
         handler.close(ctx, promise);
         verify(writer).writeGoAway(eq(ctx), eq(promise), eq(0), eq((long) NO_ERROR.code()),
                 eq(EMPTY_BUFFER));
-        verify(connection).goAwaySent();
+        verify(remote).goAwayReceived(0);
     }
 
     @Test
@@ -237,15 +239,16 @@ public class DelegatingHttp2ConnectionHandlerTest {
     @Test
     public void connectionErrorShouldSendGoAway() throws Exception {
         Http2Exception e = new Http2Exception(PROTOCOL_ERROR);
+        when(remote.lastStreamCreated()).thenReturn(STREAM_ID);
         handler.exceptionCaught(ctx, e);
-        verify(connection).goAwaySent();
-        verify(writer).writeGoAway(eq(ctx), eq(promise), eq(0), eq((long) PROTOCOL_ERROR.code()),
+        verify(remote).goAwayReceived(STREAM_ID);
+        verify(writer).writeGoAway(eq(ctx), eq(promise), eq(STREAM_ID), eq((long) PROTOCOL_ERROR.code()),
                 eq(EMPTY_BUFFER));
     }
 
     @Test
     public void dataReadAfterGoAwayShouldApplyFlowControl() throws Exception {
-        when(connection.isGoAwaySent()).thenReturn(true);
+        when(remote.isGoAwayReceived()).thenReturn(true);
         decode().onDataRead(ctx, STREAM_ID, dummyData(), 10, true, true, true);
         verify(inboundFlow).applyInboundFlowControl(eq(STREAM_ID), eq(dummyData()), eq(10),
                 eq(true), eq(true), eq(true), any(Http2InboundFlowController.FrameWriter.class));
@@ -284,7 +287,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
 
     @Test
     public void headersReadAfterGoAwayShouldBeIgnored() throws Exception {
-        when(connection.isGoAwaySent()).thenReturn(true);
+        when(remote.isGoAwayReceived()).thenReturn(true);
         decode().onHeadersRead(ctx, STREAM_ID, EMPTY_HEADERS, 0, false, false);
         verify(remote, never()).createStream(eq(STREAM_ID), eq(false));
 
@@ -331,7 +334,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
 
     @Test
     public void pushPromiseReadAfterGoAwayShouldBeIgnored() throws Exception {
-        when(connection.isGoAwaySent()).thenReturn(true);
+        when(remote.isGoAwayReceived()).thenReturn(true);
         decode().onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, EMPTY_HEADERS, 0);
         verify(remote, never()).reservePushStream(anyInt(), any(Http2Stream.class));
         verify(observer, never()).onPushPromiseRead(eq(ctx), anyInt(), anyInt(),
@@ -348,7 +351,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
 
     @Test
     public void priorityReadAfterGoAwayShouldBeIgnored() throws Exception {
-        when(connection.isGoAwaySent()).thenReturn(true);
+        when(remote.isGoAwayReceived()).thenReturn(true);
         decode().onPriorityRead(ctx, STREAM_ID, 0, (short) 255, true);
         verify(stream, never()).setPriority(anyInt(), anyShort(), anyBoolean());
         verify(observer, never()).onPriorityRead(eq(ctx), anyInt(), anyInt(), anyShort(), anyBoolean());
@@ -363,17 +366,16 @@ public class DelegatingHttp2ConnectionHandlerTest {
 
     @Test
     public void windowUpdateReadAfterGoAwayShouldBeIgnored() throws Exception {
-        when(connection.isGoAwaySent()).thenReturn(true);
+        when(remote.isGoAwayReceived()).thenReturn(true);
         decode().onWindowUpdateRead(ctx, STREAM_ID, 10);
         verify(outboundFlow, never()).updateOutboundWindowSize(anyInt(), anyInt());
         verify(observer, never()).onWindowUpdateRead(eq(ctx), anyInt(), anyInt());
     }
 
-    @Test
-    public void windowUpdateReadForUnknownStreamShouldBeIgnored() throws Exception {
+    @Test(expected = Http2Exception.class)
+    public void windowUpdateReadForUnknownStreamShouldThrow() throws Exception {
+        when(connection.requireStream(5)).thenThrow(protocolError(""));
         decode().onWindowUpdateRead(ctx, 5, 10);
-        verify(outboundFlow, never()).updateOutboundWindowSize(anyInt(), anyInt());
-        verify(observer, never()).onWindowUpdateRead(eq(ctx), anyInt(), anyInt());
     }
 
     @Test
@@ -384,18 +386,17 @@ public class DelegatingHttp2ConnectionHandlerTest {
     }
 
     @Test
-    public void rstStreamReadAfterGoAwayShouldBeIgnored() throws Exception {
-        when(connection.isGoAwaySent()).thenReturn(true);
+    public void rstStreamReadAfterGoAwayShouldSucceed() throws Exception {
+        when(remote.isGoAwayReceived()).thenReturn(true);
         decode().onRstStreamRead(ctx, STREAM_ID, PROTOCOL_ERROR.code());
-        verify(stream, never()).close();
-        verify(observer, never()).onRstStreamRead(eq(ctx), anyInt(), anyLong());
+        verify(stream).close();
+        verify(observer).onRstStreamRead(eq(ctx), anyInt(), anyLong());
     }
 
-    @Test
-    public void rstStreamReadForUnknownStreamShouldBeIgnored() throws Exception {
+    @Test(expected = Http2Exception.class)
+    public void rstStreamReadForUnknownStreamShouldThrow() throws Exception {
+        when(connection.requireStream(5)).thenThrow(protocolError(""));
         decode().onRstStreamRead(ctx, 5, PROTOCOL_ERROR.code());
-        verify(stream, never()).close();
-        verify(observer, never()).onRstStreamRead(eq(ctx), anyInt(), anyLong());
     }
 
     @Test
@@ -455,8 +456,8 @@ public class DelegatingHttp2ConnectionHandlerTest {
 
     @Test
     public void goAwayShouldReadShouldUpdateConnectionState() throws Exception {
-        decode().onGoAwayRead(ctx, 1, 2, EMPTY_BUFFER);
-        verify(connection).goAwayReceived();
+        decode().onGoAwayRead(ctx, 1, 2L, EMPTY_BUFFER);
+        verify(local).goAwayReceived(1);
         verify(observer).onGoAwayRead(eq(ctx), eq(1), eq(2L), eq(EMPTY_BUFFER));
     }
 

@@ -28,7 +28,7 @@ public enum SocksCmdType {
         this.b = b;
     }
 
-    public static SocksCmdType fromByte(byte b) {
+    public static SocksCmdType valueOf(byte b) {
         for (SocksCmdType code : values()) {
             if (code.b == b) {
                 return code;

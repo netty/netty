@@ -33,7 +33,7 @@ public abstract class DefaultSpdyStreamFrame implements SpdyStreamFrame {
     }
 
     @Override
-    public int getStreamId() {
+    public int streamId() {
         return streamId;
     }
 

@@ -91,6 +91,6 @@ public final class WebSocketClientHandshakerFactory {
                     webSocketURL, V00, subprotocol, customHeaders, maxFramePayloadLength);
         }
 
-        throw new WebSocketHandshakeException("Protocol version " + version.toString() + " not supported.");
+        throw new WebSocketHandshakeException("Protocol version " + version + " not supported.");
     }
 }

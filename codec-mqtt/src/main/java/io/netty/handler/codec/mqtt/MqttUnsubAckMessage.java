@@ -14,13 +14,19 @@
  * under the License.
  */
 
-package io.netty.util.internal;
+package io.netty.handler.codec.mqtt;
 
-import java.io.Serializable;
+/**
+ * See <a href="http://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html#unsuback">MQTTV3.1/unsuback</a>
+ */
+public class MqttUnsubAckMessage extends MqttMessage {
 
-abstract class LeftPadding implements Serializable {
-    private static final long serialVersionUID = -9129166504419549394L;
-    // cache line padding (must be public)
-    public transient long lp1, lp2, lp3, lp4, lp5, lp6;           // 48 bytes (excluding 16-byte object header)
-    public transient long lpA, lpB, lpC, lpD, lpE, lpF, lpG, lpH; // 64 bytes
+    public MqttUnsubAckMessage(MqttFixedHeader mqttFixedHeader, MqttMessageIdVariableHeader variableHeader) {
+        super(mqttFixedHeader, variableHeader, null);
+    }
+
+    @Override
+    public MqttMessageIdVariableHeader variableHeader() {
+        return (MqttMessageIdVariableHeader) super.variableHeader();
+    }
 }

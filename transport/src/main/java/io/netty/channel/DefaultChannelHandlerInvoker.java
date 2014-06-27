@@ -20,6 +20,7 @@ import io.netty.util.Recycler;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.OneTimeTask;
+import io.netty.util.internal.RecyclableMpscLinkedQueueNode;
 
 import java.net.SocketAddress;
 
@@ -398,7 +399,8 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
         }
     }
 
-    static final class WriteTask extends OneTimeTask implements SingleThreadEventLoop.NonWakeupRunnable {
+    static final class WriteTask extends RecyclableMpscLinkedQueueNode<SingleThreadEventLoop.NonWakeupRunnable>
+            implements SingleThreadEventLoop.NonWakeupRunnable {
         private ChannelHandlerContext ctx;
         private Object msg;
         private ChannelPromise promise;
@@ -421,10 +423,8 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
             return task;
         }
 
-        private final Recycler.Handle<WriteTask> handle;
-
         private WriteTask(Recycler.Handle<WriteTask> handle) {
-            this.handle = handle;
+            super(handle);
         }
 
         @Override
@@ -443,9 +443,12 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
                 ctx = null;
                 msg = null;
                 promise = null;
-
-                RECYCLER.recycle(this, handle);
             }
+        }
+
+        @Override
+        public SingleThreadEventLoop.NonWakeupRunnable value() {
+            return this;
         }
     }
 }

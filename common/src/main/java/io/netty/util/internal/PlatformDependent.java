@@ -250,7 +250,9 @@ public final class PlatformDependent {
      * the current platform does not support this operation or the specified buffer is not a direct buffer.
      */
     public static void freeDirectBuffer(ByteBuffer buffer) {
-        if (hasUnsafe()) {
+        if (hasUnsafe() && !isAndroid()) {
+            // only direct to method if we are not running on android.
+            // See https://github.com/netty/netty/issues/2604
             PlatformDependent0.freeDirectBuffer(buffer);
         }
     }

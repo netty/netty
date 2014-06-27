@@ -29,6 +29,7 @@ import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderUtil;
+import io.netty.handler.codec.http.HttpChunkedInput;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -116,12 +117,12 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
             return;
         }
 
-        if (request.getMethod() != GET) {
+        if (request.method() != GET) {
             sendError(ctx, METHOD_NOT_ALLOWED);
             return;
         }
 
-        final String uri = request.getUri();
+        final String uri = request.uri();
         final String path = sanitizeUri(uri);
         if (path == null) {
             sendError(ctx, FORBIDDEN);
@@ -191,7 +192,8 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
                     ctx.write(new DefaultFileRegion(raf.getChannel(), 0, fileLength), ctx.newProgressivePromise());
         } else {
             sendFileFuture =
-                    ctx.write(new ChunkedFile(raf, 0, fileLength, 8192), ctx.newProgressivePromise());
+                    ctx.write(new HttpChunkedInput(new ChunkedFile(raf, 0, fileLength, 8192)),
+                            ctx.newProgressivePromise());
         }
 
         sendFileFuture.addListener(new ChannelProgressiveFutureListener() {

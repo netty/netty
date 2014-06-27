@@ -50,7 +50,7 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
     }
 
     @Override
-    public HttpResponseStatus getStatus() {
+    public HttpResponseStatus status() {
         return status;
     }
 
@@ -77,9 +77,9 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
         buf.append(decoderResult());
         buf.append(')');
         buf.append(StringUtil.NEWLINE);
-        buf.append(getProtocolVersion().text());
+        buf.append(protocolVersion().text());
         buf.append(' ');
-        buf.append(getStatus());
+        buf.append(status());
         buf.append(StringUtil.NEWLINE);
         appendHeaders(buf);
 

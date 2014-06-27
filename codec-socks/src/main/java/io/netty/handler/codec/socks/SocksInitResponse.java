@@ -44,7 +44,7 @@ public final class SocksInitResponse extends SocksResponse {
     }
 
     @Override
-    public void encodeAsByteBuf(ByteBuf byteBuf) {
+    void encodeAsByteBuf(ByteBuf byteBuf) {
         byteBuf.writeByte(protocolVersion().byteValue());
         byteBuf.writeByte(authScheme.byteValue());
     }

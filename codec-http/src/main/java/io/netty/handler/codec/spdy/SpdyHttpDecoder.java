@@ -100,11 +100,11 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
 
             // HTTP requests/responses are mapped one-to-one to SPDY streams.
             SpdySynStreamFrame spdySynStreamFrame = (SpdySynStreamFrame) msg;
-            int streamId = spdySynStreamFrame.getStreamId();
+            int streamId = spdySynStreamFrame.streamId();
 
             if (SpdyCodecUtil.isServerId(streamId)) {
                 // SYN_STREAM frames initiated by the server are pushed resources
-                int associatedToStreamId = spdySynStreamFrame.getAssociatedToStreamId();
+                int associatedToStreamId = spdySynStreamFrame.associatedStreamId();
 
                 // If a client receives a SYN_STREAM with an Associated-To-Stream-ID of 0
                 // it must reply with a RST_STREAM with error code INVALID_STREAM
@@ -142,7 +142,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
                     // Set the Stream-ID, Associated-To-Stream-ID, Priority, and URL as headers
                     httpResponseWithEntity.headers().set(Names.STREAM_ID, streamId);
                     httpResponseWithEntity.headers().set(Names.ASSOCIATED_TO_STREAM_ID, associatedToStreamId);
-                    httpResponseWithEntity.headers().set(Names.PRIORITY, spdySynStreamFrame.getPriority());
+                    httpResponseWithEntity.headers().set(Names.PRIORITY, spdySynStreamFrame.priority());
                     httpResponseWithEntity.headers().set(Names.URL, URL);
 
                     if (spdySynStreamFrame.isLast()) {
@@ -200,7 +200,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
         } else if (msg instanceof SpdySynReplyFrame) {
 
             SpdySynReplyFrame spdySynReplyFrame = (SpdySynReplyFrame) msg;
-            int streamId = spdySynReplyFrame.getStreamId();
+            int streamId = spdySynReplyFrame.streamId();
 
             // If a client receives a SYN_REPLY with a truncated header block,
             // reply with a RST_STREAM frame with error code INTERNAL_ERROR.
@@ -235,7 +235,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
         } else if (msg instanceof SpdyHeadersFrame) {
 
             SpdyHeadersFrame spdyHeadersFrame = (SpdyHeadersFrame) msg;
-            int streamId = spdyHeadersFrame.getStreamId();
+            int streamId = spdyHeadersFrame.streamId();
             FullHttpMessage fullHttpMessage = getMessage(streamId);
 
             // If message is not in map discard HEADERS frame.
@@ -259,7 +259,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
         } else if (msg instanceof SpdyDataFrame) {
 
             SpdyDataFrame spdyDataFrame = (SpdyDataFrame) msg;
-            int streamId = spdyDataFrame.getStreamId();
+            int streamId = spdyDataFrame.streamId();
             FullHttpMessage fullHttpMessage = getMessage(streamId);
 
             // If message is not in map discard Data Frame.
@@ -287,7 +287,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
         } else if (msg instanceof SpdyRstStreamFrame) {
 
             SpdyRstStreamFrame spdyRstStreamFrame = (SpdyRstStreamFrame) msg;
-            int streamId = spdyRstStreamFrame.getStreamId();
+            int streamId = spdyRstStreamFrame.streamId();
             removeMessage(streamId);
         }
     }

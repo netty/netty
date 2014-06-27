@@ -34,7 +34,7 @@ public enum SocksCmdStatus {
         this.b = b;
     }
 
-    public static SocksCmdStatus fromByte(byte b) {
+    public static SocksCmdStatus valueOf(byte b) {
         for (SocksCmdStatus code : values()) {
             if (code.b == b) {
                 return code;

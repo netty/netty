@@ -15,23 +15,9 @@
  */
 package io.netty.handler.codec.memcache;
 
-import io.netty.handler.codec.DecoderResult;
+import io.netty.handler.codec.DecoderResultProvider;
 
 /**
  * Defines a common interface for all {@link MemcacheObject} implementations.
  */
-public interface MemcacheObject {
-
-    /**
-     * Returns the result of decoding this message.
-     */
-    DecoderResult getDecoderResult();
-
-    /**
-     * Updates the result of decoding this message.
-     * <p/>
-     * <p>Do not call this method unless you know what you are doing.</p>
-     */
-    void setDecoderResult(DecoderResult result);
-
-}
+public interface MemcacheObject extends DecoderResultProvider { }

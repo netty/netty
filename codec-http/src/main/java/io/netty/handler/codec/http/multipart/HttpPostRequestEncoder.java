@@ -202,7 +202,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
         if (charset == null) {
             throw new NullPointerException("charset");
         }
-        HttpMethod method = request.getMethod();
+        HttpMethod method = request.method();
         if (!(method.equals(HttpMethod.POST) || method.equals(HttpMethod.PUT)
                 || method.equals(HttpMethod.PATCH) || method.equals(HttpMethod.OPTIONS))) {
             throw new ErrorDataEncoderException("Cannot create a Encoder if not a POST");
@@ -1132,18 +1132,18 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
         }
 
         @Override
-        public HttpMethod getMethod() {
-            return request.getMethod();
+        public HttpMethod method() {
+            return request.method();
         }
 
         @Override
-        public String getUri() {
-            return request.getUri();
+        public String uri() {
+            return request.uri();
         }
 
         @Override
-        public HttpVersion getProtocolVersion() {
-            return request.getProtocolVersion();
+        public HttpVersion protocolVersion() {
+            return request.protocolVersion();
         }
 
         @Override
@@ -1191,7 +1191,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
         @Override
         public FullHttpRequest copy() {
             DefaultFullHttpRequest copy = new DefaultFullHttpRequest(
-                    getProtocolVersion(), getMethod(), getUri(), content().copy());
+                    protocolVersion(), method(), uri(), content().copy());
             copy.headers().set(headers());
             copy.trailingHeaders().set(trailingHeaders());
             return copy;
@@ -1200,7 +1200,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
         @Override
         public FullHttpRequest duplicate() {
             DefaultFullHttpRequest duplicate = new DefaultFullHttpRequest(
-                    getProtocolVersion(), getMethod(), getUri(), content().duplicate());
+                    protocolVersion(), method(), uri(), content().duplicate());
             duplicate.headers().set(headers());
             duplicate.trailingHeaders().set(trailingHeaders());
             return duplicate;

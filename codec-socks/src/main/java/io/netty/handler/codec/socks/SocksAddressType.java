@@ -28,7 +28,7 @@ public enum SocksAddressType {
         this.b = b;
     }
 
-    public static SocksAddressType fromByte(byte b) {
+    public static SocksAddressType valueOf(byte b) {
         for (SocksAddressType code : values()) {
             if (code.b == b) {
                 return code;

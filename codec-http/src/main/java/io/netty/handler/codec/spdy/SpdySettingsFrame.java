@@ -36,7 +36,7 @@ public interface SpdySettingsFrame extends SpdyFrame {
      * Returns a {@code Set} of the setting IDs.
      * The set's iterator will return the IDs in ascending order.
      */
-    Set<Integer> getIds();
+    Set<Integer> ids();
 
     /**
      * Returns {@code true} if the setting ID has a value.

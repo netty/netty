@@ -34,7 +34,7 @@ public class DefaultSpdyPingFrame implements SpdyPingFrame {
     }
 
     @Override
-    public int getId() {
+    public int id() {
         return id;
     }
 
@@ -50,7 +50,7 @@ public class DefaultSpdyPingFrame implements SpdyPingFrame {
         buf.append(StringUtil.simpleClassName(this));
         buf.append(StringUtil.NEWLINE);
         buf.append("--> ID = ");
-        buf.append(getId());
+        buf.append(id());
         return buf.toString();
     }
 }

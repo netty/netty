@@ -167,7 +167,7 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator {
                 response = (FullHttpResponse) out.get(0);
             }
 
-            if (!SWITCHING_PROTOCOLS.equals(response.getStatus())) {
+            if (!SWITCHING_PROTOCOLS.equals(response.status())) {
                 // The server does not support the requested protocol, just remove this handler
                 // and continue processing HTTP.
                 // NOTE: not releasing the response since we're letting it propagate to the

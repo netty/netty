@@ -34,7 +34,6 @@ import java.util.zip.Deflater;
 public class JdkZlibEncoder extends ZlibEncoder {
 
     private final ZlibWrapper wrapper;
-    private final byte[] encodeBuf = new byte[8192];
     private final Deflater deflater;
     private volatile boolean finished;
     private volatile ChannelHandlerContext ctx;
@@ -211,23 +210,11 @@ public class JdkZlibEncoder extends ZlibEncoder {
             offset = 0;
         }
 
-        int sizeEstimate = (int) Math.ceil(inAry.length * 1.001) + 12;
-
         if (writeHeader) {
             writeHeader = false;
-            switch (wrapper) {
-                case GZIP:
-                    out.ensureWritable(sizeEstimate + gzipHeader.length);
-                    out.writeBytes(gzipHeader);
-                    break;
-                case ZLIB:
-                    out.ensureWritable(sizeEstimate + 2); // first two magic bytes
-                    break;
-                default:
-                    out.ensureWritable(sizeEstimate);
+            if (wrapper == ZlibWrapper.GZIP) {
+                out.writeBytes(gzipHeader);
             }
-        } else {
-            out.ensureWritable(sizeEstimate);
         }
 
         if (wrapper == ZlibWrapper.GZIP) {
@@ -238,6 +225,23 @@ public class JdkZlibEncoder extends ZlibEncoder {
         while (!deflater.needsInput()) {
             deflate(out);
         }
+    }
+
+    @Override
+    protected final ByteBuf allocateBuffer(ChannelHandlerContext ctx, ByteBuf msg,
+                                           boolean preferDirect) throws Exception {
+        int sizeEstimate = (int) Math.ceil(msg.readableBytes() * 1.001) + 12;
+        if (writeHeader) {
+            switch (wrapper) {
+                case GZIP:
+                    sizeEstimate += gzipHeader.length;
+                    break;
+                case ZLIB:
+                    sizeEstimate += 2; // first two magic bytes
+                    break;
+            }
+        }
+        return ctx.alloc().heapBuffer(sizeEstimate);
     }
 
     @Override
@@ -268,8 +272,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
         }
 
         finished = true;
-
-        ByteBuf footer = ctx.alloc().buffer();
+        ByteBuf footer = ctx.alloc().heapBuffer();
         if (writeHeader && wrapper == ZlibWrapper.GZIP) {
             // Write the GZIP header first if not written yet. (i.e. user wrote nothing.)
             writeHeader = false;
@@ -277,8 +280,14 @@ public class JdkZlibEncoder extends ZlibEncoder {
         }
 
         deflater.finish();
+
         while (!deflater.finished()) {
             deflate(footer);
+            if (!footer.isWritable()) {
+                // no more space so write it to the channel and continue
+                ctx.write(footer);
+                footer = ctx.alloc().heapBuffer();
+            }
         }
         if (wrapper == ZlibWrapper.GZIP) {
             int crcValue = (int) crc.getValue();
@@ -299,8 +308,10 @@ public class JdkZlibEncoder extends ZlibEncoder {
     private void deflate(ByteBuf out) {
         int numBytes;
         do {
-            numBytes = deflater.deflate(encodeBuf, 0, encodeBuf.length, Deflater.SYNC_FLUSH);
-            out.writeBytes(encodeBuf, 0, numBytes);
+            int writerIndex = out.writerIndex();
+            numBytes = deflater.deflate(
+                    out.array(), out.arrayOffset() + writerIndex, out.writableBytes(), Deflater.SYNC_FLUSH);
+            out.writerIndex(writerIndex + numBytes);
         } while (numBytes > 0);
     }
 

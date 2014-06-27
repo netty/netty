@@ -55,4 +55,11 @@ public abstract class MpscLinkedQueueNode<T> {
     protected T clearMaybe() {
         return value();
     }
+
+    /**
+     * Unlink to allow GC'ed
+     */
+    void unlink() {
+        setNext(null);
+    }
 }

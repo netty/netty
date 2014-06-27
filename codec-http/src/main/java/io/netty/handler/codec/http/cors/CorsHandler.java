@@ -64,7 +64,7 @@ public class CorsHandler extends ChannelHandlerAdapter {
     }
 
     private void handlePreflight(final ChannelHandlerContext ctx, final HttpRequest request) {
-        final HttpResponse response = new DefaultFullHttpResponse(request.getProtocolVersion(), OK);
+        final HttpResponse response = new DefaultFullHttpResponse(request.protocolVersion(), OK);
         if (setOrigin(response)) {
             setAllowMethods(response);
             setAllowHeaders(response);
@@ -153,7 +153,7 @@ public class CorsHandler extends ChannelHandlerAdapter {
 
     private static boolean isPreflightRequest(final HttpRequest request) {
         final HttpHeaders headers = request.headers();
-        return request.getMethod().equals(OPTIONS) &&
+        return request.method().equals(OPTIONS) &&
                 headers.contains(ORIGIN) &&
                 headers.contains(ACCESS_CONTROL_REQUEST_METHOD);
     }
@@ -197,7 +197,7 @@ public class CorsHandler extends ChannelHandlerAdapter {
     }
 
     private static void forbidden(final ChannelHandlerContext ctx, final HttpRequest request) {
-        ctx.writeAndFlush(new DefaultFullHttpResponse(request.getProtocolVersion(), FORBIDDEN))
+        ctx.writeAndFlush(new DefaultFullHttpResponse(request.protocolVersion(), FORBIDDEN))
                 .addListener(ChannelFutureListener.CLOSE);
     }
 }

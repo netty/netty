@@ -45,7 +45,7 @@ public final class SocksAuthResponse extends SocksResponse {
     }
 
     @Override
-    public void encodeAsByteBuf(ByteBuf byteBuf) {
+    void encodeAsByteBuf(ByteBuf byteBuf) {
         byteBuf.writeByte(SUBNEGOTIATION_VERSION.byteValue());
         byteBuf.writeByte(authStatus.byteValue());
     }

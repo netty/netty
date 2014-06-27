@@ -51,7 +51,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
 
     @Override
     protected void decode(ChannelHandlerContext ctx, HttpObject msg, List<Object> out) throws Exception {
-        if (msg instanceof HttpResponse && ((HttpResponse) msg).getStatus().code() == 100) {
+        if (msg instanceof HttpResponse && ((HttpResponse) msg).status().code() == 100) {
 
             if (!(msg instanceof LastHttpContent)) {
                 continueResponse = true;

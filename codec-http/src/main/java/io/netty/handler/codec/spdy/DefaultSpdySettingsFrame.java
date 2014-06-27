@@ -30,7 +30,7 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
     private final Map<Integer, Setting> settingsMap = new TreeMap<Integer, Setting>();
 
     @Override
-    public Set<Integer> getIds() {
+    public Set<Integer> ids() {
         return settingsMap.keySet();
     }
 
@@ -138,7 +138,7 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
         for (Map.Entry<Integer, Setting> e: getSettings()) {
             Setting setting = e.getValue();
             buf.append("--> ");
-            buf.append(e.getKey().toString());
+            buf.append(e.getKey());
             buf.append(':');
             buf.append(setting.getValue());
             buf.append(" (persist value: ");

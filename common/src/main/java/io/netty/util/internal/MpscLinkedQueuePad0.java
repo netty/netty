@@ -16,18 +16,7 @@
 
 package io.netty.util.internal;
 
-import java.util.concurrent.atomic.AtomicReference;
-
-public final class RightPaddedReference<T> extends AtomicReference<T> {
-    private static final long serialVersionUID = -467619563034125237L;
-
-    // cache line padding (must be public)
-    public transient long rp1, rp2, rp3, rp4, rp5; // 40 bytes (excluding AtomicReference.value and object header)
-    public transient long rpA, rpB, rpC, rpD, rpE, rpF, rpG, rpH; // 64 bytes
-
-    public RightPaddedReference() { }
-
-    public RightPaddedReference(T initialValue) {
-        super(initialValue);
-    }
+abstract class MpscLinkedQueuePad0<E> {
+    long p00, p01, p02, p03, p04, p05, p06, p07;
+    long p30, p31, p32, p33, p34, p35, p36, p37;
 }

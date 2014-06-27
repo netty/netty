@@ -38,6 +38,11 @@ public final class EpollServerSocketChannelConfig extends DefaultChannelConfig
     EpollServerSocketChannelConfig(EpollServerSocketChannel channel) {
         super(channel);
         this.channel = channel;
+
+        // Use SO_REUSEADDR by default as java.nio does the same.
+        //
+        // See https://github.com/netty/netty/issues/2605
+        setReuseAddress(true);
     }
 
     @Override

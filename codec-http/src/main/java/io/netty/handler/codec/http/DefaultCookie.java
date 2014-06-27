@@ -78,12 +78,12 @@ public class DefaultCookie implements Cookie {
     }
 
     @Override
-    public String getName() {
+    public String name() {
         return name;
     }
 
     @Override
-    public String getValue() {
+    public String value() {
         return value;
     }
 
@@ -96,7 +96,7 @@ public class DefaultCookie implements Cookie {
     }
 
     @Override
-    public String getDomain() {
+    public String domain() {
         return domain;
     }
 
@@ -106,7 +106,7 @@ public class DefaultCookie implements Cookie {
     }
 
     @Override
-    public String getPath() {
+    public String path() {
         return path;
     }
 
@@ -116,7 +116,7 @@ public class DefaultCookie implements Cookie {
     }
 
     @Override
-    public String getComment() {
+    public String comment() {
         return comment;
     }
 
@@ -126,7 +126,7 @@ public class DefaultCookie implements Cookie {
     }
 
     @Override
-    public String getCommentUrl() {
+    public String commentUrl() {
         return commentUrl;
     }
 
@@ -146,7 +146,7 @@ public class DefaultCookie implements Cookie {
     }
 
     @Override
-    public Set<Integer> getPorts() {
+    public Set<Integer> ports() {
         if (unmodifiablePorts == null) {
             unmodifiablePorts = Collections.unmodifiableSet(ports);
         }
@@ -193,7 +193,7 @@ public class DefaultCookie implements Cookie {
     }
 
     @Override
-    public long getMaxAge() {
+    public long maxAge() {
         return maxAge;
     }
 
@@ -203,7 +203,7 @@ public class DefaultCookie implements Cookie {
     }
 
     @Override
-    public int getVersion() {
+    public int version() {
         return version;
     }
 
@@ -234,7 +234,7 @@ public class DefaultCookie implements Cookie {
 
     @Override
     public int hashCode() {
-        return getName().hashCode();
+        return name().hashCode();
     }
 
     @Override
@@ -244,28 +244,28 @@ public class DefaultCookie implements Cookie {
         }
 
         Cookie that = (Cookie) o;
-        if (!getName().equalsIgnoreCase(that.getName())) {
+        if (!name().equalsIgnoreCase(that.name())) {
             return false;
         }
 
-        if (getPath() == null) {
-            if (that.getPath() != null) {
+        if (path() == null) {
+            if (that.path() != null) {
                 return false;
             }
-        } else if (that.getPath() == null) {
+        } else if (that.path() == null) {
             return false;
-        } else if (!getPath().equals(that.getPath())) {
+        } else if (!path().equals(that.path())) {
             return false;
         }
 
-        if (getDomain() == null) {
-            if (that.getDomain() != null) {
+        if (domain() == null) {
+            if (that.domain() != null) {
                 return false;
             }
-        } else if (that.getDomain() == null) {
+        } else if (that.domain() == null) {
             return false;
         } else {
-            return getDomain().equalsIgnoreCase(that.getDomain());
+            return domain().equalsIgnoreCase(that.domain());
         }
 
         return true;
@@ -274,32 +274,32 @@ public class DefaultCookie implements Cookie {
     @Override
     public int compareTo(Cookie c) {
         int v;
-        v = getName().compareToIgnoreCase(c.getName());
+        v = name().compareToIgnoreCase(c.name());
         if (v != 0) {
             return v;
         }
 
-        if (getPath() == null) {
-            if (c.getPath() != null) {
+        if (path() == null) {
+            if (c.path() != null) {
                 return -1;
             }
-        } else if (c.getPath() == null) {
+        } else if (c.path() == null) {
             return 1;
         } else {
-            v = getPath().compareTo(c.getPath());
+            v = path().compareTo(c.path());
             if (v != 0) {
                 return v;
             }
         }
 
-        if (getDomain() == null) {
-            if (c.getDomain() != null) {
+        if (domain() == null) {
+            if (c.domain() != null) {
                 return -1;
             }
-        } else if (c.getDomain() == null) {
+        } else if (c.domain() == null) {
             return 1;
         } else {
-            v = getDomain().compareToIgnoreCase(c.getDomain());
+            v = domain().compareToIgnoreCase(c.domain());
             return v;
         }
 
@@ -309,24 +309,24 @@ public class DefaultCookie implements Cookie {
     @Override
     public String toString() {
         StringBuilder buf = new StringBuilder();
-        buf.append(getName());
+        buf.append(name());
         buf.append('=');
-        buf.append(getValue());
-        if (getDomain() != null) {
+        buf.append(value());
+        if (domain() != null) {
             buf.append(", domain=");
-            buf.append(getDomain());
+            buf.append(domain());
         }
-        if (getPath() != null) {
+        if (path() != null) {
             buf.append(", path=");
-            buf.append(getPath());
+            buf.append(path());
         }
-        if (getComment() != null) {
+        if (comment() != null) {
             buf.append(", comment=");
-            buf.append(getComment());
+            buf.append(comment());
         }
-        if (getMaxAge() >= 0) {
+        if (maxAge() >= 0) {
             buf.append(", maxAge=");
-            buf.append(getMaxAge());
+            buf.append(maxAge());
             buf.append('s');
         }
         if (isSecure()) {

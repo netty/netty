@@ -24,12 +24,7 @@ import io.netty.handler.codec.http.HttpHeaders.Values;
 import java.util.Iterator;
 import java.util.List;
 
-import static io.netty.handler.codec.http.HttpConstants.*;
-
 public final class HttpHeaderUtil {
-
-    private static final byte[] HEADER_SEPERATOR = { COLON, SP };
-    private static final byte[] CRLF = { CR, LF };
 
     /**
      * Returns {@code true} if and only if the connection can remain open and
@@ -43,7 +38,7 @@ public final class HttpHeaderUtil {
             return false;
         }
 
-        if (message.getProtocolVersion().isKeepAliveDefault()) {
+        if (message.protocolVersion().isKeepAliveDefault()) {
             return !AsciiString.equalsIgnoreCase(Values.CLOSE, connection);
         } else {
             return AsciiString.equalsIgnoreCase(Values.KEEP_ALIVE, connection);
@@ -71,7 +66,7 @@ public final class HttpHeaderUtil {
      */
     public static void setKeepAlive(HttpMessage message, boolean keepAlive) {
         HttpHeaders h = message.headers();
-        if (message.getProtocolVersion().isKeepAliveDefault()) {
+        if (message.protocolVersion().isKeepAliveDefault()) {
             if (keepAlive) {
                 h.remove(Names.CONNECTION);
             } else {
@@ -155,14 +150,14 @@ public final class HttpHeaderUtil {
         HttpHeaders h = message.headers();
         if (message instanceof HttpRequest) {
             HttpRequest req = (HttpRequest) message;
-            if (HttpMethod.GET.equals(req.getMethod()) &&
+            if (HttpMethod.GET.equals(req.method()) &&
                     h.contains(Names.SEC_WEBSOCKET_KEY1) &&
                     h.contains(Names.SEC_WEBSOCKET_KEY2)) {
                 return 8;
             }
         } else if (message instanceof HttpResponse) {
             HttpResponse res = (HttpResponse) message;
-            if (res.getStatus().code() == 101 &&
+            if (res.status().code() == 101 &&
                     h.contains(Names.SEC_WEBSOCKET_ORIGIN) &&
                     h.contains(Names.SEC_WEBSOCKET_LOCATION)) {
                 return 16;
@@ -195,7 +190,7 @@ public final class HttpHeaderUtil {
         }
 
         // It works only on HTTP/1.1 or later.
-        if (message.getProtocolVersion().compareTo(HttpVersion.HTTP_1_1) < 0) {
+        if (message.protocolVersion().compareTo(HttpVersion.HTTP_1_1) < 0) {
             return false;
         }
 

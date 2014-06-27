@@ -17,9 +17,7 @@ package io.netty.util.internal;
 
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-import sun.misc.Cleaner;
 import sun.misc.Unsafe;
-import sun.nio.ch.DirectBuffer;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -56,18 +54,7 @@ final class PlatformDependent0 {
     private static final boolean UNALIGNED;
 
     static {
-        boolean directBufferFreeable = false;
-        try {
-            Class<?> cls = Class.forName("sun.nio.ch.DirectBuffer", false, getClassLoader(PlatformDependent0.class));
-            Method method = cls.getMethod("cleaner");
-            if ("sun.misc.Cleaner".equals(method.getReturnType().getName())) {
-                directBufferFreeable = true;
-            }
-        } catch (Throwable t) {
-            // We don't have sun.nio.ch.DirectBuffer.cleaner().
-        }
-        logger.debug("sun.nio.ch.DirectBuffer.cleaner(): {}", directBufferFreeable? "available" : "unavailable");
-
+        ByteBuffer direct = ByteBuffer.allocateDirect(1);
         Field addressField;
         try {
             addressField = Buffer.class.getDeclaredField("address");
@@ -76,7 +63,6 @@ final class PlatformDependent0 {
                 // A heap buffer must have 0 address.
                 addressField = null;
             } else {
-                ByteBuffer direct = ByteBuffer.allocateDirect(1);
                 if (addressField.getLong(direct) == 0) {
                     // A direct buffer must have non-zero address.
                     addressField = null;
@@ -89,7 +75,7 @@ final class PlatformDependent0 {
         logger.debug("java.nio.Buffer.address: {}", addressField != null? "available" : "unavailable");
 
         Unsafe unsafe;
-        if (addressField != null && directBufferFreeable) {
+        if (addressField != null) {
             try {
                 Field unsafeField = Unsafe.class.getDeclaredField("theUnsafe");
                 unsafeField.setAccessible(true);
@@ -156,17 +142,9 @@ final class PlatformDependent0 {
     }
 
     static void freeDirectBuffer(ByteBuffer buffer) {
-        if (!(buffer instanceof DirectBuffer)) {
-            return;
-        }
-        try {
-            Cleaner cleaner = ((DirectBuffer) buffer).cleaner();
-            if (cleaner != null) {
-                cleaner.clean();
-            }
-        } catch (Throwable t) {
-            // Nothing we can do here.
-        }
+        // Delegate to other class to not break on android
+        // See https://github.com/netty/netty/issues/2604
+        Cleaner0.freeDirectBuffer(buffer);
     }
 
     static long directBufferAddress(ByteBuffer buffer) {
