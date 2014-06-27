@@ -27,6 +27,7 @@ import io.netty.testsuite.util.TestUtils;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ResourceLeakDetector;
+import io.netty.util.internal.StringUtil;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
@@ -47,17 +48,21 @@ public class EpollReuseAddrTest {
     private static final int BUGFIX;
     static {
         String kernelVersion = Native.kernelVersion();
-        int index = kernelVersion.indexOf("-");
+        int index = kernelVersion.indexOf('-');
         if (index > -1) {
             kernelVersion = kernelVersion.substring(0, index);
         }
-        String[] versionParts = kernelVersion.split("\\.");
-        if (versionParts.length == 3) {
+        String[] versionParts = StringUtil.split(kernelVersion, '.');
+        if (versionParts.length <= 3) {
             MAJOR = Integer.parseInt(versionParts[0]);
             MINOR = Integer.parseInt(versionParts[1]);
-            BUGFIX = Integer.parseInt(versionParts[2]);
+            if (versionParts.length == 3) {
+                BUGFIX = Integer.parseInt(versionParts[2]);
+            } else {
+                BUGFIX = 0;
+            }
         } else {
-            throw new IllegalStateException();
+            throw new IllegalStateException("Can not parse kernel version " + kernelVersion);
         }
     }
 
@@ -162,7 +167,7 @@ public class EpollReuseAddrTest {
         Assert.assertTrue(received2.get());
     }
 
-    private ServerBootstrap createServerBootstrap() {
+    private static ServerBootstrap createServerBootstrap() {
         ServerBootstrap bootstrap = new ServerBootstrap();
         bootstrap.group(EpollSocketTestPermutation.EPOLL_BOSS_GROUP, EpollSocketTestPermutation.EPOLL_WORKER_GROUP);
         bootstrap.channel(EpollServerSocketChannel.class);
@@ -172,7 +177,7 @@ public class EpollReuseAddrTest {
         return bootstrap;
     }
 
-    private Bootstrap createBootstrap() {
+    private static Bootstrap createBootstrap() {
         Bootstrap bootstrap = new Bootstrap();
         bootstrap.group(EpollSocketTestPermutation.EPOLL_WORKER_GROUP);
         bootstrap.channel(EpollDatagramChannel.class);
@@ -184,7 +189,8 @@ public class EpollReuseAddrTest {
     private static boolean versionEqOrGt(int major, int minor, int bugfix)  {
         if (MAJOR > major) {
             return true;
-        } else if (MAJOR == major) {
+        }
+        if (MAJOR == major) {
             if (MINOR > minor) {
                 return true;
             } else if (MINOR == minor) {
