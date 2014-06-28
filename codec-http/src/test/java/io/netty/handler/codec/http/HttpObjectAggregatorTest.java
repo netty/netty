@@ -192,7 +192,9 @@ public class HttpObjectAggregatorTest {
     public void testBadRequest() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpRequestDecoder(), new HttpObjectAggregator(1024 * 1024));
         ch.writeInbound(Unpooled.copiedBuffer("GET / HTTP/1.0 with extra\r\n", CharsetUtil.UTF_8));
-        assertThat(ch.readInbound(), is(instanceOf(FullHttpRequest.class)));
+        Object inbound = ch.readInbound();
+        assertThat(inbound, is(instanceOf(FullHttpRequest.class)));
+        assertTrue(((FullHttpRequest) inbound).getDecoderResult().isFailure());
         assertNull(ch.readInbound());
         ch.finish();
     }
@@ -201,7 +203,9 @@ public class HttpObjectAggregatorTest {
     public void testBadResponse() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder(), new HttpObjectAggregator(1024 * 1024));
         ch.writeInbound(Unpooled.copiedBuffer("HTTP/1.0 BAD_CODE Bad Server\r\n", CharsetUtil.UTF_8));
-        assertThat(ch.readInbound(), is(instanceOf(FullHttpResponse.class)));
+        Object inbound = ch.readInbound();
+        assertThat(inbound, is(instanceOf(FullHttpResponse.class)));
+        assertTrue(((FullHttpResponse) inbound).getDecoderResult().isFailure());
         assertNull(ch.readInbound());
         ch.finish();
     }
