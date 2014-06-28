@@ -190,6 +190,7 @@ import java.util.List;
  *       ByteBuf frame = buf.readBytes(length);
  *       <strong>checkpoint(MyDecoderState.READ_LENGTH);</strong>
  *       out.add(frame);
+ *       break;
  *     default:
  *       throw new Error("Shouldn't reach here.");
  *     }
