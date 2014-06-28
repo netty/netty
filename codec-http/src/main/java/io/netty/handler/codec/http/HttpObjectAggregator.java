@@ -260,10 +260,12 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
             HttpRequest req = (HttpRequest) msg;
             fullMsg = new DefaultFullHttpRequest(
                     req.getProtocolVersion(), req.getMethod(), req.getUri(), Unpooled.EMPTY_BUFFER, false);
+            fullMsg.setDecoderResult(req.getDecoderResult());
         } else if (msg instanceof HttpResponse) {
             HttpResponse res = (HttpResponse) msg;
             fullMsg = new DefaultFullHttpResponse(
                     res.getProtocolVersion(), res.getStatus(), Unpooled.EMPTY_BUFFER, false);
+            fullMsg.setDecoderResult(res.getDecoderResult());
         } else {
             throw new IllegalStateException();
         }
