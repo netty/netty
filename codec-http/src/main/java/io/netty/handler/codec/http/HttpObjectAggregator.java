@@ -123,7 +123,7 @@ public class HttpObjectAggregator
             HttpRequest req = (HttpRequest) start;
             ret = new DefaultFullHttpRequest(req.protocolVersion(),
                     req.method(), req.uri(), content);
-        } else  if (start instanceof HttpResponse) {
+        } else if (start instanceof HttpResponse) {
             HttpResponse res = (HttpResponse) start;
             ret = new DefaultFullHttpResponse(
                     res.protocolVersion(), res.status(), content);
@@ -132,6 +132,7 @@ public class HttpObjectAggregator
         }
 
         ret.headers().set(start.headers());
+        ret.setDecoderResult(start.decoderResult());
         return ret;
     }
 
