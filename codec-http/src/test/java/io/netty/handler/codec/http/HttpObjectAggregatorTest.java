@@ -308,7 +308,7 @@ public class HttpObjectAggregatorTest {
         ch.writeInbound(Unpooled.copiedBuffer("GET / HTTP/1.0 with extra\r\n", CharsetUtil.UTF_8));
         Object inbound = ch.readInbound();
         assertThat(inbound, is(instanceOf(FullHttpRequest.class)));
-        assertTrue(((FullHttpRequest) inbound).getDecoderResult().isFailure());
+        assertTrue(((FullHttpRequest) inbound).decoderResult().isFailure());
         assertNull(ch.readInbound());
         ch.finish();
     }
@@ -319,7 +319,7 @@ public class HttpObjectAggregatorTest {
         ch.writeInbound(Unpooled.copiedBuffer("HTTP/1.0 BAD_CODE Bad Server\r\n", CharsetUtil.UTF_8));
         Object inbound = ch.readInbound();
         assertThat(inbound, is(instanceOf(FullHttpResponse.class)));
-        assertTrue(((FullHttpResponse) inbound).getDecoderResult().isFailure());
+        assertTrue(((FullHttpResponse) inbound).decoderResult().isFailure());
         assertNull(ch.readInbound());
         ch.finish();
     }
