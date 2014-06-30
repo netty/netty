@@ -565,6 +565,7 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public ByteBuffer internalNioBuffer(int index, int length) {
+        checkIndex(index, length);
         return (ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length);
     }
 
@@ -578,6 +579,7 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public ByteBuffer nioBuffer(int index, int length) {
+        checkIndex(index, length);
         return ((ByteBuffer) buffer.duplicate().position(index).limit(index + length)).slice();
     }
 

@@ -229,6 +229,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf ensureWritable(int minWritableBytes) {
+        ensureAccessible();
         if (minWritableBytes < 0) {
             throw new IllegalArgumentException(String.format(
                     "minWritableBytes: %d (expected: >= 0)", minWritableBytes));
@@ -974,11 +975,12 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public int forEachByte(int index, int length, ByteBufProcessor processor) {
-        checkIndex(index, length);
         return forEachByteAsc0(index, length, processor);
     }
 
     private int forEachByteAsc0(int index, int length, ByteBufProcessor processor) {
+        checkIndex(index, length);
+
         if (processor == null) {
             throw new NullPointerException("processor");
         }
@@ -1013,11 +1015,12 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public int forEachByteDesc(int index, int length, ByteBufProcessor processor) {
-        checkIndex(index, length);
         return forEachByteDesc0(index, length, processor);
     }
 
     private int forEachByteDesc0(int index, int length, ByteBufProcessor processor) {
+        checkIndex(index, length);
+
         if (processor == null) {
             throw new NullPointerException("processor");
         }
