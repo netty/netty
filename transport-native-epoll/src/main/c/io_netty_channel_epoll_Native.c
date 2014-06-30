@@ -692,6 +692,12 @@ JNIEXPORT jlong JNICALL Java_io_netty_channel_epoll_Native_writev(JNIEnv * env, 
         iov[iovidx].iov_base = buffer + pos;
         iov[iovidx].iov_len = (size_t) (limit - pos);
         iovidx++;
+
+        // Explicit delete local reference as otherwise the local references will only be released once the native method returns.
+        // Also there may be a lot of these and JNI specification only specify that 16 must be able to be created.
+        //
+        // See https://github.com/netty/netty/issues/2623
+        (*env)->DeleteLocalRef(env, bufObj);
     }
 
     ssize_t res;
@@ -728,6 +734,12 @@ JNIEXPORT jlong JNICALL Java_io_netty_channel_epoll_Native_writev(JNIEnv * env, 
             incrementPosition(env, bufObj, len);
             written -= len;
         }
+
+        // Explicit delete local reference as otherwise the local references will only be released once the native method returns.
+        // Also there may be a lot of these and JNI specification only specify that 16 must be able to be created.
+        //
+        // See https://github.com/netty/netty/issues/2623
+        (*env)->DeleteLocalRef(env, bufObj);
     }
     return res;
 }
