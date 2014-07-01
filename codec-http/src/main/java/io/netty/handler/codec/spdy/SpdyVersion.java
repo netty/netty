@@ -16,22 +16,21 @@
 package io.netty.handler.codec.spdy;
 
 public enum SpdyVersion {
-    SPDY_3   (3, false),
-    SPDY_3_1 (3, true);
+    SPDY_3_1 (3, 1);
 
     private final int version;
-    private final boolean sessionFlowControl;
+    private final int minorVersion;
 
-    private SpdyVersion(int version, boolean sessionFlowControl) {
+    SpdyVersion(int version, int minorVersion) {
         this.version = version;
-        this.sessionFlowControl = sessionFlowControl;
+        this.minorVersion = minorVersion;
     }
 
     int getVersion() {
         return version;
     }
 
-    boolean useSessionFlowControl() {
-        return sessionFlowControl;
+    int getMinorVersion() {
+        return minorVersion;
     }
 }

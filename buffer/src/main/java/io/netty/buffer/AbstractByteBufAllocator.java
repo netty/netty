@@ -16,6 +16,8 @@
 
 package io.netty.buffer;
 
+import io.netty.util.ResourceLeak;
+import io.netty.util.ResourceLeakDetector;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
@@ -25,6 +27,26 @@ import io.netty.util.internal.StringUtil;
 public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
     private static final int DEFAULT_INITIAL_CAPACITY = 256;
     private static final int DEFAULT_MAX_COMPONENTS = 16;
+
+    protected static ByteBuf toLeakAwareBuffer(ByteBuf buf) {
+        ResourceLeak leak;
+        switch (ResourceLeakDetector.getLevel()) {
+            case SIMPLE:
+                leak = AbstractByteBuf.leakDetector.open(buf);
+                if (leak != null) {
+                    buf = new SimpleLeakAwareByteBuf(buf, leak);
+                }
+                break;
+            case ADVANCED:
+            case PARANOID:
+                leak = AbstractByteBuf.leakDetector.open(buf);
+                if (leak != null) {
+                    buf = new AdvancedLeakAwareByteBuf(buf, leak);
+                }
+                break;
+        }
+        return buf;
+    }
 
     private final boolean directByDefault;
     private final ByteBuf emptyBuf;
@@ -74,9 +96,9 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
     @Override
     public ByteBuf ioBuffer() {
         if (PlatformDependent.hasUnsafe()) {
-            return directBuffer(0);
+            return directBuffer(DEFAULT_INITIAL_CAPACITY);
         }
-        return heapBuffer(0);
+        return heapBuffer(DEFAULT_INITIAL_CAPACITY);
     }
 
     @Override
@@ -193,5 +215,41 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
     @Override
     public String toString() {
         return StringUtil.simpleClassName(this) + "(directByDefault: " + directByDefault + ')';
+    }
+
+    @Override
+    public int calculateNewCapacity(int minNewCapacity, int maxCapacity) {
+        if (minNewCapacity < 0) {
+            throw new IllegalArgumentException("minNewCapacity: " + minNewCapacity + " (expectd: 0+)");
+        }
+        if (minNewCapacity > maxCapacity) {
+            throw new IllegalArgumentException(String.format(
+                    "minNewCapacity: %d (expected: not greater than maxCapacity(%d)",
+                    minNewCapacity, maxCapacity));
+        }
+        final int threshold = 1048576 * 4; // 4 MiB page
+
+        if (minNewCapacity == threshold) {
+            return threshold;
+        }
+
+        // If over threshold, do not double but just increase by threshold.
+        if (minNewCapacity > threshold) {
+            int newCapacity = minNewCapacity / threshold * threshold;
+            if (newCapacity > maxCapacity - threshold) {
+                newCapacity = maxCapacity;
+            } else {
+                newCapacity += threshold;
+            }
+            return newCapacity;
+        }
+
+        // Not over threshold. Double up to 4 MiB, starting from 64.
+        int newCapacity = 64;
+        while (newCapacity < minNewCapacity) {
+            newCapacity <<= 1;
+        }
+
+        return Math.min(newCapacity, maxCapacity);
     }
 }

@@ -36,7 +36,7 @@ public interface HttpResponse extends HttpMessage {
      *
      * @return The {@link HttpResponseStatus} of this {@link HttpResponse}
      */
-    HttpResponseStatus getStatus();
+    HttpResponseStatus status();
 
     /**
      * Set the status of this {@link HttpResponse}.

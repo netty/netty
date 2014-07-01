@@ -27,11 +27,6 @@ import java.util.List;
  * Before returning SocksRequest decoder removes itself from pipeline.
  */
 public class SocksAuthRequestDecoder extends ReplayingDecoder<SocksAuthRequestDecoder.State> {
-    private static final String name = "SOCKS_AUTH_REQUEST_DECODER";
-
-    public static String getName() {
-        return name;
-    }
 
     private SocksSubnegotiationVersion version;
     private int fieldLength;
@@ -47,7 +42,7 @@ public class SocksAuthRequestDecoder extends ReplayingDecoder<SocksAuthRequestDe
     protected void decode(ChannelHandlerContext ctx, ByteBuf byteBuf, List<Object> out) throws Exception {
         switch (state()) {
             case CHECK_PROTOCOL_VERSION: {
-                version = SocksSubnegotiationVersion.fromByte(byteBuf.readByte());
+                version = SocksSubnegotiationVersion.valueOf(byteBuf.readByte());
                 if (version != SocksSubnegotiationVersion.AUTH_PASSWORD) {
                     break;
                 }

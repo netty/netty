@@ -16,6 +16,7 @@
 
 package io.netty.buffer;
 
+import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -27,12 +28,16 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class PooledByteBufAllocator extends AbstractByteBufAllocator {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PooledByteBufAllocator.class);
-
     private static final int DEFAULT_NUM_HEAP_ARENA;
     private static final int DEFAULT_NUM_DIRECT_ARENA;
 
     private static final int DEFAULT_PAGE_SIZE;
     private static final int DEFAULT_MAX_ORDER; // 8192 << 11 = 16 MiB per chunk
+    private static final int DEFAULT_TINY_CACHE_SIZE;
+    private static final int DEFAULT_SMALL_CACHE_SIZE;
+    private static final int DEFAULT_NORMAL_CACHE_SIZE;
+    private static final int DEFAULT_MAX_CACHED_BUFFER_CAPACITY;
+    private static final int DEFAULT_CACHE_TRIM_INTERVAL;
 
     private static final int MIN_PAGE_SIZE = 4096;
     private static final int MAX_CHUNK_SIZE = (int) (((long) Integer.MAX_VALUE + 1) / 2);
@@ -75,6 +80,20 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
                                 runtime.availableProcessors(),
                                 PlatformDependent.maxDirectMemory() / defaultChunkSize / 2 / 3)));
 
+        // cache sizes
+        DEFAULT_TINY_CACHE_SIZE = SystemPropertyUtil.getInt("io.netty.allocator.tinyCacheSize", 512);
+        DEFAULT_SMALL_CACHE_SIZE = SystemPropertyUtil.getInt("io.netty.allocator.smallCacheSize", 256);
+        DEFAULT_NORMAL_CACHE_SIZE = SystemPropertyUtil.getInt("io.netty.allocator.normalCacheSize", 64);
+
+        // 32 kb is the default maximum capacity of the cached buffer. Similar to what is explained in
+        // 'Scalable memory allocation using jemalloc'
+        DEFAULT_MAX_CACHED_BUFFER_CAPACITY = SystemPropertyUtil.getInt(
+                "io.netty.allocator.maxCachedBufferCapacity", 32 * 1024);
+
+        // the number of threshold of allocations when cached entries will be freed up if not frequently used
+        DEFAULT_CACHE_TRIM_INTERVAL = SystemPropertyUtil.getInt(
+                "io.netty.allocator.cacheTrimInterval", 8192);
+
         if (logger.isDebugEnabled()) {
             logger.debug("-Dio.netty.allocator.numHeapArenas: {}", DEFAULT_NUM_HEAP_ARENA);
             logger.debug("-Dio.netty.allocator.numDirectArenas: {}", DEFAULT_NUM_DIRECT_ARENA);
@@ -89,6 +108,11 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
                 logger.debug("-Dio.netty.allocator.maxOrder: {}", DEFAULT_MAX_ORDER, maxOrderFallbackCause);
             }
             logger.debug("-Dio.netty.allocator.chunkSize: {}", DEFAULT_PAGE_SIZE << DEFAULT_MAX_ORDER);
+            logger.debug("-Dio.netty.allocator.tinyCacheSize: {}", DEFAULT_TINY_CACHE_SIZE);
+            logger.debug("-Dio.netty.allocator.smallCacheSize: {}", DEFAULT_SMALL_CACHE_SIZE);
+            logger.debug("-Dio.netty.allocator.normalCacheSize: {}", DEFAULT_NORMAL_CACHE_SIZE);
+            logger.debug("-Dio.netty.allocator.maxCachedBufferCapacity: {}", DEFAULT_MAX_CACHED_BUFFER_CAPACITY);
+            logger.debug("-Dio.netty.allocator.cacheTrimInterval: {}", DEFAULT_CACHE_TRIM_INTERVAL);
         }
     }
 
@@ -97,30 +121,11 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
 
     private final PoolArena<byte[]>[] heapArenas;
     private final PoolArena<ByteBuffer>[] directArenas;
+    private final int tinyCacheSize;
+    private final int smallCacheSize;
+    private final int normalCacheSize;
 
-    final ThreadLocal<PoolThreadCache> threadCache = new ThreadLocal<PoolThreadCache>() {
-        private final AtomicInteger index = new AtomicInteger();
-        @Override
-        protected PoolThreadCache initialValue() {
-            final int idx = index.getAndIncrement();
-            final PoolArena<byte[]> heapArena;
-            final PoolArena<ByteBuffer> directArena;
-
-            if (heapArenas != null) {
-                heapArena = heapArenas[Math.abs(idx % heapArenas.length)];
-            } else {
-                heapArena = null;
-            }
-
-            if (directArenas != null) {
-                directArena = directArenas[Math.abs(idx % directArenas.length)];
-            } else {
-                directArena = null;
-            }
-
-            return new PoolThreadCache(heapArena, directArena);
-        }
-    };
+    final PoolThreadLocalCache threadCache;
 
     public PooledByteBufAllocator() {
         this(false);
@@ -135,8 +140,17 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
     }
 
     public PooledByteBufAllocator(boolean preferDirect, int nHeapArena, int nDirectArena, int pageSize, int maxOrder) {
-        super(preferDirect);
+        this(preferDirect, nHeapArena, nDirectArena, pageSize, maxOrder,
+                DEFAULT_TINY_CACHE_SIZE, DEFAULT_SMALL_CACHE_SIZE, DEFAULT_NORMAL_CACHE_SIZE);
+    }
 
+    public PooledByteBufAllocator(boolean preferDirect, int nHeapArena, int nDirectArena, int pageSize, int maxOrder,
+                                  int tinyCacheSize, int smallCacheSize, int normalCacheSize) {
+        super(preferDirect);
+        threadCache = new PoolThreadLocalCache();
+        this.tinyCacheSize = tinyCacheSize;
+        this.smallCacheSize = smallCacheSize;
+        this.normalCacheSize = normalCacheSize;
         final int chunkSize = validateAndCalculateChunkSize(pageSize, maxOrder);
 
         if (nHeapArena < 0) {
@@ -174,26 +188,15 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
 
     private static int validateAndCalculatePageShifts(int pageSize) {
         if (pageSize < MIN_PAGE_SIZE) {
-            throw new IllegalArgumentException("pageSize: " + pageSize + " (expected: 4096+)");
+            throw new IllegalArgumentException("pageSize: " + pageSize + " (expected: " + MIN_PAGE_SIZE + "+)");
         }
 
-        // Ensure pageSize is power of 2.
-        boolean found1 = false;
-        int pageShifts = 0;
-        for (int i = pageSize; i != 0 ; i >>= 1) {
-            if ((i & 1) != 0) {
-                if (!found1) {
-                    found1 = true;
-                } else {
-                    throw new IllegalArgumentException("pageSize: " + pageSize + " (expected: power of 2");
-                }
-            } else {
-                if (!found1) {
-                    pageShifts ++;
-                }
-            }
+        if ((pageSize & pageSize - 1) != 0) {
+            throw new IllegalArgumentException("pageSize: " + pageSize + " (expected: power of 2)");
         }
-        return pageShifts;
+
+        // Logarithm base 2. At this point we know that pageSize is a power of two.
+        return Integer.SIZE - 1 - Integer.numberOfLeadingZeros(pageSize);
     }
 
     private static int validateAndCalculateChunkSize(int pageSize, int maxOrder) {
@@ -217,31 +220,71 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
     protected ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity) {
         PoolThreadCache cache = threadCache.get();
         PoolArena<byte[]> heapArena = cache.heapArena;
+
+        ByteBuf buf;
         if (heapArena != null) {
-            return heapArena.allocate(cache, initialCapacity, maxCapacity);
+            buf = heapArena.allocate(cache, initialCapacity, maxCapacity);
         } else {
-            return new UnpooledHeapByteBuf(this, initialCapacity, maxCapacity);
+            buf = new UnpooledHeapByteBuf(this, initialCapacity, maxCapacity);
         }
+
+        return toLeakAwareBuffer(buf);
     }
 
     @Override
     protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
         PoolThreadCache cache = threadCache.get();
         PoolArena<ByteBuffer> directArena = cache.directArena;
+
+        ByteBuf buf;
         if (directArena != null) {
-            return directArena.allocate(cache, initialCapacity, maxCapacity);
+            buf = directArena.allocate(cache, initialCapacity, maxCapacity);
         } else {
             if (PlatformDependent.hasUnsafe()) {
-                return new UnpooledUnsafeDirectByteBuf(this, initialCapacity, maxCapacity);
+                buf = new UnpooledUnsafeDirectByteBuf(this, initialCapacity, maxCapacity);
             } else {
-                return new UnpooledDirectByteBuf(this, initialCapacity, maxCapacity);
+                buf = new UnpooledDirectByteBuf(this, initialCapacity, maxCapacity);
             }
         }
+
+        return toLeakAwareBuffer(buf);
     }
 
     @Override
     public boolean isDirectBufferPooled() {
         return directArenas != null;
+    }
+
+    final class PoolThreadLocalCache extends FastThreadLocal<PoolThreadCache> {
+        private final AtomicInteger index = new AtomicInteger();
+
+        @Override
+        protected PoolThreadCache initialValue() {
+            final int idx = index.getAndIncrement();
+            final PoolArena<byte[]> heapArena;
+            final PoolArena<ByteBuffer> directArena;
+
+            if (heapArenas != null) {
+                heapArena = heapArenas[Math.abs(idx % heapArenas.length)];
+            } else {
+                heapArena = null;
+            }
+
+            if (directArenas != null) {
+                directArena = directArenas[Math.abs(idx % directArenas.length)];
+            } else {
+                directArena = null;
+            }
+
+            return new PoolThreadCache(
+                    heapArena, directArena, tinyCacheSize, smallCacheSize, normalCacheSize,
+                    DEFAULT_MAX_CACHED_BUFFER_CAPACITY, DEFAULT_CACHE_TRIM_INTERVAL);
+        }
+
+        @Override
+        protected void onRemoval(PoolThreadCache value) {
+            value.free();
+        }
     }
 
 //    Too noisy at the moment.

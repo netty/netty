@@ -23,7 +23,7 @@ public interface SpdyStreamFrame extends SpdyFrame {
     /**
      * Returns the Stream-ID of this frame.
      */
-    int getStreamId();
+    int streamId();
 
     /**
      * Sets the Stream-ID of this frame.  The Stream-ID must be positive.

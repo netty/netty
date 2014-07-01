@@ -35,12 +35,14 @@ import io.netty.util.internal.TypeParameterMatcher;
  *     }
  * </pre>
  *
- * Be aware that depending of the constructor parameters it will release all handled messages.
+ * Be aware that depending of the constructor parameters it will release all handled messages by pass them to
+ * {@link ReferenceCountUtil#release(Object)}. In this case you may need to use
+ * {@link ReferenceCountUtil#retain(Object)} if you pass the object to the next handler in the {@link ChannelPipeline}.
  *
  * <h3>Backward compatibility consideration</h3>
  * <p>
  * Since 5.0, {@code channelRead0(ChannelHandlerContext, I)} has been renamed to
- * {@link #messageReceived(ChannelHandlerContext, Object)}.
+ * {@link #messageReceived(ChannelHandlerContext, I)}.
  * </p>
  */
 public abstract class SimpleChannelInboundHandler<I> extends ChannelHandlerAdapter {

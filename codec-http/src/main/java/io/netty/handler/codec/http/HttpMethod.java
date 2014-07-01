@@ -149,8 +149,8 @@ public class HttpMethod implements Comparable<HttpMethod> {
         }
 
         for (int i = 0; i < name.length(); i ++) {
-            if (Character.isISOControl(name.charAt(i)) ||
-                    Character.isWhitespace(name.charAt(i))) {
+            char c = name.charAt(i);
+            if (Character.isISOControl(c) || Character.isWhitespace(c)) {
                 throw new IllegalArgumentException("invalid character in name");
             }
         }
@@ -197,7 +197,7 @@ public class HttpMethod implements Comparable<HttpMethod> {
 
     void encode(ByteBuf buf) {
         if (bytes == null) {
-            HttpHeaders.encodeAscii0(name, buf);
+            HttpHeaderUtil.encodeAscii0(name, buf);
         } else {
             buf.writeBytes(bytes);
         }

@@ -18,7 +18,7 @@ package io.netty.handler.codec.http;
 import io.netty.buffer.ByteBuf;
 import io.netty.util.CharsetUtil;
 
-import static io.netty.handler.codec.http.HttpConstants.SP;
+import static io.netty.handler.codec.http.HttpConstants.*;
 
 /**
  * The response code and its description of HTTP or its derived protocols, such as
@@ -453,6 +453,36 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
         return new HttpResponseStatus(code, reasonPhrase + " (" + code + ')');
     }
 
+    /**
+     * Parses the specified HTTP status line into a {@link HttpResponseStatus}.  The expected formats of the line are:
+     * <ul>
+     * <li>{@code statusCode} (e.g. 200)</li>
+     * <li>{@code statusCode} {@code reasonPhrase} (e.g. 404 Not Found)</li>
+     * </ul>
+     *
+     * @throws IllegalArgumentException if the specified status line is malformed
+     */
+    public static HttpResponseStatus parseLine(CharSequence line) {
+        String status = line.toString();
+        try {
+            int space = status.indexOf(' ');
+            if (space == -1) {
+                return valueOf(Integer.parseInt(status));
+            } else {
+                int code = Integer.parseInt(status.substring(0, space));
+                String reasonPhrase = status.substring(space + 1);
+                HttpResponseStatus responseStatus = valueOf(code);
+                if (responseStatus.reasonPhrase().equals(reasonPhrase)) {
+                    return responseStatus;
+                } else {
+                    return new HttpResponseStatus(code, reasonPhrase);
+                }
+            }
+        } catch (Exception e) {
+            throw new IllegalArgumentException("malformed status line: " + status, e);
+        }
+    }
+
     private final int code;
 
     private final String reasonPhrase;
@@ -497,14 +527,14 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
     }
 
     /**
-     * Returns the code of this getStatus.
+     * Returns the code of this {@link HttpResponseStatus}.
      */
     public int code() {
         return code;
     }
 
     /**
-     * Returns the reason phrase of this getStatus.
+     * Returns the reason phrase of this {@link HttpResponseStatus}.
      */
     public String reasonPhrase() {
         return reasonPhrase;
@@ -515,6 +545,10 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
         return code();
     }
 
+    /**
+     * Equality of {@link HttpResponseStatus} only depends on {@link #code()}. The
+     * reason phrase is not considered for equality.
+     */
     @Override
     public boolean equals(Object o) {
         if (!(o instanceof HttpResponseStatus)) {
@@ -524,6 +558,10 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
         return code() == ((HttpResponseStatus) o).code();
     }
 
+    /**
+     * Equality of {@link HttpResponseStatus} only depends on {@link #code()}. The
+     * reason phrase is not considered for equality.
+     */
     @Override
     public int compareTo(HttpResponseStatus o) {
         return code() - o.code();
@@ -540,9 +578,9 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
 
     void encode(ByteBuf buf) {
         if (bytes == null) {
-            HttpHeaders.encodeAscii0(String.valueOf(code()), buf);
+            HttpHeaderUtil.encodeAscii0(String.valueOf(code()), buf);
             buf.writeByte(SP);
-            HttpHeaders.encodeAscii0(String.valueOf(reasonPhrase()), buf);
+            HttpHeaderUtil.encodeAscii0(String.valueOf(reasonPhrase()), buf);
         } else {
             buf.writeBytes(bytes);
         }

@@ -53,7 +53,7 @@ public abstract class AbstractCompatibleMarshallingDecoderTest {
         ch.writeInbound(input(testBytes));
         assertTrue(ch.finish());
 
-        String unmarshalled = (String) ch.readInbound();
+        String unmarshalled = ch.readInbound();
 
         assertEquals(testObject, unmarshalled);
 
@@ -87,7 +87,7 @@ public abstract class AbstractCompatibleMarshallingDecoderTest {
         ch.writeInbound(buffer);
         assertTrue(ch.finish());
 
-        String unmarshalled = (String) ch.readInbound();
+        String unmarshalled = ch.readInbound();
 
         assertEquals(testObject, unmarshalled);
 

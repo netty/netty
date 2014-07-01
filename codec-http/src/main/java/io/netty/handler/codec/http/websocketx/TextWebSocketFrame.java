@@ -115,4 +115,16 @@ public class TextWebSocketFrame extends WebSocketFrame {
         super.retain(increment);
         return this;
     }
+
+    @Override
+    public TextWebSocketFrame touch() {
+        super.touch();
+        return this;
+    }
+
+    @Override
+    public TextWebSocketFrame touch(Object hint) {
+        super.touch(hint);
+        return this;
+    }
 }

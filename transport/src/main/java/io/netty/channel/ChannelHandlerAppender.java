@@ -181,9 +181,9 @@ public class ChannelHandlerAppender extends ChannelHandlerAdapter {
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
         added = true;
 
-        DefaultChannelPipeline pipeline = (DefaultChannelPipeline) ctx.pipeline();
-
-        String name = ctx.name();
+        AbstractChannelHandlerContext dctx = (AbstractChannelHandlerContext) ctx;
+        DefaultChannelPipeline pipeline = (DefaultChannelPipeline) dctx.pipeline();
+        String name = dctx.name();
         try {
             for (Entry e: handlers) {
                 String oldName = name;
@@ -192,7 +192,10 @@ public class ChannelHandlerAppender extends ChannelHandlerAdapter {
                 } else {
                     name = e.name;
                 }
-                pipeline.addAfter(ctx.invoker(), oldName, name, e.handler);
+
+                // Note that we do not use dctx.invoker() because it raises an IllegalStateExxception
+                // if the Channel is not registered yet.
+                pipeline.addAfter(dctx.invoker, oldName, name, e.handler);
             }
         } finally {
             if (selfRemoval) {

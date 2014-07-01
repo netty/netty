@@ -301,9 +301,7 @@ public class QueryStringDecoder {
      * @throws IllegalArgumentException if the string contains a malformed
      * escape sequence.
      */
-    @SuppressWarnings("fallthrough")
-    public static String decodeComponent(final String s,
-                                         final Charset charset) {
+    public static String decodeComponent(final String s, final Charset charset) {
         if (s == null) {
             return "";
         }
@@ -311,13 +309,9 @@ public class QueryStringDecoder {
         boolean modified = false;
         for (int i = 0; i < size; i++) {
             final char c = s.charAt(i);
-            switch (c) {
-                case '%':
-                    i++;  // We can skip at least one char, e.g. `%%'.
-                    // Fall through.
-                case '+':
-                    modified = true;
-                    break;
+            if (c == '%' || c == '+') {
+                modified = true;
+                break;
             }
         }
         if (!modified) {

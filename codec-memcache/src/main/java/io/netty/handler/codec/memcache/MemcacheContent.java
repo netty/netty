@@ -21,10 +21,10 @@ import io.netty.channel.ChannelPipeline;
 /**
  * An Memcache content chunk.
  * <p/>
- * A MemcacheObjectDecoder generates {@link MemcacheContent} after
- * {@link MemcacheMessage} when the content is large. If you prefer not to
- * receive {@link MemcacheContent} in your handler, place a aggregator
- * after MemcacheObjectDecoder in the {@link ChannelPipeline}.
+ * A implementation of a {@link AbstractMemcacheObjectDecoder} generates {@link MemcacheContent} after
+ * {@link MemcacheMessage} when the content is large. If you prefer not to receive {@link MemcacheContent}
+ * in your handler, place a aggregator after an implementation of the {@link AbstractMemcacheObjectDecoder}
+ * in the {@link ChannelPipeline}.
  */
 public interface MemcacheContent extends MemcacheObject, ByteBufHolder {
 
@@ -40,4 +40,9 @@ public interface MemcacheContent extends MemcacheObject, ByteBufHolder {
     @Override
     MemcacheContent retain(int increment);
 
+    @Override
+    MemcacheContent touch();
+
+    @Override
+    MemcacheContent touch(Object hint);
 }

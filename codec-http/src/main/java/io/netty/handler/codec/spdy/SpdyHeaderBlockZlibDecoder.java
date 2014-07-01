@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 The Netty Project
+ * Copyright 2014 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,72 +16,110 @@
 package io.netty.handler.codec.spdy;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.ByteBufAllocator;
 
 import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
 
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 
-class SpdyHeaderBlockZlibDecoder extends SpdyHeaderBlockRawDecoder {
+final class SpdyHeaderBlockZlibDecoder extends SpdyHeaderBlockRawDecoder {
 
-    private final byte[] out = new byte[8192];
+    private static final int DEFAULT_BUFFER_CAPACITY = 4096;
+    private static final SpdyProtocolException INVALID_HEADER_BLOCK =
+            new SpdyProtocolException("Invalid Header Block");
+
     private final Inflater decompressor = new Inflater();
 
     private ByteBuf decompressed;
 
-    public SpdyHeaderBlockZlibDecoder(SpdyVersion version, int maxHeaderSize) {
-        super(version, maxHeaderSize);
+    SpdyHeaderBlockZlibDecoder(SpdyVersion spdyVersion, int maxHeaderSize) {
+        super(spdyVersion, maxHeaderSize);
     }
 
     @Override
-    void decode(ByteBuf encoded, SpdyHeadersFrame frame) throws Exception {
-        setInput(encoded);
+    void decode(ByteBuf headerBlock, SpdyHeadersFrame frame) throws Exception {
+        int len = setInput(headerBlock);
 
         int numBytes;
         do {
-            numBytes = decompress(frame);
-        } while (!decompressed.isReadable() && numBytes > 0);
-    }
+            numBytes = decompress(headerBlock.alloc(), frame);
+        } while (numBytes > 0);
 
-    private void setInput(ByteBuf compressed) {
-        byte[] in = new byte[compressed.readableBytes()];
-        compressed.readBytes(in);
-        decompressor.setInput(in);
-    }
-
-    private int decompress(SpdyHeadersFrame frame) throws Exception {
-        if (decompressed == null) {
-            decompressed = Unpooled.buffer(8192);
+        // z_stream has an internal 64-bit hold buffer
+        // it is always capable of consuming the entire input
+        if (decompressor.getRemaining() != 0) {
+            // we reached the end of the deflate stream
+            throw INVALID_HEADER_BLOCK;
         }
+
+        headerBlock.skipBytes(len);
+    }
+
+    private int setInput(ByteBuf compressed) {
+        int len = compressed.readableBytes();
+
+        if (compressed.hasArray()) {
+            decompressor.setInput(compressed.array(), compressed.arrayOffset() + compressed.readerIndex(), len);
+        } else {
+            byte[] in = new byte[len];
+            compressed.getBytes(compressed.readerIndex(), in);
+            decompressor.setInput(in, 0, in.length);
+        }
+
+        return len;
+    }
+
+    private int decompress(ByteBufAllocator alloc, SpdyHeadersFrame frame) throws Exception {
+        ensureBuffer(alloc);
+        byte[] out = decompressed.array();
+        int off = decompressed.arrayOffset() + decompressed.writerIndex();
         try {
-            int numBytes = decompressor.inflate(out);
+            int numBytes = decompressor.inflate(out, off, decompressed.writableBytes());
             if (numBytes == 0 && decompressor.needsDictionary()) {
-                decompressor.setDictionary(SPDY_DICT);
-                numBytes = decompressor.inflate(out);
+                try {
+                    decompressor.setDictionary(SPDY_DICT);
+                } catch (IllegalArgumentException ignored) {
+                    throw INVALID_HEADER_BLOCK;
+                }
+                numBytes = decompressor.inflate(out, off, decompressed.writableBytes());
             }
             if (frame != null) {
-                decompressed.writeBytes(out, 0, numBytes);
-                super.decode(decompressed, frame);
+                decompressed.writerIndex(decompressed.writerIndex() + numBytes);
+                decodeHeaderBlock(decompressed, frame);
                 decompressed.discardReadBytes();
             }
+
             return numBytes;
         } catch (DataFormatException e) {
-            throw new SpdyProtocolException(
-                    "Received invalid header block", e);
+            throw new SpdyProtocolException("Received invalid header block", e);
         }
+    }
+
+    private void ensureBuffer(ByteBufAllocator alloc) {
+        if (decompressed == null) {
+            decompressed = alloc.heapBuffer(DEFAULT_BUFFER_CAPACITY);
+        }
+        decompressed.ensureWritable(1);
     }
 
     @Override
-    public void reset() {
-        decompressed = null;
-        super.reset();
+    void endHeaderBlock(SpdyHeadersFrame frame) throws Exception {
+        super.endHeaderBlock(frame);
+        releaseBuffer();
     }
 
     @Override
     public void end() {
-        decompressed = null;
-        decompressor.end();
         super.end();
+        releaseBuffer();
+        decompressor.end();
+    }
+
+    private void releaseBuffer() {
+        if (decompressed != null) {
+            decompressed.release();
+            decompressed = null;
+        }
     }
 }

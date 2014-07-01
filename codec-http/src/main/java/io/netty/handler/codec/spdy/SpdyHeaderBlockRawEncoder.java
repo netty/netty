@@ -17,7 +17,6 @@ package io.netty.handler.codec.spdy;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelHandlerContext;
 
 import java.util.Set;
 
@@ -35,23 +34,15 @@ public class SpdyHeaderBlockRawEncoder extends SpdyHeaderBlockEncoder {
     }
 
     private void setLengthField(ByteBuf buffer, int writerIndex, int length) {
-        if (version < 3) {
-            buffer.setShort(writerIndex, length);
-        } else {
-            buffer.setInt(writerIndex, length);
-        }
+        buffer.setInt(writerIndex, length);
     }
 
     private void writeLengthField(ByteBuf buffer, int length) {
-        if (version < 3) {
-            buffer.writeShort(length);
-        } else {
-            buffer.writeInt(length);
-        }
+        buffer.writeInt(length);
     }
 
     @Override
-    public ByteBuf encode(ChannelHandlerContext ctx, SpdyHeadersFrame frame) throws Exception {
+    public ByteBuf encode(SpdyHeadersFrame frame) throws Exception {
         Set<String> names = frame.headers().names();
         int numHeaders = names.size();
         if (numHeaders == 0) {
@@ -78,12 +69,7 @@ public class SpdyHeaderBlockRawEncoder extends SpdyHeaderBlockEncoder {
                     valueLength += valueBytes.length + 1;
                 }
             }
-            if (valueLength == 0) {
-                if (version < 3) {
-                    throw new IllegalArgumentException(
-                            "header value cannot be empty: " + name);
-                }
-            } else {
+            if (valueLength != 0) {
                 valueLength --;
             }
             if (valueLength > SPDY_MAX_NV_LENGTH) {

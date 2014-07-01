@@ -16,7 +16,7 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.channel.nio.AbstractNioByteChannel;
 import io.netty.channel.socket.SocketChannelConfig;
 
 import java.util.IdentityHashMap;
@@ -30,7 +30,6 @@ import static io.netty.channel.ChannelOption.*;
  */
 public class DefaultChannelConfig implements ChannelConfig {
 
-    private static final ByteBufAllocator DEFAULT_ALLOCATOR = UnpooledByteBufAllocator.DEFAULT;
     private static final RecvByteBufAllocator DEFAULT_RCVBUF_ALLOCATOR = AdaptiveRecvByteBufAllocator.DEFAULT;
     private static final MessageSizeEstimator DEFAULT_MSG_SIZE_ESTIMATOR = DefaultMessageSizeEstimator.DEFAULT;
 
@@ -38,7 +37,7 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     protected final Channel channel;
 
-    private volatile ByteBufAllocator allocator = DEFAULT_ALLOCATOR;
+    private volatile ByteBufAllocator allocator = ByteBufAllocator.DEFAULT;
     private volatile RecvByteBufAllocator rcvBufAllocator = DEFAULT_RCVBUF_ALLOCATOR;
     private volatile MessageSizeEstimator msgSizeEstimator = DEFAULT_MSG_SIZE_ESTIMATOR;
 
@@ -55,8 +54,11 @@ public class DefaultChannelConfig implements ChannelConfig {
         }
         this.channel = channel;
 
-        if (channel instanceof ServerChannel) {
-            // Accept as many incoming connections as possible.
+        if (channel instanceof ServerChannel || channel instanceof AbstractNioByteChannel) {
+            // Server channels: Accept as many incoming connections as possible.
+            // NIO byte channels: Implemented to reduce unnecessary system calls even if it's > 1.
+            //                    See https://github.com/netty/netty/issues/2079
+            // TODO: Add some property to ChannelMetadata so we can remove the ugly instanceof
             maxMessagesPerRead = 16;
         } else {
             maxMessagesPerRead = 1;
@@ -256,9 +258,17 @@ public class DefaultChannelConfig implements ChannelConfig {
         this.autoRead = autoRead;
         if (autoRead && !oldAutoRead) {
             channel.read();
+        } else if (!autoRead && oldAutoRead) {
+            autoReadCleared();
         }
         return this;
     }
+
+    /**
+     * Is called once {@link #setAutoRead(boolean)} is called with {@code false} and {@link #isAutoRead()} was
+     * {@code true} before.
+     */
+    protected void autoReadCleared() { }
 
     @Override
     public int getWriteBufferHighWaterMark() {

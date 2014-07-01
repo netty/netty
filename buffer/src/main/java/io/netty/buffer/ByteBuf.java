@@ -1877,4 +1877,10 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
 
     @Override
     public abstract ByteBuf retain();
+
+    @Override
+    public abstract ByteBuf touch();
+
+    @Override
+    public abstract ByteBuf touch(Object hint);
 }

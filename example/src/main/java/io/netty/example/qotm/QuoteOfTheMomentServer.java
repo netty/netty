@@ -22,20 +22,16 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 
 /**
- * A UDP server that responds to the QOTM (quote of the moment) request to a
- * {@link QuoteOfTheMomentClient}.
+ * A UDP server that responds to the QOTM (quote of the moment) request to a {@link QuoteOfTheMomentClient}.
  *
- * Inspired by <a href="http://goo.gl/BsXVR">the official Java tutorial</a>.
+ * Inspired by <a href="http://docs.oracle.com/javase/tutorial/networking/datagrams/clientServer.html">the official
+ * Java tutorial</a>.
  */
-public class QuoteOfTheMomentServer {
+public final class QuoteOfTheMomentServer {
 
-    private final int port;
+    private static final int PORT = Integer.parseInt(System.getProperty("port", "7686"));
 
-    public QuoteOfTheMomentServer(int port) {
-        this.port = port;
-    }
-
-    public void run() throws Exception {
+    public static void main(String[] args) throws Exception {
         EventLoopGroup group = new NioEventLoopGroup();
         try {
             Bootstrap b = new Bootstrap();
@@ -44,19 +40,9 @@ public class QuoteOfTheMomentServer {
              .option(ChannelOption.SO_BROADCAST, true)
              .handler(new QuoteOfTheMomentServerHandler());
 
-            b.bind(port).sync().channel().closeFuture().await();
+            b.bind(PORT).sync().channel().closeFuture().await();
         } finally {
             group.shutdownGracefully();
         }
-    }
-
-    public static void main(String[] args) throws Exception {
-        int port;
-        if (args.length > 0) {
-            port = Integer.parseInt(args[0]);
-        } else {
-            port = 8080;
-        }
-        new QuoteOfTheMomentServer(port).run();
     }
 }

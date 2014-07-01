@@ -20,6 +20,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -109,8 +110,8 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
     protected FullHttpResponse newHandshakeResponse(FullHttpRequest req, HttpHeaders headers) {
 
         // Serve the WebSocket handshake request.
-        if (!HttpHeaders.equalsIgnoreCase(Values.UPGRADE, req.headers().get(CONNECTION))
-                || !HttpHeaders.equalsIgnoreCase(WEBSOCKET, req.headers().get(Names.UPGRADE))) {
+        if (!AsciiString.equalsIgnoreCase(Values.UPGRADE, req.headers().get(CONNECTION))
+                || !AsciiString.equalsIgnoreCase(WEBSOCKET, req.headers().get(Names.UPGRADE))) {
             throw new WebSocketHandshakeException("not a WebSocket handshake request: missing upgrade");
         }
 
@@ -136,7 +137,9 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
             if (subprotocols != null) {
                 String selectedSubprotocol = selectSubprotocol(subprotocols);
                 if (selectedSubprotocol == null) {
-                    throw new WebSocketHandshakeException("Requested subprotocol(s) not supported: " + subprotocols);
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("Requested subprotocol(s) not supported: {}", subprotocols);
+                    }
                 } else {
                     res.headers().add(SEC_WEBSOCKET_PROTOCOL, selectedSubprotocol);
                 }

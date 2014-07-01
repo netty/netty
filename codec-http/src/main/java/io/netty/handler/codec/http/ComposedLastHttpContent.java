@@ -50,6 +50,16 @@ final class ComposedLastHttpContent implements LastHttpContent {
     }
 
     @Override
+    public LastHttpContent touch() {
+        return this;
+    }
+
+    @Override
+    public LastHttpContent touch(Object hint) {
+        return this;
+    }
+
+    @Override
     public LastHttpContent duplicate() {
         return copy();
     }
@@ -60,7 +70,7 @@ final class ComposedLastHttpContent implements LastHttpContent {
     }
 
     @Override
-    public DecoderResult getDecoderResult() {
+    public DecoderResult decoderResult() {
         return result;
     }
 

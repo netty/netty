@@ -27,10 +27,11 @@ import io.netty.channel.ChannelHandlerAppender;
 public class BinaryMemcacheServerCodec extends ChannelHandlerAppender {
 
     public BinaryMemcacheServerCodec() {
-        this(BinaryMemcacheDecoder.DEFAULT_MAX_CHUNK_SIZE);
+        this(AbstractBinaryMemcacheDecoder.DEFAULT_MAX_CHUNK_SIZE);
     }
 
     public BinaryMemcacheServerCodec(int decodeChunkSize) {
-        add(new BinaryMemcacheRequestDecoder(decodeChunkSize), new BinaryMemcacheResponseEncoder());
+        add(new BinaryMemcacheRequestDecoder(decodeChunkSize));
+        add(new BinaryMemcacheResponseEncoder());
     }
 }

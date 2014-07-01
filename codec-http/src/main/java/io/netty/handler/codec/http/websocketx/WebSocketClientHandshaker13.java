@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
+import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -40,7 +41,7 @@ import java.net.URI;
 public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketClientHandshaker13.class);
-    private static final CharSequence WEBSOCKET = HttpHeaders.newEntity(Values.WEBSOCKET.toString().toLowerCase());
+    private static final CharSequence WEBSOCKET = new AsciiString(Values.WEBSOCKET.toString().toLowerCase());
 
     public static final String MAGIC_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
@@ -111,8 +112,9 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
         expectedChallengeResponseString = WebSocketUtil.base64(sha1);
 
         if (logger.isDebugEnabled()) {
-            logger.debug(String.format("WS Version 13 Client Handshake key: %s. Expected response: %s.", key,
-                    expectedChallengeResponseString));
+            logger.debug(
+                    "WebSocket version 13 client handshake key: {}, expected response: {}",
+                    key, expectedChallengeResponseString);
         }
 
         // Format request
@@ -178,17 +180,17 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
         final HttpResponseStatus status = HttpResponseStatus.SWITCHING_PROTOCOLS;
         final HttpHeaders headers = response.headers();
 
-        if (!response.getStatus().equals(status)) {
-            throw new WebSocketHandshakeException("Invalid handshake response getStatus: " + response.getStatus());
+        if (!response.status().equals(status)) {
+            throw new WebSocketHandshakeException("Invalid handshake response getStatus: " + response.status());
         }
 
         String upgrade = headers.get(Names.UPGRADE);
-        if (!HttpHeaders.equalsIgnoreCase(Values.WEBSOCKET, upgrade)) {
+        if (!AsciiString.equalsIgnoreCase(Values.WEBSOCKET, upgrade)) {
             throw new WebSocketHandshakeException("Invalid handshake response upgrade: " + upgrade);
         }
 
         String connection = headers.get(Names.CONNECTION);
-        if (!HttpHeaders.equalsIgnoreCase(Values.UPGRADE, connection)) {
+        if (!AsciiString.equalsIgnoreCase(Values.UPGRADE, connection)) {
             throw new WebSocketHandshakeException("Invalid handshake response connection: " + connection);
         }
 

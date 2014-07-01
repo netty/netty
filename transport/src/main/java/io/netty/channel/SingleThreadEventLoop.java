@@ -50,4 +50,32 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
     public ChannelHandlerInvoker asInvoker() {
         return invoker;
     }
+
+    @Override
+    public ChannelFuture register(Channel channel) {
+        return register(channel, new DefaultChannelPromise(channel, this));
+    }
+
+    @Override
+    public ChannelFuture register(final Channel channel, final ChannelPromise promise) {
+        if (channel == null) {
+            throw new NullPointerException("channel");
+        }
+        if (promise == null) {
+            throw new NullPointerException("promise");
+        }
+
+        channel.unsafe().register(this, promise);
+        return promise;
+    }
+
+    @Override
+    protected boolean wakesUpForTask(Runnable task) {
+        return !(task instanceof NonWakeupRunnable);
+    }
+
+    /**
+     * Marker interface for {@link Runnable} that will not trigger an {@link #wakeup(boolean)} in all cases.
+     */
+    interface NonWakeupRunnable extends Runnable { }
 }

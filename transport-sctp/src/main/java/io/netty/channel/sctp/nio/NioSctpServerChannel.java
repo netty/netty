@@ -22,9 +22,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.EventLoop;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.AbstractNioMessageServerChannel;
+import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.sctp.DefaultSctpServerChannelConfig;
 import io.netty.channel.sctp.SctpServerChannelConfig;
 
@@ -46,9 +44,8 @@ import java.util.Set;
  * Be aware that not all operations systems support SCTP. Please refer to the documentation of your operation system,
  * to understand what you need to do to use it. Also this feature is only supported on Java 7+.
  */
-public class NioSctpServerChannel extends AbstractNioMessageServerChannel
+public class NioSctpServerChannel extends AbstractNioMessageChannel
         implements io.netty.channel.sctp.SctpServerChannel {
-
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
     private static SctpServerChannel newSocket() {
@@ -65,9 +62,9 @@ public class NioSctpServerChannel extends AbstractNioMessageServerChannel
     /**
      * Create a new instance
      */
-    public NioSctpServerChannel(EventLoop eventLoop, EventLoopGroup childGroup) {
-        super(null, eventLoop, childGroup, newSocket(), SelectionKey.OP_ACCEPT);
-        config = new DefaultSctpServerChannelConfig(this, javaChannel());
+    public NioSctpServerChannel() {
+        super(null, newSocket(), SelectionKey.OP_ACCEPT);
+        config = new NioSctpServerChannelConfig(this, javaChannel());
     }
 
     @Override
@@ -143,7 +140,7 @@ public class NioSctpServerChannel extends AbstractNioMessageServerChannel
         if (ch == null) {
             return 0;
         }
-        buf.add(new NioSctpChannel(this, childEventLoopGroup().next(), ch));
+        buf.add(new NioSctpChannel(this, ch));
         return 1;
     }
 
@@ -222,5 +219,16 @@ public class NioSctpServerChannel extends AbstractNioMessageServerChannel
     @Override
     protected boolean doWriteMessage(Object msg, ChannelOutboundBuffer in) throws Exception {
         throw new UnsupportedOperationException();
+    }
+
+    private final class NioSctpServerChannelConfig extends DefaultSctpServerChannelConfig {
+        private NioSctpServerChannelConfig(NioSctpServerChannel channel, SctpServerChannel javaChannel) {
+            super(channel, javaChannel);
+        }
+
+        @Override
+        protected void autoReadCleared() {
+            setReadPending(false);
+        }
     }
 }

@@ -15,11 +15,11 @@
  */
 package io.netty.buffer;
 
-import static org.junit.Assert.*;
+import org.junit.Test;
 
 import java.util.Random;
 
-import org.junit.Test;
+import static org.junit.Assert.*;
 
 /**
  * Tests sliced channel buffers
@@ -93,5 +93,11 @@ public class SlicedByteBufTest extends AbstractByteBufTest {
     @Override
     public void testNioBufferExposeOnlyRegion() {
         super.testNioBufferExposeOnlyRegion();
+    }
+
+    @Test
+    @Override
+    public void testLittleEndianWithExpand() {
+       // ignore for SlicedByteBuf
     }
 }

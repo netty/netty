@@ -75,4 +75,16 @@ public class BinaryWebSocketFrame extends WebSocketFrame {
         super.retain(increment);
         return this;
     }
+
+    @Override
+    public BinaryWebSocketFrame touch() {
+        super.touch();
+        return this;
+    }
+
+    @Override
+    public BinaryWebSocketFrame touch(Object hint) {
+        super.touch(hint);
+        return this;
+    }
 }

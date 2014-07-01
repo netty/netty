@@ -28,10 +28,8 @@ public interface HttpMessage extends HttpObject {
 
     /**
      * Returns the protocol version of this {@link HttpMessage}
-     *
-     * @return The protocol version
      */
-    HttpVersion getProtocolVersion();
+    HttpVersion protocolVersion();
 
     /**
      * Set the protocol version of this {@link HttpMessage}

@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -29,6 +30,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.NotYetConnectedException;
+import java.util.concurrent.RejectedExecutionException;
 
 /**
  * A skeletal {@link Channel} implementation.
@@ -58,7 +60,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     private volatile SocketAddress localAddress;
     private volatile SocketAddress remoteAddress;
-    private final EventLoop eventLoop;
+    private volatile EventLoop eventLoop;
     private volatile boolean registered;
 
     /** Cache for the string representation of this channel */
@@ -71,9 +73,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      * @param parent
      *        the parent of this channel. {@code null} if there's no parent.
      */
-    protected AbstractChannel(Channel parent, EventLoop eventLoop) {
+    protected AbstractChannel(Channel parent) {
         this.parent = parent;
-        this.eventLoop = validate(eventLoop);
         unsafe = newUnsafe();
         pipeline = new DefaultChannelPipeline(this);
     }
@@ -106,6 +107,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     @Override
     public EventLoop eventLoop() {
+        EventLoop eventLoop = this.eventLoop;
+        if (eventLoop == null) {
+            throw new IllegalStateException("channel not registered to an event loop");
+        }
         return eventLoop;
     }
 
@@ -179,6 +184,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
+    public ChannelFuture deregister() {
+        return pipeline.deregister();
+    }
+
+    @Override
     public Channel flush() {
         pipeline.flush();
         return this;
@@ -207,6 +217,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     @Override
     public ChannelFuture close(ChannelPromise promise) {
         return pipeline.close(promise);
+    }
+
+    @Override
+    public ChannelFuture deregister(ChannelPromise promise) {
+        return pipeline.deregister(promise);
     }
 
     @Override
@@ -368,12 +383,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      */
     protected abstract class AbstractUnsafe implements Unsafe {
 
-        private ChannelOutboundBuffer outboundBuffer = ChannelOutboundBuffer.newInstance(AbstractChannel.this);
+        private ChannelOutboundBuffer outboundBuffer = newOutboundBuffer();
+
         private boolean inFlush0;
 
         @Override
         public final ChannelHandlerInvoker invoker() {
-            return eventLoop.asInvoker();
+            return eventLoop().asInvoker();
         }
 
         @Override
@@ -392,12 +408,27 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public final void register(final ChannelPromise promise) {
+        public final void register(EventLoop eventLoop, final ChannelPromise promise) {
+            if (eventLoop == null) {
+                throw new NullPointerException("eventLoop");
+            }
+            if (isRegistered()) {
+                promise.setFailure(new IllegalStateException("registered to an event loop already"));
+                return;
+            }
+            if (!isCompatible(eventLoop)) {
+                promise.setFailure(
+                        new IllegalStateException("incompatible event loop type: " + eventLoop.getClass().getName()));
+                return;
+            }
+
+            AbstractChannel.this.eventLoop = eventLoop;
+
             if (eventLoop.inEventLoop()) {
                 register0(promise);
             } else {
                 try {
-                    eventLoop.execute(new Runnable() {
+                    eventLoop.execute(new OneTimeTask() {
                         @Override
                         public void run() {
                             register0(promise);
@@ -409,7 +440,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                             AbstractChannel.this, t);
                     closeForcibly();
                     closeFuture.setClosed();
-                    promise.setFailure(t);
+                    safeSetFailure(promise, t);
                 }
             }
         }
@@ -418,12 +449,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             try {
                 // check if the channel is still open as it could be closed in the mean time when the register
                 // call was outside of the eventLoop
-                if (!ensureOpen(promise)) {
+                if (!promise.setUncancellable() || !ensureOpen(promise)) {
                     return;
                 }
                 doRegister();
                 registered = true;
-                promise.setSuccess();
+                safeSetSuccess(promise);
                 pipeline.fireChannelRegistered();
                 if (isActive()) {
                     pipeline.fireChannelActive();
@@ -432,17 +463,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 // Close the channel directly to avoid FD leak.
                 closeForcibly();
                 closeFuture.setClosed();
-                if (!promise.tryFailure(t)) {
-                    logger.warn(
-                            "Tried to fail the registration promise, but it is complete already. " +
-                                    "Swallowing the cause of the registration failure:", t);
-                }
+                safeSetFailure(promise, t);
             }
         }
 
         @Override
         public final void bind(final SocketAddress localAddress, final ChannelPromise promise) {
-            if (!ensureOpen(promise)) {
+            if (!promise.setUncancellable() || !ensureOpen(promise)) {
                 return;
             }
 
@@ -463,47 +490,59 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             try {
                 doBind(localAddress);
             } catch (Throwable t) {
-                promise.setFailure(t);
+                safeSetFailure(promise, t);
                 closeIfClosed();
                 return;
             }
+
             if (!wasActive && isActive()) {
-                invokeLater(new Runnable() {
+                invokeLater(new OneTimeTask() {
                     @Override
                     public void run() {
                         pipeline.fireChannelActive();
                     }
                 });
             }
-            promise.setSuccess();
+
+            safeSetSuccess(promise);
         }
 
         @Override
         public final void disconnect(final ChannelPromise promise) {
+            if (!promise.setUncancellable()) {
+                return;
+            }
+
             boolean wasActive = isActive();
             try {
                 doDisconnect();
             } catch (Throwable t) {
-                promise.setFailure(t);
+                safeSetFailure(promise, t);
                 closeIfClosed();
                 return;
             }
+
             if (wasActive && !isActive()) {
-                invokeLater(new Runnable() {
+                invokeLater(new OneTimeTask() {
                     @Override
                     public void run() {
                         pipeline.fireChannelInactive();
                     }
                 });
             }
-            promise.setSuccess();
+
+            safeSetSuccess(promise);
             closeIfClosed(); // doDisconnect() might have closed the channel
         }
 
         @Override
         public final void close(final ChannelPromise promise) {
+            if (!promise.setUncancellable()) {
+                return;
+            }
+
             if (inFlush0) {
-                invokeLater(new Runnable() {
+                invokeLater(new OneTimeTask() {
                     @Override
                     public void run() {
                         close(promise);
@@ -514,7 +553,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
             if (closeFuture.isDone()) {
                 // Closed already.
-                promise.setSuccess();
+                safeSetSuccess(promise);
                 return;
             }
 
@@ -525,10 +564,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             try {
                 doClose();
                 closeFuture.setClosed();
-                promise.setSuccess();
+                safeSetSuccess(promise);
             } catch (Throwable t) {
                 closeFuture.setClosed();
-                promise.setFailure(t);
+                safeSetFailure(promise, t);
             }
 
             // Fail all the queued messages
@@ -538,7 +577,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             } finally {
 
                 if (wasActive && !isActive()) {
-                    invokeLater(new Runnable() {
+                    invokeLater(new OneTimeTask() {
                         @Override
                         public void run() {
                             pipeline.fireChannelInactive();
@@ -546,7 +585,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     });
                 }
 
-                deregister();
+                deregister(voidPromise());
             }
         }
 
@@ -559,8 +598,14 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
         }
 
-        private void deregister() {
+        @Override
+        public final void deregister(final ChannelPromise promise) {
+            if (!promise.setUncancellable()) {
+                return;
+            }
+
             if (!registered) {
+                safeSetSuccess(promise);
                 return;
             }
 
@@ -571,6 +616,18 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             } finally {
                 if (registered) {
                     registered = false;
+                    invokeLater(new OneTimeTask() {
+                        @Override
+                        public void run() {
+                            pipeline.fireChannelUnregistered();
+                        }
+                    });
+                    safeSetSuccess(promise);
+                } else {
+                    // Some transports like local and AIO does not allow the deregistration of
+                    // an open channel.  Their doDeregister() calls close().  Consequently,
+                    // close() calls deregister() again - no need to fire channelUnregistered.
+                    safeSetSuccess(promise);
                 }
             }
         }
@@ -584,7 +641,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             try {
                 doBeginRead();
             } catch (final Exception e) {
-                invokeLater(new Runnable() {
+                invokeLater(new OneTimeTask() {
                     @Override
                     public void run() {
                         pipeline.fireExceptionCaught(e);
@@ -596,18 +653,18 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public void write(Object msg, ChannelPromise promise) {
-            if (!isActive()) {
-                // Mark the write request as failure if the channel is inactive.
-                if (isOpen()) {
-                    promise.tryFailure(NOT_YET_CONNECTED_EXCEPTION);
-                } else {
-                    promise.tryFailure(CLOSED_CHANNEL_EXCEPTION);
-                }
+            ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
+            if (outboundBuffer == null) {
+                // If the outboundBuffer is null we know the channel was closed and so
+                // need to fail the future right away. If it is not null the handling of the rest
+                // will be done in flush0()
+                // See https://github.com/netty/netty/issues/2362
+                safeSetFailure(promise, CLOSED_CHANNEL_EXCEPTION);
                 // release message now to prevent resource-leak
                 ReferenceCountUtil.release(msg);
-            } else {
-                outboundBuffer.addMessage(msg, promise);
+                return;
             }
+            outboundBuffer.addMessage(msg, promise);
         }
 
         @Override
@@ -667,8 +724,26 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return true;
             }
 
-            promise.setFailure(CLOSED_CHANNEL_EXCEPTION);
+            safeSetFailure(promise, CLOSED_CHANNEL_EXCEPTION);
             return false;
+        }
+
+        /**
+         * Marks the specified {@code promise} as success.  If the {@code promise} is done already, log a message.
+         */
+        protected final void safeSetSuccess(ChannelPromise promise) {
+            if (!(promise instanceof VoidChannelPromise) && !promise.trySuccess()) {
+                logger.warn("Failed to mark a promise as success because it is done already: {}", promise);
+            }
+        }
+
+        /**
+         * Marks the specified {@code promise} as failure.  If the {@code promise} is done already, log a message.
+         */
+        protected final void safeSetFailure(ChannelPromise promise, Throwable cause) {
+            if (!(promise instanceof VoidChannelPromise) && !promise.tryFailure(cause)) {
+                logger.warn("Failed to mark a promise as failure because it's done already: {}", promise, cause);
+            }
         }
 
         protected final void closeIfClosed() {
@@ -679,29 +754,30 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         private void invokeLater(Runnable task) {
-            // This method is used by outbound operation implementations to trigger an inbound event later.
-            // They do not trigger an inbound event immediately because an outbound operation might have been
-            // triggered by another inbound event handler method.  If fired immediately, the call stack
-            // will look like this for example:
-            //
-            //   handlerA.inboundBufferUpdated() - (1) an inbound handler method closes a connection.
-            //   -> handlerA.ctx.close()
-            //      -> channel.unsafe.close()
-            //         -> handlerA.channelInactive() - (2) another inbound handler method called while in (1) yet
-            //
-            // which means the execution of two inbound handler methods of the same handler overlap undesirably.
-            eventLoop().execute(task);
+            try {
+                // This method is used by outbound operation implementations to trigger an inbound event later.
+                // They do not trigger an inbound event immediately because an outbound operation might have been
+                // triggered by another inbound event handler method.  If fired immediately, the call stack
+                // will look like this for example:
+                //
+                //   handlerA.inboundBufferUpdated() - (1) an inbound handler method closes a connection.
+                //   -> handlerA.ctx.close()
+                //      -> channel.unsafe.close()
+                //         -> handlerA.channelInactive() - (2) another inbound handler method called while in (1) yet
+                //
+                // which means the execution of two inbound handler methods of the same handler overlap undesirably.
+                eventLoop().execute(task);
+            } catch (RejectedExecutionException e) {
+                logger.warn("Can't invoke task later as EventLoop rejected it", e);
+            }
         }
     }
 
-    private EventLoop validate(EventLoop eventLoop) {
-        if (eventLoop == null) {
-            throw new IllegalStateException("null event loop");
-        }
-        if (!isCompatible(eventLoop)) {
-            throw new IllegalStateException("incompatible event loop type: " + eventLoop.getClass().getName());
-        }
-        return eventLoop;
+    /**
+     * Create a new {@link ChannelOutboundBuffer} which holds the pending messages for this {@link AbstractChannel}.
+     */
+    protected ChannelOutboundBuffer newOutboundBuffer() {
+        return ChannelOutboundBuffer.newInstance(this);
     }
 
     /**
@@ -720,8 +796,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     protected abstract SocketAddress remoteAddress0();
 
     /**
-     * Is called after the {@link Channel} is registered with its {@link EventLoop} as part of the register
-     * process.
+     * Is called after the {@link Channel} is registered with its {@link EventLoop} as part of the register process.
      *
      * Sub-classes may override this method
      */

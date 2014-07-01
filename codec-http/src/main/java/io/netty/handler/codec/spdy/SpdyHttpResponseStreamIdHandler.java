@@ -18,6 +18,7 @@ package io.netty.handler.codec.spdy;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageCodec;
 import io.netty.handler.codec.http.HttpMessage;
+import io.netty.handler.codec.spdy.SpdyHttpHeaders.Names;
 import io.netty.util.ReferenceCountUtil;
 
 import java.util.LinkedList;
@@ -43,7 +44,7 @@ public class SpdyHttpResponseStreamIdHandler extends
     protected void encode(ChannelHandlerContext ctx, HttpMessage msg, List<Object> out) throws Exception {
         Integer id = ids.poll();
         if (id != null && id.intValue() != NO_ID && !msg.headers().contains(SpdyHttpHeaders.Names.STREAM_ID)) {
-            SpdyHttpHeaders.setStreamId(msg, id);
+            msg.headers().set(Names.STREAM_ID, id);
         }
 
         out.add(ReferenceCountUtil.retain(msg));
@@ -56,10 +57,10 @@ public class SpdyHttpResponseStreamIdHandler extends
             if (!contains) {
                 ids.add(NO_ID);
             } else {
-                ids.add(SpdyHttpHeaders.getStreamId((HttpMessage) msg));
+                ids.add(((HttpMessage) msg).headers().getInt(Names.STREAM_ID));
             }
         } else if (msg instanceof SpdyRstStreamFrame) {
-            ids.remove(((SpdyRstStreamFrame) msg).getStreamId());
+            ids.remove(((SpdyRstStreamFrame) msg).streamId());
         }
 
         out.add(ReferenceCountUtil.retain(msg));

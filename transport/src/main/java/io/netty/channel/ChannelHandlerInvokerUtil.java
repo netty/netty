@@ -16,6 +16,8 @@
 
 package io.netty.channel;
 
+import io.netty.util.internal.StringUtil;
+
 import java.net.SocketAddress;
 
 import static io.netty.channel.DefaultChannelPipeline.*;
@@ -28,6 +30,14 @@ public final class ChannelHandlerInvokerUtil {
     public static void invokeChannelRegisteredNow(ChannelHandlerContext ctx) {
         try {
             ctx.handler().channelRegistered(ctx);
+        } catch (Throwable t) {
+            notifyHandlerException(ctx, t);
+        }
+    }
+
+    public static void invokeChannelUnregisteredNow(ChannelHandlerContext ctx) {
+        try {
+            ctx.handler().channelUnregistered(ctx);
         } catch (Throwable t) {
             notifyHandlerException(ctx, t);
         }
@@ -54,9 +64,8 @@ public final class ChannelHandlerInvokerUtil {
             ctx.handler().exceptionCaught(ctx, cause);
         } catch (Throwable t) {
             if (logger.isWarnEnabled()) {
-                logger.warn(
-                        "An exception was thrown by a user handler's " +
-                                "exceptionCaught() method while handling the following exception:", cause);
+                logger.warn("An exception was thrown by a user handler's exceptionCaught() method:", t);
+                logger.warn(".. and the cause of the exceptionCaught() was:", cause);
             }
         }
     }
@@ -127,6 +136,14 @@ public final class ChannelHandlerInvokerUtil {
         }
     }
 
+    public static void invokeDeregisterNow(final ChannelHandlerContext ctx, final ChannelPromise promise) {
+        try {
+            ctx.handler().deregister(ctx, promise);
+        } catch (Throwable t) {
+            notifyOutboundHandlerException(t, promise);
+        }
+    }
+
     public static void invokeReadNow(final ChannelHandlerContext ctx) {
         try {
             ctx.handler().read(ctx);
@@ -151,9 +168,42 @@ public final class ChannelHandlerInvokerUtil {
         }
     }
 
-    public static void invokeWriteAndFlushNow(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-        invokeWriteNow(ctx, msg, promise);
-        invokeFlushNow(ctx);
+    public static boolean validatePromise(
+            ChannelHandlerContext ctx, ChannelPromise promise, boolean allowVoidPromise) {
+        if (ctx == null) {
+            throw new NullPointerException("ctx");
+        }
+
+        if (promise == null) {
+            throw new NullPointerException("promise");
+        }
+
+        if (promise.isDone()) {
+            if (promise.isCancelled()) {
+                return false;
+            }
+            throw new IllegalArgumentException("promise already done: " + promise);
+        }
+
+        if (promise.channel() != ctx.channel()) {
+            throw new IllegalArgumentException(String.format(
+                    "promise.channel does not match: %s (expected: %s)", promise.channel(), ctx.channel()));
+        }
+
+        if (promise.getClass() == DefaultChannelPromise.class) {
+            return true;
+        }
+
+        if (!allowVoidPromise && promise instanceof VoidChannelPromise) {
+            throw new IllegalArgumentException(
+                    StringUtil.simpleClassName(VoidChannelPromise.class) + " not allowed for this operation");
+        }
+
+        if (promise instanceof AbstractChannel.CloseFuture) {
+            throw new IllegalArgumentException(
+                    StringUtil.simpleClassName(AbstractChannel.CloseFuture.class) + " not allowed in a pipeline");
+        }
+        return true;
     }
 
     private static void notifyHandlerException(ChannelHandlerContext ctx, Throwable cause) {

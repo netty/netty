@@ -70,7 +70,7 @@ public class HttpContentCompressorTest {
 
         ch.writeOutbound(new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK));
 
-        HttpResponse res = (HttpResponse) ch.readOutbound();
+        HttpResponse res = ch.readOutbound();
         assertThat(res, is(not(instanceOf(FullHttpResponse.class))));
         assertThat(res.headers().get(Names.TRANSFER_ENCODING), is("chunked"));
         assertThat(res.headers().get(Names.CONTENT_LENGTH), is(nullValue()));
@@ -79,12 +79,12 @@ public class HttpContentCompressorTest {
         ch.writeOutbound(LastHttpContent.EMPTY_LAST_CONTENT);
 
         HttpContent chunk;
-        chunk = (HttpContent) ch.readOutbound();
+        chunk = ch.readOutbound();
         assertThat(chunk, is(instanceOf(HttpContent.class)));
         assertThat(chunk.content().isReadable(), is(true));
         chunk.release();
 
-        chunk = (HttpContent) ch.readOutbound();
+        chunk = ch.readOutbound();
         assertThat(chunk, is(instanceOf(LastHttpContent.class)));
         assertThat(chunk.content().isReadable(), is(false));
         chunk.release();

@@ -19,16 +19,18 @@ package io.netty.handler.codec.http;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
-
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.List;
+
+import static org.hamcrest.CoreMatchers.*;
+import static org.junit.Assert.*;
 
 public class HttpRequestDecoderTest {
     private static final byte[] CONTENT_CRLF_DELIMITERS = createContent("\r\n");
     private static final byte[] CONTENT_LF_DELIMITERS = createContent("\n");
     private static final byte[] CONTENT_MIXED_DELIMITERS = createContent("\r\n", "\n");
+    private static final int CONTENT_LENGTH = 8;
 
     private static byte[] createContent(String... lineDelimiters) {
         String lineDelimiter;
@@ -47,7 +49,7 @@ public class HttpRequestDecoderTest {
                 "Origin: http://localhost:8080" + lineDelimiter +
                 "Sec-WebSocket-Key1: 10  28 8V7 8 48     0" + lineDelimiter2 +
                 "Sec-WebSocket-Key2: 8 Xt754O3Q3QW 0   _60" + lineDelimiter +
-                "Content-Length: 8" + lineDelimiter2 +
+                "Content-Length: " + CONTENT_LENGTH + lineDelimiter2 +
                 "\r\n"  +
                 "12345678").getBytes(CharsetUtil.US_ASCII);
     }
@@ -69,34 +71,36 @@ public class HttpRequestDecoderTest {
 
     private static void testDecodeWholeRequestAtOnce(byte[] content) {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
-        Assert.assertTrue(channel.writeInbound(Unpooled.wrappedBuffer(content)));
-        HttpRequest req = (HttpRequest) channel.readInbound();
-        Assert.assertNotNull(req);
+        assertTrue(channel.writeInbound(Unpooled.wrappedBuffer(content)));
+        HttpRequest req = channel.readInbound();
+        assertNotNull(req);
         checkHeaders(req.headers());
-        LastHttpContent c = (LastHttpContent) channel.readInbound();
-        Assert.assertEquals(8, c.content().readableBytes());
-        Assert.assertEquals(Unpooled.wrappedBuffer(content, content.length - 8, 8), c.content().readBytes(8));
+        LastHttpContent c = channel.readInbound();
+        assertEquals(CONTENT_LENGTH, c.content().readableBytes());
+        assertEquals(
+                Unpooled.wrappedBuffer(content, content.length - CONTENT_LENGTH, CONTENT_LENGTH),
+                c.content().readBytes(CONTENT_LENGTH));
         c.release();
 
-        Assert.assertFalse(channel.finish());
-        Assert.assertNull(channel.readInbound());
+        assertFalse(channel.finish());
+        assertNull(channel.readInbound());
     }
 
     private static void checkHeaders(HttpHeaders headers) {
-        Assert.assertEquals(7, headers.names().size());
+        assertEquals(7, headers.names().size());
         checkHeader(headers, "Upgrade", "WebSocket");
         checkHeader(headers, "Connection", "Upgrade");
         checkHeader(headers, "Host", "localhost");
         checkHeader(headers, "Origin", "http://localhost:8080");
         checkHeader(headers, "Sec-WebSocket-Key1", "10  28 8V7 8 48     0");
         checkHeader(headers, "Sec-WebSocket-Key2", "8 Xt754O3Q3QW 0   _60");
-        checkHeader(headers, "Content-Length", "8");
+        checkHeader(headers, "Content-Length", String.valueOf(CONTENT_LENGTH));
     }
 
     private static void checkHeader(HttpHeaders headers, String name, String value) {
         List<String> header1 = headers.getAll(name);
-        Assert.assertEquals(1, header1.size());
-        Assert.assertEquals(value, header1.get(0));
+        assertEquals(1, header1.size());
+        assertEquals(value, header1.get(0));
     }
 
     @Test
@@ -122,7 +126,7 @@ public class HttpRequestDecoderTest {
 
     private static void testDecodeWholeRequestInMultipleSteps(byte[] content, int fragmentSize) {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
-        int headerLength = content.length - 8;
+        int headerLength = content.length - CONTENT_LENGTH;
 
         // split up the header
         for (int a = 0; a < headerLength;) {
@@ -137,24 +141,29 @@ public class HttpRequestDecoderTest {
             a += amount;
         }
 
-        for (int i = 8; i > 0; i--) {
+        for (int i = CONTENT_LENGTH; i > 0; i --) {
             // Should produce HttpContent
             channel.writeInbound(Unpooled.wrappedBuffer(content, content.length - i, 1));
         }
 
-        HttpRequest req = (HttpRequest) channel.readInbound();
-        Assert.assertNotNull(req);
+        HttpRequest req = channel.readInbound();
+        assertNotNull(req);
         checkHeaders(req.headers());
 
-        LastHttpContent c = (LastHttpContent) channel.readInbound();
-        Assert.assertEquals(8, c.content().readableBytes());
-        for (int i = 8; i > 1; i--) {
-            Assert.assertEquals(content[content.length - i], c.content().readByte());
+        for (int i = CONTENT_LENGTH; i > 1; i --) {
+            HttpContent c = channel.readInbound();
+            assertEquals(1, c.content().readableBytes());
+            assertEquals(content[content.length - i], c.content().readByte());
+            c.release();
         }
+
+        LastHttpContent c = channel.readInbound();
+        assertEquals(1, c.content().readableBytes());
+        assertEquals(content[content.length - 1], c.content().readByte());
         c.release();
 
-        Assert.assertFalse(channel.finish());
-        Assert.assertNull(channel.readInbound());
+        assertFalse(channel.finish());
+        assertNull(channel.readInbound());
     }
 
     @Test
@@ -165,7 +174,61 @@ public class HttpRequestDecoderTest {
                 "Host: localhost" + crlf +
                 "EmptyHeader:" + crlf + crlf;
         channel.writeInbound(Unpooled.wrappedBuffer(request.getBytes(CharsetUtil.US_ASCII)));
-        HttpRequest req = (HttpRequest) channel.readInbound();
-        Assert.assertEquals("", req.headers().get("EmptyHeader"));
+        HttpRequest req = channel.readInbound();
+        assertEquals("", req.headers().get("EmptyHeader"));
+    }
+
+    @Test
+    public void test100Continue() {
+        HttpRequestDecoder decoder = new HttpRequestDecoder();
+        EmbeddedChannel channel = new EmbeddedChannel(decoder);
+        String oversized =
+                "PUT /file HTTP/1.1\r\n" +
+                "Expect: 100-continue\r\n" +
+                "Content-Length: 1048576000\r\n\r\n";
+
+        channel.writeInbound(Unpooled.copiedBuffer(oversized, CharsetUtil.US_ASCII));
+        assertThat(channel.readInbound(), is(instanceOf(HttpRequest.class)));
+
+        // At this point, we assume that we sent '413 Entity Too Large' to the peer without closing the connection
+        // so that the client can try again.
+        decoder.reset();
+
+        String query = "GET /max-file-size HTTP/1.1\r\n\r\n";
+        channel.writeInbound(Unpooled.copiedBuffer(query, CharsetUtil.US_ASCII));
+        assertThat(channel.readInbound(), is(instanceOf(HttpRequest.class)));
+        assertThat(channel.readInbound(), is(instanceOf(LastHttpContent.class)));
+
+        assertThat(channel.finish(), is(false));
+    }
+
+    @Test
+    public void test100ContinueWithBadClient() {
+        HttpRequestDecoder decoder = new HttpRequestDecoder();
+        EmbeddedChannel channel = new EmbeddedChannel(decoder);
+        String oversized =
+                "PUT /file HTTP/1.1\r\n" +
+                "Expect: 100-continue\r\n" +
+                "Content-Length: 1048576000\r\n\r\n" +
+                "WAY_TOO_LARGE_DATA_BEGINS";
+
+        channel.writeInbound(Unpooled.copiedBuffer(oversized, CharsetUtil.US_ASCII));
+        assertThat(channel.readInbound(), is(instanceOf(HttpRequest.class)));
+
+        HttpContent prematureData = channel.readInbound();
+        prematureData.release();
+
+        assertThat(channel.readInbound(), is(nullValue()));
+
+        // At this point, we assume that we sent '413 Entity Too Large' to the peer without closing the connection
+        // so that the client can try again.
+        decoder.reset();
+
+        String query = "GET /max-file-size HTTP/1.1\r\n\r\n";
+        channel.writeInbound(Unpooled.copiedBuffer(query, CharsetUtil.US_ASCII));
+        assertThat(channel.readInbound(), is(instanceOf(HttpRequest.class)));
+        assertThat(channel.readInbound(), is(instanceOf(LastHttpContent.class)));
+
+        assertThat(channel.finish(), is(false));
     }
 }

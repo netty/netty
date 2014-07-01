@@ -21,51 +21,148 @@ import io.netty.handler.codec.memcache.AbstractMemcacheObject;
 /**
  * Default implementation of a {@link BinaryMemcacheMessage}.
  */
-public abstract class AbstractBinaryMemcacheMessage<H extends BinaryMemcacheMessageHeader>
+public abstract class AbstractBinaryMemcacheMessage
     extends AbstractMemcacheObject
-    implements BinaryMemcacheMessage<H> {
-
-    /**
-     * Contains the message header.
-     */
-    private final H header;
+    implements BinaryMemcacheMessage {
 
     /**
      * Contains the optional key.
      */
-    private final String key;
+    private String key;
 
     /**
      * Contains the optional extras.
      */
-    private final ByteBuf extras;
+    private ByteBuf extras;
+
+    private byte magic;
+    private byte opcode;
+    private short keyLength;
+    private byte extrasLength;
+    private byte dataType;
+    private int totalBodyLength;
+    private int opaque;
+    private long cas;
 
     /**
      * Create a new instance with all properties set.
      *
-     * @param header the message header.
      * @param key    the message key.
      * @param extras the message extras.
      */
-    protected AbstractBinaryMemcacheMessage(H header, String key, ByteBuf extras) {
-        this.header = header;
+    protected AbstractBinaryMemcacheMessage(String key, ByteBuf extras) {
         this.key = key;
         this.extras = extras;
     }
 
     @Override
-    public H getHeader() {
-        return header;
-    }
-
-    @Override
-    public String getKey() {
+    public String key() {
         return key;
     }
 
     @Override
-    public ByteBuf getExtras() {
+    public ByteBuf extras() {
         return extras;
+    }
+
+    @Override
+    public BinaryMemcacheMessage setKey(String key) {
+        this.key = key;
+        return this;
+    }
+
+    @Override
+    public BinaryMemcacheMessage setExtras(ByteBuf extras) {
+        this.extras = extras;
+        return this;
+    }
+
+    @Override
+    public byte magic() {
+        return magic;
+    }
+
+    @Override
+    public BinaryMemcacheMessage setMagic(byte magic) {
+        this.magic = magic;
+        return this;
+    }
+
+    @Override
+    public long cas() {
+        return cas;
+    }
+
+    @Override
+    public BinaryMemcacheMessage setCas(long cas) {
+        this.cas = cas;
+        return this;
+    }
+
+    @Override
+    public int opaque() {
+        return opaque;
+    }
+
+    @Override
+    public BinaryMemcacheMessage setOpaque(int opaque) {
+        this.opaque = opaque;
+        return this;
+    }
+
+    @Override
+    public int totalBodyLength() {
+        return totalBodyLength;
+    }
+
+    @Override
+    public BinaryMemcacheMessage setTotalBodyLength(int totalBodyLength) {
+        this.totalBodyLength = totalBodyLength;
+        return this;
+    }
+
+    @Override
+    public byte dataType() {
+        return dataType;
+    }
+
+    @Override
+    public BinaryMemcacheMessage setDataType(byte dataType) {
+        this.dataType = dataType;
+        return this;
+    }
+
+    @Override
+    public byte extrasLength() {
+        return extrasLength;
+    }
+
+    @Override
+    public BinaryMemcacheMessage setExtrasLength(byte extrasLength) {
+        this.extrasLength = extrasLength;
+        return this;
+    }
+
+    @Override
+    public short keyLength() {
+        return keyLength;
+    }
+
+    @Override
+    public BinaryMemcacheMessage setKeyLength(short keyLength) {
+        this.keyLength = keyLength;
+        return this;
+    }
+
+    @Override
+    public byte opcode() {
+        return opcode;
+    }
+
+    @Override
+    public BinaryMemcacheMessage setOpcode(byte opcode) {
+        this.opcode = opcode;
+        return this;
     }
 
     @Override
@@ -77,7 +174,7 @@ public abstract class AbstractBinaryMemcacheMessage<H extends BinaryMemcacheMess
     }
 
     @Override
-    public BinaryMemcacheMessage<H> retain() {
+    public BinaryMemcacheMessage retain() {
         if (extras != null) {
             extras.retain();
         }
@@ -85,7 +182,7 @@ public abstract class AbstractBinaryMemcacheMessage<H extends BinaryMemcacheMess
     }
 
     @Override
-    public BinaryMemcacheMessage<H> retain(int increment) {
+    public BinaryMemcacheMessage retain(int increment) {
         if (extras != null) {
             extras.retain(increment);
         }
@@ -106,5 +203,18 @@ public abstract class AbstractBinaryMemcacheMessage<H extends BinaryMemcacheMess
             return extras.release(decrement);
         }
         return false;
+    }
+
+    @Override
+    public BinaryMemcacheMessage touch() {
+        return touch(null);
+    }
+
+    @Override
+    public BinaryMemcacheMessage touch(Object hint) {
+        if (extras != null) {
+            extras.touch(hint);
+        }
+        return this;
     }
 }

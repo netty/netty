@@ -23,7 +23,7 @@ public interface SpdyRstStreamFrame extends SpdyStreamFrame {
     /**
      * Returns the status of this frame.
      */
-    SpdyStreamStatus getStatus();
+    SpdyStreamStatus status();
 
     /**
      * Sets the status of this frame.

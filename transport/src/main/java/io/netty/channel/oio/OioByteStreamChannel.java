@@ -17,7 +17,6 @@ package io.netty.channel.oio;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.EventLoop;
 import io.netty.channel.FileRegion;
 
 import java.io.IOException;
@@ -57,8 +56,8 @@ public abstract class OioByteStreamChannel extends AbstractOioByteChannel {
      * @param parent    the parent {@link Channel} which was used to create this instance. This can be null if the
      *                  {@link} has no parent as it was created by your self.
      */
-    protected OioByteStreamChannel(Channel parent, EventLoop eventLoop) {
-        super(parent, eventLoop);
+    protected OioByteStreamChannel(Channel parent) {
+        super(parent);
     }
 
     /**

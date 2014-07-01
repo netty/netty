@@ -26,7 +26,7 @@ public enum SocksSubnegotiationVersion {
         this.b = b;
     }
 
-    public static SocksSubnegotiationVersion fromByte(byte b) {
+    public static SocksSubnegotiationVersion valueOf(byte b) {
         for (SocksSubnegotiationVersion code : values()) {
             if (code.b == b) {
                 return code;

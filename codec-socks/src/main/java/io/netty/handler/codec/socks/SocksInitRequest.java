@@ -47,7 +47,7 @@ public final class SocksInitRequest extends SocksRequest {
     }
 
     @Override
-    public void encodeAsByteBuf(ByteBuf byteBuf) {
+    void encodeAsByteBuf(ByteBuf byteBuf) {
         byteBuf.writeByte(protocolVersion().byteValue());
         byteBuf.writeByte(authSchemes.size());
         for (SocksAuthScheme authScheme : authSchemes) {

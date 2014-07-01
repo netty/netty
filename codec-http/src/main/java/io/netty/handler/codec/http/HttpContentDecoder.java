@@ -51,7 +51,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
 
     @Override
     protected void decode(ChannelHandlerContext ctx, HttpObject msg, List<Object> out) throws Exception {
-        if (msg instanceof HttpResponse && ((HttpResponse) msg).getStatus().code() == 100) {
+        if (msg instanceof HttpResponse && ((HttpResponse) msg).status().code() == 100) {
 
             if (!(msg instanceof LastHttpContent)) {
                 continueResponse = true;
@@ -206,7 +206,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
             // Clean-up the previous encoder if not cleaned up correctly.
             if (decoder.finish()) {
                 for (;;) {
-                    ByteBuf buf = (ByteBuf) decoder.readOutbound();
+                    ByteBuf buf = decoder.readOutbound();
                     if (buf == null) {
                         break;
                     }
@@ -234,7 +234,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
 
     private void fetchDecoderOutput(List<Object> out) {
         for (;;) {
-            ByteBuf buf = (ByteBuf) decoder.readInbound();
+            ByteBuf buf = decoder.readInbound();
             if (buf == null) {
                 break;
             }

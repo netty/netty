@@ -42,7 +42,7 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
      * @param httpVersion       the HTTP version of the request
      * @param method            the HTTP getMethod of the request
      * @param uri               the URI or path of the request
-     * @param validateHeaders   validate the header names and values when adding them to the {@link HttpHeaders}.
+     * @param validateHeaders   validate the header names and values when adding them to the {@link HttpHeaders}
      */
     public DefaultHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri, boolean validateHeaders) {
         super(httpVersion, validateHeaders);
@@ -57,12 +57,12 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
     }
 
     @Override
-    public HttpMethod getMethod() {
+    public HttpMethod method() {
         return method;
     }
 
     @Override
-    public String getUri() {
+    public String uri() {
         return uri;
     }
 
@@ -94,15 +94,15 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
     public String toString() {
         StringBuilder buf = new StringBuilder();
         buf.append(StringUtil.simpleClassName(this));
-        buf.append(", decodeResult: ");
-        buf.append(getDecoderResult());
+        buf.append("(decodeResult: ");
+        buf.append(decoderResult());
         buf.append(')');
         buf.append(StringUtil.NEWLINE);
-        buf.append(getMethod().toString());
+        buf.append(method());
         buf.append(' ');
-        buf.append(getUri());
+        buf.append(uri());
         buf.append(' ');
-        buf.append(getProtocolVersion().text());
+        buf.append(protocolVersion().text());
         buf.append(StringUtil.NEWLINE);
         appendHeaders(buf);
 

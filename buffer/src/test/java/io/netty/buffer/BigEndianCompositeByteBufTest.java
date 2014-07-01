@@ -16,6 +16,8 @@
 package io.netty.buffer;
 
 
+import org.junit.Test;
+
 /**
  * Tests big-endian composite channel buffers
  */
@@ -23,4 +25,11 @@ public class BigEndianCompositeByteBufTest extends AbstractCompositeByteBufTest 
     public BigEndianCompositeByteBufTest() {
         super(Unpooled.BIG_ENDIAN);
     }
+
+    @Override
+    @Test(expected = UnsupportedOperationException.class)
+    public void testInternalNioBufferAfterRelease() {
+        super.testInternalNioBufferAfterRelease();
+    }
+
 }

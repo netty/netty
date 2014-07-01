@@ -22,14 +22,18 @@ import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.Delimiters;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
-import io.netty.handler.ssl.SslHandler;
-
-import javax.net.ssl.SSLEngine;
+import io.netty.handler.ssl.SslContext;
 
 /**
  * Creates a newly configured {@link ChannelPipeline} for a new channel.
  */
 public class SecureChatClientInitializer extends ChannelInitializer<SocketChannel> {
+
+    private final SslContext sslCtx;
+
+    public SecureChatClientInitializer(SslContext sslCtx) {
+        this.sslCtx = sslCtx;
+    }
 
     @Override
     public void initChannel(SocketChannel ch) throws Exception {
@@ -40,20 +44,14 @@ public class SecureChatClientInitializer extends ChannelInitializer<SocketChanne
         // and accept any invalid certificates in the client side.
         // You will need something more complicated to identify both
         // and server in the real world.
-
-        SSLEngine engine =
-            SecureChatSslContextFactory.getClientContext().createSSLEngine();
-        engine.setUseClientMode(true);
-
-        pipeline.addLast("ssl", new SslHandler(engine));
+        pipeline.addLast(sslCtx.newHandler(ch.alloc(), SecureChatClient.HOST, SecureChatClient.PORT));
 
         // On top of the SSL handler, add the text line codec.
-        pipeline.addLast("framer", new DelimiterBasedFrameDecoder(
-                8192, Delimiters.lineDelimiter()));
-        pipeline.addLast("decoder", new StringDecoder());
-        pipeline.addLast("encoder", new StringEncoder());
+        pipeline.addLast(new DelimiterBasedFrameDecoder(8192, Delimiters.lineDelimiter()));
+        pipeline.addLast(new StringDecoder());
+        pipeline.addLast(new StringEncoder());
 
         // and then business logic.
-        pipeline.addLast("handler", new SecureChatClientHandler());
+        pipeline.addLast(new SecureChatClientHandler());
     }
 }

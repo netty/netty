@@ -50,7 +50,6 @@ final class CaseIgnoringComparator implements Comparator<CharSequence>, Serializ
         return o1Length - o2Length;
     }
 
-    @SuppressWarnings("MethodMayBeStatic")
     private Object readResolve() {
         return INSTANCE;
     }

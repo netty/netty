@@ -17,6 +17,7 @@ package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorGroup;
 
 import java.net.ConnectException;
@@ -662,6 +663,15 @@ public interface ChannelPipeline extends Iterable<Entry<String, ChannelHandler>>
     ChannelPipeline fireChannelRegistered();
 
     /**
+     * A {@link Channel} was unregistered from its {@link EventLoop}.
+     *
+     * This will result in having the  {@link ChannelHandler#channelUnregistered(ChannelHandlerContext)} method
+     * called of the next  {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link Channel}.
+     */
+    ChannelPipeline fireChannelUnregistered();
+
+    /**
      * A {@link Channel} is active now, which means it is connected.
      *
      * This will result in having the  {@link ChannelHandler#channelActive(ChannelHandlerContext)} method
@@ -782,6 +792,19 @@ public interface ChannelPipeline extends Iterable<Entry<String, ChannelHandler>>
     ChannelFuture close();
 
     /**
+     * Request to deregister the {@link Channel} from the previous assigned {@link EventExecutor} and notify the
+     * {@link ChannelFuture} once the operation completes, either because the operation was successful or because of
+     * an error.
+     * <p>
+     * This will result in having the
+     * {@link ChannelHandler#deregister(ChannelHandlerContext, ChannelPromise)}
+     * method called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link Channel}.
+     *
+     */
+    ChannelFuture deregister();
+
+    /**
      * Request to bind to the given {@link SocketAddress} and notify the {@link ChannelFuture} once the operation
      * completes, either because the operation was successful or because of an error.
      *
@@ -853,6 +876,20 @@ public interface ChannelPipeline extends Iterable<Entry<String, ChannelHandler>>
      * {@link Channel}.
      */
     ChannelFuture close(ChannelPromise promise);
+
+    /**
+     * Request to deregister the {@link Channel} bound this {@link ChannelPipeline} from the previous assigned
+     * {@link EventExecutor} and notify the {@link ChannelFuture} once the operation completes, either because the
+     * operation was successful or because of an error.
+     *
+     * The given {@link ChannelPromise} will be notified.
+     * <p>ChannelOutboundHandler
+     * This will result in having the
+     * {@link ChannelHandler#deregister(ChannelHandlerContext, ChannelPromise)}
+     * method called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link Channel}.
+     */
+    ChannelFuture deregister(ChannelPromise promise);
 
     /**
      * Request to Read data from the {@link Channel} into the first inbound buffer, triggers an

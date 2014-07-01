@@ -24,6 +24,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpHeaderUtil;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.ContinuationWebSocketFrame;
@@ -58,6 +59,8 @@ public class AutobahnServerHandler extends ChannelHandlerAdapter {
             handleHttpRequest(ctx, (FullHttpRequest) msg);
         } else if (msg instanceof WebSocketFrame) {
             handleWebSocketFrame(ctx, (WebSocketFrame) msg);
+        } else {
+            throw new IllegalStateException("unknown message: " + msg);
         }
     }
 
@@ -69,14 +72,14 @@ public class AutobahnServerHandler extends ChannelHandlerAdapter {
     private void handleHttpRequest(ChannelHandlerContext ctx, FullHttpRequest req)
             throws Exception {
         // Handle a bad request.
-        if (!req.getDecoderResult().isSuccess()) {
+        if (!req.decoderResult().isSuccess()) {
             sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, BAD_REQUEST));
             req.release();
             return;
         }
 
         // Allow only GET methods.
-        if (req.getMethod() != GET) {
+        if (req.method() != GET) {
             sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, FORBIDDEN));
             req.release();
             return;
@@ -87,7 +90,7 @@ public class AutobahnServerHandler extends ChannelHandlerAdapter {
                 getWebSocketLocation(req), null, false, Integer.MAX_VALUE);
         handshaker = wsFactory.newHandshaker(req);
         if (handshaker == null) {
-            WebSocketServerHandshakerFactory.sendUnsupportedWebSocketVersionResponse(ctx.channel());
+            WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(ctx.channel());
         } else {
             handshaker.handshake(ctx.channel(), req);
         }
@@ -104,11 +107,9 @@ public class AutobahnServerHandler extends ChannelHandlerAdapter {
             handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame);
         } else if (frame instanceof PingWebSocketFrame) {
             ctx.write(new PongWebSocketFrame(frame.isFinalFragment(), frame.rsv(), frame.content()));
-        } else if (frame instanceof TextWebSocketFrame) {
-            ctx.write(frame);
-        } else if (frame instanceof BinaryWebSocketFrame) {
-            ctx.write(frame);
-        } else if (frame instanceof ContinuationWebSocketFrame) {
+        } else if (frame instanceof TextWebSocketFrame ||
+                frame instanceof BinaryWebSocketFrame ||
+                frame instanceof ContinuationWebSocketFrame) {
             ctx.write(frame);
         } else if (frame instanceof PongWebSocketFrame) {
             frame.release();
@@ -121,24 +122,23 @@ public class AutobahnServerHandler extends ChannelHandlerAdapter {
 
     private static void sendHttpResponse(
             ChannelHandlerContext ctx, FullHttpRequest req, FullHttpResponse res) {
-        // Generate an error page if response getStatus code is not OK (200).
-        if (res.getStatus().code() != 200) {
-            ByteBuf buf = Unpooled.copiedBuffer(res.getStatus().toString(), CharsetUtil.UTF_8);
+        // Generate an error page if response status code is not OK (200).
+        if (res.status().code() != 200) {
+            ByteBuf buf = Unpooled.copiedBuffer(res.status().toString(), CharsetUtil.UTF_8);
             res.content().writeBytes(buf);
             buf.release();
-            setContentLength(res, res.content().readableBytes());
+            HttpHeaderUtil.setContentLength(res, res.content().readableBytes());
         }
 
         // Send the response and close the connection if necessary.
         ChannelFuture f = ctx.channel().writeAndFlush(res);
-        if (!isKeepAlive(req) || res.getStatus().code() != 200) {
+        if (!HttpHeaderUtil.isKeepAlive(req) || res.status().code() != 200) {
             f.addListener(ChannelFutureListener.CLOSE);
         }
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        cause.printStackTrace();
         ctx.close();
     }
 

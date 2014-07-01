@@ -28,13 +28,16 @@ import io.netty.channel.nio.AbstractNioByteChannel;
 import io.netty.channel.socket.DefaultSocketChannelConfig;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannelConfig;
+import io.netty.util.internal.OneTimeTask;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
+import java.nio.channels.spi.SelectorProvider;
 
 /**
  * {@link io.netty.channel.socket.SocketChannel} which uses NIO selector based implementation.
@@ -42,10 +45,17 @@ import java.nio.channels.SocketChannel;
 public class NioSocketChannel extends AbstractNioByteChannel implements io.netty.channel.socket.SocketChannel {
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
+    private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
 
-    private static SocketChannel newSocket() {
+    private static SocketChannel newSocket(SelectorProvider provider) {
         try {
-            return SocketChannel.open();
+            /**
+             *  Use the {@link SelectorProvider} to open {@link SocketChannel} and so remove condition in
+             *  {@link SelectorProvider#provider()} which is called by each SocketChannel.open() otherwise.
+             *
+             *  See <a href="See https://github.com/netty/netty/issues/2308">#2308</a>.
+             */
+            return provider.openSocketChannel();
         } catch (IOException e) {
             throw new ChannelException("Failed to open a socket.", e);
         }
@@ -56,26 +66,32 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     /**
      * Create a new instance
      */
-    public NioSocketChannel(EventLoop eventLoop) {
-        this(eventLoop, newSocket());
+    public NioSocketChannel() {
+        this(DEFAULT_SELECTOR_PROVIDER);
+    }
+
+    /**
+     * Create a new instance using the given {@link SelectorProvider}.
+     */
+    public NioSocketChannel(SelectorProvider provider) {
+        this(newSocket(provider));
     }
 
     /**
      * Create a new instance using the given {@link SocketChannel}.
      */
-    public NioSocketChannel(EventLoop eventLoop, SocketChannel socket) {
-        this(null, eventLoop, socket);
+    public NioSocketChannel(SocketChannel socket) {
+        this(null, socket);
     }
-
     /**
      * Create a new instance
      *
      * @param parent    the {@link Channel} which created this instance or {@code null} if it was created by the user
      * @param socket    the {@link SocketChannel} which will be used
      */
-    public NioSocketChannel(Channel parent, EventLoop eventLoop, SocketChannel socket) {
-        super(parent, eventLoop, socket);
-        config = new DefaultSocketChannelConfig(this, socket.socket());
+    public NioSocketChannel(Channel parent, SocketChannel socket) {
+        super(parent, socket);
+        config = new NioSocketChannelConfig(this, socket.socket());
     }
 
     @Override
@@ -140,7 +156,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
                 promise.setFailure(t);
             }
         } else {
-            loop.execute(new Runnable() {
+            loop.execute(new OneTimeTask() {
                 @Override
                 public void run() {
                     shutdownOutput(promise);
@@ -231,16 +247,16 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
                 super.doWrite(in);
                 return;
             }
-
+            NioSocketChannelOutboundBuffer nioIn = (NioSocketChannelOutboundBuffer) in;
             // Ensure the pending writes are made of ByteBufs only.
-            ByteBuffer[] nioBuffers = in.nioBuffers();
+            ByteBuffer[] nioBuffers = nioIn.nioBuffers();
             if (nioBuffers == null) {
                 super.doWrite(in);
                 return;
             }
 
-            int nioBufferCnt = in.nioBufferCount();
-            long expectedWrittenBytes = in.nioBufferSize();
+            int nioBufferCnt = nioIn.nioBufferCount();
+            long expectedWrittenBytes = nioIn.nioBufferSize();
 
             final SocketChannel ch = javaChannel();
             long writtenBytes = 0;
@@ -263,7 +279,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
             if (done) {
                 // Release all buffers
                 for (int i = msgCount; i > 0; i --) {
-                    in.remove();
+                    nioIn.remove();
                 }
 
                 // Finish the write loop if no new messages were flushed by in.remove().
@@ -281,16 +297,16 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
                     final int readableBytes = buf.writerIndex() - readerIndex;
 
                     if (readableBytes < writtenBytes) {
-                        in.progress(readableBytes);
-                        in.remove();
+                        nioIn.progress(readableBytes);
+                        nioIn.remove();
                         writtenBytes -= readableBytes;
                     } else if (readableBytes > writtenBytes) {
                         buf.readerIndex(readerIndex + (int) writtenBytes);
-                        in.progress(writtenBytes);
+                        nioIn.progress(writtenBytes);
                         break;
                     } else { // readableBytes == writtenBytes
-                        in.progress(readableBytes);
-                        in.remove();
+                        nioIn.progress(readableBytes);
+                        nioIn.remove();
                         break;
                     }
                 }
@@ -298,6 +314,22 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
                 incompleteWrite(setOpWrite);
                 break;
             }
+        }
+    }
+
+    @Override
+    protected ChannelOutboundBuffer newOutboundBuffer() {
+        return NioSocketChannelOutboundBuffer.newInstance(this);
+    }
+
+    private final class NioSocketChannelConfig  extends DefaultSocketChannelConfig {
+        private NioSocketChannelConfig(NioSocketChannel channel, Socket javaSocket) {
+            super(channel, javaSocket);
+        }
+
+        @Override
+        protected void autoReadCleared() {
+            setReadPending(false);
         }
     }
 }

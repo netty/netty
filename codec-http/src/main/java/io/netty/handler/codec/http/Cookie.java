@@ -28,14 +28,14 @@ public interface Cookie extends Comparable<Cookie> {
      *
      * @return The name of this {@link Cookie}
      */
-    String getName();
+    String name();
 
     /**
      * Returns the value of this {@link Cookie}.
      *
      * @return The value of this {@link Cookie}
      */
-    String getValue();
+    String value();
 
     /**
      * Sets the value of this {@link Cookie}.
@@ -49,7 +49,7 @@ public interface Cookie extends Comparable<Cookie> {
      *
      * @return The domain of this {@link Cookie}
      */
-    String getDomain();
+    String domain();
 
     /**
      * Sets the domain of this {@link Cookie}.
@@ -63,7 +63,7 @@ public interface Cookie extends Comparable<Cookie> {
      *
      * @return The {@link Cookie}'s path
      */
-    String getPath();
+    String path();
 
     /**
      * Sets the path of this {@link Cookie}.
@@ -77,7 +77,7 @@ public interface Cookie extends Comparable<Cookie> {
      *
      * @return The comment of this {@link Cookie}
      */
-    String getComment();
+    String comment();
 
     /**
      * Sets the comment of this {@link Cookie}.
@@ -91,7 +91,7 @@ public interface Cookie extends Comparable<Cookie> {
      *
      * @return The maximum age of this {@link Cookie}
      */
-    long getMaxAge();
+    long maxAge();
 
     /**
      * Sets the maximum age of this {@link Cookie} in seconds.
@@ -109,7 +109,7 @@ public interface Cookie extends Comparable<Cookie> {
      *
      * @return The version of this {@link Cookie}
      */
-    int getVersion();
+    int version();
 
     /**
      * Sets the version of this {@link Cookie}.
@@ -158,7 +158,7 @@ public interface Cookie extends Comparable<Cookie> {
      *
      * @return The comment URL of this {@link Cookie}
      */
-    String getCommentUrl();
+    String commentUrl();
 
     /**
      * Sets the comment URL of this {@link Cookie}.
@@ -189,7 +189,7 @@ public interface Cookie extends Comparable<Cookie> {
      *
      * @return The {@link Set} of ports that this {@link Cookie} can use
      */
-    Set<Integer> getPorts();
+    Set<Integer> ports();
 
     /**
      * Sets the ports that this {@link Cookie} can be accessed on.

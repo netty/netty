@@ -40,7 +40,7 @@ class NioDatagramChannelConfig extends DefaultDatagramChannelConfig {
     private static final Method SET_OPTION;
 
     static {
-        ClassLoader classLoader = DatagramChannel.class.getClassLoader();
+        ClassLoader classLoader = PlatformDependent.getClassLoader(DatagramChannel.class);
         Class<?> socketOptionType = null;
         try {
             socketOptionType = Class.forName("java.net.SocketOption", true, classLoader);
@@ -159,6 +159,17 @@ class NioDatagramChannelConfig extends DefaultDatagramChannelConfig {
     public DatagramChannelConfig setLoopbackModeDisabled(boolean loopbackModeDisabled) {
         setOption0(IP_MULTICAST_LOOP, loopbackModeDisabled);
         return this;
+    }
+
+    @Override
+    public DatagramChannelConfig setAutoRead(boolean autoRead) {
+        super.setAutoRead(autoRead);
+        return this;
+    }
+
+    @Override
+    protected void autoReadCleared() {
+        ((NioDatagramChannel) channel).setReadPending(false);
     }
 
     private Object getOption0(Object option) {

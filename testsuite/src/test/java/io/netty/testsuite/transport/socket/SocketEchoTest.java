@@ -23,10 +23,10 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.DefaultEventLoopGroup;
-import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.util.concurrent.DefaultEventExecutorGroup;
+import io.netty.util.concurrent.EventExecutorGroup;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -42,7 +42,7 @@ public class SocketEchoTest extends AbstractSocketTest {
     private static final Random random = new Random();
     static final byte[] data = new byte[1048576];
 
-    private static EventLoopGroup group;
+    private static EventExecutorGroup group;
 
     static {
         random.nextBytes(data);
@@ -50,7 +50,7 @@ public class SocketEchoTest extends AbstractSocketTest {
 
     @BeforeClass
     public static void createGroup() {
-        group = new DefaultEventLoopGroup(2);
+        group = new DefaultEventExecutorGroup(2);
     }
 
     @AfterClass
@@ -64,7 +64,16 @@ public class SocketEchoTest extends AbstractSocketTest {
     }
 
     public void testSimpleEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSimpleEcho0(sb, cb, false, false);
+        testSimpleEcho0(sb, cb, false, false, true);
+    }
+
+    @Test(timeout = 30000)
+    public void testSimpleEchoNotAutoRead() throws Throwable {
+        run();
+    }
+
+    public void testSimpleEchoNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        testSimpleEcho0(sb, cb, false, false, false);
     }
 
     @Test//(timeout = 30000)
@@ -73,7 +82,16 @@ public class SocketEchoTest extends AbstractSocketTest {
     }
 
     public void testSimpleEchoWithAdditionalExecutor(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSimpleEcho0(sb, cb, true, false);
+        testSimpleEcho0(sb, cb, true, false, true);
+    }
+
+    @Test//(timeout = 30000)
+    public void testSimpleEchoWithAdditionalExecutorNotAutoRead() throws Throwable {
+        run();
+    }
+
+    public void testSimpleEchoWithAdditionalExecutorNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        testSimpleEcho0(sb, cb, true, false, false);
     }
 
     @Test//(timeout = 30000)
@@ -82,7 +100,16 @@ public class SocketEchoTest extends AbstractSocketTest {
     }
 
     public void testSimpleEchoWithVoidPromise(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSimpleEcho0(sb, cb, false, true);
+        testSimpleEcho0(sb, cb, false, true, true);
+    }
+
+    @Test//(timeout = 30000)
+    public void testSimpleEchoWithVoidPromiseNotAutoRead() throws Throwable {
+        run();
+    }
+
+    public void testSimpleEchoWithVoidPromiseNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        testSimpleEcho0(sb, cb, false, true, false);
     }
 
     @Test(timeout = 30000)
@@ -91,15 +118,15 @@ public class SocketEchoTest extends AbstractSocketTest {
     }
 
     public void testSimpleEchoWithAdditionalExecutorAndVoidPromise(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSimpleEcho0(sb, cb, true, true);
+        testSimpleEcho0(sb, cb, true, true, true);
     }
 
     private static void testSimpleEcho0(
-            ServerBootstrap sb, Bootstrap cb, boolean additionalExecutor, boolean voidPromise)
+            ServerBootstrap sb, Bootstrap cb, boolean additionalExecutor, boolean voidPromise, boolean autoRead)
             throws Throwable {
 
-        final EchoHandler sh = new EchoHandler();
-        final EchoHandler ch = new EchoHandler();
+        final EchoHandler sh = new EchoHandler(autoRead);
+        final EchoHandler ch = new EchoHandler(autoRead);
 
         if (additionalExecutor) {
             sb.childHandler(new ChannelInitializer<SocketChannel>() {
@@ -188,9 +215,14 @@ public class SocketEchoTest extends AbstractSocketTest {
     }
 
     private static class EchoHandler extends SimpleChannelInboundHandler<ByteBuf> {
+        private final boolean autoRead;
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;
+
+        EchoHandler(boolean autoRead) {
+            this.autoRead = autoRead;
+        }
 
         @Override
         public void channelActive(ChannelHandlerContext ctx)
@@ -217,7 +249,13 @@ public class SocketEchoTest extends AbstractSocketTest {
 
         @Override
         public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-            ctx.flush();
+            try {
+                ctx.flush();
+            } finally {
+                if (!autoRead) {
+                    ctx.read();
+                }
+            }
         }
 
         @Override

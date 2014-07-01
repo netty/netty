@@ -101,7 +101,7 @@ public class LocalTransportThreadModelTest2 {
 
         public final AtomicInteger count = new AtomicInteger(0);
 
-        public LocalHander(String name) {
+        LocalHander(String name) {
             this.name = name;
         }
 

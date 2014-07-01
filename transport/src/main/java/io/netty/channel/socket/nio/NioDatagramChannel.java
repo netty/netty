@@ -16,7 +16,6 @@
 package io.netty.channel.socket.nio;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.Channel;
@@ -26,8 +25,6 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.DefaultAddressedEnvelope;
-import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
@@ -46,6 +43,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.MembershipKey;
 import java.nio.channels.SelectionKey;
+import java.nio.channels.spi.SelectorProvider;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -63,57 +61,84 @@ public final class NioDatagramChannel
         extends AbstractNioMessageChannel implements io.netty.channel.socket.DatagramChannel {
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(true);
+    private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
 
     private final DatagramChannelConfig config;
-    private final Map<InetAddress, List<MembershipKey>> memberships =
-            new HashMap<InetAddress, List<MembershipKey>>();
 
+    private Map<InetAddress, List<MembershipKey>> memberships;
     private RecvByteBufAllocator.Handle allocHandle;
 
-    private static DatagramChannel newSocket() {
+    private static DatagramChannel newSocket(SelectorProvider provider) {
         try {
-            return DatagramChannel.open();
+            /**
+             *  Use the {@link SelectorProvider} to open {@link SocketChannel} and so remove condition in
+             *  {@link SelectorProvider#provider()} which is called by each DatagramChannel.open() otherwise.
+             *
+             *  See <a href="See https://github.com/netty/netty/issues/2308">#2308</a>.
+             */
+            return provider.openDatagramChannel();
         } catch (IOException e) {
             throw new ChannelException("Failed to open a socket.", e);
         }
     }
 
-    private static DatagramChannel newSocket(InternetProtocolFamily ipFamily) {
+    private static DatagramChannel newSocket(SelectorProvider provider, InternetProtocolFamily ipFamily) {
         if (ipFamily == null) {
-            return newSocket();
+            return newSocket(provider);
         }
 
-        if (PlatformDependent.javaVersion() < 7) {
-            throw new UnsupportedOperationException();
-        }
+        checkJavaVersion();
 
         try {
-            return DatagramChannel.open(ProtocolFamilyConverter.convert(ipFamily));
+            return provider.openDatagramChannel(ProtocolFamilyConverter.convert(ipFamily));
         } catch (IOException e) {
             throw new ChannelException("Failed to open a socket.", e);
+        }
+    }
+
+    private static void checkJavaVersion() {
+        if (PlatformDependent.javaVersion() < 7) {
+            throw new UnsupportedOperationException("Only supported on java 7+.");
         }
     }
 
     /**
      * Create a new instance which will use the Operation Systems default {@link InternetProtocolFamily}.
      */
-    public NioDatagramChannel(EventLoop eventLoop) {
-        this(eventLoop, newSocket());
+    public NioDatagramChannel() {
+        this(newSocket(DEFAULT_SELECTOR_PROVIDER));
+    }
+
+    /**
+     * Create a new instance using the given {@link SelectorProvider}
+     * which will use the Operation Systems default {@link InternetProtocolFamily}.
+     */
+    public NioDatagramChannel(SelectorProvider provider) {
+        this(newSocket(provider));
     }
 
     /**
      * Create a new instance using the given {@link InternetProtocolFamily}. If {@code null} is used it will depend
      * on the Operation Systems default which will be chosen.
      */
-    public NioDatagramChannel(EventLoop eventLoop, InternetProtocolFamily ipFamily) {
-        this(eventLoop, newSocket(ipFamily));
+    public NioDatagramChannel(InternetProtocolFamily ipFamily) {
+        this(newSocket(DEFAULT_SELECTOR_PROVIDER, ipFamily));
+    }
+
+    /**
+     * Create a new instance using the given {@link SelectorProvider} and {@link InternetProtocolFamily}.
+     * If {@link InternetProtocolFamily} is {@code null} it will depend on the Operation Systems default
+     * which will be chosen.
+     */
+    public NioDatagramChannel(SelectorProvider provider, InternetProtocolFamily ipFamily) {
+        this(newSocket(provider, ipFamily));
     }
 
     /**
      * Create a new instance from the given {@link DatagramChannel}.
      */
-    public NioDatagramChannel(EventLoop eventLoop, DatagramChannel socket) {
-        super(null, eventLoop, socket, SelectionKey.OP_READ);
+    public NioDatagramChannel(DatagramChannel socket) {
+        super(null, socket, SelectionKey.OP_READ);
         config = new NioDatagramChannelConfig(this, socket);
     }
 
@@ -257,20 +282,7 @@ public final class NioDatagramChannel
             return true;
         }
 
-        ByteBufAllocator alloc = alloc();
-        boolean needsCopy = data.nioBufferCount() != 1;
-        if (!needsCopy) {
-            if (!data.isDirect() && alloc.isDirectBufferPooled()) {
-                needsCopy = true;
-            }
-        }
-        ByteBuffer nioData;
-        if (!needsCopy) {
-            nioData = data.nioBuffer();
-        } else {
-            data = alloc.directBuffer(dataLen).writeBytes(data);
-            nioData = data.nioBuffer();
-        }
+        ByteBuffer  nioData = data.nioBuffer();
 
         final int writtenBytes;
         if (remoteAddress != null) {
@@ -280,22 +292,6 @@ public final class NioDatagramChannel
         }
 
         boolean done =  writtenBytes > 0;
-        if (needsCopy) {
-            // This means we have allocated a new buffer and need to store it back so we not need to allocate it again
-            // later
-            if (remoteAddress == null) {
-                // remoteAddress is null which means we can handle it as ByteBuf directly
-                in.current(data);
-            } else {
-                if (!done) {
-                    // store it back with all the needed informations
-                    in.current(new DefaultAddressedEnvelope<ByteBuf, SocketAddress>(data, remoteAddress));
-                } else {
-                    // Just store back the new create buffer so it is cleaned up once in.remove() is called.
-                    in.current(data);
-                }
-            }
-        }
         return done;
     }
 
@@ -350,39 +346,44 @@ public final class NioDatagramChannel
     public ChannelFuture joinGroup(
             InetAddress multicastAddress, NetworkInterface networkInterface,
             InetAddress source, ChannelPromise promise) {
-        if (PlatformDependent.javaVersion() >= 7) {
-            if (multicastAddress == null) {
-                throw new NullPointerException("multicastAddress");
-            }
 
-            if (networkInterface == null) {
-                throw new NullPointerException("networkInterface");
-            }
+        checkJavaVersion();
 
-            try {
-                MembershipKey key;
-                if (source == null) {
-                    key = javaChannel().join(multicastAddress, networkInterface);
-                } else {
-                    key = javaChannel().join(multicastAddress, networkInterface, source);
-                }
-
-                synchronized (this) {
-                    List<MembershipKey> keys = memberships.get(multicastAddress);
-                    if (keys == null) {
-                        keys = new ArrayList<MembershipKey>();
-                        memberships.put(multicastAddress, keys);
-                    }
-                    keys.add(key);
-                }
-
-                promise.setSuccess();
-            } catch (Throwable e) {
-                promise.setFailure(e);
-            }
-        } else {
-            throw new UnsupportedOperationException();
+        if (multicastAddress == null) {
+            throw new NullPointerException("multicastAddress");
         }
+
+        if (networkInterface == null) {
+            throw new NullPointerException("networkInterface");
+        }
+
+        try {
+            MembershipKey key;
+            if (source == null) {
+                key = javaChannel().join(multicastAddress, networkInterface);
+            } else {
+                key = javaChannel().join(multicastAddress, networkInterface, source);
+            }
+
+            synchronized (this) {
+                List<MembershipKey> keys = null;
+                if (memberships == null) {
+                    memberships = new HashMap<InetAddress, List<MembershipKey>>();
+                } else {
+                    keys = memberships.get(multicastAddress);
+                }
+                if (keys == null) {
+                    keys = new ArrayList<MembershipKey>();
+                    memberships.put(multicastAddress, keys);
+                }
+                keys.add(key);
+            }
+
+            promise.setSuccess();
+        } catch (Throwable e) {
+            promise.setFailure(e);
+        }
+
         return promise;
     }
 
@@ -425,9 +426,8 @@ public final class NioDatagramChannel
     public ChannelFuture leaveGroup(
             InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source,
             ChannelPromise promise) {
-        if (PlatformDependent.javaVersion() < 7) {
-            throw new UnsupportedOperationException();
-        }
+        checkJavaVersion();
+
         if (multicastAddress == null) {
             throw new NullPointerException("multicastAddress");
         }
@@ -479,36 +479,34 @@ public final class NioDatagramChannel
     public ChannelFuture block(
             InetAddress multicastAddress, NetworkInterface networkInterface,
             InetAddress sourceToBlock, ChannelPromise promise) {
-        if (PlatformDependent.javaVersion() < 7) {
-            throw new UnsupportedOperationException();
-        } else {
-            if (multicastAddress == null) {
-                throw new NullPointerException("multicastAddress");
-            }
-            if (sourceToBlock == null) {
-                throw new NullPointerException("sourceToBlock");
-            }
+        checkJavaVersion();
 
-            if (networkInterface == null) {
-                throw new NullPointerException("networkInterface");
-            }
-            synchronized (this) {
-                if (memberships != null) {
-                    List<MembershipKey> keys = memberships.get(multicastAddress);
-                    for (MembershipKey key: keys) {
-                        if (networkInterface.equals(key.networkInterface())) {
-                            try {
-                                key.block(sourceToBlock);
-                            } catch (IOException e) {
-                                promise.setFailure(e);
-                            }
+        if (multicastAddress == null) {
+            throw new NullPointerException("multicastAddress");
+        }
+        if (sourceToBlock == null) {
+            throw new NullPointerException("sourceToBlock");
+        }
+
+        if (networkInterface == null) {
+            throw new NullPointerException("networkInterface");
+        }
+        synchronized (this) {
+            if (memberships != null) {
+                List<MembershipKey> keys = memberships.get(multicastAddress);
+                for (MembershipKey key: keys) {
+                    if (networkInterface.equals(key.networkInterface())) {
+                        try {
+                            key.block(sourceToBlock);
+                        } catch (IOException e) {
+                            promise.setFailure(e);
                         }
                     }
                 }
             }
-            promise.setSuccess();
-            return promise;
         }
+        promise.setSuccess();
+        return promise;
     }
 
     /**
@@ -536,5 +534,15 @@ public final class NioDatagramChannel
             promise.setFailure(e);
         }
         return promise;
+    }
+
+    @Override
+    protected ChannelOutboundBuffer newOutboundBuffer() {
+        return NioDatagramChannelOutboundBuffer.newInstance(this);
+    }
+
+    @Override
+    protected void setReadPending(boolean readPending) {
+        super.setReadPending(readPending);
     }
 }

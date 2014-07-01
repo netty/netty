@@ -25,7 +25,6 @@ import io.netty.buffer.Unpooled;
 public class DefaultFullHttpResponse extends DefaultHttpResponse implements FullHttpResponse {
 
     private final ByteBuf content;
-
     private final HttpHeaders trailingHeaders;
     private final boolean validateHeaders;
 
@@ -76,6 +75,18 @@ public class DefaultFullHttpResponse extends DefaultHttpResponse implements Full
     }
 
     @Override
+    public FullHttpResponse touch() {
+        content.touch();
+        return this;
+    }
+
+    @Override
+    public FullHttpResponse touch(Object hint) {
+        content.touch(hint);
+        return this;
+    }
+
+    @Override
     public boolean release() {
         return content.release();
     }
@@ -100,7 +111,7 @@ public class DefaultFullHttpResponse extends DefaultHttpResponse implements Full
     @Override
     public FullHttpResponse copy() {
         DefaultFullHttpResponse copy = new DefaultFullHttpResponse(
-                getProtocolVersion(), getStatus(), content().copy(), validateHeaders);
+                protocolVersion(), status(), content().copy(), validateHeaders);
         copy.headers().set(headers());
         copy.trailingHeaders().set(trailingHeaders());
         return copy;
@@ -108,7 +119,7 @@ public class DefaultFullHttpResponse extends DefaultHttpResponse implements Full
 
     @Override
     public FullHttpResponse duplicate() {
-        DefaultFullHttpResponse duplicate = new DefaultFullHttpResponse(getProtocolVersion(), getStatus(),
+        DefaultFullHttpResponse duplicate = new DefaultFullHttpResponse(protocolVersion(), status(),
                 content().duplicate(), validateHeaders);
         duplicate.headers().set(headers());
         duplicate.trailingHeaders().set(trailingHeaders());

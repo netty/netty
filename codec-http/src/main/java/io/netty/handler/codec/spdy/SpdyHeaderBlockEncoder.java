@@ -16,7 +16,6 @@
 package io.netty.handler.codec.spdy;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.internal.PlatformDependent;
 
 abstract class SpdyHeaderBlockEncoder {
@@ -33,6 +32,6 @@ abstract class SpdyHeaderBlockEncoder {
         }
     }
 
-    abstract ByteBuf encode(ChannelHandlerContext ctx, SpdyHeadersFrame frame) throws Exception;
+    abstract ByteBuf encode(SpdyHeadersFrame frame) throws Exception;
     abstract void end();
 }

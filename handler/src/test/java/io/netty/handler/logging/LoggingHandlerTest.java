@@ -40,6 +40,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import static org.easymock.EasyMock.*;
+import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
 
 /**
@@ -208,6 +209,10 @@ public class LoggingHandlerTest {
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
         channel.writeInbound(msg);
         verify(appender);
+
+        String handledMsg = channel.readInbound();
+        assertThat(msg, is(sameInstance(handledMsg)));
+        assertThat(channel.readInbound(), is(nullValue()));
     }
 
     @Test
@@ -218,6 +223,11 @@ public class LoggingHandlerTest {
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
         channel.writeInbound(msg);
         verify(appender);
+
+        ByteBuf handledMsg = channel.readInbound();
+        assertThat(msg, is(sameInstance(handledMsg)));
+        handledMsg.release();
+        assertThat(channel.readInbound(), is(nullValue()));
     }
 
     @Test
@@ -228,6 +238,10 @@ public class LoggingHandlerTest {
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
         channel.writeInbound(msg);
         verify(appender);
+
+        ByteBuf handledMsg = channel.readInbound();
+        assertThat(msg, is(sameInstance(handledMsg)));
+        assertThat(channel.readInbound(), is(nullValue()));
     }
 
     @Test
@@ -244,6 +258,11 @@ public class LoggingHandlerTest {
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
         channel.writeInbound(msg);
         verify(appender);
+
+        ByteBufHolder handledMsg = channel.readInbound();
+        assertThat(msg, is(sameInstance(handledMsg)));
+        handledMsg.release();
+        assertThat(channel.readInbound(), is(nullValue()));
     }
 
     /**
@@ -260,12 +279,12 @@ public class LoggingHandlerTest {
     /**
      * A custom EasyMock matcher that matches on Logback messages.
      */
-    private static class RegexLogMatcher implements IArgumentMatcher {
+    private static final class RegexLogMatcher implements IArgumentMatcher {
 
         private final String expected;
         private String actualMsg;
 
-        public RegexLogMatcher(String expected) {
+        RegexLogMatcher(String expected) {
             this.expected = expected;
         }
 

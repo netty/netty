@@ -16,52 +16,87 @@
 package io.netty.handler.codec.memcache.binary;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 
 /**
  * The default implementation of the {@link BinaryMemcacheRequest}.
  */
-public class DefaultBinaryMemcacheRequest extends AbstractBinaryMemcacheMessage<BinaryMemcacheRequestHeader>
-    implements BinaryMemcacheRequest {
+public class DefaultBinaryMemcacheRequest extends AbstractBinaryMemcacheMessage implements BinaryMemcacheRequest {
+
+    /**
+     * Default magic byte for a request.
+     */
+    public static final byte REQUEST_MAGIC_BYTE = (byte) 0x80;
+
+    private short reserved;
 
     /**
      * Create a new {@link DefaultBinaryMemcacheRequest} with the header only.
-     *
-     * @param header the header to use.
      */
-    public DefaultBinaryMemcacheRequest(BinaryMemcacheRequestHeader header) {
-        this(header, null, Unpooled.EMPTY_BUFFER);
+    public DefaultBinaryMemcacheRequest() {
+        this(null, null);
     }
 
     /**
      * Create a new {@link DefaultBinaryMemcacheRequest} with the header and key.
      *
-     * @param header the header to use.
      * @param key    the key to use.
      */
-    public DefaultBinaryMemcacheRequest(BinaryMemcacheRequestHeader header, String key) {
-        this(header, key, Unpooled.EMPTY_BUFFER);
+    public DefaultBinaryMemcacheRequest(String key) {
+        this(key, null);
     }
 
     /**
      * Create a new {@link DefaultBinaryMemcacheRequest} with the header and extras.
      *
-     * @param header the header to use.
      * @param extras the extras to use.
      */
-    public DefaultBinaryMemcacheRequest(BinaryMemcacheRequestHeader header, ByteBuf extras) {
-        this(header, null, extras);
+    public DefaultBinaryMemcacheRequest(ByteBuf extras) {
+        this(null, extras);
     }
 
     /**
      * Create a new {@link DefaultBinaryMemcacheRequest} with the header only.
      *
-     * @param header the header to use.
      * @param key    the key to use.
      * @param extras the extras to use.
      */
-    public DefaultBinaryMemcacheRequest(BinaryMemcacheRequestHeader header, String key, ByteBuf extras) {
-        super(header, key, extras);
+    public DefaultBinaryMemcacheRequest(String key, ByteBuf extras) {
+        super(key, extras);
+        setMagic(REQUEST_MAGIC_BYTE);
     }
 
+    @Override
+    public short reserved() {
+        return reserved;
+    }
+
+    @Override
+    public BinaryMemcacheRequest setReserved(short reserved) {
+        this.reserved = reserved;
+        return this;
+    }
+
+    @Override
+    public BinaryMemcacheRequest retain() {
+        super.retain();
+        return this;
+    }
+
+    @Override
+    public BinaryMemcacheRequest retain(int increment) {
+        super.retain(increment);
+        return this;
+    }
+
+    @Override
+    public BinaryMemcacheRequest touch() {
+        super.touch();
+        return this;
+    }
+
+    @Override
+    public BinaryMemcacheRequest touch(Object hint) {
+        super.touch(hint);
+        return this;
+    }
 }

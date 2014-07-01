@@ -65,6 +65,7 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
     private final String websocketPath;
     private final String subprotocols;
     private final boolean allowExtensions;
+    private final int maxFramePayloadLength;
 
     public WebSocketServerProtocolHandler(String websocketPath) {
         this(websocketPath, null, false);
@@ -75,9 +76,15 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
     }
 
     public WebSocketServerProtocolHandler(String websocketPath, String subprotocols, boolean allowExtensions) {
+        this(websocketPath, subprotocols, allowExtensions, 65536);
+    }
+
+    public WebSocketServerProtocolHandler(String websocketPath, String subprotocols,
+            boolean allowExtensions, int maxFrameSize) {
         this.websocketPath = websocketPath;
         this.subprotocols = subprotocols;
         this.allowExtensions = allowExtensions;
+        maxFramePayloadLength = maxFrameSize;
     }
 
     @Override
@@ -86,7 +93,8 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
         if (cp.get(WebSocketServerProtocolHandshakeHandler.class) == null) {
             // Add the WebSocketHandshakeHandler before this one.
             ctx.pipeline().addBefore(ctx.name(), WebSocketServerProtocolHandshakeHandler.class.getName(),
-                    new WebSocketServerProtocolHandshakeHandler(websocketPath, subprotocols, allowExtensions));
+                    new WebSocketServerProtocolHandshakeHandler(websocketPath, subprotocols,
+                            allowExtensions, maxFramePayloadLength));
         }
     }
 
@@ -94,8 +102,12 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
     protected void decode(ChannelHandlerContext ctx, WebSocketFrame frame, List<Object> out) throws Exception {
         if (frame instanceof CloseWebSocketFrame) {
             WebSocketServerHandshaker handshaker = getHandshaker(ctx);
-            frame.retain();
-            handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame);
+            if (handshaker != null) {
+                frame.retain();
+                handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame);
+            } else {
+                ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
+            }
             return;
         }
         super.decode(ctx, frame, out);

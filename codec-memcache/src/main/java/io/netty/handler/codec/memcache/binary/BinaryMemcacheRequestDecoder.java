@@ -16,12 +16,13 @@
 package io.netty.handler.codec.memcache.binary;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 
 /**
  * The decoder part which takes care of decoding the request-specific headers.
  */
 public class BinaryMemcacheRequestDecoder
-    extends BinaryMemcacheDecoder<BinaryMemcacheRequest, BinaryMemcacheRequestHeader> {
+    extends AbstractBinaryMemcacheDecoder<BinaryMemcacheRequest> {
 
     public BinaryMemcacheRequestDecoder() {
         this(DEFAULT_MAX_CHUNK_SIZE);
@@ -32,8 +33,8 @@ public class BinaryMemcacheRequestDecoder
     }
 
     @Override
-    protected BinaryMemcacheRequestHeader decodeHeader(ByteBuf in) {
-        BinaryMemcacheRequestHeader header = new DefaultBinaryMemcacheRequestHeader();
+    protected BinaryMemcacheRequest decodeHeader(ByteBuf in) {
+        BinaryMemcacheRequest header = new DefaultBinaryMemcacheRequest();
         header.setMagic(in.readByte());
         header.setOpcode(in.readByte());
         header.setKeyLength(in.readShort());
@@ -42,13 +43,12 @@ public class BinaryMemcacheRequestDecoder
         header.setReserved(in.readShort());
         header.setTotalBodyLength(in.readInt());
         header.setOpaque(in.readInt());
-        header.setCAS(in.readLong());
+        header.setCas(in.readLong());
         return header;
     }
 
     @Override
-    protected BinaryMemcacheRequest buildMessage(BinaryMemcacheRequestHeader header, ByteBuf extras, String key) {
-        return new DefaultBinaryMemcacheRequest(header, key, extras);
+    protected BinaryMemcacheRequest buildInvalidMessage() {
+        return new DefaultBinaryMemcacheRequest("", Unpooled.EMPTY_BUFFER);
     }
-
 }

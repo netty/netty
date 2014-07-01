@@ -47,34 +47,34 @@ public final class ServerCookieEncoder {
             throw new NullPointerException("cookie");
         }
 
-        StringBuilder buf = buffer.get();
+        StringBuilder buf = stringBuilder();
 
-        add(buf, cookie.getName(), cookie.getValue());
+        add(buf, cookie.name(), cookie.value());
 
-        if (cookie.getMaxAge() != Long.MIN_VALUE) {
-            if (cookie.getVersion() == 0) {
+        if (cookie.maxAge() != Long.MIN_VALUE) {
+            if (cookie.version() == 0) {
                 addUnquoted(buf, CookieHeaderNames.EXPIRES,
                         HttpHeaderDateFormat.get().format(
                                 new Date(System.currentTimeMillis() +
-                                         cookie.getMaxAge() * 1000L)));
+                                         cookie.maxAge() * 1000L)));
             } else {
-                add(buf, CookieHeaderNames.MAX_AGE, cookie.getMaxAge());
+                add(buf, CookieHeaderNames.MAX_AGE, cookie.maxAge());
             }
         }
 
-        if (cookie.getPath() != null) {
-            if (cookie.getVersion() > 0) {
-                add(buf, CookieHeaderNames.PATH, cookie.getPath());
+        if (cookie.path() != null) {
+            if (cookie.version() > 0) {
+                add(buf, CookieHeaderNames.PATH, cookie.path());
             } else {
-                addUnquoted(buf, CookieHeaderNames.PATH, cookie.getPath());
+                addUnquoted(buf, CookieHeaderNames.PATH, cookie.path());
             }
         }
 
-        if (cookie.getDomain() != null) {
-            if (cookie.getVersion() > 0) {
-                add(buf, CookieHeaderNames.DOMAIN, cookie.getDomain());
+        if (cookie.domain() != null) {
+            if (cookie.version() > 0) {
+                add(buf, CookieHeaderNames.DOMAIN, cookie.domain());
             } else {
-                addUnquoted(buf, CookieHeaderNames.DOMAIN, cookie.getDomain());
+                addUnquoted(buf, CookieHeaderNames.DOMAIN, cookie.domain());
             }
         }
         if (cookie.isSecure()) {
@@ -87,22 +87,22 @@ public final class ServerCookieEncoder {
             buf.append((char) HttpConstants.SEMICOLON);
             buf.append((char) HttpConstants.SP);
         }
-        if (cookie.getVersion() >= 1) {
-            if (cookie.getComment() != null) {
-                add(buf, CookieHeaderNames.COMMENT, cookie.getComment());
+        if (cookie.version() >= 1) {
+            if (cookie.comment() != null) {
+                add(buf, CookieHeaderNames.COMMENT, cookie.comment());
             }
 
             add(buf, CookieHeaderNames.VERSION, 1);
 
-            if (cookie.getCommentUrl() != null) {
-                addQuoted(buf, CookieHeaderNames.COMMENTURL, cookie.getCommentUrl());
+            if (cookie.commentUrl() != null) {
+                addQuoted(buf, CookieHeaderNames.COMMENTURL, cookie.commentUrl());
             }
 
-            if (!cookie.getPorts().isEmpty()) {
+            if (!cookie.ports().isEmpty()) {
                 buf.append(CookieHeaderNames.PORT);
                 buf.append((char) HttpConstants.EQUALS);
                 buf.append((char) HttpConstants.DOUBLE_QUOTE);
-                for (int port: cookie.getPorts()) {
+                for (int port: cookie.ports()) {
                     buf.append(port);
                     buf.append((char) HttpConstants.COMMA);
                 }

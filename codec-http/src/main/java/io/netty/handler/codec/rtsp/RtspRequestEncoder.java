@@ -17,7 +17,6 @@ package io.netty.handler.codec.rtsp;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.util.CharsetUtil;
 
@@ -37,13 +36,12 @@ public class RtspRequestEncoder extends RtspObjectEncoder<HttpRequest> {
     }
 
     @Override
-    protected void encodeInitialLine(ByteBuf buf, HttpRequest request)
-            throws Exception {
-        HttpHeaders.encodeAscii(request.getMethod().toString(), buf);
+    protected void encodeInitialLine(ByteBuf buf, HttpRequest request) throws Exception {
+        buf.writeBytes(request.method().toString().getBytes(CharsetUtil.US_ASCII));
         buf.writeByte(SP);
-        buf.writeBytes(request.getUri().getBytes(CharsetUtil.UTF_8));
+        buf.writeBytes(request.uri().getBytes(CharsetUtil.UTF_8));
         buf.writeByte(SP);
-        HttpHeaders.encodeAscii(request.getProtocolVersion().toString(), buf);
+        buf.writeBytes(request.protocolVersion().toString().getBytes(CharsetUtil.US_ASCII));
         buf.writeBytes(CRLF);
     }
 }

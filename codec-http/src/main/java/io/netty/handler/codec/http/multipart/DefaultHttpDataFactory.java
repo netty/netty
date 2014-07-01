@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.http.multipart;
 
+import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.util.internal.PlatformDependent;
 
@@ -22,7 +23,7 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ConcurrentMap;
+import java.util.Map;
 
 /**
  * Default factory giving Attribute and FileUpload according to constructor
@@ -33,6 +34,7 @@ import java.util.concurrent.ConcurrentMap;
  * according to the constructor.
  */
 public class DefaultHttpDataFactory implements HttpDataFactory {
+
     /**
      * Proposed default MINSIZE as 16 KB.
      */
@@ -50,11 +52,12 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
 
     private long maxSize = MAXSIZE;
 
+    private Charset charset = HttpConstants.DEFAULT_CHARSET;
+
     /**
-     * Keep all HttpDatas until cleanAllHttpDatas() is called.
+     * Keep all HttpDatas until cleanAllHttpData() is called.
      */
-    private final ConcurrentMap<HttpRequest, List<HttpData>> requestFileDeleteMap =
-            PlatformDependent.newConcurrentHashMap();
+    private final Map<HttpRequest, List<HttpData>> requestFileDeleteMap = PlatformDependent.newConcurrentHashMap();
 
     /**
      * HttpData will be in memory if less than default size (16KB).
@@ -66,6 +69,11 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
         minSize = MINSIZE;
     }
 
+    public DefaultHttpDataFactory(Charset charset) {
+        this();
+        this.charset = charset;
+    }
+
     /**
      * HttpData will be always on Disk if useDisk is True, else always in Memory if False
      */
@@ -74,6 +82,10 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
         checkSize = false;
     }
 
+    public DefaultHttpDataFactory(boolean useDisk, Charset charset) {
+        this(useDisk);
+        this.charset = charset;
+    }
     /**
      * HttpData will be on Disk if the size of the file is greater than minSize, else it
      * will be in memory. The type will be Mixed.
@@ -84,8 +96,14 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
         this.minSize = minSize;
     }
 
-    public void setMaxLimit(long max) {
-        this.maxSize = max;
+    public DefaultHttpDataFactory(long minSize, Charset charset) {
+        this(minSize);
+        this.charset = charset;
+    }
+
+    @Override
+    public void setMaxLimit(long maxSize) {
+        this.maxSize = maxSize;
     }
 
     /**
@@ -103,14 +121,14 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     @Override
     public Attribute createAttribute(HttpRequest request, String name) {
         if (useDisk) {
-            Attribute attribute = new DiskAttribute(name);
+            Attribute attribute = new DiskAttribute(name, charset);
             attribute.setMaxSize(maxSize);
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.add(attribute);
             return attribute;
         }
         if (checkSize) {
-            Attribute attribute = new MixedAttribute(name, minSize);
+            Attribute attribute = new MixedAttribute(name, minSize, charset);
             attribute.setMaxSize(maxSize);
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.add(attribute);
@@ -123,9 +141,8 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
 
     /**
      * Utility method
-     * @param data
      */
-    private void checkHttpDataSize(HttpData data) {
+    private static void checkHttpDataSize(HttpData data) {
         try {
             data.checkSize(data.length());
         } catch (IOException e) {
@@ -138,11 +155,11 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
         if (useDisk) {
             Attribute attribute;
             try {
-                attribute = new DiskAttribute(name, value);
+                attribute = new DiskAttribute(name, value, charset);
                 attribute.setMaxSize(maxSize);
             } catch (IOException e) {
                 // revert to Mixed mode
-                attribute = new MixedAttribute(name, value, minSize);
+                attribute = new MixedAttribute(name, value, minSize, charset);
                 attribute.setMaxSize(maxSize);
             }
             checkHttpDataSize(attribute);
@@ -151,7 +168,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
             return attribute;
         }
         if (checkSize) {
-            Attribute attribute = new MixedAttribute(name, value, minSize);
+            Attribute attribute = new MixedAttribute(name, value, minSize, charset);
             attribute.setMaxSize(maxSize);
             checkHttpDataSize(attribute);
             List<HttpData> fileToDelete = getList(request);
@@ -159,7 +176,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
             return attribute;
         }
         try {
-            MemoryAttribute attribute = new MemoryAttribute(name, value);
+            MemoryAttribute attribute = new MemoryAttribute(name, value, charset);
             attribute.setMaxSize(maxSize);
             checkHttpDataSize(attribute);
             return attribute;
@@ -206,7 +223,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     }
 
     @Override
-    public void cleanRequestHttpDatas(HttpRequest request) {
+    public void cleanRequestHttpData(HttpRequest request) {
         List<HttpData> fileToDelete = requestFileDeleteMap.remove(request);
         if (fileToDelete != null) {
             for (HttpData data: fileToDelete) {
@@ -217,7 +234,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     }
 
     @Override
-    public void cleanAllHttpDatas() {
+    public void cleanAllHttpData() {
         for (HttpRequest request : requestFileDeleteMap.keySet()) {
             List<HttpData> fileToDelete = requestFileDeleteMap.get(request);
             if (fileToDelete != null) {

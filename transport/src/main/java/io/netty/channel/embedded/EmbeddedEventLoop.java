@@ -16,9 +16,12 @@
 package io.netty.channel.embedded;
 
 import io.netty.channel.AbstractEventLoop;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelHandlerInvoker;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.DefaultChannelPromise;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 
@@ -32,10 +35,6 @@ import static io.netty.channel.ChannelHandlerInvokerUtil.*;
 final class EmbeddedEventLoop extends AbstractEventLoop implements ChannelHandlerInvoker {
 
     private final Queue<Runnable> tasks = new ArrayDeque<Runnable>(2);
-
-    protected EmbeddedEventLoop() {
-        super(null);
-    }
 
     @Override
     public void execute(Runnable command) {
@@ -93,6 +92,17 @@ final class EmbeddedEventLoop extends AbstractEventLoop implements ChannelHandle
     }
 
     @Override
+    public ChannelFuture register(Channel channel) {
+        return register(channel, new DefaultChannelPromise(channel, this));
+    }
+
+    @Override
+    public ChannelFuture register(Channel channel, ChannelPromise promise) {
+        channel.unsafe().register(this, promise);
+        return promise;
+    }
+
+    @Override
     public boolean inEventLoop() {
         return true;
     }
@@ -115,6 +125,11 @@ final class EmbeddedEventLoop extends AbstractEventLoop implements ChannelHandle
     @Override
     public void invokeChannelRegistered(ChannelHandlerContext ctx) {
         invokeChannelRegisteredNow(ctx);
+    }
+
+    @Override
+    public void invokeChannelUnregistered(ChannelHandlerContext ctx) {
+        invokeChannelUnregisteredNow(ctx);
     }
 
     @Override
@@ -172,6 +187,11 @@ final class EmbeddedEventLoop extends AbstractEventLoop implements ChannelHandle
     @Override
     public void invokeClose(ChannelHandlerContext ctx, ChannelPromise promise) {
         invokeCloseNow(ctx, promise);
+    }
+
+    @Override
+    public void invokeDeregister(ChannelHandlerContext ctx, ChannelPromise promise) {
+        invokeDeregisterNow(ctx, promise);
     }
 
     @Override

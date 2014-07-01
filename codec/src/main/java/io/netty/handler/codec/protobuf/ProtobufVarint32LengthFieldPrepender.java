@@ -47,7 +47,7 @@ public class ProtobufVarint32LengthFieldPrepender extends MessageToByteEncoder<B
         out.ensureWritable(headerLen + bodyLen);
 
         CodedOutputStream headerOut =
-                CodedOutputStream.newInstance(new ByteBufOutputStream(out));
+                CodedOutputStream.newInstance(new ByteBufOutputStream(out), headerLen);
         headerOut.writeRawVarint32(bodyLen);
         headerOut.flush();
 

@@ -27,7 +27,7 @@ public enum SocksProtocolVersion {
         this.b = b;
     }
 
-    public static SocksProtocolVersion fromByte(byte b) {
+    public static SocksProtocolVersion valueOf(byte b) {
         for (SocksProtocolVersion code : values()) {
             if (code.b == b) {
                 return code;

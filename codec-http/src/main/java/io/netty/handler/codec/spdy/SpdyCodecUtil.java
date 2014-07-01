@@ -285,11 +285,11 @@ final class SpdyCodecUtil {
     /**
      * Validate a SPDY header name.
      */
-    static void validateHeaderName(String name) {
+    static void validateHeaderName(CharSequence name) {
         if (name == null) {
             throw new NullPointerException("name");
         }
-        if (name.isEmpty()) {
+        if (name.length() == 0) {
             throw new IllegalArgumentException(
                     "name cannot be length zero");
         }
@@ -315,7 +315,7 @@ final class SpdyCodecUtil {
     /**
      * Validate a SPDY header value. Does not validate max length.
      */
-    static void validateHeaderValue(String value) {
+    static void validateHeaderValue(CharSequence value) {
         if (value == null) {
             throw new NullPointerException("value");
         }

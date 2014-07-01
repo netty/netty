@@ -18,14 +18,31 @@ package io.netty.handler.codec.memcache.binary;
 /**
  * Represents a full {@link BinaryMemcacheRequest}, which contains the header and optional key and extras.
  */
-public interface BinaryMemcacheRequest extends BinaryMemcacheMessage<BinaryMemcacheRequestHeader> {
+public interface BinaryMemcacheRequest extends BinaryMemcacheMessage {
 
     /**
-     * Returns the {@link BinaryMemcacheRequestHeader} which contains the full required request header.
+     * Returns the reserved field value.
      *
-     * @return the required request header.
+     * @return the reserved field value.
      */
-    @Override
-    BinaryMemcacheRequestHeader getHeader();
+    short reserved();
 
+    /**
+     * Sets the reserved field value.
+     *
+     * @param reserved the reserved field value.
+     */
+    BinaryMemcacheRequest setReserved(short reserved);
+
+    @Override
+    BinaryMemcacheRequest retain();
+
+    @Override
+    BinaryMemcacheRequest retain(int increment);
+
+    @Override
+    BinaryMemcacheRequest touch();
+
+    @Override
+    BinaryMemcacheRequest touch(Object hint);
 }

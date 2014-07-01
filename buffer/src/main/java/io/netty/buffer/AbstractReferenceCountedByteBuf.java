@@ -26,23 +26,15 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
  */
 public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
 
-    private static final AtomicIntegerFieldUpdater<AbstractReferenceCountedByteBuf> refCntUpdater =
-            AtomicIntegerFieldUpdater.newUpdater(AbstractReferenceCountedByteBuf.class, "refCnt");
-
-    private static final long REFCNT_FIELD_OFFSET;
+    private static final AtomicIntegerFieldUpdater<AbstractReferenceCountedByteBuf> refCntUpdater;
 
     static {
-        long refCntFieldOffset = -1;
-        try {
-            if (PlatformDependent.hasUnsafe()) {
-                refCntFieldOffset = PlatformDependent.objectFieldOffset(
-                        AbstractReferenceCountedByteBuf.class.getDeclaredField("refCnt"));
-            }
-        } catch (Throwable t) {
-            // Ignored
+        AtomicIntegerFieldUpdater<AbstractReferenceCountedByteBuf> updater =
+                PlatformDependent.newAtomicIntegerFieldUpdater(AbstractReferenceCountedByteBuf.class, "refCnt");
+        if (updater == null) {
+            updater = AtomicIntegerFieldUpdater.newUpdater(AbstractReferenceCountedByteBuf.class, "refCnt");
         }
-
-        REFCNT_FIELD_OFFSET = refCntFieldOffset;
+        refCntUpdater = updater;
     }
 
     @SuppressWarnings("FieldMayBeFinal")
@@ -54,12 +46,7 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
 
     @Override
     public final int refCnt() {
-        if (REFCNT_FIELD_OFFSET >= 0) {
-            // Try to do non-volatile read for performance.
-            return PlatformDependent.getInt(this, REFCNT_FIELD_OFFSET);
-        } else {
-            return refCnt;
-        }
+        return refCnt;
     }
 
     /**
@@ -104,6 +91,16 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
                 break;
             }
         }
+        return this;
+    }
+
+    @Override
+    public ByteBuf touch() {
+        return this;
+    }
+
+    @Override
+    public ByteBuf touch(Object hint) {
         return this;
     }
 

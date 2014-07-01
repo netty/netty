@@ -17,31 +17,27 @@ package io.netty.util.concurrent;
 
 import io.netty.util.Signal;
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.util.ArrayDeque;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.concurrent.TimeUnit.*;
 
-
 public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
-    private static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(DefaultPromise.class);
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultPromise.class);
+    private static final InternalLogger rejectedExecutionLogger =
+            InternalLoggerFactory.getInstance(DefaultPromise.class.getName() + ".rejectedExecution");
 
     private static final int MAX_LISTENER_STACK_DEPTH = 8;
-    private static final ThreadLocal<Integer> LISTENER_STACK_DEPTH = new ThreadLocal<Integer>() {
-        @Override
-        protected Integer initialValue() {
-            return 0;
-        }
-    };
-    private static final Signal SUCCESS = Signal.valueOf(DefaultPromise.class.getName() + ".SUCCESS");
-    private static final Signal UNCANCELLABLE = Signal.valueOf(DefaultPromise.class.getName() + ".UNCANCELLABLE");
+    private static final Signal SUCCESS = Signal.valueOf(DefaultPromise.class, "SUCCESS");
+    private static final Signal UNCANCELLABLE = Signal.valueOf(DefaultPromise.class, "UNCANCELLABLE");
     private static final CauseHolder CANCELLATION_CAUSE_HOLDER = new CauseHolder(new CancellationException());
 
     static {
@@ -51,7 +47,19 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     private final EventExecutor executor;
 
     private volatile Object result;
-    private Object listeners; // Can be ChannelFutureListener or DefaultFutureListeners
+
+    /**
+     * One or more listeners. Can be a {@link GenericFutureListener} or a {@link DefaultFutureListeners}.
+     * If {@code null}, it means either 1) no listeners were added yet or 2) all listeners were notified.
+     */
+    private Object listeners;
+
+    /**
+     * The list of the listeners that were added after the promise is done.  Initially {@code null} and lazily
+     * instantiated when the late listener is scheduled to be notified later.  Also used as a cached {@link Runnable}
+     * that performs the notification of the listeners it contains.
+     */
+    private LateListeners lateListeners;
 
     private short waiters;
 
@@ -127,7 +135,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         }
 
         if (isDone()) {
-            notifyListener(executor(), this, listener);
+            notifyLateListener(listener);
             return this;
         }
 
@@ -149,7 +157,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             }
         }
 
-        notifyListener(executor(), this, listener);
+        notifyLateListener(listener);
         return this;
     }
 
@@ -278,6 +286,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
                 try {
                     wait();
                 } catch (InterruptedException e) {
+                    // Interrupted while waiting.
                     interrupted = true;
                 } finally {
                     decWaiters();
@@ -297,6 +306,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         try {
             return await0(unit.toNanos(timeout), false);
         } catch (InterruptedException e) {
+            // Should not be raised at all.
             throw new InternalError();
         }
     }
@@ -306,6 +316,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         try {
             return await0(MILLISECONDS.toNanos(timeoutMillis), false);
         } catch (InterruptedException e) {
+            // Should not be raised at all.
             throw new InternalError();
         }
     }
@@ -323,7 +334,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             throw new InterruptedException(toString());
         }
 
-        long startTime = timeoutNanos <= 0 ? 0 : System.nanoTime();
+        long startTime = System.nanoTime();
         long waitTime = timeoutNanos;
         boolean interrupted = false;
 
@@ -445,14 +456,14 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     public boolean setUncancellable() {
         Object result = this.result;
         if (isDone0(result)) {
-            return false;
+            return !isCancelled0(result);
         }
 
         synchronized (this) {
             // Allow only once.
             result = this.result;
             if (isDone0(result)) {
-                return false;
+                return !isCancelled0(result);
             }
 
             this.result = UNCANCELLABLE;
@@ -538,13 +549,12 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             return;
         }
 
-        this.listeners = null;
-
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
-            final Integer stackDepth = LISTENER_STACK_DEPTH.get();
+            final InternalThreadLocalMap threadLocals = InternalThreadLocalMap.get();
+            final int stackDepth = threadLocals.futureListenerStackDepth();
             if (stackDepth < MAX_LISTENER_STACK_DEPTH) {
-                LISTENER_STACK_DEPTH.set(stackDepth + 1);
+                threadLocals.setFutureListenerStackDepth(stackDepth + 1);
                 try {
                     if (listeners instanceof DefaultFutureListeners) {
                         notifyListeners0(this, (DefaultFutureListeners) listeners);
@@ -555,34 +565,33 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
                         notifyListener0(this, l);
                     }
                 } finally {
-                    LISTENER_STACK_DEPTH.set(stackDepth);
+                    this.listeners = null;
+                    threadLocals.setFutureListenerStackDepth(stackDepth);
                 }
                 return;
             }
         }
 
-        try {
-            if (listeners instanceof DefaultFutureListeners) {
-                final DefaultFutureListeners dfl = (DefaultFutureListeners) listeners;
-                executor.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        notifyListeners0(DefaultPromise.this, dfl);
-                    }
-                });
-            } else {
-                @SuppressWarnings("unchecked")
-                final GenericFutureListener<? extends Future<V>> l =
-                        (GenericFutureListener<? extends Future<V>>) listeners;
-                executor.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        notifyListener0(DefaultPromise.this, l);
-                    }
-                });
-            }
-        } catch (Throwable t) {
-            logger.error("Failed to notify listener(s). Event loop shut down?", t);
+        if (listeners instanceof DefaultFutureListeners) {
+            final DefaultFutureListeners dfl = (DefaultFutureListeners) listeners;
+            execute(executor, new Runnable() {
+                @Override
+                public void run() {
+                    notifyListeners0(DefaultPromise.this, dfl);
+                    DefaultPromise.this.listeners = null;
+                }
+            });
+        } else {
+            @SuppressWarnings("unchecked")
+            final GenericFutureListener<? extends Future<V>> l =
+                    (GenericFutureListener<? extends Future<V>>) listeners;
+            execute(executor, new Runnable() {
+                @Override
+                public void run() {
+                    notifyListener0(DefaultPromise.this, l);
+                    DefaultPromise.this.listeners = null;
+                }
+            });
         }
     }
 
@@ -594,31 +603,73 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         }
     }
 
+    /**
+     * Notifies the specified listener which were added after this promise is already done.
+     * This method ensures that the specified listener is not notified until {@link #listeners} becomes {@code null}
+     * to avoid the case where the late listeners are notified even before the early listeners are notified.
+     */
+    private void notifyLateListener(final GenericFutureListener<?> l) {
+        final EventExecutor executor = executor();
+        if (executor.inEventLoop()) {
+            if (listeners == null && lateListeners == null) {
+                final InternalThreadLocalMap threadLocals = InternalThreadLocalMap.get();
+                final int stackDepth = threadLocals.futureListenerStackDepth();
+                if (stackDepth < MAX_LISTENER_STACK_DEPTH) {
+                    threadLocals.setFutureListenerStackDepth(stackDepth + 1);
+                    try {
+                        notifyListener0(this, l);
+                    } finally {
+                        threadLocals.setFutureListenerStackDepth(stackDepth);
+                    }
+                    return;
+                }
+            } else {
+                LateListeners lateListeners = this.lateListeners;
+                if (lateListeners == null) {
+                    this.lateListeners = lateListeners = new LateListeners();
+                }
+                lateListeners.add(l);
+                execute(executor, lateListeners);
+                return;
+            }
+        }
+
+        // Add the late listener to lateListeners in the executor thread for thread safety.
+        // We could just make LateListeners extend ConcurrentLinkedQueue, but it's an overkill considering
+        // that most asynchronous applications won't execute this code path.
+        execute(executor, new LateListenerNotifier(l));
+    }
+
     protected static void notifyListener(
             final EventExecutor eventExecutor, final Future<?> future, final GenericFutureListener<?> l) {
 
         if (eventExecutor.inEventLoop()) {
-            final Integer stackDepth = LISTENER_STACK_DEPTH.get();
+            final InternalThreadLocalMap threadLocals = InternalThreadLocalMap.get();
+            final int stackDepth = threadLocals.futureListenerStackDepth();
             if (stackDepth < MAX_LISTENER_STACK_DEPTH) {
-                LISTENER_STACK_DEPTH.set(stackDepth + 1);
+                threadLocals.setFutureListenerStackDepth(stackDepth + 1);
                 try {
                     notifyListener0(future, l);
                 } finally {
-                    LISTENER_STACK_DEPTH.set(stackDepth);
+                    threadLocals.setFutureListenerStackDepth(stackDepth);
                 }
                 return;
             }
         }
 
+        execute(eventExecutor, new Runnable() {
+            @Override
+            public void run() {
+                notifyListener0(future, l);
+            }
+        });
+    }
+
+    private static void execute(EventExecutor executor, Runnable task) {
         try {
-            eventExecutor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    notifyListener0(future, l);
-                }
-            });
+            executor.execute(task);
         } catch (Throwable t) {
-            logger.error("Failed to notify a listener. Event loop shut down?", t);
+            rejectedExecutionLogger.error("Failed to submit a listener notification task. Event loop shut down?", t);
         }
     }
 
@@ -697,28 +748,24 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
                         self, (GenericProgressiveFutureListener<ProgressiveFuture<V>>) listeners, progress, total);
             }
         } else {
-            try {
-                if (listeners instanceof GenericProgressiveFutureListener[]) {
-                    final GenericProgressiveFutureListener<?>[] array =
-                            (GenericProgressiveFutureListener<?>[]) listeners;
-                    executor.execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            notifyProgressiveListeners0(self, array, progress, total);
-                        }
-                    });
-                } else {
-                    final GenericProgressiveFutureListener<ProgressiveFuture<V>> l =
-                            (GenericProgressiveFutureListener<ProgressiveFuture<V>>) listeners;
-                    executor.execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            notifyProgressiveListener0(self, l, progress, total);
-                        }
-                    });
-                }
-            } catch (Throwable t) {
-                logger.error("Failed to notify listener(s). Event loop shut down?", t);
+            if (listeners instanceof GenericProgressiveFutureListener[]) {
+                final GenericProgressiveFutureListener<?>[] array =
+                        (GenericProgressiveFutureListener<?>[]) listeners;
+                execute(executor, new Runnable() {
+                    @Override
+                    public void run() {
+                        notifyProgressiveListeners0(self, array, progress, total);
+                    }
+                });
+            } else {
+                final GenericProgressiveFutureListener<ProgressiveFuture<V>> l =
+                        (GenericProgressiveFutureListener<ProgressiveFuture<V>>) listeners;
+                execute(executor, new Runnable() {
+                    @Override
+                    public void run() {
+                        notifyProgressiveListener0(self, l, progress, total);
+                    }
+                });
             }
         }
     }
@@ -776,5 +823,53 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             buf.append("(incomplete)");
         }
         return buf;
+    }
+
+    private final class LateListeners extends ArrayDeque<GenericFutureListener<?>> implements Runnable {
+
+        private static final long serialVersionUID = -687137418080392244L;
+
+        LateListeners() {
+            super(2);
+        }
+
+        @Override
+        public void run() {
+            if (listeners == null) {
+                for (;;) {
+                    GenericFutureListener<?> l = poll();
+                    if (l == null) {
+                        break;
+                    }
+                    notifyListener0(DefaultPromise.this, l);
+                }
+            } else {
+                // Reschedule until the initial notification is done to avoid the race condition
+                // where the notification is made in an incorrect order.
+                execute(executor(), this);
+            }
+        }
+    }
+
+    private final class LateListenerNotifier implements Runnable {
+        private GenericFutureListener<?> l;
+
+        LateListenerNotifier(GenericFutureListener<?> l) {
+            this.l = l;
+        }
+
+        @Override
+        public void run() {
+            LateListeners lateListeners = DefaultPromise.this.lateListeners;
+            if (l != null) {
+                if (lateListeners == null) {
+                    DefaultPromise.this.lateListeners = lateListeners = new LateListeners();
+                }
+                lateListeners.add(l);
+                l = null;
+            }
+
+            lateListeners.run();
+        }
     }
 }

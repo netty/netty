@@ -18,11 +18,10 @@ package io.netty.testsuite.transport.socket;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerAdapter;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
 import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-import org.junit.Assume;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -32,14 +31,17 @@ import java.net.Socket;
 
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
+import static org.junit.Assume.*;
 
 public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
 
-    private static final String BAD_HOST = SystemPropertyUtil.get("io.netty.testsuite.badHost", "255.255.255.0");
+    private static final String BAD_HOST = SystemPropertyUtil.get("io.netty.testsuite.badHost", "netty.io");
+    private static final int BAD_PORT = SystemPropertyUtil.getInt("io.netty.testsuite.badPort", 65535);
 
     static {
-        InternalLoggerFactory.getInstance(SocketConnectionAttemptTest.class).debug(
-                "-Dio.netty.testsuite.badHost: {}", BAD_HOST);
+        InternalLogger logger = InternalLoggerFactory.getInstance(SocketConnectionAttemptTest.class);
+        logger.debug("-Dio.netty.testsuite.badHost: {}", BAD_HOST);
+        logger.debug("-Dio.netty.testsuite.badPort: {}", BAD_PORT);
     }
 
     @Test(timeout = 30000)
@@ -48,9 +50,8 @@ public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
     }
 
     public void testConnectTimeout(Bootstrap cb) throws Throwable {
-        TestHandler h = new TestHandler();
-        cb.handler(h).option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 2000);
-        ChannelFuture future = cb.connect(BAD_HOST, 8080);
+        cb.handler(new ChannelHandlerAdapter()).option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 2000);
+        ChannelFuture future = cb.connect(BAD_HOST, BAD_PORT);
         try {
             assertThat(future.await(3000), is(true));
         } finally {
@@ -62,12 +63,12 @@ public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
     public void testConnectCancellation() throws Throwable {
         // Check if the test can be executed or should be skipped because of no network/internet connection
         // See https://github.com/netty/netty/issues/1474
-        boolean noRoute = false;
+        boolean badHostTimedOut = true;
         Socket socket = new Socket();
         try {
-            socket.connect(new InetSocketAddress(BAD_HOST, 8080), 10);
+            socket.connect(new InetSocketAddress(BAD_HOST, BAD_PORT), 10);
         } catch (ConnectException e) {
-            noRoute = true;
+            badHostTimedOut = false;
             // is thrown for no route to host when using Socket connect
         } catch (Exception e) {
             // ignore
@@ -79,17 +80,23 @@ public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
             }
         }
 
-        Assume.assumeFalse(
-                "No route to host, so skip the test as it may be because of no network connection ", noRoute);
+        assumeThat("The connection attempt to " + BAD_HOST + " does not time out.", badHostTimedOut, is(true));
+
         run();
     }
 
     public void testConnectCancellation(Bootstrap cb) throws Throwable {
-        TestHandler h = new TestHandler();
-        cb.handler(h).option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 4000);
-        ChannelFuture future = cb.connect(BAD_HOST, 8080);
+        cb.handler(new ChannelHandlerAdapter()).option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 4000);
+        ChannelFuture future = cb.connect(BAD_HOST, BAD_PORT);
         try {
-            assertThat(future.await(1000), is(false));
+            if (future.await(1000)) {
+                if (future.isSuccess()) {
+                    fail("A connection attempt to " + BAD_HOST + " must not succeed.");
+                } else {
+                    throw future.cause();
+                }
+            }
+
             if (future.cancel(true)) {
                 assertThat(future.channel().closeFuture().await(500), is(true));
                 assertThat(future.isCancelled(), is(true));
@@ -98,13 +105,6 @@ public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
             }
         } finally {
             future.channel().close();
-        }
-    }
-
-    private static class TestHandler extends ChannelHandlerAdapter {
-        @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-            cause.printStackTrace();
         }
     }
 }

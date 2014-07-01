@@ -22,6 +22,6 @@ final class EmbeddedSocketAddress extends SocketAddress {
 
     @Override
     public String toString() {
-        return "embeded";
+        return "embedded";
     }
 }

@@ -26,11 +26,6 @@ import java.util.List;
  * Before returning SocksResponse decoder removes itself from pipeline.
  */
 public class SocksInitResponseDecoder extends ReplayingDecoder<SocksInitResponseDecoder.State> {
-    private static final String name = "SOCKS_INIT_RESPONSE_DECODER";
-
-    public static String getName() {
-        return name;
-    }
 
     private SocksProtocolVersion version;
     private SocksAuthScheme authScheme;
@@ -45,14 +40,14 @@ public class SocksInitResponseDecoder extends ReplayingDecoder<SocksInitResponse
     protected void decode(ChannelHandlerContext ctx, ByteBuf byteBuf, List<Object> out) throws Exception {
         switch (state()) {
             case CHECK_PROTOCOL_VERSION: {
-                version = SocksProtocolVersion.fromByte(byteBuf.readByte());
+                version = SocksProtocolVersion.valueOf(byteBuf.readByte());
                 if (version != SocksProtocolVersion.SOCKS5) {
                     break;
                 }
                 checkpoint(State.READ_PREFFERED_AUTH_TYPE);
             }
             case READ_PREFFERED_AUTH_TYPE: {
-                authScheme = SocksAuthScheme.fromByte(byteBuf.readByte());
+                authScheme = SocksAuthScheme.valueOf(byteBuf.readByte());
                 msg = new SocksInitResponse(authScheme);
                 break;
             }

@@ -76,20 +76,20 @@ public class SpdySessionStatus implements Comparable<SpdySessionStatus> {
     /**
      * Returns the code of this status.
      */
-    public int getCode() {
+    public int code() {
         return code;
     }
 
     /**
      * Returns the status phrase of this status.
      */
-    public String getStatusPhrase() {
+    public String statusPhrase() {
         return statusPhrase;
     }
 
     @Override
     public int hashCode() {
-        return getCode();
+        return code();
     }
 
     @Override
@@ -98,16 +98,16 @@ public class SpdySessionStatus implements Comparable<SpdySessionStatus> {
             return false;
         }
 
-        return getCode() == ((SpdySessionStatus) o).getCode();
+        return code() == ((SpdySessionStatus) o).code();
     }
 
     @Override
     public String toString() {
-        return getStatusPhrase();
+        return statusPhrase();
     }
 
     @Override
     public int compareTo(SpdySessionStatus o) {
-        return getCode() - o.getCode();
+        return code() - o.code();
     }
 }

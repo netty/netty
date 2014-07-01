@@ -18,9 +18,7 @@ package io.netty.channel.socket.nio;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
-import io.netty.channel.EventLoop;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.AbstractNioMessageServerChannel;
+import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.socket.DefaultServerSocketChannelConfig;
 import io.netty.channel.socket.ServerSocketChannelConfig;
 import io.netty.util.internal.logging.InternalLogger;
@@ -28,26 +26,35 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.ServerSocket;
 import java.net.SocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.nio.channels.spi.SelectorProvider;
 import java.util.List;
 
 /**
  * A {@link io.netty.channel.socket.ServerSocketChannel} implementation which uses
  * NIO selector based implementation to accept new connections.
  */
-public class NioServerSocketChannel extends AbstractNioMessageServerChannel
-                                 implements io.netty.channel.socket.ServerSocketChannel {
+public class NioServerSocketChannel extends AbstractNioMessageChannel
+                             implements io.netty.channel.socket.ServerSocketChannel {
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
+    private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioServerSocketChannel.class);
 
-    private static ServerSocketChannel newSocket() {
+    private static ServerSocketChannel newSocket(SelectorProvider provider) {
         try {
-            return ServerSocketChannel.open();
+            /**
+             *  Use the {@link SelectorProvider} to open {@link SocketChannel} and so remove condition in
+             *  {@link SelectorProvider#provider()} which is called by each ServerSocketChannel.open() otherwise.
+             *
+             *  See <a href="See https://github.com/netty/netty/issues/2308">#2308</a>.
+             */
+            return provider.openServerSocketChannel();
         } catch (IOException e) {
             throw new ChannelException(
                     "Failed to open a server socket.", e);
@@ -59,9 +66,23 @@ public class NioServerSocketChannel extends AbstractNioMessageServerChannel
     /**
      * Create a new instance
      */
-    public NioServerSocketChannel(EventLoop eventLoop, EventLoopGroup childGroup) {
-        super(null, eventLoop, childGroup, newSocket(), SelectionKey.OP_ACCEPT);
-        config = new DefaultServerSocketChannelConfig(this, javaChannel().socket());
+    public NioServerSocketChannel() {
+        this(newSocket(DEFAULT_SELECTOR_PROVIDER));
+    }
+
+    /**
+     * Create a new instance using the given {@link SelectorProvider}.
+     */
+    public NioServerSocketChannel(SelectorProvider provider) {
+        this(newSocket(provider));
+    }
+
+    /**
+     * Create a new instance using the given {@link ServerSocketChannel}.
+     */
+    public NioServerSocketChannel(ServerSocketChannel channel) {
+        super(null, channel, SelectionKey.OP_ACCEPT);
+        config = new NioServerSocketChannelConfig(this, javaChannel().socket());
     }
 
     @Override
@@ -115,7 +136,7 @@ public class NioServerSocketChannel extends AbstractNioMessageServerChannel
 
         try {
             if (ch != null) {
-                buf.add(new NioSocketChannel(this, childEventLoopGroup().next(), ch));
+                buf.add(new NioSocketChannel(this, ch));
                 return 1;
             }
         } catch (Throwable t) {
@@ -156,5 +177,16 @@ public class NioServerSocketChannel extends AbstractNioMessageServerChannel
     @Override
     protected boolean doWriteMessage(Object msg, ChannelOutboundBuffer in) throws Exception {
         throw new UnsupportedOperationException();
+    }
+
+    private final class NioServerSocketChannelConfig  extends DefaultServerSocketChannelConfig {
+        private NioServerSocketChannelConfig(NioServerSocketChannel channel, ServerSocket javaSocket) {
+            super(channel, javaSocket);
+        }
+
+        @Override
+        protected void autoReadCleared() {
+            setReadPending(false);
+        }
     }
 }

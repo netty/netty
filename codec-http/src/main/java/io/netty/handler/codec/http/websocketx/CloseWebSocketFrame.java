@@ -159,4 +159,16 @@ public class CloseWebSocketFrame extends WebSocketFrame {
         super.retain(increment);
         return this;
     }
+
+    @Override
+    public CloseWebSocketFrame touch() {
+        super.touch();
+        return this;
+    }
+
+    @Override
+    public CloseWebSocketFrame touch(Object hint) {
+        super.touch(hint);
+        return this;
+    }
 }

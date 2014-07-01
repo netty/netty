@@ -39,12 +39,12 @@ public class LengthFieldPrependerTest {
     public void testPrependLength() throws Exception {
         final EmbeddedChannel ch = new EmbeddedChannel(new LengthFieldPrepender(4));
         ch.writeOutbound(msg);
-        ByteBuf buf = (ByteBuf) ch.readOutbound();
+        ByteBuf buf = ch.readOutbound();
         assertEquals(4, buf.readableBytes());
         assertEquals(msg.readableBytes(), buf.readInt());
         buf.release();
 
-        buf = (ByteBuf) ch.readOutbound();
+        buf = ch.readOutbound();
         assertSame(buf, msg);
         buf.release();
     }
@@ -53,12 +53,12 @@ public class LengthFieldPrependerTest {
     public void testPrependLengthIncludesLengthFieldLength() throws Exception {
         final EmbeddedChannel ch = new EmbeddedChannel(new LengthFieldPrepender(4, true));
         ch.writeOutbound(msg);
-        ByteBuf buf = (ByteBuf) ch.readOutbound();
+        ByteBuf buf = ch.readOutbound();
         assertEquals(4, buf.readableBytes());
         assertEquals(5, buf.readInt());
         buf.release();
 
-        buf = (ByteBuf) ch.readOutbound();
+        buf = ch.readOutbound();
         assertSame(buf, msg);
         buf.release();
     }
@@ -67,12 +67,12 @@ public class LengthFieldPrependerTest {
     public void testPrependAdjustedLength() throws Exception {
         final EmbeddedChannel ch = new EmbeddedChannel(new LengthFieldPrepender(4, -1));
         ch.writeOutbound(msg);
-        ByteBuf buf = (ByteBuf) ch.readOutbound();
+        ByteBuf buf = ch.readOutbound();
         assertEquals(4, buf.readableBytes());
         assertEquals(msg.readableBytes() - 1, buf.readInt());
         buf.release();
 
-        buf = (ByteBuf) ch.readOutbound();
+        buf = ch.readOutbound();
         assertSame(buf, msg);
         buf.release();
     }

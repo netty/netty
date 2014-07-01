@@ -33,9 +33,9 @@ public class HttpResponseEncoder extends HttpObjectEncoder<HttpResponse> {
 
     @Override
     protected void encodeInitialLine(ByteBuf buf, HttpResponse response) throws Exception {
-        response.getProtocolVersion().encode(buf);
+        response.protocolVersion().encode(buf);
         buf.writeByte(SP);
-        response.getStatus().encode(buf);
+        response.status().encode(buf);
         buf.writeBytes(CRLF);
     }
 }

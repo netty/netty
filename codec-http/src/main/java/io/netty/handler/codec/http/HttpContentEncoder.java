@@ -89,7 +89,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
 
                 final HttpResponse res = (HttpResponse) msg;
 
-                if (res.getStatus().code() == 100) {
+                if (res.status().code() == 100) {
                     if (isFull) {
                         out.add(ReferenceCountUtil.retain(res));
                     } else {
@@ -142,7 +142,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                 // Output the rewritten response.
                 if (isFull) {
                     // Convert full message into unfull one.
-                    HttpResponse newRes = new DefaultHttpResponse(res.getProtocolVersion(), res.getStatus());
+                    HttpResponse newRes = new DefaultHttpResponse(res.protocolVersion(), res.status());
                     newRes.headers().set(res.headers());
                     out.add(newRes);
                     // Fall through to encode the content of the full response.
@@ -247,7 +247,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
             // Clean-up the previous encoder if not cleaned up correctly.
             if (encoder.finish()) {
                 for (;;) {
-                    ByteBuf buf = (ByteBuf) encoder.readOutbound();
+                    ByteBuf buf = encoder.readOutbound();
                     if (buf == null) {
                         break;
                     }
@@ -275,7 +275,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
 
     private void fetchEncoderOutput(List<Object> out) {
         for (;;) {
-            ByteBuf buf = (ByteBuf) encoder.readOutbound();
+            ByteBuf buf = encoder.readOutbound();
             if (buf == null) {
                 break;
             }

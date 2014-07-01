@@ -19,7 +19,6 @@ import gnu.io.CommPort;
 import gnu.io.CommPortIdentifier;
 import gnu.io.SerialPort;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.EventLoop;
 import io.netty.channel.oio.OioByteStreamChannel;
 
 import java.net.SocketAddress;
@@ -40,8 +39,8 @@ public class RxtxChannel extends OioByteStreamChannel {
     private RxtxDeviceAddress deviceAddress;
     private SerialPort serialPort;
 
-    public RxtxChannel(EventLoop eventLoop) {
-        super(null, eventLoop);
+    public RxtxChannel() {
+        super(null);
 
         config = new DefaultRxtxChannelConfig(this);
     }
@@ -66,7 +65,7 @@ public class RxtxChannel extends OioByteStreamChannel {
         RxtxDeviceAddress remote = (RxtxDeviceAddress) remoteAddress;
         final CommPortIdentifier cpi = CommPortIdentifier.getPortIdentifier(remote.value());
         final CommPort commPort = cpi.open(getClass().getName(), 1000);
-
+        commPort.enableReceiveTimeout(config().getOption(READ_TIMEOUT));
         deviceAddress = remote;
 
         serialPort = (SerialPort) commPort;
@@ -134,7 +133,7 @@ public class RxtxChannel extends OioByteStreamChannel {
         public void connect(
                 final SocketAddress remoteAddress,
                 final SocketAddress localAddress, final ChannelPromise promise) {
-            if (!ensureOpen(promise)) {
+            if (!promise.setUncancellable() || !ensureOpen(promise)) {
                 return;
             }
 
@@ -149,25 +148,25 @@ public class RxtxChannel extends OioByteStreamChannel {
                         public void run() {
                             try {
                                 doInit();
-                                promise.setSuccess();
+                                safeSetSuccess(promise);
                                 if (!wasActive && isActive()) {
                                     pipeline().fireChannelActive();
                                 }
                             } catch (Throwable t) {
-                                promise.setFailure(t);
+                                safeSetFailure(promise, t);
                                 closeIfClosed();
                             }
                         }
                    }, waitTime, TimeUnit.MILLISECONDS);
                 } else {
                     doInit();
-                    promise.setSuccess();
+                    safeSetSuccess(promise);
                     if (!wasActive && isActive()) {
                         pipeline().fireChannelActive();
                     }
                 }
             } catch (Throwable t) {
-                promise.setFailure(t);
+                safeSetFailure(promise, t);
                 closeIfClosed();
             }
         }

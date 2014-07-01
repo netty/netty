@@ -73,7 +73,7 @@ public final class SocksAuthRequest extends SocksRequest {
     }
 
     @Override
-    public void encodeAsByteBuf(ByteBuf byteBuf) {
+    void encodeAsByteBuf(ByteBuf byteBuf) {
         byteBuf.writeByte(SUBNEGOTIATION_VERSION.byteValue());
         byteBuf.writeByte(username.length());
         byteBuf.writeBytes(username.getBytes(CharsetUtil.US_ASCII));

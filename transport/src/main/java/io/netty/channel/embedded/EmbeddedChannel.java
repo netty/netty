@@ -54,7 +54,7 @@ public class EmbeddedChannel extends AbstractChannel {
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
-    private final EmbeddedEventLoop loop;
+    private final EmbeddedEventLoop loop = new EmbeddedEventLoop();
     private final ChannelConfig config = new DefaultChannelConfig(this);
     private final Queue<Object> inboundMessages = new ArrayDeque<Object>();
     private final Queue<Object> outboundMessages = new ArrayDeque<Object>();
@@ -74,9 +74,7 @@ public class EmbeddedChannel extends AbstractChannel {
      * @param handlers the @link ChannelHandler}s which will be add in the {@link ChannelPipeline}
      */
     public EmbeddedChannel(ChannelHandler... handlers) {
-        super(null, new EmbeddedEventLoop());
-
-        loop = (EmbeddedEventLoop) eventLoop();
+        super(null);
 
         if (handlers == null) {
             throw new NullPointerException("handlers");
@@ -91,7 +89,7 @@ public class EmbeddedChannel extends AbstractChannel {
         }
 
         p.addLast(new LastInboundHandler());
-        unsafe().register(newPromise());
+        loop.register(this);
     }
 
     @Override
@@ -147,15 +145,17 @@ public class EmbeddedChannel extends AbstractChannel {
     /**
      * Return received data from this {@link Channel}
      */
-    public Object readInbound() {
-        return inboundMessages.poll();
+    @SuppressWarnings("unchecked")
+    public <T> T readInbound() {
+        return (T) inboundMessages.poll();
     }
 
     /**
      * Read data froum the outbound. This may return {@code null} if nothing is readable.
      */
-    public Object readOutbound() {
-        return outboundMessages.poll();
+    @SuppressWarnings("unchecked")
+    public <T> T readOutbound() {
+        return (T) outboundMessages.poll();
     }
 
     /**
@@ -235,7 +235,7 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     /**
-     * Run all tasks that are pending in the {@link io.netty.channel.EventLoop} for this {@link Channel}
+     * Run all tasks that are pending in the {@link EventLoop} for this {@link Channel}
      */
     public void runPendingTasks() {
         try {
@@ -327,7 +327,7 @@ public class EmbeddedChannel extends AbstractChannel {
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
         for (;;) {
-            Object msg = in.current(false);
+            Object msg = in.current();
             if (msg == null) {
                 break;
             }
@@ -341,7 +341,7 @@ public class EmbeddedChannel extends AbstractChannel {
     private class DefaultUnsafe extends AbstractUnsafe {
         @Override
         public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-            promise.setSuccess();
+            safeSetSuccess(promise);
         }
     }
 

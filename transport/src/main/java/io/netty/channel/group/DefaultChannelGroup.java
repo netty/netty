@@ -54,7 +54,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     };
 
     /**
-     * Creates a new group with a generated name amd the provided {@link EventExecutor} to notify the
+     * Creates a new group with a generated name and the provided {@link EventExecutor} to notify the
      * {@link ChannelGroupFuture}s.
      */
     public DefaultChannelGroup(EventExecutor executor) {
@@ -190,6 +190,11 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     }
 
     @Override
+    public ChannelGroupFuture deregister() {
+        return deregister(ChannelMatchers.all());
+    }
+
+    @Override
     public ChannelGroupFuture write(Object message) {
         return write(message, ChannelMatchers.all());
     }
@@ -232,8 +237,8 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     }
 
     @Override
-    public ChannelGroupFuture flushAndWrite(Object message) {
-        return flushAndWrite(message, ChannelMatchers.all());
+    public ChannelGroupFuture writeAndFlush(Object message) {
+        return writeAndFlush(message, ChannelMatchers.all());
     }
 
     @Override
@@ -283,6 +288,29 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     }
 
     @Override
+    public ChannelGroupFuture deregister(ChannelMatcher matcher) {
+        if (matcher == null) {
+            throw new NullPointerException("matcher");
+        }
+
+        Map<Channel, ChannelFuture> futures =
+                new LinkedHashMap<Channel, ChannelFuture>(size());
+
+        for (Channel c: serverChannels.values()) {
+            if (matcher.matches(c)) {
+                futures.put(c, c.deregister());
+            }
+        }
+        for (Channel c: nonServerChannels.values()) {
+            if (matcher.matches(c)) {
+                futures.put(c, c.deregister());
+            }
+        }
+
+        return new DefaultChannelGroupFuture(this, futures, executor);
+    }
+
+    @Override
     public ChannelGroup flush(ChannelMatcher matcher) {
         for (Channel c: nonServerChannels.values()) {
             if (matcher.matches(c)) {
@@ -293,7 +321,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     }
 
     @Override
-    public ChannelGroupFuture flushAndWrite(Object message, ChannelMatcher matcher) {
+    public ChannelGroupFuture writeAndFlush(Object message, ChannelMatcher matcher) {
         if (message == null) {
             throw new NullPointerException("message");
         }

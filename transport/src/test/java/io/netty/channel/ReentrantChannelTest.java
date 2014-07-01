@@ -142,19 +142,19 @@ public class ReentrantChannelTest extends BaseChannelTest {
         clientChannel.close().sync();
 
         assertLog(
-            "WRITE\n" +
-            "FLUSH\n" +
-            "WRITE\n" +
-            "FLUSH\n" +
-            "WRITE\n" +
-            "FLUSH\n" +
-            "WRITE\n" +
-            "FLUSH\n" +
-            "WRITE\n" +
-            "FLUSH\n" +
-            "WRITE\n" +
-            "FLUSH\n" +
-            "CLOSE\n");
+                "WRITE\n" +
+                "FLUSH\n" +
+                "WRITE\n" +
+                "FLUSH\n" +
+                "WRITE\n" +
+                "FLUSH\n" +
+                "WRITE\n" +
+                "FLUSH\n" +
+                "WRITE\n" +
+                "FLUSH\n" +
+                "WRITE\n" +
+                "FLUSH\n" +
+                "CLOSE\n");
     }
 
     @Test
@@ -189,10 +189,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
         clientChannel.write(createTestBuf(2000)).sync();
         clientChannel.closeFuture().sync();
 
-        assertLog(
-            "WRITE\n" +
-            "FLUSH\n" +
-            "CLOSE\n");
+        assertLog("WRITE\nFLUSH\nCLOSE\n");
     }
 
     @Test
@@ -232,9 +229,6 @@ public class ReentrantChannelTest extends BaseChannelTest {
 
         clientChannel.closeFuture().sync();
 
-        assertLog(
-            "WRITE\n" +
-            "CLOSE\n");
+        assertLog("WRITE\nCLOSE\n");
     }
-
 }

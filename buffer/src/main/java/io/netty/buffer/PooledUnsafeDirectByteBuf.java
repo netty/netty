@@ -34,7 +34,7 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
 
     private static final Recycler<PooledUnsafeDirectByteBuf> RECYCLER = new Recycler<PooledUnsafeDirectByteBuf>() {
         @Override
-        protected PooledUnsafeDirectByteBuf newObject(Handle handle) {
+        protected PooledUnsafeDirectByteBuf newObject(Handle<PooledUnsafeDirectByteBuf> handle) {
             return new PooledUnsafeDirectByteBuf(handle, 0);
         }
     };
@@ -48,7 +48,7 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
 
     private long memoryAddress;
 
-    private PooledUnsafeDirectByteBuf(Recycler.Handle recyclerHandle, int maxCapacity) {
+    private PooledUnsafeDirectByteBuf(Recycler.Handle<PooledUnsafeDirectByteBuf> recyclerHandle, int maxCapacity) {
         super(recyclerHandle, maxCapacity);
     }
 
@@ -278,7 +278,7 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
 
     @Override
     public ByteBuf setBytes(int index, ByteBuffer src) {
-        checkIndex(index);
+        checkIndex(index, src.remaining());
         ByteBuffer tmpBuf = internalNioBuffer();
         if (src == tmpBuf) {
             src = src.duplicate();
@@ -317,10 +317,14 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     @Override
     public ByteBuf copy(int index, int length) {
         checkIndex(index, length);
-        PooledUnsafeDirectByteBuf copy = (PooledUnsafeDirectByteBuf) alloc().directBuffer(length, maxCapacity());
+        ByteBuf copy = alloc().directBuffer(length, maxCapacity());
         if (length != 0) {
-            PlatformDependent.copyMemory(addr(index), copy.addr(0), length);
-            copy.setIndex(0, length);
+            if (copy.hasMemoryAddress()) {
+                PlatformDependent.copyMemory(addr(index), copy.memoryAddress(), length);
+                copy.setIndex(0, length);
+            } else {
+                copy.writeBytes(this, index, length);
+            }
         }
         return copy;
     }
@@ -379,7 +383,7 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     }
 
     @Override
-    protected Recycler<?> recycler() {
-        return RECYCLER;
+    protected SwappedByteBuf newSwappedByteBuf() {
+        return new UnsafeDirectSwappedByteBuf(this);
     }
 }

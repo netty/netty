@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.Test;
 
 import java.util.Random;
@@ -121,7 +122,7 @@ public class SnappyIntegrationTest {
         EmbeddedChannel decoder = new EmbeddedChannel(new SnappyFramedDecoder());
         try {
             encoder.writeOutbound(in.copy());
-            ByteBuf compressed = (ByteBuf) encoder.readOutbound();
+            ByteBuf compressed = encoder.readOutbound();
             assertThat(compressed, is(notNullValue()));
             assertThat(compressed, is(not(in)));
             decoder.writeInbound(compressed.retain());
@@ -138,10 +139,27 @@ public class SnappyIntegrationTest {
             }
             assertEquals(in, decompressed);
             decompressed.release();
+            in.release();
         } finally {
             // Avoids memory leak through AbstractChannel.allChannels
             encoder.close();
             decoder.close();
+
+            for (;;) {
+                Object msg = encoder.readOutbound();
+                if (msg == null) {
+                    break;
+                }
+                ReferenceCountUtil.release(msg);
+            }
+
+            for (;;) {
+                Object msg = decoder.readInbound();
+                if (msg == null) {
+                    break;
+                }
+                ReferenceCountUtil.release(msg);
+            }
         }
     }
 

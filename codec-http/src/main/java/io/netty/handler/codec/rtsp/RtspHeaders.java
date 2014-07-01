@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.rtsp;
 
+import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.http.HttpHeaders;
 
 
@@ -42,7 +43,7 @@ public final class RtspHeaders {
         /**
          * {@code "Allow"}
          */
-        public static final CharSequence ALLOW = HttpHeaders.newEntity("Allow");
+        public static final CharSequence ALLOW = new AsciiString("Allow");
         /**
          * {@code "Authorization"}
          */
@@ -50,11 +51,11 @@ public final class RtspHeaders {
         /**
          * {@code "Bandwidth"}
          */
-        public static final CharSequence BANDWIDTH = HttpHeaders.newEntity("Bandwidth");
+        public static final CharSequence BANDWIDTH = new AsciiString("Bandwidth");
         /**
          * {@code "Blocksize"}
          */
-        public static final CharSequence BLOCKSIZE = HttpHeaders.newEntity("Blocksize");
+        public static final CharSequence BLOCKSIZE = new AsciiString("Blocksize");
         /**
          * {@code "Cache-Control"}
          */
@@ -62,7 +63,7 @@ public final class RtspHeaders {
         /**
          * {@code "Conference"}
          */
-        public static final CharSequence CONFERENCE = HttpHeaders.newEntity("Conference");
+        public static final CharSequence CONFERENCE = new AsciiString("Conference");
         /**
          * {@code "Connection"}
          */
@@ -94,7 +95,7 @@ public final class RtspHeaders {
         /**
          * {@code "CSeq"}
          */
-        public static final CharSequence CSEQ = HttpHeaders.newEntity("CSeq");
+        public static final CharSequence CSEQ = new AsciiString("CSeq");
         /**
          * {@code "Date"}
          */
@@ -122,7 +123,7 @@ public final class RtspHeaders {
         /**
          * {@code "KeyMgmt"}
          */
-        public static final CharSequence KEYMGMT = HttpHeaders.newEntity("KeyMgmt");
+        public static final CharSequence KEYMGMT = new AsciiString("KeyMgmt");
         /**
          * {@code "Last-Modified"}
          */
@@ -134,11 +135,11 @@ public final class RtspHeaders {
         /**
          * {@code "Proxy-Require"}
          */
-        public static final CharSequence PROXY_REQUIRE = HttpHeaders.newEntity("Proxy-Require");
+        public static final CharSequence PROXY_REQUIRE = new AsciiString("Proxy-Require");
         /**
          * {@code "Public"}
          */
-        public static final CharSequence PUBLIC = HttpHeaders.newEntity("Public");
+        public static final CharSequence PUBLIC = new AsciiString("Public");
         /**
          * {@code "Range"}
          */
@@ -150,7 +151,7 @@ public final class RtspHeaders {
         /**
          * {@code "Require"}
          */
-        public static final CharSequence REQUIRE = HttpHeaders.newEntity("Require");
+        public static final CharSequence REQUIRE = new AsciiString("Require");
         /**
          * {@code "Retry-After"}
          */
@@ -158,15 +159,15 @@ public final class RtspHeaders {
         /**
          * {@code "RTP-Info"}
          */
-        public static final CharSequence RTP_INFO = HttpHeaders.newEntity("RTP-Info");
+        public static final CharSequence RTP_INFO = new AsciiString("RTP-Info");
         /**
          * {@code "Scale"}
          */
-        public static final CharSequence SCALE = HttpHeaders.newEntity("Scale");
+        public static final CharSequence SCALE = new AsciiString("Scale");
         /**
          * {@code "Session"}
          */
-        public static final CharSequence SESSION = HttpHeaders.newEntity("Session");
+        public static final CharSequence SESSION = new AsciiString("Session");
         /**
          * {@code "Server"}
          */
@@ -174,19 +175,19 @@ public final class RtspHeaders {
         /**
          * {@code "Speed"}
          */
-        public static final CharSequence SPEED = HttpHeaders.newEntity("Speed");
+        public static final CharSequence SPEED = new AsciiString("Speed");
         /**
          * {@code "Timestamp"}
          */
-        public static final CharSequence TIMESTAMP = HttpHeaders.newEntity("Timestamp");
+        public static final CharSequence TIMESTAMP = new AsciiString("Timestamp");
         /**
          * {@code "Transport"}
          */
-        public static final CharSequence TRANSPORT = HttpHeaders.newEntity("Transport");
+        public static final CharSequence TRANSPORT = new AsciiString("Transport");
         /**
          * {@code "Unsupported"}
          */
-        public static final CharSequence UNSUPPORTED = HttpHeaders.newEntity("Unsupported");
+        public static final CharSequence UNSUPPORTED = new AsciiString("Unsupported");
         /**
          * {@code "User-Agent"}
          */
@@ -215,11 +216,11 @@ public final class RtspHeaders {
         /**
          * {@code "append"}
          */
-        public static final CharSequence APPEND = HttpHeaders.newEntity("append");
+        public static final CharSequence APPEND = new AsciiString("append");
         /**
          * {@code "AVP"}
          */
-        public static final CharSequence AVP = HttpHeaders.newEntity("AVP");
+        public static final CharSequence AVP = new AsciiString("AVP");
         /**
          * {@code "bytes"}
          */
@@ -231,11 +232,11 @@ public final class RtspHeaders {
         /**
          * {@code "client_port"}
          */
-        public static final CharSequence CLIENT_PORT = HttpHeaders.newEntity("client_port");
+        public static final CharSequence CLIENT_PORT = new AsciiString("client_port");
         /**
          * {@code "clock"}
          */
-        public static final CharSequence CLOCK = HttpHeaders.newEntity("clock");
+        public static final CharSequence CLOCK = new AsciiString("clock");
         /**
          * {@code "close"}
          */
@@ -255,7 +256,7 @@ public final class RtspHeaders {
         /**
          * {@code "destination"}
          */
-        public static final CharSequence DESTINATION = HttpHeaders.newEntity("destination");
+        public static final CharSequence DESTINATION = new AsciiString("destination");
         /**
          * {@code "gzip"}
          */
@@ -267,7 +268,7 @@ public final class RtspHeaders {
         /**
          * {@code "interleaved"}
          */
-        public static final CharSequence INTERLEAVED = HttpHeaders.newEntity("interleaved");
+        public static final CharSequence INTERLEAVED = new AsciiString("interleaved");
         /**
          * {@code "keep-alive"}
          */
@@ -275,7 +276,7 @@ public final class RtspHeaders {
         /**
          * {@code "layers"}
          */
-        public static final CharSequence LAYERS = HttpHeaders.newEntity("layers");
+        public static final CharSequence LAYERS = new AsciiString("layers");
         /**
          * {@code "max-age"}
          */
@@ -291,11 +292,11 @@ public final class RtspHeaders {
         /**
          * {@code "mode"}
          */
-        public static final CharSequence MODE = HttpHeaders.newEntity("mode");
+        public static final CharSequence MODE = new AsciiString("mode");
         /**
          * {@code "multicast"}
          */
-        public static final CharSequence MULTICAST = HttpHeaders.newEntity("multicast");
+        public static final CharSequence MULTICAST = new AsciiString("multicast");
         /**
          * {@code "must-revalidate"}
          */
@@ -319,7 +320,7 @@ public final class RtspHeaders {
         /**
          * {@code "port"}
          */
-        public static final CharSequence PORT = HttpHeaders.newEntity("port");
+        public static final CharSequence PORT = new AsciiString("port");
         /**
          * {@code "private"}
          */
@@ -335,51 +336,51 @@ public final class RtspHeaders {
         /**
          * {@code "RTP"}
          */
-        public static final CharSequence RTP = HttpHeaders.newEntity("RTP");
+        public static final CharSequence RTP = new AsciiString("RTP");
         /**
          * {@code "rtptime"}
          */
-        public static final CharSequence RTPTIME = HttpHeaders.newEntity("rtptime");
+        public static final CharSequence RTPTIME = new AsciiString("rtptime");
         /**
          * {@code "seq"}
          */
-        public static final CharSequence SEQ = HttpHeaders.newEntity("seq");
+        public static final CharSequence SEQ = new AsciiString("seq");
         /**
          * {@code "server_port"}
          */
-        public static final CharSequence SERVER_PORT = HttpHeaders.newEntity("server_port");
+        public static final CharSequence SERVER_PORT = new AsciiString("server_port");
         /**
          * {@code "ssrc"}
          */
-        public static final CharSequence SSRC = HttpHeaders.newEntity("ssrc");
+        public static final CharSequence SSRC = new AsciiString("ssrc");
         /**
          * {@code "TCP"}
          */
-        public static final CharSequence TCP = HttpHeaders.newEntity("TCP");
+        public static final CharSequence TCP = new AsciiString("TCP");
         /**
          * {@code "time"}
          */
-        public static final CharSequence TIME = HttpHeaders.newEntity("time");
+        public static final CharSequence TIME = new AsciiString("time");
         /**
          * {@code "timeout"}
          */
-        public static final CharSequence TIMEOUT = HttpHeaders.newEntity("timeout");
+        public static final CharSequence TIMEOUT = new AsciiString("timeout");
         /**
          * {@code "ttl"}
          */
-        public static final CharSequence TTL = HttpHeaders.newEntity("ttl");
+        public static final CharSequence TTL = new AsciiString("ttl");
         /**
          * {@code "UDP"}
          */
-        public static final CharSequence UDP = HttpHeaders.newEntity("UDP");
+        public static final CharSequence UDP = new AsciiString("UDP");
         /**
          * {@code "unicast"}
          */
-        public static final CharSequence UNICAST = HttpHeaders.newEntity("unicast");
+        public static final CharSequence UNICAST = new AsciiString("unicast");
         /**
          * {@code "url"}
          */
-        public static final CharSequence URL = HttpHeaders.newEntity("url");
+        public static final CharSequence URL = new AsciiString("url");
 
         private Values() { }
     }

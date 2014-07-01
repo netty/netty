@@ -125,11 +125,18 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
 
     @Override
     public String toString() {
+        File file = null;
+        try {
+            file = getFile();
+        } catch (IOException e) {
+            // Should not occur.
+        }
+
         return HttpPostBodyUtil.CONTENT_DISPOSITION + ": " +
             HttpPostBodyUtil.FORM_DATA + "; " + HttpPostBodyUtil.NAME + "=\"" + getName() +
                 "\"; " + HttpPostBodyUtil.FILENAME + "=\"" + filename + "\"\r\n" +
                 HttpHeaders.Names.CONTENT_TYPE + ": " + contentType +
-                (charset != null? "; " + HttpHeaders.Values.CHARSET + '=' + charset + "\r\n" : "\r\n") +
+                (getCharset() != null? "; " + HttpHeaders.Values.CHARSET + '=' + getCharset() + "\r\n" : "\r\n") +
                 HttpHeaders.Names.CONTENT_LENGTH + ": " + length() + "\r\n" +
                 "Completed: " + isCompleted() +
                 "\r\nIsInMemory: " + isInMemory() + "\r\nRealFile: " +
@@ -202,6 +209,18 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
     @Override
     public FileUpload retain() {
         super.retain();
+        return this;
+    }
+
+    @Override
+    public FileUpload touch() {
+        super.touch();
+        return this;
+    }
+
+    @Override
+    public FileUpload touch(Object hint) {
+        super.touch(hint);
         return this;
     }
 }

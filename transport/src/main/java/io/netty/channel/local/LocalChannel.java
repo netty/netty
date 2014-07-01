@@ -28,6 +28,7 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
+import io.netty.util.internal.InternalThreadLocalMap;
 
 import java.net.SocketAddress;
 import java.nio.channels.AlreadyConnectedException;
@@ -48,12 +49,6 @@ public class LocalChannel extends AbstractChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
     private static final int MAX_READER_STACK_DEPTH = 8;
-    private static final ThreadLocal<Integer> READER_STACK_DEPTH = new ThreadLocal<Integer>() {
-        @Override
-        protected Integer initialValue() {
-            return 0;
-        }
-    };
 
     private final ChannelConfig config = new DefaultChannelConfig(this);
     private final Queue<Object> inboundBuffer = new ArrayDeque<Object>();
@@ -85,13 +80,14 @@ public class LocalChannel extends AbstractChannel {
     private volatile LocalAddress remoteAddress;
     private volatile ChannelPromise connectPromise;
     private volatile boolean readInProgress;
+    private volatile boolean registerInProgress;
 
-    public LocalChannel(EventLoop eventLoop) {
-        super(null, eventLoop);
+    public LocalChannel() {
+        super(null);
     }
 
-    LocalChannel(LocalServerChannel parent, EventLoop eventLoop, LocalChannel peer) {
-        super(parent, eventLoop);
+    LocalChannel(LocalServerChannel parent, LocalChannel peer) {
+        super(parent);
         this.peer = peer;
         localAddress = parent.localAddress();
         remoteAddress = peer.localAddress();
@@ -154,7 +150,20 @@ public class LocalChannel extends AbstractChannel {
 
     @Override
     protected void doRegister() throws Exception {
-        if (peer != null) {
+        // Check if both peer and parent are non-null because this channel was created by a LocalServerChannel.
+        // This is needed as a peer may not be null also if a LocalChannel was connected before and
+        // deregistered / registered later again.
+        //
+        // See https://github.com/netty/netty/issues/2400
+        if (peer != null && parent() != null) {
+            // Store the peer in a local variable as it may be set to null if doClose() is called.
+            // Because of this we also set registerInProgress to true as we check for this in doClose() and make sure
+            // we delay the fireChannelInactive() to be fired after the fireChannelActive() and so keep the correct
+            // order of events.
+            //
+            // See https://github.com/netty/netty/issues/2144
+            final LocalChannel peer = this.peer;
+            registerInProgress = true;
             state = State.CONNECTED;
 
             peer.remoteAddress = parent() == null ? null : parent().localAddress();
@@ -167,6 +176,7 @@ public class LocalChannel extends AbstractChannel {
             peer.eventLoop().execute(new Runnable() {
                 @Override
                 public void run() {
+                    registerInProgress = false;
                     peer.pipeline().fireChannelActive();
                     peer.connectPromise.setSuccess();
                 }
@@ -206,7 +216,12 @@ public class LocalChannel extends AbstractChannel {
             // Need to execute the close in the correct EventLoop
             // See https://github.com/netty/netty/issues/1777
             EventLoop eventLoop = peer.eventLoop();
-            if (eventLoop.inEventLoop()) {
+
+            // Also check if the registration was not done yet. In this case we submit the close to the EventLoop
+            // to make sure it is run after the registration completes.
+            //
+            // See https://github.com/netty/netty/issues/2144
+            if (eventLoop.inEventLoop() && !registerInProgress) {
                 peer.unsafe().close(unsafe().voidPromise());
             } else {
                 peer.eventLoop().execute(new Runnable() {
@@ -222,6 +237,7 @@ public class LocalChannel extends AbstractChannel {
 
     @Override
     protected void doDeregister() throws Exception {
+        // Just remove the shutdownHook as this Channel may be closed later or registered to another EventLoop
         ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
     }
 
@@ -238,9 +254,10 @@ public class LocalChannel extends AbstractChannel {
             return;
         }
 
-        final Integer stackDepth = READER_STACK_DEPTH.get();
+        final InternalThreadLocalMap threadLocals = InternalThreadLocalMap.get();
+        final Integer stackDepth = threadLocals.localChannelReaderStackDepth();
         if (stackDepth < MAX_READER_STACK_DEPTH) {
-            READER_STACK_DEPTH.set(stackDepth + 1);
+            threadLocals.setLocalChannelReaderStackDepth(stackDepth + 1);
             try {
                 for (;;) {
                     Object received = inboundBuffer.poll();
@@ -251,7 +268,7 @@ public class LocalChannel extends AbstractChannel {
                 }
                 pipeline.fireChannelReadComplete();
             } finally {
-                READER_STACK_DEPTH.set(stackDepth);
+                threadLocals.setLocalChannelReaderStackDepth(stackDepth);
             }
         } else {
             eventLoop().execute(readTask);
@@ -287,7 +304,7 @@ public class LocalChannel extends AbstractChannel {
             // Use a copy because the original msgs will be recycled by AbstractChannel.
             final Object[] msgsCopy = new Object[in.size()];
             for (int i = 0; i < msgsCopy.length; i ++) {
-                msgsCopy[i] = ReferenceCountUtil.retain(in.current(false));
+                msgsCopy[i] = ReferenceCountUtil.retain(in.current());
                 in.remove();
             }
 
@@ -320,13 +337,13 @@ public class LocalChannel extends AbstractChannel {
         @Override
         public void connect(final SocketAddress remoteAddress,
                 SocketAddress localAddress, final ChannelPromise promise) {
-            if (!ensureOpen(promise)) {
+            if (!promise.setUncancellable() || !ensureOpen(promise)) {
                 return;
             }
 
             if (state == State.CONNECTED) {
                 Exception cause = new AlreadyConnectedException();
-                promise.setFailure(cause);
+                safeSetFailure(promise, cause);
                 pipeline().fireExceptionCaught(cause);
                 return;
             }
@@ -348,7 +365,7 @@ public class LocalChannel extends AbstractChannel {
                 try {
                     doBind(localAddress);
                 } catch (Throwable t) {
-                    promise.setFailure(t);
+                    safeSetFailure(promise, t);
                     close(voidPromise());
                     return;
                 }
@@ -357,7 +374,7 @@ public class LocalChannel extends AbstractChannel {
             Channel boundChannel = LocalChannelRegistry.get(remoteAddress);
             if (!(boundChannel instanceof LocalServerChannel)) {
                 Exception cause = new ChannelException("connection refused");
-                promise.setFailure(cause);
+                safeSetFailure(promise, cause);
                 close(voidPromise());
                 return;
             }

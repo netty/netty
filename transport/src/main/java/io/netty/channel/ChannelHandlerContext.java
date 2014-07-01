@@ -30,24 +30,21 @@ import java.nio.channels.Channels;
 
 /**
  * Enables a {@link ChannelHandler} to interact with its {@link ChannelPipeline}
- * and other handlers.  A handler can notify the next {@link ChannelHandler} in the {@link ChannelPipeline},
- * modify the {@link ChannelPipeline} it belongs to dynamically.
+ * and other handlers. Among other things a handler can notify the next {@link ChannelHandler} in the
+ * {@link ChannelPipeline} as well as modify the {@link ChannelPipeline} it belongs to dynamically.
  *
  * <h3>Notify</h3>
  *
-<<<<<<< HEAD
- * You can notify the closest handler in the same {@link ChannelPipeline} by calling one of the various method.
-=======
- * You can notify the closest handler in the
- * same {@link ChannelPipeline} by calling one of the various methods provided here.
->>>>>>> 7ec70d0... Merge package private interfaces into public ones. Related to [#1989] and [#1991]
+ * You can notify the closest handler in the same {@link ChannelPipeline} by calling one of the various methods
+ * provided here.
+ *
  * Please refer to {@link ChannelPipeline} to understand how an event flows.
  *
  * <h3>Modifying a pipeline</h3>
  *
  * You can get the {@link ChannelPipeline} your handler belongs to by calling
  * {@link #pipeline()}.  A non-trivial application could insert, remove, or
- * replace handlers in the pipeline dynamically in runtime.
+ * replace handlers in the pipeline dynamically at runtime.
  *
  * <h3>Retrieving for later use</h3>
  *
@@ -85,7 +82,7 @@ import java.nio.channels.Channels;
  * {@link ChannelHandlerContext}s if it is added to one or more
  * {@link ChannelPipeline}s more than once.
  * <p>
- * For example, the following handler will have as many independent attachments
+ * For example, the following handler will have as many independent {@link AttributeKey}s
  * as how many times it is added to pipelines, regardless if it is added to the
  * same pipeline multiple times or added to different pipelines multiple times:
  * <pre>
@@ -110,7 +107,7 @@ import java.nio.channels.Channels;
  *
  * // Different context objects are given to "f1", "f2", "f3", and "f4" even if
  * // they refer to the same handler instance.  Because the FactorialHandler
- * // stores its state in a context object (as an attachment), the factorial is
+ * // stores its state in a context object (using an {@link AttributeKey}), the factorial is
  * // calculated correctly 4 times once the two pipelines (p1 and p2) are active.
  * FactorialHandler fh = new FactorialHandler();
  *
@@ -165,24 +162,33 @@ public interface ChannelHandlerContext extends AttributeMap {
     /**
      * Return {@code true} if the {@link ChannelHandler} which belongs to this {@link ChannelHandler} was removed
      * from the {@link ChannelPipeline}. Note that this method is only meant to be called from with in the
-     * {@link EventExecutor}.
+     * {@link EventLoop}.
      */
     boolean isRemoved();
 
     /**
      * A {@link Channel} was registered to its {@link EventLoop}.
      *
-     * This will result in having the  {@link ChannelHandler#channelRegistered(ChannelHandlerContext)} method
-     * called of the next  {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * This will result in having the {@link ChannelHandler#channelRegistered(ChannelHandlerContext)} method
+     * called of the next {@link ChannelHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelHandlerContext fireChannelRegistered();
 
     /**
+     * A {@link Channel} was unregistered from its {@link EventLoop}.
+     *
+     * This will result in having the {@link ChannelHandler#channelUnregistered(ChannelHandlerContext)} method
+     * called of the next {@link ChannelHandler} contained in the {@link ChannelPipeline} of the
+     * {@link Channel}.
+     */
+    ChannelHandlerContext fireChannelUnregistered();
+
+    /**
      * A {@link Channel} is active now, which means it is connected.
      *
-     * This will result in having the  {@link ChannelHandler#channelActive(ChannelHandlerContext)} method
-     * called of the next  {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * This will result in having the {@link ChannelHandler#channelActive(ChannelHandlerContext)} method
+     * called of the next {@link ChannelHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelHandlerContext fireChannelActive();
@@ -190,8 +196,8 @@ public interface ChannelHandlerContext extends AttributeMap {
     /**
      * A {@link Channel} is inactive now, which means it is closed.
      *
-     * This will result in having the  {@link ChannelHandler#channelInactive(ChannelHandlerContext)} method
-     * called of the next  {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * This will result in having the {@link ChannelHandler#channelInactive(ChannelHandlerContext)} method
+     * called of the next {@link ChannelHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelHandlerContext fireChannelInactive();
@@ -199,8 +205,8 @@ public interface ChannelHandlerContext extends AttributeMap {
     /**
      * A {@link Channel} received an {@link Throwable} in one of its inbound operations.
      *
-     * This will result in having the  {@link ChannelHandler#exceptionCaught(ChannelHandlerContext, Throwable)}
-     * method  called of the next  {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * This will result in having the {@link ChannelHandler#exceptionCaught(ChannelHandlerContext, Throwable)}
+     * method called of the next {@link ChannelHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelHandlerContext fireExceptionCaught(Throwable cause);
@@ -208,8 +214,8 @@ public interface ChannelHandlerContext extends AttributeMap {
     /**
      * A {@link Channel} received an user defined event.
      *
-     * This will result in having the  {@link ChannelHandler#userEventTriggered(ChannelHandlerContext, Object)}
-     * method  called of the next  {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * This will result in having the {@link ChannelHandler#userEventTriggered(ChannelHandlerContext, Object)}
+     * method called of the next {@link ChannelHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelHandlerContext fireUserEventTriggered(Object event);
@@ -218,7 +224,7 @@ public interface ChannelHandlerContext extends AttributeMap {
      * A {@link Channel} received a message.
      *
      * This will result in having the {@link ChannelHandler#channelRead(ChannelHandlerContext, Object)}
-     * method  called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * method called of the next {@link ChannelHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelHandlerContext fireChannelRead(Object msg);
@@ -241,7 +247,7 @@ public interface ChannelHandlerContext extends AttributeMap {
      * <p>
      * This will result in having the
      * {@link ChannelHandler#bind(ChannelHandlerContext, SocketAddress, ChannelPromise)} method
-     * called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * called of the next {@link ChannelHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelFuture bind(SocketAddress localAddress);
@@ -256,7 +262,7 @@ public interface ChannelHandlerContext extends AttributeMap {
      * <p>
      * This will result in having the
      * {@link ChannelHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, ChannelPromise)}
-     * method called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * method called of the next {@link ChannelHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelFuture connect(SocketAddress remoteAddress);
@@ -268,7 +274,7 @@ public interface ChannelHandlerContext extends AttributeMap {
      * <p>
      * This will result in having the
      * {@link ChannelHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, ChannelPromise)}
-     * method called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * method called of the next {@link ChannelHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress);
@@ -279,7 +285,7 @@ public interface ChannelHandlerContext extends AttributeMap {
      * <p>
      * This will result in having the
      * {@link ChannelHandler#disconnect(ChannelHandlerContext, ChannelPromise)}
-     * method called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * method called of the next {@link ChannelHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelFuture disconnect();
@@ -293,10 +299,23 @@ public interface ChannelHandlerContext extends AttributeMap {
      * <p>
      * This will result in having the
      * {@link ChannelHandler#close(ChannelHandlerContext, ChannelPromise)}
-     * method called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * method called of the next {@link ChannelHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelFuture close();
+
+    /**
+     * Request to deregister from the previous assigned {@link EventExecutor} and notify the
+     * {@link ChannelFuture} once the operation completes, either because the operation was successful or because of
+     * an error.
+     * <p>
+     * This will result in having the
+     * {@link ChannelHandler#deregister(ChannelHandlerContext, ChannelPromise)}
+     * method called of the next {@link ChannelHandler} contained in the {@link ChannelPipeline} of the
+     * {@link Channel}.
+     *
+     */
+    ChannelFuture deregister();
 
     /**
      * Request to bind to the given {@link SocketAddress} and notify the {@link ChannelFuture} once the operation
@@ -306,7 +325,7 @@ public interface ChannelHandlerContext extends AttributeMap {
      * <p>
      * This will result in having the
      * {@link ChannelHandler#bind(ChannelHandlerContext, SocketAddress, ChannelPromise)} method
-     * called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * called of the next {@link ChannelHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise);
@@ -324,7 +343,7 @@ public interface ChannelHandlerContext extends AttributeMap {
      * <p>
      * This will result in having the
      * {@link ChannelHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, ChannelPromise)}
-     * method called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * method called of the next {@link ChannelHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise promise);
@@ -338,7 +357,7 @@ public interface ChannelHandlerContext extends AttributeMap {
      * <p>
      * This will result in having the
      * {@link ChannelHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, ChannelPromise)}
-     * method called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * method called of the next {@link ChannelHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise);
@@ -351,7 +370,7 @@ public interface ChannelHandlerContext extends AttributeMap {
      * <p>
      * This will result in having the
      * {@link ChannelHandler#disconnect(ChannelHandlerContext, ChannelPromise)}
-     * method called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * method called of the next {@link ChannelHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelFuture disconnect(ChannelPromise promise);
@@ -366,10 +385,24 @@ public interface ChannelHandlerContext extends AttributeMap {
      * <p>
      * This will result in having the
      * {@link ChannelHandler#close(ChannelHandlerContext, ChannelPromise)}
-     * method called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * method called of the next {@link ChannelHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelFuture close(ChannelPromise promise);
+
+    /**
+     * Request to deregister from the previous assigned {@link EventExecutor} and notify the
+     * {@link ChannelFuture} once the operation completes, either because the operation was successful or because of
+     * an error.
+     *
+     * The given {@link ChannelPromise} will be notified.
+     * <p>
+     * This will result in having the
+     * {@link ChannelHandler#deregister(ChannelHandlerContext, ChannelPromise)}
+     * method called of the next {@link ChannelHandler} contained in the {@link ChannelPipeline} of the
+     * {@link Channel}.
+     */
+    ChannelFuture deregister(ChannelPromise promise);
 
     /**
      * Request to Read data from the {@link Channel} into the first inbound buffer, triggers an
@@ -380,7 +413,7 @@ public interface ChannelHandlerContext extends AttributeMap {
      * <p>
      * This will result in having the
      * {@link ChannelHandler#read(ChannelHandlerContext)}
-     * method called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * method called of the next {@link ChannelHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelHandlerContext read();

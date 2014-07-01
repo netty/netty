@@ -304,7 +304,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     private void checkComponentIndex(int cIndex) {
-        assert !freed;
+        ensureAccessible();
         if (cIndex < 0 || cIndex > components.size()) {
             throw new IndexOutOfBoundsException(String.format(
                     "cIndex: %d (expected: >= 0 && <= numComponents(%d))",
@@ -313,7 +313,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     private void checkComponentIndex(int cIndex, int numComponents) {
-        assert !freed;
+        ensureAccessible();
         if (cIndex < 0 || cIndex + numComponents > components.size()) {
             throw new IndexOutOfBoundsException(String.format(
                     "cIndex: %d, numComponents: %d " +
@@ -375,7 +375,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     public Iterator<ByteBuf> iterator() {
-        assert !freed;
+        ensureAccessible();
         List<ByteBuf> list = new ArrayList<ByteBuf>(components.size());
         for (Component c: components) {
             list.add(c.buf);
@@ -492,7 +492,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public CompositeByteBuf capacity(int newCapacity) {
-        assert !freed;
+        ensureAccessible();
         if (newCapacity < 0 || newCapacity > maxCapacity()) {
             throw new IllegalArgumentException("newCapacity: " + newCapacity);
         }
@@ -569,7 +569,6 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
      * Return the index for the given offset
      */
     public int toComponentIndex(int offset) {
-        assert !freed;
         checkIndex(offset);
 
         for (int low = 0, high = components.size(); low <= high;) {
@@ -1075,7 +1074,6 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     private Component findComponent(int offset) {
-        assert !freed;
         checkIndex(offset);
 
         for (int low = 0, high = components.size(); low <= high;) {
@@ -1173,7 +1171,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
      * Consolidate the composed {@link ByteBuf}s
      */
     public CompositeByteBuf consolidate() {
-        assert !freed;
+        ensureAccessible();
         final int numComponents = numComponents();
         if (numComponents <= 1) {
             return this;
@@ -1230,7 +1228,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
      * Discard all {@link ByteBuf}s which are read.
      */
     public CompositeByteBuf discardReadComponents() {
-        assert !freed;
+        ensureAccessible();
         final int readerIndex = readerIndex();
         if (readerIndex == 0) {
             return this;
@@ -1266,7 +1264,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public CompositeByteBuf discardReadBytes() {
-        assert !freed;
+        ensureAccessible();
         final int readerIndex = readerIndex();
         if (readerIndex == 0) {
             return this;
@@ -1568,6 +1566,22 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public CompositeByteBuf retain() {
         return (CompositeByteBuf) super.retain();
+    }
+
+    @Override
+    public CompositeByteBuf touch() {
+        if (leak != null) {
+            leak.record();
+        }
+        return this;
+    }
+
+    @Override
+    public CompositeByteBuf touch(Object hint) {
+        if (leak != null) {
+            leak.record(hint);
+        }
+        return this;
     }
 
     @Override

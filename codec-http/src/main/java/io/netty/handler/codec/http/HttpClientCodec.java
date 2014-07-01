@@ -17,8 +17,8 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelHandlerAppender;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.PrematureChannelClosureException;
 
 import java.util.ArrayDeque;
@@ -40,7 +40,8 @@ import java.util.concurrent.atomic.AtomicLong;
  *
  * @see HttpServerCodec
  */
-public final class HttpClientCodec extends ChannelHandlerAppender {
+public final class HttpClientCodec extends ChannelHandlerAppender implements
+        HttpClientUpgradeHandler.SourceCodec {
 
     /** A queue that is used for correlating a request and a response. */
     private final Queue<HttpMethod> queue = new ArrayDeque<HttpMethod>();
@@ -81,8 +82,19 @@ public final class HttpClientCodec extends ChannelHandlerAppender {
     public HttpClientCodec(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean failOnMissingResponse,
             boolean validateHeaders) {
-        add(new Decoder(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders), new Encoder());
+        add(new Decoder(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders));
+        add(new Encoder());
         this.failOnMissingResponse = failOnMissingResponse;
+    }
+
+    /**
+     * Upgrades to another protocol from HTTP. Removes the {@link Decoder} and {@link Encoder} from
+     * the pipeline.
+     */
+    @Override
+    public void upgradeFrom(ChannelHandlerContext ctx) {
+        ctx.pipeline().remove(Decoder.class);
+        ctx.pipeline().remove(Encoder.class);
     }
 
     private Decoder decoder() {
@@ -103,7 +115,7 @@ public final class HttpClientCodec extends ChannelHandlerAppender {
         protected void encode(
                 ChannelHandlerContext ctx, Object msg, List<Object> out) throws Exception {
             if (msg instanceof HttpRequest && !done) {
-                queue.offer(((HttpRequest) msg).getMethod());
+                queue.offer(((HttpRequest) msg).method());
             }
 
             super.encode(ctx, msg, out);
@@ -159,7 +171,7 @@ public final class HttpClientCodec extends ChannelHandlerAppender {
 
         @Override
         protected boolean isContentAlwaysEmpty(HttpMessage msg) {
-            final int statusCode = ((HttpResponse) msg).getStatus().code();
+            final int statusCode = ((HttpResponse) msg).status().code();
             if (statusCode == 100) {
                 // 100-continue response should be excluded from paired comparison.
                 return true;

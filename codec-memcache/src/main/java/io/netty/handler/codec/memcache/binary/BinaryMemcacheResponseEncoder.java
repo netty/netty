@@ -21,19 +21,19 @@ import io.netty.buffer.ByteBuf;
  * The encoder which takes care of encoding the response headers.
  */
 public class BinaryMemcacheResponseEncoder
-    extends BinaryMemcacheEncoder<BinaryMemcacheResponse, BinaryMemcacheResponseHeader> {
+    extends AbstractBinaryMemcacheEncoder<BinaryMemcacheResponse> {
 
     @Override
-    protected void encodeHeader(ByteBuf buf, BinaryMemcacheResponseHeader header) {
-        buf.writeByte(header.getMagic());
-        buf.writeByte(header.getOpcode());
-        buf.writeShort(header.getKeyLength());
-        buf.writeByte(header.getExtrasLength());
-        buf.writeByte(header.getDataType());
-        buf.writeShort(header.getStatus());
-        buf.writeInt(header.getTotalBodyLength());
-        buf.writeInt(header.getOpaque());
-        buf.writeLong(header.getCAS());
+    protected void encodeHeader(ByteBuf buf, BinaryMemcacheResponse msg) {
+        buf.writeByte(msg.magic());
+        buf.writeByte(msg.opcode());
+        buf.writeShort(msg.keyLength());
+        buf.writeByte(msg.extrasLength());
+        buf.writeByte(msg.dataType());
+        buf.writeShort(msg.status());
+        buf.writeInt(msg.totalBodyLength());
+        buf.writeInt(msg.opaque());
+        buf.writeLong(msg.cas());
     }
 
 }

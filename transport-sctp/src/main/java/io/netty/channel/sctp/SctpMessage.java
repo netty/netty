@@ -111,11 +111,7 @@ public final class SctpMessage extends DefaultByteBufHolder {
             return false;
         }
 
-        if (!content().equals(sctpFrame.content())) {
-            return false;
-        }
-
-        return true;
+        return content().equals(sctpFrame.content());
     }
 
     @Override
@@ -153,6 +149,18 @@ public final class SctpMessage extends DefaultByteBufHolder {
     @Override
     public SctpMessage retain(int increment) {
         super.retain(increment);
+        return this;
+    }
+
+    @Override
+    public SctpMessage touch() {
+        super.touch();
+        return this;
+    }
+
+    @Override
+    public SctpMessage touch(Object hint) {
+        super.touch(hint);
         return this;
     }
 

@@ -23,7 +23,7 @@ public interface SpdyWindowUpdateFrame extends SpdyFrame {
     /**
      * Returns the Stream-ID of this frame.
      */
-    int getStreamId();
+    int streamId();
 
     /**
      * Sets the Stream-ID of this frame.  The Stream-ID cannot be negative.
@@ -33,7 +33,7 @@ public interface SpdyWindowUpdateFrame extends SpdyFrame {
     /**
      * Returns the Delta-Window-Size of this frame.
      */
-    int getDeltaWindowSize();
+    int deltaWindowSize();
 
     /**
      * Sets the Delta-Window-Size of this frame.

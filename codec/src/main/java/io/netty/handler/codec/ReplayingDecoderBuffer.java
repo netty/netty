@@ -307,11 +307,15 @@ final class ReplayingDecoderBuffer extends ByteBuf {
 
     @Override
     public int indexOf(int fromIndex, int toIndex, byte value) {
-        int endIndex = buffer.indexOf(fromIndex, toIndex, value);
-        if (endIndex < 0) {
+        if (fromIndex == toIndex) {
+            return -1;
+        }
+
+        if (Math.max(fromIndex, toIndex) > buffer.writerIndex()) {
             throw REPLAY;
         }
-        return endIndex;
+
+        return buffer.indexOf(fromIndex, toIndex, value);
     }
 
     @Override
@@ -325,27 +329,33 @@ final class ReplayingDecoderBuffer extends ByteBuf {
 
     @Override
     public int bytesBefore(int length, byte value) {
-        checkReadableBytes(length);
-        int bytes = buffer.bytesBefore(length, value);
-        if (bytes < 0) {
-            throw REPLAY;
-        }
-        return bytes;
+        final int readerIndex = buffer.readerIndex();
+        return bytesBefore(readerIndex, buffer.writerIndex() - readerIndex, value);
     }
 
     @Override
     public int bytesBefore(int index, int length, byte value) {
-        int bytes = buffer.bytesBefore(index, length, value);
-        if (bytes < 0) {
+        final int writerIndex = buffer.writerIndex();
+        if (index >= writerIndex) {
             throw REPLAY;
         }
-        return bytes;
+
+        if (index <= writerIndex - length) {
+            return buffer.bytesBefore(index, length, value);
+        }
+
+        int res = buffer.bytesBefore(index, writerIndex - index, value);
+        if (res < 0) {
+            throw REPLAY;
+        } else {
+            return res;
+        }
     }
 
     @Override
     public int forEachByte(ByteBufProcessor processor) {
         int ret = buffer.forEachByte(processor);
-        if (!terminated && ret < 0) {
+        if (ret < 0) {
             throw REPLAY;
         } else {
             return ret;
@@ -359,7 +369,7 @@ final class ReplayingDecoderBuffer extends ByteBuf {
             throw REPLAY;
         }
 
-        if (index + length <= writerIndex) {
+        if (index <= writerIndex - length) {
             return buffer.forEachByte(index, length, processor);
         }
 
@@ -969,6 +979,18 @@ final class ReplayingDecoderBuffer extends ByteBuf {
     @Override
     public ByteBuf retain(int increment) {
         reject();
+        return this;
+    }
+
+    @Override
+    public ByteBuf touch() {
+        buffer.touch();
+        return this;
+    }
+
+    @Override
+    public ByteBuf touch(Object hint) {
+        buffer.touch(hint);
         return this;
     }
 

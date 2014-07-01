@@ -86,7 +86,7 @@ public class DefaultSpdyHeadersFrame extends DefaultSpdyStreamFrame
         buf.append(')');
         buf.append(StringUtil.NEWLINE);
         buf.append("--> Stream-ID = ");
-        buf.append(getStreamId());
+        buf.append(streamId());
         buf.append(StringUtil.NEWLINE);
         buf.append("--> Headers:");
         buf.append(StringUtil.NEWLINE);

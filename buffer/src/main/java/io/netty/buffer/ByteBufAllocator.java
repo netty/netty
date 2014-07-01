@@ -21,6 +21,8 @@ package io.netty.buffer;
  */
 public interface ByteBufAllocator {
 
+    ByteBufAllocator DEFAULT = ByteBufUtil.DEFAULT_ALLOCATOR;
+
     /**
      * Allocate a {@link ByteBuf}. If it is a direct or heap buffer
      * depends on the actual implementation.
@@ -41,7 +43,7 @@ public interface ByteBufAllocator {
     ByteBuf buffer(int initialCapacity, int maxCapacity);
 
     /**
-     * Allocate a {@link ByteBuf} whose initial capacity is 0, preferably a direct buffer which is suitable for I/O.
+     * Allocate a {@link ByteBuf}, preferably a direct buffer which is suitable for I/O.
      */
     ByteBuf ioBuffer();
 
@@ -123,4 +125,10 @@ public interface ByteBufAllocator {
      * Returns {@code true} if direct {@link ByteBuf}'s are pooled
      */
     boolean isDirectBufferPooled();
-}
+
+    /**
+     * Calculate the new capacity of a {@link ByteBuf} that is used when a {@link ByteBuf} needs to expand by the
+     * {@code minNewCapacity} with {@code maxCapacity} as upper-bound.
+     */
+    int calculateNewCapacity(int minNewCapacity, int maxCapacity);
+ }

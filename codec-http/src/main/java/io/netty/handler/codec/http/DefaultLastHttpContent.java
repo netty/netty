@@ -17,6 +17,7 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.AsciiString;
 import io.netty.util.internal.StringUtil;
 
 import java.util.Map;
@@ -39,7 +40,7 @@ public class DefaultLastHttpContent extends DefaultHttpContent implements LastHt
 
     public DefaultLastHttpContent(ByteBuf content, boolean validateHeaders) {
         super(content);
-        trailingHeaders = new TrailingHeaders(validateHeaders);
+        trailingHeaders = new TrailingHttpHeaders(validateHeaders);
         this.validateHeaders = validateHeaders;
     }
 
@@ -70,6 +71,18 @@ public class DefaultLastHttpContent extends DefaultHttpContent implements LastHt
     }
 
     @Override
+    public LastHttpContent touch() {
+        super.touch();
+        return this;
+    }
+
+    @Override
+    public LastHttpContent touch(Object hint) {
+        super.touch(hint);
+        return this;
+    }
+
+    @Override
     public HttpHeaders trailingHeaders() {
         return trailingHeaders;
     }
@@ -94,20 +107,23 @@ public class DefaultLastHttpContent extends DefaultHttpContent implements LastHt
         }
     }
 
-    private static final class TrailingHeaders extends DefaultHttpHeaders {
-        TrailingHeaders(boolean validate) {
+    private static final class TrailingHttpHeaders extends DefaultHttpHeaders {
+        TrailingHttpHeaders(boolean validate) {
             super(validate);
         }
 
         @Override
-        void validateHeaderName0(CharSequence name) {
-            super.validateHeaderName0(name);
-            if (equalsIgnoreCase(name, HttpHeaders.Names.CONTENT_LENGTH) ||
-                    equalsIgnoreCase(name, HttpHeaders.Names.TRANSFER_ENCODING) ||
-                    equalsIgnoreCase(name, HttpHeaders.Names.TRAILER)) {
-                throw new IllegalArgumentException(
-                        "prohibited trailing header: " + name);
+        protected CharSequence convertName(CharSequence name) {
+            name = super.convertName(name);
+            if (validate) {
+                if (AsciiString.equalsIgnoreCase(HttpHeaders.Names.CONTENT_LENGTH, name) ||
+                        AsciiString.equalsIgnoreCase(HttpHeaders.Names.TRANSFER_ENCODING, name) ||
+                        AsciiString.equalsIgnoreCase(HttpHeaders.Names.TRAILER, name)) {
+                    throw new IllegalArgumentException(
+                            "prohibited trailing header: " + name);
+                }
             }
+            return name;
         }
     }
 }

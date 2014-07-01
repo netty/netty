@@ -24,6 +24,7 @@ import org.junit.Test;
 
 import java.util.List;
 
+import static io.netty.util.ReferenceCountUtil.*;
 import static org.junit.Assert.*;
 
 public class ReplayingDecoderTest {
@@ -73,7 +74,8 @@ public class ReplayingDecoderTest {
 
         // "C\n" should be appended to "AB" so that LineDecoder decodes it correctly.
         ch.writeInbound(Unpooled.wrappedBuffer(new byte[]{'C', '\n'}));
-        assertEquals(Unpooled.wrappedBuffer(new byte[] { 'A', 'B', 'C' }), ch.readInbound());
+        assertEquals(releaseLater(Unpooled.wrappedBuffer(new byte[] { 'A', 'B', 'C' })),
+                releaseLater(ch.readInbound()));
 
         ch.finish();
         assertNull(ch.readInbound());
@@ -95,12 +97,12 @@ public class ReplayingDecoderTest {
 
         // "C\n" should be appended to "AB" so that LineDecoder decodes it correctly.
         ch.writeInbound(Unpooled.wrappedBuffer(new byte[]{'C', '\n' , 'B', '\n'}));
-        assertEquals(Unpooled.wrappedBuffer(new byte[] {'C' }), ch.readInbound());
+        assertEquals(releaseLater(Unpooled.wrappedBuffer(new byte[] {'C' })), releaseLater(ch.readInbound()));
         assertNull("Must be null as it must only decode one frame", ch.readInbound());
 
         ch.read();
         ch.finish();
-        assertEquals(Unpooled.wrappedBuffer(new byte[] {'B' }), ch.readInbound());
+        assertEquals(releaseLater(Unpooled.wrappedBuffer(new byte[] {'B' })), releaseLater(ch.readInbound()));
         assertNull(ch.readInbound());
     }
 
@@ -120,8 +122,10 @@ public class ReplayingDecoderTest {
 
         ByteBuf buf = Unpooled.wrappedBuffer(new byte[] {'a', 'b', 'c'});
         channel.writeInbound(buf.copy());
-        ByteBuf b = (ByteBuf) channel.readInbound();
+        ByteBuf b = channel.readInbound();
         assertEquals(b, buf.skipBytes(1));
+        b.release();
+        buf.release();
     }
 
     @Test
@@ -142,9 +146,11 @@ public class ReplayingDecoderTest {
 
         ByteBuf buf = Unpooled.wrappedBuffer(new byte[] {'a', 'b', 'c'});
         channel.writeInbound(buf.copy());
-        ByteBuf b = (ByteBuf) channel.readInbound();
+        ByteBuf b = channel.readInbound();
 
         assertEquals("Expect to have still all bytes in the buffer", b, buf);
+        b.release();
+        buf.release();
     }
 
     @Test
@@ -166,7 +172,9 @@ public class ReplayingDecoderTest {
         });
 
         channel.writeInbound(buf.copy());
-        ByteBuf b = (ByteBuf) channel.readInbound();
+        ByteBuf b = channel.readInbound();
         assertEquals(b, Unpooled.wrappedBuffer(new byte[] { 'b', 'c'}));
+        b.release();
+        buf.release();
     }
 }

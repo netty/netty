@@ -68,7 +68,7 @@ public abstract class WebSocketFrame extends DefaultByteBufHolder {
 
     @Override
     public String toString() {
-        return StringUtil.simpleClassName(this) + "(data: " + content().toString() + ')';
+        return StringUtil.simpleClassName(this) + "(data: " + content() + ')';
     }
 
     @Override
@@ -80,6 +80,18 @@ public abstract class WebSocketFrame extends DefaultByteBufHolder {
     @Override
     public WebSocketFrame retain(int increment) {
         super.retain(increment);
+        return this;
+    }
+
+    @Override
+    public WebSocketFrame touch() {
+        super.touch();
+        return this;
+    }
+
+    @Override
+    public WebSocketFrame touch(Object hint) {
+        super.touch(hint);
         return this;
     }
 }

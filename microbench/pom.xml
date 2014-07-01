@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>5.0.0.Alpha1-SNAPSHOT</version>
+    <version>5.0.0.Alpha2-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-microbench</artifactId>
@@ -45,8 +45,15 @@
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>com.google.caliper</groupId>
-      <artifactId>caliper</artifactId>
+      <groupId>org.openjdk.jmh</groupId>
+      <artifactId>jmh-core</artifactId>
+      <version>0.9</version>
+    </dependency>
+    <dependency>
+      <groupId>org.openjdk.jmh</groupId>
+      <artifactId>jmh-generator-annprocess</artifactId>
+      <version>0.9</version>
+      <scope>provided</scope>
     </dependency>
   </dependencies>
 
@@ -56,6 +63,19 @@
         <artifactId>maven-deploy-plugin</artifactId>
         <configuration>
           <skip>true</skip>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <excludes>
+            <exclude>**/AbstractMicrobenchmark.java</exclude>
+            <exclude>**/*$*.class</exclude>
+          </excludes>
+            <systemPropertyVariables>
+                <perfReportDir>${project.build.directory}/reports/performance/</perfReportDir>
+            </systemPropertyVariables>
         </configuration>
       </plugin>
     </plugins>

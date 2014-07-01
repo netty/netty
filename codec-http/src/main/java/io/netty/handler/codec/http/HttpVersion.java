@@ -177,6 +177,7 @@ public class HttpVersion implements Comparable<HttpVersion> {
         this.minorVersion = minorVersion;
         text = protocolName + '/' + majorVersion + '.' + minorVersion;
         this.keepAliveDefault = keepAliveDefault;
+
         if (bytes) {
             this.bytes = text.getBytes(CharsetUtil.US_ASCII);
         } else {
@@ -263,7 +264,7 @@ public class HttpVersion implements Comparable<HttpVersion> {
 
     void encode(ByteBuf buf) {
         if (bytes == null) {
-            HttpHeaders.encodeAscii0(text, buf);
+            HttpHeaderUtil.encodeAscii0(text, buf);
         } else {
             buf.writeBytes(bytes);
         }

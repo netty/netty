@@ -27,7 +27,7 @@ import java.nio.charset.Charset;
 /**
  * Wrapper which swap the {@link ByteOrder} of a {@link ByteBuf}.
  */
-public final class SwappedByteBuf extends ByteBuf {
+public class SwappedByteBuf extends ByteBuf {
 
     private final ByteBuf buf;
     private final ByteOrder order;
@@ -815,6 +815,18 @@ public final class SwappedByteBuf extends ByteBuf {
     }
 
     @Override
+    public ByteBuf touch() {
+        buf.touch();
+        return this;
+    }
+
+    @Override
+    public ByteBuf touch(Object hint) {
+        buf.touch(hint);
+        return this;
+    }
+
+    @Override
     public boolean release() {
         return buf.release();
     }
@@ -847,6 +859,6 @@ public final class SwappedByteBuf extends ByteBuf {
 
     @Override
     public String toString() {
-        return "Swapped(" + buf.toString() + ')';
+        return "Swapped(" + buf + ')';
     }
 }

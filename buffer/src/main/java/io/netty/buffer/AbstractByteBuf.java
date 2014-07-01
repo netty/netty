@@ -38,7 +38,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
     static final ResourceLeakDetector<ByteBuf> leakDetector = new ResourceLeakDetector<ByteBuf>(ByteBuf.class);
 
     int readerIndex;
-    private int writerIndex;
+    int writerIndex;
     private int markedReaderIndex;
     private int markedWriterIndex;
 
@@ -229,6 +229,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf ensureWritable(int minWritableBytes) {
+        ensureAccessible();
         if (minWritableBytes < 0) {
             throw new IllegalArgumentException(String.format(
                     "minWritableBytes: %d (expected: >= 0)", minWritableBytes));
@@ -245,7 +246,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
         }
 
         // Normalize the current capacity to the power of 2.
-        int newCapacity = calculateNewCapacity(writerIndex + minWritableBytes);
+        int newCapacity = alloc().calculateNewCapacity(writerIndex + minWritableBytes, maxCapacity);
 
         // Adjust to the new capacity.
         capacity(newCapacity);
@@ -275,39 +276,11 @@ public abstract class AbstractByteBuf extends ByteBuf {
         }
 
         // Normalize the current capacity to the power of 2.
-        int newCapacity = calculateNewCapacity(writerIndex + minWritableBytes);
+        int newCapacity = alloc().calculateNewCapacity(writerIndex + minWritableBytes, maxCapacity);
 
         // Adjust to the new capacity.
         capacity(newCapacity);
         return 2;
-    }
-
-    private int calculateNewCapacity(int minNewCapacity) {
-        final int maxCapacity = this.maxCapacity;
-        final int threshold = 1048576 * 4; // 4 MiB page
-
-        if (minNewCapacity == threshold) {
-            return threshold;
-        }
-
-        // If over threshold, do not double but just increase by threshold.
-        if (minNewCapacity > threshold) {
-            int newCapacity = minNewCapacity / threshold * threshold;
-            if (newCapacity > maxCapacity - threshold) {
-                newCapacity = maxCapacity;
-            } else {
-                newCapacity += threshold;
-            }
-            return newCapacity;
-        }
-
-        // Not over threshold. Double up to 4 MiB, starting from 64.
-        int newCapacity = 64;
-        while (newCapacity < minNewCapacity) {
-            newCapacity <<= 1;
-        }
-
-        return Math.min(newCapacity, maxCapacity);
     }
 
     @Override
@@ -321,9 +294,16 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
         SwappedByteBuf swappedBuf = this.swappedBuf;
         if (swappedBuf == null) {
-            this.swappedBuf = swappedBuf = new SwappedByteBuf(this);
+            this.swappedBuf = swappedBuf = newSwappedByteBuf();
         }
         return swappedBuf;
+    }
+
+    /**
+     * Creates a new {@link SwappedByteBuf} for this {@link ByteBuf} instance.
+     */
+    protected SwappedByteBuf newSwappedByteBuf() {
+        return new SwappedByteBuf(this);
     }
 
     @Override
@@ -995,11 +975,12 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public int forEachByte(int index, int length, ByteBufProcessor processor) {
-        checkIndex(index, length);
         return forEachByteAsc0(index, length, processor);
     }
 
     private int forEachByteAsc0(int index, int length, ByteBufProcessor processor) {
+        checkIndex(index, length);
+
         if (processor == null) {
             throw new NullPointerException("processor");
         }
@@ -1034,11 +1015,12 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public int forEachByteDesc(int index, int length, ByteBufProcessor processor) {
-        checkIndex(index, length);
         return forEachByteDesc0(index, length, processor);
     }
 
     private int forEachByteDesc0(int index, int length, ByteBufProcessor processor) {
+        checkIndex(index, length);
+
         if (processor == null) {
             throw new NullPointerException("processor");
         }

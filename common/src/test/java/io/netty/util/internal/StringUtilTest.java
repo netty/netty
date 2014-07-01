@@ -17,37 +17,57 @@ package io.netty.util.internal;
 
 import org.junit.Test;
 
+import static io.netty.util.internal.StringUtil.*;
+import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
 
 public class StringUtilTest {
 
     @Test
     public void ensureNewlineExists() {
-        assertNotNull(StringUtil.NEWLINE);
+        assertNotNull(NEWLINE);
+    }
+
+    @Test
+    public void testToHexString() {
+        assertThat(toHexString(new byte[] { 0 }), is("0"));
+        assertThat(toHexString(new byte[] { 1 }), is("1"));
+        assertThat(toHexString(new byte[] { 0, 0 }), is("0"));
+        assertThat(toHexString(new byte[] { 1, 0 }), is("100"));
+        assertThat(toHexString(EmptyArrays.EMPTY_BYTES), is(""));
+    }
+
+    @Test
+    public void testToHexStringPadded() {
+        assertThat(toHexStringPadded(new byte[]{0}), is("00"));
+        assertThat(toHexStringPadded(new byte[]{1}), is("01"));
+        assertThat(toHexStringPadded(new byte[]{0, 0}), is("0000"));
+        assertThat(toHexStringPadded(new byte[]{1, 0}), is("0100"));
+        assertThat(toHexStringPadded(EmptyArrays.EMPTY_BYTES), is(""));
     }
 
     @Test
     public void splitSimple() {
-        assertArrayEquals(new String[] { "foo", "bar" }, StringUtil.split("foo:bar", ':'));
+        assertArrayEquals(new String[] { "foo", "bar" }, split("foo:bar", ':'));
     }
 
     @Test
     public void splitWithTrailingDelimiter() {
-        assertArrayEquals(new String[] { "foo", "bar" }, StringUtil.split("foo,bar,", ','));
+        assertArrayEquals(new String[] { "foo", "bar" }, split("foo,bar,", ','));
     }
 
     @Test
     public void splitWithTrailingDelimiters() {
-        assertArrayEquals(new String[] { "foo", "bar" }, StringUtil.split("foo!bar!!", '!'));
+        assertArrayEquals(new String[] { "foo", "bar" }, split("foo!bar!!", '!'));
     }
 
     @Test
     public void splitWithConsecutiveDelimiters() {
-        assertArrayEquals(new String[] { "foo", "", "bar" }, StringUtil.split("foo$$bar", '$'));
+        assertArrayEquals(new String[] { "foo", "", "bar" }, split("foo$$bar", '$'));
     }
 
     @Test
     public void splitWithDelimiterAtBeginning() {
-        assertArrayEquals(new String[] { "", "foo", "bar" }, StringUtil.split("#foo#bar", '#'));
+        assertArrayEquals(new String[] { "", "foo", "bar" }, split("#foo#bar", '#'));
     }
 }

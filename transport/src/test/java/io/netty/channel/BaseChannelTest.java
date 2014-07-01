@@ -23,8 +23,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
 
-import java.io.UnsupportedEncodingException;
-
 import static org.junit.Assert.*;
 
 class BaseChannelTest {
@@ -66,18 +64,6 @@ class BaseChannelTest {
         return buf;
     }
 
-    static Object createTestBuf(String string) throws UnsupportedEncodingException {
-        byte[] buf = string.getBytes("US-ASCII");
-        return createTestBuf(buf);
-    }
-
-    static Object createTestBuf(byte[] buf) {
-        ByteBuf ret = createTestBuf(buf.length);
-        ret.clear();
-        ret.writeBytes(buf);
-        return ret;
-    }
-
     void assertLog(String expected) {
         String actual = loggingHandler.getLog();
         assertEquals(expected, actual);
@@ -90,4 +76,5 @@ class BaseChannelTest {
     void setInterest(LoggingHandler.Event... events) {
         loggingHandler.setInterest(events);
     }
+
 }

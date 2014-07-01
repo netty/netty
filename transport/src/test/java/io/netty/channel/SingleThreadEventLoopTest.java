@@ -15,12 +15,19 @@
  */
 package io.netty.channel;
 
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.Appender;
 import io.netty.channel.local.LocalChannel;
 import io.netty.util.concurrent.EventExecutor;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -130,7 +137,7 @@ public class SingleThreadEventLoopTest {
         testScheduleTask(loopB);
     }
 
-    private static void testScheduleTask(EventExecutor loopA) throws InterruptedException, ExecutionException {
+    private static void testScheduleTask(EventLoop loopA) throws InterruptedException, ExecutionException {
         long startTime = System.nanoTime();
         final AtomicLong endTime = new AtomicLong();
         loopA.schedule(new Runnable() {
@@ -152,7 +159,7 @@ public class SingleThreadEventLoopTest {
         testScheduleTaskAtFixedRate(loopB);
     }
 
-    private static void testScheduleTaskAtFixedRate(EventExecutor loopA) throws InterruptedException {
+    private static void testScheduleTaskAtFixedRate(EventLoop loopA) throws InterruptedException {
         final Queue<Long> timestamps = new LinkedBlockingQueue<Long>();
         ScheduledFuture<?> f = loopA.scheduleAtFixedRate(new Runnable() {
             @Override
@@ -192,7 +199,7 @@ public class SingleThreadEventLoopTest {
         testScheduleLaggyTaskAtFixedRate(loopB);
     }
 
-    private static void testScheduleLaggyTaskAtFixedRate(EventExecutor loopA) throws InterruptedException {
+    private static void testScheduleLaggyTaskAtFixedRate(EventLoop loopA) throws InterruptedException {
         final Queue<Long> timestamps = new LinkedBlockingQueue<Long>();
         ScheduledFuture<?> f = loopA.scheduleAtFixedRate(new Runnable() {
             @Override
@@ -242,7 +249,7 @@ public class SingleThreadEventLoopTest {
         testScheduleTaskWithFixedDelay(loopB);
     }
 
-    private static void testScheduleTaskWithFixedDelay(EventExecutor loopA) throws InterruptedException {
+    private static void testScheduleTaskWithFixedDelay(EventLoop loopA) throws InterruptedException {
         final Queue<Long> timestamps = new LinkedBlockingQueue<Long>();
         ScheduledFuture<?> f = loopA.scheduleWithFixedDelay(new Runnable() {
             @Override
@@ -321,12 +328,27 @@ public class SingleThreadEventLoopTest {
     @SuppressWarnings("deprecation")
     public void testRegistrationAfterShutdown() throws Exception {
         loopA.shutdown();
-        Channel channel = new LocalChannel(loopA);
-        ChannelPromise f = channel.newPromise();
-        channel.unsafe().register(f);
-        f.awaitUninterruptibly();
-        assertFalse(f.isSuccess());
-        assertThat(f.cause(), is(instanceOf(RejectedExecutionException.class)));
+
+        // Disable logging temporarily.
+        Logger root = (Logger) LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
+        List<Appender<ILoggingEvent>> appenders = new ArrayList<Appender<ILoggingEvent>>();
+        for (Iterator<Appender<ILoggingEvent>> i = root.iteratorForAppenders(); i.hasNext();) {
+            Appender<ILoggingEvent> a = i.next();
+            appenders.add(a);
+            root.detachAppender(a);
+        }
+
+        try {
+            ChannelFuture f = loopA.register(new LocalChannel());
+            f.awaitUninterruptibly();
+            assertFalse(f.isSuccess());
+            assertThat(f.cause(), is(instanceOf(RejectedExecutionException.class)));
+            assertFalse(f.channel().isOpen());
+        } finally {
+            for (Appender<ILoggingEvent> a: appenders) {
+                root.addAppender(a);
+            }
+        }
     }
 
     @Test(timeout = 10000)
@@ -334,7 +356,7 @@ public class SingleThreadEventLoopTest {
     public void testRegistrationAfterShutdown2() throws Exception {
         loopA.shutdown();
         final CountDownLatch latch = new CountDownLatch(1);
-        Channel ch = new LocalChannel(loopA);
+        Channel ch = new LocalChannel();
         ChannelPromise promise = ch.newPromise();
         promise.addListener(new ChannelFutureListener() {
             @Override
@@ -343,13 +365,29 @@ public class SingleThreadEventLoopTest {
             }
         });
 
-        ch.unsafe().register(promise);
-        promise.awaitUninterruptibly();
-        assertFalse(promise.isSuccess());
-        assertThat(promise.cause(), is(instanceOf(RejectedExecutionException.class)));
+        // Disable logging temporarily.
+        Logger root = (Logger) LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
+        List<Appender<ILoggingEvent>> appenders = new ArrayList<Appender<ILoggingEvent>>();
+        for (Iterator<Appender<ILoggingEvent>> i = root.iteratorForAppenders(); i.hasNext();) {
+            Appender<ILoggingEvent> a = i.next();
+            appenders.add(a);
+            root.detachAppender(a);
+        }
 
-        // Ensure the listener was notified.
-        assertFalse(latch.await(1, TimeUnit.SECONDS));
+        try {
+            ChannelFuture f = loopA.register(ch, promise);
+            f.awaitUninterruptibly();
+            assertFalse(f.isSuccess());
+            assertThat(f.cause(), is(instanceOf(RejectedExecutionException.class)));
+
+            // Ensure the listener was notified.
+            assertFalse(latch.await(1, TimeUnit.SECONDS));
+            assertFalse(ch.isOpen());
+        } finally {
+            for (Appender<ILoggingEvent> a: appenders) {
+                root.addAppender(a);
+            }
+        }
     }
 
     @Test(timeout = 5000)

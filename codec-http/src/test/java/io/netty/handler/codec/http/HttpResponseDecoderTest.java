@@ -17,6 +17,7 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.util.CharsetUtil;
 import org.junit.Test;
 
@@ -24,20 +25,18 @@ import java.util.List;
 
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
-import static org.junit.Assert.assertEquals;
 
 public class HttpResponseDecoderTest {
 
-    /*
     @Test
     public void testResponseChunked() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
         ch.writeInbound(Unpooled.copiedBuffer("HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n",
                 CharsetUtil.US_ASCII));
 
-        HttpResponse res = (HttpResponse) ch.readInbound();
-        assertThat(res.getProtocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
-        assertThat(res.getStatus(), is(HttpResponseStatus.OK));
+        HttpResponse res = ch.readInbound();
+        assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
+        assertThat(res.status(), is(HttpResponseStatus.OK));
 
         byte[] data = new byte[64];
         for (int i = 0; i < data.length; i++) {
@@ -48,7 +47,7 @@ public class HttpResponseDecoderTest {
             assertFalse(ch.writeInbound(Unpooled.copiedBuffer(Integer.toHexString(data.length) + "\r\n",
                     CharsetUtil.US_ASCII)));
             assertTrue(ch.writeInbound(Unpooled.wrappedBuffer(data)));
-            HttpContent content = (HttpContent) ch.readInbound();
+            HttpContent content = ch.readInbound();
             assertEquals(data.length, content.content().readableBytes());
 
             byte[] decodedData = new byte[data.length];
@@ -58,24 +57,28 @@ public class HttpResponseDecoderTest {
 
             assertFalse(ch.writeInbound(Unpooled.copiedBuffer("\r\n", CharsetUtil.US_ASCII)));
         }
-        assertTrue(ch.finish());
 
-        LastHttpContent content = (LastHttpContent) ch.readInbound();
+        // Write the last chunk.
+        ch.writeInbound(Unpooled.copiedBuffer("0\r\n\r\n", CharsetUtil.US_ASCII));
+
+        // Ensure the last chunk was decoded.
+        LastHttpContent content = ch.readInbound();
         assertFalse(content.content().isReadable());
         content.release();
 
+        ch.finish();
         assertNull(ch.readInbound());
     }
 
     @Test
     public void testResponseChunkedExceedMaxChunkSize() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder(4096, 8192, 32));
-        ch.writeInbound(Unpooled.copiedBuffer("HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n",
-                CharsetUtil.US_ASCII));
+        ch.writeInbound(
+                Unpooled.copiedBuffer("HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n", CharsetUtil.US_ASCII));
 
-        HttpResponse res = (HttpResponse) ch.readInbound();
-        assertThat(res.getProtocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
-        assertThat(res.getStatus(), is(HttpResponseStatus.OK));
+        HttpResponse res = ch.readInbound();
+        assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
+        assertThat(res.status(), is(HttpResponseStatus.OK));
 
         byte[] data = new byte[64];
         for (int i = 0; i < data.length; i++) {
@@ -88,11 +91,12 @@ public class HttpResponseDecoderTest {
             assertTrue(ch.writeInbound(Unpooled.wrappedBuffer(data)));
 
             byte[] decodedData = new byte[data.length];
-            HttpContent content = (HttpContent) ch.readInbound();
+            HttpContent content = ch.readInbound();
             assertEquals(32, content.content().readableBytes());
             content.content().readBytes(decodedData, 0, 32);
+            content.release();
 
-            content = (HttpContent) ch.readInbound();
+            content = ch.readInbound();
             assertEquals(32, content.content().readableBytes());
 
             content.content().readBytes(decodedData, 32, 32);
@@ -102,29 +106,135 @@ public class HttpResponseDecoderTest {
 
             assertFalse(ch.writeInbound(Unpooled.copiedBuffer("\r\n", CharsetUtil.US_ASCII)));
         }
-        assertTrue(ch.finish());
 
-        LastHttpContent content = (LastHttpContent) ch.readInbound();
+        // Write the last chunk.
+        ch.writeInbound(Unpooled.copiedBuffer("0\r\n\r\n", CharsetUtil.US_ASCII));
+
+        // Ensure the last chunk was decoded.
+        LastHttpContent content = ch.readInbound();
         assertFalse(content.content().isReadable());
         content.release();
 
+        ch.finish();
         assertNull(ch.readInbound());
     }
-    */
+
+    @Test
+    public void testClosureWithoutContentLength1() throws Exception {
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
+        ch.writeInbound(Unpooled.copiedBuffer("HTTP/1.1 200 OK\r\n\r\n", CharsetUtil.US_ASCII));
+
+        // Read the response headers.
+        HttpResponse res = ch.readInbound();
+        assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
+        assertThat(res.status(), is(HttpResponseStatus.OK));
+        assertThat(ch.readInbound(), is(nullValue()));
+
+        // Close the connection without sending anything.
+        assertTrue(ch.finish());
+
+        // The decoder should still produce the last content.
+        LastHttpContent content = ch.readInbound();
+        assertThat(content.content().isReadable(), is(false));
+        content.release();
+
+        // But nothing more.
+        assertThat(ch.readInbound(), is(nullValue()));
+    }
+
+    @Test
+    public void testClosureWithoutContentLength2() throws Exception {
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
+
+        // Write the partial response.
+        ch.writeInbound(Unpooled.copiedBuffer("HTTP/1.1 200 OK\r\n\r\n12345678", CharsetUtil.US_ASCII));
+
+        // Read the response headers.
+        HttpResponse res = ch.readInbound();
+        assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
+        assertThat(res.status(), is(HttpResponseStatus.OK));
+
+        // Read the partial content.
+        HttpContent content = ch.readInbound();
+        assertThat(content.content().toString(CharsetUtil.US_ASCII), is("12345678"));
+        assertThat(content, is(not(instanceOf(LastHttpContent.class))));
+        content.release();
+
+        assertThat(ch.readInbound(), is(nullValue()));
+
+        // Close the connection.
+        assertTrue(ch.finish());
+
+        // The decoder should still produce the last content.
+        LastHttpContent lastContent = ch.readInbound();
+        assertThat(lastContent.content().isReadable(), is(false));
+        lastContent.release();
+
+        // But nothing more.
+        assertThat(ch.readInbound(), is(nullValue()));
+    }
+
+    @Test
+    public void testPrematureClosureWithChunkedEncoding1() throws Exception {
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
+        ch.writeInbound(
+                Unpooled.copiedBuffer("HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n", CharsetUtil.US_ASCII));
+
+        // Read the response headers.
+        HttpResponse res = ch.readInbound();
+        assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
+        assertThat(res.status(), is(HttpResponseStatus.OK));
+        assertThat(res.headers().get(Names.TRANSFER_ENCODING), is("chunked"));
+        assertThat(ch.readInbound(), is(nullValue()));
+
+        // Close the connection without sending anything.
+        ch.finish();
+        // The decoder should not generate the last chunk because it's closed prematurely.
+        assertThat(ch.readInbound(), is(nullValue()));
+    }
+
+    @Test
+    public void testPrematureClosureWithChunkedEncoding2() throws Exception {
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
+
+        // Write the partial response.
+        ch.writeInbound(Unpooled.copiedBuffer(
+                "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n8\r\n12345678", CharsetUtil.US_ASCII));
+
+        // Read the response headers.
+        HttpResponse res = ch.readInbound();
+        assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
+        assertThat(res.status(), is(HttpResponseStatus.OK));
+        assertThat(res.headers().get(Names.TRANSFER_ENCODING), is("chunked"));
+
+        // Read the partial content.
+        HttpContent content = ch.readInbound();
+        assertThat(content.content().toString(CharsetUtil.US_ASCII), is("12345678"));
+        assertThat(content, is(not(instanceOf(LastHttpContent.class))));
+        content.release();
+
+        assertThat(ch.readInbound(), is(nullValue()));
+
+        // Close the connection.
+        ch.finish();
+
+        // The decoder should not generate the last chunk because it's closed prematurely.
+        assertThat(ch.readInbound(), is(nullValue()));
+    }
 
     @Test
     public void testLastResponseWithEmptyHeaderAndEmptyContent() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
         ch.writeInbound(Unpooled.copiedBuffer("HTTP/1.1 200 OK\r\n\r\n", CharsetUtil.US_ASCII));
 
-        HttpResponse res = (HttpResponse) ch.readInbound();
-        assertThat(res.getProtocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
-        assertThat(res.getStatus(), is(HttpResponseStatus.OK));
+        HttpResponse res = ch.readInbound();
+        assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
+        assertThat(res.status(), is(HttpResponseStatus.OK));
         assertThat(ch.readInbound(), is(nullValue()));
 
         assertThat(ch.finish(), is(true));
 
-        LastHttpContent content = (LastHttpContent) ch.readInbound();
+        LastHttpContent content = ch.readInbound();
         assertThat(content.content().isReadable(), is(false));
         content.release();
 
@@ -136,19 +246,19 @@ public class HttpResponseDecoderTest {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
         ch.writeInbound(Unpooled.copiedBuffer("HTTP/1.1 200 OK\r\n\r\n", CharsetUtil.US_ASCII));
 
-        HttpResponse res = (HttpResponse) ch.readInbound();
-        assertThat(res.getProtocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
-        assertThat(res.getStatus(), is(HttpResponseStatus.OK));
+        HttpResponse res = ch.readInbound();
+        assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
+        assertThat(res.status(), is(HttpResponseStatus.OK));
         assertThat(ch.readInbound(), is(nullValue()));
 
         ch.writeInbound(Unpooled.wrappedBuffer(new byte[1024]));
-        HttpContent content = (HttpContent) ch.readInbound();
+        HttpContent content = ch.readInbound();
         assertThat(content.content().readableBytes(), is(1024));
         content.release();
 
         assertThat(ch.finish(), is(true));
 
-        LastHttpContent lastContent = (LastHttpContent) ch.readInbound();
+        LastHttpContent lastContent = ch.readInbound();
         assertThat(lastContent.content().isReadable(), is(false));
         lastContent.release();
 
@@ -162,20 +272,20 @@ public class HttpResponseDecoderTest {
                 "HTTP/1.1 200 OK\r\nX-Header: h2=h2v2; Expires=Wed, 09-Jun-2021 10:18:14 GMT       \r\n\r\n",
                 CharsetUtil.US_ASCII));
 
-        HttpResponse res = (HttpResponse) ch.readInbound();
-        assertThat(res.getProtocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
-        assertThat(res.getStatus(), is(HttpResponseStatus.OK));
+        HttpResponse res = ch.readInbound();
+        assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
+        assertThat(res.status(), is(HttpResponseStatus.OK));
         assertThat(res.headers().get("X-Header"), is("h2=h2v2; Expires=Wed, 09-Jun-2021 10:18:14 GMT"));
         assertThat(ch.readInbound(), is(nullValue()));
 
         ch.writeInbound(Unpooled.wrappedBuffer(new byte[1024]));
-        HttpContent content = (HttpContent) ch.readInbound();
+        HttpContent content = ch.readInbound();
         assertThat(content.content().readableBytes(), is(1024));
         content.release();
 
         assertThat(ch.finish(), is(true));
 
-        LastHttpContent lastContent = (LastHttpContent) ch.readInbound();
+        LastHttpContent lastContent = ch.readInbound();
         assertThat(lastContent.content().isReadable(), is(false));
         lastContent.release();
 
@@ -195,11 +305,11 @@ public class HttpResponseDecoderTest {
                         "\r\n",
                 CharsetUtil.US_ASCII));
 
-        HttpResponse res = (HttpResponse) ch.readInbound();
-        assertThat(res.getProtocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
-        assertThat(res.getStatus(), is(HttpResponseStatus.OK));
+        HttpResponse res = ch.readInbound();
+        assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
+        assertThat(res.status(), is(HttpResponseStatus.OK));
 
-        LastHttpContent lastContent = (LastHttpContent) ch.readInbound();
+        LastHttpContent lastContent = ch.readInbound();
         assertThat(lastContent.content().isReadable(), is(false));
         HttpHeaders headers = lastContent.trailingHeaders();
         assertEquals(1, headers.names().size());
@@ -245,11 +355,11 @@ public class HttpResponseDecoderTest {
         }
 
         ch.writeInbound(Unpooled.wrappedBuffer(content, headerLength, content.length - headerLength));
-        HttpResponse res = (HttpResponse) ch.readInbound();
-        assertThat(res.getProtocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
-        assertThat(res.getStatus(), is(HttpResponseStatus.OK));
+        HttpResponse res = ch.readInbound();
+        assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
+        assertThat(res.status(), is(HttpResponseStatus.OK));
 
-        LastHttpContent lastContent = (LastHttpContent) ch.readInbound();
+        LastHttpContent lastContent = ch.readInbound();
         assertThat(lastContent.content().isReadable(), is(false));
         HttpHeaders headers = lastContent.trailingHeaders();
         assertEquals(1, headers.names().size());
@@ -278,14 +388,19 @@ public class HttpResponseDecoderTest {
         ch.writeInbound(Unpooled.wrappedBuffer(data, 0, data.length / 2));
         ch.writeInbound(Unpooled.wrappedBuffer(data, 5, data.length / 2));
 
-        HttpResponse res = (HttpResponse) ch.readInbound();
-        assertThat(res.getProtocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
-        assertThat(res.getStatus(), is(HttpResponseStatus.OK));
+        HttpResponse res = ch.readInbound();
+        assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
+        assertThat(res.status(), is(HttpResponseStatus.OK));
 
-        LastHttpContent content = (LastHttpContent) ch.readInbound();
-        assertEquals(10, content.content().readableBytes());
-        assertEquals(Unpooled.wrappedBuffer(data), content.content());
-        content.release();
+        HttpContent firstContent = ch.readInbound();
+        assertThat(firstContent.content().readableBytes(), is(5));
+        assertEquals(Unpooled.wrappedBuffer(data, 0, 5), firstContent.content());
+        firstContent.release();
+
+        LastHttpContent lastContent = ch.readInbound();
+        assertEquals(5, lastContent.content().readableBytes());
+        assertEquals(Unpooled.wrappedBuffer(data, 5, 5), lastContent.content());
+        lastContent.release();
 
         assertThat(ch.finish(), is(false));
         assertThat(ch.readInbound(), is(nullValue()));
@@ -321,13 +436,18 @@ public class HttpResponseDecoderTest {
         ch.writeInbound(Unpooled.wrappedBuffer(data, 0, data.length / 2));
         ch.writeInbound(Unpooled.wrappedBuffer(data, 5, data.length / 2));
 
-        HttpResponse res = (HttpResponse) ch.readInbound();
-        assertThat(res.getProtocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
-        assertThat(res.getStatus(), is(HttpResponseStatus.OK));
+        HttpResponse res = ch.readInbound();
+        assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
+        assertThat(res.status(), is(HttpResponseStatus.OK));
 
-        LastHttpContent lastContent = (LastHttpContent) ch.readInbound();
-        assertEquals(10, lastContent.content().readableBytes());
-        assertEquals(Unpooled.wrappedBuffer(data), lastContent.content());
+        HttpContent firstContent = ch.readInbound();
+        assertThat(firstContent.content().readableBytes(), is(5));
+        assertEquals(Unpooled.wrappedBuffer(data, 0, 5), firstContent.content());
+        firstContent.release();
+
+        LastHttpContent lastContent = ch.readInbound();
+        assertEquals(5, lastContent.content().readableBytes());
+        assertEquals(Unpooled.wrappedBuffer(data, 5, 5), lastContent.content());
         lastContent.release();
 
         assertThat(ch.finish(), is(false));
@@ -346,15 +466,101 @@ public class HttpResponseDecoderTest {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
         ch.writeInbound(Unpooled.wrappedBuffer(data));
 
-        HttpResponse res = (HttpResponse) ch.readInbound();
-        assertThat(res.getProtocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
-        assertThat(res.getStatus(), is(HttpResponseStatus.SWITCHING_PROTOCOLS));
-        HttpContent content = (HttpContent) ch.readInbound();
+        HttpResponse res = ch.readInbound();
+        assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
+        assertThat(res.status(), is(HttpResponseStatus.SWITCHING_PROTOCOLS));
+        HttpContent content = ch.readInbound();
         assertThat(content.content().readableBytes(), is(16));
         content.release();
 
         assertThat(ch.finish(), is(false));
 
         assertThat(ch.readInbound(), is(nullValue()));
+    }
+
+    // See https://github.com/netty/netty/issues/2173
+    @Test
+    public void testWebSocketResponseWithDataFollowing() {
+        byte[] data = ("HTTP/1.1 101 WebSocket Protocol Handshake\r\n" +
+                "Upgrade: WebSocket\r\n" +
+                "Connection: Upgrade\r\n" +
+                "Sec-WebSocket-Origin: http://localhost:8080\r\n" +
+                "Sec-WebSocket-Location: ws://localhost/some/path\r\n" +
+                "\r\n" +
+                "1234567812345678").getBytes();
+        byte[] otherData = {1, 2, 3, 4};
+
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
+        ch.writeInbound(Unpooled.wrappedBuffer(data, otherData));
+
+        HttpResponse res = ch.readInbound();
+        assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
+        assertThat(res.status(), is(HttpResponseStatus.SWITCHING_PROTOCOLS));
+        HttpContent content = ch.readInbound();
+        assertThat(content.content().readableBytes(), is(16));
+        content.release();
+
+        assertThat(ch.finish(), is(true));
+
+        assertEquals(ch.readInbound(), Unpooled.wrappedBuffer(otherData));
+    }
+
+    @Test
+    public void testGarbageHeaders() {
+        // A response without headers - from https://github.com/netty/netty/issues/2103
+        byte[] data = ("<html>\r\n" +
+                "<head><title>400 Bad Request</title></head>\r\n" +
+                "<body bgcolor=\"white\">\r\n" +
+                "<center><h1>400 Bad Request</h1></center>\r\n" +
+                "<hr><center>nginx/1.1.19</center>\r\n" +
+                "</body>\r\n" +
+                "</html>\r\n").getBytes();
+
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
+
+        ch.writeInbound(Unpooled.wrappedBuffer(data));
+
+        // Garbage input should generate the 999 Unknown response.
+        HttpResponse res = ch.readInbound();
+        assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_0));
+        assertThat(res.status().code(), is(999));
+        assertThat(res.decoderResult().isFailure(), is(true));
+        assertThat(res.decoderResult().isFinished(), is(true));
+        assertThat(ch.readInbound(), is(nullValue()));
+
+        // More garbage should not generate anything (i.e. the decoder discards anything beyond this point.)
+        ch.writeInbound(Unpooled.wrappedBuffer(data));
+        assertThat(ch.readInbound(), is(nullValue()));
+
+        // Closing the connection should not generate anything since the protocol has been violated.
+        ch.finish();
+        assertThat(ch.readInbound(), is(nullValue()));
+    }
+
+    /**
+     * Tests if the decoder produces one and only {@link LastHttpContent} when an invalid chunk is received and
+     * the connection is closed.
+     */
+    @Test
+    public void testGarbageChunk() {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder());
+        String responseWithIllegalChunk =
+                "HTTP/1.1 200 OK\r\n" +
+                "Transfer-Encoding: chunked\r\n\r\n" +
+                "NOT_A_CHUNK_LENGTH\r\n";
+
+        channel.writeInbound(Unpooled.copiedBuffer(responseWithIllegalChunk, CharsetUtil.US_ASCII));
+        assertThat(channel.readInbound(), is(instanceOf(HttpResponse.class)));
+
+        // Ensure that the decoder generates the last chunk with correct decoder result.
+        LastHttpContent invalidChunk = channel.readInbound();
+        assertThat(invalidChunk.decoderResult().isFailure(), is(true));
+        invalidChunk.release();
+
+        // And no more messages should be produced by the decoder.
+        assertThat(channel.readInbound(), is(nullValue()));
+
+        // .. even after the connection is closed.
+        assertThat(channel.finish(), is(false));
     }
 }

@@ -26,7 +26,7 @@ public enum SocksAuthStatus {
         this.b = b;
     }
 
-    public static SocksAuthStatus fromByte(byte b) {
+    public static SocksAuthStatus valueOf(byte b) {
         for (SocksAuthStatus code : values()) {
             if (code.b == b) {
                 return code;

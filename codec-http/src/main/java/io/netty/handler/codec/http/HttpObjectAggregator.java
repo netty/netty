@@ -15,49 +15,50 @@
  */
 package io.netty.handler.codec.http;
 
-import static io.netty.handler.codec.http.HttpHeaders.is100ContinueExpected;
-import static io.netty.handler.codec.http.HttpHeaders.removeTransferEncodingChunked;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.handler.codec.DecoderResult;
-import io.netty.handler.codec.MessageToMessageDecoder;
+import io.netty.handler.codec.MessageAggregator;
 import io.netty.handler.codec.TooLongFrameException;
-import io.netty.util.CharsetUtil;
-import io.netty.util.ReferenceCountUtil;
-
-import java.util.List;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 /**
  * A {@link ChannelHandler} that aggregates an {@link HttpMessage}
- * and its following {@link HttpContent}s into a single {@link HttpMessage} with
- * no following {@link HttpContent}s.  It is useful when you don't want to take
+ * and its following {@link HttpContent}s into a single {@link FullHttpRequest}
+ * or {@link FullHttpResponse} (depending on if it used to handle requests or responses)
+ * with no following {@link HttpContent}s.  It is useful when you don't want to take
  * care of HTTP messages whose transfer encoding is 'chunked'.  Insert this
  * handler after {@link HttpObjectDecoder} in the {@link ChannelPipeline}:
  * <pre>
  * {@link ChannelPipeline} p = ...;
  * ...
+ * p.addLast("encoder", new {@link HttpResponseEncoder}());
  * p.addLast("decoder", new {@link HttpRequestDecoder}());
  * p.addLast("aggregator", <b>new {@link HttpObjectAggregator}(1048576)</b>);
  * ...
- * p.addLast("encoder", new {@link HttpResponseEncoder}());
  * p.addLast("handler", new HttpRequestHandler());
  * </pre>
+ * Be aware that you need to have the {@link HttpResponseEncoder} or {@link HttpRequestEncoder}
+ * before the {@link HttpObjectAggregator} in the {@link ChannelPipeline}.
  */
-public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
-    public static final int DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS = 1024;
-    private static final ByteBuf CONTINUE = Unpooled.unreleasableBuffer(Unpooled.copiedBuffer(
-            "HTTP/1.1 100 Continue\r\n\r\n", CharsetUtil.US_ASCII));
+public class HttpObjectAggregator
+        extends MessageAggregator<HttpObject, HttpMessage, HttpContent, FullHttpMessage> {
 
-    private final int maxContentLength;
-    private FullHttpMessage currentMessage;
-    private boolean tooLongFrameFound;
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(HttpObjectAggregator.class);
 
-    private int maxCumulationBufferComponents = DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS;
-    private ChannelHandlerContext ctx;
+    private static final FullHttpResponse CONTINUE = new DefaultFullHttpResponse(
+            HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE, Unpooled.EMPTY_BUFFER);
+    private static final FullHttpResponse TOO_LARGE = new DefaultFullHttpResponse(
+            HttpVersion.HTTP_1_1, HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, Unpooled.EMPTY_BUFFER);
+
+    static {
+        TOO_LARGE.headers().set(HttpHeaders.Names.CONTENT_LENGTH, 0);
+    }
 
     /**
      * Creates a new instance.
@@ -65,179 +66,125 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
      * @param maxContentLength
      *        the maximum length of the aggregated content.
      *        If the length of the aggregated content exceeds this value,
-     *        a {@link TooLongFrameException} will be raised.
+     *        {@link #handleOversizedMessage(ChannelHandlerContext, HttpMessage)}
+     *        will be called.
      */
     public HttpObjectAggregator(int maxContentLength) {
-        if (maxContentLength <= 0) {
-            throw new IllegalArgumentException(
-                    "maxContentLength must be a positive integer: " +
-                    maxContentLength);
-        }
-        this.maxContentLength = maxContentLength;
+        super(maxContentLength);
     }
 
-    /**
-     * Returns the maximum number of components in the cumulation buffer.  If the number of
-     * the components in the cumulation buffer exceeds this value, the components of the
-     * cumulation buffer are consolidated into a single component, involving memory copies.
-     * The default value of this property is {@link #DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS}.
-     */
-    public final int getMaxCumulationBufferComponents() {
-        return maxCumulationBufferComponents;
+    @Override
+    protected boolean isStartMessage(HttpObject msg) throws Exception {
+        return msg instanceof HttpMessage;
     }
 
-    /**
-     * Sets the maximum number of components in the cumulation buffer.  If the number of
-     * the components in the cumulation buffer exceeds this value, the components of the
-     * cumulation buffer are consolidated into a single component, involving memory copies.
-     * The default value of this property is {@link #DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS}
-     * and its minimum allowed value is {@code 2}.
-     */
-    public final void setMaxCumulationBufferComponents(int maxCumulationBufferComponents) {
-        if (maxCumulationBufferComponents < 2) {
-            throw new IllegalArgumentException(
-                    "maxCumulationBufferComponents: " + maxCumulationBufferComponents +
-                    " (expected: >= 2)");
-        }
+    @Override
+    protected boolean isContentMessage(HttpObject msg) throws Exception {
+        return msg instanceof HttpContent;
+    }
 
-        if (ctx == null) {
-            this.maxCumulationBufferComponents = maxCumulationBufferComponents;
+    @Override
+    protected boolean isLastContentMessage(HttpContent msg) throws Exception {
+        return msg instanceof LastHttpContent;
+    }
+
+    @Override
+    protected boolean isAggregated(HttpObject msg) throws Exception {
+        return msg instanceof FullHttpMessage;
+    }
+
+    @Override
+    protected boolean hasContentLength(HttpMessage start) throws Exception {
+        return HttpHeaderUtil.isContentLengthSet(start);
+    }
+
+    @Override
+    protected long contentLength(HttpMessage start) throws Exception {
+        return HttpHeaderUtil.getContentLength(start);
+    }
+
+    @Override
+    protected Object newContinueResponse(HttpMessage start) throws Exception {
+        if (HttpHeaderUtil.is100ContinueExpected(start)) {
+            return CONTINUE;
         } else {
-            throw new IllegalStateException(
-                    "decoder properties cannot be changed once the decoder is added to a pipeline.");
+            return null;
         }
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, HttpObject msg, List<Object> out) throws Exception {
-        FullHttpMessage currentMessage = this.currentMessage;
+    protected FullHttpMessage beginAggregation(HttpMessage start, ByteBuf content) throws Exception {
+        assert !(start instanceof FullHttpMessage);
 
-        if (msg instanceof HttpMessage) {
-            tooLongFrameFound = false;
-            assert currentMessage == null;
+        HttpHeaderUtil.setTransferEncodingChunked(start, false);
 
-            HttpMessage m = (HttpMessage) msg;
-
-            // Handle the 'Expect: 100-continue' header if necessary.
-            // TODO: Respond with 413 Request Entity Too Large
-            //   and discard the traffic or close the connection.
-            //       No need to notify the upstream handlers - just log.
-            //       If decoding a response, just throw an exception.
-            if (is100ContinueExpected(m)) {
-                ctx.writeAndFlush(CONTINUE.duplicate());
-            }
-
-            if (!m.getDecoderResult().isSuccess()) {
-                removeTransferEncodingChunked(m);
-                this.currentMessage = null;
-                out.add(ReferenceCountUtil.retain(m));
-                return;
-            }
-            if (msg instanceof HttpRequest) {
-                HttpRequest header = (HttpRequest) msg;
-                this.currentMessage = currentMessage = new DefaultFullHttpRequest(header.getProtocolVersion(),
-                        header.getMethod(), header.getUri(), Unpooled.compositeBuffer(maxCumulationBufferComponents));
-            } else if (msg instanceof HttpResponse) {
-                HttpResponse header = (HttpResponse) msg;
-                this.currentMessage = currentMessage = new DefaultFullHttpResponse(
-                        header.getProtocolVersion(), header.getStatus(),
-                        Unpooled.compositeBuffer(maxCumulationBufferComponents));
-            } else {
-                throw new Error();
-            }
-
-            currentMessage.headers().set(m.headers());
-
-            // A streamed message - initialize the cumulative buffer, and wait for incoming chunks.
-            removeTransferEncodingChunked(currentMessage);
-        } else if (msg instanceof HttpContent) {
-            if (tooLongFrameFound) {
-                if (msg instanceof LastHttpContent) {
-                    this.currentMessage = null;
-                }
-                // already detect the too long frame so just discard the content
-                return;
-            }
-            assert currentMessage != null;
-
-            // Merge the received chunk into the content of the current message.
-            HttpContent chunk = (HttpContent) msg;
-            CompositeByteBuf content = (CompositeByteBuf) currentMessage.content();
-
-            if (content.readableBytes() > maxContentLength - chunk.content().readableBytes()) {
-                tooLongFrameFound = true;
-
-                // release current message to prevent leaks
-                currentMessage.release();
-                this.currentMessage = null;
-
-                throw new TooLongFrameException(
-                        "HTTP content length exceeded " + maxContentLength +
-                        " bytes.");
-            }
-
-            // Append the content of the chunk
-            if (chunk.content().isReadable()) {
-                chunk.retain();
-                content.addComponent(chunk.content());
-                content.writerIndex(content.writerIndex() + chunk.content().readableBytes());
-            }
-
-            final boolean last;
-            if (!chunk.getDecoderResult().isSuccess()) {
-                currentMessage.setDecoderResult(
-                        DecoderResult.failure(chunk.getDecoderResult().cause()));
-                last = true;
-            } else {
-                last = chunk instanceof LastHttpContent;
-            }
-
-            if (last) {
-                this.currentMessage = null;
-
-                // Merge trailing headers into the message.
-                if (chunk instanceof LastHttpContent) {
-                    LastHttpContent trailer = (LastHttpContent) chunk;
-                    currentMessage.headers().add(trailer.trailingHeaders());
-                }
-
-                // Set the 'Content-Length' header.
-                currentMessage.headers().set(
-                        HttpHeaders.Names.CONTENT_LENGTH,
-                        String.valueOf(content.readableBytes()));
-
-                // All done
-                out.add(currentMessage);
-            }
+        FullHttpMessage ret;
+        if (start instanceof HttpRequest) {
+            HttpRequest req = (HttpRequest) start;
+            ret = new DefaultFullHttpRequest(req.protocolVersion(),
+                    req.method(), req.uri(), content);
+        } else if (start instanceof HttpResponse) {
+            HttpResponse res = (HttpResponse) start;
+            ret = new DefaultFullHttpResponse(
+                    res.protocolVersion(), res.status(), content);
         } else {
             throw new Error();
         }
+
+        ret.headers().set(start.headers());
+        ret.setDecoderResult(start.decoderResult());
+        return ret;
     }
 
     @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        super.channelInactive(ctx);
-
-        // release current message if it is not null as it may be a left-over
-        if (currentMessage != null) {
-            currentMessage.release();
-            currentMessage = null;
+    protected void aggregate(FullHttpMessage aggregated, HttpContent content) throws Exception {
+        if (content instanceof LastHttpContent) {
+            // Merge trailing headers into the message.
+            aggregated.headers().add(((LastHttpContent) content).trailingHeaders());
         }
     }
 
     @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        this.ctx = ctx;
+    protected void finishAggregation(FullHttpMessage aggregated) throws Exception {
+        // Set the 'Content-Length' header.
+        aggregated.headers().set(
+                HttpHeaders.Names.CONTENT_LENGTH,
+                String.valueOf(aggregated.content().readableBytes()));
     }
 
     @Override
-    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        super.handlerRemoved(ctx);
-        // release current message if it is not null as it may be a left-over as there is not much more we can do in
-        // this case
-        if (currentMessage != null) {
-            currentMessage.release();
-            currentMessage = null;
+    protected void handleOversizedMessage(final ChannelHandlerContext ctx, HttpMessage oversized) throws Exception {
+        if (oversized instanceof HttpRequest) {
+            // send back a 413 and close the connection
+            ChannelFuture future = ctx.writeAndFlush(TOO_LARGE).addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    if (!future.isSuccess()) {
+                        logger.debug("Failed to send a 413 Request Entity Too Large.", future.cause());
+                        ctx.close();
+                    }
+                }
+            });
+
+            // If the client started to send data already, close because it's impossible to recover.
+            // If 'Expect: 100-continue' is missing, close becuase it's impossible to recover.
+            // If keep-alive is off, no need to leave the connection open.
+            if (oversized instanceof FullHttpMessage ||
+                    !HttpHeaderUtil.is100ContinueExpected(oversized) || !HttpHeaderUtil.isKeepAlive(oversized)) {
+                future.addListener(ChannelFutureListener.CLOSE);
+            }
+
+            // If an oversized request was handled properly and the connection is still alive
+            // (i.e. rejected 100-continue). the decoder should prepare to handle a new message.
+            HttpObjectDecoder decoder = ctx.pipeline().get(HttpObjectDecoder.class);
+            if (decoder != null) {
+                decoder.reset();
+            }
+        } else if (oversized instanceof HttpResponse) {
+            ctx.close();
+            throw new TooLongFrameException("Response entity too large: " + oversized);
+        } else {
+            throw new IllegalStateException();
         }
     }
 }

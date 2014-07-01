@@ -19,7 +19,8 @@ package io.netty.channel;
 import io.netty.util.Recycler;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.OneTimeTask;
+import io.netty.util.internal.RecyclableMpscLinkedQueueNode;
 
 import java.net.SocketAddress;
 
@@ -48,10 +49,24 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
         if (executor.inEventLoop()) {
             invokeChannelRegisteredNow(ctx);
         } else {
-            executor.execute(new Runnable() {
+            executor.execute(new OneTimeTask() {
                 @Override
                 public void run() {
                     invokeChannelRegisteredNow(ctx);
+                }
+            });
+        }
+    }
+
+    @Override
+    public void invokeChannelUnregistered(final ChannelHandlerContext ctx) {
+        if (executor.inEventLoop()) {
+            invokeChannelUnregisteredNow(ctx);
+        } else {
+            executor.execute(new OneTimeTask() {
+                @Override
+                public void run() {
+                    invokeChannelUnregisteredNow(ctx);
                 }
             });
         }
@@ -62,7 +77,7 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
         if (executor.inEventLoop()) {
             invokeChannelActiveNow(ctx);
         } else {
-            executor.execute(new Runnable() {
+            executor.execute(new OneTimeTask() {
                 @Override
                 public void run() {
                     invokeChannelActiveNow(ctx);
@@ -76,7 +91,7 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
         if (executor.inEventLoop()) {
             invokeChannelInactiveNow(ctx);
         } else {
-            executor.execute(new Runnable() {
+            executor.execute(new OneTimeTask() {
                 @Override
                 public void run() {
                     invokeChannelInactiveNow(ctx);
@@ -95,7 +110,7 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
             invokeExceptionCaughtNow(ctx, cause);
         } else {
             try {
-                executor.execute(new Runnable() {
+                executor.execute(new OneTimeTask() {
                     @Override
                     public void run() {
                         invokeExceptionCaughtNow(ctx, cause);
@@ -119,7 +134,7 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
         if (executor.inEventLoop()) {
             invokeUserEventTriggeredNow(ctx, event);
         } else {
-            safeExecuteInbound(new Runnable() {
+            safeExecuteInbound(new OneTimeTask() {
                 @Override
                 public void run() {
                     invokeUserEventTriggeredNow(ctx, event);
@@ -137,7 +152,7 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
         if (executor.inEventLoop()) {
             invokeChannelReadNow(ctx, msg);
         } else {
-            safeExecuteInbound(new Runnable() {
+            safeExecuteInbound(new OneTimeTask() {
                 @Override
                 public void run() {
                     invokeChannelReadNow(ctx, msg);
@@ -151,7 +166,7 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
         if (executor.inEventLoop()) {
             invokeChannelReadCompleteNow(ctx);
         } else {
-            DefaultChannelHandlerContext dctx = (DefaultChannelHandlerContext) ctx;
+            AbstractChannelHandlerContext dctx = (AbstractChannelHandlerContext) ctx;
             Runnable task = dctx.invokeChannelReadCompleteTask;
             if (task == null) {
                 dctx.invokeChannelReadCompleteTask = task = new Runnable() {
@@ -170,7 +185,7 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
         if (executor.inEventLoop()) {
             invokeChannelWritabilityChangedNow(ctx);
         } else {
-            DefaultChannelHandlerContext dctx = (DefaultChannelHandlerContext) ctx;
+            AbstractChannelHandlerContext dctx = (AbstractChannelHandlerContext) ctx;
             Runnable task = dctx.invokeChannelWritableStateChangedTask;
             if (task == null) {
                 dctx.invokeChannelWritableStateChangedTask = task = new Runnable() {
@@ -190,12 +205,15 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
         if (localAddress == null) {
             throw new NullPointerException("localAddress");
         }
-        validatePromise(ctx, promise, false);
+        if (!validatePromise(ctx, promise, false)) {
+            // promise cancelled
+            return;
+        }
 
         if (executor.inEventLoop()) {
             invokeBindNow(ctx, localAddress, promise);
         } else {
-            safeExecuteOutbound(new Runnable() {
+            safeExecuteOutbound(new OneTimeTask() {
                 @Override
                 public void run() {
                     invokeBindNow(ctx, localAddress, promise);
@@ -211,12 +229,15 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
         if (remoteAddress == null) {
             throw new NullPointerException("remoteAddress");
         }
-        validatePromise(ctx, promise, false);
+        if (!validatePromise(ctx, promise, false)) {
+            // promise cancelled
+            return;
+        }
 
         if (executor.inEventLoop()) {
             invokeConnectNow(ctx, remoteAddress, localAddress, promise);
         } else {
-            safeExecuteOutbound(new Runnable() {
+            safeExecuteOutbound(new OneTimeTask() {
                 @Override
                 public void run() {
                     invokeConnectNow(ctx, remoteAddress, localAddress, promise);
@@ -227,12 +248,15 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
 
     @Override
     public void invokeDisconnect(final ChannelHandlerContext ctx, final ChannelPromise promise) {
-        validatePromise(ctx, promise, false);
+        if (!validatePromise(ctx, promise, false)) {
+            // promise cancelled
+            return;
+        }
 
         if (executor.inEventLoop()) {
             invokeDisconnectNow(ctx, promise);
         } else {
-            safeExecuteOutbound(new Runnable() {
+            safeExecuteOutbound(new OneTimeTask() {
                 @Override
                 public void run() {
                     invokeDisconnectNow(ctx, promise);
@@ -243,15 +267,37 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
 
     @Override
     public void invokeClose(final ChannelHandlerContext ctx, final ChannelPromise promise) {
-        validatePromise(ctx, promise, false);
+        if (!validatePromise(ctx, promise, false)) {
+            // promise cancelled
+            return;
+        }
 
         if (executor.inEventLoop()) {
             invokeCloseNow(ctx, promise);
         } else {
-            safeExecuteOutbound(new Runnable() {
+            safeExecuteOutbound(new OneTimeTask() {
                 @Override
                 public void run() {
                     invokeCloseNow(ctx, promise);
+                }
+            }, promise);
+        }
+    }
+
+    @Override
+    public void invokeDeregister(final ChannelHandlerContext ctx, final ChannelPromise promise) {
+        if (!validatePromise(ctx, promise, false)) {
+            // promise cancelled
+            return;
+        }
+
+        if (executor.inEventLoop()) {
+            invokeDeregisterNow(ctx, promise);
+        } else {
+            safeExecuteOutbound(new OneTimeTask() {
+                @Override
+                public void run() {
+                    invokeDeregisterNow(ctx, promise);
                 }
             }, promise);
         }
@@ -262,7 +308,7 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
         if (executor.inEventLoop()) {
             invokeReadNow(ctx);
         } else {
-            DefaultChannelHandlerContext dctx = (DefaultChannelHandlerContext) ctx;
+            AbstractChannelHandlerContext dctx = (AbstractChannelHandlerContext) ctx;
             Runnable task = dctx.invokeReadTask;
             if (task == null) {
                 dctx.invokeReadTask = task = new Runnable() {
@@ -281,8 +327,11 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
         if (msg == null) {
             throw new NullPointerException("msg");
         }
-
-        validatePromise(ctx, promise, true);
+        if (!validatePromise(ctx, promise, true)) {
+            // promise cancelled
+            ReferenceCountUtil.release(msg);
+            return;
+        }
 
         if (executor.inEventLoop()) {
             invokeWriteNow(ctx, msg, promise);
@@ -305,7 +354,7 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
         if (executor.inEventLoop()) {
             invokeFlushNow(ctx);
         } else {
-            DefaultChannelHandlerContext dctx = (DefaultChannelHandlerContext) ctx;
+            AbstractChannelHandlerContext dctx = (AbstractChannelHandlerContext) ctx;
             Runnable task = dctx.invokeFlushTask;
             if (task == null) {
                 dctx.invokeFlushTask = task = new Runnable() {
@@ -316,39 +365,6 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
                 };
             }
             executor.execute(task);
-        }
-    }
-
-    private static void validatePromise(ChannelHandlerContext ctx, ChannelPromise promise, boolean allowVoidPromise) {
-        if (ctx == null) {
-            throw new NullPointerException("ctx");
-        }
-
-        if (promise == null) {
-            throw new NullPointerException("promise");
-        }
-
-        if (promise.isDone()) {
-            throw new IllegalArgumentException("promise already done: " + promise);
-        }
-
-        if (promise.channel() != ctx.channel()) {
-            throw new IllegalArgumentException(String.format(
-                    "promise.channel does not match: %s (expected: %s)", promise.channel(), ctx.channel()));
-        }
-
-        if (promise.getClass() == DefaultChannelPromise.class) {
-            return;
-        }
-
-        if (!allowVoidPromise && promise instanceof VoidChannelPromise) {
-            throw new IllegalArgumentException(
-                    StringUtil.simpleClassName(VoidChannelPromise.class) + " not allowed for this operation");
-        }
-
-        if (promise instanceof AbstractChannel.CloseFuture) {
-            throw new IllegalArgumentException(
-                    StringUtil.simpleClassName(AbstractChannel.CloseFuture.class) + " not allowed in a pipeline");
         }
     }
 
@@ -383,7 +399,8 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
         }
     }
 
-    static final class WriteTask implements Runnable {
+    static final class WriteTask extends RecyclableMpscLinkedQueueNode<SingleThreadEventLoop.NonWakeupRunnable>
+            implements SingleThreadEventLoop.NonWakeupRunnable {
         private ChannelHandlerContext ctx;
         private Object msg;
         private ChannelPromise promise;
@@ -391,7 +408,7 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
 
         private static final Recycler<WriteTask> RECYCLER = new Recycler<WriteTask>() {
             @Override
-            protected WriteTask newObject(Handle handle) {
+            protected WriteTask newObject(Handle<WriteTask> handle) {
                 return new WriteTask(handle);
             }
         };
@@ -406,10 +423,8 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
             return task;
         }
 
-        private final Recycler.Handle handle;
-
-        private WriteTask(Recycler.Handle handle) {
-            this.handle = handle;
+        private WriteTask(Recycler.Handle<WriteTask> handle) {
+            super(handle);
         }
 
         @Override
@@ -428,9 +443,12 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
                 ctx = null;
                 msg = null;
                 promise = null;
-
-                RECYCLER.recycle(this, handle);
             }
+        }
+
+        @Override
+        public SingleThreadEventLoop.NonWakeupRunnable value() {
+            return this;
         }
     }
 }

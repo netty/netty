@@ -23,6 +23,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelId;
+import io.netty.channel.EventLoop;
 import io.netty.channel.ServerChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.GlobalEventExecutor;
@@ -161,13 +162,13 @@ public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
     /**
      * Shortcut for calling {@link #write(Object)} and {@link #flush()}.
      */
-    ChannelGroupFuture flushAndWrite(Object message);
+    ChannelGroupFuture writeAndFlush(Object message);
 
     /**
      * Shortcut for calling {@link #write(Object)} and {@link #flush()} and only act on
      * {@link Channel}s that match the {@link ChannelMatcher}.
      */
-    ChannelGroupFuture flushAndWrite(Object message, ChannelMatcher matcher);
+    ChannelGroupFuture writeAndFlush(Object message, ChannelMatcher matcher);
 
     /**
      * Disconnects all {@link Channel}s in this group from their remote peers.
@@ -205,4 +206,22 @@ public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
      *         the operation is done for all channels
      */
     ChannelGroupFuture close(ChannelMatcher matcher);
+
+    /**
+     * Deregister all {@link Channel}s in this group from their {@link EventLoop}.
+     * Please note that this operation is asynchronous as {@link Channel#deregister()} is.
+     *
+     * @return the {@link ChannelGroupFuture} instance that notifies when
+     * the operation is done for all channels
+     */
+    ChannelGroupFuture deregister();
+
+    /**
+     * Deregister all {@link Channel}s in this group from their {@link EventLoop} that match the given
+     * {@link ChannelMatcher}. Please note that this operation is asynchronous as {@link Channel#deregister()} is.
+     *
+     * @return the {@link ChannelGroupFuture} instance that notifies when
+     * the operation is done for all channels
+     */
+    ChannelGroupFuture deregister(ChannelMatcher matcher);
 }

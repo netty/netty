@@ -13,88 +13,96 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty.microbench.buffer;
 
-import com.google.caliper.Param;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
-import io.netty.microbench.util.DefaultBenchmark;
+import io.netty.microbench.util.AbstractMicrobenchmark;
+import org.openjdk.jmh.annotations.Benchmark;
+import org.openjdk.jmh.annotations.Param;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
+import java.util.Random;
 
-public class ByteBufAllocatorBenchmark extends DefaultBenchmark {
+/**
+ * This class benchmarks different allocators with different allocation sizes.
+ */
+public class ByteBufAllocatorBenchmark extends AbstractMicrobenchmark {
 
-    private static final ByteBufAllocator UNPOOLED_ALLOCATOR_HEAP = new UnpooledByteBufAllocator(false);
-    private static final ByteBufAllocator UNPOOLED_ALLOCATOR_DIRECT = new UnpooledByteBufAllocator(true);
-    private static final ByteBufAllocator POOLED_ALLOCATOR_HEAP = new PooledByteBufAllocator(false);
-    private static final ByteBufAllocator POOLED_ALLOCATOR_DIRECT = new PooledByteBufAllocator(true);
+    private static final ByteBufAllocator unpooledAllocator = new UnpooledByteBufAllocator(true);
+    private static final ByteBufAllocator pooledAllocator =
+            new PooledByteBufAllocator(true, 4, 4, 8192, 11, 0, 0, 0); // Disable thread-local cache
 
-    @Param({ "0", "256", "1024", "4096", "16384", "65536" })
-    private int size;
+    private static final int MAX_LIVE_BUFFERS = 8192;
+    private static final Random rand = new Random();
+    private static final ByteBuf[] unpooledHeapBuffers = new ByteBuf[MAX_LIVE_BUFFERS];
+    private static final ByteBuf[] unpooledDirectBuffers = new ByteBuf[MAX_LIVE_BUFFERS];
+    private static final ByteBuf[] pooledHeapBuffers = new ByteBuf[MAX_LIVE_BUFFERS];
+    private static final ByteBuf[] pooledDirectBuffers = new ByteBuf[MAX_LIVE_BUFFERS];
+    private static final ByteBuf[] defaultPooledHeapBuffers = new ByteBuf[MAX_LIVE_BUFFERS];
+    private static final ByteBuf[] defaultPooledDirectBuffers = new ByteBuf[MAX_LIVE_BUFFERS];
 
-    @Param
-    private Allocator allocator;
+    @Param({ "00000", "00256", "01024", "04096", "16384", "65536" })
+    public int size;
 
-    private final Deque<ByteBuf> queue = new ArrayDeque<ByteBuf>();
-    private ByteBufAllocator alloc;
-
-    @Override
-    protected void setUp() throws Exception {
-        alloc = allocator.alloc();
-        for (int i = 0; i < 2560; i ++) {
-            queue.add(alloc.buffer(size));
+    @Benchmark
+    public void unpooledHeapAllocAndFree() {
+        int idx = rand.nextInt(unpooledHeapBuffers.length);
+        ByteBuf oldBuf = unpooledHeapBuffers[idx];
+        if (oldBuf != null) {
+            oldBuf.release();
         }
+        unpooledHeapBuffers[idx] = unpooledAllocator.heapBuffer(size);
     }
 
-    @Override
-    protected void tearDown() throws Exception {
-        for (ByteBuf b: queue) {
-            b.release();
+    @Benchmark
+    public void unpooledDirectAllocAndFree() {
+        int idx = rand.nextInt(unpooledDirectBuffers.length);
+        ByteBuf oldBuf = unpooledDirectBuffers[idx];
+        if (oldBuf != null) {
+            oldBuf.release();
         }
-        queue.clear();
+        unpooledDirectBuffers[idx] = unpooledAllocator.directBuffer(size);
     }
 
-    public void timeAllocAndFree(int reps) {
-        final ByteBufAllocator alloc = this.alloc;
-        final Deque<ByteBuf> queue = this.queue;
-        final int size = this.size;
-
-        for (int i = 0; i < reps; i ++) {
-            queue.add(alloc.buffer(size));
-            queue.removeFirst().release();
+    @Benchmark
+    public void pooledHeapAllocAndFree() {
+        int idx = rand.nextInt(pooledHeapBuffers.length);
+        ByteBuf oldBuf = pooledHeapBuffers[idx];
+        if (oldBuf != null) {
+            oldBuf.release();
         }
+        pooledHeapBuffers[idx] = pooledAllocator.heapBuffer(size);
     }
 
-    public enum Allocator {
-        UNPOOLED_HEAP {
-            @Override
-            ByteBufAllocator alloc() {
-                return UNPOOLED_ALLOCATOR_HEAP;
-            }
-        },
-        UNPOOLED_DIRECT {
-            @Override
-            ByteBufAllocator alloc() {
-                return UNPOOLED_ALLOCATOR_DIRECT;
-            }
-        },
-        POOLED_HEAP {
-            @Override
-            ByteBufAllocator alloc() {
-                return POOLED_ALLOCATOR_HEAP;
-            }
-        },
-        POOLED_DIRECT {
-            @Override
-            ByteBufAllocator alloc() {
-                return POOLED_ALLOCATOR_DIRECT;
-            }
-        };
+    @Benchmark
+    public void pooledDirectAllocAndFree() {
+        int idx = rand.nextInt(pooledDirectBuffers.length);
+        ByteBuf oldBuf = pooledDirectBuffers[idx];
+        if (oldBuf != null) {
+            oldBuf.release();
+        }
+        pooledDirectBuffers[idx] = pooledAllocator.directBuffer(size);
+    }
 
-        abstract ByteBufAllocator alloc();
+    @Benchmark
+    public void defaultPooledHeapAllocAndFree() {
+        int idx = rand.nextInt(defaultPooledHeapBuffers.length);
+        ByteBuf oldBuf = defaultPooledHeapBuffers[idx];
+        if (oldBuf != null) {
+            oldBuf.release();
+        }
+        defaultPooledHeapBuffers[idx] = PooledByteBufAllocator.DEFAULT.heapBuffer(size);
+    }
+
+    @Benchmark
+    public void defaultPooledDirectAllocAndFree() {
+        int idx = rand.nextInt(defaultPooledDirectBuffers.length);
+        ByteBuf oldBuf = defaultPooledDirectBuffers[idx];
+        if (oldBuf != null) {
+            oldBuf.release();
+        }
+        defaultPooledDirectBuffers[idx] = PooledByteBufAllocator.DEFAULT.directBuffer(size);
     }
 }

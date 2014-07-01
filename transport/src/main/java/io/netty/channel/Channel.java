@@ -69,6 +69,12 @@ import java.net.SocketAddress;
  * transport.  Down-cast the {@link Channel} to sub-type to invoke such
  * operations.  For example, with the old I/O datagram transport, multicast
  * join / leave operations are provided by {@link DatagramChannel}.
+ *
+ * <h3>Release resources</h3>
+ * <p>
+ * It is important to call {@link #close()} or {@link #close(ChannelPromise)} to release all
+ * resources once you are done with the {@link Channel}. This ensures all resources are
+ * released in a proper way, i.e. filehandles.
  */
 public interface Channel extends AttributeMap, Comparable<Channel> {
 
@@ -275,6 +281,19 @@ public interface Channel extends AttributeMap, Comparable<Channel> {
     ChannelFuture close();
 
     /**
+     * Request to deregister this {@link Channel} from the previous assigned {@link EventLoop} and notify the
+     * {@link ChannelFuture} once the operation completes, either because the operation was successful or because of
+     * an error.
+     * <p>
+     * This will result in having the
+     * {@link ChannelHandler#deregister(ChannelHandlerContext, ChannelPromise)}
+     * method called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link Channel}.
+     *
+     */
+    ChannelFuture deregister();
+
+    /**
      * Request to bind to the given {@link SocketAddress} and notify the {@link ChannelFuture} once the operation
      * completes, either because the operation was successful or because of an error.
      *
@@ -348,6 +367,20 @@ public interface Channel extends AttributeMap, Comparable<Channel> {
     ChannelFuture close(ChannelPromise promise);
 
     /**
+     * Request to deregister this {@link Channel} from the previous assigned {@link EventLoop} and notify the
+     * {@link ChannelFuture} once the operation completes, either because the operation was successful or because of
+     * an error.
+     *
+     * The given {@link ChannelPromise} will be notified.
+     * <p>
+     * This will result in having the
+     * {@link ChannelHandler#deregister(ChannelHandlerContext, ChannelPromise)}
+     * method called of the next {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link Channel}.
+     */
+    ChannelFuture deregister(ChannelPromise promise);
+
+    /**
      * Request to Read data from the {@link Channel} into the first inbound buffer, triggers an
      * {@link ChannelHandler#channelRead(ChannelHandlerContext, Object)} event if data was
      * read, and triggers a
@@ -399,7 +432,8 @@ public interface Channel extends AttributeMap, Comparable<Channel> {
      *   <li>{@link #localAddress()}</li>
      *   <li>{@link #remoteAddress()}</li>
      *   <li>{@link #closeForcibly()}</li>
-     *   <li>{@link #register(ChannelPromise)}</li>
+     *   <li>{@link #register(EventLoop, ChannelPromise)}</li>
+     *   <li>{@link #deregister(ChannelPromise)}</li>
      *   <li>{@link #voidPromise()}</li>
      * </ul>
      */
@@ -426,7 +460,7 @@ public interface Channel extends AttributeMap, Comparable<Channel> {
          * Register the {@link Channel} of the {@link ChannelPromise} and notify
          * the {@link ChannelFuture} once the registration was complete.
          */
-        void register(ChannelPromise promise);
+        void register(EventLoop eventLoop, ChannelPromise promise);
 
         /**
          * Bind the {@link SocketAddress} to the {@link Channel} of the {@link ChannelPromise} and notify
@@ -460,6 +494,12 @@ public interface Channel extends AttributeMap, Comparable<Channel> {
          * when registration attempt failed.
          */
         void closeForcibly();
+
+        /**
+         * Deregister the {@link Channel} of the {@link ChannelPromise} from {@link EventLoop} and notify the
+         * {@link ChannelPromise} once the operation was complete.
+         */
+        void deregister(ChannelPromise promise);
 
         /**
          * Schedules a read operation that fills the inbound buffer of the first {@link ChannelHandler} in the

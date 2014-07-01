@@ -17,12 +17,13 @@ package io.netty.channel.oio;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.EventLoop;
 import io.netty.channel.FileRegion;
+import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.util.internal.StringUtil;
 
@@ -32,12 +33,16 @@ import java.io.IOException;
  * Abstract base class for OIO which reads and writes bytes from/to a Socket
  */
 public abstract class AbstractOioByteChannel extends AbstractOioChannel {
+    private RecvByteBufAllocator.Handle allocHandle;
 
     private volatile boolean inputShutdown;
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
-    protected AbstractOioByteChannel(Channel parent, EventLoop eventLoop) {
-        super(parent, eventLoop);
+    /**
+     * @see AbstractOioByteChannel#AbstractOioByteChannel(Channel)
+     */
+    protected AbstractOioByteChannel(Channel parent) {
+        super(parent);
     }
 
     protected boolean isInputShutdown() {
@@ -70,17 +75,25 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
         if (checkInputShutdown()) {
             return;
         }
-
+        final ChannelConfig config = config();
         final ChannelPipeline pipeline = pipeline();
 
-        // TODO: calculate size as in 3.x
-        ByteBuf byteBuf = alloc().buffer();
+        RecvByteBufAllocator.Handle allocHandle = this.allocHandle;
+        if (allocHandle == null) {
+            this.allocHandle = allocHandle = config.getRecvByteBufAllocator().newHandle();
+        }
+
+        ByteBuf byteBuf = allocHandle.allocate(alloc());
+
         boolean closed = false;
         boolean read = false;
         Throwable exception = null;
+        int localReadAmount = 0;
         try {
+            int totalReadAmount = 0;
+
             for (;;) {
-                int localReadAmount = doReadBytes(byteBuf);
+                localReadAmount = doReadBytes(byteBuf);
                 if (localReadAmount > 0) {
                     read = true;
                 } else if (localReadAmount < 0) {
@@ -110,12 +123,23 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
                         }
                     }
                 }
-                if (!config().isAutoRead()) {
+
+                if (totalReadAmount >= Integer.MAX_VALUE - localReadAmount) {
+                    // Avoid overflow.
+                    totalReadAmount = Integer.MAX_VALUE;
+                    break;
+                }
+
+                totalReadAmount += localReadAmount;
+
+                if (!config.isAutoRead()) {
                     // stop reading until next Channel.read() call
                     // See https://github.com/netty/netty/issues/1363
                     break;
                 }
             }
+            allocHandle.record(totalReadAmount);
+
         } catch (Throwable t) {
             exception = t;
         } finally {
@@ -147,14 +171,26 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
                     }
                 }
             }
+            if (localReadAmount == 0 && isActive()) {
+                // If the read amount was 0 and the channel is still active we need to trigger a new read()
+                // as otherwise we will never try to read again and the user will never know.
+                // Just call read() is ok here as it will be submitted to the EventLoop as a task and so we are
+                // able to process the rest of the tasks in the queue first.
+                //
+                // See https://github.com/netty/netty/issues/2404
+                read();
+            }
         }
     }
 
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
         for (;;) {
-            Object msg = in.current(false);
-
+            Object msg = in.current();
+            if (msg == null) {
+                // nothing left to write
+                break;
+            }
             if (msg instanceof ByteBuf) {
                 ByteBuf buf = (ByteBuf) msg;
                 while (buf.isReadable()) {

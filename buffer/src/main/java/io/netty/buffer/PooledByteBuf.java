@@ -17,29 +17,28 @@
 package io.netty.buffer;
 
 import io.netty.util.Recycler;
-import io.netty.util.ResourceLeak;
+import io.netty.util.Recycler.Handle;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
 
-    private final ResourceLeak leak;
-    private final Recycler.Handle recyclerHandle;
+    private final Recycler.Handle<PooledByteBuf<T>> recyclerHandle;
 
     protected PoolChunk<T> chunk;
     protected long handle;
     protected T memory;
     protected int offset;
     protected int length;
-    private int maxLength;
+    int maxLength;
 
     private ByteBuffer tmpNioBuf;
 
-    protected PooledByteBuf(Recycler.Handle recyclerHandle, int maxCapacity) {
+    @SuppressWarnings("unchecked")
+    protected PooledByteBuf(Recycler.Handle<? extends PooledByteBuf<T>> recyclerHandle, int maxCapacity) {
         super(maxCapacity);
-        leak = leakDetector.open(this);
-        this.recyclerHandle = recyclerHandle;
+        this.recyclerHandle = (Handle<PooledByteBuf<T>>) recyclerHandle;
     }
 
     void init(PoolChunk<T> chunk, long handle, int offset, int length, int maxLength) {
@@ -143,24 +142,15 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
             final long handle = this.handle;
             this.handle = -1;
             memory = null;
-            chunk.arena.free(chunk, handle);
-            if (leak != null) {
-                leak.close();
-            } else {
-                recycle();
-            }
+            chunk.arena.free(chunk, handle, maxLength);
+            recycle();
         }
     }
 
     @SuppressWarnings("unchecked")
     private void recycle() {
-        Recycler.Handle recyclerHandle = this.recyclerHandle;
-        if (recyclerHandle != null) {
-            ((Recycler<Object>) recycler()).recycle(this, recyclerHandle);
-        }
+        recyclerHandle.recycle(this);
     }
-
-    protected abstract Recycler<?> recycler();
 
     protected final int idx(int index) {
         return offset + index;
