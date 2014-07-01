@@ -151,8 +151,8 @@
     </dependency>
     <dependency>
       <groupId>org.jboss.logging</groupId>
-      <artifactId>jboss-logging-spi</artifactId>
-      <version>2.1.2.GA</version>
+      <artifactId>jboss-logging</artifactId>
+      <version>3.1.4.GA</version>
       <scope>compile</scope>
       <optional>true</optional>
     </dependency>
