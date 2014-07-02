@@ -47,7 +47,7 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
     /** The maximum number of elements allowed without allocating more space. */
     private int maxSize;
 
-    /** The load factor for the map. Used to calculate {@link maxSize}. */
+    /** The load factor for the map. Used to calculate {@link #maxSize}. */
     private final float loadFactor;
 
     private byte[] states;
@@ -74,10 +74,13 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
 
         this.loadFactor = loadFactor;
 
+        // Adjust the initial capacity if necessary.
+        initialCapacity = adjustCapacity(initialCapacity);
+
         // Allocate the arrays.
         states = new byte[initialCapacity];
         keys = new int[initialCapacity];
-        @SuppressWarnings("unchecked")
+        @SuppressWarnings({ "unchecked", "SuspiciousArrayCast" })
         V[] temp = (V[]) new Object[initialCapacity];
         values = temp;
 
@@ -99,7 +102,7 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
         int hash = hash(key);
         int capacity = capacity();
         int index = hash % capacity;
-        int increment = 1 + (hash % (capacity - 2));
+        int increment = 1 + hash % (capacity - 2);
         final int startIndex = index;
         int firstRemovedIndex = -1;
         do {
@@ -212,7 +215,7 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
         int i = -1;
         while ((i = nextEntryIndex(i + 1)) >= 0) {
             V next = values[i];
-            if (value == next || (value != null && value.equals(next))) {
+            if (value == next || value != null && value.equals(next)) {
                 return true;
             }
         }
@@ -265,7 +268,7 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
     private int indexOf(int key) {
         int hash = hash(key);
         int capacity = capacity();
-        int increment = 1 + (hash % (capacity - 2));
+        int increment = 1 + hash % (capacity - 2);
         int index = hash % capacity;
         int startIndex = index;
         do {
@@ -305,7 +308,7 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
     /**
      * Creates a hash value for the given key.
      */
-    private int hash(int key) {
+    private static int hash(int key) {
         // Just make sure the integer is positive.
         return key & Integer.MAX_VALUE;
     }
@@ -336,8 +339,7 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
 
         if (size > maxSize) {
             // Need to grow the arrays.
-            // TODO: consider using the next prime greater than capacity * 2.
-            rehash(capacity() * 2);
+            rehash(adjustCapacity(capacity() * 2));
         } else if (available == 0) {
             // Open addressing requires that we have at least 1 slot available. Need to refresh
             // the arrays to clear any removed elements.
@@ -346,7 +348,15 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
     }
 
     /**
-     * Marks the entry at the given index position as {@link REMOVED} and sets the value to
+     * Adjusts the given capacity value to ensure that it's odd. Even capacities can break probing.
+     * TODO: would be better to ensure it's prime as well.
+     */
+    private static int adjustCapacity(int capacity) {
+        return capacity | 1;
+    }
+
+    /**
+     * Marks the entry at the given index position as {@link #REMOVED} and sets the value to
      * {@code null}.
      * <p>
      * TODO: consider performing re-compaction.
@@ -385,7 +395,7 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
         // New states array is automatically initialized to AVAILABLE (i.e. 0 == AVAILABLE).
         states = new byte[newCapacity];
         keys = new int[newCapacity];
-        @SuppressWarnings("unchecked")
+        @SuppressWarnings({ "unchecked", "SuspiciousArrayCast" })
         V[] temp = (V[]) new Object[newCapacity];
         values = temp;
 

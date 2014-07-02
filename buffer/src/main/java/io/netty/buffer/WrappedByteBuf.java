@@ -773,6 +773,7 @@ class WrappedByteBuf extends ByteBuf {
     }
 
     @Override
+    @SuppressWarnings("EqualsWhichDoesntCheckParameterClass")
     public boolean equals(Object obj) {
         return buf.equals(obj);
     }

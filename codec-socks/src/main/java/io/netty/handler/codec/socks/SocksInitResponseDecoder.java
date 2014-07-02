@@ -18,6 +18,7 @@ package io.netty.handler.codec.socks;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
+import io.netty.handler.codec.socks.SocksInitResponseDecoder.State;
 
 import java.util.List;
 
@@ -25,7 +26,7 @@ import java.util.List;
  * Decodes {@link ByteBuf}s into {@link SocksInitResponse}.
  * Before returning SocksResponse decoder removes itself from pipeline.
  */
-public class SocksInitResponseDecoder extends ReplayingDecoder<SocksInitResponseDecoder.State> {
+public class SocksInitResponseDecoder extends ReplayingDecoder<State> {
     private static final String name = "SOCKS_INIT_RESPONSE_DECODER";
 
     /**

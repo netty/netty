@@ -147,7 +147,6 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
                     if (listeners instanceof DefaultFutureListeners) {
                         ((DefaultFutureListeners) listeners).add(listener);
                     } else {
-                        @SuppressWarnings("unchecked")
                         final GenericFutureListener<? extends Future<V>> firstListener =
                                 (GenericFutureListener<? extends Future<V>>) listeners;
                         listeners = new DefaultFutureListeners(firstListener, listener);
@@ -559,7 +558,6 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
                     if (listeners instanceof DefaultFutureListeners) {
                         notifyListeners0(this, (DefaultFutureListeners) listeners);
                     } else {
-                        @SuppressWarnings("unchecked")
                         final GenericFutureListener<? extends Future<V>> l =
                                 (GenericFutureListener<? extends Future<V>>) listeners;
                         notifyListener0(this, l);
@@ -582,7 +580,6 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
                 }
             });
         } else {
-            @SuppressWarnings("unchecked")
             final GenericFutureListener<? extends Future<V>> l =
                     (GenericFutureListener<? extends Future<V>>) listeners;
             execute(executor, new Runnable() {
@@ -729,7 +726,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         }
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @SuppressWarnings("unchecked")
     void notifyProgressiveListeners(final long progress, final long total) {
         final Object listeners = progressiveListeners();
         if (listeners == null) {
@@ -794,7 +791,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
     private static final class CauseHolder {
         final Throwable cause;
-        private CauseHolder(Throwable cause) {
+        CauseHolder(Throwable cause) {
             this.cause = cause;
         }
     }

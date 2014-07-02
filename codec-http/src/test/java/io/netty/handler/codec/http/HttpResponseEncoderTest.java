@@ -47,7 +47,7 @@ public class HttpResponseEncoderTest {
         buffer.release();
 
         FileRegion region = (FileRegion) channel.readOutbound();
-        assertSame(region, FILE_REGION);
+        assertSame(FILE_REGION, region);
         region.release();
         buffer = (ByteBuf) channel.readOutbound();
         assertEquals("\r\n", buffer.toString(CharsetUtil.US_ASCII));

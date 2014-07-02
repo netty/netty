@@ -31,15 +31,15 @@ package io.netty.util.internal.logging;
  * as possible and shouldn't be called more than once.
  */
 public abstract class InternalLoggerFactory {
-    private static volatile InternalLoggerFactory defaultFactory;
+    private static volatile InternalLoggerFactory defaultFactory =
+            newDefaultFactory(InternalLoggerFactory.class.getName());
 
-    static {
-        final String name = InternalLoggerFactory.class.getName();
+    @SuppressWarnings("UnusedCatchParameter")
+    private static InternalLoggerFactory newDefaultFactory(String name) {
         InternalLoggerFactory f;
         try {
             f = new Slf4JLoggerFactory(true);
             f.newInstance(name).debug("Using SLF4J as the default logging framework");
-            defaultFactory = f;
         } catch (Throwable t1) {
             try {
                 f = new Log4JLoggerFactory();
@@ -49,8 +49,7 @@ public abstract class InternalLoggerFactory {
                 f.newInstance(name).debug("Using java.util.logging as the default logging framework");
             }
         }
-
-        defaultFactory = f;
+        return f;
     }
 
     /**

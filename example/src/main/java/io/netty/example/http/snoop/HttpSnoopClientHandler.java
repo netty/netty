@@ -27,7 +27,7 @@ import io.netty.util.CharsetUtil;
 public class HttpSnoopClientHandler extends SimpleChannelInboundHandler<HttpObject> {
 
     @Override
-    public void channelRead0(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
+    public void channelRead0(ChannelHandlerContext ctx, HttpObject msg) {
         if (msg instanceof HttpResponse) {
             HttpResponse response = (HttpResponse) msg;
 

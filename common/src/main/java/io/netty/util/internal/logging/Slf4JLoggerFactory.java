@@ -54,7 +54,7 @@ public class Slf4JLoggerFactory extends InternalLoggerFactory {
             if (LoggerFactory.getILoggerFactory() instanceof NOPLoggerFactory) {
                 throw new NoClassDefFoundError(buf.toString());
             } else {
-                err.print(buf.toString());
+                err.print(buf);
                 err.flush();
             }
         } finally {

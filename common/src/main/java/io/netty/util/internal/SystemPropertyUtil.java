@@ -29,12 +29,12 @@ import java.util.regex.Pattern;
  */
 public final class SystemPropertyUtil {
 
-    @SuppressWarnings("all")
     private static boolean initializedLogger;
     private static final InternalLogger logger;
     private static boolean loggedException;
 
     static {
+        initializedLogger = false;
         logger = InternalLoggerFactory.getInstance(SystemPropertyUtil.class);
         initializedLogger = true;
     }

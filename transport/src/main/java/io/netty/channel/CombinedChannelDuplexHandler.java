@@ -55,7 +55,6 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
         this.outboundHandler = outboundHandler;
     }
 
-    @SuppressWarnings("InstanceofIncompatibleInterface")
     private void validate(I inboundHandler, O outboundHandler) {
         if (this.inboundHandler != null) {
             throw new IllegalStateException(

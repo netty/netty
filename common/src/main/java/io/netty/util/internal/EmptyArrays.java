@@ -29,6 +29,7 @@ public final class EmptyArrays {
     public static final short[] EMPTY_SHORTS = new short[0];
     public static final long[] EMPTY_LONGS = new long[0];
     public static final Object[] EMPTY_OBJECTS = new Object[0];
+    public static final Class<?>[] EMPTY_CLASSES = new Class[0];
     public static final String[] EMPTY_STRINGS = new String[0];
     public static final StackTraceElement[] EMPTY_STACK_TRACE = new StackTraceElement[0];
     public static final ByteBuffer[] EMPTY_BYTE_BUFFERS = new ByteBuffer[0];

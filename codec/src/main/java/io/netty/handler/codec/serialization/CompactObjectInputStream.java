@@ -65,7 +65,7 @@ class CompactObjectInputStream extends ObjectInputStream {
         Class<?> clazz;
         try {
             clazz = classResolver.resolve(desc.getName());
-        } catch (ClassNotFoundException ex) {
+        } catch (ClassNotFoundException ignored) {
             clazz = super.resolveClass(desc);
         }
 

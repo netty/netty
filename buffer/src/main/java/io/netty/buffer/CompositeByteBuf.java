@@ -289,7 +289,6 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
             ByteBuf consolidated = allocBuffer(capacity);
 
             // We're not using foreach to avoid creating an iterator.
-            // noinspection ForLoopReplaceableByForEach
             for (int i = 0; i < numComponents; i ++) {
                 Component c = components.get(i);
                 ByteBuf b = c.buf;
@@ -1098,7 +1097,6 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
         } else {
             int count = 0;
             int componentsCount = components.size();
-            //noinspection ForLoopReplaceableByForEach
             for (int i = 0; i < componentsCount; i++) {
                 Component c = components.get(i);
                 count += c.buf.nioBufferCount();

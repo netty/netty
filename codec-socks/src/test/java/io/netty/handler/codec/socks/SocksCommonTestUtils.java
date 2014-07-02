@@ -27,6 +27,7 @@ final class SocksCommonTestUtils {
         //NOOP
     }
 
+    @SuppressWarnings("deprecation")
     public static void writeMessageIntoEmbedder(EmbeddedChannel embedder, SocksMessage msg) {
         ByteBuf buf = Unpooled.buffer();
         msg.encodeAsByteBuf(buf);

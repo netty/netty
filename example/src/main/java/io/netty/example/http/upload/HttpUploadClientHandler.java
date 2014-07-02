@@ -32,7 +32,7 @@ public class HttpUploadClientHandler extends SimpleChannelInboundHandler<HttpObj
     private boolean readingChunks;
 
     @Override
-    public void channelRead0(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
+    public void channelRead0(ChannelHandlerContext ctx, HttpObject msg) {
         if (msg instanceof HttpResponse) {
             HttpResponse response = (HttpResponse) msg;
 

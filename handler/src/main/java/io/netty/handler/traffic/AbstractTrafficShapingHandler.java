@@ -260,10 +260,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
 
     private static boolean isSuspended(ChannelHandlerContext ctx) {
         Boolean suspended = ctx.attr(READ_SUSPENDED).get();
-        if (suspended == null || Boolean.FALSE.equals(suspended)) {
-            return false;
-        }
-        return true;
+        return !(suspended == null || Boolean.FALSE.equals(suspended));
     }
 
     @Override

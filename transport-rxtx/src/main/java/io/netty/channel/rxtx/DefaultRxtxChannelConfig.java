@@ -39,7 +39,7 @@ final class DefaultRxtxChannelConfig extends DefaultChannelConfig implements Rxt
     private volatile int waitTime;
     private volatile int readTimeout = 1000;
 
-    public DefaultRxtxChannelConfig(RxtxChannel channel) {
+    DefaultRxtxChannelConfig(RxtxChannel channel) {
         super(channel);
     }
 

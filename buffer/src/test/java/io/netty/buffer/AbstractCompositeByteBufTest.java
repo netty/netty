@@ -71,8 +71,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
             buffers.add(EMPTY_BUFFER);
         }
 
-        buffer = Unpooled.wrappedBuffer(
-                Integer.MAX_VALUE, buffers.toArray(new ByteBuf[buffers.size()])).order(order);
+        buffer = wrappedBuffer(Integer.MAX_VALUE, buffers.toArray(new ByteBuf[buffers.size()])).order(order);
 
         // Truncate to the requested capacity.
         buffer.capacity(length);
@@ -802,7 +801,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         CompositeByteBuf cbuf = releaseLater(compositeBuffer());
         int len = 8 * 4;
         for (int i = 0; i < len; i += 4) {
-            ByteBuf buf = Unpooled.buffer().writeInt(i);
+            ByteBuf buf = buffer().writeInt(i);
             cbuf.capacity(cbuf.writerIndex()).addComponent(buf).writerIndex(i + 4);
         }
         cbuf.writeByte(1);

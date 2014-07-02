@@ -35,7 +35,7 @@ import static io.netty.handler.codec.http.HttpConstants.*;
  */
 public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>> {
 
-    private static final byte[] HEADER_SEPERATOR = { HttpConstants.COLON, HttpConstants.SP };
+    private static final byte[] HEADER_SEPERATOR = { COLON, SP };
     private static final byte[] CRLF = { CR, LF };
     private static final CharSequence CONTENT_LENGTH_ENTITY = newEntity(Names.CONTENT_LENGTH);
     private static final CharSequence CONNECTION_ENTITY = newEntity(Names.CONNECTION);
@@ -785,7 +785,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
 
         try {
             return Integer.parseInt(value);
-        } catch (NumberFormatException e) {
+        } catch (NumberFormatException ignored) {
             return defaultValue;
         }
     }
@@ -882,7 +882,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
 
         try {
             return HttpHeaderDateFormat.get().parse(value);
-        } catch (ParseException e) {
+        } catch (ParseException ignored) {
             return defaultValue;
         }
     }
@@ -985,7 +985,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
         if (contentLength != null) {
             try {
                 return Long.parseLong(contentLength);
-            } catch (NumberFormatException e) {
+            } catch (NumberFormatException ignored) {
                 return defaultValue;
             }
         }
@@ -1361,6 +1361,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
         }
     }
 
+    @SuppressWarnings("deprecation")
     static void encode(CharSequence key, CharSequence value, ByteBuf buf) {
         encodeAscii(key, buf);
         buf.writeBytes(HEADER_SEPERATOR);

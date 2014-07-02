@@ -21,8 +21,10 @@ import io.netty.util.internal.PlatformDependent;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 /**
  * Default factory giving Attribute and FileUpload according to constructor
@@ -176,15 +178,18 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
 
     @Override
     public void cleanAllHttpDatas() {
-        for (HttpRequest request : requestFileDeleteMap.keySet()) {
-            List<HttpData> fileToDelete = requestFileDeleteMap.get(request);
+        Iterator<Entry<HttpRequest, List<HttpData>>> i = requestFileDeleteMap.entrySet().iterator();
+        while (i.hasNext()) {
+            Entry<HttpRequest, List<HttpData>> e = i.next();
+            i.remove();
+
+            List<HttpData> fileToDelete = e.getValue();
             if (fileToDelete != null) {
-                for (HttpData data: fileToDelete) {
+                for (HttpData data : fileToDelete) {
                     data.delete();
                 }
                 fileToDelete.clear();
             }
-            requestFileDeleteMap.remove(request);
         }
     }
 }

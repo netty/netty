@@ -87,8 +87,7 @@ final class PlatformDependent0 {
                 // http://www.mail-archive.com/jdk6-dev@openjdk.java.net/msg00698.html
                 try {
                     unsafe.getClass().getDeclaredMethod(
-                            "copyMemory",
-                            new Class[] { Object.class, long.class, Object.class, long.class, long.class });
+                            "copyMemory", Object.class, long.class, Object.class, long.class, long.class);
 
                     logger.debug("sun.misc.Unsafe.copyMemory: available");
                 } catch (NoSuchMethodError t) {

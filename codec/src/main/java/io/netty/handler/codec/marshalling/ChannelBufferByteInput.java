@@ -27,7 +27,7 @@ class ChannelBufferByteInput implements ByteInput {
 
     private final ByteBuf buffer;
 
-    public ChannelBufferByteInput(ByteBuf buffer) {
+    ChannelBufferByteInput(ByteBuf buffer) {
         this.buffer = buffer;
     }
 

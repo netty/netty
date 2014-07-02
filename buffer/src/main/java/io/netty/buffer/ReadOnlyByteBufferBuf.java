@@ -36,7 +36,7 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
     private final ByteBufAllocator allocator;
     private ByteBuffer tmpNioBuf;
 
-    public ReadOnlyByteBufferBuf(ByteBufAllocator allocator, ByteBuffer buffer) {
+    ReadOnlyByteBufferBuf(ByteBufAllocator allocator, ByteBuffer buffer) {
         super(buffer.remaining());
         if (!buffer.isReadOnly()) {
             throw new IllegalArgumentException("must be a readonly buffer: " + StringUtil.simpleClassName(buffer));
@@ -276,7 +276,7 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
         ByteBuffer src;
         try {
             src = (ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length);
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException ignored) {
             throw new IndexOutOfBoundsException("Too many bytes to read - Need " + (index + length));
         }
 

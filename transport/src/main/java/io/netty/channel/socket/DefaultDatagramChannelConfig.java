@@ -61,6 +61,7 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
     }
 
     @Override
+    @SuppressWarnings("deprecation")
     public Map<ChannelOption<?>, Object> getOptions() {
         return getOptions(
                 super.getOptions(),
@@ -68,8 +69,8 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
                 IP_MULTICAST_ADDR, IP_MULTICAST_IF, IP_MULTICAST_TTL, IP_TOS, DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
+    @SuppressWarnings({ "unchecked", "deprecation" })
     public <T> T getOption(ChannelOption<T> option) {
         if (option == SO_BROADCAST) {
             return (T) Boolean.valueOf(isBroadcast());
@@ -87,12 +88,10 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
             return (T) Boolean.valueOf(isLoopbackModeDisabled());
         }
         if (option == IP_MULTICAST_ADDR) {
-            T i = (T) getInterface();
-            return i;
+            return (T) getInterface();
         }
         if (option == IP_MULTICAST_IF) {
-            T i = (T) getNetworkInterface();
-            return i;
+            return (T) getNetworkInterface();
         }
         if (option == IP_MULTICAST_TTL) {
             return (T) Integer.valueOf(getTimeToLive());
@@ -107,6 +106,7 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
     }
 
     @Override
+    @SuppressWarnings("deprecation")
     public <T> boolean setOption(ChannelOption<T> option, T value) {
         validate(option, value);
 

@@ -123,6 +123,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
                         wrapper, compressionLevel, windowBits, memLevel)));
     }
 
+    @SuppressWarnings("FloatingPointEquality")
     protected ZlibWrapper determineWrapper(String acceptEncoding) {
         float starQ = -1.0f;
         float gzipQ = -1.0f;

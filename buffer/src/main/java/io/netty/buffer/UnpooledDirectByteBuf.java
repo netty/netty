@@ -535,7 +535,7 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
         tmpBuf.clear().position(index).limit(index + length);
         try {
             return in.read(tmpNioBuf);
-        } catch (ClosedChannelException e) {
+        } catch (ClosedChannelException ignored) {
             return -1;
         }
     }
@@ -556,7 +556,7 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
         ByteBuffer src;
         try {
             src = (ByteBuffer) buffer.duplicate().clear().position(index).limit(index + length);
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException ignored) {
             throw new IndexOutOfBoundsException("Too many bytes to read - Need " + (index + length));
         }
 

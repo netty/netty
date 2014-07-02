@@ -33,7 +33,7 @@ final class FailedChannelFuture extends CompleteChannelFuture {
      * @param channel the {@link Channel} associated with this future
      * @param cause   the cause of failure
      */
-    public FailedChannelFuture(Channel channel, EventExecutor executor, Throwable cause) {
+    FailedChannelFuture(Channel channel, EventExecutor executor, Throwable cause) {
         super(channel, executor);
         if (cause == null) {
             throw new NullPointerException("cause");
