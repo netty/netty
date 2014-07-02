@@ -87,9 +87,7 @@ public final class UnitHelp {
 
         final long timeFinish = System.currentTimeMillis();
 
-        final long timeDiff = timeFinish - timeStart;
-
-        return timeDiff;
+        return timeFinish - timeStart;
     }
 
     /**
@@ -205,7 +203,7 @@ public final class UnitHelp {
      * Display contents of a set.
      */
     public static void logSet(final Set<?> set) {
-        @SuppressWarnings({ "rawtypes", "unchecked" })
+        @SuppressWarnings("unchecked")
         final TreeSet<?> treeSet = new TreeSet(set);
         for (final Object item : treeSet) {
             log.info("-> {}", item);

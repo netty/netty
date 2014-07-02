@@ -29,7 +29,7 @@ final class SucceededChannelFuture extends CompleteChannelFuture {
      *
      * @param channel the {@link Channel} associated with this future
      */
-    public SucceededChannelFuture(Channel channel, EventExecutor executor) {
+    SucceededChannelFuture(Channel channel, EventExecutor executor) {
         super(channel, executor);
     }
 

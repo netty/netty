@@ -93,7 +93,7 @@ class Crc32c implements Checksum {
             0xBE2DA0A5, 0x4C4623A6, 0x5F16D052, 0xAD7D5351,
     };
 
-    private static final int LONG_MASK = 0xFFFFFFFF;
+    private static final long LONG_MASK = 0xFFFFFFFFL;
     private static final int BYTE_MASK = 0xFF;
 
     private int crc = ~0;
@@ -121,6 +121,6 @@ class Crc32c implements Checksum {
     }
 
     private static int crc32c(int crc, int b) {
-        return (crc >>> 8) ^ CRC_TABLE[(crc ^ (b & BYTE_MASK)) & BYTE_MASK];
+        return crc >>> 8 ^ CRC_TABLE[(crc ^ b & BYTE_MASK) & BYTE_MASK];
     }
 }

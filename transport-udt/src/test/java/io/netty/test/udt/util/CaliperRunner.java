@@ -202,18 +202,15 @@ public final class CaliperRunner {
     public static Run newRun(final String benchmarkName) {
         final Map<Scenario, ScenarioResult> measurements = new HashMap<Scenario, ScenarioResult>();
         final Date executedTimestamp = new Date();
-        final Run run = new Run(measurements, benchmarkName, executedTimestamp);
-        return run;
+        return new Run(measurements, benchmarkName, executedTimestamp);
     }
 
     /**
      * Make new result from run.
      */
     public static Result newResult(final Run run) {
-        final Environment env = new EnvironmentGetter()
-                .getEnvironmentSnapshot();
-        final Result result = new Result(run, env);
-        return result;
+        final Environment env = new EnvironmentGetter().getEnvironmentSnapshot();
+        return new Result(run, env);
     }
 
     /**

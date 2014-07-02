@@ -40,8 +40,8 @@ import java.util.concurrent.ThreadFactory;
 public class ByteEchoPeerBase {
 
     protected final int messageSize;
-    protected SocketAddress myAddress;
-    protected SocketAddress peerAddress;
+    protected final SocketAddress myAddress;
+    protected final SocketAddress peerAddress;
 
     public ByteEchoPeerBase(int messageSize, SocketAddress myAddress, SocketAddress peerAddress) {
         this.messageSize = messageSize;

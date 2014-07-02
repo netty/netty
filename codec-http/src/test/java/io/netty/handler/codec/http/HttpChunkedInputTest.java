@@ -118,6 +118,6 @@ public class HttpChunkedInputTest {
         }
 
         assertEquals(BYTES.length * inputs.length, read);
-        assertTrue("Last chunk must be DefaultLastHttpContent", lastHttpContent == LastHttpContent.EMPTY_LAST_CONTENT);
+        assertSame("Last chunk must be DefaultLastHttpContent", LastHttpContent.EMPTY_LAST_CONTENT, lastHttpContent);
     }
 }

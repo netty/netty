@@ -147,7 +147,6 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
         }
     }
 
-    @SuppressWarnings("unchecked")
     private void recycle() {
         recyclerHandle.recycle(this);
     }

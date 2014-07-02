@@ -92,7 +92,7 @@ public class ThreadPerChannelEventLoopGroupTest {
 
     private static class TestEventExecutor extends SingleThreadEventExecutor {
 
-        public TestEventExecutor() {
+        TestEventExecutor() {
             super(null, new DefaultThreadFactory("test"), false);
         }
 

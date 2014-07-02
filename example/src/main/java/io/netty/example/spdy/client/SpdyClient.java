@@ -45,7 +45,7 @@ import java.util.Arrays;
  *     ./run-example.sh spdy-client
  * </pre>
  */
-public class SpdyClient {
+public final class SpdyClient {
 
     static final boolean SSL = System.getProperty("ssl") != null;
     static final String HOST = System.getProperty("host", "127.0.0.1");

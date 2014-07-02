@@ -286,7 +286,7 @@ public final class Base64 {
                         (DECODABET[src[srcOffset + 1]] & 0xFF) << 12 |
                         (DECODABET[src[srcOffset + 2]] & 0xFF) <<  6 |
                          DECODABET[src[srcOffset + 3]] & 0xFF;
-            } catch (IndexOutOfBoundsException e) {
+            } catch (IndexOutOfBoundsException ignored) {
                 throw new IllegalArgumentException("not encoded in Base64");
             }
 

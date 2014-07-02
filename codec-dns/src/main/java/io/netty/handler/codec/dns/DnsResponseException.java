@@ -20,6 +20,8 @@ import io.netty.handler.codec.DecoderException;
 
 public final class DnsResponseException extends DecoderException {
 
+    private static final long serialVersionUID = -8519053051363525286L;
+
     private final DnsResponseCode code;
 
     public DnsResponseException(DnsResponseCode code) {

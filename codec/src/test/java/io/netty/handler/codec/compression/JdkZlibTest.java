@@ -31,6 +31,7 @@ public class JdkZlibTest extends ZlibTest {
     }
 
     @Test(expected = DecompressionException.class)
+    @Override
     public void testZLIB_OR_NONE3() throws Exception {
         super.testZLIB_OR_NONE3();
     }

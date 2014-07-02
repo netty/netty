@@ -17,6 +17,7 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBufUtil;
+import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThreadLocalRandom;
@@ -309,17 +310,17 @@ final class DefaultChannelId implements ChannelId {
             Class<?> mgmtFactoryType = Class.forName("java.lang.management.ManagementFactory", true, loader);
             Class<?> runtimeMxBeanType = Class.forName("java.lang.management.RuntimeMXBean", true, loader);
 
-            Method getRuntimeMXBean = mgmtFactoryType.getMethod("getRuntimeMXBean", null);
-            Object bean = getRuntimeMXBean.invoke(null, null);
-            Method getName = runtimeMxBeanType.getDeclaredMethod("getName");
-            value = (String) getName.invoke(bean, null);
+            Method getRuntimeMXBean = mgmtFactoryType.getMethod("getRuntimeMXBean", EmptyArrays.EMPTY_CLASSES);
+            Object bean = getRuntimeMXBean.invoke(null, EmptyArrays.EMPTY_OBJECTS);
+            Method getName = runtimeMxBeanType.getDeclaredMethod("getName", EmptyArrays.EMPTY_CLASSES);
+            value = (String) getName.invoke(bean, EmptyArrays.EMPTY_OBJECTS);
         } catch (Exception e) {
             logger.debug("Could not invoke ManagementFactory.getRuntimeMXBean().getName(); Android?", e);
             try {
                 // Invoke android.os.Process.myPid()
                 Class<?> processType = Class.forName("android.os.Process", true, loader);
-                Method myPid = processType.getMethod("myPid", null);
-                value = myPid.invoke(null, null).toString();
+                Method myPid = processType.getMethod("myPid", EmptyArrays.EMPTY_CLASSES);
+                value = myPid.invoke(null, EmptyArrays.EMPTY_OBJECTS).toString();
             } catch (Exception e2) {
                 logger.debug("Could not invoke Process.myPid(); not Android?", e2);
                 value = "";

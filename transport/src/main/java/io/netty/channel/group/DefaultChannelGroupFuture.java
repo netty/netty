@@ -80,7 +80,7 @@ final class DefaultChannelGroupFuture extends DefaultPromise<Void> implements Ch
     /**
      * Creates a new instance.
      */
-    public DefaultChannelGroupFuture(ChannelGroup group, Collection<ChannelFuture> futures,  EventExecutor executor) {
+    DefaultChannelGroupFuture(ChannelGroup group, Collection<ChannelFuture> futures,  EventExecutor executor) {
         super(executor);
         if (group == null) {
             throw new NullPointerException("group");
@@ -241,7 +241,7 @@ final class DefaultChannelGroupFuture extends DefaultPromise<Void> implements Ch
         private final K key;
         private final V value;
 
-        public DefaultEntry(K key, V value) {
+        DefaultEntry(K key, V value) {
             this.key = key;
             this.value = value;
         }

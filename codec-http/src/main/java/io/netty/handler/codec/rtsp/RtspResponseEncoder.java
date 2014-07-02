@@ -26,7 +26,6 @@ import static io.netty.handler.codec.http.HttpConstants.*;
 /**
  * Encodes an RTSP response represented in {@link FullHttpResponse} into
  * a {@link ByteBuf}.
-
  */
 public class RtspResponseEncoder extends RtspObjectEncoder<HttpResponse> {
     private static final byte[] CRLF = { CR, LF };
@@ -37,8 +36,8 @@ public class RtspResponseEncoder extends RtspObjectEncoder<HttpResponse> {
     }
 
     @Override
-    protected void encodeInitialLine(ByteBuf buf, HttpResponse response)
-            throws Exception {
+    @SuppressWarnings("deprecation")
+    protected void encodeInitialLine(ByteBuf buf, HttpResponse response) throws Exception {
         HttpHeaders.encodeAscii(response.protocolVersion().toString(), buf);
         buf.writeByte(SP);
         buf.writeBytes(String.valueOf(response.status().code()).getBytes(CharsetUtil.US_ASCII));

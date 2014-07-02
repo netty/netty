@@ -21,13 +21,13 @@ import java.util.EnumSet;
 
 final class LoggingHandler implements ChannelInboundHandler, ChannelOutboundHandler {
 
-    static enum Event { WRITE, FLUSH, BIND, CONNECT, DISCONNECT, CLOSE, DEREGISTER, READ, WRITABILITY,
+    enum Event { WRITE, FLUSH, BIND, CONNECT, DISCONNECT, CLOSE, DEREGISTER, READ, WRITABILITY,
         HANDLER_ADDED, HANDLER_REMOVED, EXCEPTION, READ_COMPLETE, REGISTERED, UNREGISTERED, ACTIVE, INACTIVE,
-        USER };
+        USER }
 
     private StringBuilder log = new StringBuilder();
 
-    private final EnumSet<LoggingHandler.Event> interest = EnumSet.allOf(LoggingHandler.Event.class);
+    private final EnumSet<Event> interest = EnumSet.allOf(Event.class);
 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
@@ -143,30 +143,29 @@ final class LoggingHandler implements ChannelInboundHandler, ChannelOutboundHand
     }
 
     String getLog() {
-        return this.log.toString();
+        return log.toString();
     }
 
     void clear() {
-        this.log = new StringBuilder();
+        log = new StringBuilder();
     }
 
-    void setInterest(LoggingHandler.Event... events) {
-        this.interest.clear();
-        Collections.addAll(this.interest, events);
+    void setInterest(Event... events) {
+        interest.clear();
+        Collections.addAll(interest, events);
     }
 
-    private void log(LoggingHandler.Event e) {
+    private void log(Event e) {
         log(e, null);
     }
 
-    private void log(LoggingHandler.Event e, String msg) {
-        if (this.interest.contains(e)) {
-            this.log.append(e);
+    private void log(Event e, String msg) {
+        if (interest.contains(e)) {
+            log.append(e);
             if (msg != null) {
-                this.log.append(": ").append(msg);
+                log.append(": ").append(msg);
             }
-            this.log.append('\n');
+            log.append('\n');
         }
     }
-
 }

@@ -75,6 +75,7 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
             new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE); // Disk if size exceed
 
     private HttpPostRequestDecoder decoder;
+
     static {
         DiskFileUpload.deleteOnExitTemporaryFile = true; // should delete file
                                                          // on exit (in normal

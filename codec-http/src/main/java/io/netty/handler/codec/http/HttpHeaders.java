@@ -1203,6 +1203,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
         }
     }
 
+    @SuppressWarnings("deprecation")
     private static void encode(CharSequence key, CharSequence value, ByteBuf buf) {
         encodeAscii(key, buf);
         buf.writeBytes(HEADER_SEPERATOR);

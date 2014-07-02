@@ -48,7 +48,7 @@ public class StompSubframeDecoderTest {
         assertNotNull(frame);
         assertEquals(StompCommand.CONNECT, frame.command());
         StompContentSubframe content = channel.readInbound();
-        assertSame(content, LastStompContentSubframe.EMPTY_LAST_CONTENT);
+        assertSame(LastStompContentSubframe.EMPTY_LAST_CONTENT, content);
         Object o = channel.readInbound();
         assertNull(o);
     }
@@ -123,13 +123,13 @@ public class StompSubframeDecoderTest {
         assertNotNull(frame);
         assertEquals(StompCommand.CONNECT, frame.command());
         StompContentSubframe content = channel.readInbound();
-        assertSame(content, LastStompContentSubframe.EMPTY_LAST_CONTENT);
+        assertSame(LastStompContentSubframe.EMPTY_LAST_CONTENT, content);
 
         StompHeadersSubframe frame2 = channel.readInbound();
         assertNotNull(frame2);
         assertEquals(StompCommand.CONNECTED, frame2.command());
         StompContentSubframe content2 = channel.readInbound();
-        assertSame(content2, LastStompContentSubframe.EMPTY_LAST_CONTENT);
+        assertSame(LastStompContentSubframe.EMPTY_LAST_CONTENT, content2);
         assertNull(channel.readInbound());
     }
 }

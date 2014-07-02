@@ -32,7 +32,7 @@ class ChannelBufferByteOutput implements ByteOutput {
     /**
      * Create a new instance which use the given {@link ByteBuf}
      */
-    public ChannelBufferByteOutput(ByteBuf buffer) {
+    ChannelBufferByteOutput(ByteBuf buffer) {
         this.buffer = buffer;
     }
 

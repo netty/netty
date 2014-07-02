@@ -34,7 +34,6 @@ public class ThreadPerChannelEventLoop extends SingleThreadEventLoop {
     public ChannelFuture register(Channel channel, ChannelPromise promise) {
         return super.register(channel, promise).addListener(new ChannelFutureListener() {
             @Override
-            @SuppressWarnings("unchecked")
             public void operationComplete(ChannelFuture future) throws Exception {
                 if (future.isSuccess()) {
                     ch = future.channel();

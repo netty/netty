@@ -526,7 +526,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
                 unsafe.finishConnect();
             }
-        } catch (CancelledKeyException e) {
+        } catch (CancelledKeyException ignored) {
             unsafe.close(unsafe.voidPromise());
         }
     }
@@ -644,7 +644,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 }
 
                 long time = System.nanoTime();
-                if ((time - TimeUnit.MILLISECONDS.toNanos(timeoutMillis)) >= currentTimeNanos) {
+                if (time - TimeUnit.MILLISECONDS.toNanos(timeoutMillis) >= currentTimeNanos) {
                     // timeoutMillis elapsed without anything selected.
                     selectCnt = 1;
                 } else if (SELECTOR_AUTO_REBUILD_THRESHOLD > 0 &&

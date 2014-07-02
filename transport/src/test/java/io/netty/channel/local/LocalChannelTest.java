@@ -250,8 +250,8 @@ public class LocalChannelTest {
 
     @Test
     public void testReRegister() {
-        EventLoopGroup group1 = new LocalEventLoopGroup();
-        EventLoopGroup group2 = new LocalEventLoopGroup();
+        EventLoopGroup group1 = new DefaultEventLoopGroup();
+        EventLoopGroup group2 = new DefaultEventLoopGroup();
         LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
         Bootstrap cb = new Bootstrap();
         ServerBootstrap sb = new ServerBootstrap();

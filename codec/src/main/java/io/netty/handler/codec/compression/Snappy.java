@@ -57,7 +57,7 @@ public class Snappy {
         written = 0;
     }
 
-    public void encode(ByteBuf in, ByteBuf out, int length) {
+    public void encode(final ByteBuf in, final ByteBuf out, final int length) {
         // Write the preamble length to the output buffer
         for (int i = 0;; i ++) {
             int b = length >>> i * 7;
@@ -70,15 +70,14 @@ public class Snappy {
         }
 
         int inIndex = in.readerIndex();
-        final int baseIndex = in.readerIndex();
-        final int maxIndex = length;
+        final int baseIndex = inIndex;
 
-        final short[] table = getHashTable(maxIndex);
+        final short[] table = getHashTable(length);
         final int shift = 32 - (int) Math.floor(Math.log(table.length) / Math.log(2));
 
         int nextEmit = inIndex;
 
-        if (maxIndex - inIndex >= MIN_COMPRESSIBLE_BYTES) {
+        if (length - inIndex >= MIN_COMPRESSIBLE_BYTES) {
             int nextHash = hash(in, ++inIndex, shift);
             outer: while (true) {
                 int skip = 32;
@@ -92,7 +91,7 @@ public class Snappy {
                     nextIndex = inIndex + bytesBetweenHashLookups;
 
                     // We need at least 4 remaining bytes to read the hash
-                    if (nextIndex > maxIndex - 4) {
+                    if (nextIndex > length - 4) {
                         break outer;
                     }
 
@@ -109,14 +108,14 @@ public class Snappy {
                 int insertTail;
                 do {
                     int base = inIndex;
-                    int matched = 4 + findMatchingLength(in, candidate + 4, inIndex + 4, maxIndex);
+                    int matched = 4 + findMatchingLength(in, candidate + 4, inIndex + 4, length);
                     inIndex += matched;
                     int offset = base - candidate;
                     encodeCopy(out, offset, matched);
                     in.readerIndex(in.readerIndex() + matched);
                     insertTail = inIndex - 1;
                     nextEmit = inIndex;
-                    if (inIndex >= maxIndex - 4) {
+                    if (inIndex >= length - 4) {
                         break outer;
                     }
 
@@ -134,8 +133,8 @@ public class Snappy {
         }
 
         // If there are any remaining characters, write them out as a literal
-        if (nextEmit < maxIndex) {
-            encodeLiteral(in, out, maxIndex - nextEmit);
+        if (nextEmit < length) {
+            encodeLiteral(in, out, length - nextEmit);
         }
     }
 
