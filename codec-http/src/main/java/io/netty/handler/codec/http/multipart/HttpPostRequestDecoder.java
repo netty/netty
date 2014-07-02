@@ -156,7 +156,8 @@ public class HttpPostRequestDecoder implements InterfaceHttpPostRequestDecoder {
         String[] headerContentType = splitHeaderContentType(contentType);
         if (headerContentType[0].toLowerCase().startsWith(
                 HttpHeaders.Values.MULTIPART_FORM_DATA)) {
-            int mrank = 1, crank = 2;
+            int mrank;
+            int crank;
             if (headerContentType[1].toLowerCase().startsWith(
                     HttpHeaders.Values.BOUNDARY)) {
                 mrank = 1;

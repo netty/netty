@@ -27,7 +27,7 @@ class ClassLoaderClassResolver implements ClassResolver {
     public Class<?> resolve(String className) throws ClassNotFoundException {
         try {
             return classLoader.loadClass(className);
-        } catch (ClassNotFoundException e) {
+        } catch (ClassNotFoundException ignored) {
             return Class.forName(className, false, classLoader);
         }
     }

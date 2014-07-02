@@ -88,18 +88,14 @@ public abstract class OioByteStreamChannel extends AbstractOioByteChannel {
         }
 
         OutputStream os = this.os;
-        if (os == null || os == CLOSED_OUT) {
-            return false;
-        }
-
-        return true;
+        return !(os == null || os == CLOSED_OUT);
     }
 
     @Override
     protected int available() {
         try {
             return is.available();
-        } catch (IOException e) {
+        } catch (IOException ignored) {
             return 0;
         }
     }

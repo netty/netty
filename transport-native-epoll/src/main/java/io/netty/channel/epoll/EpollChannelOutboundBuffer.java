@@ -61,8 +61,7 @@ final class EpollChannelOutboundBuffer extends ChannelOutboundBuffer {
         if (msg instanceof ByteBuf) {
             ByteBuf buf = (ByteBuf) msg;
             if (!buf.hasMemoryAddress()) {
-                ByteBuf direct = copyToDirectByteBuf(buf);
-                return direct;
+                return copyToDirectByteBuf(buf);
             }
         }
         return msg;

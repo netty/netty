@@ -32,7 +32,7 @@ class LimitingByteInput implements ByteInput {
     private final long limit;
     private long read;
 
-    public LimitingByteInput(ByteInput input, long limit) {
+    LimitingByteInput(ByteInput input, long limit) {
         if (limit <= 0) {
             throw new IllegalArgumentException("The limit MUST be > 0");
         }

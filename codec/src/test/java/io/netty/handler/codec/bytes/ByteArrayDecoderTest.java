@@ -26,9 +26,6 @@ import static io.netty.buffer.Unpooled.*;
 import static org.hamcrest.core.Is.*;
 import static org.junit.Assert.*;
 
-/**
- */
-@SuppressWarnings("ZeroLengthArrayAllocation")
 public class ByteArrayDecoderTest {
 
     private EmbeddedChannel ch;

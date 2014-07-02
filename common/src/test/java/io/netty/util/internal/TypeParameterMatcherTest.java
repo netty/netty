@@ -83,17 +83,14 @@ public class TypeParameterMatcherTest {
 
     public static class TypeQ<I extends BBB> extends TypeZ<AAA, I> { }
 
-    @SuppressWarnings("ClassMayBeInterface")
     public static class A { }
     public static class AA extends A { }
     public static class AAA extends AA { }
 
-    @SuppressWarnings("ClassMayBeInterface")
     public static class B { }
     public static class BB extends B { }
     public static class BBB extends BB { }
 
-    @SuppressWarnings("ClassMayBeInterface")
     public static class C { }
     public static class CC extends C { }
 
@@ -104,7 +101,6 @@ public class TypeParameterMatcherTest {
         assertTrue(m.match(new T()));
     }
 
-    @SuppressWarnings("ClassMayBeInterface")
     private static class T { }
     private static class U<E> { E a; }
 

@@ -189,7 +189,7 @@ public class ByteBufInputStream extends InputStream implements DataInput {
 
         loop: while (true) {
             if (!buffer.isReadable()) {
-                return (lineBuf.length() > 0) ? lineBuf.toString() : null;
+                return lineBuf.length() > 0 ? lineBuf.toString() : null;
             }
 
             int c = buffer.readUnsignedByte();
@@ -198,7 +198,7 @@ public class ByteBufInputStream extends InputStream implements DataInput {
                     break loop;
 
                 case '\r':
-                    if (buffer.isReadable() && buffer.getUnsignedByte(buffer.readerIndex()) == '\n') {
+                    if (buffer.isReadable() && (char) buffer.getUnsignedByte(buffer.readerIndex()) == '\n') {
                         buffer.skipBytes(1);
                     }
                     break loop;

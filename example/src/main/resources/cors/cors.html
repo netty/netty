@@ -10,7 +10,7 @@
         <textarea id="responseText"></textarea>
         <script>
             function simpleGetRequest() {
-                var xhr = new XMLHttpRequest()
+                var xhr = new XMLHttpRequest();
                 xhr.open('GET', 'http://localhost:8080/cors');
 
                 // Uncomment to force a CORS preflight request.
@@ -18,13 +18,13 @@
 
                 xhr.onerror = function() {
                     getTextAreaElement().value = 'CORS is NOT working';
-                }
+                };
 
                 xhr.onload = function() {
                     getTextAreaElement().value = 'CORS is working';
                     //var header = xhr.getResponseHeader("custom-response-header");
                     //appendTextArea('custom-response-header=' + header);
-                }
+                };
 
                 function getTextAreaElement() {
                     return document.getElementById('responseText');

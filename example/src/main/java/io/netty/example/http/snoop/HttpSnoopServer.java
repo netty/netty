@@ -29,7 +29,7 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
  * An HTTP server that sends back the content of the received HTTP request
  * in a pretty plaintext form.
  */
-public class HttpSnoopServer {
+public final class HttpSnoopServer {
 
     static final boolean SSL = System.getProperty("ssl") != null;
     static final int PORT = Integer.parseInt(System.getProperty("port", SSL? "8443" : "8080"));

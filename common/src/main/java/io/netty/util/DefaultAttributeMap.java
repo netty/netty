@@ -48,7 +48,7 @@ public class DefaultAttributeMap implements AttributeMap {
     @SuppressWarnings("UnusedDeclaration")
     private volatile AtomicReferenceArray<DefaultAttribute<?>> attributes;
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @SuppressWarnings("unchecked")
     @Override
     public <T> Attribute<T> attr(AttributeKey<T> key) {
         if (key == null) {

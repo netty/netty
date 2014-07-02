@@ -36,6 +36,14 @@ public abstract class InternalLoggerFactory {
     static {
         final String name = InternalLoggerFactory.class.getName();
         InternalLoggerFactory f;
+        f = newDefaultFactory(name);
+
+        defaultFactory = f;
+    }
+
+    @SuppressWarnings("UnusedCatchParameter")
+    private static InternalLoggerFactory newDefaultFactory(String name) {
+        InternalLoggerFactory f;
         try {
             f = new Slf4JLoggerFactory(true);
             f.newInstance(name).debug("Using SLF4J as the default logging framework");
@@ -49,8 +57,7 @@ public abstract class InternalLoggerFactory {
                 f.newInstance(name).debug("Using java.util.logging as the default logging framework");
             }
         }
-
-        defaultFactory = f;
+        return f;
     }
 
     /**

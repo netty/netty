@@ -106,7 +106,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
     /**
      * Used in Multipart
      */
-    private Map<String, Attribute> currentFieldAttributes;
+    private Map<CharSequence, Attribute> currentFieldAttributes;
 
     /**
      * The current FileUpload that is currently in decode process
@@ -516,7 +516,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
             // load data
             try {
                 loadFieldMultipart(multipartDataBoundary);
-            } catch (NotEnoughDataDecoderException e) {
+            } catch (NotEnoughDataDecoderException ignored) {
                 return null;
             }
             Attribute finalAttribute = currentAttribute;
@@ -561,7 +561,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
         SeekAheadOptimize sao;
         try {
             sao = new SeekAheadOptimize(undecodedChunk);
-        } catch (SeekAheadNoBackArrayException e) {
+        } catch (SeekAheadNoBackArrayException ignored) {
             try {
                 skipControlCharactersStandard();
             } catch (IndexOutOfBoundsException e1) {
@@ -608,7 +608,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
         int readerIndex = undecodedChunk.readerIndex();
         try {
             skipControlCharacters();
-        } catch (NotEnoughDataDecoderException e1) {
+        } catch (NotEnoughDataDecoderException ignored) {
             undecodedChunk.readerIndex(readerIndex);
             return null;
         }
@@ -616,7 +616,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
         String newline;
         try {
             newline = readDelimiter(delimiter);
-        } catch (NotEnoughDataDecoderException e) {
+        } catch (NotEnoughDataDecoderException ignored) {
             undecodedChunk.readerIndex(readerIndex);
             return null;
         }
@@ -648,7 +648,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
     private InterfaceHttpData findMultipartDisposition() {
         int readerIndex = undecodedChunk.readerIndex();
         if (currentStatus == MultiPartStatus.DISPOSITION) {
-            currentFieldAttributes = new TreeMap<String, Attribute>(CaseIgnoringComparator.INSTANCE);
+            currentFieldAttributes = new TreeMap<CharSequence, Attribute>(CaseIgnoringComparator.INSTANCE);
         }
         // read many lines until empty line with newline found! Store all data
         while (!skipOneLine()) {
@@ -656,7 +656,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
             try {
                 skipControlCharacters();
                 newline = readLine();
-            } catch (NotEnoughDataDecoderException e) {
+            } catch (NotEnoughDataDecoderException ignored) {
                 undecodedChunk.readerIndex(readerIndex);
                 return null;
             }
@@ -842,7 +842,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                 size = lengthAttribute != null ? Long.parseLong(lengthAttribute.getValue()) : 0L;
             } catch (IOException e) {
                 throw new ErrorDataDecoderException(e);
-            } catch (NumberFormatException e) {
+            } catch (NumberFormatException ignored) {
                 size = 0;
             }
             try {
@@ -991,7 +991,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
         SeekAheadOptimize sao;
         try {
             sao = new SeekAheadOptimize(undecodedChunk);
-        } catch (SeekAheadNoBackArrayException e1) {
+        } catch (SeekAheadNoBackArrayException ignored) {
             return readLineStandard();
         }
         int readerIndex = undecodedChunk.readerIndex();
@@ -1142,7 +1142,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
         SeekAheadOptimize sao;
         try {
             sao = new SeekAheadOptimize(undecodedChunk);
-        } catch (SeekAheadNoBackArrayException e1) {
+        } catch (SeekAheadNoBackArrayException ignored) {
             return readDelimiterStandard(delimiter);
         }
         int readerIndex = undecodedChunk.readerIndex();
@@ -1371,7 +1371,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
         SeekAheadOptimize sao;
         try {
             sao = new SeekAheadOptimize(undecodedChunk);
-        } catch (SeekAheadNoBackArrayException e1) {
+        } catch (SeekAheadNoBackArrayException ignored) {
             readFileUploadByteMultipartStandard(delimiter);
             return;
         }
@@ -1592,7 +1592,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
         SeekAheadOptimize sao;
         try {
             sao = new SeekAheadOptimize(undecodedChunk);
-        } catch (SeekAheadNoBackArrayException e1) {
+        } catch (SeekAheadNoBackArrayException ignored) {
             loadFieldMultipartStandard(delimiter);
             return;
         }
@@ -1699,6 +1699,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      *
      * @return the cleaned String
      */
+    @SuppressWarnings("IfStatementWithIdenticalBranches")
     private static String cleanString(String field) {
         StringBuilder sb = new StringBuilder(field.length());
         for (int i = 0; i < field.length(); i++) {

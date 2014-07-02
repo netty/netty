@@ -139,6 +139,7 @@ public class CaliperMeasure {
     /**
      * Perform measurement; convert from metrics into caliper.
      */
+    @SuppressWarnings("FloatingPointEquality")
     public void mark() {
         final double rateValue = filter(rate.oneMinuteRate());
         final double timeValue = filter(time.mean());
@@ -172,8 +173,7 @@ public class CaliperMeasure {
 
     private static MeasurementSet measurementSet(final Map<Long, Measurement> map) {
         final Measurement[] array = map.values().toArray(new Measurement[map.size()]);
-        final MeasurementSet set = new MeasurementSet(array);
-        return set;
+        return new MeasurementSet(array);
     }
 
     /**

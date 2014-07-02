@@ -37,8 +37,8 @@ public class RtspRequestEncoder extends RtspObjectEncoder<HttpRequest> {
     }
 
     @Override
-    protected void encodeInitialLine(ByteBuf buf, HttpRequest request)
-            throws Exception {
+    @SuppressWarnings("deprecation")
+    protected void encodeInitialLine(ByteBuf buf, HttpRequest request) throws Exception {
         HttpHeaders.encodeAscii(request.method().toString(), buf);
         buf.writeByte(SP);
         buf.writeBytes(request.uri().getBytes(CharsetUtil.UTF_8));

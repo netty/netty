@@ -55,7 +55,7 @@ public interface InterfaceHttpPostRequestDecoder {
      * @throws HttpPostRequestDecoder.NotEnoughDataDecoderException
      *             Need more chunks
      */
-    List<InterfaceHttpData> getBodyHttpDatas() throws HttpPostRequestDecoder.NotEnoughDataDecoderException;
+    List<InterfaceHttpData> getBodyHttpDatas();
 
     /**
      * This getMethod returns a List of all HttpDatas with the given name from
@@ -68,7 +68,7 @@ public interface InterfaceHttpPostRequestDecoder {
      * @throws HttpPostRequestDecoder.NotEnoughDataDecoderException
      *             need more chunks
      */
-    List<InterfaceHttpData> getBodyHttpDatas(String name) throws HttpPostRequestDecoder.NotEnoughDataDecoderException;
+    List<InterfaceHttpData> getBodyHttpDatas(String name);
 
     /**
      * This getMethod returns the first InterfaceHttpData with the given name from
@@ -82,7 +82,7 @@ public interface InterfaceHttpPostRequestDecoder {
      * @throws HttpPostRequestDecoder.NotEnoughDataDecoderException
      *             need more chunks
      */
-    InterfaceHttpData getBodyHttpData(String name) throws HttpPostRequestDecoder.NotEnoughDataDecoderException;
+    InterfaceHttpData getBodyHttpData(String name);
 
     /**
      * Initialized the internals from a new chunk
@@ -93,8 +93,7 @@ public interface InterfaceHttpPostRequestDecoder {
      *             if there is a problem with the charset decoding or other
      *             errors
      */
-    InterfaceHttpPostRequestDecoder offer(HttpContent content)
-            throws HttpPostRequestDecoder.ErrorDataDecoderException;
+    InterfaceHttpPostRequestDecoder offer(HttpContent content);
 
     /**
      * True if at current getStatus, there is an available decoded
@@ -106,7 +105,7 @@ public interface InterfaceHttpPostRequestDecoder {
      * @throws HttpPostRequestDecoder.EndOfDataDecoderException
      *             No more data will be available
      */
-    boolean hasNext() throws HttpPostRequestDecoder.EndOfDataDecoderException;
+    boolean hasNext();
 
     /**
      * Returns the next available InterfaceHttpData or null if, at the time it
@@ -120,7 +119,7 @@ public interface InterfaceHttpPostRequestDecoder {
      * @throws HttpPostRequestDecoder.EndOfDataDecoderException
      *             No more data will be available
      */
-    InterfaceHttpData next() throws HttpPostRequestDecoder.EndOfDataDecoderException;
+    InterfaceHttpData next();
 
     /**
      * Destroy the {@link InterfaceHttpPostRequestDecoder} and release all it resources. After this method

@@ -511,7 +511,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
         SeekAheadOptimize sao;
         try {
             sao = new SeekAheadOptimize(undecodedChunk);
-        } catch (SeekAheadNoBackArrayException e1) {
+        } catch (SeekAheadNoBackArrayException ignored) {
             parseBodyAttributesStandard();
             return;
         }
@@ -659,11 +659,11 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
         SeekAheadOptimize sao;
         try {
             sao = new SeekAheadOptimize(undecodedChunk);
-        } catch (SeekAheadNoBackArrayException e) {
+        } catch (SeekAheadNoBackArrayException ignored) {
             try {
                 skipControlCharactersStandard();
-            } catch (IndexOutOfBoundsException e1) {
-                throw new NotEnoughDataDecoderException(e1);
+            } catch (IndexOutOfBoundsException e) {
+                throw new NotEnoughDataDecoderException(e);
             }
             return;
         }

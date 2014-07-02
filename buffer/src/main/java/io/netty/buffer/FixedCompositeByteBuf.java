@@ -41,7 +41,7 @@ final class FixedCompositeByteBuf extends AbstractReferenceCountedByteBuf {
     private final Object[] buffers;
     private final boolean direct;
 
-    public FixedCompositeByteBuf(ByteBufAllocator allocator, ByteBuf... buffers) {
+    FixedCompositeByteBuf(ByteBufAllocator allocator, ByteBuf... buffers) {
         super(Integer.MAX_VALUE);
         if (buffers.length == 0) {
             this.buffers = EMPTY;
@@ -204,7 +204,6 @@ final class FixedCompositeByteBuf extends AbstractReferenceCountedByteBuf {
 
     private Component findComponent(int index) {
         int readable = 0;
-        //noinspection ForLoopReplaceableByForEach
         for (int i = 0 ; i < buffers.length; i++) {
             Component comp = null;
             ByteBuf b;
@@ -545,7 +544,6 @@ final class FixedCompositeByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected void deallocate() {
-        //noinspection ForLoopReplaceableByForEach
         for (int i = 0; i < buffers.length; i++) {
              buffer(i).release();
         }

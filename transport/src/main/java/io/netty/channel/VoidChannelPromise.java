@@ -31,7 +31,7 @@ final class VoidChannelPromise extends AbstractFuture<Void> implements ChannelPr
      *
      * @param channel the {@link Channel} associated with this future
      */
-    public VoidChannelPromise(Channel channel, boolean fireException) {
+    VoidChannelPromise(Channel channel, boolean fireException) {
         if (channel == null) {
             throw new NullPointerException("channel");
         }

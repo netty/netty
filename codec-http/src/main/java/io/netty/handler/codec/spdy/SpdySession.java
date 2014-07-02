@@ -18,6 +18,7 @@ package io.netty.handler.codec.spdy;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.internal.PlatformDependent;
 
+import java.io.Serializable;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Queue;
@@ -320,7 +321,10 @@ final class SpdySession {
         }
     }
 
-    private final class PriorityComparator implements Comparator<Integer> {
+    private final class PriorityComparator implements Comparator<Integer>, Serializable {
+
+        private static final long serialVersionUID = 1161471649740544848L;
+
         @Override
         public int compare(Integer id1, Integer id2) {
             StreamState state1 = activeStreams.get(id1);

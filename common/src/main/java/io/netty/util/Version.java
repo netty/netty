@@ -132,7 +132,7 @@ public final class Version {
     private static long parseIso8601(String value) {
         try {
             return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss Z").parse(value).getTime();
-        } catch (ParseException e) {
+        } catch (ParseException ignored) {
             return 0;
         }
     }

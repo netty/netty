@@ -28,6 +28,6 @@ public class NioUdtByteAcceptorChannelTest extends AbstractUdtTest {
      */
     @Test
     public void metadata() throws Exception {
-        assertEquals(false, new NioUdtByteAcceptorChannel().metadata().hasDisconnect());
+        assertFalse(new NioUdtByteAcceptorChannel().metadata().hasDisconnect());
     }
 }

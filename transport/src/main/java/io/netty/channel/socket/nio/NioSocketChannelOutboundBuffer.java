@@ -54,7 +54,7 @@ public final class NioSocketChannelOutboundBuffer extends ChannelOutboundBuffer 
         return buffer;
     }
 
-    private NioSocketChannelOutboundBuffer(Recycler.Handle<? extends NioSocketChannelOutboundBuffer> handle) {
+    private NioSocketChannelOutboundBuffer(Recycler.Handle<NioSocketChannelOutboundBuffer> handle) {
         super(handle);
         nioBuffers = new ByteBuffer[INITIAL_CAPACITY];
     }

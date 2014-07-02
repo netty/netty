@@ -35,7 +35,6 @@ public abstract class AbstractReferenceCounted implements ReferenceCounted {
         refCntUpdater = updater;
     }
 
-    @SuppressWarnings("FieldMayBeFinal")
     private volatile int refCnt = 1;
 
     @Override

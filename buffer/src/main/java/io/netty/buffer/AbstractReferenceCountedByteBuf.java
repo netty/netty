@@ -37,7 +37,6 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
         refCntUpdater = updater;
     }
 
-    @SuppressWarnings("FieldMayBeFinal")
     private volatile int refCnt = 1;
 
     protected AbstractReferenceCountedByteBuf(int maxCapacity) {

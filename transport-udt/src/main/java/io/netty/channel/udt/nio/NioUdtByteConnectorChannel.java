@@ -142,8 +142,7 @@ public class NioUdtByteConnectorChannel extends AbstractNioByteChannel implement
     @Override
     protected int doWriteBytes(final ByteBuf byteBuf) throws Exception {
         final int expectedWrittenBytes = byteBuf.readableBytes();
-        final int writtenBytes = byteBuf.readBytes(javaChannel(), expectedWrittenBytes);
-        return writtenBytes;
+        return byteBuf.readBytes(javaChannel(), expectedWrittenBytes);
     }
 
     @Override

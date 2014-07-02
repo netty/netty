@@ -157,7 +157,7 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
                     int huffmanSymbolCount = 0;
                     if (bitNumber > 0) {
                         for (int i = 0; i < 16; i++) {
-                            if ((inUse16 & ((1 << 15) >>> i)) != 0) {
+                            if ((inUse16 & 1 << 15 >>> i) != 0) {
                                 for (int j = 0, k = i << 4; j < 16; j++, k++) {
                                     if (readBoolean(in)) {
                                         huffmanSymbolMap[huffmanSymbolCount++] = (byte) k;
@@ -330,7 +330,7 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
         }
 
         this.bitCount = bitCount -= n;
-        return (bitBuffer >>> bitCount) & ((1 << n) - 1);
+        return bitBuffer >>> bitCount & (1 << n) - 1;
     }
 
     private boolean readBoolean(ByteBuf in) {
