@@ -54,7 +54,6 @@ final class EpollEventLoop extends SingleThreadEventLoop {
     private final long[] events;
 
     private int id;
-    private int oldWakenUp;
     private boolean overflown;
 
     @SuppressWarnings("unused")
@@ -176,7 +175,7 @@ final class EpollEventLoop extends SingleThreadEventLoop {
         this.ioRatio = ioRatio;
     }
 
-    private int epollWait() {
+    private int epollWait(boolean oldWakenUp) {
         int selectCnt = 0;
         long currentTimeNanos = System.nanoTime();
         long selectDeadLineNanos = currentTimeNanos + delayNanos(currentTimeNanos);
@@ -195,10 +194,11 @@ final class EpollEventLoop extends SingleThreadEventLoop {
             int selectedKeys = Native.epollWait(epollFd, events, (int) timeoutMillis);
             selectCnt ++;
 
-            if (selectedKeys != 0 || oldWakenUp == 1 || wakenUp == 1 || hasTasks()) {
-                // Selected something,
-                // waken up by user, or
-                // the task queue has a pending task.
+            if (selectedKeys != 0 || oldWakenUp || wakenUp == 1 || hasTasks() || hasScheduledTasks()) {
+                // - Selected something,
+                // - waken up by user, or
+                // - the task queue has a pending task.
+                // - a scheduled task is ready for processing
                 return selectedKeys;
             }
             currentTimeNanos = System.nanoTime();
@@ -209,14 +209,14 @@ final class EpollEventLoop extends SingleThreadEventLoop {
     @Override
     protected void run() {
         for (;;) {
-            oldWakenUp = WAKEN_UP_UPDATER.getAndSet(this, 0);
+            boolean oldWakenUp = WAKEN_UP_UPDATER.getAndSet(this, 0) == 1;
             try {
                 int ready;
                 if (hasTasks()) {
                     // Non blocking just return what is ready directly without block
                     ready = Native.epollWait(epollFd, events, 0);
                 } else {
-                    ready = epollWait();
+                    ready = epollWait(oldWakenUp);
 
                     // 'wakenUp.compareAndSet(false, true)' is always evaluated
                     // before calling 'selector.wakeup()' to reduce the wake-up

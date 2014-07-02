@@ -40,6 +40,7 @@ import java.util.Iterator;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -105,7 +106,6 @@ public final class NioEventLoop extends SingleThreadEventLoop {
      * waken up.
      */
     private final AtomicBoolean wakenUp = new AtomicBoolean();
-    private boolean oldWakenUp;
 
     private volatile int ioRatio = 50;
     private int cancelledKeys;
@@ -302,12 +302,12 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     @Override
     protected void run() {
         for (;;) {
-            oldWakenUp = wakenUp.getAndSet(false);
+            boolean oldWakenUp = wakenUp.getAndSet(false);
             try {
                 if (hasTasks()) {
                     selectNow();
                 } else {
-                    select();
+                    select(oldWakenUp);
 
                     // 'wakenUp.compareAndSet(false, true)' is always evaluated
                     // before calling 'selector.wakeup()' to reduce the wake-up
@@ -603,7 +603,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
     }
 
-    private void select() throws IOException {
+    private void select(boolean oldWakenUp) throws IOException {
         Selector selector = this.selector;
         try {
             int selectCnt = 0;
@@ -622,10 +622,11 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 int selectedKeys = selector.select(timeoutMillis);
                 selectCnt ++;
 
-                if (selectedKeys != 0 || oldWakenUp || wakenUp.get() || hasTasks()) {
-                    // Selected something,
-                    // waken up by user, or
-                    // the task queue has a pending task.
+                if (selectedKeys != 0 || oldWakenUp || wakenUp.get() || hasTasks() || hasScheduledTasks()) {
+                    // - Selected something,
+                    // - waken up by user, or
+                    // - the task queue has a pending task.
+                    // - a scheduled task is ready for processing
                     break;
                 }
                 if (Thread.interrupted()) {
@@ -642,7 +643,12 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     selectCnt = 1;
                     break;
                 }
-                if (SELECTOR_AUTO_REBUILD_THRESHOLD > 0 &&
+
+                long time = System.nanoTime();
+                if ((time - TimeUnit.MILLISECONDS.toNanos(timeoutMillis)) >= currentTimeNanos) {
+                    // timeoutMillis elapsed without anything selected.
+                    selectCnt = 1;
+                } else if (SELECTOR_AUTO_REBUILD_THRESHOLD > 0 &&
                         selectCnt >= SELECTOR_AUTO_REBUILD_THRESHOLD) {
                     // The selector returned prematurely many times in a row.
                     // Rebuild the selector to work around the problem.
@@ -659,7 +665,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     break;
                 }
 
-                currentTimeNanos = System.nanoTime();
+                currentTimeNanos = time;
             }
 
             if (selectCnt > MIN_PREMATURE_SELECTOR_RETURNS) {
