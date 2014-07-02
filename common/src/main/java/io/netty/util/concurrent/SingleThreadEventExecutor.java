@@ -291,6 +291,16 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
     }
 
     /**
+     * Returns {@code true} if a scheduled task is ready for processing by {@link #runAllTasks()} or
+     * {@link #runAllTasks(long)}.
+     */
+    protected boolean hasScheduledTasks() {
+        assert inEventLoop();
+        ScheduledFutureTask<?> delayedTask = delayedTaskQueue.peek();
+        return delayedTask != null && delayedTask.deadlineNanos() <= ScheduledFutureTask.nanoTime();
+    }
+
+    /**
      * Return the number of tasks that are pending for processing.
      *
      * <strong>Be aware that this operation may be expensive as it depends on the internal implementation of the
