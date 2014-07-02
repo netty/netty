@@ -104,4 +104,9 @@ abstract class CompleteChannelFuture extends CompleteFuture<Void> implements Cha
     public Void getNow() {
         return null;
     }
+
+    @Override
+    public boolean isVoid() {
+        return false;
+    }
 }
