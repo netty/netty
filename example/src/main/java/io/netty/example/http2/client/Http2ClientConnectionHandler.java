@@ -125,7 +125,7 @@ public class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler
         int available = data.readableBytes();
         if (collectedData == null) {
             collectedData = ctx().alloc().buffer(available);
-            collectedData.writeBytes(data);
+            collectedData.writeBytes(data, data.readerIndex(), data.readableBytes());
         } else {
             // Expand the buffer
             ByteBuf newBuffer = ctx().alloc().buffer(collectedData.readableBytes() + available);
