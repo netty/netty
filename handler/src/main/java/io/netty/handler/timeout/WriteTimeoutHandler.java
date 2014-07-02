@@ -102,37 +102,38 @@ public class WriteTimeoutHandler extends ChannelHandlerAdapter {
 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-        scheduleTimeout(ctx, promise);
+        if (timeoutNanos > 0) {
+            promise = promise.unvoid();
+            scheduleTimeout(ctx, promise);
+        }
         ctx.write(msg, promise);
     }
 
     private void scheduleTimeout(final ChannelHandlerContext ctx, final ChannelPromise future) {
-        if (timeoutNanos > 0) {
-            // Schedule a timeout.
-            final ScheduledFuture<?> sf = ctx.executor().schedule(new Runnable() {
-                @Override
-                public void run() {
-                    // Was not written yet so issue a write timeout
-                    // The future itself will be failed with a ClosedChannelException once the close() was issued
-                    // See https://github.com/netty/netty/issues/2159
-                    if (!future.isDone()) {
-                        try {
-                            writeTimedOut(ctx);
-                        } catch (Throwable t) {
-                            ctx.fireExceptionCaught(t);
-                        }
+        // Schedule a timeout.
+        final ScheduledFuture<?> sf = ctx.executor().schedule(new Runnable() {
+            @Override
+            public void run() {
+                // Was not written yet so issue a write timeout
+                // The future itself will be failed with a ClosedChannelException once the close() was issued
+                // See https://github.com/netty/netty/issues/2159
+                if (!future.isDone()) {
+                    try {
+                        writeTimedOut(ctx);
+                    } catch (Throwable t) {
+                        ctx.fireExceptionCaught(t);
                     }
                 }
-            }, timeoutNanos, TimeUnit.NANOSECONDS);
+            }
+        }, timeoutNanos, TimeUnit.NANOSECONDS);
 
-            // Cancel the scheduled timeout if the flush future is complete.
-            future.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    sf.cancel(false);
-                }
-            });
-        }
+        // Cancel the scheduled timeout if the flush future is complete.
+        future.addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) throws Exception {
+                sf.cancel(false);
+            }
+        });
     }
 
     /**

@@ -256,14 +256,15 @@ public class IdleStateHandler extends ChannelHandlerAdapter {
 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-        promise.addListener(new ChannelFutureListener() {
+        ChannelPromise unvoid = promise.unvoid();
+        unvoid.addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
                 lastWriteTime = System.nanoTime();
                 firstWriterIdleEvent = firstAllIdleEvent = true;
             }
         });
-        ctx.write(msg, promise);
+        ctx.write(msg, unvoid);
     }
 
     private void initialize(ChannelHandlerContext ctx) {

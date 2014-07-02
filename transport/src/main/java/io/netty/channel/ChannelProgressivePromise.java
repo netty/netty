@@ -59,4 +59,7 @@ public interface ChannelProgressivePromise extends ProgressivePromise<Void>, Cha
 
     @Override
     ChannelProgressivePromise setProgress(long progress, long total);
+
+    @Override
+    ChannelProgressivePromise unvoid();
 }
