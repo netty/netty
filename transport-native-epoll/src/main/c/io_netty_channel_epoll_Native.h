@@ -21,6 +21,12 @@
 #define EPOLL_ACCEPT 0x04
 #define EPOLL_RDHUP 0x08
 
+// Define SO_REUSEPORT if not found to fix build issues.
+// See https://github.com/netty/netty/issues/2558
+#ifndef SO_REUSEPORT
+#define SO_REUSEPORT 15
+#endif /* SO_REUSEPORT */
+
 jint Java_io_netty_channel_epoll_Native_eventFd(JNIEnv * env, jclass clazz);
 void Java_io_netty_channel_epoll_Native_eventFdWrite(JNIEnv * env, jclass clazz, jint fd, jlong value);
 void Java_io_netty_channel_epoll_Native_eventFdRead(JNIEnv * env, jclass clazz, jint fd);
