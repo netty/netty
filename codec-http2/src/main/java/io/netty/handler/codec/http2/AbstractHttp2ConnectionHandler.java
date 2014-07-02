@@ -15,22 +15,6 @@
 
 package io.netty.handler.codec.http2;
 
-import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
-import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
-import static io.netty.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_STREAM_ID;
-import static io.netty.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuf;
-import static io.netty.handler.codec.http2.Http2CodecUtil.toByteBuf;
-import static io.netty.handler.codec.http2.Http2CodecUtil.toHttp2Exception;
-import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
-import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
-import static io.netty.handler.codec.http2.Http2Error.STREAM_CLOSED;
-import static io.netty.handler.codec.http2.Http2Exception.protocolError;
-import static io.netty.handler.codec.http2.Http2Stream.State.CLOSED;
-import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_LOCAL;
-import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_REMOTE;
-import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
-import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_LOCAL;
-import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -40,8 +24,13 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
+
+import static io.netty.handler.codec.http2.Http2CodecUtil.*;
+import static io.netty.handler.codec.http2.Http2Error.*;
+import static io.netty.handler.codec.http2.Http2Exception.*;
+import static io.netty.handler.codec.http2.Http2Stream.State.*;
 
 /**
  * Abstract base class for a handler of HTTP/2 frames. Handles reading and writing of HTTP/2 frames
@@ -127,8 +116,8 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
         }
 
         // Create a local stream used for the HTTP cleartext upgrade.
-        createLocalStream(HTTP_UPGRADE_STREAM_ID, true, CONNECTION_STREAM_ID,
-                DEFAULT_PRIORITY_WEIGHT, false);
+        createLocalStream(HTTP_UPGRADE_STREAM_ID, true
+        );
     }
 
     /**
@@ -149,8 +138,8 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
         applyRemoteSettings(settings);
 
         // Create a stream in the half-closed state.
-        createRemoteStream(HTTP_UPGRADE_STREAM_ID, true, CONNECTION_STREAM_ID,
-                DEFAULT_PRIORITY_WEIGHT, false);
+        createRemoteStream(HTTP_UPGRADE_STREAM_ID, true
+        );
     }
 
     @Override
@@ -189,8 +178,9 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         ChannelFuture future = ctx.newSucceededFuture();
-        for (Http2Stream stream : connection.activeStreams().toArray(new Http2Stream[0])) {
-            close(stream, future);
+        final Collection<Http2Stream> streams = connection.activeStreams();
+        for (Http2Stream s : streams.toArray(new Http2Stream[streams.size()])) {
+            close(s, future);
         }
         super.channelInactive(ctx);
     }
@@ -239,7 +229,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
      */
     @Override
     public final void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
-            int padding, boolean endStream, boolean endSegment) throws Http2Exception {
+            int padding, boolean endStream, boolean endSegment) {
     }
 
     /**
@@ -392,7 +382,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
             Http2Stream stream = connection.stream(streamId);
             if (stream == null) {
                 // Create a new locally-initiated stream.
-                stream = createLocalStream(streamId, endStream, streamDependency, weight, exclusive);
+                createLocalStream(streamId, endStream);
             } else {
                 // An existing stream...
                 if (stream.state() == RESERVED_LOCAL) {
@@ -533,7 +523,8 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
 
     /**
      * Processes the given exception. Depending on the type of exception, delegates to either
-     * {@link #processConnectionError} or {@link #processStreamError}.
+     * {@link #onConnectionError(ChannelHandlerContext, Http2Exception)} or
+     * {@link #onStreamError(ChannelHandlerContext, Http2StreamException)}.
      */
     protected final void onHttp2Exception(ChannelHandlerContext ctx, Http2Exception e) {
         if (e instanceof Http2StreamException) {
@@ -694,26 +685,6 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
     }
 
     /**
-     * Closes the remote side of the given stream. If this causes the stream to be closed, adds a
-     * hook to close the channel after the given future completes.
-     *
-     * @param stream the stream to be half closed.
-     * @param future If closing, the future after which to close the channel. If {@code null},
-     *            ignored.
-     */
-    private void closeRemoteSide(Http2Stream stream, ChannelFuture future) {
-        switch (stream.state()) {
-            case HALF_CLOSED_REMOTE:
-            case OPEN:
-                stream.closeRemoteSide();
-                break;
-            default:
-                close(stream, future);
-                break;
-        }
-    }
-
-    /**
      * Closes the given stream and adds a hook to close the channel after the given future completes.
      *
      * @param stream the stream to be closed.
@@ -730,18 +701,9 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
     }
 
     /**
-     * Verifies that the HTTP/2 connection preface has been received from the remote endpoint.
-     */
-    private void verifyPrefaceReceived() throws Http2Exception {
-        if (!prefaceReceived) {
-            throw protocolError("Received non-SETTINGS as first frame.");
-        }
-    }
-
-    /**
      * Sends the HTTP/2 connection preface upon establishment of the connection, if not already sent.
      */
-    private void sendPreface(final ChannelHandlerContext ctx) throws Http2Exception {
+    private void sendPreface(final ChannelHandlerContext ctx) {
         if (prefaceSent || !ctx.channel().isActive()) {
             return;
         }
@@ -758,34 +720,6 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
         outstandingLocalSettingsQueue.add(settings);
         frameWriter.writeSettings(ctx, ctx.newPromise(), settings).addListener(
                 ChannelFutureListener.CLOSE_ON_FAILURE);
-    }
-
-    /**
-     * Applies settings sent from the local endpoint.
-     */
-    private void applyLocalSettings(Http2Settings settings) throws Http2Exception {
-        if (settings.hasPushEnabled()) {
-            if (connection.isServer()) {
-                throw protocolError("Server sending SETTINGS frame with ENABLE_PUSH specified");
-            }
-            connection.local().allowPushTo(settings.pushEnabled());
-        }
-
-        if (settings.hasAllowCompressedData()) {
-            connection.local().allowCompressedData(settings.allowCompressedData());
-        }
-
-        if (settings.hasMaxConcurrentStreams()) {
-            connection.remote().maxStreams(settings.maxConcurrentStreams());
-        }
-
-        if (settings.hasMaxHeaderTableSize()) {
-            frameReader.maxHeaderTableSize(settings.maxHeaderTableSize());
-        }
-
-        if (settings.hasInitialWindowSize()) {
-            inboundFlow.initialInboundWindowSize(settings.initialWindowSize());
-        }
     }
 
     /**
@@ -819,16 +753,14 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
     /**
      * Creates a new stream initiated by the local endpoint.
      */
-    private Http2Stream createLocalStream(int streamId, boolean halfClosed, int streamDependency,
-            short weight, boolean exclusive) throws Http2Exception {
+    private Http2Stream createLocalStream(int streamId, boolean halfClosed) throws Http2Exception {
         return connection.local().createStream(streamId, halfClosed);
     }
 
     /**
      * Creates a new stream initiated by the remote endpoint.
      */
-    private Http2Stream createRemoteStream(int streamId, boolean halfClosed, int streamDependency,
-            short weight, boolean exclusive) throws Http2Exception {
+    private Http2Stream createRemoteStream(int streamId, boolean halfClosed) throws Http2Exception {
         return connection.remote().createStream(streamId, halfClosed);
     }
 
@@ -855,8 +787,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
                     compressed, new Http2InboundFlowController.FrameWriter() {
 
                         @Override
-                        public void writeFrame(int streamId, int windowSizeIncrement)
-                                throws Http2Exception {
+                        public void writeFrame(int streamId, int windowSizeIncrement) {
                             frameWriter.writeWindowUpdate(ctx, ctx.newPromise(), streamId,
                                     windowSizeIncrement);
                         }
@@ -877,6 +808,35 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
                     endOfSegment, compressed);
         }
 
+        /**
+         * Verifies that the HTTP/2 connection preface has been received from the remote endpoint.
+         */
+        private void verifyPrefaceReceived() throws Http2Exception {
+            if (!prefaceReceived) {
+                throw protocolError("Received non-SETTINGS as first frame.");
+            }
+        }
+
+        /**
+         * Closes the remote side of the given stream. If this causes the stream to be closed, adds a
+         * hook to close the channel after the given future completes.
+         *
+         * @param stream the stream to be half closed.
+         * @param future If closing, the future after which to close the channel. If {@code null},
+         *            ignored.
+         */
+        private void closeRemoteSide(Http2Stream stream, ChannelFuture future) {
+            switch (stream.state()) {
+                case HALF_CLOSED_REMOTE:
+                case OPEN:
+                    stream.closeRemoteSide();
+                    break;
+                default:
+                    close(stream, future);
+                    break;
+            }
+        }
+
         @Override
         public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
                 int padding, boolean endStream, boolean endSegment) throws Http2Exception {
@@ -893,13 +853,13 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
             Http2Stream stream = connection.stream(streamId);
             verifyGoAwayNotReceived();
             verifyRstStreamNotReceived(stream);
-            if (connection.remote().isGoAwayReceived() || (stream != null && shouldIgnoreFrame(stream))) {
+            if (connection.remote().isGoAwayReceived() || stream != null && shouldIgnoreFrame(stream)) {
                 // Ignore this frame.
                 return;
             }
 
             if (stream == null) {
-                createRemoteStream(streamId, endStream, streamDependency, weight, exclusive);
+                createRemoteStream(streamId, endStream);
             } else {
                 if (stream.state() == RESERVED_REMOTE) {
                     // Received headers for a reserved push stream ... open it for push to the
@@ -977,6 +937,34 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
             }
 
             AbstractHttp2ConnectionHandler.this.onSettingsAckRead(ctx);
+        }
+
+        /**
+         * Applies settings sent from the local endpoint.
+         */
+        private void applyLocalSettings(Http2Settings settings) throws Http2Exception {
+            if (settings.hasPushEnabled()) {
+                if (connection.isServer()) {
+                    throw protocolError("Server sending SETTINGS frame with ENABLE_PUSH specified");
+                }
+                connection.local().allowPushTo(settings.pushEnabled());
+            }
+
+            if (settings.hasAllowCompressedData()) {
+                connection.local().allowCompressedData(settings.allowCompressedData());
+            }
+
+            if (settings.hasMaxConcurrentStreams()) {
+                connection.remote().maxStreams(settings.maxConcurrentStreams());
+            }
+
+            if (settings.hasMaxHeaderTableSize()) {
+                frameReader.maxHeaderTableSize(settings.maxHeaderTableSize());
+            }
+
+            if (settings.hasInitialWindowSize()) {
+                inboundFlow.initialInboundWindowSize(settings.initialWindowSize());
+            }
         }
 
         @Override
@@ -1138,8 +1126,8 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
         FlowControlWriter(ChannelHandlerContext ctx, ByteBuf data, ChannelPromise promise) {
             this.ctx = ctx;
             this.promise = promise;
-            promises = new ArrayList<ChannelPromise>(
-                    Arrays.asList(promise));
+            promises = new ArrayList<ChannelPromise>(4);
+            promises.add(promise);
             remaining = data.readableBytes();
         }
 
