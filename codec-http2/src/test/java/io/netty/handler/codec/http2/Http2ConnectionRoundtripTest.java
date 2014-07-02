@@ -15,6 +15,7 @@
 
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.Http2TestUtil.runInChannel;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
@@ -78,6 +79,7 @@ public class Http2ConnectionRoundtripTest {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
+                p.addLast(new Http2PrefaceHandler(true));
                 p.addLast(new DelegatingHttp2ConnectionHandler(true, new FrameCountDown()));
             }
         });
@@ -88,6 +90,7 @@ public class Http2ConnectionRoundtripTest {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
+                p.addLast(new Http2PrefaceHandler(false));
                 p.addLast(new DelegatingHttp2ConnectionHandler(false, serverObserver));
             }
         });
@@ -114,20 +117,18 @@ public class Http2ConnectionRoundtripTest {
                 new DefaultHttp2Headers.Builder().method("GET").scheme("https")
                         .authority("example.org").path("/some/path/resource2").build();
         final String text = "hello world";
-
-        for (int i = 0, nextStream = 3; i < NUM_STREAMS; ++i, nextStream += 2) {
-            final int streamId = nextStream;
-            clientChannel.eventLoop().execute(new Runnable() {
-                @Override
-                public void run() {
-                    http2Client.writeHeaders(ctx(), newPromise(), streamId, headers, 0,
-                            (short) 16, false, 0, false, false);
+        runInChannel(clientChannel, new Http2TestUtil.Http2Runnable() {
+            @Override
+            public void run() throws Http2Exception {
+                for (int i = 0, nextStream = 3; i < NUM_STREAMS; ++i, nextStream += 2) {
+                    final int streamId = nextStream;
+                    http2Client.writeHeaders(ctx(), newPromise(), streamId, headers, 0, (short) 16,
+                            false, 0, false, false);
                     http2Client.writeData(ctx(), newPromise(), streamId,
                             Unpooled.copiedBuffer(text.getBytes()), 0, true, true, false);
                 }
-            });
-        }
-
+            }
+        });
         // Wait for all frames to be received.
         awaitRequests();
         verify(serverObserver, times(NUM_STREAMS)).onHeadersRead(any(ChannelHandlerContext.class),
@@ -157,7 +158,7 @@ public class Http2ConnectionRoundtripTest {
 
         @Override
         public void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
-                boolean endOfStream, boolean endOfSegment, boolean compressed)
+                               boolean endOfStream, boolean endOfSegment, boolean compressed)
                 throws Http2Exception {
             serverObserver.onDataRead(ctx, streamId, copy(data), padding, endOfStream,
                     endOfSegment, compressed);
@@ -166,15 +167,15 @@ public class Http2ConnectionRoundtripTest {
 
         @Override
         public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
-                int padding, boolean endStream, boolean endSegment) throws Http2Exception {
+                                  int padding, boolean endStream, boolean endSegment) throws Http2Exception {
             serverObserver.onHeadersRead(ctx, streamId, headers, padding, endStream, endSegment);
             requestLatch.countDown();
         }
 
         @Override
         public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
-                int streamDependency, short weight, boolean exclusive, int padding,
-                boolean endStream, boolean endSegment) throws Http2Exception {
+                                  int streamDependency, short weight, boolean exclusive, int padding,
+                                  boolean endStream, boolean endSegment) throws Http2Exception {
             serverObserver.onHeadersRead(ctx, streamId, headers, streamDependency, weight,
                     exclusive, padding, endStream, endSegment);
             requestLatch.countDown();
@@ -182,7 +183,7 @@ public class Http2ConnectionRoundtripTest {
 
         @Override
         public void onPriorityRead(ChannelHandlerContext ctx, int streamId, int streamDependency,
-                short weight, boolean exclusive) throws Http2Exception {
+                                   short weight, boolean exclusive) throws Http2Exception {
             serverObserver.onPriorityRead(ctx, streamId, streamDependency, weight, exclusive);
             requestLatch.countDown();
         }
@@ -220,7 +221,7 @@ public class Http2ConnectionRoundtripTest {
 
         @Override
         public void onPushPromiseRead(ChannelHandlerContext ctx, int streamId,
-                int promisedStreamId, Http2Headers headers, int padding) throws Http2Exception {
+                                      int promisedStreamId, Http2Headers headers, int padding) throws Http2Exception {
             serverObserver.onPushPromiseRead(ctx, streamId, promisedStreamId, headers, padding);
             requestLatch.countDown();
         }
@@ -234,14 +235,14 @@ public class Http2ConnectionRoundtripTest {
 
         @Override
         public void onWindowUpdateRead(ChannelHandlerContext ctx, int streamId,
-                int windowSizeIncrement) throws Http2Exception {
+                                       int windowSizeIncrement) throws Http2Exception {
             serverObserver.onWindowUpdateRead(ctx, streamId, windowSizeIncrement);
             requestLatch.countDown();
         }
 
         @Override
         public void onAltSvcRead(ChannelHandlerContext ctx, int streamId, long maxAge, int port,
-                ByteBuf protocolId, String host, String origin) throws Http2Exception {
+                                 ByteBuf protocolId, String host, String origin) throws Http2Exception {
             serverObserver
                     .onAltSvcRead(ctx, streamId, maxAge, port, copy(protocolId), host, origin);
             requestLatch.countDown();
