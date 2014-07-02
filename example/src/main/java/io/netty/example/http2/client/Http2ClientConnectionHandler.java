@@ -125,7 +125,7 @@ public class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler
         int available = data.readableBytes();
         if (collectedData == null) {
             collectedData = ctx().alloc().buffer(available);
-            collectedData.writeBytes(data);
+            collectedData.writeBytes(data, data.readerIndex(), data.readableBytes());
         } else {
             // Expand the buffer
             ByteBuf newBuffer = ctx().alloc().buffer(collectedData.readableBytes() + available);
@@ -137,9 +137,7 @@ public class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler
 
         // If it's the last frame, print the complete message.
         if (endOfStream) {
-            byte[] bytes = new byte[data.readableBytes()];
-            data.readBytes(bytes);
-            System.out.println("Received message: " + new String(bytes, CharsetUtil.UTF_8));
+            System.out.println("Received message: " + collectedData.toString(CharsetUtil.UTF_8));
 
             // Free the data buffer.
             collectedData.release();
