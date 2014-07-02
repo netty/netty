@@ -193,6 +193,27 @@ final class VoidChannelPromise extends AbstractFuture<Void> implements ChannelPr
         return null;
     }
 
+    @Override
+    public ChannelPromise unvoid() {
+        ChannelPromise promise = new DefaultChannelPromise(channel);
+        if (fireException) {
+            promise.addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    if (!future.isSuccess()) {
+                        fireException(future.cause());
+                    }
+                }
+            });
+        }
+        return promise;
+    }
+
+    @Override
+    public boolean isVoid() {
+        return true;
+    }
+
     private void fireException(Throwable cause) {
         // Only fire the exception if the channel is open and registered
         // if not the pipeline is not setup and so it would hit the tail

@@ -193,4 +193,25 @@ public interface ChannelFuture extends Future<Void> {
 
     @Override
     ChannelFuture awaitUninterruptibly();
+
+    /**
+     * Returns a new {@link ChannelFuture} if {@link #isVoid()} returns {@code true} otherwise itself.
+     */
+    ChannelFuture unvoid();
+
+    /**
+     * Returns {@code true} if this {@link ChannelFuture} is a void future and so not allow to call any of the
+     * following methods:
+     * <ul>
+     *     <li>{@link #addListener(GenericFutureListener)}</li>
+     *     <li>{@link #addListeners(GenericFutureListener[])}</li>
+     *     <li>{@link #await()}</li>
+     *     <li>{@link #await(long, TimeUnit)} ()}</li>
+     *     <li>{@link #await(long)} ()}</li>
+     *     <li>{@link #awaitUninterruptibly()}</li>
+     *     <li>{@link #sync()}</li>
+     *     <li>{@link #syncUninterruptibly()}</li>
+     * </ul>
+     */
+    boolean isVoid();
 }

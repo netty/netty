@@ -46,4 +46,7 @@ public interface ChannelProgressiveFuture extends ChannelFuture, ProgressiveFutu
 
     @Override
     ChannelProgressiveFuture awaitUninterruptibly();
+
+    @Override
+    ChannelProgressiveFuture unvoid();
 }
