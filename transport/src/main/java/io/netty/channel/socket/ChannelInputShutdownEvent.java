@@ -29,6 +29,7 @@ public final class ChannelInputShutdownEvent {
     /**
      * Instance to use
      */
+    @SuppressWarnings("InstantiationOfUtilityClass")
     public static final ChannelInputShutdownEvent INSTANCE = new ChannelInputShutdownEvent();
 
     private ChannelInputShutdownEvent() { }

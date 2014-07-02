@@ -16,8 +16,7 @@
 package io.netty.handler.codec.memcache.binary;
 
 /**
- * Contains all possible status values a
- * {@link BinaryMemcacheResponseHeader} can return.
+ * Contains all possible status values a {@link BinaryMemcacheResponse} can return.
  */
 public final class BinaryMemcacheResponseStatus {
 

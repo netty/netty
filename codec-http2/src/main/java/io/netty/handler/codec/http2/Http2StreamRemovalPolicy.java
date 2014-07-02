@@ -15,8 +15,7 @@
 package io.netty.handler.codec.http2;
 
 /**
- * A policy for determining when it is appropriate to remove streams from a
- * {@link Http2StreamRegistry}.
+ * A policy for determining when it is appropriate to remove streams from an HTTP/2 stream registry.
  */
 public interface Http2StreamRemovalPolicy {
 

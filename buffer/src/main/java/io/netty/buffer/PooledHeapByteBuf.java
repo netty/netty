@@ -232,7 +232,7 @@ final class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
         index = idx(index);
         try {
             return in.read((ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length));
-        } catch (ClosedChannelException e) {
+        } catch (ClosedChannelException ignored) {
             return -1;
         }
     }

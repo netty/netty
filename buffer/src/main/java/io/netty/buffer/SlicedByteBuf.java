@@ -39,7 +39,7 @@ public class SlicedByteBuf extends AbstractDerivedByteBuf {
     public SlicedByteBuf(ByteBuf buffer, int index, int length) {
         super(length);
         if (index < 0 || index > buffer.capacity() - length) {
-            throw new IndexOutOfBoundsException(buffer.toString() + ".slice(" + index + ", " + length + ')');
+            throw new IndexOutOfBoundsException(buffer + ".slice(" + index + ", " + length + ')');
         }
 
         if (buffer instanceof SlicedByteBuf) {

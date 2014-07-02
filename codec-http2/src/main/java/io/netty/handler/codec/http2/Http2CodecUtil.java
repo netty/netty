@@ -15,19 +15,21 @@
 
 package io.netty.handler.codec.http2;
 
-import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
-import static io.netty.handler.codec.http2.Http2Exception.format;
-import static io.netty.util.CharsetUtil.UTF_8;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http2.Http2StreamRemovalPolicy.Action;
 
+import static io.netty.handler.codec.http2.Http2Error.*;
+import static io.netty.handler.codec.http2.Http2Exception.*;
+import static io.netty.util.CharsetUtil.*;
+
 /**
  * Constants and utility method used for encoding/decoding HTTP2 frames.
  */
 public final class Http2CodecUtil {
+
     private static final byte[] CONNECTION_PREFACE = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".getBytes(UTF_8);
     private static final byte[] EMPTY_PING = new byte[8];
 
@@ -46,8 +48,8 @@ public final class Http2CodecUtil {
     public static final int SETTING_ENTRY_LENGTH = 5;
     public static final int PRIORITY_ENTRY_LENGTH = 5;
     public static final int INT_FIELD_LENGTH = 4;
-    public static final short MAX_WEIGHT = (short) 256;
-    public static final short MIN_WEIGHT = (short) 1;
+    public static final short MAX_WEIGHT = 256;
+    public static final short MIN_WEIGHT = 1;
 
     public static final short SETTINGS_HEADER_TABLE_SIZE = 1;
     public static final short SETTINGS_ENABLE_PUSH = 2;
@@ -144,18 +146,18 @@ public final class Http2CodecUtil {
      * Writes a big-endian (32-bit) unsigned integer to the buffer.
      */
     public static void writeUnsignedInt(long value, ByteBuf out) {
-        out.writeByte((int) ((value >> 24) & 0xFF));
-        out.writeByte((int) ((value >> 16) & 0xFF));
-        out.writeByte((int) ((value >> 8) & 0xFF));
-        out.writeByte((int) ((value & 0xFF)));
+        out.writeByte((int) (value >> 24 & 0xFF));
+        out.writeByte((int) (value >> 16 & 0xFF));
+        out.writeByte((int) (value >> 8 & 0xFF));
+        out.writeByte((int) (value & 0xFF));
     }
 
     /**
      * Writes a big-endian (16-bit) unsigned integer to the buffer.
      */
     public static void writeUnsignedShort(int value, ByteBuf out) {
-        out.writeByte((int) ((value >> 8) & 0xFF));
-        out.writeByte((int) ((value & 0xFF)));
+        out.writeByte(value >> 8 & 0xFF);
+        out.writeByte(value & 0xFF);
     }
 
     /**

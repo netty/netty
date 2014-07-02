@@ -14,13 +14,6 @@
  */
 package io.netty.handler.codec.http2;
 
-import static io.netty.handler.codec.base64.Base64Dialect.URL_SAFE;
-import static io.netty.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_PROTOCOL_NAME;
-import static io.netty.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_SETTINGS_HEADER;
-import static io.netty.handler.codec.http2.Http2CodecUtil.calcSettingsPayloadLength;
-import static io.netty.handler.codec.http2.Http2CodecUtil.writeSettingsPayload;
-import static io.netty.util.CharsetUtil.UTF_8;
-import static io.netty.util.ReferenceCountUtil.release;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.base64.Base64;
@@ -28,18 +21,22 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpClientUpgradeHandler;
 import io.netty.handler.codec.http.HttpRequest;
 
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+
+import static io.netty.handler.codec.base64.Base64Dialect.*;
+import static io.netty.handler.codec.http2.Http2CodecUtil.*;
+import static io.netty.util.CharsetUtil.*;
+import static io.netty.util.ReferenceCountUtil.*;
 
 /**
  * Client-side cleartext upgrade codec from HTTP to HTTP/2.
  */
 public class Http2ClientUpgradeCodec implements HttpClientUpgradeHandler.UpgradeCodec {
 
-    private static final List<String> UPGRADE_HEADERS = Collections.unmodifiableList(Arrays
-            .asList(HTTP_UPGRADE_SETTINGS_HEADER));
+    private static final List<String> UPGRADE_HEADERS = Collections.singletonList(HTTP_UPGRADE_SETTINGS_HEADER);
+
     private final String handlerName;
     private final AbstractHttp2ConnectionHandler connectionHandler;
 

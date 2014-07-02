@@ -116,8 +116,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
         }
 
         // Create a local stream used for the HTTP cleartext upgrade.
-        createLocalStream(HTTP_UPGRADE_STREAM_ID, true
-        );
+        createLocalStream(HTTP_UPGRADE_STREAM_ID, true);
     }
 
     /**
@@ -138,8 +137,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
         applyRemoteSettings(settings);
 
         // Create a stream in the half-closed state.
-        createRemoteStream(HTTP_UPGRADE_STREAM_ID, true
-        );
+        createRemoteStream(HTTP_UPGRADE_STREAM_ID, true);
     }
 
     @Override

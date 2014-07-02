@@ -27,10 +27,9 @@ import java.util.Map;
 
 import static io.netty.channel.ChannelOption.*;
 
-public final class EpollSocketChannelConfig extends DefaultChannelConfig
-        implements SocketChannelConfig {
+public final class EpollSocketChannelConfig extends DefaultChannelConfig implements SocketChannelConfig {
 
-    protected final EpollSocketChannel channel;
+    private final EpollSocketChannel channel;
     private volatile boolean allowHalfClosure;
 
     /**

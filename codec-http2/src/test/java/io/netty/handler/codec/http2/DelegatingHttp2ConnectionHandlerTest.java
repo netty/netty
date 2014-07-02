@@ -15,51 +15,31 @@
 
 package io.netty.handler.codec.http2;
 
-import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
-import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
-import static io.netty.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuf;
-import static io.netty.handler.codec.http2.Http2CodecUtil.emptyPingBuf;
-import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
-import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
-import static io.netty.handler.codec.http2.Http2Exception.protocolError;
-import static io.netty.handler.codec.http2.Http2Headers.EMPTY_HEADERS;
-import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_LOCAL;
-import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
-import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_LOCAL;
-import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
-import static io.netty.util.CharsetUtil.UTF_8;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Matchers.anyShort;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-
-import java.util.Arrays;
-import java.util.Collections;
-
 import io.netty.channel.DefaultChannelPromise;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
+
+import java.util.Collections;
+
+import static io.netty.buffer.Unpooled.*;
+import static io.netty.handler.codec.http2.Http2CodecUtil.*;
+import static io.netty.handler.codec.http2.Http2Error.*;
+import static io.netty.handler.codec.http2.Http2Exception.*;
+import static io.netty.handler.codec.http2.Http2Headers.*;
+import static io.netty.handler.codec.http2.Http2Stream.State.*;
+import static io.netty.util.CharsetUtil.*;
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 
 /**
  * Tests for {@link DelegatingHttp2ConnectionHandlerTest} and its base class
@@ -122,7 +102,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
         when(stream.id()).thenReturn(STREAM_ID);
         when(stream.state()).thenReturn(OPEN);
         when(pushStream.id()).thenReturn(PUSH_STREAM_ID);
-        when(connection.activeStreams()).thenReturn(Arrays.asList(stream));
+        when(connection.activeStreams()).thenReturn(Collections.singletonList(stream));
         when(connection.stream(STREAM_ID)).thenReturn(stream);
         when(connection.requireStream(STREAM_ID)).thenReturn(stream);
         when(connection.local()).thenReturn(local);
@@ -197,13 +177,13 @@ public class DelegatingHttp2ConnectionHandlerTest {
         when(connection.isServer()).thenReturn(true);
         handler = new DelegatingHttp2ConnectionHandler(connection, reader, writer, inboundFlow,
                         outboundFlow, observer);
-        handler.channelRead(ctx, Unpooled.copiedBuffer("BAD_PREFACE", UTF_8));
+        handler.channelRead(ctx, copiedBuffer("BAD_PREFACE", UTF_8));
         verify(ctx).close();
     }
 
     @Test
     public void serverReceivingValidClientPrefaceStringShouldContinueReadingFrames() throws Exception {
-        Mockito.reset(observer);
+        reset(observer);
         when(connection.isServer()).thenReturn(true);
         handler = new DelegatingHttp2ConnectionHandler(connection, reader, writer, inboundFlow,
                         outboundFlow, observer);
@@ -464,7 +444,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
     @Test(expected = Http2Exception.class)
     public void serverAltSvcReadShouldThrow() throws Exception {
         when(connection.isServer()).thenReturn(true);
-        decode().onAltSvcRead(ctx, STREAM_ID, 1, 2, Unpooled.EMPTY_BUFFER, "www.example.com", null);
+        decode().onAltSvcRead(ctx, STREAM_ID, 1, 2, EMPTY_BUFFER, "www.example.com", null);
     }
 
     @Test
@@ -645,7 +625,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
     @Test
     public void clientWriteAltSvcShouldThrow() throws Exception {
         when(connection.isServer()).thenReturn(false);
-        ChannelFuture future = handler.writeAltSvc(ctx, promise, STREAM_ID, 1, 2, Unpooled.EMPTY_BUFFER,
+        ChannelFuture future = handler.writeAltSvc(ctx, promise, STREAM_ID, 1, 2, EMPTY_BUFFER,
                 "www.example.com", null);
         assertTrue(future.awaitUninterruptibly().cause() instanceof Http2Exception);
     }
@@ -662,11 +642,11 @@ public class DelegatingHttp2ConnectionHandlerTest {
 
     private static ByteBuf dummyData() {
         // The buffer is purposely 8 bytes so it will even work for a ping frame.
-        return Unpooled.wrappedBuffer("abcdefgh".getBytes(UTF_8));
+        return wrappedBuffer("abcdefgh".getBytes(UTF_8));
     }
 
     private void mockContext() {
-        Mockito.reset(ctx);
+        reset(ctx);
         when(ctx.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
         when(ctx.channel()).thenReturn(channel);
         when(ctx.newSucceededFuture()).thenReturn(future);

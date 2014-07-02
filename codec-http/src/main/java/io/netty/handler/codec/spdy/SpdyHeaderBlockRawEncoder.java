@@ -33,11 +33,11 @@ public class SpdyHeaderBlockRawEncoder extends SpdyHeaderBlockEncoder {
         this.version = version.getVersion();
     }
 
-    private void setLengthField(ByteBuf buffer, int writerIndex, int length) {
+    private static void setLengthField(ByteBuf buffer, int writerIndex, int length) {
         buffer.setInt(writerIndex, length);
     }
 
-    private void writeLengthField(ByteBuf buffer, int length) {
+    private static void writeLengthField(ByteBuf buffer, int length) {
         buffer.writeInt(length);
     }
 

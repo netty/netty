@@ -163,11 +163,8 @@ public class Http2Flags {
         if (getClass() != obj.getClass()) {
             return false;
         }
-        Http2Flags other = (Http2Flags) obj;
-        if (value != other.value) {
-            return false;
-        }
-        return true;
+
+        return value == ((Http2Flags) obj).value;
     }
 
     @Override
@@ -195,7 +192,7 @@ public class Http2Flags {
         if (padLowPresent()) {
             builder.append("PAD_LOW,");
         }
-        builder.append(")");
+        builder.append(')');
         return builder.toString();
     }
 

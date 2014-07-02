@@ -24,6 +24,7 @@ import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.TooLongFrameException;
+import io.netty.handler.codec.http.HttpObjectDecoder.State;
 import io.netty.util.internal.AppendableCharSequence;
 
 import java.util.List;
@@ -101,7 +102,7 @@ import static io.netty.buffer.ByteBufUtil.*;
  * To implement the decoder of such a derived protocol, extend this class and
  * implement all abstract methods properly.
  */
-public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecoder.State> {
+public abstract class HttpObjectDecoder extends ReplayingDecoder<State> {
 
     private final int maxInitialLineLength;
     private final int maxHeaderSize;

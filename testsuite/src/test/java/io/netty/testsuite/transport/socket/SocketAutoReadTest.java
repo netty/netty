@@ -19,8 +19,8 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.Test;
 
@@ -181,7 +181,7 @@ public class SocketAutoReadTest extends AbstractSocketTest {
         }
     }
 
-    private static class TestHandler extends ChannelInboundHandlerAdapter {
+    private static class TestHandler extends ChannelHandlerAdapter {
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
 
         @Override

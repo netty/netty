@@ -143,7 +143,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     public Association association() {
         try {
             return javaChannel().association();
-        } catch (IOException e) {
+        } catch (IOException ignored) {
             return null;
         }
     }
@@ -157,7 +157,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
                 addresses.add((InetSocketAddress) socketAddress);
             }
             return addresses;
-        } catch (Throwable t) {
+        } catch (Throwable ignored) {
             return Collections.emptySet();
         }
     }
@@ -176,7 +176,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
                 addresses.add((InetSocketAddress) socketAddress);
             }
             return addresses;
-        } catch (Throwable t) {
+        } catch (Throwable ignored) {
             return Collections.emptySet();
         }
     }
@@ -279,7 +279,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
             if (messageInfo == null) {
                 return 0;
             }
-            buf.add(new SctpMessage(messageInfo, buffer.writerIndex(buffer.writerIndex() + (data.position() - pos))));
+            buf.add(new SctpMessage(messageInfo, buffer.writerIndex(buffer.writerIndex() + data.position() - pos)));
             free = false;
             return 1;
         } catch (Throwable cause) {
@@ -311,8 +311,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
 
         final int writtenBytes = javaChannel().send(nioData, mi);
 
-        boolean done = writtenBytes > 0;
-        return done;
+        return writtenBytes > 0;
     }
 
     @Override
@@ -370,7 +369,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
         return NioSctpChannelOutboundBuffer.newInstance(this);
     }
 
-    private static final class NioSctpChannelOutboundBuffer extends ChannelOutboundBuffer {
+    static final class NioSctpChannelOutboundBuffer extends ChannelOutboundBuffer {
         private static final Recycler<NioSctpChannelOutboundBuffer> RECYCLER =
                 new Recycler<NioSctpChannelOutboundBuffer>() {
                     @Override

@@ -81,7 +81,7 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
                 addresses.add((InetSocketAddress) socketAddress);
             }
             return addresses;
-        } catch (Throwable t) {
+        } catch (Throwable ignored) {
             return Collections.emptySet();
         }
     }

@@ -17,7 +17,6 @@ package io.netty.handler.codec.rtsp;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.util.CharsetUtil;
 
@@ -26,7 +25,6 @@ import static io.netty.handler.codec.http.HttpConstants.*;
 /**
  * Encodes an RTSP response represented in {@link FullHttpResponse} into
  * a {@link ByteBuf}.
-
  */
 public class RtspResponseEncoder extends RtspObjectEncoder<HttpResponse> {
     private static final byte[] CRLF = { CR, LF };

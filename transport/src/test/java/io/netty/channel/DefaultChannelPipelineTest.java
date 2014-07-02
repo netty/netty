@@ -204,7 +204,7 @@ public class DefaultChannelPipelineTest {
         pipeline.addLast(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
-                ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                ch.pipeline().addLast(new ChannelHandlerAdapter() {
                     @Override
                     public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
                         latch.countDown();

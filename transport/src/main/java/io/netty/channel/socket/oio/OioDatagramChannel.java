@@ -125,9 +125,10 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     }
 
     @Override
+    @SuppressWarnings("deprecation")
     public boolean isActive() {
         return isOpen()
-            && ((config.getOption(ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION) && isRegistered())
+            && (config.getOption(ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION) && isRegistered()
                  || socket.isBound());
     }
 

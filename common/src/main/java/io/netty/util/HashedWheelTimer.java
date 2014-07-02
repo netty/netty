@@ -222,7 +222,6 @@ public class HashedWheelTimer implements Timer {
         leak = leakDetector.open(this);
     }
 
-    @SuppressWarnings("unchecked")
     private static HashedWheelBucket[] createWheel(int ticksPerWheel) {
         if (ticksPerWheel <= 0) {
             throw new IllegalArgumentException(
@@ -306,7 +305,7 @@ public class HashedWheelTimer implements Timer {
             workerThread.interrupt();
             try {
                 workerThread.join(100);
-            } catch (InterruptedException e) {
+            } catch (InterruptedException ignored) {
                 interrupted = true;
             }
         }
@@ -397,8 +396,7 @@ public class HashedWheelTimer implements Timer {
                     continue;
                 }
                 long calculated = timeout.deadline / tickDuration;
-                long remainingRounds = (calculated - tick) / wheel.length;
-                timeout.remainingRounds = remainingRounds;
+                timeout.remainingRounds = (calculated - tick) / wheel.length;
 
                 final long ticks = Math.max(calculated, tick); // Ensure we don't schedule for past.
                 int stopIndex = (int) (ticks & mask);
@@ -439,7 +437,7 @@ public class HashedWheelTimer implements Timer {
 
                 try {
                     Thread.sleep(sleepTimeMs);
-                } catch (InterruptedException e) {
+                } catch (InterruptedException ignored) {
                     if (WORKER_STATE_UPDATER.get(HashedWheelTimer.this) == WORKER_STATE_SHUTDOWN) {
                         return Long.MIN_VALUE;
                     }

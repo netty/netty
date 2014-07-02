@@ -72,7 +72,7 @@ class Log4JLogger extends AbstractInternalLogger {
         try {
             logger.isTraceEnabled();
             return true;
-        } catch (NoSuchMethodError e) {
+        } catch (NoSuchMethodError ignored) {
             return false;
         }
     }

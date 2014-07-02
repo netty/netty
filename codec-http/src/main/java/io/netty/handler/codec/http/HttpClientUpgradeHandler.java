@@ -14,10 +14,6 @@
  */
 package io.netty.handler.codec.http;
 
-import static io.netty.handler.codec.http.HttpHeaders.Names.CONNECTION;
-import static io.netty.handler.codec.http.HttpHeaders.Names.UPGRADE;
-import static io.netty.handler.codec.http.HttpResponseStatus.SWITCHING_PROTOCOLS;
-import static io.netty.util.ReferenceCountUtil.release;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 
@@ -25,6 +21,10 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+
+import static io.netty.handler.codec.http.HttpHeaders.Names.*;
+import static io.netty.handler.codec.http.HttpResponseStatus.*;
+import static io.netty.util.ReferenceCountUtil.*;
 
 /**
  * Client-side handler for handling an HTTP upgrade handshake to another protocol. When the first
@@ -71,7 +71,7 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator {
      */
     public interface UpgradeCodec {
         /**
-         * Returns the name of the protocol supported by this codec, as indicated by the {@link UPGRADE} header.
+         * Returns the name of the protocol supported by this codec, as indicated by the {@code 'UPGRADE'} header.
          */
         String protocol();
 
@@ -207,7 +207,7 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator {
         }
     }
 
-    private void removeThisHandler(ChannelHandlerContext ctx) {
+    private static void removeThisHandler(ChannelHandlerContext ctx) {
         ctx.pipeline().remove(ctx.name());
     }
 
@@ -226,7 +226,7 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator {
         StringBuilder builder = new StringBuilder();
         for (String part : connectionParts) {
             builder.append(part);
-            builder.append(",");
+            builder.append(',');
         }
         builder.append(UPGRADE);
         request.headers().set(CONNECTION, builder.toString());

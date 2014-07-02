@@ -52,7 +52,7 @@ class Slf4JLogger extends AbstractInternalLogger {
     }
 
     @Override
-    public void trace(String format, Object[] argArray) {
+    public void trace(String format, Object... argArray) {
         logger.trace(format, argArray);
     }
 
@@ -82,7 +82,7 @@ class Slf4JLogger extends AbstractInternalLogger {
     }
 
     @Override
-    public void debug(String format, Object[] argArray) {
+    public void debug(String format, Object... argArray) {
         logger.debug(format, argArray);
     }
 
@@ -112,7 +112,7 @@ class Slf4JLogger extends AbstractInternalLogger {
     }
 
     @Override
-    public void info(String format, Object[] argArray) {
+    public void info(String format, Object... argArray) {
         logger.info(format, argArray);
     }
 
@@ -137,7 +137,7 @@ class Slf4JLogger extends AbstractInternalLogger {
     }
 
     @Override
-    public void warn(String format, Object[] argArray) {
+    public void warn(String format, Object... argArray) {
         logger.warn(format, argArray);
     }
 
@@ -172,7 +172,7 @@ class Slf4JLogger extends AbstractInternalLogger {
     }
 
     @Override
-    public void error(String format, Object[] argArray) {
+    public void error(String format, Object... argArray) {
         logger.error(format, argArray);
     }
 

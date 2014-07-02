@@ -30,8 +30,6 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.*;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Matchers.isNull;
 import static org.mockito.Mockito.*;
 
 /**

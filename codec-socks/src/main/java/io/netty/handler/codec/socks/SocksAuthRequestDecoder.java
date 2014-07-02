@@ -18,6 +18,7 @@ package io.netty.handler.codec.socks;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
+import io.netty.handler.codec.socks.SocksAuthRequestDecoder.State;
 import io.netty.util.CharsetUtil;
 
 import java.util.List;
@@ -26,7 +27,7 @@ import java.util.List;
  * Decodes {@link ByteBuf}s into {@link SocksAuthRequest}.
  * Before returning SocksRequest decoder removes itself from pipeline.
  */
-public class SocksAuthRequestDecoder extends ReplayingDecoder<SocksAuthRequestDecoder.State> {
+public class SocksAuthRequestDecoder extends ReplayingDecoder<State> {
 
     private SocksSubnegotiationVersion version;
     private int fieldLength;

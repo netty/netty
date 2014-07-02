@@ -45,7 +45,6 @@ public class DefaultTextHeaders implements TextHeaders {
         return Math.abs(hash % BUCKET_SIZE);
     }
 
-    @SuppressWarnings("unchecked")
     private final HeaderEntry[] entries = new HeaderEntry[BUCKET_SIZE];
     private final HeaderEntry head = new HeaderEntry(this);
     private final boolean ignoreCase;
@@ -71,7 +70,6 @@ public class DefaultTextHeaders implements TextHeaders {
         return name;
     }
 
-    @SuppressWarnings("unchecked")
     protected CharSequence convertValue(Object value) {
         if (value == null) {
             throw new NullPointerException("value");
@@ -173,7 +171,6 @@ public class DefaultTextHeaders implements TextHeaders {
         }
 
         if (headers instanceof DefaultTextHeaders) {
-            @SuppressWarnings("unchecked")
             DefaultTextHeaders m = (DefaultTextHeaders) headers;
             HeaderEntry e = m.head.after;
             while (e != m.head) {

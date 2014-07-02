@@ -217,7 +217,6 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
         private final Entry<ChannelOption<?>, Object>[] childOptions;
         private final Entry<AttributeKey<?>, Object>[] childAttrs;
 
-        @SuppressWarnings("unchecked")
         ServerBootstrapAcceptor(
                 EventLoopGroup childGroup, ChannelHandler childHandler,
                 Entry<ChannelOption<?>, Object>[] childOptions, Entry<AttributeKey<?>, Object>[] childAttrs) {

@@ -187,12 +187,12 @@ public class Http2Settings {
      * @return this object.
      */
     public Http2Settings copy(Http2Settings source) {
-        this.enabled = source.enabled;
-        this.allowCompressedData = source.allowCompressedData;
-        this.initialWindowSize = source.initialWindowSize;
-        this.maxConcurrentStreams = source.maxConcurrentStreams;
-        this.maxHeaderTableSize = source.maxHeaderTableSize;
-        this.pushEnabled = source.pushEnabled;
+        enabled = source.enabled;
+        allowCompressedData = source.allowCompressedData;
+        initialWindowSize = source.initialWindowSize;
+        maxConcurrentStreams = source.maxConcurrentStreams;
+        maxHeaderTableSize = source.maxHeaderTableSize;
+        pushEnabled = source.pushEnabled;
         return this;
     }
 
@@ -236,31 +236,29 @@ public class Http2Settings {
         if (maxConcurrentStreams != other.maxConcurrentStreams) {
             return false;
         }
-        if (pushEnabled != other.pushEnabled) {
-            return false;
-        }
-        return true;
+
+        return pushEnabled == other.pushEnabled;
     }
 
     @Override
     public String toString() {
         StringBuilder builder = new StringBuilder("Http2Settings [");
         if (hasMaxHeaderTableSize()) {
-            builder.append("maxHeaderTableSize=").append(maxHeaderTableSize).append(",");
+            builder.append("maxHeaderTableSize=").append(maxHeaderTableSize).append(',');
         }
         if (hasPushEnabled()) {
-            builder.append("pushEnabled=").append(pushEnabled).append(",");
+            builder.append("pushEnabled=").append(pushEnabled).append(',');
         }
         if (hasMaxConcurrentStreams()) {
-            builder.append("maxConcurrentStreams=").append(maxConcurrentStreams).append(",");
+            builder.append("maxConcurrentStreams=").append(maxConcurrentStreams).append(',');
         }
         if (hasInitialWindowSize()) {
-            builder.append("initialWindowSize=").append(initialWindowSize).append(",");
+            builder.append("initialWindowSize=").append(initialWindowSize).append(',');
         }
         if (hasAllowCompressedData()) {
-            builder.append("allowCompressedData=").append(allowCompressedData).append(",");
+            builder.append("allowCompressedData=").append(allowCompressedData).append(',');
         }
-        builder.append("]");
+        builder.append(']');
         return builder.toString();
     }
 

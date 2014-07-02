@@ -28,7 +28,7 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 /**
  * A HTTP server showing how to use the HTTP multipart package for file uploads and decoding post data.
  */
-public class HttpUploadServer {
+public final class HttpUploadServer {
 
     static final boolean SSL = System.getProperty("ssl") != null;
     static final int PORT = Integer.parseInt(System.getProperty("port", SSL? "8443" : "8080"));

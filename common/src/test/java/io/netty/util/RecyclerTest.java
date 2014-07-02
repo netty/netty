@@ -40,14 +40,14 @@ public class RecyclerTest {
 
         private static final Recycler<RecyclableObject> RECYCLER = new Recycler<RecyclableObject>() {
             @Override
-            protected RecyclableObject newObject(Handle handle) {
+            protected RecyclableObject newObject(Handle<RecyclableObject> handle) {
                 return new RecyclableObject(handle);
             }
         };
 
-        private final Recycler.Handle handle;
+        private final Recycler.Handle<RecyclableObject> handle;
 
-        private RecyclableObject(Recycler.Handle handle) {
+        private RecyclableObject(Recycler.Handle<RecyclableObject> handle) {
             this.handle = handle;
         }
 

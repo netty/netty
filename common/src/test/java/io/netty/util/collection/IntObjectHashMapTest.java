@@ -14,17 +14,13 @@
  */
 package io.netty.util.collection;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.util.HashSet;
 import java.util.Set;
 
-import org.junit.Before;
-import org.junit.Test;
+import static org.junit.Assert.*;
 
 /**
  * Tests for {@link IntObjectHashMap}.
@@ -34,7 +30,7 @@ public class IntObjectHashMapTest {
     private static class Value {
         private final String name;
 
-        public Value(String name) {
+        Value(String name) {
             this.name = name;
         }
 
@@ -42,7 +38,7 @@ public class IntObjectHashMapTest {
         public int hashCode() {
             final int prime = 31;
             int result = 1;
-            result = prime * result + ((name == null) ? 0 : name.hashCode());
+            result = prime * result + (name == null ? 0 : name.hashCode());
             return result;
         }
 

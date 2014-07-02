@@ -61,9 +61,10 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     }
 
     @Override
+    @SuppressWarnings("deprecation")
     public boolean isActive() {
         return fd != -1 &&
-                ((config.getOption(ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION) && isRegistered())
+                (config.getOption(ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION) && isRegistered()
                         || active);
     }
 
@@ -278,7 +279,6 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
         InetSocketAddress remoteAddress;
         ByteBuf data;
         if (msg instanceof DatagramPacket) {
-            @SuppressWarnings("unchecked")
             DatagramPacket packet = (DatagramPacket) msg;
             remoteAddress = packet.recipient();
             m = packet.content();
@@ -433,6 +433,9 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
      * to create more objects then needed.
      */
     static final class DatagramSocketAddress extends InetSocketAddress {
+
+        private static final long serialVersionUID = 1348596211215015739L;
+
         // holds the amount of received bytes
         final int receivedAmount;
 

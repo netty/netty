@@ -18,6 +18,7 @@ package io.netty.handler.codec.socks;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
+import io.netty.handler.codec.socks.SocksCmdRequestDecoder.State;
 import io.netty.util.CharsetUtil;
 
 import java.util.List;
@@ -26,12 +27,13 @@ import java.util.List;
  * Decodes {@link ByteBuf}s into {@link SocksCmdRequest}.
  * Before returning SocksRequest decoder removes itself from pipeline.
  */
-public class SocksCmdRequestDecoder extends ReplayingDecoder<SocksCmdRequestDecoder.State> {
+public class SocksCmdRequestDecoder extends ReplayingDecoder<State> {
 
     private SocksProtocolVersion version;
     private int fieldLength;
     private SocksCmdType cmdType;
     private SocksAddressType addressType;
+    @SuppressWarnings("UnusedDeclaration")
     private byte reserved;
     private String host;
     private int port;

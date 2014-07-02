@@ -78,7 +78,7 @@ public class CorsHandlerTest {
     @Test
     public void preflightDeleteRequestWithCustomHeaders() {
         final CorsConfig config = CorsConfig.withOrigin("http://localhost:8888")
-                .allowedRequestMethods(HttpMethod.GET, HttpMethod.DELETE)
+                .allowedRequestMethods(GET, DELETE)
                 .build();
         final HttpResponse response = preflightRequest(config, "http://localhost:8888", "content-type, xheader1");
         assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN), is("http://localhost:8888"));
@@ -89,7 +89,7 @@ public class CorsHandlerTest {
     @Test
     public void preflightGetRequestWithCustomHeaders() {
         final CorsConfig config = CorsConfig.withOrigin("http://localhost:8888")
-                .allowedRequestMethods(HttpMethod.OPTIONS, HttpMethod.GET, HttpMethod.DELETE)
+                .allowedRequestMethods(OPTIONS, GET, DELETE)
                 .allowedRequestHeaders("content-type", "xheader1")
                 .build();
         final HttpResponse response = preflightRequest(config, "http://localhost:8888", "content-type, xheader1");

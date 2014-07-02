@@ -15,9 +15,7 @@
 
 package io.netty.handler.codec.http2;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import org.junit.Test;
 
 import java.util.HashSet;
 import java.util.Iterator;
@@ -26,7 +24,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
-import org.junit.Test;
+import static org.junit.Assert.*;
 
 
 /**
@@ -73,7 +71,7 @@ public class DefaultHttp2HeadersTest {
 
         // Now iterate through the headers, removing them from the original set.
         for (Map.Entry<String, String> entry : builder.build()) {
-            assertTrue(headers.remove(entry.getKey() + ":" + entry.getValue()));
+            assertTrue(headers.remove(entry.getKey() + ':' + entry.getValue()));
         }
 
         // Make sure we removed them all.

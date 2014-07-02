@@ -15,21 +15,16 @@
 
 package io.netty.handler.codec.http2;
 
-import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
-import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_FLOW_CONTROL_WINDOW_SIZE;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http2.Http2InboundFlowController.FrameWriter;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
+
+import static io.netty.handler.codec.http2.Http2CodecUtil.*;
+import static org.mockito.Mockito.*;
 
 /**
  * Tests for {@link DefaultHttp2InboundFlowController}.
@@ -70,7 +65,7 @@ public class DefaultHttp2InboundFlowControllerTest {
 
     @Test
     public void halfWindowRemainingShouldUpdateConnectionWindow() throws Http2Exception {
-        int dataSize = (DEFAULT_FLOW_CONTROL_WINDOW_SIZE / 2) + 1;
+        int dataSize = DEFAULT_FLOW_CONTROL_WINDOW_SIZE / 2 + 1;
         int newWindow = DEFAULT_FLOW_CONTROL_WINDOW_SIZE - dataSize;
         int windowDelta = DEFAULT_FLOW_CONTROL_WINDOW_SIZE - newWindow;
 
@@ -81,7 +76,7 @@ public class DefaultHttp2InboundFlowControllerTest {
 
     @Test
     public void halfWindowRemainingShouldUpdateAllWindows() throws Http2Exception {
-        int dataSize = (DEFAULT_FLOW_CONTROL_WINDOW_SIZE / 2) + 1;
+        int dataSize = DEFAULT_FLOW_CONTROL_WINDOW_SIZE / 2 + 1;
         int initialWindowSize = DEFAULT_FLOW_CONTROL_WINDOW_SIZE;
         int windowDelta = getWindowDelta(initialWindowSize, initialWindowSize, dataSize);
 
@@ -102,7 +97,7 @@ public class DefaultHttp2InboundFlowControllerTest {
         controller.initialInboundWindowSize(newInitialWindowSize);
 
         // Clear any previous calls to the writer.
-        Mockito.reset(frameWriter);
+        reset(frameWriter);
 
         // Send the next frame and verify that the expected window updates were sent.
         applyFlowControl(initialWindowSize, false);

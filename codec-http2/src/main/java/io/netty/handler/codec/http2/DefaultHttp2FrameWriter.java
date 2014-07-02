@@ -15,26 +15,14 @@
 
 package io.netty.handler.codec.http2;
 
-import static io.netty.handler.codec.http2.Http2CodecUtil.FRAME_HEADER_LENGTH;
-import static io.netty.handler.codec.http2.Http2CodecUtil.INT_FIELD_LENGTH;
-import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_PAYLOAD_LENGTH;
-import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_UNSIGNED_BYTE;
-import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_UNSIGNED_INT;
-import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_UNSIGNED_SHORT;
-import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_WEIGHT;
-import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_WEIGHT;
-import static io.netty.handler.codec.http2.Http2CodecUtil.PRIORITY_ENTRY_LENGTH;
-import static io.netty.handler.codec.http2.Http2CodecUtil.calcSettingsPayloadLength;
-import static io.netty.handler.codec.http2.Http2CodecUtil.writeFrameHeader;
-import static io.netty.handler.codec.http2.Http2CodecUtil.writeSettingsPayload;
-import static io.netty.handler.codec.http2.Http2CodecUtil.writeUnsignedInt;
-import static io.netty.handler.codec.http2.Http2CodecUtil.writeUnsignedShort;
-import static io.netty.util.CharsetUtil.UTF_8;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+
+import static io.netty.handler.codec.http2.Http2CodecUtil.*;
+import static io.netty.util.CharsetUtil.*;
 
 /**
  * A {@link Http2FrameWriter} that supports all frame types defined by the HTTP/2 specification.
@@ -125,7 +113,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
             ByteBuf frame = ctx.alloc().buffer(FRAME_HEADER_LENGTH + PRIORITY_ENTRY_LENGTH);
             writeFrameHeader(frame, PRIORITY_ENTRY_LENGTH, Http2FrameType.PRIORITY,
                     Http2Flags.EMPTY, streamId);
-            long word1 = exclusive ? (0x80000000L | streamDependency) : streamDependency;
+            long word1 = exclusive ? 0x80000000L | streamDependency : streamDependency;
             writeUnsignedInt(word1, frame);
 
             // Adjust the weight so that it fits into a single byte on the wire.
@@ -381,7 +369,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
 
             // Write the priority.
             if (hasPriority) {
-                long word1 = exclusive ? (0x80000000L | streamDependency) : streamDependency;
+                long word1 = exclusive ? 0x80000000L | streamDependency : streamDependency;
                 writeUnsignedInt(word1, firstFrame);
 
                 // Adjust the weight so that it fits into a single byte on the wire.

@@ -153,7 +153,7 @@ public class OioSctpServerChannel extends AbstractOioMessageChannel
                 addresses.add((InetSocketAddress) socketAddress);
             }
             return addresses;
-        } catch (Throwable t) {
+        } catch (Throwable ignored) {
             return Collections.emptySet();
         }
     }

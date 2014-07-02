@@ -15,23 +15,13 @@
 
 package io.netty.handler.codec.http2;
 
-import static io.netty.handler.codec.http2.Http2CodecUtil.FRAME_HEADER_LENGTH;
-import static io.netty.handler.codec.http2.Http2CodecUtil.FRAME_LENGTH_MASK;
-import static io.netty.handler.codec.http2.Http2CodecUtil.INT_FIELD_LENGTH;
-import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_PAYLOAD_LENGTH;
-import static io.netty.handler.codec.http2.Http2CodecUtil.PRIORITY_ENTRY_LENGTH;
-import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_COMPRESS_DATA;
-import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_ENABLE_PUSH;
-import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_HEADER_TABLE_SIZE;
-import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_INITIAL_WINDOW_SIZE;
-import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_MAX_CONCURRENT_STREAMS;
-import static io.netty.handler.codec.http2.Http2CodecUtil.SETTING_ENTRY_LENGTH;
-import static io.netty.handler.codec.http2.Http2CodecUtil.readUnsignedInt;
-import static io.netty.handler.codec.http2.Http2Exception.protocolError;
-import static io.netty.util.CharsetUtil.UTF_8;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
+
+import static io.netty.handler.codec.http2.Http2CodecUtil.*;
+import static io.netty.handler.codec.http2.Http2Exception.*;
+import static io.netty.util.CharsetUtil.*;
 
 /**
  * A {@link Http2FrameReader} that supports all frame types defined by the HTTP/2 specification.

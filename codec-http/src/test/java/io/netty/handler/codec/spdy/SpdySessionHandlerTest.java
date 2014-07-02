@@ -172,7 +172,7 @@ public class SpdySessionHandlerTest {
         // a RST_STREAM frame for that Stream-ID
         sessionHandler.writeInbound(new DefaultSpdyRstStreamFrame(remoteStreamId, 3));
         assertNull(sessionHandler.readOutbound());
-        remoteStreamId += 2;
+        //remoteStreamId += 2;
 
         // Check if session handler honors UNIDIRECTIONAL streams
         spdySynStreamFrame.setLast(false);

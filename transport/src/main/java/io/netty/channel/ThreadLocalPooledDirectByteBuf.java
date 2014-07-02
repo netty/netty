@@ -51,7 +51,7 @@ final class ThreadLocalPooledDirectByteBuf {
         // utility
     }
 
-    private static final class ThreadLocalUnsafeDirectByteBuf extends UnpooledUnsafeDirectByteBuf {
+    static final class ThreadLocalUnsafeDirectByteBuf extends UnpooledUnsafeDirectByteBuf {
 
         private static final Recycler<ThreadLocalUnsafeDirectByteBuf> RECYCLER =
                 new Recycler<ThreadLocalUnsafeDirectByteBuf>() {
@@ -85,7 +85,7 @@ final class ThreadLocalPooledDirectByteBuf {
         }
     }
 
-    private static final class ThreadLocalDirectByteBuf extends UnpooledDirectByteBuf {
+    static final class ThreadLocalDirectByteBuf extends UnpooledDirectByteBuf {
 
         private static final Recycler<ThreadLocalDirectByteBuf> RECYCLER = new Recycler<ThreadLocalDirectByteBuf>() {
             @Override

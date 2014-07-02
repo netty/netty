@@ -15,26 +15,18 @@
 
 package io.netty.handler.codec.http2;
 
-import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
-import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_FLOW_CONTROL_WINDOW_SIZE;
-import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http2.Http2OutboundFlowController.FrameWriter;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+
+import static io.netty.handler.codec.http2.Http2CodecUtil.*;
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 
 /**
  * Tests for {@link DefaultHttp2OutboundFlowController}.
@@ -536,18 +528,12 @@ public class DefaultHttp2OutboundFlowControllerTest {
 
         captureWrite(STREAM_A, captor, false);
         int aWritten = captor.getValue().readableBytes();
-        int min = aWritten;
-        int max = aWritten;
 
         captureWrite(STREAM_B, captor, false);
         int bWritten = captor.getValue().readableBytes();
-        min = Math.min(min, bWritten);
-        max = Math.max(max, bWritten);
 
         captureWrite(STREAM_D, captor, false);
         int dWritten = captor.getValue().readableBytes();
-        min = Math.min(min, dWritten);
-        max = Math.max(max, dWritten);
 
         assertEquals(999, aWritten + bWritten + dWritten);
         assertEquals(333, aWritten);
@@ -579,7 +565,7 @@ public class DefaultHttp2OutboundFlowControllerTest {
         connection.stream(stream).setPriority(parent, (short) weight, exclusive);
     }
 
-    private ByteBuf dummyData(int size) {
+    private static ByteBuf dummyData(int size) {
         ByteBuf buffer = Unpooled.buffer(size);
         buffer.writerIndex(size);
         return buffer;

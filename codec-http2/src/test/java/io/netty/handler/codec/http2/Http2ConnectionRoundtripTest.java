@@ -15,14 +15,6 @@
 
 package io.netty.handler.codec.http2;
 
-import static io.netty.handler.codec.http2.Http2TestUtil.runInChannel;
-import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
@@ -37,15 +29,19 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.NetUtil;
-
-import java.net.InetSocketAddress;
-import java.util.concurrent.CountDownLatch;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+
+import java.net.InetSocketAddress;
+import java.util.concurrent.CountDownLatch;
+
+import static io.netty.handler.codec.http2.Http2TestUtil.*;
+import static java.util.concurrent.TimeUnit.*;
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 
 /**
  * Tests the full HTTP/2 framing stack including the connection and preface handlers.
@@ -117,14 +113,14 @@ public class Http2ConnectionRoundtripTest {
                 new DefaultHttp2Headers.Builder().method("GET").scheme("https")
                         .authority("example.org").path("/some/path/resource2").build();
         final String text = "hello world";
-        runInChannel(clientChannel, new Http2TestUtil.Http2Runnable() {
+        runInChannel(clientChannel, new Http2Runnable() {
             @Override
-            public void run() throws Http2Exception {
+            public void run() {
                 for (int i = 0, nextStream = 3; i < NUM_STREAMS; ++i, nextStream += 2) {
-                    final int streamId = nextStream;
-                    http2Client.writeHeaders(ctx(), newPromise(), streamId, headers, 0, (short) 16,
-                            false, 0, false, false);
-                    http2Client.writeData(ctx(), newPromise(), streamId,
+                    http2Client.writeHeaders(
+                            ctx(), newPromise(), nextStream, headers, 0, (short) 16, false, 0, false, false);
+                    http2Client.writeData(
+                            ctx(), newPromise(), nextStream,
                             Unpooled.copiedBuffer(text.getBytes()), 0, true, true, false);
                 }
             }

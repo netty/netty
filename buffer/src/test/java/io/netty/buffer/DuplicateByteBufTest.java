@@ -15,7 +15,6 @@
  */
 package io.netty.buffer;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -42,14 +41,6 @@ public class DuplicateByteBufTest extends AbstractByteBufTest {
     @Test(expected = NullPointerException.class)
     public void shouldNotAllowNullInConstructor() {
         new DuplicatedByteBuf(null);
-    }
-
-    @Ignore
-    @Test
-    // Test which shows bug
-    // https://github.com/netty/netty/issues/1802
-    public void testInternalNioBuffer() {
-        super.testInternalNioBuffer();
     }
 
     // See https://github.com/netty/netty/issues/1800

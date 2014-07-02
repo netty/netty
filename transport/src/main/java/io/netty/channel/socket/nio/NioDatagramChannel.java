@@ -153,10 +153,11 @@ public final class NioDatagramChannel
     }
 
     @Override
+    @SuppressWarnings("deprecation")
     public boolean isActive() {
         DatagramChannel ch = javaChannel();
         return ch.isOpen() && (
-                (config.getOption(ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION) && isRegistered())
+                config.getOption(ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION) && isRegistered()
                 || ch.socket().isBound());
     }
 
@@ -291,8 +292,7 @@ public final class NioDatagramChannel
             writtenBytes = javaChannel().write(nioData);
         }
 
-        boolean done =  writtenBytes > 0;
-        return done;
+        return writtenBytes > 0;
     }
 
     @Override

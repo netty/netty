@@ -46,15 +46,15 @@ public class ReadOnlyByteBufTest {
     @Test
     public void testUnwrap() {
         ByteBuf buf = buffer(1);
-        assertSame(buf, Unpooled.unmodifiableBuffer(buf).unwrap());
+        assertSame(buf, unmodifiableBuffer(buf).unwrap());
     }
 
     @Test
     public void shouldHaveSameByteOrder() {
         ByteBuf buf = buffer(1);
-        assertSame(BIG_ENDIAN, Unpooled.unmodifiableBuffer(buf).order());
+        assertSame(BIG_ENDIAN, unmodifiableBuffer(buf).order());
         buf = buf.order(LITTLE_ENDIAN);
-        assertSame(LITTLE_ENDIAN, Unpooled.unmodifiableBuffer(buf).order());
+        assertSame(LITTLE_ENDIAN, unmodifiableBuffer(buf).order());
     }
 
     @Test

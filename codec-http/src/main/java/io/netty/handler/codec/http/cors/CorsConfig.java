@@ -267,7 +267,7 @@ public final class CorsConfig {
      * @return {@link Builder} to support method chaining.
      */
     public static Builder withOrigin(final String origin) {
-        if (origin.equals("*")) {
+        if ("*".equals(origin)) {
             return new Builder();
         }
         return new Builder(origin);

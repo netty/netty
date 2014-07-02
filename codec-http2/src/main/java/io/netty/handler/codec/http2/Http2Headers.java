@@ -232,11 +232,11 @@ public abstract class Http2Headers implements Iterable<Entry<String, String>> {
         StringBuilder builder = new StringBuilder("Http2Headers[");
         for (Map.Entry<String, String> header : this) {
             builder.append(header.getKey());
-            builder.append(":");
+            builder.append(':');
             builder.append(header.getValue());
-            builder.append(",");
+            builder.append(',');
         }
-        builder.append("]");
+        builder.append(']');
         return builder.toString();
     }
 }
