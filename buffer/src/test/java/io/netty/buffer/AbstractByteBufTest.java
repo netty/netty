@@ -17,6 +17,7 @@ package io.netty.buffer;
 
 import io.netty.util.CharsetUtil;
 import io.netty.util.IllegalReferenceCountException;
+import io.netty.util.internal.ThreadLocalRandom;
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
@@ -1742,15 +1743,15 @@ public abstract class AbstractByteBufTest {
         ByteBuffer buf = buffer.internalNioBuffer(0, 1);
         assertEquals(1, buf.remaining());
 
-        for (int i = 0; i < a; i++) {
-            buffer.writeByte(i);
-        }
+        byte[] data = new byte[a];
+        ThreadLocalRandom.current().nextBytes(data);
+        buffer.writeBytes(data);
 
         buf = buffer.internalNioBuffer(0, a);
         assertEquals(a, buf.remaining());
 
         for (int i = 0; i < a; i++) {
-            assertEquals((byte) i, buf.get());
+            assertEquals(data[i], buf.get());
         }
         assertFalse(buf.hasRemaining());
     }
