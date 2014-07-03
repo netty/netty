@@ -170,6 +170,7 @@ public class JsonObjectDecoder extends ByteToMessageDecoder {
     /**
      * Override this method if you want to filter the json objects/arrays that get passed through the pipeline.
      */
+    @SuppressWarnings("UnusedParameters")
     protected ByteBuf extractObject(ChannelHandlerContext ctx, ByteBuf buffer, int index, int length) {
         return buffer.slice(index, length).retain();
     }
