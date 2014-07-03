@@ -24,8 +24,6 @@ import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.CharsetUtil;
 import org.junit.Test;
 
-import java.nio.charset.Charset;
-
 import static org.junit.Assert.*;
 
 public class JsonObjectDecoderTest {
@@ -176,6 +174,7 @@ public class JsonObjectDecoderTest {
 
         ByteBuf res = ch.readInbound();
         assertEquals(object, res.toString(CharsetUtil.UTF_8));
+        res.release();
 
         assertFalse(ch.finish());
     }
