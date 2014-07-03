@@ -60,4 +60,7 @@ public interface ChannelPromise extends ChannelFuture, Promise<Void> {
 
     @Override
     ChannelPromise awaitUninterruptibly();
+
+    @Override
+    ChannelPromise unvoid();
 }

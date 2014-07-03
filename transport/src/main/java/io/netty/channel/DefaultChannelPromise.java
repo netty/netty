@@ -157,4 +157,14 @@ public class DefaultChannelPromise extends DefaultPromise<Void> implements Chann
             super.checkDeadLock();
         }
     }
+
+    @Override
+    public ChannelPromise unvoid() {
+        return this;
+    }
+
+    @Override
+    public boolean isVoid() {
+        return false;
+    }
 }

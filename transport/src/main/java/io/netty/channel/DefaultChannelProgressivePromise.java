@@ -166,4 +166,14 @@ public class DefaultChannelProgressivePromise
             super.checkDeadLock();
         }
     }
+
+    @Override
+    public ChannelProgressivePromise unvoid() {
+        return this;
+    }
+
+    @Override
+    public boolean isVoid() {
+        return false;
+    }
 }
