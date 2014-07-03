@@ -24,20 +24,20 @@ import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.ServerChannel;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GlobalEventExecutor;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.net.SocketAddress;
+import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class BootstrapTest {
@@ -155,8 +155,10 @@ public class BootstrapTest {
                 @Override
                 public void operationComplete(ChannelFuture future) throws Exception {
                     queue.add(future.channel().eventLoop().inEventLoop(Thread.currentThread()));
+                    queue.add(future.isSuccess());
                 }
             });
+            Assert.assertTrue(queue.take());
             Assert.assertTrue(queue.take());
         } finally {
             group.shutdownGracefully();
@@ -165,24 +167,41 @@ public class BootstrapTest {
     }
 
     @Test
-    public void testLateRegisterFailed() throws Exception {
-        final TestLocalEventLoopGroup group = new TestLocalEventLoopGroup();
+    public void testLateRegisterSuccessBindFailed() throws Exception {
+        TestLocalEventLoopGroup group = new TestLocalEventLoopGroup();
         try {
             ServerBootstrap bootstrap = new ServerBootstrap();
             bootstrap.group(group);
-            bootstrap.channel(LocalServerChannel.class);
+            bootstrap.channelFactory(new ChannelFactory<ServerChannel>() {
+                @Override
+                public ServerChannel newChannel() {
+                    return new LocalServerChannel() {
+                        @Override
+                        public ChannelFuture bind(SocketAddress localAddress) {
+                            return newFailedFuture(new SocketException());
+                        }
+
+                        @Override
+                        public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
+                            return promise.setFailure(new SocketException());
+                        }
+                    };
+                }
+            });
             bootstrap.childHandler(new DummyHandler());
             bootstrap.localAddress(new LocalAddress("1"));
             ChannelFuture future = bootstrap.bind();
             Assert.assertFalse(future.isDone());
-            group.promise.setFailure(new IllegalStateException());
+            group.promise.setSuccess();
             final BlockingQueue<Boolean> queue = new LinkedBlockingQueue<Boolean>();
             future.addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(ChannelFuture future) throws Exception {
-                    queue.add(group.next().inEventLoop(Thread.currentThread()));
+                    queue.add(future.channel().eventLoop().inEventLoop(Thread.currentThread()));
+                    queue.add(future.isSuccess());
                 }
             });
+            Assert.assertTrue(queue.take());
             Assert.assertFalse(queue.take());
         } finally {
             group.shutdownGracefully();
@@ -204,7 +223,7 @@ public class BootstrapTest {
         }
 
         @Override
-        public ChannelFuture register(Channel channel, ChannelPromise promise) {
+        public ChannelFuture register(Channel channel, final ChannelPromise promise) {
             throw new UnsupportedOperationException();
         }
     }
