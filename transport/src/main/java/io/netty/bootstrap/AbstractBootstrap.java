@@ -300,7 +300,8 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
             init(channel);
         } catch (Throwable t) {
             channel.unsafe().closeForcibly();
-            return channel.newFailedFuture(t);
+            // as the Channel is not registered yet we need to force the usage of the GlobalEventExecutor
+            return new DefaultChannelPromise(channel, GlobalEventExecutor.INSTANCE).setFailure(t);
         }
 
         ChannelFuture regFuture = group().register(channel);
@@ -460,9 +461,11 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
 
         @Override
         protected EventExecutor executor() {
-            if (isSuccess()) {
+            if (channel().isRegistered()) {
                 // If the registration was a success we can just call super.executor() which will return
                 // channel.eventLoop().
+                //
+                // See https://github.com/netty/netty/issues/2586
                 return super.executor();
             }
             // The registration failed so we can only use the GlobalEventExecutor as last resort to notify.
