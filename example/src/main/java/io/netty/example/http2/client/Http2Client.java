@@ -77,7 +77,7 @@ public final class Http2Client {
             Http2ClientConnectionHandler http2ConnectionHandler = initializer.connectionHandler();
             http2ConnectionHandler.awaitInitialization();
 
-            // Create a simple GET request with just headers.
+            // Create a simple POST request with just headers.
             FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, POST, "/whatever");
             request.headers().add(HttpHeaders.Names.HOST, HOST + ':' + PORT);
             request.content().writeBytes("sample data".getBytes(CharsetUtil.UTF_8));
