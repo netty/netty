@@ -65,26 +65,6 @@ final class DefaultChannelId implements ChannelId {
     }
 
     static {
-        byte[] machineId = null;
-        String customMachineId = SystemPropertyUtil.get("io.netty.machineId");
-        if (customMachineId != null) {
-            if (MACHINE_ID_PATTERN.matcher(customMachineId).matches()) {
-                machineId = parseMachineId(customMachineId);
-                logger.debug("-Dio.netty.machineId: {} (user-set)", customMachineId);
-            } else {
-                logger.warn("-Dio.netty.machineId: {} (malformed)", customMachineId);
-            }
-        }
-
-        if (machineId == null) {
-            machineId = defaultMachineId();
-            if (logger.isDebugEnabled()) {
-                logger.debug("-Dio.netty.machineId: {} (auto-detected)", formatAddress(machineId));
-            }
-        }
-
-        MACHINE_ID = machineId;
-
         int processId = -1;
         String customProcessId = SystemPropertyUtil.get("io.netty.processId");
         if (customProcessId != null) {
@@ -110,6 +90,26 @@ final class DefaultChannelId implements ChannelId {
         }
 
         PROCESS_ID = processId;
+
+        byte[] machineId = null;
+        String customMachineId = SystemPropertyUtil.get("io.netty.machineId");
+        if (customMachineId != null) {
+            if (MACHINE_ID_PATTERN.matcher(customMachineId).matches()) {
+                machineId = parseMachineId(customMachineId);
+                logger.debug("-Dio.netty.machineId: {} (user-set)", customMachineId);
+            } else {
+                logger.warn("-Dio.netty.machineId: {} (malformed)", customMachineId);
+            }
+        }
+
+        if (machineId == null) {
+            machineId = defaultMachineId();
+            if (logger.isDebugEnabled()) {
+                logger.debug("-Dio.netty.machineId: {} (auto-detected)", formatAddress(machineId));
+            }
+        }
+
+        MACHINE_ID = machineId;
     }
 
     @SuppressWarnings("DynamicRegexReplaceableByCompiledPattern")
