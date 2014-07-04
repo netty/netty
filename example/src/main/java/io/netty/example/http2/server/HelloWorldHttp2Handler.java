@@ -81,7 +81,7 @@ public class HelloWorldHttp2Handler extends AbstractHttp2ConnectionHandler {
     public void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
             boolean endOfStream, boolean endOfSegment, boolean compressed) throws Http2Exception {
         if (endOfStream) {
-            sendResponse(ctx(), streamId, data);
+            sendResponse(ctx(), streamId, data.retain());
         }
     }
 
@@ -112,9 +112,6 @@ public class HelloWorldHttp2Handler extends AbstractHttp2ConnectionHandler {
         Http2Headers headers = DefaultHttp2Headers.newBuilder().status("200").build();
         writeHeaders(ctx(), ctx().newPromise(), streamId, headers, 0, false, false);
 
-        // Send a data frame with the response message.
-        ByteBuf content = ctx.alloc().buffer();
-        content.writeBytes(payload);
-        writeData(ctx(), ctx().newPromise(), streamId, content, 0, true, true, false);
+        writeData(ctx(), ctx().newPromise(), streamId, payload, 0, true, true, false);
     }
 }
