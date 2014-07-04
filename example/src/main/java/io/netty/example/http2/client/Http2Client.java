@@ -15,6 +15,7 @@
 package io.netty.example.http2.client;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelOption;
@@ -78,9 +79,9 @@ public final class Http2Client {
             http2ConnectionHandler.awaitInitialization();
 
             // Create a simple POST request with just headers.
-            FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, POST, "/whatever");
+            FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, POST, "/whatever",
+                    Unpooled.copiedBuffer("sample data".getBytes(CharsetUtil.UTF_8)));
             request.headers().add(HttpHeaders.Names.HOST, HOST + ':' + PORT);
-            request.content().writeBytes("sample data".getBytes(CharsetUtil.UTF_8));
 
             // Send the request to the server.
             System.err.println("Sending request...");
