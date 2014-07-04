@@ -100,7 +100,7 @@ public class HttpObjectAggregatorTest {
         assertEquals(chunk1.content().readableBytes() + chunk2.content().readableBytes(),
                 HttpHeaders.getContentLength(aggratedMessage));
         assertEquals(aggratedMessage.headers().get("X-Test"), Boolean.TRUE.toString());
-        assertEquals(aggratedMessage.headers().get("X-Trailer"), Boolean.TRUE.toString());
+        assertEquals(aggratedMessage.trailingHeaders().get("X-Trailer"), Boolean.TRUE.toString());
         checkContentBuffer(aggratedMessage);
         assertNull(embedder.readInbound());
     }
