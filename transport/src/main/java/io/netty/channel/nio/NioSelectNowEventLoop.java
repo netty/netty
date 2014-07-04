@@ -225,16 +225,18 @@ public final class NioSelectNowEventLoop extends SingleThreadEventLoop implement
      * @return
      */
     private static int backoff(final int backoffCounter) {
-    	if(backoffCounter > 1000) {
-    		LockSupport.parkNanos(1);
-    	} 
+    	
+    	if (backoffCounter > 3000) {
+    		LockSupport.parkNanos(5000);
+    	}
     	else if(backoffCounter > 2000) {
     		Thread.yield();
     	}
-    	else if(backoffCounter > 3000) {
-    		LockSupport.parkNanos(5000);
-    	}
-		return backoffCounter + 1;
+    	else if(backoffCounter > 1000) {
+    		LockSupport.parkNanos(1);
+    	} 
+    	
+    	return backoffCounter + 1;
 	}
 
 	private void processSelectedKeys() {
