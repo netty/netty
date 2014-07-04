@@ -51,7 +51,7 @@ public class HttpObjectAggregatorTest {
         // this should trigger a channelRead event so return true
         assertTrue(embedder.writeInbound(chunk3));
         assertTrue(embedder.finish());
-        DefaultFullHttpRequest aggratedMessage = (DefaultFullHttpRequest) embedder.readInbound();
+        FullHttpRequest aggratedMessage = (FullHttpRequest) embedder.readInbound();
         assertNotNull(aggratedMessage);
 
         assertEquals(chunk1.content().readableBytes() + chunk2.content().readableBytes(),
@@ -93,13 +93,13 @@ public class HttpObjectAggregatorTest {
         // this should trigger a channelRead event so return true
         assertTrue(embedder.writeInbound(trailer));
         assertTrue(embedder.finish());
-        DefaultFullHttpRequest aggratedMessage = (DefaultFullHttpRequest) embedder.readInbound();
+        FullHttpRequest aggratedMessage = (FullHttpRequest) embedder.readInbound();
         assertNotNull(aggratedMessage);
 
         assertEquals(chunk1.content().readableBytes() + chunk2.content().readableBytes(),
                 HttpHeaders.getContentLength(aggratedMessage));
         assertEquals(aggratedMessage.headers().get("X-Test"), Boolean.TRUE.toString());
-        assertEquals(aggratedMessage.headers().get("X-Trailer"), Boolean.TRUE.toString());
+        assertEquals(aggratedMessage.trailingHeaders().get("X-Trailer"), Boolean.TRUE.toString());
         checkContentBuffer(aggratedMessage);
         assertNull(embedder.readInbound());
     }
