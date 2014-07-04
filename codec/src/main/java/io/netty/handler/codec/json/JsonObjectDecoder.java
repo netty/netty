@@ -37,11 +37,15 @@ import java.util.List;
  */
 public class JsonObjectDecoder extends ByteToMessageDecoder {
 
+    private static final int ST_CORRUPTED = -1;
+    private static final int ST_INIT = 0;
+    private static final int ST_DECODING_NORMAL = 1;
+    private static final int ST_DECODING_ARRAY_STREAM = 2;
+
     private int openBraces;
     private int idx;
 
-    private boolean isDecoding;
-    private boolean isArrayStreamDecoding;
+    private int state;
     private boolean insideString;
 
     private final int maxObjectLength;
@@ -79,6 +83,11 @@ public class JsonObjectDecoder extends ByteToMessageDecoder {
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+        if (state == ST_CORRUPTED) {
+            in.skipBytes(in.readableBytes());
+            return;
+        }
+
         // index of next byte to process.
         int idx = this.idx;
         int wrtIdx = in.writerIndex();
@@ -97,7 +106,7 @@ public class JsonObjectDecoder extends ByteToMessageDecoder {
 
         for (/* use current idx */; idx < wrtIdx; idx++) {
             byte c = in.getByte(idx);
-            if (isDecoding) {
+            if (state == ST_DECODING_NORMAL) {
                 decodeByte(c, in, idx);
 
                 // All opening braces/brackets have been closed. That's enough to conclude
@@ -115,7 +124,7 @@ public class JsonObjectDecoder extends ByteToMessageDecoder {
                     // coming along the byte stream.
                     reset();
                 }
-            } else if (isArrayStreamDecoding) {
+            } else if (state == ST_DECODING_ARRAY_STREAM) {
                 decodeByte(c, in, idx);
 
                 if (!insideString && (openBraces == 1 && c == ',' || openBraces == 0 && c == ']')) {
@@ -146,7 +155,7 @@ public class JsonObjectDecoder extends ByteToMessageDecoder {
             } else if (c == '{' || c == '[') {
                 initDecoding(c);
 
-                if (isArrayStreamDecoding) {
+                if (state == ST_DECODING_ARRAY_STREAM) {
                     // Discard the array bracket
                     in.skipBytes(1);
                 }
@@ -154,9 +163,9 @@ public class JsonObjectDecoder extends ByteToMessageDecoder {
             } else if (Character.isWhitespace(c)) {
                 in.skipBytes(1);
             } else {
-                ctx.fireExceptionCaught(
-                        new CorruptedFrameException("Invalid JSON received at byte position " + idx + ". " +
-                                                     "Hexdump: " + ByteBufUtil.hexDump(in)));
+                state = ST_CORRUPTED;
+                throw new CorruptedFrameException(
+                        "invalid JSON received at byte position " + idx + ": " + ByteBufUtil.hexDump(in));
             }
         }
 
@@ -194,12 +203,16 @@ public class JsonObjectDecoder extends ByteToMessageDecoder {
 
     private void initDecoding(byte openingBrace) {
         openBraces = 1;
-        isArrayStreamDecoding = openingBrace == '[' && streamArrayElements;
-        isDecoding = !isArrayStreamDecoding;
+        if (openingBrace == '[' && streamArrayElements) {
+            state = ST_DECODING_ARRAY_STREAM;
+        } else {
+            state = ST_DECODING_NORMAL;
+        }
     }
 
     private void reset() {
-        isDecoding = insideString = isArrayStreamDecoding = false;
+        insideString = false;
+        state = ST_INIT;
         openBraces = 0;
     }
 }
