@@ -74,7 +74,7 @@ public class EmbeddedChannel extends AbstractChannel {
      * @param handlers the @link ChannelHandler}s which will be add in the {@link ChannelPipeline}
      */
     public EmbeddedChannel(ChannelHandler... handlers) {
-        super(null);
+        super(null, EmbeddedChannelId.INSTANCE);
 
         if (handlers == null) {
             throw new NullPointerException("handlers");

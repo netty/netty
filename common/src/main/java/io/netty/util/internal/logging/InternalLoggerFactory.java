@@ -15,6 +15,8 @@
  */
 package io.netty.util.internal.logging;
 
+import io.netty.util.internal.ThreadLocalRandom;
+
 /**
  * Creates an {@link InternalLogger} or changes the default factory
  * implementation.  This factory allows you to choose what logging framework
@@ -31,8 +33,19 @@ package io.netty.util.internal.logging;
  * as possible and shouldn't be called more than once.
  */
 public abstract class InternalLoggerFactory {
+
     private static volatile InternalLoggerFactory defaultFactory =
             newDefaultFactory(InternalLoggerFactory.class.getName());
+
+    static {
+        // Initiate some time-consuming background jobs here,
+        // because this class is often initialized at the earliest time.
+        try {
+            Class.forName(ThreadLocalRandom.class.getName(), true, InternalLoggerFactory.class.getClassLoader());
+        } catch (Exception ignored) {
+            // Should not fail, but it does not harm to fail.
+        }
+    }
 
     @SuppressWarnings("UnusedCatchParameter")
     private static InternalLoggerFactory newDefaultFactory(String name) {
