@@ -27,6 +27,7 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http2.Http2OrHttpChooser.SelectedProtocol;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty.util.CharsetUtil;
 
 import java.util.Arrays;
 
@@ -77,8 +78,9 @@ public final class Http2Client {
             http2ConnectionHandler.awaitInitialization();
 
             // Create a simple GET request with just headers.
-            FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, "/whatever");
+            FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, POST, "/whatever");
             request.headers().add(HttpHeaders.Names.HOST, HOST + ':' + PORT);
+            request.content().writeBytes("sample data".getBytes(CharsetUtil.UTF_8));
 
             // Send the request to the server.
             System.err.println("Sending request...");
