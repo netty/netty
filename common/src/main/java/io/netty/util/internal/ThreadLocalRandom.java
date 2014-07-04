@@ -156,6 +156,7 @@ public final class ThreadLocalRandom extends Random {
     }
 
     private static long newSeed() {
+        final long startTime = System.nanoTime();
         for (;;) {
             final long current = seedUniquifier.get();
             final long actualCurrent = current != 0? current : getInitialSeedUniquifier();
@@ -165,7 +166,9 @@ public final class ThreadLocalRandom extends Random {
 
             if (seedUniquifier.compareAndSet(current, next)) {
                 if (current == 0 && logger.isDebugEnabled()) {
-                    logger.debug(String.format("-Dio.netty.initialSeedUniquifier: 0x%016x", actualCurrent));
+                    logger.debug(String.format(
+                            "-Dio.netty.initialSeedUniquifier: 0x%016x (took %d ms)",
+                            actualCurrent, TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime)));
                 }
                 return next ^ System.nanoTime();
             }
