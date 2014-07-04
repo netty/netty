@@ -64,59 +64,76 @@ public final class ThreadLocalRandom extends Random {
 
     private static final AtomicLong seedUniquifier = new AtomicLong();
 
-    private static volatile long initialSeedUniquifier;
+    private static volatile long initialSeedUniquifier =
+            SystemPropertyUtil.getLong("io.netty.initialSeedUniquifier", 0);
 
-    public static void setInitialSeedUniquifier(long initialSeedUniquifier) {
-        ThreadLocalRandom.initialSeedUniquifier = initialSeedUniquifier;
-    }
+    private static final Thread seedGeneratorThread;
+    private static final BlockingQueue<byte[]> seedQueue;
+    private static final long seedGeneratorStartTime;
+    private static volatile long seedGeneratorEndTime;
 
-    public static synchronized long getInitialSeedUniquifier() {
-        // Use the value set via the setter.
-        long initialSeedUniquifier = ThreadLocalRandom.initialSeedUniquifier;
-        if (initialSeedUniquifier == 0) {
-            // Use the system property value.
-            ThreadLocalRandom.initialSeedUniquifier = initialSeedUniquifier =
-                    SystemPropertyUtil.getLong("io.netty.initialSeedUniquifier", 0);
-        }
-
-        // Otherwise, generate one.
+    static {
         if (initialSeedUniquifier == 0) {
             // Try to generate a real random number from /dev/random.
             // Get from a different thread to avoid blocking indefinitely on a machine without much entrophy.
-            final BlockingQueue<byte[]> queue = new LinkedBlockingQueue<byte[]>();
-            Thread generatorThread = new Thread("initialSeedUniquifierGenerator") {
+            seedGeneratorThread = new Thread("initialSeedUniquifierGenerator") {
                 @Override
                 public void run() {
-                    SecureRandom random = new SecureRandom(); // Get the real random seed from /dev/random
-                    queue.add(random.generateSeed(8));
+                    final SecureRandom random = new SecureRandom(); // Get the real random seed from /dev/random
+                    final byte[] seed = random.generateSeed(8);
+                    seedGeneratorEndTime = System.nanoTime();
+                    seedQueue.add(seed);
                 }
             };
-            generatorThread.setDaemon(true);
-            generatorThread.start();
-            generatorThread.setUncaughtExceptionHandler(new UncaughtExceptionHandler() {
+            seedGeneratorThread.setDaemon(true);
+            seedGeneratorThread.setUncaughtExceptionHandler(new UncaughtExceptionHandler() {
                 @Override
                 public void uncaughtException(Thread t, Throwable e) {
                     logger.debug("An exception has been raised by {}", t.getName(), e);
                 }
             });
 
-            // Get the random seed from the thread with timeout.
+            seedQueue = new LinkedBlockingQueue<byte[]>();
+            seedGeneratorStartTime = System.nanoTime();
+            seedGeneratorThread.start();
+        } else {
+            seedGeneratorThread = null;
+            seedQueue = null;
+            seedGeneratorStartTime = 0L;
+        }
+    }
+
+    public static void setInitialSeedUniquifier(long initialSeedUniquifier) {
+        ThreadLocalRandom.initialSeedUniquifier = initialSeedUniquifier;
+    }
+
+    public static long getInitialSeedUniquifier() {
+        // Use the value set via the setter.
+        long initialSeedUniquifier = ThreadLocalRandom.initialSeedUniquifier;
+        if (initialSeedUniquifier != 0) {
+            return initialSeedUniquifier;
+        }
+
+        synchronized (ThreadLocalRandom.class) {
+            initialSeedUniquifier = ThreadLocalRandom.initialSeedUniquifier;
+            if (initialSeedUniquifier != 0) {
+                return initialSeedUniquifier;
+            }
+
+            // Get the random seed from the generator thread with timeout.
             final long timeoutSeconds = 3;
-            final long deadLine = System.nanoTime() + TimeUnit.SECONDS.toNanos(timeoutSeconds);
+            final long deadLine = seedGeneratorStartTime + TimeUnit.SECONDS.toNanos(timeoutSeconds);
             boolean interrupted = false;
             for (;;) {
-                long waitTime = deadLine - System.nanoTime();
-                if (waitTime <= 0) {
-                    generatorThread.interrupt();
-                    logger.warn(
-                            "Failed to generate a seed from SecureRandom within {} seconds. " +
-                                    "Not enough entrophy?", timeoutSeconds
-                    );
-                    break;
-                }
-
+                final long waitTime = deadLine - System.nanoTime();
                 try {
-                    byte[] seed = queue.poll(waitTime, TimeUnit.NANOSECONDS);
+                    final byte[] seed;
+                    if (waitTime <= 0) {
+                        seed = seedQueue.poll();
+                    } else {
+                        seed = seedQueue.poll(waitTime, TimeUnit.NANOSECONDS);
+                    }
+
                     if (seed != null) {
                         initialSeedUniquifier =
                                 ((long) seed[0] & 0xff) << 56 |
@@ -126,12 +143,21 @@ public final class ThreadLocalRandom extends Random {
                                 ((long) seed[4] & 0xff) << 24 |
                                 ((long) seed[5] & 0xff) << 16 |
                                 ((long) seed[6] & 0xff) <<  8 |
-                                 (long) seed[7] & 0xff;
+                                (long) seed[7] & 0xff;
                         break;
                     }
                 } catch (InterruptedException e) {
                     interrupted = true;
                     logger.warn("Failed to generate a seed from SecureRandom due to an InterruptedException.");
+                    break;
+                }
+
+                if (waitTime <= 0) {
+                    seedGeneratorThread.interrupt();
+                    logger.warn(
+                            "Failed to generate a seed from SecureRandom within {} seconds. " +
+                            "Not enough entrophy?", timeoutSeconds
+                    );
                     break;
                 }
             }
@@ -148,15 +174,18 @@ public final class ThreadLocalRandom extends Random {
 
                 // Interrupt the generator thread if it's still running,
                 // in the hope that the SecureRandom provider raises an exception on interruption.
-                generatorThread.interrupt();
+                seedGeneratorThread.interrupt();
             }
-        }
 
-        return initialSeedUniquifier;
+            if (seedGeneratorEndTime == 0) {
+                seedGeneratorEndTime = System.nanoTime();
+            }
+
+            return initialSeedUniquifier;
+        }
     }
 
     private static long newSeed() {
-        final long startTime = System.nanoTime();
         for (;;) {
             final long current = seedUniquifier.get();
             final long actualCurrent = current != 0? current : getInitialSeedUniquifier();
@@ -166,9 +195,14 @@ public final class ThreadLocalRandom extends Random {
 
             if (seedUniquifier.compareAndSet(current, next)) {
                 if (current == 0 && logger.isDebugEnabled()) {
-                    logger.debug(String.format(
-                            "-Dio.netty.initialSeedUniquifier: 0x%016x (took %d ms)",
-                            actualCurrent, TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime)));
+                    if (seedGeneratorEndTime != 0) {
+                        logger.debug(String.format(
+                                "-Dio.netty.initialSeedUniquifier: 0x%016x (took %d ms)",
+                                actualCurrent,
+                                TimeUnit.NANOSECONDS.toMillis(seedGeneratorEndTime - seedGeneratorStartTime)));
+                    } else {
+                        logger.debug(String.format("-Dio.netty.initialSeedUniquifier: 0x%016x", actualCurrent));
+                    }
                 }
                 return next ^ System.nanoTime();
             }

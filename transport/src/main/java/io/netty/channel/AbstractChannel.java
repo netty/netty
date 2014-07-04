@@ -50,7 +50,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private MessageSizeEstimator.Handle estimatorHandle;
 
     private final Channel parent;
-    private final ChannelId id = DefaultChannelId.newInstance();
+    private final ChannelId id;
     private final Unsafe unsafe;
     private final DefaultChannelPipeline pipeline;
     private final ChannelFuture succeededFuture = new SucceededChannelFuture(this, null);
@@ -75,6 +75,20 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      */
     protected AbstractChannel(Channel parent) {
         this.parent = parent;
+        id = DefaultChannelId.newInstance();
+        unsafe = newUnsafe();
+        pipeline = new DefaultChannelPipeline(this);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param parent
+     *        the parent of this channel. {@code null} if there's no parent.
+     */
+    protected AbstractChannel(Channel parent, ChannelId id) {
+        this.parent = parent;
+        this.id = id;
         unsafe = newUnsafe();
         pipeline = new DefaultChannelPipeline(this);
     }
