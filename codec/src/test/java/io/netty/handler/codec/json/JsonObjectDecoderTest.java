@@ -113,7 +113,11 @@ public class JsonObjectDecoderTest {
     @Test(expected = CorruptedFrameException.class)
     public void testNonJsonContent1() {
         EmbeddedChannel ch = new EmbeddedChannel(new JsonObjectDecoder());
-        ch.writeInbound(Unpooled.copiedBuffer("  b [1,2,3]", CharsetUtil.UTF_8));
+        try {
+            ch.writeInbound(Unpooled.copiedBuffer("  b [1,2,3]", CharsetUtil.UTF_8));
+        } finally {
+            assertFalse(ch.finish());
+        }
 
         fail();
     }
@@ -127,7 +131,11 @@ public class JsonObjectDecoderTest {
         assertEquals("[1,2,3]", res.toString(CharsetUtil.UTF_8));
         res.release();
 
-        ch.writeInbound(Unpooled.copiedBuffer(" a {\"key\" : 10}", CharsetUtil.UTF_8));
+        try {
+            ch.writeInbound(Unpooled.copiedBuffer(" a {\"key\" : 10}", CharsetUtil.UTF_8));
+        } finally {
+            assertFalse(ch.finish());
+        }
 
         fail();
     }
@@ -135,7 +143,11 @@ public class JsonObjectDecoderTest {
     @Test (expected = TooLongFrameException.class)
     public void testMaxObjectLength() {
         EmbeddedChannel ch = new EmbeddedChannel(new JsonObjectDecoder(6));
-        ch.writeInbound(Unpooled.copiedBuffer("[2,4,5]", CharsetUtil.UTF_8));
+        try {
+            ch.writeInbound(Unpooled.copiedBuffer("[2,4,5]", CharsetUtil.UTF_8));
+        } finally {
+            assertFalse(ch.finish());
+        }
 
         fail();
     }
