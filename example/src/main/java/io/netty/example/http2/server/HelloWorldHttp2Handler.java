@@ -15,6 +15,8 @@
 
 package io.netty.example.http2.server;
 
+import static io.netty.buffer.Unpooled.copiedBuffer;
+import static io.netty.buffer.Unpooled.unreleasableBuffer;
 import static io.netty.example.http2.Http2ExampleUtil.UPGRADE_RESPONSE_HEADER;
 import static io.netty.util.internal.logging.InternalLogLevel.INFO;
 import io.netty.buffer.ByteBuf;
@@ -44,7 +46,7 @@ public class HelloWorldHttp2Handler extends AbstractHttp2ConnectionHandler {
 
     private static final Http2FrameLogger logger = new Http2FrameLogger(INFO,
             InternalLoggerFactory.getInstance(Http2ClientConnectionHandler.class));
-    static final byte[] RESPONSE_BYTES = "Hello World".getBytes(CharsetUtil.UTF_8);
+    static final ByteBuf RESPONSE_BYTES = unreleasableBuffer(copiedBuffer("Hello World", CharsetUtil.UTF_8));
 
     public HelloWorldHttp2Handler() {
         this(new DefaultHttp2Connection(true));
@@ -79,7 +81,7 @@ public class HelloWorldHttp2Handler extends AbstractHttp2ConnectionHandler {
     public void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
             boolean endOfStream, boolean endOfSegment) throws Http2Exception {
         if (endOfStream) {
-            sendResponse(ctx(), streamId);
+            sendResponse(ctx(), streamId, data.retain());
         }
     }
 
@@ -92,7 +94,7 @@ public class HelloWorldHttp2Handler extends AbstractHttp2ConnectionHandler {
             boolean exclusive, int padding, boolean endStream, boolean endSegment)
             throws Http2Exception {
         if (endStream) {
-            sendResponse(ctx(), streamId);
+            sendResponse(ctx(), streamId, RESPONSE_BYTES.duplicate());
         }
     }
 
@@ -105,14 +107,11 @@ public class HelloWorldHttp2Handler extends AbstractHttp2ConnectionHandler {
     /**
      * Sends a "Hello World" DATA frame to the client.
      */
-    private void sendResponse(ChannelHandlerContext ctx, int streamId) {
+    private void sendResponse(ChannelHandlerContext ctx, int streamId, ByteBuf payload) {
         // Send a frame for the response status
         Http2Headers headers = DefaultHttp2Headers.newBuilder().status("200").build();
         writeHeaders(ctx(), ctx().newPromise(), streamId, headers, 0, false, false);
 
-        // Send a data frame with the response message.
-        ByteBuf content = ctx.alloc().buffer();
-        content.writeBytes(RESPONSE_BYTES);
-        writeData(ctx(), ctx().newPromise(), streamId, content, 0, true, true, false);
+        writeData(ctx(), ctx().newPromise(), streamId, payload, 0, true, true, false);
     }
 }

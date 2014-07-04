@@ -15,6 +15,7 @@
 package io.netty.example.http2.client;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelOption;
@@ -27,6 +28,7 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http2.Http2OrHttpChooser.SelectedProtocol;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty.util.CharsetUtil;
 
 import java.util.Arrays;
 
@@ -76,8 +78,9 @@ public final class Http2Client {
             Http2ClientConnectionHandler http2ConnectionHandler = initializer.connectionHandler();
             http2ConnectionHandler.awaitInitialization();
 
-            // Create a simple GET request with just headers.
-            FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, "/whatever");
+            // Create a simple POST request with just headers.
+            FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, POST, "/whatever",
+                    Unpooled.copiedBuffer("sample data".getBytes(CharsetUtil.UTF_8)));
             request.headers().add(HttpHeaders.Names.HOST, HOST + ':' + PORT);
 
             // Send the request to the server.

@@ -42,7 +42,7 @@ public class HelloWorldHttp1Handler extends SimpleChannelInboundHandler<HttpRequ
         boolean keepAlive = HttpHeaderUtil.isKeepAlive(req);
 
         ByteBuf content = ctx.alloc().buffer();
-        content.writeBytes(HelloWorldHttp2Handler.RESPONSE_BYTES);
+        content.writeBytes(HelloWorldHttp2Handler.RESPONSE_BYTES.duplicate());
 
         FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, content);
         response.headers().set(CONTENT_TYPE, "text/plain; charset=UTF-8");
