@@ -108,6 +108,12 @@
       <artifactId>netty-transport-rxtx</artifactId>
       <version>${project.version}</version>
     </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-transport-native-epoll</artifactId>
+      <version>${project.version}</version>
+      <classifier>${os.detected.classifier} </classifier>
+    </dependency>
   </dependencies>
 
   <build>
@@ -130,6 +136,13 @@
         </configuration>
       </plugin>
     </plugins>
+    <extensions>
+      <extension>
+        <groupId>kr.motd.maven</groupId>
+        <artifactId>os-maven-plugin</artifactId>
+        <version>1.2.3.Final</version>
+      </extension>
+    </extensions>
   </build>
 </project>
 
