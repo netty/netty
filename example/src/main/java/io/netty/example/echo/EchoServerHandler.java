@@ -27,7 +27,7 @@ public class EchoServerHandler extends ChannelHandlerAdapter {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
-        ctx.write(msg);
+        ctx.write(msg, ctx.voidPromise());
     }
 
     @Override
