@@ -15,9 +15,12 @@
  */
 package io.netty.handler.codec.compression;
 
+/**
+ * Random numbers for decompress Bzip2 blocks.
+ */
 final class Bzip2Rand {
     /**
-     * The BZip2 specification originally included the optional addition of a slight pseudo-random
+     * The Bzip2 specification originally included the optional addition of a slight pseudo-random
      * perturbation to the input data, in order to work around the block sorting algorithm's non-
      * optimal performance on some types of input. The current mainline bzip2 does not require this
      * and will not create randomised blocks, but compatibility is still required for old data (and
