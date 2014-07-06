@@ -19,6 +19,19 @@ import io.netty.buffer.ByteBuf;
 
 import static io.netty.handler.codec.compression.Bzip2Constants.*;
 
+/**
+ * Reads and decompresses a single Bzip2 block.<br><br>
+ *
+ * Block decoding consists of the following stages:<br>
+ * 1. Read block header<br>
+ * 2. Read Huffman tables<br>
+ * 3. Read and decode Huffman encoded data - {@link #decodeHuffmanData(Bzip2HuffmanStageDecoder, ByteBuf)}<br>
+ * 4. Run-Length Decoding[2] - {@link #decodeHuffmanData(Bzip2HuffmanStageDecoder, ByteBuf)}<br>
+ * 5. Inverse Move To Front Transform - {@link #decodeHuffmanData(Bzip2HuffmanStageDecoder, ByteBuf)}<br>
+ * 6. Inverse Burrows Wheeler Transform - {@link #initialiseInverseBWT()}<br>
+ * 7. Run-Length Decoding[1] - {@link #read()}<br>
+ * 8. Optional Block De-Randomisation - {@link #read()} (through {@link #decodeNextBWTByte()})
+ */
 final class Bzip2BlockDecompressor {
     /**
      * Calculates the block CRC from the fully decoded bytes of the block.

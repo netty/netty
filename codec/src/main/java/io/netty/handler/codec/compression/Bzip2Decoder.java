@@ -32,7 +32,7 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
     /**
      * Current state of stream.
      */
-    enum State {
+    private enum State {
         INIT,
         INIT_BLOCK,
         INIT_BLOCK_PARAMS,
@@ -48,12 +48,17 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
     private State currentState = State.INIT;
 
     /**
+     * A reader that provides bit-level reads.
+     */
+    private final Bzip2BitReader reader = new Bzip2BitReader();
+
+    /**
      * The decompressor for the current block.
      */
     private Bzip2BlockDecompressor blockDecompressor;
 
     /**
-     * BZip2 Huffman coding stage.
+     * Bzip2 Huffman coding stage.
      */
     private Bzip2HuffmanStageDecoder huffmanStageDecoder;
 
@@ -71,17 +76,6 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
      * The merged CRC of all blocks decompressed so far.
      */
     private int streamCRC;
-
-    // For bitwise access
-    /**
-     * A buffer of bits read from the input stream that have not yet been returned.
-     */
-    private int bitBuffer;
-
-    /**
-     * The number of bits currently buffered in {@link #bitBuffer}.
-     */
-    private int bitCount;
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
@@ -112,11 +106,12 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
                     if (in.readableBytes() < 10) {
                         return;
                     }
+                    Bzip2BitReader reader = this.reader;
                     // Get the block magic bytes.
-                    final long magic = (long) readBits(in, 24) << 24 | readBits(in, 24);
+                    final long magic = (long) reader.readBits(in, 24) << 24 | reader.readBits(in, 24);
                     if (magic == END_OF_STREAM_MAGIC) {
                         // End of stream was reached. Check the combined CRC.
-                        final int storedCombinedCRC = readInt(in);
+                        final int storedCombinedCRC = reader.readInt(in);
                         if (storedCombinedCRC != streamCRC) {
                             throw new DecompressionException("stream CRC error");
                         }
@@ -126,14 +121,15 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
                     if (magic != COMPRESSED_MAGIC) {
                         throw new DecompressionException("bad block header");
                     }
-                    blockCRC = readInt(in);
+                    blockCRC = reader.readInt(in);
                     currentState = State.INIT_BLOCK_PARAMS;
                 case INIT_BLOCK_PARAMS:
                     if (in.readableBytes() < 4) {
                         return;
                     }
-                    final boolean blockRandomised = readBoolean(in);
-                    final int bwtStartPointer = readBits(in, 24);
+                    reader = this.reader;
+                    final boolean blockRandomised = reader.readBoolean(in);
+                    final int bwtStartPointer = reader.readBits(in, 24);
 
                     blockDecompressor = new Bzip2BlockDecompressor(this.blockSize, blockCRC,
                                                                     blockRandomised, bwtStartPointer);
@@ -142,7 +138,8 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
                     if (in.readableBytes() < 2) {
                         return;
                     }
-                    blockDecompressor.huffmanInUse16 = readBits(in, 16);
+                    reader = this.reader;
+                    blockDecompressor.huffmanInUse16 = reader.readBits(in, 16);
                     currentState = State.RECEIVE_HUFFMAN_USED_BITMAPS;
                 case RECEIVE_HUFFMAN_USED_BITMAPS:
                     Bzip2BlockDecompressor blockDecompressor = this.blockDecompressor;
@@ -153,13 +150,14 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
                     if (in.readableBytes() < bitNumber * 16 / 8 + 1) {
                         return;
                     }
+                    reader = this.reader;
 
                     int huffmanSymbolCount = 0;
                     if (bitNumber > 0) {
                         for (int i = 0; i < 16; i++) {
                             if ((inUse16 & 1 << 15 >>> i) != 0) {
                                 for (int j = 0, k = i << 4; j < 16; j++, k++) {
-                                    if (readBoolean(in)) {
+                                    if (reader.readBoolean(in)) {
                                         huffmanSymbolMap[huffmanSymbolCount++] = (byte) k;
                                     }
                                 }
@@ -168,7 +166,7 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
                     }
                     blockDecompressor.huffmanEndOfBlockSymbol = huffmanSymbolCount + 1;
 
-                    int totalTables = readBits(in, 3);
+                    int totalTables = reader.readBits(in, 3);
                     if (totalTables < HUFFMAN_MINIMUM_TABLES || totalTables > HUFFMAN_MAXIMUM_TABLES) {
                         throw new DecompressionException("incorrect huffman groups number");
                     }
@@ -176,13 +174,14 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
                     if (alphaSize > HUFFMAN_MAX_ALPHABET_SIZE) {
                         throw new DecompressionException("incorrect alphabet size");
                     }
-                    huffmanStageDecoder = new Bzip2HuffmanStageDecoder(this, totalTables, alphaSize);
+                    huffmanStageDecoder = new Bzip2HuffmanStageDecoder(reader, totalTables, alphaSize);
                     currentState = State.RECEIVE_SELECTORS_NUMBER;
                 case RECEIVE_SELECTORS_NUMBER:
                     if (in.readableBytes() < 2) {
                         return;
                     }
-                    int totalSelectors = readBits(in, 15);
+                    reader = this.reader;
+                    int totalSelectors = reader.readBits(in, 15);
                     if (totalSelectors < 1 || totalSelectors > MAX_SELECTORS) {
                         throw new DecompressionException("incorrect selectors number");
                     }
@@ -194,6 +193,7 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
                     byte[] selectors = huffmanStageDecoder.selectors;
                     totalSelectors = selectors.length;
                     final Bzip2MoveToFrontTable tableMtf = huffmanStageDecoder.tableMTF;
+                    reader = this.reader;
 
                     int currSelector;
                     // Get zero-terminated bit runs (0..62) of MTF'ed Huffman table. length = 1..6
@@ -205,7 +205,7 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
                             return;
                         }
                         int index = 0;
-                        while (readBoolean(in)) {
+                        while (reader.readBoolean(in)) {
                             index++;
                         }
                         selectors[currSelector] = tableMtf.indexToFront(index);
@@ -217,6 +217,7 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
                     totalTables = huffmanStageDecoder.totalTables;
                     final byte[][] codeLength = huffmanStageDecoder.tableCodeLengths;
                     alphaSize = huffmanStageDecoder.alphabetSize;
+                    reader = this.reader;
 
                     /* Now the coding tables */
                     int currGroup;
@@ -231,23 +232,24 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
                             break;
                         }
                         if (currLength < 0) {
-                            currLength = readBits(in, 5);
+                            currLength = reader.readBits(in, 5);
                         }
                         for (currAlpha = huffmanStageDecoder.currentAlpha; currAlpha < alphaSize; currAlpha++) {
                             // delta_bit_length: 1..40
-                            if (!hasBit(in)) {
+                            if (!reader.hasBit(in)) {
                                 saveStateAndReturn = true;
                                 break loop;
                             }
-                            while (modifyLength || readBoolean(in)) {  // 0=>next symbol; 1=>alter length
-                                if (!hasBit(in)) {
+                            while (modifyLength || reader.readBoolean(in)) {  // 0=>next symbol; 1=>alter length
+                                if (!reader.hasBit(in)) {
                                     modifyLength = true;
                                     saveStateAndReturn = true;
                                     break loop;
                                 }
-                                currLength += readBoolean(in) ? -1 : 1; // 1=>decrement length;  0=>increment length
+                                // 1=>decrement length;  0=>increment length
+                                currLength += reader.readBoolean(in) ? -1 : 1;
                                 modifyLength = false;
-                                if (!hasBit(in)) {
+                                if (!reader.hasBit(in)) {
                                     saveStateAndReturn = true;
                                     break loop;
                                 }
@@ -313,35 +315,5 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
      */
     public boolean isClosed() {
         return currentState == State.EOF;
-    }
-
-    int readBits(ByteBuf in, final int n) {
-        int bitCount = this.bitCount;
-        int bitBuffer = this.bitBuffer;
-
-        if (bitCount < n) {
-            do {
-                int uByte = in.readUnsignedByte();
-                bitBuffer = bitBuffer << 8 | uByte;
-                bitCount += 8;
-            } while (bitCount < n);
-
-            this.bitBuffer = bitBuffer;
-        }
-
-        this.bitCount = bitCount -= n;
-        return bitBuffer >>> bitCount & (1 << n) - 1;
-    }
-
-    private boolean readBoolean(ByteBuf in) {
-        return readBits(in, 1) != 0;
-    }
-
-    private int readInt(ByteBuf in) {
-        return readBits(in, 16) << 16 | readBits(in, 16);
-    }
-
-    private boolean hasBit(ByteBuf in) {
-        return bitCount > 0 || in.isReadable();
     }
 }
