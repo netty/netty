@@ -15,16 +15,21 @@
 
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.verify;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http2.Http2InboundFlowController.FrameWriter;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-
-import static io.netty.handler.codec.http2.Http2CodecUtil.*;
-import static org.mockito.Mockito.*;
 
 /**
  * Tests for {@link DefaultHttp2InboundFlowController}.
@@ -46,7 +51,7 @@ public class DefaultHttp2InboundFlowControllerTest {
     public void setup() throws Http2Exception {
         MockitoAnnotations.initMocks(this);
 
-        connection = new DefaultHttp2Connection(false, false);
+        connection = new DefaultHttp2Connection(false);
         controller = new DefaultHttp2InboundFlowController(connection);
 
         connection.local().createStream(STREAM_ID, false);
@@ -60,14 +65,14 @@ public class DefaultHttp2InboundFlowControllerTest {
 
     @Test(expected = Http2Exception.class)
     public void connectionFlowControlExceededShouldThrow() throws Http2Exception {
-        applyFlowControl(DEFAULT_FLOW_CONTROL_WINDOW_SIZE + 1, true);
+        applyFlowControl(DEFAULT_WINDOW_SIZE + 1, true);
     }
 
     @Test
     public void halfWindowRemainingShouldUpdateConnectionWindow() throws Http2Exception {
-        int dataSize = DEFAULT_FLOW_CONTROL_WINDOW_SIZE / 2 + 1;
-        int newWindow = DEFAULT_FLOW_CONTROL_WINDOW_SIZE - dataSize;
-        int windowDelta = DEFAULT_FLOW_CONTROL_WINDOW_SIZE - newWindow;
+        int dataSize = DEFAULT_WINDOW_SIZE / 2 + 1;
+        int newWindow = DEFAULT_WINDOW_SIZE - dataSize;
+        int windowDelta = DEFAULT_WINDOW_SIZE - newWindow;
 
         // Set end-of-stream on the frame, so no window update will be sent for the stream.
         applyFlowControl(dataSize, true);
@@ -76,8 +81,8 @@ public class DefaultHttp2InboundFlowControllerTest {
 
     @Test
     public void halfWindowRemainingShouldUpdateAllWindows() throws Http2Exception {
-        int dataSize = DEFAULT_FLOW_CONTROL_WINDOW_SIZE / 2 + 1;
-        int initialWindowSize = DEFAULT_FLOW_CONTROL_WINDOW_SIZE;
+        int dataSize = DEFAULT_WINDOW_SIZE / 2 + 1;
+        int initialWindowSize = DEFAULT_WINDOW_SIZE;
         int windowDelta = getWindowDelta(initialWindowSize, initialWindowSize, dataSize);
 
         // Don't set end-of-stream so we'll get a window update for the stream as well.
@@ -89,7 +94,7 @@ public class DefaultHttp2InboundFlowControllerTest {
     @Test
     public void initialWindowUpdateShouldAllowMoreFrames() throws Http2Exception {
         // Send a frame that takes up the entire window.
-        int initialWindowSize = DEFAULT_FLOW_CONTROL_WINDOW_SIZE;
+        int initialWindowSize = DEFAULT_WINDOW_SIZE;
         applyFlowControl(initialWindowSize, false);
 
         // Update the initial window size to allow another frame.
@@ -113,8 +118,7 @@ public class DefaultHttp2InboundFlowControllerTest {
 
     private void applyFlowControl(int dataSize, boolean endOfStream) throws Http2Exception {
         ByteBuf buf = dummyData(dataSize);
-        controller.applyInboundFlowControl(STREAM_ID, buf, 0, endOfStream, false,
-                false, frameWriter);
+        controller.applyInboundFlowControl(STREAM_ID, buf, 0, endOfStream, false, frameWriter);
         buf.release();
     }
 

@@ -16,7 +16,7 @@
 package io.netty.handler.codec.http2;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
-import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_FLOW_CONTROL_WINDOW_SIZE;
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 import static io.netty.handler.codec.http2.Http2Exception.flowControlError;
 import static io.netty.handler.codec.http2.Http2Exception.protocolError;
 import io.netty.buffer.ByteBuf;
@@ -27,7 +27,7 @@ import io.netty.buffer.ByteBuf;
 public class DefaultHttp2InboundFlowController implements Http2InboundFlowController {
 
     private final Http2Connection connection;
-    private int initialWindowSize = DEFAULT_FLOW_CONTROL_WINDOW_SIZE;
+    private int initialWindowSize = DEFAULT_WINDOW_SIZE;
 
     public DefaultHttp2InboundFlowController(Http2Connection connection) {
         if (connection == null) {
@@ -66,7 +66,7 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
 
     @Override
     public void applyInboundFlowControl(int streamId, ByteBuf data, int padding,
-            boolean endOfStream, boolean endOfSegment, boolean compressed, FrameWriter frameWriter)
+            boolean endOfStream, boolean endOfSegment, FrameWriter frameWriter)
             throws Http2Exception {
         int dataLength = data.readableBytes();
         applyConnectionFlowControl(dataLength, frameWriter);

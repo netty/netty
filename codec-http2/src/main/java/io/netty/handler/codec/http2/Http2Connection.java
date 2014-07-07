@@ -178,16 +178,6 @@ public interface Http2Connection {
         void maxStreams(int maxStreams);
 
         /**
-         * Indicates whether or not this endpoint allows compression.
-         */
-        boolean allowCompressedData();
-
-        /**
-         * Sets whether or not this endpoint allows compression.
-         */
-        void allowCompressedData(boolean allow);
-
-        /**
          * Gets the ID of the stream last successfully created by this endpoint.
          */
         int lastStreamCreated();

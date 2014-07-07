@@ -15,6 +15,34 @@
 
 package io.netty.handler.codec.http2;
 
+import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
+import static io.netty.buffer.Unpooled.copiedBuffer;
+import static io.netty.buffer.Unpooled.wrappedBuffer;
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
+import static io.netty.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuf;
+import static io.netty.handler.codec.http2.Http2CodecUtil.emptyPingBuf;
+import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
+import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
+import static io.netty.handler.codec.http2.Http2Exception.protocolError;
+import static io.netty.handler.codec.http2.Http2Headers.EMPTY_HEADERS;
+import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_LOCAL;
+import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
+import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_LOCAL;
+import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
+import static io.netty.util.CharsetUtil.UTF_8;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Matchers.anyLong;
+import static org.mockito.Matchers.anyShort;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
@@ -22,24 +50,15 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
+
+import java.util.Collections;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-
-import java.util.Collections;
-
-import static io.netty.buffer.Unpooled.*;
-import static io.netty.handler.codec.http2.Http2CodecUtil.*;
-import static io.netty.handler.codec.http2.Http2Error.*;
-import static io.netty.handler.codec.http2.Http2Exception.*;
-import static io.netty.handler.codec.http2.Http2Headers.*;
-import static io.netty.handler.codec.http2.Http2Stream.State.*;
-import static io.netty.util.CharsetUtil.*;
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
 
 /**
  * Tests for {@link DelegatingHttp2ConnectionHandlerTest} and its base class
@@ -123,16 +142,14 @@ public class DelegatingHttp2ConnectionHandlerTest {
 
         // Simulate activation of the handler to force writing the initial settings.
         Http2Settings settings = new Http2Settings();
-        settings.allowCompressedData(true);
         settings.initialWindowSize(10);
         settings.pushEnabled(true);
         settings.maxConcurrentStreams(100);
-        settings.maxHeaderTableSize(200);
-        when(local.allowCompressedData()).thenReturn(true);
+        settings.headerTableSize(200);
         when(inboundFlow.initialInboundWindowSize()).thenReturn(10);
         when(local.allowPushTo()).thenReturn(true);
         when(remote.maxStreams()).thenReturn(100);
-        when(reader.maxHeaderTableSize()).thenReturn(200);
+        when(reader.maxHeaderTableSize()).thenReturn(200L);
         handler.handlerAdded(ctx);
         verify(writer).writeSettings(eq(ctx), eq(promise), eq(settings));
 
@@ -229,40 +246,23 @@ public class DelegatingHttp2ConnectionHandlerTest {
     @Test
     public void dataReadAfterGoAwayShouldApplyFlowControl() throws Exception {
         when(remote.isGoAwayReceived()).thenReturn(true);
-        decode().onDataRead(ctx, STREAM_ID, dummyData(), 10, true, true, true);
+        decode().onDataRead(ctx, STREAM_ID, dummyData(), 10, true, true);
         verify(inboundFlow).applyInboundFlowControl(eq(STREAM_ID), eq(dummyData()), eq(10),
-                eq(true), eq(true), eq(true), any(Http2InboundFlowController.FrameWriter.class));
+                eq(true), eq(true), any(Http2InboundFlowController.FrameWriter.class));
 
         // Verify that the event was absorbed and not propagated to the oberver.
-        verify(observer, never()).onDataRead(eq(ctx), anyInt(), any(ByteBuf.class), anyInt(), anyBoolean(),
+        verify(observer, never()).onDataRead(eq(ctx), anyInt(), any(ByteBuf.class), anyInt(),
                 anyBoolean(), anyBoolean());
     }
 
     @Test
     public void dataReadWithEndOfStreamShouldCloseRemoteSide() throws Exception {
-        decode().onDataRead(ctx, STREAM_ID, dummyData(), 10, true, false, false);
+        decode().onDataRead(ctx, STREAM_ID, dummyData(), 10, true, false);
         verify(inboundFlow).applyInboundFlowControl(eq(STREAM_ID), eq(dummyData()), eq(10),
-                eq(true), eq(false), eq(false), any(Http2InboundFlowController.FrameWriter.class));
+                eq(true), eq(false), any(Http2InboundFlowController.FrameWriter.class));
         verify(stream).closeRemoteSide();
         verify(observer).onDataRead(eq(ctx), eq(STREAM_ID), eq(dummyData()), eq(10), eq(true),
-                eq(false), eq(false));
-    }
-
-    @Test
-    public void dataReadWithShouldAllowCompression() throws Exception {
-        when(local.allowCompressedData()).thenReturn(true);
-        decode().onDataRead(ctx, STREAM_ID, dummyData(), 10, false, false, true);
-        verify(inboundFlow).applyInboundFlowControl(eq(STREAM_ID), eq(dummyData()), eq(10),
-                eq(false), eq(false), eq(true), any(Http2InboundFlowController.FrameWriter.class));
-        verify(stream, never()).closeRemoteSide();
-        verify(observer).onDataRead(eq(ctx), eq(STREAM_ID), eq(dummyData()), eq(10), eq(false),
-                eq(false), eq(true));
-    }
-
-    @Test(expected = Http2Exception.class)
-    public void dataReadShouldDisallowCompression() throws Exception {
-        when(local.allowCompressedData()).thenReturn(false);
-        decode().onDataRead(ctx, STREAM_ID, dummyData(), 10, false, false, true);
+                eq(false));
     }
 
     @Test
@@ -421,14 +421,12 @@ public class DelegatingHttp2ConnectionHandlerTest {
         settings.pushEnabled(true);
         settings.initialWindowSize(123);
         settings.maxConcurrentStreams(456);
-        settings.allowCompressedData(true);
-        settings.maxHeaderTableSize(789);
+        settings.headerTableSize(789);
         decode().onSettingsRead(ctx, settings);
         verify(remote).allowPushTo(true);
         verify(outboundFlow).initialOutboundWindowSize(123);
         verify(local).maxStreams(456);
-        assertTrue(handler.settings().allowCompressedData());
-        verify(writer).maxHeaderTableSize(789);
+        verify(writer).maxHeaderTableSize(789L);
         // Take into account the time this was called during setup().
         verify(writer, times(2)).writeSettingsAck(eq(ctx), eq(promise));
         verify(observer).onSettingsRead(eq(ctx), eq(settings));
@@ -441,42 +439,11 @@ public class DelegatingHttp2ConnectionHandlerTest {
         verify(observer).onGoAwayRead(eq(ctx), eq(1), eq(2L), eq(EMPTY_BUFFER));
     }
 
-    @Test(expected = Http2Exception.class)
-    public void serverAltSvcReadShouldThrow() throws Exception {
-        when(connection.isServer()).thenReturn(true);
-        decode().onAltSvcRead(ctx, STREAM_ID, 1, 2, EMPTY_BUFFER, "www.example.com", null);
-    }
-
-    @Test
-    public void clientAltSvcReadShouldNotifyObserver() throws Exception {
-        String host = "www.host.com";
-        String origin = "www.origin.com";
-        when(connection.isServer()).thenReturn(false);
-        decode().onAltSvcRead(ctx, STREAM_ID, 1, 2, EMPTY_BUFFER, host, origin);
-        verify(observer).onAltSvcRead(eq(ctx), eq(STREAM_ID), eq(1L), eq(2), eq(EMPTY_BUFFER),
-                eq(host), eq(origin));
-    }
-
     @Test
     public void dataWriteAfterGoAwayShouldFail() throws Exception {
         when(connection.isGoAway()).thenReturn(true);
         ChannelFuture future = handler.writeData(ctx, promise, STREAM_ID, dummyData(), 0, false, false, false);
         assertTrue(future.awaitUninterruptibly().cause() instanceof Http2Exception);
-    }
-
-    @Test
-    public void dataWriteShouldDisallowCompression() throws Exception {
-        when(local.allowCompressedData()).thenReturn(false);
-        ChannelFuture future = handler.writeData(ctx, promise, STREAM_ID, dummyData(), 0, false, false, true);
-        assertTrue(future.awaitUninterruptibly().cause() instanceof Http2Exception);
-    }
-
-    @Test
-    public void dataWriteShouldAllowCompression() throws Exception {
-        when(remote.allowCompressedData()).thenReturn(true);
-        handler.writeData(ctx, promise, STREAM_ID, dummyData(), 0, false, false, true);
-        verify(outboundFlow).sendFlowControlled(eq(STREAM_ID), eq(dummyData()), eq(0), eq(false),
-                eq(false), eq(true), any(Http2OutboundFlowController.FrameWriter.class));
     }
 
     @Test
@@ -600,44 +567,23 @@ public class DelegatingHttp2ConnectionHandlerTest {
     @Test
     public void settingsWriteShouldNotUpdateSettings() throws Exception {
         Http2Settings settings = new Http2Settings();
-        settings.allowCompressedData(false);
         settings.initialWindowSize(100);
         settings.pushEnabled(false);
         settings.maxConcurrentStreams(1000);
-        settings.maxHeaderTableSize(2000);
+        settings.headerTableSize(2000);
         handler.writeSettings(ctx, promise, settings);
         verify(writer).writeSettings(eq(ctx), eq(promise), eq(settings));
         // Verify that application of local settings must not be done when it is dispatched.
-        verify(local, never()).allowCompressedData(eq(false));
         verify(inboundFlow, never()).initialInboundWindowSize(eq(100));
         verify(local, never()).allowPushTo(eq(false));
         verify(remote, never()).maxStreams(eq(1000));
-        verify(reader, never()).maxHeaderTableSize(eq(2000));
+        verify(reader, never()).maxHeaderTableSize(eq(2000L));
         // Verify that settings values are applied on the reception of SETTINGS ACK
         decode().onSettingsAckRead(ctx);
-        verify(local).allowCompressedData(eq(false));
         verify(inboundFlow).initialInboundWindowSize(eq(100));
         verify(local).allowPushTo(eq(false));
         verify(remote).maxStreams(eq(1000));
-        verify(reader).maxHeaderTableSize(eq(2000));
-    }
-
-    @Test
-    public void clientWriteAltSvcShouldThrow() throws Exception {
-        when(connection.isServer()).thenReturn(false);
-        ChannelFuture future = handler.writeAltSvc(ctx, promise, STREAM_ID, 1, 2, EMPTY_BUFFER,
-                "www.example.com", null);
-        assertTrue(future.awaitUninterruptibly().cause() instanceof Http2Exception);
-    }
-
-    @Test
-    public void serverWriteAltSvcShouldSucceed() throws Exception {
-        String host = "www.host.com";
-        String origin = "www.origin.com";
-        when(connection.isServer()).thenReturn(true);
-        handler.writeAltSvc(ctx, promise, STREAM_ID, 1, 2, EMPTY_BUFFER, host, origin);
-        verify(writer).writeAltSvc(eq(ctx), eq(promise), eq(STREAM_ID), eq(1L), eq(2),
-                eq(EMPTY_BUFFER), eq(host), eq(origin));
+        verify(reader).maxHeaderTableSize(eq(2000L));
     }
 
     private static ByteBuf dummyData() {

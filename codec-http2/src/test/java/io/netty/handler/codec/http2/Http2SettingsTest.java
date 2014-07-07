@@ -16,10 +16,8 @@
 package io.netty.handler.codec.http2;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-
-import java.util.NoSuchElementException;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -37,105 +35,23 @@ public class Http2SettingsTest {
     }
 
     @Test
-    public void allValuesShouldBeNotSet() {
-        assertFalse(settings.hasAllowCompressedData());
-        assertFalse(settings.hasMaxHeaderTableSize());
-        assertFalse(settings.hasInitialWindowSize());
-        assertFalse(settings.hasMaxConcurrentStreams());
-        assertFalse(settings.hasPushEnabled());
+    public void standardSettingsShouldBeNotSet() {
+        assertEquals(0, settings.size());
+        assertNull(settings.headerTableSize());
+        assertNull(settings.initialWindowSize());
+        assertNull(settings.maxConcurrentStreams());
+        assertNull(settings.pushEnabled());
     }
 
-    @Test(expected = NoSuchElementException.class)
-    public void unsetAllowCompressedDataShouldThrow() {
-        // Set everything else.
-        settings.maxHeaderTableSize(1);
+    @Test
+    public void standardSettingsShouldBeSet() {
         settings.initialWindowSize(1);
-        settings.maxConcurrentStreams(1);
+        settings.maxConcurrentStreams(2);
         settings.pushEnabled(true);
-
-        settings.allowCompressedData();
-    }
-
-    @Test(expected = NoSuchElementException.class)
-    public void unsetHeaderTableSizeShouldThrow() {
-        // Set everything else.
-        settings.allowCompressedData(true);
-        settings.initialWindowSize(1);
-        settings.maxConcurrentStreams(1);
-        settings.pushEnabled(true);
-
-        settings.maxHeaderTableSize();
-    }
-
-    @Test(expected = NoSuchElementException.class)
-    public void unsetInitialWindowSizeShouldThrow() {
-        // Set everything else.
-        settings.allowCompressedData(true);
-        settings.maxHeaderTableSize(1);
-        settings.maxConcurrentStreams(1);
-        settings.pushEnabled(true);
-
-        settings.initialWindowSize();
-    }
-
-    @Test(expected = NoSuchElementException.class)
-    public void unsetMaxConcurrentStreamsShouldThrow() {
-        // Set everything else.
-        settings.allowCompressedData(true);
-        settings.maxHeaderTableSize(1);
-        settings.initialWindowSize(1);
-        settings.pushEnabled(true);
-
-        settings.maxConcurrentStreams();
-    }
-
-    @Test(expected = NoSuchElementException.class)
-    public void unsetPushEnabledShouldThrow() {
-        // Set everything else.
-        settings.allowCompressedData(true);
-        settings.maxHeaderTableSize(1);
-        settings.initialWindowSize(1);
-        settings.maxConcurrentStreams(1);
-
-        settings.pushEnabled();
-    }
-
-    @Test
-    public void allowCompressedDataShouldBeSet() {
-        settings.allowCompressedData(true);
-        assertTrue(settings.hasAllowCompressedData());
-        assertTrue(settings.allowCompressedData());
-        settings.allowCompressedData(false);
-        assertFalse(settings.allowCompressedData());
-    }
-
-    @Test
-    public void headerTableSizeShouldBeSet() {
-        settings.maxHeaderTableSize(123);
-        assertTrue(settings.hasMaxHeaderTableSize());
-        assertEquals(123, settings.maxHeaderTableSize());
-    }
-
-    @Test
-    public void initialWindowSizeShouldBeSet() {
-        settings.initialWindowSize(123);
-        assertTrue(settings.hasInitialWindowSize());
-        assertEquals(123, settings.initialWindowSize());
-    }
-
-    @Test
-    public void maxConcurrentStreamsShouldBeSet() {
-        settings.maxConcurrentStreams(123);
-        assertTrue(settings.hasMaxConcurrentStreams());
-        assertEquals(123, settings.maxConcurrentStreams());
-    }
-
-    @Test
-    public void pushEnabledShouldBeSet() {
-        settings.pushEnabled(true);
-        assertTrue(settings.hasPushEnabled());
+        settings.headerTableSize(3);
+        assertEquals(1, (int) settings.initialWindowSize());
+        assertEquals(2L, (long) settings.maxConcurrentStreams());
         assertTrue(settings.pushEnabled());
-        settings.pushEnabled(false);
-        assertFalse(settings.pushEnabled());
+        assertEquals(3L, (long) settings.headerTableSize());
     }
 }

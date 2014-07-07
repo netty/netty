@@ -38,12 +38,6 @@ public class DelegatingHttp2ConnectionHandler extends AbstractHttp2ConnectionHan
         this.observer = observer;
     }
 
-    public DelegatingHttp2ConnectionHandler(boolean server, boolean allowCompression,
-            Http2FrameObserver observer) {
-        super(server, allowCompression);
-        this.observer = observer;
-    }
-
     public DelegatingHttp2ConnectionHandler(Http2Connection connection,
             Http2FrameReader frameReader, Http2FrameWriter frameWriter,
             Http2InboundFlowController inboundFlow, Http2OutboundFlowController outboundFlow,
@@ -108,15 +102,9 @@ public class DelegatingHttp2ConnectionHandler extends AbstractHttp2ConnectionHan
     }
 
     @Override
-    public ChannelFuture writeAltSvc(ChannelHandlerContext ctx, ChannelPromise promise,
-            int streamId, long maxAge, int port, ByteBuf protocolId, String host, String origin) {
-        return super.writeAltSvc(ctx, promise, streamId, maxAge, port, protocolId, host, origin);
-    }
-
-    @Override
     public void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
-            boolean endOfStream, boolean endOfSegment, boolean compressed) throws Http2Exception {
-        observer.onDataRead(ctx, streamId, data, padding, endOfStream, endOfSegment, compressed);
+            boolean endOfStream, boolean endOfSegment) throws Http2Exception {
+        observer.onDataRead(ctx, streamId, data, padding, endOfStream, endOfSegment);
     }
 
     @Override
@@ -178,13 +166,8 @@ public class DelegatingHttp2ConnectionHandler extends AbstractHttp2ConnectionHan
     }
 
     @Override
-    public void onAltSvcRead(ChannelHandlerContext ctx, int streamId, long maxAge, int port,
-            ByteBuf protocolId, String host, String origin) throws Http2Exception {
-        observer.onAltSvcRead(ctx, streamId, maxAge, port, protocolId, host, origin);
-    }
-
-    @Override
-    public void onBlockedRead(ChannelHandlerContext ctx, int streamId) throws Http2Exception {
-        observer.onBlockedRead(ctx, streamId);
+    public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
+            ByteBuf payload) {
+        observer.onUnknownFrame(ctx, frameType, streamId, flags, payload);
     }
 }

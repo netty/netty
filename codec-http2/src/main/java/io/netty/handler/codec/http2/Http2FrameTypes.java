@@ -16,33 +16,20 @@
 package io.netty.handler.codec.http2;
 
 /**
- * All error codes identified by the HTTP/2 spec.
+ * Registry of all standard frame types defined by the HTTP/2 specification.
  */
-public enum Http2Error {
-    NO_ERROR(0x0),
-    PROTOCOL_ERROR(0x1),
-    INTERNAL_ERROR(0x2),
-    FLOW_CONTROL_ERROR(0x3),
-    SETTINGS_TIMEOUT(0x4),
-    STREAM_CLOSED(0x5),
-    FRAME_SIZE_ERROR(0x6),
-    REFUSED_STREAM(0x7),
-    CANCEL(0x8),
-    COMPRESSION_ERROR(0x9),
-    CONNECT_ERROR(0xA),
-    ENHANCE_YOUR_CALM(0xB),
-    INADEQUATE_SECURITY(0xC);
+public final class Http2FrameTypes {
+    public static final byte DATA = 0x0;
+    public static final byte HEADERS = 0x1;
+    public static final byte PRIORITY = 0x2;
+    public static final byte RST_STREAM = 0x3;
+    public static final byte SETTINGS = 0x4;
+    public static final byte PUSH_PROMISE = 0x5;
+    public static final byte PING = 0x6;
+    public static final byte GO_AWAY = 0x7;
+    public static final byte WINDOW_UPDATE = 0x8;
+    public static final byte CONTINUATION = 0x9;
 
-    private final int code;
-
-    Http2Error(int code) {
-        this.code = code;
-    }
-
-    /**
-     * Gets the code for this error used on the wire.
-     */
-    public int code() {
-        return code;
+    private Http2FrameTypes() {
     }
 }

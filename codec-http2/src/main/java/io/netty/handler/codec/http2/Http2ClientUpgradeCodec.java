@@ -20,6 +20,7 @@ import io.netty.handler.codec.base64.Base64;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpClientUpgradeHandler;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.util.collection.IntObjectMap;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -103,8 +104,12 @@ public class Http2ClientUpgradeCodec implements HttpClientUpgradeHandler.Upgrade
             Http2Settings settings = connectionHandler.settings();
 
             // Serialize the payload of the SETTINGS frame.
-            buf = ctx.alloc().buffer(calcSettingsPayloadLength(settings));
-            writeSettingsPayload(settings, buf);
+            int payloadLength = SETTING_ENTRY_LENGTH * settings.size();
+            buf = ctx.alloc().buffer(payloadLength);
+            for (IntObjectMap.Entry<Long> entry : settings.entries()) {
+                writeUnsignedShort(entry.key(), buf);
+                writeUnsignedInt(entry.value(), buf);
+            }
 
             // Base64 encode the payload and then convert to a string for the header.
             encodedBuf = Base64.encode(buf, URL_SAFE);

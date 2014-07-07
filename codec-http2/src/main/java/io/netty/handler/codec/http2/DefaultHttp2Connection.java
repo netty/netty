@@ -45,39 +45,28 @@ public class DefaultHttp2Connection implements Http2Connection {
     private final Http2StreamRemovalPolicy removalPolicy;
 
     /**
-     * Creates a connection with compression disabled and an immediate stream removal policy.
+     * Creates a connection with an immediate stream removal policy.
      *
      * @param server whether or not this end-point is the server-side of the HTTP/2 connection.
      */
     public DefaultHttp2Connection(boolean server) {
-        this(server, false);
-    }
-
-    /**
-     * Creates a connection with an immediate stream removal policy.
-     *
-     * @param server whether or not this end-point is the server-side of the HTTP/2 connection.
-     * @param allowCompressedData if true, compressed frames are allowed from the remote end-point.
-     */
-    public DefaultHttp2Connection(boolean server, boolean allowCompressedData) {
-        this(server, allowCompressedData, immediateRemovalPolicy());
+        this(server, immediateRemovalPolicy());
     }
 
     /**
      * Creates a new connection with the given settings.
      *
      * @param server whether or not this end-point is the server-side of the HTTP/2 connection.
-     * @param allowCompressedData if true, compressed frames are allowed from the remote end-point.
      * @param removalPolicy the policy to be used for removal of closed stream.
      */
-    public DefaultHttp2Connection(boolean server, boolean allowCompressedData,
+    public DefaultHttp2Connection(boolean server,
             Http2StreamRemovalPolicy removalPolicy) {
         if (removalPolicy == null) {
             throw new NullPointerException("removalPolicy");
         }
         this.removalPolicy = removalPolicy;
-        localEndpoint = new DefaultEndpoint(server, allowCompressedData);
-        remoteEndpoint = new DefaultEndpoint(!server, false);
+        localEndpoint = new DefaultEndpoint(server);
+        remoteEndpoint = new DefaultEndpoint(!server);
 
         // Tell the removal policy how to remove a stream from this connection.
         removalPolicy.setAction(new Action() {
@@ -600,8 +589,7 @@ public class DefaultHttp2Connection implements Http2Connection {
         private int nextStreamId;
         private int lastStreamCreated;
         private int lastKnownStream = -1;
-        private boolean pushToAllowed;
-        private boolean allowCompressedData;
+        private boolean pushToAllowed = true;
 
         /**
          * The maximum number of active streams allowed to be created by this endpoint.
@@ -613,8 +601,7 @@ public class DefaultHttp2Connection implements Http2Connection {
          */
         private int numActiveStreams;
 
-        DefaultEndpoint(boolean server, boolean allowCompressedData) {
-            this.allowCompressedData = allowCompressedData;
+        DefaultEndpoint(boolean server) {
             this.server = server;
 
             // Determine the starting stream ID for this endpoint. Client-initiated streams
@@ -736,16 +723,6 @@ public class DefaultHttp2Connection implements Http2Connection {
         @Override
         public void maxStreams(int maxStreams) {
             this.maxStreams = maxStreams;
-        }
-
-        @Override
-        public boolean allowCompressedData() {
-            return allowCompressedData;
-        }
-
-        @Override
-        public void allowCompressedData(boolean allow) {
-            allowCompressedData = allow;
         }
 
         @Override

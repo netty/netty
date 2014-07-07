@@ -51,7 +51,7 @@ public class DefaultHttp2OutboundFlowControllerTest {
     public void setup() throws Http2Exception {
         MockitoAnnotations.initMocks(this);
 
-        connection = new DefaultHttp2Connection(false, false);
+        connection = new DefaultHttp2Connection(false);
         controller = new DefaultHttp2OutboundFlowController(connection);
 
         connection.local().createStream(STREAM_A, false);
@@ -142,7 +142,7 @@ public class DefaultHttp2OutboundFlowControllerTest {
     public void connectionWindowUpdateShouldSendFrame() throws Http2Exception {
         // Set the connection window size to zero.
         controller
-                .updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_FLOW_CONTROL_WINDOW_SIZE);
+                .updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_WINDOW_SIZE);
 
         ByteBuf data = dummyData(10);
         send(STREAM_A, data);
@@ -162,7 +162,7 @@ public class DefaultHttp2OutboundFlowControllerTest {
     public void connectionWindowUpdateShouldSendPartialFrame() throws Http2Exception {
         // Set the connection window size to zero.
         controller
-                .updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_FLOW_CONTROL_WINDOW_SIZE);
+                .updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_WINDOW_SIZE);
 
         ByteBuf data = dummyData(10);
         send(STREAM_A, data);
@@ -183,7 +183,7 @@ public class DefaultHttp2OutboundFlowControllerTest {
     @Test
     public void streamWindowUpdateShouldSendFrame() throws Http2Exception {
         // Set the stream window size to zero.
-        controller.updateOutboundWindowSize(STREAM_A, -DEFAULT_FLOW_CONTROL_WINDOW_SIZE);
+        controller.updateOutboundWindowSize(STREAM_A, -DEFAULT_WINDOW_SIZE);
 
         ByteBuf data = dummyData(10);
         send(STREAM_A, data);
@@ -202,7 +202,7 @@ public class DefaultHttp2OutboundFlowControllerTest {
     @Test
     public void streamWindowUpdateShouldSendPartialFrame() throws Http2Exception {
         // Set the stream window size to zero.
-        controller.updateOutboundWindowSize(STREAM_A, -DEFAULT_FLOW_CONTROL_WINDOW_SIZE);
+        controller.updateOutboundWindowSize(STREAM_A, -DEFAULT_WINDOW_SIZE);
 
         ByteBuf data = dummyData(10);
         send(STREAM_A, data);
@@ -235,10 +235,10 @@ public class DefaultHttp2OutboundFlowControllerTest {
     public void blockedStreamShouldSpreadDataToChildren() throws Http2Exception {
         // Block the connection
         controller
-                .updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_FLOW_CONTROL_WINDOW_SIZE);
+                .updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_WINDOW_SIZE);
 
         // Block stream A
-        controller.updateOutboundWindowSize(STREAM_A, -DEFAULT_FLOW_CONTROL_WINDOW_SIZE);
+        controller.updateOutboundWindowSize(STREAM_A, -DEFAULT_WINDOW_SIZE);
 
         // Try sending 10 bytes on each stream. They will be pending until we free up the
         // connection.
@@ -287,10 +287,10 @@ public class DefaultHttp2OutboundFlowControllerTest {
     public void childrenShouldNotSendDataUntilParentBlocked() throws Http2Exception {
         // Block the connection
         controller
-                .updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_FLOW_CONTROL_WINDOW_SIZE);
+                .updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_WINDOW_SIZE);
 
         // Block stream B
-        controller.updateOutboundWindowSize(STREAM_B, -DEFAULT_FLOW_CONTROL_WINDOW_SIZE);
+        controller.updateOutboundWindowSize(STREAM_B, -DEFAULT_WINDOW_SIZE);
 
         // Send 10 bytes to each.
         send(STREAM_A, dummyData(10));
@@ -330,10 +330,10 @@ public class DefaultHttp2OutboundFlowControllerTest {
     public void parentShouldWaterFallDataToChildren() throws Http2Exception {
         // Block the connection
         controller
-                .updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_FLOW_CONTROL_WINDOW_SIZE);
+                .updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_WINDOW_SIZE);
 
         // Block stream B
-        controller.updateOutboundWindowSize(STREAM_B, -DEFAULT_FLOW_CONTROL_WINDOW_SIZE);
+        controller.updateOutboundWindowSize(STREAM_B, -DEFAULT_WINDOW_SIZE);
 
         // Only send 5 to A so that it will allow data from its children.
         send(STREAM_A, dummyData(5));
@@ -392,10 +392,10 @@ public class DefaultHttp2OutboundFlowControllerTest {
     public void reprioritizeShouldAdjustOutboundFlow() throws Http2Exception {
         // Block the connection
         controller
-                .updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_FLOW_CONTROL_WINDOW_SIZE);
+                .updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_WINDOW_SIZE);
 
         // Block stream B
-        controller.updateOutboundWindowSize(STREAM_B, -DEFAULT_FLOW_CONTROL_WINDOW_SIZE);
+        controller.updateOutboundWindowSize(STREAM_B, -DEFAULT_WINDOW_SIZE);
 
         // Send 10 bytes to each.
         send(STREAM_A, dummyData(10));
@@ -437,7 +437,7 @@ public class DefaultHttp2OutboundFlowControllerTest {
     public void writeShouldPreferHighestWeight() throws Http2Exception {
         // Block the connection
         controller
-                .updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_FLOW_CONTROL_WINDOW_SIZE);
+                .updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_WINDOW_SIZE);
 
         // Root the streams at the connection and assign weights.
         setPriority(STREAM_A, 0, (short) 50, false);
@@ -501,7 +501,7 @@ public class DefaultHttp2OutboundFlowControllerTest {
     public void samePriorityShouldWriteEqualData() throws Http2Exception {
         // Block the connection
         controller
-                .updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_FLOW_CONTROL_WINDOW_SIZE);
+                .updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_WINDOW_SIZE);
 
         // Root the streams at the connection with the same weights.
         setPriority(STREAM_A, 0, DEFAULT_PRIORITY_WEIGHT, false);

@@ -15,6 +15,10 @@
 
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_UNSIGNED_INT;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
@@ -23,14 +27,12 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-
-import static io.netty.handler.codec.http2.Http2CodecUtil.*;
-import static org.mockito.Mockito.*;
 
 /**
  * Integration tests for {@link DefaultHttp2FrameReader} and {@link DefaultHttp2FrameWriter}.
@@ -65,33 +67,33 @@ public class DefaultHttp2FrameIOTest {
     @Test
     public void emptyDataShouldRoundtrip() throws Exception {
         ByteBuf data = Unpooled.EMPTY_BUFFER;
-        writer.writeData(ctx, promise, 1000, data, 0, false, false, false);
+        writer.writeData(ctx, promise, 1000, data, 0, false, false);
 
         ByteBuf frame = captureWrite();
         reader.readFrame(ctx, frame, observer);
-        verify(observer).onDataRead(eq(ctx), eq(1000), eq(data), eq(0), eq(false), eq(false), eq(false));
+        verify(observer).onDataRead(eq(ctx), eq(1000), eq(data), eq(0), eq(false), eq(false));
         frame.release();
     }
 
     @Test
     public void dataShouldRoundtrip() throws Exception {
         ByteBuf data = dummyData();
-        writer.writeData(ctx, promise, 1000, data.retain().duplicate(), 0, false, false, false);
+        writer.writeData(ctx, promise, 1000, data.retain().duplicate(), 0, false, false);
 
         ByteBuf frame = captureWrite();
         reader.readFrame(ctx, frame, observer);
-        verify(observer).onDataRead(eq(ctx), eq(1000), eq(data), eq(0), eq(false), eq(false), eq(false));
+        verify(observer).onDataRead(eq(ctx), eq(1000), eq(data), eq(0), eq(false), eq(false));
         frame.release();
     }
 
     @Test
     public void dataWithPaddingShouldRoundtrip() throws Exception {
         ByteBuf data = dummyData();
-        writer.writeData(ctx, promise, 1, data.retain().duplicate(), 256, true, true, true);
+        writer.writeData(ctx, promise, 1, data.retain().duplicate(), 0xFF, true, true);
 
         ByteBuf frame = captureWrite();
         reader.readFrame(ctx, frame, observer);
-        verify(observer).onDataRead(eq(ctx), eq(1), eq(data), eq(256), eq(true), eq(true), eq(true));
+        verify(observer).onDataRead(eq(ctx), eq(1), eq(data), eq(0xFF), eq(true), eq(true));
         frame.release();
     }
 
@@ -129,10 +131,9 @@ public class DefaultHttp2FrameIOTest {
     public void settingsShouldStripShouldRoundtrip() throws Exception {
         Http2Settings settings = new Http2Settings();
         settings.pushEnabled(true);
-        settings.maxHeaderTableSize(4096);
+        settings.headerTableSize(4096);
         settings.initialWindowSize(123);
         settings.maxConcurrentStreams(456);
-        settings.allowCompressedData(false);
 
         writer.writeSettings(ctx, promise, settings);
 
@@ -194,35 +195,6 @@ public class DefaultHttp2FrameIOTest {
     }
 
     @Test
-    public void altSvcShouldRoundtrip() throws Exception {
-        writer.writeAltSvc(ctx, promise, 1, MAX_UNSIGNED_INT, MAX_UNSIGNED_SHORT, dummyData(), "host", "origin");
-        ByteBuf frame = captureWrite();
-        reader.readFrame(ctx, frame, observer);
-        verify(observer).onAltSvcRead(eq(ctx), eq(1), eq(MAX_UNSIGNED_INT), eq(MAX_UNSIGNED_SHORT),
-                eq(dummyData()), eq("host"), eq("origin"));
-        frame.release();
-    }
-
-    @Test
-    public void altSvcWithoutOriginShouldRoundtrip() throws Exception {
-        writer.writeAltSvc(ctx, promise, 1, MAX_UNSIGNED_INT, MAX_UNSIGNED_SHORT, dummyData(), "host", null);
-        ByteBuf frame = captureWrite();
-        reader.readFrame(ctx, frame, observer);
-        verify(observer).onAltSvcRead(eq(ctx), eq(1), eq(MAX_UNSIGNED_INT), eq(MAX_UNSIGNED_SHORT),
-                eq(dummyData()), eq("host"), isNull(String.class));
-        frame.release();
-    }
-
-    @Test
-    public void blockedShouldRoundtrip() throws Exception {
-        writer.writeBlocked(ctx, promise, 1);
-        ByteBuf frame = captureWrite();
-        reader.readFrame(ctx, frame, observer);
-        verify(observer).onBlockedRead(eq(ctx), eq(1));
-        frame.release();
-    }
-
-    @Test
     public void emptyHeadersShouldRoundtrip() throws Exception {
         Http2Headers headers = Http2Headers.EMPTY_HEADERS;
         writer.writeHeaders(ctx, promise, 1, headers, 0, true, true);
@@ -235,10 +207,10 @@ public class DefaultHttp2FrameIOTest {
     @Test
     public void emptyHeadersWithPaddingShouldRoundtrip() throws Exception {
         Http2Headers headers = Http2Headers.EMPTY_HEADERS;
-        writer.writeHeaders(ctx, promise, 1, headers, 256, true, true);
+        writer.writeHeaders(ctx, promise, 1, headers, 0xFF, true, true);
         ByteBuf frame = captureWrite();
         reader.readFrame(ctx, frame, observer);
-        verify(observer).onHeadersRead(eq(ctx), eq(1), eq(headers), eq(256), eq(true), eq(true));
+        verify(observer).onHeadersRead(eq(ctx), eq(1), eq(headers), eq(0xFF), eq(true), eq(true));
         frame.release();
     }
 
@@ -255,10 +227,10 @@ public class DefaultHttp2FrameIOTest {
     @Test
     public void headersWithPaddingWithoutPriorityShouldRoundtrip() throws Exception {
         Http2Headers headers = dummyHeaders();
-        writer.writeHeaders(ctx, promise, 1, headers, 256, true, true);
+        writer.writeHeaders(ctx, promise, 1, headers, 0xFF, true, true);
         ByteBuf frame = captureWrite();
         reader.readFrame(ctx, frame, observer);
-        verify(observer).onHeadersRead(eq(ctx), eq(1), eq(headers), eq(256), eq(true), eq(true));
+        verify(observer).onHeadersRead(eq(ctx), eq(1), eq(headers), eq(0xFF), eq(true), eq(true));
         frame.release();
     }
 
@@ -276,10 +248,10 @@ public class DefaultHttp2FrameIOTest {
     @Test
     public void headersWithPaddingWithPriorityShouldRoundtrip() throws Exception {
         Http2Headers headers = dummyHeaders();
-        writer.writeHeaders(ctx, promise, 1, headers, 2, (short) 3, true, 256, true, true);
+        writer.writeHeaders(ctx, promise, 1, headers, 2, (short) 3, true, 0xFF, true, true);
         ByteBuf frame = captureWrite();
         reader.readFrame(ctx, frame, observer);
-        verify(observer).onHeadersRead(eq(ctx), eq(1), eq(headers), eq(2), eq((short) 3), eq(true), eq(256),
+        verify(observer).onHeadersRead(eq(ctx), eq(1), eq(headers), eq(2), eq((short) 3), eq(true), eq(0xFF),
                 eq(true), eq(true));
         frame.release();
     }
@@ -298,10 +270,10 @@ public class DefaultHttp2FrameIOTest {
     @Test
     public void continuedHeadersWithPaddingShouldRoundtrip() throws Exception {
         Http2Headers headers = largeHeaders();
-        writer.writeHeaders(ctx, promise, 1, headers, 2, (short) 3, true, 256, true, true);
+        writer.writeHeaders(ctx, promise, 1, headers, 2, (short) 3, true, 0xFF, true, true);
         ByteBuf frame = captureWrite();
         reader.readFrame(ctx, frame, observer);
-        verify(observer).onHeadersRead(eq(ctx), eq(1), eq(headers), eq(2), eq((short) 3), eq(true), eq(256),
+        verify(observer).onHeadersRead(eq(ctx), eq(1), eq(headers), eq(2), eq((short) 3), eq(true), eq(0xFF),
                 eq(true), eq(true));
         frame.release();
     }
@@ -329,10 +301,10 @@ public class DefaultHttp2FrameIOTest {
     @Test
     public void pushPromiseWithPaddingShouldRoundtrip() throws Exception {
         Http2Headers headers = dummyHeaders();
-        writer.writePushPromise(ctx, promise, 1, 2, headers, 256);
+        writer.writePushPromise(ctx, promise, 1, 2, headers, 0xFF);
         ByteBuf frame = captureWrite();
         reader.readFrame(ctx, frame, observer);
-        verify(observer).onPushPromiseRead(eq(ctx), eq(1), eq(2), eq(headers), eq(256));
+        verify(observer).onPushPromiseRead(eq(ctx), eq(1), eq(2), eq(headers), eq(0xFF));
         frame.release();
     }
 
@@ -349,10 +321,10 @@ public class DefaultHttp2FrameIOTest {
     @Test
     public void continuedPushPromiseWithPaddingShouldRoundtrip() throws Exception {
         Http2Headers headers = largeHeaders();
-        writer.writePushPromise(ctx, promise, 1, 2, headers, 256);
+        writer.writePushPromise(ctx, promise, 1, 2, headers, 0xFF);
         ByteBuf frame = captureWrite();
         reader.readFrame(ctx, frame, observer);
-        verify(observer).onPushPromiseRead(eq(ctx), eq(1), eq(2), eq(headers), eq(256));
+        verify(observer).onPushPromiseRead(eq(ctx), eq(1), eq(2), eq(headers), eq(0xFF));
         frame.release();
     }
 

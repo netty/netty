@@ -40,7 +40,7 @@ public abstract class Http2OrHttpChooser extends ByteToMessageDecoder {
 
     public enum SelectedProtocol {
         /** Must be updated to match the HTTP/2 draft number. */
-        HTTP_2("h2-12"),
+        HTTP_2("h2-13"),
         HTTP_1_1("http/1.1"),
         HTTP_1_0("http/1.0"),
         UNKNOWN("Unknown");

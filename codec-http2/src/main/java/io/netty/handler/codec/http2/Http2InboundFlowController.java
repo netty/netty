@@ -59,6 +59,5 @@ public interface Http2InboundFlowController {
      * @throws Http2Exception thrown if any protocol-related error occurred.
      */
     void applyInboundFlowControl(int streamId, ByteBuf data, int padding, boolean endOfStream,
-            boolean endOfSegment, boolean compressed, FrameWriter frameWriter)
-            throws Http2Exception;
+            boolean endOfSegment, FrameWriter frameWriter) throws Http2Exception;
 }

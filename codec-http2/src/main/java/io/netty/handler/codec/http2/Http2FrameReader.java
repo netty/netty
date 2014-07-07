@@ -36,12 +36,12 @@ public interface Http2FrameReader extends Closeable {
     /**
      * Sets the maximum size of the HPACK header table used for decoding HTTP/2 headers.
      */
-    void maxHeaderTableSize(int max);
+    void maxHeaderTableSize(long max);
 
     /**
      * Gets the maximum size of the HPACK header table used for decoding HTTP/2 headers.
      */
-    int maxHeaderTableSize();
+    long maxHeaderTableSize();
 
     /**
      * Closes this reader and frees any allocated resources.

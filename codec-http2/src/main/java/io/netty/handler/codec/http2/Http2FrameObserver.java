@@ -34,10 +34,9 @@ public interface Http2FrameObserver {
      * @param endOfStream Indicates whether this is the last frame to be sent from the remote
      *            endpoint for this stream.
      * @param endOfSegment Indicates whether this frame is the end of the current segment.
-     * @param compressed Indicates whether or not the payload is compressed with gzip encoding.
      */
     void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
-            boolean endOfStream, boolean endOfSegment, boolean compressed) throws Http2Exception;
+            boolean endOfStream, boolean endOfSegment) throws Http2Exception;
 
     /**
      * Handles an inbound HEADERS frame.
@@ -162,26 +161,13 @@ public interface Http2FrameObserver {
             throws Http2Exception;
 
     /**
-     * Handles an inbound ALT_SVC frame.
+     * Handler for a frame not defined by the HTTP/2 spec.
      *
      * @param ctx the context from the handler where the frame was read.
-     * @param streamId the stream.
-     * @param maxAge the freshness lifetime of the alternative service association.
-     * @param port the port that the alternative service is available upon.
-     * @param protocolId the ALPN protocol identifier of the alternative service. If this buffer
-     *            needs to be retained by the observer they must make a copy.
-     * @param host the host that the alternative service is available upon.
-     * @param origin an optional origin that the alternative service is available upon. May be
-     *            {@code null}.
+     * @param frameType the frame type from the HTTP/2 header.
+     * @param streamId the stream the frame was sent on.
+     * @param flags the flags in the frame header.
+     * @param payload the payload of the frame.
      */
-    void onAltSvcRead(ChannelHandlerContext ctx, int streamId, long maxAge, int port,
-            ByteBuf protocolId, String host, String origin) throws Http2Exception;
-
-    /**
-     * Handles an inbound BLOCKED frame.
-     *
-     * @param ctx the context from the handler where the frame was read.
-     * @param streamId the stream that is blocked or 0 if the entire connection is blocked.
-     */
-    void onBlockedRead(ChannelHandlerContext ctx, int streamId) throws Http2Exception;
+    void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags, ByteBuf payload);
 }

@@ -129,7 +129,7 @@ public class Http2ConnectionRoundtripTest {
                 anyInt(), eq(headers), eq(0), eq((short) 16), eq(false), eq(0), eq(false),
                 eq(false));
         verify(serverObserver, times(NUM_STREAMS)).onDataRead(any(ChannelHandlerContext.class),
-                anyInt(), eq(Unpooled.copiedBuffer(text.getBytes())), eq(0), eq(true), eq(true), eq(false));
+                anyInt(), eq(Unpooled.copiedBuffer(text.getBytes())), eq(0), eq(true), eq(true));
     }
 
     private void awaitRequests() throws Exception {
@@ -152,10 +152,10 @@ public class Http2ConnectionRoundtripTest {
 
         @Override
         public void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
-                               boolean endOfStream, boolean endOfSegment, boolean compressed)
+                               boolean endOfStream, boolean endOfSegment)
                 throws Http2Exception {
             serverObserver.onDataRead(ctx, streamId, copy(data), padding, endOfStream,
-                    endOfSegment, compressed);
+                    endOfSegment);
             requestLatch.countDown();
         }
 
@@ -235,16 +235,9 @@ public class Http2ConnectionRoundtripTest {
         }
 
         @Override
-        public void onAltSvcRead(ChannelHandlerContext ctx, int streamId, long maxAge, int port,
-                                 ByteBuf protocolId, String host, String origin) throws Http2Exception {
-            serverObserver
-                    .onAltSvcRead(ctx, streamId, maxAge, port, copy(protocolId), host, origin);
-            requestLatch.countDown();
-        }
-
-        @Override
-        public void onBlockedRead(ChannelHandlerContext ctx, int streamId) throws Http2Exception {
-            serverObserver.onBlockedRead(ctx, streamId);
+        public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId,
+                Http2Flags flags, ByteBuf payload) {
+            serverObserver.onUnknownFrame(ctx, frameType, streamId, flags, payload);
             requestLatch.countDown();
         }
 

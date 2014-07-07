@@ -57,7 +57,7 @@ public class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler
     private ByteBuf collectedData;
 
     public Http2ClientConnectionHandler(ChannelPromise initPromise, ChannelPromise responsePromise) {
-        this(initPromise, responsePromise, new DefaultHttp2Connection(false, false));
+        this(initPromise, responsePromise, new DefaultHttp2Connection(false));
     }
 
     private Http2ClientConnectionHandler(ChannelPromise initPromise,
@@ -119,7 +119,7 @@ public class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler
 
     @Override
     public void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
-            boolean endOfStream, boolean endOfSegment, boolean compressed) throws Http2Exception {
+            boolean endOfStream, boolean endOfSegment) throws Http2Exception {
 
         // Copy the data into the buffer.
         int available = data.readableBytes();

@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.util.internal.logging.InternalLogLevel;
 import io.netty.util.internal.logging.InternalLogger;
@@ -50,10 +51,10 @@ public class Http2FrameLogger extends ChannelHandlerAdapter {
     }
 
     public void logData(Direction direction, int streamId, ByteBuf data, int padding,
-            boolean endStream, boolean endSegment, boolean compressed) {
+            boolean endStream, boolean endSegment) {
         log(direction,
-                "DATA: streamId=%d, dataLen=%d, padding=%d, endStream=%b, endSegment=%b, compressed=%b",
-                streamId, data.readableBytes(), padding, endStream, endSegment, compressed);
+                "DATA: streamId=%d, padding=%d, endStream=%b, endSegment=%b, length=%d, bytes=%s",
+                streamId, padding, endStream, endSegment, data.readableBytes(), ByteBufUtil.hexDump(data));
     }
 
     public void logHeaders(Direction direction, int streamId, Http2Headers headers, int padding,
@@ -90,11 +91,11 @@ public class Http2FrameLogger extends ChannelHandlerAdapter {
     }
 
     public void logPing(Direction direction, ByteBuf data) {
-        log(direction, "PING: ack=false, dataLen=%d", data.readableBytes());
+        log(direction, "PING: ack=false, length=%d, bytes=%s", data.readableBytes(), ByteBufUtil.hexDump(data));
     }
 
     public void logPingAck(Direction direction, ByteBuf data) {
-        log(direction, "PING: ack=true, dataLen=%d", data.readableBytes());
+        log(direction, "PING: ack=true, length=%d, bytes=%s", data.readableBytes(), ByteBufUtil.hexDump(data));
     }
 
     public void logPushPromise(Direction direction, int streamId, int promisedStreamId,
@@ -104,8 +105,8 @@ public class Http2FrameLogger extends ChannelHandlerAdapter {
     }
 
     public void logGoAway(Direction direction, int lastStreamId, long errorCode, ByteBuf debugData) {
-        log(direction, "GO_AWAY: lastStreamId=%d, errorCode=%d, dataLen=%d", lastStreamId,
-                errorCode, debugData.readableBytes());
+        log(direction, "GO_AWAY: lastStreamId=%d, errorCode=%d, length=%d, bytes=%s", lastStreamId,
+                errorCode, debugData.readableBytes(), ByteBufUtil.hexDump(debugData));
     }
 
     public void logWindowsUpdate(Direction direction, int streamId, int windowSizeIncrement) {
@@ -113,15 +114,9 @@ public class Http2FrameLogger extends ChannelHandlerAdapter {
                 windowSizeIncrement);
     }
 
-    public void logAltSvc(Direction direction, int streamId, long maxAge, int port,
-            ByteBuf protocolId, String host, String origin) {
-        log(direction,
-                "ALT_SVC: streamId=%d, maxAge=%d, port=%d, protocolIdLen=%d, host=%s, origin=%s",
-                streamId, maxAge, port, protocolId.readableBytes(), host, origin);
-    }
-
-    public void logBlocked(Direction direction, int streamId) {
-        log(direction, "BLOCKED: streamId=%d", streamId);
+    public void logUnknownFrame(Direction direction, byte frameType, int streamId, Http2Flags flags, ByteBuf data) {
+        log(direction, "UNKNOWN: frameType=%d, streamId=%d, flags=%d, length=%d, bytes=%s",
+                frameType & 0xFF, streamId, flags.value(), data.readableBytes(), ByteBufUtil.hexDump(data));
     }
 
     private void log(Direction direction, String format, Object... args) {

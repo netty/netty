@@ -57,7 +57,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
     };
 
     private final Http2Connection connection;
-    private int initialWindowSize = DEFAULT_FLOW_CONTROL_WINDOW_SIZE;
+    private int initialWindowSize = DEFAULT_WINDOW_SIZE;
 
     public DefaultHttp2OutboundFlowController(Http2Connection connection) {
         if (connection == null) {
@@ -145,11 +145,6 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
             state.incrementStreamWindow(delta);
             state.writeBytes(state.writableWindow());
         }
-    }
-
-    @Override
-    public void setBlocked(int streamId) throws Http2Exception {
-        // Ignore blocked frames. Just rely on window updates.
     }
 
     @Override
