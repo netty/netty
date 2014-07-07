@@ -32,7 +32,10 @@ public class HttpVersion implements Comparable<HttpVersion> {
         Pattern.compile("(\\S+)/(\\d+)\\.(\\d+)");
 
     private static final String HTTP_1_0_STRING = "HTTP/1.0";
+    private static final char[] HTTP_1_0_CHARS = HTTP_1_0_STRING.toCharArray();
+
     private static final String HTTP_1_1_STRING = "HTTP/1.1";
+    private static final char[] HTTP_1_1_CHARS = HTTP_1_1_STRING.toCharArray();
 
     /**
      * HTTP/1.0
@@ -43,6 +46,41 @@ public class HttpVersion implements Comparable<HttpVersion> {
      * HTTP/1.1
      */
     public static final HttpVersion HTTP_1_1 = new HttpVersion("HTTP", 1, 1, true, true);
+
+    /**
+     * Internal method which allows to create known {@link HttpVersion} without create a temporary {@link String}
+     * to reduce object creation and so GC-pressure.
+     */
+    static HttpVersion valueOf(char[] chars, int startIndex, int endIndex) {
+        startIndex = HttpDecoderUtil.startIndex(chars, startIndex, endIndex);
+        endIndex = HttpDecoderUtil.endIndex(chars, startIndex, endIndex);
+        int size = endIndex - startIndex;
+        if (size == 0) {
+            throw new IllegalArgumentException("text is empty");
+        }
+        // Check if it can be HTTP/1.1 or HTTP/1.0
+        if (size == 8) {
+            // Most are HTTP/1.1 these days so let this be the fast-path
+            if (equalsVersion(HTTP_1_1_CHARS, chars, startIndex, endIndex)) {
+                return HTTP_1_1;
+            }
+            if (equalsVersion(HTTP_1_0_CHARS, chars, startIndex, endIndex)) {
+                return HTTP_1_0;
+            }
+        }
+
+        return new HttpVersion(HttpDecoderUtil.newString(chars, startIndex, endIndex), true);
+    }
+
+    private static boolean equalsVersion(char[] chars, char[] input, int startIndex, int endIndex) {
+        // compare in reverse as this will allow us to detect earlier when HTTP/1.1 or HTTP/1.0 is used.
+        for (int i = endIndex - 1 , a = chars.length - 1; i >= startIndex; i--, a--) {
+            if (chars[a] != input[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
 
     /**
      * Returns an existing or new {@link HttpVersion} instance which matches to

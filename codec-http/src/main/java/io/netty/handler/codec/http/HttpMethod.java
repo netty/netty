@@ -87,18 +87,116 @@ public class HttpMethod implements Comparable<HttpMethod> {
     public static final HttpMethod CONNECT = new HttpMethod("CONNECT", true);
 
     private static final Map<String, HttpMethod> methodMap =
-            new HashMap<String, HttpMethod>();
+            new HashMap<String, HttpMethod>(9);
 
     static {
-        methodMap.put(OPTIONS.toString(), OPTIONS);
         methodMap.put(GET.toString(), GET);
-        methodMap.put(HEAD.toString(), HEAD);
-        methodMap.put(POST.toString(), POST);
         methodMap.put(PUT.toString(), PUT);
+        methodMap.put(POST.toString(), POST);
+        methodMap.put(HEAD.toString(), HEAD);
         methodMap.put(PATCH.toString(), PATCH);
-        methodMap.put(DELETE.toString(), DELETE);
         methodMap.put(TRACE.toString(), TRACE);
+        methodMap.put(DELETE.toString(), DELETE);
         methodMap.put(CONNECT.toString(), CONNECT);
+        methodMap.put(OPTIONS.toString(), OPTIONS);
+    }
+
+    /**
+     * Internal method which allows to create known {@link HttpMethod} without create a temporary {@link String}
+     * to reduce object creation and so GC-pressure.
+     */
+    static HttpMethod valueOf(char[] chars, int startIndex, int endIndex) {
+        startIndex = HttpDecoderUtil.startIndex(chars, startIndex, endIndex);
+        endIndex = HttpDecoderUtil.endIndex(chars, startIndex, endIndex);
+        int size = endIndex - startIndex;
+        if (size == 0) {
+            throw new IllegalArgumentException("empty name");
+        }
+        // Lookup table for our pre-created HttpMethods. Fast-path to GET.
+        switch (size) {
+            // Fast-path for GET, PUT
+            case 3:
+                switch (chars[startIndex]) {
+                    case 'G':
+                        if (chars[startIndex + 1] == 'E' && chars[startIndex + 2] == 'T') {
+                            return GET;
+                        }
+                        break;
+                    case 'P':
+                        if (chars[startIndex + 1] == 'U' && chars[startIndex + 2] == 'T') {
+                            return PUT;
+                        }
+                        break;
+                }
+                break;
+            // Fast-path for POST, HEAD
+            case 4:
+                switch (chars[startIndex]) {
+                    case 'P':
+                        if (chars[startIndex + 1] == 'O' && chars[startIndex + 2] == 'S'
+                                && chars[startIndex + 3] == 'T') {
+                            return POST;
+                        }
+                        break;
+                    case 'H':
+                        if (chars[startIndex + 1] == 'E' && chars[startIndex + 2] == 'A'
+                                && chars[startIndex + 3] == 'D') {
+                            return HEAD;
+                        }
+                        break;
+                }
+                break;
+            // Fast-path for PATCH, TRACE
+            case 5:
+                switch (chars[startIndex]) {
+                    case 'P':
+                        if (chars[startIndex + 1] == 'A' && chars[startIndex + 2] == 'T'
+                                && chars[startIndex + 3] == 'C' && chars[startIndex + 4] == 'H') {
+                            return PATCH;
+                        }
+                        break;
+                    case 'T':
+                        if (chars[startIndex + 1] == 'R' && chars[startIndex + 2] == 'A'
+                                && chars[startIndex + 3] == 'C' && chars[startIndex + 5] == 'E') {
+                            return TRACE;
+                        }
+                        break;
+                }
+                break;
+            // Fast-path for DELETE
+            case 6:
+                switch (chars[startIndex]) {
+                    case 'D':
+                        if (chars[startIndex + 1] == 'E' && chars[startIndex + 2] == 'L'
+                                && chars[startIndex + 3] == 'E' && chars[startIndex + 4] == 'T'
+                                && chars[startIndex + 5] == 'E') {
+                            return DELETE;
+                        }
+                        break;
+                }
+                break;
+            // Fast-path for CONNECT, OPTIONS
+            case 7:
+                switch (chars[startIndex]) {
+                    case 'C':
+                        if (chars[startIndex + 1] == 'O' && chars[startIndex + 2] == 'N'
+                                && chars[startIndex + 3] == 'N' && chars[startIndex + 4] == 'E'
+                                && chars[startIndex + 5] == 'C' && chars[startIndex + 6] == 'T') {
+                            return CONNECT;
+                        }
+                        break;
+                    case 'O':
+                        if (chars[startIndex + 1] == 'P' && chars[startIndex + 2] == 'T'
+                                && chars[startIndex + 3] == 'I' && chars[startIndex + 4] == 'O'
+                                && chars[startIndex + 5] == 'N' && chars[startIndex + 6] == 'S') {
+                            return OPTIONS;
+                        }
+                        break;
+                }
+                break;
+        }
+        // Not able to re-use precreated HttpMethod. Create a new.
+        return new HttpMethod(HttpDecoderUtil.newString(chars, startIndex, endIndex));
     }
 
     /**

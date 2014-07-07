@@ -71,9 +71,11 @@ public class RtspRequestDecoder extends RtspObjectDecoder {
     }
 
     @Override
-    protected HttpMessage createMessage(String[] initialLine) throws Exception {
-        return new DefaultHttpRequest(RtspVersions.valueOf(initialLine[2]),
-                RtspMethods.valueOf(initialLine[0]), initialLine[1], validateHeaders);
+    protected HttpMessage createMessage(
+            char[] initialLine, int aStart, int aEnd, int bStart, int bEnd, int cStart, int cEnd) throws Exception {
+        return new DefaultHttpRequest(RtspVersions.valueOf(new String(initialLine, cStart, cEnd - cStart)),
+                RtspMethods.valueOf(new String(initialLine, aStart, aEnd - aStart)),
+                new String(initialLine, bStart, bEnd - bStart), validateHeaders);
     }
 
     @Override

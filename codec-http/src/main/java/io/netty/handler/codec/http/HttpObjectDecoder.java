@@ -201,14 +201,24 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<State> {
             }
         }
         case READ_INITIAL: try {
-            String[] initialLine = splitInitialLine(lineParser.parse(buffer));
-            if (initialLine.length < 3) {
-                // Invalid initial line - ignore.
-                checkpoint(State.SKIP_CONTROL_CHARS);
-                return;
-            }
+            AppendableCharSequence seq = lineParser.parse(buffer);
+            int aStart;
+            int aEnd;
+            int bStart;
+            int bEnd;
+            int cStart;
+            int cEnd;
 
-            message = createMessage(initialLine);
+            aStart = findNonWhitespace(seq, 0);
+            aEnd = findWhitespace(seq, aStart);
+
+            bStart = findNonWhitespace(seq, aEnd);
+            bEnd = findWhitespace(seq, bStart);
+
+            cStart = findNonWhitespace(seq, bEnd);
+            cEnd = findEndOfString(seq);
+
+            message = createMessage(seq.chars(), aStart, aEnd, bStart, bEnd, cStart, cEnd);
             checkpoint(State.READ_HEADER);
 
         } catch (Exception e) {
@@ -579,7 +589,8 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<State> {
     }
 
     protected abstract boolean isDecodingRequest();
-    protected abstract HttpMessage createMessage(String[] initialLine) throws Exception;
+    protected abstract HttpMessage createMessage(
+            char[] initialLine, int aStart, int aEnd, int bStart, int bEnd, int cStart, int cEnd) throws Exception;
     protected abstract HttpMessage createInvalidMessage();
 
     private static int getChunkSize(String hex) {
@@ -593,29 +604,6 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<State> {
         }
 
         return Integer.parseInt(hex, 16);
-    }
-
-    private static String[] splitInitialLine(AppendableCharSequence sb) {
-        int aStart;
-        int aEnd;
-        int bStart;
-        int bEnd;
-        int cStart;
-        int cEnd;
-
-        aStart = findNonWhitespace(sb, 0);
-        aEnd = findWhitespace(sb, aStart);
-
-        bStart = findNonWhitespace(sb, aEnd);
-        bEnd = findWhitespace(sb, bStart);
-
-        cStart = findNonWhitespace(sb, bEnd);
-        cEnd = findEndOfString(sb);
-
-        return new String[] {
-                sb.substring(aStart, aEnd),
-                sb.substring(bStart, bEnd),
-                cStart < cEnd? sb.substring(cStart, cEnd) : "" };
     }
 
     private static String[] splitHeader(AppendableCharSequence sb) {
@@ -767,4 +755,5 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<State> {
             }
         }
     }
+
 }

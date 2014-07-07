@@ -76,10 +76,12 @@ public class HttpRequestDecoder extends HttpObjectDecoder {
     }
 
     @Override
-    protected HttpMessage createMessage(String[] initialLine) throws Exception {
+    protected HttpMessage createMessage(
+            char[] initialLine, int aStart, int aEnd, int bStart, int bEnd, int cStart, int cEnd) throws Exception {
         return new DefaultHttpRequest(
-                HttpVersion.valueOf(initialLine[2]),
-                HttpMethod.valueOf(initialLine[0]), initialLine[1], validateHeaders);
+                HttpVersion.valueOf(initialLine, cStart, cEnd),
+                HttpMethod.valueOf(initialLine, aStart, aEnd), HttpDecoderUtil.newString(initialLine, bStart, bEnd),
+                validateHeaders);
     }
 
     @Override
@@ -91,4 +93,5 @@ public class HttpRequestDecoder extends HttpObjectDecoder {
     protected boolean isDecodingRequest() {
         return true;
     }
+
 }

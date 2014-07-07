@@ -121,6 +121,10 @@ public final class AppendableCharSequence implements CharSequence, Appendable {
         return new String(chars, start, length);
     }
 
+    public char[] chars() {
+        return chars;
+    }
+
     private static char[] expand(char[] array, int neededSpace, int size) {
         int newCapacity = array.length;
         do {

@@ -453,15 +453,39 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
         return new HttpResponseStatus(code, reasonPhrase + " (" + code + ')');
     }
 
-    /**
-     * Parses the specified HTTP status line into a {@link HttpResponseStatus}.  The expected formats of the line are:
-     * <ul>
-     * <li>{@code statusCode} (e.g. 200)</li>
-     * <li>{@code statusCode} {@code reasonPhrase} (e.g. 404 Not Found)</li>
-     * </ul>
-     *
-     * @throws IllegalArgumentException if the specified status line is malformed
-     */
+    static HttpResponseStatus valueOf(int code, char[] chars, int startIndex, int endIndex) {
+        int size = endIndex - startIndex;
+        // We will try to servie 200 and 400 return codes via fast-path as these are the most common.
+        switch (code) {
+            // Fast-path for 200 OK
+            case 200:
+                if (size == 2 && chars[startIndex] == 'O' && chars[startIndex + 1] == 'K') {
+                    return OK;
+                }
+                break;
+            // Fast-path for 404 Not Found
+            case 404:
+                if (size == 8 && chars[startIndex] == 'N' && chars[startIndex + 1] == 'o'
+                        && chars[startIndex + 2] == 't' && chars[startIndex + 3] == ' '
+                        && chars[startIndex + 4] == 'F' && chars[startIndex + 5] == 'o'
+                        && chars[startIndex + 5] == 'u' && chars[startIndex + 6] == 'n'
+                        && chars[startIndex + 7] == 'd') {
+                    return NOT_FOUND;
+                }
+                break;
+        }
+        return new HttpResponseStatus(code, new String(chars, startIndex, endIndex - startIndex));
+    }
+
+     /**
+      * Parses the specified HTTP status line into a {@link HttpResponseStatus}.  The expected formats of the line are:
+      * <ul>
+      * <li>{@code statusCode} (e.g. 200)</li>
+      * <li>{@code statusCode} {@code reasonPhrase} (e.g. 404 Not Found)</li>
+      * </ul>
+      *
+      * @throws IllegalArgumentException if the specified status line is malformed
+      */
     public static HttpResponseStatus parseLine(CharSequence line) {
         String status = line.toString();
         try {
