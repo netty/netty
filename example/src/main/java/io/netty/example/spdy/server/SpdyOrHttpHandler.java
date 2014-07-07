@@ -18,8 +18,6 @@ package io.netty.example.spdy.server;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.handler.codec.spdy.SpdyOrHttpChooser;
 
-import javax.net.ssl.SSLEngine;
-
 /**
  * Negotiates with the browser if SPDY or HTTP is going to be used. Once decided, the Netty pipeline is setup with
  * the correct handlers for the selected protocol.
@@ -34,14 +32,6 @@ public class SpdyOrHttpHandler extends SpdyOrHttpChooser {
 
     public SpdyOrHttpHandler(int maxSpdyContentLength, int maxHttpContentLength) {
         super(maxSpdyContentLength, maxHttpContentLength);
-    }
-
-    @Override
-    protected SelectedProtocol getProtocol(SSLEngine engine) {
-        String[] protocol = engine.getSession().getProtocol().split(":");
-        SelectedProtocol selectedProtocol = SelectedProtocol.protocol(protocol[1]);
-        System.err.println("Selected Protocol is " + selectedProtocol);
-        return selectedProtocol;
     }
 
     @Override
