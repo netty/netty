@@ -40,8 +40,8 @@ class Bzip2BitReader {
      * @return The bits requested, right-aligned within the integer
      */
     int readBits(ByteBuf in, final int count) {
-        if (count > 24) {
-            throw new IllegalArgumentException("count");
+        if (count < 0 || count > 24) {
+            throw new IllegalArgumentException("count: " + count + " (expected: 0-24)");
         }
         int bitCount = this.bitCount;
         int bitBuffer = this.bitBuffer;
