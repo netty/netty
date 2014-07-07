@@ -25,6 +25,7 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.ssl.SslHandler;
+import io.netty.util.internal.StringUtil;
 
 import javax.net.ssl.SSLEngine;
 import java.util.List;
@@ -84,7 +85,15 @@ public abstract class SpdyOrHttpChooser extends ByteToMessageDecoder {
      * {@link SelectedProtocol#UNKNOWN}.
      *
      */
-    protected abstract SelectedProtocol getProtocol(SSLEngine engine);
+    protected SelectedProtocol getProtocol(SSLEngine engine) {
+        String[] protocol = StringUtil.split(engine.getSession().getProtocol(), ':');
+        if (protocol.length < 2) {
+            // Use HTTP/1.1 as default
+            return SelectedProtocol.HTTP_1_1;
+        }
+        SelectedProtocol selectedProtocol = SelectedProtocol.protocol(protocol[1]);
+        return selectedProtocol;
+    }
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
