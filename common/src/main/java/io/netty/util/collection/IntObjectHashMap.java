@@ -247,6 +247,42 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
         return outValues;
     }
 
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        for (Entry<V> entry : entries()) {
+            V value = entry.value();
+            int hash = value == null ? 0 : value.hashCode();
+            result = prime * result + hash;
+        }
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj || obj == null || getClass() != obj.getClass()) {
+            return true;
+        }
+        @SuppressWarnings("rawtypes")
+        IntObjectHashMap other = (IntObjectHashMap) obj;
+        if (size != other.size) {
+            return false;
+        }
+        for (Entry<V> entry : entries()) {
+            V value = entry.value();
+            Object otherValue = other.get(entry.key());
+            if (value == null) {
+                if (otherValue != null || !other.containsKey(entry.key())) {
+                    return false;
+                }
+            } else if (!value.equals(otherValue)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     /**
      * Copies the occupied entries from the source to the target array.
      */

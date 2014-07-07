@@ -65,15 +65,6 @@ public interface Http2OutboundFlowController {
     void updateOutboundWindowSize(int streamId, int deltaWindowSize) throws Http2Exception;
 
     /**
-     * Indicates that the given stream or the entire connection is blocked and that no more messages
-     * should be sent.
-     *
-     * @param streamId the stream ID that is blocked or zero if the entire connection is blocked.
-     * @throws Http2Exception thrown if a protocol-related error occurred.
-     */
-    void setBlocked(int streamId) throws Http2Exception;
-
-    /**
      * Sends the frame with outbound flow control applied. The frame may be written at a later time,
      * depending on whether the remote endpoint can receive the frame now.
      * <p/>

@@ -37,11 +37,10 @@ public interface Http2FrameWriter extends Closeable {
      * @param padding the amount of padding to be added to the end of the frame
      * @param endStream indicates if this is the last frame to be sent for the stream.
      * @param endSegment indicates if this is the last frame in the current segment.
-     * @param compressed indicates whether the data is compressed using gzip encoding.
      * @return the future for the write.
      */
     ChannelFuture writeData(ChannelHandlerContext ctx, ChannelPromise promise, int streamId,
-            ByteBuf data, int padding, boolean endStream, boolean endSegment, boolean compressed);
+            ByteBuf data, int padding, boolean endStream, boolean endSegment);
 
     /**
      * Writes a HEADERS frame to the remote endpoint.
@@ -179,31 +178,18 @@ public interface Http2FrameWriter extends Closeable {
             int streamId, int windowSizeIncrement);
 
     /**
-     * Writes a ALT_SVC frame to the remote endpoint.
+     * Generic write method for any HTTP/2 frame. This allows writing of non-standard frames.
      *
      * @param ctx the context to use for writing.
      * @param promise the promise for the write.
-     * @param streamId the stream.
-     * @param maxAge the freshness lifetime of the alternative service association.
-     * @param port the port that the alternative service is available upon.
-     * @param protocolId the ALPN protocol identifier of the alternative service.
-     * @param host the host that the alternative service is available upon.
-     * @param origin an optional origin that the alternative service is available upon. May be
-     *            {@code null}.
+     * @param frameType the frame type identifier.
+     * @param streamId the stream for which to send the frame.
+     * @param flags the flags to write for this frame.
+     * @param payload the payload to write for this frame.
      * @return the future for the write.
      */
-    ChannelFuture writeAltSvc(ChannelHandlerContext ctx, ChannelPromise promise, int streamId,
-            long maxAge, int port, ByteBuf protocolId, String host, String origin);
-
-    /**
-     * Writes a BLOCKED frame to the remote endpoint.
-     *
-     * @param ctx the context to use for writing.
-     * @param promise the promise for the write.
-     * @param streamId the stream that is blocked or 0 if the entire connection is blocked.
-     * @return the future for the write.
-     */
-    ChannelFuture writeBlocked(ChannelHandlerContext ctx, ChannelPromise promise, int streamId);
+    ChannelFuture writeFrame(ChannelHandlerContext ctx, ChannelPromise promise, byte frameType,
+            int streamId, Http2Flags flags, ByteBuf payload);
 
     /**
      * Closes this writer and frees any allocated resources.
@@ -214,10 +200,10 @@ public interface Http2FrameWriter extends Closeable {
     /**
      * Sets the maximum size of the HPACK header table used for decoding HTTP/2 headers.
      */
-    void maxHeaderTableSize(int max) throws Http2Exception;
+    void maxHeaderTableSize(long max) throws Http2Exception;
 
     /**
      * Gets the maximum size of the HPACK header table used for decoding HTTP/2 headers.
      */
-    int maxHeaderTableSize();
+    long maxHeaderTableSize();
 }

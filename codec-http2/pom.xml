@@ -43,7 +43,7 @@
     <dependency>
       <groupId>com.twitter</groupId>
       <artifactId>hpack</artifactId>
-      <version>0.7.0</version>
+      <version>0.8.0</version>
     </dependency>
     <dependency>
       <groupId>org.mockito</groupId>

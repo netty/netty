@@ -116,12 +116,12 @@ public class Http2FrameRoundtripTest {
             @Override
             public void run() {
                 frameWriter.writeData(ctx(), newPromise(), 0x7FFFFFFF,
-                        Unpooled.copiedBuffer(text.getBytes()), 100, true, false, false);
+                        Unpooled.copiedBuffer(text.getBytes()), 100, true, false);
             }
         });
         awaitRequests();
         verify(serverObserver).onDataRead(any(ChannelHandlerContext.class), eq(0x7FFFFFFF),
-                dataCaptor.capture(), eq(100), eq(true), eq(false), eq(false));
+                dataCaptor.capture(), eq(100), eq(true), eq(false));
     }
 
     @Test
@@ -231,10 +231,9 @@ public class Http2FrameRoundtripTest {
     @Test
     public void settingsFrameShouldMatch() throws Exception {
         final Http2Settings settings = new Http2Settings();
-        settings.allowCompressedData(true);
         settings.initialWindowSize(10);
         settings.maxConcurrentStreams(1000);
-        settings.maxHeaderTableSize(4096);
+        settings.headerTableSize(4096);
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
             public void run() {
@@ -274,7 +273,7 @@ public class Http2FrameRoundtripTest {
                     frameWriter.writeHeaders(ctx(), newPromise(), i, headers, 0, (short) 16, false,
                             0, false, false);
                     frameWriter.writeData(ctx(), newPromise(), i,
-                            Unpooled.copiedBuffer(text.getBytes()), 0, true, true, false);
+                            Unpooled.copiedBuffer(text.getBytes()), 0, true, true);
                 }
             }
         });
@@ -310,10 +309,10 @@ public class Http2FrameRoundtripTest {
 
                 @Override
                 public void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data,
-                                       int padding, boolean endOfStream, boolean endOfSegment, boolean compressed)
+                                       int padding, boolean endOfStream, boolean endOfSegment)
                         throws Http2Exception {
                     observer.onDataRead(ctx, streamId, copy(data), padding, endOfStream,
-                            endOfSegment, compressed);
+                            endOfSegment);
                     requestLatch.countDown();
                 }
 
@@ -400,18 +399,9 @@ public class Http2FrameRoundtripTest {
                 }
 
                 @Override
-                public void onAltSvcRead(ChannelHandlerContext ctx, int streamId, long maxAge,
-                                         int port, ByteBuf protocolId, String host, String origin)
-                        throws Http2Exception {
-                    observer.onAltSvcRead(ctx, streamId, maxAge, port, copy(protocolId), host,
-                            origin);
-                    requestLatch.countDown();
-                }
-
-                @Override
-                public void onBlockedRead(ChannelHandlerContext ctx, int streamId)
-                        throws Http2Exception {
-                    observer.onBlockedRead(ctx, streamId);
+                public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId,
+                        Http2Flags flags, ByteBuf payload) {
+                    observer.onUnknownFrame(ctx, frameType, streamId, flags, payload);
                     requestLatch.countDown();
                 }
             });

@@ -14,6 +14,13 @@
  */
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.base64.Base64Dialect.URL_SAFE;
+import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
+import static io.netty.handler.codec.http2.Http2CodecUtil.FRAME_HEADER_LENGTH;
+import static io.netty.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_PROTOCOL_NAME;
+import static io.netty.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_SETTINGS_HEADER;
+import static io.netty.handler.codec.http2.Http2CodecUtil.writeFrameHeader;
+import static io.netty.handler.codec.http2.Http2FrameTypes.SETTINGS;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -26,12 +33,6 @@ import io.netty.util.CharsetUtil;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-
-import static io.netty.handler.codec.base64.Base64Dialect.*;
-import static io.netty.handler.codec.http.HttpResponseStatus.*;
-import static io.netty.handler.codec.http2.Http2CodecUtil.*;
-import static io.netty.handler.codec.http2.Http2Flags.*;
-import static io.netty.handler.codec.http2.Http2FrameType.*;
 
 /**
  * Server-side codec for performing a cleartext upgrade from HTTP/1.x to HTTP/2.
@@ -138,8 +139,9 @@ public class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.Upgrade
             final Http2Settings decodedSettings = new Http2Settings();
             frameReader.readFrame(ctx, frame, new Http2FrameAdapter() {
                 @Override
-                public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings) {
-                    decodedSettings.copy(settings);
+                public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings)
+                        throws Http2Exception {
+                    decodedSettings.copyFrom(settings);
                 }
             });
             return decodedSettings;
@@ -153,7 +155,7 @@ public class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.Upgrade
      */
     private static ByteBuf createSettingsFrame(ChannelHandlerContext ctx, ByteBuf payload) {
         ByteBuf frame = ctx.alloc().buffer(FRAME_HEADER_LENGTH + payload.readableBytes());
-        writeFrameHeader(frame, payload.readableBytes(), SETTINGS, EMPTY, 0);
+        writeFrameHeader(frame, payload.readableBytes(), SETTINGS, new Http2Flags(), 0);
         frame.writeBytes(payload);
         payload.release();
         return frame;

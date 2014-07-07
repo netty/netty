@@ -47,7 +47,7 @@ public class HelloWorldHttp2Handler extends AbstractHttp2ConnectionHandler {
     static final byte[] RESPONSE_BYTES = "Hello World".getBytes(CharsetUtil.UTF_8);
 
     public HelloWorldHttp2Handler() {
-        this(new DefaultHttp2Connection(true, false));
+        this(new DefaultHttp2Connection(true));
     }
 
     private HelloWorldHttp2Handler(Http2Connection connection) {
@@ -77,7 +77,7 @@ public class HelloWorldHttp2Handler extends AbstractHttp2ConnectionHandler {
      */
     @Override
     public void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
-            boolean endOfStream, boolean endOfSegment, boolean compressed) throws Http2Exception {
+            boolean endOfStream, boolean endOfSegment) throws Http2Exception {
         if (endOfStream) {
             sendResponse(ctx(), streamId);
         }

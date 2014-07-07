@@ -38,8 +38,8 @@ public class DefaultHttp2ConnectionTest {
     public void setup() {
         MockitoAnnotations.initMocks(this);
 
-        server = new DefaultHttp2Connection(true, false);
-        client = new DefaultHttp2Connection(false, false);
+        server = new DefaultHttp2Connection(true);
+        client = new DefaultHttp2Connection(false);
     }
 
     @Test(expected = Http2Exception.class)

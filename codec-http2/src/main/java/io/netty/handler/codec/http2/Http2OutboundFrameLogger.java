@@ -43,10 +43,9 @@ public class Http2OutboundFrameLogger implements Http2FrameWriter {
 
     @Override
     public ChannelFuture writeData(ChannelHandlerContext ctx, ChannelPromise promise, int streamId,
-            ByteBuf data, int padding, boolean endStream, boolean endSegment, boolean compressed) {
-        logger.logData(OUTBOUND, streamId, data, padding, endStream, endSegment, compressed);
-        return writer.writeData(ctx, promise, streamId, data, padding, endStream, endSegment,
-                compressed);
+            ByteBuf data, int padding, boolean endStream, boolean endSegment) {
+        logger.logData(OUTBOUND, streamId, data, padding, endStream, endSegment);
+        return writer.writeData(ctx, promise, streamId, data, padding, endStream, endSegment);
     }
 
     @Override
@@ -121,17 +120,10 @@ public class Http2OutboundFrameLogger implements Http2FrameWriter {
     }
 
     @Override
-    public ChannelFuture writeAltSvc(ChannelHandlerContext ctx, ChannelPromise promise,
-            int streamId, long maxAge, int port, ByteBuf protocolId, String host, String origin) {
-        logger.logAltSvc(OUTBOUND, streamId, maxAge, port, protocolId, host, origin);
-        return writer.writeAltSvc(ctx, promise, streamId, maxAge, port, protocolId, host, origin);
-    }
-
-    @Override
-    public ChannelFuture writeBlocked(ChannelHandlerContext ctx, ChannelPromise promise,
-            int streamId) {
-        logger.logBlocked(OUTBOUND, streamId);
-        return writer.writeBlocked(ctx, promise, streamId);
+    public ChannelFuture writeFrame(ChannelHandlerContext ctx, ChannelPromise promise,
+            byte frameType, int streamId, Http2Flags flags, ByteBuf payload) {
+        logger.logUnknownFrame(OUTBOUND, frameType, streamId, flags, payload);
+        return writer.writeFrame(ctx, promise, frameType, streamId, flags, payload);
     }
 
     @Override
@@ -140,12 +132,12 @@ public class Http2OutboundFrameLogger implements Http2FrameWriter {
     }
 
     @Override
-    public void maxHeaderTableSize(int max) throws Http2Exception {
+    public void maxHeaderTableSize(long max) throws Http2Exception {
         writer.maxHeaderTableSize(max);
     }
 
     @Override
-    public int maxHeaderTableSize() {
+    public long maxHeaderTableSize() {
         return writer.maxHeaderTableSize();
     }
 }

@@ -24,7 +24,7 @@ public class Http2FrameAdapter implements Http2FrameObserver {
 
     @Override
     public void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
-            boolean endOfStream, boolean endOfSegment, boolean compressed) throws Http2Exception {
+            boolean endOfStream, boolean endOfSegment) throws Http2Exception {
     }
 
     @Override
@@ -81,11 +81,7 @@ public class Http2FrameAdapter implements Http2FrameObserver {
     }
 
     @Override
-    public void onAltSvcRead(ChannelHandlerContext ctx, int streamId, long maxAge, int port,
-            ByteBuf protocolId, String host, String origin) throws Http2Exception {
-    }
-
-    @Override
-    public void onBlockedRead(ChannelHandlerContext ctx, int streamId) throws Http2Exception {
+    public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
+            ByteBuf payload) {
     }
 }

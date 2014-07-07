@@ -46,11 +46,10 @@ public class Http2InboundFrameLogger implements Http2FrameReader {
 
             @Override
             public void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data,
-                    int padding, boolean endOfStream, boolean endOfSegment, boolean compressed)
+                    int padding, boolean endOfStream, boolean endOfSegment)
                     throws Http2Exception {
-                logger.logData(INBOUND, streamId, data, padding, endOfStream, endOfSegment,
-                        compressed);
-                observer.onDataRead(ctx, streamId, data, padding, endOfStream, endOfSegment, compressed);
+                logger.logData(INBOUND, streamId, data, padding, endOfStream, endOfSegment);
+                observer.onDataRead(ctx, streamId, data, padding, endOfStream, endOfSegment);
             }
 
             @Override
@@ -132,16 +131,10 @@ public class Http2InboundFrameLogger implements Http2FrameReader {
             }
 
             @Override
-            public void onAltSvcRead(ChannelHandlerContext ctx, int streamId, long maxAge,
-                    int port, ByteBuf protocolId, String host, String origin) throws Http2Exception {
-                logger.logAltSvc(INBOUND, streamId, maxAge, port, protocolId, host, origin);
-                observer.onAltSvcRead(ctx, streamId, maxAge, port, protocolId, host, origin);
-            }
-
-            @Override
-            public void onBlockedRead(ChannelHandlerContext ctx, int streamId) throws Http2Exception {
-                logger.logBlocked(INBOUND, streamId);
-                observer.onBlockedRead(ctx, streamId);
+            public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId,
+                    Http2Flags flags, ByteBuf payload) {
+                logger.logUnknownFrame(INBOUND, frameType, streamId, flags, payload);
+                observer.onUnknownFrame(ctx, frameType, streamId, flags, payload);
             }
         });
     }
@@ -152,12 +145,12 @@ public class Http2InboundFrameLogger implements Http2FrameReader {
     }
 
     @Override
-    public void maxHeaderTableSize(int max) {
+    public void maxHeaderTableSize(long max) {
         reader.maxHeaderTableSize(max);
     }
 
     @Override
-    public int maxHeaderTableSize() {
+    public long maxHeaderTableSize() {
         return reader.maxHeaderTableSize();
     }
 
