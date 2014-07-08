@@ -102,7 +102,7 @@ public class PerMessageDeflateClientExtensionHandshaker implements WebSocketClie
 
     @Override
     public WebSocketClientExtension handshakeExtension(WebSocketExtensionData extensionData) {
-        if (!PERMESSAGE_DEFLATE_EXTENSION.equals(extensionData.getName())) {
+        if (!PERMESSAGE_DEFLATE_EXTENSION.equals(extensionData.name())) {
             return null;
         }
 
@@ -113,7 +113,7 @@ public class PerMessageDeflateClientExtensionHandshaker implements WebSocketClie
         boolean clientNoContext = false;
 
         Iterator<Entry<String, String>> parametersIterator =
-                extensionData.getParameters().entrySet().iterator();
+                extensionData.parameters().entrySet().iterator();
         while (succeed && parametersIterator.hasNext()) {
             Entry<String, String> parameter = parametersIterator.next();
 
@@ -184,12 +184,12 @@ public class PerMessageDeflateClientExtensionHandshaker implements WebSocketClie
         }
 
         @Override
-        public WebSocketExtensionEncoder createExtensionEncoder() {
+        public WebSocketExtensionEncoder newExtensionEncoder() {
             return new PerMessageDeflateEncoder(compressionLevel, serverWindowSize, serverNoContext);
         }
 
         @Override
-        public WebSocketExtensionDecoder createExtensionDecoder() {
+        public WebSocketExtensionDecoder newExtensionDecoder() {
             return new PerMessageDeflateDecoder(clientNoContext);
         }
     }

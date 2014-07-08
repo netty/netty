@@ -21,8 +21,15 @@ import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtension;
 
+/**
+ * Per-frame implementation of deflate decompressor.
+ */
 class PerFrameDeflateDecoder extends DeflateDecoder {
 
+    /**
+     * Constructor
+     * @param noContext true to disable context takeover.
+     */
     public PerFrameDeflateDecoder(boolean noContext) {
         super(noContext);
     }
@@ -36,8 +43,12 @@ class PerFrameDeflateDecoder extends DeflateDecoder {
     }
 
     @Override
+    protected int newRsv(WebSocketFrame msg) {
+        return msg.rsv() ^ WebSocketExtension.RSV1;
+    }
+
+    @Override
     protected boolean appendFrameTail(WebSocketFrame msg) {
         return true;
     }
-
 }

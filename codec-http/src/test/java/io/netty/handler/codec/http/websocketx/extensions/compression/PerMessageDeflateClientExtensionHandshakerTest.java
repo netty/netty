@@ -36,8 +36,8 @@ public class PerMessageDeflateClientExtensionHandshakerTest {
 
         WebSocketExtensionData data = handshaker.newRequestData();
 
-        assertEquals(PERMESSAGE_DEFLATE_EXTENSION, data.getName());
-        assertTrue(data.getParameters().isEmpty());
+        assertEquals(PERMESSAGE_DEFLATE_EXTENSION, data.name());
+        assertTrue(data.parameters().isEmpty());
     }
 
     @Test
@@ -47,12 +47,12 @@ public class PerMessageDeflateClientExtensionHandshakerTest {
 
         WebSocketExtensionData data = handshaker.newRequestData();
 
-        assertEquals(PERMESSAGE_DEFLATE_EXTENSION, data.getName());
-        assertTrue(data.getParameters().containsKey(CLIENT_MAX_WINDOW));
-        assertTrue(data.getParameters().containsKey(SERVER_MAX_WINDOW));
-        assertTrue(data.getParameters().get(SERVER_MAX_WINDOW).equals("10"));
-        assertTrue(data.getParameters().containsKey(CLIENT_MAX_WINDOW));
-        assertTrue(data.getParameters().containsKey(SERVER_MAX_WINDOW));
+        assertEquals(PERMESSAGE_DEFLATE_EXTENSION, data.name());
+        assertTrue(data.parameters().containsKey(CLIENT_MAX_WINDOW));
+        assertTrue(data.parameters().containsKey(SERVER_MAX_WINDOW));
+        assertTrue(data.parameters().get(SERVER_MAX_WINDOW).equals("10"));
+        assertTrue(data.parameters().containsKey(CLIENT_MAX_WINDOW));
+        assertTrue(data.parameters().containsKey(SERVER_MAX_WINDOW));
     }
 
     @Test
@@ -65,8 +65,8 @@ public class PerMessageDeflateClientExtensionHandshakerTest {
 
         assertNotNull(extension);
         assertEquals(WebSocketClientExtension.RSV1, extension.rsv());
-        assertTrue(extension.createExtensionDecoder() instanceof PerMessageDeflateDecoder);
-        assertTrue(extension.createExtensionEncoder() instanceof PerMessageDeflateEncoder);
+        assertTrue(extension.newExtensionDecoder() instanceof PerMessageDeflateDecoder);
+        assertTrue(extension.newExtensionEncoder() instanceof PerMessageDeflateEncoder);
     }
 
     @Test
@@ -91,8 +91,8 @@ public class PerMessageDeflateClientExtensionHandshakerTest {
         // test
         assertNotNull(extension);
         assertEquals(WebSocketClientExtension.RSV1, extension.rsv());
-        assertTrue(extension.createExtensionDecoder() instanceof PerMessageDeflateDecoder);
-        assertTrue(extension.createExtensionEncoder() instanceof PerMessageDeflateEncoder);
+        assertTrue(extension.newExtensionDecoder() instanceof PerMessageDeflateDecoder);
+        assertTrue(extension.newExtensionEncoder() instanceof PerMessageDeflateEncoder);
 
         // initialize
         parameters = new HashMap<String, String>();
@@ -106,8 +106,8 @@ public class PerMessageDeflateClientExtensionHandshakerTest {
         // test
         assertNotNull(extension);
         assertEquals(WebSocketClientExtension.RSV1, extension.rsv());
-        assertTrue(extension.createExtensionDecoder() instanceof PerMessageDeflateDecoder);
-        assertTrue(extension.createExtensionEncoder() instanceof PerMessageDeflateEncoder);
+        assertTrue(extension.newExtensionDecoder() instanceof PerMessageDeflateDecoder);
+        assertTrue(extension.newExtensionEncoder() instanceof PerMessageDeflateEncoder);
 
         // initialize
         parameters = new HashMap<String, String>();

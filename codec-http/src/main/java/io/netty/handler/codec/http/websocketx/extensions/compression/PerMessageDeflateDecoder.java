@@ -24,10 +24,17 @@ import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtension;
 
 import java.util.List;
 
+/**
+ * Per-message implementation of deflate decompressor.
+ */
 class PerMessageDeflateDecoder extends DeflateDecoder {
 
     private boolean compressing;
 
+    /**
+     * Constructor
+     * @param noContext true to disable context takeover.
+     */
     public PerMessageDeflateDecoder(boolean noContext) {
         super(noContext);
     }
@@ -38,6 +45,12 @@ class PerMessageDeflateDecoder extends DeflateDecoder {
                  msg instanceof BinaryWebSocketFrame) &&
                     (((WebSocketFrame) msg).rsv() & WebSocketExtension.RSV1) > 0) ||
                 (msg instanceof ContinuationWebSocketFrame && compressing);
+    }
+
+    @Override
+    protected int newRsv(WebSocketFrame msg) {
+        return (((WebSocketFrame) msg).rsv() & WebSocketExtension.RSV1) > 0 ?
+                msg.rsv() ^ WebSocketExtension.RSV1 : msg.rsv();
     }
 
     @Override
@@ -56,5 +69,4 @@ class PerMessageDeflateDecoder extends DeflateDecoder {
             compressing = true;
         }
     }
-
 }

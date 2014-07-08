@@ -36,8 +36,8 @@ public class DeflateFrameClientExtensionHandshakerTest {
 
         WebSocketExtensionData data = handshaker.newRequestData();
 
-        assertEquals(X_WEBKIT_DEFLATE_FRAME_EXTENSION, data.getName());
-        assertTrue(data.getParameters().isEmpty());
+        assertEquals(X_WEBKIT_DEFLATE_FRAME_EXTENSION, data.name());
+        assertTrue(data.parameters().isEmpty());
     }
 
     @Test
@@ -47,8 +47,8 @@ public class DeflateFrameClientExtensionHandshakerTest {
 
         WebSocketExtensionData data = handshaker.newRequestData();
 
-        assertEquals(DEFLATE_FRAME_EXTENSION, data.getName());
-        assertTrue(data.getParameters().isEmpty());
+        assertEquals(DEFLATE_FRAME_EXTENSION, data.name());
+        assertTrue(data.parameters().isEmpty());
     }
 
     @Test
@@ -61,8 +61,8 @@ public class DeflateFrameClientExtensionHandshakerTest {
 
         assertNotNull(extension);
         assertEquals(WebSocketClientExtension.RSV1, extension.rsv());
-        assertTrue(extension.createExtensionDecoder() instanceof PerFrameDeflateDecoder);
-        assertTrue(extension.createExtensionEncoder() instanceof PerFrameDeflateEncoder);
+        assertTrue(extension.newExtensionDecoder() instanceof PerFrameDeflateDecoder);
+        assertTrue(extension.newExtensionEncoder() instanceof PerFrameDeflateEncoder);
     }
 
     @Test

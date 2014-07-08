@@ -86,7 +86,7 @@ public final class WebSocketExtensionTestUtil {
         @Override
         public boolean matches(Object o) {
             return o instanceof WebSocketExtensionData &&
-                    name.equals(((WebSocketExtensionData) o).getName());
+                    name.equals(((WebSocketExtensionData) o).name());
         }
     }
 

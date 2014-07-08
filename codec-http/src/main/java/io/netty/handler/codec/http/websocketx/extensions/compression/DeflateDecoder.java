@@ -23,15 +23,21 @@ import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
+import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.ContinuationWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtension;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionDecoder;
+import io.netty.util.ReferenceCountUtil;
 
 import java.util.List;
 
+/**
+ * Deflate implementation of a payload decompressor for
+ * <tt>io.netty.handler.codec.http.websocketx.WebSocketFrame</tt>.
+ */
 abstract class DeflateDecoder extends WebSocketExtensionDecoder {
 
     static final byte[] FRAME_TAIL = new byte[] {0x00, 0x00, (byte) 0xff, (byte) 0xff};
@@ -40,15 +46,20 @@ abstract class DeflateDecoder extends WebSocketExtensionDecoder {
 
     private EmbeddedChannel decoder;
 
+    /**
+     * Constructor
+     * @param noContext true to disable context takeover.
+     */
     public DeflateDecoder(boolean noContext) {
         this.noContext = noContext;
     }
 
     protected abstract boolean appendFrameTail(WebSocketFrame msg);
 
+    protected abstract int newRsv(WebSocketFrame msg);
+
     @Override
     protected void decode(ChannelHandlerContext ctx, WebSocketFrame msg, List<Object> out) throws Exception {
-
         if (decoder == null) {
             if (!(msg instanceof TextWebSocketFrame) && !(msg instanceof BinaryWebSocketFrame)) {
                 throw new CodecException("unexpected initial frame type: " + msg.getClass().getName());
@@ -63,27 +74,60 @@ abstract class DeflateDecoder extends WebSocketExtensionDecoder {
 
         ByteBuf decodedContent = (ByteBuf) decoder.readInbound();
         if (decodedContent == null) {
-            throw new CodecException();
+            throw new CodecException("cannot get compressed buffer");
+        }
+        if (!decodedContent.isReadable()) {
+            decodedContent.release();
+            throw new CodecException("cannot read compressed buffer");
+        }
+
+        if (!decoder.inboundMessages().isEmpty()) {
+            throw new CodecException("unexpected content");
+        }
+
+        if (msg.isFinalFragment() && noContext) {
+            cleanup();
         }
 
         WebSocketFrame outMsg;
         if (msg instanceof TextWebSocketFrame) {
-            outMsg = new TextWebSocketFrame(msg.isFinalFragment(),
-                    msg.rsv(), decodedContent);
+            outMsg = new TextWebSocketFrame(msg.isFinalFragment(), newRsv(msg), decodedContent);
         } else if (msg instanceof BinaryWebSocketFrame) {
-            outMsg = new BinaryWebSocketFrame(msg.isFinalFragment(),
-                    msg.rsv(), decodedContent);
+            outMsg = new BinaryWebSocketFrame(msg.isFinalFragment(), newRsv(msg), decodedContent);
         } else if (msg instanceof ContinuationWebSocketFrame) {
-            outMsg = new ContinuationWebSocketFrame(msg.isFinalFragment(),
-                    msg.rsv(), decodedContent);
+            outMsg = new ContinuationWebSocketFrame(msg.isFinalFragment(), newRsv(msg), decodedContent);
         } else {
             throw new CodecException("unexpected frame type: " + msg.getClass().getName());
         }
         out.add(outMsg);
+    }
 
-        if (msg.isFinalFragment() && noContext) {
+    @Override
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        cleanup();
+        super.handlerRemoved(ctx);
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        cleanup();
+        super.channelInactive(ctx);
+    }
+
+    private void cleanup() {
+        if (decoder != null) {
+            // Clean-up the previous encoder if not cleaned up correctly.
+            if (decoder.finish()) {
+                for (;;) {
+                    ByteBuf buf = decoder.readOutbound();
+                    if (buf == null) {
+                        break;
+                    }
+                    // Release the buffer
+                    buf.release();
+                }
+            }
             decoder = null;
         }
     }
-
 }

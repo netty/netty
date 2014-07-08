@@ -51,9 +51,9 @@ public final class WebSocketExtensionUtil {
             for (String rawExtension : rawExtensions) {
                 String[] extensionParameters = StringUtil.split(rawExtension, PARAMETER_SEPARATOR);
                 String name = extensionParameters[0].trim();
-                HashMap<String, String> parameters =
-                        new HashMap<String, String>(extensionParameters.length - 1);
+                Map<String, String> parameters;
                 if (extensionParameters.length > 1) {
+                    parameters = new HashMap<String, String>(extensionParameters.length - 1);
                     for (int i = 1; i < extensionParameters.length; i++) {
                         String parameter = extensionParameters[i].trim();
                         Matcher parameterMatcher = PARAMETER.matcher(parameter);
@@ -61,6 +61,8 @@ public final class WebSocketExtensionUtil {
                             parameters.put(parameterMatcher.group(1), parameterMatcher.group(3));
                         }
                     }
+                } else {
+                    parameters = Collections.<String, String>emptyMap();
                 }
                 extensions.add(new WebSocketExtensionData(name, parameters));
             }

@@ -20,18 +20,21 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.CodecException;
-import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.ContinuationWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
-import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtension;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionEncoder;
+import io.netty.util.ReferenceCountUtil;
 
 import java.util.List;
 
+/**
+ * Deflate implementation of a payload compressor for
+ * <tt>io.netty.handler.codec.http.websocketx.WebSocketFrame</tt>.
+ */
 abstract class DeflateEncoder extends WebSocketExtensionEncoder {
 
     private final int compressionLevel;
@@ -40,14 +43,28 @@ abstract class DeflateEncoder extends WebSocketExtensionEncoder {
 
     private EmbeddedChannel encoder;
 
+    /**
+     * Constructor
+     * @param compressionLevel compression level of the compressor.
+     * @param windowSize maximum size of the window compressor buffer.
+     * @param noContext true to disable context takeover.
+     */
     public DeflateEncoder(int compressionLevel, int windowSize, boolean noContext) {
         this.compressionLevel = compressionLevel;
         this.windowSize = windowSize;
         this.noContext = noContext;
     }
 
+    /**
+     * @param msg the current frame.
+     * @return the rsv bits to set in the compressed frame.
+     */
     protected abstract int rsv(WebSocketFrame msg);
 
+    /**
+     * @param msg the current frame.
+     * @return true if compressed payload tail needs to be removed.
+     */
     protected abstract boolean removeFrameTail(WebSocketFrame msg);
 
     @Override
@@ -63,7 +80,19 @@ abstract class DeflateEncoder extends WebSocketExtensionEncoder {
 
         ByteBuf encodedContent = (ByteBuf) encoder.readOutbound();
         if (encodedContent == null) {
-            throw new CodecException();
+            throw new CodecException("cannot get uncompressed buffer");
+        }
+        if (!encodedContent.isReadable()) {
+            encodedContent.release();
+            throw new CodecException("cannot read uncompressed buffer");
+        }
+
+        if (!encoder.outboundMessages().isEmpty()) {
+            throw new CodecException("unexpected content");
+        }
+
+        if (msg.isFinalFragment() && noContext) {
+            cleanup();
         }
 
         if (removeFrameTail(msg)) {
@@ -88,4 +117,32 @@ abstract class DeflateEncoder extends WebSocketExtensionEncoder {
         }
     }
 
+    @Override
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        cleanup();
+        super.handlerRemoved(ctx);
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        cleanup();
+        super.channelInactive(ctx);
+    }
+
+    private void cleanup() {
+        if (encoder != null) {
+            // Clean-up the previous encoder if not cleaned up correctly.
+            if (encoder.finish()) {
+                for (;;) {
+                    ByteBuf buf = encoder.readOutbound();
+                    if (buf == null) {
+                        break;
+                    }
+                    // Release the buffer
+                    buf.release();
+                }
+            }
+            encoder = null;
+        }
+    }
 }

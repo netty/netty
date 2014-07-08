@@ -24,10 +24,19 @@ import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtension;
 
 import java.util.List;
 
+/**
+ * Per-message implementation of deflate compressor.
+ */
 class PerMessageDeflateEncoder extends DeflateEncoder {
 
     private boolean compressing;
 
+    /**
+     * Constructor
+     * @param compressionLevel compression level of the compressor.
+     * @param windowSize maximum size of the window compressor buffer.
+     * @param noContext true to disable context takeover.
+     */
     public PerMessageDeflateEncoder(int compressionLevel, int windowSize, boolean noContext) {
         super(compressionLevel, windowSize, noContext);
     }

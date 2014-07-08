@@ -42,8 +42,8 @@ public class DeflateFrameServerExtensionHandshakerTest {
         // test
         assertNotNull(extension);
         assertEquals(WebSocketServerExtension.RSV1, extension.rsv());
-        assertTrue(extension.createExtensionDecoder() instanceof PerFrameDeflateDecoder);
-        assertTrue(extension.createExtensionEncoder() instanceof PerFrameDeflateEncoder);
+        assertTrue(extension.newExtensionDecoder() instanceof PerFrameDeflateDecoder);
+        assertTrue(extension.newExtensionEncoder() instanceof PerFrameDeflateEncoder);
     }
 
     @Test
@@ -59,8 +59,8 @@ public class DeflateFrameServerExtensionHandshakerTest {
         // test
         assertNotNull(extension);
         assertEquals(WebSocketServerExtension.RSV1, extension.rsv());
-        assertTrue(extension.createExtensionDecoder() instanceof PerFrameDeflateDecoder);
-        assertTrue(extension.createExtensionEncoder() instanceof PerFrameDeflateEncoder);
+        assertTrue(extension.newExtensionDecoder() instanceof PerFrameDeflateDecoder);
+        assertTrue(extension.newExtensionEncoder() instanceof PerFrameDeflateEncoder);
     }
 
     @Test

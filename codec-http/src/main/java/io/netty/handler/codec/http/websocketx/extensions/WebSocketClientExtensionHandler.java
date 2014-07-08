@@ -53,6 +53,9 @@ public class WebSocketClientExtensionHandler extends ChannelHandlerAdapter {
         if (extensionHandshakers == null) {
             throw new NullPointerException("extensionHandshakers");
         }
+        if (extensionHandshakers.length == 0) {
+            throw new IllegalArgumentException("extensionHandshakers must contains at least one handshaker");
+        }
         this.extensionHandshakers = Arrays.asList(extensionHandshakers);
     }
 
@@ -65,7 +68,7 @@ public class WebSocketClientExtensionHandler extends ChannelHandlerAdapter {
             for (WebSocketClientExtensionHandshaker extentionHandshaker : extensionHandshakers) {
                 WebSocketExtensionData extensionData = extentionHandshaker.newRequestData();
                 headerValue = WebSocketExtensionUtil.appendExtension(headerValue,
-                        extensionData.getName(), extensionData.getParameters());
+                        extensionData.name(), extensionData.parameters());
             }
 
             request.headers().set(HttpHeaders.Names.SEC_WEBSOCKET_EXTENSIONS, headerValue);
@@ -111,8 +114,8 @@ public class WebSocketClientExtensionHandler extends ChannelHandlerAdapter {
                     }
 
                     for (WebSocketClientExtension validExtension : validExtensions) {
-                        WebSocketExtensionDecoder decoder = validExtension.createExtensionDecoder();
-                        WebSocketExtensionEncoder encoder = validExtension.createExtensionEncoder();
+                        WebSocketExtensionDecoder decoder = validExtension.newExtensionDecoder();
+                        WebSocketExtensionEncoder encoder = validExtension.newExtensionEncoder();
                         ctx.pipeline().addAfter(ctx.name(), decoder.getClass().getName(), decoder);
                         ctx.pipeline().addAfter(ctx.name(), encoder.getClass().getName(), encoder);
                     }

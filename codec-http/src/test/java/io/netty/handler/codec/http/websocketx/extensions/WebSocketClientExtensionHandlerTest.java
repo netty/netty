@@ -56,8 +56,8 @@ public class WebSocketClientExtensionHandlerTest {
         replay(fallbackHandshakerMock);
 
         expect(mainExtensionMock.rsv()).andReturn(WebSocketExtension.RSV1).anyTimes();
-        expect(mainExtensionMock.createExtensionEncoder()).andReturn(new DummyEncoder()).once();
-        expect(mainExtensionMock.createExtensionDecoder()).andReturn(new DummyDecoder()).once();
+        expect(mainExtensionMock.newExtensionEncoder()).andReturn(new DummyEncoder()).once();
+        expect(mainExtensionMock.newExtensionDecoder()).andReturn(new DummyDecoder()).once();
         replay(mainExtensionMock);
 
         // execute
@@ -80,12 +80,12 @@ public class WebSocketClientExtensionHandlerTest {
 
         // test
         assertEquals(2, reqExts.size());
-        assertEquals("main", reqExts.get(0).getName());
-        assertEquals("fallback", reqExts.get(1).getName());
+        assertEquals("main", reqExts.get(0).name());
+        assertEquals("fallback", reqExts.get(1).name());
 
         assertEquals(1, resExts.size());
-        assertEquals("main", resExts.get(0).getName());
-        assertTrue(resExts.get(0).getParameters().isEmpty());
+        assertEquals("main", resExts.get(0).name());
+        assertTrue(resExts.get(0).parameters().isEmpty());
         assertTrue(ch.pipeline().get(DummyDecoder.class) != null);
         assertTrue(ch.pipeline().get(DummyEncoder.class) != null);
     }
@@ -106,8 +106,8 @@ public class WebSocketClientExtensionHandlerTest {
         replay(fallbackHandshakerMock);
 
         expect(fallbackExtensionMock.rsv()).andReturn(WebSocketExtension.RSV1).anyTimes();
-        expect(fallbackExtensionMock.createExtensionEncoder()).andReturn(new DummyEncoder()).once();
-        expect(fallbackExtensionMock.createExtensionDecoder()).andReturn(new DummyDecoder()).once();
+        expect(fallbackExtensionMock.newExtensionEncoder()).andReturn(new DummyEncoder()).once();
+        expect(fallbackExtensionMock.newExtensionDecoder()).andReturn(new DummyDecoder()).once();
         replay(fallbackExtensionMock);
 
         // execute
@@ -130,12 +130,12 @@ public class WebSocketClientExtensionHandlerTest {
 
         // test
         assertEquals(2, reqExts.size());
-        assertEquals("main", reqExts.get(0).getName());
-        assertEquals("fallback", reqExts.get(1).getName());
+        assertEquals("main", reqExts.get(0).name());
+        assertEquals("fallback", reqExts.get(1).name());
 
         assertEquals(1, resExts.size());
-        assertEquals("fallback", resExts.get(0).getName());
-        assertTrue(resExts.get(0).getParameters().isEmpty());
+        assertEquals("fallback", resExts.get(0).name());
+        assertTrue(resExts.get(0).parameters().isEmpty());
         assertTrue(ch.pipeline().get(DummyDecoder.class) != null);
         assertTrue(ch.pipeline().get(DummyEncoder.class) != null);
     }
@@ -162,15 +162,15 @@ public class WebSocketClientExtensionHandlerTest {
         DummyEncoder mainEncoder = new DummyEncoder();
         DummyDecoder mainDecoder = new DummyDecoder();
         expect(mainExtensionMock.rsv()).andReturn(WebSocketExtension.RSV1).anyTimes();
-        expect(mainExtensionMock.createExtensionEncoder()).andReturn(mainEncoder).once();
-        expect(mainExtensionMock.createExtensionDecoder()).andReturn(mainDecoder).once();
+        expect(mainExtensionMock.newExtensionEncoder()).andReturn(mainEncoder).once();
+        expect(mainExtensionMock.newExtensionDecoder()).andReturn(mainDecoder).once();
         replay(mainExtensionMock);
 
         Dummy2Encoder fallbackEncoder = new Dummy2Encoder();
         Dummy2Decoder fallbackDecoder = new Dummy2Decoder();
         expect(fallbackExtensionMock.rsv()).andReturn(WebSocketExtension.RSV2).anyTimes();
-        expect(fallbackExtensionMock.createExtensionEncoder()).andReturn(fallbackEncoder).once();
-        expect(fallbackExtensionMock.createExtensionDecoder()).andReturn(fallbackDecoder).once();
+        expect(fallbackExtensionMock.newExtensionEncoder()).andReturn(fallbackEncoder).once();
+        expect(fallbackExtensionMock.newExtensionDecoder()).andReturn(fallbackDecoder).once();
         replay(fallbackExtensionMock);
 
         // execute
@@ -193,12 +193,12 @@ public class WebSocketClientExtensionHandlerTest {
 
         // test
         assertEquals(2, reqExts.size());
-        assertEquals("main", reqExts.get(0).getName());
-        assertEquals("fallback", reqExts.get(1).getName());
+        assertEquals("main", reqExts.get(0).name());
+        assertEquals("fallback", reqExts.get(1).name());
 
         assertEquals(2, resExts.size());
-        assertEquals("main", resExts.get(0).getName());
-        assertEquals("fallback", resExts.get(1).getName());
+        assertEquals("main", resExts.get(0).name());
+        assertEquals("fallback", resExts.get(1).name());
         assertTrue(ch.pipeline().context(mainEncoder) != null);
         assertTrue(ch.pipeline().context(mainDecoder) != null);
         assertTrue(ch.pipeline().context(fallbackEncoder) != null);
@@ -246,8 +246,8 @@ public class WebSocketClientExtensionHandlerTest {
 
         // test
         assertEquals(2, reqExts.size());
-        assertEquals("main", reqExts.get(0).getName());
-        assertEquals("fallback", reqExts.get(1).getName());
+        assertEquals("main", reqExts.get(0).name());
+        assertEquals("fallback", reqExts.get(1).name());
     }
 
 }

@@ -32,11 +32,11 @@ public interface WebSocketExtension {
     /**
      * @return create the extension encoder.
      */
-    WebSocketExtensionEncoder createExtensionEncoder();
+    WebSocketExtensionEncoder newExtensionEncoder();
 
     /**
      * @return create the extension decoder.
      */
-    WebSocketExtensionDecoder createExtensionDecoder();
+    WebSocketExtensionDecoder newExtensionDecoder();
 
 }

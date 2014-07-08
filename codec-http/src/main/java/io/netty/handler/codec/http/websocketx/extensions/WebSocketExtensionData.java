@@ -18,6 +18,11 @@ package io.netty.handler.codec.http.websocketx.extensions;
 import java.util.Collections;
 import java.util.Map;
 
+/**
+ * A WebSocket Extension data from the <tt>Sec-WebSocket-Extensions</tt> header.
+ *
+ * See <tt>io.netty.handler.codec.http.HttpHeaders.Names.SEC_WEBSOCKET_EXTENSIONS</tt>.
+ */
 public final class WebSocketExtensionData {
 
     private final String name;
@@ -27,15 +32,24 @@ public final class WebSocketExtensionData {
         if (name == null) {
             throw new NullPointerException("name");
         }
+        if (parameters == null) {
+            throw new NullPointerException("parameters");
+        }
         this.name = name;
         this.parameters = Collections.unmodifiableMap(parameters);
     }
 
-    public String getName() {
+    /**
+     * @return the extension name.
+     */
+    public String name() {
         return name;
     }
 
-    public Map<String, String> getParameters() {
+    /**
+     * @return the extension optional parameters.
+     */
+    public Map<String, String> parameters() {
         return parameters;
     }
 }

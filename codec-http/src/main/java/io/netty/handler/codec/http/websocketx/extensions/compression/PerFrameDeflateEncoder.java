@@ -21,8 +21,17 @@ import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtension;
 
+/**
+ * Per-frame implementation of deflate compressor.
+ */
 class PerFrameDeflateEncoder extends DeflateEncoder {
 
+    /**
+     * Constructor
+     * @param compressionLevel compression level of the compressor.
+     * @param windowSize maximum size of the window compressor buffer.
+     * @param noContext true to disable context takeover.
+     */
     public PerFrameDeflateEncoder(int compressionLevel, int windowSize, boolean noContext) {
         super(compressionLevel, windowSize, noContext);
     }

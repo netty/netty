@@ -57,13 +57,13 @@ public class DeflateFrameServerExtensionHandshaker implements WebSocketServerExt
 
     @Override
     public WebSocketServerExtension handshakeExtension(WebSocketExtensionData extensionData) {
-        if (!X_WEBKIT_DEFLATE_FRAME_EXTENSION.equals(extensionData.getName()) &&
-            !DEFLATE_FRAME_EXTENSION.equals(extensionData.getName())) {
+        if (!X_WEBKIT_DEFLATE_FRAME_EXTENSION.equals(extensionData.name()) &&
+            !DEFLATE_FRAME_EXTENSION.equals(extensionData.name())) {
             return null;
         }
 
-        if (extensionData.getParameters().isEmpty()) {
-            return new DeflateFrameServerExtension(compressionLevel, extensionData.getName());
+        if (extensionData.parameters().isEmpty()) {
+            return new DeflateFrameServerExtension(compressionLevel, extensionData.name());
         } else {
             return null;
         }
@@ -85,12 +85,12 @@ public class DeflateFrameServerExtensionHandshaker implements WebSocketServerExt
         }
 
         @Override
-        public WebSocketExtensionEncoder createExtensionEncoder() {
+        public WebSocketExtensionEncoder newExtensionEncoder() {
             return new PerFrameDeflateEncoder(compressionLevel, 15, false);
         }
 
         @Override
-        public WebSocketExtensionDecoder createExtensionDecoder() {
+        public WebSocketExtensionDecoder newExtensionDecoder() {
             return new PerFrameDeflateDecoder(false);
         }
 
