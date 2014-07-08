@@ -17,6 +17,7 @@ package io.netty.handler.codec.http.websocketx.extensions.compression;
 
 import static io.netty.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateDecoder.*;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.CodecException;
@@ -70,7 +71,6 @@ abstract class DeflateEncoder extends WebSocketExtensionEncoder {
     @Override
     protected void encode(ChannelHandlerContext ctx, WebSocketFrame msg,
             List<Object> out) throws Exception {
-
         if (encoder == null) {
             encoder = new EmbeddedChannel(ZlibCodecFactory.newZlibEncoder(
                     ZlibWrapper.NONE, compressionLevel, windowSize, 8));
@@ -78,43 +78,48 @@ abstract class DeflateEncoder extends WebSocketExtensionEncoder {
 
         encoder.writeOutbound(msg.content().retain());
 
-        ByteBuf encodedContent = (ByteBuf) encoder.readOutbound();
-        if (encodedContent == null) {
-            throw new CodecException("cannot get uncompressed buffer");
+        CompositeByteBuf fullCompressedContent = ctx.alloc().compositeBuffer();
+        for (;;) {
+            ByteBuf partCompressedContent = encoder.readOutbound();
+            if (partCompressedContent == null) {
+                break;
+            }
+            if (!partCompressedContent.isReadable()) {
+                partCompressedContent.release();
+                continue;
+            }
+            fullCompressedContent.addComponent(partCompressedContent);
+            fullCompressedContent.writerIndex(fullCompressedContent.writerIndex() +
+                    partCompressedContent.readableBytes());
         }
-        if (!encodedContent.isReadable()) {
-            encodedContent.release();
-            throw new CodecException("cannot read uncompressed buffer");
-        }
-
-        if (!encoder.outboundMessages().isEmpty()) {
-            throw new CodecException("unexpected content");
+        if (fullCompressedContent.numComponents() <= 0) {
+            fullCompressedContent.release();
+            throw new CodecException("cannot read compressed buffer");
         }
 
         if (msg.isFinalFragment() && noContext) {
             cleanup();
         }
 
+        ByteBuf compressedContent;
         if (removeFrameTail(msg)) {
-            int realLength = encodedContent.readableBytes() - FRAME_TAIL.length;
-            encodedContent = encodedContent.slice(0, realLength);
+            int realLength = fullCompressedContent.readableBytes() - FRAME_TAIL.length;
+            compressedContent = fullCompressedContent.slice(0, realLength);
+        } else {
+            compressedContent = fullCompressedContent;
         }
 
         WebSocketFrame outMsg;
         if (msg instanceof TextWebSocketFrame) {
-            outMsg = new TextWebSocketFrame(msg.isFinalFragment(), rsv(msg), encodedContent);
+            outMsg = new TextWebSocketFrame(msg.isFinalFragment(), rsv(msg), compressedContent);
         } else if (msg instanceof BinaryWebSocketFrame) {
-            outMsg = new BinaryWebSocketFrame(msg.isFinalFragment(), rsv(msg), encodedContent);
+            outMsg = new BinaryWebSocketFrame(msg.isFinalFragment(), rsv(msg), compressedContent);
         } else if (msg instanceof ContinuationWebSocketFrame) {
-            outMsg = new ContinuationWebSocketFrame(msg.isFinalFragment(), rsv(msg), encodedContent);
+            outMsg = new ContinuationWebSocketFrame(msg.isFinalFragment(), rsv(msg), compressedContent);
         } else {
             throw new CodecException("unexpected frame type: " + msg.getClass().getName());
         }
         out.add(outMsg);
-
-        if (msg.isFinalFragment() && noContext) {
-            encoder = null;
-        }
     }
 
     @Override
