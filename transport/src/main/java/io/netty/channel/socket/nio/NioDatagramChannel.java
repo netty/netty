@@ -300,31 +300,36 @@ public final class NioDatagramChannel
             nioData = data.nioBuffer();
         }
 
-        final int writtenBytes;
-        if (remoteAddress != null) {
-            writtenBytes = javaChannel().send(nioData, remoteAddress);
-        } else {
-            writtenBytes = javaChannel().write(nioData);
-        }
-
-        boolean done =  writtenBytes > 0;
-        if (needsCopy) {
-            // This means we have allocated a new buffer and need to store it back so we not need to allocate it again
-            // later
-            if (remoteAddress == null) {
-                // remoteAddress is null which means we can handle it as ByteBuf directly
-                in.current(data);
+        boolean done = false;
+        try {
+            final int writtenBytes;
+            if (remoteAddress != null) {
+                writtenBytes = javaChannel().send(nioData, remoteAddress);
             } else {
-                if (!done) {
-                    // store it back with all the needed informations
-                    in.current(new DefaultAddressedEnvelope<ByteBuf, SocketAddress>(data, remoteAddress));
-                } else {
-                    // Just store back the new create buffer so it is cleaned up once in.remove() is called.
+                writtenBytes = javaChannel().write(nioData);
+            }
+            done =  writtenBytes > 0;
+            return done;
+        } finally {
+            // Handle this in the finally block to make sure we release the old buffer in all cases
+            // See https://github.com/netty/netty/issues/2644
+            if (needsCopy) {
+                // This means we have allocated a new buffer and need to store it back so we not need to allocate it
+                // later again
+                if (remoteAddress == null) {
+                    // remoteAddress is null which means we can handle it as ByteBuf directly
                     in.current(data);
+                } else {
+                    if (!done) {
+                        // store it back with all the needed informations
+                        in.current(new DefaultAddressedEnvelope<ByteBuf, SocketAddress>(data, remoteAddress));
+                    } else {
+                        // Just store back the new created buffer so it is cleaned up once in.remove() is called.
+                        in.current(data);
+                    }
                 }
             }
         }
-        return done;
     }
 
     @Override

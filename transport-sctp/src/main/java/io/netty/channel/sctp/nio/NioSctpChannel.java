@@ -316,22 +316,26 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
             data = alloc.directBuffer(dataLen).writeBytes(data);
             nioData = data.nioBuffer();
         }
-
         final MessageInfo mi = MessageInfo.createOutgoing(association(), null, packet.streamIdentifier());
         mi.payloadProtocolID(packet.protocolIdentifier());
         mi.streamNumber(packet.streamIdentifier());
 
-        final int writtenBytes = javaChannel().send(nioData, mi);
-
-        boolean done = writtenBytes > 0;
-        if (needsCopy) {
-            if (!done) {
-                in.current(new SctpMessage(mi, data));
-            } else {
-                in.current(data);
+        boolean done = false;
+        try {
+            final int writtenBytes = javaChannel().send(nioData, mi);
+            done = writtenBytes > 0;
+            return done;
+        } finally {
+            // Handle this in the finally block to make sure we release the old buffer in all cases
+            // See https://github.com/netty/netty/issues/2644
+            if (needsCopy) {
+                if (!done) {
+                    in.current(new SctpMessage(mi, data));
+                } else {
+                    in.current(data);
+                }
             }
         }
-        return done;
     }
 
     @Override
