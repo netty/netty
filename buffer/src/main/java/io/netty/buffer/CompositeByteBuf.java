@@ -1599,8 +1599,11 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
         }
 
         freed = true;
-        for (Component c: components) {
-            c.freeIfNecessary();
+        int size = components.size();
+        // We're not using foreach to avoid creating an iterator.
+        // see https://github.com/netty/netty/issues/2642
+        for (int i = 0; i < size; i++) {
+            components.get(i).freeIfNecessary();
         }
 
         if (leak != null) {
