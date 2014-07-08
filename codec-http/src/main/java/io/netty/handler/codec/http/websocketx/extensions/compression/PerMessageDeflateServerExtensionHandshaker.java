@@ -29,7 +29,7 @@ import java.util.Map.Entry;
  * <a href="http://tools.ietf.org/html/draft-ietf-hybi-permessage-compression-18">permessage-deflate</a>
  * handshake implementation.
  */
-public class PerMessageDeflateServerExtensionHandshaker implements WebSocketServerExtensionHandshaker {
+public final class PerMessageDeflateServerExtensionHandshaker implements WebSocketServerExtensionHandshaker {
 
     public static final int MIN_WINDOW_SIZE = 8;
     public static final int MAX_WINDOW_SIZE = 15;

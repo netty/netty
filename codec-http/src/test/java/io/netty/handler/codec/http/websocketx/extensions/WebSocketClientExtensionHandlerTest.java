@@ -64,14 +64,14 @@ public class WebSocketClientExtensionHandlerTest {
         EmbeddedChannel ch = new EmbeddedChannel(new WebSocketClientExtensionHandler(
                 mainHandshakerMock, fallbackHandshakerMock));
 
-        HttpRequest req = createUpgradeRequest(null);
+        HttpRequest req = newUpgradeRequest(null);
         ch.writeOutbound(req);
 
         HttpRequest req2 = ch.readOutbound();
         List<WebSocketExtensionData> reqExts = WebSocketExtensionUtil.extractExtensions(
                 req2.headers().get(Names.SEC_WEBSOCKET_EXTENSIONS));
 
-        HttpResponse res = createUpgradeResponse("main");
+        HttpResponse res = newUpgradeResponse("main");
         ch.writeInbound(res);
 
         HttpResponse res2 = ch.readInbound();
@@ -114,14 +114,14 @@ public class WebSocketClientExtensionHandlerTest {
         EmbeddedChannel ch = new EmbeddedChannel(new WebSocketClientExtensionHandler(
                 mainHandshakerMock, fallbackHandshakerMock));
 
-        HttpRequest req = createUpgradeRequest(null);
+        HttpRequest req = newUpgradeRequest(null);
         ch.writeOutbound(req);
 
         HttpRequest req2 = ch.readOutbound();
         List<WebSocketExtensionData> reqExts = WebSocketExtensionUtil.extractExtensions(
                 req2.headers().get(Names.SEC_WEBSOCKET_EXTENSIONS));
 
-        HttpResponse res = createUpgradeResponse("fallback");
+        HttpResponse res = newUpgradeResponse("fallback");
         ch.writeInbound(res);
 
         HttpResponse res2 = ch.readInbound();
@@ -177,14 +177,14 @@ public class WebSocketClientExtensionHandlerTest {
         EmbeddedChannel ch = new EmbeddedChannel(new WebSocketClientExtensionHandler(
                 mainHandshakerMock, fallbackHandshakerMock));
 
-        HttpRequest req = createUpgradeRequest(null);
+        HttpRequest req = newUpgradeRequest(null);
         ch.writeOutbound(req);
 
         HttpRequest req2 = ch.readOutbound();
         List<WebSocketExtensionData> reqExts = WebSocketExtensionUtil.extractExtensions(
                 req2.headers().get(Names.SEC_WEBSOCKET_EXTENSIONS));
 
-        HttpResponse res = createUpgradeResponse("main, fallback");
+        HttpResponse res = newUpgradeResponse("main, fallback");
         ch.writeInbound(res);
 
         HttpResponse res2 = ch.readInbound();
@@ -234,14 +234,14 @@ public class WebSocketClientExtensionHandlerTest {
         EmbeddedChannel ch = new EmbeddedChannel(new WebSocketClientExtensionHandler(
                 mainHandshakerMock, fallbackHandshakerMock));
 
-        HttpRequest req = createUpgradeRequest(null);
+        HttpRequest req = newUpgradeRequest(null);
         ch.writeOutbound(req);
 
         HttpRequest req2 = ch.readOutbound();
         List<WebSocketExtensionData> reqExts = WebSocketExtensionUtil.extractExtensions(
                 req2.headers().get(Names.SEC_WEBSOCKET_EXTENSIONS));
 
-        HttpResponse res = createUpgradeResponse("main, fallback");
+        HttpResponse res = newUpgradeResponse("main, fallback");
         ch.writeInbound(res);
 
         // test

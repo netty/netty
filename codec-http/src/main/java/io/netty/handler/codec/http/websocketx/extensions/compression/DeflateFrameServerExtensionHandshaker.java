@@ -27,7 +27,7 @@ import java.util.Collections;
  * <a href="https://tools.ietf.org/id/draft-tyoshino-hybi-websocket-perframe-deflate-06.txt">perframe-deflate</a>
  * handshake implementation.
  */
-public class DeflateFrameServerExtensionHandshaker implements WebSocketServerExtensionHandshaker {
+public final class DeflateFrameServerExtensionHandshaker implements WebSocketServerExtensionHandshaker {
 
     static final String X_WEBKIT_DEFLATE_FRAME_EXTENSION = "x-webkit-deflate-frame";
     static final String DEFLATE_FRAME_EXTENSION = "deflate-frame";

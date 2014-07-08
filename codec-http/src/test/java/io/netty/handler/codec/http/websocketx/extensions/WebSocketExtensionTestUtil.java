@@ -35,7 +35,7 @@ import io.netty.util.ReferenceCountUtil;
 
 public final class WebSocketExtensionTestUtil {
 
-    public static HttpRequest createUpgradeRequest(String ext) {
+    public static HttpRequest newUpgradeRequest(String ext) {
         HttpRequest req = ReferenceCountUtil.releaseLater(new DefaultHttpRequest(
                 HttpVersion.HTTP_1_1, HttpMethod.GET, "/chat"));
 
@@ -50,7 +50,7 @@ public final class WebSocketExtensionTestUtil {
         return req;
     }
 
-    public static HttpResponse createUpgradeResponse(String ext) {
+    public static HttpResponse newUpgradeResponse(String ext) {
         HttpResponse res = ReferenceCountUtil.releaseLater(new DefaultHttpResponse(
                 HttpVersion.HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS));
 

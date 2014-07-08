@@ -37,10 +37,10 @@ public class WebSocketServerCompressionHandlerTest {
     public void testNormalSuccess() {
         EmbeddedChannel ch = new EmbeddedChannel(new WebSocketServerCompressionHandler());
 
-        HttpRequest req = createUpgradeRequest(PERMESSAGE_DEFLATE_EXTENSION);
+        HttpRequest req = newUpgradeRequest(PERMESSAGE_DEFLATE_EXTENSION);
         ch.writeInbound(req);
 
-        HttpResponse res = createUpgradeResponse(null);
+        HttpResponse res = newUpgradeResponse(null);
         ch.writeOutbound(res);
 
         HttpResponse res2 = ch.readOutbound();
@@ -58,10 +58,10 @@ public class WebSocketServerCompressionHandlerTest {
         EmbeddedChannel ch = new EmbeddedChannel(new WebSocketServerExtensionHandler(
                 new PerMessageDeflateServerExtensionHandshaker(6, false, 10, false, false)));
 
-        HttpRequest req = createUpgradeRequest(PERMESSAGE_DEFLATE_EXTENSION + "; " + CLIENT_MAX_WINDOW);
+        HttpRequest req = newUpgradeRequest(PERMESSAGE_DEFLATE_EXTENSION + "; " + CLIENT_MAX_WINDOW);
         ch.writeInbound(req);
 
-        HttpResponse res = createUpgradeResponse(null);
+        HttpResponse res = newUpgradeResponse(null);
         ch.writeOutbound(res);
 
         HttpResponse res2 = ch.readOutbound();
@@ -79,10 +79,10 @@ public class WebSocketServerCompressionHandlerTest {
         EmbeddedChannel ch = new EmbeddedChannel(new WebSocketServerExtensionHandler(
                 new PerMessageDeflateServerExtensionHandshaker(6, false, 10, false, false)));
 
-        HttpRequest req = createUpgradeRequest(PERMESSAGE_DEFLATE_EXTENSION);
+        HttpRequest req = newUpgradeRequest(PERMESSAGE_DEFLATE_EXTENSION);
         ch.writeInbound(req);
 
-        HttpResponse res = createUpgradeResponse(null);
+        HttpResponse res = newUpgradeResponse(null);
         ch.writeOutbound(res);
 
         HttpResponse res2 = ch.readOutbound();
@@ -100,10 +100,10 @@ public class WebSocketServerCompressionHandlerTest {
         EmbeddedChannel ch = new EmbeddedChannel(new WebSocketServerExtensionHandler(
                 new PerMessageDeflateServerExtensionHandshaker(6, true, 15, false, false)));
 
-        HttpRequest req = createUpgradeRequest(PERMESSAGE_DEFLATE_EXTENSION + "; " + SERVER_MAX_WINDOW + "=10");
+        HttpRequest req = newUpgradeRequest(PERMESSAGE_DEFLATE_EXTENSION + "; " + SERVER_MAX_WINDOW + "=10");
         ch.writeInbound(req);
 
-        HttpResponse res = createUpgradeResponse(null);
+        HttpResponse res = newUpgradeResponse(null);
         ch.writeOutbound(res);
 
         HttpResponse res2 = ch.readOutbound();
@@ -121,10 +121,10 @@ public class WebSocketServerCompressionHandlerTest {
         EmbeddedChannel ch = new EmbeddedChannel(new WebSocketServerExtensionHandler(
                 new PerMessageDeflateServerExtensionHandshaker(6, false, 15, false, false)));
 
-        HttpRequest req = createUpgradeRequest(PERMESSAGE_DEFLATE_EXTENSION + "; " + SERVER_MAX_WINDOW + "=10");
+        HttpRequest req = newUpgradeRequest(PERMESSAGE_DEFLATE_EXTENSION + "; " + SERVER_MAX_WINDOW + "=10");
         ch.writeInbound(req);
 
-        HttpResponse res = createUpgradeResponse(null);
+        HttpResponse res = newUpgradeResponse(null);
         ch.writeOutbound(res);
 
         HttpResponse res2 = ch.readOutbound();
@@ -138,10 +138,10 @@ public class WebSocketServerCompressionHandlerTest {
     public void testServerNoContext() {
         EmbeddedChannel ch = new EmbeddedChannel(new WebSocketServerCompressionHandler());
 
-        HttpRequest req = createUpgradeRequest(PERMESSAGE_DEFLATE_EXTENSION + "; " + SERVER_NO_CONTEXT);
+        HttpRequest req = newUpgradeRequest(PERMESSAGE_DEFLATE_EXTENSION + "; " + SERVER_NO_CONTEXT);
         ch.writeInbound(req);
 
-        HttpResponse res = createUpgradeResponse(null);
+        HttpResponse res = newUpgradeResponse(null);
         ch.writeOutbound(res);
 
         HttpResponse res2 = ch.readOutbound();
@@ -155,10 +155,10 @@ public class WebSocketServerCompressionHandlerTest {
     public void testClientNoContext() {
         EmbeddedChannel ch = new EmbeddedChannel(new WebSocketServerCompressionHandler());
 
-        HttpRequest req = createUpgradeRequest(PERMESSAGE_DEFLATE_EXTENSION + "; " + CLIENT_NO_CONTEXT);
+        HttpRequest req = newUpgradeRequest(PERMESSAGE_DEFLATE_EXTENSION + "; " + CLIENT_NO_CONTEXT);
         ch.writeInbound(req);
 
-        HttpResponse res = createUpgradeResponse(null);
+        HttpResponse res = newUpgradeResponse(null);
         ch.writeOutbound(res);
 
         HttpResponse res2 = ch.readOutbound();
@@ -176,11 +176,11 @@ public class WebSocketServerCompressionHandlerTest {
         EmbeddedChannel ch = new EmbeddedChannel(new WebSocketServerExtensionHandler(
                 new PerMessageDeflateServerExtensionHandshaker(6, false, 15, false, false)));
 
-        HttpRequest req = createUpgradeRequest(PERMESSAGE_DEFLATE_EXTENSION + "; " + SERVER_MAX_WINDOW + "=10, " +
+        HttpRequest req = newUpgradeRequest(PERMESSAGE_DEFLATE_EXTENSION + "; " + SERVER_MAX_WINDOW + "=10, " +
                 PERMESSAGE_DEFLATE_EXTENSION);
         ch.writeInbound(req);
 
-        HttpResponse res = createUpgradeResponse(null);
+        HttpResponse res = newUpgradeResponse(null);
         ch.writeOutbound(res);
 
         HttpResponse res2 = ch.readOutbound();
