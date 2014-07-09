@@ -711,94 +711,141 @@ jlong writev0(JNIEnv * env, jclass clazz, jint fd, struct iovec iov[], jint leng
 }
 
 JNIEXPORT jlong JNICALL Java_io_netty_channel_epoll_Native_writev(JNIEnv * env, jclass clazz, jint fd, jobjectArray buffers, jint offset, jint length) {
-    struct iovec iov[length];
-    int i;
-    int iovidx = 0;
-    for (i = offset; i < length; i++) {
-        jobject bufObj = (*env)->GetObjectArrayElement(env, buffers, i);
-        jint pos;
-        // Get the current position using the (*env)->GetIntField if possible and fallback
-        // to slower (*env)->CallIntMethod(...) if needed
-        if (posFieldId == NULL) {
-            pos = (*env)->CallIntMethod(env, bufObj, posId, NULL);
-        } else {
-            pos = (*env)->GetIntField(env, bufObj, posFieldId);
-        }
-        jint limit;
-        // Get the current limit using the (*env)->GetIntField if possible and fallback
-        // to slower (*env)->CallIntMethod(...) if needed
-        if (limitFieldId == NULL) {
-            limit = (*env)->CallIntMethod(env, bufObj, limitId, NULL);
-        } else {
-            limit = (*env)->GetIntField(env, bufObj, limitFieldId);
-        }
-        void *buffer = (*env)->GetDirectBufferAddress(env, bufObj);
-        if (buffer == NULL) {
-            throwRuntimeException(env, "Unable to access address of buffer");
-            return -1;
-        }
-        iov[iovidx].iov_base = buffer + pos;
-        iov[iovidx].iov_len = (size_t) (limit - pos);
-        iovidx++;
+    // Calculate maximal size of iov
+    //
+    // See https://github.com/netty/netty/issues/2647
+    int iovLen = IOV_MAX < length ? IOV_MAX : length;
+    struct iovec iov[iovLen];
+    jlong w = 0;
+    while (length > 0) {
+        int i;
+        int iovidx = 0;
+        int loop = IOV_MAX < length ? IOV_MAX : length;
+        int num = offset + loop;
+        for (i = offset; i < num; i++) {
+            jobject bufObj = (*env)->GetObjectArrayElement(env, buffers, i);
+            jint pos;
+            // Get the current position using the (*env)->GetIntField if possible and fallback
+            // to slower (*env)->CallIntMethod(...) if needed
+            if (posFieldId == NULL) {
+                pos = (*env)->CallIntMethod(env, bufObj, posId, NULL);
+            } else {
+                pos = (*env)->GetIntField(env, bufObj, posFieldId);
+            }
+            jint limit;
+            // Get the current limit using the (*env)->GetIntField if possible and fallback
+            // to slower (*env)->CallIntMethod(...) if needed
+            if (limitFieldId == NULL) {
+                limit = (*env)->CallIntMethod(env, bufObj, limitId, NULL);
+            } else {
+                limit = (*env)->GetIntField(env, bufObj, limitFieldId);
+            }
+            void *buffer = (*env)->GetDirectBufferAddress(env, bufObj);
+            if (buffer == NULL) {
+                throwRuntimeException(env, "Unable to access address of buffer");
+                return -1;
+            }
+            iov[iovidx].iov_base = buffer + pos;
+            iov[iovidx].iov_len = (size_t) (limit - pos);
+            iovidx++;
 
-        // Explicit delete local reference as otherwise the local references will only be released once the native method returns.
-        // Also there may be a lot of these and JNI specification only specify that 16 must be able to be created.
-        //
-        // See https://github.com/netty/netty/issues/2623
-        (*env)->DeleteLocalRef(env, bufObj);
-    }
-    jlong res = writev0(env, clazz, fd, iov, length);
-    if (res <= 0) {
-        return res;
-    }
-
-    // update the position of the written buffers
-    int written = res;
-    int a;
-    for (a = 0; a < length; a++) {
-        int len = iov[a].iov_len;
-        jobject bufObj = (*env)->GetObjectArrayElement(env, buffers, a + offset);
-        if (len >= written) {
-            incrementPosition(env, bufObj, written);
-            break;
-        } else {
-            incrementPosition(env, bufObj, len);
-            written -= len;
+            // Explicit delete local reference as otherwise the local references will only be released once the native method returns.
+            // Also there may be a lot of these and JNI specification only specify that 16 must be able to be created.
+            //
+            // See https://github.com/netty/netty/issues/2623
+            (*env)->DeleteLocalRef(env, bufObj);
         }
-        // Explicit delete local reference as otherwise the local references will only be released once the native method returns.
-        // Also there may be a lot of these and JNI specification only specify that 16 must be able to be created.
-        //
-        // See https://github.com/netty/netty/issues/2623
-        (*env)->DeleteLocalRef(env, bufObj);
+        jlong res = writev0(env, clazz, fd, iov, loop);
+        if (res <= 0) {
+            return res < 0 ? res : w;
+        }
+
+        w += res;
+        offset += loop;
+        length -= loop;
+
+        // update the position of the written buffers
+        int written = res;
+        int a;
+        for (a = 0; a < loop; a++) {
+            int len = iov[a].iov_len;
+            jobject bufObj = (*env)->GetObjectArrayElement(env, buffers, a + offset);
+            if (len > written) {
+                incrementPosition(env, bufObj, written);
+                // Explicit delete local reference as otherwise the local references will only be released once the native method returns.
+                // Also there may be a lot of these and JNI specification only specify that 16 must be able to be created.
+                //
+                // See https://github.com/netty/netty/issues/2623
+                (*env)->DeleteLocalRef(env, bufObj);
+
+                // incomplete write which means the channel is not writable anymore. Return now!
+                return w;
+            } else {
+                incrementPosition(env, bufObj, len);
+                // Explicit delete local reference as otherwise the local references will only be released once the native method returns.
+                // Also there may be a lot of these and JNI specification only specify that 16 must be able to be created.
+                //
+                // See https://github.com/netty/netty/issues/2623
+                 (*env)->DeleteLocalRef(env, bufObj);
+                written -= len;
+            }
+
+        }
     }
-    return res;
+    return w;
 }
 
 JNIEXPORT jlong JNICALL Java_io_netty_channel_epoll_Native_writevAddresses(JNIEnv * env, jclass clazz, jint fd, jobjectArray addresses, jint offset, jint length) {
-    struct iovec iov[length];
-    int i;
-    int iovidx = 0;
-    for (i = offset; i < length; i++) {
-        jobject addressEntry = (*env)->GetObjectArrayElement(env, addresses, i);
-        jint readerIndex = (*env)->GetIntField(env, addressEntry, readerIndexFieldId);
-        jint writerIndex = (*env)->GetIntField(env, addressEntry, writerIndexFieldId);
-        void* memoryAddress = (void*) (*env)->GetLongField(env, addressEntry, memoryAddressFieldId);
+    // Calculate maximal size of iov
+    //
+    // See https://github.com/netty/netty/issues/2647
+    int iovLen = IOV_MAX < length ? IOV_MAX : length;
+    struct iovec iov[iovLen];
+    jlong w = 0;
+    while (length > 0) {
+        int i;
+        int iovidx = 0;
+        int loop = IOV_MAX < length ? IOV_MAX : length;
+        int num = offset + loop;
+        for (i = offset; i < num; i++) {
+            jobject addressEntry = (*env)->GetObjectArrayElement(env, addresses, i);
+            jint readerIndex = (*env)->GetIntField(env, addressEntry, readerIndexFieldId);
+            jint writerIndex = (*env)->GetIntField(env, addressEntry, writerIndexFieldId);
+            void* memoryAddress = (void*) (*env)->GetLongField(env, addressEntry, memoryAddressFieldId);
 
-        iov[iovidx].iov_base = memoryAddress + readerIndex;
-        iov[iovidx].iov_len = (size_t) (writerIndex - readerIndex);
-        iovidx++;
+            iov[iovidx].iov_base = memoryAddress + readerIndex;
+            iov[iovidx].iov_len = (size_t) (writerIndex - readerIndex);
+            iovidx++;
 
-        // Explicit delete local reference as otherwise the local references will only be released once the native method returns.
-        // Also there may be a lot of these and JNI specification only specify that 16 must be able to be created.
-        //
-        // See https://github.com/netty/netty/issues/2623
-        (*env)->DeleteLocalRef(env, addressEntry);
+            // Explicit delete local reference as otherwise the local references will only be released once the native method returns.
+            // Also there may be a lot of these and JNI specification only specify that 16 must be able to be created.
+            //
+            // See https://github.com/netty/netty/issues/2623
+            (*env)->DeleteLocalRef(env, addressEntry);
+        }
+
+        jlong res = writev0(env, clazz, fd, iov, loop);
+        if (res <= 0) {
+            return res < 0 ? res : w;
+        }
+
+        w += res;
+        offset += loop;
+        length -= loop;
+
+        // update the position of the written buffers
+        int written = res;
+        int a;
+        for (a = 0; a < loop; a++) {
+            int len = iov[a].iov_len;
+            if (len > written) {
+                // incomplete write which means the channel is not writable anymore. Return now!
+                return w;
+            }
+            written -= len;
+        }
     }
-
-    jlong res = writev0(env, clazz, fd, iov, length);
-    if (res <= 0) {
-        return res;
-    }
+    return w;
 }
 
 jint read0(JNIEnv * env, jclass clazz, jint fd, void *buffer, jint pos, jint limit) {

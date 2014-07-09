@@ -133,7 +133,6 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
 
         int nioBufferCnt = in.addressCount();
         long expectedWrittenBytes = in.addressSize();
-
         long localWrittenBytes = Native.writevAddresses(fd, nioBuffers, 0, nioBufferCnt);
 
         if (localWrittenBytes < expectedWrittenBytes) {
