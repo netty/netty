@@ -104,7 +104,6 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
     private byte[] maskingKey;
     private int framePayloadLen1;
     private boolean receivedClosingHandshake;
-    private Utf8Validator utf8Validator;
     private State state = State.READING_FIRST;
 
     /**
@@ -315,33 +314,8 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
                             // allowed in the middle of a fragmented message
                             if (frameOpcode != OPCODE_PING) {
                                 fragmentedFramesCount = 0;
-
-                                // Check text for UTF8 correctness
-                                if (frameOpcode == OPCODE_TEXT ||
-                                        utf8Validator != null && utf8Validator.isChecking()) {
-                                    // Check UTF-8 correctness for this payload
-                                    checkUTF8String(ctx, payloadBuffer);
-
-                                    // This does a second check to make sure UTF-8
-                                    // correctness for entire text message
-                                    utf8Validator.finish();
-                                }
                             }
                         } else {
-                            // Not final frame so we can expect more frames in the
-                            // fragmented sequence
-                            if (fragmentedFramesCount == 0) {
-                                // First text or binary frame for a fragmented set
-                                if (frameOpcode == OPCODE_TEXT) {
-                                    checkUTF8String(ctx, payloadBuffer);
-                                }
-                            } else {
-                                // Subsequent frames - only check if init frame is text
-                                if (utf8Validator != null && utf8Validator.isChecking()) {
-                                    checkUTF8String(ctx, payloadBuffer);
-                                }
-                            }
-
                             // Increment counter
                             fragmentedFramesCount++;
                         }
@@ -404,17 +378,6 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
             throw new TooLongFrameException("Length:" + l);
         } else {
             return (int) l;
-        }
-    }
-
-    private void checkUTF8String(ChannelHandlerContext ctx, ByteBuf buffer) {
-        try {
-            if (utf8Validator == null) {
-                utf8Validator = new Utf8Validator();
-            }
-            utf8Validator.check(buffer);
-        } catch (CorruptedFrameException ex) {
-            protocolViolation(ctx, ex);
         }
     }
 

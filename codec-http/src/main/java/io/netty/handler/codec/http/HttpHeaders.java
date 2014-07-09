@@ -270,6 +270,10 @@ public interface HttpHeaders extends TextHeaders {
          */
         public static final AsciiString SEC_WEBSOCKET_ACCEPT = new AsciiString("Sec-WebSocket-Accept");
         /**
+         * {@code "Sec-WebSocket-Protocol"}
+         */
+        public static final AsciiString SEC_WEBSOCKET_EXTENSIONS = new AsciiString("Sec-WebSocket-Extensions");
+        /**
          * {@code "Server"}
          */
         public static final AsciiString SERVER = new AsciiString("Server");
