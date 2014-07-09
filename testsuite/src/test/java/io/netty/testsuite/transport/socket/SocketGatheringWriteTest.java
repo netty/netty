@@ -46,7 +46,7 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
     }
 
     public void testGatheringWrite(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testGatheringWrite0(sb, cb, false, true);
+        testGatheringWrite0(sb, cb, data, false, true);
     }
 
     @Test(timeout = 30000)
@@ -55,7 +55,7 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
     }
 
     public void testGatheringWriteNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testGatheringWrite0(sb, cb, false, false);
+        testGatheringWrite0(sb, cb, data, false, false);
     }
 
     @Test(timeout = 30000)
@@ -64,7 +64,7 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
     }
 
     public void testGatheringWriteWithCompositeNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testGatheringWrite0(sb, cb, true, false);
+        testGatheringWrite0(sb, cb, data, true, false);
     }
 
     @Test(timeout = 30000)
@@ -73,11 +73,23 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
     }
 
     public void testGatheringWriteWithComposite(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testGatheringWrite0(sb, cb, true, true);
+        testGatheringWrite0(sb, cb, data, true, true);
+    }
+
+    // Test for https://github.com/netty/netty/issues/2647
+    @Test(timeout = 30000)
+    public void testGatheringWriteBig() throws Throwable {
+        run();
+    }
+
+    public void testGatheringWriteBig(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        byte[] bigData = new byte[1024 * 1024 * 50];
+        random.nextBytes(bigData);
+        testGatheringWrite0(sb, cb, bigData, false, true);
     }
 
     private static void testGatheringWrite0(
-            ServerBootstrap sb, Bootstrap cb, boolean composite, boolean autoRead) throws Throwable {
+            ServerBootstrap sb, Bootstrap cb, byte[] data, boolean composite, boolean autoRead) throws Throwable {
         final TestHandler sh = new TestHandler(autoRead);
         final TestHandler ch = new TestHandler(autoRead);
 
@@ -88,7 +100,7 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
         Channel cc = cb.connect().sync().channel();
 
         for (int i = 0; i < data.length;) {
-            int length = Math.min(random.nextInt(1024 * 64), data.length - i);
+            int length = Math.min(random.nextInt(1024 * 8), data.length - i);
             ByteBuf buf = Unpooled.wrappedBuffer(data, i, length);
             if (composite && i % 2 == 0) {
                 int split =  buf.readableBytes() / 2;

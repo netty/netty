@@ -14,7 +14,7 @@
  * under the License.
  */
 #include <jni.h>
-
+#include <limits.h>
 
 #define EPOLL_READ 0x01
 #define EPOLL_WRITE 0x02
@@ -26,6 +26,12 @@
 #ifndef SO_REUSEPORT
 #define SO_REUSEPORT 15
 #endif /* SO_REUSEPORT */
+
+// Define IOV_MAX if not found to limit the iov size on writev calls
+// See https://github.com/netty/netty/issues/2647
+#ifndef IOV_MAX
+#define IOV_MAX 1024
+#endif /* IOV_MAX */
 
 jint Java_io_netty_channel_epoll_Native_eventFd(JNIEnv * env, jclass clazz);
 void Java_io_netty_channel_epoll_Native_eventFdWrite(JNIEnv * env, jclass clazz, jint fd, jlong value);

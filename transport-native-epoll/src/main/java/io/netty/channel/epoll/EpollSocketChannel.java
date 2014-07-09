@@ -123,7 +123,6 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
 
     private void writeBytesMultiple(
             ChannelOutboundBuffer in, int msgCount, ByteBuffer[] nioBuffers) throws IOException {
-
         int nioBufferCnt = in.nioBufferCount();
         long expectedWrittenBytes = in.nioBufferSize();
 
