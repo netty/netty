@@ -286,6 +286,10 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
          */
         public static final String SEC_WEBSOCKET_ACCEPT = "Sec-WebSocket-Accept";
         /**
+         * {@code "Sec-WebSocket-Protocol"}
+         */
+        public static final AsciiString SEC_WEBSOCKET_EXTENSIONS = new AsciiString("Sec-WebSocket-Extensions");
+        /**
          * {@code "Server"}
          */
         public static final String SERVER = "Server";
