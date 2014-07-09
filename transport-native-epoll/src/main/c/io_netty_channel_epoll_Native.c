@@ -761,8 +761,6 @@ JNIEXPORT jlong JNICALL Java_io_netty_channel_epoll_Native_writev(JNIEnv * env, 
         }
 
         w += res;
-        offset += loop;
-        length -= loop;
 
         // update the position of the written buffers
         int written = res;
@@ -791,6 +789,8 @@ JNIEXPORT jlong JNICALL Java_io_netty_channel_epoll_Native_writev(JNIEnv * env, 
             }
 
         }
+        offset += loop;
+        length -= loop;
     }
     return w;
 }
