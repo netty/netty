@@ -33,6 +33,7 @@ import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakerFactory;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
+import io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketClientCompressionHandler;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 
@@ -111,6 +112,7 @@ public final class WebSocketClient {
                      p.addLast(
                              new HttpClientCodec(),
                              new HttpObjectAggregator(8192),
+                             new WebSocketClientCompressionHandler(),
                              handler);
                  }
              });
