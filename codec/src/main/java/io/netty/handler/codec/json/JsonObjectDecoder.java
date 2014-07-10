@@ -94,14 +94,11 @@ public class JsonObjectDecoder extends ByteToMessageDecoder {
 
         if (wrtIdx > maxObjectLength) {
             // buffer size exceeded maxObjectLength; discarding the complete buffer.
-            ctx.fireExceptionCaught(
-                    new TooLongFrameException(
-                            "object length exceeds " + maxObjectLength + ": " + wrtIdx + " bytes discarded")
-            );
-
             in.skipBytes(in.readableBytes());
             reset();
-            return;
+            throw new TooLongFrameException(
+                            "object length exceeds " + maxObjectLength + ": " + wrtIdx + " bytes discarded");
+
         }
 
         for (/* use current idx */; idx < wrtIdx; idx++) {
