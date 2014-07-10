@@ -98,7 +98,6 @@ public class JsonObjectDecoder extends ByteToMessageDecoder {
             reset();
             throw new TooLongFrameException(
                             "object length exceeds " + maxObjectLength + ": " + wrtIdx + " bytes discarded");
-
         }
 
         for (/* use current idx */; idx < wrtIdx; idx++) {
