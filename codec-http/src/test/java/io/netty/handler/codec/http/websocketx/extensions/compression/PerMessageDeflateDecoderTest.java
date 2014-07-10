@@ -143,9 +143,7 @@ public class PerMessageDeflateDecoderTest {
         byte[] finalPayload = new byte[300];
         finalPayloadWrapped.readBytes(finalPayload);
         assertTrue(Arrays.equals(finalPayload, payload));
-        uncompressedFrame1.release();
-        uncompressedFrame2.release();
-        uncompressedFrame3.release();
+        finalPayloadWrapped.release();
     }
 
     @Test
