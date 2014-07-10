@@ -90,8 +90,8 @@ public class XmlFrameDecoder extends ByteToMessageDecoder {
 
         if (bufferLength > maxFrameLength) {
             // bufferLength exceeded maxFrameLength; dropping frame
-            fail(ctx, bufferLength);
             in.skipBytes(in.readableBytes());
+            fail(bufferLength);
             return;
         }
 
@@ -178,15 +178,13 @@ public class XmlFrameDecoder extends ByteToMessageDecoder {
         }
     }
 
-    private void fail(ChannelHandlerContext ctx, long frameLength) {
+    private void fail(long frameLength) {
         if (frameLength > 0) {
-            ctx.fireExceptionCaught(
-                    new TooLongFrameException(
-                            "frame length exceeds " + maxFrameLength + ": " + frameLength + " - discarded"));
+            throw new TooLongFrameException(
+                            "frame length exceeds " + maxFrameLength + ": " + frameLength + " - discarded");
         } else {
-            ctx.fireExceptionCaught(
-                    new TooLongFrameException(
-                            "frame length exceeds " + maxFrameLength + " - discarding"));
+            throw new TooLongFrameException(
+                            "frame length exceeds " + maxFrameLength + " - discarding");
         }
     }
 
