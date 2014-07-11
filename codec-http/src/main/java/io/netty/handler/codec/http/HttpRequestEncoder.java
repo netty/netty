@@ -29,6 +29,12 @@ public class HttpRequestEncoder extends HttpObjectEncoder<HttpRequest> {
     private static final char QUESTION_MARK = '?';
     private static final byte[] CRLF = { CR, LF };
 
+    public HttpRequestEncoder() { }
+
+    public HttpRequestEncoder(int initialBufferCapacity, int flushThreshold) {
+        super(initialBufferCapacity, flushThreshold);
+    }
+
     @Override
     public boolean acceptOutboundMessage(Object msg) throws Exception {
         return super.acceptOutboundMessage(msg) && !(msg instanceof HttpResponse);
