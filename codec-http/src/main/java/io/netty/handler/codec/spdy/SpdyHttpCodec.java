@@ -28,4 +28,11 @@ public final class SpdyHttpCodec
     public SpdyHttpCodec(SpdyVersion version, int maxContentLength) {
         super(new SpdyHttpDecoder(version, maxContentLength), new SpdyHttpEncoder(version));
     }
+
+    /**
+     * Creates a new instance with the specified decoder options.
+     */
+    public SpdyHttpCodec(SpdyVersion version, int maxContentLength, boolean validateHttpHeaders) {
+        super(new SpdyHttpDecoder(version, maxContentLength, validateHttpHeaders), new SpdyHttpEncoder(version));
+    }
 }
