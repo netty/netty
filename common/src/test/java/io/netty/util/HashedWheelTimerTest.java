@@ -17,8 +17,10 @@ package io.netty.util;
 
 import org.junit.Test;
 
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -122,5 +124,34 @@ public class HashedWheelTimerTest {
         }, 1, TimeUnit.SECONDS);
         Thread.sleep(3500);
         assertEquals(3, counter.get());
+        timer.stop();
+    }
+
+    @Test
+    public void testExecutionOnTime() throws InterruptedException {
+        int tickDuration = 200;
+        int timeout = 125;
+        int maxTimeout = tickDuration + timeout;
+        final HashedWheelTimer timer = new HashedWheelTimer(tickDuration, TimeUnit.MILLISECONDS);
+        final BlockingQueue<Long> queue = new LinkedBlockingQueue<Long>();
+
+        int scheduledTasks = 100000;
+        for (int i = 0; i < scheduledTasks; i++) {
+            final long start = System.nanoTime();
+            timer.newTimeout(new TimerTask() {
+                @Override
+                public void run(final Timeout timeout) throws Exception {
+                    queue.add(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start));
+                }
+            }, timeout, TimeUnit.MILLISECONDS);
+        }
+
+        for (int i = 0; i < scheduledTasks; i++) {
+            long delay = queue.take();
+            assertTrue("Timeout + " + scheduledTasks + " delay " + delay + " must be " + timeout + " <= " + maxTimeout,
+                    delay >= timeout && delay <= maxTimeout);
+        }
+
+        timer.stop();
     }
 }
