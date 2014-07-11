@@ -114,7 +114,6 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
         }
     }
 
-
     private void encodeChunkedContent(HttpContent content, ByteBuf out) {
         encodeChunkedContent(content.content(), out);
 
@@ -168,7 +167,6 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
             throw new Error();
         }
     }
-
 
     @Deprecated
     protected static void encodeAscii(String s, ByteBuf buf) {
