@@ -42,6 +42,7 @@ import static io.netty.handler.codec.spdy.SpdyHeaders.HttpNames.*;
  */
 public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
 
+    private final boolean validateHeaders;
     private final int spdyVersion;
     private final int maxContentLength;
     private final Map<Integer, FullHttpMessage> messageMap;
@@ -55,7 +56,20 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
      *        a {@link TooLongFrameException} will be raised.
      */
     public SpdyHttpDecoder(SpdyVersion version, int maxContentLength) {
-        this(version, maxContentLength, new HashMap<Integer, FullHttpMessage>());
+        this(version, maxContentLength, new HashMap<Integer, FullHttpMessage>(), true);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param version the protocol version
+     * @param maxContentLength the maximum length of the message content.
+     *        If the length of the message content exceeds this value,
+     *        a {@link TooLongFrameException} will be raised.
+     * @param validateHeaders {@code true} if http headers should be validated
+     */
+    public SpdyHttpDecoder(SpdyVersion version, int maxContentLength, boolean validateHeaders) {
+        this(version, maxContentLength, new HashMap<Integer, FullHttpMessage>(), validateHeaders);
     }
 
     /**
@@ -68,6 +82,21 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
      * @param messageMap the {@link Map} used to hold partially received messages.
      */
     protected SpdyHttpDecoder(SpdyVersion version, int maxContentLength, Map<Integer, FullHttpMessage> messageMap) {
+        this(version, maxContentLength, messageMap, true);
+    }
+
+    /**
+     * Creates a new instance with the specified parameters.
+     *
+     * @param version the protocol version
+     * @param maxContentLength the maximum length of the message content.
+     *        If the length of the message content exceeds this value,
+     *        a {@link TooLongFrameException} will be raised.
+     * @param messageMap the {@link Map} used to hold partially received messages.
+     * @param validateHeaders {@code true} if http headers should be validated
+     */
+    protected SpdyHttpDecoder(SpdyVersion version, int maxContentLength, Map<Integer,
+            FullHttpMessage> messageMap, boolean validateHeaders) {
         if (version == null) {
             throw new NullPointerException("version");
         }
@@ -78,6 +107,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
         spdyVersion = version.getVersion();
         this.maxContentLength = maxContentLength;
         this.messageMap = messageMap;
+        this.validateHeaders = validateHeaders;
     }
 
     protected FullHttpMessage putMessage(int streamId, FullHttpMessage message) {
@@ -136,7 +166,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
 
                 try {
                     FullHttpResponse httpResponseWithEntity =
-                            createHttpResponse(spdyVersion, spdySynStreamFrame);
+                            createHttpResponse(ctx, spdySynStreamFrame, validateHeaders);
 
                     // Set the Stream-ID, Associated-To-Stream-ID, Priority, and URL as headers
                     HttpHeaders.setIntHeader(httpResponseWithEntity, Names.STREAM_ID, streamId);
@@ -212,7 +242,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
             }
 
             try {
-                FullHttpResponse httpResponseWithEntity = createHttpResponse(spdyVersion, spdySynReplyFrame);
+                FullHttpResponse httpResponseWithEntity = createHttpResponse(ctx, spdySynReplyFrame, validateHeaders);
 
                 // Set the Stream-ID as a header
                 HttpHeaders.setIntHeader(httpResponseWithEntity, Names.STREAM_ID, streamId);
@@ -328,8 +358,8 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
         return req;
     }
 
-    private static FullHttpResponse createHttpResponse(
-            int spdyVersion, SpdyHeadersFrame responseFrame) throws Exception {
+    private static FullHttpResponse createHttpResponse(ChannelHandlerContext ctx, SpdyHeadersFrame responseFrame,
+                                                       boolean validateHeaders) throws Exception {
 
         // Create the first line of the response from the name/value pairs
         SpdyHeaders headers = responseFrame.headers();
@@ -338,7 +368,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
         headers.remove(STATUS);
         headers.remove(VERSION);
 
-        FullHttpResponse res = new DefaultFullHttpResponse(version, status);
+        FullHttpResponse res = new DefaultFullHttpResponse(version, status, ctx.alloc().buffer(), validateHeaders);
         for (Map.Entry<String, String> e: responseFrame.headers()) {
             res.headers().add(e.getKey(), e.getValue());
         }
