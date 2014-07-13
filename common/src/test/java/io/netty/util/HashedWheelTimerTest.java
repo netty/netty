@@ -131,7 +131,7 @@ public class HashedWheelTimerTest {
     public void testExecutionOnTime() throws InterruptedException {
         int tickDuration = 200;
         int timeout = 125;
-        int maxTimeout = tickDuration + timeout;
+        int maxTimeout = tickDuration + timeout + tickDuration;
         final HashedWheelTimer timer = new HashedWheelTimer(tickDuration, TimeUnit.MILLISECONDS);
         final BlockingQueue<Long> queue = new LinkedBlockingQueue<Long>();
 
@@ -148,8 +148,8 @@ public class HashedWheelTimerTest {
 
         for (int i = 0; i < scheduledTasks; i++) {
             long delay = queue.take();
-            assertTrue("Timeout + " + scheduledTasks + " delay " + delay + " must be " + timeout + " <= " + maxTimeout,
-                    delay >= timeout && delay <= maxTimeout);
+            assertTrue("Timeout + " + scheduledTasks + " delay " + delay + " must be " + timeout + " < " + maxTimeout,
+                    delay >= timeout && delay < maxTimeout);
         }
 
         timer.stop();
