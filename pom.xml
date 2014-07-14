@@ -421,6 +421,11 @@
         <artifactId>jzlib</artifactId>
           <version>1.1.2</version>
       </dependency>
+      <dependency>
+        <groupId>com.ning</groupId>
+        <artifactId>compress-lzf</artifactId>
+        <version>1.0.1</version>
+      </dependency>
 
       <dependency>
         <groupId>org.rxtx</groupId>

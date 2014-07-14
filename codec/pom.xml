@@ -49,6 +49,11 @@
       <artifactId>jzlib</artifactId>
       <optional>true</optional>
     </dependency>
+    <dependency>
+      <groupId>com.ning</groupId>
+      <artifactId>compress-lzf</artifactId>
+      <optional>true</optional>
+    </dependency>
 
     <!-- Test dependencies for jboss marshalling encoder/decoder -->
     <dependency>
