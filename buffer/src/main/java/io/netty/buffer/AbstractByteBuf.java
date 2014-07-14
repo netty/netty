@@ -229,7 +229,6 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf ensureWritable(int minWritableBytes) {
-        ensureAccessible();
         if (minWritableBytes < 0) {
             throw new IllegalArgumentException(String.format(
                     "minWritableBytes: %d (expected: >= 0)", minWritableBytes));
@@ -731,13 +730,15 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf writeByte(int value) {
+        ensureAccessible();
         ensureWritable(1);
-        setByte(writerIndex++, value);
+        _setByte(writerIndex++, value);
         return this;
     }
 
     @Override
     public ByteBuf writeShort(int value) {
+        ensureAccessible();
         ensureWritable(2);
         _setShort(writerIndex, value);
         writerIndex += 2;
@@ -746,6 +747,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf writeMedium(int value) {
+        ensureAccessible();
         ensureWritable(3);
         _setMedium(writerIndex, value);
         writerIndex += 3;
@@ -754,6 +756,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf writeInt(int value) {
+        ensureAccessible();
         ensureWritable(4);
         _setInt(writerIndex, value);
         writerIndex += 4;
@@ -762,6 +765,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf writeLong(long value) {
+        ensureAccessible();
         ensureWritable(8);
         _setLong(writerIndex, value);
         writerIndex += 8;
@@ -788,6 +792,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf writeBytes(byte[] src, int srcIndex, int length) {
+        ensureAccessible();
         ensureWritable(length);
         setBytes(writerIndex, src, srcIndex, length);
         writerIndex += length;
@@ -819,6 +824,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf writeBytes(ByteBuf src, int srcIndex, int length) {
+        ensureAccessible();
         ensureWritable(length);
         setBytes(writerIndex, src, srcIndex, length);
         writerIndex += length;
@@ -827,6 +833,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf writeBytes(ByteBuffer src) {
+        ensureAccessible();
         int length = src.remaining();
         ensureWritable(length);
         setBytes(writerIndex, src);
@@ -837,6 +844,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
     @Override
     public int writeBytes(InputStream in, int length)
             throws IOException {
+        ensureAccessible();
         ensureWritable(length);
         int writtenBytes = setBytes(writerIndex, in, length);
         if (writtenBytes > 0) {
@@ -847,6 +855,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public int writeBytes(ScatteringByteChannel in, int length) throws IOException {
+        ensureAccessible();
         ensureWritable(length);
         int writtenBytes = setBytes(writerIndex, in, length);
         if (writtenBytes > 0) {
