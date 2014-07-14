@@ -129,6 +129,7 @@ final class UnsafeDirectSwappedByteBuf extends SwappedByteBuf {
 
     @Override
     public ByteBuf writeShort(int value) {
+        wrapped.ensureAccessible();
         wrapped.ensureWritable(2);
         _setShort(wrapped.writerIndex, value);
         wrapped.writerIndex += 2;
@@ -137,6 +138,7 @@ final class UnsafeDirectSwappedByteBuf extends SwappedByteBuf {
 
     @Override
     public ByteBuf writeInt(int value) {
+        wrapped.ensureAccessible();
         wrapped.ensureWritable(4);
         _setInt(wrapped.writerIndex, value);
         wrapped.writerIndex += 4;
@@ -145,6 +147,7 @@ final class UnsafeDirectSwappedByteBuf extends SwappedByteBuf {
 
     @Override
     public ByteBuf writeLong(long value) {
+        wrapped.ensureAccessible();
         wrapped.ensureWritable(8);
         _setLong(wrapped.writerIndex, value);
         wrapped.writerIndex += 8;
