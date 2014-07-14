@@ -17,12 +17,11 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.FileRegion;
-import io.netty.handler.codec.MessageToMessageEncoder;
+import io.netty.handler.codec.MessageToBufferedByteEncoder;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.StringUtil;
-
-import java.util.List;
 
 import static io.netty.buffer.Unpooled.*;
 import static io.netty.handler.codec.http.HttpConstants.*;
@@ -40,13 +39,11 @@ import static io.netty.handler.codec.http.HttpConstants.*;
  * To implement the encoder of such a derived protocol, extend this class and
  * implement all abstract methods properly.
  */
-public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageToMessageEncoder<Object> {
+public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageToBufferedByteEncoder<Object> {
     private static final byte[] CRLF = { CR, LF };
     private static final byte[] ZERO_CRLF = { '0', CR, LF };
     private static final byte[] ZERO_CRLF_CRLF = { '0', CR, LF, CR, LF };
     private static final ByteBuf CRLF_BUF = unreleasableBuffer(directBuffer(CRLF.length).writeBytes(CRLF));
-    private static final ByteBuf ZERO_CRLF_CRLF_BUF = unreleasableBuffer(directBuffer(ZERO_CRLF_CRLF.length)
-            .writeBytes(ZERO_CRLF_CRLF));
 
     private static final int ST_INIT = 0;
     private static final int ST_CONTENT_NON_CHUNK = 1;
@@ -55,132 +52,120 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
     @SuppressWarnings("RedundantFieldInitialization")
     private int state = ST_INIT;
 
+    protected HttpObjectEncoder() {
+    }
+
+    protected HttpObjectEncoder(int bufferSize) {
+        super(bufferSize);
+    }
+
     @Override
-    protected void encode(ChannelHandlerContext ctx, Object msg, List<Object> out) throws Exception {
-        ByteBuf buf = null;
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        if (msg instanceof FileRegion) {
+            // As we can't write a FileRegion into a ByteBuf in an efficient way we special handle it here
+            // and write it directly. This will also first write all buffered data to make sure we keep the
+            // correct order.
+            writeFileRegion(ctx, (FileRegion) msg, promise);
+            return;
+        }
+        super.write(ctx, msg, promise);
+    }
+
+    @Override
+    protected void encode(ChannelHandlerContext ctx, Object msg, ByteBuf out) throws Exception {
         if (msg instanceof HttpMessage) {
             if (state != ST_INIT) {
                 throw new IllegalStateException("unexpected message type: " + StringUtil.simpleClassName(msg));
             }
-
             @SuppressWarnings({ "unchecked", "CastConflictsWithInstanceof" })
             H m = (H) msg;
-
-            buf = ctx.alloc().buffer();
             // Encode the message.
-            encodeInitialLine(buf, m);
-            HttpHeaders.encode(m.headers(), buf);
-            buf.writeBytes(CRLF);
+            encodeInitialLine(out, m);
+            HttpHeaders.encode(m.headers(), out);
+            out.writeBytes(CRLF);
             state = HttpHeaders.isTransferEncodingChunked(m) ? ST_CONTENT_CHUNK : ST_CONTENT_NON_CHUNK;
         }
-        if (msg instanceof HttpContent || msg instanceof ByteBuf || msg instanceof FileRegion) {
+        if (msg instanceof HttpContent) {
             if (state == ST_INIT) {
                 throw new IllegalStateException("unexpected message type: " + StringUtil.simpleClassName(msg));
             }
 
-            final long contentLength = contentLength(msg);
+            HttpContent content = (HttpContent) msg;
             if (state == ST_CONTENT_NON_CHUNK) {
-                if (contentLength > 0) {
-                    if (buf != null && buf.writableBytes() >= contentLength && msg instanceof HttpContent) {
-                        // merge into other buffer for performance reasons
-                        buf.writeBytes(((HttpContent) msg).content());
-                        out.add(buf);
-                    } else {
-                        if (buf != null) {
-                            out.add(buf);
-                        }
-                        out.add(encodeAndRetain(msg));
-                    }
-                } else {
-                    if (buf != null) {
-                        out.add(buf);
-                    } else {
-                        // Need to produce some output otherwise an
-                        // IllegalStateException will be thrown
-                        out.add(EMPTY_BUFFER);
-                    }
-                }
+                out.writeBytes(content.content());
 
                 if (msg instanceof LastHttpContent) {
                     state = ST_INIT;
                 }
             } else if (state == ST_CONTENT_CHUNK) {
-                if (buf != null) {
-                    out.add(buf);
-                }
-                encodeChunkedContent(ctx, msg, contentLength, out);
+                encodeChunkedContent(content, out);
             } else {
                 throw new Error();
             }
-        } else {
-            if (buf != null) {
-                out.add(buf);
+        } else if (msg instanceof ByteBuf) {
+            ByteBuf content = (ByteBuf) msg;
+            if (state == ST_CONTENT_NON_CHUNK) {
+                out.writeBytes(content);
+            } else if (state == ST_CONTENT_CHUNK) {
+                encodeChunkedContent(content, out);
+            } else {
+                throw new Error();
             }
         }
     }
 
-    private void encodeChunkedContent(ChannelHandlerContext ctx, Object msg, long contentLength, List<Object> out) {
+    private void encodeChunkedContent(HttpContent content, ByteBuf out) {
+        encodeChunkedContent(content.content(), out);
+
+        if (content instanceof LastHttpContent) {
+            HttpHeaders headers = ((LastHttpContent) content).trailingHeaders();
+            if (headers.isEmpty()) {
+                out.writeBytes(ZERO_CRLF_CRLF);
+            } else {
+                out.writeBytes(ZERO_CRLF);
+                HttpHeaders.encode(headers, out);
+                out.writeBytes(CRLF);
+            }
+            state = ST_INIT;
+        }
+    }
+
+    private static void encodeChunkedContent(ByteBuf content, ByteBuf out) {
+        int contentLength = content.readableBytes();
         if (contentLength > 0) {
             byte[] length = Long.toHexString(contentLength).getBytes(CharsetUtil.US_ASCII);
-            ByteBuf buf = ctx.alloc().buffer(length.length + 2);
-            buf.writeBytes(length);
-            buf.writeBytes(CRLF);
-            out.add(buf);
-            out.add(encodeAndRetain(msg));
-            out.add(CRLF_BUF.duplicate());
+            out.writeBytes(length);
+            out.writeBytes(CRLF);
+            out.writeBytes(content);
+            out.writeBytes(CRLF);
         }
+    }
 
-        if (msg instanceof LastHttpContent) {
-            HttpHeaders headers = ((LastHttpContent) msg).trailingHeaders();
-            if (headers.isEmpty()) {
-                out.add(ZERO_CRLF_CRLF_BUF.duplicate());
-            } else {
-                ByteBuf buf = ctx.alloc().buffer();
-                buf.writeBytes(ZERO_CRLF);
-                HttpHeaders.encode(headers, buf);
-                buf.writeBytes(CRLF);
-                out.add(buf);
+    private void writeFileRegion(ChannelHandlerContext ctx, FileRegion region, ChannelPromise promise) {
+        if (state == ST_INIT) {
+            throw new IllegalStateException("unexpected message type: " + StringUtil.simpleClassName(region));
+        } else if (state == ST_CONTENT_NON_CHUNK) {
+            // write buffered data now to preserve correct order
+            writeBufferedData(ctx);
+
+            ctx.write(region, promise);
+        } else if (state == ST_CONTENT_CHUNK) {
+            long contentLength = region.count();
+            if (contentLength > 0) {
+                // write buffered data now to preserve correct order
+                writeBufferedData(ctx);
+
+                byte[] length = Long.toHexString(contentLength).getBytes(CharsetUtil.US_ASCII);
+                ByteBuf out = ctx.alloc().buffer(length.length + 2);
+                out.writeBytes(length);
+                out.writeBytes(CRLF);
+                ctx.write(out);
+                ctx.write(region);
+                ctx.write(CRLF_BUF.duplicate(), promise);
             }
-
-            state = ST_INIT;
         } else {
-            if (contentLength == 0) {
-                // Need to produce some output otherwise an
-                // IllegalstateException will be thrown
-                out.add(EMPTY_BUFFER);
-            }
+            throw new Error();
         }
-    }
-
-    @Override
-    public boolean acceptOutboundMessage(Object msg) throws Exception {
-        return msg instanceof HttpObject || msg instanceof ByteBuf || msg instanceof FileRegion;
-    }
-
-    private static Object encodeAndRetain(Object msg) {
-        if (msg instanceof ByteBuf) {
-            return ((ByteBuf) msg).retain();
-        }
-        if (msg instanceof HttpContent) {
-            return ((HttpContent) msg).content().retain();
-        }
-        if (msg instanceof FileRegion) {
-            return ((FileRegion) msg).retain();
-        }
-        throw new IllegalStateException("unexpected message type: " + StringUtil.simpleClassName(msg));
-    }
-
-    private static long contentLength(Object msg) {
-        if (msg instanceof HttpContent) {
-            return ((HttpContent) msg).content().readableBytes();
-        }
-        if (msg instanceof ByteBuf) {
-            return ((ByteBuf) msg).readableBytes();
-        }
-        if (msg instanceof FileRegion) {
-            return ((FileRegion) msg).count();
-        }
-        throw new IllegalStateException("unexpected message type: " + StringUtil.simpleClassName(msg));
     }
 
     @Deprecated
