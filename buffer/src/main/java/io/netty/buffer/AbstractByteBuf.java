@@ -970,17 +970,17 @@ public abstract class AbstractByteBuf extends ByteBuf {
     public int forEachByte(ByteBufProcessor processor) {
         int index = readerIndex;
         int length = writerIndex - index;
+        ensureAccessible();
         return forEachByteAsc0(index, length, processor);
     }
 
     @Override
     public int forEachByte(int index, int length, ByteBufProcessor processor) {
+        checkIndex(index, length);
         return forEachByteAsc0(index, length, processor);
     }
 
     private int forEachByteAsc0(int index, int length, ByteBufProcessor processor) {
-        checkIndex(index, length);
-
         if (processor == null) {
             throw new NullPointerException("processor");
         }
@@ -1010,16 +1010,18 @@ public abstract class AbstractByteBuf extends ByteBuf {
     public int forEachByteDesc(ByteBufProcessor processor) {
         int index = readerIndex;
         int length = writerIndex - index;
+        ensureAccessible();
         return forEachByteDesc0(index, length, processor);
     }
 
     @Override
     public int forEachByteDesc(int index, int length, ByteBufProcessor processor) {
+        checkIndex(index, length);
+
         return forEachByteDesc0(index, length, processor);
     }
 
     private int forEachByteDesc0(int index, int length, ByteBufProcessor processor) {
-        checkIndex(index, length);
 
         if (processor == null) {
             throw new NullPointerException("processor");
