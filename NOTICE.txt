@@ -97,6 +97,14 @@ pure Java, which can be obtained at:
   * HOMEPAGE:
     * http://www.jcraft.com/jzlib/
 
+This product optionally depends on 'Compress-LZF', a Java library for encoding and
+decoding data in LZF format, written by Tatu Saloranta. It can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.compress-lzf.txt (Apache License 2.0)
+  * HOMEPAGE:
+    * https://github.com/ning/compress
+
 This product optionally depends on 'Protocol Buffers', Google's data
 interchange format, which can be obtained at:
 
