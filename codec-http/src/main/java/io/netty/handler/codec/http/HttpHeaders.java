@@ -1363,17 +1363,20 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
 
     @SuppressWarnings("deprecation")
     static void encode(CharSequence key, CharSequence value, ByteBuf buf) {
-        encodeAscii(key, buf);
-        buf.writeBytes(HEADER_SEPERATOR);
-        encodeAscii(value, buf);
-        buf.writeBytes(CRLF);
+        if (!encodeAscii(key, buf)) {
+            buf.writeBytes(HEADER_SEPERATOR);
+        }
+        if (!encodeAscii(value, buf)) {
+            buf.writeBytes(CRLF);
+        }
     }
 
-    public static void encodeAscii(CharSequence seq, ByteBuf buf) {
+    public static boolean encodeAscii(CharSequence seq, ByteBuf buf) {
         if (seq instanceof HttpHeaderEntity) {
-            ((HttpHeaderEntity) seq).encode(buf);
+            return ((HttpHeaderEntity) seq).encode(buf);
         } else {
             encodeAscii0(seq, buf);
+            return false;
         }
     }
 
@@ -1393,6 +1396,28 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
             throw new NullPointerException("name");
         }
         return new HttpHeaderEntity(name);
+    }
+
+    /**
+     * Create a new {@link CharSequence} which is optimized for reuse as {@link HttpHeaders} name.
+     * So if you have a Header name that you want to reuse you should make use of this.
+     */
+    public static CharSequence newNameEntity(String name) {
+        if (name == null) {
+            throw new NullPointerException("name");
+        }
+        return new HttpHeaderEntity(name, HEADER_SEPERATOR);
+    }
+
+    /**
+     * Create a new {@link CharSequence} which is optimized for reuse as {@link HttpHeaders} value.
+     * So if you have a Header value that you want to reuse you should make use of this.
+     */
+    public static CharSequence newValueEntity(String name) {
+        if (name == null) {
+            throw new NullPointerException("name");
+        }
+        return new HttpHeaderEntity(name, CRLF);
     }
 
     protected HttpHeaders() { }
