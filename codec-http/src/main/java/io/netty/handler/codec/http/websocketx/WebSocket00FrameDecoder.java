@@ -60,12 +60,17 @@ public class WebSocket00FrameDecoder extends ReplayingDecoder<Void> implements W
 
         // Decode a frame otherwise.
         byte type = in.readByte();
+        WebSocketFrame frame;
         if ((type & 0x80) == 0x80) {
             // If the MSB on type is set, decode the frame length
-            out.add(decodeBinaryFrame(ctx, type, in));
+            frame = decodeBinaryFrame(ctx, type, in);
         } else {
             // Decode a 0xff terminated UTF-8 string
-            out.add(decodeTextFrame(ctx, in));
+            frame = decodeTextFrame(ctx, in);
+        }
+
+        if (frame != null) {
+            out.add(frame);
         }
     }
 
