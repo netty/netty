@@ -125,45 +125,50 @@ public class LzfDecoder extends ByteToMessageDecoder {
                 if (in.getUnsignedShort(idx) != SIGNATURE_OF_CHUNK) {
                     throw new DecompressionException("Unexpected signature of chunk");
                 }
-                if (type == BLOCK_TYPE_NON_COMPRESSED) {
-                    in.skipBytes(HEADER_LEN_NOT_COMPRESSED);
-                    out.add(in.readBytes(chunkLength));
-                } else if (type == BLOCK_TYPE_COMPRESSED) {
-                    final int originalLength = in.getUnsignedShort(idx + ORIGINAL_LENGTH_OFFSET);
-
-                    final byte[] inputArray;
-                    final int inPos;
-                    if (in.hasArray()) {
-                        inputArray = in.array();
-                        inPos = in.arrayOffset() + idx + HEADER_LEN_COMPRESSED;
-                    } else {
-                        inputArray = recycler.allocInputBuffer(chunkLength);
-                        in.getBytes(idx + HEADER_LEN_COMPRESSED, inputArray, 0, chunkLength);
-                        inPos = 0;
+                switch (type) {
+                    case BLOCK_TYPE_NON_COMPRESSED: {
+                        in.skipBytes(HEADER_LEN_NOT_COMPRESSED);
+                        out.add(in.readBytes(chunkLength));
+                        break;
                     }
+                    case BLOCK_TYPE_COMPRESSED: {
+                        final int originalLength = in.getUnsignedShort(idx + ORIGINAL_LENGTH_OFFSET);
 
-                    ByteBuf uncompressed = ctx.alloc().heapBuffer(originalLength, originalLength);
-                    final byte[] outputArray = uncompressed.array();
-                    final int outPos = uncompressed.arrayOffset();
-
-                    boolean success = false;
-                    try {
-                        decoder.decodeChunk(inputArray, inPos, outputArray, outPos, outPos + originalLength);
-                        uncompressed.writerIndex(uncompressed.writerIndex() + originalLength);
-                        out.add(uncompressed);
-                        in.skipBytes(totalLength);
-                        success = true;
-                    } finally {
-                        if (!success) {
-                            uncompressed.release();
+                        final byte[] inputArray;
+                        final int inPos;
+                        if (in.hasArray()) {
+                            inputArray = in.array();
+                            inPos = in.arrayOffset() + idx + HEADER_LEN_COMPRESSED;
+                        } else {
+                            inputArray = recycler.allocInputBuffer(chunkLength);
+                            in.getBytes(idx + HEADER_LEN_COMPRESSED, inputArray, 0, chunkLength);
+                            inPos = 0;
                         }
-                    }
 
-                    if (!in.hasArray()) {
-                        recycler.releaseInputBuffer(inputArray);
+                        ByteBuf uncompressed = ctx.alloc().heapBuffer(originalLength, originalLength);
+                        final byte[] outputArray = uncompressed.array();
+                        final int outPos = uncompressed.arrayOffset();
+
+                        boolean success = false;
+                        try {
+                            decoder.decodeChunk(inputArray, inPos, outputArray, outPos, outPos + originalLength);
+                            uncompressed.writerIndex(uncompressed.writerIndex() + originalLength);
+                            out.add(uncompressed);
+                            in.skipBytes(totalLength);
+                            success = true;
+                        } finally {
+                            if (!success) {
+                                uncompressed.release();
+                            }
+                        }
+
+                        if (!in.hasArray()) {
+                            recycler.releaseInputBuffer(inputArray);
+                        }
+                        break;
                     }
-                } else {
-                    throw new DecompressionException("Unknown type of chunk: " + type + " (expected: 0 or 1)");
+                    default:
+                        throw new DecompressionException("Unknown type of chunk: " + type + " (expected: 0 or 1)");
                 }
             } catch (Exception e) {
                 corrupted = true;
