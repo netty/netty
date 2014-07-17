@@ -89,6 +89,15 @@ and decompression library written by Matthew J. Francis. It can be obtained at:
   * HOMEPAGE:
     * https://code.google.com/p/jbzip2/
 
+This product contains a modified portion of 'libdivsufsort', a C API library to construct
+the suffix array and the Burrows-Wheeler transformed string for any input string of
+a constant-size alphabet written by Yuta Mori. It can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.libdivsufsort.txt (MIT License)
+  * HOMEPAGE:
+    * https://code.google.com/p/libdivsufsort/
+
 This product optionally depends on 'JZlib', a re-implementation of zlib in
 pure Java, which can be obtained at:
 
