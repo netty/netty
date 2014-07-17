@@ -128,20 +128,43 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
         boolean done = false;
         boolean setEpollOut = false;
         long writtenBytes = 0;
+        int offset = 0;
+        int end = offset + nioBufferCnt;
+        int spinCount = config.getWriteSpinCount();
+        loop: while (nioBufferCnt > 0) {
+            for (int i = spinCount - 1; i >= 0; i --) {
+                int cnt = nioBufferCnt > Native.IOV_MAX? Native.IOV_MAX : nioBufferCnt;
 
-        for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
-            long localWrittenBytes = Native.writev(fd, nioBuffers, 0, nioBufferCnt);
-            if (localWrittenBytes == 0) {
-                setEpollOut = true;
-                break;
+                long localWrittenBytes = Native.writev(fd, nioBuffers, offset, cnt);
+                if (localWrittenBytes == 0) {
+                    setEpollOut = true;
+                    break loop;
+                }
+                expectedWrittenBytes -= localWrittenBytes;
+                writtenBytes += localWrittenBytes;
+
+                while (offset < end && localWrittenBytes > 0) {
+                    ByteBuffer buffer = nioBuffers[offset];
+                    int pos = buffer.position();
+                    int bytes = buffer.limit() - pos;
+                    if (bytes > localWrittenBytes) {
+                        buffer.position(pos + (int) localWrittenBytes);
+                        // incomplete write
+                        break;
+                    } else {
+                        offset++;
+                        nioBufferCnt--;
+                        localWrittenBytes -= bytes;
+                    }
+                }
             }
-            expectedWrittenBytes -= localWrittenBytes;
-            writtenBytes += localWrittenBytes;
+
             if (expectedWrittenBytes == 0) {
                 done = true;
                 break;
             }
         }
+
         if (done) {
             // Release all buffers
             for (int i = msgCount; i > 0; i --) {
