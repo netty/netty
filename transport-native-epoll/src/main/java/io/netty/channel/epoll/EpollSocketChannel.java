@@ -129,41 +129,51 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
     }
 
     private void writeBytesMultiple(
-            EpollChannelOutboundBuffer in, int msgCount, AddressEntry[] nioBuffers) throws IOException {
+            EpollChannelOutboundBuffer in, int msgCount, AddressEntry[] addresses) throws IOException {
 
-        int nioBufferCnt = in.addressCount();
+        int addressCnt = in.addressCount();
         long expectedWrittenBytes = in.addressSize();
-        long localWrittenBytes = Native.writevAddresses(fd, nioBuffers, 0, nioBufferCnt);
+        boolean done = false;
+        boolean setEpollOut = false;
+        long writtenBytes = 0;
+        int offset = 0;
+        int end = offset + addressCnt;
+        int spinCount = config.getWriteSpinCount();
+        loop: while (addressCnt > 0) {
+            for (int i = spinCount - 1; i >= 0; i --) {
+                int cnt = addressCnt > Native.IOV_MAX? Native.IOV_MAX : addressCnt;
 
-        if (localWrittenBytes < expectedWrittenBytes) {
-            setEpollOut();
+                long localWrittenBytes = Native.writevAddresses(fd, addresses, offset, cnt);
+                if (localWrittenBytes == 0) {
+                    setEpollOut = true;
+                    break loop;
+                }
+                expectedWrittenBytes -= localWrittenBytes;
+                writtenBytes += localWrittenBytes;
 
-            // Did not write all buffers completely.
-            // Release the fully written buffers and update the indexes of the partially written buffer.
-            for (int i = msgCount; i > 0; i --) {
-                final ByteBuf buf = (ByteBuf) in.current();
-                final int readerIndex = buf.readerIndex();
-                final int readableBytes = buf.writerIndex() - readerIndex;
-
-                if (readableBytes < localWrittenBytes) {
-                    in.remove();
-                    localWrittenBytes -= readableBytes;
-                } else if (readableBytes > localWrittenBytes) {
-
-                    buf.readerIndex(readerIndex + (int) localWrittenBytes);
-                    in.progress(localWrittenBytes);
-                    break;
-                } else { // readable == writtenBytes
-                    in.remove();
-                    break;
+                while (offset < end && localWrittenBytes > 0) {
+                    AddressEntry address = addresses[offset];
+                    int readerIndex = address.readerIndex;
+                    int bytes = address.writerIndex - readerIndex;
+                    if (bytes > localWrittenBytes) {
+                        address.readerIndex += (int) localWrittenBytes;
+                        // incomplete write
+                        break;
+                    } else {
+                        offset++;
+                        addressCnt--;
+                        localWrittenBytes -= bytes;
+                    }
                 }
             }
-        } else {
-            // Release all buffers
-            for (int i = msgCount; i > 0; i --) {
-                in.remove();
+
+            if (expectedWrittenBytes == 0) {
+                done = true;
+                break;
             }
         }
+
+        updateOutboundBuffer(in, writtenBytes, msgCount, done, setEpollOut);
     }
 
     private void writeBytesMultiple(
@@ -174,20 +184,48 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
         boolean done = false;
         boolean setEpollOut = false;
         long writtenBytes = 0;
+        int offset = 0;
+        int end = offset + nioBufferCnt;
+        int spinCount = config.getWriteSpinCount();
+        loop: while (nioBufferCnt > 0) {
+            for (int i = spinCount - 1; i >= 0; i --) {
+                int cnt = nioBufferCnt > Native.IOV_MAX? Native.IOV_MAX : nioBufferCnt;
 
-        for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
-            long localWrittenBytes = Native.writev(fd, nioBuffers, 0, nioBufferCnt);
-            if (localWrittenBytes == 0) {
-                setEpollOut = true;
-                break;
+                long localWrittenBytes = Native.writev(fd, nioBuffers, offset, cnt);
+                if (localWrittenBytes == 0) {
+                    setEpollOut = true;
+                    break loop;
+                }
+                expectedWrittenBytes -= localWrittenBytes;
+                writtenBytes += localWrittenBytes;
+
+                while (offset < end && localWrittenBytes > 0) {
+                    ByteBuffer buffer = nioBuffers[offset];
+                    int pos = buffer.position();
+                    int bytes = buffer.limit() - pos;
+                    if (bytes > localWrittenBytes) {
+                        buffer.position(pos + (int) localWrittenBytes);
+                        // incomplete write
+                        break;
+                    } else {
+                        offset++;
+                        nioBufferCnt--;
+                        localWrittenBytes -= bytes;
+                    }
+                }
             }
-            expectedWrittenBytes -= localWrittenBytes;
-            writtenBytes += localWrittenBytes;
+
             if (expectedWrittenBytes == 0) {
                 done = true;
                 break;
             }
         }
+
+        updateOutboundBuffer(in, writtenBytes, msgCount, done, setEpollOut);
+    }
+
+    private void updateOutboundBuffer(ChannelOutboundBuffer in, long writtenBytes, int msgCount,
+                                      boolean done, boolean setEpollOut) {
         if (done) {
             // Release all buffers
             for (int i = msgCount; i > 0; i --) {
@@ -224,7 +262,6 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
             incompleteWrite(setEpollOut);
         }
     }
-
     private void incompleteWrite(boolean setEpollOut) {
         // Did not write completely.
         if (setEpollOut) {
