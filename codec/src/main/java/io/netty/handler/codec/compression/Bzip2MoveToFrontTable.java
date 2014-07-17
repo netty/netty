@@ -18,7 +18,7 @@ package io.netty.handler.codec.compression;
 /**
  * A 256 entry Move To Front transform.
  */
-class Bzip2MoveToFrontTable {
+final class Bzip2MoveToFrontTable {
     /**
      * The Move To Front list.
      */

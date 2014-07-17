@@ -108,8 +108,9 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
                     }
                     Bzip2BitReader reader = this.reader;
                     // Get the block magic bytes.
-                    final long magic = (long) reader.readBits(in, 24) << 24 | reader.readBits(in, 24);
-                    if (magic == END_OF_STREAM_MAGIC) {
+                    final int magic1 = reader.readBits(in, 24);
+                    final int magic2 = reader.readBits(in, 24);
+                    if (magic1 == END_OF_STREAM_MAGIC_1 && magic2 == END_OF_STREAM_MAGIC_2) {
                         // End of stream was reached. Check the combined CRC.
                         final int storedCombinedCRC = reader.readInt(in);
                         if (storedCombinedCRC != streamCRC) {
@@ -118,7 +119,7 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
                         currentState = State.EOF;
                         break;
                     }
-                    if (magic != COMPRESSED_MAGIC) {
+                    if (magic1 != BLOCK_HEADER_MAGIC_1 || magic2 != BLOCK_HEADER_MAGIC_2) {
                         throw new DecompressionException("bad block header");
                     }
                     blockCRC = reader.readInt(in);

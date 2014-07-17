@@ -21,4 +21,4 @@
  * <a href="http://code.google.com/p/snappy/">Snappy</a>.
  */
 package io.netty.handler.codec.compression;
-// TODO Implement bzip2 and lzma handlers
+// TODO Implement lzma handler
