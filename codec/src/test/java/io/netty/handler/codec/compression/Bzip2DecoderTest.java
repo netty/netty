@@ -16,6 +16,7 @@
 package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.internal.ThreadLocalRandom;
@@ -84,9 +85,9 @@ public class Bzip2DecoderTest {
         ByteBuf in = Unpooled.buffer();
         in.writeMedium(MAGIC_NUMBER);
         in.writeByte('1');  //block size
-        in.writeInt(11111); //random value
-        in.writeShort(111); //random value
-        in.writeInt(111);   //block CRC
+        in.writeMedium(11); //incorrect block header
+        in.writeMedium(11); //incorrect block header
+        in.writeInt(11111); //block CRC
 
         channel.writeInbound(in);
     }
@@ -99,8 +100,8 @@ public class Bzip2DecoderTest {
         ByteBuf in = Unpooled.buffer();
         in.writeMedium(MAGIC_NUMBER);
         in.writeByte('1');  //block size
-        in.writeInt((int) (END_OF_STREAM_MAGIC >> 16));
-        in.writeShort((int) END_OF_STREAM_MAGIC);
+        in.writeMedium(END_OF_STREAM_MAGIC_1);
+        in.writeMedium(END_OF_STREAM_MAGIC_2);
         in.writeInt(1);  //wrong storedCombinedCRC
 
         channel.writeInbound(in);
@@ -181,6 +182,22 @@ public class Bzip2DecoderTest {
         channel.writeInbound(in);
     }
 
+    @Test
+    public void testStartPointerInvalid() throws Exception {
+        expected.expect(DecompressionException.class);
+        expected.expectMessage("start pointer invalid");
+
+        final byte[] data = { 0x42, 0x5A, 0x68, 0x37, 0x31, 0x41, 0x59, 0x26, 0x53,
+                              0x59, 0x77, 0x7B, (byte) 0xCA, (byte) 0xC0, (byte) 0xFF, 0x00,
+                              0x00, 0x05, (byte) 0x80, 0x00, 0x01, 0x02, 0x00, 0x04,
+                              0x20, 0x20, 0x00, 0x30, (byte) 0xCD, 0x34, 0x19, (byte) 0xA6,
+                              (byte) 0x89, (byte) 0x99, (byte) 0xC5, (byte) 0xDC, (byte) 0x91,
+                              0x4E, 0x14, 0x24, 0x1D, (byte) 0xDE, (byte) 0xF2, (byte) 0xB0, 0x00 };
+
+        ByteBuf in = Unpooled.wrappedBuffer(data);
+        channel.writeInbound(in);
+    }
+
     private static void testDecompression(final byte[] data) throws Exception {
         for (int blockSize = MIN_BLOCK_SIZE; blockSize <= MAX_BLOCK_SIZE; blockSize++) {
             final EmbeddedChannel channel = new EmbeddedChannel(new Bzip2Decoder());
@@ -193,17 +210,13 @@ public class Bzip2DecoderTest {
             ByteBuf compressed = Unpooled.wrappedBuffer(os.toByteArray());
             channel.writeInbound(compressed);
 
-            ByteBuf uncompressed = Unpooled.buffer();
-            ByteBuf msg;
-            while ((msg = channel.readInbound()) != null) {
-                uncompressed.writeBytes(msg);
-                msg.release();
-            }
-            final byte[] result = new byte[uncompressed.readableBytes()];
-            uncompressed.readBytes(result);
-            uncompressed.release();
+            ByteBuf uncompressed = readUncompressed(channel);
+            ByteBuf dataBuf = Unpooled.wrappedBuffer(data);
 
-            assertArrayEquals(data, result);
+            assertEquals(dataBuf, uncompressed);
+
+            uncompressed.release();
+            dataBuf.release();
         }
     }
 
@@ -219,10 +232,12 @@ public class Bzip2DecoderTest {
 
     @Test
     public void testDecompressionOfBatchedFlowOfData() throws Exception {
+        final byte[] data = BYTES_LARGE;
+
         ByteArrayOutputStream os = new ByteArrayOutputStream();
         BZip2CompressorOutputStream bZip2Os = new BZip2CompressorOutputStream(os,
                                                     rand.nextInt(MIN_BLOCK_SIZE, MAX_BLOCK_SIZE + 1));
-        bZip2Os.write(BYTES_LARGE);
+        bZip2Os.write(data);
         bZip2Os.close();
 
         final byte[] compressedArray = os.toByteArray();
@@ -236,16 +251,23 @@ public class Bzip2DecoderTest {
         ByteBuf compressed = Unpooled.wrappedBuffer(compressedArray, written, compressedArray.length - written);
         channel.writeInbound(compressed);
 
-        ByteBuf uncompressed = Unpooled.buffer();
+        ByteBuf uncompressed = readUncompressed(channel);
+        ByteBuf dataBuf = Unpooled.wrappedBuffer(data);
+
+        assertEquals(dataBuf, uncompressed);
+
+        uncompressed.release();
+        dataBuf.release();
+    }
+
+    private static ByteBuf readUncompressed(EmbeddedChannel channel) throws Exception {
+        CompositeByteBuf uncompressed = Unpooled.compositeBuffer();
         ByteBuf msg;
         while ((msg = channel.readInbound()) != null) {
-            uncompressed.writeBytes(msg);
-            msg.release();
+            uncompressed.addComponent(msg);
+            uncompressed.writerIndex(uncompressed.writerIndex() + msg.readableBytes());
         }
-        final byte[] result = new byte[uncompressed.readableBytes()];
-        uncompressed.readBytes(result);
-        uncompressed.release();
 
-        assertArrayEquals(BYTES_LARGE, result);
+        return uncompressed;
     }
 }
