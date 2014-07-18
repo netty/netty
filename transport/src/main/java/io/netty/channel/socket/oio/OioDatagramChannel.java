@@ -276,8 +276,15 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
                 data.getBytes(data.readerIndex(), tmp);
                 tmpPacket.setData(tmp);
             }
-            socket.send(tmpPacket);
-            in.remove();
+            try {
+                socket.send(tmpPacket);
+                in.remove();
+            } catch (IOException e) {
+                // Continue on write error as a DatagramChannel can write to multiple remote peers
+                //
+                // See https://github.com/netty/netty/issues/2665
+                in.remove(e);
+            }
         }
     }
 
