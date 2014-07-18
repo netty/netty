@@ -138,25 +138,39 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                 }
                 break;
             }
+            try {
+                boolean done = false;
+                for (int i = config().getWriteSpinCount() - 1; i >= 0; i--) {
+                    if (doWriteMessage(msg, in)) {
+                        done = true;
+                        break;
+                    }
+                }
 
-            boolean done = false;
-            for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
-                if (doWriteMessage(msg, in)) {
-                    done = true;
+                if (done) {
+                    in.remove();
+                } else {
+                    // Did not write all messages.
+                    if ((interestOps & SelectionKey.OP_WRITE) == 0) {
+                        key.interestOps(interestOps | SelectionKey.OP_WRITE);
+                    }
                     break;
                 }
-            }
-
-            if (done) {
-                in.remove();
-            } else {
-                // Did not write all messages.
-                if ((interestOps & SelectionKey.OP_WRITE) == 0) {
-                    key.interestOps(interestOps | SelectionKey.OP_WRITE);
+            } catch (IOException e) {
+                if (continueOnWriteError()) {
+                    in.remove(e);
+                } else {
+                    throw e;
                 }
-                break;
             }
         }
+    }
+
+    /**
+     * Returns {@code true} if we should continue the write loop on a write error.
+     */
+    protected boolean continueOnWriteError() {
+        return false;
     }
 
     /**

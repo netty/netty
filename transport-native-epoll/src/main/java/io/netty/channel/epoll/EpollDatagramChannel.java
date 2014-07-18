@@ -256,20 +256,27 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                 break;
             }
 
-            boolean done = false;
-            for (int i = config().getWriteSpinCount() - 1; i >= 0; i--) {
-                if (doWriteMessage(msg)) {
-                    done = true;
+            try {
+                boolean done = false;
+                for (int i = config().getWriteSpinCount() - 1; i >= 0; i--) {
+                    if (doWriteMessage(msg)) {
+                        done = true;
+                        break;
+                    }
+                }
+
+                if (done) {
+                    in.remove();
+                } else {
+                    // Did not write all messages.
+                    setEpollOut();
                     break;
                 }
-            }
-
-            if (done) {
-                in.remove();
-            } else {
-                // Did not write all messages.
-                setEpollOut();
-                break;
+            } catch (IOException e) {
+                // Continue on write error as a DatagramChannel can write to multiple remote peers
+                //
+                // See https://github.com/netty/netty/issues/2665
+                in.remove(e);
             }
         }
     }
