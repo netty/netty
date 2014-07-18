@@ -308,7 +308,7 @@ public final class NioDatagramChannel
             } else {
                 writtenBytes = javaChannel().write(nioData);
             }
-            done =  writtenBytes > 0;
+            done = writtenBytes > 0;
             return done;
         } finally {
             // Handle this in the finally block to make sure we release the old buffer in all cases
@@ -330,6 +330,14 @@ public final class NioDatagramChannel
                 }
             }
         }
+    }
+
+    @Override
+    protected boolean continueOnWriteError() {
+        // Continue on write error as a DatagramChannel can write to multiple remote peers
+        //
+        // See https://github.com/netty/netty/issues/2665
+        return true;
     }
 
     @Override
