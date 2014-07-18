@@ -556,14 +556,7 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_write(JNIEnv * env, jc
         throwRuntimeException(env, "Unable to access address of buffer");
         return -1;
     }
-    jint res = write0(env, clazz, fd, buffer, pos, limit);
-    if (res > 0) {
-        // Increment the pos of the ByteBuffer as it may be only partial written to prevent data-corruption later once we
-        // try to write the remaining data.
-        // See https://github.com/netty/netty/issues/2371
-        incrementPosition(env, jbuffer, res);
-    }
-    return res;
+    return  write0(env, clazz, fd, buffer, pos, limit);
 }
 
 JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_writeAddress(JNIEnv * env, jclass clazz, jint fd, jlong address, jint pos, jint limit) {
@@ -648,18 +641,6 @@ JNIEXPORT jobject JNICALL Java_io_netty_channel_epoll_Native_recvFrom(JNIEnv * e
 
 JNIEXPORT jobject JNICALL Java_io_netty_channel_epoll_Native_recvFromAddress(JNIEnv * env, jclass clazz, jint fd, jlong address, jint pos, jint limit) {
     return recvFrom0(env, fd, (void*) address, pos, limit);
-}
-
-void incrementPosition(JNIEnv * env, jobject bufObj, int written) {
-    // Get the current position using the (*env)->GetIntField if possible and fallback
-    // to slower (*env)->CallIntMethod(...) if needed
-    if (posFieldId == NULL) {
-        jint pos = (*env)->CallIntMethod(env, bufObj, posId, NULL);
-        (*env)->CallObjectMethod(env, bufObj, updatePosId, pos + written);
-    } else {
-        jint pos = (*env)->GetIntField(env, bufObj, posFieldId);
-        (*env)->SetIntField(env, bufObj, posFieldId, pos + written);
-    }
 }
 
 JNIEXPORT jlong JNICALL Java_io_netty_channel_epoll_Native_writev(JNIEnv * env, jclass clazz, jint fd, jobjectArray buffers, jint offset, jint length) {
