@@ -291,8 +291,15 @@ public final class NioDatagramChannel
         } else {
             writtenBytes = javaChannel().write(nioData);
         }
-
         return writtenBytes > 0;
+    }
+
+    @Override
+    protected boolean continueOnWriteError() {
+        // Continue on write error as a DatagramChannel can write to multiple remote peers
+        //
+        // See https://github.com/netty/netty/issues/2665
+        return true;
     }
 
     @Override
