@@ -74,12 +74,10 @@ public final class HAProxyMessage {
             HAProxyProtocolVersion protocolVersion, HAProxyCommand command, HAProxyProxiedProtocol proxiedProtocol,
             String sourceAddress, String destinationAddress, int sourcePort, int destinationPort) {
 
-        AddressFamily addrFamily;
-        if (proxiedProtocol != null) {
-            addrFamily = proxiedProtocol.addressFamily();
-        } else {
-            addrFamily = null;
+        if (proxiedProtocol == null) {
+            throw new NullPointerException("proxiedProtocol");
         }
+        AddressFamily addrFamily = proxiedProtocol.addressFamily();
 
         checkAddress(sourceAddress, addrFamily);
         checkAddress(destinationAddress, addrFamily);

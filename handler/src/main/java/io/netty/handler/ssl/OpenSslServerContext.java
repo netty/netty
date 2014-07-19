@@ -322,7 +322,7 @@ public final class OpenSslServerContext extends SslContext {
      * Sets the SSL session ticket keys of this context.
      */
     public void setTicketKeys(byte[] keys) {
-        if (keys != null) {
+        if (keys == null) {
             throw new NullPointerException("keys");
         }
         SSLContext.setSessionTicketKeys(ctx, keys);
