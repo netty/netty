@@ -94,6 +94,18 @@ public final class ReferenceCountUtil {
     }
 
     /**
+     * Will throw a {@link IllegalReferenceCountException} if the specified object is of type
+     * {@link ReferenceCounted} and {@link ReferenceCounted#refCnt()} is {@code 0}.
+     */
+    public static void ensureAccessible(Object msg) {
+        if (msg instanceof ReferenceCounted) {
+            if (((ReferenceCounted) msg).refCnt() == 0) {
+                throw new IllegalReferenceCountException(0);
+            }
+        }
+    }
+
+    /**
      * Releases the objects when the thread that called {@link #releaseLater(Object)} has been terminated.
      */
     private static final class ReleasingTask implements Runnable {

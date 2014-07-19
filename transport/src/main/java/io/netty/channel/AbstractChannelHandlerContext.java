@@ -330,6 +330,9 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap impleme
 
     private void invokeChannelRead(Object msg) {
         try {
+            // Make sure the object was not released before
+            ReferenceCountUtil.ensureAccessible(msg);
+
             ((ChannelInboundHandler) handler()).channelRead(this, msg);
         } catch (Throwable t) {
             notifyHandlerException(t);
@@ -655,6 +658,9 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap impleme
 
     private void invokeWrite(Object msg, ChannelPromise promise) {
         try {
+            // Make sure the object was not released before
+            ReferenceCountUtil.ensureAccessible(msg);
+
             ((ChannelOutboundHandler) handler()).write(this, msg, promise);
         } catch (Throwable t) {
             notifyOutboundHandlerException(t, promise);
