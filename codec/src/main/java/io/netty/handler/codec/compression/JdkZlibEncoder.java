@@ -27,7 +27,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.zip.CRC32;
 import java.util.zip.Deflater;
 
-
 /**
  * Compresses a {@link ByteBuf} using the deflate algorithm.
  */
