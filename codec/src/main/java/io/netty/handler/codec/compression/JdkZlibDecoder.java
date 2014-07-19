@@ -24,7 +24,6 @@ import java.util.zip.DataFormatException;
 import java.util.zip.Deflater;
 import java.util.zip.Inflater;
 
-
 /**
  * Decompress a {@link ByteBuf} using the inflate algorithm.
  */
@@ -249,14 +248,14 @@ public class JdkZlibDecoder extends ZlibDecoder {
                 int magic1 = in.readByte();
 
                 if (magic0 != 31) {
-                    throw new CompressionException("Input is not in the GZIP format");
+                    throw new DecompressionException("Input is not in the GZIP format");
                 }
                 crc.update(magic0);
                 crc.update(magic1);
 
                 int method = in.readUnsignedByte();
                 if (method != Deflater.DEFLATED) {
-                    throw new CompressionException("Unsupported compression method "
+                    throw new DecompressionException("Unsupported compression method "
                             + method + " in the GZIP header");
                 }
                 crc.update(method);
@@ -265,7 +264,7 @@ public class JdkZlibDecoder extends ZlibDecoder {
                 crc.update(flags);
 
                 if ((flags & FRESERVED) != 0) {
-                    throw new CompressionException(
+                    throw new DecompressionException(
                             "Reserved flags are set in the GZIP header");
                 }
 
@@ -360,7 +359,7 @@ public class JdkZlibDecoder extends ZlibDecoder {
         }
         int readLength = inflater.getTotalOut();
         if (dataLength != readLength) {
-            throw new CompressionException(
+            throw new DecompressionException(
                     "Number of bytes mismatch. Expected: " + dataLength + ", Got: " + readLength);
         }
         return true;
@@ -373,7 +372,7 @@ public class JdkZlibDecoder extends ZlibDecoder {
         }
         long readCrc = crc.getValue();
         if (crcValue != readCrc) {
-            throw new CompressionException(
+            throw new DecompressionException(
                     "CRC value missmatch. Expected: " + crcValue + ", Got: " + readCrc);
         }
     }
