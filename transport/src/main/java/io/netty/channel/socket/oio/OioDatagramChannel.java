@@ -209,9 +209,6 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
             socket.receive(tmpPacket);
 
             InetSocketAddress remoteAddr = (InetSocketAddress) tmpPacket.getSocketAddress();
-            if (remoteAddr == null) {
-                remoteAddr = remoteAddress();
-            }
 
             int readBytes = tmpPacket.getLength();
             allocHandle.record(readBytes);

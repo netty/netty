@@ -54,7 +54,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      *            reserved bits used for protocol extensions
      */
     public CloseWebSocketFrame(boolean finalFragment, int rsv) {
-        this(finalFragment, rsv, null);
+        this(finalFragment, rsv, Unpooled.buffer(0));
     }
 
     /**
