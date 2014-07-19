@@ -42,7 +42,7 @@ final class Bzip2HuffmanAllocator {
         i = Math.max(nodesToMove - 1, i);
 
         while (k > i + 1) {
-            int temp = i + k >> 1;
+            int temp = i + k >>> 1;
             if (array[temp] % length > limit) {
                 k = temp;
             } else {

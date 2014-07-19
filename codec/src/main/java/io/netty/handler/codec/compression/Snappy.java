@@ -24,7 +24,7 @@ import io.netty.buffer.ByteBufUtil;
  *
  * See http://code.google.com/p/snappy/source/browse/trunk/format_description.txt
  */
-public class Snappy {
+class Snappy {
 
     private static final int MAX_HT_SIZE = 1 << 14;
     private static final int MIN_COMPRESSIBLE_BYTES = 15;
