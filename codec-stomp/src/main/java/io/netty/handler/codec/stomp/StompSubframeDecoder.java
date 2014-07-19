@@ -18,7 +18,6 @@ package io.netty.handler.codec.stomp;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.ReplayingDecoder;
@@ -220,14 +219,10 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
     }
 
     private static long getContentLength(StompHeaders headers, long defaultValue) {
-        CharSequence contentLength = headers.get(StompHeaders.CONTENT_LENGTH);
+        String contentLength = headers.get(StompHeaders.CONTENT_LENGTH);
         if (contentLength != null) {
             try {
-                if (contentLength instanceof AsciiString) {
-                    return ((AsciiString) contentLength).parseLong();
-                } else {
-                    return Long.parseLong(contentLength.toString());
-                }
+                return Long.parseLong(contentLength);
             } catch (NumberFormatException ignored) {
                 return defaultValue;
             }

@@ -111,7 +111,7 @@ public final class PerMessageDeflateServerExtensionHandshaker implements WebSock
             } else if (SERVER_MAX_WINDOW.equalsIgnoreCase(parameter.getKey())) {
                 // use provided windowSize if it is allowed
                 if (allowServerWindowSize) {
-                    serverWindowSize = Integer.valueOf(parameter.getValue());
+                    serverWindowSize = Integer.parseInt(parameter.getValue());
                     if (serverWindowSize > MAX_WINDOW_SIZE || serverWindowSize < MIN_WINDOW_SIZE) {
                         deflateEnabled = false;
                     }
