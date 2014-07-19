@@ -232,7 +232,7 @@ public abstract class Recycler<T> {
             }
             to.size = size;
 
-            if (end == LINK_CAPACITY & head.next != null) {
+            if (end == LINK_CAPACITY && head.next != null) {
                 this.head = head.next;
             }
 
