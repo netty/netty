@@ -759,9 +759,7 @@ public final class PlatformDependent {
         }
 
         File f = new File(path);
-        if (!f.exists()) {
-            f.mkdirs();
-        }
+        f.mkdirs();
 
         if (!f.isDirectory()) {
             return null;
