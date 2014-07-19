@@ -1319,7 +1319,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
         return result + ", components=" + components.size() + ')';
     }
 
-    private final class Component {
+    private static final class Component {
         final ByteBuf buf;
         final int length;
         int offset;
