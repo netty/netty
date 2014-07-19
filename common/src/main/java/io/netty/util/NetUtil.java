@@ -186,7 +186,7 @@ public final class NetUtil {
             somaxconn = Integer.parseInt(in.readLine());
             logger.debug("/proc/sys/net/core/somaxconn: {}", somaxconn);
         } catch (Exception e) {
-            // Failed to get SOMAXCONN
+            logger.debug("Failed to get SOMAXCONN", e);
         } finally {
             if (in != null) {
                 try {
