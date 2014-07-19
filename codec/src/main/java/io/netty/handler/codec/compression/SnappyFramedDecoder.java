@@ -36,7 +36,8 @@ import java.util.List;
  * set to {@code true}.
  */
 public class SnappyFramedDecoder extends ByteToMessageDecoder {
-    enum ChunkType {
+
+    private enum ChunkType {
         STREAM_IDENTIFIER,
         COMPRESSED_DATA,
         UNCOMPRESSED_DATA,
@@ -45,6 +46,7 @@ public class SnappyFramedDecoder extends ByteToMessageDecoder {
     }
 
     private static final byte[] SNAPPY = { 's', 'N', 'a', 'P', 'p', 'Y' };
+    private static final int MAX_UNCOMPRESSED_DATA_SIZE = 65536 + 4;
 
     private final Snappy snappy = new Snappy();
     private final boolean validateChecksums;
@@ -83,7 +85,7 @@ public class SnappyFramedDecoder extends ByteToMessageDecoder {
 
         try {
             int idx = in.readerIndex();
-            final int inSize = in.writerIndex() - idx;
+            final int inSize = in.readableBytes();
             if (inSize < 4) {
                 // We need to be at least able to read the chunk type identifier (one byte),
                 // and the length of the chunk (3 bytes) in order to proceed
@@ -136,7 +138,7 @@ public class SnappyFramedDecoder extends ByteToMessageDecoder {
                     if (!started) {
                         throw new DecompressionException("Received UNCOMPRESSED_DATA tag before STREAM_IDENTIFIER");
                     }
-                    if (chunkLength > 65536 + 4) {
+                    if (chunkLength > MAX_UNCOMPRESSED_DATA_SIZE) {
                         throw new DecompressionException("Received UNCOMPRESSED_DATA larger than 65540 bytes");
                     }
 
@@ -193,7 +195,7 @@ public class SnappyFramedDecoder extends ByteToMessageDecoder {
      * @param type The tag byte extracted from the stream
      * @return The appropriate {@link ChunkType}, defaulting to {@link ChunkType#RESERVED_UNSKIPPABLE}
      */
-    static ChunkType mapChunkType(byte type) {
+    private static ChunkType mapChunkType(byte type) {
         if (type == 0) {
             return ChunkType.COMPRESSED_DATA;
         } else if (type == 1) {

@@ -29,7 +29,6 @@ import io.netty.util.internal.EmptyArrays;
 
 import java.util.concurrent.TimeUnit;
 
-
 /**
  * Compresses a {@link ByteBuf} using the deflate algorithm.
  */
