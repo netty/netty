@@ -54,7 +54,10 @@ public class Bzip2EncoderTest {
         assertEquals(9 + '0', out.readByte());
 
         out.release();
-        channel.finish();
+        assertTrue(channel.finish());
+        out = channel.readOutbound();
+        out.release();
+        assertNull(channel.readOutbound());
     }
 
     private static void testCompression(final byte[] data) throws Exception {
