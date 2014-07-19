@@ -80,16 +80,17 @@ final class PlatformDependent0 {
                 Field unsafeField = Unsafe.class.getDeclaredField("theUnsafe");
                 unsafeField.setAccessible(true);
                 unsafe = (Unsafe) unsafeField.get(null);
-                logger.debug("sun.misc.Unsafe.theUnsafe: {}", unsafe != null? "available" : "unavailable");
+                logger.debug("sun.misc.Unsafe.theUnsafe: {}", unsafe != null ? "available" : "unavailable");
 
                 // Ensure the unsafe supports all necessary methods to work around the mistake in the latest OpenJDK.
                 // https://github.com/netty/netty/issues/1061
                 // http://www.mail-archive.com/jdk6-dev@openjdk.java.net/msg00698.html
                 try {
-                    unsafe.getClass().getDeclaredMethod(
-                            "copyMemory", Object.class, long.class, Object.class, long.class, long.class);
-
-                    logger.debug("sun.misc.Unsafe.copyMemory: available");
+                    if (unsafe != null) {
+                        unsafe.getClass().getDeclaredMethod(
+                                "copyMemory", Object.class, long.class, Object.class, long.class, long.class);
+                        logger.debug("sun.misc.Unsafe.copyMemory: available");
+                    }
                 } catch (NoSuchMethodError t) {
                     logger.debug("sun.misc.Unsafe.copyMemory: unavailable");
                     throw t;

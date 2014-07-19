@@ -133,7 +133,7 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
                 HttpHeaders.Names.CONTENT_LENGTH + ": " + length() + "\r\n" +
                 "Completed: " + isCompleted() +
                 "\r\nIsInMemory: " + isInMemory() + "\r\nRealFile: " +
-                file.getAbsolutePath() + " DefaultDeleteAfter: " +
+                (file != null ? file.getAbsolutePath() : "null") + " DefaultDeleteAfter: " +
                 deleteOnExitTemporaryFile;
     }
 
