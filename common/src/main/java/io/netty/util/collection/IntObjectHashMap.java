@@ -21,22 +21,14 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 /**
- * A hash map implementation of {@link IntObjectMap} that uses open addressing for keys. To minimize
- * the memory footprint, this class uses open addressing rather than chaining. Collisions are
- * resolved using double hashing.
+ * A hash map implementation of {@link IntObjectMap} that uses open addressing for keys.
+ * To minimize the memory footprint, this class uses open addressing rather than chaining.
+ * Collisions are resolved using linear probing. Deletions implement compaction, so cost of
+ * remove can approach O(N) for full maps, which makes a small loadFactor recommended.
  *
  * @param <V> The value type stored in the map.
  */
 public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectMap.Entry<V>> {
-
-    /** State indicating that a slot is available.*/
-    private static final byte AVAILABLE = 0;
-
-    /** State indicating that a slot is occupied. */
-    private static final byte OCCUPIED = 1;
-
-    /** State indicating that a slot was removed. */
-    private static final byte REMOVED = 2;
 
     /** Default initial capacity. Used if not specified in the constructor */
     private static final int DEFAULT_CAPACITY = 11;
@@ -44,17 +36,21 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
     /** Default load factor. Used if not specified in the constructor */
     private static final float DEFAULT_LOAD_FACTOR = 0.5f;
 
+    /**
+     * Placeholder for null values, so we can use the actual null to mean available.
+     * (Better than using a placeholder for available: less references for GC processing.)
+     */
+    private static final Object NULL_VALUE = new Object();
+
     /** The maximum number of elements allowed without allocating more space. */
     private int maxSize;
 
     /** The load factor for the map. Used to calculate {@link #maxSize}. */
     private final float loadFactor;
 
-    private byte[] states;
     private int[] keys;
     private V[] values;
     private int size;
-    private int available;
 
     public IntObjectHashMap() {
         this(DEFAULT_CAPACITY, DEFAULT_LOAD_FACTOR);
@@ -68,93 +64,71 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
         if (initialCapacity < 1) {
             throw new IllegalArgumentException("initialCapacity must be >= 1");
         }
-        if (loadFactor <= 0.0f) {
-            throw new IllegalArgumentException("loadFactor must be > 0");
+        if (loadFactor <= 0.0f || loadFactor > 1.0f) {
+            // Cannot exceed 1 because we can never store more than capacity elements;
+            // using a bigger loadFactor would trigger rehashing before the desired load is reached.
+            throw new IllegalArgumentException("loadFactor must be > 0 and <= 1");
         }
 
         this.loadFactor = loadFactor;
 
         // Adjust the initial capacity if necessary.
-        initialCapacity = adjustCapacity(initialCapacity);
+        int capacity = adjustCapacity(initialCapacity);
 
         // Allocate the arrays.
-        states = new byte[initialCapacity];
-        keys = new int[initialCapacity];
-        @SuppressWarnings({ "unchecked", "SuspiciousArrayCast" })
-        V[] temp = (V[]) new Object[initialCapacity];
+        keys = new int[capacity];
+        @SuppressWarnings({ "unchecked", })
+        V[] temp = (V[]) new Object[capacity];
         values = temp;
 
         // Initialize the maximum size value.
-        maxSize = calcMaxSize(initialCapacity);
+        maxSize = calcMaxSize(capacity);
+    }
 
-        // Initialize the available element count
-        available = initialCapacity - size;
+    private static <T> T toExternal(T value) {
+        return value == NULL_VALUE ? null : value;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T> T toInternal(T value) {
+        return value == null ? (T) NULL_VALUE : value;
     }
 
     @Override
     public V get(int key) {
         int index = indexOf(key);
-        return index < 0 ? null : values[index];
+        return index == -1 ? null : toExternal(values[index]);
     }
 
     @Override
     public V put(int key, V value) {
-        int hash = hash(key);
-        int capacity = capacity();
-        int index = hash % capacity;
-        int increment = 1 + hash % (capacity - 2);
-        final int startIndex = index;
-        int firstRemovedIndex = -1;
-        do {
-            switch (states[index]) {
-                case AVAILABLE:
-                    // We only stop probing at a AVAILABLE node, since the value may still exist
-                    // beyond
-                    // a REMOVED node.
-                    if (firstRemovedIndex != -1) {
-                        // We encountered a REMOVED node prior. Store the entry there so that
-                        // retrieval
-                        // will be faster.
-                        insertAt(firstRemovedIndex, key, value);
-                        return null;
-                    }
+        int startIndex = hashIndex(key);
+        int index = startIndex;
 
-                    // No REMOVED node, just store the entry here.
-                    insertAt(index, key, value);
-                    return null;
-                case OCCUPIED:
-                    if (keys[index] == key) {
-                        V previousValue = values[index];
-                        insertAt(index, key, value);
-                        return previousValue;
-                    }
-                    break;
-                case REMOVED:
-                    // Check for first removed index.
-                    if (firstRemovedIndex == -1) {
-                        firstRemovedIndex = index;
-                    }
-                    break;
-                default:
-                    throw new AssertionError("Invalid state: " + states[index]);
+        for (;;) {
+            if (values[index] == null) {
+                // Found empty slot, use it.
+                keys[index] = key;
+                values[index] = toInternal(value);
+                growSize();
+                return null;
+            } else if (keys[index] == key) {
+                // Found existing entry with this key, just replace the value.
+                V previousValue = values[index];
+                values[index] = toInternal(value);
+                return toExternal(previousValue);
             }
 
-            // REMOVED or OCCUPIED but wrong key, keep probing ...
-            index += increment;
-            if (index >= capacity) {
-                // Handle wrap-around by decrement rather than mod.
-                index -= capacity;
+            // Conflict, keep probing ...
+            if ((index = probeNext(index)) == startIndex) {
+                // Can only happen if the map was full at MAX_ARRAY_SIZE and couldn't grow.
+                throw new IllegalStateException("Unable to insert");
             }
-        } while (index != startIndex);
-
-        if (firstRemovedIndex == -1) {
-            // Should never happen.
-            throw new AssertionError("Unable to insert");
         }
+    }
 
-        // Never found a AVAILABLE slot, just use the first REMOVED.
-        insertAt(firstRemovedIndex, key, value);
-        return null;
+    private int probeNext(int index) {
+        return index == values.length - 1 ? 0 : index + 1;
     }
 
     @Override
@@ -162,9 +136,11 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
         if (sourceMap instanceof IntObjectHashMap) {
             // Optimization - iterate through the arrays.
             IntObjectHashMap<V> source = (IntObjectHashMap<V>) sourceMap;
-            int i = -1;
-            while ((i = source.nextEntryIndex(i + 1)) >= 0) {
-                put(source.keys[i], source.values[i]);
+            for (int i = 0; i < source.values.length; ++i) {
+                V sourceValue = source.values[i];
+                if (sourceValue != null) {
+                    put(source.keys[i], sourceValue);
+                }
             }
             return;
         }
@@ -178,13 +154,13 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
     @Override
     public V remove(int key) {
         int index = indexOf(key);
-        if (index < 0) {
+        if (index == -1) {
             return null;
         }
 
         V prev = values[index];
         removeAt(index);
-        return prev;
+        return toExternal(prev);
     }
 
     @Override
@@ -199,10 +175,9 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
 
     @Override
     public void clear() {
-        Arrays.fill(states, AVAILABLE);
+        Arrays.fill(keys, 0);
         Arrays.fill(values, null);
         size = 0;
-        available = capacity();
     }
 
     @Override
@@ -212,10 +187,10 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
 
     @Override
     public boolean containsValue(V value) {
-        int i = -1;
-        while ((i = nextEntryIndex(i + 1)) >= 0) {
-            V next = values[i];
-            if (value == next || value != null && value.equals(next)) {
+        V v = toInternal(value);
+        for (int i = 0; i < values.length; ++i) {
+            // The map supports null values; this will be matched as NULL_VALUE.equals(NULL_VALUE).
+            if (values[i] != null && values[i].equals(v)) {
                 return true;
             }
         }
@@ -235,7 +210,12 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
     @Override
     public int[] keys() {
         int[] outKeys = new int[size()];
-        copyEntries(keys, outKeys);
+        int targetIx = 0;
+        for (int i = 0; i < values.length; ++i) {
+            if (values[i] != null) {
+                outKeys[targetIx++] = keys[i];
+            }
+        }
         return outKeys;
     }
 
@@ -243,56 +223,61 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
     public V[] values(Class<V> clazz) {
         @SuppressWarnings("unchecked")
         V[] outValues = (V[]) Array.newInstance(clazz, size());
-        copyEntries(values, outValues);
+        int targetIx = 0;
+        for (int i = 0; i < values.length; ++i) {
+            if (values[i] != null) {
+                outValues[targetIx++] = values[i];
+            }
+        }
         return outValues;
     }
 
     @Override
     public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        for (Entry<V> entry : entries()) {
-            V value = entry.value();
-            int hash = value == null ? 0 : value.hashCode();
-            result = prime * result + hash;
+        // Hashcode is based on all non-zero, valid keys. We have to scan the whole keys
+        // array, which may have different lengths for two maps of same size(), so the
+        // capacity cannot be used as input for hashing but the size can.
+        int hash = size;
+        for (int i = 0; i < keys.length; ++i) {
+            // 0 can be a valid key or unused slot, but won't impact the hashcode in either case.
+            // This way we can use a cheap loop without conditionals, or hard-to-unroll operations,
+            // or the devastatingly bad memory locality of visiting value objects.
+            // Also, it's important to use a hash function that does not depend on the ordering
+            // of terms, only their values; since the map is an unordered collection and
+            // entries can end up in different positions in different maps that have the same
+            // elements, but with different history of puts/removes, due to conflicts.
+            hash = hash ^ keys[i];
         }
-        return result;
+        return hash;
     }
 
     @Override
     public boolean equals(Object obj) {
-        if (this == obj || obj == null || getClass() != obj.getClass()) {
+        if (this == obj) {
             return true;
-        }
-        @SuppressWarnings("rawtypes")
-        IntObjectHashMap other = (IntObjectHashMap) obj;
-        if (size != other.size) {
+        } else if (!(obj instanceof IntObjectMap)) {
             return false;
         }
-        for (Entry<V> entry : entries()) {
-            V value = entry.value();
-            Object otherValue = other.get(entry.key());
-            if (value == null) {
-                if (otherValue != null || !other.containsKey(entry.key())) {
+        @SuppressWarnings("rawtypes")
+        IntObjectMap other = (IntObjectMap) obj;
+        if (size != other.size()) {
+            return false;
+        }
+        for (int i = 0; i < values.length; ++i) {
+            V value = values[i];
+            if (value != null) {
+                int key = keys[i];
+                Object otherValue = other.get(key);
+                if (value == NULL_VALUE) {
+                    if (otherValue != null) {
+                      return false;
+                    }
+                } else if (!value.equals(otherValue)) {
                     return false;
                 }
-            } else if (!value.equals(otherValue)) {
-                return false;
             }
         }
         return true;
-    }
-
-    /**
-     * Copies the occupied entries from the source to the target array.
-     */
-    private void copyEntries(Object sourceArray, Object targetArray) {
-        int sourceIx = -1;
-        int targetIx = 0;
-        while ((sourceIx = nextEntryIndex(sourceIx + 1)) >= 0) {
-            Object obj = Array.get(sourceArray, sourceIx);
-            Array.set(targetArray, targetIx++, obj);
-        }
     }
 
     /**
@@ -302,117 +287,94 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
      * @return the index where the key was found, or {@code -1} if no entry is found for that key.
      */
     private int indexOf(int key) {
-        int hash = hash(key);
-        int capacity = capacity();
-        int increment = 1 + hash % (capacity - 2);
-        int index = hash % capacity;
-        int startIndex = index;
-        do {
-            switch(states[index]) {
-                case AVAILABLE:
-                    // It's available, so no chance that this value exists anywhere in the map.
-                    return -1;
-                case OCCUPIED:
-                    if (key == keys[index]) {
-                        // Found it!
-                        return index;
-                    }
-                    break;
-                default:
-                    break;
+        int startIndex = hashIndex(key);
+        int index = startIndex;
+
+        for (;;) {
+            if (values[index] == null) {
+                // It's available, so no chance that this value exists anywhere in the map.
+                return -1;
+            } else if (key == keys[index]) {
+                return index;
             }
 
-            // REMOVED or OCCUPIED but wrong key, keep probing ...
-            index += increment;
-            if (index >= capacity) {
-                // Handle wrap-around by decrement rather than mod.
-                index -= capacity;
-            }
-        } while (index != startIndex);
-
-        // Got back to the beginning. Not found.
-        return -1;
-    }
-
-    /**
-     * Determines the current capacity (i.e. size of the arrays).
-     */
-    private int capacity() {
-        return keys.length;
-    }
-
-    /**
-     * Creates a hash value for the given key.
-     */
-    private static int hash(int key) {
-        // Just make sure the integer is positive.
-        return key & Integer.MAX_VALUE;
-    }
-
-    /**
-     * Performs an insert of the key/value at the given index position. If necessary, performs a
-     * rehash of the map.
-     *
-     * @param index the index at which to insert the key/value
-     * @param key the entry key
-     * @param value the entry value
-     */
-    private void insertAt(int index, int key, V value) {
-        byte state = states[index];
-        if (state != OCCUPIED) {
-            // Added a new mapping, increment the size.
-            size++;
-
-            if (state == AVAILABLE) {
-                // Consumed a OCCUPIED slot, decrement the number of available slots.
-                available--;
+            // Conflict, keep probing ...
+            if ((index = probeNext(index)) == startIndex) {
+                return -1;
             }
         }
+    }
 
-        keys[index] = key;
-        values[index] = value;
-        states[index] = OCCUPIED;
+    /**
+     * Returns the hashed index for the given key.
+     */
+    private int hashIndex(int key) {
+        return key % keys.length;
+    }
+
+    /**
+     * Grows the map size after an insertion. If necessary, performs a rehash of the map.
+     */
+    private void growSize() {
+        size++;
 
         if (size > maxSize) {
-            // Need to grow the arrays.
-            rehash(adjustCapacity(capacity() * 2));
-        } else if (available == 0) {
+            // Need to grow the arrays. We take care to detect integer overflow,
+            // also limit array size to ArrayList.MAX_ARRAY_SIZE.
+            rehash(adjustCapacity((int) Math.min(keys.length * 2.0, Integer.MAX_VALUE - 8)));
+        } else if (size == keys.length) {
             // Open addressing requires that we have at least 1 slot available. Need to refresh
             // the arrays to clear any removed elements.
-            rehash(capacity());
+            rehash(keys.length);
         }
     }
 
     /**
      * Adjusts the given capacity value to ensure that it's odd. Even capacities can break probing.
-     * TODO: would be better to ensure it's prime as well.
      */
     private static int adjustCapacity(int capacity) {
         return capacity | 1;
     }
 
     /**
-     * Marks the entry at the given index position as {@link #REMOVED} and sets the value to
-     * {@code null}.
-     * <p>
-     * TODO: consider performing re-compaction.
+     * Removes entry at the given index position. Also performs opportunistic, incremental rehashing
+     * if necessary to not break conflict chains.
      *
      * @param index the index position of the element to remove.
      */
     private void removeAt(int index) {
-        if (states[index] == OCCUPIED) {
-            size--;
-        }
-        states[index] = REMOVED;
+        --size;
+        // Clearing the key is not strictly necessary (for GC like in a regular collection),
+        // but recommended for security. The memory location is still fresh in the cache anyway.
+        keys[index] = 0;
         values[index] = null;
+
+        // In the interval from index to the next available entry, the arrays may have entries
+        // that are displaced from their base position due to prior conflicts. Iterate these
+        // entries and move them back if possible, optimizing future lookups.
+        // Knuth Section 6.4 Algorithm R, also used by the JDK's IdentityHashMap.
+
+        int nextFree = index;
+        for (int i = probeNext(index); values[i] != null; i = probeNext(i)) {
+            int bucket = hashIndex(keys[i]);
+            if ((i < bucket && (bucket <= nextFree || nextFree <= i))
+                    || (bucket <= nextFree && nextFree <= i)) {
+                // Move the displaced entry "back" to the first available position.
+                keys[nextFree] = keys[i];
+                values[nextFree] = values[i];
+                // Put the first entry after the displaced entry
+                keys[i] = 0;
+                values[i] = null;
+                nextFree = i;
+            }
+        }
     }
 
     /**
      * Calculates the maximum size allowed before rehashing.
      */
     private int calcMaxSize(int capacity) {
-        // Clip the upper bound so that there will always be at least one
-        // available slot.
+        // Clip the upper bound so that there will always be at least one available slot.
         int upperBound = capacity - 1;
         return Math.min(upperBound, (int) (capacity * loadFactor));
     }
@@ -423,61 +385,62 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
      * @param newCapacity the new capacity for the map.
      */
     private void rehash(int newCapacity) {
-        int oldCapacity = capacity();
         int[] oldKeys = keys;
         V[] oldVals = values;
-        byte[] oldStates = states;
 
-        // New states array is automatically initialized to AVAILABLE (i.e. 0 == AVAILABLE).
-        states = new byte[newCapacity];
         keys = new int[newCapacity];
-        @SuppressWarnings({ "unchecked", "SuspiciousArrayCast" })
+        @SuppressWarnings({ "unchecked" })
         V[] temp = (V[]) new Object[newCapacity];
         values = temp;
 
-        size = 0;
-        available = newCapacity;
         maxSize = calcMaxSize(newCapacity);
 
-        // Insert the new states.
-        for (int i = 0; i < oldCapacity; ++i) {
-            if (oldStates[i] == OCCUPIED) {
-                put(oldKeys[i], oldVals[i]);
-            }
-        }
-    }
+        // Insert to the new arrays.
+        for (int i = 0; i < oldVals.length; ++i) {
+            V oldVal = oldVals[i];
+            if (oldVal != null) {
+                // Inlined put(), but much simpler: we don't need to worry about
+                // duplicated keys, growing/rehashing, or failing to insert.
+                int oldKey = oldKeys[i];
+                int startIndex = hashIndex(oldKey);
+                int index = startIndex;
 
-    /**
-     * Returns the next index of the next entry in the map.
-     *
-     * @param index the index at which to begin the search.
-     * @return the index of the next entry, or {@code -1} if not found.
-     */
-    private int nextEntryIndex(int index) {
-        int capacity = capacity();
-        for (; index < capacity; ++index) {
-            if (states[index] == OCCUPIED) {
-                return index;
+                for (;;) {
+                    if (values[index] == null) {
+                        keys[index] = oldKey;
+                        values[index] = toInternal(oldVal);
+                        break;
+                    }
+
+                    // Conflict, keep probing. Can wrap around, but never reaches startIndex again.
+                    index = probeNext(index);
+                }
             }
         }
-        return -1;
     }
 
     /**
      * Iterator for traversing the entries in this map.
      */
-    private final class IteratorImpl implements Iterator<Entry<V>> {
-        int prevIndex;
-        int nextIndex;
+    private final class IteratorImpl implements Iterator<Entry<V>>, Entry<V> {
+        private int prevIndex = -1;
+        private int nextIndex = -1;
+        private int entryIndex = -1;
 
-        IteratorImpl() {
-            prevIndex = -1;
-            nextIndex = nextEntryIndex(0);
+        private void scanNext() {
+            for (;;) {
+                if (++nextIndex == values.length || values[nextIndex] != null) {
+                    break;
+                }
+            }
         }
 
         @Override
         public boolean hasNext() {
-            return nextIndex >= 0;
+            if (nextIndex == -1) {
+                scanNext();
+            }
+            return nextIndex < keys.length;
         }
 
         @Override
@@ -487,43 +450,54 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
             }
 
             prevIndex = nextIndex;
-            nextIndex = nextEntryIndex(nextIndex + 1);
-            return new EntryImpl(prevIndex);
+            scanNext();
+
+            // Always return the same Entry object, just change its index each time.
+            entryIndex = prevIndex;
+            return this;
         }
 
         @Override
         public void remove() {
             if (prevIndex < 0) {
-                throw new IllegalStateException("Next must be called before removing.");
+                throw new IllegalStateException("next must be called before each remove.");
             }
             removeAt(prevIndex);
             prevIndex = -1;
         }
-    }
 
-    /**
-     * {@link Entry} implementation that just references the key/value at the given index position.
-     */
-    private final class EntryImpl implements Entry<V> {
-        final int index;
-
-        EntryImpl(int index) {
-            this.index = index;
-        }
+        // Entry implementation. Since this implementation uses a single Entry, we coalesce that
+        // into the Iterator object (potentially making loop optimization much easier).
 
         @Override
         public int key() {
-            return keys[index];
+            return keys[entryIndex];
         }
 
         @Override
         public V value() {
-            return values[index];
+            return toExternal(values[entryIndex]);
         }
 
         @Override
         public void setValue(V value) {
-            values[index] = value;
+            values[entryIndex] = toInternal(value);
         }
+    }
+
+    @Override
+    public String toString() {
+        if (size == 0) {
+            return "{}";
+        }
+        StringBuilder sb = new StringBuilder(4 * size);
+        for (int i = 0; i < values.length; ++i) {
+            V value = values[i];
+            if (value != null) {
+                sb.append(sb.length() == 0 ? "{" : ", ");
+                sb.append(keys[i]).append('=').append(value == this ? "(this Map)" : value);
+            }
+        }
+        return sb.append('}').toString();
     }
 }
