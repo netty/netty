@@ -338,25 +338,26 @@ public class IntObjectHashMapTest {
         HashMap<Integer, Integer> goodMap = new HashMap<Integer, Integer>();
 
         // Add initial population.
-        for (int i = 0; i < baseSize / 2; ++i) {
+        for (int i = 0; i < baseSize / 4; ++i) {
             int key = rnd.nextInt(baseSize);
             assertEquals(goodMap.put(key, key), map.put(key, key));
             // 50% elements are multiple of a divisor of startTableSize => more conflicts.
-            key = rnd.nextInt(baseSize);
+            key = rnd.nextInt(baseSize) * 17;
             assertEquals(goodMap.put(key, key), map.put(key, key));
         }
 
-        // Now do some mixed adds and removes for further fuzzing.
-        for (int i = 0; i < baseSize * 100; ++i) {
+        // Now do some mixed adds and removes for further fuzzing
+        // Rehash will happen here, but only once, and the final size will be closer to max.
+        for (int i = 0; i < baseSize * 1000; ++i) {
             int key = rnd.nextInt(baseSize);
-            if (rnd.nextBoolean()) {
+            if (rnd.nextDouble() >= 0.2) {
                 assertEquals(goodMap.put(key, key), map.put(key, key));
             } else {
                 assertEquals(goodMap.remove(key), map.remove(key));
             }
         }
 
-        // final batch of fuzzing, only searches and removes.
+        // Final batch of fuzzing, only searches and removes.
         int removeSize = map.size() / 2;
         while (removeSize > 0) {
             int key = rnd.nextInt(baseSize);
@@ -378,7 +379,7 @@ public class IntObjectHashMapTest {
             assertEquals((int) goodKeys[i], keys[i]);
         }
 
-        // Finally, drain the map, mostly so we can investigate available/state.
+        // Finally drain the map.
         for (int key : map.keys()) {
             assertEquals(goodMap.remove(key), map.remove(key));
         }
