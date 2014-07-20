@@ -104,11 +104,7 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
         int startIndex = hashIndex(key);
         int index = startIndex;
 
-<<<<<<< HEAD
         for (;;) {
-=======
-        while (true) {
->>>>>>> 5813e35a5182578fe7c7fa646012dd4b7d72a2e8
             if (values[index] == null) {
                 keys[index] = key;
                 values[index] = setValue(value);
@@ -123,11 +119,7 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
             // Conflict, keep probing ...
             if ((index = probeNext(index)) == startIndex) {
                 // Can only happen if the map was full at MAX_ARRAY_SIZE and couldn't grow.
-<<<<<<< HEAD
                 throw new IllegalStateException("Unable to insert");
-=======
-                throw new AssertionError("Unable to insert");
->>>>>>> 5813e35a5182578fe7c7fa646012dd4b7d72a2e8
             }
         }
     }
@@ -142,14 +134,9 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
             // Optimization - iterate through the arrays.
             IntObjectHashMap<V> source = (IntObjectHashMap<V>) sourceMap;
             for (int i = 0; i < source.values.length; ++i) {
-<<<<<<< HEAD
                 V sourceValue = source.values[i];
                 if (sourceValue != null) {
                     put(source.keys[i], sourceValue);
-=======
-                if (source.values[i] != null) {
-                    put(source.keys[i], source.values[i]);
->>>>>>> 5813e35a5182578fe7c7fa646012dd4b7d72a2e8
                 }
             }
             return;
@@ -199,10 +186,7 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
     public boolean containsValue(V value) {
         V v = setValue(value);
         for (int i = 0; i < values.length; ++i) {
-<<<<<<< HEAD
             // The map supports null values; this will be matched as NULL_VALUE.equals(NULL_VALUE).
-=======
->>>>>>> 5813e35a5182578fe7c7fa646012dd4b7d72a2e8
             if (values[i] != null && values[i].equals(v)) {
                 return true;
             }
@@ -247,7 +231,6 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
 
     @Override
     public int hashCode() {
-<<<<<<< HEAD
         // Hashcode is based on all non-zero, valid keys. We have to scan the whole keys
         // array, which may have different lengths for two maps of same size(), so the
         // capacity cannot be used as input for hashing but the size can.
@@ -256,16 +239,6 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
             // 0 can be a valid key or unused slot, but won't impact the hashcode in either case.
             // This way we can use a cheap loop without conditionals or hard-to-unroll operations.
             hash = hash ^ keys[i];
-=======
-        final int prime = 31;
-        int result = 1;
-        for (int i = 0; i < keys.length; ++i) {
-            // 0 can be a valid key, but this is good enough for hashcode. Better than having
-            // to scan both the keys and values arrays.
-            if (keys[i] != 0) {
-                result = prime * result + keys[i];
-            }
->>>>>>> 5813e35a5182578fe7c7fa646012dd4b7d72a2e8
         }
         return hash;
     }
@@ -307,11 +280,7 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
         int startIndex = hashIndex(key);
         int index = startIndex;
 
-<<<<<<< HEAD
         for (;;) {
-=======
-        while (true) {
->>>>>>> 5813e35a5182578fe7c7fa646012dd4b7d72a2e8
             if (values[index] == null) {
                 // It's available, so no chance that this value exists anywhere in the map.
                 return -1;
@@ -418,7 +387,6 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
 
         // Insert to the new arrays.
         for (int i = 0; i < oldVals.length; ++i) {
-<<<<<<< HEAD
             V oldVal = oldVals[i];
             if (oldVal != null) {
                 // Inlined put(), but much simpler: we don't need to worry about
@@ -431,18 +399,6 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
                     if (values[index] == null) {
                         keys[index] = oldKey;
                         values[index] = setValue(oldVal);
-=======
-            if (oldVals[i] != null) {
-                // Inlined put(), but much simpler: we don't need to worry about
-                // duplicated keys, growing/rehashing, or failing to insert.
-                int startIndex = hashIndex(oldKeys[i]);
-                int index = startIndex;
-
-                while (true) {
-                    if (values[index] == null) {
-                        keys[index] = oldKeys[i];
-                        values[index] = setValue(oldVals[i]);
->>>>>>> 5813e35a5182578fe7c7fa646012dd4b7d72a2e8
                         break;
                     }
 
@@ -462,11 +418,7 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
         private EntryImpl entry;
 
         private void scanNext() {
-<<<<<<< HEAD
             for (;;) {
-=======
-            while (true) {
->>>>>>> 5813e35a5182578fe7c7fa646012dd4b7d72a2e8
                 if (++nextIndex == values.length || values[nextIndex] != null) {
                     break;
                 }
@@ -535,11 +487,7 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
         if (size == 0) {
             return "{}";
         }
-<<<<<<< HEAD
-        StringBuilder sb = new StringBuilder(8 + 4 * size);
-=======
-        StringBuilder sb = new StringBuilder();
->>>>>>> 5813e35a5182578fe7c7fa646012dd4b7d72a2e8
+        StringBuilder sb = new StringBuilder(4 * size);
         for (int i = 0; i < values.length; ++i) {
             V value = values[i];
             if (value != null) {
