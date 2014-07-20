@@ -89,9 +89,9 @@ final class EpollChannelOutboundBuffer extends ChannelOutboundBuffer {
         int flushed = flushed();
         while (flushed != unflushed && (m = buffer[flushed].msg()) != null) {
             if (!(m instanceof ByteBuf)) {
-                this.addressCount = 0;
-                this.addressSize = 0;
-                return null;
+                // Just break out of the loop as we can still use gathering writes for the buffers that we
+                // found by now.
+                break;
             }
 
             AddressEntry entry = (AddressEntry) buffer[flushed];
