@@ -19,9 +19,12 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.socket.DatagramPacket;
+import io.netty.handler.codec.DecoderException;
 
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.net.InetSocketAddress;
 
@@ -40,6 +43,8 @@ public class DnsResponseTest {
             { 0, 3, -127, -128, 0, 1, 0, 1, 0, 0, 0, 0, 3, 119, 119, 119, 7, 101, 120, 97, 109, 112, 108, 101, 3, 99,
                     111, 109, 0, 0, 16, 0, 1, -64, 12, 0, 16, 0, 1, 0, 0, 84, 75, 0, 12, 11, 118, 61, 115, 112, 102,
                     49, 32, 45, 97, 108, 108 } };
+
+    private static final byte[] malformedLoopPacket = { 0, 4, -127, -128, 0, 1, 0, 0, 0, 0, 0, 0, -64, 12, 0, 1, 0, 1 };
 
     @Test
     public void readResponseTest() throws Exception {
@@ -64,5 +69,17 @@ public class DnsResponseTest {
                     decoded.additionalResources().size());
             decoded.release();
         }
+    }
+
+    @Rule
+    public ExpectedException exception = ExpectedException.none();
+
+    @Test
+    public void readMalormedResponseTest() throws Exception {
+        EmbeddedChannel embedder = new EmbeddedChannel(new DnsResponseDecoder());
+        ByteBuf packet = embedder.alloc().buffer(512).writeBytes(malformedLoopPacket);
+        exception.expect(DecoderException.class);
+        exception.expectMessage("java.lang.NullPointerException: name");
+        embedder.writeInbound(new DatagramPacket(packet, null, new InetSocketAddress(0)));
     }
 }
