@@ -86,6 +86,8 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
      */
     private static String readName(ByteBuf buf) {
         int position = -1;
+        int checked = 0;
+        int length = buf.writerIndex();
         StringBuilder name = new StringBuilder();
         for (int len = buf.readUnsignedByte(); buf.isReadable() && len != 0; len = buf.readUnsignedByte()) {
             boolean pointer = (len & 0xc0) == 0xc0;
@@ -94,6 +96,11 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
                     position = buf.readerIndex() + 1;
                 }
                 buf.readerIndex((len & 0x3f) << 8 | buf.readUnsignedByte());
+                // check for loops
+                checked += 2;
+                if (checked >= length) {
+                    return null;
+                }
             } else {
                 name.append(buf.toString(buf.readerIndex(), len, CharsetUtil.UTF_8)).append('.');
                 buf.skipBytes(len);
