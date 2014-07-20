@@ -138,15 +138,13 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
             return done;
         } else {
             ByteBuffer[] nioBuffers = buf.nioBuffers();
-            return writeBytesMultiple0(in, 1, nioBuffers, nioBuffers.length, readableBytes);
+            return writeBytesMultiple(in, 1, nioBuffers, nioBuffers.length, readableBytes);
         }
     }
 
     private boolean writeBytesMultiple(
-            EpollChannelOutboundBuffer in, int msgCount, AddressEntry[] addresses) throws IOException {
-
-        int addressCnt = in.addressCount();
-        long expectedWrittenBytes = in.addressSize();
+            EpollChannelOutboundBuffer in, int msgCount, AddressEntry[] addresses,
+            int addressCnt, int expectedWrittenBytes) throws IOException {
         boolean done = false;
         long writtenBytes = 0;
         int offset = 0;
@@ -191,11 +189,6 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
     }
 
     private boolean writeBytesMultiple(
-            NioSocketChannelOutboundBuffer in, int msgCount, ByteBuffer[] nioBuffers) throws IOException {
-        return writeBytesMultiple0(in, msgCount, nioBuffers, in.nioBufferCount(), in.nioBufferSize());
-    }
-
-    private boolean writeBytesMultiple0(
             ChannelOutboundBuffer in, int msgCount, ByteBuffer[] nioBuffers,
             int nioBufferCnt, long expectedWrittenBytes) throws IOException {
         boolean done = false;
@@ -240,7 +233,7 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
         return done;
     }
 
-    private void updateOutboundBuffer(ChannelOutboundBuffer in, long writtenBytes, int msgCount,
+    private static void updateOutboundBuffer(ChannelOutboundBuffer in, long writtenBytes, int msgCount,
                                       boolean done) {
         if (done) {
             // Release all buffers
@@ -328,8 +321,9 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
                     EpollChannelOutboundBuffer epollIn = (EpollChannelOutboundBuffer) in;
                     // Ensure the pending writes are made of memoryaddresses only.
                     AddressEntry[] addresses = epollIn.memoryAddresses();
-                    if (addresses != null) {
-                        if (!writeBytesMultiple(epollIn, msgCount, addresses)) {
+                    int addressesCnt = epollIn.addressCount();
+                    if (addressesCnt > 1) {
+                        if (!writeBytesMultiple(epollIn, msgCount, addresses, addressesCnt, epollIn.addressCount())) {
                             // was not able to write everything so break here we will get notified later again once
                             // the network stack can handle more writes.
                             break;
@@ -344,8 +338,9 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
                     NioSocketChannelOutboundBuffer nioIn = (NioSocketChannelOutboundBuffer) in;
                     // Ensure the pending writes are made of memoryaddresses only.
                     ByteBuffer[] nioBuffers = nioIn.nioBuffers();
-                    if (nioBuffers != null) {
-                        if (!writeBytesMultiple(nioIn, msgCount, nioBuffers)) {
+                    int nioBufferCnt = nioIn.nioBufferCount();
+                    if (nioBufferCnt > 1) {
+                        if (!writeBytesMultiple(nioIn, msgCount, nioBuffers, nioBufferCnt, nioIn.nioBufferSize())) {
                             // was not able to write everything so break here we will get notified later again once
                             // the network stack can handle more writes.
                             break;
