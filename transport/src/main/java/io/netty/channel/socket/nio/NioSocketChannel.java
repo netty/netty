@@ -251,7 +251,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
             ByteBuffer[] nioBuffers = in.nioBuffers();
             int nioBufferCnt = in.nioBufferCount();
 
-            if (nioBufferCnt == 0) {
+            if (nioBufferCnt <= 1) {
                 // We have something else beside ByteBuffers to write so fallback to normal writes.
                 super.doWrite(in);
                 break;
