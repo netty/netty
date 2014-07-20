@@ -85,18 +85,19 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
         maxSize = calcMaxSize(capacity);
     }
 
-    private static <T> T retValue(T value) {
+    private static <T> T toExternal(T value) {
         return value == NULL_VALUE ? null : value;
     }
 
-    private static <T> T setValue(T value) {
+    @SuppressWarnings("unchecked")
+    private static <T> T toInternal(T value) {
         return value == null ? (T) NULL_VALUE : value;
     }
 
     @Override
     public V get(int key) {
         int index = indexOf(key);
-        return index == -1 ? null : retValue(values[index]);
+        return index == -1 ? null : toExternal(values[index]);
     }
 
     @Override
@@ -106,14 +107,16 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
 
         for (;;) {
             if (values[index] == null) {
+                // Found empty slot, use it.
                 keys[index] = key;
-                values[index] = setValue(value);
+                values[index] = toInternal(value);
                 growSize();
                 return null;
             } else if (keys[index] == key) {
+                // Found existing entry with this key, just replace the value.
                 V previousValue = values[index];
-                values[index] = setValue(value);
-                return retValue(previousValue);
+                values[index] = toInternal(value);
+                return toExternal(previousValue);
             }
 
             // Conflict, keep probing ...
@@ -151,13 +154,13 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
     @Override
     public V remove(int key) {
         int index = indexOf(key);
-        if (index < 0) {
+        if (index == -1) {
             return null;
         }
 
         V prev = values[index];
         removeAt(index);
-        return retValue(prev);
+        return toExternal(prev);
     }
 
     @Override
@@ -184,7 +187,7 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
 
     @Override
     public boolean containsValue(V value) {
-        V v = setValue(value);
+        V v = toInternal(value);
         for (int i = 0; i < values.length; ++i) {
             // The map supports null values; this will be matched as NULL_VALUE.equals(NULL_VALUE).
             if (values[i] != null && values[i].equals(v)) {
@@ -257,7 +260,7 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
         }
         for (int i = 0; i < values.length; ++i) {
             int key = keys[i];
-            V value = retValue(values[i]);
+            V value = toExternal(values[i]);
             Object otherValue = other.get(key);
             if (value == null) {
                 if (otherValue != null || !other.containsKey(key)) {
@@ -398,11 +401,11 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
                 for (;;) {
                     if (values[index] == null) {
                         keys[index] = oldKey;
-                        values[index] = setValue(oldVal);
+                        values[index] = toInternal(oldVal);
                         break;
                     }
 
-                    // Conflict, keep probing ...
+                    // Conflict, keep probing. Can wrap around, but never reaches startIndex again.
                     index = probeNext(index);
                 }
             }
@@ -453,7 +456,7 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
         @Override
         public void remove() {
             if (prevIndex < 0) {
-                throw new IllegalStateException("Next must be called before removing.");
+                throw new IllegalStateException("next must be called before each remove.");
             }
             removeAt(prevIndex);
             prevIndex = -1;
@@ -473,12 +476,12 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
 
         @Override
         public V value() {
-            return retValue(values[entryIndex]);
+            return toExternal(values[entryIndex]);
         }
 
         @Override
         public void setValue(V value) {
-          values[entryIndex] = IntObjectHashMap.setValue(value);
+          values[entryIndex] = toInternal(value);
         }
     }
 
