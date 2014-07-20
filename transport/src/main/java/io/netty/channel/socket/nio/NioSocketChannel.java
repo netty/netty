@@ -249,12 +249,14 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
 
             // Ensure the pending writes are made of ByteBufs only.
             ByteBuffer[] nioBuffers = in.nioBuffers();
-            if (nioBuffers == null) {
+            int nioBufferCnt = in.nioBufferCount();
+
+            if (nioBufferCnt == 0) {
+                // We have something else beside ByteBuffers to write so fallback to normal writes.
                 super.doWrite(in);
-                return;
+                break;
             }
 
-            int nioBufferCnt = in.nioBufferCount();
             long expectedWrittenBytes = in.nioBufferSize();
 
             final SocketChannel ch = javaChannel();

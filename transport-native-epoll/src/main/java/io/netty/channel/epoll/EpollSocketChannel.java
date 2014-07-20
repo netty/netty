@@ -63,7 +63,7 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
     private volatile boolean inputShutdown;
     private volatile boolean outputShutdown;
 
-    EpollSocketChannel(Channel parent, int fd) throws IOException {
+    EpollSocketChannel(Channel parent, int fd) {
         super(parent, fd, Native.EPOLLIN, true);
         config = new EpollSocketChannelConfig(this);
         // Directly cache the remote and local addresses
@@ -135,16 +135,11 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
             return done;
         } else {
             ByteBuffer[] nioBuffers = buf.nioBuffers();
-            return writeBytesMultiple0(in, 1, nioBuffers, nioBuffers.length, readableBytes);
+            return writeBytesMultiple(in, 1, nioBuffers, nioBuffers.length, readableBytes);
         }
     }
 
     private boolean writeBytesMultiple(
-            ChannelOutboundBuffer in, int msgCount, ByteBuffer[] nioBuffers) throws IOException {
-        return writeBytesMultiple0(in, msgCount, nioBuffers, in.nioBufferCount(), in.nioBufferSize());
-    }
-
-    private boolean writeBytesMultiple0(
             ChannelOutboundBuffer in, int msgCount, ByteBuffer[] nioBuffers,
             int nioBufferCnt, long expectedWrittenBytes) throws IOException {
         boolean done = false;
@@ -189,7 +184,7 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
         return done;
     }
 
-    private void updateOutboundBuffer(ChannelOutboundBuffer in, long writtenBytes, int msgCount,
+    private static void updateOutboundBuffer(ChannelOutboundBuffer in, long writtenBytes, int msgCount,
                                       boolean done) {
         if (done) {
             // Release all buffers
@@ -274,8 +269,9 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
             if (msgCount > 1) {
                 // Ensure the pending writes are made of ByteBufs only.
                 ByteBuffer[] nioBuffers = in.nioBuffers();
-                if (nioBuffers != null) {
-                    if (!writeBytesMultiple(in, msgCount, nioBuffers)) {
+                int nioBufferCount = in.nioBufferCount();
+                if (nioBufferCount != 0) {
+                    if (!writeBytesMultiple(in, msgCount, nioBuffers, nioBufferCount, in.nioBufferSize())) {
                         // was not able to write everything so break here we will get notified later again once
                         // the network stack can handle more writes.
                         break;
