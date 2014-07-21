@@ -240,7 +240,12 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
         int hash = size;
         for (int i = 0; i < keys.length; ++i) {
             // 0 can be a valid key or unused slot, but won't impact the hashcode in either case.
-            // This way we can use a cheap loop without conditionals or hard-to-unroll operations.
+            // This way we can use a cheap loop without conditionals, or hard-to-unroll operations,
+            // or the devastatingly bad memory locality of visiting value objects.
+            // Also, it's important to use a hash function that does not depend on the ordering
+            // of terms, only their values; since the map is an unordered collection and
+            // entries can end up in different positions in different maps that have the same
+            // elements, but with different history of puts/removes, due to conflicts.
             hash = hash ^ keys[i];
         }
         return hash;
@@ -254,20 +259,22 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
             return false;
         }
         @SuppressWarnings("rawtypes")
-        IntObjectHashMap other = (IntObjectHashMap) obj;
-        if (size != other.size) {
+        IntObjectMap other = (IntObjectMap) obj;
+        if (size != other.size()) {
             return false;
         }
         for (int i = 0; i < values.length; ++i) {
-            int key = keys[i];
-            V value = toExternal(values[i]);
-            Object otherValue = other.get(key);
-            if (value == null) {
-                if (otherValue != null || !other.containsKey(key)) {
+            V value = values[i];
+            if (value != null) {
+                int key = keys[i];
+                Object otherValue = other.get(key);
+                if (value == NULL_VALUE) {
+                    if (otherValue != null) {
+                      return false;
+                    }
+                } else if (!value.equals(otherValue)) {
                     return false;
                 }
-            } else if (!value.equals(otherValue)) {
-                return false;
             }
         }
         return true;
@@ -415,10 +422,10 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
     /**
      * Iterator for traversing the entries in this map.
      */
-    private final class IteratorImpl implements Iterator<Entry<V>> {
+    private final class IteratorImpl implements Iterator<Entry<V>>, Entry<V> {
         private int prevIndex = -1;
         private int nextIndex = -1;
-        private EntryImpl entry;
+        private int entryIndex = -1;
 
         private void scanNext() {
             for (;;) {
@@ -446,11 +453,8 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
             scanNext();
 
             // Always return the same Entry object, just change its index each time.
-            if (entry == null) {
-                entry = new EntryImpl();
-            }
-            entry.entryIndex = prevIndex;
-            return entry;
+            entryIndex = prevIndex;
+            return this;
         }
 
         @Override
@@ -461,13 +465,9 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
             removeAt(prevIndex);
             prevIndex = -1;
         }
-    }
 
-    /**
-     * {@link Entry} implementation that just references the key/value at the given index position.
-     */
-    private final class EntryImpl implements Entry<V> {
-        int entryIndex;
+        // Entry implementation. Since this implementation uses a single Entry, we coalesce that
+        // into the Iterator object (potentially making loop optimization much easier).
 
         @Override
         public int key() {
@@ -481,7 +481,7 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
 
         @Override
         public void setValue(V value) {
-          values[entryIndex] = toInternal(value);
+            values[entryIndex] = toInternal(value);
         }
     }
 

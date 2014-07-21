@@ -300,20 +300,38 @@ public class IntObjectHashMapTest {
     }
 
     @Test
-    public void lookupShouldSupportDirtyMap() {
-        int cap = 5;
-        IntObjectHashMap<String> map = new IntObjectHashMap<String>(cap, 1.0f);
-        // Fill map as much as possible, without rehashing
-        map.put(cap * 0, "");
-        map.put(cap * 1, "");
-        map.put(cap * 2, "");
-        map.put(cap * 3, "");
-        // Remove entries, leaving the map full of REMOVED entries
-        map.remove(cap * 0);
-        map.remove(cap * 1);
-        map.remove(cap * 2);
-        // Search remaining element that was in the middle of conflict chain
-        assertTrue(map.containsKey(cap * 3));
+    public void hashcodeEqualsTest() {
+        IntObjectHashMap<Integer> map1 = new IntObjectHashMap<Integer>();
+        IntObjectHashMap<Integer> map2 = new IntObjectHashMap<Integer>();
+        Random rnd = new Random(0);
+        while (map1.size() < 100) {
+            int key = rnd.nextInt(100);
+            map1.put(key, key);
+            map2.put(key, key);
+        }
+        assertEquals(map1.hashCode(), map2.hashCode());
+        assertTrue(map1.equals(map2));
+        // Remove one "middle" element, maps should now be non-equals.
+        int[] keys = map1.keys();
+        map2.remove(keys[50]);
+        assertFalse(map1.equals(map2));
+        // Put it back; will likely be in a different position, but maps will be equal again.
+        map2.put(keys[50], map1.keys()[50]);
+        assertTrue(map1.equals(map2));
+        assertEquals(map1.hashCode(), map2.hashCode());
+        // Make map2 have one extra element, will be non-equal.
+        map2.put(1000, 1000);
+        assertFalse(map1.equals(map2));
+        // Rebuild map2 with elements in a different order, again the maps should be equal.
+        // (These tests with same elements in different order also show that the hashCode
+        // function does not depend on the internal ordering of entries.)
+        map2.clear();
+        Arrays.sort(keys);
+        for (int key : keys) {
+            map2.put(key, key);
+        }
+        assertEquals(map1.hashCode(), map2.hashCode());
+        assertTrue(map1.equals(map2));
     }
 
     @Test
