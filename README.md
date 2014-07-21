@@ -17,6 +17,7 @@ You require the following to build Netty:
 
 * Latest stable [Oracle JDK 7](http://www.oracle.com/technetwork/java/)
 * Latest stable [Apache Maven](http://maven.apache.org/)
+* If you are on Linux, you need [additional development packages](http://netty.io/wiki/native-transports.html) installed on your system, because you'll build the native transport.
 
 Note that this is build-time requirement.  JDK 5 (for 3.x) or 6 (for 4.0+) is enough to run your Netty-based application.
 
