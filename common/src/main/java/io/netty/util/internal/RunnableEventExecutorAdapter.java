@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 The Netty Project
+ * Copyright 2014 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,28 +13,27 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
-package io.netty.channel;
+package io.netty.util.internal;
 
 import io.netty.util.concurrent.EventExecutor;
 
 /**
- * Will handle all the I/O-Operations for a {@link Channel} once it was registered.
+ * Generic interface to wrap an {@link EventExecutor} and a {@link Runnable}.
  *
- * One {@link EventLoop} instance will usually handle more then one {@link Channel} but this may depend on
- * implementation details and internals.
+ * This interface is used internally to ensure scheduled tasks are executed by
+ * the correct {@link EventExecutor} after channel migration.
  *
+ * @see io.netty.util.concurrent.ScheduledFutureTask
+ * @see io.netty.util.concurrent.SingleThreadEventExecutor
  */
-public interface EventLoop extends EventExecutor, EventLoopGroup {
-    @Override
-    EventLoopGroup parent();
-
-    @Override
-    EventLoop unwrap();
+public interface RunnableEventExecutorAdapter extends Runnable {
+    /**
+     * @return  the wrapped {@link EventExecutor}.
+     */
+    EventExecutor executor();
 
     /**
-     * Creates a new default {@link ChannelHandlerInvoker} implementation that uses this {@link EventLoop} to
-     * invoke event handler methods.
+     * @return  the wrapped {@link Runnable}.
      */
-    ChannelHandlerInvoker asInvoker();
+    Runnable unwrap();
 }

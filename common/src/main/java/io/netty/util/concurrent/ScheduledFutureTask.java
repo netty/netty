@@ -16,6 +16,9 @@
 
 package io.netty.util.concurrent;
 
+import io.netty.util.internal.CallableEventExecutorAdapter;
+import io.netty.util.internal.OneTimeTask;
+
 import java.util.Queue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Delayed;
@@ -36,36 +39,26 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
     }
 
     private final long id = nextTaskId.getAndIncrement();
-    private final Queue<ScheduledFutureTask<?>> delayedTaskQueue;
+    private Queue<ScheduledFutureTask<?>> delayedTaskQueue;
     private long deadlineNanos;
     /* 0 - no repeat, >0 - repeat at fixed rate, <0 - repeat with fixed delay */
     private final long periodNanos;
 
-    ScheduledFutureTask(
-            EventExecutor executor, Queue<ScheduledFutureTask<?>> delayedTaskQueue,
-            Runnable runnable, V result, long nanoTime) {
-
-        this(executor, delayedTaskQueue, toCallable(runnable, result), nanoTime);
-    }
-
-    ScheduledFutureTask(
-            EventExecutor executor, Queue<ScheduledFutureTask<?>> delayedTaskQueue,
-            Callable<V> callable, long nanoTime, long period) {
-
-        super(executor, callable);
+    ScheduledFutureTask(EventExecutor executor, Queue<ScheduledFutureTask<?>> delayedTaskQueue,
+                        Callable<V> callable, long nanoTime, long period) {
+        super(executor.unwrap(), callable);
         if (period == 0) {
             throw new IllegalArgumentException("period: 0 (expected: != 0)");
         }
+
         this.delayedTaskQueue = delayedTaskQueue;
         deadlineNanos = nanoTime;
         periodNanos = period;
     }
 
-    ScheduledFutureTask(
-            EventExecutor executor, Queue<ScheduledFutureTask<?>> delayedTaskQueue,
-            Callable<V> callable, long nanoTime) {
-
-        super(executor, callable);
+    ScheduledFutureTask(EventExecutor executor, Queue<ScheduledFutureTask<?>> delayedTaskQueue,
+                        Callable<V> callable, long nanoTime) {
+        super(executor.unwrap(), callable);
         this.delayedTaskQueue = delayedTaskQueue;
         deadlineNanos = nanoTime;
         periodNanos = 0;
@@ -73,7 +66,7 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
 
     @Override
     protected EventExecutor executor() {
-        return super.executor();
+        return executor;
     }
 
     public long deadlineNanos() {
@@ -117,26 +110,27 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
     @Override
     public void run() {
         assert executor().inEventLoop();
+        assert !delayedTaskQueue.contains(task);
+
         try {
-            if (periodNanos == 0) {
-                if (setUncancellableInternal()) {
-                    V result = task.call();
-                    setSuccessInternal(result);
-                }
+            if (migrateToNewExecutor()) {
+                rescheduleWithNewExecutor();
+            } else if (skipExecution()) {
+                // Treat one time and periodic tasks in the same way: Try again after 10ms.
+                rescheduleTask(TimeUnit.MICROSECONDS.toNanos(10));
             } else {
-                // check if is done as it may was cancelled
-                if (!isCancelled()) {
-                    task.call();
-                    if (!executor().isShutdown()) {
-                        long p = periodNanos;
-                        if (p > 0) {
-                            deadlineNanos += p;
-                        } else {
-                            deadlineNanos = nanoTime() - p;
-                        }
-                        if (!isCancelled()) {
-                            delayedTaskQueue.add(this);
-                        }
+                // delayed tasks executed once
+                if (periodNanos == 0) {
+                    if (setUncancellableInternal()) {
+                        V result = task.call();
+                        setSuccessInternal(result);
+                    }
+                // periodically executed tasks
+                } else {
+                    // check if is done as it may was cancelled
+                    if (!isCancelled()) {
+                        task.call();
+                        rescheduleTask(periodNanos);
                     }
                 }
             }
@@ -157,5 +151,51 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
         buf.append(periodNanos);
         buf.append(')');
         return buf;
+    }
+
+    private void rescheduleTask(long p) {
+        if (!executor().isShutdown()) {
+            if (p > 0) {
+                deadlineNanos += p;
+            } else {
+                deadlineNanos = nanoTime() - p;
+            }
+            if (!isCancelled()) {
+                delayedTaskQueue.add(this);
+            }
+        }
+    }
+
+    private boolean skipExecution() {
+        return task instanceof CallableEventExecutorAdapter &&
+                ((CallableEventExecutorAdapter) task).executor() instanceof PausableEventExecutor &&
+                ((PausableEventExecutor) ((CallableEventExecutorAdapter) task).executor()).isRejecting();
+    }
+
+    private boolean migrateToNewExecutor() {
+        return !isCancelled() &&
+                task instanceof CallableEventExecutorAdapter &&
+                executor() != ((CallableEventExecutorAdapter) task).executor().unwrap();
+    }
+
+    private void rescheduleWithNewExecutor() {
+        EventExecutor newExecutor = ((CallableEventExecutorAdapter) task).executor().unwrap();
+
+        if (newExecutor instanceof SingleThreadEventExecutor) {
+            if (!newExecutor.isShutdown()) {
+                executor = newExecutor;
+                delayedTaskQueue = ((SingleThreadEventExecutor) newExecutor).delayedTaskQueue;
+
+                executor.execute(new OneTimeTask() {
+                    @Override
+                    public void run() {
+                        // Treat one time and periodic task the same: Try again as soon as possible.
+                        rescheduleTask(0);
+                    }
+                });
+            }
+        } else {
+            throw new UnsupportedOperationException("The new executor does not support task migration.");
+        }
     }
 }

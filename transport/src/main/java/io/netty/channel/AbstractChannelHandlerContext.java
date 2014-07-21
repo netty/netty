@@ -22,9 +22,10 @@ import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ResourceLeakHint;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.PausableEventExecutor;
+import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
-
 import java.net.SocketAddress;
 import java.util.WeakHashMap;
 
@@ -237,12 +238,16 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         if (executor.inEventLoop()) {
             teardown0();
         } else {
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    teardown0();
-                }
-            });
+            /**
+             * use unwrap, because the executor will usually be a {@link PausableEventExecutor}
+             * that might not accept any new tasks.
+             */
+            executor().unwrap().execute(new OneTimeTask() {
+                    @Override
+                    public void run() {
+                        teardown0();
+                    }
+                });
         }
     }
 

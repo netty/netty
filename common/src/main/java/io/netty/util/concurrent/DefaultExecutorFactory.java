@@ -31,6 +31,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * An implementation of an {@link ExecutorFactory} that creates a new {@link ForkJoinPool} on each
  * call to {@link #newExecutor(int)}.
+ *
+ * For the reasons behind choosing a {@link ForkJoinPool} as the default {@link Executor},
+ * take a look at <a href="https://github.com/netty/netty/issues/2250">https://github.com/netty/netty/issues/2250</a>.
  */
 public final class DefaultExecutorFactory implements ExecutorFactory {
 

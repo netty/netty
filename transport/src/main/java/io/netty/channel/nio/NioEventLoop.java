@@ -20,7 +20,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.EventLoopException;
 import io.netty.channel.SingleThreadEventLoop;
-import io.netty.channel.nio.AbstractNioChannel.NioUnsafe;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
