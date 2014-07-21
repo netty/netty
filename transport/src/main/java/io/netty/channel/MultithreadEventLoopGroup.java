@@ -15,17 +15,16 @@
  */
 package io.netty.channel;
 
-import io.netty.util.concurrent.DefaultThreadFactory;
+import io.netty.util.concurrent.ExecutorFactory;
 import io.netty.util.concurrent.MultithreadEventExecutorGroup;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.concurrent.Executor;
-import java.util.concurrent.ThreadFactory;
 
 /**
- * Abstract base class for {@link EventLoopGroup} implementations that handles their tasks with multiple threads at
+ * Abstract base class for {@link EventLoopGroup} implementations that handle their tasks with multiple threads at
  * the same time.
  */
 public abstract class MultithreadEventLoopGroup extends MultithreadEventExecutorGroup implements EventLoopGroup {
@@ -46,20 +45,15 @@ public abstract class MultithreadEventLoopGroup extends MultithreadEventExecutor
     /**
      * @see {@link MultithreadEventExecutorGroup#MultithreadEventExecutorGroup(int, Executor, Object...)}
      */
-    protected MultithreadEventLoopGroup(int nThreads, Executor executor, Object... args) {
-        super(nThreads == 0 ? DEFAULT_EVENT_LOOP_THREADS : nThreads, executor, args);
+    protected MultithreadEventLoopGroup(int nEventLoops, Executor executor, Object... args) {
+        super(nEventLoops == 0 ? DEFAULT_EVENT_LOOP_THREADS : nEventLoops, executor, args);
     }
 
     /**
-     * @see {@link MultithreadEventExecutorGroup#MultithreadEventExecutorGroup(int, ThreadFactory, Object...)}
+     * @see {@link MultithreadEventExecutorGroup#MultithreadEventExecutorGroup(int, ExecutorFactory, Object...)}
      */
-    protected MultithreadEventLoopGroup(int nThreads, ThreadFactory threadFactory, Object... args) {
-        super(nThreads == 0 ? DEFAULT_EVENT_LOOP_THREADS : nThreads, threadFactory, args);
-    }
-
-    @Override
-    protected ThreadFactory newDefaultThreadFactory() {
-        return new DefaultThreadFactory(getClass(), Thread.MAX_PRIORITY);
+    protected MultithreadEventLoopGroup(int nEventLoops, ExecutorFactory executorFactory, Object... args) {
+        super(nEventLoops == 0 ? DEFAULT_EVENT_LOOP_THREADS : nEventLoops, executorFactory, args);
     }
 
     @Override

@@ -23,10 +23,10 @@ import io.netty.channel.udt.UdtChannel;
 import io.netty.channel.udt.nio.NioUdtProvider;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
-import io.netty.util.concurrent.DefaultThreadFactory;
+import io.netty.util.concurrent.DefaultExecutorFactory;
+import io.netty.util.concurrent.ExecutorFactory;
 
 import java.net.InetSocketAddress;
-import java.util.concurrent.ThreadFactory;
 
 /**
  * UDT Message Flow Peer
@@ -48,9 +48,10 @@ public abstract class MsgEchoPeerBase {
 
     public void run() throws Exception {
         // Configure the peer.
-        final ThreadFactory connectFactory = new DefaultThreadFactory("rendezvous");
-        final NioEventLoopGroup connectGroup = new NioEventLoopGroup(1,
-                connectFactory, NioUdtProvider.MESSAGE_PROVIDER);
+        final ExecutorFactory connectFactory = new DefaultExecutorFactory("rendezvous");
+        final NioEventLoopGroup connectGroup =
+                new NioEventLoopGroup(1, connectFactory, NioUdtProvider.MESSAGE_PROVIDER);
+
         try {
             final Bootstrap boot = new Bootstrap();
             boot.group(connectGroup)

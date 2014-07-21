@@ -23,18 +23,19 @@ import java.util.IdentityHashMap;
 import java.util.Set;
 
 /**
- * A special variant of {@link ThreadLocal} that yields higher access performan when accessed from a
- * {@link FastThreadLocalThread}.
+ * A special variant of {@link ThreadLocal} that yields to higher access performance when accessed from a
+ * {@link FastThreadLocalAccess} {@link Thread}.
  * <p>
  * Internally, a {@link FastThreadLocal} uses a constant index in an array, instead of using hash code and hash table,
  * to look for a variable.  Although seemingly very subtle, it yields slight performance advantage over using a hash
  * table, and it is useful when accessed frequently.
  * </p><p>
- * To take advantage of this thread-local variable, your thread must be a {@link FastThreadLocalThread} or its subtype.
- * By default, all threads created by {@link DefaultThreadFactory} are {@link FastThreadLocalThread} due to this reason.
+ * To take advantage of this thread-local variable, your thread must implement {@link FastThreadLocalAccess}.
+ * By default, all threads created by {@link DefaultThreadFactory} and {@link DefaultExecutorFactory} implement
+ * {@link FastThreadLocalAccess}.
  * </p><p>
- * Note that the fast path is only possible on threads that extend {@link FastThreadLocalThread}, because it requires
- * a special field to store the necessary state.  An access by any other kind of thread falls back to a regular
+ * Note that the fast path is only possible on threads that implement {@link FastThreadLocalAccess}, because it
+ * requires a special field to store the necessary state. An access by any other kind of thread falls back to a regular
  * {@link ThreadLocal}.
  * </p>
  *

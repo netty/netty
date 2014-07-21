@@ -23,10 +23,10 @@ import io.netty.channel.udt.UdtChannel;
 import io.netty.channel.udt.nio.NioUdtProvider;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
-import io.netty.util.concurrent.DefaultThreadFactory;
+import io.netty.util.concurrent.DefaultExecutorFactory;
+import io.netty.util.concurrent.ExecutorFactory;
 
 import java.net.SocketAddress;
-import java.util.concurrent.ThreadFactory;
 
 /**
  * UDT Byte Stream Peer
@@ -50,9 +50,10 @@ public class ByteEchoPeerBase {
     }
 
     public void run() throws Exception {
-        final ThreadFactory connectFactory = new DefaultThreadFactory("rendezvous");
-        final NioEventLoopGroup connectGroup = new NioEventLoopGroup(1,
-                connectFactory, NioUdtProvider.BYTE_PROVIDER);
+        final ExecutorFactory connectFactory = new DefaultExecutorFactory("rendezvous");
+        final NioEventLoopGroup connectGroup =
+                new NioEventLoopGroup(1, connectFactory, NioUdtProvider.BYTE_PROVIDER);
+
         try {
             final Bootstrap bootstrap = new Bootstrap();
             bootstrap.group(connectGroup)

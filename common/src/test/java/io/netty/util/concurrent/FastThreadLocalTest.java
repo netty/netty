@@ -19,6 +19,8 @@ package io.netty.util.concurrent;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.concurrent.Executor;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -74,5 +76,35 @@ public class FastThreadLocalTest {
         if (t != null) {
             throw t;
         }
+    }
+
+    /**
+     * Make sure threads created by the {@link DefaultExecutorFactory} and {@link DefaultThreadFactory}
+     * implement the {@link FastThreadLocalAccess} interface.
+     */
+    @Test
+    public void testIsFastThreadLocalThread() {
+        ExecutorFactory executorFactory = new DefaultExecutorFactory(FastThreadLocalTest.class);
+        int parallelism = Runtime.getRuntime().availableProcessors() * 2;
+
+        Executor executor = executorFactory.newExecutor(parallelism);
+        // submit a "high" number of tasks, to get a good chance to touch every thread.
+        for (int i = 0; i < parallelism * 100; i++) {
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    assertTrue(Thread.currentThread() instanceof FastThreadLocalAccess);
+                }
+            });
+        }
+
+        ThreadFactory threadFactory = new DefaultThreadFactory(FastThreadLocalTest.class);
+        Thread t = threadFactory.newThread(new Runnable() {
+            @Override
+            public void run() {
+            }
+        });
+
+        assertTrue(t instanceof FastThreadLocalAccess);
     }
 }

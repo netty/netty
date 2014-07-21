@@ -20,7 +20,7 @@ import io.netty.util.internal.InternalThreadLocalMap;
 /**
  * A special {@link Thread} that provides fast access to {@link FastThreadLocal} variables.
  */
-public class FastThreadLocalThread extends Thread {
+public class FastThreadLocalThread extends Thread implements FastThreadLocalAccess {
 
     private InternalThreadLocalMap threadLocalMap;
 
@@ -58,6 +58,7 @@ public class FastThreadLocalThread extends Thread {
      * Returns the internal data structure that keeps the thread-local variables bound to this thread.
      * Note that this method is for internal use only, and thus is subject to change at any time.
      */
+    @Override
     public final InternalThreadLocalMap threadLocalMap() {
         return threadLocalMap;
     }
@@ -66,6 +67,7 @@ public class FastThreadLocalThread extends Thread {
      * Sets the internal data structure that keeps the thread-local variables bound to this thread.
      * Note that this method is for internal use only, and thus is subject to change at any time.
      */
+    @Override
     public final void setThreadLocalMap(InternalThreadLocalMap threadLocalMap) {
         this.threadLocalMap = threadLocalMap;
     }

@@ -19,6 +19,7 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
 import io.netty.channel.local.LocalChannel;
+import io.netty.util.concurrent.DefaultExecutorFactory;
 import io.netty.util.concurrent.EventExecutor;
 import org.junit.After;
 import org.junit.Before;
@@ -31,7 +32,6 @@ import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledFuture;
@@ -440,21 +440,21 @@ public class SingleThreadEventLoopTest {
         final AtomicInteger cleanedUp = new AtomicInteger();
 
         SingleThreadEventLoopA() {
-            super(null, Executors.defaultThreadFactory(), true);
+            super(null, new DefaultExecutorFactory("A").newExecutor(1), true);
         }
 
         @Override
         protected void run() {
-            for (;;) {
-                Runnable task = takeTask();
-                if (task != null) {
-                    task.run();
-                    updateLastExecutionTime();
-                }
+            Runnable task = takeTask();
+            if (task != null) {
+                task.run();
+                updateLastExecutionTime();
+            }
 
-                if (confirmShutdown()) {
-                    break;
-                }
+            if (confirmShutdown()) {
+                cleanupAndTerminate(true);
+            } else {
+                scheduleExecution();
             }
         }
 
@@ -466,30 +466,43 @@ public class SingleThreadEventLoopTest {
 
     private static class SingleThreadEventLoopB extends SingleThreadEventLoop {
 
+        private volatile Thread thread;
+        private volatile boolean interrupted;
+
         SingleThreadEventLoopB() {
-            super(null, Executors.defaultThreadFactory(), false);
+            super(null, new DefaultExecutorFactory("B").newExecutor(1), false);
         }
 
         @Override
         protected void run() {
-            for (;;) {
-                try {
-                    Thread.sleep(TimeUnit.NANOSECONDS.toMillis(delayNanos(System.nanoTime())));
-                } catch (InterruptedException e) {
-                    // Waken up by interruptThread()
-                }
+            thread = Thread.currentThread();
 
-                runAllTasks();
+            if (interrupted) {
+                thread.interrupt();
+            }
 
-                if (confirmShutdown()) {
-                    break;
-                }
+            try {
+                Thread.sleep(TimeUnit.NANOSECONDS.toMillis(delayNanos(System.nanoTime())));
+            } catch (InterruptedException e) {
+                // Waken up by interruptThread()
+            }
+
+            runAllTasks();
+
+            if (confirmShutdown()) {
+                cleanupAndTerminate(true);
+            } else {
+                scheduleExecution();
             }
         }
 
         @Override
         protected void wakeup(boolean inEventLoop) {
-            interruptThread();
+            if (thread == null) {
+                interrupted = true;
+            } else {
+                thread.interrupt();
+            }
         }
     }
 }
