@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.DatagramPacket;
+import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.util.CharsetUtil;
 
@@ -99,7 +100,7 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
                 // check for loops
                 checked += 2;
                 if (checked >= length) {
-                    return null;
+                    throw new CorruptedFrameException("name contains a loop.");
                 }
             } else {
                 name.append(buf.toString(buf.readerIndex(), len, CharsetUtil.UTF_8)).append('.');

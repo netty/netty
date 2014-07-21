@@ -19,8 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.socket.DatagramPacket;
-import io.netty.handler.codec.DecoderException;
-
+import io.netty.handler.codec.CorruptedFrameException;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -100,8 +99,7 @@ public class DnsResponseTest {
     public void readMalormedResponseTest() throws Exception {
         EmbeddedChannel embedder = new EmbeddedChannel(new DnsResponseDecoder());
         ByteBuf packet = embedder.alloc().buffer(512).writeBytes(malformedLoopPacket);
-        exception.expect(DecoderException.class);
-        exception.expectMessage("java.lang.NullPointerException: name");
+        exception.expect(CorruptedFrameException.class);
         embedder.writeInbound(new DatagramPacket(packet, null, new InetSocketAddress(0)));
     }
 }
