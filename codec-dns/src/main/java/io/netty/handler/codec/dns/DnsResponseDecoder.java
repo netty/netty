@@ -110,8 +110,9 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
             buf.readerIndex(position);
         }
         if (name.length() == 0) {
-            return null;
+            return "";
         }
+
         return name.substring(0, name.length() - 1);
     }
 
