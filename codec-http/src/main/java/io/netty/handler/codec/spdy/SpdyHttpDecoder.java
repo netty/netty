@@ -322,6 +322,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
     private static FullHttpRequest createHttpRequest(int spdyVersion, SpdyHeadersFrame requestFrame)
             throws Exception {
         // Create the first line of the request from the name/value pairs
+        SpdyHeaders headers     = requestFrame.headers();
         HttpMethod  method      = SpdyHeaders.getMethod(spdyVersion, requestFrame);
         String      url         = SpdyHeaders.getUrl(spdyVersion, requestFrame);
         HttpVersion httpVersion = SpdyHeaders.getVersion(spdyVersion, requestFrame);
@@ -334,12 +335,10 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
         // Remove the scheme header
         SpdyHeaders.removeScheme(spdyVersion, requestFrame);
 
-        if (spdyVersion >= 3) {
-            // Replace the SPDY host header with the HTTP host header
-            String host = SpdyHeaders.getHost(requestFrame);
-            SpdyHeaders.removeHost(requestFrame);
-            HttpHeaders.setHost(req, host);
-        }
+        // Replace the SPDY host header with the HTTP host header
+        String host = headers.get(SpdyHeaders.HttpNames.HOST);
+        headers.remove(SpdyHeaders.HttpNames.HOST);
+        req.headers().set(HttpHeaders.Names.HOST, host);
 
         for (Map.Entry<String, String> e: requestFrame.headers()) {
             req.headers().add(e.getKey(), e.getValue());
