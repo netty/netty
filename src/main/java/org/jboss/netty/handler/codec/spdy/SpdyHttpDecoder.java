@@ -116,6 +116,7 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
                 }
 
                 String URL = SpdyHeaders.getUrl(spdyVersion, spdySynStreamFrame);
+                SpdyHeaders.removeUrl(spdyVersion, spdySynStreamFrame);
 
                 // If a client receives a SYN_STREAM without a 'url' header
                 // it must reply with a RST_STREAM with error code PROTOCOL_ERROR
@@ -308,12 +309,10 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
         // Remove the scheme header
         SpdyHeaders.removeScheme(spdyVersion, requestFrame);
 
-        if (spdyVersion >= 3) {
-            // Replace the SPDY host header with the HTTP host header
-            String host = SpdyHeaders.getHost(requestFrame);
-            SpdyHeaders.removeHost(requestFrame);
-            HttpHeaders.setHost(httpRequest, host);
-        }
+        // Replace the SPDY host header with the HTTP host header
+        String host = SpdyHeaders.getHost(requestFrame);
+        SpdyHeaders.removeHost(requestFrame);
+        HttpHeaders.setHost(httpRequest, host);
 
         for (Map.Entry<String, String> e: requestFrame.headers()) {
             httpRequest.headers().add(e.getKey(), e.getValue());
