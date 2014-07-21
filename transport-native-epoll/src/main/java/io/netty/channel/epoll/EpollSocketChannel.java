@@ -144,7 +144,7 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
 
     private boolean writeBytesMultiple(
             EpollChannelOutboundBuffer in, int msgCount, AddressEntry[] addresses,
-            int addressCnt, int expectedWrittenBytes) throws IOException {
+            int addressCnt, long expectedWrittenBytes) throws IOException {
         boolean done = false;
         long writtenBytes = 0;
         int offset = 0;
@@ -323,7 +323,7 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
                     AddressEntry[] addresses = epollIn.memoryAddresses();
                     int addressesCnt = epollIn.addressCount();
                     if (addressesCnt > 1) {
-                        if (!writeBytesMultiple(epollIn, msgCount, addresses, addressesCnt, epollIn.addressCount())) {
+                        if (!writeBytesMultiple(epollIn, msgCount, addresses, addressesCnt, epollIn.addressSize())) {
                             // was not able to write everything so break here we will get notified later again once
                             // the network stack can handle more writes.
                             break;
