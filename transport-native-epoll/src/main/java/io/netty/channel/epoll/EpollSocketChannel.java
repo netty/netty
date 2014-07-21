@@ -162,7 +162,13 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
                 expectedWrittenBytes -= localWrittenBytes;
                 writtenBytes += localWrittenBytes;
 
-                while (offset < end && localWrittenBytes > 0) {
+                if (expectedWrittenBytes == 0) {
+                    // Written everything, just break out here (fast-path)
+                    done = true;
+                    break loop;
+                }
+
+                do {
                     AddressEntry address = addresses[offset];
                     int readerIndex = address.readerIndex;
                     int bytes = address.writerIndex - readerIndex;
@@ -175,12 +181,7 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
                         addressCnt--;
                         localWrittenBytes -= bytes;
                     }
-                }
-
-                if (expectedWrittenBytes == 0) {
-                    done = true;
-                    break;
-                }
+                } while (offset < end && localWrittenBytes > 0);
             }
         }
 
@@ -207,8 +208,12 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
                 }
                 expectedWrittenBytes -= localWrittenBytes;
                 writtenBytes += localWrittenBytes;
-
-                while (offset < end && localWrittenBytes > 0) {
+                if (expectedWrittenBytes == 0) {
+                    // Written everything, just break out here (fast-path)
+                    done = true;
+                    break loop;
+                }
+                do {
                     ByteBuffer buffer = nioBuffers[offset];
                     int pos = buffer.position();
                     int bytes = buffer.limit() - pos;
@@ -221,12 +226,7 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
                         nioBufferCnt--;
                         localWrittenBytes -= bytes;
                     }
-                }
-
-                if (expectedWrittenBytes == 0) {
-                    done = true;
-                    break;
-                }
+                 } while (offset < end && localWrittenBytes > 0);
             }
         }
         updateOutboundBuffer(in, writtenBytes, msgCount, done);
