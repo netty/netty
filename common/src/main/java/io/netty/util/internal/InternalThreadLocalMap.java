@@ -17,7 +17,7 @@
 package io.netty.util.internal;
 
 import io.netty.util.concurrent.FastThreadLocal;
-import io.netty.util.concurrent.FastThreadLocalThread;
+import io.netty.util.concurrent.FastThreadLocalAccess;
 
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
@@ -39,8 +39,8 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
     public static InternalThreadLocalMap getIfSet() {
         Thread thread = Thread.currentThread();
         InternalThreadLocalMap threadLocalMap;
-        if (thread instanceof FastThreadLocalThread) {
-            threadLocalMap = ((FastThreadLocalThread) thread).threadLocalMap();
+        if (thread instanceof FastThreadLocalAccess) {
+            threadLocalMap = ((FastThreadLocalAccess) thread).threadLocalMap();
         } else {
             ThreadLocal<InternalThreadLocalMap> slowThreadLocalMap = UnpaddedInternalThreadLocalMap.slowThreadLocalMap;
             if (slowThreadLocalMap == null) {
@@ -54,14 +54,14 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
 
     public static InternalThreadLocalMap get() {
         Thread thread = Thread.currentThread();
-        if (thread instanceof FastThreadLocalThread) {
-            return fastGet((FastThreadLocalThread) thread);
+        if (thread instanceof FastThreadLocalAccess) {
+            return fastGet((FastThreadLocalAccess) thread);
         } else {
             return slowGet();
         }
     }
 
-    private static InternalThreadLocalMap fastGet(FastThreadLocalThread thread) {
+    private static InternalThreadLocalMap fastGet(FastThreadLocalAccess thread) {
         InternalThreadLocalMap threadLocalMap = thread.threadLocalMap();
         if (threadLocalMap == null) {
             thread.setThreadLocalMap(threadLocalMap = new InternalThreadLocalMap());
@@ -86,8 +86,8 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
 
     public static void remove() {
         Thread thread = Thread.currentThread();
-        if (thread instanceof FastThreadLocalThread) {
-            ((FastThreadLocalThread) thread).setThreadLocalMap(null);
+        if (thread instanceof FastThreadLocalAccess) {
+            ((FastThreadLocalAccess) thread).setThreadLocalMap(null);
         } else {
             ThreadLocal<InternalThreadLocalMap> slowThreadLocalMap = UnpaddedInternalThreadLocalMap.slowThreadLocalMap;
             if (slowThreadLocalMap != null) {

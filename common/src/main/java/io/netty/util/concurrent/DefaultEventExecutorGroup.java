@@ -16,29 +16,42 @@
 package io.netty.util.concurrent;
 
 import java.util.concurrent.Executor;
-import java.util.concurrent.ThreadFactory;
 
 /**
- * Default implementation of {@link MultithreadEventExecutorGroup} which will use {@link DefaultEventExecutor} instances
- * to handle the tasks.
+ * Default implementation of {@link MultithreadEventExecutorGroup} which will use {@link DefaultEventExecutor}
+ * instances to handle the tasks.
  */
 public class DefaultEventExecutorGroup extends MultithreadEventExecutorGroup {
 
     /**
-     * @see {@link #DefaultEventExecutorGroup(int, ThreadFactory)}
+     * Create a new instance.
+     *
+     * @param nEventExecutors   the number of {@link DefaultEventExecutor}s that this group will use.
      */
-    public DefaultEventExecutorGroup(int nThreads) {
-        this(nThreads, null);
+    public DefaultEventExecutorGroup(int nEventExecutors) {
+        this(nEventExecutors, (Executor) null);
     }
 
     /**
      * Create a new instance.
      *
-     * @param nThreads          the number of threads that will be used by this instance.
-     * @param threadFactory     the ThreadFactory to use, or {@code null} if the default should be used.
+     * @param nEventExecutors   the number of {@link DefaultEventExecutor}s that this group will use.
+     * @param executor  the {@link Executor} responsible for executing the work handled by
+     *                  this {@link EventExecutorGroup}.
      */
-    public DefaultEventExecutorGroup(int nThreads, ThreadFactory threadFactory) {
-        super(nThreads, threadFactory);
+    public DefaultEventExecutorGroup(int nEventExecutors, Executor executor) {
+        super(nEventExecutors, executor);
+    }
+
+    /**
+     * Create a new instance.
+     *
+     * @param nEventExecutors   the number of {@link DefaultEventExecutor}s that this group will use.
+     * @param executorFactory   the {@link ExecutorFactory} which produces the {@link Executor} responsible for
+     *                          executing the work handled by this {@link EventExecutorGroup}.
+     */
+    public DefaultEventExecutorGroup(int nEventExecutors, ExecutorFactory executorFactory) {
+        super(nEventExecutors, executorFactory);
     }
 
     @Override

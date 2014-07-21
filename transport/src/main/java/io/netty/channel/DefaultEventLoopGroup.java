@@ -15,8 +15,9 @@
  */
 package io.netty.channel;
 
+import io.netty.util.concurrent.ExecutorFactory;
+
 import java.util.concurrent.Executor;
-import java.util.concurrent.ThreadFactory;
 
 /**
  * {@link MultithreadEventLoopGroup} which must be used for the local transport.
@@ -24,29 +25,48 @@ import java.util.concurrent.ThreadFactory;
 public class DefaultEventLoopGroup extends MultithreadEventLoopGroup {
 
     /**
-     * Create a new instance with the default number of threads.
+     * Create a new instance that uses twice as many {@link EventLoop}s as there processors/cores
+     * available, as well as the default {@link Executor}.
+     *
+     * @see io.netty.util.concurrent.DefaultExecutorFactory
      */
     public DefaultEventLoopGroup() {
         this(0);
     }
 
     /**
-     * Create a new instance
-     *
-     * @param nThreads          the number of threads to use
+     * @param nEventLoops       the number of {@link EventLoop}s that will be used by this instance.
+     *                             If {@code executor} is {@code null} this number will also be the parallelism
+     *                             requested from the default executor. It is generally advised for the number
+     *                             of {@link EventLoop}s and the number of {@link Thread}s used by the
+     *                             {@code executor} to lie very close together.
      */
-    public DefaultEventLoopGroup(int nThreads) {
-        this(nThreads, null);
+    public DefaultEventLoopGroup(int nEventLoops) {
+        this(nEventLoops, (Executor) null);
     }
 
     /**
-     * Create a new instance
-     *
-     * @param nThreads          the number of threads to use
-     * @param threadFactory     the {@link ThreadFactory} or {@code null} to use the default
+     * @param nEventLoops       the number of {@link EventLoop}s that will be used by this instance.
+     *                             If {@code executor} is {@code null} this number will also be the parallelism
+     *                             requested from the default executor. It is generally advised for the number
+     *                             of {@link EventLoop}s and the number of {@link Thread}s used by the
+     *                             {@code executor} to lie very close together.
+     * @param executor           the {@link Executor} to use, or {@code null} if the default should be used.
      */
-    public DefaultEventLoopGroup(int nThreads, ThreadFactory threadFactory) {
-        super(nThreads, threadFactory);
+    public DefaultEventLoopGroup(int nEventLoops, Executor executor) {
+        super(nEventLoops, executor);
+    }
+
+    /**
+     * @param nEventLoops       the number of {@link EventLoop}s that will be used by this instance.
+     *                             If {@code executor} is {@code null} this number will also be the parallelism
+     *                             requested from the default executor. It is generally advised for the number
+     *                             of {@link EventLoop}s and the number of {@link Thread}s used by the
+     *                             {@code executor} to lie very close together.
+     * @param executorFactory   the {@link ExecutorFactory} to use, or {@code null} if the default should be used.
+     */
+    public DefaultEventLoopGroup(int nEventLoops, ExecutorFactory executorFactory) {
+        super(nEventLoops, executorFactory);
     }
 
     @Override

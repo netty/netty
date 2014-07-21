@@ -28,10 +28,6 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
 
     private final ChannelHandlerInvoker invoker = new DefaultChannelHandlerInvoker(this);
 
-    protected SingleThreadEventLoop(EventLoopGroup parent, ThreadFactory threadFactory, boolean addTaskWakesUp) {
-        super(parent, threadFactory, addTaskWakesUp);
-    }
-
     protected SingleThreadEventLoop(EventLoopGroup parent, Executor executor, boolean addTaskWakesUp) {
         super(parent, executor, addTaskWakesUp);
     }
