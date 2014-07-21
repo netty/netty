@@ -33,7 +33,8 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 /**
- * {@link EventLoop} which uses epoll under the covers. Only works on Linux!
+ * A {@link SingleThreadEventLoop} implementation which uses <a href="http://en.wikipedia.org/wiki/Epoll">epoll</a>
+ * under the covers. This {@link EventLoop} works only on Linux systems!
  */
 final class EpollEventLoop extends SingleThreadEventLoop {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(EpollEventLoop.class);
@@ -208,84 +209,85 @@ final class EpollEventLoop extends SingleThreadEventLoop {
 
     @Override
     protected void run() {
-        for (;;) {
-            boolean oldWakenUp = WAKEN_UP_UPDATER.getAndSet(this, 0) == 1;
-            try {
-                int ready;
-                if (hasTasks()) {
-                    // Non blocking just return what is ready directly without block
-                    ready = Native.epollWait(epollFd, events, 0);
-                } else {
-                    ready = epollWait(oldWakenUp);
+        boolean oldWakenUp = WAKEN_UP_UPDATER.getAndSet(this, 0) == 1;
+        try {
+            int ready;
+            if (hasTasks()) {
+                // Non blocking just return what is ready directly without block
+                ready = Native.epollWait(epollFd, events, 0);
+            } else {
+                ready = epollWait(oldWakenUp);
 
-                    // 'wakenUp.compareAndSet(false, true)' is always evaluated
-                    // before calling 'selector.wakeup()' to reduce the wake-up
-                    // overhead. (Selector.wakeup() is an expensive operation.)
-                    //
-                    // However, there is a race condition in this approach.
-                    // The race condition is triggered when 'wakenUp' is set to
-                    // true too early.
-                    //
-                    // 'wakenUp' is set to true too early if:
-                    // 1) Selector is waken up between 'wakenUp.set(false)' and
-                    //    'selector.select(...)'. (BAD)
-                    // 2) Selector is waken up between 'selector.select(...)' and
-                    //    'if (wakenUp.get()) { ... }'. (OK)
-                    //
-                    // In the first case, 'wakenUp' is set to true and the
-                    // following 'selector.select(...)' will wake up immediately.
-                    // Until 'wakenUp' is set to false again in the next round,
-                    // 'wakenUp.compareAndSet(false, true)' will fail, and therefore
-                    // any attempt to wake up the Selector will fail, too, causing
-                    // the following 'selector.select(...)' call to block
-                    // unnecessarily.
-                    //
-                    // To fix this problem, we wake up the selector again if wakenUp
-                    // is true immediately after selector.select(...).
-                    // It is inefficient in that it wakes up the selector for both
-                    // the first case (BAD - wake-up required) and the second case
-                    // (OK - no wake-up required).
+                // 'wakenUp.compareAndSet(false, true)' is always evaluated
+                // before calling 'selector.wakeup()' to reduce the wake-up
+                // overhead. (Selector.wakeup() is an expensive operation.)
+                //
+                // However, there is a race condition in this approach.
+                // The race condition is triggered when 'wakenUp' is set to
+                // true too early.
+                //
+                // 'wakenUp' is set to true too early if:
+                // 1) Selector is waken up between 'wakenUp.set(false)' and
+                //    'selector.select(...)'. (BAD)
+                // 2) Selector is waken up between 'selector.select(...)' and
+                //    'if (wakenUp.get()) { ... }'. (OK)
+                //
+                // In the first case, 'wakenUp' is set to true and the
+                // following 'selector.select(...)' will wake up immediately.
+                // Until 'wakenUp' is set to false again in the next round,
+                // 'wakenUp.compareAndSet(false, true)' will fail, and therefore
+                // any attempt to wake up the Selector will fail, too, causing
+                // the following 'selector.select(...)' call to block
+                // unnecessarily.
+                //
+                // To fix this problem, we wake up the selector again if wakenUp
+                // is true immediately after selector.select(...).
+                // It is inefficient in that it wakes up the selector for both
+                // the first case (BAD - wake-up required) and the second case
+                // (OK - no wake-up required).
 
-                    if (wakenUp == 1) {
-                        Native.eventFdWrite(eventFd, 1L);
-                    }
-                }
-
-                final int ioRatio = this.ioRatio;
-                if (ioRatio == 100) {
-                    if (ready > 0) {
-                        processReady(events, ready);
-                    }
-                    runAllTasks();
-                } else {
-                    final long ioStartTime = System.nanoTime();
-
-                    if (ready > 0) {
-                        processReady(events, ready);
-                    }
-
-                    final long ioTime = System.nanoTime() - ioStartTime;
-                    runAllTasks(ioTime * (100 - ioRatio) / ioRatio);
-                }
-
-                if (isShuttingDown()) {
-                    closeAll();
-                    if (confirmShutdown()) {
-                        break;
-                    }
-                }
-            } catch (Throwable t) {
-                logger.warn("Unexpected exception in the selector loop.", t);
-
-                // Prevent possible consecutive immediate failures that lead to
-                // excessive CPU consumption.
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    // Ignore.
+                if (wakenUp == 1) {
+                    Native.eventFdWrite(eventFd, 1L);
                 }
             }
+
+            final int ioRatio = this.ioRatio;
+            if (ioRatio == 100) {
+                if (ready > 0) {
+                    processReady(events, ready);
+                }
+                runAllTasks();
+            } else {
+                final long ioStartTime = System.nanoTime();
+
+                if (ready > 0) {
+                    processReady(events, ready);
+                }
+
+                final long ioTime = System.nanoTime() - ioStartTime;
+                runAllTasks(ioTime * (100 - ioRatio) / ioRatio);
+            }
+
+            if (isShuttingDown()) {
+                closeAll();
+                if (confirmShutdown()) {
+                    cleanupAndTerminate(true);
+                    return;
+                }
+            }
+        } catch (Throwable t) {
+            logger.warn("Unexpected exception in the selector loop.", t);
+
+            // Prevent possible consecutive immediate failures that lead to
+            // excessive CPU consumption.
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                // Ignore.
+            }
         }
+
+        executeRun();
     }
 
     private void closeAll() {

@@ -23,9 +23,8 @@ import io.netty.channel.udt.UdtChannel;
 import io.netty.channel.udt.nio.NioUdtProvider;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
-import io.netty.util.concurrent.DefaultThreadFactory;
-
-import java.util.concurrent.ThreadFactory;
+import io.netty.util.concurrent.DefaultExecutorFactory;
+import io.netty.util.concurrent.ExecutorFactory;
 
 /**
  * UDT Byte Stream Client
@@ -43,9 +42,10 @@ public final class ByteEchoClient {
 
     public static void main(String[] args) throws Exception {
         // Configure the client.
-        final ThreadFactory connectFactory = new DefaultThreadFactory("connect");
-        final NioEventLoopGroup connectGroup = new NioEventLoopGroup(1,
-                connectFactory, NioUdtProvider.BYTE_PROVIDER);
+        final ExecutorFactory connectFactory = new DefaultExecutorFactory("connect");
+        final NioEventLoopGroup connectGroup =
+                new NioEventLoopGroup(1, connectFactory, NioUdtProvider.BYTE_PROVIDER);
+
         try {
             final Bootstrap boot = new Bootstrap();
             boot.group(connectGroup)

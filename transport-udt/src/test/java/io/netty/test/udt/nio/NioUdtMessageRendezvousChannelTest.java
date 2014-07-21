@@ -25,12 +25,12 @@ import io.netty.channel.udt.nio.NioUdtMessageRendezvousChannel;
 import io.netty.channel.udt.nio.NioUdtProvider;
 import io.netty.test.udt.util.EchoMessageHandler;
 import io.netty.test.udt.util.UnitHelp;
+import io.netty.util.concurrent.DefaultExecutorFactory;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.Test;
 
 import java.net.InetSocketAddress;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
@@ -68,10 +68,10 @@ public class NioUdtMessageRendezvousChannelTest extends AbstractUdtTest {
         final EchoMessageHandler handler1 = new EchoMessageHandler(rate1, messageSize);
         final EchoMessageHandler handler2 = new EchoMessageHandler(rate2, messageSize);
 
-        final NioEventLoopGroup group1 = new NioEventLoopGroup(
-                1, Executors.defaultThreadFactory(), NioUdtProvider.MESSAGE_PROVIDER);
-        final NioEventLoopGroup group2 = new NioEventLoopGroup(
-                1, Executors.defaultThreadFactory(), NioUdtProvider.MESSAGE_PROVIDER);
+        final NioEventLoopGroup group1 =
+                new NioEventLoopGroup(1, new DefaultExecutorFactory("group1"), NioUdtProvider.MESSAGE_PROVIDER);
+        final NioEventLoopGroup group2 =
+                new NioEventLoopGroup(1, new DefaultExecutorFactory("group2"), NioUdtProvider.MESSAGE_PROVIDER);
 
         final Bootstrap boot1 = new Bootstrap();
         boot1.group(group1)

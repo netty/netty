@@ -32,13 +32,12 @@ import io.netty.handler.codec.Delimiters;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
 import io.netty.util.CharsetUtil;
-import io.netty.util.concurrent.DefaultThreadFactory;
+import io.netty.util.concurrent.DefaultExecutorFactory;
+import io.netty.util.concurrent.ExecutorFactory;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.concurrent.ThreadFactory;
 
 import static org.junit.Assert.*;
 
@@ -66,9 +65,10 @@ public class UDTClientServerConnectionTest {
         @Override
         public void run() {
             final Bootstrap boot = new Bootstrap();
-            final ThreadFactory clientFactory = new DefaultThreadFactory("client");
-            final NioEventLoopGroup connectGroup = new NioEventLoopGroup(1,
-                    clientFactory, NioUdtProvider.BYTE_PROVIDER);
+            final ExecutorFactory clientFactory = new DefaultExecutorFactory("client");
+            final NioEventLoopGroup connectGroup =
+                    new NioEventLoopGroup(1, clientFactory, NioUdtProvider.BYTE_PROVIDER);
+
             try {
                 boot.group(connectGroup)
                         .channelFactory(NioUdtProvider.BYTE_CONNECTOR)
@@ -193,12 +193,13 @@ public class UDTClientServerConnectionTest {
         @Override
         public void run() {
             final ServerBootstrap boot = new ServerBootstrap();
-            final ThreadFactory acceptFactory = new DefaultThreadFactory("accept");
-            final ThreadFactory serverFactory = new DefaultThreadFactory("server");
-            final NioEventLoopGroup acceptGroup = new NioEventLoopGroup(1,
-                    acceptFactory, NioUdtProvider.BYTE_PROVIDER);
-            final NioEventLoopGroup connectGroup = new NioEventLoopGroup(1,
-                    serverFactory, NioUdtProvider.BYTE_PROVIDER);
+            final ExecutorFactory acceptFactory = new DefaultExecutorFactory("accept");
+            final ExecutorFactory serverFactory = new DefaultExecutorFactory("server");
+            final NioEventLoopGroup acceptGroup =
+                    new NioEventLoopGroup(1, acceptFactory, NioUdtProvider.BYTE_PROVIDER);
+            final NioEventLoopGroup connectGroup =
+                    new NioEventLoopGroup(1, serverFactory, NioUdtProvider.BYTE_PROVIDER);
+
             try {
                 boot.group(acceptGroup, connectGroup)
                         .channelFactory(NioUdtProvider.BYTE_ACCEPTOR)
