@@ -162,9 +162,17 @@ jobject createDatagramSocketAddress(JNIEnv * env, struct sockaddr_storage addr, 
     return socketAddr;
 }
 
-void init_sockaddr(JNIEnv * env, jbyteArray address, jint scopeId, jint jport, struct sockaddr_storage * addr) {
+int init_sockaddr(JNIEnv * env, jbyteArray address, jint scopeId, jint jport, struct sockaddr_storage * addr) {
     uint16_t port = htons((uint16_t) jport);
-    jbyte* addressBytes = (*env)->GetByteArrayElements(env, address, 0);
+    // Use GetPrimitiveArrayCritical and ReleasePrimitiveArrayCritical to signal the VM that we really would like
+    // to not do a memory copy here. This is ok as we not do any blocking action here anyway.
+    // This is important as the VM may suspend GC for the time!
+    jbyte* addressBytes = (*env)->GetPrimitiveArrayCritical(env, address, 0);
+    if (addressBytes == NULL) {
+        // No memory left ?!?!?
+        throwOutOfMemoryError(env, "Can't allocate memory");
+        return -1;
+    }
     if (socketType == AF_INET6) {
         struct sockaddr_in6* ip6addr = (struct sockaddr_in6 *) addr;
         ip6addr->sin6_family = AF_INET6;
@@ -181,7 +189,8 @@ void init_sockaddr(JNIEnv * env, jbyteArray address, jint scopeId, jint jport, s
         memcpy( &(ipaddr->sin_addr.s_addr), addressBytes + 12, 4);
     }
 
-    (*env)->ReleaseByteArrayElements(env, address, addressBytes, JNI_ABORT);
+    (*env)->ReleasePrimitiveArrayCritical(env, address, addressBytes, JNI_ABORT);
+    return 0;
 }
 
 static int socket_type() {
@@ -197,14 +206,23 @@ static int socket_type() {
     }
 }
 
-void init_in_addr(JNIEnv * env, jbyteArray address, struct in_addr * addr) {
-    jbyte* addressBytes = (*env)->GetByteArrayElements(env, address, 0);
+int init_in_addr(JNIEnv * env, jbyteArray address, struct in_addr * addr) {
+    // Use GetPrimitiveArrayCritical and ReleasePrimitiveArrayCritical to signal the VM that we really would like
+    // to not do a memory copy here. This is ok as we not do any blocking action here anyway.
+    // This is important as the VM may suspend GC for the time!
+    jbyte* addressBytes = (*env)->GetPrimitiveArrayCritical(env, address, 0);
+    if (addressBytes == NULL) {
+        // No memory left ?!?!?
+        throwOutOfMemoryError(env, "Can't allocate memory");
+        return -1;
+    }
     if (socketType == AF_INET6) {
         memcpy(addr, addressBytes, 16);
     } else {
         memcpy(addr, addressBytes + 12, 4);
     }
-    (*env)->ReleaseByteArrayElements(env, address, addressBytes, JNI_ABORT);
+    (*env)->ReleasePrimitiveArrayCritical(env, address, addressBytes, JNI_ABORT);
+    return 0;
 }
 // util methods end
 
@@ -496,7 +514,10 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_epollWait(JNIEnv * env
     }
 
     jboolean isCopy;
-    jlong *elements = (*env)->GetLongArrayElements(env, events, &isCopy);
+    // Use GetPrimitiveArrayCritical and ReleasePrimitiveArrayCritical to signal the VM that we really would like
+    // to not do a memory copy here. This is ok as we not do any blocking action here anyway.
+    // This is important as the VM may suspend GC for the time!
+    jlong *elements = (*env)->GetPrimitiveArrayCritical(env, events, &isCopy);
     if (elements == NULL) {
         // No memory left ?!?!?
         throwOutOfMemoryError(env, "Can't allocate memory");
@@ -524,7 +545,7 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_epollWait(JNIEnv * env
         // was just pinned so use JNI_ABORT to eliminate not needed copy.
         mode = JNI_ABORT;
     }
-    (*env)->ReleaseLongArrayElements(env, events, elements, mode);
+    (*env)->ReleasePrimitiveArrayCritical(env, events, elements, mode);
 
     return ready;
 }
@@ -590,7 +611,9 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_writeAddress(JNIEnv * 
 
 jint sendTo0(JNIEnv * env, jint fd, void* buffer, jint pos, jint limit ,jbyteArray address, jint scopeId, jint port) {
     struct sockaddr_storage addr;
-    init_sockaddr(env, address, scopeId, port, &addr);
+    if (init_sockaddr(env, address, scopeId, port, &addr) == -1) {
+        return -1;
+    }
 
     ssize_t res;
     int err;
@@ -847,7 +870,9 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_socketStream(JNIEnv * 
 
 JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_bind(JNIEnv * env, jclass clazz, jint fd, jbyteArray address, jint scopeId, jint port) {
     struct sockaddr_storage addr;
-    init_sockaddr(env, address, scopeId, port, &addr);
+    if (init_sockaddr(env, address, scopeId, port, &addr) == -1) {
+        return -1;
+    }
 
     if(bind(fd, (struct sockaddr *) &addr, sizeof(addr)) == -1){
         int err = errno;
@@ -864,7 +889,9 @@ JNIEXPORT void JNICALL Java_io_netty_channel_epoll_Native_listen(JNIEnv * env, j
 
 JNIEXPORT jboolean JNICALL Java_io_netty_channel_epoll_Native_connect(JNIEnv * env, jclass clazz, jint fd, jbyteArray address, jint scopeId, jint port) {
     struct sockaddr_storage addr;
-    init_sockaddr(env, address, scopeId, port, &addr);
+    if (init_sockaddr(env, address, scopeId, port, &addr) == -1) {
+        return -1;
+    }
 
     int res;
     int err;
