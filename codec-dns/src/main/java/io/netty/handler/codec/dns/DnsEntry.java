@@ -317,9 +317,6 @@ public class DnsEntry {
         if (name == null) {
             throw new NullPointerException("name");
         }
-        if (name.isEmpty()) {
-            throw new IllegalArgumentException("name must not be left blank.");
-        }
         if ((type & 0xffff) != type) {
             throw new IllegalArgumentException("type must be an unsigned short.");
         }

@@ -49,6 +49,10 @@ public final class DnsQuestion extends DnsEntry {
      */
     public DnsQuestion(String name, int type, int qClass) {
         super(name, type, qClass);
+
+        if (name.isEmpty()) {
+            throw new IllegalArgumentException("name must not be left blank.");
+        }
     }
 
     @Override
