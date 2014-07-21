@@ -163,37 +163,33 @@ public class TrafficCounter {
     /**
      * Start the monitoring process
      */
-    public void start() {
-        synchronized (lastTime) {
-            if (monitorActive.get()) {
-                return;
-            }
-            lastTime.set(System.currentTimeMillis());
-            if (checkInterval.get() > 0) {
-                monitorActive.set(true);
-                monitor = new TrafficMonitoringTask(trafficShapingHandler, this);
-                scheduledFuture =
-                    executor.schedule(monitor, checkInterval.get(), TimeUnit.MILLISECONDS);
-            }
+    public synchronized void start() {
+        if (monitorActive.get()) {
+            return;
+        }
+        lastTime.set(System.currentTimeMillis());
+        if (checkInterval.get() > 0) {
+            monitorActive.set(true);
+            monitor = new TrafficMonitoringTask(trafficShapingHandler, this);
+            scheduledFuture =
+                executor.schedule(monitor, checkInterval.get(), TimeUnit.MILLISECONDS);
         }
     }
 
     /**
      * Stop the monitoring process
      */
-    public void stop() {
-        synchronized (lastTime) {
-            if (!monitorActive.get()) {
-                return;
-            }
-            monitorActive.set(false);
-            resetAccounting(System.currentTimeMillis());
-            if (trafficShapingHandler != null) {
-                trafficShapingHandler.doAccounting(this);
-            }
-            if (scheduledFuture != null) {
-                scheduledFuture.cancel(true);
-            }
+    public synchronized void stop() {
+        if (!monitorActive.get()) {
+            return;
+        }
+        monitorActive.set(false);
+        resetAccounting(System.currentTimeMillis());
+        if (trafficShapingHandler != null) {
+            trafficShapingHandler.doAccounting(this);
+        }
+        if (scheduledFuture != null) {
+            scheduledFuture.cancel(true);
         }
     }
 
@@ -202,20 +198,18 @@ public class TrafficCounter {
      *
      * @param newLastTime the millisecond unix timestamp that we should be considered up-to-date for
      */
-    void resetAccounting(long newLastTime) {
-        synchronized (lastTime) {
-            long interval = newLastTime - lastTime.getAndSet(newLastTime);
-            if (interval == 0) {
-                // nothing to do
-                return;
-            }
-            lastReadBytes = currentReadBytes.getAndSet(0);
-            lastWrittenBytes = currentWrittenBytes.getAndSet(0);
-            lastReadThroughput = lastReadBytes / interval * 1000;
-            // nb byte / checkInterval in ms * 1000 (1s)
-            lastWriteThroughput = lastWrittenBytes / interval * 1000;
-            // nb byte / checkInterval in ms * 1000 (1s)
+    synchronized void resetAccounting(long newLastTime) {
+        long interval = newLastTime - lastTime.getAndSet(newLastTime);
+        if (interval == 0) {
+            // nothing to do
+            return;
         }
+        lastReadBytes = currentReadBytes.getAndSet(0);
+        lastWrittenBytes = currentWrittenBytes.getAndSet(0);
+        lastReadThroughput = lastReadBytes / interval * 1000;
+        // nb byte / checkInterval in ms * 1000 (1s)
+        lastWriteThroughput = lastWrittenBytes / interval * 1000;
+        // nb byte / checkInterval in ms * 1000 (1s)
     }
 
     /**
