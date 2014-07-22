@@ -199,25 +199,23 @@ public class Bzip2DecoderTest {
     }
 
     private static void testDecompression(final byte[] data) throws Exception {
-        for (int blockSize = MIN_BLOCK_SIZE; blockSize <= MAX_BLOCK_SIZE; blockSize++) {
-            final EmbeddedChannel channel = new EmbeddedChannel(new Bzip2Decoder());
+        final EmbeddedChannel channel = new EmbeddedChannel(new Bzip2Decoder());
 
-            ByteArrayOutputStream os = new ByteArrayOutputStream();
-            BZip2CompressorOutputStream bZip2Os = new BZip2CompressorOutputStream(os, blockSize);
-            bZip2Os.write(data);
-            bZip2Os.close();
+        ByteArrayOutputStream os = new ByteArrayOutputStream();
+        BZip2CompressorOutputStream bZip2Os = new BZip2CompressorOutputStream(os, randomBlockSize());
+        bZip2Os.write(data);
+        bZip2Os.close();
 
-            ByteBuf compressed = Unpooled.wrappedBuffer(os.toByteArray());
-            channel.writeInbound(compressed);
+        ByteBuf compressed = Unpooled.wrappedBuffer(os.toByteArray());
+        channel.writeInbound(compressed);
 
-            ByteBuf uncompressed = readUncompressed(channel);
-            ByteBuf dataBuf = Unpooled.wrappedBuffer(data);
+        ByteBuf uncompressed = readUncompressed(channel);
+        ByteBuf dataBuf = Unpooled.wrappedBuffer(data);
 
-            assertEquals(dataBuf, uncompressed);
+        assertEquals(dataBuf, uncompressed);
 
-            uncompressed.release();
-            dataBuf.release();
-        }
+        uncompressed.release();
+        dataBuf.release();
     }
 
     @Test
@@ -235,8 +233,7 @@ public class Bzip2DecoderTest {
         final byte[] data = BYTES_LARGE;
 
         ByteArrayOutputStream os = new ByteArrayOutputStream();
-        BZip2CompressorOutputStream bZip2Os = new BZip2CompressorOutputStream(os,
-                                                    rand.nextInt(MIN_BLOCK_SIZE, MAX_BLOCK_SIZE + 1));
+        BZip2CompressorOutputStream bZip2Os = new BZip2CompressorOutputStream(os, randomBlockSize());
         bZip2Os.write(data);
         bZip2Os.close();
 
@@ -269,5 +266,9 @@ public class Bzip2DecoderTest {
         }
 
         return uncompressed;
+    }
+
+    private static int randomBlockSize() {
+        return rand.nextInt(MIN_BLOCK_SIZE, MAX_BLOCK_SIZE + 1);
     }
 }
