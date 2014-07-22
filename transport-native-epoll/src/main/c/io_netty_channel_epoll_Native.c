@@ -44,10 +44,7 @@ jfieldID limitFieldId = NULL;
 jfieldID fileChannelFieldId = NULL;
 jfieldID transferedFieldId = NULL;
 jfieldID fdFieldId = NULL;
-jfieldID fileDescriptorFieldId = NULL;
-jfieldID readerIndexFieldId = NULL;
-jfieldID writerIndexFieldId = NULL;
-jfieldID memoryAddressFieldId = NULL;
+jfieldID fileDescriptorFieldId = NULL;;
 jmethodID inetSocketAddrMethodId = NULL;
 jmethodID datagramSocketAddrMethodId = NULL;
 jclass runtimeExceptionClass = NULL;
@@ -393,27 +390,6 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
             throwRuntimeException(env, "Unable to obtain constructor of DatagramSocketAddress");
             return JNI_ERR;
         }
-
-        jclass addressEntryClass = (*env)->FindClass(env, "io/netty/channel/epoll/EpollChannelOutboundBuffer$AddressEntry");
-        if (addressEntryClass == NULL) {
-             // pending exception...
-            return JNI_ERR;
-        }
-        readerIndexFieldId = (*env)->GetFieldID(env, addressEntryClass, "readerIndex", "I");
-        if (readerIndexFieldId == NULL) {
-            // pending exception...
-            return JNI_ERR;
-        }
-        writerIndexFieldId = (*env)->GetFieldID(env, addressEntryClass, "writerIndex", "I");
-        if (writerIndexFieldId == NULL) {
-            // pending exception...
-            return JNI_ERR;
-        }
-        memoryAddressFieldId = (*env)->GetFieldID(env, addressEntryClass, "memoryAddress", "J");
-        if (memoryAddressFieldId == NULL) {
-            // pending exception...
-            return JNI_ERR;
-        }
         return JNI_VERSION_1_6;
     }
 }
@@ -691,7 +667,7 @@ JNIEXPORT jobject JNICALL Java_io_netty_channel_epoll_Native_recvFromAddress(JNI
     return recvFrom0(env, fd, (void*) address, pos, limit);
 }
 
-jlong writev0(JNIEnv * env, jclass clazz, jint fd, struct iovec iov[], jint length) {
+jlong writev0(JNIEnv * env, jclass clazz, jint fd, struct iovec * iov, jint length) {
     ssize_t res;
     int err;
     do {
@@ -755,28 +731,8 @@ JNIEXPORT jlong JNICALL Java_io_netty_channel_epoll_Native_writev(JNIEnv * env, 
     return writev0(env, clazz, fd, iov, length);
 }
 
-JNIEXPORT jlong JNICALL Java_io_netty_channel_epoll_Native_writevAddresses(JNIEnv * env, jclass clazz, jint fd, jobjectArray addresses, jint offset, jint length) {
-    struct iovec iov[length];
-    int iovidx = 0;
-    int i;
-    int num = offset + length;
-    for (i = offset; i < num; i++) {
-        jobject addressEntry = (*env)->GetObjectArrayElement(env, addresses, i);
-        jint readerIndex = (*env)->GetIntField(env, addressEntry, readerIndexFieldId);
-        jint writerIndex = (*env)->GetIntField(env, addressEntry, writerIndexFieldId);
-        void* memoryAddress = (void*) (*env)->GetLongField(env, addressEntry, memoryAddressFieldId);
-
-        iov[iovidx].iov_base = memoryAddress + readerIndex;
-        iov[iovidx].iov_len = (size_t) (writerIndex - readerIndex);
-        iovidx++;
-
-        // Explicit delete local reference as otherwise the local references will only be released once the native method returns.
-        // Also there may be a lot of these and JNI specification only specify that 16 must be able to be created.
-        //
-        // See https://github.com/netty/netty/issues/2623
-        (*env)->DeleteLocalRef(env, addressEntry);
-    }
-
+JNIEXPORT jlong JNICALL Java_io_netty_channel_epoll_Native_writevAddresses(JNIEnv * env, jclass clazz, jint fd, jlong memoryAddress, jint length) {
+    struct iovec * iov = (struct iovec *) memoryAddress;
     return writev0(env, clazz, fd, iov, length);
 }
 
