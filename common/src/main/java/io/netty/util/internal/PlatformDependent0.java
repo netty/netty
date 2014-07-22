@@ -365,6 +365,18 @@ final class PlatformDependent0 {
         }
     }
 
+    static int addressSize() {
+        return UNSAFE.addressSize();
+    }
+
+    static long allocateMemory(long size) {
+        return UNSAFE.allocateMemory(size);
+    }
+
+    static void freeMemory(long address) {
+        UNSAFE.freeMemory(address);
+    }
+
     private PlatformDependent0() {
     }
 

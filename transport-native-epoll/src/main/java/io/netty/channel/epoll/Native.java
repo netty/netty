@@ -69,6 +69,9 @@ final class Native {
     public static native int writeAddress(int fd, long address, int pos, int limit) throws IOException;
 
     public static native long writev(int fd, ByteBuffer[] buffers, int offset, int length) throws IOException;
+    public static native long writevAddresses(int fd, long memoryAddress, int length)
+            throws IOException;
+
     public static native int read(int fd, ByteBuffer buf, int pos, int limit) throws IOException;
     public static native int readAddress(int fd, long address, int pos, int limit) throws IOException;
 

@@ -45,7 +45,7 @@ import java.util.concurrent.atomic.AtomicLongFieldUpdater;
  * (Transport implementors only) an internal data structure used by {@link AbstractChannel} to store its pending
  * outbound write requests.
  */
-public final class ChannelOutboundBuffer {
+public class ChannelOutboundBuffer {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ChannelOutboundBuffer.class);
 
@@ -109,7 +109,7 @@ public final class ChannelOutboundBuffer {
         TOTAL_PENDING_SIZE_UPDATER = pendingSizeUpdater;
     }
 
-    ChannelOutboundBuffer(AbstractChannel channel) {
+    public ChannelOutboundBuffer(AbstractChannel channel) {
         this.channel = channel;
     }
 
@@ -417,7 +417,7 @@ public final class ChannelOutboundBuffer {
     }
 
     private static int fillBufferArrayNonDirect(Entry entry, ByteBuf buf, int readerIndex, int readableBytes,
-                                      ByteBufAllocator alloc, ByteBuffer[] nioBuffers, int nioBufferCount) {
+                                                ByteBufAllocator alloc, ByteBuffer[] nioBuffers, int nioBufferCount) {
         ByteBuf directBuf;
         if (alloc.isDirectBufferPooled()) {
             directBuf = alloc.directBuffer(readableBytes);
@@ -562,6 +562,29 @@ public final class ChannelOutboundBuffer {
 
     public long totalPendingWriteBytes() {
         return totalPendingSize;
+    }
+
+    protected final void forEachFlushedMessage(FlushedMessageProcessor processor) throws Exception {
+        if (processor == null) {
+            throw new NullPointerException("processor");
+        }
+        Entry entry = flushedEntry;
+        while (entry != null) {
+            if (!entry.cancelled) {
+                if (!processor.processedFlushedMessage(entry.msg)) {
+                    return;
+                }
+            }
+            entry = entry.next;
+        }
+    }
+
+    public interface FlushedMessageProcessor {
+        /**
+         * Will be called for each flushed message until it either there are no more flushed messages or this
+         * method returns {@code false}.
+         */
+        boolean processedFlushedMessage(Object msg) throws Exception;
     }
 
     static final class Entry {
