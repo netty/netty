@@ -61,17 +61,15 @@ public class Bzip2EncoderTest {
     }
 
     private static void testCompression(final byte[] data) throws Exception {
-        for (int blockSize = MIN_BLOCK_SIZE; blockSize <= MAX_BLOCK_SIZE; blockSize++) {
-            final EmbeddedChannel channel = new EmbeddedChannel(new Bzip2Encoder(blockSize));
+        final EmbeddedChannel channel = new EmbeddedChannel(new Bzip2Encoder(randomBlockSize()));
 
-            ByteBuf in = Unpooled.wrappedBuffer(data);
-            channel.writeOutbound(in);
-            channel.finish();
+        ByteBuf in = Unpooled.wrappedBuffer(data);
+        channel.writeOutbound(in);
+        channel.finish();
 
-            byte[] uncompressed = uncompress(channel, data.length);
+        byte[] uncompressed = uncompress(channel, data.length);
 
-            assertArrayEquals(data, uncompressed);
-        }
+        assertArrayEquals(data, uncompressed);
     }
 
     @Test
@@ -86,8 +84,7 @@ public class Bzip2EncoderTest {
 
     @Test
     public void testCompressionOfBatchedFlowOfData() throws Exception {
-        final EmbeddedChannel channel = new EmbeddedChannel(new Bzip2Encoder(
-                                rand.nextInt(MIN_BLOCK_SIZE, MAX_BLOCK_SIZE + 1)));
+        final EmbeddedChannel channel = new EmbeddedChannel(new Bzip2Encoder(randomBlockSize()));
 
         int written = 0, length = rand.nextInt(100);
         while (written + length < BYTES_LARGE.length) {
@@ -133,5 +130,9 @@ public class Bzip2EncoderTest {
         assertEquals(-1, bZip2Is.read());
 
         return uncompressed;
+    }
+
+    private static int randomBlockSize() {
+        return rand.nextInt(MIN_BLOCK_SIZE, MAX_BLOCK_SIZE + 1);
     }
 }
