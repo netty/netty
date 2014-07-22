@@ -48,13 +48,17 @@ public final class ChannelOutboundBuffer {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ChannelOutboundBuffer.class);
 
-    private static final int INITIAL_CAPACITY = 32;
+    private static final int INITIAL_CAPACITY =
+            SystemPropertyUtil.getInt("io.netty.outboundBufferInitialCapacity", 4);
 
-    private static final int threadLocalDirectBufferSize;
+    private static final int threadLocalDirectBufferSize =
+            SystemPropertyUtil.getInt("io.netty.threadLocalDirectBufferSize", 64 * 1024);
 
     static {
-        threadLocalDirectBufferSize = SystemPropertyUtil.getInt("io.netty.threadLocalDirectBufferSize", 64 * 1024);
-        logger.debug("-Dio.netty.threadLocalDirectBufferSize: {}", threadLocalDirectBufferSize);
+        if (logger.isDebugEnabled()) {
+            logger.debug("-Dio.netty.outboundBufferInitialCapacity: {}", INITIAL_CAPACITY);
+            logger.debug("-Dio.netty.threadLocalDirectBufferSize: {}", threadLocalDirectBufferSize);
+        }
     }
 
     private static final Recycler<ChannelOutboundBuffer> RECYCLER = new Recycler<ChannelOutboundBuffer>() {
