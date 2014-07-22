@@ -417,7 +417,7 @@ public final class ChannelOutboundBuffer {
     }
 
     private static int fillBufferArrayNonDirect(Entry entry, ByteBuf buf, int readerIndex, int readableBytes,
-                                      ByteBufAllocator alloc, ByteBuffer[] nioBuffers, int nioBufferCount) {
+                                                ByteBufAllocator alloc, ByteBuffer[] nioBuffers, int nioBufferCount) {
         ByteBuf directBuf;
         if (alloc.isDirectBufferPooled()) {
             directBuf = alloc.directBuffer(readableBytes);
@@ -562,6 +562,34 @@ public final class ChannelOutboundBuffer {
 
     public long totalPendingWriteBytes() {
         return totalPendingSize;
+    }
+
+    /**
+     * Call {@link FlushedMessageProcessor#process(Object)} foreach flushed message
+     * in this {@link ChannelOutboundBuffer} until {@link FlushedMessageProcessor#process(Object)}
+     * returns {@code false} or ther are no more flushed messages to process.
+     */
+    public void forEachFlushedMessage(FlushedMessageProcessor processor) throws Exception {
+        if (processor == null) {
+            throw new NullPointerException("processor");
+        }
+        Entry entry = flushedEntry;
+        while (entry != null) {
+            if (!entry.cancelled) {
+                if (!processor.process(entry.msg)) {
+                    return;
+                }
+            }
+            entry = entry.next;
+        }
+    }
+
+    public interface FlushedMessageProcessor {
+        /**
+         * Will be called for each flushed message until it either there are no more flushed messages or this
+         * method returns {@code false}.
+         */
+        boolean process(Object msg) throws Exception;
     }
 
     static final class Entry {

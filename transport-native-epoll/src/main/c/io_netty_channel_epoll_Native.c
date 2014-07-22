@@ -44,7 +44,7 @@ jfieldID limitFieldId = NULL;
 jfieldID fileChannelFieldId = NULL;
 jfieldID transferedFieldId = NULL;
 jfieldID fdFieldId = NULL;
-jfieldID fileDescriptorFieldId = NULL;
+jfieldID fileDescriptorFieldId = NULL;;
 jmethodID inetSocketAddrMethodId = NULL;
 jmethodID datagramSocketAddrMethodId = NULL;
 jclass runtimeExceptionClass = NULL;
@@ -384,6 +384,7 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
             return JNI_ERR;
         }
         socketType = socket_type();
+
         datagramSocketAddrMethodId = (*env)->GetMethodID(env, datagramSocketAddressClass, "<init>", "(Ljava/lang/String;II)V");
         if (datagramSocketAddrMethodId == NULL) {
             throwRuntimeException(env, "Unable to obtain constructor of DatagramSocketAddress");
@@ -671,6 +672,29 @@ JNIEXPORT jobject JNICALL Java_io_netty_channel_epoll_Native_recvFromAddress(JNI
     return recvFrom0(env, fd, (void*) address, pos, limit);
 }
 
+jlong writev0(JNIEnv * env, jclass clazz, jint fd, struct iovec * iov, jint length) {
+    ssize_t res;
+    int err;
+    do {
+        res = writev(fd, iov, length);
+        // keep on writing if it was interrupted
+    } while(res == -1 && ((err = errno) == EINTR));
+
+    if (res < 0) {
+        if (err == EAGAIN || err == EWOULDBLOCK) {
+            // network stack is saturated we will try again later
+            return 0;
+        }
+        if (err == EBADF) {
+            throwClosedChannelException(env);
+            return -1;
+        }
+        throwIOException(env, exceptionMessage("Error while writev(...): ", err));
+        return -1;
+    }
+    return (jlong) res;
+}
+
 JNIEXPORT jlong JNICALL Java_io_netty_channel_epoll_Native_writev(JNIEnv * env, jclass clazz, jint fd, jobjectArray buffers, jint offset, jint length) {
     struct iovec iov[length];
     int iovidx = 0;
@@ -709,26 +733,12 @@ JNIEXPORT jlong JNICALL Java_io_netty_channel_epoll_Native_writev(JNIEnv * env, 
         // See https://github.com/netty/netty/issues/2623
         (*env)->DeleteLocalRef(env, bufObj);
     }
-    ssize_t res;
-    int err;
-    do {
-        res = writev(fd, iov, length);
-        // keep on writing if it was interrupted
-    } while(res == -1 && ((err = errno) == EINTR));
+    return writev0(env, clazz, fd, iov, length);
+}
 
-    if (res < 0) {
-        if (err == EAGAIN || err == EWOULDBLOCK) {
-            // network stack is saturated we will try again later
-            return 0;
-        }
-        if (err == EBADF) {
-            throwClosedChannelException(env);
-            return -1;
-        }
-        throwIOException(env, exceptionMessage("Error while writev(...): ", err));
-        return -1;
-    }
-    return res;
+JNIEXPORT jlong JNICALL Java_io_netty_channel_epoll_Native_writevAddresses(JNIEnv * env, jclass clazz, jint fd, jlong memoryAddress, jint length) {
+    struct iovec * iov = (struct iovec *) memoryAddress;
+    return writev0(env, clazz, fd, iov, length);
 }
 
 jint read0(JNIEnv * env, jclass clazz, jint fd, void *buffer, jint pos, jint limit) {
