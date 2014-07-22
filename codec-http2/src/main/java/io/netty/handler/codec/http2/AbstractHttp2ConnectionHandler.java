@@ -968,7 +968,8 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
             verifyPrefaceReceived();
 
             // Send an ack back to the remote client.
-            frameWriter.writePing(ctx, ctx.newPromise(), true, data);
+            // Need to retain the buffer here since it will be released after the write completes.
+            frameWriter.writePing(ctx, ctx.newPromise(), true, data.retain());
 
             AbstractHttp2ConnectionHandler.this.onPingRead(ctx, data);
         }
