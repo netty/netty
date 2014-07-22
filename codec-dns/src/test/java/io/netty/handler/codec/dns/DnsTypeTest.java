@@ -48,7 +48,7 @@ public class DnsTypeTest {
     @Test
     public void testHashCode() throws Exception {
         for (DnsType t : allTypes()) {
-            assertEquals(t.type, t.hashCode());
+            assertEquals(t.type(), t.hashCode());
         }
     }
 
@@ -72,7 +72,7 @@ public class DnsTypeTest {
     @Test
     public void testFind() throws Exception {
         for (DnsType t : allTypes()) {
-            DnsType found = DnsType.find(t.type);
+            DnsType found = DnsType.find(t.type());
             assertSame(t, found);
             found = DnsType.forName(t.toString());
             assertSame(t.toString(), t, found);

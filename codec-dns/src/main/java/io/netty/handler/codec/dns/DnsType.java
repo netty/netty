@@ -301,11 +301,11 @@ public class DnsType {
     /**
      * The value of this type in DNS protocol
      */
-    public final int type;
+    private final int type;
     /**
      * The name of this type
      */
-    public final String name;
+    private final String name;
 
     DnsType(int type, String name) {
         if ((type & 0xffff) != type) {
@@ -313,6 +313,22 @@ public class DnsType {
         }
         this.type = type;
         this.name = name;
+    }
+
+    /**
+     * The name of this type, as seen in bind config files
+     * @return the name
+     */
+    public final String name() {
+        return name;
+    }
+
+    /**
+     * The value of this DnsType as it appears in DNS protocol
+     * @return The valueF
+     */
+    public final int type() {
+        return type;
     }
 
     public static DnsType create(int type, String name) {
@@ -335,34 +351,175 @@ public class DnsType {
     }
 
     public static DnsType find(int type) {
-        DnsType[] all = {A, NS, CNAME, SOA, PTR, MX,
-            TXT, RP, AFSDB, SIG, KEY, AAAA, LOC,
-            SRV, NAPTR, KX, CERT, DNAME, OPT,
-            APL, DS, SSHFP, IPSECKEY, RRSIG, NSEC,
-            DNSKEY, DHCID, NSEC3, NSEC3PARAM, TLSA,
-            HIP, SPF, TKEY, TSIG, IXFR, AXFR,
-            ANY, CAA, TA, DLV};
-        for (DnsType test : all) {
-            if (type == test.type) {
-                return test;
-            }
+        switch (type) {
+            case 1:
+                return A;
+            case 28:
+                return AAAA;
+            case 16:
+                return TXT;
+            case 2:
+                return NS;
+            case 5:
+                return CNAME;
+            case 6:
+                return SOA;
+            case 12:
+                return PTR;
+            case 15:
+                return MX;
+            case 255:
+                return ANY;
+            case 29:
+                return LOC;
+            case 17:
+                return RP;
+            case 18:
+                return AFSDB;
+            case 24:
+                return SIG;
+            case 25:
+                return KEY;
+            case 33:
+                return SRV;
+            case 35:
+                return NAPTR;
+            case 36:
+                return KX;
+            case 37:
+                return CERT;
+            case 39:
+                return DNAME;
+            case 41:
+                return OPT;
+            case 42:
+                return APL;
+            case 43:
+                return DS;
+            case 44:
+                return SSHFP;
+            case 45:
+                return IPSECKEY;
+            case 46:
+                return RRSIG;
+            case 47:
+                return NSEC;
+            case 48:
+                return DNSKEY;
+            case 49:
+                return DHCID;
+            case 50:
+                return NSEC3;
+            case 51:
+                return NSEC3PARAM;
+            case 52:
+                return TLSA;
+            case 55:
+                return HIP;
+            case 99:
+                return SPF;
+            case 249:
+                return TKEY;
+            case 250:
+                return TSIG;
+            case 251:
+                return IXFR;
+            case 252:
+                return AXFR;
+            case 257:
+                return CAA;
+            case 32768:
+                return TA;
+            case 32769:
+                return DLV;
+            default:
+                return null;
         }
-        return null;
     }
 
     public static DnsType forName(String name) {
-        DnsType[] all = {A, NS, CNAME, SOA, PTR, MX,
-            TXT, RP, AFSDB, SIG, KEY, AAAA, LOC,
-            SRV, NAPTR, KX, CERT, DNAME, OPT,
-            APL, DS, SSHFP, IPSECKEY, RRSIG, NSEC,
-            DNSKEY, DHCID, NSEC3, NSEC3PARAM, TLSA,
-            HIP, SPF, TKEY, TSIG, IXFR, AXFR,
-            ANY, CAA, TA, DLV};
-        for (DnsType test : all) {
-            if (test.name.equals(name)) {
-                return test;
-            }
+        if ("A".equals(name)) {
+            return A;
+        } else if ("AAAA".equals(name)) {
+            return AAAA;
+        } else if ("TXT".equals(name)) {
+            return TXT;
+        } else if ("NS".equals(name)) {
+            return NS;
+        } else if ("CNAME".equals(name)) {
+            return CNAME;
+        } else if ("SOA".equals(name)) {
+            return SOA;
+        } else if ("PTR".equals(name)) {
+            return PTR;
+        } else if ("MX".equals(name)) {
+            return MX;
+        } else if ("ANY".equals(name)) {
+            return ANY;
+        } else if ("LOC".equals(name)) {
+            return LOC;
+        } else if ("RP".equals(name)) {
+            return RP;
+        } else if ("AFSDB".equals(name)) {
+            return AFSDB;
+        } else if ("SIG".equals(name)) {
+            return SIG;
+        } else if ("KEY".equals(name)) {
+            return KEY;
+        } else if ("SRV".equals(name)) {
+            return SRV;
+        } else if ("NAPTR".equals(name)) {
+            return NAPTR;
+        } else if ("KX".equals(name)) {
+            return KX;
+        } else if ("CERT".equals(name)) {
+            return CERT;
+        } else if ("DNAME".equals(name)) {
+            return DNAME;
+        } else if ("OPT".equals(name)) {
+            return OPT;
+        } else if ("APL".equals(name)) {
+            return APL;
+        } else if ("DS".equals(name)) {
+            return DS;
+        } else if ("SSHFP".equals(name)) {
+            return SSHFP;
+        } else if ("IPSECKEY".equals(name)) {
+            return IPSECKEY;
+        } else if ("RRSIG".equals(name)) {
+            return RRSIG;
+        } else if ("NSEC".equals(name)) {
+            return NSEC;
+        } else if ("DNSKEY".equals(name)) {
+            return DNSKEY;
+        } else if ("DHCID".equals(name)) {
+            return DHCID;
+        } else if ("NSEC3".equals(name)) {
+            return NSEC3;
+        } else if ("NSEC3PARAM".equals(name)) {
+            return NSEC3PARAM;
+        } else if ("TLSA".equals(name)) {
+            return TLSA;
+        } else if ("HIP".equals(name)) {
+            return HIP;
+        } else if ("SPF".equals(name)) {
+            return SPF;
+        } else if ("TKEY".equals(name)) {
+            return TKEY;
+        } else if ("TSIG".equals(name)) {
+            return TSIG;
+        } else if ("IXFR".equals(name)) {
+            return IXFR;
+        } else if ("AXFR".equals(name)) {
+            return AXFR;
+        } else if ("CAA".equals(name)) {
+            return CAA;
+        } else if ("TA".equals(name)) {
+            return TA;
+        } else if ("DLV".equals(name)) {
+            return DLV;
+        } else {
+            return null;
         }
-        return null;
     }
 }

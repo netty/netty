@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 The Netty Project
+ * Copyright 2014 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -33,15 +33,33 @@ public class DnsClass {
     /**
      * The protocol value of this DNS class
      */
-    public final int clazz;
+    private final int clazz;
     /**
      * The name of this DNS class
      */
-    public final String name;
+    private final String name;
 
     DnsClass(int clazz, String name) {
         this.clazz = clazz;
         this.name = name;
+    }
+
+    /**
+     * The name of this class as used in bind config files
+     *
+     * @return
+     */
+    public final String name() {
+        return name;
+    }
+
+    /**
+     * Get the protocol value represented by this class
+     *
+     * @return The value
+     */
+    public final int clazz() {
+        return clazz;
     }
 
     /**
@@ -55,6 +73,11 @@ public class DnsClass {
         return new DnsClass(clazz, name);
     }
 
+    /**
+     * Determine if this class is valid with respect to DNS protocol
+     *
+     * @return true if this is a legal value
+     */
     public boolean isValid() {
         if (clazz < 1 || clazz > 4 && clazz != NONE.clazz && clazz != ANY.clazz) {
             return false;
@@ -63,10 +86,18 @@ public class DnsClass {
     }
 
     public static DnsClass forName(String name) {
-        for (DnsClass clazz : new DnsClass[]{IN, CSNET, CHAOS, HESIOD, NONE, ANY}) {
-            if (clazz.name.equals(name)) {
-                return clazz;
-            }
+        if (IN.name.equals(name)) {
+            return IN;
+        } else if (NONE.name().equals(name)) {
+            return NONE;
+        } else if (ANY.name().equals(name)) {
+            return ANY;
+        } else if (CSNET.name().equals(name)) {
+            return CSNET;
+        } else if (CHAOS.name().equals(name)) {
+            return CHAOS;
+        } else if (HESIOD.name().equals(name)) {
+            return HESIOD;
         }
         return null;
     }

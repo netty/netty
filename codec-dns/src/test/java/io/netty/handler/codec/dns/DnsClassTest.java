@@ -51,7 +51,7 @@ public class DnsClassTest {
     @Test
     public void testHashCode() throws Exception {
         for (DnsClass t : allTypes()) {
-            assertEquals(t.clazz, t.hashCode());
+            assertEquals(t.clazz(), t.hashCode());
         }
     }
 
@@ -75,7 +75,7 @@ public class DnsClassTest {
     @Test
     public void testFind() throws Exception {
         for (DnsClass t : allTypes()) {
-            DnsClass found = DnsClass.find(t.clazz);
+            DnsClass found = DnsClass.find(t.clazz());
             assertSame(t, found);
             found = DnsClass.forName(t.toString());
             assertSame(t.toString(), t, found);
