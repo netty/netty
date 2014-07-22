@@ -126,8 +126,8 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
      */
     private static DnsQuestion decodeQuestion(ByteBuf buf) {
         String name = readName(buf);
-        DnsType type = DnsType.find(buf.readUnsignedShort());
-        DnsClass qClass = DnsClass.find(buf.readUnsignedShort());
+        DnsType type = DnsType.valueOf(buf.readUnsignedShort());
+        DnsClass qClass = DnsClass.valueOf(buf.readUnsignedShort());
         return new DnsQuestion(name, type, qClass);
     }
 
@@ -140,8 +140,8 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
      */
     private static DnsResource decodeResource(ByteBuf buf) {
         String name = readName(buf);
-        DnsType type = DnsType.find(buf.readUnsignedShort());
-        DnsClass aClass = DnsClass.find(buf.readUnsignedShort());
+        DnsType type = DnsType.valueOf(buf.readUnsignedShort());
+        DnsClass aClass = DnsClass.valueOf(buf.readUnsignedShort());
         long ttl = buf.readUnsignedInt();
         int len = buf.readUnsignedShort();
 

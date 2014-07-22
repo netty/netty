@@ -27,8 +27,8 @@ public class DnsTypeTest {
 
     private List<DnsType> allTypes() throws Exception {
         List<DnsType> result = new ArrayList<DnsType>();
-        for (Field field : DnsType.class.getDeclaredFields()) {
-            if ((field.getModifiers() & Modifier.STATIC) != 0) {
+        for (Field field : DnsType.class.getFields()) {
+            if ((field.getModifiers() & Modifier.STATIC) != 0 && DnsType.class == field.getType()) {
                 result.add((DnsType) field.get(null));
             }
         }
@@ -72,7 +72,7 @@ public class DnsTypeTest {
     @Test
     public void testFind() throws Exception {
         for (DnsType t : allTypes()) {
-            DnsType found = DnsType.find(t.type());
+            DnsType found = DnsType.valueOf(t.type());
             assertSame(t, found);
             found = DnsType.forName(t.toString());
             assertSame(t.toString(), t, found);

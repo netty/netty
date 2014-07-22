@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.dns;
 
+import java.util.Arrays;
+
 /**
  * Represents a class field in DNS protocol
  */
@@ -45,38 +47,31 @@ public class DnsClass {
     }
 
     /**
-     * The name of this class as used in bind config files
-     *
-     * @return
+     * Returns the name of this class as used in bind config files
      */
     public final String name() {
         return name;
     }
 
     /**
-     * Get the protocol value represented by this class
-     *
-     * @return The value
+     * Returns the protocol value represented by this class
      */
     public final int clazz() {
         return clazz;
     }
 
     /**
-     * Create an instance of DnsClass for a custom type.
+     * Returns an instance of DnsClass for a custom type.
      *
      * @param clazz The class
      * @param name The name
-     * @return A DnsClass
      */
     public static DnsClass create(int clazz, String name) {
         return new DnsClass(clazz, name);
     }
 
     /**
-     * Determine if this class is valid with respect to DNS protocol
-     *
-     * @return true if this is a legal value
+     * Returns true if this class is valid with respect to DNS protocol
      */
     public boolean isValid() {
         if (clazz < 1 || clazz > 4 && clazz != NONE.clazz && clazz != ANY.clazz) {
@@ -99,10 +94,11 @@ public class DnsClass {
         } else if (HESIOD.name().equals(name)) {
             return HESIOD;
         }
-        return null;
+        throw new IllegalArgumentException("name: " + name + " (expected: "
+                + "IN, ANY, CSNET, CHAOS, HESIOD)");
     }
 
-    public static DnsClass find(int clazz) {
+    public static DnsClass valueOf(int clazz) {
         switch (clazz) {
             case 0x0001:
                 return IN;
@@ -117,7 +113,9 @@ public class DnsClass {
             case 0x00ff:
                 return ANY;
             default:
-                return null;
+                throw new IllegalArgumentException("clazz: " + clazz + " (expected: "
+                    + Arrays.asList(new Integer[] {IN.clazz, CSNET.clazz,
+                    CHAOS.clazz, HESIOD.clazz, NONE.clazz, ANY.clazz}) + ")");
         }
     }
 
