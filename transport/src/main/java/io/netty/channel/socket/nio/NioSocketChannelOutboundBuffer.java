@@ -89,7 +89,7 @@ public final class NioSocketChannelOutboundBuffer extends ChannelOutboundBuffer 
         long nioBufferSize = 0;
         int nioBufferCount = 0;
         final Entry[] buffer = entries();
-        final int mask = buffer.length - 1;
+        final int mask = entryMask();
         ByteBuffer[] nioBuffers = this.nioBuffers;
         Object m;
         int unflushed = unflushed();

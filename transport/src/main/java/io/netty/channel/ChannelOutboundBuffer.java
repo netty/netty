@@ -531,6 +531,10 @@ public class ChannelOutboundBuffer {
         return unflushed;
     }
 
+    protected final int entryMask() {
+        return buffer.length - 1;
+    }
+
     protected ByteBuf copyToDirectByteBuf(ByteBuf buf) {
         int readableBytes = buf.readableBytes();
         ByteBufAllocator alloc = channel.alloc();
