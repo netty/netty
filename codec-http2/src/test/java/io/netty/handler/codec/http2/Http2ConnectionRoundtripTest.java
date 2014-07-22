@@ -60,7 +60,7 @@ public class Http2ConnectionRoundtripTest {
     private Channel serverChannel;
     private Channel clientChannel;
     private static final int NUM_STREAMS = 1000;
-    private final CountDownLatch requestLatch = new CountDownLatch(NUM_STREAMS * 2);
+    private final CountDownLatch requestLatch = new CountDownLatch(NUM_STREAMS * 3);
 
     @Before
     public void setup() throws Exception {
@@ -111,12 +111,14 @@ public class Http2ConnectionRoundtripTest {
                 new DefaultHttp2Headers.Builder().method("GET").scheme("https")
                         .authority("example.org").path("/some/path/resource2").build();
         final String text = "hello world";
+        final String pingMsg = "12345678";
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
             public void run() {
                 for (int i = 0, nextStream = 3; i < NUM_STREAMS; ++i, nextStream += 2) {
                     http2Client.writeHeaders(
                             ctx(), newPromise(), nextStream, headers, 0, (short) 16, false, 0, false, false);
+                    http2Client.writePing(ctx(), newPromise(), Unpooled.copiedBuffer(pingMsg.getBytes()));
                     http2Client.writeData(
                             ctx(), newPromise(), nextStream,
                             Unpooled.copiedBuffer(text.getBytes()), 0, true, true, false);
@@ -128,6 +130,8 @@ public class Http2ConnectionRoundtripTest {
         verify(serverObserver, times(NUM_STREAMS)).onHeadersRead(any(ChannelHandlerContext.class),
                 anyInt(), eq(headers), eq(0), eq((short) 16), eq(false), eq(0), eq(false),
                 eq(false));
+        verify(serverObserver, times(NUM_STREAMS)).onPingRead(any(ChannelHandlerContext.class),
+                eq(Unpooled.copiedBuffer(pingMsg.getBytes())));
         verify(serverObserver, times(NUM_STREAMS)).onDataRead(any(ChannelHandlerContext.class),
                 anyInt(), eq(Unpooled.copiedBuffer(text.getBytes())), eq(0), eq(true), eq(true));
     }
