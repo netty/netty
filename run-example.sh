@@ -18,6 +18,7 @@ EXAMPLE_MAP=(
   'websocket-server:io.netty.example.http.websocketx.server.WebSocketServer'
   'http2-client:io.netty.example.http2.client.Http2Client'
   'http2-server:io.netty.example.http2.server.Http2Server'
+  'http2-client-httpobject:io.netty.example.http2.client.httpobject.Http2ClientMain'
   'spdy-client:io.netty.example.spdy.client.SpdyClient'
   'spdy-server:io.netty.example.spdy.server.SpdyServer'
   'worldclock-client:io.netty.example.worldclock.WorldClockClient'
