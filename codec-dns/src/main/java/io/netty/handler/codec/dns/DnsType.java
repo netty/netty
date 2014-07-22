@@ -15,8 +15,10 @@
  */
 package io.netty.handler.codec.dns;
 
+import io.netty.util.collection.IntObjectHashMap;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Represents a DNS record type.
@@ -302,8 +304,8 @@ public class DnsType {
     private static final Map<String, DnsType> BY_NAME
             = new HashMap<String, DnsType>();
 
-    private static final Map<Integer, DnsType> BY_TYPE
-            = new HashMap<Integer, DnsType>();
+    private static final IntObjectHashMap<DnsType> BY_TYPE
+            = new IntObjectHashMap<DnsType>();
 
     static {
         DnsType[] all = {A, NS, CNAME, SOA, PTR, MX,
@@ -371,9 +373,21 @@ public class DnsType {
         DnsType result = BY_TYPE.get(type);
         if (result == null) {
             throw new IllegalArgumentException("type: " + type
-                    + "(expected: " + BY_TYPE.keySet() + ")");
+                    + "(expected: " + keysString() + ")");
         }
         return result;
+    }
+
+    private static CharSequence keysString() {
+        // Replace with Objects.toString(BY_TYPE.keys()) when JDK 7 supported
+        StringBuilder sb = new StringBuilder();
+        for (int key : BY_TYPE.keys()) {
+            if (sb.length() > 0) {
+                sb.append(", ");
+            }
+            sb.append(key);
+        }
+        return sb;
     }
 
     public static DnsType forName(String name) {
