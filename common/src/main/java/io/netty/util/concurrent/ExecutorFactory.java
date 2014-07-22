@@ -14,33 +14,14 @@
  * under the License.
  */
 
-package io.netty.channel;
+package io.netty.util.concurrent;
 
-import io.netty.util.concurrent.AbstractEventExecutor;
+import java.util.concurrent.Executor;
 
 /**
- * Skeletal implementation of {@link EventLoop}.
+ * An object that creates new {@link Executor}s on demand. Using executor factories mainly
+ * simplifies providing custom executor implementations to Netty's event loops.
  */
-public abstract class AbstractEventLoop extends AbstractEventExecutor implements EventLoop {
-
-    protected AbstractEventLoop() { }
-
-    protected AbstractEventLoop(EventLoopGroup parent) {
-        super(parent);
-    }
-
-    @Override
-    public EventLoopGroup parent() {
-        return (EventLoopGroup) super.parent();
-    }
-
-    @Override
-    public EventLoop next() {
-        return (EventLoop) super.next();
-    }
-
-    @Override
-    public EventLoop unwrap() {
-        return this;
-    }
+public interface ExecutorFactory {
+    Executor newExecutor(int parallelism);
 }

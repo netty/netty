@@ -28,11 +28,11 @@ import io.netty.test.udt.util.CustomReporter;
 import io.netty.test.udt.util.EchoMessageHandler;
 import io.netty.test.udt.util.TrafficControl;
 import io.netty.test.udt.util.UnitHelp;
+import io.netty.util.concurrent.DefaultExecutorFactory;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.InetSocketAddress;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -92,10 +92,10 @@ public final class UdtNetty {
         final ChannelHandler handler1 = new EchoMessageHandler(rate, size);
         final ChannelHandler handler2 = new EchoMessageHandler(null, size);
 
-        final NioEventLoopGroup group1 = new NioEventLoopGroup(
-                1, Executors.defaultThreadFactory(), NioUdtProvider.MESSAGE_PROVIDER);
-        final NioEventLoopGroup group2 = new NioEventLoopGroup(
-                1, Executors.defaultThreadFactory(), NioUdtProvider.MESSAGE_PROVIDER);
+        final NioEventLoopGroup group1 =
+                new NioEventLoopGroup(1, new DefaultExecutorFactory("group1"), NioUdtProvider.MESSAGE_PROVIDER);
+        final NioEventLoopGroup group2 =
+                new NioEventLoopGroup(1, new DefaultExecutorFactory("group2"), NioUdtProvider.MESSAGE_PROVIDER);
 
         final Bootstrap peerBoot1 = new Bootstrap();
         peerBoot1.group(group1)

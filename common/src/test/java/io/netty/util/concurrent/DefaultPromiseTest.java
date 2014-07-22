@@ -20,7 +20,6 @@ import org.junit.Test;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -178,21 +177,21 @@ public class DefaultPromiseTest {
 
     private static final class TestEventExecutor extends SingleThreadEventExecutor {
         TestEventExecutor() {
-            super(null, Executors.defaultThreadFactory(), true);
+            super(null, new DefaultExecutorFactory(TestEventExecutor.class).newExecutor(1), true);
         }
 
         @Override
         protected void run() {
-            for (;;) {
-                Runnable task = takeTask();
-                if (task != null) {
-                    task.run();
-                    updateLastExecutionTime();
-                }
+            Runnable task = takeTask();
+            if (task != null) {
+                task.run();
+                updateLastExecutionTime();
+            }
 
-                if (confirmShutdown()) {
-                    break;
-                }
+            if (confirmShutdown()) {
+                cleanupAndTerminate(true);
+            } else {
+                executeRun();
             }
         }
     }

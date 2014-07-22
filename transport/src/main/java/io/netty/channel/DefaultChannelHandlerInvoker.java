@@ -291,16 +291,7 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
             return;
         }
 
-        if (executor.inEventLoop()) {
-            invokeDeregisterNow(ctx, promise);
-        } else {
-            safeExecuteOutbound(new OneTimeTask() {
-                @Override
-                public void run() {
-                    invokeDeregisterNow(ctx, promise);
-                }
-            }, promise);
-        }
+        invokeDeregisterNow(ctx, promise);
     }
 
     @Override

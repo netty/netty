@@ -19,6 +19,8 @@ import io.netty.channel.Channel.Unsafe;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorGroup;
+import io.netty.util.concurrent.PausableEventExecutor;
+import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -1188,8 +1190,20 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-            unsafe.deregister(promise);
+        public void deregister(ChannelHandlerContext ctx, final ChannelPromise promise) throws Exception {
+            try {
+                ctx.channel().eventLoop().execute(new OneTimeTask() {
+                    @Override
+                    public void run() {
+                        unsafe.deregister(promise);
+                    }
+                });
+            } catch (Throwable cause) {
+                promise.setFailure(cause);
+            } finally {
+                PausableEventExecutor pausableExecutor = (PausableEventExecutor) ctx.channel().eventLoop();
+                pausableExecutor.rejectNewTasks();
+            }
         }
 
         @Override

@@ -55,6 +55,25 @@ public interface EventExecutor extends EventExecutorGroup {
     boolean inEventLoop(Thread thread);
 
     /**
+     * Returns an {@link EventExecutor} that is not a {@link WrappedEventExecutor}.
+     *
+     * <ul>
+     *     <li>
+     *         A {@link WrappedEventExecutor} implementing this method must return the underlying
+     *         {@link EventExecutor} while making sure that it's not a {@link WrappedEventExecutor}
+     *         (e.g. by multiple calls to {@link #unwrap()}).
+     *     </li>
+     *     <li>
+     *         An {@link EventExecutor} that is not a {@link WrappedEventExecutor} must return a reference to itself.
+     *     </li>
+     *     <li>
+     *         This method must not return null.
+     *     </li>
+     * </ul>
+     */
+    EventExecutor unwrap();
+
+    /**
      * Return a new {@link Promise}.
      */
     <V> Promise<V> newPromise();

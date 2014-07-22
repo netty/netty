@@ -14,33 +14,14 @@
  * under the License.
  */
 
-package io.netty.channel;
-
-import io.netty.util.concurrent.AbstractEventExecutor;
+package io.netty.util.concurrent;
 
 /**
- * Skeletal implementation of {@link EventLoop}.
+ * A marker interface indicating that the {@link EventExecutor} is a wrapper around
+ * another {@link EventExecutor} implementation.
+ *
+ * See {@link EventExecutor#unwrap()} and {@link PausableEventExecutor} for further details.
  */
-public abstract class AbstractEventLoop extends AbstractEventExecutor implements EventLoop {
+public interface WrappedEventExecutor extends EventExecutor {
 
-    protected AbstractEventLoop() { }
-
-    protected AbstractEventLoop(EventLoopGroup parent) {
-        super(parent);
-    }
-
-    @Override
-    public EventLoopGroup parent() {
-        return (EventLoopGroup) super.parent();
-    }
-
-    @Override
-    public EventLoop next() {
-        return (EventLoop) super.next();
-    }
-
-    @Override
-    public EventLoop unwrap() {
-        return this;
-    }
 }

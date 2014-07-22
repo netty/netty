@@ -93,7 +93,7 @@ abstract class AbstractEpollChannel extends AbstractChannel {
 
     @Override
     protected void doDeregister() throws Exception {
-        ((EpollEventLoop) eventLoop()).remove(this);
+        ((EpollEventLoop) eventLoop().unwrap()).remove(this);
     }
 
     @Override
@@ -146,14 +146,13 @@ abstract class AbstractEpollChannel extends AbstractChannel {
 
     private void modifyEvents() {
         if (isOpen()) {
-            ((EpollEventLoop) eventLoop()).modify(this);
+            ((EpollEventLoop) eventLoop().unwrap()).modify(this);
         }
     }
 
     @Override
     protected void doRegister() throws Exception {
-        EpollEventLoop loop = (EpollEventLoop) eventLoop();
-        loop.add(this);
+        ((EpollEventLoop) eventLoop().unwrap()).add(this);
     }
 
     @Override

@@ -25,7 +25,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.DefaultPromise;
-import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Promise;
 import org.junit.Test;
@@ -37,8 +36,7 @@ import static org.junit.Assert.*;
 
 public class SocketBufReleaseTest extends AbstractSocketTest {
 
-    private static final EventExecutor executor =
-            new DefaultEventExecutorGroup(1, new DefaultThreadFactory(SocketBufReleaseTest.class, true)).next();
+    private static final EventExecutor executor = new DefaultEventExecutorGroup(1).next();
 
     @Test
     public void testBufRelease() throws Throwable {

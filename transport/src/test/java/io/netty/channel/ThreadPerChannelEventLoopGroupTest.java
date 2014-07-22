@@ -19,8 +19,8 @@ package io.netty.channel;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
+import io.netty.util.concurrent.DefaultExecutorFactory;
 import io.netty.util.concurrent.DefaultPromise;
-import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.Promise;
@@ -90,24 +90,23 @@ public class ThreadPerChannelEventLoopGroupTest {
         assertTrue(loopGroup.isTerminated());
     }
 
-    private static class TestEventExecutor extends SingleThreadEventExecutor {
-
+    private static final class TestEventExecutor extends SingleThreadEventExecutor {
         TestEventExecutor() {
-            super(null, new DefaultThreadFactory("test"), false);
+            super(null, new DefaultExecutorFactory(TestEventExecutor.class).newExecutor(1), false);
         }
 
         @Override
         protected void run() {
-            for (;;) {
-                Runnable task = takeTask();
-                if (task != null) {
-                    task.run();
-                    updateLastExecutionTime();
-                }
+            Runnable task = takeTask();
+            if (task != null) {
+                task.run();
+                updateLastExecutionTime();
+            }
 
-                if (confirmShutdown()) {
-                    break;
-                }
+            if (confirmShutdown()) {
+                cleanupAndTerminate(true);
+            } else {
+                executeRun();
             }
         }
     }

@@ -15,8 +15,12 @@
 */
 package io.netty.channel;
 
+import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.PausableEventExecutor;
+
 final class DefaultChannelHandlerContext extends AbstractChannelHandlerContext {
     private final ChannelHandler handler;
+    private volatile PausableChannelEventExecutor wrapped;
 
     DefaultChannelHandlerContext(
             DefaultChannelPipeline pipeline, ChannelHandlerInvoker invoker, String name, ChannelHandler handler) {
@@ -34,5 +38,75 @@ final class DefaultChannelHandlerContext extends AbstractChannelHandlerContext {
     @Override
     public ChannelHandler handler() {
         return handler;
+    }
+
+    @Override
+    public EventExecutor executor() {
+        // If the ChannelHandler does not have its own
+        // invoker/eventloop we can reuse the wrapped
+        // eventloop of the channel.
+        if (invoker == null) {
+            return channel().eventLoop();
+        } else {
+            // No need for thread safety, because a ChannelHandlerContext is
+            // local to a specific Channel and ChannelHandler.
+            PausableChannelEventExecutor eventExecutor = this.wrapped;
+            if (eventExecutor == null) {
+                wrapped = eventExecutor = new PausableChannelEventExecutorImpl();
+            }
+            return eventExecutor;
+        }
+    }
+
+    @Override
+    public ChannelHandlerInvoker invoker() {
+        if (invoker == null) {
+            return channel().eventLoop().asInvoker();
+        } else {
+            // No need for thread safety, because a ChannelHandlerContext is
+            // local to a specific Channel and ChannelHandler.
+            PausableChannelEventExecutor eventExecutor = this.wrapped;
+            if (eventExecutor == null) {
+                wrapped = eventExecutor = new PausableChannelEventExecutorImpl();
+            }
+            return eventExecutor;
+        }
+    }
+
+    private final class PausableChannelEventExecutorImpl extends PausableChannelEventExecutor {
+
+        @Override
+        public EventExecutor unwrap() {
+            if (unwrapInvoker() == null) {
+                return channel().unsafe().invoker().executor();
+            }
+            return unwrapInvoker().executor();
+        }
+
+        @Override
+        public void rejectNewTasks() {
+            ((PausableEventExecutor) channel().eventLoop()).rejectNewTasks();
+        }
+
+        @Override
+        public void acceptNewTasks() {
+            ((PausableEventExecutor) channel().eventLoop()).acceptNewTasks();
+        }
+
+        @Override
+        public boolean isRejecting() {
+            return ((PausableEventExecutor) channel().eventLoop()).isRejecting();
+        }
+
+        @Override
+        Channel channel() {
+            return DefaultChannelHandlerContext.super.channel();
+        }
+
+        @Override
+        ChannelHandlerInvoker unwrapInvoker() {
+            // return the unwrapped invoker
+            return DefaultChannelHandlerContext.this.invoker;
+        }
     }
 }
