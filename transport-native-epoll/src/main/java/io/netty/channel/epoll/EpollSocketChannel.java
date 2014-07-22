@@ -29,7 +29,6 @@ import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
-import io.netty.channel.epoll.EpollChannelOutboundBuffer.AddressEntry;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
@@ -114,7 +113,28 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
         }
         boolean done = false;
         long writtenBytes = 0;
-        if (buf.nioBufferCount() == 1) {
+        if (buf.hasMemoryAddress()) {
+            long memoryAddress = buf.memoryAddress();
+            int readerIndex = buf.readerIndex();
+            for (;;) {
+                int localFlushedAmount = Native.writeAddress(fd, memoryAddress, readerIndex, readableBytes);
+                if (localFlushedAmount > 0) {
+                    writtenBytes += localFlushedAmount;
+                    if (writtenBytes == readableBytes) {
+                        done = true;
+                        break;
+                    }
+                    readerIndex += localFlushedAmount;
+                    readableBytes -= localFlushedAmount;
+                } else {
+                    // Returned EAGAIN need to set EPOLLOUT
+                    setEpollOut();
+                    break;
+                }
+            }
+            updateOutboundBuffer(in, writtenBytes, 1, done);
+            return done;
+        } else if (buf.nioBufferCount() == 1) {
             int readerIndex = buf.readerIndex();
             ByteBuffer nioBuf = buf.internalNioBuffer(readerIndex, buf.readableBytes());
             for (;;) {
@@ -143,49 +163,44 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
     }
 
     private boolean writeBytesMultiple(
-            EpollChannelOutboundBuffer in, int msgCount, AddressEntry[] addresses,
-            int addressCnt, long expectedWrittenBytes) throws IOException {
+            EpollChannelOutboundBuffer in, IovArray array) throws IOException {
         boolean done = false;
+        long expectedWrittenBytes = array.size();
+        int cnt = array.count();
         long writtenBytes = 0;
         int offset = 0;
-        int end = offset + addressCnt;
-        loop: while (addressCnt > 0) {
-            for (;;) {
-                int cnt = addressCnt > Native.IOV_MAX? Native.IOV_MAX : addressCnt;
-
-                long localWrittenBytes = Native.writevAddresses(fd, addresses, offset, cnt);
-                if (localWrittenBytes == 0) {
-                    // Returned EAGAIN need to set EPOLLOUT
-                    setEpollOut();
-                    break loop;
-                }
-                expectedWrittenBytes -= localWrittenBytes;
-                writtenBytes += localWrittenBytes;
-
-                if (expectedWrittenBytes == 0) {
-                    // Written everything, just break out here (fast-path)
-                    done = true;
-                    break loop;
-                }
-
-                do {
-                    AddressEntry address = addresses[offset];
-                    int readerIndex = address.readerIndex;
-                    int bytes = address.writerIndex - readerIndex;
-                    if (bytes > localWrittenBytes) {
-                        address.readerIndex += (int) localWrittenBytes;
-                        // incomplete write
-                        break;
-                    } else {
-                        offset++;
-                        addressCnt--;
-                        localWrittenBytes -= bytes;
-                    }
-                } while (offset < end && localWrittenBytes > 0);
+        int end = offset + cnt;
+        int messages = cnt;
+        for (;;) {
+            long localWrittenBytes = Native.writevAddresses(fd, array.memoryAddress(offset), cnt);
+            if (localWrittenBytes == 0) {
+                // Returned EAGAIN need to set EPOLLOUT
+                setEpollOut();
+                break;
             }
+            expectedWrittenBytes -= localWrittenBytes;
+            writtenBytes += localWrittenBytes;
+
+            if (expectedWrittenBytes == 0) {
+                // Written everything, just break out here (fast-path)
+                done = true;
+                break;
+            }
+
+            do {
+                long bytes = array.processWritten(offset, localWrittenBytes);
+                if (bytes == -1) {
+                    // incomplete write
+                    break;
+                } else {
+                    offset++;
+                    cnt--;
+                    localWrittenBytes -= bytes;
+                }
+            } while (offset < end && localWrittenBytes > 0);
         }
 
-        updateOutboundBuffer(in, writtenBytes, msgCount, done);
+        updateOutboundBuffer(in, writtenBytes, messages, done);
         return done;
     }
 
@@ -315,15 +330,14 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
             // Do gathering write if:
             // * the outbound buffer contains more than one messages and
             // * they are all buffers rather than a file region.
-            if (msgCount > 1) {
+            if (msgCount >= 1) {
                 if (PlatformDependent.hasUnsafe()) {
-                    // this means we can cast to EpollChannelOutboundBuffer and write the AdressEntry directly.
+                    // this means we can cast to EpollChannelOutboundBuffer and write the IovArray directly.
                     EpollChannelOutboundBuffer epollIn = (EpollChannelOutboundBuffer) in;
-                    // Ensure the pending writes are made of memoryaddresses only.
-                    AddressEntry[] addresses = epollIn.memoryAddresses();
-                    int addressesCnt = epollIn.addressCount();
-                    if (addressesCnt > 1) {
-                        if (!writeBytesMultiple(epollIn, msgCount, addresses, addressesCnt, epollIn.addressSize())) {
+                    IovArray array = epollIn.iovArray();
+                    int cnt = array.count();
+                    if (cnt > 1) {
+                        if (!writeBytesMultiple(epollIn, array)) {
                             // was not able to write everything so break here we will get notified later again once
                             // the network stack can handle more writes.
                             break;
