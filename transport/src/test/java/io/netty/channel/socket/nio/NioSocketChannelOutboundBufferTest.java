@@ -36,7 +36,7 @@ public class NioSocketChannelOutboundBufferTest {
         NioSocketChannelOutboundBuffer buffer = NioSocketChannelOutboundBuffer.newInstance(channel);
         assertEquals(0, buffer.nioBufferCount());
         ByteBuffer[] buffers = buffer.nioBuffers();
-        assertEquals(32, buffers.length);
+        assertNotNull(buffers);
         for (ByteBuffer b: buffers) {
             assertNull(b);
         }
@@ -50,7 +50,7 @@ public class NioSocketChannelOutboundBufferTest {
         NioSocketChannelOutboundBuffer buffer = NioSocketChannelOutboundBuffer.newInstance(channel);
         assertEquals(0, buffer.nioBufferCount());
         ByteBuffer[] buffers = buffer.nioBuffers();
-        assertEquals(32, buffers.length);
+        assertNotNull(buffers);
         for (ByteBuffer b: buffers) {
             assertNull(b);
         }
@@ -66,7 +66,7 @@ public class NioSocketChannelOutboundBufferTest {
         }
         buffer.addFlush();
         buffers = buffer.nioBuffers();
-        assertEquals(32, buffers.length);
+        assertNotNull(buffers);
         assertEquals("Should still be 0 as not flushed yet", 1, buffer.nioBufferCount());
         for (int i = 0;  i < buffers.length; i++) {
             if (i == 0) {
