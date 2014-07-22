@@ -32,11 +32,11 @@ public class DnsQueryTest {
         InetSocketAddress addr = new InetSocketAddress(0);
         EmbeddedChannel embedder = new EmbeddedChannel(new DnsQueryEncoder());
         List<DnsQuery> queries = new ArrayList<DnsQuery>(5);
-        queries.add(new DnsQuery(1, addr).addQuestion(new DnsQuestion("1.0.0.127.in-addr.arpa", DnsEntry.TYPE_PTR)));
-        queries.add(new DnsQuery(1, addr).addQuestion(new DnsQuestion("www.example.com", DnsEntry.TYPE_A)));
-        queries.add(new DnsQuery(1, addr).addQuestion(new DnsQuestion("example.com", DnsEntry.TYPE_AAAA)));
-        queries.add(new DnsQuery(1, addr).addQuestion(new DnsQuestion("example.com", DnsEntry.TYPE_MX)));
-        queries.add(new DnsQuery(1, addr).addQuestion(new DnsQuestion("example.com", DnsEntry.TYPE_CNAME)));
+        queries.add(new DnsQuery(1, addr).addQuestion(new DnsQuestion("1.0.0.127.in-addr.arpa", DnsType.PTR)));
+        queries.add(new DnsQuery(1, addr).addQuestion(new DnsQuestion("www.example.com", DnsType.A)));
+        queries.add(new DnsQuery(1, addr).addQuestion(new DnsQuestion("example.com", DnsType.AAAA)));
+        queries.add(new DnsQuery(1, addr).addQuestion(new DnsQuestion("example.com", DnsType.MX)));
+        queries.add(new DnsQuery(1, addr).addQuestion(new DnsQuestion("example.com", DnsType.CNAME)));
 
         for (DnsQuery query: queries) {
             Assert.assertEquals("Invalid question count, expected 1.", 1, query.header().questionCount());
