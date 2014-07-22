@@ -85,7 +85,7 @@ public class DnsQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
             buf.writeBytes(part.getBytes(charset));
         }
         buf.writeByte(0); // marks end of name field
-        buf.writeShort(question.type());
-        buf.writeShort(question.dnsClass());
+        buf.writeShort(question.type().type);
+        buf.writeShort(question.dnsClass().clazz);
     }
 }
