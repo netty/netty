@@ -52,45 +52,52 @@ import static io.netty.util.internal.logging.InternalLogLevel.*;
  */
 public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
 
-  private static final Http2FrameLogger           logger = new Http2FrameLogger(INFO,
-                                                             InternalLoggerFactory
-                                                                 .getInstance(Http2ClientInitializer.class));
+    private static final Http2FrameLogger logger = new Http2FrameLogger(INFO,
+                                                                        InternalLoggerFactory
+                                                                            .getInstance(Http2ClientInitializer.class));
 
-  private final SslContext                        sslCtx;
-  private final int                               maxContentLength;
-  private final Http2EventListener<Http2Settings> listener;
+    private final SslContext sslCtx;
+    private final int maxContentLength;
+    private final Http2EventListener<Http2Settings> listener;
+    private HttpResponseHandler myHandler;
 
-  public Http2ClientInitializer(SslContext sslCtx, int maxContentLength, Http2EventListener<Http2Settings> listener) {
-    this.sslCtx = sslCtx;
-    this.maxContentLength = maxContentLength;
-    this.listener = listener;
-  }
-
-  @Override
-  protected void initChannel(SocketChannel ch) throws Exception {
-    ChannelPipeline pipeline = ch.pipeline();
-    if (sslCtx != null) {
-      pipeline.addLast(sslCtx.newHandler(ch.alloc()));
+    public Http2ClientInitializer(SslContext sslCtx, int maxContentLength, Http2EventListener<Http2Settings> listener) {
+        this.sslCtx = sslCtx;
+        this.maxContentLength = maxContentLength;
+        this.listener = listener;
+        this.myHandler = null;
     }
-    Http2HttpDecoderSettingsNotifier http2Decoder = new Http2HttpDecoderSettingsNotifier(maxContentLength);
-    Http2Connection connection = new DefaultHttp2Connection(false);
-    DelegatingHttp2ConnectionHandler connectionHandler = new DelegatingHttp2HttpConnectionHandler(
-        connection, frameReader(), frameWriter(), new DefaultHttp2InboundFlowController(
-            connection), new DefaultHttp2OutboundFlowController(connection), http2Decoder);
-    if (listener != null) {
-      http2Decoder.addListener(listener);
+
+    @Override
+    protected void initChannel(SocketChannel ch) throws Exception {
+        ChannelPipeline pipeline = ch.pipeline();
+        if (sslCtx != null) {
+            pipeline.addLast(sslCtx.newHandler(ch.alloc()));
+        }
+        Http2HttpDecoderSettingsNotifier http2Decoder = new Http2HttpDecoderSettingsNotifier(maxContentLength);
+        Http2Connection connection = new DefaultHttp2Connection(false);
+        DelegatingHttp2ConnectionHandler connectionHandler = new DelegatingHttp2HttpConnectionHandler(connection,
+                        frameReader(), frameWriter(), new DefaultHttp2InboundFlowController(connection),
+                        new DefaultHttp2OutboundFlowController(connection), http2Decoder);
+        if (listener != null) {
+            http2Decoder.addListener(listener);
+        }
+        pipeline.addLast("http2", connectionHandler);
+        pipeline.addLast("inflater", new HttpContentDecompressor());
+        pipeline.addLast("aggregator", new HttpObjectAggregator(maxContentLength));
+        myHandler = new HttpResponseHandler();
+        pipeline.addLast("myhandler", myHandler);
     }
-    pipeline.addLast("http2", connectionHandler);
-    pipeline.addLast("inflater", new HttpContentDecompressor());
-    pipeline.addLast("aggregator", new HttpObjectAggregator(maxContentLength));
-    pipeline.addLast("myhandler", new Http2ResponseHandler());
-  }
 
-  private static Http2FrameReader frameReader() {
-    return new Http2InboundFrameLogger(new DefaultHttp2FrameReader(), logger);
-  }
+    public HttpResponseHandler responseHandler() {
+        return myHandler;
+    }
 
-  private static Http2FrameWriter frameWriter() {
-    return new Http2OutboundFrameLogger(new DefaultHttp2FrameWriter(), logger);
-  }
+    private static Http2FrameReader frameReader() {
+        return new Http2InboundFrameLogger(new DefaultHttp2FrameReader(), logger);
+    }
+
+    private static Http2FrameWriter frameWriter() {
+        return new Http2OutboundFrameLogger(new DefaultHttp2FrameWriter(), logger);
+    }
 }

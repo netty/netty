@@ -17,22 +17,26 @@ package io.netty.handler.codec.http2;
 
 /**
  * Provide asynchronous callback and failure notification interface
- * @param <T> The type to pass to the callback
+ *
+ * @param <T>
+ *            The type to pass to the callback
  */
 public interface Http2EventListener<T> {
-  /**
-   * Callback will be invoked when the operation has completed
-   *
-   * @param obj The result of the operation
-   */
-  void done(T obj);
+    /**
+     * Callback will be invoked when the operation has completed
+     *
+     * @param obj
+     *            The result of the operation
+     */
+    void done(T obj);
 
-  /**
-   * An exception has occurred during processing and the {@code done} method will not
-   * be invoked
-   *
-   * @param obj Description of the problem
-   * @param expectedType The expected type if {@code done} were to be called
-   */
-  void fail(Throwable obj, Class<T> expectedType);
+    /**
+     * An exception has occurred during processing and the {@code done} method will not be invoked
+     *
+     * @param obj
+     *            Description of the problem
+     * @param expectedType
+     *            The expected type if {@code done} were to be called
+     */
+    void fail(Throwable obj, Class<T> expectedType);
 }

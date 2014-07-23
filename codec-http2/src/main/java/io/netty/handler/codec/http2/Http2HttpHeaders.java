@@ -21,36 +21,37 @@ import io.netty.handler.codec.AsciiString;
  */
 public final class Http2HttpHeaders {
 
-  public static final class Names {
-    /**
-     * {@code "X-HTTP2-Stream-ID"}
-     */
-    public static final AsciiString STREAM_ID = new AsciiString("X-HTTP2-Stream-ID");
-    /**
-     * {@code "X-HTTP2-Authority"}
-     */
-    public static final AsciiString AUTHORITY = new AsciiString("X-HTTP2-Authority");
-    /**
-     * {@code "X-HTTP2-Scheme"}
-     */
-    public static final AsciiString SCHEME = new AsciiString("X-HTTP2-Scheme");
-    /**
-     * {@code "X-HTTP2-Stream-Promise-ID"}
-     */
-    public static final AsciiString STREAM_PROMISE_ID = new AsciiString("X-HTTP2-Stream-Promise-ID");
-    /**
-     * {@code "X-HTTP2-Stream-Dependency-ID"}
-     */
-    public static final AsciiString STREAM_DEPENDENCY_ID = new AsciiString("X-HTTP2-Stream-Dependency-ID");
-    /**
-     * {@code "X-HTTP2-Stream-Weight"}
-     */
-    public static final AsciiString STREAM_WEIGHT = new AsciiString("X-HTTP2-Stream-Weight");
-    /**
-     * {@code "X-HTTP2-Stream-Exclusive"}
-     */
-    public static final AsciiString STREAM_EXCLUSIVE = new AsciiString("X-HTTP2-Stream-Exclusive");
+    public static final class Names {
+        /**
+         * {@code "X-HTTP2-Stream-ID"}
+         */
+        public static final AsciiString STREAM_ID            = new AsciiString("X-HTTP2-Stream-ID");
+        /**
+         * {@code "X-HTTP2-Authority"}
+         */
+        public static final AsciiString AUTHORITY            = new AsciiString("X-HTTP2-Authority");
+        /**
+         * {@code "X-HTTP2-Scheme"}
+         */
+        public static final AsciiString SCHEME               = new AsciiString("X-HTTP2-Scheme");
+        /**
+         * {@code "X-HTTP2-Stream-Promise-ID"}
+         */
+        public static final AsciiString STREAM_PROMISE_ID    = new AsciiString("X-HTTP2-Stream-Promise-ID");
+        /**
+         * {@code "X-HTTP2-Stream-Dependency-ID"}
+         */
+        public static final AsciiString STREAM_DEPENDENCY_ID = new AsciiString("X-HTTP2-Stream-Dependency-ID");
+        /**
+         * {@code "X-HTTP2-Stream-Weight"}
+         */
+        public static final AsciiString STREAM_WEIGHT        = new AsciiString("X-HTTP2-Stream-Weight");
+        /**
+         * {@code "X-HTTP2-Stream-Exclusive"}
+         */
+        public static final AsciiString STREAM_EXCLUSIVE     = new AsciiString("X-HTTP2-Stream-Exclusive");
 
-    private Names() { }
-  }
+        private Names() {
+        }
+    }
 }

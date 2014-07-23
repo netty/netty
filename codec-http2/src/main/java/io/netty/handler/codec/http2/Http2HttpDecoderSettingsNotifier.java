@@ -24,50 +24,47 @@ import java.util.List;
  * Provides a subscriber interface to notify listeners when a SETTINGS frame is read
  */
 public class Http2HttpDecoderSettingsNotifier extends Http2HttpDecoder {
-  private List<Http2EventListener<Http2Settings>> settingsListeners;
+    private final List<Http2EventListener<Http2Settings>> settingsListeners;
 
-  public Http2HttpDecoderSettingsNotifier(long maxContentLength) {
-    super(maxContentLength);
-    init();
-  }
-
-  public Http2HttpDecoderSettingsNotifier(long maxContentLength, boolean validateHttpHeaders) {
-    super(maxContentLength, validateHttpHeaders);
-    init();
-  }
-
-  /**
-   * Common class initialization method
-   */
-  private void init() {
-    settingsListeners = new ArrayList<Http2EventListener<Http2Settings>>();
-  }
-
-  /**
-   * Subscribe to SETTINGS read event notification
-   * @param listener The object which will receive notifications
-   */
-  public void addListener(Http2EventListener<Http2Settings> listener) {
-    settingsListeners.add(listener);
-    // NOTE: We are not tracking if the settings have already been read
-    // or if an exception has been raised. If a listener subscribes after these events
-    // then they will not be notified.
-  }
-
-  /**
-   * Unsubscribe from SETTINGS read event notifications
-   * @param listener The object to unsubscribe
-   * @return <tt>true</tt> if {@code listener} was subscribed at least 1 time and was removed 1 time
-   */
-  public boolean removeListener(Http2EventListener<Http2Settings> listener) {
-    return settingsListeners.remove(listener);
-  }
-
-  @Override
-  public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings) throws Http2Exception {
-    super.onSettingsRead(ctx, settings);
-    for (Http2EventListener<Http2Settings> listener : settingsListeners) {
-      listener.done(settings);
+    public Http2HttpDecoderSettingsNotifier(long maxContentLength) {
+        super(maxContentLength);
+        settingsListeners = new ArrayList<Http2EventListener<Http2Settings>>();
     }
-  }
+
+    public Http2HttpDecoderSettingsNotifier(long maxContentLength, boolean validateHttpHeaders) {
+        super(maxContentLength, validateHttpHeaders);
+        settingsListeners = new ArrayList<Http2EventListener<Http2Settings>>();
+    }
+
+    /**
+     * Subscribe to SETTINGS read event notification
+     *
+     * @param listener
+     *            The object which will receive notifications
+     */
+    public void addListener(Http2EventListener<Http2Settings> listener) {
+        settingsListeners.add(listener);
+        // NOTE: We are not tracking if the settings have already been read
+        // or if an exception has been raised. If a listener subscribes after these events
+        // then they will not be notified.
+    }
+
+    /**
+     * Unsubscribe from SETTINGS read event notifications
+     *
+     * @param listener
+     *            The object to unsubscribe
+     * @return <tt>true</tt> if {@code listener} was subscribed at least 1 time and was removed 1 time
+     */
+    public boolean removeListener(Http2EventListener<Http2Settings> listener) {
+        return settingsListeners.remove(listener);
+    }
+
+    @Override
+    public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings) throws Http2Exception {
+        super.onSettingsRead(ctx, settings);
+        for (Http2EventListener<Http2Settings> listener : settingsListeners) {
+            listener.done(settings);
+        }
+    }
 }
