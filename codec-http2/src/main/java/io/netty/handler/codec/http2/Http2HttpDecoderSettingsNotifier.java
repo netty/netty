@@ -26,12 +26,12 @@ import java.util.List;
 public class Http2HttpDecoderSettingsNotifier extends Http2HttpDecoder {
   private List<Http2EventListener<Http2Settings>> settingsListeners;
 
-  public Http2HttpDecoderSettingsNotifier(int maxContentLength) {
+  public Http2HttpDecoderSettingsNotifier(long maxContentLength) {
     super(maxContentLength);
     init();
   }
 
-  public Http2HttpDecoderSettingsNotifier(int maxContentLength, boolean validateHttpHeaders) {
+  public Http2HttpDecoderSettingsNotifier(long maxContentLength, boolean validateHttpHeaders) {
     super(maxContentLength, validateHttpHeaders);
     init();
   }

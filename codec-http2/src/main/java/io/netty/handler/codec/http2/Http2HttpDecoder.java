@@ -44,7 +44,7 @@ import java.util.Set;
  */
 public class Http2HttpDecoder implements Http2FrameObserver {
 
-  private final int                                       maxContentLength;
+  private final long                                      maxContentLength;
   private final Map<Integer, Http2HttpMessageAccumulator> messageMap;
   private boolean                                         validateHttpHeaders;
 
@@ -69,7 +69,7 @@ public class Http2HttpDecoder implements Http2FrameObserver {
    *          the maximum length of the message content. If the length of the message content exceeds this value, a
    *          {@link TooLongFrameException} will be raised.
    */
-  public Http2HttpDecoder(int maxContentLength) {
+  public Http2HttpDecoder(long maxContentLength) {
     this(maxContentLength, true);
   }
 
@@ -82,7 +82,7 @@ public class Http2HttpDecoder implements Http2FrameObserver {
    * @param validateHeaders
    *          {@code true} if http headers should be validated
    */
-  public Http2HttpDecoder(int maxContentLength, boolean validateHttpHeaders) {
+  public Http2HttpDecoder(long maxContentLength, boolean validateHttpHeaders) {
     if (maxContentLength <= 0) {
       throw new IllegalArgumentException("maxContentLength must be a positive integer: " + maxContentLength);
     }
@@ -323,7 +323,7 @@ public class Http2HttpDecoder implements Http2FrameObserver {
   protected class Http2HttpMessageAccumulator {
     private HttpMessage       message;
     private List<HttpContent> contents;
-    private int               contentLength;
+    private long              contentLength;
 
     /**
      * Creates a new instance
@@ -380,7 +380,7 @@ public class Http2HttpDecoder implements Http2FrameObserver {
         // TODO: Please Review the `retain` call logic below
         // I am assuming this is desired (no copy but still want to use the object)
         // but its worth a second look
-        content.retain();
+        httpContent.retain();
         contentLength += content.readableBytes();
         return true;
       }

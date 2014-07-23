@@ -27,19 +27,11 @@ import java.io.IOException;
 
 public class Http2ResponseHandler extends SimpleChannelInboundHandler<FullHttpResponse> {
 
-  public Http2ResponseHandler() {
-    super(false);
-  }
-
   @Override
   protected void messageReceived(ChannelHandlerContext ctx, FullHttpResponse msg) throws Exception {
-    try {
-      System.out.println("Http2ResponseHandler.messageReceived message type: " + msg.getClass() + " Body size: "
-          + msg.content().readableBytes());
-      String streamId = msg.headers().get(Http2HttpHeaders.Names.STREAM_ID);
-      System.out.println("Http2ResponseHandler.messageReceived streamId: " + streamId);
-    } finally {
-      msg.content().release();
-    }
+    System.out.println("Http2ResponseHandler.messageReceived message type: " + msg.getClass() + " Body size: "
+        + msg.content().readableBytes());
+    String streamId = msg.headers().get(Http2HttpHeaders.Names.STREAM_ID);
+    System.out.println("Http2ResponseHandler.messageReceived streamId: " + streamId);
   }
 }
