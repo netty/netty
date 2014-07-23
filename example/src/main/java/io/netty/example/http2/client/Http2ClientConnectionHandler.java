@@ -110,7 +110,7 @@ public class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler
             int streamId = nextStreamId();
             writeHeaders(ctx, promise, streamId, headers.build(), 0, !hasData, false);
             if (hasData) {
-                writeData(ctx, ctx.newPromise(), streamId, httpMsg.content(), 0, true, true, false);
+                writeData(ctx, ctx.newPromise(), streamId, httpMsg.content(), 0, true, true);
             }
         } else {
             ctx.write(msg, promise);
