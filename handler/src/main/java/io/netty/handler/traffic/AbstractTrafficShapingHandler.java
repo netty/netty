@@ -194,6 +194,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
 
         @Override
         public void run() {
+            ctx.channel().config().setAutoRead(true);
             ctx.attr(READ_SUSPENDED).set(false);
             ctx.read();
         }
@@ -234,6 +235,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
                 // try to limit the traffic
                 if (!isSuspended(ctx)) {
                     ctx.attr(READ_SUSPENDED).set(true);
+                    ctx.channel().config().setAutoRead(false);
 
                     // Create a Runnable to reactive the read if needed. If one was create before it will just be
                     // reused to limit object creation
@@ -249,13 +251,6 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
             }
         }
         ctx.fireChannelRead(msg);
-    }
-
-    @Override
-    public void read(ChannelHandlerContext ctx) {
-        if (!isSuspended(ctx)) {
-            ctx.read();
-        }
     }
 
     private static boolean isSuspended(ChannelHandlerContext ctx) {
