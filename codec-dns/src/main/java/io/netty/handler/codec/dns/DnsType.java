@@ -22,7 +22,7 @@ import java.util.Map;
 /**
  * Represents a DNS record type.
  */
-public class DnsType {
+public final class DnsType implements Comparable<DnsType> {
 
     /**
      * Address record RFC 1035 Returns a 32-bit IPv4 address, most commonly used
@@ -300,101 +300,99 @@ public class DnsType {
      */
     public static final DnsType DLV = new DnsType(0x8001, "DLV");
 
-    private static final Map<String, DnsType> BY_NAME
-            = new HashMap<String, DnsType>();
-
-    private static final IntObjectHashMap<DnsType> BY_TYPE
-            = new IntObjectHashMap<DnsType>();
+    private static final Map<String, DnsType> BY_NAME = new HashMap<String, DnsType>();
+    private static final IntObjectHashMap<DnsType> BY_TYPE = new IntObjectHashMap<DnsType>();
+    private static final String EXPECTED;
 
     static {
-        DnsType[] all = {A, NS, CNAME, SOA, PTR, MX,
-            TXT, RP, AFSDB, SIG, KEY, AAAA, LOC,
-            SRV, NAPTR, KX, CERT, DNAME, OPT,
-            APL, DS, SSHFP, IPSECKEY, RRSIG, NSEC,
-            DNSKEY, DHCID, NSEC3, NSEC3PARAM, TLSA,
-            HIP, SPF, TKEY, TSIG, IXFR, AXFR,
-            ANY, CAA, TA, DLV};
-        for (DnsType type : all) {
+        DnsType[] all = {
+                A, NS, CNAME, SOA, PTR, MX, TXT, RP, AFSDB, SIG, KEY, AAAA, LOC, SRV, NAPTR, KX, CERT, DNAME, OPT, APL,
+                DS, SSHFP, IPSECKEY, RRSIG, NSEC, DNSKEY, DHCID, NSEC3, NSEC3PARAM, TLSA, HIP, SPF, TKEY, TSIG, IXFR,
+                AXFR, ANY, CAA, TA, DLV
+        };
+
+        StringBuilder expected = new StringBuilder(512);
+        expected.append(" (expected: ");
+
+        for (DnsType type: all) {
             BY_NAME.put(type.name(), type);
-            BY_TYPE.put(type.type(), type);
+            BY_TYPE.put(type.intValue(), type);
+            expected.append(type.name());
+            expected.append('(');
+            expected.append(type.intValue());
+            expected.append("), ");
         }
+
+        expected.setLength(expected.length() - 2);
+        expected.append(')');
+        EXPECTED = expected.toString();
     }
 
-    private final int type;
+    public static DnsType valueOf(int intValue) {
+        DnsType result = BY_TYPE.get(intValue);
+        if (result == null) {
+            return new DnsType(intValue, "UNKNOWN");
+        }
+        return result;
+    }
+
+    public static DnsType valueOf(String name) {
+        DnsType result = BY_NAME.get(name);
+        if (result == null) {
+            throw new IllegalArgumentException("name: " + name + EXPECTED);
+        }
+        return result;
+    }
+
+    /**
+     * Returns a new instance.
+     */
+    public static DnsType valueOf(int intValue, String name) {
+        return new DnsType(intValue, name);
+    }
+
+    private final int intValue;
     private final String name;
 
-    DnsType(int type, String name) {
-        if ((type & 0xffff) != type) {
-            throw new IllegalArgumentException("type: " + type
-                    + " (expected: 0 ~ 65535)");
+    private DnsType(int intValue, String name) {
+        if ((intValue & 0xffff) != intValue) {
+            throw new IllegalArgumentException("intValue: " + intValue + " (expected: 0 ~ 65535)");
         }
-        this.type = type;
+        this.intValue = intValue;
         this.name = name;
     }
 
     /**
      * Returns the name of this type, as seen in bind config files
      */
-    public final String name() {
+    public String name() {
         return name;
     }
 
     /**
      * Returns the value of this DnsType as it appears in DNS protocol
      */
-    public final int type() {
-        return type;
-    }
-
-    /**
-     * Returns a new DnsType instance
-     */
-    public static DnsType create(int type, String name) {
-        return new DnsType(type, name);
+    public int intValue() {
+        return intValue;
     }
 
     @Override
-    public final int hashCode() {
-        return type;
+    public int hashCode() {
+        return intValue;
     }
 
     @Override
-    public final boolean equals(Object o) {
-        return o instanceof DnsType && ((DnsType) o).type == type;
+    public boolean equals(Object o) {
+        return o instanceof DnsType && ((DnsType) o).intValue == intValue;
     }
 
     @Override
-    public final String toString() {
+    public int compareTo(DnsType o) {
+        return intValue() - o.intValue();
+    }
+
+    @Override
+    public String toString() {
         return name;
-    }
-
-    public static DnsType valueOf(int type) {
-        DnsType result = BY_TYPE.get(type);
-        if (result == null) {
-            throw new IllegalArgumentException("type: " + type
-                    + "(expected: " + keysString() + ")");
-        }
-        return result;
-    }
-
-    private static CharSequence keysString() {
-        // Replace with Objects.toString(BY_TYPE.keys()) when JDK 7 supported
-        StringBuilder sb = new StringBuilder();
-        for (int key : BY_TYPE.keys()) {
-            if (sb.length() > 0) {
-                sb.append(", ");
-            }
-            sb.append(key);
-        }
-        return sb;
-    }
-
-    public static DnsType forName(String name) {
-        DnsType result = BY_NAME.get(name);
-        if (result == null) {
-            throw new IllegalArgumentException("name: " + name
-                    + " (expected: " + BY_NAME.keySet() + ")");
-        }
-        return result;
     }
 }

@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.dns;
 
+import io.netty.util.internal.StringUtil;
+
 /**
  * A class representing entries in a DNS packet (questions, and all resource
  * records). Contains data shared by entries such as name, type, and class.
@@ -30,9 +32,13 @@ public class DnsEntry {
         if (name == null) {
             throw new NullPointerException("name");
         }
-        if (!dnsClass.isValid()) {
-            throw new IllegalArgumentException("an invalid class has been supplied.");
+        if (type == null) {
+            throw new NullPointerException("type");
         }
+        if (dnsClass == null) {
+            throw new NullPointerException("dnsClass");
+        }
+
         this.name = name;
         this.type = type;
         this.dnsClass = dnsClass;
@@ -66,8 +72,11 @@ public class DnsEntry {
 
     @Override
     public String toString() {
-        return new StringBuilder(32).append(getClass().getSimpleName()).append("(domain name: ").append(name)
-                .append(", type: ").append(type).append(", class: ").append(dnsClass).append(')').toString();
+        return new StringBuilder(128).append(StringUtil.simpleClassName(this))
+                                     .append("(name: ").append(name)
+                                     .append(", type: ").append(type)
+                                     .append(", class: ").append(dnsClass)
+                                     .append(')').toString();
     }
 
     @Override
@@ -75,10 +84,13 @@ public class DnsEntry {
         if (this == o) {
             return true;
         }
-        if (o instanceof DnsEntry) {
-            DnsEntry other = (DnsEntry) o;
-            return other.type() == type && other.dnsClass() == dnsClass && other.name().equals(name);
+        if (!(o instanceof DnsEntry)) {
+            return false;
         }
-        return false;
+
+        DnsEntry that = (DnsEntry) o;
+        return type().intValue() == that.type().intValue() &&
+               dnsClass().intValue() == that.dnsClass().intValue() &&
+               name().equals(that.name());
     }
 }
