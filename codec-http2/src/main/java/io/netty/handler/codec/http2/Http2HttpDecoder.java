@@ -106,7 +106,7 @@ public class Http2HttpDecoder implements Http2FrameObserver {
           : new DefaultHttpContent(data));
     } catch (TooLongFrameException e) {
       throw Http2Exception.format(Http2Error.INTERNAL_ERROR, "Content length exceeded max of %d for stream id %d",
-          streamId);
+          maxContentLength, streamId);
     }
 
     if (isAddSuccessful) {

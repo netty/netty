@@ -61,9 +61,6 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
   private final Http2EventListener<Http2Settings> listener;
 
   public Http2ClientInitializer(SslContext sslCtx, int maxContentLength, Http2EventListener<Http2Settings> listener) {
-    if (sslCtx == null) {
-      throw new NullPointerException("sslCtx");
-    }
     this.sslCtx = sslCtx;
     this.maxContentLength = maxContentLength;
     this.listener = listener;
