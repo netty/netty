@@ -15,23 +15,22 @@
  */
 package io.netty.handler.codec.dns;
 
+import org.junit.Test;
+
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertSame;
-import org.junit.Test;
+
+import static org.junit.Assert.*;
 
 public class DnsClassTest {
 
-    private List<DnsClass> allTypes() throws Exception {
+    private static List<DnsClass> allTypes() throws Exception {
         List<DnsClass> result = new ArrayList<DnsClass>();
         for (Field field : DnsClass.class.getDeclaredFields()) {
-            if ((field.getModifiers() & Modifier.STATIC) != 0) {
+            if ((field.getModifiers() & Modifier.STATIC) != 0 && field.getType() == DnsClass.class) {
                 result.add((DnsClass) field.get(null));
             }
         }
@@ -42,7 +41,7 @@ public class DnsClassTest {
     @Test
     public void testSanity() throws Exception {
         assertEquals("More than one type has the same int value",
-                allTypes().size(), new HashSet(allTypes()).size());
+                allTypes().size(), new HashSet<DnsClass>(allTypes()).size());
     }
 
     /**
@@ -51,7 +50,7 @@ public class DnsClassTest {
     @Test
     public void testHashCode() throws Exception {
         for (DnsClass t : allTypes()) {
-            assertEquals(t.clazz(), t.hashCode());
+            assertEquals(t.intValue(), t.hashCode());
         }
     }
 
@@ -75,9 +74,9 @@ public class DnsClassTest {
     @Test
     public void testFind() throws Exception {
         for (DnsClass t : allTypes()) {
-            DnsClass found = DnsClass.valueOf(t.clazz());
+            DnsClass found = DnsClass.valueOf(t.intValue());
             assertSame(t, found);
-            found = DnsClass.forName(t.toString());
+            found = DnsClass.valueOf(t.toString());
             assertSame(t.toString(), t, found);
         }
     }

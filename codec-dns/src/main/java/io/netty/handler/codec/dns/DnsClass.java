@@ -15,12 +15,10 @@
  */
 package io.netty.handler.codec.dns;
 
-import java.util.Arrays;
-
 /**
  * Represents a class field in DNS protocol
  */
-public class DnsClass {
+public final class DnsClass implements Comparable<DnsClass> {
 
     /**
      * Default class for DNS entries.
@@ -32,32 +30,55 @@ public class DnsClass {
     public static final DnsClass NONE = new DnsClass(0x00fe, "NONE");
     public static final DnsClass ANY = new DnsClass(0x00ff, "ANY");
 
-    /**
-     * The protocol value of this DNS class
-     */
-    private final int clazz;
-    /**
-     * The name of this DNS class
-     */
-    private final String name;
+    private static final String EXPECTED =
+            " (expected: " +
+            IN + '(' + IN.intValue() + "), " +
+            CSNET + '(' + CSNET.intValue() + "), " +
+            CHAOS + '(' + CHAOS.intValue() + "), " +
+            HESIOD + '(' + HESIOD.intValue() + "), " +
+            NONE + '(' + NONE.intValue() + "), " +
+            ANY + '(' + ANY.intValue() + "))";
 
-    DnsClass(int clazz, String name) {
-        this.clazz = clazz;
-        this.name = name;
+    public static DnsClass valueOf(String name) {
+        if (IN.name().equals(name)) {
+            return IN;
+        }
+        if (NONE.name().equals(name)) {
+            return NONE;
+        }
+        if (ANY.name().equals(name)) {
+            return ANY;
+        }
+        if (CSNET.name().equals(name)) {
+            return CSNET;
+        }
+        if (CHAOS.name().equals(name)) {
+            return CHAOS;
+        }
+        if (HESIOD.name().equals(name)) {
+            return HESIOD;
+        }
+
+        throw new IllegalArgumentException("name: " + name + EXPECTED);
     }
 
-    /**
-     * Returns the name of this class as used in bind config files
-     */
-    public final String name() {
-        return name;
-    }
-
-    /**
-     * Returns the protocol value represented by this class
-     */
-    public final int clazz() {
-        return clazz;
+    public static DnsClass valueOf(int intValue) {
+        switch (intValue) {
+        case 0x0001:
+            return IN;
+        case 0x0002:
+            return CSNET;
+        case 0x0003:
+            return CHAOS;
+        case 0x0004:
+            return HESIOD;
+        case 0x00fe:
+            return NONE;
+        case 0x00ff:
+            return ANY;
+        default:
+            return new DnsClass(intValue, "UNKNOWN");
+        }
     }
 
     /**
@@ -66,71 +87,60 @@ public class DnsClass {
      * @param clazz The class
      * @param name The name
      */
-    public static DnsClass create(int clazz, String name) {
+    public static DnsClass valueOf(int clazz, String name) {
         return new DnsClass(clazz, name);
     }
 
     /**
-     * Returns true if this class is valid with respect to DNS protocol
+     * The protocol value of this DNS class
      */
-    public boolean isValid() {
-        if (clazz < 1 || clazz > 4 && clazz != NONE.clazz && clazz != ANY.clazz) {
-            return false;
+    private final int intValue;
+
+    /**
+     * The name of this DNS class
+     */
+    private final String name;
+
+    private DnsClass(int intValue, String name) {
+        if ((intValue & 0xffff) != intValue) {
+            throw new IllegalArgumentException("intValue: " + intValue + " (expected: 0 ~ 65535)");
         }
-        return true;
+
+        this.intValue = intValue;
+        this.name = name;
     }
 
-    public static DnsClass forName(String name) {
-        if (IN.name.equals(name)) {
-            return IN;
-        } else if (NONE.name().equals(name)) {
-            return NONE;
-        } else if (ANY.name().equals(name)) {
-            return ANY;
-        } else if (CSNET.name().equals(name)) {
-            return CSNET;
-        } else if (CHAOS.name().equals(name)) {
-            return CHAOS;
-        } else if (HESIOD.name().equals(name)) {
-            return HESIOD;
-        }
-        throw new IllegalArgumentException("name: " + name + " (expected: "
-                + "IN, ANY, CSNET, CHAOS, HESIOD)");
+    /**
+     * Returns the name of this class as used in bind config files
+     */
+    public String name() {
+        return name;
     }
 
-    public static DnsClass valueOf(int clazz) {
-        switch (clazz) {
-            case 0x0001:
-                return IN;
-            case 0x0002:
-                return CSNET;
-            case 0x0003:
-                return CHAOS;
-            case 0x0004:
-                return HESIOD;
-            case 0x00fe:
-                return NONE;
-            case 0x00ff:
-                return ANY;
-            default:
-                throw new IllegalArgumentException("clazz: " + clazz + " (expected: "
-                    + Arrays.asList(new Integer[] {IN.clazz, CSNET.clazz,
-                    CHAOS.clazz, HESIOD.clazz, NONE.clazz, ANY.clazz}) + ")");
-        }
+    /**
+     * Returns the protocol value represented by this class
+     */
+    public int intValue() {
+        return intValue;
     }
 
     @Override
-    public final int hashCode() {
-        return clazz;
+    public int hashCode() {
+        return intValue;
     }
 
     @Override
-    public final boolean equals(Object o) {
-        return o instanceof DnsClass && ((DnsClass) o).clazz == clazz;
+    public boolean equals(Object o) {
+        return o instanceof DnsClass && ((DnsClass) o).intValue == intValue;
     }
 
     @Override
-    public final String toString() {
+    public int compareTo(DnsClass o) {
+        return intValue() - o.intValue();
+    }
+
+    @Override
+    public String toString() {
         return name;
     }
 }
