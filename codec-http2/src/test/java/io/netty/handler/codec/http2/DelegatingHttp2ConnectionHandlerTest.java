@@ -442,15 +442,15 @@ public class DelegatingHttp2ConnectionHandlerTest {
     @Test
     public void dataWriteAfterGoAwayShouldFail() throws Exception {
         when(connection.isGoAway()).thenReturn(true);
-        ChannelFuture future = handler.writeData(ctx, promise, STREAM_ID, dummyData(), 0, false, false, false);
+        ChannelFuture future = handler.writeData(ctx, promise, STREAM_ID, dummyData(), 0, false, false);
         assertTrue(future.awaitUninterruptibly().cause() instanceof Http2Exception);
     }
 
     @Test
     public void dataWriteShouldSucceed() throws Exception {
-        handler.writeData(ctx, promise, STREAM_ID, dummyData(), 0, false, false, false);
+        handler.writeData(ctx, promise, STREAM_ID, dummyData(), 0, false, false);
         verify(outboundFlow).sendFlowControlled(eq(STREAM_ID), eq(dummyData()), eq(0), eq(false),
-                eq(false), eq(false), any(Http2OutboundFlowController.FrameWriter.class));
+                eq(false), any(Http2OutboundFlowController.FrameWriter.class));
     }
 
     @Test
