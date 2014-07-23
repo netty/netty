@@ -15,20 +15,22 @@
  */
 package io.netty.handler.codec.dns;
 
+import org.junit.Test;
+
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import org.junit.Test;
+
 import static org.junit.Assert.*;
 
 public class DnsTypeTest {
 
-    private List<DnsType> allTypes() throws Exception {
+    private static List<DnsType> allTypes() throws Exception {
         List<DnsType> result = new ArrayList<DnsType>();
         for (Field field : DnsType.class.getFields()) {
-            if ((field.getModifiers() & Modifier.STATIC) != 0 && DnsType.class == field.getType()) {
+            if ((field.getModifiers() & Modifier.STATIC) != 0 && field.getType() == DnsType.class) {
                 result.add((DnsType) field.get(null));
             }
         }
@@ -39,7 +41,7 @@ public class DnsTypeTest {
     @Test
     public void testSanity() throws Exception {
         assertEquals("More than one type has the same int value",
-                allTypes().size(), new HashSet(allTypes()).size());
+                allTypes().size(), new HashSet<DnsType>(allTypes()).size());
     }
 
     /**
@@ -48,7 +50,7 @@ public class DnsTypeTest {
     @Test
     public void testHashCode() throws Exception {
         for (DnsType t : allTypes()) {
-            assertEquals(t.type(), t.hashCode());
+            assertEquals(t.intValue(), t.hashCode());
         }
     }
 
@@ -72,9 +74,9 @@ public class DnsTypeTest {
     @Test
     public void testFind() throws Exception {
         for (DnsType t : allTypes()) {
-            DnsType found = DnsType.valueOf(t.type());
+            DnsType found = DnsType.valueOf(t.intValue());
             assertSame(t, found);
-            found = DnsType.forName(t.toString());
+            found = DnsType.valueOf(t.toString());
             assertSame(t.toString(), t, found);
         }
     }
