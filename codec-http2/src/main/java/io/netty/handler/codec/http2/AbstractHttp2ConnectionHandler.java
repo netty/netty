@@ -338,7 +338,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
 
     protected ChannelFuture writeData(final ChannelHandlerContext ctx,
             final ChannelPromise promise, int streamId, final ByteBuf data, int padding,
-            boolean endStream, boolean endSegment, boolean compressed) {
+            boolean endStream, boolean endSegment) {
         try {
             if (connection.isGoAway()) {
                 throw protocolError("Sending data after connection going away.");
@@ -349,7 +349,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
 
             // Hand control of the frame to the flow controller.
             outboundFlow.sendFlowControlled(streamId, data, padding, endStream, endSegment,
-                    compressed, new FlowControlWriter(ctx, data, promise));
+                    new FlowControlWriter(ctx, data, promise));
 
             return promise;
         } catch (Http2Exception e) {
@@ -1094,7 +1094,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
 
         @Override
         public void writeFrame(int streamId, ByteBuf data, int padding,
-                boolean endStream, boolean endSegment, boolean compressed) {
+                boolean endStream, boolean endSegment) {
             if (promise.isDone()) {
                 // Most likely the write already failed. Just release the
                 // buffer.

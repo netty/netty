@@ -121,7 +121,7 @@ public class Http2ConnectionRoundtripTest {
                     http2Client.writePing(ctx(), newPromise(), Unpooled.copiedBuffer(pingMsg.getBytes()));
                     http2Client.writeData(
                             ctx(), newPromise(), nextStream,
-                            Unpooled.copiedBuffer(text.getBytes()), 0, true, true, false);
+                            Unpooled.copiedBuffer(text.getBytes()), 0, true, true);
                 }
             }
         });

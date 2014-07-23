@@ -149,10 +149,10 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
 
     @Override
     public void sendFlowControlled(int streamId, ByteBuf data, int padding, boolean endStream,
-            boolean endSegment, boolean compressed, FrameWriter frameWriter) throws Http2Exception {
+            boolean endSegment, FrameWriter frameWriter) throws Http2Exception {
         OutboundFlowState state = stateOrFail(streamId);
         OutboundFlowState.Frame frame =
-                state.newFrame(data, padding, endStream, endSegment, compressed, frameWriter);
+                state.newFrame(data, padding, endStream, endSegment, frameWriter);
 
         int dataLength = data.readableBytes();
         if (state.writableWindow() >= dataLength) {
@@ -442,8 +442,8 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
          * Creates a new frame with the given values but does not add it to the pending queue.
          */
         Frame newFrame(ByteBuf data, int padding, boolean endStream, boolean endSegment,
-                boolean compressed, FrameWriter writer) {
-            return new Frame(data, padding, endStream, endSegment, compressed, writer);
+                FrameWriter writer) {
+            return new Frame(data, padding, endStream, endSegment, writer);
         }
 
         /**
@@ -530,17 +530,15 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
             private final int padding;
             private final boolean endStream;
             private final boolean endSegment;
-            private final boolean compressed;
             private final FrameWriter writer;
             private boolean enqueued;
 
             Frame(ByteBuf data, int padding, boolean endStream, boolean endSegment,
-                    boolean compressed, FrameWriter writer) {
+                    FrameWriter writer) {
                 this.data = data;
                 this.padding = padding;
                 this.endStream = endStream;
                 this.endSegment = endSegment;
-                this.compressed = compressed;
                 this.writer = writer;
             }
 
@@ -580,7 +578,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
                 int dataLength = data.readableBytes();
                 connectionState().incrementStreamWindow(-dataLength);
                 incrementStreamWindow(-dataLength);
-                writer.writeFrame(stream.id(), data, padding, endStream, endSegment, compressed);
+                writer.writeFrame(stream.id(), data, padding, endStream, endSegment);
                 decrementPendingBytes(dataLength);
             }
 
@@ -606,7 +604,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
             Frame split(int maxBytes) {
                 // TODO: Should padding be included in the chunks or only the last frame?
                 maxBytes = min(maxBytes, data.readableBytes());
-                Frame frame = new Frame(data.readSlice(maxBytes).retain(), 0, false, false, compressed, writer);
+                Frame frame = new Frame(data.readSlice(maxBytes).retain(), 0, false, false, writer);
                 decrementPendingBytes(maxBytes);
                 return frame;
             }
