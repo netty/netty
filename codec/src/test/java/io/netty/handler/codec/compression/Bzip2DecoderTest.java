@@ -27,16 +27,24 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.io.ByteArrayOutputStream;
+import java.util.Arrays;
 
 import static io.netty.handler.codec.compression.Bzip2Constants.*;
 import static org.junit.Assert.*;
 
 public class Bzip2DecoderTest {
 
+    private static final byte[] DATA = { 0x42, 0x5A, 0x68, 0x37, 0x31, 0x41, 0x59, 0x26, 0x53,
+                                         0x59, 0x77, 0x7B, (byte) 0xCA, (byte) 0xC0, 0x00, 0x00,
+                                         0x00, 0x05, (byte) 0x80, 0x00, 0x01, 0x02, 0x00, 0x04,
+                                         0x20, 0x20, 0x00, 0x30, (byte) 0xCD, 0x34, 0x19, (byte) 0xA6,
+                                         (byte) 0x89, (byte) 0x99, (byte) 0xC5, (byte) 0xDC, (byte) 0x91,
+                                         0x4E, 0x14, 0x24, 0x1D, (byte) 0xDE, (byte) 0xF2, (byte) 0xB0, 0x00 };
+
     private static final ThreadLocalRandom rand;
 
     private static final byte[] BYTES_SMALL = new byte[256];
-    private static final byte[] BYTES_LARGE = new byte[MAX_BLOCK_SIZE * BASE_BLOCK_SIZE * 2];
+    private static final byte[] BYTES_LARGE = new byte[MAX_BLOCK_SIZE * BASE_BLOCK_SIZE + 256];
 
     static {
         rand = ThreadLocalRandom.current();
@@ -112,12 +120,8 @@ public class Bzip2DecoderTest {
         expected.expect(DecompressionException.class);
         expected.expectMessage("stream CRC error");
 
-        final byte[] data = { 0x42, 0x5A, 0x68, 0x37, 0x31, 0x41, 0x59, 0x26, 0x53,
-                              0x59, 0x77, 0x7B, (byte) 0xCA, (byte) 0xC0, 0x00, 0x00,
-                              0x00, 0x05, (byte) 0x80, 0x00, 0x01, 0x02, 0x00, 0x04,
-                              0x20, 0x20, 0x00, 0x30, (byte) 0xCD, 0x34, 0x19, (byte) 0xA6,
-                              (byte) 0x89, (byte) 0x99, (byte) 0xC5, (byte) 0xDC, (byte) 0x91,
-                              0x4E, 0x14, 0x24, 0x1D, (byte) 0xDD, (byte) 0xF2, (byte) 0xB0, 0x00 };
+        final byte[] data = Arrays.copyOf(DATA, DATA.length);
+        data[41] = (byte) 0xDD;
 
         ByteBuf in = Unpooled.wrappedBuffer(data);
         try {
@@ -139,12 +143,8 @@ public class Bzip2DecoderTest {
         expected.expect(DecompressionException.class);
         expected.expectMessage("incorrect huffman groups number");
 
-        final byte[] data = { 0x42, 0x5A, 0x68, 0x37, 0x31, 0x41, 0x59, 0x26, 0x53,
-                              0x59, 0x77, 0x7B, (byte) 0xCA, (byte) 0xC0, 0x00, 0x00,
-                              0x00, 0x05, (byte) 0x80, 0x00, 0x01, 0x02, 0x00, 0x04,
-                              0x20, 0x70, 0x00, 0x30, (byte) 0xCD, 0x34, 0x19, (byte) 0xA6,
-                              (byte) 0x89, (byte) 0x99, (byte) 0xC5, (byte) 0xDC, (byte) 0x91,
-                              0x4E, 0x14, 0x24, 0x1D, (byte) 0xDE, (byte) 0xF2, (byte) 0xB0, 0x00 };
+        final byte[] data = Arrays.copyOf(DATA, DATA.length);
+        data[25] = 0x70;
 
         ByteBuf in = Unpooled.wrappedBuffer(data);
         channel.writeInbound(in);
@@ -155,12 +155,8 @@ public class Bzip2DecoderTest {
         expected.expect(DecompressionException.class);
         expected.expectMessage("incorrect selectors number");
 
-        final byte[] data = { 0x42, 0x5A, 0x68, 0x37, 0x31, 0x41, 0x59, 0x26, 0x53,
-                              0x59, 0x77, 0x7B, (byte) 0xCA, (byte) 0xC0, 0x00, 0x00,
-                              0x00, 0x05, (byte) 0x80, 0x00, 0x01, 0x02, 0x00, 0x04,
-                              0x20, 0x2F, (byte) 0xFF, 0x30, (byte) 0xCD, 0x34, 0x19, (byte) 0xA6,
-                              (byte) 0x89, (byte) 0x99, (byte) 0xC5, (byte) 0xDC, (byte) 0x91,
-                              0x4E, 0x14, 0x24, 0x1D, (byte) 0xDE, (byte) 0xF2, (byte) 0xB0, 0x00 };
+        final byte[] data = Arrays.copyOf(DATA, DATA.length);
+        data[25] = 0x2F;
 
         ByteBuf in = Unpooled.wrappedBuffer(data);
         channel.writeInbound(in);
@@ -171,12 +167,8 @@ public class Bzip2DecoderTest {
         expected.expect(DecompressionException.class);
         expected.expectMessage("block CRC error");
 
-        final byte[] data = { 0x42, 0x5A, 0x68, 0x37, 0x31, 0x41, 0x59, 0x26, 0x53,
-                              0x59, 0x77, 0x77, (byte) 0xCA, (byte) 0xC0, 0x00, 0x00,
-                              0x00, 0x05, (byte) 0x80, 0x00, 0x01, 0x02, 0x00, 0x04,
-                              0x20, 0x20, 0x00, 0x30, (byte) 0xCD, 0x34, 0x19, (byte) 0xA6,
-                              (byte) 0x89, (byte) 0x99, (byte) 0xC5, (byte) 0xDC, (byte) 0x91,
-                              0x4E, 0x14, 0x24, 0x1D, (byte) 0xDE, (byte) 0xF2, (byte) 0xB0, 0x00 };
+        final byte[] data = Arrays.copyOf(DATA, DATA.length);
+        data[11] = 0x77;
 
         ByteBuf in = Unpooled.wrappedBuffer(data);
         channel.writeInbound(in);
@@ -187,20 +179,14 @@ public class Bzip2DecoderTest {
         expected.expect(DecompressionException.class);
         expected.expectMessage("start pointer invalid");
 
-        final byte[] data = { 0x42, 0x5A, 0x68, 0x37, 0x31, 0x41, 0x59, 0x26, 0x53,
-                              0x59, 0x77, 0x7B, (byte) 0xCA, (byte) 0xC0, (byte) 0xFF, 0x00,
-                              0x00, 0x05, (byte) 0x80, 0x00, 0x01, 0x02, 0x00, 0x04,
-                              0x20, 0x20, 0x00, 0x30, (byte) 0xCD, 0x34, 0x19, (byte) 0xA6,
-                              (byte) 0x89, (byte) 0x99, (byte) 0xC5, (byte) 0xDC, (byte) 0x91,
-                              0x4E, 0x14, 0x24, 0x1D, (byte) 0xDE, (byte) 0xF2, (byte) 0xB0, 0x00 };
+        final byte[] data = Arrays.copyOf(DATA, DATA.length);
+        data[14] = (byte) 0xFF;
 
         ByteBuf in = Unpooled.wrappedBuffer(data);
         channel.writeInbound(in);
     }
 
-    private static void testDecompression(final byte[] data) throws Exception {
-        final EmbeddedChannel channel = new EmbeddedChannel(new Bzip2Decoder());
-
+    private static void testDecompression(final EmbeddedChannel channel, final byte[] data) throws Exception {
         ByteArrayOutputStream os = new ByteArrayOutputStream();
         BZip2CompressorOutputStream bZip2Os = new BZip2CompressorOutputStream(os, randomBlockSize());
         bZip2Os.write(data);
@@ -220,12 +206,12 @@ public class Bzip2DecoderTest {
 
     @Test
     public void testDecompressionOfSmallChunkOfData() throws Exception {
-        testDecompression(BYTES_SMALL);
+        testDecompression(channel, BYTES_SMALL);
     }
 
     @Test
     public void testDecompressionOfLargeChunkOfData() throws Exception {
-        testDecompression(BYTES_LARGE);
+        testDecompression(channel, BYTES_LARGE);
     }
 
     @Test
