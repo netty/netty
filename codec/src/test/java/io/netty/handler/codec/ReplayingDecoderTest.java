@@ -193,7 +193,7 @@ public class ReplayingDecoderTest {
                     out.add("data");
                 }
             }
-        }, new ChannelInboundHandlerAdapter() {
+        }, new ChannelHandlerAdapter() {
             @Override
             public void channelInactive(ChannelHandlerContext ctx) throws Exception {
                 queue.add(3);
