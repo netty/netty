@@ -334,7 +334,7 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
                 if (PlatformDependent.hasUnsafe()) {
                     // this means we can cast to EpollChannelOutboundBuffer and write the IovArray directly.
                     EpollChannelOutboundBuffer epollIn = (EpollChannelOutboundBuffer) in;
-                    IovArray array = epollIn.array();
+                    IovArray array = epollIn.iovArray();
                     int cnt = array.count();
                     if (cnt > 1) {
                         if (!writeBytesMultiple(epollIn, array)) {

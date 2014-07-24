@@ -62,13 +62,20 @@ final class EpollChannelOutboundBuffer extends ChannelOutboundBuffer {
         return msg;
     }
 
-    IovArray array() {
+    /**
+     * Returns a {@link IovArray} if the currently pending messages.
+     * <p>
+     * Note that the returned {@link IovArray} is reused and thus should not escape
+     * {@link io.netty.channel.AbstractChannel#doWrite(ChannelOutboundBuffer)}.
+     */
+    IovArray iovArray() {
         IovArray array = IovArray.get();
         final Entry[] buffer = entries();
-        final int mask = buffer.length - 1;
-        Object m;
+        final int mask = entryMask();
         int unflushed = unflushed();
         int flushed = flushed();
+        Object m;
+
         while (flushed != unflushed && (m = buffer[flushed].msg()) != null) {
             if (!(m instanceof ByteBuf)) {
                 // Just break out of the loop as we can still use gathering writes for the buffers that we
@@ -82,7 +89,7 @@ final class EpollChannelOutboundBuffer extends ChannelOutboundBuffer {
             if (!entry.isCancelled()) {
                 ByteBuf buf = (ByteBuf) m;
                 if (!array.add(buf)) {
-                    // can not hold more data so break here.
+                    // Can not hold more data so break here.
                     // We will handle this on the next write loop.
                     break;
                 }

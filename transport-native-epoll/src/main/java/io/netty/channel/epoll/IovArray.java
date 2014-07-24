@@ -88,6 +88,7 @@ final class IovArray {
             PlatformDependent.putLong(baseOffset, addr + offset);
             PlatformDependent.putLong(lengthOffset, len);
         } else {
+            assert ADDRESS_SIZE == 4;
             PlatformDependent.putInt(baseOffset, (int) addr + offset);
             PlatformDependent.putInt(lengthOffset, len);
         }
@@ -96,19 +97,9 @@ final class IovArray {
     }
 
     /**
-     * Returns the length of the iov entry on the given index.
+     * Process the written iov entries. This will return the length of the iov entry on the given index if it is
+     * smaller then the given {@code written} value. Otherwise it returns {@code -1}.
      */
-    long len(int index) {
-        long baseOffset = memoryAddress(index);
-        long lengthOffset = baseOffset + ADDRESS_SIZE;
-        if (ADDRESS_SIZE == 8) {
-            // 64bit
-            return PlatformDependent.getLong(lengthOffset);
-        } else {
-            return PlatformDependent.getInt(lengthOffset);
-        }
-    }
-
     long processWritten(int index, long written) {
         long baseOffset = memoryAddress(index);
         long lengthOffset = baseOffset + ADDRESS_SIZE;
@@ -123,6 +114,7 @@ final class IovArray {
             }
             return len;
         } else {
+            assert ADDRESS_SIZE == 4;
             long len = PlatformDependent.getInt(lengthOffset);
             if (len > written) {
                 int offset = PlatformDependent.getInt(baseOffset);
