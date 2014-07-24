@@ -80,7 +80,6 @@ import java.util.Set;
  *
  *     // Close the serverChannel and then all accepted connections.
  *     <strong>allChannels.close().awaitUninterruptibly();</strong>
- *     b.releaseExternalResources();
  * }
  *
  * public class MyHandler extends {@link ChannelInboundHandlerAdapter} {
