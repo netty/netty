@@ -23,6 +23,8 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.Test;
 
 import java.util.List;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingDeque;
 
 import static io.netty.util.ReferenceCountUtil.releaseLater;
 import static org.junit.Assert.*;
@@ -176,5 +178,45 @@ public class ReplayingDecoderTest {
         assertEquals(b, Unpooled.wrappedBuffer(new byte[] { 'b', 'c'}));
         b.release();
         buf.release();
+    }
+
+    @Test
+    public void testFireChannelReadCompleteOnInactive() throws InterruptedException {
+        final BlockingQueue<Integer> queue = new LinkedBlockingDeque<Integer>();
+        final ByteBuf buf = releaseLater(Unpooled.buffer().writeBytes(new byte[]{'a', 'b'}));
+        EmbeddedChannel channel = new EmbeddedChannel(new ReplayingDecoder<Integer>() {
+
+            @Override
+            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+                in.skipBytes(in.readableBytes());
+                if (!ctx.channel().isActive()) {
+                    out.add("data");
+                }
+            }
+        }, new ChannelInboundHandlerAdapter() {
+            @Override
+            public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+                queue.add(3);
+            }
+
+            @Override
+            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                queue.add(1);
+            }
+
+            @Override
+            public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+                if (!ctx.channel().isActive()) {
+                    queue.add(2);
+                }
+            }
+        });
+        assertFalse(channel.writeInbound(buf));
+        channel.finish();
+        assertEquals(1, (int) queue.take());
+        assertEquals(1, (int) queue.take());
+        assertEquals(2, (int) queue.take());
+        assertEquals(3, (int) queue.take());
+        assertTrue(queue.isEmpty());
     }
 }

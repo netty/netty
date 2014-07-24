@@ -18,12 +18,15 @@ package io.netty.handler.codec;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.List;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingDeque;
 
 public class ByteToMessageDecoderTest {
 
@@ -118,5 +121,43 @@ public class ByteToMessageDecoderTest {
         Assert.assertTrue(channel.finish());
         Assert.assertEquals(channel.readInbound(), Unpooled.wrappedBuffer(new byte[] {'b'}));
         Assert.assertNull(channel.readInbound());
+    }
+
+    @Test
+    public void testFireChannelReadCompleteOnInactive() throws InterruptedException {
+        final BlockingQueue<Integer> queue = new LinkedBlockingDeque<Integer>();
+        final ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer().writeBytes(new byte[]{'a', 'b'}));
+        EmbeddedChannel channel = new EmbeddedChannel(new ByteToMessageDecoder() {
+            @Override
+            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+                in.skipBytes(in.readableBytes());
+                if (!ctx.channel().isActive()) {
+                    out.add("data");
+                }
+            }
+        }, new ChannelInboundHandlerAdapter() {
+            @Override
+            public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+                queue.add(3);
+            }
+
+            @Override
+            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                queue.add(1);
+            }
+
+            @Override
+            public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+                if (!ctx.channel().isActive()) {
+                    queue.add(2);
+                }
+            }
+        });
+        Assert.assertFalse(channel.writeInbound(buf));
+        channel.finish();
+        Assert.assertEquals(1, (int) queue.take());
+        Assert.assertEquals(2, (int) queue.take());
+        Assert.assertEquals(3, (int) queue.take());
+        Assert.assertTrue(queue.isEmpty());
     }
 }
