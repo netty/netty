@@ -35,6 +35,10 @@ public final class Http2HttpHeaders {
          */
         public static final AsciiString SCHEME               = new AsciiString("X-HTTP2-Scheme");
         /**
+         * {@code "X-HTTP2-Path"}
+         */
+        public static final AsciiString PATH                 = new AsciiString("X-HTTP2-Path");
+        /**
          * {@code "X-HTTP2-Stream-Promise-ID"}
          */
         public static final AsciiString STREAM_PROMISE_ID    = new AsciiString("X-HTTP2-Stream-Promise-ID");

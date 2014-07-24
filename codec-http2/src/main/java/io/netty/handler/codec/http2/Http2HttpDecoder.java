@@ -64,6 +64,8 @@ public class Http2HttpDecoder implements Http2FrameObserver {
                                      Http2HttpHeaders.Names.AUTHORITY.toString());
         HEADER_NAME_TRANSLATIONS.put(Http2Headers.HttpName.SCHEME.value(),
                                      Http2HttpHeaders.Names.SCHEME.toString());
+        HEADER_NAME_TRANSLATIONS.put(Http2Headers.HttpName.PATH.value(),
+                                     Http2HttpHeaders.Names.PATH.toString());
     }
 
     /**
@@ -282,7 +284,7 @@ public class Http2HttpDecoder implements Http2FrameObserver {
                             promisedStreamId);
         }
 
-        processHeadersEnd(ctx, streamId, msgAccumulator, false);
+        processHeadersEnd(ctx, promisedStreamId, msgAccumulator, false);
     }
 
     @Override
@@ -355,7 +357,6 @@ public class Http2HttpDecoder implements Http2FrameObserver {
     protected final class Http2HttpMessageAccumulator {
         private HttpMessage message;
         private long contentLength;
-        private boolean seenLastHttpContent;
 
         /**
          * Creates a new instance
@@ -369,7 +370,6 @@ public class Http2HttpDecoder implements Http2FrameObserver {
             }
             this.message = message;
             this.contentLength = 0;
-            this.seenLastHttpContent = false;
         }
 
         /**
@@ -444,11 +444,7 @@ public class Http2HttpDecoder implements Http2FrameObserver {
          *            The channel context for which to propagate events
          */
         public void endOfStream(ChannelHandlerContext ctx) {
-            // Check if LastHttpContent has been seen, it is possible (not likely) that all HttpContent
-            // objects have 0 length and thus contentLength alone can not determine if a LastHttpContent must be sent
-            if (!sendHeaders(ctx, true) && !seenLastHttpContent) {
-                ctx.fireChannelRead(LastHttpContent.EMPTY_LAST_CONTENT);
-            }
+            sendHeaders(ctx, true);
         }
 
         /**
@@ -467,9 +463,6 @@ public class Http2HttpDecoder implements Http2FrameObserver {
                 throw new TooLongFrameException("HTTP/2 content length exceeded " + maxContentLength + " bytes.");
             }
 
-            if (httpContent instanceof LastHttpContent) {
-                seenLastHttpContent = true;
-            }
             contentLength += content.readableBytes();
             sendHeaders(ctx, false);
             ctx.fireChannelRead(httpContent.retain());
@@ -496,8 +489,8 @@ public class Http2HttpDecoder implements Http2FrameObserver {
             Iterator<Entry<String, String>> itr = http2Headers.iterator();
             while (itr.hasNext()) {
                 Entry<String, String> entry = itr.next();
-                if (!HEADERS_TO_EXCLUDE.contains(entry.getKey())) {
-                    String translatedName = HEADER_NAME_TRANSLATIONS.get(entry.getKey());
+                String translatedName = HEADER_NAME_TRANSLATIONS.get(entry.getKey());
+                if (translatedName != null || !HEADERS_TO_EXCLUDE.contains(entry.getKey())) {
                     if (translatedName == null) {
                         translatedName = entry.getKey();
                     }

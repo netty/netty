@@ -70,6 +70,26 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
     }
 
     @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + status.hashCode();
+        result = prime * result + super.hashCode();
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof DefaultHttpResponse)) {
+            return false;
+        }
+
+        DefaultHttpResponse other = (DefaultHttpResponse) o;
+
+        return status().equals(other.status()) && super.equals(o);
+    }
+
+    @Override
     public String toString() {
         StringBuilder buf = new StringBuilder();
         buf.append(StringUtil.simpleClassName(this));

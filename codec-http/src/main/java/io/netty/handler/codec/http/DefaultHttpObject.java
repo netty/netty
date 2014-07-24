@@ -37,4 +37,23 @@ public class DefaultHttpObject implements HttpObject {
         }
         this.decoderResult = decoderResult;
     }
+
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + decoderResult.hashCode();
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof DefaultHttpObject)) {
+            return false;
+        }
+
+        DefaultHttpObject other = (DefaultHttpObject) o;
+
+        return decoderResult().equals(other.decoderResult());
+    }
 }
