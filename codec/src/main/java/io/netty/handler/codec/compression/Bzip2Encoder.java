@@ -42,8 +42,7 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
         INIT,
         INIT_BLOCK,
         WRITE_DATA,
-        CLOSE_BLOCK,
-        EOF
+        CLOSE_BLOCK
     }
 
     private State currentState = State.INIT;

@@ -71,6 +71,16 @@ final class Bzip2Constants {
     static final int HUFFMAN_SYMBOL_RUNB = 1;
 
     /**
+     * Huffman symbols range size for Huffman used map.
+     */
+    static final int HUFFMAN_SYMBOL_RANGE_SIZE = 16;
+
+    /**
+     * Maximum length of zero-terminated bit runs of MTF'ed Huffman table.
+     */
+    static final int HUFFMAN_SELECTOR_LIST_MAX_LENGTH = 6;
+
+    /**
      * Number of symbols decoded after which a new Huffman table is selected.
      */
     static final int HUFFMAN_GROUP_RUN_LENGTH = 50;
