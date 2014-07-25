@@ -19,14 +19,14 @@ import io.netty.buffer.ByteBuf;
 
 /**
  * A bit writer that allows the writing of single bit booleans, unary numbers, bit strings
- * of arbitrary length (up to 24 bits), and bit aligned 32-bit integers. A single byte at a
+ * of arbitrary length (up to 32 bits), and bit aligned 32-bit integers. A single byte at a
  * time is written to the {@link ByteBuf} when sufficient bits have been accumulated.
  */
 final class Bzip2BitWriter {
     /**
      * A buffer of bits waiting to be written to the output stream.
      */
-    private int bitBuffer;
+    private long bitBuffer;
 
     /**
      * The number of bits currently buffered in {@link #bitBuffer}.
@@ -34,23 +34,22 @@ final class Bzip2BitWriter {
     private int bitCount;
 
     /**
-     * Writes up to 24 bits to the output {@link ByteBuf}.
-     * @param count The number of bits to write (maximum {@code 24}, because the {@link #bitBuffer}
-     *              is {@code int} and it can store up to {@code 8} bits before calling)
+     * Writes up to 32 bits to the output {@link ByteBuf}.
+     * @param count The number of bits to write (maximum {@code 32} as a size of {@code int})
      * @param value The bits to write
      */
-    void writeBits(ByteBuf out, final int count, final int value) {
-        if (count < 0 || count > 24) {
-            throw new IllegalArgumentException("count: " + count + " (expected: 0-24)");
+    void writeBits(ByteBuf out, final int count, final long value) {
+        if (count < 0 || count > 32) {
+            throw new IllegalArgumentException("count: " + count + " (expected: 0-32)");
         }
         int bitCount = this.bitCount;
-        int bitBuffer = this.bitBuffer | (value << (32 - count)) >>> bitCount;
+        long bitBuffer = this.bitBuffer | value << 64 - count >>> bitCount;
         bitCount += count;
 
-        while (bitCount >= 8) {
-            out.writeByte(bitBuffer >>> 24);
-            bitBuffer <<= 8;
-            bitCount -= 8;
+        if (bitCount >= 32) {
+            out.writeInt((int) (bitBuffer >>> 32));
+            bitBuffer <<= 32;
+            bitCount -= 32;
         }
         this.bitBuffer = bitBuffer;
         this.bitCount = bitCount;
@@ -62,10 +61,10 @@ final class Bzip2BitWriter {
      */
     void writeBoolean(ByteBuf out, final boolean value) {
         int bitCount = this.bitCount + 1;
-        int bitBuffer = this.bitBuffer | (value ? 1 : 0) << (32 - bitCount);
+        long bitBuffer = this.bitBuffer | (value ? 1L << 64 - bitCount : 0L);
 
-        if (bitCount == 8) {
-            out.writeByte(bitBuffer >>> 24);
+        if (bitCount == 32) {
+            out.writeInt((int) (bitBuffer >>> 32));
             bitBuffer = 0;
             bitCount = 0;
         }
@@ -93,8 +92,7 @@ final class Bzip2BitWriter {
      * @param value The integer to write
      */
     void writeInt(ByteBuf out, final int value) {
-        writeBits(out, 16, (value >>> 16) & 0xffff);
-        writeBits(out, 16, value & 0xffff);
+        writeBits(out, 32, value);
     }
 
     /**
@@ -102,8 +100,21 @@ final class Bzip2BitWriter {
      * zero padding to a whole byte as required.
      */
     void flush(ByteBuf out) {
+        final int bitCount = this.bitCount;
+
         if (bitCount > 0) {
-            writeBits(out, 8 - bitCount, 0);
+            final long bitBuffer = this.bitBuffer;
+            final int shiftToRight = 64 - bitCount;
+
+            if (bitCount <= 8) {
+                out.writeByte((int) (bitBuffer >>> shiftToRight << 8 - bitCount));
+            } else if (bitCount <= 16) {
+                out.writeShort((int) (bitBuffer >>> shiftToRight << 16 - bitCount));
+            } else if (bitCount <= 24) {
+                out.writeMedium((int) (bitBuffer >>> shiftToRight << 24 - bitCount));
+            } else {
+                out.writeInt((int) (bitBuffer >>> shiftToRight << 32 - bitCount));
+            }
         }
     }
 }
