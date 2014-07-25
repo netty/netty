@@ -189,21 +189,39 @@ public class Http2HttpDecoder implements Http2FrameObserver {
         processHeadersEnd(ctx, streamId, msgAccumulator, endOfStream);
     }
 
+    /**
+     * Set/clear all HTTP/1.x headers related to stream dependencies
+     *
+     * @param msgAccumulator The object which caches the HTTP/1.x headers
+     * @param streamDependency The stream id for which the {@code msgAccumulator} is dependent on
+     * @param weight The dependency weight
+     * @param exclusive The exlusive HTTP/2 flag
+     * @throws IllegalStateException If the {@code msgAccumulator} is not in a valid state to change headers
+     */
+    protected void setDependencyHeaders(Http2HttpMessageAccumulator msgAccumulator,
+                        int streamDependency, short weight, boolean exclusive) throws IllegalStateException {
+        if (streamDependency != 0) {
+            msgAccumulator.setHeader(Http2HttpHeaders.Names.STREAM_DEPENDENCY_ID, streamDependency);
+            msgAccumulator.setHeader(Http2HttpHeaders.Names.STREAM_EXCLUSIVE, exclusive);
+            msgAccumulator.setHeader(Http2HttpHeaders.Names.STREAM_WEIGHT, weight);
+        } else {
+            msgAccumulator.removeHeader(Http2HttpHeaders.Names.STREAM_DEPENDENCY_ID);
+            msgAccumulator.removeHeader(Http2HttpHeaders.Names.STREAM_EXCLUSIVE);
+            msgAccumulator.removeHeader(Http2HttpHeaders.Names.STREAM_WEIGHT);
+        }
+    }
+
     @Override
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int streamDependency,
                     short weight, boolean exclusive, int padding, boolean endOfStream, boolean endSegment)
                     throws Http2Exception {
         Http2HttpMessageAccumulator msgAccumulator = processHeadersBegin(streamId, headers, true);
-        if (streamDependency != 0) {
-            try {
-                msgAccumulator.setHeader(Http2HttpHeaders.Names.STREAM_DEPENDENCY_ID, streamDependency);
-                msgAccumulator.setHeader(Http2HttpHeaders.Names.STREAM_EXCLUSIVE, exclusive);
-                msgAccumulator.setHeader(Http2HttpHeaders.Names.STREAM_WEIGHT, weight);
-            } catch (IllegalStateException e) {
-                removeMessage(streamId);
-                throw Http2Exception.protocolError(
-                                "Headers Frame recieved for stream id %d which is in an invalid state", streamId);
-            }
+        try {
+            setDependencyHeaders(msgAccumulator, streamDependency, weight, exclusive);
+        } catch (IllegalStateException e) {
+            removeMessage(streamId);
+            throw Http2Exception.protocolError(
+                      "Headers Frame recieved for stream id %d which is in an invalid state", streamId);
         }
         processHeadersEnd(ctx, streamId, msgAccumulator, endOfStream);
     }
@@ -217,15 +235,7 @@ public class Http2HttpDecoder implements Http2FrameObserver {
         }
 
         try {
-            if (streamDependency != 0) {
-                msgAccumulator.setHeader(Http2HttpHeaders.Names.STREAM_DEPENDENCY_ID, streamDependency);
-                msgAccumulator.setHeader(Http2HttpHeaders.Names.STREAM_EXCLUSIVE, exclusive);
-                msgAccumulator.setHeader(Http2HttpHeaders.Names.STREAM_WEIGHT, weight);
-            } else {
-                msgAccumulator.removeHeader(Http2HttpHeaders.Names.STREAM_DEPENDENCY_ID);
-                msgAccumulator.removeHeader(Http2HttpHeaders.Names.STREAM_EXCLUSIVE);
-                msgAccumulator.removeHeader(Http2HttpHeaders.Names.STREAM_WEIGHT);
-            }
+            setDependencyHeaders(msgAccumulator, streamDependency, weight, exclusive);
         } catch (IllegalStateException e) {
             removeMessage(streamId);
             throw Http2Exception.protocolError("Priority Frame recieved for stream id %d which is in an invalid state",
