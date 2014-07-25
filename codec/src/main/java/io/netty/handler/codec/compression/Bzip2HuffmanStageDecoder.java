@@ -15,8 +15,6 @@
  */
 package io.netty.handler.codec.compression;
 
-import io.netty.buffer.ByteBuf;
-
 import static io.netty.handler.codec.compression.Bzip2Constants.*;
 
 /**
@@ -170,7 +168,7 @@ final class Bzip2HuffmanStageDecoder {
      * Decodes and returns the next symbol.
      * @return The decoded symbol
      */
-    int nextSymbol(ByteBuf in) {
+    int nextSymbol() {
         // Move to next group selector if required
         if (++groupPosition % HUFFMAN_GROUP_RUN_LENGTH == 0) {
             groupIndex++;
@@ -189,13 +187,13 @@ final class Bzip2HuffmanStageDecoder {
 
         // Starting with the minimum bit length for the table, read additional bits one at a time
         // until a complete code is recognised
-        int codeBits = reader.readBits(in, codeLength);
+        int codeBits = reader.readBits(codeLength);
         for (; codeLength <= HUFFMAN_DECODE_MAX_CODE_LENGTH; codeLength++) {
             if (codeBits <= tableLimits[codeLength]) {
                 // Convert the code to a symbol index and return
                 return tableSymbols[codeBits - tableBases[codeLength]];
             }
-            codeBits = codeBits << 1 | reader.readBits(in, 1);
+            codeBits = codeBits << 1 | reader.readBits(1);
         }
 
         throw new DecompressionException("a valid code was not recognised");
