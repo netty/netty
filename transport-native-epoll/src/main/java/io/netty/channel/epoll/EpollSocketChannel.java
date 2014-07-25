@@ -116,8 +116,9 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
         if (buf.hasMemoryAddress()) {
             long memoryAddress = buf.memoryAddress();
             int readerIndex = buf.readerIndex();
+            int writerIndex = buf.writerIndex();
             for (;;) {
-                int localFlushedAmount = Native.writeAddress(fd, memoryAddress, readerIndex, readableBytes);
+                int localFlushedAmount = Native.writeAddress(fd, memoryAddress, readerIndex, writerIndex);
                 if (localFlushedAmount > 0) {
                     writtenBytes += localFlushedAmount;
                     if (writtenBytes == readableBytes) {
@@ -125,7 +126,6 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
                         break;
                     }
                     readerIndex += localFlushedAmount;
-                    readableBytes -= localFlushedAmount;
                 } else {
                     // Returned EAGAIN need to set EPOLLOUT
                     setEpollOut();
