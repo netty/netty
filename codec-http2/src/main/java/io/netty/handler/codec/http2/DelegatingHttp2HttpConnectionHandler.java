@@ -82,6 +82,7 @@ public class DelegatingHttp2HttpConnectionHandler extends DelegatingHttp2Connect
                 } catch (NumberFormatException e) {
                     promise.setFailure(Http2Exception.format(Http2Error.INTERNAL_ERROR,
                                     "Invalid user-specified stream id value '%s'", value));
+                    httpMsg.release();
                     return;
                 }
                 // Simple stream id validation for user-specified streamId
@@ -89,6 +90,7 @@ public class DelegatingHttp2HttpConnectionHandler extends DelegatingHttp2Connect
                                 || (!connection().isServer() && (streamId % 2 == 0))) {
                     promise.setFailure(Http2Exception.format(Http2Error.INTERNAL_ERROR,
                                     "Invalid user-specified stream id value '%d'", streamId));
+                    httpMsg.release();
                     return;
                 }
                 httpHeaders.remove(Http2HttpHeaders.Names.STREAM_ID);

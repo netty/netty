@@ -345,18 +345,13 @@ public class Http2HttpDecoder implements Http2FrameObserver {
             status = HttpResponseStatus.parseLine(http2Headers.status());
         } catch (Exception e) {
             throw Http2Exception.protocolError(
-                            "Unrecognized HTTP status code '%s' encountered in translation to HTTP/1.x", http2Headers);
+                            "Unrecognized HTTP status code '%s' encountered in translation to HTTP/1.x",
+                            http2Headers.status());
         }
-        // TODO: http://tools.ietf.org/html/draft-ietf-httpbis-http2-13#section-8.1.2.1 states
-        // there is explicitly no ":version" header. How to derive the HTTP version?
-        // - Track the version from the request portion of this stream?
-        // -- What if this is a server push frame and there is no corresponding request?
-        // - What negative implications come from always using HTTP_1_1 regardless?
-        // -- Is it possible to use HTTP_1_0 through HTTP/2? (I am assuming it is)
-        HttpVersion version = HttpVersion.HTTP_1_1;
-
+        // HTTP/2 does not define a way to carry the version or reason phrase that is included in an HTTP/1.1
+        // status line.
         Http2HttpMessageAccumulator messageAccumulator = new Http2HttpMessageAccumulator(new DefaultHttpResponse(
-                        version, status, validateHttpHeaders));
+                        HttpVersion.HTTP_1_1, status, validateHttpHeaders));
         messageAccumulator.add(http2Headers);
         return messageAccumulator;
     }
