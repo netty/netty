@@ -21,6 +21,7 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.frame.TooLongFrameException;
+import org.jboss.netty.handler.codec.http.HttpMessageDecoder.State;
 import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
 
 import java.util.List;
@@ -98,7 +99,7 @@ import java.util.List;
  * implement all abstract methods properly.
  * @apiviz.landmark
  */
-public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDecoder.State> {
+public abstract class HttpMessageDecoder extends ReplayingDecoder<State> {
 
     private final int maxInitialLineLength;
     private final int maxHeaderSize;
@@ -126,7 +127,8 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         READ_CHUNKED_CONTENT,
         READ_CHUNKED_CONTENT_AS_CHUNKS,
         READ_CHUNK_DELIMITER,
-        READ_CHUNK_FOOTER
+        READ_CHUNK_FOOTER,
+        UPGRADED
     }
 
     /**
@@ -397,6 +399,18 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
                 return trailer;
             }
         }
+        case UPGRADED: {
+            int readableBytes = actualReadableBytes();
+            if (readableBytes > 0) {
+                // Keep on consuming as otherwise we may trigger an DecoderException,
+                // other handler will replace this codec with the upgraded protocol codec to
+                // take the traffic over at some point then.
+                // See https://github.com/netty/netty/issues/2173
+                return buffer.readBytes(actualReadableBytes());
+            } else {
+                return null;
+            }
+        }
         default: {
             throw new Error("Shouldn't reach here.");
         }
@@ -438,6 +452,14 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             this.content = null;
         }
         this.message = null;
+
+        if (!isDecodingRequest()) {
+            HttpResponse res = (HttpResponse) message;
+            if (res != null && res.getStatus().getCode() == 101) {
+                checkpoint(State.UPGRADED);
+                return message;
+            }
+        }
 
         checkpoint(State.SKIP_CONTROL_CHARS);
         return message;
