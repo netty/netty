@@ -39,7 +39,7 @@ public class DefaultChannelIdTest {
     @Test
     public void testLongText() {
         String text = DefaultChannelId.newInstance().asLongText();
-        assertTrue(text.matches("^[0-9a-f]{16}-[0-9a-f]{4}-[0-9a-f]{8}-[0-9a-f]{16}-[0-9a-f]{8}$"));
+        assertTrue(text.matches("^[0-9a-f]{16}-[0-9a-f]{8}-[0-9a-f]{8}-[0-9a-f]{16}-[0-9a-f]{8}$"));
     }
 
     @Test
