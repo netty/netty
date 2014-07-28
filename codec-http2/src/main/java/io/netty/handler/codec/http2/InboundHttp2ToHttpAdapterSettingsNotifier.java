@@ -23,16 +23,19 @@ import java.util.List;
 /**
  * Provides a subscriber interface to notify listeners when a SETTINGS frame is read
  */
-public class Http2HttpDecoderSettingsNotifier extends Http2HttpDecoder {
+public class InboundHttp2ToHttpAdapterSettingsNotifier extends InboundHttp2ToHttpAdapter {
     private final List<Http2EventListener<Http2Settings>> settingsListeners;
 
-    public Http2HttpDecoderSettingsNotifier(long maxContentLength) {
-        super(maxContentLength);
+    public InboundHttp2ToHttpAdapterSettingsNotifier(Http2Connection connection, long maxContentLength)
+        throws NullPointerException, IllegalArgumentException {
+        super(connection, maxContentLength);
         settingsListeners = new ArrayList<Http2EventListener<Http2Settings>>();
     }
 
-    public Http2HttpDecoderSettingsNotifier(long maxContentLength, boolean validateHttpHeaders) {
-        super(maxContentLength, validateHttpHeaders);
+    public InboundHttp2ToHttpAdapterSettingsNotifier(Http2Connection connection,
+        long maxContentLength, boolean validateHttpHeaders)
+        throws NullPointerException, IllegalArgumentException {
+        super(connection, maxContentLength, validateHttpHeaders);
         settingsListeners = new ArrayList<Http2EventListener<Http2Settings>>();
     }
 

@@ -44,7 +44,7 @@ import java.util.Set;
 /**
  * Decodes HTTP/2 data and associated streams into {@link HttpMessage}s and {@link HttpContent}s.
  */
-public class Http2HttpDecoder implements Http2FrameObserver {
+public class InboundHttp2ToHttpAdapter extends Http2ConnectionAdapter implements Http2FrameObserver {
 
     private final long maxContentLength;
     private final boolean validateHttpHeaders;
@@ -71,30 +71,47 @@ public class Http2HttpDecoder implements Http2FrameObserver {
     /**
      * Creates a new instance
      *
+     * @param connection The object which will provide connection notification events for the current connection
      * @param maxContentLength
      *            the maximum length of the message content. If the length of the message content exceeds this value, a
      *            {@link TooLongFrameException} will be raised.
+     * @throws NullPointerException If {@code connection} is null
+     * @throws IllegalArgumentException If {@code maxContentLength} is less than or equal to {@code 0}
      */
-    public Http2HttpDecoder(long maxContentLength) {
-        this(maxContentLength, true);
+    public InboundHttp2ToHttpAdapter(Http2Connection connection, long maxContentLength)
+        throws NullPointerException, IllegalArgumentException {
+        this(connection, maxContentLength, true);
     }
 
     /**
      * Creates a new instance
      *
+     * @param connection The object which will provide connection notification events for the current connection
      * @param maxContentLength
      *            the maximum length of the message content. If the length of the message content exceeds this value, a
      *            {@link TooLongFrameException} will be raised.
      * @param validateHeaders
      *            {@code true} if http headers should be validated
+     * @throws NullPointerException If {@code connection} is null
+     * @throws IllegalArgumentException If {@code maxContentLength} is less than or equal to {@code 0}
      */
-    public Http2HttpDecoder(long maxContentLength, boolean validateHttpHeaders) {
+    public InboundHttp2ToHttpAdapter(Http2Connection connection, long maxContentLength, boolean validateHttpHeaders)
+        throws NullPointerException, IllegalArgumentException {
+        if (connection == null) {
+            throw new NullPointerException("connection");
+        }
         if (maxContentLength <= 0) {
             throw new IllegalArgumentException("maxContentLength must be a positive integer: " + maxContentLength);
         }
         this.maxContentLength = maxContentLength;
         this.validateHttpHeaders = validateHttpHeaders;
         messageMap = new IntObjectHashMap<Http2HttpMessageAccumulator>();
+        connection.addListener(this);
+    }
+
+    @Override
+    public void streamRemoved(Http2Stream stream) {
+        removeMessage(stream.id());
     }
 
     @Override
@@ -246,11 +263,9 @@ public class Http2HttpDecoder implements Http2FrameObserver {
     @Override
     public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode) throws Http2Exception {
         Http2HttpMessageAccumulator msgAccumulator = getMessage(streamId);
-        if (msgAccumulator == null) {
-            throw Http2Exception.protocolError("Rst Frame recieved for unknown stream id %d", streamId);
+        if (msgAccumulator != null) {
+            removeMessage(streamId);
         }
-
-        removeMessage(streamId);
     }
 
     @Override

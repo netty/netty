@@ -65,9 +65,9 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
 
 /**
- * Testing the {@link Http2HttpDecoder} for HTTP/2 frames into {@link HttpObject}s
+ * Testing the {@link InboundHttp2ToHttpAdapter} for HTTP/2 frames into {@link HttpObject}s
  */
-public class Http2HttpDecoderTest {
+public class InboundHttp2ToHttpAdapterTest {
 
     @Mock
     private HttpResponseListener messageObserver;
@@ -100,7 +100,10 @@ public class Http2HttpDecoderTest {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
-                p.addLast("reader", new FrameAdapter(new Http2HttpDecoder(maxContentLength), new CountDownLatch(10)));
+                Http2Connection connection = new DefaultHttp2Connection(true);
+                p.addLast("reader", new FrameAdapter(new InboundHttp2ToHttpAdapter(
+                    connection, maxContentLength),
+                    new CountDownLatch(10)));
                 p.addLast(new HttpResponseDelegator(messageObserver));
             }
         });

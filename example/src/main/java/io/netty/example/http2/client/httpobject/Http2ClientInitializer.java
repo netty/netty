@@ -41,7 +41,7 @@ import io.netty.handler.codec.http2.DefaultHttp2OutboundFlowController;
 import io.netty.handler.codec.http2.DefaultHttp2Connection;
 import io.netty.handler.codec.http2.Http2Connection;
 import io.netty.handler.codec.http2.Http2EventListener;
-import io.netty.handler.codec.http2.Http2HttpDecoderSettingsNotifier;
+import io.netty.handler.codec.http2.InboundHttp2ToHttpAdapterSettingsNotifier;
 import io.netty.handler.codec.http2.DelegatingHttp2HttpConnectionHandler;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -74,8 +74,9 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
         if (sslCtx != null) {
             pipeline.addLast(sslCtx.newHandler(ch.alloc()));
         }
-        Http2HttpDecoderSettingsNotifier http2Decoder = new Http2HttpDecoderSettingsNotifier(maxContentLength);
         Http2Connection connection = new DefaultHttp2Connection(false);
+        InboundHttp2ToHttpAdapterSettingsNotifier http2Decoder =
+            new InboundHttp2ToHttpAdapterSettingsNotifier(connection, maxContentLength);
         DelegatingHttp2ConnectionHandler connectionHandler = new DelegatingHttp2HttpConnectionHandler(connection,
                         frameReader(), frameWriter(), new DefaultHttp2InboundFlowController(connection),
                         new DefaultHttp2OutboundFlowController(connection), http2Decoder);

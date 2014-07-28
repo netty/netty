@@ -17,6 +17,7 @@ package io.netty.handler.codec.http2;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelPromiseAggregator;
 import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
@@ -42,6 +43,46 @@ public class DelegatingHttp2HttpConnectionHandler extends DelegatingHttp2Connect
         super(connection, observer);
     }
 
+    protected void addRequestHeaders(HttpRequest httpRequest, DefaultHttp2Headers.Builder http2Headers) {
+        HttpHeaders httpHeaders = httpRequest.headers();
+        http2Headers.path(httpRequest.uri());
+        http2Headers.method(httpRequest.method().toString());
+        String value = httpHeaders.get(HttpHeaders.Names.HOST);
+        if (value != null) {
+            http2Headers.authority(value);
+            httpHeaders.remove(HttpHeaders.Names.HOST);
+        }
+        value = httpHeaders.get(Http2HttpHeaders.Names.SCHEME);
+        if (value != null) {
+            http2Headers.scheme(value);
+            httpHeaders.remove(Http2HttpHeaders.Names.SCHEME);
+        }
+    }
+
+    protected int getStreamId(HttpHeaders httpHeaders) throws Http2Exception {
+        int streamId = 0;
+        String value = httpHeaders.get(Http2HttpHeaders.Names.STREAM_ID);
+        if (value == null) {
+            streamId = nextStreamId();
+        } else {
+            try {
+                streamId = Integer.parseInt(value);
+            } catch (NumberFormatException e) {
+                throw Http2Exception.format(Http2Error.INTERNAL_ERROR,
+                                    "Invalid user-specified stream id value '%s'", value);
+            }
+            // Simple stream id validation for user-specified streamId
+            if (streamId < 1 || (connection().isServer() && (streamId % 2 != 0))
+                            || (!connection().isServer() && (streamId % 2 == 0))) {
+                throw Http2Exception.format(Http2Error.INTERNAL_ERROR,
+                                    "Invalid user-specified stream id value '%d'", streamId);
+            }
+            httpHeaders.remove(Http2HttpHeaders.Names.STREAM_ID);
+        }
+
+        return streamId;
+    }
+
     /**
      * Handles conversion of a {@link FullHttpMessage} to HTTP/2 frames.
      */
@@ -56,44 +97,17 @@ public class DelegatingHttp2HttpConnectionHandler extends DelegatingHttp2Connect
             HttpHeaders httpHeaders = httpMsg.headers();
             DefaultHttp2Headers.Builder http2Headers = DefaultHttp2Headers.newBuilder();
             if (msg instanceof HttpRequest) {
-                HttpRequest httpRequest = (HttpRequest) msg;
-                http2Headers.path(httpRequest.uri());
-                http2Headers.method(httpRequest.method().toString());
-                value = httpHeaders.get(HttpHeaders.Names.HOST);
-                if (value != null) {
-                    http2Headers.authority(value);
-                    httpHeaders.remove(HttpHeaders.Names.HOST);
-                }
-                value = httpHeaders.get(Http2HttpHeaders.Names.SCHEME);
-                if (value != null) {
-                    http2Headers.scheme(value);
-                    httpHeaders.remove(Http2HttpHeaders.Names.SCHEME);
-                }
+                addRequestHeaders((HttpRequest) msg, http2Headers);
             }
 
             // Provide the user the opportunity to specify the streamId
             int streamId = 0;
-            value = httpHeaders.get(Http2HttpHeaders.Names.STREAM_ID);
-            if (value == null) {
-                streamId = nextStreamId();
-            } else {
-                try {
-                    streamId = Integer.parseInt(value);
-                } catch (NumberFormatException e) {
-                    promise.setFailure(Http2Exception.format(Http2Error.INTERNAL_ERROR,
-                                    "Invalid user-specified stream id value '%s'", value));
-                    httpMsg.release();
-                    return;
-                }
-                // Simple stream id validation for user-specified streamId
-                if (streamId < 1 || (connection().isServer() && (streamId % 2 != 0))
-                                || (!connection().isServer() && (streamId % 2 == 0))) {
-                    promise.setFailure(Http2Exception.format(Http2Error.INTERNAL_ERROR,
-                                    "Invalid user-specified stream id value '%d'", streamId));
-                    httpMsg.release();
-                    return;
-                }
-                httpHeaders.remove(Http2HttpHeaders.Names.STREAM_ID);
+            try {
+                streamId = getStreamId(httpHeaders);
+            } catch (Http2Exception e) {
+                httpMsg.release();
+                promise.setFailure(e);
+                return;
             }
 
             // The Connection, Keep-Alive, Proxy-Connection, Transfer-Encoding,
@@ -102,16 +116,21 @@ public class DelegatingHttp2HttpConnectionHandler extends DelegatingHttp2Connect
             httpHeaders.remove("Keep-Alive");
             httpHeaders.remove("Proxy-Connection");
             httpHeaders.remove(HttpHeaders.Names.TRANSFER_ENCODING);
-            httpHeaders.remove(HttpHeaders.Names.UPGRADE);
 
             // Add the HTTP headers which have not been consumed above
             for (Map.Entry<String, String> entry : httpHeaders.entries()) {
                 http2Headers.add(entry.getKey(), entry.getValue());
             }
 
-            writeHeaders(ctx, promise, streamId, http2Headers.build(), 0, !hasData, !hasData);
             if (hasData) {
-                writeData(ctx, promise, streamId, httpMsg.content(), 0, true, true, false);
+                ChannelPromiseAggregator promiseAggregator = new ChannelPromiseAggregator(promise);
+                ChannelPromise headerPromise = ctx.newPromise();
+                ChannelPromise dataPromise = ctx.newPromise();
+                promiseAggregator.add(headerPromise, dataPromise);
+                writeHeaders(ctx, headerPromise, streamId, http2Headers.build(), 0, false, false);
+                writeData(ctx, dataPromise, streamId, httpMsg.content(), 0, true, true, false);
+            } else {
+                writeHeaders(ctx, promise, streamId, http2Headers.build(), 0, true, true);
             }
         } else {
             ctx.write(msg, promise);

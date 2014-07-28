@@ -17,7 +17,8 @@ package io.netty.handler.codec.http2;
 import io.netty.handler.codec.AsciiString;
 
 /**
- * Provides the constants for the header names used by the {@link Http2HttpDecoder} and {@link Http2HttpEncoder}.
+ * Provides the constants for the header names used by
+ * {@link InboundHttp2ToHttpAdapter} and {@link DelegatingHttp2HttpConnectionHandler}
  */
 public final class Http2HttpHeaders {
 
