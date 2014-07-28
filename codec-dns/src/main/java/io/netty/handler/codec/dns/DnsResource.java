@@ -74,7 +74,7 @@ public final class DnsResource extends DnsEntry implements ByteBufHolder {
      * Returns a duplicate of this resource record.
      */
     @Override
-    public ByteBufHolder duplicate() {
+    public DnsResource duplicate() {
         return new DnsResource(name(), type(), dnsClass(), ttl, content.duplicate());
     }
 
