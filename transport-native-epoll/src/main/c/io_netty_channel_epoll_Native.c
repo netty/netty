@@ -423,7 +423,7 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_eventFd(JNIEnv * env, 
 
     if (eventFD < 0) {
         int err = errno;
-        throwRuntimeException(env, exceptionMessage("Error creating eventFD(...): ", err));
+        throwRuntimeException(env, exceptionMessage("Error calling eventfd(...): ", err));
     }
     return eventFD;
 }
@@ -456,7 +456,12 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_epollCreate(JNIEnv * e
     }
     if (efd < 0) {
         int err = errno;
-        throwRuntimeException(env, exceptionMessage("Error during epoll_create(...): ", err));
+        if (epoll_create1) {
+            throwRuntimeException(env, exceptionMessage("Error during epoll_create1(...): ", err));
+        } else {
+            throwRuntimeException(env, exceptionMessage("Error during epoll_create(...): ", err));
+        }
+        return efd;
     }
     if (!epoll_create1) {
         if (fcntl(efd, F_SETFD, FD_CLOEXEC) < 0) {
@@ -944,7 +949,7 @@ JNIEXPORT jlong JNICALL Java_io_netty_channel_epoll_Native_sendfile(JNIEnv *env,
         if (err == EAGAIN) {
             return 0;
         }
-        throwIOException(env, exceptionMessage("Error during accept(...): ", err));
+        throwIOException(env, exceptionMessage("Error during sendfile(...): ", err));
         return -1;
     }
     if (res > 0) {
