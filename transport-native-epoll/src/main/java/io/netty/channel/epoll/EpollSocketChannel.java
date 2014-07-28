@@ -188,6 +188,8 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
         if (done) {
             // Release all buffers
             for (int i = msgCount; i > 0; i --) {
+                final ByteBuf buf = (ByteBuf) in.current();
+                in.progress(buf.readableBytes());
                 in.remove();
             }
             in.progress(writtenBytes);
@@ -203,6 +205,7 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
                 final int readableBytes = buf.writerIndex() - readerIndex;
 
                 if (readableBytes < writtenBytes) {
+                    in.progress(readableBytes);
                     in.remove();
                     writtenBytes -= readableBytes;
                 } else if (readableBytes > writtenBytes) {
@@ -210,6 +213,7 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
                     in.progress(writtenBytes);
                     break;
                 } else { // readable == writtenBytes
+                    in.progress(readableBytes);
                     in.remove();
                     break;
                 }

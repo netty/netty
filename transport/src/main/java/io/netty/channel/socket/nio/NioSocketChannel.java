@@ -280,6 +280,8 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
             if (done) {
                 // Release all buffers
                 for (int i = msgCount; i > 0; i --) {
+                    final ByteBuf buf = (ByteBuf) in.current();
+                    in.progress(buf.readableBytes());
                     in.remove();
                 }
 

@@ -193,12 +193,19 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
             }
             if (msg instanceof ByteBuf) {
                 ByteBuf buf = (ByteBuf) msg;
-                while (buf.isReadable()) {
+                int readableBytes = buf.readableBytes();
+                while (readableBytes > 0) {
                     doWriteBytes(buf);
+                    int newReadableBytes = buf.readableBytes();
+                    in.progress(readableBytes - newReadableBytes);
+                    readableBytes = newReadableBytes;
                 }
                 in.remove();
             } else if (msg instanceof FileRegion) {
-                doWriteFileRegion((FileRegion) msg);
+                FileRegion region = (FileRegion) msg;
+                long transfered = region.transfered();
+                doWriteFileRegion(region);
+                in.progress(region.transfered() - transfered);
                 in.remove();
             } else {
                 in.remove(new UnsupportedOperationException(
