@@ -45,15 +45,13 @@ public final class Signal extends Error implements Constant<Signal> {
         return pool.valueOf(firstNameComponent, secondNameComponent);
     }
 
-    private final int id;
-    private final String name;
+    private final SignalConstant constant;
 
     /**
      * Creates a new {@link Signal} with the specified {@code name}.
      */
     private Signal(int id, String name) {
-        this.id = id;
-        this.name = name;
+        constant = new SignalConstant(id, name);
     }
 
     /**
@@ -78,12 +76,12 @@ public final class Signal extends Error implements Constant<Signal> {
 
     @Override
     public int id() {
-        return id;
+        return constant.id();
     }
 
     @Override
     public String name() {
-        return name;
+        return constant.name();
     }
 
     @Override
@@ -102,16 +100,17 @@ public final class Signal extends Error implements Constant<Signal> {
             return 0;
         }
 
-        int returnCode = name.compareTo(other.name());
-        if (returnCode != 0) {
-            return returnCode;
-        }
-
-        return ((Integer) id).compareTo(other.id());
+        return constant.compareTo(other.constant);
     }
 
     @Override
     public String toString() {
         return name();
+    }
+
+    private static final class SignalConstant extends AbstractConstant<SignalConstant> {
+        SignalConstant(int id, String name) {
+            super(id, name);
+        }
     }
 }
