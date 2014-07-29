@@ -374,15 +374,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      */
     protected abstract class AbstractUnsafe implements Unsafe {
 
-        private ChannelOutboundBuffer outboundBuffer = newOutboundBuffer();
+        private ChannelOutboundBuffer outboundBuffer =  new ChannelOutboundBuffer(AbstractChannel.this);
         private boolean inFlush0;
-
-        /**
-         * Creates a new {@link ChannelOutboundBuffer} to use.
-         */
-        protected ChannelOutboundBuffer newOutboundBuffer() {
-            return new ChannelOutboundBuffer(AbstractChannel.this);
-        }
 
         @Override
         public final ChannelOutboundBuffer outboundBuffer() {

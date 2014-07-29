@@ -162,7 +162,7 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
     }
 
     private boolean writeBytesMultiple(
-            EpollChannelOutboundBuffer in, IovArray array) throws IOException {
+            ChannelOutboundBuffer in, IovArray array) throws IOException {
         boolean done = false;
         long expectedWrittenBytes = array.size();
         int cnt = array.count();
@@ -315,12 +315,11 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
             // * they are all buffers rather than a file region.
             if (msgCount >= 1) {
                 if (PlatformDependent.hasUnsafe()) {
-                    // this means we can cast to EpollChannelOutboundBuffer and write the IovArray directly.
-                    EpollChannelOutboundBuffer epollIn = (EpollChannelOutboundBuffer) in;
-                    IovArray array = epollIn.iovArray();
+                    // this means we can cast to IovArray and write the IovArray directly.
+                    IovArray array = IovArray.get(in);
                     int cnt = array.count();
                     if (cnt > 1) {
-                        if (!writeBytesMultiple(epollIn, array)) {
+                        if (!writeBytesMultiple(in, array)) {
                             // was not able to write everything so break here we will get notified later again once
                             // the network stack can handle more writes.
                             break;
@@ -420,14 +419,6 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
 
     final class EpollSocketUnsafe extends AbstractEpollUnsafe {
         private RecvByteBufAllocator.Handle allocHandle;
-
-        @Override
-        protected ChannelOutboundBuffer newOutboundBuffer() {
-            if (PlatformDependent.hasUnsafe()) {
-                return new EpollChannelOutboundBuffer(EpollSocketChannel.this);
-            }
-            return super.newOutboundBuffer();
-        }
 
         @Override
         public void write(Object msg, ChannelPromise promise) {

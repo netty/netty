@@ -149,17 +149,18 @@ final class IovArray implements ChannelOutboundBuffer.FlushedMessageProcessor {
     }
 
     @Override
-    public boolean processedFlushedMessage(Object msg) throws Exception {
+    public boolean process(Object msg) throws Exception {
         return msg instanceof ByteBuf && add((ByteBuf) msg);
     }
 
     /**
-     * Returns a {@link IovArray} which can be filled.
+     * Returns a {@link IovArray} which is filled with the flushed messages of {@link ChannelOutboundBuffer}.
      */
-    static IovArray get() {
+    static IovArray get(ChannelOutboundBuffer buffer) throws Exception {
         IovArray array = ARRAY.get();
         array.size = 0;
         array.count = 0;
+        buffer.forEachFlushedMessage(array);
         return array;
     }
 }
