@@ -15,6 +15,11 @@
  */
 package io.netty.util;
 
+import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.ThreadLocalRandom;
+
+import java.nio.ByteBuffer;
+
 /**
  * Base implementation of {@link Constant}.
  */
@@ -22,6 +27,8 @@ public abstract class AbstractConstant<T extends AbstractConstant<T>> implements
 
     private final int id;
     private final String name;
+    private volatile long uniquifier;
+    private ByteBuffer directBuffer;
 
     /**
      * Creates a new instance.
@@ -42,31 +49,63 @@ public abstract class AbstractConstant<T extends AbstractConstant<T>> implements
     }
 
     @Override
+    public final String toString() {
+        return name();
+    }
+
+    @Override
     public final int hashCode() {
         return super.hashCode();
     }
 
     @Override
-    public final boolean equals(Object o) {
-        return super.equals(o);
+    public final boolean equals(Object obj) {
+        return super.equals(obj);
     }
 
     @Override
-    public final int compareTo(T other) {
-        if (this == other) {
+    public final int compareTo(T o) {
+        if (this == o) {
             return 0;
         }
 
-        int returnCode = name.compareTo(other.name());
+        @SuppressWarnings("UnnecessaryLocalVariable")
+        AbstractConstant<T> other = o;
+        int returnCode;
+
+        returnCode = hashCode() - other.hashCode();
         if (returnCode != 0) {
             return returnCode;
         }
 
-        return ((Integer) id).compareTo(other.id());
+        long thisUV = uniquifier();
+        long otherUV = other.uniquifier();
+        if (thisUV < otherUV) {
+            return -1;
+        }
+        if (thisUV > otherUV) {
+            return 1;
+        }
+
+        throw new Error("failed to compare two different constants");
     }
 
-    @Override
-    public final String toString() {
-        return name();
+    private long uniquifier() {
+        long uniquifier;
+        if ((uniquifier = this.uniquifier) == 0) {
+            synchronized (this) {
+                while ((uniquifier = this.uniquifier) == 0) {
+                    if (PlatformDependent.hasUnsafe()) {
+                        directBuffer = ByteBuffer.allocateDirect(1);
+                        this.uniquifier = PlatformDependent.directBufferAddress(directBuffer);
+                    } else {
+                        directBuffer = null;
+                        this.uniquifier = ThreadLocalRandom.current().nextLong();
+                    }
+                }
+            }
+        }
+
+        return uniquifier;
     }
 }
