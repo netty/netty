@@ -22,6 +22,7 @@ import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
 
+import java.net.URI;
 import java.util.Map;
 
 /**
@@ -49,9 +50,27 @@ public class DelegatingHttp2HttpConnectionHandler extends DelegatingHttp2Connect
         http2Headers.method(httpRequest.method().toString());
         String value = httpHeaders.get(HttpHeaders.Names.HOST);
         if (value != null) {
-            http2Headers.authority(value);
+            URI hostUri = URI.create(value);
+            // The authority MUST NOT include the deprecated "userinfo" subcomponent
+            value = hostUri.getAuthority();
+            if (value != null) {
+                http2Headers.authority(value.replaceFirst("^.*@", ""));
+            }
+            value = hostUri.getScheme();
+            if (value != null) {
+                http2Headers.scheme(value);
+            }
             httpHeaders.remove(HttpHeaders.Names.HOST);
         }
+
+        // Consume the Authority extension header if present
+        value = httpHeaders.get(Http2HttpHeaders.Names.AUTHORITY);
+        if (value != null) {
+            http2Headers.authority(value);
+            httpHeaders.remove(Http2HttpHeaders.Names.AUTHORITY);
+        }
+
+        // Consume the Scheme extension header if present
         value = httpHeaders.get(Http2HttpHeaders.Names.SCHEME);
         if (value != null) {
             http2Headers.scheme(value);

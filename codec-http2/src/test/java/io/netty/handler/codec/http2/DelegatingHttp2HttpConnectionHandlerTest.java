@@ -40,6 +40,7 @@ import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
+import static io.netty.handler.codec.http.HttpMethod.GET;
 import static io.netty.handler.codec.http.HttpMethod.POST;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -133,9 +134,18 @@ public class DelegatingHttp2HttpConnectionHandlerTest {
 
     @Test
     public void testJustHeadersRequest() throws Exception {
-        final HttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, POST, "/example");
+        final HttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, "/example");
+        final HttpHeaders httpHeaders = request.headers();
+        httpHeaders.set(Http2HttpHeaders.Names.STREAM_ID, 5);
+        httpHeaders.set(HttpHeaders.Names.HOST, "http://my-user_name@www.example.org:5555/example");
+        httpHeaders.set(Http2HttpHeaders.Names.AUTHORITY, "www.example.org:5555");
+        httpHeaders.set(Http2HttpHeaders.Names.SCHEME, "http");
+        httpHeaders.add("foo", "goo");
+        httpHeaders.add("foo", "goo2");
+        httpHeaders.add("foo2", "goo2");
         final Http2Headers http2Headers = new DefaultHttp2Headers.Builder()
-            .method("POST").path("/example").build();
+            .method("GET").path("/example").authority("www.example.org:5555").scheme("http")
+            .add("foo", "goo").add("foo", "goo2").add("foo2", "goo2").build();
         ChannelPromise writePromise = newPromise();
         ChannelFuture writeFuture = clientChannel.writeAndFlush(request, writePromise);
 
@@ -144,7 +154,7 @@ public class DelegatingHttp2HttpConnectionHandlerTest {
         writeFuture.awaitUninterruptibly(2, SECONDS);
         assertTrue(writeFuture.isSuccess());
         awaitRequests();
-        verify(serverObserver).onHeadersRead(any(ChannelHandlerContext.class), eq(3), eq(http2Headers), eq(0),
+        verify(serverObserver).onHeadersRead(any(ChannelHandlerContext.class), eq(5), eq(http2Headers), eq(0),
             anyShort(), anyBoolean(), eq(0), eq(true), eq(true));
         verify(serverObserver, never()).onDataRead(any(ChannelHandlerContext.class),
             anyInt(), any(ByteBuf.class), anyInt(), anyBoolean(), anyBoolean());
@@ -156,8 +166,14 @@ public class DelegatingHttp2HttpConnectionHandlerTest {
         final String text = "foooooogoooo";
         final HttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, POST, "/example",
             Unpooled.copiedBuffer(text, UTF_8));
+        final HttpHeaders httpHeaders = request.headers();
+        httpHeaders.set(HttpHeaders.Names.HOST, "http://your_user-name123@www.example.org:5555/example");
+        httpHeaders.add("foo", "goo");
+        httpHeaders.add("foo", "goo2");
+        httpHeaders.add("foo2", "goo2");
         final Http2Headers http2Headers = new DefaultHttp2Headers.Builder()
-            .method("POST").path("/example").build();
+            .method("POST").path("/example").authority("www.example.org:5555").scheme("http")
+            .add("foo", "goo").add("foo", "goo2").add("foo2", "goo2").build();
         final HttpContent expectedContent = new DefaultLastHttpContent(Unpooled.copiedBuffer(text.getBytes()),
                             true);
         ChannelPromise writePromise = newPromise();
