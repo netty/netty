@@ -739,14 +739,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
     @Override
     public ByteBuf skipBytes(int length) {
         checkReadableBytes(length);
-
-        int newReaderIndex = readerIndex + length;
-        if (newReaderIndex > writerIndex) {
-            throw new IndexOutOfBoundsException(String.format(
-                    "length: %d (expected: readerIndex(%d) + length <= writerIndex(%d))",
-                    length, readerIndex, writerIndex));
-        }
-        readerIndex = newReaderIndex;
+        readerIndex += length;
         return this;
     }
 
