@@ -17,6 +17,8 @@ package io.netty.util;
 
 import org.junit.Test;
 
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -75,6 +77,15 @@ public class ConstantPoolTest {
 
         TestConstant[] array = set.toArray(new TestConstant[5]);
         assertThat(array.length, is(5));
+
+        // Sort by name
+        Arrays.sort(array, new Comparator<TestConstant>() {
+            @Override
+            public int compare(TestConstant o1, TestConstant o2) {
+                return o1.name().compareTo(o2.name());
+            }
+        });
+
         assertThat(array[0], is(sameInstance(a)));
         assertThat(array[1], is(sameInstance(b)));
         assertThat(array[2], is(sameInstance(c)));
