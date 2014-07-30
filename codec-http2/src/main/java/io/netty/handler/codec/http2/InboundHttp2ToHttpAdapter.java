@@ -16,15 +16,18 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.http.DefaultHttpContent;
+import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaderUtil;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMessage;
+import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
@@ -48,23 +51,27 @@ public class InboundHttp2ToHttpAdapter extends Http2ConnectionAdapter implements
 
     private final long maxContentLength;
     private final boolean validateHttpHeaders;
+    private final Http2Connection connection;
     private final IntObjectMap<Http2HttpMessageAccumulator> messageMap;
 
     private static final Set<String> HEADERS_TO_EXCLUDE;
-    private static final Map<String, String> HEADER_NAME_TRANSLATIONS;
+    private static final Map<String, String> HEADER_NAME_TRANSLATIONS_REQUEST;
+    private static final Map<String, String> HEADER_NAME_TRANSLATIONS_RESPONSE;
 
     static {
         HEADERS_TO_EXCLUDE = new HashSet<String>();
-        HEADER_NAME_TRANSLATIONS = new HashMap<String, String>();
+        HEADER_NAME_TRANSLATIONS_REQUEST = new HashMap<String, String>();
+        HEADER_NAME_TRANSLATIONS_RESPONSE = new HashMap<String, String>();
         for (Http2Headers.HttpName http2HeaderName : Http2Headers.HttpName.values()) {
             HEADERS_TO_EXCLUDE.add(http2HeaderName.value());
         }
 
-        HEADER_NAME_TRANSLATIONS.put(Http2Headers.HttpName.AUTHORITY.value(),
+        HEADER_NAME_TRANSLATIONS_RESPONSE.put(Http2Headers.HttpName.AUTHORITY.value(),
                                      Http2HttpHeaders.Names.AUTHORITY.toString());
-        HEADER_NAME_TRANSLATIONS.put(Http2Headers.HttpName.SCHEME.value(),
+        HEADER_NAME_TRANSLATIONS_RESPONSE.put(Http2Headers.HttpName.SCHEME.value(),
                                      Http2HttpHeaders.Names.SCHEME.toString());
-        HEADER_NAME_TRANSLATIONS.put(Http2Headers.HttpName.PATH.value(),
+        HEADER_NAME_TRANSLATIONS_REQUEST.putAll(HEADER_NAME_TRANSLATIONS_RESPONSE);
+        HEADER_NAME_TRANSLATIONS_RESPONSE.put(Http2Headers.HttpName.PATH.value(),
                                      Http2HttpHeaders.Names.PATH.toString());
     }
 
@@ -105,8 +112,9 @@ public class InboundHttp2ToHttpAdapter extends Http2ConnectionAdapter implements
         }
         this.maxContentLength = maxContentLength;
         this.validateHttpHeaders = validateHttpHeaders;
-        messageMap = new IntObjectHashMap<Http2HttpMessageAccumulator>();
-        connection.addListener(this);
+        this.connection = connection;
+        this.messageMap = new IntObjectHashMap<Http2HttpMessageAccumulator>();
+        this.connection.addListener(this);
     }
 
     @Override
@@ -158,8 +166,16 @@ public class InboundHttp2ToHttpAdapter extends Http2ConnectionAdapter implements
         Http2HttpMessageAccumulator msgAccumulator = getMessage(streamId);
         try {
             if (msgAccumulator == null) {
-                msgAccumulator = newHttpResponseAccumulator(headers);
+                msgAccumulator = connection.isServer() ? newHttpRequestAccumulator(headers)
+                                                       : newHttpResponseAccumulator(headers);
             } else if (allowAppend) {
+                if (msgAccumulator.headerConsumed()) {
+                    if (msgAccumulator.trailerConsumed()) {
+                        throw new IllegalStateException("Header received and trailer already consumed");
+                    } else {
+                        msgAccumulator.trailer(new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER, validateHttpHeaders));
+                    }
+                }
                 msgAccumulator.add(headers);
             } else {
                 return null;
@@ -343,18 +359,17 @@ public class InboundHttp2ToHttpAdapter extends Http2ConnectionAdapter implements
     }
 
     /**
-     * Translate HTTP/2 headers into an object which can build the corresponding HTTP/1.x objects
+     * Translate HTTP/2 headers into an object which can build the corresponding HTTP/1.x response objects
      *
-     * @param http2Headers
-     *            The HTTP/2 headers corresponding to a new stream
+     * @param http2Headers The HTTP/2 headers corresponding to a new stream
      * @return Collector for HTTP/1.x objects
      * @throws Http2Exception
      *             If any of the HTTP/2 headers to not translate to valid HTTP/1.x headers
      * @throws IllegalStateException
      *             If this object is not in the correct state to accept additional headers
      */
-    private Http2HttpMessageAccumulator newHttpResponseAccumulator(Http2Headers http2Headers) throws Http2Exception,
-                    IllegalStateException {
+    private Http2HttpMessageAccumulator newHttpResponseAccumulator(Http2Headers http2Headers)
+                    throws Http2Exception, IllegalStateException {
         HttpResponseStatus status = null;
         try {
             status = HttpResponseStatus.parseLine(http2Headers.status());
@@ -372,10 +387,32 @@ public class InboundHttp2ToHttpAdapter extends Http2ConnectionAdapter implements
     }
 
     /**
+     * Translate HTTP/2 headers into an object which can build the corresponding HTTP/1.x request objects
+     *
+     * @param http2Headers The HTTP/2 headers corresponding to a new stream
+     * @return Collector for HTTP/1.x objects
+     * @throws Http2Exception
+     *             If any of the HTTP/2 headers to not translate to valid HTTP/1.x headers
+     * @throws IllegalStateException
+     *             If this object is not in the correct state to accept additional headers
+     */
+    private Http2HttpMessageAccumulator newHttpRequestAccumulator(Http2Headers http2Headers)
+                    throws Http2Exception, IllegalStateException {
+        // HTTP/2 does not define a way to carry the version identifier that is
+        // included in the HTTP/1.1 request line.
+        Http2HttpMessageAccumulator messageAccumulator = new Http2HttpMessageAccumulator(
+               new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.valueOf(http2Headers.method()),
+                                      http2Headers.path(), validateHttpHeaders));
+        messageAccumulator.add(http2Headers);
+        return messageAccumulator;
+    }
+
+    /**
      * Provides a container to collect HTTP/1.x objects until the end of the stream has been reached
      */
     protected final class Http2HttpMessageAccumulator {
         private HttpMessage message;
+        private LastHttpContent trailer;
         private long contentLength;
 
         /**
@@ -389,6 +426,7 @@ public class InboundHttp2ToHttpAdapter extends Http2ConnectionAdapter implements
                 throw new NullPointerException("message");
             }
             this.message = message;
+            this.trailer = null;
             this.contentLength = 0;
         }
 
@@ -404,10 +442,11 @@ public class InboundHttp2ToHttpAdapter extends Http2ConnectionAdapter implements
          *             If this object is not in the correct state to accept additional headers
          */
         public HttpHeaders setHeader(CharSequence name, Object value) throws IllegalStateException {
-            if (message == null) {
+            HttpHeaders headers = currentHeaders();
+            if (headers == null) {
                 throw new IllegalStateException("Headers object is null");
             }
-            return message.headers().set(name, value);
+            return headers.set(name, value);
         }
 
         /**
@@ -420,10 +459,11 @@ public class InboundHttp2ToHttpAdapter extends Http2ConnectionAdapter implements
          *             If this object is not in the correct state to accept additional headers
          */
         public boolean removeHeader(CharSequence name) throws IllegalStateException {
-            if (message == null) {
+            HttpHeaders headers = currentHeaders();
+            if (headers == null) {
                 throw new IllegalStateException("Headers object is null");
             }
-            return message.headers().remove(name);
+            return headers.remove(name);
         }
 
         /**
@@ -433,38 +473,47 @@ public class InboundHttp2ToHttpAdapter extends Http2ConnectionAdapter implements
          *            The channel context for which to propagate events
          * @param setContentLength
          *            {@code true} to set the Content-Length header
-         * @return {@code true} If the message was fired to {@code ctx}, {@code false} otherwise
+         * @return {@code true} If a non-trailer header was fired to {@code ctx}, {@code false} otherwise
          */
         protected boolean sendHeaders(ChannelHandlerContext ctx, boolean setContentLength) {
-            if (message == null) {
+            HttpHeaders headers = currentHeaders();
+            if (headers == null) {
                 return false;
-            }
-
-            HttpHeaders headers = message.headers();
-
-            // The Connection and Keep-Alive headers are no longer valid
-            HttpHeaderUtil.setKeepAlive(message, true);
-            if (setContentLength) {
-                HttpHeaderUtil.setContentLength(message, contentLength);
             }
 
             // Transfer-Encoding header is not valid
             headers.remove(HttpHeaders.Names.TRANSFER_ENCODING);
             headers.remove(HttpHeaders.Names.TRAILER);
 
-            ctx.fireChannelRead(message);
-            message = null;
-            return true;
+            // Initial header and trailer header will never need to be sent at the same time
+            // the behavior is that all header events will be appended to the initial header
+            // until some data is received, and only then will the trailer be used
+            if (!headerConsumed()) {
+                // The Connection and Keep-Alive headers are no longer valid
+                HttpHeaderUtil.setKeepAlive(message, true);
+                if (setContentLength) {
+                    HttpHeaderUtil.setContentLength(message, contentLength);
+                }
+
+                ctx.fireChannelRead(message);
+                message = null;
+                return true;
+            } else if (trailerExists()) {
+                ctx.fireChannelRead(trailer);
+                trailer = LastHttpContent.EMPTY_LAST_CONTENT;
+            }
+            return false;
         }
 
         /**
          * Called when the end of the stream is encountered
          *
-         * @param ctx
-         *            The channel context for which to propagate events
+         * @param ctx The channel context for which to propagate events
          */
         public void endOfStream(ChannelHandlerContext ctx) {
-            sendHeaders(ctx, true);
+            if (sendHeaders(ctx, true)) {
+                ctx.fireChannelRead(LastHttpContent.EMPTY_LAST_CONTENT);
+            }
         }
 
         /**
@@ -491,25 +540,38 @@ public class InboundHttp2ToHttpAdapter extends Http2ConnectionAdapter implements
         /**
          * Extend the current set of HTTP/1.x headers
          *
-         * @param http2Headers
-         *            The HTTP/2 headers to be added
-         * @throws Http2Exception
-         *             If any HTTP/2 headers do not map to HTTP/1.x headers
+         * @param http2Headers The HTTP/2 headers to be added
+         * @throws Http2Exception If any HTTP/2 headers do not map to HTTP/1.x headers
          * @throws IllegalStateException
          *             If this object is not in the correct state to accept additional headers
          */
         public void add(Http2Headers http2Headers) throws Http2Exception, IllegalStateException {
-            if (message == null) {
+            add(http2Headers, InboundHttp2ToHttpAdapter.this.connection.isServer() ? HEADER_NAME_TRANSLATIONS_REQUEST
+                                                                                 : HEADER_NAME_TRANSLATIONS_RESPONSE);
+        }
+
+        /**
+         * Extend the current set of HTTP/1.x headers
+         *
+         * @param http2Headers The HTTP/2 headers to be added
+         * @param headerTranslations Translation map from HTTP/2 headers to HTTP/1.x headers
+         * @throws Http2Exception If any HTTP/2 headers do not map to HTTP/1.x headers
+         * @throws IllegalStateException
+         *             If this object is not in the correct state to accept additional headers
+         */
+        protected void add(Http2Headers http2Headers, Map<String, String> headerTranslations)
+                        throws Http2Exception, IllegalStateException {
+            HttpHeaders headers = currentHeaders();
+            if (headers == null) {
                 throw new IllegalStateException("Headers object is null");
             }
 
             // http://tools.ietf.org/html/draft-ietf-httpbis-http2-13#section-8.1.2.1
             // All headers that start with ':' are only valid in HTTP/2 context
-            HttpHeaders headers = message.headers();
             Iterator<Entry<String, String>> itr = http2Headers.iterator();
             while (itr.hasNext()) {
                 Entry<String, String> entry = itr.next();
-                String translatedName = HEADER_NAME_TRANSLATIONS.get(entry.getKey());
+                String translatedName = headerTranslations.get(entry.getKey());
                 if (translatedName != null || !HEADERS_TO_EXCLUDE.contains(entry.getKey())) {
                     if (translatedName == null) {
                         translatedName = entry.getKey();
@@ -524,6 +586,57 @@ public class InboundHttp2ToHttpAdapter extends Http2ConnectionAdapter implements
                     }
                 }
             }
+        }
+        /**
+         * Set the current trailer header
+         *
+         * @param trailer The object which represents the trailing headers
+         */
+        public void trailer(LastHttpContent trailer) {
+            this.trailer = trailer;
+        }
+
+        /**
+         * Determine if the initial header and continuations have been processed and
+         * sent up the pipeline
+         *
+         * @return {@code true} if the initial header and continuations have been processed and
+         *         sent up the pipeline
+         */
+        public boolean headerConsumed() {
+            return message == null;
+        }
+
+        /**
+         * Determine if the trailing header and continuations have been processed and
+         * sent up the pipeline
+         *
+         * @return {@code true} if the trailing header and continuations have been processed and
+         *         sent up the pipeline
+         */
+        public boolean trailerConsumed() {
+            return trailer != null && trailer.equals(LastHttpContent.EMPTY_LAST_CONTENT);
+        }
+
+        /**
+         * Determine if there is a trailing header that has not yet been sent up the pipeline
+         *
+         * @return {@code true} if there is a trailing header that has not yet been sent up the pipeline
+         */
+        public boolean trailerExists() {
+            return trailer != null && !trailerConsumed();
+        }
+
+        /**
+         * Obtain the current object for accumulating headers
+         *
+         * @return The primary (non-trailer) header if it exists, otherwise the trailer header
+         */
+        private HttpHeaders currentHeaders() {
+            if (headerConsumed()) {
+                return trailerExists() ? trailer.trailingHeaders() : null;
+            }
+            return message.headers();
         }
     }
 }

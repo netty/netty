@@ -29,6 +29,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultHttpContent;
+import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -40,6 +41,7 @@ import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.ByteToMessageDecoder;
@@ -134,15 +136,16 @@ public class InboundHttp2ToHttpAdapterTest {
     }
 
     @Test
-    public void testSingleHeaderNoDataFrames() throws Exception {
-        final HttpMessage response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-        HttpHeaders httpHeaders = response.headers();
+    public void clientRequestSingleHeaderNoDataFrames() throws Exception {
+        serverLatch = new CountDownLatch(2);
+        final HttpMessage request = new DefaultHttpRequest(HttpVersion.HTTP_1_1,
+                        HttpMethod.GET, "/some/path/resource2", true);
+        HttpHeaders httpHeaders = request.headers();
         httpHeaders.set(Http2HttpHeaders.Names.SCHEME, "https");
         httpHeaders.set(Http2HttpHeaders.Names.AUTHORITY, "example.org");
-        httpHeaders.set(Http2HttpHeaders.Names.PATH, "/some/path/resource2");
         httpHeaders.set(Http2HttpHeaders.Names.STREAM_ID, 3);
         httpHeaders.set(HttpHeaders.Names.CONTENT_LENGTH, 0);
-        final Http2Headers http2Headers = new DefaultHttp2Headers.Builder().status("200")
+        final Http2Headers http2Headers = new DefaultHttp2Headers.Builder()
             .method("GET").scheme("https").authority("example.org")
             .path("/some/path/resource2").build();
         runInChannel(clientChannel, new Http2Runnable() {
@@ -152,17 +155,19 @@ public class InboundHttp2ToHttpAdapterTest {
             }
         });
         awaitRequests();
-        verify(messageObserver, only()).messageReceived(eq(response));
+        verify(messageObserver).messageReceived(eq(request));
+        verify(messageObserver).messageReceived(eq(LastHttpContent.EMPTY_LAST_CONTENT));
     }
 
     @Test
-    public void testOneDataFrame() throws Exception {
+    public void clientRequestOneDataFrame() throws Exception {
         serverLatch = new CountDownLatch(2);
-        final HttpMessage response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-        HttpHeaders httpHeaders = response.headers();
+        final HttpMessage request = new DefaultHttpRequest(HttpVersion.HTTP_1_1,
+                        HttpMethod.GET, "/some/path/resource2", true);
+        HttpHeaders httpHeaders = request.headers();
         httpHeaders.set(Http2HttpHeaders.Names.STREAM_ID, 3);
-        final Http2Headers http2Headers = new DefaultHttp2Headers.Builder().status("200")
-            .method("GET").build();
+        final Http2Headers http2Headers = new DefaultHttp2Headers.Builder()
+            .method("GET").path("/some/path/resource2").build();
         final String text = "hello world";
         final HttpContent content = new DefaultLastHttpContent(Unpooled.copiedBuffer(text.getBytes()),
                                                                true);
@@ -179,18 +184,19 @@ public class InboundHttp2ToHttpAdapterTest {
         verify(messageObserver, times(2)).messageReceived(httpObjectCaptor.capture());
 
         List<HttpObject> capturedHttpObjects = httpObjectCaptor.getAllValues();
-        assertEquals(response, capturedHttpObjects.get(0));
+        assertEquals(request, capturedHttpObjects.get(0));
         assertEquals(content, capturedHttpObjects.get(1));
     }
 
     @Test
-    public void testMultipleDataFrames() throws Exception {
+    public void clientRequestMultipleDataFrames() throws Exception {
         serverLatch = new CountDownLatch(3);
-        final HttpMessage response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-        HttpHeaders httpHeaders = response.headers();
+        final HttpMessage request = new DefaultHttpRequest(HttpVersion.HTTP_1_1,
+                        HttpMethod.GET, "/some/path/resource2", true);
+        HttpHeaders httpHeaders = request.headers();
         httpHeaders.set(Http2HttpHeaders.Names.STREAM_ID, 3);
-        final Http2Headers http2Headers = new DefaultHttp2Headers.Builder().status("200")
-            .method("GET").build();
+        final Http2Headers http2Headers = new DefaultHttp2Headers.Builder()
+            .method("GET").path("/some/path/resource2").build();
         final String text = "hello world";
         final String text2 = "hello world2";
         final HttpContent content = new DefaultHttpContent(Unpooled.copiedBuffer(text.getBytes()));
@@ -211,19 +217,20 @@ public class InboundHttp2ToHttpAdapterTest {
         verify(messageObserver, times(3)).messageReceived(httpObjectCaptor.capture());
 
         List<HttpObject> capturedHttpObjects = httpObjectCaptor.getAllValues();
-        assertEquals(response, capturedHttpObjects.get(0));
+        assertEquals(request, capturedHttpObjects.get(0));
         assertEquals(content, capturedHttpObjects.get(1));
         assertEquals(content2, capturedHttpObjects.get(2));
     }
 
     @Test
-    public void testMultipleEmptyDataFrames() throws Exception {
+    public void clientRequestMultipleEmptyDataFrames() throws Exception {
         serverLatch = new CountDownLatch(4);
-        final HttpMessage response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-        HttpHeaders httpHeaders = response.headers();
+        final HttpMessage request = new DefaultHttpRequest(HttpVersion.HTTP_1_1,
+                        HttpMethod.GET, "/some/path/resource2", true);
+        HttpHeaders httpHeaders = request.headers();
         httpHeaders.set(Http2HttpHeaders.Names.STREAM_ID, 3);
-        final Http2Headers http2Headers = new DefaultHttp2Headers.Builder().status("200")
-            .method("GET").build();
+        final Http2Headers http2Headers = new DefaultHttp2Headers.Builder()
+            .method("GET").path("/some/path/resource2").build();
         final String text = "";
         final HttpContent content = new DefaultHttpContent(Unpooled.copiedBuffer(text.getBytes()));
         final HttpContent content2 = new DefaultLastHttpContent(Unpooled.copiedBuffer(text.getBytes()),
@@ -245,23 +252,24 @@ public class InboundHttp2ToHttpAdapterTest {
         verify(messageObserver, times(4)).messageReceived(httpObjectCaptor.capture());
 
         List<HttpObject> capturedHttpObjects = httpObjectCaptor.getAllValues();
-        assertEquals(response, capturedHttpObjects.get(0));
+        assertEquals(request, capturedHttpObjects.get(0));
         assertEquals(content, capturedHttpObjects.get(1));
         assertEquals(content, capturedHttpObjects.get(2));
         assertEquals(content2, capturedHttpObjects.get(3));
     }
 
     @Test
-    public void testHeaderContinuation() throws Exception {
+    public void clientRequestHeaderContinuation() throws Exception {
         serverLatch = new CountDownLatch(2);
-        final HttpMessage response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-        HttpHeaders httpHeaders = response.headers();
+        final HttpMessage request = new DefaultHttpRequest(HttpVersion.HTTP_1_1,
+                        HttpMethod.GET, "/some/path/resource2", true);
+        HttpHeaders httpHeaders = request.headers();
         httpHeaders.set(Http2HttpHeaders.Names.STREAM_ID, 3);
         httpHeaders.set("foo", "goo");
         httpHeaders.set("foo2", "goo2");
         httpHeaders.add("foo2", "goo3");
-        final Http2Headers http2Headers = new DefaultHttp2Headers.Builder().status("200")
-            .method("GET").build();
+        final Http2Headers http2Headers = new DefaultHttp2Headers.Builder()
+            .method("GET").path("/some/path/resource2").build();
         final Http2Headers http2Headers2 = new DefaultHttp2Headers.Builder().set("foo", "goo")
             .set("foo2", "goo2").add("foo2", "goo3").build();
         final String text = "";
@@ -281,28 +289,67 @@ public class InboundHttp2ToHttpAdapterTest {
         verify(messageObserver, times(2)).messageReceived(httpObjectCaptor.capture());
 
         List<HttpObject> capturedHttpObjects = httpObjectCaptor.getAllValues();
-        assertEquals(response, capturedHttpObjects.get(0));
+        assertEquals(request, capturedHttpObjects.get(0));
         assertEquals(content, capturedHttpObjects.get(1));
     }
 
     @Test
-    public void testPushPromise() throws Exception {
-        serverLatch = new CountDownLatch(4);
-        final HttpMessage response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-        HttpHeaders httpHeaders = response.headers();
+    public void clientRequestTrailingHeaders() throws Exception {
+        serverLatch = new CountDownLatch(3);
+        final HttpMessage request = new DefaultHttpRequest(HttpVersion.HTTP_1_1,
+                        HttpMethod.GET, "/some/path/resource2", true);
+        HttpHeaders httpHeaders = request.headers();
         httpHeaders.set(Http2HttpHeaders.Names.STREAM_ID, 3);
-        final HttpMessage response2 = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-        HttpHeaders httpHeaders2 = response2.headers();
+        final LastHttpContent trailer = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER, true);
+        HttpHeaders trailingHeaders = trailer.trailingHeaders();
+        trailingHeaders.set("foo", "goo");
+        trailingHeaders.set("foo2", "goo2");
+        trailingHeaders.add("foo2", "goo3");
+        final Http2Headers http2Headers = new DefaultHttp2Headers.Builder()
+            .method("GET").path("/some/path/resource2").build();
+        final Http2Headers http2Headers2 = new DefaultHttp2Headers.Builder().set("foo", "goo")
+            .set("foo2", "goo2").add("foo2", "goo3").build();
+        final String text = "not empty!";
+        final HttpContent content = new DefaultLastHttpContent(Unpooled.copiedBuffer(text.getBytes()),
+                                                               true);
+        runInChannel(clientChannel, new Http2Runnable() {
+            @Override
+            public void run() {
+                frameWriter.writeHeaders(ctx(), newPromise(), 3, http2Headers, 0, false, false);
+                frameWriter.writeData(ctx(), newPromise(), 3,
+                    Unpooled.copiedBuffer(text.getBytes()), 0, false, false);
+                frameWriter.writeHeaders(ctx(), newPromise(), 3, http2Headers2, 0, true, true);
+            }
+        });
+        awaitRequests();
+        ArgumentCaptor<HttpObject> httpObjectCaptor = ArgumentCaptor.forClass(HttpObject.class);
+        verify(messageObserver, times(3)).messageReceived(httpObjectCaptor.capture());
+
+        List<HttpObject> capturedHttpObjects = httpObjectCaptor.getAllValues();
+        assertEquals(request, capturedHttpObjects.get(0));
+        assertEquals(content, capturedHttpObjects.get(1));
+        assertEquals(trailer, capturedHttpObjects.get(2));
+    }
+
+    @Test
+    public void clientRequestPushPromise() throws Exception {
+        serverLatch = new CountDownLatch(4);
+        final HttpMessage request = new DefaultHttpRequest(HttpVersion.HTTP_1_1,
+                        HttpMethod.GET, "/some/path/resource", true);
+        HttpHeaders httpHeaders = request.headers();
+        httpHeaders.set(Http2HttpHeaders.Names.STREAM_ID, 3);
+        final HttpMessage request2 = new DefaultHttpRequest(HttpVersion.HTTP_1_1,
+                        HttpMethod.GET, "/some/path/resource2", true);
+        HttpHeaders httpHeaders2 = request2.headers();
         httpHeaders2.set(Http2HttpHeaders.Names.SCHEME, "https");
         httpHeaders2.set(Http2HttpHeaders.Names.AUTHORITY, "example.org");
-        httpHeaders2.set(Http2HttpHeaders.Names.PATH, "/some/path/resource2");
         httpHeaders2.set(Http2HttpHeaders.Names.STREAM_ID, 5);
         httpHeaders2.set(Http2HttpHeaders.Names.STREAM_PROMISE_ID, 3);
-        final Http2Headers http2Headers = new DefaultHttp2Headers.Builder().status("200")
-            .method("GET").build();
-        final Http2Headers http2Headers2 = new DefaultHttp2Headers.Builder().status("200")
-            .method("GET").scheme("https").authority("example.org")
-            .path("/some/path/resource2").build();
+        final Http2Headers http2Headers = new DefaultHttp2Headers.Builder()
+            .method("GET").path("/some/path/resource").build();
+        final Http2Headers http2Headers2 = new DefaultHttp2Headers.Builder()
+            .method("GET").path("/some/path/resource2").scheme("https")
+            .authority("example.org").build();
         final String text = "hello 1!**";
         final HttpContent content = new DefaultLastHttpContent(Unpooled.copiedBuffer(text.getBytes()),
                                                                true);
@@ -325,28 +372,30 @@ public class InboundHttp2ToHttpAdapterTest {
         verify(messageObserver, times(4)).messageReceived(httpObjectCaptor.capture());
 
         List<HttpObject> capturedHttpObjects = httpObjectCaptor.getAllValues();
-        assertEquals(response, capturedHttpObjects.get(0));
+        assertEquals(request, capturedHttpObjects.get(0));
         assertEquals(content, capturedHttpObjects.get(1));
-        assertEquals(response2, capturedHttpObjects.get(2));
+        assertEquals(request2, capturedHttpObjects.get(2));
         assertEquals(content2, capturedHttpObjects.get(3));
     }
 
     @Test
-    public void testStreamDependency() throws Exception {
+    public void clientRequestStreamDependency() throws Exception {
         serverLatch = new CountDownLatch(4);
-        final HttpMessage response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-        HttpHeaders httpHeaders = response.headers();
+        final HttpMessage request = new DefaultHttpRequest(HttpVersion.HTTP_1_1,
+                        HttpMethod.GET, "/some/path/resource", true);
+        HttpHeaders httpHeaders = request.headers();
         httpHeaders.set(Http2HttpHeaders.Names.STREAM_ID, 3);
-        final HttpMessage response2 = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-        HttpHeaders httpHeaders2 = response2.headers();
+        final HttpMessage request2  = new DefaultHttpRequest(HttpVersion.HTTP_1_1,
+                        HttpMethod.GET, "/some/path/resource2", true);
+        HttpHeaders httpHeaders2 = request2.headers();
         httpHeaders2.set(Http2HttpHeaders.Names.STREAM_ID, 5);
         httpHeaders2.set(Http2HttpHeaders.Names.STREAM_DEPENDENCY_ID, 3);
         httpHeaders2.set(Http2HttpHeaders.Names.STREAM_EXCLUSIVE, true);
         httpHeaders2.set(Http2HttpHeaders.Names.STREAM_WEIGHT, 256);
-        final Http2Headers http2Headers = new DefaultHttp2Headers.Builder().status("200")
-            .method("GET").build();
-        final Http2Headers http2Headers2 = new DefaultHttp2Headers.Builder().status("200")
-            .method("GET").build();
+        final Http2Headers http2Headers = new DefaultHttp2Headers.Builder()
+            .method("GET").path("/some/path/resource").build();
+        final Http2Headers http2Headers2 = new DefaultHttp2Headers.Builder()
+            .method("GET").path("/some/path/resource2").build();
         final String text = "hello 1!**";
         final HttpContent content = new DefaultLastHttpContent(Unpooled.copiedBuffer(text.getBytes()),
                                                                true);
@@ -370,9 +419,9 @@ public class InboundHttp2ToHttpAdapterTest {
         verify(messageObserver, times(4)).messageReceived(httpObjectCaptor.capture());
 
         List<HttpObject> capturedHttpObjects = httpObjectCaptor.getAllValues();
-        assertEquals(response, capturedHttpObjects.get(0));
+        assertEquals(request, capturedHttpObjects.get(0));
         assertEquals(content, capturedHttpObjects.get(1));
-        assertEquals(response2, capturedHttpObjects.get(2));
+        assertEquals(request2, capturedHttpObjects.get(2));
         assertEquals(content2, capturedHttpObjects.get(3));
     }
 

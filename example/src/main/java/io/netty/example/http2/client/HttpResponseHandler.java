@@ -12,8 +12,9 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-package io.netty.example.http2.client.httpobject;
+package io.netty.example.http2.client;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -48,6 +49,7 @@ public class HttpResponseHandler extends SimpleChannelInboundHandler<FullHttpRes
      * @param streamId The stream for which a response is expected
      * @param promise The promise object that will be used to wait/notify events
      * @return The previous object associated with {@code streamId}
+     * @see {@link io.netty.example.http2.client.HttpResponseHandler#awaitResponses awaitResponses}
      */
     public ChannelPromise put(int streamId, ChannelPromise promise) {
         return streamidPromiseMap.put(streamId, promise);
@@ -56,9 +58,9 @@ public class HttpResponseHandler extends SimpleChannelInboundHandler<FullHttpRes
     /**
      * Wait (sequentially) for a time duration for each anticipated response
      *
-     * @param timeout Value of time to wait
+     * @param timeout Value of time to wait for each response
      * @param unit Units associated with {@code timeout}
-     * @see put
+     * @see {@link io.netty.example.http2.client.HttpResponseHandler#put put}
      */
     public void awaitResponses(long timeout, TimeUnit unit) {
         Iterator<Entry<Integer, ChannelPromise>> itr = streamidPromiseMap.entrySet().iterator();
@@ -83,6 +85,15 @@ public class HttpResponseHandler extends SimpleChannelInboundHandler<FullHttpRes
         if (promise == null) {
             System.err.println("Message received for unknown stream id " + streamId);
         } else {
+            // Do stuff with the message (for now just print it)
+            ByteBuf content = msg.content();
+            if (content.isReadable()) {
+                int contentLength = content.readableBytes();
+                byte[] arr = new byte[contentLength];
+                content.readBytes(arr);
+                System.out.println(new String(arr, 0, contentLength, CharsetUtil.UTF_8));
+            }
+
             promise.setSuccess();
         }
     }

@@ -21,7 +21,6 @@ import static io.netty.example.http2.Http2ExampleUtil.UPGRADE_RESPONSE_HEADER;
 import static io.netty.util.internal.logging.InternalLogLevel.INFO;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.example.http2.client.Http2ClientConnectionHandler;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler;
 import io.netty.handler.codec.http2.AbstractHttp2ConnectionHandler;
 import io.netty.handler.codec.http2.DefaultHttp2Connection;
@@ -45,7 +44,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 public class HelloWorldHttp2Handler extends AbstractHttp2ConnectionHandler {
 
     private static final Http2FrameLogger logger = new Http2FrameLogger(INFO,
-            InternalLoggerFactory.getInstance(Http2ClientConnectionHandler.class));
+            InternalLoggerFactory.getInstance(HelloWorldHttp2Handler.class));
     static final ByteBuf RESPONSE_BYTES = unreleasableBuffer(copiedBuffer("Hello World", CharsetUtil.UTF_8));
 
     public HelloWorldHttp2Handler() {
@@ -68,7 +67,8 @@ public class HelloWorldHttp2Handler extends AbstractHttp2ConnectionHandler {
         if (evt instanceof HttpServerUpgradeHandler.UpgradeEvent) {
             // Write an HTTP/2 response to the upgrade request
             Http2Headers headers =
-                    DefaultHttp2Headers.newBuilder().set(UPGRADE_RESPONSE_HEADER, "true").build();
+                    DefaultHttp2Headers.newBuilder().status("200")
+                    .set(UPGRADE_RESPONSE_HEADER, "true").build();
             writeHeaders(ctx, ctx.newPromise(), 1, headers, 0, true, true);
         }
         super.userEventTriggered(ctx, evt);
