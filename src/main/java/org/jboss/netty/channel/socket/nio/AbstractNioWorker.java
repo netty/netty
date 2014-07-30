@@ -488,6 +488,7 @@ abstract class AbstractNioWorker extends AbstractNioSelector implements Worker {
             }
 
             if (channel.getRawInterestOps() != newInterestOps) {
+                changed = true;
                 key.interestOps(newInterestOps);
                 if (Thread.currentThread() != thread &&
                     wakenUp.compareAndSet(false, true)) {
