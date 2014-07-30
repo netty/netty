@@ -17,6 +17,7 @@ package io.netty.channel.epoll;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelOutboundBuffer;
+import io.netty.channel.ChannelOutboundBuffer.MessageProcessor;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.PlatformDependent;
 
@@ -24,7 +25,7 @@ import io.netty.util.internal.PlatformDependent;
  * Represent an array of struct array and so can be passed directly over via JNI without the need to do any more
  * array copies.
  *
- * The buffers are written out directly into direct memory to match the struct iov. See also <code>man writev</code>.
+ * The buffers are written out directly into direct memory to match the struct iov. See also {@code man writev}.
  *
  * <pre>
  * struct iovec {
@@ -34,19 +35,24 @@ import io.netty.util.internal.PlatformDependent;
  * </pre>
  *
  * See also
- * <a href="http://rkennke.wordpress.com/2007/07/30/efficient-jni-programming-iv-wrapping-native-data-objects/">
- *     Efficient JNI programming IV: Wrapping native data objects</a>.
+ * <a href="http://rkennke.wordpress.com/2007/07/30/efficient-jni-programming-iv-wrapping-native-data-objects/"
+ * >Efficient JNI programming IV: Wrapping native data objects</a>.
  */
-final class IovArray implements ChannelOutboundBuffer.FlushedMessageProcessor {
-    // Maximal number of struct iov entries that can be passed to writev(...)
-    private static final int IOV_MAX = Native.IOV_MAX;
-    // The size of an address which should be 8 for 64 bits and 4 for 32 bits.
+final class IovArray implements MessageProcessor {
+
+    /** The size of an address which should be 8 for 64 bits and 4 for 32 bits. */
     private static final int ADDRESS_SIZE = PlatformDependent.addressSize();
-    // The size of an struct iov entry in bytes. This is calculated as we have 2 entries each of the size of the
-    // address.
+
+    /**
+     * The size of an {@code iovec} struct in bytes. This is calculated as we have 2 entries each of the size of the
+     * address.
+     */
     private static final int IOV_SIZE = 2 * ADDRESS_SIZE;
-    // The needed memory to hold up to IOV_MAX iov entries.
-    private static final int CAPACITY = IOV_MAX * IOV_SIZE;
+
+    /** The needed memory to hold up to {@link Native#IOV_MAX} iov entries, where {@link Native#IOV_MAX} signified
+     * the maximum number of {@code iovec} structs that can be passed to {@code writev(...)}.
+     */
+    private static final int CAPACITY = Native.IOV_MAX * IOV_SIZE;
 
     private static final FastThreadLocal<IovArray> ARRAY = new FastThreadLocal<IovArray>() {
         @Override
@@ -74,7 +80,7 @@ final class IovArray implements ChannelOutboundBuffer.FlushedMessageProcessor {
      * {@code false} otherwise.
      */
     private boolean add(ByteBuf buf) {
-        if (count == IOV_MAX) {
+        if (count == Native.IOV_MAX) {
             // No more room!
             return false;
         }
@@ -149,7 +155,7 @@ final class IovArray implements ChannelOutboundBuffer.FlushedMessageProcessor {
     }
 
     @Override
-    public boolean process(Object msg) throws Exception {
+    public boolean processMessage(Object msg) throws Exception {
         return msg instanceof ByteBuf && add((ByteBuf) msg);
     }
 

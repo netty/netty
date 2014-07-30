@@ -294,7 +294,7 @@ public final class ChannelOutboundBuffer {
         }
 
         // recycle the entry
-        e.recycleAndGetNext();
+        e.recycle();
 
         return true;
     }
@@ -320,7 +320,7 @@ public final class ChannelOutboundBuffer {
         }
 
         // recycle the entry
-        e.recycleAndGetNext();
+        e.recycle();
 
         return true;
     }
@@ -384,11 +384,11 @@ public final class ChannelOutboundBuffer {
                             }
                             nioBuffers[nioBufferCount ++] = nioBuf;
                         } else {
-                            ByteBuffer[] nioBufs = entry.buffers;
+                            ByteBuffer[] nioBufs = entry.bufs;
                             if (nioBufs == null) {
                                 // cached ByteBuffers as they may be expensive to create in terms
                                 // of Object allocation
-                                entry.buffers = nioBufs = buf.nioBuffers();
+                                entry.bufs = nioBufs = buf.nioBuffers();
                             }
                             nioBufferCount = fillBufferArray(nioBufs, nioBuffers, nioBufferCount);
                         }
@@ -565,18 +565,18 @@ public final class ChannelOutboundBuffer {
     }
 
     /**
-     * Call {@link FlushedMessageProcessor#process(Object)} foreach flushed message
-     * in this {@link ChannelOutboundBuffer} until {@link FlushedMessageProcessor#process(Object)}
-     * returns {@code false} or ther are no more flushed messages to process.
+     * Call {@link MessageProcessor#processMessage(Object)} for each flushed message
+     * in this {@link ChannelOutboundBuffer} until {@link MessageProcessor#processMessage(Object)}
+     * returns {@code false} or there are no more flushed messages to process.
      */
-    public void forEachFlushedMessage(FlushedMessageProcessor processor) throws Exception {
+    public void forEachFlushedMessage(MessageProcessor processor) throws Exception {
         if (processor == null) {
             throw new NullPointerException("processor");
         }
         Entry entry = flushedEntry;
         while (entry != null) {
             if (!entry.cancelled) {
-                if (!processor.process(entry.msg)) {
+                if (!processor.processMessage(entry.msg)) {
                     return;
                 }
             }
@@ -584,12 +584,12 @@ public final class ChannelOutboundBuffer {
         }
     }
 
-    public interface FlushedMessageProcessor {
+    public interface MessageProcessor {
         /**
          * Will be called for each flushed message until it either there are no more flushed messages or this
          * method returns {@code false}.
          */
-        boolean process(Object msg) throws Exception;
+        boolean processMessage(Object msg) throws Exception;
     }
 
     static final class Entry {
@@ -603,7 +603,7 @@ public final class ChannelOutboundBuffer {
         private final Handle handle;
         Entry next;
         Object msg;
-        ByteBuffer[] buffers;
+        ByteBuffer[] bufs;
         ByteBuffer buf;
         ChannelPromise promise;
         long progress;
@@ -637,17 +637,16 @@ public final class ChannelOutboundBuffer {
                 pendingSize = 0;
                 total = 0;
                 progress = 0;
-                buffers = null;
+                bufs = null;
                 buf = null;
                 return pSize;
             }
             return 0;
         }
 
-        Entry recycleAndGetNext() {
-            Entry e = next;
+        void recycle() {
             next = null;
-            buffers = null;
+            bufs = null;
             buf = null;
             msg = null;
             promise = null;
@@ -657,7 +656,12 @@ public final class ChannelOutboundBuffer {
             count = -1;
             cancelled = false;
             RECYCLER.recycle(this, handle);
-            return e;
+        }
+
+        Entry recycleAndGetNext() {
+            Entry next = this.next;
+            recycle();
+            return next;
         }
     }
 
