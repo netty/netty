@@ -573,15 +573,20 @@ public final class ChannelOutboundBuffer {
         if (processor == null) {
             throw new NullPointerException("processor");
         }
+
         Entry entry = flushedEntry;
-        while (entry != null) {
+        if (entry == null) {
+            return;
+        }
+
+        do {
             if (!entry.cancelled) {
                 if (!processor.processMessage(entry.msg)) {
                     return;
                 }
             }
             entry = entry.next;
-        }
+        } while (entry != null && entry != unflushedEntry);
     }
 
     public interface MessageProcessor {
