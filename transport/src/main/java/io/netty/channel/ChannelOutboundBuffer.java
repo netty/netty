@@ -120,15 +120,18 @@ public final class ChannelOutboundBuffer {
 
         Entry entry = Entry.newInstance(msg, size, total(msg), promise);
         if (tailEntry == null) {
-            flushedEntry = null;
+            assert flushedEntry == null;
+            assert unflushedEntry == null;
             tailEntry = entry;
+            unflushedEntry = entry;
         } else {
             Entry tail = tailEntry;
             tail.next = entry;
             tailEntry = entry;
-        }
-        if (unflushedEntry == null) {
-            unflushedEntry = entry;
+
+            if (unflushedEntry == null) {
+                unflushedEntry = entry;
+            }
         }
 
         // increment pending bytes after adding message to the unflushed arrays.
@@ -328,12 +331,13 @@ public final class ChannelOutboundBuffer {
         if (e == tailEntry) {
             // processed everything
             tailEntry = null;
-            unflushedEntry = null;
+            assert unflushedEntry == null;
         }
         if (-- flushed == 0) {
             flushedEntry = null;
         } else {
             flushedEntry = e.next;
+            assert flushedEntry != null;
         }
     }
 
