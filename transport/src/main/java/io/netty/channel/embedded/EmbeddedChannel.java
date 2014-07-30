@@ -163,7 +163,7 @@ public class EmbeddedChannel extends AbstractChannel {
      *
      * @param msgs the messages to be written
      *
-     * @return {@code true} if the write operation did add something to the the inbound buffer
+     * @return {@code true} if the write operation did add something to the inbound buffer
      */
     public boolean writeInbound(Object... msgs) {
         ensureOpen();
@@ -185,7 +185,7 @@ public class EmbeddedChannel extends AbstractChannel {
      * Write messages to the outbound of this {@link Channel}.
      *
      * @param msgs              the messages to be written
-     * @return bufferReadable   returns {@code true} if the write operation did add something to the the outbound buffer
+     * @return bufferReadable   returns {@code true} if the write operation did add something to the outbound buffer
      */
     public boolean writeOutbound(Object... msgs) {
         ensureOpen();

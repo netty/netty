@@ -18,7 +18,6 @@ package io.netty.channel.epoll;
 
 import io.netty.channel.ChannelException;
 import io.netty.channel.DefaultFileRegion;
-import io.netty.channel.epoll.EpollChannelOutboundBuffer.AddressEntry;
 import io.netty.util.internal.NativeLibraryLoader;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -52,6 +51,7 @@ final class Native {
     public static final int EPOLLOUT = 0x02;
     public static final int EPOLLACCEPT = 0x04;
     public static final int EPOLLRDHUP = 0x08;
+    public static int IOV_MAX = iovMax();
 
     public static native int eventFd();
     public static native void eventFdWrite(int fd, long value);
@@ -69,7 +69,7 @@ final class Native {
     public static native int writeAddress(int fd, long address, int pos, int limit) throws IOException;
 
     public static native long writev(int fd, ByteBuffer[] buffers, int offset, int length) throws IOException;
-    public static native long writevAddresses(int fd, AddressEntry[] addresses, int offset, int length)
+    public static native long writevAddresses(int fd, long memoryAddress, int length)
             throws IOException;
 
     public static native int read(int fd, ByteBuffer buf, int pos, int limit) throws IOException;
@@ -222,6 +222,9 @@ final class Native {
     }
 
     public static native String kernelVersion();
+
+    private static native int iovMax();
+
     private Native() {
         // utility
     }

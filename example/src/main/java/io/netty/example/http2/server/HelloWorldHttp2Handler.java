@@ -112,6 +112,6 @@ public class HelloWorldHttp2Handler extends AbstractHttp2ConnectionHandler {
         Http2Headers headers = DefaultHttp2Headers.newBuilder().status("200").build();
         writeHeaders(ctx(), ctx().newPromise(), streamId, headers, 0, false, false);
 
-        writeData(ctx(), ctx().newPromise(), streamId, payload, 0, true, true, false);
+        writeData(ctx(), ctx().newPromise(), streamId, payload, 0, true, true);
     }
 }

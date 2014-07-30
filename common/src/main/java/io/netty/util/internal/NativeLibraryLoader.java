@@ -44,11 +44,7 @@ public final class NativeLibraryLoader {
         String workdir = SystemPropertyUtil.get("io.netty.native.workdir");
         if (workdir != null) {
             File f = new File(workdir);
-            if (!f.exists()) {
-                // ok to ignore as createTempFile will take care
-                //noinspection ResultOfMethodCallIgnored
-                f.mkdirs();
-            }
+            f.mkdirs();
 
             try {
                 f = f.getAbsoluteFile();
@@ -130,9 +126,7 @@ public final class NativeLibraryLoader {
         }
 
         File f = new File(path);
-        if (!f.exists()) {
-            f.mkdirs();
-        }
+        f.mkdirs();
 
         if (!f.isDirectory()) {
             return null;

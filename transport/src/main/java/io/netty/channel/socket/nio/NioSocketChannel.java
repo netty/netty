@@ -245,15 +245,16 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
                 super.doWrite(in);
                 return;
             }
-            NioSocketChannelOutboundBuffer nioIn = (NioSocketChannelOutboundBuffer) in;
             // Ensure the pending writes are made of ByteBufs only.
+            NioSocketChannelOutboundBuffer nioIn = (NioSocketChannelOutboundBuffer) in;
             ByteBuffer[] nioBuffers = nioIn.nioBuffers();
-            if (nioBuffers == null) {
+            int nioBufferCnt = nioIn.nioBufferCount();
+            if (nioBufferCnt <= 1) {
+                // We have something else beside ByteBuffers to write so fallback to normal writes.
                 super.doWrite(in);
                 return;
             }
 
-            int nioBufferCnt = nioIn.nioBufferCount();
             long expectedWrittenBytes = nioIn.nioBufferSize();
 
             final SocketChannel ch = javaChannel();
@@ -277,7 +278,9 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
             if (done) {
                 // Release all buffers
                 for (int i = msgCount; i > 0; i --) {
-                    nioIn.remove();
+                    final ByteBuf buf = (ByteBuf) in.current();
+                    in.progress(buf.readableBytes());
+                    in.remove();
                 }
 
                 // Finish the write loop if no new messages were flushed by in.remove().

@@ -27,6 +27,7 @@ import io.netty.util.Recycler;
 import io.netty.util.Recycler.Handle;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -42,7 +43,14 @@ public class ChannelOutboundBuffer {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ChannelOutboundBuffer.class);
 
-    protected static final int INITIAL_CAPACITY = 32;
+    protected static final int INITIAL_CAPACITY =
+            SystemPropertyUtil.getInt("io.netty.outboundBufferInitialCapacity", 4);
+
+    static {
+        if (logger.isDebugEnabled()) {
+            logger.debug("-Dio.netty.outboundBufferInitialCapacity: {}", INITIAL_CAPACITY);
+        }
+    }
 
     private static final Recycler<ChannelOutboundBuffer> RECYCLER = new Recycler<ChannelOutboundBuffer>() {
         @Override
@@ -521,6 +529,10 @@ public class ChannelOutboundBuffer {
      */
     protected final int unflushed() {
         return unflushed;
+    }
+
+    protected final int entryMask() {
+        return buffer.length - 1;
     }
 
     protected ByteBuf copyToDirectByteBuf(ByteBuf buf) {

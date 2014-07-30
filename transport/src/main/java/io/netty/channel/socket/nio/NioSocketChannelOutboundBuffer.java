@@ -89,16 +89,16 @@ public final class NioSocketChannelOutboundBuffer extends ChannelOutboundBuffer 
         long nioBufferSize = 0;
         int nioBufferCount = 0;
         final Entry[] buffer = entries();
-        final int mask = buffer.length - 1;
+        final int mask = entryMask();
         ByteBuffer[] nioBuffers = this.nioBuffers;
         Object m;
         int unflushed = unflushed();
         int i = flushed();
         while (i != unflushed && (m = buffer[i].msg()) != null) {
             if (!(m instanceof ByteBuf)) {
-                this.nioBufferCount = 0;
-                this.nioBufferSize = 0;
-                return null;
+                // Just break out of the loop as we can still use gathering writes for the buffers that we
+                // found by now.
+                break;
             }
 
             NioEntry entry = (NioEntry) buffer[i];

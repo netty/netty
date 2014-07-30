@@ -268,6 +268,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         private void fulfillConnectPromise(ChannelPromise promise, Throwable cause) {
             if (promise == null) {
                 // Closed via cancellation and the promise has been notified already.
+                return;
             }
 
             // Use tryFailure() instead of setFailure() to avoid the race against cancel().

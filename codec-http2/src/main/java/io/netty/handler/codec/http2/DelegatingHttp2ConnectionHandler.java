@@ -53,9 +53,8 @@ public class DelegatingHttp2ConnectionHandler extends AbstractHttp2ConnectionHan
 
     @Override
     public ChannelFuture writeData(ChannelHandlerContext ctx, ChannelPromise promise, int streamId,
-            ByteBuf data, int padding, boolean endStream, boolean endSegment, boolean compressed) {
-        return super.writeData(ctx, promise, streamId, data, padding, endStream, endSegment,
-                compressed);
+            ByteBuf data, int padding, boolean endStream, boolean endSegment) {
+        return super.writeData(ctx, promise, streamId, data, padding, endStream, endSegment);
     }
 
     @Override

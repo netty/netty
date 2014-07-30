@@ -15,20 +15,12 @@
  */
 package io.netty.handler.codec.compression;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.util.CharsetUtil;
-import io.netty.util.ReferenceCountUtil;
 import org.junit.Test;
 
 import java.util.Random;
 
-import static io.netty.buffer.Unpooled.*;
-import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.*;
-
-public class SnappyIntegrationTest {
+public class SnappyIntegrationTest extends IntegrationTest {
 
     /**
      * The number of random regression tests run by testRandom() runs.  Whenever testRandom() finds the case that
@@ -39,18 +31,20 @@ public class SnappyIntegrationTest {
      **/
     private static final int RANDOM_RUNS = 1;
 
-    @Test
-    public void testText() throws Exception {
-        testIdentity(copiedBuffer(
-                "Netty has been designed carefully with the experiences earned from the implementation of a lot of " +
-                        "protocols such as FTP, SMTP, HTTP, and various binary and text-based legacy protocols",
-                CharsetUtil.US_ASCII));
+    @Override
+    protected EmbeddedChannel createEncoderEmbeddedChannel() {
+        return new EmbeddedChannel(new SnappyFramedEncoder());
+    }
+
+    @Override
+    protected EmbeddedChannel createDecoderEmbeddedChannel() {
+        return new EmbeddedChannel(new SnappyFramedDecoder());
     }
 
     @Test
     public void test1002() throws Throwable {
         // Data from https://github.com/netty/netty/issues/1002
-        testIdentity(wrappedBuffer(new byte[] {
+        final byte[] data = {
                 11,    0,    0,    0,    0,    0,   16,   65,   96,  119,  -22,   79,  -43,   76,  -75,  -93,
                 11,  104,   96,  -99,  126,  -98,   27,  -36,   40,  117,  -65,   -3,  -57,  -83,  -58,    7,
                 114,  -14,   68, -122,  124,   88,  118,   54,   45,  -26,  117,   13,  -45,   -9,   60,  -73,
@@ -69,7 +63,8 @@ public class SnappyIntegrationTest {
                 -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,
                 -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,
                 -1,   -1
-        }));
+        };
+        testIdentity(data);
     }
 
     // These tests were found using testRandom() with large RANDOM_RUNS.
@@ -89,9 +84,8 @@ public class SnappyIntegrationTest {
 
     @Test
     public void testRandom() throws Throwable {
-        Random rnd = new Random();
         for (int i = 0; i < RANDOM_RUNS; i++) {
-            long seed = rnd.nextLong();
+            long seed = rand.nextLong();
             if (seed < 0) {
                 // Use only positive seed to get prettier test name. :-)
                 continue;
@@ -102,65 +96,15 @@ public class SnappyIntegrationTest {
             } catch (Throwable t) {
                 System.out.println("Failed with random seed " + seed + ". Here is a test for it:\n");
                 printSeedAsTest(seed);
-                //throw t;
+                throw t;
             }
         }
     }
 
-    private static void testWithSeed(long seed) {
+    private void testWithSeed(long seed) {
         byte[] data = new byte[16 * 1048576];
         new Random(seed).nextBytes(data);
         testIdentity(data);
-    }
-
-    private static void testIdentity(byte[] data) {
-        testIdentity(wrappedBuffer(data));
-    }
-
-    private static void testIdentity(ByteBuf in) {
-        EmbeddedChannel encoder = new EmbeddedChannel(new SnappyFramedEncoder());
-        EmbeddedChannel decoder = new EmbeddedChannel(new SnappyFramedDecoder());
-        try {
-            encoder.writeOutbound(in.copy());
-            ByteBuf compressed = encoder.readOutbound();
-            assertThat(compressed, is(notNullValue()));
-            assertThat(compressed, is(not(in)));
-            decoder.writeInbound(compressed.retain());
-            assertFalse(compressed.isReadable());
-            compressed.release();
-            CompositeByteBuf decompressed = compositeBuffer();
-            for (;;) {
-                Object o = decoder.readInbound();
-                if (o == null) {
-                    break;
-                }
-                decompressed.addComponent((ByteBuf) o);
-                decompressed.writerIndex(decompressed.writerIndex() + ((ByteBuf) o).readableBytes());
-            }
-            assertEquals(in, decompressed);
-            decompressed.release();
-            in.release();
-        } finally {
-            // Avoids memory leak through AbstractChannel.allChannels
-            encoder.close();
-            decoder.close();
-
-            for (;;) {
-                Object msg = encoder.readOutbound();
-                if (msg == null) {
-                    break;
-                }
-                ReferenceCountUtil.release(msg);
-            }
-
-            for (;;) {
-                Object msg = decoder.readInbound();
-                if (msg == null) {
-                    break;
-                }
-                ReferenceCountUtil.release(msg);
-            }
-        }
     }
 
     private static void printSeedAsTest(long l) {

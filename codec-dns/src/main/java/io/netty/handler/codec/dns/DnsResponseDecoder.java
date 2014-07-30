@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.DatagramPacket;
+import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.util.CharsetUtil;
 
@@ -86,6 +87,8 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
      */
     private static String readName(ByteBuf buf) {
         int position = -1;
+        int checked = 0;
+        int length = buf.writerIndex();
         StringBuilder name = new StringBuilder();
         for (int len = buf.readUnsignedByte(); buf.isReadable() && len != 0; len = buf.readUnsignedByte()) {
             boolean pointer = (len & 0xc0) == 0xc0;
@@ -94,6 +97,11 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
                     position = buf.readerIndex() + 1;
                 }
                 buf.readerIndex((len & 0x3f) << 8 | buf.readUnsignedByte());
+                // check for loops
+                checked += 2;
+                if (checked >= length) {
+                    throw new CorruptedFrameException("name contains a loop.");
+                }
             } else {
                 name.append(buf.toString(buf.readerIndex(), len, CharsetUtil.UTF_8)).append('.');
                 buf.skipBytes(len);
@@ -103,8 +111,9 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
             buf.readerIndex(position);
         }
         if (name.length() == 0) {
-            return null;
+            return "";
         }
+
         return name.substring(0, name.length() - 1);
     }
 
@@ -117,8 +126,8 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
      */
     private static DnsQuestion decodeQuestion(ByteBuf buf) {
         String name = readName(buf);
-        int type = buf.readUnsignedShort();
-        int qClass = buf.readUnsignedShort();
+        DnsType type = DnsType.valueOf(buf.readUnsignedShort());
+        DnsClass qClass = DnsClass.valueOf(buf.readUnsignedShort());
         return new DnsQuestion(name, type, qClass);
     }
 
@@ -131,8 +140,8 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
      */
     private static DnsResource decodeResource(ByteBuf buf) {
         String name = readName(buf);
-        int type = buf.readUnsignedShort();
-        int aClass = buf.readUnsignedShort();
+        DnsType type = DnsType.valueOf(buf.readUnsignedShort());
+        DnsClass aClass = DnsClass.valueOf(buf.readUnsignedShort());
         long ttl = buf.readUnsignedInt();
         int len = buf.readUnsignedShort();
 

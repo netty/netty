@@ -14,13 +14,20 @@
  */
 package io.netty.util.collection;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Random;
 import java.util.Set;
-
-import static org.junit.Assert.*;
 
 /**
  * Tests for {@link IntObjectHashMap}.
@@ -278,5 +285,122 @@ public class IntObjectHashMapTest {
             assertTrue(found.add(value));
         }
         assertEquals(expected, found);
+    }
+
+    @Test
+    public void mapShouldSupportHashingConflicts() {
+        for (int mod = 0; mod < 10; ++mod) {
+            for (int sz = 1; sz <= 101; sz += 2) {
+                IntObjectHashMap<String> map = new IntObjectHashMap<String>(sz);
+                for (int i = 0; i < 100; ++i) {
+                    map.put(i * mod, "");
+                }
+            }
+        }
+    }
+
+    @Test
+    public void hashcodeEqualsTest() {
+        IntObjectHashMap<Integer> map1 = new IntObjectHashMap<Integer>();
+        IntObjectHashMap<Integer> map2 = new IntObjectHashMap<Integer>();
+        Random rnd = new Random(0);
+        while (map1.size() < 100) {
+            int key = rnd.nextInt(100);
+            map1.put(key, key);
+            map2.put(key, key);
+        }
+        assertEquals(map1.hashCode(), map2.hashCode());
+        assertTrue(map1.equals(map2));
+        // Remove one "middle" element, maps should now be non-equals.
+        int[] keys = map1.keys();
+        map2.remove(keys[50]);
+        assertFalse(map1.equals(map2));
+        // Put it back; will likely be in a different position, but maps will be equal again.
+        map2.put(keys[50], map1.keys()[50]);
+        assertTrue(map1.equals(map2));
+        assertEquals(map1.hashCode(), map2.hashCode());
+        // Make map2 have one extra element, will be non-equal.
+        map2.put(1000, 1000);
+        assertFalse(map1.equals(map2));
+        // Rebuild map2 with elements in a different order, again the maps should be equal.
+        // (These tests with same elements in different order also show that the hashCode
+        // function does not depend on the internal ordering of entries.)
+        map2.clear();
+        Arrays.sort(keys);
+        for (int key : keys) {
+            map2.put(key, key);
+        }
+        assertEquals(map1.hashCode(), map2.hashCode());
+        assertTrue(map1.equals(map2));
+    }
+
+    @Test
+    public void fuzzTest() {
+        // This test is so extremely internals-dependent that I'm not even trying to
+        // minimize that. Any internal changes will not fail the test (so it's not flaky per se)
+        // but will possibly make it less effective (not test interesting scenarios anymore).
+
+        // The RNG algorithm is specified and stable, so this will cause the same exact dataset
+        // to be used in every run and every JVM implementation.
+        Random rnd = new Random(0);
+
+        int baseSize = 1000;
+        // Empirically-determined size to expand the capacity exactly once, and before
+        // the step that creates the long conflict chain. We need to test rehash(),
+        // but also control when rehash happens because it cleans up the REMOVED entries.
+        // This size is also chosen so after the single rehash, the map will be densely
+        // populated, getting close to a second rehash but not triggering it.
+        int startTableSize = 1105;
+        IntObjectHashMap<Integer> map = new IntObjectHashMap<Integer>(startTableSize);
+        // Reference map which implementation we trust to be correct, will mirror all operations.
+        HashMap<Integer, Integer> goodMap = new HashMap<Integer, Integer>();
+
+        // Add initial population.
+        for (int i = 0; i < baseSize / 4; ++i) {
+            int key = rnd.nextInt(baseSize);
+            assertEquals(goodMap.put(key, key), map.put(key, key));
+            // 50% elements are multiple of a divisor of startTableSize => more conflicts.
+            key = rnd.nextInt(baseSize) * 17;
+            assertEquals(goodMap.put(key, key), map.put(key, key));
+        }
+
+        // Now do some mixed adds and removes for further fuzzing
+        // Rehash will happen here, but only once, and the final size will be closer to max.
+        for (int i = 0; i < baseSize * 1000; ++i) {
+            int key = rnd.nextInt(baseSize);
+            if (rnd.nextDouble() >= 0.2) {
+                assertEquals(goodMap.put(key, key), map.put(key, key));
+            } else {
+                assertEquals(goodMap.remove(key), map.remove(key));
+            }
+        }
+
+        // Final batch of fuzzing, only searches and removes.
+        int removeSize = map.size() / 2;
+        while (removeSize > 0) {
+            int key = rnd.nextInt(baseSize);
+            boolean found = goodMap.containsKey(key);
+            assertEquals(found, map.containsKey(key));
+            assertEquals(goodMap.remove(key), map.remove(key));
+            if (found) {
+                --removeSize;
+            }
+        }
+
+        // Now gotta write some code to compare the final maps, as equals() won't work.
+        assertEquals(goodMap.size(), map.size());
+        Integer[] goodKeys = goodMap.keySet().toArray(new Integer[goodMap.size()]);
+        Arrays.sort(goodKeys);
+        int [] keys = map.keys();
+        Arrays.sort(keys);
+        for (int i = 0; i < goodKeys.length; ++i) {
+            assertEquals((int) goodKeys[i], keys[i]);
+        }
+
+        // Finally drain the map.
+        for (int key : map.keys()) {
+            assertEquals(goodMap.remove(key), map.remove(key));
+        }
+        assertTrue(map.isEmpty());
     }
 }

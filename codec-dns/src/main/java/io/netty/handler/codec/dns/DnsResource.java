@@ -41,7 +41,7 @@ public final class DnsResource extends DnsEntry implements ByteBufHolder {
      * @param content
      *            the data contained in this record
      */
-    public DnsResource(String name, int type, int aClass, long ttl, ByteBuf content) {
+    public DnsResource(String name, DnsType type, DnsClass aClass, long ttl, ByteBuf content) {
         super(name, type, aClass);
         this.ttl = ttl;
         this.content = content;
@@ -74,7 +74,7 @@ public final class DnsResource extends DnsEntry implements ByteBufHolder {
      * Returns a duplicate of this resource record.
      */
     @Override
-    public ByteBufHolder duplicate() {
+    public DnsResource duplicate() {
         return new DnsResource(name(), type(), dnsClass(), ttl, content.duplicate());
     }
 

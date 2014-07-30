@@ -147,7 +147,7 @@ public class DelegatingHttp2HttpConnectionHandler extends DelegatingHttp2Connect
                 ChannelPromise dataPromise = ctx.newPromise();
                 promiseAggregator.add(headerPromise, dataPromise);
                 writeHeaders(ctx, headerPromise, streamId, http2Headers.build(), 0, false, false);
-                writeData(ctx, dataPromise, streamId, httpMsg.content(), 0, true, true, false);
+                writeData(ctx, dataPromise, streamId, httpMsg.content(), 0, true, true);
             } else {
                 writeHeaders(ctx, promise, streamId, http2Headers.build(), 0, true, true);
             }

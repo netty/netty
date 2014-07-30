@@ -29,7 +29,6 @@ import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
-import io.netty.channel.epoll.EpollChannelOutboundBuffer.AddressEntry;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
@@ -105,38 +104,163 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
     /**
      * Write bytes form the given {@link ByteBuf} to the underlying {@link java.nio.channels.Channel}.
      * @param buf           the {@link ByteBuf} from which the bytes should be written
-     * @return amount       the amount of written bytes
      */
-    private int doWriteBytes(ByteBuf buf, int readable) throws Exception {
-        int readerIndex = buf.readerIndex();
-        int localFlushedAmount;
-        if (buf.nioBufferCount() == 1) {
-            if (buf.hasMemoryAddress()) {
-                localFlushedAmount = Native.writeAddress(fd, buf.memoryAddress(), readerIndex, buf.writerIndex());
-            } else {
-                ByteBuffer nioBuf = buf.internalNioBuffer(readerIndex, readable);
-                localFlushedAmount = Native.write(fd, nioBuf, nioBuf.position(), nioBuf.limit());
+    private boolean writeBytes(ChannelOutboundBuffer in, ByteBuf buf) throws Exception {
+        int readableBytes = buf.readableBytes();
+        if (readableBytes == 0) {
+            in.remove();
+            return true;
+        }
+        boolean done = false;
+        long writtenBytes = 0;
+        if (buf.hasMemoryAddress()) {
+            long memoryAddress = buf.memoryAddress();
+            int readerIndex = buf.readerIndex();
+            int writerIndex = buf.writerIndex();
+            for (;;) {
+                int localFlushedAmount = Native.writeAddress(fd, memoryAddress, readerIndex, writerIndex);
+                if (localFlushedAmount > 0) {
+                    writtenBytes += localFlushedAmount;
+                    if (writtenBytes == readableBytes) {
+                        done = true;
+                        break;
+                    }
+                    readerIndex += localFlushedAmount;
+                } else {
+                    // Returned EAGAIN need to set EPOLLOUT
+                    setEpollOut();
+                    break;
+                }
             }
+            updateOutboundBuffer(in, writtenBytes, 1, done);
+            return done;
+        } else if (buf.nioBufferCount() == 1) {
+            int readerIndex = buf.readerIndex();
+            ByteBuffer nioBuf = buf.internalNioBuffer(readerIndex, buf.readableBytes());
+            for (;;) {
+                int pos = nioBuf.position();
+                int limit = nioBuf.limit();
+                int localFlushedAmount = Native.write(fd, nioBuf, pos, limit);
+                if (localFlushedAmount > 0) {
+                    nioBuf.position(pos + localFlushedAmount);
+                    writtenBytes += localFlushedAmount;
+                    if (writtenBytes == readableBytes) {
+                        done = true;
+                        break;
+                    }
+                } else {
+                    // Returned EAGAIN need to set EPOLLOUT
+                    setEpollOut();
+                    break;
+                }
+            }
+            updateOutboundBuffer(in, writtenBytes, 1, done);
+            return done;
         } else {
-            // backed by more then one buffer, do a gathering write...
-            ByteBuffer[] nioBufs = buf.nioBuffers();
-            localFlushedAmount = (int) Native.writev(fd, nioBufs, 0, nioBufs.length);
+            ByteBuffer[] nioBuffers = buf.nioBuffers();
+            return writeBytesMultiple(in, 1, nioBuffers, nioBuffers.length, readableBytes);
         }
-        if (localFlushedAmount > 0) {
-            buf.readerIndex(readerIndex + localFlushedAmount);
-        }
-        return localFlushedAmount;
     }
 
-    private void writeBytesMultiple(
-            EpollChannelOutboundBuffer in, int msgCount, AddressEntry[] nioBuffers) throws IOException {
+    private boolean writeBytesMultiple(
+            EpollChannelOutboundBuffer in, IovArray array) throws IOException {
+        boolean done = false;
+        long expectedWrittenBytes = array.size();
+        int cnt = array.count();
+        long writtenBytes = 0;
+        int offset = 0;
+        int end = offset + cnt;
+        int messages = cnt;
+        for (;;) {
+            long localWrittenBytes = Native.writevAddresses(fd, array.memoryAddress(offset), cnt);
+            if (localWrittenBytes == 0) {
+                // Returned EAGAIN need to set EPOLLOUT
+                setEpollOut();
+                break;
+            }
+            expectedWrittenBytes -= localWrittenBytes;
+            writtenBytes += localWrittenBytes;
 
-        int nioBufferCnt = in.addressCount();
-        long expectedWrittenBytes = in.addressSize();
-        long localWrittenBytes = Native.writevAddresses(fd, nioBuffers, 0, nioBufferCnt);
+            if (expectedWrittenBytes == 0) {
+                // Written everything, just break out here (fast-path)
+                done = true;
+                break;
+            }
 
-        if (localWrittenBytes < expectedWrittenBytes) {
-            setEpollOut();
+            do {
+                long bytes = array.processWritten(offset, localWrittenBytes);
+                if (bytes == -1) {
+                    // incomplete write
+                    break;
+                } else {
+                    offset++;
+                    cnt--;
+                    localWrittenBytes -= bytes;
+                }
+            } while (offset < end && localWrittenBytes > 0);
+        }
+
+        updateOutboundBuffer(in, writtenBytes, messages, done);
+        return done;
+    }
+
+    private boolean writeBytesMultiple(
+            ChannelOutboundBuffer in, int msgCount, ByteBuffer[] nioBuffers,
+            int nioBufferCnt, long expectedWrittenBytes) throws IOException {
+        boolean done = false;
+        long writtenBytes = 0;
+        int offset = 0;
+        int end = offset + nioBufferCnt;
+        loop: while (nioBufferCnt > 0) {
+            for (;;) {
+                int cnt = nioBufferCnt > Native.IOV_MAX? Native.IOV_MAX : nioBufferCnt;
+
+                long localWrittenBytes = Native.writev(fd, nioBuffers, offset, cnt);
+                if (localWrittenBytes == 0) {
+                    // Returned EAGAIN need to set EPOLLOUT
+                    setEpollOut();
+                    break loop;
+                }
+                expectedWrittenBytes -= localWrittenBytes;
+                writtenBytes += localWrittenBytes;
+                if (expectedWrittenBytes == 0) {
+                    // Written everything, just break out here (fast-path)
+                    done = true;
+                    break loop;
+                }
+                do {
+                    ByteBuffer buffer = nioBuffers[offset];
+                    int pos = buffer.position();
+                    int bytes = buffer.limit() - pos;
+                    if (bytes > localWrittenBytes) {
+                        buffer.position(pos + (int) localWrittenBytes);
+                        // incomplete write
+                        break;
+                    } else {
+                        offset++;
+                        nioBufferCnt--;
+                        localWrittenBytes -= bytes;
+                    }
+                 } while (offset < end && localWrittenBytes > 0);
+            }
+        }
+        updateOutboundBuffer(in, writtenBytes, msgCount, done);
+        return done;
+    }
+
+    private static void updateOutboundBuffer(ChannelOutboundBuffer in, long writtenBytes, int msgCount,
+                                      boolean done) {
+        if (done) {
+            // Release all buffers
+            for (int i = msgCount; i > 0; i --) {
+                final ByteBuf buf = (ByteBuf) in.current();
+                in.progress(buf.readableBytes());
+                in.remove();
+            }
+            in.progress(writtenBytes);
+        } else {
+            // Did not write all buffers completely.
+            // Release the fully written buffers and update the indexes of the partially written buffer.
 
             // Did not write all buffers completely.
             // Release the fully written buffers and update the indexes of the partially written buffer.
@@ -145,62 +269,19 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
                 final int readerIndex = buf.readerIndex();
                 final int readableBytes = buf.writerIndex() - readerIndex;
 
-                if (readableBytes < localWrittenBytes) {
+                if (readableBytes < writtenBytes) {
+                    in.progress(readableBytes);
                     in.remove();
-                    localWrittenBytes -= readableBytes;
-                } else if (readableBytes > localWrittenBytes) {
-
-                    buf.readerIndex(readerIndex + (int) localWrittenBytes);
-                    in.progress(localWrittenBytes);
+                    writtenBytes -= readableBytes;
+                } else if (readableBytes > writtenBytes) {
+                    buf.readerIndex(readerIndex + (int) writtenBytes);
+                    in.progress(writtenBytes);
                     break;
                 } else { // readable == writtenBytes
+                    in.progress(readableBytes);
                     in.remove();
                     break;
                 }
-            }
-        } else {
-            // Release all buffers
-            for (int i = msgCount; i > 0; i --) {
-                in.remove();
-            }
-        }
-    }
-
-    private void writeBytesMultiple(
-            NioSocketChannelOutboundBuffer in, int msgCount, ByteBuffer[] nioBuffers) throws IOException {
-
-        int nioBufferCnt = in.nioBufferCount();
-        long expectedWrittenBytes = in.nioBufferSize();
-
-        long localWrittenBytes = Native.writev(fd, nioBuffers, 0, nioBufferCnt);
-
-        if (localWrittenBytes < expectedWrittenBytes) {
-            setEpollOut();
-
-            // Did not write all buffers completely.
-            // Release the fully written buffers and update the indexes of the partially written buffer.
-            for (int i = msgCount; i > 0; i --) {
-                final ByteBuf buf = (ByteBuf) in.current();
-                final int readerIndex = buf.readerIndex();
-                final int readableBytes = buf.writerIndex() - readerIndex;
-
-                if (readableBytes < localWrittenBytes) {
-                    in.remove();
-                    localWrittenBytes -= readableBytes;
-                } else if (readableBytes > localWrittenBytes) {
-
-                    buf.readerIndex(readerIndex + (int) localWrittenBytes);
-                    in.progress(localWrittenBytes);
-                    break;
-                } else { // readable == writtenBytes
-                    in.remove();
-                    break;
-                }
-            }
-        } else {
-            // Release all buffers
-            for (int i = msgCount; i > 0; i --) {
-                in.remove();
             }
         }
     }
@@ -211,8 +292,32 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
      * @param region        the {@link DefaultFileRegion} from which the bytes should be written
      * @return amount       the amount of written bytes
      */
-    private long doWriteFileRegion(DefaultFileRegion region, long count) throws Exception {
-        return Native.sendfile(fd, region, region.transfered(), count);
+    private boolean writeFileRegion(ChannelOutboundBuffer in, DefaultFileRegion region) throws Exception {
+        boolean done = false;
+        long flushedAmount = 0;
+
+        for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
+            long expected = region.count() - region.position();
+            long localFlushedAmount = Native.sendfile(fd, region, region.transfered(), expected);
+            if (localFlushedAmount == 0) {
+                // Returned EAGAIN need to set EPOLLOUT
+                setEpollOut();
+                break;
+            }
+
+            flushedAmount += localFlushedAmount;
+            if (region.transfered() >= region.count()) {
+                done = true;
+                break;
+            }
+        }
+
+        in.progress(flushedAmount);
+
+        if (done) {
+            in.remove();
+        }
+        return done;
     }
 
     @Override
@@ -229,14 +334,18 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
             // Do gathering write if:
             // * the outbound buffer contains more than one messages and
             // * they are all buffers rather than a file region.
-            if (msgCount > 1) {
+            if (msgCount >= 1) {
                 if (PlatformDependent.hasUnsafe()) {
-                    // this means we can cast to EpollChannelOutboundBuffer and write the AdressEntry directly.
+                    // this means we can cast to EpollChannelOutboundBuffer and write the IovArray directly.
                     EpollChannelOutboundBuffer epollIn = (EpollChannelOutboundBuffer) in;
-                    // Ensure the pending writes are made of memoryaddresses only.
-                    AddressEntry[] addresses = epollIn.memoryAddresses();
-                    if (addresses != null) {
-                        writeBytesMultiple(epollIn, msgCount, addresses);
+                    IovArray array = epollIn.iovArray();
+                    int cnt = array.count();
+                    if (cnt > 1) {
+                        if (!writeBytesMultiple(epollIn, array)) {
+                            // was not able to write everything so break here we will get notified later again once
+                            // the network stack can handle more writes.
+                            break;
+                        }
 
                         // We do not break the loop here even if the outbound buffer was flushed completely,
                         // because a user might have triggered another write and flush when we notify his or her
@@ -246,9 +355,14 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
                 } else {
                     NioSocketChannelOutboundBuffer nioIn = (NioSocketChannelOutboundBuffer) in;
                     // Ensure the pending writes are made of memoryaddresses only.
-                    ByteBuffer[] buffers = nioIn.nioBuffers();
-                    if (buffers != null) {
-                        writeBytesMultiple(nioIn, msgCount, buffers);
+                    ByteBuffer[] nioBuffers = nioIn.nioBuffers();
+                    int nioBufferCnt = nioIn.nioBufferCount();
+                    if (nioBufferCnt > 1) {
+                        if (!writeBytesMultiple(nioIn, msgCount, nioBuffers, nioBufferCnt, nioIn.nioBufferSize())) {
+                            // was not able to write everything so break here we will get notified later again once
+                            // the network stack can handle more writes.
+                            break;
+                        }
 
                         // We do not break the loop here even if the outbound buffer was flushed completely,
                         // because a user might have triggered another write and flush when we notify his or her
@@ -262,37 +376,17 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
             Object msg = in.current();
             if (msg instanceof ByteBuf) {
                 ByteBuf buf = (ByteBuf) msg;
-                int readableBytes = buf.readableBytes();
-                if (readableBytes == 0) {
-                    in.remove();
-                    continue;
-                }
-
-                int expected = buf.readableBytes();
-                int localFlushedAmount = doWriteBytes(buf, expected);
-                in.progress(localFlushedAmount);
-                if (localFlushedAmount < expected) {
-                    setEpollOut();
+                if (!writeBytes(in, buf)) {
+                    // was not able to write everything so break here we will get notified later again once
+                    // the network stack can handle more writes.
                     break;
                 }
-                if (!buf.isReadable()) {
-                    in.remove();
-                }
-
             } else if (msg instanceof DefaultFileRegion) {
                 DefaultFileRegion region = (DefaultFileRegion) msg;
-
-                long expected = region.count() - region.position();
-                long localFlushedAmount = doWriteFileRegion(region, expected);
-                in.progress(localFlushedAmount);
-
-                if (localFlushedAmount < expected) {
-                    setEpollOut();
+                if (!writeFileRegion(in, region)) {
+                    // was not able to write everything so break here we will get notified later again once
+                    // the network stack can handle more writes.
                     break;
-                }
-
-                if (region.transfered() >= region.count()) {
-                    in.remove();
                 }
             } else {
                 throw new UnsupportedOperationException("unsupported message type: " + StringUtil.simpleClassName(msg));
@@ -464,6 +558,7 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
         private void fulfillConnectPromise(ChannelPromise promise, Throwable cause) {
             if (promise == null) {
                 // Closed via cancellation and the promise has been notified already.
+                return;
             }
 
             // Use tryFailure() instead of setFailure() to avoid the race against cancel().
