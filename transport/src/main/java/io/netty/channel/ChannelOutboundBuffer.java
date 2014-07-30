@@ -30,6 +30,7 @@ import io.netty.util.Recycler;
 import io.netty.util.Recycler.Handle;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.FastThreadLocal;
+import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -325,13 +326,13 @@ public final class ChannelOutboundBuffer {
     }
 
     private void removeEntry(Entry e) {
-        if (e == tailEntry) {
-            // processed everything
-            tailEntry = null;
-            unflushedEntry = null;
-        }
         if (-- flushed == 0) {
+            // processed everything
             flushedEntry = null;
+            if (e == tailEntry) {
+                tailEntry = null;
+                unflushedEntry = null;
+            }
         } else {
             flushedEntry = e.next;
         }
@@ -352,7 +353,8 @@ public final class ChannelOutboundBuffer {
         long nioBufferSize = 0;
         int nioBufferCount = 0;
         final ByteBufAllocator alloc = channel.alloc();
-        ByteBuffer[] nioBuffers = NIO_BUFFERS.get();
+        final InternalThreadLocalMap threadLocalMap = InternalThreadLocalMap.get();
+        ByteBuffer[] nioBuffers = NIO_BUFFERS.get(threadLocalMap);
         Entry entry = flushedEntry;
         while (entry != null && entry.msg instanceof ByteBuf) {
             if (!entry.cancelled) {
@@ -369,7 +371,8 @@ public final class ChannelOutboundBuffer {
                     }
                     int neededSpace = nioBufferCount + count;
                     if (neededSpace > nioBuffers.length) {
-                        break;
+                        nioBuffers = expandNioBufferArray(nioBuffers, neededSpace, nioBufferCount);
+                        NIO_BUFFERS.set(threadLocalMap, nioBuffers);
                     }
                     if (buf.isDirect() || threadLocalDirectBufferSize <= 0) {
                         if (count == 1) {
@@ -429,6 +432,25 @@ public final class ChannelOutboundBuffer {
         entry.count = 1;
         nioBuffers[nioBufferCount ++] = nioBuf;
         return nioBufferCount;
+    }
+
+    private static ByteBuffer[] expandNioBufferArray(ByteBuffer[] array, int neededSpace, int size) {
+        int newCapacity = array.length;
+        do {
+            // double capacity until it is big enough
+            // See https://github.com/netty/netty/issues/1890
+            newCapacity <<= 1;
+
+            if (newCapacity < 0) {
+                throw new IllegalStateException();
+            }
+
+        } while (neededSpace > newCapacity);
+
+        ByteBuffer[] newArray = new ByteBuffer[newCapacity];
+        System.arraycopy(array, 0, newArray, 0, size);
+
+        return newArray;
     }
 
     public int nioBufferCount() {

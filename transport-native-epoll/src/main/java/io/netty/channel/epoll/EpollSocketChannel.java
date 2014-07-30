@@ -192,7 +192,6 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
                 in.progress(buf.readableBytes());
                 in.remove();
             }
-            in.progress(writtenBytes);
         } else {
             // Did not write all buffers completely.
             // Release the fully written buffers and update the indexes of the partially written buffer.
