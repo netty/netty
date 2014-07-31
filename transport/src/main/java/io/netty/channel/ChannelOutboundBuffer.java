@@ -356,7 +356,7 @@ public final class ChannelOutboundBuffer {
         final InternalThreadLocalMap threadLocalMap = InternalThreadLocalMap.get();
         ByteBuffer[] nioBuffers = NIO_BUFFERS.get(threadLocalMap);
         Entry entry = flushedEntry;
-        while (entry != null && entry.msg instanceof ByteBuf) {
+        while (isFlushedEntry(entry) && entry.msg instanceof ByteBuf) {
             if (!entry.cancelled) {
                 ByteBuf buf = (ByteBuf) entry.msg;
                 final int readerIndex = buf.readerIndex();
@@ -586,7 +586,11 @@ public final class ChannelOutboundBuffer {
                 }
             }
             entry = entry.next;
-        } while (entry != null && entry != unflushedEntry);
+        } while (isFlushedEntry(entry));
+    }
+
+    private boolean isFlushedEntry(Entry e) {
+        return e != null && e != unflushedEntry;
     }
 
     public interface MessageProcessor {
