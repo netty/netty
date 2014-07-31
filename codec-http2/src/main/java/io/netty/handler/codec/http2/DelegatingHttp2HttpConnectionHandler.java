@@ -21,6 +21,7 @@ import io.netty.channel.ChannelPromiseAggregator;
 import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpResponse;
 
 import java.net.URI;
 import java.util.Map;
@@ -44,10 +45,13 @@ public class DelegatingHttp2HttpConnectionHandler extends DelegatingHttp2Connect
         super(connection, observer);
     }
 
-    protected void addRequestHeaders(HttpRequest httpRequest, DefaultHttp2Headers.Builder http2Headers) {
-        HttpHeaders httpHeaders = httpRequest.headers();
-        http2Headers.path(httpRequest.uri());
-        http2Headers.method(httpRequest.method().toString());
+    /**
+     * Add HTTP/2 headers based upon HTTP/1.x headers from a {@link HttpHeaders}
+     *
+     * @param httpHeaders The HTTP/1.x request object to pull headers from
+     * @param http2Headers The HTTP/2 headers object to add headers to
+     */
+    protected void addHeaders(HttpHeaders httpHeaders, DefaultHttp2Headers.Builder http2Headers) {
         String value = httpHeaders.get(HttpHeaders.Names.HOST);
         if (value != null) {
             URI hostUri = URI.create(value);
@@ -78,6 +82,36 @@ public class DelegatingHttp2HttpConnectionHandler extends DelegatingHttp2Connect
         }
     }
 
+    /**
+     * Add HTTP/2 headers based upon HTTP/1.x headers from a {@link HttpRequest}
+     *
+     * @param httpRequest The HTTP/1.x request object to pull headers from
+     * @param http2Headers The HTTP/2 headers object to add headers to
+     */
+    protected void addRequestHeaders(HttpRequest httpRequest, DefaultHttp2Headers.Builder http2Headers) {
+        http2Headers.path(httpRequest.uri());
+        http2Headers.method(httpRequest.method().toString());
+        addHeaders(httpRequest.headers(), http2Headers);
+    }
+
+    /**
+     * Add HTTP/2 headers based upon HTTP/1.x headers from a {@link HttpRequest}
+     *
+     * @param httpResponse The HTTP/1.x response object to pull headers from
+     * @param http2Headers The HTTP/2 headers object to add headers to
+     */
+    protected void addResponseHeaders(HttpResponse httpResponse, DefaultHttp2Headers.Builder http2Headers) {
+        http2Headers.status(Integer.toString(httpResponse.status().code()));
+        addHeaders(httpResponse.headers(), http2Headers);
+    }
+
+    /**
+     * Get the next stream id either from the {@link HttpHeaders} object or HTTP/2 codec
+     *
+     * @param httpHeaders The HTTP/1.x headers object to look for the stream id
+     * @return The stream id to use with this {@link HttpHeaders} object
+     * @throws Http2Exception If the {@code httpHeaders} object specifies an invalid stream id
+     */
     protected int getStreamId(HttpHeaders httpHeaders) throws Http2Exception {
         int streamId = 0;
         String value = httpHeaders.get(Http2HttpHeaders.Names.STREAM_ID);
@@ -117,6 +151,8 @@ public class DelegatingHttp2HttpConnectionHandler extends DelegatingHttp2Connect
             DefaultHttp2Headers.Builder http2Headers = DefaultHttp2Headers.newBuilder();
             if (msg instanceof HttpRequest) {
                 addRequestHeaders((HttpRequest) msg, http2Headers);
+            } else if (msg instanceof HttpResponse) {
+                addResponseHeaders((HttpResponse) msg, http2Headers);
             }
 
             // Provide the user the opportunity to specify the streamId
