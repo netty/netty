@@ -231,9 +231,8 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
 
         @Override
         public void run() {
-            ctx.channel().config().setAutoRead(true);
             ctx.attr(READ_SUSPENDED).set(false);
-            ctx.read();
+            ctx.channel().config().setAutoRead(true);
         }
     }
 
