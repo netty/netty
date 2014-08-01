@@ -48,10 +48,17 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
      */
     public static final long DEFAULT_CHECK_INTERVAL = 1000;
 
+   /**
+    * Default max delay in case of traffic shaping
+    * (during which no communication will occur).
+    * Shall be less than TIMEOUT. Here half of "standard" 30s
+    */
+    public static final long DEFAULT_MAX_TIME = 15000;
+
     /**
      * Default minimal time to wait
      */
-    private static final long MINIMAL_WAIT = 10;
+    static final long MINIMAL_WAIT = 10;
 
     /**
      * Traffic Counter
@@ -68,15 +75,20 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
      */
     private long readLimit;
 
+   /**
+    * Max delay in wait
+    */
+    protected long maxTime = DEFAULT_MAX_TIME; // default 15 s
+
     /**
      * Delay between two performance snapshots
      */
     protected long checkInterval = DEFAULT_CHECK_INTERVAL; // default 1 s
 
-    private static final AttributeKey<Boolean> READ_SUSPENDED = AttributeKey.valueOf(
-            AbstractTrafficShapingHandler.class.getName() + ".READ_SUSPENDED");
-    private static final AttributeKey<Runnable> REOPEN_TASK = AttributeKey.valueOf(
-            AbstractTrafficShapingHandler.class.getName() + ".REOPEN_TASK");
+    private static final AttributeKey<Boolean> READ_SUSPENDED =
+            AttributeKey.valueOf(AbstractTrafficShapingHandler.class, "READ_SUSPENDED");
+    private static final AttributeKey<Runnable> REOPEN_TASK =
+            AttributeKey.valueOf(AbstractTrafficShapingHandler.class, "REOPEN_TASK");
 
     /**
      *
@@ -94,12 +106,29 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
      * @param checkInterval
      *          The delay between two computations of performances for
      *            channels or 0 if no stats are to be computed
+     * @param maxTime
+     *          The maximum delay to wait in case of traffic excess
      */
     protected AbstractTrafficShapingHandler(long writeLimit, long readLimit,
-                                            long checkInterval) {
+                                            long checkInterval, long maxTime) {
         this.writeLimit = writeLimit;
         this.readLimit = readLimit;
         this.checkInterval = checkInterval;
+        this.maxTime = maxTime;
+    }
+
+   /**
+    * @param writeLimit
+    *           0 or a limit in bytes/s
+    * @param readLimit
+    *           0 or a limit in bytes/s
+    * @param checkInterval
+    *           The delay between two computations of performances for
+    *           channels or 0 if no stats are to be computed
+    */
+    protected AbstractTrafficShapingHandler(long writeLimit, long readLimit,
+            long checkInterval) {
+        this(writeLimit, readLimit, checkInterval, DEFAULT_MAX_TIME);
     }
 
     /**
@@ -111,14 +140,14 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
      *          0 or a limit in bytes/s
      */
     protected AbstractTrafficShapingHandler(long writeLimit, long readLimit) {
-        this(writeLimit, readLimit, DEFAULT_CHECK_INTERVAL);
+        this(writeLimit, readLimit, DEFAULT_CHECK_INTERVAL, DEFAULT_MAX_TIME);
     }
 
     /**
      * Constructor using NO LIMIT and default Check Interval
      */
     protected AbstractTrafficShapingHandler() {
-        this(0, 0, DEFAULT_CHECK_INTERVAL);
+        this(0, 0, DEFAULT_CHECK_INTERVAL, DEFAULT_MAX_TIME);
     }
 
     /**
@@ -129,7 +158,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
      *            channels or 0 if no stats are to be computed
      */
     protected AbstractTrafficShapingHandler(long checkInterval) {
-        this(0, 0, checkInterval);
+        this(0, 0, checkInterval, DEFAULT_MAX_TIME);
     }
 
     /**
@@ -171,6 +200,15 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
         }
     }
 
+   /**
+    *
+    * @param maxTime
+    * Max delay in wait, shall be less than TIME OUT in related protocol
+    */
+    public void setMaxTimeWait(long maxTime) {
+        this.maxTime = maxTime;
+    }
+
     /**
      * Called each time the accounting is computed from the TrafficCounters.
      * This method could be used for instance to implement almost real time accounting.
@@ -178,7 +216,6 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
      * @param counter
      *            the TrafficCounter that computes its performance
      */
-    @SuppressWarnings("unused")
     protected void doAccounting(TrafficCounter counter) {
         // NOOP by default
     }
@@ -194,27 +231,15 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
 
         @Override
         public void run() {
+            ctx.channel().config().setAutoRead(true);
             ctx.attr(READ_SUSPENDED).set(false);
             ctx.read();
         }
     }
 
-    /**
-     * @return the time that should be necessary to wait to respect limit. Can be negative time
-     */
-    private static long getTimeToWait(long limit, long bytes, long lastTime, long curtime) {
-        long interval = curtime - lastTime;
-        if (interval <= 0) {
-            // Time is too short, so just lets continue
-            return 0;
-        }
-        return (bytes * 1000 / limit - interval) / 10 * 10;
-    }
-
     @Override
     public void channelRead(final ChannelHandlerContext ctx, final Object msg) throws Exception {
         long size = calculateSize(msg);
-        long curtime = System.currentTimeMillis();
 
         if (trafficCounter != null) {
             trafficCounter.bytesRecvFlowControl(size);
@@ -226,15 +251,13 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
             }
 
             // compute the number of ms to wait before reopening the channel
-            long wait = getTimeToWait(readLimit,
-                    trafficCounter.currentReadBytes(),
-                    trafficCounter.lastTime(), curtime);
+            long wait = trafficCounter.readTimeToWait(readLimit, maxTime);
             if (wait >= MINIMAL_WAIT) { // At least 10ms seems a minimal
                 // time in order to
                 // try to limit the traffic
                 if (!isSuspended(ctx)) {
                     ctx.attr(READ_SUSPENDED).set(true);
-
+                    ctx.channel().config().setAutoRead(false);
                     // Create a Runnable to reactive the read if needed. If one was create before it will just be
                     // reused to limit object creation
                     Attribute<Runnable> attr  = ctx.attr(REOPEN_TASK);
@@ -251,13 +274,6 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
         ctx.fireChannelRead(msg);
     }
 
-    @Override
-    public void read(ChannelHandlerContext ctx) {
-        if (!isSuspended(ctx)) {
-            ctx.read();
-        }
-    }
-
     private static boolean isSuspended(ChannelHandlerContext ctx) {
         Boolean suspended = ctx.attr(READ_SUSPENDED).get();
         return !(suspended == null || Boolean.FALSE.equals(suspended));
@@ -266,7 +282,6 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
     @Override
     public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise)
             throws Exception {
-        long curtime = System.currentTimeMillis();
         long size = calculateSize(msg);
 
         if (size > -1 && trafficCounter != null) {
@@ -277,9 +292,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
             }
             // compute the number of ms to wait before continue with the
             // channel
-            long wait = getTimeToWait(writeLimit,
-                    trafficCounter.currentWrittenBytes(),
-                    trafficCounter.lastTime(), curtime);
+            long wait = trafficCounter.writeTimeToWait(writeLimit, maxTime);
             if (wait >= MINIMAL_WAIT) {
                 ctx.executor().schedule(new Runnable() {
                     @Override
