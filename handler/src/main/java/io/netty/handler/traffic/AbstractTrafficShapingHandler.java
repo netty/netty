@@ -231,8 +231,15 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
 
         @Override
         public void run() {
-            ctx.attr(READ_SUSPENDED).set(false);
-            ctx.channel().config().setAutoRead(true);
+            if (ctx.channel().config().isAutoRead() || isHandlerActive(ctx)) {
+                // If AutoRead is False and Suspended is False, user make a direct setAutoRead(false)
+                // Anything else allows the handler to reset the AutoRead
+                ctx.attr(READ_SUSPENDED).set(false);
+                ctx.channel().config().setAutoRead(true);
+            } else {
+                // Just reset the status
+                ctx.attr(READ_SUSPENDED).set(false);
+            }
         }
     }
 
@@ -245,16 +252,15 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
             if (readLimit == 0) {
                 // no action
                 ctx.fireChannelRead(msg);
-
                 return;
             }
 
             // compute the number of ms to wait before reopening the channel
             long wait = trafficCounter.readTimeToWait(readLimit, maxTime);
             if (wait >= MINIMAL_WAIT) { // At least 10ms seems a minimal
-                // time in order to
-                // try to limit the traffic
-                if (!isSuspended(ctx)) {
+                // time in order to try to limit the traffic
+                // Only AutoRead AND HandlerActive True means Context Active
+                if (ctx.channel().config().isAutoRead() && isHandlerActive(ctx)) {
                     ctx.attr(READ_SUSPENDED).set(true);
                     ctx.channel().config().setAutoRead(false);
                     // Create a Runnable to reactive the read if needed. If one was create before it will just be
@@ -273,9 +279,17 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
         ctx.fireChannelRead(msg);
     }
 
-    private static boolean isSuspended(ChannelHandlerContext ctx) {
+    @Override
+    public void read(ChannelHandlerContext ctx) {
+        if (isHandlerActive(ctx)) {
+            // For Global Traffic: check if READ_SUSPENDED is False
+            ctx.read();
+        }
+    }
+
+    private static boolean isHandlerActive(ChannelHandlerContext ctx) {
         Boolean suspended = ctx.attr(READ_SUSPENDED).get();
-        return !(suspended == null || Boolean.FALSE.equals(suspended));
+        return suspended == null || Boolean.FALSE.equals(suspended);
     }
 
     @Override
