@@ -185,7 +185,7 @@ public final class NetUtil {
         if (file.exists()) {
             BufferedReader in = null;
             try {
-                in = new BufferedReader(new FileReader("/proc/sys/net/core/somaxconn"));
+                in = new BufferedReader(new FileReader(file));
                 somaxconn = Integer.parseInt(in.readLine());
                 logger.debug("/proc/sys/net/core/somaxconn: {}", somaxconn);
             } catch (Exception e) {
