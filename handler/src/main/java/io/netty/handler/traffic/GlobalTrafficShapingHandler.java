@@ -43,7 +43,9 @@ import java.util.concurrent.ScheduledExecutorService;
  * it is recommended to set a positive value, even if it is high since the precision of the
  * Traffic Shaping depends on the period where the traffic is computed. The highest the interval,
  * the less precise the traffic shaping will be. It is suggested as higher value something close
- * to 5 or 10 minutes.<br>
+ * to 5 or 10 minutes.<br><br>
+ *
+ *  maxTimeToWait, by default set to 15s, allows to specify an upper bound of time shaping.<br>
  * </li>
  * </ul><br>
  *
@@ -63,6 +65,27 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
                     checkInterval);
         setTrafficCounter(tc);
         tc.start();
+    }
+
+    /**
+     * Create a new instance
+     *
+     * @param executor
+     *          the {@link ScheduledExecutorService} to use for the {@link TrafficCounter}
+     * @param writeLimit
+     *          0 or a limit in bytes/s
+     * @param readLimit
+     *          0 or a limit in bytes/s
+     * @param checkInterval
+     *          The delay between two computations of performances for
+     *            channels or 0 if no stats are to be computed
+     * @param maxTime
+     *          The maximum delay to wait in case of traffic excess
+     */
+    public GlobalTrafficShapingHandler(ScheduledExecutorService executor, long writeLimit,
+            long readLimit, long checkInterval, long maxTime) {
+        super(writeLimit, readLimit, checkInterval, maxTime);
+        createGlobalTrafficCounter(executor);
     }
 
     /**
