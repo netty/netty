@@ -20,6 +20,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
@@ -180,21 +181,26 @@ public final class NetUtil {
 
         // Determine the default somaxconn (server socket backlog) value of the platform.
         int somaxconn = 3072;
-        BufferedReader in = null;
-        try {
-            in = new BufferedReader(new FileReader("/proc/sys/net/core/somaxconn"));
-            somaxconn = Integer.parseInt(in.readLine());
-            logger.debug("/proc/sys/net/core/somaxconn: {}", somaxconn);
-        } catch (Exception e) {
-            logger.debug("Failed to get SOMAXCONN", e);
-        } finally {
-            if (in != null) {
-                try {
-                    in.close();
-                } catch (Exception e) {
-                    // Ignored.
+        File file = new File("/proc/sys/net/core/somaxconn");
+        if (file.exists()) {
+            BufferedReader in = null;
+            try {
+                in = new BufferedReader(new FileReader("/proc/sys/net/core/somaxconn"));
+                somaxconn = Integer.parseInt(in.readLine());
+                logger.debug("/proc/sys/net/core/somaxconn: {}", somaxconn);
+            } catch (Exception e) {
+                logger.debug("Failed to get SOMAXCONN", e);
+            } finally {
+                if (in != null) {
+                    try {
+                        in.close();
+                    } catch (Exception e) {
+                        // Ignored.
+                    }
                 }
             }
+        } else {
+            logger.debug("/proc/sys/net/core/somaxconn not exists. Use default-value: {}", somaxconn);
         }
 
         SOMAXCONN = somaxconn;
