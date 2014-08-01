@@ -279,6 +279,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
 
     @Test
     public void headersReadForUnknownStreamShouldCreateStream() throws Exception {
+        when(remote.createStream(eq(5), eq(false))).thenReturn(stream);
         decode().onHeadersRead(ctx, 5, EMPTY_HEADERS, 0, false, false);
         verify(remote).createStream(eq(5), eq(false));
         verify(observer).onHeadersRead(eq(ctx), eq(5), eq(EMPTY_HEADERS), eq(0),
@@ -287,6 +288,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
 
     @Test
     public void headersReadForUnknownStreamShouldCreateHalfClosedStream() throws Exception {
+        when(remote.createStream(eq(5), eq(true))).thenReturn(stream);
         decode().onHeadersRead(ctx, 5, EMPTY_HEADERS, 0, true, false);
         verify(remote).createStream(eq(5), eq(true));
         verify(observer).onHeadersRead(eq(ctx), eq(5), eq(EMPTY_HEADERS), eq(0),
@@ -466,6 +468,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
 
     @Test
     public void headersWriteForUnknownStreamShouldCreateStream() throws Exception {
+        when(local.createStream(eq(5), eq(false))).thenReturn(stream);
         handler.writeHeaders(ctx, promise, 5, EMPTY_HEADERS, 0, false, false);
         verify(local).createStream(eq(5), eq(false));
         verify(writer).writeHeaders(eq(ctx), eq(promise), eq(5), eq(EMPTY_HEADERS), eq(0),
@@ -474,6 +477,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
 
     @Test
     public void headersWriteShouldCreateHalfClosedStream() throws Exception {
+        when(local.createStream(eq(5), eq(true))).thenReturn(stream);
         handler.writeHeaders(ctx, promise, 5, EMPTY_HEADERS, 0, true, false);
         verify(local).createStream(eq(5), eq(true));
         verify(writer).writeHeaders(eq(ctx), eq(promise), eq(5), eq(EMPTY_HEADERS), eq(0),

@@ -56,6 +56,29 @@ public abstract class DefaultHttpMessage extends DefaultHttpObject implements Ht
     }
 
     @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + headers.hashCode();
+        result = prime * result + version.hashCode();
+        result = prime * result + super.hashCode();
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof DefaultHttpMessage)) {
+            return false;
+        }
+
+        DefaultHttpMessage other = (DefaultHttpMessage) o;
+
+        return headers().equals(other.headers()) &&
+               protocolVersion().equals(other.protocolVersion()) &&
+               super.equals(o);
+    }
+
+    @Override
     public String toString() {
         StringBuilder buf = new StringBuilder();
         buf.append(StringUtil.simpleClassName(this));

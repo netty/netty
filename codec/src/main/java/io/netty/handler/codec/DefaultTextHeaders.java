@@ -35,6 +35,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.TreeSet;
+import java.util.HashSet;
 import java.util.TimeZone;
 
 public class DefaultTextHeaders implements TextHeaders {
@@ -600,6 +602,54 @@ public class DefaultTextHeaders implements TextHeaders {
             PlatformDependent.throwException(ex);
         }
         return this;
+    }
+
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        for (String name : names()) {
+            result = prime * result + name.hashCode();
+            Set<String> values = new TreeSet<String>(getAll(name));
+            for (String value : values) {
+                result = prime * result + value.hashCode();
+            }
+        }
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof DefaultTextHeaders)) {
+            return false;
+        }
+
+        DefaultTextHeaders other = (DefaultTextHeaders) o;
+
+        // First, check that the set of names match.
+        Set<String> names = names();
+        if (!names.equals(other.names())) {
+            return false;
+        }
+
+        // Compare the values for each name.
+        for (String name : names) {
+            List<String> values = getAll(name);
+            List<String> otherValues = other.getAll(name);
+            if (values.size() != otherValues.size()) {
+                return false;
+            }
+
+            // Convert the values to a set and remove values from the other object to see if
+            // they match.
+            Set<String> valueSet = new HashSet<String>(values);
+            valueSet.removeAll(otherValues);
+            if (!valueSet.isEmpty()) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static final class HeaderEntry implements Map.Entry<CharSequence, CharSequence> {
