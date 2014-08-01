@@ -339,6 +339,36 @@ public final class ChannelOutboundBuffer {
     }
 
     /**
+     * Removes the fully written entries and update the reader index of the partially written entry.
+     * This operation assumes all messages in this buffer is {@link ByteBuf}.
+     */
+    public void removeBytes(long writtenBytes) {
+        for (;;) {
+            final ByteBuf buf = (ByteBuf) current();
+            if (buf == null) {
+                break;
+            }
+
+            final int readerIndex = buf.readerIndex();
+            final int readableBytes = buf.writerIndex() - readerIndex;
+
+            if (readableBytes <= writtenBytes) {
+                if (writtenBytes != 0) {
+                    progress(readableBytes);
+                    writtenBytes -= readableBytes;
+                }
+                remove();
+            } else { // readableBytes > writtenBytes
+                if (writtenBytes != 0) {
+                    buf.readerIndex(readerIndex + (int) writtenBytes);
+                    progress(writtenBytes);
+                }
+                break;
+            }
+        }
+    }
+
+    /**
      * Returns an array of direct NIO buffers if the currently pending messages are made of {@link ByteBuf} only.
      * {@code null} is returned otherwise.  If this method returns a non-null array, {@link #nioBufferCount()} and
      * {@link #nioBufferSize()} will return the number of NIO buffers in the returned array and the total number

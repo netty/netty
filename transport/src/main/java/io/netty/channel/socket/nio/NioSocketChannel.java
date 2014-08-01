@@ -293,27 +293,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
             } else {
                 // Did not write all buffers completely.
                 // Release the fully written buffers and update the indexes of the partially written buffer.
-
-                for (int i = msgCount; i > 0; i --) {
-                    final ByteBuf buf = (ByteBuf) in.current();
-                    final int readerIndex = buf.readerIndex();
-                    final int readableBytes = buf.writerIndex() - readerIndex;
-
-                    if (readableBytes < writtenBytes) {
-                        in.progress(readableBytes);
-                        in.remove();
-                        writtenBytes -= readableBytes;
-                    } else if (readableBytes > writtenBytes) {
-                        buf.readerIndex(readerIndex + (int) writtenBytes);
-                        in.progress(writtenBytes);
-                        break;
-                    } else { // readableBytes == writtenBytes
-                        in.progress(readableBytes);
-                        in.remove();
-                        break;
-                    }
-                }
-
+                in.removeBytes(writtenBytes);
                 incompleteWrite(setOpWrite);
                 break;
             }

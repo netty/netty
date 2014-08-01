@@ -110,6 +110,7 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
             in.remove();
             return true;
         }
+
         boolean done = false;
         long writtenBytes = 0;
         if (buf.hasMemoryAddress()) {
@@ -131,7 +132,8 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
                     break;
                 }
             }
-            updateOutboundBuffer(in, writtenBytes);
+
+            in.removeBytes(writtenBytes);
             return done;
         } else if (buf.nioBufferCount() == 1) {
             int readerIndex = buf.readerIndex();
@@ -153,7 +155,8 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
                     break;
                 }
             }
-            updateOutboundBuffer(in, writtenBytes);
+
+            in.removeBytes(writtenBytes);
             return done;
         } else {
             ByteBuffer[] nioBuffers = buf.nioBuffers();
@@ -161,11 +164,15 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
         }
     }
 
-    private boolean writeBytesMultiple(
-            ChannelOutboundBuffer in, IovArray array) throws IOException {
-        boolean done = false;
+    private boolean writeBytesMultiple(ChannelOutboundBuffer in, IovArray array) throws IOException {
+
         long expectedWrittenBytes = array.size();
         int cnt = array.count();
+
+        assert expectedWrittenBytes != 0;
+        assert cnt != 0;
+
+        boolean done = false;
         long writtenBytes = 0;
         int offset = 0;
         int end = offset + cnt;
@@ -198,13 +205,16 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
             } while (offset < end && localWrittenBytes > 0);
         }
 
-        updateOutboundBuffer(in, writtenBytes);
+        in.removeBytes(writtenBytes);
         return done;
     }
 
     private boolean writeBytesMultiple(
             ChannelOutboundBuffer in, ByteBuffer[] nioBuffers,
             int nioBufferCnt, long expectedWrittenBytes) throws IOException {
+
+        assert expectedWrittenBytes != 0;
+
         boolean done = false;
         long writtenBytes = 0;
         int offset = 0;
@@ -239,30 +249,9 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
                 }
             } while (offset < end && localWrittenBytes > 0);
         }
-        updateOutboundBuffer(in, writtenBytes);
+
+        in.removeBytes(writtenBytes);
         return done;
-    }
-
-    private static void updateOutboundBuffer(ChannelOutboundBuffer in, long writtenBytes) {
-        for (;;) {
-            final ByteBuf buf = (ByteBuf) in.current();
-            final int readerIndex = buf.readerIndex();
-            final int readableBytes = buf.writerIndex() - readerIndex;
-
-            if (readableBytes < writtenBytes) {
-                in.progress(readableBytes);
-                in.remove();
-                writtenBytes -= readableBytes;
-            } else if (readableBytes > writtenBytes) {
-                buf.readerIndex(readerIndex + (int) writtenBytes);
-                in.progress(writtenBytes);
-                break;
-            } else { // readable == writtenBytes
-                in.progress(readableBytes);
-                in.remove();
-                break;
-            }
-        }
     }
 
     /**
@@ -272,6 +261,11 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
      * @return amount       the amount of written bytes
      */
     private boolean writeFileRegion(ChannelOutboundBuffer in, DefaultFileRegion region) throws Exception {
+        if (region.transfered() >= region.count()) {
+            in.remove();
+            return true;
+        }
+
         boolean done = false;
         long flushedAmount = 0;
 
@@ -310,64 +304,79 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
                 break;
             }
 
-            // Do gathering write if:
-            // * the outbound buffer contains more than one messages and
-            // * they are all buffers rather than a file region.
-            if (msgCount >= 1) {
-                if (PlatformDependent.hasUnsafe()) {
-                    // this means we can cast to IovArray and write the IovArray directly.
-                    IovArray array = IovArray.get(in);
-                    int cnt = array.count();
-                    if (cnt > 1) {
-                        if (!writeBytesMultiple(in, array)) {
-                            // was not able to write everything so break here we will get notified later again once
-                            // the network stack can handle more writes.
-                            break;
-                        }
-
-                        // We do not break the loop here even if the outbound buffer was flushed completely,
-                        // because a user might have triggered another write and flush when we notify his or her
-                        // listeners.
-                        continue;
-                    }
-                } else {
-                    ByteBuffer[] buffers = in.nioBuffers();
-                    int cnt = in.nioBufferCount();
-                    if (cnt > 1) {
-                        if (!writeBytesMultiple(in, buffers, cnt, in.nioBufferSize())) {
-                            // was not able to write everything so break here we will get notified later again once
-                            // the network stack can handle more writes.
-                            break;
-                        }
-
-                        // We do not break the loop here even if the outbound buffer was flushed completely,
-                        // because a user might have triggered another write and flush when we notify his or her
-                        // listeners.
-                        continue;
-                    }
-                }
-            }
-
-            // The outbound buffer contains only one message or it contains a file region.
-            Object msg = in.current();
-            if (msg instanceof ByteBuf) {
-                ByteBuf buf = (ByteBuf) msg;
-                if (!writeBytes(in, buf)) {
-                    // was not able to write everything so break here we will get notified later again once
-                    // the network stack can handle more writes.
+            // Do gathering write if the outbounf buffer entries start with more than one ByteBuf.
+            if (msgCount > 1 && in.current() instanceof ByteBuf) {
+                if (!doWriteMultiple(in)) {
                     break;
                 }
-            } else if (msg instanceof DefaultFileRegion) {
-                DefaultFileRegion region = (DefaultFileRegion) msg;
-                if (!writeFileRegion(in, region)) {
-                    // was not able to write everything so break here we will get notified later again once
-                    // the network stack can handle more writes.
+
+                // We do not break the loop here even if the outbound buffer was flushed completely,
+                // because a user might have triggered another write and flush when we notify his or her
+                // listeners.
+            } else { // msgCount == 1
+                if (!doWriteSingle(in)) {
                     break;
                 }
-            } else {
-                throw new UnsupportedOperationException("unsupported message type: " + StringUtil.simpleClassName(msg));
             }
         }
+    }
+
+    private boolean doWriteSingle(ChannelOutboundBuffer in) throws Exception {
+        // The outbound buffer contains only one message or it contains a file region.
+        Object msg = in.current();
+        if (msg instanceof ByteBuf) {
+            ByteBuf buf = (ByteBuf) msg;
+            if (!writeBytes(in, buf)) {
+                // was not able to write everything so break here we will get notified later again once
+                // the network stack can handle more writes.
+                return false;
+            }
+        } else if (msg instanceof DefaultFileRegion) {
+            DefaultFileRegion region = (DefaultFileRegion) msg;
+            if (!writeFileRegion(in, region)) {
+                // was not able to write everything so break here we will get notified later again once
+                // the network stack can handle more writes.
+                return false;
+            }
+        } else {
+            throw new UnsupportedOperationException(
+                    "unsupported message type: " + StringUtil.simpleClassName(msg));
+        }
+
+        return true;
+    }
+
+    private boolean doWriteMultiple(ChannelOutboundBuffer in) throws Exception {
+        if (PlatformDependent.hasUnsafe()) {
+            // this means we can cast to IovArray and write the IovArray directly.
+            IovArray array = IovArray.get(in);
+            int cnt = array.count();
+            if (cnt >= 1) {
+                // TODO: Handle the case where cnt == 1 specially.
+                if (!writeBytesMultiple(in, array)) {
+                    // was not able to write everything so break here we will get notified later again once
+                    // the network stack can handle more writes.
+                    return false;
+                }
+            } else { // cnt == 0, which means the outbound buffer contained empty buffers only.
+                in.removeBytes(0);
+            }
+        } else {
+            ByteBuffer[] buffers = in.nioBuffers();
+            int cnt = in.nioBufferCount();
+            if (cnt >= 1) {
+                // TODO: Handle the case where cnt == 1 specially.
+                if (!writeBytesMultiple(in, buffers, cnt, in.nioBufferSize())) {
+                    // was not able to write everything so break here we will get notified later again once
+                    // the network stack can handle more writes.
+                    return false;
+                }
+            } else { // cnt == 0, which means the outbound buffer contained empty buffers only.
+                in.removeBytes(0);
+            }
+        }
+
+        return true;
     }
 
     @Override

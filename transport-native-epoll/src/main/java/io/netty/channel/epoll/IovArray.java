@@ -84,12 +84,21 @@ final class IovArray implements MessageProcessor {
             // No more room!
             return false;
         }
-        int len = buf.readableBytes();
-        long addr = buf.memoryAddress();
-        int offset = buf.readerIndex();
 
-        long baseOffset = memoryAddress(count++);
-        long lengthOffset = baseOffset + ADDRESS_SIZE;
+        final int len = buf.readableBytes();
+        if (len == 0) {
+            // No need to add an empty buffer.
+            // We return true here because we want ChannelOutboundBuffer.forEachFlushedMessage() to continue
+            // fetching the next buffers.
+            return true;
+        }
+
+        final long addr = buf.memoryAddress();
+        final int offset = buf.readerIndex();
+
+        final long baseOffset = memoryAddress(count++);
+        final long lengthOffset = baseOffset + ADDRESS_SIZE;
+
         if (ADDRESS_SIZE == 8) {
             // 64bit
             PlatformDependent.putLong(baseOffset, addr + offset);
@@ -99,6 +108,7 @@ final class IovArray implements MessageProcessor {
             PlatformDependent.putInt(baseOffset, (int) addr + offset);
             PlatformDependent.putInt(lengthOffset, len);
         }
+
         size += len;
         return true;
     }
