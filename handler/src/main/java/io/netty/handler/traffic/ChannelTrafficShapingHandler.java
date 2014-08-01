@@ -15,7 +15,13 @@
  */
 package io.netty.handler.traffic;
 
+import java.util.LinkedList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
 
 /**
  * This implementation of the {@link AbstractTrafficShapingHandler} is for channel
@@ -38,11 +44,32 @@ import io.netty.channel.ChannelHandlerContext;
  * it is recommended to set a positive value, even if it is high since the precision of the
  * Traffic Shaping depends on the period where the traffic is computed. The highest the interval,
  * the less precise the traffic shaping will be. It is suggested as higher value something close
- * to 5 or 10 minutes.<br>
+ * to 5 or 10 minutes.<br><br>
+ *
+ * maxTimeToWait, by default set to 15s, allows to specify an upper bound of time shaping.<br>
  * </li>
  * </ul><br>
  */
 public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler {
+    private List<ToSend> messagesQueue = new LinkedList<ToSend>();
+
+    /**
+     * Create a new instance
+     *
+     * @param writeLimit
+     *            0 or a limit in bytes/s
+     * @param readLimit
+     *            0 or a limit in bytes/s
+     * @param checkInterval
+     *            The delay between two computations of performances for
+     *            channels or 0 if no stats are to be computed
+     * @param maxTime
+     *            The maximum delay to wait in case of traffic excess
+     */
+    public ChannelTrafficShapingHandler(long writeLimit, long readLimit,
+            long checkInterval, long maxTime) {
+        super(writeLimit, readLimit, checkInterval, maxTime);
+    }
 
     /**
      * Create a new instance
@@ -93,9 +120,57 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
     }
 
     @Override
-    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+    public synchronized void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
         if (trafficCounter != null) {
             trafficCounter.stop();
         }
+        for (ToSend toSend : messagesQueue) {
+            if (toSend.toSend instanceof ByteBuf) {
+                ((ByteBuf) toSend.toSend).release();
+            }
+        }
+        messagesQueue.clear();
+    }
+
+    private static final class ToSend {
+        final long date;
+        final Object toSend;
+        final ChannelPromise promise;
+
+        private ToSend(final long delay, final Object toSend, final ChannelPromise promise) {
+            this.date = System.currentTimeMillis() + delay;
+            this.toSend = toSend;
+            this.promise = promise;
+        }
+    }
+
+    @Override
+    protected synchronized void submitWrite(final ChannelHandlerContext ctx, final Object msg, final long delay,
+            final ChannelPromise promise) {
+        if (delay == 0 && messagesQueue.isEmpty()) {
+            ctx.write(msg, promise);
+            return;
+        }
+        final ToSend newToSend = new ToSend(delay, msg, promise);
+        messagesQueue.add(newToSend);
+        ctx.executor().schedule(new Runnable() {
+            @Override
+            public void run() {
+                sendAllValid(ctx);
+            }
+        }, delay, TimeUnit.MILLISECONDS);
+    }
+
+    private synchronized void sendAllValid(ChannelHandlerContext ctx) {
+        while (!messagesQueue.isEmpty()) {
+            ToSend newToSend = messagesQueue.remove(0);
+            if (newToSend.date <= System.currentTimeMillis()) {
+                ctx.write(newToSend.toSend, newToSend.promise);
+            } else {
+                messagesQueue.add(0, newToSend);
+                break;
+            }
+        }
+        ctx.flush();
     }
 }
