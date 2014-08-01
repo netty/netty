@@ -28,8 +28,8 @@ import static io.netty.handler.codec.http.HttpVersion.*;
 
 /**
  * <p>
- * Performs server side opening and closing handshakes for <a href="http://tools.ietf.org/html/rfc6455">RFC 6455</a>
- * (originally web socket specification <a href="http://goo.gl/zVBkL">draft-ietf-hybi-thewebsocketprotocol-17</a>).
+ * Performs server side opening and closing handshakes for <a href="http://netty.io/s/rfc6455">RFC 6455</a>
+ * (originally web socket specification <a href="http://netty.io/s/ws-17">draft-ietf-hybi-thewebsocketprotocol-17</a>).
  * </p>
  */
 public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {

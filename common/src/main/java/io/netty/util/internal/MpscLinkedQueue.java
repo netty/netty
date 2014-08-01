@@ -55,12 +55,12 @@ import java.util.Queue;
  *
  * The initial implementation is based on:
  * <ul>
- *   <li><a href="http://goo.gl/sZE3ie">Non-intrusive MPSC node based queue</a> from 1024cores.net</li>
- *   <li><a href="http://goo.gl/O0spmV">AbstractNodeQueue</a> from Akka</li>
+ *   <li><a href="http://netty.io/s/mpsc-1024c">Non-intrusive MPSC node based queue</a> from 1024cores.net</li>
+ *   <li><a href="http://netty.io/s/mpsc-akka">AbstractNodeQueue</a> from Akka</li>
  * </ul>
  * and adopted padded head node changes from:
  * <ul>
- * <li><a href="http://goo.gl/bD5ZUV">MpscPaddedQueue</a> from RxJava</li>
+ * <li><a href="http://netty.io/s/mpsc-rxjava">MpscPaddedQueue</a> from RxJava</li>
  * </ul>
  * data structure modified to avoid false sharing between head and tail Ref as per implementation of MpscLinkedQueue
  * on <a href="https://github.com/JCTools/JCTools">JCTools project</a>.
