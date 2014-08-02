@@ -18,11 +18,8 @@ package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
+import io.netty.handler.ssl.util.KeySpecGenerator;
 
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLSessionContext;
 import java.io.File;
 import java.security.KeyFactory;
 import java.security.KeyStore;
@@ -35,6 +32,11 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLSessionContext;
 
 /**
  * A server-side {@link SslContext} which uses JDK's SSL/TLS implementation.
@@ -133,7 +135,9 @@ public final class JdkSslServerContext extends JdkSslContext {
             ByteBuf encodedKeyBuf = PemReader.readPrivateKey(keyFile);
             byte[] encodedKey = new byte[encodedKeyBuf.readableBytes()];
             encodedKeyBuf.readBytes(encodedKey).release();
-            PKCS8EncodedKeySpec encodedKeySpec = new PKCS8EncodedKeySpec(encodedKey);
+
+            char[] keyPasswordChars = keyPassword.toCharArray();
+            PKCS8EncodedKeySpec encodedKeySpec = KeySpecGenerator.generateKeySpec(keyPasswordChars, encodedKey);
 
             PrivateKey key;
             try {
@@ -154,11 +158,11 @@ public final class JdkSslServerContext extends JdkSslContext {
                 }
             }
 
-            ks.setKeyEntry("key", key, keyPassword.toCharArray(), certChain.toArray(new Certificate[certChain.size()]));
+            ks.setKeyEntry("key", key, keyPasswordChars, certChain.toArray(new Certificate[certChain.size()]));
 
             // Set up key manager factory to use our key store
             KeyManagerFactory kmf = KeyManagerFactory.getInstance(algorithm);
-            kmf.init(ks, keyPassword.toCharArray());
+            kmf.init(ks, keyPasswordChars);
 
             // Initialize the SSLContext to work with our key managers.
             ctx = SSLContext.getInstance(PROTOCOL);
