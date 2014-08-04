@@ -96,7 +96,7 @@ public abstract class SimpleChannelInboundHandler<I> extends ChannelHandlerAdapt
     }
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public final void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         boolean release = true;
         try {
             if (acceptInboundMessage(msg)) {
