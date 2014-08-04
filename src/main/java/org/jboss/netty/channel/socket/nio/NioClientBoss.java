@@ -115,7 +115,6 @@ public final class NioClientBoss extends AbstractNioSelector implements Boss {
     }
 
     private static void processConnectTimeout(Set<SelectionKey> keys, long currentTimeNanos) {
-        ConnectException cause = null;
         for (SelectionKey k: keys) {
             if (!k.isValid()) {
                 // Comment the close call again as it gave us major problems
@@ -133,9 +132,12 @@ public final class NioClientBoss extends AbstractNioSelector implements Boss {
             if (ch.connectDeadlineNanos > 0 &&
                     currentTimeNanos >= ch.connectDeadlineNanos) {
 
-                if (cause == null) {
-                    cause = new ConnectTimeoutException("connection timed out: " + ch.requestedRemoteAddress);
-                }
+                // Create a new ConnectException everytime and not cache it as otherwise we end up with
+                // using the wrong remoteaddress in the ConnectException message.
+                //
+                // See https://github.com/netty/netty/issues/2713
+                ConnectException cause =
+                        new ConnectTimeoutException("connection timed out: " + ch.requestedRemoteAddress);
 
                 ch.connectFuture.setFailure(cause);
                 fireExceptionCaught(ch, cause);
