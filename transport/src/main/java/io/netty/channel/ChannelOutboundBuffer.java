@@ -13,10 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-/*
- * Written by Josh Bloch of Google Inc. and released to the public domain,
- * as explained at http://creativecommons.org/publicdomain/zero/1.0/.
- */
 package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;

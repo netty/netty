@@ -58,11 +58,6 @@ facade for Java, which can be obtained at:
   * HOMEPAGE:
     * http://www.slf4j.org/
 
-This product contains a modified portion of 'ArrayDeque', written by Josh
-Bloch of Google, Inc:
-
-  * LICENSE:
-    * license/LICENSE.deque.txt (Public Domain)
 
 This product contains a modified version of Roland Kuhn's ASL2
 AbstractNodeQueue, which is based on Dmitriy Vyukov's non-intrusive MPSC queue.
