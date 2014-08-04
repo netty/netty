@@ -19,13 +19,23 @@ package org.jboss.netty.handler.ssl;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferInputStream;
 
+import javax.crypto.Cipher;
+import javax.crypto.EncryptedPrivateKeyInfo;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLSessionContext;
 import java.io.File;
+import java.io.IOException;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
 import java.security.KeyFactory;
 import java.security.KeyStore;
+import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.Security;
 import java.security.cert.Certificate;
@@ -136,7 +146,9 @@ public final class JdkSslServerContext extends JdkSslContext {
             ChannelBuffer encodedKeyBuf = PemReader.readPrivateKey(keyFile);
             byte[] encodedKey = new byte[encodedKeyBuf.readableBytes()];
             encodedKeyBuf.readBytes(encodedKey);
-            PKCS8EncodedKeySpec encodedKeySpec = new PKCS8EncodedKeySpec(encodedKey);
+
+            char[] keyPasswordChars = keyPassword.toCharArray();
+            PKCS8EncodedKeySpec encodedKeySpec = generateKeySpec(keyPasswordChars, encodedKey);
 
             PrivateKey key;
             try {
@@ -150,11 +162,11 @@ public final class JdkSslServerContext extends JdkSslContext {
                 certChain.add(cf.generateCertificate(new ChannelBufferInputStream(buf)));
             }
 
-            ks.setKeyEntry("key", key, keyPassword.toCharArray(), certChain.toArray(new Certificate[certChain.size()]));
+            ks.setKeyEntry("key", key, keyPasswordChars, certChain.toArray(new Certificate[certChain.size()]));
 
             // Set up key manager factory to use our key store
             KeyManagerFactory kmf = KeyManagerFactory.getInstance(algorithm);
-            kmf.init(ks, keyPassword.toCharArray());
+            kmf.init(ks, keyPasswordChars);
 
             // Initialize the SSLContext to work with our key managers.
             ctx = SSLContext.getInstance(PROTOCOL);
@@ -185,5 +197,40 @@ public final class JdkSslServerContext extends JdkSslContext {
     @Override
     public SSLContext context() {
         return ctx;
+    }
+
+    /**
+     * Generates a key specification for an (encrypted) private key.
+     *
+     * @param password characters, if {@code null} or empty an unencrypted key is assumed
+     * @param key bytes of the DER encoded private key
+     *
+     * @return a key specification
+     *
+     * @throws IOException if parsing {@code key} fails
+     * @throws NoSuchAlgorithmException if the algorithm used to encrypt {@code key} is unkown
+     * @throws NoSuchPaddingException if the padding scheme specified in the decryption algorithm is unkown
+     * @throws InvalidKeySpecException if the decryption key based on {@code password} cannot be generated
+     * @throws InvalidKeyException if the decryption key based on {@code password} cannot be used to decrypt {@code
+     * key}
+     * @throws InvalidAlgorithmParameterException if decryption algorithm parameters are somehow faulty
+     */
+    private static PKCS8EncodedKeySpec generateKeySpec(char[] password, byte[] key)
+            throws IOException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException,
+                   InvalidKeyException, InvalidAlgorithmParameterException {
+
+        if (password == null || password.length == 0) {
+            return new PKCS8EncodedKeySpec(key);
+        }
+
+        EncryptedPrivateKeyInfo encryptedPrivateKeyInfo = new EncryptedPrivateKeyInfo(key);
+        SecretKeyFactory keyFactory = SecretKeyFactory.getInstance(encryptedPrivateKeyInfo.getAlgName());
+        PBEKeySpec pbeKeySpec = new PBEKeySpec(password);
+        SecretKey pbeKey = keyFactory.generateSecret(pbeKeySpec);
+
+        Cipher cipher = Cipher.getInstance(encryptedPrivateKeyInfo.getAlgName());
+        cipher.init(Cipher.DECRYPT_MODE, pbeKey, encryptedPrivateKeyInfo.getAlgParameters());
+
+        return encryptedPrivateKeyInfo.getKeySpec(cipher);
     }
 }
