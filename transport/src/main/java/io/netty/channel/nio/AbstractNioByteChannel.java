@@ -35,6 +35,11 @@ import java.nio.channels.SelectionKey;
  * {@link AbstractNioChannel} base class for {@link Channel}s that operate on bytes.
  */
 public abstract class AbstractNioByteChannel extends AbstractNioChannel {
+
+    private static final String EXPECTED_TYPES =
+            " (expected: " + StringUtil.simpleClassName(ByteBuf.class) + ", " +
+            StringUtil.simpleClassName(FileRegion.class) + ')';
+
     private Runnable flushTask;
 
     /**
@@ -188,17 +193,6 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                     continue;
                 }
 
-                if (!buf.isDirect()) {
-                    ByteBufAllocator alloc = alloc();
-                    if (alloc.isDirectBufferPooled()) {
-                        // Non-direct buffers are copied into JDK's own internal direct buffer on every I/O.
-                        // We can do a better job by using our pooled allocator. If the current allocator does not
-                        // pool a direct buffer, we rely on JDK's direct buffer pool.
-                        buf = alloc.directBuffer(readableBytes).writeBytes(buf);
-                        in.current(buf);
-                    }
-                }
-
                 boolean setOpWrite = false;
                 boolean done = false;
                 long flushedAmount = 0;
@@ -258,9 +252,29 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                     break;
                 }
             } else {
-                throw new UnsupportedOperationException("unsupported message type: " + StringUtil.simpleClassName(msg));
+                // Should not reach here.
+                throw new Error();
             }
         }
+    }
+
+    @Override
+    protected final Object filterOutboundMessage(Object msg) {
+        if (msg instanceof ByteBuf) {
+            ByteBuf buf = (ByteBuf) msg;
+            if (buf.isDirect()) {
+                return msg;
+            }
+
+            return newDirectBuffer(buf);
+        }
+
+        if (msg instanceof FileRegion) {
+            return msg;
+        }
+
+        throw new UnsupportedOperationException(
+                "unsupported message type: " + StringUtil.simpleClassName(msg) + EXPECTED_TYPES);
     }
 
     protected final void incompleteWrite(boolean setOpWrite) {

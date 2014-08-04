@@ -290,6 +290,11 @@ public class OioSctpServerChannel extends AbstractOioMessageChannel
         throw new UnsupportedOperationException();
     }
 
+    @Override
+    protected Object filterOutboundMessage(Object msg) throws Exception {
+        throw new UnsupportedOperationException();
+    }
+
     private final class OioSctpServerChannelConfig extends DefaultSctpServerChannelConfig {
         private OioSctpServerChannelConfig(OioSctpServerChannel channel, SctpServerChannel javaChannel) {
             super(channel, javaChannel);

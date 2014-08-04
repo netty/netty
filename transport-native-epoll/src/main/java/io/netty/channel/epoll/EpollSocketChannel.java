@@ -49,6 +49,10 @@ import java.util.concurrent.TimeUnit;
  */
 public final class EpollSocketChannel extends AbstractEpollChannel implements SocketChannel {
 
+    private static final String EXPECTED_TYPES =
+            " (expected: " + StringUtil.simpleClassName(ByteBuf.class) + ", " +
+            StringUtil.simpleClassName(DefaultFileRegion.class) + ')';
+
     private final EpollSocketChannelConfig config;
 
     /**
@@ -339,8 +343,8 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
                 return false;
             }
         } else {
-            throw new UnsupportedOperationException(
-                    "unsupported message type: " + StringUtil.simpleClassName(msg));
+            // Should never reach here.
+            throw new Error();
         }
 
         return true;
@@ -377,6 +381,27 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
         }
 
         return true;
+    }
+
+    @Override
+    protected Object filterOutboundMessage(Object msg) {
+        if (msg instanceof ByteBuf) {
+            ByteBuf buf = (ByteBuf) msg;
+            if (!buf.hasMemoryAddress() && (PlatformDependent.hasUnsafe() || !buf.isDirect())) {
+                // We can only handle buffers with memory address so we need to copy if a non direct is
+                // passed to write.
+                buf = newDirectBuffer(buf);
+                assert buf.hasMemoryAddress();
+            }
+            return buf;
+        }
+
+        if (msg instanceof DefaultFileRegion) {
+            return msg;
+        }
+
+        throw new UnsupportedOperationException(
+                "unsupported message type: " + StringUtil.simpleClassName(msg) + EXPECTED_TYPES);
     }
 
     @Override
@@ -428,24 +453,6 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
 
     final class EpollSocketUnsafe extends AbstractEpollUnsafe {
         private RecvByteBufAllocator.Handle allocHandle;
-
-        @Override
-        public void write(Object msg, ChannelPromise promise) {
-            if (msg instanceof ByteBuf) {
-                ByteBuf buf = (ByteBuf) msg;
-                if (PlatformDependent.hasUnsafe() && !buf.hasMemoryAddress()) {
-                    // We can only handle buffers with memory address so we need to copy if a non direct is
-                    // passed to write.
-                    int readable = buf.readableBytes();
-                    ByteBuf dst = alloc().directBuffer(readable);
-                    dst.writeBytes(buf, buf.readerIndex(), readable);
-                    buf.release();
-                    msg = dst;
-                    assert dst.hasMemoryAddress();
-                }
-            }
-            super.write(msg, promise);
-        }
 
         private void closeOnRead(ChannelPipeline pipeline) {
             inputShutdown = true;

@@ -16,11 +16,8 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
-import io.netty.buffer.UnpooledByteBufAllocator;
-import io.netty.buffer.UnpooledDirectByteBuf;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.Recycler;
 import io.netty.util.Recycler.Handle;
@@ -28,7 +25,6 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -46,15 +42,6 @@ import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 public final class ChannelOutboundBuffer {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ChannelOutboundBuffer.class);
-
-    private static final int threadLocalDirectBufferSize =
-            SystemPropertyUtil.getInt("io.netty.threadLocalDirectBufferSize", 64 * 1024);
-
-    static {
-        if (logger.isDebugEnabled()) {
-            logger.debug("-Dio.netty.threadLocalDirectBufferSize: {}", threadLocalDirectBufferSize);
-        }
-    }
 
     private static final FastThreadLocal<ByteBuffer[]> NIO_BUFFERS = new FastThreadLocal<ByteBuffer[]>() {
         @Override
@@ -215,61 +202,12 @@ public final class ChannelOutboundBuffer {
      * Return the current message to write or {@code null} if nothing was flushed before and so is ready to be written.
      */
     public Object current() {
-        return current(true);
-    }
-
-    /**
-     * Return the current message to write or {@code null} if nothing was flushed before and so is ready to be written.
-     * If {@code true} is specified a direct {@link ByteBuf} or {@link ByteBufHolder} is prefered and
-     * so the current message may be copied into a direct buffer.
-     */
-    public Object current(boolean preferDirect) {
-        // TODO: Think of a smart way to handle ByteBufHolder messages
         Entry entry = flushedEntry;
         if (entry == null) {
             return null;
         }
-        Object msg = entry.msg;
-        if (threadLocalDirectBufferSize <= 0 || !preferDirect) {
-            return msg;
-        }
-        if (msg instanceof ByteBuf) {
-            ByteBuf buf = (ByteBuf) msg;
-            if (buf.isDirect()) {
-                return buf;
-            } else {
-                int readableBytes = buf.readableBytes();
-                if (readableBytes == 0) {
-                    return buf;
-                }
 
-                // Non-direct buffers are copied into JDK's own internal direct buffer on every I/O.
-                // We can do a better job by using our pooled allocator. If the current allocator does not
-                // pool a direct buffer, we use a ThreadLocal based pool.
-                ByteBufAllocator alloc = channel.alloc();
-                ByteBuf directBuf;
-                if (alloc.isDirectBufferPooled()) {
-                    directBuf = alloc.directBuffer(readableBytes);
-                } else {
-                    directBuf = ThreadLocalPooledByteBuf.newInstance();
-                }
-                directBuf.writeBytes(buf, buf.readerIndex(), readableBytes);
-                current(directBuf);
-                return directBuf;
-            }
-        }
-        return msg;
-    }
-
-    /**
-     * Replace the current msg with the given one.
-     * {@link ReferenceCountUtil#release(Object)} will automatically be called on the replaced message.
-     */
-    public void current(Object msg) {
-        Entry entry = flushedEntry;
-        assert entry != null;
-        safeRelease(entry.msg);
-        entry.msg = msg;
+        return entry.msg;
     }
 
     /**
@@ -305,7 +243,7 @@ public final class ChannelOutboundBuffer {
 
         if (!e.cancelled) {
             // only release message, notify and decrement if it was not canceled before.
-            safeRelease(msg);
+            ReferenceCountUtil.safeRelease(msg);
             safeSuccess(promise);
             decrementPendingOutboundBytes(size);
         }
@@ -335,7 +273,7 @@ public final class ChannelOutboundBuffer {
 
         if (!e.cancelled) {
             // only release message, fail and decrement if it was not canceled before.
-            safeRelease(msg);
+            ReferenceCountUtil.safeRelease(msg);
 
             safeFail(promise, cause);
             decrementPendingOutboundBytes(size);
@@ -403,7 +341,6 @@ public final class ChannelOutboundBuffer {
     public ByteBuffer[] nioBuffers() {
         long nioBufferSize = 0;
         int nioBufferCount = 0;
-        final ByteBufAllocator alloc = channel.alloc();
         final InternalThreadLocalMap threadLocalMap = InternalThreadLocalMap.get();
         ByteBuffer[] nioBuffers = NIO_BUFFERS.get(threadLocalMap);
         Entry entry = flushedEntry;
@@ -425,27 +362,22 @@ public final class ChannelOutboundBuffer {
                         nioBuffers = expandNioBufferArray(nioBuffers, neededSpace, nioBufferCount);
                         NIO_BUFFERS.set(threadLocalMap, nioBuffers);
                     }
-                    if (buf.isDirect() || threadLocalDirectBufferSize <= 0) {
-                        if (count == 1) {
-                            ByteBuffer nioBuf = entry.buf;
-                            if (nioBuf == null) {
-                                // cache ByteBuffer as it may need to create a new ByteBuffer instance if its a
-                                // derived buffer
-                                entry.buf = nioBuf = buf.internalNioBuffer(readerIndex, readableBytes);
-                            }
-                            nioBuffers[nioBufferCount ++] = nioBuf;
-                        } else {
-                            ByteBuffer[] nioBufs = entry.bufs;
-                            if (nioBufs == null) {
-                                // cached ByteBuffers as they may be expensive to create in terms
-                                // of Object allocation
-                                entry.bufs = nioBufs = buf.nioBuffers();
-                            }
-                            nioBufferCount = fillBufferArray(nioBufs, nioBuffers, nioBufferCount);
+                    if (count == 1) {
+                        ByteBuffer nioBuf = entry.buf;
+                        if (nioBuf == null) {
+                            // cache ByteBuffer as it may need to create a new ByteBuffer instance if its a
+                            // derived buffer
+                            entry.buf = nioBuf = buf.internalNioBuffer(readerIndex, readableBytes);
                         }
+                        nioBuffers[nioBufferCount ++] = nioBuf;
                     } else {
-                        nioBufferCount = fillBufferArrayNonDirect(entry, buf, readerIndex,
-                                readableBytes, alloc, nioBuffers, nioBufferCount);
+                        ByteBuffer[] nioBufs = entry.bufs;
+                        if (nioBufs == null) {
+                            // cached ByteBuffers as they may be expensive to create in terms
+                            // of Object allocation
+                            entry.bufs = nioBufs = buf.nioBuffers();
+                        }
+                        nioBufferCount = fillBufferArray(nioBufs, nioBuffers, nioBufferCount);
                     }
                 }
             }
@@ -464,24 +396,6 @@ public final class ChannelOutboundBuffer {
             }
             nioBuffers[nioBufferCount ++] = nioBuf;
         }
-        return nioBufferCount;
-    }
-
-    private static int fillBufferArrayNonDirect(Entry entry, ByteBuf buf, int readerIndex, int readableBytes,
-                                                ByteBufAllocator alloc, ByteBuffer[] nioBuffers, int nioBufferCount) {
-        ByteBuf directBuf;
-        if (alloc.isDirectBufferPooled()) {
-            directBuf = alloc.directBuffer(readableBytes);
-        } else {
-            directBuf = ThreadLocalPooledByteBuf.newInstance();
-        }
-        directBuf.writeBytes(buf, readerIndex, readableBytes);
-        buf.release();
-        entry.msg = directBuf;
-        // cache ByteBuffer
-        ByteBuffer nioBuf = entry.buf = directBuf.internalNioBuffer(0, readableBytes);
-        entry.count = 1;
-        nioBuffers[nioBufferCount ++] = nioBuf;
         return nioBufferCount;
     }
 
@@ -593,21 +507,13 @@ public final class ChannelOutboundBuffer {
                 TOTAL_PENDING_SIZE_UPDATER.addAndGet(this, -size);
 
                 if (!e.cancelled) {
-                    safeRelease(e.msg);
+                    ReferenceCountUtil.safeRelease(e.msg);
                     safeFail(e.promise, cause);
                 }
                 e = e.recycleAndGetNext();
             }
         } finally {
             inFail = false;
-        }
-    }
-
-    private static void safeRelease(Object message) {
-        try {
-            ReferenceCountUtil.release(message);
-        } catch (Throwable t) {
-            logger.warn("Failed to release a message.", t);
         }
     }
 
@@ -708,7 +614,7 @@ public final class ChannelOutboundBuffer {
                 int pSize = pendingSize;
 
                 // release message and replace with an empty buffer
-                safeRelease(msg);
+                ReferenceCountUtil.safeRelease(msg);
                 msg = Unpooled.EMPTY_BUFFER;
 
                 pendingSize = 0;
@@ -739,38 +645,6 @@ public final class ChannelOutboundBuffer {
             Entry next = this.next;
             recycle();
             return next;
-        }
-    }
-
-    static final class ThreadLocalPooledByteBuf extends UnpooledDirectByteBuf {
-        private final Recycler.Handle handle;
-
-        private static final Recycler<ThreadLocalPooledByteBuf> RECYCLER = new Recycler<ThreadLocalPooledByteBuf>() {
-            @Override
-            protected ThreadLocalPooledByteBuf newObject(Handle handle) {
-                return new ThreadLocalPooledByteBuf(handle);
-            }
-        };
-
-        private ThreadLocalPooledByteBuf(Recycler.Handle handle) {
-            super(UnpooledByteBufAllocator.DEFAULT, 256, Integer.MAX_VALUE);
-            this.handle = handle;
-        }
-
-        static ThreadLocalPooledByteBuf newInstance() {
-            ThreadLocalPooledByteBuf buf = RECYCLER.get();
-            buf.setRefCnt(1);
-            return buf;
-        }
-
-        @Override
-        protected void deallocate() {
-            if (capacity() > threadLocalDirectBufferSize) {
-                super.deallocate();
-            } else {
-                clear();
-                RECYCLER.recycle(this, handle);
-            }
         }
     }
 }

@@ -16,8 +16,6 @@
 package io.netty.channel.socket.nio;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
@@ -64,6 +62,12 @@ public final class NioDatagramChannel
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(true);
     private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
+    private static final String EXPECTED_TYPES =
+            " (expected: " + StringUtil.simpleClassName(DatagramPacket.class) + ", " +
+            StringUtil.simpleClassName(AddressedEnvelope.class) + '<' +
+            StringUtil.simpleClassName(ByteBuf.class) + ", " +
+            StringUtil.simpleClassName(SocketAddress.class) + ">, " +
+            StringUtil.simpleClassName(ByteBuf.class) + ')';
 
     private final DatagramChannelConfig config;
 
@@ -259,77 +263,74 @@ public final class NioDatagramChannel
 
     @Override
     protected boolean doWriteMessage(Object msg, ChannelOutboundBuffer in) throws Exception {
-        final Object m;
         final SocketAddress remoteAddress;
-        ByteBuf data;
+        final ByteBuf data;
         if (msg instanceof AddressedEnvelope) {
             @SuppressWarnings("unchecked")
-            AddressedEnvelope<Object, SocketAddress> envelope = (AddressedEnvelope<Object, SocketAddress>) msg;
+            AddressedEnvelope<ByteBuf, SocketAddress> envelope = (AddressedEnvelope<ByteBuf, SocketAddress>) msg;
             remoteAddress = envelope.recipient();
-            m = envelope.content();
+            data = envelope.content();
         } else {
-            m = msg;
+            data = (ByteBuf) msg;
             remoteAddress = null;
         }
 
-        if (m instanceof ByteBufHolder) {
-            data = ((ByteBufHolder) m).content();
-        } else if (m instanceof ByteBuf) {
-            data = (ByteBuf) m;
-        } else {
-            throw new UnsupportedOperationException("unsupported message type: " + StringUtil.simpleClassName(msg));
-        }
-
-        int dataLen = data.readableBytes();
+        final int dataLen = data.readableBytes();
         if (dataLen == 0) {
             return true;
         }
 
-        ByteBufAllocator alloc = alloc();
-        boolean needsCopy = data.nioBufferCount() != 1;
-        if (!needsCopy) {
-            if (!data.isDirect() && alloc.isDirectBufferPooled()) {
-                needsCopy = true;
-            }
-        }
-        ByteBuffer nioData;
-        if (!needsCopy) {
-            nioData = data.nioBuffer();
+        final ByteBuffer nioData = data.internalNioBuffer(data.readerIndex(), dataLen);
+        final int writtenBytes;
+        if (remoteAddress != null) {
+            writtenBytes = javaChannel().send(nioData, remoteAddress);
         } else {
-            data = alloc.directBuffer(dataLen).writeBytes(data);
-            nioData = data.nioBuffer();
+            writtenBytes = javaChannel().write(nioData);
+        }
+        return writtenBytes > 0;
+    }
+
+    @Override
+    protected Object filterOutboundMessage(Object msg) {
+        if (msg instanceof DatagramPacket) {
+            DatagramPacket p = (DatagramPacket) msg;
+            ByteBuf content = p.content();
+            if (isSingleDirectBuffer(content)) {
+                return p;
+            }
+            return new DatagramPacket(newDirectBuffer(p, content), p.recipient());
         }
 
-        boolean done = false;
-        try {
-            final int writtenBytes;
-            if (remoteAddress != null) {
-                writtenBytes = javaChannel().send(nioData, remoteAddress);
-            } else {
-                writtenBytes = javaChannel().write(nioData);
+        if (msg instanceof ByteBuf) {
+            ByteBuf buf = (ByteBuf) msg;
+            if (isSingleDirectBuffer(buf)) {
+                return buf;
             }
-            done = writtenBytes > 0;
-            return done;
-        } finally {
-            // Handle this in the finally block to make sure we release the old buffer in all cases
-            // See https://github.com/netty/netty/issues/2644
-            if (needsCopy) {
-                // This means we have allocated a new buffer and need to store it back so we not need to allocate it
-                // later again
-                if (remoteAddress == null) {
-                    // remoteAddress is null which means we can handle it as ByteBuf directly
-                    in.current(data);
-                } else {
-                    if (!done) {
-                        // store it back with all the needed informations
-                        in.current(new DefaultAddressedEnvelope<ByteBuf, SocketAddress>(data, remoteAddress));
-                    } else {
-                        // Just store back the new created buffer so it is cleaned up once in.remove() is called.
-                        in.current(data);
-                    }
+            return newDirectBuffer(buf);
+        }
+
+        if (msg instanceof AddressedEnvelope) {
+            @SuppressWarnings("unchecked")
+            AddressedEnvelope<Object, SocketAddress> e = (AddressedEnvelope<Object, SocketAddress>) msg;
+            if (e.content() instanceof ByteBuf) {
+                ByteBuf content = (ByteBuf) e.content();
+                if (isSingleDirectBuffer(content)) {
+                    return e;
                 }
+                return new DefaultAddressedEnvelope<ByteBuf, SocketAddress>(newDirectBuffer(e, content), e.recipient());
             }
         }
+
+        throw new UnsupportedOperationException(
+                "unsupported message type: " + StringUtil.simpleClassName(msg) + EXPECTED_TYPES);
+    }
+
+    /**
+     * Checks if the specified buffer is a direct buffer and is composed of a single NIO buffer.
+     * (We check this because otherwise we need to make it a non-composite buffer.)
+     */
+    private static boolean isSingleDirectBuffer(ByteBuf buf) {
+        return buf.isDirect() && buf.nioBufferCount() == 1;
     }
 
     @Override

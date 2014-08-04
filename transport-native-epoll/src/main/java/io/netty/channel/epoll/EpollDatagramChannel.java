@@ -16,13 +16,14 @@
 package io.netty.channel.epoll;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
+import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.DefaultAddressedEnvelope;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
@@ -44,6 +45,12 @@ import java.nio.channels.NotYetConnectedException;
  */
 public final class EpollDatagramChannel extends AbstractEpollChannel implements DatagramChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(true);
+    private static final String EXPECTED_TYPES =
+            " (expected: " + StringUtil.simpleClassName(DatagramPacket.class) + ", " +
+            StringUtil.simpleClassName(AddressedEnvelope.class) + '<' +
+            StringUtil.simpleClassName(ByteBuf.class) + ", " +
+            StringUtil.simpleClassName(InetSocketAddress.class) + ">, " +
+            StringUtil.simpleClassName(ByteBuf.class) + ')';
 
     private volatile InetSocketAddress local;
     private volatile InetSocketAddress remote;
@@ -282,27 +289,20 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     }
 
     private boolean doWriteMessage(Object msg) throws IOException {
-        final Object m;
+        final ByteBuf data;
         InetSocketAddress remoteAddress;
-        ByteBuf data;
-        if (msg instanceof DatagramPacket) {
-            DatagramPacket packet = (DatagramPacket) msg;
-            remoteAddress = packet.recipient();
-            m = packet.content();
+        if (msg instanceof AddressedEnvelope) {
+            @SuppressWarnings("unchecked")
+            AddressedEnvelope<ByteBuf, InetSocketAddress> envelope =
+                    (AddressedEnvelope<ByteBuf, InetSocketAddress>) msg;
+            data = envelope.content();
+            remoteAddress = envelope.recipient();
         } else {
-            m = msg;
+            data = (ByteBuf) msg;
             remoteAddress = null;
         }
 
-        if (m instanceof ByteBufHolder) {
-            data = ((ByteBufHolder) m).content();
-        } else if (m instanceof ByteBuf) {
-            data = (ByteBuf) m;
-        } else {
-            throw new UnsupportedOperationException("unsupported message type: " + StringUtil.simpleClassName(msg));
-        }
-
-        int dataLen = data.readableBytes();
+        final int dataLen = data.readableBytes();
         if (dataLen == 0) {
             return true;
         }
@@ -324,7 +324,55 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             writtenBytes = Native.sendTo(fd, nioData, nioData.position(), nioData.limit(),
                     remoteAddress.getAddress(), remoteAddress.getPort());
         }
+
         return writtenBytes > 0;
+    }
+
+    @Override
+    protected Object filterOutboundMessage(Object msg) {
+        if (msg instanceof DatagramPacket) {
+            DatagramPacket packet = (DatagramPacket) msg;
+            ByteBuf content = packet.content();
+            if (content.hasMemoryAddress()) {
+                return msg;
+            }
+
+            // We can only handle direct buffers so we need to copy if a non direct is
+            // passed to write.
+            return new DatagramPacket(newDirectBuffer(packet, content), packet.recipient());
+        }
+
+        if (msg instanceof ByteBuf) {
+            ByteBuf buf = (ByteBuf) msg;
+            if (buf.hasMemoryAddress()) {
+                return msg;
+            }
+
+            // We can only handle direct buffers so we need to copy if a non direct is
+            // passed to write.
+            return newDirectBuffer(buf);
+        }
+
+        if (msg instanceof AddressedEnvelope) {
+            @SuppressWarnings("unchecked")
+            AddressedEnvelope<Object, SocketAddress> e = (AddressedEnvelope<Object, SocketAddress>) msg;
+            if (e.content() instanceof ByteBuf &&
+                (e.recipient() == null || e.recipient() instanceof InetSocketAddress)) {
+
+                ByteBuf content = (ByteBuf) e.content();
+                if (content.hasMemoryAddress()) {
+                    return e;
+                }
+
+                // We can only handle direct buffers so we need to copy if a non direct is
+                // passed to write.
+                return new DefaultAddressedEnvelope<ByteBuf, InetSocketAddress>(
+                        newDirectBuffer(e, content), (InetSocketAddress) e.recipient());
+            }
+        }
+
+        throw new UnsupportedOperationException(
+                "unsupported message type: " + StringUtil.simpleClassName(msg) + EXPECTED_TYPES);
     }
 
     @Override
@@ -427,42 +475,6 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                     clearEpollIn();
                 }
             }
-        }
-
-        @Override
-        public void write(Object msg, ChannelPromise promise) {
-            if (msg instanceof DatagramPacket) {
-                DatagramPacket packet = (DatagramPacket) msg;
-                ByteBuf content = packet.content();
-                if (isCopyNeeded(content)) {
-                    // We can only handle direct buffers so we need to copy if a non direct is
-                    // passed to write.
-                    int readable = content.readableBytes();
-                    ByteBuf dst = alloc().directBuffer(readable);
-                    dst.writeBytes(content, content.readerIndex(), readable);
-
-                    content.release();
-                    msg = new DatagramPacket(dst, packet.recipient(), packet.sender());
-                }
-            } else if (msg instanceof ByteBuf) {
-                ByteBuf buf = (ByteBuf) msg;
-                if (isCopyNeeded(buf)) {
-                    // We can only handle direct buffers so we need to copy if a non direct is
-                    // passed to write.
-                    int readable = buf.readableBytes();
-                    ByteBuf dst = alloc().directBuffer(readable);
-                    dst.writeBytes(buf, buf.readerIndex(), readable);
-
-                    buf.release();
-                    msg = dst;
-                }
-            }
-
-            super.write(msg, promise);
-        }
-
-        private boolean isCopyNeeded(ByteBuf content) {
-            return !content.hasMemoryAddress() || content.nioBufferCount() != 1;
         }
     }
 

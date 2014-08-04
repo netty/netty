@@ -35,6 +35,7 @@ import io.netty.channel.sctp.SctpMessage;
 import io.netty.channel.sctp.SctpNotificationHandler;
 import io.netty.channel.sctp.SctpServerChannel;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -320,22 +321,25 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
         mi.payloadProtocolID(packet.protocolIdentifier());
         mi.streamNumber(packet.streamIdentifier());
 
-        boolean done = false;
-        try {
-            final int writtenBytes = javaChannel().send(nioData, mi);
-            done = writtenBytes > 0;
-            return done;
-        } finally {
-            // Handle this in the finally block to make sure we release the old buffer in all cases
-            // See https://github.com/netty/netty/issues/2644
-            if (needsCopy) {
-                if (!done) {
-                    in.current(new SctpMessage(mi, data));
-                } else {
-                    in.current(data);
-                }
+        final int writtenBytes = javaChannel().send(nioData, mi);
+        return writtenBytes > 0;
+    }
+
+    @Override
+    protected final Object filterOutboundMessage(Object msg) throws Exception {
+        if (msg instanceof SctpMessage) {
+            SctpMessage m = (SctpMessage) msg;
+            ByteBuf buf = m.content();
+            if (buf.isDirect() && buf.nioBufferCount() == 1) {
+                return m;
             }
+
+            return new SctpMessage(m.protocolIdentifier(), m.streamIdentifier(), newDirectBuffer(m, buf));
         }
+
+        throw new UnsupportedOperationException(
+                "unsupported message type: " + StringUtil.simpleClassName(msg) +
+                " (expected: " + StringUtil.simpleClassName(SctpMessage.class));
     }
 
     @Override

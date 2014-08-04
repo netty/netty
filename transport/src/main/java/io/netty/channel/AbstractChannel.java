@@ -25,7 +25,6 @@ import io.netty.util.internal.ThreadLocalRandom;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.io.EOFException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -374,7 +373,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      */
     protected abstract class AbstractUnsafe implements Unsafe {
 
-        private ChannelOutboundBuffer outboundBuffer =  new ChannelOutboundBuffer(AbstractChannel.this);
+        private ChannelOutboundBuffer outboundBuffer = new ChannelOutboundBuffer(AbstractChannel.this);
         private boolean inFlush0;
 
         @Override
@@ -618,7 +617,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public void beginRead() {
+        public final void beginRead() {
             if (!isActive()) {
                 return;
             }
@@ -637,7 +636,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public void write(Object msg, ChannelPromise promise) {
+        public final void write(Object msg, ChannelPromise promise) {
             ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
             if (outboundBuffer == null) {
                 // If the outboundBuffer is null we know the channel was closed and so
@@ -649,15 +648,25 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 ReferenceCountUtil.release(msg);
                 return;
             }
-            int size = estimatorHandle().size(msg);
-            if (size < 0) {
-                size = 0;
+
+            int size;
+            try {
+                msg = filterOutboundMessage(msg);
+                size = estimatorHandle().size(msg);
+                if (size < 0) {
+                    size = 0;
+                }
+            } catch (Throwable t) {
+                safeSetFailure(promise, t);
+                ReferenceCountUtil.release(msg);
+                return;
             }
+
             outboundBuffer.addMessage(msg, size, promise);
         }
 
         @Override
-        public void flush() {
+        public final void flush() {
             ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
             if (outboundBuffer == null) {
                 return;
@@ -707,7 +716,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public ChannelPromise voidPromise() {
+        public final ChannelPromise voidPromise() {
             return unsafeVoidPromise;
         }
 
@@ -823,12 +832,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      */
     protected abstract void doWrite(ChannelOutboundBuffer in) throws Exception;
 
-    protected static void checkEOF(FileRegion region) throws IOException {
-        if (region.transfered() < region.count()) {
-            throw new EOFException("Expected to be able to write "
-                    + region.count() + " bytes, but only wrote "
-                    + region.transfered());
-        }
+    /**
+     * Invoked when a new message is added to a {@link ChannelOutboundBuffer} of this {@link AbstractChannel}, so that
+     * the {@link Channel} implementation converts the message to another. (e.g. heap buffer -> direct buffer)
+     */
+    protected Object filterOutboundMessage(Object msg) throws Exception {
+        return msg;
     }
 
     static final class CloseFuture extends DefaultChannelPromise {

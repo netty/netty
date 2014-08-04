@@ -99,6 +99,11 @@ public abstract class NioUdtAcceptorChannel extends AbstractNioMessageChannel im
     }
 
     @Override
+    protected final Object filterOutboundMessage(Object msg) throws Exception {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public boolean isActive() {
         return javaChannel().socket().isBound();
     }
