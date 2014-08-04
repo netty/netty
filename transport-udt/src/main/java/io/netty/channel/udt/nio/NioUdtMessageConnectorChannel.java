@@ -27,6 +27,7 @@ import io.netty.channel.udt.DefaultUdtChannelConfig;
 import io.netty.channel.udt.UdtChannel;
 import io.netty.channel.udt.UdtChannelConfig;
 import io.netty.channel.udt.UdtMessage;
+import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -47,6 +48,7 @@ public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel imp
             InternalLoggerFactory.getInstance(NioUdtMessageConnectorChannel.class);
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
+    private static final String EXPECTED_TYPE = " (expected: " + StringUtil.simpleClassName(UdtMessage.class) + ')';
 
     private final UdtChannelConfig config;
 
@@ -194,6 +196,16 @@ public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel imp
         }
 
         return true;
+    }
+
+    @Override
+    protected final Object filterOutboundMessage(Object msg) throws Exception {
+        if (msg instanceof UdtMessage) {
+            return msg;
+        }
+
+        throw new UnsupportedOperationException(
+                "unsupported message type: " + StringUtil.simpleClassName(msg) + EXPECTED_TYPE);
     }
 
     @Override

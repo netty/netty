@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.FileRegion;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -137,6 +138,13 @@ public abstract class OioByteStreamChannel extends AbstractOioByteChannel {
             if (written >= region.count()) {
                 return;
             }
+        }
+    }
+
+    private static void checkEOF(FileRegion region) throws IOException {
+        if (region.transfered() < region.count()) {
+            throw new EOFException("Expected to be able to write " + region.count() + " bytes, " +
+                                   "but only wrote " + region.transfered());
         }
     }
 

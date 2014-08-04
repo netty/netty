@@ -15,7 +15,7 @@
  */
 package io.netty.channel;
 
-import io.netty.util.ReferenceCountUtil;
+import io.netty.util.internal.EmptyArrays;
 
 import java.net.SocketAddress;
 
@@ -71,24 +71,14 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
         throw new UnsupportedOperationException();
     }
 
+    @Override
+    protected final Object filterOutboundMessage(Object msg) {
+        throw new UnsupportedOperationException();
+    }
+
     private final class DefaultServerUnsafe extends AbstractUnsafe {
         @Override
-        public void write(Object msg, ChannelPromise promise) {
-            ReferenceCountUtil.release(msg);
-            reject(promise);
-        }
-
-        @Override
-        public void flush() {
-            // ignore
-        }
-
-        @Override
         public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-            reject(promise);
-        }
-
-        private void reject(ChannelPromise promise) {
             safeSetFailure(promise, new UnsupportedOperationException());
         }
     }
