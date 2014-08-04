@@ -20,19 +20,17 @@ package io.netty.channel.epoll;
  */
 public final class Epoll {
 
-    private static final boolean IS_AVAILABLE;
+    private static final Throwable UNAVAILABILITY_CAUSE;
 
     static  {
-        boolean available;
+        Throwable cause = null;
         int epollFd = -1;
         int eventFd = -1;
         try {
             epollFd = Native.epollCreate();
             eventFd = Native.eventFd();
-            available = true;
-        } catch (Throwable cause) {
-            // ignore
-            available = false;
+        } catch (Throwable t) {
+            cause = t;
         } finally {
             if (epollFd != -1) {
                 try {
@@ -49,15 +47,43 @@ public final class Epoll {
                 }
             }
         }
-        IS_AVAILABLE = available;
+
+        if (cause != null) {
+            UNAVAILABILITY_CAUSE = cause;
+        } else {
+            UNAVAILABILITY_CAUSE = null;
+        }
     }
 
     /**
      * Returns {@code true} if and only if the
-     * <a href="http://netty.io/wiki/native-transports.html">{@code netty-transport-native-epoll}</a> can be used.
+     * <a href="http://netty.io/wiki/native-transports.html">{@code netty-transport-native-epoll}</a> is available.
      */
     public static boolean isAvailable() {
-        return IS_AVAILABLE;
+        return UNAVAILABILITY_CAUSE == null;
+    }
+
+    /**
+     * Ensure that <a href="http://netty.io/wiki/native-transports.html">{@code netty-transport-native-epoll}</a> is
+     * available.
+     *
+     * @throws UnsatisfiedLinkError if unavailable
+     */
+    public static void ensureAvailability() {
+        if (UNAVAILABILITY_CAUSE != null) {
+            throw (Error) new UnsatisfiedLinkError(
+                    "failed to load the required native library").initCause(UNAVAILABILITY_CAUSE);
+        }
+    }
+
+    /**
+     * Returns the cause of unavailability of
+     * <a href="http://netty.io/wiki/native-transports.html">{@code netty-transport-native-epoll}</a>.
+     *
+     * @return the cause if unavailable. {@code null} if available.
+     */
+    public static Throwable unavailabilityCause() {
+        return UNAVAILABILITY_CAUSE;
     }
 
     private Epoll() { }
