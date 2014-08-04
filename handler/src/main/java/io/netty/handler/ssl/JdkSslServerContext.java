@@ -13,8 +13,22 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package io.netty.handler.ssl;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufInputStream;
+
+import javax.crypto.Cipher;
+import javax.crypto.EncryptedPrivateKeyInfo;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLSessionContext;
 import java.io.File;
 import java.io.IOException;
 import java.security.InvalidAlgorithmParameterException;
@@ -31,20 +45,6 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
-import javax.crypto.Cipher;
-import javax.crypto.EncryptedPrivateKeyInfo;
-import javax.crypto.NoSuchPaddingException;
-import javax.crypto.SecretKey;
-import javax.crypto.SecretKeyFactory;
-import javax.crypto.spec.PBEKeySpec;
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLSessionContext;
-
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufInputStream;
 
 /**
  * A server-side {@link SslContext} which uses JDK's SSL/TLS implementation.
@@ -69,7 +69,8 @@ public final class JdkSslServerContext extends JdkSslContext {
      *
      * @param certChainFile an X.509 certificate chain file in PEM format
      * @param keyFile a PKCS#8 private key file in PEM format
-     * @param keyPassword the password of the {@code keyFile}. {@code null} if it's not password-protected.
+     * @param keyPassword the password of the {@code keyFile}.
+     *                    {@code null} if it's not password-protected.
      */
     public JdkSslServerContext(File certChainFile, File keyFile, String keyPassword) throws SSLException {
         this(certChainFile, keyFile, keyPassword, null, null, 0, 0);
@@ -80,15 +81,16 @@ public final class JdkSslServerContext extends JdkSslContext {
      *
      * @param certChainFile an X.509 certificate chain file in PEM format
      * @param keyFile a PKCS#8 private key file in PEM format
-     * @param keyPassword the password of the {@code keyFile}. {@code null} if it's not password-protected.
-     * @param ciphers the cipher suites to enable, in the order of preference. {@code null} to use the default cipher
-     * suites.
-     * @param nextProtocols the application layer protocols to accept, in the order of preference. {@code null} to
-     * disable TLS NPN/ALPN extension.
-     * @param sessionCacheSize the size of the cache used for storing SSL session objects. {@code 0} to use the default
-     * value.
-     * @param sessionTimeout the timeout for the cached SSL session objects, in seconds. {@code 0} to use the default
-     * value.
+     * @param keyPassword the password of the {@code keyFile}.
+     *                    {@code null} if it's not password-protected.
+     * @param ciphers the cipher suites to enable, in the order of preference.
+     *                {@code null} to use the default cipher suites.
+     * @param nextProtocols the application layer protocols to accept, in the order of preference.
+     *                      {@code null} to disable TLS NPN/ALPN extension.
+     * @param sessionCacheSize the size of the cache used for storing SSL session objects.
+     *                         {@code 0} to use the default value.
+     * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
+     *                       {@code 0} to use the default value.
      */
     public JdkSslServerContext(
             File certChainFile, File keyFile, String keyPassword,
@@ -114,7 +116,7 @@ public final class JdkSslServerContext extends JdkSslContext {
             }
 
             List<String> list = new ArrayList<String>();
-            for (String p : nextProtocols) {
+            for (String p: nextProtocols) {
                 if (p == null) {
                     break;
                 }
@@ -155,11 +157,11 @@ public final class JdkSslServerContext extends JdkSslContext {
             List<Certificate> certChain = new ArrayList<Certificate>();
             ByteBuf[] certs = PemReader.readCertificates(certChainFile);
             try {
-                for (ByteBuf buf : certs) {
+                for (ByteBuf buf: certs) {
                     certChain.add(cf.generateCertificate(new ByteBufInputStream(buf)));
                 }
             } finally {
-                for (ByteBuf buf : certs) {
+                for (ByteBuf buf: certs) {
                     buf.release();
                 }
             }
@@ -206,17 +208,20 @@ public final class JdkSslServerContext extends JdkSslContext {
      *
      * @param password characters, if {@code null} or empty an unencrypted key is assumed
      * @param key bytes of the DER encoded private key
+     *
      * @return a key specification
+     *
      * @throws IOException if parsing {@code key} fails
      * @throws NoSuchAlgorithmException if the algorithm used to encrypt {@code key} is unkown
      * @throws NoSuchPaddingException if the padding scheme specified in the decryption algorithm is unkown
      * @throws InvalidKeySpecException if the decryption key based on {@code password} cannot be generated
-     * @throws InvalidKeyException if the decryption key based on {@code password} cannot be used to decrypt {@code key}
+     * @throws InvalidKeyException if the decryption key based on {@code password} cannot be used to decrypt
+     *                             {@code key}
      * @throws InvalidAlgorithmParameterException if decryption algorithm parameters are somehow faulty
      */
-    private static PKCS8EncodedKeySpec generateKeySpec(char[] password, byte[] key) throws IOException,
-        NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, InvalidKeyException,
-        InvalidAlgorithmParameterException {
+    private static PKCS8EncodedKeySpec generateKeySpec(char[] password, byte[] key)
+            throws IOException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException,
+                   InvalidKeyException, InvalidAlgorithmParameterException {
 
         if (password == null || password.length == 0) {
             return new PKCS8EncodedKeySpec(key);
