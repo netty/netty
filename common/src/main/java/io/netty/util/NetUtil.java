@@ -187,9 +187,11 @@ public final class NetUtil {
             try {
                 in = new BufferedReader(new FileReader(file));
                 somaxconn = Integer.parseInt(in.readLine());
-                logger.debug("/proc/sys/net/core/somaxconn: {}", somaxconn);
+                if (logger.isDebugEnabled()) {
+                    logger.debug("{}: {}", file, somaxconn);
+                }
             } catch (Exception e) {
-                logger.debug("Failed to get SOMAXCONN", e);
+                logger.debug("Failed to get SOMAXCONN from: {}", file, e);
             } finally {
                 if (in != null) {
                     try {
@@ -200,7 +202,9 @@ public final class NetUtil {
                 }
             }
         } else {
-            logger.debug("/proc/sys/net/core/somaxconn not exists. Use default-value: {}", somaxconn);
+            if (logger.isDebugEnabled()) {
+                logger.debug("{}: {} (non-existent)", file, somaxconn);
+            }
         }
 
         SOMAXCONN = somaxconn;
