@@ -74,7 +74,6 @@ public class DnsResponseTest {
             ByteBuf packet = embedder.alloc().buffer(512).writeBytes(p);
             embedder.writeInbound(new DatagramPacket(packet, null, new InetSocketAddress(0)));
             DnsResponse decoded = embedder.readInbound();
-            packet.retain().readerIndex(0);
             ByteBuf raw = Unpooled.wrappedBuffer(p);
             Assert.assertEquals("Invalid id, expected: " + raw.getUnsignedShort(0) + ", actual: "
                     + decoded.header().id(), raw.getUnsignedShort(0), decoded.header().id());

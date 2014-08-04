@@ -64,16 +64,35 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
             out.add(response);
             return;
         }
-        for (int i = 0; i < answers; i++) {
-            response.addAnswer(decodeResource(buf));
+        boolean release = true;
+        try {
+            for (int i = 0; i < answers; i++) {
+                response.addAnswer(decodeResource(buf));
+            }
+            for (int i = 0; i < authorities; i++) {
+                response.addAuthorityResource(decodeResource(buf));
+            }
+            for (int i = 0; i < additionals; i++) {
+                response.addAdditionalResource(decodeResource(buf));
+            }
+            out.add(response);
+            release = false;
+        } finally {
+            if (release) {
+                // We need to release te DnsResources in case of an Exception as we called retain() on the buffer.
+                releaseDnsResources(response.answers());
+                releaseDnsResources(response.authorityResources());
+                releaseDnsResources(response.additionalResources());
+            }
         }
-        for (int i = 0; i < authorities; i++) {
-            response.addAuthorityResource(decodeResource(buf));
+    }
+
+    private static void releaseDnsResources(List<DnsResource> resources) {
+        int size = resources.size();
+        for (int i = 0; i < size; i++) {
+            DnsResource resource = resources.get(i);
+            resource.release();
         }
-        for (int i = 0; i < additionals; i++) {
-            response.addAdditionalResource(decodeResource(buf));
-        }
-        out.add(response);
     }
 
     /**
