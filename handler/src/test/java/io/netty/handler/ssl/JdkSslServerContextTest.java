@@ -16,32 +16,27 @@
 
 package io.netty.handler.ssl;
 
-import java.io.File;
-
-import javax.net.ssl.SSLException;
-
 import org.junit.Test;
 
-/**
- * Tests for JDK SSL Server Context.
- */
+import javax.net.ssl.SSLException;
+import java.io.File;
+
 public class JdkSslServerContextTest {
 
     @Test
     public void testJdkSslServerWithEncryptedPrivateKey() throws SSLException {
-        File keyFile = new File(getClass().getResource("netty_test").getFile());
-        File crtFile = new File(getClass().getResource("netty_test.crt").getFile());
+        File keyFile = new File(getClass().getResource("test_encrypted.pem").getFile());
+        File crtFile = new File(getClass().getResource("test.crt").getFile());
 
         new JdkSslServerContext(crtFile, keyFile, "12345");
     }
 
     @Test
     public void testJdkSslServerWithUnencryptedPrivateKey() throws SSLException {
-        File keyFile = new File(getClass().getResource("netty_test_unencrypted").getFile());
-        File crtFile = new File(getClass().getResource("netty_test.crt").getFile());
+        File keyFile = new File(getClass().getResource("test_unencrypted.pem").getFile());
+        File crtFile = new File(getClass().getResource("test.crt").getFile());
 
         new JdkSslServerContext(crtFile, keyFile, "");
         new JdkSslServerContext(crtFile, keyFile, null);
     }
-
 }
