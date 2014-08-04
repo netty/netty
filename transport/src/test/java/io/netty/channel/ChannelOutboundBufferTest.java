@@ -51,7 +51,7 @@ public class ChannelOutboundBufferTest {
 
         ByteBuf buf = copiedBuffer("buf1", CharsetUtil.US_ASCII);
         ByteBuffer nioBuf = buf.internalNioBuffer(0, buf.readableBytes());
-        buffer.addMessage(buf, channel.voidPromise());
+        buffer.addMessage(buf, buf.readableBytes(), channel.voidPromise());
         assertEquals("Should still be 0 as not flushed yet", 0, buffer.nioBufferCount());
         buffer.addFlush();
         ByteBuffer[] buffers = buffer.nioBuffers();
@@ -75,7 +75,7 @@ public class ChannelOutboundBufferTest {
 
         ByteBuf buf = directBuffer().writeBytes("buf1".getBytes(CharsetUtil.US_ASCII));
         for (int i = 0; i < 64; i++) {
-            buffer.addMessage(buf.copy(), channel.voidPromise());
+            buffer.addMessage(buf.copy(), buf.readableBytes(), channel.voidPromise());
         }
         assertEquals("Should still be 0 as not flushed yet", 0, buffer.nioBufferCount());
         buffer.addFlush();
@@ -99,7 +99,7 @@ public class ChannelOutboundBufferTest {
         for (int i = 0; i < 65; i++) {
             comp.addComponent(buf.copy()).writerIndex(comp.writerIndex() + buf.readableBytes());
         }
-        buffer.addMessage(comp, channel.voidPromise());
+        buffer.addMessage(comp, comp.readableBytes(), channel.voidPromise());
 
         assertEquals("Should still be 0 as not flushed yet", 0, buffer.nioBufferCount());
         buffer.addFlush();

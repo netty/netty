@@ -83,7 +83,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     @Override
     public boolean isWritable() {
         ChannelOutboundBuffer buf = unsafe.outboundBuffer();
-        return buf != null && buf.getWritable();
+        return buf != null && buf.isWritable();
     }
 
     @Override
@@ -649,7 +649,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 ReferenceCountUtil.release(msg);
                 return;
             }
-            outboundBuffer.addMessage(msg, promise);
+            int size = estimatorHandle().size(msg);
+            if (size < 0) {
+                size = 0;
+            }
+            outboundBuffer.addMessage(msg, size, promise);
         }
 
         @Override
