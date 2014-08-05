@@ -221,6 +221,11 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
         throw new UnsupportedOperationException();
     }
 
+    @Override
+    protected Object filterOutboundMessage(Object msg) throws Exception {
+        throw new UnsupportedOperationException();
+    }
+
     private final class NioSctpServerChannelConfig extends DefaultSctpServerChannelConfig {
         private NioSctpServerChannelConfig(NioSctpServerChannel channel, SctpServerChannel javaChannel) {
             super(channel, javaChannel);

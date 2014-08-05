@@ -16,6 +16,8 @@
 package io.netty.channel.epoll;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelOutboundBuffer;
+import io.netty.channel.ChannelOutboundBuffer.MessageProcessor;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.PlatformDependent;
 
@@ -23,7 +25,7 @@ import io.netty.util.internal.PlatformDependent;
  * Represent an array of struct array and so can be passed directly over via JNI without the need to do any more
  * array copies.
  *
- * The buffers are written out directly into direct memory to match the struct iov. See also <code>man writev</code>.
+ * The buffers are written out directly into direct memory to match the struct iov. See also {@code man writev}.
  *
  * <pre>
  * struct iovec {
@@ -33,19 +35,24 @@ import io.netty.util.internal.PlatformDependent;
  * </pre>
  *
  * See also
- * <a href="http://rkennke.wordpress.com/2007/07/30/efficient-jni-programming-iv-wrapping-native-data-objects/">
- *     Efficient JNI programming IV: Wrapping native data objects</a>.
+ * <a href="http://rkennke.wordpress.com/2007/07/30/efficient-jni-programming-iv-wrapping-native-data-objects/"
+ * >Efficient JNI programming IV: Wrapping native data objects</a>.
  */
-final class IovArray {
-    // Maximal number of struct iov entries that can be passed to writev(...)
-    private static final int IOV_MAX = Native.IOV_MAX;
-    // The size of an address which should be 8 for 64 bits and 4 for 32 bits.
+final class IovArray implements MessageProcessor {
+
+    /** The size of an address which should be 8 for 64 bits and 4 for 32 bits. */
     private static final int ADDRESS_SIZE = PlatformDependent.addressSize();
-    // The size of an struct iov entry in bytes. This is calculated as we have 2 entries each of the size of the
-    // address.
+
+    /**
+     * The size of an {@code iovec} struct in bytes. This is calculated as we have 2 entries each of the size of the
+     * address.
+     */
     private static final int IOV_SIZE = 2 * ADDRESS_SIZE;
-    // The needed memory to hold up to IOV_MAX iov entries.
-    private static final int CAPACITY = IOV_MAX * IOV_SIZE;
+
+    /** The needed memory to hold up to {@link Native#IOV_MAX} iov entries, where {@link Native#IOV_MAX} signified
+     * the maximum number of {@code iovec} structs that can be passed to {@code writev(...)}.
+     */
+    private static final int CAPACITY = Native.IOV_MAX * IOV_SIZE;
 
     private static final FastThreadLocal<IovArray> ARRAY = new FastThreadLocal<IovArray>() {
         @Override
@@ -72,17 +79,26 @@ final class IovArray {
      * Try to add the given {@link ByteBuf}. Returns {@code true} on success,
      * {@code false} otherwise.
      */
-    boolean add(ByteBuf buf) {
-        if (count == IOV_MAX) {
+    private boolean add(ByteBuf buf) {
+        if (count == Native.IOV_MAX) {
             // No more room!
             return false;
         }
-        int len = buf.readableBytes();
-        long addr = buf.memoryAddress();
-        int offset = buf.readerIndex();
 
-        long baseOffset = memoryAddress(count++);
-        long lengthOffset = baseOffset + ADDRESS_SIZE;
+        final int len = buf.readableBytes();
+        if (len == 0) {
+            // No need to add an empty buffer.
+            // We return true here because we want ChannelOutboundBuffer.forEachFlushedMessage() to continue
+            // fetching the next buffers.
+            return true;
+        }
+
+        final long addr = buf.memoryAddress();
+        final int offset = buf.readerIndex();
+
+        final long baseOffset = memoryAddress(count++);
+        final long lengthOffset = baseOffset + ADDRESS_SIZE;
+
         if (ADDRESS_SIZE == 8) {
             // 64bit
             PlatformDependent.putLong(baseOffset, addr + offset);
@@ -92,6 +108,7 @@ final class IovArray {
             PlatformDependent.putInt(baseOffset, (int) addr + offset);
             PlatformDependent.putInt(lengthOffset, len);
         }
+
         size += len;
         return true;
     }
@@ -147,13 +164,19 @@ final class IovArray {
         return memoryAddress + IOV_SIZE * offset;
     }
 
+    @Override
+    public boolean processMessage(Object msg) throws Exception {
+        return msg instanceof ByteBuf && add((ByteBuf) msg);
+    }
+
     /**
-     * Returns a {@link IovArray} which can be filled.
+     * Returns a {@link IovArray} which is filled with the flushed messages of {@link ChannelOutboundBuffer}.
      */
-    static IovArray get() {
+    static IovArray get(ChannelOutboundBuffer buffer) throws Exception {
         IovArray array = ARRAY.get();
         array.size = 0;
         array.count = 0;
+        buffer.forEachFlushedMessage(array);
         return array;
     }
 }
