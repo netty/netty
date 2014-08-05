@@ -22,19 +22,18 @@ import java.io.Serializable;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Queue;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_SESSION_STREAM_ID;
+import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 
 final class SpdySession {
 
     private final AtomicInteger activeLocalStreams  = new AtomicInteger();
     private final AtomicInteger activeRemoteStreams = new AtomicInteger();
     private final Map<Integer, StreamState> activeStreams = PlatformDependent.newConcurrentHashMap();
-
+    private final StreamComparator streamComparator = new StreamComparator();
     private final AtomicInteger sendWindowSize;
     private final AtomicInteger receiveWindowSize;
 
@@ -60,10 +59,10 @@ final class SpdySession {
     }
 
     // Stream-IDs should be iterated in priority order
-    Set<Integer> getActiveStreams() {
-        TreeSet<Integer> streamIds = new TreeSet<Integer>(new PriorityComparator());
-        streamIds.addAll(activeStreams.keySet());
-        return streamIds;
+    Map<Integer, StreamState> activeStreams() {
+        Map<Integer, StreamState> streams = new TreeMap<Integer, StreamState>(streamComparator);
+        streams.putAll(activeStreams);
+        return streams;
     }
 
     void acceptStream(
@@ -208,8 +207,8 @@ final class SpdySession {
 
     PendingWrite getPendingWrite(int streamId) {
         if (streamId == SPDY_SESSION_STREAM_ID) {
-            for (Integer id : getActiveStreams()) {
-                StreamState state = activeStreams.get(id);
+            for (Map.Entry<Integer, StreamState> e: activeStreams().entrySet()) {
+                StreamState state = e.getValue();
                 if (state.getSendWindowSize() > 0) {
                     PendingWrite pendingWrite = state.getPendingWrite();
                     if (pendingWrite != null) {
@@ -321,15 +320,23 @@ final class SpdySession {
         }
     }
 
-    private final class PriorityComparator implements Comparator<Integer>, Serializable {
+    private final class StreamComparator implements Comparator<Integer>, Serializable {
 
         private static final long serialVersionUID = 1161471649740544848L;
+
+        StreamComparator() { }
 
         @Override
         public int compare(Integer id1, Integer id2) {
             StreamState state1 = activeStreams.get(id1);
             StreamState state2 = activeStreams.get(id2);
-            return state1.getPriority() - state2.getPriority();
+
+            int result = state1.getPriority() - state2.getPriority();
+            if (result != 0) {
+                return result;
+            }
+
+            return id1 - id2;
         }
     }
 
