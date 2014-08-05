@@ -15,7 +15,12 @@
  */
 package io.netty.handler.traffic;
 
+import java.util.LinkedList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
 
 /**
  * This implementation of the {@link AbstractTrafficShapingHandler} is for channel
@@ -45,6 +50,7 @@ import io.netty.channel.ChannelHandlerContext;
  * </ul><br>
  */
 public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler {
+    private List<ToSend> messagesQueue = new LinkedList<ToSend>();
 
     /**
      * Create a new instance
@@ -117,5 +123,43 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
         if (trafficCounter != null) {
             trafficCounter.stop();
         }
+    }
+
+    private static final class ToSend {
+        final long date;
+        final Object toSend;
+        final ChannelPromise promise;
+
+        private ToSend(final long delay, final Object toSend, final ChannelPromise promise) {
+            this.date = System.currentTimeMillis() + delay;
+            this.toSend = toSend;
+            this.promise = promise;
+        }
+    }
+
+    @Override
+    protected synchronized void submitWrite(final ChannelHandlerContext ctx, final Object msg, final long delay,
+            final ChannelPromise promise) {
+        final ToSend newToSend = new ToSend(delay, msg, promise);
+        messagesQueue.add(newToSend);
+        ctx.executor().schedule(new Runnable() {
+            @Override
+            public void run() {
+                sendAllValid(ctx);
+            }
+        }, delay, TimeUnit.MILLISECONDS);
+    }
+
+    private synchronized void sendAllValid(ChannelHandlerContext ctx) {
+        while (!messagesQueue.isEmpty()) {
+            ToSend newToSend = messagesQueue.remove(0);
+            if (newToSend.date <= System.currentTimeMillis()) {
+                ctx.write(newToSend.toSend, newToSend.promise);
+            } else {
+                messagesQueue.add(0, newToSend);
+                break;
+            }
+        }
+        ctx.flush();
     }
 }
