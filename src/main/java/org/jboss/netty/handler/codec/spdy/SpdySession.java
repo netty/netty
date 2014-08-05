@@ -17,10 +17,10 @@ package org.jboss.netty.handler.codec.spdy;
 
 import org.jboss.netty.channel.MessageEvent;
 
+import java.io.Serializable;
 import java.util.Comparator;
 import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -33,9 +33,8 @@ final class SpdySession {
 
     private final AtomicInteger activeLocalStreams  = new AtomicInteger();
     private final AtomicInteger activeRemoteStreams = new AtomicInteger();
-    private final Map<Integer, StreamState> activeStreams =
-        new ConcurrentHashMap<Integer, StreamState>();
-
+    private final Map<Integer, StreamState> activeStreams = new ConcurrentHashMap<Integer, StreamState>();
+    private final StreamComparator streamComparator = new StreamComparator();
     private final AtomicInteger sendWindowSize;
     private final AtomicInteger receiveWindowSize;
 
@@ -61,10 +60,10 @@ final class SpdySession {
     }
 
     // Stream-IDs should be iterated in priority order
-    Set<Integer> getActiveStreams() {
-        TreeSet<Integer> StreamIds = new TreeSet<Integer>(new PriorityComparator());
-        StreamIds.addAll(activeStreams.keySet());
-        return StreamIds;
+    Map<Integer, StreamState> activeStreams() {
+        Map<Integer, StreamState> streams = new TreeMap<Integer, StreamState>(streamComparator);
+        streams.putAll(activeStreams);
+        return streams;
     }
 
     void acceptStream(
@@ -215,12 +214,12 @@ final class SpdySession {
 
     MessageEvent getPendingWrite(int streamId) {
         if (streamId == SPDY_SESSION_STREAM_ID) {
-            for (Integer id : getActiveStreams()) {
-                StreamState state = activeStreams.get(id);
+            for (Map.Entry<Integer, StreamState> e: activeStreams().entrySet()) {
+                StreamState state = e.getValue();
                 if (state.getSendWindowSize() > 0) {
-                    MessageEvent e = state.getPendingWrite();
-                    if (e != null) {
-                        return e;
+                    MessageEvent evt = state.getPendingWrite();
+                    if (evt != null) {
+                        return evt;
                     }
                 }
             }
@@ -319,15 +318,22 @@ final class SpdySession {
         }
     }
 
-    private final class PriorityComparator implements Comparator<Integer> {
+    private final class StreamComparator implements Comparator<Integer>, Serializable {
 
-        PriorityComparator() {
-        }
+        private static final long serialVersionUID = 1161471649740544848L;
+
+        StreamComparator() { }
 
         public int compare(Integer id1, Integer id2) {
             StreamState state1 = activeStreams.get(id1);
             StreamState state2 = activeStreams.get(id2);
-            return state1.getPriority() - state2.getPriority();
+
+            int result = state1.getPriority() - state2.getPriority();
+            if (result != 0) {
+                return result;
+            }
+
+            return id1 - id2;
         }
     }
 }
