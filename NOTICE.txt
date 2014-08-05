@@ -114,6 +114,14 @@ decoding data in LZF format, written by Tatu Saloranta. It can be obtained at:
   * HOMEPAGE:
     * https://github.com/ning/compress
 
+This product optionally depends on 'lz4', a LZ4 Java compression
+and decompression library written by Adrien Grand. It can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.lz4.txt (Apache License 2.0)
+  * HOMEPAGE:
+    * https://github.com/jpountz/lz4-java
+
 This product contains a modified portion of 'jfastlz', a Java port of FastLZ compression
 and decompression library written by William Kinney. It can be obtained at:
 
