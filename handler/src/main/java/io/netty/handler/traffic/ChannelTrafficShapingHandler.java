@@ -19,6 +19,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 
@@ -123,6 +124,12 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
         if (trafficCounter != null) {
             trafficCounter.stop();
         }
+        for (ToSend toSend : messagesQueue) {
+            if (toSend.toSend instanceof ByteBuf) {
+                ((ByteBuf) toSend.toSend).release();
+            }
+        }
+        messagesQueue.clear();
     }
 
     private static final class ToSend {

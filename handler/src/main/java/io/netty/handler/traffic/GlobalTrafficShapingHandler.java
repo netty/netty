@@ -172,20 +172,20 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
         int key = ctx.channel().hashCode();
         List<ToSend> mq = new LinkedList<ToSend>();
         messagesQueues.put(key, mq);
-        super.handlerAdded(ctx);
     }
 
     @Override
     public synchronized void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
         int key = ctx.channel().hashCode();
         List<ToSend> mq = messagesQueues.remove(key);
-        for (ToSend toSend : mq) {
-            if (toSend.toSend instanceof ByteBuf) {
-                ((ByteBuf) toSend.toSend).release();
+        if (mq != null) {
+            for (ToSend toSend : mq) {
+                if (toSend.toSend instanceof ByteBuf) {
+                    ((ByteBuf) toSend.toSend).release();
+                }
             }
+            mq.clear();
         }
-        mq.clear();
-        super.handlerRemoved(ctx);
     }
 
     private static final class ToSend {
