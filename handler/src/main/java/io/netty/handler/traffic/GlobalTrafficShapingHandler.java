@@ -15,10 +15,17 @@
  */
 package io.netty.handler.traffic;
 
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.util.concurrent.EventExecutor;
 
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * This implementation of the {@link AbstractTrafficShapingHandler} is for global
@@ -54,6 +61,8 @@ import java.util.concurrent.ScheduledExecutorService;
  */
 @Sharable
 public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
+    private Map<Integer, List<ToSend>> messagesQueues = new HashMap<Integer, List<ToSend>>();
+    
     /**
      * Create the global TrafficCounter
      */
@@ -154,5 +163,50 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
         if (trafficCounter != null) {
             trafficCounter.stop();
         }
+    }
+
+    private static class ToSend {
+        final long date;
+        final Object toSend;
+        final ChannelPromise promise;
+
+        private ToSend(final long delay, final Object toSend, final ChannelPromise promise) {
+            this.date = System.currentTimeMillis() + delay;
+            this.toSend = toSend;
+            this.promise = promise;
+        }
+    }
+
+    @Override
+    protected synchronized void submitWrite(final ChannelHandlerContext ctx, final Object msg, final long delay,
+            final ChannelPromise promise) {
+        final ToSend newToSend = new ToSend(delay, msg, promise);
+        int key = ctx.channel().hashCode();
+        List<ToSend> mq = messagesQueues.get(key);
+        if (mq == null) {
+            mq = new LinkedList<ToSend>();
+            messagesQueues.put(key, mq);
+        }
+        mq.add(newToSend);
+        final List<ToSend> mqfinal = mq;
+        ctx.executor().schedule(new Runnable() {
+            @Override
+            public void run() {
+                sendAllValid(ctx, mqfinal);
+            }
+        }, delay, TimeUnit.MILLISECONDS);
+    }
+
+    private synchronized void sendAllValid(final ChannelHandlerContext ctx, final List<ToSend> messagesQueue) {
+        while (!messagesQueue.isEmpty()) {
+            ToSend newToSend = messagesQueue.remove(0);
+            if (newToSend.date <= System.currentTimeMillis()) {
+                ctx.write(newToSend.toSend, newToSend.promise);
+            } else {
+                messagesQueue.add(0, newToSend);
+                break;
+            }
+        }
+        ctx.flush();
     }
 }
