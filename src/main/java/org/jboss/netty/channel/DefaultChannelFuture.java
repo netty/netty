@@ -364,6 +364,10 @@ public class DefaultChannelFuture implements ChannelFuture {
     }
 
     public boolean setFailure(Throwable cause) {
+        if (cause == null) {
+            throw new NullPointerException("cause");
+        }
+
         synchronized (this) {
             // Allow only once.
             if (done) {
