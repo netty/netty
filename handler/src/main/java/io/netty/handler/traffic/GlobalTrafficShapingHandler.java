@@ -15,6 +15,7 @@
  */
 package io.netty.handler.traffic;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelHandler.Sharable;
@@ -26,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+
 
 /**
  * This implementation of the {@link AbstractTrafficShapingHandler} is for global
@@ -162,6 +164,28 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
     public final void release() {
         if (trafficCounter != null) {
             trafficCounter.stop();
+        }
+    }
+
+    @Override
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        int key = ctx.channel().hashCode();
+        List<ToSend> mq = new LinkedList<ToSend>();
+        messagesQueues.put(key, mq);
+        super.handlerAdded(ctx);
+    }
+
+    @Override
+    public synchronized void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        int key = ctx.channel().hashCode();
+        List<ToSend> mq = messagesQueues.remove(key);
+        if (mq != null) {
+            for (ToSend toSend : mq) {
+                if (toSend.toSend instanceof ByteBuf) {
+                    ((ByteBuf) toSend.toSend).release();
+                }
+            }
+            mq.clear();
         }
     }
 
