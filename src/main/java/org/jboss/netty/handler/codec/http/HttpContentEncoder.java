@@ -15,9 +15,6 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
-
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -27,6 +24,9 @@ import org.jboss.netty.channel.LifeCycleAwareChannelHandler;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.handler.codec.embedder.EncoderEmbedder;
+
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * Encodes the content of the outbound {@link HttpResponse} and {@link HttpChunk}.
@@ -54,6 +54,7 @@ public abstract class HttpContentEncoder extends SimpleChannelHandler
 
     private final Queue<String> acceptEncodingQueue = new ConcurrentLinkedQueue<String>();
     private volatile EncoderEmbedder<ChannelBuffer> encoder;
+    private volatile boolean offerred;
 
     /**
      * Creates a new instance.
@@ -198,16 +199,24 @@ public abstract class HttpContentEncoder extends SimpleChannelHandler
     protected abstract String getTargetContentEncoding(String acceptEncoding) throws Exception;
 
     private ChannelBuffer encode(ChannelBuffer buf) {
+        offerred = true;
         encoder.offer(buf);
         return ChannelBuffers.wrappedBuffer(encoder.pollAll(new ChannelBuffer[encoder.size()]));
     }
 
     private ChannelBuffer finishEncode() {
         if (encoder == null) {
+            offerred = false;
             return ChannelBuffers.EMPTY_BUFFER;
         }
 
         ChannelBuffer result;
+        if (!offerred) {
+            // No data was offerred to the encoder since the encoder was created.
+            // We should offer at least an empty buffer so that the encoder knows its is encoding empty content.
+            offerred = false;
+            encoder.offer(ChannelBuffers.EMPTY_BUFFER);
+        }
         if (encoder.finish()) {
             result = ChannelBuffers.wrappedBuffer(encoder.pollAll(new ChannelBuffer[encoder.size()]));
         } else {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2014 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,48 +13,48 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package org.jboss.netty.handler.codec.http;
 
+import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.handler.codec.embedder.EncoderEmbedder;
 import org.jboss.netty.handler.codec.http.HttpHeaders.Names;
 import org.jboss.netty.handler.codec.http.HttpHeaders.Values;
+import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
 import org.jboss.netty.util.CharsetUtil;
 import org.junit.Test;
 
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
 
-public class HttpContentCompressorTest {
+public class HttpContentEncoderTest {
 
-    @Test
-    public void testGetTargetContentEncoding() throws Exception {
-        HttpContentCompressor compressor = new HttpContentCompressor();
+    private static final class TestEncoder extends HttpContentEncoder {
+        @Override
+        protected EncoderEmbedder<ChannelBuffer> newContentEncoder(HttpMessage msg, String acceptEncoding)
+                throws Exception {
+            return new EncoderEmbedder<ChannelBuffer>(new OneToOneEncoder() {
+                @Override
+                protected Object encode(ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
+                    ChannelBuffer in = (ChannelBuffer) msg;
+                    return ChannelBuffers.wrappedBuffer(String.valueOf(in.readableBytes()).getBytes(CharsetUtil.US_ASCII));
+                }
+            });
+        }
 
-        String[] tests = {
-            // Accept-Encoding      ->     Content-Encoding
-            "",                            null,
-            "*",                           "gzip",
-            "*;q=0.0",                     null,
-            "gzip",                        "gzip",
-            "compress, gzip;q=0.5",        "gzip",
-            "gzip; q=0.5, identity",       "gzip",
-            "gzip ; q=0.1",                "gzip",
-            "gzip; q=0, deflate",          "deflate",
-            " deflate ; q=0 , *;q=0.5",    "gzip",
-        };
-        for (int i = 0; i < tests.length; i += 2) {
-            String acceptEncoding = tests[i];
-            String contentEncoding = tests[i + 1];
-            String targetEncoding = compressor.getTargetContentEncoding(acceptEncoding);
-            assertEquals(contentEncoding, targetEncoding);
+        @Override
+        protected String getTargetContentEncoding(String acceptEncoding) throws Exception {
+            return "test";
         }
     }
 
-    static final class HttpContentCompressorEmbedder extends EncoderEmbedder<Object> {
-        HttpContentCompressorEmbedder() {
-            super(new HttpContentCompressor());
+    static final class HttpContentEncoderEmbedder extends EncoderEmbedder<Object> {
+        HttpContentEncoderEmbedder() {
+            super(new TestEncoder());
         }
 
         public void fireMessageReceived(Object msg) {
@@ -64,15 +64,15 @@ public class HttpContentCompressorTest {
 
     @Test
     public void testSplitContent() throws Exception {
-        HttpContentCompressorEmbedder e = new HttpContentCompressorEmbedder();
-        e.fireMessageReceived(newRequest());
+        HttpContentEncoderEmbedder e = new HttpContentEncoderEmbedder();
+        e.fireMessageReceived(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
 
         HttpResponse res = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         res.setChunked(true);
         e.offer(res);
-        e.offer(new DefaultHttpChunk(ChannelBuffers.copiedBuffer("Hell", CharsetUtil.US_ASCII)));
-        e.offer(new DefaultHttpChunk(ChannelBuffers.copiedBuffer("o, w", CharsetUtil.US_ASCII)));
-        e.offer(new DefaultHttpChunk(ChannelBuffers.copiedBuffer("orld", CharsetUtil.US_ASCII)));
+        e.offer(new DefaultHttpChunk(ChannelBuffers.wrappedBuffer(new byte[3])));
+        e.offer(new DefaultHttpChunk(ChannelBuffers.wrappedBuffer(new byte[2])));
+        e.offer(new DefaultHttpChunk(ChannelBuffers.wrappedBuffer(new byte[1])));
         e.offer(HttpChunk.LAST_CHUNK);
 
         Object o = e.poll();
@@ -86,20 +86,17 @@ public class HttpContentCompressorTest {
         assertThat(res.getContent().readableBytes(), is(0));
         assertThat(res.headers().get(Names.TRANSFER_ENCODING), is(nullValue()));
         assertThat(res.headers().get(Names.CONTENT_LENGTH), is(nullValue()));
-        assertThat(res.headers().get(Names.CONTENT_ENCODING), is("gzip"));
+        assertThat(res.headers().get(Names.CONTENT_ENCODING), is("test"));
 
         HttpChunk chunk;
         chunk = (HttpChunk) e.poll();
-        assertThat(ChannelBuffers.hexDump(chunk.getContent()), is("1f8b0800000000000000f248cdc901000000ffff"));
+        assertThat(chunk.getContent().toString(CharsetUtil.US_ASCII), is("3"));
 
         chunk = (HttpChunk) e.poll();
-        assertThat(ChannelBuffers.hexDump(chunk.getContent()), is("cad7512807000000ffff"));
+        assertThat(chunk.getContent().toString(CharsetUtil.US_ASCII), is("2"));
 
         chunk = (HttpChunk) e.poll();
-        assertThat(ChannelBuffers.hexDump(chunk.getContent()), is("ca2fca4901000000ffff"));
-
-        chunk = (HttpChunk) e.poll();
-        assertThat(ChannelBuffers.hexDump(chunk.getContent()), is("0300c2a99ae70c000000"));
+        assertThat(chunk.getContent().toString(CharsetUtil.US_ASCII), is("1"));
 
         chunk = (HttpChunk) e.poll();
         assertThat(chunk, is(instanceOf(HttpChunkTrailer.class)));
@@ -109,8 +106,8 @@ public class HttpContentCompressorTest {
 
     @Test
     public void testChunkedContent() throws Exception {
-        HttpContentCompressorEmbedder e = new HttpContentCompressorEmbedder();
-        e.fireMessageReceived(newRequest());
+        HttpContentEncoderEmbedder e = new HttpContentEncoderEmbedder();
+        e.fireMessageReceived(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
 
         HttpResponse res = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         res.headers().set(Names.TRANSFER_ENCODING, Values.CHUNKED);
@@ -118,23 +115,20 @@ public class HttpContentCompressorTest {
 
         assertEncodedResponse(e);
 
-        e.offer(new DefaultHttpChunk(ChannelBuffers.copiedBuffer("Hell", CharsetUtil.US_ASCII)));
-        e.offer(new DefaultHttpChunk(ChannelBuffers.copiedBuffer("o, w", CharsetUtil.US_ASCII)));
-        e.offer(new DefaultHttpChunk(ChannelBuffers.copiedBuffer("orld", CharsetUtil.US_ASCII)));
+        e.offer(new DefaultHttpChunk(ChannelBuffers.wrappedBuffer(new byte[3])));
+        e.offer(new DefaultHttpChunk(ChannelBuffers.wrappedBuffer(new byte[2])));
+        e.offer(new DefaultHttpChunk(ChannelBuffers.wrappedBuffer(new byte[1])));
         e.offer(HttpChunk.LAST_CHUNK);
 
         HttpChunk chunk;
         chunk = (HttpChunk) e.poll();
-        assertThat(ChannelBuffers.hexDump(chunk.getContent()), is("1f8b0800000000000000f248cdc901000000ffff"));
+        assertThat(chunk.getContent().toString(CharsetUtil.US_ASCII), is("3"));
 
         chunk = (HttpChunk) e.poll();
-        assertThat(ChannelBuffers.hexDump(chunk.getContent()), is("cad7512807000000ffff"));
+        assertThat(chunk.getContent().toString(CharsetUtil.US_ASCII), is("2"));
 
         chunk = (HttpChunk) e.poll();
-        assertThat(ChannelBuffers.hexDump(chunk.getContent()), is("ca2fca4901000000ffff"));
-
-        chunk = (HttpChunk) e.poll();
-        assertThat(ChannelBuffers.hexDump(chunk.getContent()), is("0300c2a99ae70c000000"));
+        assertThat(chunk.getContent().toString(CharsetUtil.US_ASCII), is("1"));
 
         chunk = (HttpChunk) e.poll();
         assertThat(chunk.getContent().readable(), is(false));
@@ -145,8 +139,8 @@ public class HttpContentCompressorTest {
 
     @Test
     public void testChunkedContentWithTrailingHeader() throws Exception {
-        HttpContentCompressorEmbedder e = new HttpContentCompressorEmbedder();
-        e.fireMessageReceived(newRequest());
+        HttpContentEncoderEmbedder e = new HttpContentEncoderEmbedder();
+        e.fireMessageReceived(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
 
         HttpResponse res = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         res.headers().set(Names.TRANSFER_ENCODING, Values.CHUNKED);
@@ -154,25 +148,22 @@ public class HttpContentCompressorTest {
 
         assertEncodedResponse(e);
 
-        e.offer(new DefaultHttpChunk(ChannelBuffers.copiedBuffer("Hell", CharsetUtil.US_ASCII)));
-        e.offer(new DefaultHttpChunk(ChannelBuffers.copiedBuffer("o, w", CharsetUtil.US_ASCII)));
-        e.offer(new DefaultHttpChunk(ChannelBuffers.copiedBuffer("orld", CharsetUtil.US_ASCII)));
+        e.offer(new DefaultHttpChunk(ChannelBuffers.wrappedBuffer(new byte[3])));
+        e.offer(new DefaultHttpChunk(ChannelBuffers.wrappedBuffer(new byte[2])));
+        e.offer(new DefaultHttpChunk(ChannelBuffers.wrappedBuffer(new byte[1])));
         HttpChunkTrailer trailer = new DefaultHttpChunkTrailer();
         trailer.trailingHeaders().set("X-Test", "Netty");
         e.offer(trailer);
 
         HttpChunk chunk;
         chunk = (HttpChunk) e.poll();
-        assertThat(ChannelBuffers.hexDump(chunk.getContent()), is("1f8b0800000000000000f248cdc901000000ffff"));
+        assertThat(chunk.getContent().toString(CharsetUtil.US_ASCII), is("3"));
 
         chunk = (HttpChunk) e.poll();
-        assertThat(ChannelBuffers.hexDump(chunk.getContent()), is("cad7512807000000ffff"));
+        assertThat(chunk.getContent().toString(CharsetUtil.US_ASCII), is("2"));
 
         chunk = (HttpChunk) e.poll();
-        assertThat(ChannelBuffers.hexDump(chunk.getContent()), is("ca2fca4901000000ffff"));
-
-        chunk = (HttpChunk) e.poll();
-        assertThat(ChannelBuffers.hexDump(chunk.getContent()), is("0300c2a99ae70c000000"));
+        assertThat(chunk.getContent().toString(CharsetUtil.US_ASCII), is("1"));
         assertThat(chunk, is(instanceOf(HttpChunk.class)));
 
         chunk = (HttpChunk) e.poll();
@@ -185,12 +176,12 @@ public class HttpContentCompressorTest {
 
     @Test
     public void testFullContent() throws Exception {
-        HttpContentCompressorEmbedder e = new HttpContentCompressorEmbedder();
-        e.fireMessageReceived(newRequest());
+        HttpContentEncoderEmbedder e = new HttpContentEncoderEmbedder();
+        e.fireMessageReceived(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
 
         HttpResponse res = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-        res.setContent(ChannelBuffers.copiedBuffer("Hello, World", CharsetUtil.US_ASCII));
-        res.headers().set(Names.CONTENT_LENGTH, res.getContent().readableBytes());
+        res.setContent(ChannelBuffers.wrappedBuffer(new byte[42]));
+        res.headers().set(Names.CONTENT_LENGTH, 42);
         e.offer(res);
 
         Object o = e.poll();
@@ -201,12 +192,11 @@ public class HttpContentCompressorTest {
 
         res = (HttpResponse) o;
         assertThat(res.isChunked(), is(false));
-        assertThat(
-                ChannelBuffers.hexDump(res.getContent()),
-                is("1f8b0800000000000000f248cdc9c9d75108cf2fca4901000000ffff0300c6865b260c000000"));
+        assertThat(res.getContent().readableBytes(), is(2));
+        assertThat(res.getContent().toString(CharsetUtil.US_ASCII), is("42"));
         assertThat(res.headers().get(Names.TRANSFER_ENCODING), is(nullValue()));
-        assertThat(res.headers().get(Names.CONTENT_LENGTH), is(String.valueOf(res.getContent().readableBytes())));
-        assertThat(res.headers().get(Names.CONTENT_ENCODING), is("gzip"));
+        assertThat(res.headers().get(Names.CONTENT_LENGTH), is("2"));
+        assertThat(res.headers().get(Names.CONTENT_ENCODING), is("test"));
 
         assertThat(e.poll(), is(nullValue()));
     }
@@ -217,8 +207,8 @@ public class HttpContentCompressorTest {
      */
     @Test
     public void testEmptySplitContent() throws Exception {
-        HttpContentCompressorEmbedder e = new HttpContentCompressorEmbedder();
-        e.fireMessageReceived(newRequest());
+        HttpContentEncoderEmbedder e = new HttpContentEncoderEmbedder();
+        e.fireMessageReceived(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
 
         HttpResponse res = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         res.setChunked(true);
@@ -235,12 +225,12 @@ public class HttpContentCompressorTest {
         assertThat(res.isChunked(), is(true));
         assertThat(res.headers().get(Names.TRANSFER_ENCODING), is(nullValue()));
         assertThat(res.headers().get(Names.CONTENT_LENGTH), is(nullValue()));
-        assertThat(res.headers().get(Names.CONTENT_ENCODING), is("gzip"));
+        assertThat(res.headers().get(Names.CONTENT_ENCODING), is("test"));
 
         e.offer(HttpChunk.LAST_CHUNK);
 
         HttpChunk chunk = (HttpChunk) e.poll();
-        assertThat(chunk.getContent().readableBytes(), is(20)); // an empty gzip stream is 20 bytes long.
+        assertThat(chunk.getContent().toString(CharsetUtil.US_ASCII), is("0"));
         assertThat(chunk, is(instanceOf(HttpChunk.class)));
 
         chunk = (HttpChunk) e.poll();
@@ -255,8 +245,8 @@ public class HttpContentCompressorTest {
      */
     @Test
     public void testEmptyFullContent() throws Exception {
-        HttpContentCompressorEmbedder ch = new HttpContentCompressorEmbedder();
-        ch.fireMessageReceived(newRequest());
+        HttpContentEncoderEmbedder ch = new HttpContentEncoderEmbedder();
+        ch.fireMessageReceived(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
 
         HttpResponse res = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         res.setContent(ChannelBuffers.EMPTY_BUFFER);
@@ -279,13 +269,7 @@ public class HttpContentCompressorTest {
         assertThat(ch.poll(), is(nullValue()));
     }
 
-    private static HttpRequest newRequest() {
-        HttpRequest req = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
-        req.headers().set(Names.ACCEPT_ENCODING, "gzip");
-        return req;
-    }
-
-    private static void assertEncodedResponse(HttpContentCompressorEmbedder e) {
+    private static void assertEncodedResponse(HttpContentEncoderEmbedder e) {
         Object o = e.poll();
         assertThat(o, is(instanceOf(HttpRequest.class)));
 
@@ -296,6 +280,6 @@ public class HttpContentCompressorTest {
         assertThat(res.getContent().readableBytes(), is(0));
         assertThat(res.headers().get(Names.TRANSFER_ENCODING), is("chunked"));
         assertThat(res.headers().get(Names.CONTENT_LENGTH), is(nullValue()));
-        assertThat(res.headers().get(Names.CONTENT_ENCODING), is("gzip"));
+        assertThat(res.headers().get(Names.CONTENT_ENCODING), is("test"));
     }
 }
