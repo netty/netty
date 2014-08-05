@@ -179,7 +179,8 @@ public class TrafficCounter {
             if (trafficShapingHandler1 != null) {
                 trafficShapingHandler1.doAccounting(counter);
             }
-            counter.scheduledFuture = counter.executor.schedule(this, counter.checkInterval.get(), TimeUnit.MILLISECONDS);
+            counter.scheduledFuture = counter.executor.schedule(this, counter.checkInterval.get(),
+                    TimeUnit.MILLISECONDS);
         }
     }
 
@@ -249,7 +250,7 @@ public class TrafficCounter {
     /**
      * Constructor with the {@link AbstractTrafficShapingHandler} that hosts it, the Timer to use, its
      * name, the checkInterval between two computations in millisecond
-     * 
+     *
      * @param trafficShapingHandler
      *            the associated AbstractTrafficShapingHandler
      * @param executor
@@ -259,8 +260,8 @@ public class TrafficCounter {
      * @param checkInterval
      *            the checkInterval in millisecond between two computations
      */
-    public TrafficCounter(AbstractTrafficShapingHandler trafficShapingHandler, ScheduledExecutorService executor, String name,
-            long checkInterval) {
+    public TrafficCounter(AbstractTrafficShapingHandler trafficShapingHandler, ScheduledExecutorService executor,
+            String name, long checkInterval) {
         this.trafficShapingHandler = trafficShapingHandler;
         this.executor = executor;
         this.name = name;
@@ -414,8 +415,9 @@ public class TrafficCounter {
     }
 
     /**
-     * Returns the time to wait (if any) for the given length message, using the given limitTraffic and the max wait time
-     * 
+     * Returns the time to wait (if any) for the given length message, using the given limitTraffic and the max wait
+     * time
+     *
      * @param size
      *            the recv size
      * @param limitTraffic
@@ -471,7 +473,7 @@ public class TrafficCounter {
 
     /**
      * Returns the time to wait (if any) for the given length message, using the given limitTraffic and the max wait time
-     * 
+     *
      * @param size
      *            the write size
      * @param limitTraffic
@@ -528,7 +530,7 @@ public class TrafficCounter {
     @Override
     public String toString() {
         return "Monitor " + name + " Current Speed Read: " + (lastReadThroughput >> 10) + " KB/s, Write: "
-                + (lastWriteThroughput >> 10) + " KB/s Current Read: " + (currentReadBytes.get() >> 10) + " KB Current Write: "
-                + (currentWrittenBytes.get() >> 10) + " KB";
+                + (lastWriteThroughput >> 10) + " KB/s Current Read: " + (currentReadBytes.get() >> 10)
+                + " KB Current Write: " + (currentWrittenBytes.get() >> 10) + " KB";
     }
 }

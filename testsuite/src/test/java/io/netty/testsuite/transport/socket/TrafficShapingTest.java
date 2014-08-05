@@ -81,7 +81,8 @@ public class TrafficShapingTest extends AbstractSocketTest {
         long[] minimalWaitBetween = new long[multipleMessage.length + 1];
         minimalWaitBetween[0] = 0;
         for (int i = 0; i < multipleMessage.length; i++) {
-            minimalWaitBetween[i + 1] = (multipleMessage[i] - 1) * (1000 / bandwidthFactor) + (1000 / bandwidthFactor - 100);
+            minimalWaitBetween[i + 1] = (multipleMessage[i] - 1) * (1000 / bandwidthFactor)
+                    + (1000 / bandwidthFactor - 100);
         }
         return minimalWaitBetween;
     }
@@ -89,7 +90,8 @@ public class TrafficShapingTest extends AbstractSocketTest {
     private static long[] computeWaitWrite(int[] multipleMessage) {
         long[] minimalWaitBetween = new long[multipleMessage.length + 1];
         for (int i = 0; i < multipleMessage.length; i++) {
-            minimalWaitBetween[i] = (multipleMessage[i] - 1) * (1000 / bandwidthFactor) + (1000 / bandwidthFactor - 150);
+            minimalWaitBetween[i] = (multipleMessage[i] - 1) * (1000 / bandwidthFactor)
+                    + (1000 / bandwidthFactor - 150);
         }
         return minimalWaitBetween;
     }
@@ -261,7 +263,8 @@ public class TrafficShapingTest extends AbstractSocketTest {
     private static void testTrafficShapping0(ServerBootstrap sb, Bootstrap cb, final boolean additionalExecutor,
             final boolean limitRead, final boolean limitWrite, final boolean globalLimit, int[] autoRead,
             long[] minimalWaitBetween, int[] multipleMessage) throws Throwable {
-        logger.info("Exec: " + additionalExecutor + " Read: " + limitRead + " Write: " + limitWrite + " Global: " + globalLimit);
+        logger.info("Exec: " + additionalExecutor + " Read: " + limitRead + " Write: " + limitWrite + " Global: "
+                + globalLimit);
         final ValidTimestampedHandler sh = new ValidTimestampedHandler(autoRead, multipleMessage);
         Promise<Boolean> promise = group.next().newPromise();
         final ClientTrafficHandler ch = new ClientTrafficHandler(promise, minimalWaitBetween, multipleMessage, autoRead);
@@ -345,7 +348,8 @@ public class TrafficShapingTest extends AbstractSocketTest {
         Thread.sleep(500);
 
         if (autoRead == null && minimalWaitBetween != null) {
-            assertTrue("Overall Traffic not ok since > " + (bandwidthFactor + 1) + ": " + average, average <= bandwidthFactor + 1);
+            assertTrue("Overall Traffic not ok since > " + (bandwidthFactor + 1) + ": " + average,
+                    average <= bandwidthFactor + 1);
             if (additionalExecutor) {
                 // Oio is not as good when using additionalExecutor
                 assertTrue("Overall Traffic not ok since < 0.25: " + average, average >= 0.25);
@@ -425,10 +429,10 @@ public class TrafficShapingTest extends AbstractSocketTest {
                     minimalWait = 0;
                 }
             }
-            logger.info("Step: " + step + " Interval: " + (lastTimestamp - currentLastTime) + " compareTo " + minimalWait + " ("
-                    + ar + ")");
-            assertTrue("The interval of time is incorrect:" + (lastTimestamp - currentLastTime) + " not> " + minimalWait,
-                    lastTimestamp - currentLastTime >= minimalWait);
+            logger.info("Step: " + step + " Interval: " + (lastTimestamp - currentLastTime) + " compareTo "
+                    + minimalWait + " (" + ar + ")");
+            assertTrue("The interval of time is incorrect:" + (lastTimestamp - currentLastTime) + " not> "
+                    + minimalWait, lastTimestamp - currentLastTime >= minimalWait);
             currentLastTime = lastTimestamp;
             step++;
             if (multipleMessage.length > step) {

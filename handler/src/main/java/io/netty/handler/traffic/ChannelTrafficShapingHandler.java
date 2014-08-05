@@ -51,7 +51,7 @@ import io.netty.channel.ChannelPromise;
  */
 public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler {
     private List<ToSend> messagesQueue = new LinkedList<ToSend>();
-    
+
     /**
      * Create a new instance
      *
@@ -124,8 +124,8 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
             trafficCounter.stop();
         }
     }
-    
-    private static class ToSend {
+
+    private static final class ToSend {
         final long date;
         final Object toSend;
         final ChannelPromise promise;

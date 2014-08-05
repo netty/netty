@@ -86,10 +86,10 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
      */
     protected long checkInterval = DEFAULT_CHECK_INTERVAL; // default 1 s
 
-    private static final AttributeKey<Boolean> READ_SUSPENDED = AttributeKey.valueOf(AbstractTrafficShapingHandler.class
-            .getName() + ".READ_SUSPENDED");
-    private static final AttributeKey<Runnable> REOPEN_TASK = AttributeKey.valueOf(AbstractTrafficShapingHandler.class.getName()
-            + ".REOPEN_TASK");
+    private static final AttributeKey<Boolean> READ_SUSPENDED = AttributeKey
+            .valueOf(AbstractTrafficShapingHandler.class.getName() + ".READ_SUSPENDED");
+    private static final AttributeKey<Runnable> REOPEN_TASK = AttributeKey.valueOf(AbstractTrafficShapingHandler.class
+            .getName() + ".REOPEN_TASK");
 
     /**
      *
@@ -250,7 +250,8 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
                     if (ctx.channel().config().isAutoRead() && !isHandlerActive(ctx)) {
                         logger.debug("Unsuspend: " + ctx.channel().config().isAutoRead() + ":" + isHandlerActive(ctx));
                     } else {
-                        logger.debug("Normal Unsuspend: " + ctx.channel().config().isAutoRead() + ":" + isHandlerActive(ctx));
+                        logger.debug("Normal Unsuspend: " + ctx.channel().config().isAutoRead() + ":"
+                                + isHandlerActive(ctx));
                     }
                 }
                 ctx.attr(READ_SUSPENDED).set(false);
@@ -258,7 +259,8 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
                 ctx.channel().read();
             }
             if (logger.isDebugEnabled()) {
-                logger.debug("Unsupsend final status => " + ctx.channel().config().isAutoRead() + ":" + isHandlerActive(ctx));
+                logger.debug("Unsupsend final status => " + ctx.channel().config().isAutoRead() + ":"
+                        + isHandlerActive(ctx));
             }
         }
     }
@@ -274,7 +276,8 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
                 // time in order to try to limit the traffic
                 // Only AutoRead AND HandlerActive True means Context Active
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Read Suspend: " + wait + ":" + ctx.channel().config().isAutoRead() + ":" + isHandlerActive(ctx));
+                    logger.debug("Read Suspend: " + wait + ":" + ctx.channel().config().isAutoRead() + ":"
+                            + isHandlerActive(ctx));
                 }
                 if ((ctx.channel().config().isAutoRead() && isHandlerActive(ctx))) {
                     ctx.channel().config().setAutoRead(false);
@@ -320,14 +323,14 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
             // channel
             long wait = trafficCounter.writeTimeToWait(size, writeLimit, maxTime);
             if (logger.isDebugEnabled()) {
-                logger.debug("Write suspend: " + wait + ":" + ctx.channel().config().isAutoRead() + ":" + isHandlerActive(ctx));
+                logger.debug("Write suspend: " + wait + ":" + ctx.channel().config().isAutoRead() + ":"
+                        + isHandlerActive(ctx));
             }
             if (wait >= MINIMAL_WAIT) {
                 /*
                  * Option 2: but issue with ctx.executor().schedule()
                  * Thread.sleep(wait);
                  * System.out.println("Write unsuspended");
-                 * 
                  * Option 1: use an ordered list of messages to send
                  * Warning of memory pressure!
                  */
@@ -338,7 +341,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
         ctx.write(msg, promise);
     }
 
-    abstract protected void submitWrite(final ChannelHandlerContext ctx, final Object msg, final long delay,
+    protected abstract void submitWrite(final ChannelHandlerContext ctx, final Object msg, final long delay,
             final ChannelPromise promise);
 
     /**
@@ -360,7 +363,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
      * Calculate the size of the given {@link Object}.
      *
      * This implementation supports {@link ByteBuf} and {@link ByteBufHolder}. Sub-classes may override this.
-     * 
+     *
      * @param msg
      *            the msg for which the size should be calculated
      * @return size the size of the msg or {@code -1} if unknown.

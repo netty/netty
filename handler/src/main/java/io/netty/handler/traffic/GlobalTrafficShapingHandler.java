@@ -62,7 +62,7 @@ import java.util.concurrent.TimeUnit;
 @Sharable
 public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
     private Map<Integer, List<ToSend>> messagesQueues = new HashMap<Integer, List<ToSend>>();
-    
+
     /**
      * Create the global TrafficCounter
      */
@@ -165,7 +165,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
         }
     }
 
-    private static class ToSend {
+    private static final class ToSend {
         final long date;
         final Object toSend;
         final ChannelPromise promise;
