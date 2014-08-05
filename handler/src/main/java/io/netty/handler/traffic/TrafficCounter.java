@@ -25,14 +25,14 @@ import java.util.concurrent.atomic.AtomicLong;
  * TrafficCounter is associated with {@link AbstractTrafficShapingHandler}.
  *
  * <p>
- * A <tt>TrafficCounter</tt> counts the read and written bytes such that the {@link AbstractTrafficShapingHandler} can limit the
- * traffic, globally or per channel.
+ * A <tt>TrafficCounter</tt> counts the read and written bytes such that the {@link AbstractTrafficShapingHandler}
+ * can limit the traffic, globally or per channel.
  * </p>
  *
  * <p>
  * It computes the statistics for both read and written every {@link #checkInterval}, and calls back to its parent
- * {@link AbstractTrafficShapingHandler#doAccounting} method. If the checkInterval is set to 0, no accounting will be done and
- * statistics will only be computed at each receive or write operation.
+ * {@link AbstractTrafficShapingHandler#doAccounting} method. If the checkInterval is set to 0, no accounting will be
+ * done and statistics will only be computed at each receive or write operation.
  * </p>
  */
 public class TrafficCounter {
@@ -472,7 +472,8 @@ public class TrafficCounter {
     }
 
     /**
-     * Returns the time to wait (if any) for the given length message, using the given limitTraffic and the max wait time
+     * Returns the time to wait (if any) for the given length message, using the given limitTraffic and
+     * the max wait time
      *
      * @param size
      *            the write size

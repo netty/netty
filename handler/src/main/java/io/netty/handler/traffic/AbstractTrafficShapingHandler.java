@@ -37,8 +37,8 @@ import java.util.concurrent.TimeUnit;
  * the read/write limit or the check interval, several methods allow that for you:<br>
  * <ul>
  * <li><tt>configure</tt> allows you to change read or write limits, or the checkInterval</li>
- * <li><tt>getTrafficCounter</tt> allows you to have access to the TrafficCounter and so to stop or start the monitoring, to
- * change the checkInterval directly, or to have access to its values.</li>
+ * <li><tt>getTrafficCounter</tt> allows you to have access to the TrafficCounter and so to stop or start the
+ * monitoring, to change the checkInterval directly, or to have access to its values.</li>
  * </ul>
  */
 public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler {
@@ -279,7 +279,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
                     logger.debug("Read Suspend: " + wait + ":" + ctx.channel().config().isAutoRead() + ":"
                             + isHandlerActive(ctx));
                 }
-                if ((ctx.channel().config().isAutoRead() && isHandlerActive(ctx))) {
+                if (ctx.channel().config().isAutoRead() && isHandlerActive(ctx)) {
                     ctx.channel().config().setAutoRead(false);
                     ctx.attr(READ_SUSPENDED).set(true);
                     if (logger.isDebugEnabled()) {
@@ -315,12 +315,12 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise) throws Exception {
+    public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise)
+            throws Exception {
         long size = calculateSize(msg);
 
         if (size > 0 && trafficCounter != null) {
-            // compute the number of ms to wait before continue with the
-            // channel
+            // compute the number of ms to wait before continue with the channel
             long wait = trafficCounter.writeTimeToWait(size, writeLimit, maxTime);
             if (logger.isDebugEnabled()) {
                 logger.debug("Write suspend: " + wait + ":" + ctx.channel().config().isAutoRead() + ":"
