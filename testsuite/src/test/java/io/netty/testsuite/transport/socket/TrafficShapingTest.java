@@ -69,7 +69,7 @@ public class TrafficShapingTest extends AbstractSocketTest {
         InternalLoggerFactory.setDefaultFactory(new Slf4JLoggerFactory());
         Logger logger = (Logger) LoggerFactory.getLogger("ROOT");
         logger.setLevel(Level.INFO);
-        group = new DefaultEventExecutorGroup(8);// XXX FIXME check with lower value as 2
+        group = new DefaultEventExecutorGroup(8);
     }
 
     @AfterClass
@@ -240,7 +240,7 @@ public class TrafficShapingTest extends AbstractSocketTest {
     }
 
     /**
-     * 
+     *
      * @param sb
      * @param cb
      * @param additionalExecutor
@@ -253,11 +253,11 @@ public class TrafficShapingTest extends AbstractSocketTest {
      *            True to change Channel to Global TrafficShapping
      * @param autoRead
      * @param minimalWaitBetween
-     *            time in ms that should be waited before getting the final result (note: for READ the values are right shifted
-     *            once, the first value being 0)
+     *            time in ms that should be waited before getting the final result (note: for READ the values are
+     *            right shifted once, the first value being 0)
      * @param multipleMessage
-     *            how many message to send at each step (for READ: the first should be 1, as the two last steps to ensure correct
-     *            testing)
+     *            how many message to send at each step (for READ: the first should be 1, as the two last steps to
+     *            ensure correct testing)
      * @throws Throwable
      */
     private static void testTrafficShapping0(ServerBootstrap sb, Bootstrap cb, final boolean additionalExecutor,
@@ -267,7 +267,8 @@ public class TrafficShapingTest extends AbstractSocketTest {
                 + globalLimit);
         final ValidTimestampedHandler sh = new ValidTimestampedHandler(autoRead, multipleMessage);
         Promise<Boolean> promise = group.next().newPromise();
-        final ClientTrafficHandler ch = new ClientTrafficHandler(promise, minimalWaitBetween, multipleMessage, autoRead);
+        final ClientTrafficHandler ch = new ClientTrafficHandler(promise, minimalWaitBetween, multipleMessage,
+                autoRead);
 
         final AbstractTrafficShapingHandler handler;
         if (limitRead) {
@@ -339,7 +340,7 @@ public class TrafficShapingTest extends AbstractSocketTest {
         Long stop = System.currentTimeMillis();
         assertTrue("Error during exceution of TrafficShapping: " + promise.cause(), promise.isSuccess());
 
-        float average = ((totalNb * messageSize) / (float) (stop - start));
+        float average = (totalNb * messageSize) / (float) (stop - start);
         logger.info("Average of traffic: " + average + " compare to " + bandwidthFactor);
         sh.channel.close().sync();
         ch.channel.close().sync();
@@ -379,14 +380,16 @@ public class TrafficShapingTest extends AbstractSocketTest {
     private static class ClientTrafficHandler extends SimpleChannelInboundHandler<ByteBuf> {
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
-        volatile int step = 0;
-        private long currentLastTime = System.currentTimeMillis();// first message will always be validated
+        volatile int step;
+        // first message will always be validated
+        private long currentLastTime = System.currentTimeMillis();
         private final long[] minimalWaitBetween;
         private final int[] multipleMessage;
         private final int[] autoRead;
         final Promise<Boolean> promise;
 
-        ClientTrafficHandler(Promise<Boolean> promise, long[] minimalWaitBetween, int[] multipleMessage, int[] autoRead) {
+        ClientTrafficHandler(Promise<Boolean> promise, long[] minimalWaitBetween, int[] multipleMessage,
+                int[] autoRead) {
             this.minimalWaitBetween = minimalWaitBetween;
             this.multipleMessage = Arrays.copyOf(multipleMessage, multipleMessage.length);
             this.promise = promise;
@@ -460,7 +463,7 @@ public class TrafficShapingTest extends AbstractSocketTest {
         private final int[] autoRead;
         private final int[] multipleMessage;
         volatile Channel channel;
-        volatile int step = 0;
+        volatile int step;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
 
         ValidTimestampedHandler(int[] autoRead, int[] multipleMessage) {
