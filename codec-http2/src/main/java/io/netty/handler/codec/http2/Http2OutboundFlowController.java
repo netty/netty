@@ -31,7 +31,7 @@ public interface Http2OutboundFlowController {
          * Writes a single data frame to the remote endpoint.
          */
         void writeFrame(int streamId, ByteBuf data, int padding, boolean endStream,
-                boolean endSegment, boolean compressed);
+                boolean endSegment);
 
         /**
          * Called if an error occurred before the write could take place. Sets the failure on the
@@ -80,10 +80,9 @@ public interface Http2OutboundFlowController {
      * @param padding the number of bytes of padding to be added to the frame.
      * @param endStream indicates whether this frames is to be the last sent on this stream.
      * @param endSegment indicates whether this is to be the last frame in the segment.
-     * @param compressed whether the data is compressed using gzip compression.
      * @param frameWriter peforms to the write of the frame to the remote endpoint.
      * @throws Http2Exception thrown if a protocol-related error occurred.
      */
     void sendFlowControlled(int streamId, ByteBuf data, int padding, boolean endStream,
-            boolean endSegment, boolean compressed, FrameWriter frameWriter) throws Http2Exception;
+            boolean endSegment, FrameWriter frameWriter) throws Http2Exception;
 }

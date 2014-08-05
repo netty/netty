@@ -15,8 +15,6 @@
  */
 package io.netty.handler.codec.compression;
 
-import io.netty.buffer.ByteBuf;
-
 import static io.netty.handler.codec.compression.Bzip2Constants.*;
 
 /**
@@ -25,14 +23,19 @@ import static io.netty.handler.codec.compression.Bzip2Constants.*;
  * Block decoding consists of the following stages:<br>
  * 1. Read block header<br>
  * 2. Read Huffman tables<br>
- * 3. Read and decode Huffman encoded data - {@link #decodeHuffmanData(Bzip2HuffmanStageDecoder, ByteBuf)}<br>
- * 4. Run-Length Decoding[2] - {@link #decodeHuffmanData(Bzip2HuffmanStageDecoder, ByteBuf)}<br>
- * 5. Inverse Move To Front Transform - {@link #decodeHuffmanData(Bzip2HuffmanStageDecoder, ByteBuf)}<br>
+ * 3. Read and decode Huffman encoded data - {@link #decodeHuffmanData(Bzip2HuffmanStageDecoder)}<br>
+ * 4. Run-Length Decoding[2] - {@link #decodeHuffmanData(Bzip2HuffmanStageDecoder)}<br>
+ * 5. Inverse Move To Front Transform - {@link #decodeHuffmanData(Bzip2HuffmanStageDecoder)}<br>
  * 6. Inverse Burrows Wheeler Transform - {@link #initialiseInverseBWT()}<br>
  * 7. Run-Length Decoding[1] - {@link #read()}<br>
  * 8. Optional Block De-Randomisation - {@link #read()} (through {@link #decodeNextBWTByte()})
  */
 final class Bzip2BlockDecompressor {
+    /**
+     * A reader that provides bit-level reads.
+     */
+    private final Bzip2BitReader reader;
+
     /**
      * Calculates the block CRC from the fully decoded bytes of the block.
      */
@@ -142,25 +145,31 @@ final class Bzip2BlockDecompressor {
     /**
      * Table for Move To Front transformations.
      */
-    final Bzip2MoveToFrontTable symbolMTF = new Bzip2MoveToFrontTable();
+    private final Bzip2MoveToFrontTable symbolMTF = new Bzip2MoveToFrontTable();
 
-    int repeatCount;
-    int repeatIncrement = 1;
-    int mtfValue;
+    // This variables is used to save current state if we haven't got enough readable bits
+    private int repeatCount;
+    private int repeatIncrement = 1;
+    private int mtfValue;
 
-    Bzip2BlockDecompressor(int blockSize, int blockCRC, boolean blockRandomised, int bwtStartPointer) {
+    Bzip2BlockDecompressor(final int blockSize, final int blockCRC, final boolean blockRandomised,
+                           final int bwtStartPointer, final Bzip2BitReader reader) {
+
         bwtBlock = new byte[blockSize];
 
         this.blockCRC = blockCRC;
         this.blockRandomised = blockRandomised;
         this.bwtStartPointer = bwtStartPointer;
+
+        this.reader = reader;
     }
 
     /**
      * Reads the Huffman encoded data from the input stream, performs Run-Length Decoding and
      * applies the Move To Front transform to reconstruct the Burrows-Wheeler Transform array.
      */
-    boolean decodeHuffmanData(final Bzip2HuffmanStageDecoder huffmanDecoder, ByteBuf in) {
+    boolean decodeHuffmanData(final Bzip2HuffmanStageDecoder huffmanDecoder) {
+        final Bzip2BitReader reader = this.reader;
         final byte[] bwtBlock = this.bwtBlock;
         final byte[] huffmanSymbolMap = this.huffmanSymbolMap;
         final int streamBlockSize = this.bwtBlock.length;
@@ -174,14 +183,14 @@ final class Bzip2BlockDecompressor {
         int mtfValue = this.mtfValue;
 
         for (;;) {
-            if (in.readableBytes() < 3) {   // 3 = (HUFFMAN_DECODE_MAX_CODE_LENGTH + 1) bits / 8
+            if (!reader.hasReadableBits(HUFFMAN_DECODE_MAX_CODE_LENGTH)) {
                 this.bwtBlockLength = bwtBlockLength;
                 this.repeatCount = repeatCount;
                 this.repeatIncrement = repeatIncrement;
                 this.mtfValue = mtfValue;
                 return false;
             }
-            final int nextSymbol = huffmanDecoder.nextSymbol(in);
+            final int nextSymbol = huffmanDecoder.nextSymbol();
 
             if (nextSymbol == HUFFMAN_SYMBOL_RUNA) {
                 repeatCount += repeatIncrement;

@@ -542,22 +542,21 @@ public class DefaultHttp2OutboundFlowControllerTest {
     }
 
     private void send(int streamId, ByteBuf data) throws Http2Exception {
-        controller.sendFlowControlled(streamId, data, 0, false, false, false, frameWriter);
+        controller.sendFlowControlled(streamId, data, 0, false, false, frameWriter);
     }
 
     private void verifyWrite(int streamId, ByteBuf data) {
-        verify(frameWriter).writeFrame(eq(streamId), eq(data), eq(0), eq(false), eq(false),
-                eq(false));
+        verify(frameWriter).writeFrame(eq(streamId), eq(data), eq(0), eq(false), eq(false));
     }
 
     private void verifyNoWrite(int streamId) {
         verify(frameWriter, never()).writeFrame(eq(streamId), any(ByteBuf.class), anyInt(),
-                anyBoolean(), anyBoolean(), anyBoolean());
+                anyBoolean(), anyBoolean());
     }
 
     private void captureWrite(int streamId, ArgumentCaptor<ByteBuf> captor, boolean endStream) {
         verify(frameWriter).writeFrame(eq(streamId), captor.capture(), eq(0), eq(endStream),
-                eq(false), eq(false));
+                eq(false));
     }
 
     private void setPriority(int stream, int parent, int weight, boolean exclusive)

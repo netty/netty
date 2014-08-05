@@ -32,8 +32,8 @@ final class ZlibUtil {
         throw deflaterException(z, message, resultCode);
     }
 
-    static CompressionException inflaterException(Inflater z, String message, int resultCode) {
-        return new CompressionException(message + " (" + resultCode + ')' + (z.msg != null? ": " + z.msg : ""));
+    static DecompressionException inflaterException(Inflater z, String message, int resultCode) {
+        return new DecompressionException(message + " (" + resultCode + ')' + (z.msg != null? ": " + z.msg : ""));
     }
 
     static CompressionException deflaterException(Deflater z, String message, int resultCode) {

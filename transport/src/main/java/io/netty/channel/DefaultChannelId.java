@@ -49,8 +49,10 @@ final class DefaultChannelId implements ChannelId {
     private static final Pattern MACHINE_ID_PATTERN = Pattern.compile("^(?:[0-9a-fA-F][:-]?){6,8}$");
     private static final int MACHINE_ID_LEN = 8;
     private static final byte[] MACHINE_ID;
-    private static final int PROCESS_ID_LEN = 2;
-    private static final int MAX_PROCESS_ID = 65535;
+    private static final int PROCESS_ID_LEN = 4;
+    // Maximal value for 64bit systems is 2^22.  See man 5 proc.
+    // See https://github.com/netty/netty/issues/2706
+    private static final int MAX_PROCESS_ID = 4194304;
     private static final int PROCESS_ID;
     private static final int SEQUENCE_LEN = 4;
     private static final int TIMESTAMP_LEN = 8;
@@ -362,7 +364,7 @@ final class DefaultChannelId implements ChannelId {
         i += MACHINE_ID_LEN;
 
         // processId
-        i = writeShort(i, PROCESS_ID);
+        i = writeInt(i, PROCESS_ID);
 
         // sequence
         i = writeInt(i, nextSequence.getAndIncrement());
@@ -376,12 +378,6 @@ final class DefaultChannelId implements ChannelId {
         i = writeInt(i, random);
 
         assert i == data.length;
-    }
-
-    private int writeShort(int i, int value) {
-        data[i ++] = (byte) (value >>> 8);
-        data[i ++] = (byte) value;
-        return i;
     }
 
     private int writeInt(int i, int value) {

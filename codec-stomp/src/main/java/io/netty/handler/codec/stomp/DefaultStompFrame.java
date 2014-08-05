@@ -28,9 +28,6 @@ public class DefaultStompFrame extends DefaultStompHeadersSubframe implements St
 
     public DefaultStompFrame(StompCommand command) {
         this(command, Unpooled.buffer(0));
-        if (command == null) {
-            throw new NullPointerException("command");
-        }
     }
 
     public DefaultStompFrame(StompCommand command, ByteBuf content) {

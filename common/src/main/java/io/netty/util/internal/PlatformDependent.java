@@ -80,6 +80,8 @@ public final class PlatformDependent {
 
     private static final int BIT_MODE = bitMode0();
 
+    private static final int ADDRESS_SIZE = addressSize0();
+
     static {
         if (logger.isDebugEnabled()) {
             logger.debug("-Dio.netty.noPreferDirect: {}", !DIRECT_BUFFER_PREFERRED);
@@ -171,6 +173,22 @@ public final class PlatformDependent {
      */
     public static int bitMode() {
         return BIT_MODE;
+    }
+
+    /**
+     * Return the address size of the OS.
+     * 4 (for 32 bits systems ) and 8 (for 64 bits systems).
+     */
+    public static int addressSize() {
+        return ADDRESS_SIZE;
+    }
+
+    public static long allocateMemory(long size) {
+        return PlatformDependent0.allocateMemory(size);
+    }
+
+    public static void freeMemory(long address) {
+        PlatformDependent0.freeMemory(address);
     }
 
     /**
@@ -759,9 +777,7 @@ public final class PlatformDependent {
         }
 
         File f = new File(path);
-        if (!f.exists()) {
-            f.mkdirs();
-        }
+        f.mkdirs();
 
         if (!f.isDirectory()) {
             return null;
@@ -815,6 +831,13 @@ public final class PlatformDependent {
         } else {
             return 64;
         }
+    }
+
+    private static int addressSize0() {
+        if (!hasUnsafe()) {
+            return -1;
+        }
+        return PlatformDependent0.addressSize();
     }
 
     private PlatformDependent() {

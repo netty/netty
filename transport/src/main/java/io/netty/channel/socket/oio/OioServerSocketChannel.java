@@ -153,18 +153,14 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
         try {
             Socket s = socket.accept();
             try {
-                if (s != null) {
-                    buf.add(new OioSocketChannel(this, s));
-                    return 1;
-                }
+                buf.add(new OioSocketChannel(this, s));
+                return 1;
             } catch (Throwable t) {
                 logger.warn("Failed to create a new channel from an accepted socket.", t);
-                if (s != null) {
-                    try {
-                        s.close();
-                    } catch (Throwable t2) {
-                        logger.warn("Failed to close a socket.", t2);
-                    }
+                try {
+                    s.close();
+                } catch (Throwable t2) {
+                    logger.warn("Failed to close a socket.", t2);
                 }
             }
         } catch (SocketTimeoutException e) {
@@ -175,6 +171,11 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
 
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected Object filterOutboundMessage(Object msg) throws Exception {
         throw new UnsupportedOperationException();
     }
 

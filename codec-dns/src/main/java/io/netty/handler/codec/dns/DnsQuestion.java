@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.dns;
 
+import static io.netty.handler.codec.dns.DnsClass.IN;
+
 /**
  * The DNS question class which represents a question being sent to a server via
  * a query, or the question being duplicated and sent back in a response.
@@ -32,8 +34,8 @@ public final class DnsQuestion extends DnsEntry {
      *            the question type, which represents the type of
      *            {@link DnsResource} record that should be returned
      */
-    public DnsQuestion(String name, int type) {
-        this(name, type, CLASS_IN);
+    public DnsQuestion(String name, DnsType type) {
+        this(name, type, IN);
     }
 
     /**
@@ -47,8 +49,12 @@ public final class DnsQuestion extends DnsEntry {
      * @param qClass
      *            the class of a DNS record
      */
-    public DnsQuestion(String name, int type, int qClass) {
+    public DnsQuestion(String name, DnsType type, DnsClass qClass) {
         super(name, type, qClass);
+
+        if (name.isEmpty()) {
+            throw new IllegalArgumentException("name must not be left blank.");
+        }
     }
 
     @Override
