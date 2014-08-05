@@ -74,7 +74,12 @@ public final class EpollServerSocketChannel extends AbstractEpollChannel impleme
     }
 
     @Override
-    protected void doWrite(ChannelOutboundBuffer in) {
+    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected Object filterOutboundMessage(Object msg) throws Exception {
         throw new UnsupportedOperationException();
     }
 
