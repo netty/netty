@@ -45,4 +45,13 @@ public class HttpRequestEncoderTest {
         String req = buffer.toString(Charset.forName("US-ASCII"));
         assertEquals("GET http://localhost/ HTTP/1.1\r\n", req);
     }
+
+    @Test
+    public void testUriWithoutPath2() throws Exception {
+        HttpRequestEncoder encoder = new HttpRequestEncoder();
+        ChannelBuffer buffer = ChannelBuffers.buffer(64);
+        encoder.encodeInitialLine(buffer, new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost:9999?p1=v1"));
+        String req = buffer.toString(Charset.forName("US-ASCII"));
+        assertEquals("GET http://localhost:9999/?p1=v1 HTTP/1.1\r\n", req);
+    }
 }

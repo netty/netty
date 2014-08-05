@@ -25,6 +25,7 @@ import static org.jboss.netty.handler.codec.http.HttpConstants.*;
  */
 public class HttpRequestEncoder extends HttpMessageEncoder {
     private static final char SLASH = '/';
+    private static final char QUESTION_MARK = '?';
 
     @Override
     protected void encodeInitialLine(ChannelBuffer buf, HttpMessage message) throws Exception {
@@ -38,8 +39,22 @@ public class HttpRequestEncoder extends HttpMessageEncoder {
         int start = uri.indexOf("://");
         if (start != -1) {
             int startIndex = start + 3;
-            if (uri.lastIndexOf(SLASH) <= startIndex) {
-                uri += SLASH;
+            // Correctly handle query params.
+            // See https://github.com/netty/netty/issues/2732
+            int index = uri.indexOf(QUESTION_MARK, startIndex);
+            if (index == -1) {
+                if (uri.lastIndexOf(SLASH) <= startIndex) {
+                    uri += SLASH;
+                }
+            } else {
+                if (uri.lastIndexOf(SLASH, index) <= startIndex) {
+                    int len = uri.length();
+                    StringBuilder sb = new StringBuilder(len + 1);
+                    sb.append(uri, 0, index);
+                    sb.append(SLASH);
+                    sb.append(uri, index, len);
+                    uri = sb.toString();
+                }
             }
         }
 
