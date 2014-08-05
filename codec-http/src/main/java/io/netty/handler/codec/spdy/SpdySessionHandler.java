@@ -421,7 +421,7 @@ public class SpdySessionHandler
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        for (Integer streamId: spdySession.getActiveStreams()) {
+        for (Integer streamId: spdySession.activeStreams().keySet()) {
             removeStream(streamId, ctx.newSucceededFuture());
         }
         ctx.fireChannelInactive();
