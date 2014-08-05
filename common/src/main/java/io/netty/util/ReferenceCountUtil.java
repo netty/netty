@@ -39,7 +39,7 @@ public final class ReferenceCountUtil {
     }
 
     /**
-     * Try to call {@link ReferenceCounted#retain()} if the specified message implements {@link ReferenceCounted}.
+     * Try to call {@link ReferenceCounted#retain(int)} if the specified message implements {@link ReferenceCounted}.
      * If the specified message doesn't implement {@link ReferenceCounted}, this method does nothing.
      */
     @SuppressWarnings("unchecked")
@@ -87,7 +87,7 @@ public final class ReferenceCountUtil {
     }
 
     /**
-     * Try to call {@link ReferenceCounted#release()} if the specified message implements {@link ReferenceCounted}.
+     * Try to call {@link ReferenceCounted#release(int)} if the specified message implements {@link ReferenceCounted}.
      * If the specified message doesn't implement {@link ReferenceCounted}, this method does nothing.
      */
     public static boolean release(Object msg, int decrement) {
@@ -95,6 +95,38 @@ public final class ReferenceCountUtil {
             return ((ReferenceCounted) msg).release(decrement);
         }
         return false;
+    }
+
+    /**
+     * Try to call {@link ReferenceCounted#release()} if the specified message implements {@link ReferenceCounted}.
+     * If the specified message doesn't implement {@link ReferenceCounted}, this method does nothing.
+     * Unlike {@link #release(Object)} this method catches an exception raised by {@link ReferenceCounted#release()}
+     * and logs it, rather than rethrowing it to the caller.  It is usually recommended to use {@link #release(Object)}
+     * instead, unless you absolutely need to swallow an exception.
+     */
+    public static void safeRelease(Object msg) {
+        try {
+            release(msg);
+        } catch (Throwable t) {
+            logger.warn("Failed to release a message: {}", msg, t);
+        }
+    }
+
+    /**
+     * Try to call {@link ReferenceCounted#release(int)} if the specified message implements {@link ReferenceCounted}.
+     * If the specified message doesn't implement {@link ReferenceCounted}, this method does nothing.
+     * Unlike {@link #release(Object)} this method catches an exception raised by {@link ReferenceCounted#release(int)}
+     * and logs it, rather than rethrowing it to the caller.  It is usually recommended to use
+     * {@link #release(Object, int)} instead, unless you absolutely need to swallow an exception.
+     */
+    public static void safeRelease(Object msg, int decrement) {
+        try {
+            release(msg, decrement);
+        } catch (Throwable t) {
+            if (logger.isWarnEnabled()) {
+                logger.warn("Failed to release a message: {} (decrement: {})", msg, decrement, t);
+            }
+        }
     }
 
     /**
