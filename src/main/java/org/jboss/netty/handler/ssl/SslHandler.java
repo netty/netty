@@ -645,7 +645,7 @@ public class SslHandler extends FrameDecoder
         try {
             super.channelDisconnected(ctx, e);
         } finally {
-            unwrapNonAppData(ctx, e.getChannel());
+            unwrapNonAppData(ctx, e.getChannel(), false);
             closeEngine();
         }
     }
@@ -914,7 +914,7 @@ public class SslHandler extends FrameDecoder
             // See https://github.com/netty/netty/issues/1534
 
             final ByteBuffer inNetBuf = in.toByteBuffer(in.readerIndex(), totalLength);
-            unwrapped = unwrap(ctx, channel, in, inNetBuf, totalLength);
+            unwrapped = unwrap(ctx, channel, in, inNetBuf, totalLength, true);
             assert !inNetBuf.hasRemaining() || engine.isInboundDone();
         }
 
@@ -1101,7 +1101,7 @@ public class SslHandler extends FrameDecoder
         }
 
         if (needsUnwrap) {
-            unwrapNonAppData(ctx, channel);
+            unwrapNonAppData(ctx, channel, true);
         }
     }
 
@@ -1191,7 +1191,7 @@ public class SslHandler extends FrameDecoder
                         // unwrap shouldn't be called when this method was
                         // called by unwrap - unwrap will keep running after
                         // this method returns.
-                        unwrapNonAppData(ctx, channel);
+                        unwrapNonAppData(ctx, channel, true);
                     }
                     break;
                 case NOT_HANDSHAKING:
@@ -1227,8 +1227,9 @@ public class SslHandler extends FrameDecoder
     /**
      * Calls {@link SSLEngine#unwrap(ByteBuffer, ByteBuffer)} with an empty buffer to handle handshakes, etc.
      */
-    private void unwrapNonAppData(ChannelHandlerContext ctx, Channel channel) throws SSLException {
-        unwrap(ctx, channel, ChannelBuffers.EMPTY_BUFFER, EMPTY_BUFFER, -1);
+    private void unwrapNonAppData(
+            ChannelHandlerContext ctx, Channel channel, boolean mightNeedHandshake) throws SSLException {
+        unwrap(ctx, channel, ChannelBuffers.EMPTY_BUFFER, EMPTY_BUFFER, -1, mightNeedHandshake);
     }
 
     /**
@@ -1237,7 +1238,7 @@ public class SslHandler extends FrameDecoder
     private ChannelBuffer unwrap(
             ChannelHandlerContext ctx, Channel channel,
             ChannelBuffer nettyInNetBuf, ByteBuffer nioInNetBuf,
-            int initialNettyOutAppBufCapacity) throws SSLException {
+            int initialNettyOutAppBufCapacity, boolean mightNeedHandshake) throws SSLException {
 
         final int nettyInNetBufStartOffset = nettyInNetBuf.readerIndex();
         final int nioInNetBufStartOffset = nioInNetBuf.position();
@@ -1250,11 +1251,13 @@ public class SslHandler extends FrameDecoder
             for (;;) {
                 SSLEngineResult result;
                 boolean needsHandshake = false;
-                synchronized (handshakeLock) {
-                    if (!handshaken && !handshaking &&
-                        !engine.getUseClientMode() &&
-                        !engine.isInboundDone() && !engine.isOutboundDone()) {
-                        needsHandshake = true;
+                if (mightNeedHandshake) {
+                    synchronized (handshakeLock) {
+                        if (!handshaken && !handshaking &&
+                            !engine.getUseClientMode() &&
+                            !engine.isInboundDone() && !engine.isOutboundDone()) {
+                            needsHandshake = true;
+                        }
                     }
                 }
 
@@ -1592,7 +1595,7 @@ public class SslHandler extends FrameDecoder
         boolean passthrough = true;
         try {
             try {
-                unwrapNonAppData(ctx, e.getChannel());
+                unwrapNonAppData(ctx, e.getChannel(), false);
             } catch (SSLException ex) {
                 if (logger.isDebugEnabled()) {
                     logger.debug("Failed to unwrap before sending a close_notify message", ex);
