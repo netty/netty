@@ -465,6 +465,12 @@ public interface Channel extends AttributeMap, Comparable<Channel> {
     interface Unsafe {
 
         /**
+         * Return the assigned {@link RecvByteBufAllocator.Handle} which will be used to allocate {@link ByteBuf}'s when
+         * receiving data.
+         */
+        RecvByteBufAllocator.Handle recvBufAllocHandle();
+
+        /**
          * Returns the {@link ChannelHandlerInvoker} which is used by default unless specified by a user.
          */
         ChannelHandlerInvoker invoker();

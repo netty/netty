@@ -72,7 +72,6 @@ public final class NioDatagramChannel
     private final DatagramChannelConfig config;
 
     private Map<InetAddress, List<MembershipKey>> memberships;
-    private RecvByteBufAllocator.Handle allocHandle;
 
     private static DatagramChannel newSocket(SelectorProvider provider) {
         try {
@@ -230,10 +229,8 @@ public final class NioDatagramChannel
     protected int doReadMessages(List<Object> buf) throws Exception {
         DatagramChannel ch = javaChannel();
         DatagramChannelConfig config = config();
-        RecvByteBufAllocator.Handle allocHandle = this.allocHandle;
-        if (allocHandle == null) {
-            this.allocHandle = allocHandle = config.getRecvByteBufAllocator().newHandle();
-        }
+        RecvByteBufAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();
+
         ByteBuf data = allocHandle.allocate(config.getAllocator());
         boolean free = true;
         try {
