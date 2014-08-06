@@ -166,13 +166,13 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
         Integer key = ctx.getChannel().getId();
         List<ToSend> messagesQueue = messagesQueues.get(key);
         if (delay == 0 && (messagesQueue == null || messagesQueue.isEmpty())) {
-            super.writeRequested(ctx, evt);
+            internalSubmitWrite(ctx, evt);
             return;
         }
         if (timer == null) {
             // Sleep since no executor
             Thread.sleep(delay);
-            super.writeRequested(ctx, evt);
+            internalSubmitWrite(ctx, evt);
             return;
         }
         if (messagesQueue == null) {
@@ -194,12 +194,20 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
         while (!messagesQueue.isEmpty()) {
             ToSend newToSend = messagesQueue.remove(0);
             if (newToSend.date <= System.currentTimeMillis()) {
-                super.writeRequested(ctx, newToSend.toSend);
+                internalSubmitWrite(ctx, newToSend.toSend);
             } else {
                 messagesQueue.add(0, newToSend);
                 break;
             }
         }
+    }
+
+    @Override
+    public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e)
+            throws Exception {
+        Integer key = ctx.getChannel().getId();
+        List<ToSend> messagesQueue = new LinkedList<ToSend>();
+        messagesQueues.put(key, messagesQueue);
     }
 
     @Override

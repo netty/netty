@@ -138,13 +138,13 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
     protected synchronized void submitWrite(final ChannelHandlerContext ctx, final MessageEvent evt, final long delay)
             throws Exception {
         if (delay == 0 && messagesQueue.isEmpty()) {
-            super.writeRequested(ctx, evt);
+            internalSubmitWrite(ctx, evt);
             return;
         }
         if (timer == null) {
             // Sleep since no executor
             Thread.sleep(delay);
-            super.writeRequested(ctx, evt);
+            internalSubmitWrite(ctx, evt);
             return;
         }
         final ToSend newToSend = new ToSend(delay, evt);
@@ -160,7 +160,7 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
         while (!messagesQueue.isEmpty()) {
             ToSend newToSend = messagesQueue.remove(0);
             if (newToSend.date <= System.currentTimeMillis()) {
-                super.writeRequested(ctx, newToSend.toSend);
+                internalSubmitWrite(ctx, newToSend.toSend);
             } else {
                 messagesQueue.add(0, newToSend);
                 break;
@@ -197,10 +197,10 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
         if (trafficCounter != null) {
             trafficCounter.start();
         }
-        super.channelConnected(ctx, e);
         // readSuspended = false;
         ctx.setAttachment(null);
         ctx.getChannel().setReadable(true);
+        super.channelConnected(ctx, e);
     }
 
 }

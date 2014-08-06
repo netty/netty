@@ -91,7 +91,7 @@ public abstract class AbstractTrafficShapingHandler extends
     private ObjectSizeEstimator objectSizeEstimator;
 
     /**
-     * Timer to associated to any TrafficCounter
+     * Timer associated to any TrafficCounter
      */
     protected Timer timer;
 
@@ -144,15 +144,6 @@ public abstract class AbstractTrafficShapingHandler extends
      */
     void setTrafficCounter(TrafficCounter newTrafficCounter) {
         trafficCounter = newTrafficCounter;
-    }
-
-    /**
-     *
-     * @param maxTime
-     *    Max delay in wait, shall be less than TIME OUT in related protocol
-     */
-    public void setMaxTimeWait(long maxTime) {
-        this.maxTime = maxTime;
     }
 
     /**
@@ -358,11 +349,75 @@ public abstract class AbstractTrafficShapingHandler extends
      * Change the check interval.
      */
     public void configure(long newCheckInterval) {
-        checkInterval = newCheckInterval;
+        setCheckInterval(newCheckInterval);
+    }
+
+    /**
+     * @return the writeLimit
+     */
+    public long getWriteLimit() {
+        return writeLimit;
+    }
+
+    /**
+     * @param writeLimit the writeLimit to set
+     */
+    public void setWriteLimit(long writeLimit) {
+        this.writeLimit = writeLimit;
+        if (trafficCounter != null) {
+            trafficCounter.resetAccounting(System.currentTimeMillis() + 1);
+        }
+    }
+
+    /**
+     * @return the readLimit
+     */
+    public long getReadLimit() {
+        return readLimit;
+    }
+
+    /**
+     * @param readLimit the readLimit to set
+     */
+    public void setReadLimit(long readLimit) {
+        this.readLimit = readLimit;
+        if (trafficCounter != null) {
+            trafficCounter.resetAccounting(System.currentTimeMillis() + 1);
+        }
+    }
+
+    /**
+     * @return the checkInterval
+     */
+    public long getCheckInterval() {
+        return checkInterval;
+    }
+
+    /**
+     * @param newCheckInterval the checkInterval to set
+     */
+    public void setCheckInterval(long newCheckInterval) {
+        this.checkInterval = newCheckInterval;
         if (trafficCounter != null) {
             trafficCounter.configure(checkInterval);
         }
     }
+
+    /**
+     * @return the max delay on wait
+     */
+    public long getMaxTimeWait() {
+        return maxTime;
+    }
+
+    /**
+    *
+    * @param maxTime
+    *    Max delay in wait, shall be less than TIME OUT in related protocol
+    */
+   public void setMaxTimeWait(long maxTime) {
+       this.maxTime = maxTime;
+   }
 
     /**
      * Called each time the accounting is computed from the TrafficCounters.
@@ -502,6 +557,10 @@ public abstract class AbstractTrafficShapingHandler extends
         }
     }
 
+    protected void internalSubmitWrite(ChannelHandlerContext ctx, MessageEvent evt) throws Exception {
+        super.writeRequested(ctx, evt);
+    }
+
     protected abstract void submitWrite(final ChannelHandlerContext ctx, final MessageEvent evt, final long delay)
             throws Exception;
 
@@ -543,7 +602,7 @@ public abstract class AbstractTrafficShapingHandler extends
         if (timeout != null) {
             timeout.cancel();
         }
-        timer.stop();
+        //shall be done outside (since it can be shared): timer.stop();
     }
 
     @Override
