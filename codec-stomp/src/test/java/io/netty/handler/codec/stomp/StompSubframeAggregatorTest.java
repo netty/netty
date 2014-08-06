@@ -44,8 +44,10 @@ public class StompSubframeAggregatorTest {
         ByteBuf incoming = Unpooled.buffer();
         incoming.writeBytes(StompTestConstants.CONNECT_FRAME.getBytes());
         channel.writeInbound(incoming);
+
         StompHeadersSubframe frame = channel.readInbound();
         Assert.assertTrue(frame instanceof StompFrame);
+
         Assert.assertNull(channel.readInbound());
     }
 
@@ -54,10 +56,13 @@ public class StompSubframeAggregatorTest {
         ByteBuf incoming = Unpooled.buffer();
         incoming.writeBytes(StompTestConstants.SEND_FRAME_2.getBytes());
         channel.writeInbound(incoming);
+
         StompFrame frame = channel.readInbound();
         Assert.assertNotNull(frame);
         Assert.assertEquals(StompCommand.SEND, frame.command());
         Assert.assertEquals("hello, queue a!!!", frame.content().toString(CharsetUtil.UTF_8));
+        frame.release();
+
         Assert.assertNull(channel.readInbound());
     }
 
@@ -68,9 +73,12 @@ public class StompSubframeAggregatorTest {
         ByteBuf incoming = Unpooled.buffer();
         incoming.writeBytes(StompTestConstants.SEND_FRAME_2.getBytes());
         channel.writeInbound(incoming);
+
         StompFrame frame = channel.readInbound();
         Assert.assertNotNull(frame);
         Assert.assertEquals(StompCommand.SEND, frame.command());
+        frame.release();
+
         Assert.assertNull(channel.readInbound());
     }
 
@@ -81,12 +89,19 @@ public class StompSubframeAggregatorTest {
         incoming.writeBytes(StompTestConstants.CONNECTED_FRAME.getBytes());
         channel.writeInbound(incoming);
         channel.writeInbound(Unpooled.wrappedBuffer(StompTestConstants.SEND_FRAME_1.getBytes()));
+
         StompFrame frame = channel.readInbound();
         Assert.assertEquals(StompCommand.CONNECT, frame.command());
+        frame.release();
+
         frame = channel.readInbound();
         Assert.assertEquals(StompCommand.CONNECTED, frame.command());
+        frame.release();
+
         frame = channel.readInbound();
         Assert.assertEquals(StompCommand.SEND, frame.command());
+        frame.release();
+
         Assert.assertNull(channel.readInbound());
     }
 
