@@ -634,8 +634,6 @@ public class DefaultTextHeaders implements TextHeaders {
         return values;
     }
 
-
-
     @Override
     public List<String> getAll(CharSequence name) {
         if (name == null) {

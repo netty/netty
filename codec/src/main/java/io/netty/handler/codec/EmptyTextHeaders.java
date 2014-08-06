@@ -25,7 +25,7 @@ import java.util.Set;
 
 public class EmptyTextHeaders implements TextHeaders {
 
-    protected EmptyTextHeaders() {}
+    protected EmptyTextHeaders() { }
 
     @Override
     public String get(CharSequence name) {
