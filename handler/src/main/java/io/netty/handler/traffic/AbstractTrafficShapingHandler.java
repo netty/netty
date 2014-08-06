@@ -293,6 +293,14 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
         ctx.write(msg, promise);
     }
 
+    public long getReadLimit() {
+        return readLimit;
+    }
+
+    public long getWriteLimit() {
+        return writeLimit;
+    }
+
     /**
      *
      * @return the current TrafficCounter (if
