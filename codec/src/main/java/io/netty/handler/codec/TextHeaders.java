@@ -57,12 +57,83 @@ public interface TextHeaders extends Iterable<Map.Entry<String, String>> {
      */
     String getAndRemove(CharSequence name);
 
+    /**
+     * Returns and Removes the value of a header with the specified name.  If there are
+     * more than one values for the specified name, the first value is returned.
+     *
+     * @param name The name of the header to search
+     * @param defaultValue default value
+     * @return The first header value or {@code defaultValue} if there is no such header
+     */
     String getAndRemove(CharSequence name, String defaultValue);
+
+    /**
+     * Returns and Removes the integer value of a header with the specified name.  If there are
+     * more than one values for the specified name, the first value is returned.
+     *
+     * @param name The name of the header to search
+     * @return The first header value
+     * @throws java.util.NoSuchElementException
+     *         if no such header
+     * @throws NumberFormatException
+     *         if the value of header is not number
+     */
     int getIntAndRemove(CharSequence name);
+
+    /**
+     * Returns and Removes the integer value of a header with the specified name.  If there are more than one values for
+     * the specified name, the first value is returned.
+     *
+     * @param name The name of the header to search
+     * @param defaultValue default value
+     * @return The first header value or {@code defaultValue} if there is no such header or the value of header is not
+     * number
+     */
     int getIntAndRemove(CharSequence name, int defaultValue);
+
+    /**
+     * Returns and Removes the long value of a header with the specified name.  If there are
+     * more than one values for the specified name, the first value is returned.
+     *
+     * @param name The name of the header to search
+     * @return The first header value
+     * @throws java.util.NoSuchElementException
+     *         if no such header
+     * @throws NumberFormatException
+     *         if the value of header is not number
+     */
     long getLongAndRemove(CharSequence name);
+
+    /**
+     * Returns and Removes the long value of a header with the specified name.  If there are more than one values for
+     * the specified name, the first value is returned.
+     *
+     * @param name The name of the header to search
+     * @param defaultValue default value
+     * @return The first header value or {@code defaultValue} if there is no such header or the value of header is not
+     * number
+     */
     long getLongAndRemove(CharSequence name, long defaultValue);
+
+    /**
+     * Returns and Removes the millisecond value of a header with the specified name.  If there are
+     * more than one values for the specified name, the first value is returned.
+     *
+     * @param name The name of the header to search
+     * @return The first header value
+     * @throws java.util.NoSuchElementException
+     *         if no such header
+     */
     long getTimeMillisAndRemove(CharSequence name);
+
+    /**
+     * Returns and Removes the millisecond value of a header with the specified name.  If there are more than one values
+     * for the specified name, the first value is returned.
+     *
+     * @param name The name of the header to search
+     * @param defaultValue default value
+     * @return The first header value or {@code defaultValue} if there is no such header
+     */
     long getTimeMillisAndRemove(CharSequence name, long defaultValue);
 
     /**
