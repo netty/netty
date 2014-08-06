@@ -1735,17 +1735,17 @@ public class SslHandler extends FrameDecoder
                     return;
                 }
 
-                Throwable cause = null;
+                List<ChannelFuture> futures = null;
                 try {
                     for (;;) {
                         PendingWrite pw = pendingUnencryptedWrites.poll();
                         if (pw == null) {
                             break;
                         }
-                        if (cause == null) {
-                            cause = new ClosedChannelException();
+                        if (futures == null) {
+                            futures = new ArrayList<ChannelFuture>();
                         }
-                        pw.future.setFailure(cause);
+                        futures.add(pw.future);
                     }
 
                     for (;;) {
@@ -1753,16 +1753,21 @@ public class SslHandler extends FrameDecoder
                         if (ev == null) {
                             break;
                         }
-                        if (cause == null) {
-                            cause = new ClosedChannelException();
+                        if (futures != null) {
+                            futures = new ArrayList<ChannelFuture>();
                         }
-                        ev.getFuture().setFailure(cause);
+                        futures.add(ev.getFuture());
                     }
                 } finally {
                     pendingUnencryptedWritesLock.unlock();
                 }
 
-                if (cause != null) {
+                if (futures != null) {
+                    final ClosedChannelException cause = new ClosedChannelException();
+                    final int size = futures.size();
+                    for (int i = 0; i < size; i ++) {
+                        futures.get(i).setFailure(cause);
+                    }
                     fireExceptionCaught(ctx, cause);
                 }
             }
