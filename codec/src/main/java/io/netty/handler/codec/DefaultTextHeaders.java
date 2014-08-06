@@ -472,7 +472,7 @@ public class DefaultTextHeaders implements TextHeaders {
         }
 
         CharSequence value = null;
-        for (; ; ) {
+        for (;;) {
             if (e.hash == h && nameEquals(e.name, name)) {
                 value = e.value;
                 e.remove();
@@ -489,7 +489,7 @@ public class DefaultTextHeaders implements TextHeaders {
             }
         }
 
-        for (; ; ) {
+        for (;;) {
             HeaderEntry next = e.next;
             if (next == null) {
                 break;
@@ -506,9 +506,7 @@ public class DefaultTextHeaders implements TextHeaders {
         if (value != null) {
             return value;
         }
-
         return null;
-
     }
 
     @Override
@@ -668,7 +666,7 @@ public class DefaultTextHeaders implements TextHeaders {
         }
 
         List<String> values = new ArrayList<String>(4);
-        for (; ; ) {
+        for (;;) {
             if (e.hash == h && nameEquals(e.name, name)) {
                 values.add(e.getValue().toString());
                 e.remove();
@@ -686,7 +684,7 @@ public class DefaultTextHeaders implements TextHeaders {
             }
         }
 
-        for (; ; ) {
+        for (;;) {
             HeaderEntry next = e.next;
             if (next == null) {
                 break;
@@ -717,7 +715,7 @@ public class DefaultTextHeaders implements TextHeaders {
         }
 
         List<CharSequence> values = new ArrayList<CharSequence>(4);
-        for (; ; ) {
+        for (;;) {
             if (e.hash == h && nameEquals(e.name, name)) {
                 values.add(e.getValue());
                 e.remove();
@@ -735,7 +733,7 @@ public class DefaultTextHeaders implements TextHeaders {
             }
         }
 
-        for (; ; ) {
+        for (;;) {
             HeaderEntry next = e.next;
             if (next == null) {
                 break;
