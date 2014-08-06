@@ -15,14 +15,21 @@
  */
 package org.jboss.netty.handler.traffic;
 
+import java.util.LinkedList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.ChannelStateEvent;
+import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.execution.ExecutionHandler;
 import org.jboss.netty.handler.execution.MemoryAwareThreadPoolExecutor;
 import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
 import org.jboss.netty.util.ObjectSizeEstimator;
+import org.jboss.netty.util.Timeout;
 import org.jboss.netty.util.Timer;
+import org.jboss.netty.util.TimerTask;
 
 /**
  * This implementation of the {@link AbstractTrafficShapingHandler} is for channel
@@ -49,7 +56,9 @@ import org.jboss.netty.util.Timer;
  * it is recommended to set a positive value, even if it is high since the precision of the
  * Traffic Shaping depends on the period where the traffic is computed. The highest the interval,
  * the less precise the traffic shaping will be. It is suggested as higher value something close
- * to 5 or 10 minutes.<br>
+ * to 5 or 10 minutes.<br><br>
+ *
+ * maxTimeToWait, by default set to 15s, allows to specify an upper bound of time shaping.<br><br>
  * </li>
  * <li>When you shutdown your application, release all the external resources (except the timer internal itself)
  * by calling:<br>
@@ -58,10 +67,17 @@ import org.jboss.netty.util.Timer;
  * </ul><br>
  */
 public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler {
+    private List<ToSend> messagesQueue = new LinkedList<ToSend>();
+    private volatile Timeout writeTimeout;
 
     public ChannelTrafficShapingHandler(Timer timer, long writeLimit,
             long readLimit, long checkInterval) {
         super(timer, writeLimit, readLimit, checkInterval);
+    }
+
+    public ChannelTrafficShapingHandler(Timer timer, long writeLimit,
+            long readLimit, long checkInterval, long maxTime) {
+        super(timer, writeLimit, readLimit, checkInterval, maxTime);
     }
 
     public ChannelTrafficShapingHandler(Timer timer, long writeLimit,
@@ -86,6 +102,13 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
 
     public ChannelTrafficShapingHandler(
             ObjectSizeEstimator objectSizeEstimator, Timer timer,
+            long writeLimit, long readLimit, long checkInterval, long maxTime) {
+        super(objectSizeEstimator, timer, writeLimit, readLimit,
+                checkInterval, maxTime);
+    }
+
+    public ChannelTrafficShapingHandler(
+            ObjectSizeEstimator objectSizeEstimator, Timer timer,
             long writeLimit, long readLimit) {
         super(objectSizeEstimator, timer, writeLimit, readLimit);
     }
@@ -101,11 +124,59 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
         super(objectSizeEstimator, timer);
     }
 
+    private static final class ToSend {
+        final long date;
+        final MessageEvent toSend;
+
+        private ToSend(final long delay, final MessageEvent toSend) {
+            this.date = System.currentTimeMillis() + delay;
+            this.toSend = toSend;
+        }
+    }
+
+    @Override
+    protected synchronized void submitWrite(final ChannelHandlerContext ctx, final MessageEvent evt, final long delay)
+            throws Exception {
+        if (delay == 0 && messagesQueue.isEmpty()) {
+            internalSubmitWrite(ctx, evt);
+            return;
+        }
+        if (timer == null) {
+            // Sleep since no executor
+            Thread.sleep(delay);
+            internalSubmitWrite(ctx, evt);
+            return;
+        }
+        final ToSend newToSend = new ToSend(delay, evt);
+        messagesQueue.add(newToSend);
+        writeTimeout = timer.newTimeout(new TimerTask() {
+            public void run(Timeout timeout) throws Exception {
+                sendAllValid(ctx);
+            }
+        }, delay + 1, TimeUnit.MILLISECONDS);
+    }
+
+    private synchronized void sendAllValid(ChannelHandlerContext ctx) throws Exception {
+        while (!messagesQueue.isEmpty()) {
+            ToSend newToSend = messagesQueue.remove(0);
+            if (newToSend.date <= System.currentTimeMillis()) {
+                internalSubmitWrite(ctx, newToSend.toSend);
+            } else {
+                messagesQueue.add(0, newToSend);
+                break;
+            }
+        }
+    }
+
     @Override
     public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e)
             throws Exception {
         if (trafficCounter != null) {
             trafficCounter.stop();
+        }
+        messagesQueue.clear();
+        if (writeTimeout != null) {
+            writeTimeout.cancel();
         }
         super.channelClosed(ctx, e);
     }
@@ -126,10 +197,10 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
         if (trafficCounter != null) {
             trafficCounter.start();
         }
-        super.channelConnected(ctx, e);
         // readSuspended = false;
         ctx.setAttachment(null);
         ctx.getChannel().setReadable(true);
+        super.channelConnected(ctx, e);
     }
 
 }
