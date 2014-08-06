@@ -15,8 +15,6 @@
  */
 package org.jboss.netty.logging;
 
-import org.jboss.netty.util.internal.StackTraceSimplifier;
-
 /**
  * Creates an {@link InternalLogger} or changes the default factory
  * implementation.  This factory allows you to choose what logging framework
@@ -36,13 +34,6 @@ import org.jboss.netty.util.internal.StackTraceSimplifier;
  */
 public abstract class InternalLoggerFactory {
     private static volatile InternalLoggerFactory defaultFactory = new JdkLoggerFactory();
-
-    static {
-        // Load the dependent classes in advance to avoid the case where
-        // the VM fails to load the required classes because of too many open
-        // files.
-        StackTraceSimplifier.simplify(new Exception());
-    }
 
     /**
      * Returns the default factory.  The initial default factory is
@@ -73,74 +64,7 @@ public abstract class InternalLoggerFactory {
      * Creates a new logger instance with the specified name.
      */
     public static InternalLogger getInstance(String name) {
-        final InternalLogger logger = getDefaultFactory().newInstance(name);
-        return new InternalLogger() {
-
-            public void debug(String msg) {
-                logger.debug(msg);
-            }
-
-            public void debug(String msg, Throwable cause) {
-                StackTraceSimplifier.simplify(cause);
-                logger.debug(msg, cause);
-            }
-
-            public void error(String msg) {
-                logger.error(msg);
-            }
-
-            public void error(String msg, Throwable cause) {
-                StackTraceSimplifier.simplify(cause);
-                logger.error(msg, cause);
-            }
-
-            public void info(String msg) {
-                logger.info(msg);
-            }
-
-            public void info(String msg, Throwable cause) {
-                StackTraceSimplifier.simplify(cause);
-                logger.info(msg, cause);
-            }
-
-            public boolean isDebugEnabled() {
-                return logger.isDebugEnabled();
-            }
-
-            public boolean isErrorEnabled() {
-                return logger.isErrorEnabled();
-            }
-
-            public boolean isInfoEnabled() {
-                return logger.isInfoEnabled();
-            }
-
-            public boolean isWarnEnabled() {
-                return logger.isWarnEnabled();
-            }
-
-            public void warn(String msg) {
-                logger.warn(msg);
-            }
-
-            public void warn(String msg, Throwable cause) {
-                StackTraceSimplifier.simplify(cause);
-                logger.warn(msg, cause);
-            }
-
-            public boolean isEnabled(InternalLogLevel level) {
-                return logger.isEnabled(level);
-            }
-
-            public void log(InternalLogLevel level, String msg) {
-                logger.log(level, msg);
-            }
-
-            public void log(InternalLogLevel level, String msg, Throwable cause) {
-                StackTraceSimplifier.simplify(cause);
-                logger.log(level, msg, cause);
-            }
-        };
+        return getDefaultFactory().newInstance(name);
     }
 
     /**

@@ -50,11 +50,6 @@ public class InternalLoggerFactoryTest {
     }
 
     @Test
-    public void shouldReturnWrappedLogger() {
-        assertNotSame(mock, InternalLoggerFactory.getInstance("mock"));
-    }
-
-    @Test
     public void testIsDebugEnabled() {
         expect(mock.isDebugEnabled()).andReturn(true);
         replay(mock);

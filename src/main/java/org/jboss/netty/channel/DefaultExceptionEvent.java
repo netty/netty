@@ -17,8 +17,6 @@ package org.jboss.netty.channel;
 
 import static org.jboss.netty.channel.Channels.*;
 
-import org.jboss.netty.util.internal.StackTraceSimplifier;
-
 /**
  * The default {@link ExceptionEvent} implementation.
  */
@@ -39,7 +37,6 @@ public class DefaultExceptionEvent implements ExceptionEvent {
         }
         this.channel = channel;
         this.cause = cause;
-        StackTraceSimplifier.simplify(cause);
     }
 
     public Channel getChannel() {
