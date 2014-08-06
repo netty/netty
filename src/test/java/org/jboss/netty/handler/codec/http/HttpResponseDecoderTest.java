@@ -18,6 +18,7 @@ package org.jboss.netty.handler.codec.http;
 
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.embedder.DecoderEmbedder;
+import org.jboss.netty.util.CharsetUtil;
 import org.junit.Test;
 
 import static org.hamcrest.CoreMatchers.*;
@@ -56,11 +57,10 @@ public class HttpResponseDecoderTest {
                        "Sec-WebSocket-Origin: http://localhost:8080\r\n" +
                        "Sec-WebSocket-Location: ws://localhost/some/path\r\n" +
                        "\r\n" +
-                       "1234567812345678").getBytes();
-        byte[] otherData = {1, 2, 3, 4};
+                       "1234567812345678EXTRA").getBytes(CharsetUtil.US_ASCII);
 
         DecoderEmbedder<Object> ch = new DecoderEmbedder<Object>(new HttpResponseDecoder());
-        ch.offer(ChannelBuffers.wrappedBuffer(data, otherData));
+        ch.offer(ChannelBuffers.wrappedBuffer(data));
 
         HttpResponse res = (HttpResponse) ch.poll();
         assertThat(res.getProtocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
@@ -69,6 +69,27 @@ public class HttpResponseDecoderTest {
 
         assertThat(ch.finish(), is(true));
 
-        assertEquals(ch.poll(), ChannelBuffers.wrappedBuffer(otherData));
+        assertEquals(ch.poll(), ChannelBuffers.wrappedBuffer("EXTRA".getBytes(CharsetUtil.US_ASCII)));
+    }
+
+    @Test
+    public void testWebSocketResponseWithDataFollowing2() {
+        byte[] data = ("HTTP/1.1 101 Switching Protocols\n" +
+                       "Upgrade: websocket\n" +
+                       "Connection: Upgrade\n" +
+                       "Sec-WebSocket-Accept: fd6T8bTOMVN65WHXymeKp6WTWfA=\n\n" +
+                       "EXTRA").getBytes(CharsetUtil.US_ASCII);
+
+        DecoderEmbedder<Object> ch = new DecoderEmbedder<Object>(new HttpResponseDecoder());
+        ch.offer(ChannelBuffers.wrappedBuffer(data));
+
+        HttpResponse res = (HttpResponse) ch.poll();
+        assertThat(res.getProtocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
+        assertThat(res.getStatus(), is(HttpResponseStatus.SWITCHING_PROTOCOLS));
+        assertThat(res.getContent().readableBytes(), is(0));
+
+        assertThat(ch.finish(), is(true));
+
+        assertEquals(ch.poll(), ChannelBuffers.wrappedBuffer("EXTRA".getBytes(CharsetUtil.US_ASCII)));
     }
 }

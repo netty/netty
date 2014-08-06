@@ -17,7 +17,11 @@ package org.jboss.netty.handler.codec.http.websocketx;
 
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelHandler;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpResponse;
+import org.jboss.netty.handler.codec.http.HttpResponseDecoder;
 
 import java.net.URI;
 import java.util.Map;
@@ -151,4 +155,22 @@ public abstract class WebSocketClientHandshaker {
      *            HTTP response containing the closing handshake details
      */
     public abstract void finishHandshake(Channel channel, HttpResponse response);
+
+    /**
+     * Replace the HTTP decoder with a new Web Socket decoder.
+     * Note that we do not use {@link ChannelPipeline#replace(String, String, ChannelHandler)}, because the server
+     * might have sent the first frame immediately after the upgrade response.  In such a case, the HTTP decoder might
+     * have the first frame in its cumulation buffer and the HTTP decoder will forward it to the next handler.
+     * The Web Socket decoder will not receive it if we simply replaced it.  For more information, refer to
+     * {@link HttpResponseDecoder} and its unit tests.
+     */
+    static void replaceDecoder(Channel channel, ChannelHandler wsDecoder) {
+        ChannelPipeline p = channel.getPipeline();
+        ChannelHandlerContext httpDecoderCtx = p.getContext(HttpResponseDecoder.class);
+        if (httpDecoderCtx == null) {
+            throw new IllegalStateException("can't find an HTTP decoder from the pipeline");
+        }
+        p.addAfter(httpDecoderCtx.getName(), "ws-decoder", wsDecoder);
+        p.remove(httpDecoderCtx.getName());
+    }
 }

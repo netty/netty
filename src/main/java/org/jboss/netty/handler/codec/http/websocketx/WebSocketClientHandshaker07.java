@@ -29,7 +29,6 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpRequestEncoder;
 import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseDecoder;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.logging.InternalLogger;
@@ -225,10 +224,8 @@ public class WebSocketClientHandshaker07 extends WebSocketClientHandshaker {
         setActualSubprotocol(subprotocol);
 
         setHandshakeComplete();
-
-        ChannelPipeline p = channel.getPipeline();
-        p.get(HttpResponseDecoder.class).replace(
-                "ws-decoder",
+        replaceDecoder(
+                channel,
                 new WebSocket07FrameDecoder(false, allowExtensions, getMaxFramePayloadLength()));
     }
 }

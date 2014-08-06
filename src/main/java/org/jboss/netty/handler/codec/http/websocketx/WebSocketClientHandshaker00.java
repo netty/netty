@@ -29,7 +29,6 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpRequestEncoder;
 import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseDecoder;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
@@ -262,9 +261,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         setActualSubprotocol(subprotocol);
 
         setHandshakeComplete();
-
-        channel.getPipeline().get(HttpResponseDecoder.class).replace("ws-decoder",
-                new WebSocket00FrameDecoder(getMaxFramePayloadLength()));
+        replaceDecoder(channel, new WebSocket00FrameDecoder(getMaxFramePayloadLength()));
     }
 
     private static String insertRandomCharacters(String key) {

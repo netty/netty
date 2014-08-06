@@ -205,6 +205,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<State> {
                 // Remove the headers which are not supposed to be present not
                 // to confuse subsequent handlers.
                 message.headers().remove(HttpHeaders.Names.TRANSFER_ENCODING);
+                resetState();
                 return message;
             }
             long contentLength = HttpHeaders.getContentLength(message, -1);
@@ -451,18 +452,23 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<State> {
             message.setContent(content);
             this.content = null;
         }
+
+        resetState();
         this.message = null;
 
+        return message;
+    }
+
+    private void resetState() {
         if (!isDecodingRequest()) {
             HttpResponse res = (HttpResponse) message;
             if (res != null && res.getStatus().getCode() == 101) {
                 checkpoint(State.UPGRADED);
-                return message;
+                return;
             }
         }
 
         checkpoint(State.SKIP_CONTROL_CHARS);
-        return message;
     }
 
     private static void skipControlCharacters(ChannelBuffer buffer) {
