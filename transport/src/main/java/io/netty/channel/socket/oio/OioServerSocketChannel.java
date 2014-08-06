@@ -175,6 +175,11 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
     }
 
     @Override
+    protected Object filterOutboundMessage(Object msg) throws Exception {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     protected void doConnect(
             SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
         throw new UnsupportedOperationException();

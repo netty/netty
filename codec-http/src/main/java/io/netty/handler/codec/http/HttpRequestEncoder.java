@@ -26,6 +26,7 @@ import static io.netty.handler.codec.http.HttpConstants.*;
  */
 public class HttpRequestEncoder extends HttpObjectEncoder<HttpRequest> {
     private static final char SLASH = '/';
+    private static final char QUESTION_MARK = '?';
     private static final byte[] CRLF = { CR, LF };
 
     @Override
@@ -48,8 +49,22 @@ public class HttpRequestEncoder extends HttpObjectEncoder<HttpRequest> {
             int start = uri.indexOf("://");
             if (start != -1 && uri.charAt(0) != SLASH) {
                 int startIndex = start + 3;
-                if (uri.lastIndexOf(SLASH) <= startIndex) {
-                    uri += SLASH;
+                // Correctly handle query params.
+                // See https://github.com/netty/netty/issues/2732
+                int index = uri.indexOf(QUESTION_MARK, startIndex);
+                if (index == -1) {
+                    if (uri.lastIndexOf(SLASH) <= startIndex) {
+                        uri += SLASH;
+                    }
+                } else {
+                    if (uri.lastIndexOf(SLASH, index) <= startIndex) {
+                        int len = uri.length();
+                        StringBuilder sb = new StringBuilder(len + 1);
+                        sb.append(uri, 0, index);
+                        sb.append(SLASH);
+                        sb.append(uri, index, len);
+                        uri = sb.toString();
+                    }
                 }
             }
         }

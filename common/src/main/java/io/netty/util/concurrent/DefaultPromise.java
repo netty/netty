@@ -471,6 +471,10 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     private boolean setFailure0(Throwable cause) {
+        if (cause == null) {
+            throw new NullPointerException("cause");
+        }
+
         if (isDone()) {
             return false;
         }

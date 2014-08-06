@@ -147,7 +147,7 @@ public class LzfDecoder extends ByteToMessageDecoder {
 
                         ByteBuf uncompressed = ctx.alloc().heapBuffer(originalLength, originalLength);
                         final byte[] outputArray = uncompressed.array();
-                        final int outPos = uncompressed.arrayOffset();
+                        final int outPos = uncompressed.arrayOffset() + uncompressed.writerIndex();
 
                         boolean success = false;
                         try {
