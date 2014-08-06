@@ -185,6 +185,12 @@ public interface Channel extends AttributeMap, Comparable<Channel> {
     RecvByteBufAllocator.Handle recvHandle();
 
     /**
+     * Return the assigned {@link MessageSizeEstimator.Handle} which will be used to estimate the size of different
+     * {@link Object}s by this {@link Channel}.
+     */
+    MessageSizeEstimator.Handle estimatorHandle();
+
+    /**
      * Return a new {@link ChannelPromise}.
      */
     ChannelPromise newPromise();
