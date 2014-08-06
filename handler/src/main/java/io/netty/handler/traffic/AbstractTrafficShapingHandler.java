@@ -204,13 +204,71 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
         }
     }
 
-   /**
-    *
-    * @param maxTime
-    * Max delay in wait, shall be less than TIME OUT in related protocol
-    */
+    /**
+     * @return the writeLimit
+     */
+    public long getWriteLimit() {
+        return writeLimit;
+    }
+
+    /**
+     * @param writeLimit the writeLimit to set
+     */
+    public void setWriteLimit(long writeLimit) {
+        this.writeLimit = writeLimit;
+        if (trafficCounter != null) {
+            trafficCounter.resetAccounting(System.currentTimeMillis() + 1);
+        }
+    }
+
+    /**
+     * @return the readLimit
+     */
+    public long getReadLimit() {
+        return readLimit;
+    }
+
+    /**
+     * @param readLimit the readLimit to set
+     */
+    public void setReadLimit(long readLimit) {
+        this.readLimit = readLimit;
+        if (trafficCounter != null) {
+            trafficCounter.resetAccounting(System.currentTimeMillis() + 1);
+        }
+    }
+
+    /**
+     * @return the checkInterval
+     */
+    public long getCheckInterval() {
+        return checkInterval;
+    }
+
+    /**
+     * @param checkInterval the checkInterval to set
+     */
+    public void setCheckInterval(long checkInterval) {
+        this.checkInterval = checkInterval;
+        if (trafficCounter != null) {
+            trafficCounter.configure(checkInterval);
+        }
+    }
+
+    /**
+     *
+     * @param maxTime
+     *            Max delay in wait, shall be less than TIME OUT in related protocol
+     */
     public void setMaxTimeWait(long maxTime) {
         this.maxTime = maxTime;
+    }
+
+    /**
+     * @return the max delay in wait
+     */
+    public long getMaxTimeWait() {
+        return maxTime;
     }
 
     /**
@@ -233,7 +291,6 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
             this.ctx = ctx;
         }
 
-        @Override
         public void run() {
             if (!ctx.channel().config().isAutoRead() && isHandlerActive(ctx)) {
                 // If AutoRead is False and Active is True, user make a direct setAutoRead(false)
