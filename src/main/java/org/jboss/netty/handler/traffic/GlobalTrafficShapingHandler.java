@@ -186,7 +186,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
             public void run(Timeout timeout) throws Exception {
                 sendAllValid(ctx, mqfinal);
             }
-        }, delay+1, TimeUnit.MILLISECONDS);
+        }, delay + 1, TimeUnit.MILLISECONDS);
     }
 
     private synchronized void sendAllValid(ChannelHandlerContext ctx, final List<ToSend> messagesQueue)

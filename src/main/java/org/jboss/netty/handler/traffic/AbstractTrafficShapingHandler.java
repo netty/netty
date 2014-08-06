@@ -505,8 +505,8 @@ public abstract class AbstractTrafficShapingHandler extends
                                 logger.debug("Suspend final status => " + channel.isReadable() + ":" +
                                         (ctx.getAttachment() == null));
                             }
-                            // Create a Runnable to reactive the read if needed. If one was create before it will just be
-                            // reused to limit object creation
+                            // Create a Runnable to reactive the read if needed. If one was create before
+                            // it will just be reused to limit object creation
                             TimerTask timerTask = new ReopenReadTimerTask(ctx);
                             timeout = timer.newTimeout(timerTask, wait,
                                     TimeUnit.MILLISECONDS);
@@ -538,7 +538,7 @@ public abstract class AbstractTrafficShapingHandler extends
                         return;
                     }
                     /*
-                     * Option 2: 
+                     * Option 2:
                      * Thread.sleep(wait);
                      * System.out.println("Write unsuspended");
                      * Option 1: use an ordered list of messages to send

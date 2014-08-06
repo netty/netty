@@ -69,7 +69,7 @@ import org.jboss.netty.util.TimerTask;
 public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler {
     private List<ToSend> messagesQueue = new LinkedList<ToSend>();
     private volatile Timeout writeTimeout;
-    
+
     public ChannelTrafficShapingHandler(Timer timer, long writeLimit,
             long readLimit, long checkInterval) {
         super(timer, writeLimit, readLimit, checkInterval);
@@ -153,7 +153,7 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
             public void run(Timeout timeout) throws Exception {
                 sendAllValid(ctx);
             }
-        }, delay+1, TimeUnit.MILLISECONDS);
+        }, delay + 1, TimeUnit.MILLISECONDS);
     }
 
     private synchronized void sendAllValid(ChannelHandlerContext ctx) throws Exception {
