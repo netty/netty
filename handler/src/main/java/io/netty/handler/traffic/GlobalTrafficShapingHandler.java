@@ -169,14 +169,14 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
 
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        int key = ctx.channel().hashCode();
+        Integer key = ctx.channel().hashCode();
         List<ToSend> mq = new LinkedList<ToSend>();
         messagesQueues.put(key, mq);
     }
 
     @Override
     public synchronized void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        int key = ctx.channel().hashCode();
+        Integer key = ctx.channel().hashCode();
         List<ToSend> mq = messagesQueues.remove(key);
         if (mq != null) {
             for (ToSend toSend : mq) {
@@ -203,15 +203,19 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
     @Override
     protected synchronized void submitWrite(final ChannelHandlerContext ctx, final Object msg, final long delay,
             final ChannelPromise promise) {
-        final ToSend newToSend = new ToSend(delay, msg, promise);
-        int key = ctx.channel().hashCode();
-        List<ToSend> mq = messagesQueues.get(key);
-        if (mq == null) {
-            mq = new LinkedList<ToSend>();
-            messagesQueues.put(key, mq);
+        Integer key = ctx.channel().hashCode();
+        List<ToSend> messagesQueue = messagesQueues.get(key);
+        if (delay == 0 && (messagesQueue == null || messagesQueue.isEmpty())) {
+            ctx.write(msg, promise);
+            return;
         }
-        mq.add(newToSend);
-        final List<ToSend> mqfinal = mq;
+        final ToSend newToSend = new ToSend(delay, msg, promise);
+        if (messagesQueue == null) {
+            messagesQueue = new LinkedList<ToSend>();
+            messagesQueues.put(key, messagesQueue);
+        }
+        messagesQueue.add(newToSend);
+        final List<ToSend> mqfinal = messagesQueue;
         ctx.executor().schedule(new Runnable() {
             @Override
             public void run() {

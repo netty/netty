@@ -336,7 +336,8 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
                 return;
             }
         }
-        ctx.write(msg, promise);
+        // to maintain order of write (if not using option 2)
+        submitWrite(ctx, msg, 0, promise);
     }
 
     protected abstract void submitWrite(final ChannelHandlerContext ctx, final Object msg, final long delay,
