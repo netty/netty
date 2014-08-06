@@ -68,11 +68,17 @@ public abstract class AbstractTrafficShapingHandler extends
      * Default delay between two checks: 1s
      */
     public static final long DEFAULT_CHECK_INTERVAL = 1000;
+    /**
+     * Default max delay in case of traffic shaping
+     * (during which no communication will occur).
+     * Shall be less than TIMEOUT. Here half of "standard" 30s
+     */
+    public static final long DEFAULT_MAX_TIME = 15000;
 
     /**
      * Default minimal time to wait
      */
-    private static final long MINIMAL_WAIT = 10;
+    static final long MINIMAL_WAIT = 10;
 
     /**
      * Traffic Counter
@@ -108,6 +114,10 @@ public abstract class AbstractTrafficShapingHandler extends
      * Delay between two performance snapshots
      */
     protected long checkInterval = DEFAULT_CHECK_INTERVAL; // default 1 s
+    /**
+     * Max delay in wait
+     */
+    protected long maxTime = DEFAULT_MAX_TIME; // default 15 s
 
     /**
      * Boolean associated with the release of this TrafficShapingHandler.
@@ -118,12 +128,13 @@ public abstract class AbstractTrafficShapingHandler extends
 
      private void init(ObjectSizeEstimator newObjectSizeEstimator,
              Timer newTimer, long newWriteLimit, long newReadLimit,
-             long newCheckInterval) {
+             long newCheckInterval, long newMaxTime) {
          objectSizeEstimator = newObjectSizeEstimator;
          timer = newTimer;
          writeLimit = newWriteLimit;
          readLimit = newReadLimit;
          checkInterval = newCheckInterval;
+         maxTime = newMaxTime;
          //logger.warn("TSH: "+writeLimit+":"+readLimit+":"+checkInterval);
      }
 
@@ -133,6 +144,15 @@ public abstract class AbstractTrafficShapingHandler extends
      */
     void setTrafficCounter(TrafficCounter newTrafficCounter) {
         trafficCounter = newTrafficCounter;
+    }
+
+    /**
+     *
+     * @param maxTime
+     *    Max delay in wait, shall be less than TIME OUT in related protocol
+     */
+    public void setMaxTimeWait(long maxTime) {
+        this.maxTime = maxTime;
     }
 
     /**
@@ -150,7 +170,8 @@ public abstract class AbstractTrafficShapingHandler extends
      */
     protected AbstractTrafficShapingHandler(Timer timer, long writeLimit,
                                             long readLimit, long checkInterval) {
-        init(new DefaultObjectSizeEstimator(), timer, writeLimit, readLimit, checkInterval);
+        init(new DefaultObjectSizeEstimator(), timer, writeLimit, readLimit, checkInterval,
+                DEFAULT_MAX_TIME);
     }
 
     /**
@@ -172,7 +193,7 @@ public abstract class AbstractTrafficShapingHandler extends
     protected AbstractTrafficShapingHandler(
             ObjectSizeEstimator objectSizeEstimator, Timer timer,
             long writeLimit, long readLimit, long checkInterval) {
-        init(objectSizeEstimator, timer, writeLimit, readLimit, checkInterval);
+        init(objectSizeEstimator, timer, writeLimit, readLimit, checkInterval, DEFAULT_MAX_TIME);
     }
 
     /**
@@ -187,7 +208,8 @@ public abstract class AbstractTrafficShapingHandler extends
      */
     protected AbstractTrafficShapingHandler(Timer timer, long writeLimit,
                                             long readLimit) {
-        init(new DefaultObjectSizeEstimator(), timer, writeLimit, readLimit, DEFAULT_CHECK_INTERVAL);
+        init(new DefaultObjectSizeEstimator(), timer, writeLimit, readLimit,
+                DEFAULT_CHECK_INTERVAL, DEFAULT_MAX_TIME);
     }
 
     /**
@@ -206,7 +228,8 @@ public abstract class AbstractTrafficShapingHandler extends
     protected AbstractTrafficShapingHandler(
             ObjectSizeEstimator objectSizeEstimator, Timer timer,
             long writeLimit, long readLimit) {
-        init(objectSizeEstimator, timer, writeLimit, readLimit, DEFAULT_CHECK_INTERVAL);
+        init(objectSizeEstimator, timer, writeLimit, readLimit,
+                DEFAULT_CHECK_INTERVAL, DEFAULT_MAX_TIME);
     }
 
     /**
@@ -216,7 +239,8 @@ public abstract class AbstractTrafficShapingHandler extends
      *          created once for instance like HashedWheelTimer(10, TimeUnit.MILLISECONDS, 1024)
      */
     protected AbstractTrafficShapingHandler(Timer timer) {
-        init(new DefaultObjectSizeEstimator(), timer, 0, 0, DEFAULT_CHECK_INTERVAL);
+        init(new DefaultObjectSizeEstimator(), timer, 0, 0,
+                DEFAULT_CHECK_INTERVAL, DEFAULT_MAX_TIME);
     }
 
     /**
@@ -230,7 +254,8 @@ public abstract class AbstractTrafficShapingHandler extends
      */
     protected AbstractTrafficShapingHandler(
             ObjectSizeEstimator objectSizeEstimator, Timer timer) {
-        init(objectSizeEstimator, timer, 0, 0, DEFAULT_CHECK_INTERVAL);
+        init(objectSizeEstimator, timer, 0, 0,
+                DEFAULT_CHECK_INTERVAL, DEFAULT_MAX_TIME);
     }
 
     /**
@@ -243,7 +268,7 @@ public abstract class AbstractTrafficShapingHandler extends
      *            channels or 0 if no stats are to be computed
      */
     protected AbstractTrafficShapingHandler(Timer timer, long checkInterval) {
-        init(new DefaultObjectSizeEstimator(), timer, 0, 0, checkInterval);
+        init(new DefaultObjectSizeEstimator(), timer, 0, 0, checkInterval, DEFAULT_MAX_TIME);
     }
 
     /**
@@ -261,7 +286,52 @@ public abstract class AbstractTrafficShapingHandler extends
     protected AbstractTrafficShapingHandler(
             ObjectSizeEstimator objectSizeEstimator, Timer timer,
             long checkInterval) {
-        init(objectSizeEstimator, timer, 0, 0, checkInterval);
+        init(objectSizeEstimator, timer, 0, 0, checkInterval, DEFAULT_MAX_TIME);
+    }
+
+    /**
+     * Constructor using default {@link ObjectSizeEstimator}
+     *
+     * @param timer
+     *          created once for instance like HashedWheelTimer(10, TimeUnit.MILLISECONDS, 1024)
+     * @param writeLimit
+     *          0 or a limit in bytes/s
+     * @param readLimit
+     *          0 or a limit in bytes/s
+     * @param checkInterval
+     *          The delay between two computations of performances for
+     *            channels or 0 if no stats are to be computed
+     * @param maxTime
+     *          The max time to wait in case of excess of traffic (to prevent Time Out event)
+     */
+    protected AbstractTrafficShapingHandler(Timer timer, long writeLimit,
+                                            long readLimit, long checkInterval, long maxTime) {
+        init(new DefaultObjectSizeEstimator(), timer, writeLimit, readLimit, checkInterval,
+                maxTime);
+    }
+
+    /**
+     * Constructor using the specified ObjectSizeEstimator
+     *
+     * @param objectSizeEstimator
+     *            the {@link ObjectSizeEstimator} that will be used to compute
+     *            the size of the message
+     * @param timer
+     *          created once for instance like HashedWheelTimer(10, TimeUnit.MILLISECONDS, 1024)
+     * @param writeLimit
+     *          0 or a limit in bytes/s
+     * @param readLimit
+     *          0 or a limit in bytes/s
+     * @param checkInterval
+     *          The delay between two computations of performances for
+     *            channels or 0 if no stats are to be computed
+     * @param maxTime
+     *          The max time to wait in case of excess of traffic (to prevent Time Out event)
+     */
+    protected AbstractTrafficShapingHandler(
+            ObjectSizeEstimator objectSizeEstimator, Timer timer,
+            long writeLimit, long readLimit, long checkInterval, long maxTime) {
+        init(objectSizeEstimator, timer, writeLimit, readLimit, checkInterval, maxTime);
     }
 
     /**
@@ -333,23 +403,10 @@ public abstract class AbstractTrafficShapingHandler extends
         }
     }
 
-    /**
-     * @return the time that should be necessary to wait to respect limit. Can be negative time
-     */
-    private static long getTimeToWait(long limit, long bytes, long lastTime, long curtime) {
-        long interval = curtime - lastTime;
-        if (interval <= 0) {
-            // Time is too short, so just lets continue
-            return 0;
-        }
-        return (bytes * 1000 / limit - interval) / 10 * 10;
-    }
-
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent evt)
             throws Exception {
         try {
-            long curtime = System.currentTimeMillis();
             long size = objectSizeEstimator.estimateSize(evt.getMessage());
             if (trafficCounter != null) {
                 trafficCounter.bytesRecvFlowControl(size);
@@ -358,9 +415,7 @@ public abstract class AbstractTrafficShapingHandler extends
                     return;
                 }
                 // compute the number of ms to wait before reopening the channel
-                long wait = getTimeToWait(readLimit,
-                        trafficCounter.getCurrentReadBytes(),
-                        trafficCounter.getLastTime(), curtime);
+                long wait = trafficCounter.getReadTimeToWait(readLimit, maxTime);
                 if (wait >= MINIMAL_WAIT) { // At least 10ms seems a minimal
                                             // time in order to
                     Channel channel = ctx.getChannel();
@@ -413,7 +468,6 @@ public abstract class AbstractTrafficShapingHandler extends
     public void writeRequested(ChannelHandlerContext ctx, MessageEvent evt)
             throws Exception {
         try {
-            long curtime = System.currentTimeMillis();
             long size = objectSizeEstimator.estimateSize(evt.getMessage());
             if (trafficCounter != null) {
                 trafficCounter.bytesWriteFlowControl(size);
@@ -422,9 +476,7 @@ public abstract class AbstractTrafficShapingHandler extends
                 }
                 // compute the number of ms to wait before continue with the
                 // channel
-                long wait = getTimeToWait(writeLimit,
-                        trafficCounter.getCurrentWrittenBytes(),
-                        trafficCounter.getLastTime(), curtime);
+                long wait = trafficCounter.getWriteTimeToWait(writeLimit, maxTime);
                 if (wait >= MINIMAL_WAIT) {
                     // Global or Channel
                     if (release.get()) {

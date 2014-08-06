@@ -330,6 +330,52 @@ public class TrafficCounter {
     }
 
     /**
+    * @param limitTraffic the traffic limit in bytes per second
+    * @param maxTime the max time in ms to wait in case of excess of traffic
+    * @return the current time to wait (in ms) if needed for Read operation
+    */
+    public long getReadTimeToWait(long limitTraffic, long maxTime) {
+        long interval = System.currentTimeMillis() - lastTime.get();
+        long sum = currentReadBytes.get();
+        if (interval > AbstractTrafficShapingHandler.MINIMAL_WAIT && sum > 0) {
+            long time = (sum * 1000 / limitTraffic - interval) / 10 * 10;
+            if (time > AbstractTrafficShapingHandler.MINIMAL_WAIT) {
+                return time > maxTime ? maxTime : time;
+            }
+        }
+        sum += lastReadBytes;
+        long time = (sum * 1000 / limitTraffic - interval - getCheckInterval())
+                / 10 * 10;
+        if (time > AbstractTrafficShapingHandler.MINIMAL_WAIT) {
+            return time > maxTime ? maxTime : time;
+        }
+        return 0;
+    }
+
+    /**
+    * @param limitTraffic the traffic limit in bytes per second
+    * @param maxTime the max time in ms to wait in case of excess of traffic
+    * @return the current time to wait (in ms) if needed for Write operation
+     */
+    public long getWriteTimeToWait(long limitTraffic, long maxTime) {
+        long interval = System.currentTimeMillis() - lastTime.get();
+        long sum = currentWrittenBytes.get();
+        if (interval > AbstractTrafficShapingHandler.MINIMAL_WAIT && sum > 0) {
+            long time = (sum * 1000 / limitTraffic - interval) / 10 * 10;
+            if (time > AbstractTrafficShapingHandler.MINIMAL_WAIT) {
+                return time > maxTime ? maxTime : time;
+            }
+        }
+        sum += lastWrittenBytes;
+        long time = (sum * 1000 / limitTraffic - interval - getCheckInterval())
+                / 10 * 10;
+        if (time > AbstractTrafficShapingHandler.MINIMAL_WAIT) {
+            return time > maxTime ? maxTime : time;
+        }
+        return 0;
+    }
+
+    /**
      * @return the Time in millisecond of the last check as of System.currentTimeMillis()
      */
     public long getLastTime() {

@@ -45,7 +45,9 @@ import org.jboss.netty.util.Timer;
  * it is recommended to set a positive value, even if it is high since the precision of the
  * Traffic Shaping depends on the period where the traffic is computed. The highest the interval,
  * the less precise the traffic shaping will be. It is suggested as higher value something close
- * to 5 or 10 minutes.<br>
+ * to 5 or 10 minutes.<br><br>
+ *
+ * maxTimeToWait, by default set to 15s, allows to specify an upper bound of time shaping.<br><br>
  * </li>
  * <li>Add it in your pipeline, before a recommended {@link ExecutionHandler} (like
  * {@link OrderedMemoryAwareThreadPoolExecutor} or {@link MemoryAwareThreadPoolExecutor}).<br>
@@ -79,6 +81,12 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
     }
 
     public GlobalTrafficShapingHandler(Timer timer, long writeLimit,
+            long readLimit, long checkInterval, long maxTime) {
+        super(timer, writeLimit, readLimit, checkInterval, maxTime);
+        createGlobalTrafficCounter();
+    }
+
+    public GlobalTrafficShapingHandler(Timer timer, long writeLimit,
             long readLimit) {
         super(timer, writeLimit, readLimit);
         createGlobalTrafficCounter();
@@ -99,6 +107,14 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
             long checkInterval) {
         super(objectSizeEstimator, timer, writeLimit, readLimit,
                 checkInterval);
+        createGlobalTrafficCounter();
+    }
+
+    public GlobalTrafficShapingHandler(ObjectSizeEstimator objectSizeEstimator,
+            Timer timer, long writeLimit, long readLimit,
+            long checkInterval, long maxTime) {
+        super(objectSizeEstimator, timer, writeLimit, readLimit,
+                checkInterval, maxTime);
         createGlobalTrafficCounter();
     }
 

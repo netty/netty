@@ -49,7 +49,9 @@ import org.jboss.netty.util.Timer;
  * it is recommended to set a positive value, even if it is high since the precision of the
  * Traffic Shaping depends on the period where the traffic is computed. The highest the interval,
  * the less precise the traffic shaping will be. It is suggested as higher value something close
- * to 5 or 10 minutes.<br>
+ * to 5 or 10 minutes.<br><br>
+ *
+ * maxTimeToWait, by default set to 15s, allows to specify an upper bound of time shaping.<br><br>
  * </li>
  * <li>When you shutdown your application, release all the external resources (except the timer internal itself)
  * by calling:<br>
@@ -62,6 +64,11 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
     public ChannelTrafficShapingHandler(Timer timer, long writeLimit,
             long readLimit, long checkInterval) {
         super(timer, writeLimit, readLimit, checkInterval);
+    }
+
+    public ChannelTrafficShapingHandler(Timer timer, long writeLimit,
+            long readLimit, long checkInterval, long maxTime) {
+        super(timer, writeLimit, readLimit, checkInterval, maxTime);
     }
 
     public ChannelTrafficShapingHandler(Timer timer, long writeLimit,
@@ -82,6 +89,13 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
             long writeLimit, long readLimit, long checkInterval) {
         super(objectSizeEstimator, timer, writeLimit, readLimit,
                 checkInterval);
+    }
+
+    public ChannelTrafficShapingHandler(
+            ObjectSizeEstimator objectSizeEstimator, Timer timer,
+            long writeLimit, long readLimit, long checkInterval, long maxTime) {
+        super(objectSizeEstimator, timer, writeLimit, readLimit,
+                checkInterval, maxTime);
     }
 
     public ChannelTrafficShapingHandler(
