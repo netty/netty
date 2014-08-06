@@ -460,6 +460,160 @@ public class DefaultTextHeaders implements TextHeaders {
     }
 
     @Override
+    public CharSequence getUnconvertedAndRemove(CharSequence name) {
+        if (name == null) {
+            throw new NullPointerException("name");
+        }
+        int h = hashCode(name);
+        int i = index(h);
+        HeaderEntry e = entries[i];
+        if (e == null) {
+            return null;
+        }
+
+        CharSequence value = null;
+        for (; ; ) {
+            if (e.hash == h && nameEquals(e.name, name)) {
+                value = e.value;
+                e.remove();
+                HeaderEntry next = e.next;
+                if (next != null) {
+                    entries[i] = next;
+                    e = next;
+                } else {
+                    entries[i] = null;
+                    return value;
+                }
+            } else {
+                break;
+            }
+        }
+
+        for (; ; ) {
+            HeaderEntry next = e.next;
+            if (next == null) {
+                break;
+            }
+            if (next.hash == h && nameEquals(next.name, name)) {
+                value = next.value;
+                e.next = next.next;
+                next.remove();
+            } else {
+                e = next;
+            }
+        }
+
+        if (value != null) {
+            return value;
+        }
+
+        return null;
+
+    }
+
+    @Override
+    public String getAndRemove(CharSequence name) {
+        CharSequence v = getUnconvertedAndRemove(name);
+        if (v == null) {
+            return null;
+        }
+        return v.toString();
+    }
+
+    @Override
+    public String getAndRemove(CharSequence name, String defaultValue) {
+        CharSequence v = getUnconvertedAndRemove(name);
+        if (v == null) {
+            return defaultValue;
+        }
+        return v.toString();
+    }
+
+    @Override
+    public int getIntAndRemove(CharSequence name) {
+        CharSequence v = getUnconvertedAndRemove(name);
+        if (v == null) {
+            throw new NoSuchElementException(String.valueOf(name));
+        }
+
+        if (v instanceof AsciiString) {
+            return ((AsciiString) v).parseInt();
+        } else {
+            return Integer.parseInt(v.toString());
+        }
+    }
+
+    @Override
+    public int getIntAndRemove(CharSequence name, int defaultValue) {
+        CharSequence v = getUnconvertedAndRemove(name);
+        if (v == null) {
+            return defaultValue;
+        }
+
+        try {
+            if (v instanceof AsciiString) {
+                return ((AsciiString) v).parseInt();
+            } else {
+                return Integer.parseInt(v.toString());
+            }
+        } catch (NumberFormatException ignored) {
+            return defaultValue;
+        }
+    }
+
+    @Override
+    public long getLongAndRemove(CharSequence name) {
+        CharSequence v = getUnconvertedAndRemove(name);
+        if (v == null) {
+            throw new NoSuchElementException(String.valueOf(name));
+        }
+
+        if (v instanceof AsciiString) {
+            return ((AsciiString) v).parseLong();
+        } else {
+            return Long.parseLong(v.toString());
+        }
+    }
+
+    @Override
+    public long getLongAndRemove(CharSequence name, long defaultValue) {
+        CharSequence v = getUnconvertedAndRemove(name);
+        if (v == null) {
+            return defaultValue;
+        }
+
+        try {
+            if (v instanceof AsciiString) {
+                return ((AsciiString) v).parseLong();
+            } else {
+                return Long.parseLong(v.toString());
+            }
+        } catch (NumberFormatException ignored) {
+            return defaultValue;
+        }
+    }
+
+    @Override
+    public long getTimeMillisAndRemove(CharSequence name) {
+        CharSequence v = getUnconvertedAndRemove(name);
+        if (v == null) {
+            throw new NoSuchElementException(String.valueOf(name));
+        }
+
+        return HttpHeaderDateFormat.get().parse(v.toString());
+    }
+
+    @Override
+    public long getTimeMillisAndRemove(CharSequence name, long defaultValue) {
+        CharSequence v = getUnconvertedAndRemove(name);
+        if (v == null) {
+            return defaultValue;
+        }
+
+        return HttpHeaderDateFormat.get().parse(v.toString(), defaultValue);
+    }
+
+    @Override
     public List<CharSequence> getAllUnconverted(CharSequence name) {
         if (name == null) {
             throw new NullPointerException("name");
@@ -480,6 +634,8 @@ public class DefaultTextHeaders implements TextHeaders {
         return values;
     }
 
+
+
     @Override
     public List<String> getAll(CharSequence name) {
         if (name == null) {
@@ -495,6 +651,104 @@ public class DefaultTextHeaders implements TextHeaders {
                 values.add(e.getValue().toString());
             }
             e = e.next;
+        }
+
+        Collections.reverse(values);
+        return values;
+    }
+
+    @Override
+    public List<String> getAllAndRemove(CharSequence name) {
+        if (name == null) {
+            throw new NullPointerException("name");
+        }
+        int h = hashCode(name);
+        int i = index(h);
+        HeaderEntry e = entries[i];
+        if (e == null) {
+            return null;
+        }
+
+        List<String> values = new ArrayList<String>(4);
+        for (; ; ) {
+            if (e.hash == h && nameEquals(e.name, name)) {
+                values.add(e.getValue().toString());
+                e.remove();
+                HeaderEntry next = e.next;
+                if (next != null) {
+                    entries[i] = next;
+                    e = next;
+                } else {
+                    entries[i] = null;
+                    Collections.reverse(values);
+                    return values;
+                }
+            } else {
+                break;
+            }
+        }
+
+        for (; ; ) {
+            HeaderEntry next = e.next;
+            if (next == null) {
+                break;
+            }
+            if (next.hash == h && nameEquals(next.name, name)) {
+                values.add(next.getValue().toString());
+                e.next = next.next;
+                next.remove();
+            } else {
+                e = next;
+            }
+        }
+
+        Collections.reverse(values);
+        return values;
+    }
+
+    @Override
+    public List<CharSequence> getAllUnconvertedAndRemove(CharSequence name) {
+        if (name == null) {
+            throw new NullPointerException("name");
+        }
+        int h = hashCode(name);
+        int i = index(h);
+        HeaderEntry e = entries[i];
+        if (e == null) {
+            return null;
+        }
+
+        List<CharSequence> values = new ArrayList<CharSequence>(4);
+        for (; ; ) {
+            if (e.hash == h && nameEquals(e.name, name)) {
+                values.add(e.getValue());
+                e.remove();
+                HeaderEntry next = e.next;
+                if (next != null) {
+                    entries[i] = next;
+                    e = next;
+                } else {
+                    entries[i] = null;
+                    Collections.reverse(values);
+                    return values;
+                }
+            } else {
+                break;
+            }
+        }
+
+        for (; ; ) {
+            HeaderEntry next = e.next;
+            if (next == null) {
+                break;
+            }
+            if (next.hash == h && nameEquals(next.name, name)) {
+                values.add(next.getValue());
+                e.next = next.next;
+                next.remove();
+            } else {
+                e = next;
+            }
         }
 
         Collections.reverse(values);

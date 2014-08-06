@@ -25,7 +25,7 @@ import java.util.Set;
 
 public class EmptyTextHeaders implements TextHeaders {
 
-    protected EmptyTextHeaders() { }
+    protected EmptyTextHeaders() {}
 
     @Override
     public String get(CharSequence name) {
@@ -68,7 +68,52 @@ public class EmptyTextHeaders implements TextHeaders {
     }
 
     @Override
+    public String getAndRemove(CharSequence name) {
+        return null;
+    }
+
+    @Override
+    public String getAndRemove(CharSequence name, String defaultValue) {
+        return defaultValue;
+    }
+
+    @Override
+    public int getIntAndRemove(CharSequence name) {
+        throw new NoSuchElementException(String.valueOf(name));
+    }
+
+    @Override
+    public int getIntAndRemove(CharSequence name, int defaultValue) {
+        return defaultValue;
+    }
+
+    @Override
+    public long getLongAndRemove(CharSequence name) {
+        throw new NoSuchElementException(String.valueOf(name));
+    }
+
+    @Override
+    public long getLongAndRemove(CharSequence name, long defaultValue) {
+        return defaultValue;
+    }
+
+    @Override
+    public long getTimeMillisAndRemove(CharSequence name) {
+        throw new NoSuchElementException(String.valueOf(name));
+    }
+
+    @Override
+    public long getTimeMillisAndRemove(CharSequence name, long defaultValue) {
+        return defaultValue;
+    }
+
+    @Override
     public CharSequence getUnconverted(CharSequence name) {
+        return null;
+    }
+
+    @Override
+    public CharSequence getUnconvertedAndRemove(CharSequence name) {
         return null;
     }
 
@@ -79,6 +124,16 @@ public class EmptyTextHeaders implements TextHeaders {
 
     @Override
     public List<CharSequence> getAllUnconverted(CharSequence name) {
+        return Collections.emptyList();
+    }
+
+    @Override
+    public List<String> getAllAndRemove(CharSequence name) {
+        return Collections.emptyList();
+    }
+
+    @Override
+    public List<CharSequence> getAllUnconvertedAndRemove(CharSequence name) {
         return Collections.emptyList();
     }
 
