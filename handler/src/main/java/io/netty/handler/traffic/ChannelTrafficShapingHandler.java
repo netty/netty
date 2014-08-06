@@ -120,7 +120,7 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
     }
 
     @Override
-    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+    public synchronized void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
         if (trafficCounter != null) {
             trafficCounter.stop();
         }
@@ -147,6 +147,10 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
     @Override
     protected synchronized void submitWrite(final ChannelHandlerContext ctx, final Object msg, final long delay,
             final ChannelPromise promise) {
+        if (delay == 0 && messagesQueue.isEmpty()) {
+            ctx.write(msg, promise);
+            return;
+        }
         final ToSend newToSend = new ToSend(delay, msg, promise);
         messagesQueue.add(newToSend);
         ctx.executor().schedule(new Runnable() {
