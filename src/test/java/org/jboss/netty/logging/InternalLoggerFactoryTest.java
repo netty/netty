@@ -43,7 +43,6 @@ public class InternalLoggerFactoryTest {
         InternalLoggerFactory.setDefaultFactory(oldLoggerFactory);
     }
 
-
     @Test(expected = NullPointerException.class)
     public void shouldNotAllowNullDefaultFactory() {
         InternalLoggerFactory.setDefaultFactory(null);
