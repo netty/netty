@@ -68,8 +68,6 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
 
     private final NotificationHandler<?> notificationHandler;
 
-    private RecvByteBufAllocator.Handle allocHandle;
-
     private static SctpChannel newSctpChannel() {
         try {
             return SctpChannel.open();
@@ -265,10 +263,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     protected int doReadMessages(List<Object> buf) throws Exception {
         SctpChannel ch = javaChannel();
 
-        RecvByteBufAllocator.Handle allocHandle = this.allocHandle;
-        if (allocHandle == null) {
-            this.allocHandle = allocHandle = config().getRecvByteBufAllocator().newHandle();
-        }
+        RecvByteBufAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();
         ByteBuf buffer = allocHandle.allocate(config().getAllocator());
         boolean free = true;
         try {
