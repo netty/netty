@@ -76,8 +76,6 @@ public class OioSctpChannel extends AbstractOioMessageChannel
 
     private final NotificationHandler<?> notificationHandler;
 
-    private RecvByteBufAllocator.Handle allocHandle;
-
     private static SctpChannel openChannel() {
         try {
             return SctpChannel.open();
@@ -187,10 +185,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
         Set<SelectionKey> reableKeys = readSelector.selectedKeys();
         try {
             for (SelectionKey ignored : reableKeys) {
-                RecvByteBufAllocator.Handle allocHandle = this.allocHandle;
-                if (allocHandle == null) {
-                    this.allocHandle = allocHandle = config().getRecvByteBufAllocator().newHandle();
-                }
+                RecvByteBufAllocator.Handle allocHandle = recvHandle();
                 ByteBuf buffer = allocHandle.allocate(config().getAllocator());
                 boolean free = true;
 

@@ -61,6 +61,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private volatile SocketAddress remoteAddress;
     private volatile EventLoop eventLoop;
     private volatile boolean registered;
+    private volatile RecvByteBufAllocator.Handle recvHandle;
 
     /** Cache for the string representation of this channel */
     private boolean strValActive;
@@ -116,6 +117,14 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     @Override
     public ByteBufAllocator alloc() {
         return config().getAllocator();
+    }
+
+    @Override
+    public RecvByteBufAllocator.Handle recvHandle() {
+        if (recvHandle == null) {
+            recvHandle = config().getRecvByteBufAllocator().newHandle();
+        }
+        return recvHandle;
     }
 
     @Override

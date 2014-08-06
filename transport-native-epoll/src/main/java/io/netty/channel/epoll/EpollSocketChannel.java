@@ -693,10 +693,7 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
             final ChannelConfig config = config();
             final ChannelPipeline pipeline = pipeline();
             final ByteBufAllocator allocator = config.getAllocator();
-            RecvByteBufAllocator.Handle allocHandle = this.allocHandle;
-            if (allocHandle == null) {
-                this.allocHandle = allocHandle = config.getRecvByteBufAllocator().newHandle();
-            }
+            RecvByteBufAllocator.Handle allocHandle = recvHandle();
 
             ByteBuf byteBuf = null;
             boolean close = false;
