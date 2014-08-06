@@ -43,9 +43,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
 
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.Logger;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
@@ -81,10 +78,6 @@ public class TrafficShapingTest {
     
     @BeforeClass
     public static void createGroup() {
-        InternalLoggerFactory.setDefaultFactory(new Slf4JLoggerFactory());
-        Logger logger = (Logger) LoggerFactory.getLogger("ROOT");
-        logger.setLevel(Level.INFO);
-        //logger.setLevel(Level.DEBUG);
         serverSocketAddress = new InetSocketAddress("127.0.0.1", 0);
 
         bootstrapServer = new ServerBootstrap(
