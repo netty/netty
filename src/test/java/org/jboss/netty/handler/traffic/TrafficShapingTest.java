@@ -31,9 +31,11 @@ import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.jboss.netty.handler.execution.ExecutionHandler;
 import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
+import org.jboss.netty.handler.traffic.AbstractTrafficShapingHandler;
+import org.jboss.netty.handler.traffic.ChannelTrafficShapingHandler;
+import org.jboss.netty.handler.traffic.GlobalTrafficShapingHandler;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.logging.Slf4JLoggerFactory;
 import org.jboss.netty.util.HashedWheelTimer;
 import org.jboss.netty.util.Timeout;
 import org.jboss.netty.util.Timer;
@@ -41,7 +43,6 @@ import org.jboss.netty.util.TimerTask;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -175,7 +176,7 @@ public class TrafficShapingTest {
         minimalWaitBetween[0] = 0;
         for (int i = 0; i < multipleMessage.length; i++) {
             minimalWaitBetween[i + 1] = (multipleMessage[i] - 1) * (1000 / bandwidthFactor)
-                    + (1000 / bandwidthFactor - 100);
+                    + (1000 / bandwidthFactor - 150);
         }
         return minimalWaitBetween;
     }
@@ -320,17 +321,53 @@ public class TrafficShapingTest {
         testTrafficShapping0(sb, cb, false, true, false, true, autoRead, minimalWaitBetween, multipleMessage);
     }
 
-    @Test(timeout = 60000)
+    @Test(timeout = 30000)
     public void testAutoReadTrafficShapping() throws Throwable {
         logger.info("TEST AUTO READ");
         testAutoReadTrafficShapping(bootstrapServer, bootstrapCient);
     }
 
     public void testAutoReadTrafficShapping(ServerBootstrap sb, ClientBootstrap cb) throws Throwable {
-        int[] autoRead = { 1, -1, -1, 1, -2, 0, 1, -3, 0, 1, 2, 0 };
-        int[] multipleMessage = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+        int[] autoRead = { 1, -1, -1, 1, -2, 0, 1, 0, -3, 0, 1, 2, 0 };
+        int[] multipleMessage = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
         long[] minimalWaitBetween = computeWaitRead(multipleMessage);
         testTrafficShapping0(sb, cb, false, true, false, false, autoRead, minimalWaitBetween, multipleMessage);
+    }
+    @Test(timeout = 30000)
+    public void testAutoReadGlobalTrafficShapping() throws Throwable {
+        logger.info("TEST AUTO READ GLOBAL");
+        testAutoReadTrafficShapping(bootstrapServer, bootstrapCient);
+    }
+
+    public void testAutoReadGlobalTrafficShapping(ServerBootstrap sb, ClientBootstrap cb) throws Throwable {
+        int[] autoRead = { 1, -1, -1, 1, -2, 0, 1, 0, -3, 0, 1, 2, 0 };
+        int[] multipleMessage = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+        long[] minimalWaitBetween = computeWaitRead(multipleMessage);
+        testTrafficShapping0(sb, cb, false, true, false, true, autoRead, minimalWaitBetween, multipleMessage);
+    }
+    @Test(timeout = 30000)
+    public void testAutoReadExecTrafficShapping() throws Throwable {
+        logger.info("TEST AUTO READ EXEC");
+        testAutoReadTrafficShapping(bootstrapServer, bootstrapCient);
+    }
+
+    public void testAutoReadExecTrafficShapping(ServerBootstrap sb, ClientBootstrap cb) throws Throwable {
+        int[] autoRead = { 1, -1, -1, 1, -2, 0, 1, 0, -3, 0, 1, 2, 0 };
+        int[] multipleMessage = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+        long[] minimalWaitBetween = computeWaitRead(multipleMessage);
+        testTrafficShapping0(sb, cb, true, true, false, false, autoRead, minimalWaitBetween, multipleMessage);
+    }
+    @Test(timeout = 30000)
+    public void testAutoReadExecGlobalTrafficShapping() throws Throwable {
+        logger.info("TEST AUTO READ EXEC GLOBAL");
+        testAutoReadTrafficShapping(bootstrapServer, bootstrapCient);
+    }
+
+    public void testAutoReadExecGlobalTrafficShapping(ServerBootstrap sb, ClientBootstrap cb) throws Throwable {
+        int[] autoRead = { 1, -1, -1, 1, -2, 0, 1, 0, -3, 0, 1, 2, 0 };
+        int[] multipleMessage = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+        long[] minimalWaitBetween = computeWaitRead(multipleMessage);
+        testTrafficShapping0(sb, cb, true, true, false, true, autoRead, minimalWaitBetween, multipleMessage);
     }
 
     /**
@@ -473,14 +510,8 @@ public class TrafficShapingTest {
                     ar = autoRead[step - 1];
                     if (ar > 0) {
                         minimalWait = -1;
-                        if (ar == 2) {
-                            minimalWait = 1000 / bandwidthFactor + 100;
-                        }
                     } else {
                         minimalWait = 100;
-                        if (ar == -3) {
-                            minimalWait = 1000 / bandwidthFactor + 100;
-                        }
                     }
                 } else {
                     minimalWait = 0;
@@ -552,7 +583,7 @@ public class TrafficShapingTest {
                     step++;
                 }
             }
-            if (autoRead != null && isAutoRead != 2 && isAutoRead != -3) {
+            if (autoRead != null && isAutoRead != 2) {
                 if (isAutoRead != 0) {
                     logger.info("Set AutoRead: " + (isAutoRead > 0) + " Step: " + step);
                     channel.setReadable(isAutoRead > 0);
@@ -571,9 +602,6 @@ public class TrafficShapingTest {
                     final int exactStep = step;
                     int wait = (isAutoRead == -1) ? 100 : 1000 / bandwidthFactor + 100;
                     if (isAutoRead == -3) {
-                        Thread.sleep(wait);
-                        logger.info("Set AutoRead: True for long time, Step: " + step);
-                        channel.setReadable(isAutoRead > 0);
                         wait = 1000;
                     }
                     timer.newTimeout(new TimerTask() {
@@ -584,9 +612,12 @@ public class TrafficShapingTest {
                     }, wait, TimeUnit.MILLISECONDS);
                 } else {
                     if (isAutoRead > 1) {
-                        Thread.sleep(1000 / bandwidthFactor + 100);
-                        logger.info("AutoRead: " + isAutoRead + " Step:" + step);
-                        channel.setReadable(isAutoRead > 0);
+                        timer.newTimeout(new TimerTask() {
+                            public void run(Timeout timeout) throws Exception {
+                                logger.info("AutoRead: True, Step " + step);
+                                channel.setReadable(true);
+                            }
+                        }, 1000 / bandwidthFactor + 100, TimeUnit.MILLISECONDS);
                     }
                 }
             }
