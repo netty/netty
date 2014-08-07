@@ -298,16 +298,19 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
                 // If AutoRead is False and Active is True, user make a direct setAutoRead(false)
                 // Then Just reset the status
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Not Unsuspend: " + ctx.channel().config().isAutoRead() + ":" + isHandlerActive(ctx));
+                    logger.debug("Channel:" + ctx.channel().hashCode() +
+                            " Not Unsuspend: " + ctx.channel().config().isAutoRead() + ":" + isHandlerActive(ctx));
                 }
                 ctx.attr(READ_SUSPENDED).set(false);
             } else {
                 // Anything else allows the handler to reset the AutoRead
                 if (logger.isDebugEnabled()) {
                     if (ctx.channel().config().isAutoRead() && !isHandlerActive(ctx)) {
-                        logger.debug("Unsuspend: " + ctx.channel().config().isAutoRead() + ":" + isHandlerActive(ctx));
+                        logger.debug("Channel:" + ctx.channel().hashCode() +
+                                " Unsuspend: " + ctx.channel().config().isAutoRead() + ":" + isHandlerActive(ctx));
                     } else {
-                        logger.debug("Normal Unsuspend: " + ctx.channel().config().isAutoRead() + ":"
+                        logger.debug("Channel:" + ctx.channel().hashCode() +
+                                " Normal Unsuspend: " + ctx.channel().config().isAutoRead() + ":"
                                 + isHandlerActive(ctx));
                     }
                 }
@@ -316,7 +319,8 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
                 ctx.channel().read();
             }
             if (logger.isDebugEnabled()) {
-                logger.debug("Unsupsend final status => " + ctx.channel().config().isAutoRead() + ":"
+                logger.debug("Channel:" + ctx.channel().hashCode() +
+                        " Unsupsend final status => " + ctx.channel().config().isAutoRead() + ":"
                         + isHandlerActive(ctx));
             }
         }
@@ -333,16 +337,13 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
                 // time in order to try to limit the traffic
                 // Only AutoRead AND HandlerActive True means Context Active
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Read Suspend: " + wait + ":" + ctx.channel().config().isAutoRead() + ":"
+                    logger.debug("Channel:" + ctx.channel().hashCode() +
+                            " Read Suspend: " + wait + ":" + ctx.channel().config().isAutoRead() + ":"
                             + isHandlerActive(ctx));
                 }
                 if (ctx.channel().config().isAutoRead() && isHandlerActive(ctx)) {
                     ctx.channel().config().setAutoRead(false);
                     ctx.attr(READ_SUSPENDED).set(true);
-                    if (logger.isDebugEnabled()) {
-                        logger.debug("Suspend final status => " + ctx.channel().config().isAutoRead() + ":"
-                                + isHandlerActive(ctx));
-                    }
                     // Create a Runnable to reactive the read if needed. If one was create before it will just be
                     // reused to limit object creation
                     Attribute<Runnable> attr = ctx.attr(REOPEN_TASK);
@@ -352,6 +353,11 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
                         attr.set(reopenTask);
                     }
                     ctx.executor().schedule(reopenTask, wait, TimeUnit.MILLISECONDS);
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("Channel:" + ctx.channel().hashCode() +
+                                " Suspend final status => " + ctx.channel().config().isAutoRead() + ":"
+                                + isHandlerActive(ctx)+" will reopened at: " + wait);
+                    }
                 }
             }
         }
@@ -379,10 +385,6 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
         if (size > 0 && trafficCounter != null) {
             // compute the number of ms to wait before continue with the channel
             long wait = trafficCounter.writeTimeToWait(size, writeLimit, maxTime);
-            if (logger.isDebugEnabled()) {
-                logger.debug("Write suspend: " + wait + ":" + ctx.channel().config().isAutoRead() + ":"
-                        + isHandlerActive(ctx));
-            }
             if (wait >= MINIMAL_WAIT) {
                 /*
                  * Option 2: but issue with ctx.executor().schedule()
@@ -391,6 +393,11 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
                  * Option 1: use an ordered list of messages to send
                  * Warning of memory pressure!
                  */
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Channel:" + ctx.channel().hashCode() +
+                            " Write suspend: " + wait + ":" + ctx.channel().config().isAutoRead() + ":"
+                            + isHandlerActive(ctx));
+                }
                 submitWrite(ctx, msg, wait, promise);
                 return;
             }

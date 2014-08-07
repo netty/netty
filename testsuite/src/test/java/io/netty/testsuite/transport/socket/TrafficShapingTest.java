@@ -51,6 +51,8 @@ import static org.junit.Assert.*;
 
 public class TrafficShapingTest extends AbstractSocketTest {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(TrafficShapingTest.class);
+    private static final InternalLogger loggerServer = InternalLoggerFactory.getInstance(ValidTimestampedHandler.class);
+    private static final InternalLogger loggerClient = InternalLoggerFactory.getInstance(ClientTrafficHandler.class);
 
     static final int messageSize = 1024;
     static final int bandwidthFactor = 4;
@@ -58,6 +60,8 @@ public class TrafficShapingTest extends AbstractSocketTest {
     private static final Random random = new Random();
     static final byte[] data = new byte[messageSize];
 
+    private static final String TRAFFIC = "traffic";
+    
     private static EventExecutorGroup group;
     private static ScheduledExecutorService executor = Executors.newScheduledThreadPool(10);
     static {
@@ -82,7 +86,7 @@ public class TrafficShapingTest extends AbstractSocketTest {
         minimalWaitBetween[0] = 0;
         for (int i = 0; i < multipleMessage.length; i++) {
             minimalWaitBetween[i + 1] = (multipleMessage[i] - 1) * (1000 / bandwidthFactor)
-                    + (1000 / bandwidthFactor - 100);
+                    + (1000 / bandwidthFactor - 150);
         }
         return minimalWaitBetween;
     }
@@ -233,10 +237,46 @@ public class TrafficShapingTest extends AbstractSocketTest {
     }
 
     public void testAutoReadTrafficShapping(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        int[] autoRead = { 1, -1, -1, 1, -2, 0, 1, -3, 0, 1, 2, 0 };
-        int[] multipleMessage = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+        int[] autoRead = { 1, -1, -1, 1, -2, 0, 1, 0, -3, 0, 1, 2, 0 };
+        int[] multipleMessage = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
         long[] minimalWaitBetween = computeWaitRead(multipleMessage);
         testTrafficShapping0(sb, cb, false, true, false, false, autoRead, minimalWaitBetween, multipleMessage);
+    }
+    @Test(timeout = 60000)
+    public void testAutoReadGlobalTrafficShapping() throws Throwable {
+        logger.info("TEST AUTO READ GLOBAL");
+        run();
+    }
+
+    public void testAutoReadGlobalTrafficShapping(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        int[] autoRead = { 1, -1, -1, 1, -2, 0, 1, 0, -3, 0, 1, 2, 0 };
+        int[] multipleMessage = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+        long[] minimalWaitBetween = computeWaitRead(multipleMessage);
+        testTrafficShapping0(sb, cb, false, true, false, true, autoRead, minimalWaitBetween, multipleMessage);
+    }
+    @Test(timeout = 60000)
+    public void testAutoReadExecTrafficShapping() throws Throwable {
+        logger.info("TEST AUTO READ EXEC");
+        run();
+    }
+
+    public void testAutoReadExecTrafficShapping(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        int[] autoRead = { 1, -1, -1, 1, -2, 0, 1, 0, -3, 0, 1, 2, 0 };
+        int[] multipleMessage = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+        long[] minimalWaitBetween = computeWaitRead(multipleMessage);
+        testTrafficShapping0(sb, cb, true, true, false, false, autoRead, minimalWaitBetween, multipleMessage);
+    }
+    @Test(timeout = 60000)
+    public void testAutoReadExecGlobalTrafficShapping() throws Throwable {
+        logger.info("TEST AUTO READ EXEC GLOBAL");
+        run();
+    }
+
+    public void testAutoReadExecGlobalTrafficShapping(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        int[] autoRead = { 1, -1, -1, 1, -2, 0, 1, 0, -3, 0, 1, 2, 0 };
+        int[] multipleMessage = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+        long[] minimalWaitBetween = computeWaitRead(multipleMessage);
+        testTrafficShapping0(sb, cb, true, true, false, true, autoRead, minimalWaitBetween, multipleMessage);
     }
 
     /**
@@ -292,9 +332,9 @@ public class TrafficShapingTest extends AbstractSocketTest {
             protected void initChannel(SocketChannel c) throws Exception {
                 if (limitRead) {
                     if (additionalExecutor) {
-                        c.pipeline().addLast(group, handler);
+                        c.pipeline().addLast(group, TRAFFIC, handler);
                     } else {
-                        c.pipeline().addLast(handler);
+                        c.pipeline().addLast(TRAFFIC, handler);
                     }
                 }
                 if (additionalExecutor) {
@@ -309,9 +349,9 @@ public class TrafficShapingTest extends AbstractSocketTest {
             protected void initChannel(SocketChannel c) throws Exception {
                 if (limitWrite) {
                     if (additionalExecutor) {
-                        c.pipeline().addLast(group, handler);
+                        c.pipeline().addLast(group, TRAFFIC, handler);
                     } else {
-                        c.pipeline().addLast(handler);
+                        c.pipeline().addLast(TRAFFIC, handler);
                     }
                 }
                 if (additionalExecutor) {
@@ -419,20 +459,14 @@ public class TrafficShapingTest extends AbstractSocketTest {
                     ar = autoRead[step - 1];
                     if (ar > 0) {
                         minimalWait = -1;
-                        if (ar == 2) {
-                            minimalWait = 1000 / bandwidthFactor + 100;
-                        }
                     } else {
                         minimalWait = 100;
-                        if (ar == -3) {
-                            minimalWait = 1000 / bandwidthFactor + 100;
-                        }
                     }
                 } else {
                     minimalWait = 0;
                 }
             }
-            logger.info("Step: " + step + " Interval: " + (lastTimestamp - currentLastTime) + " compareTo "
+            loggerClient.info("Step: " + step + " Interval: " + (lastTimestamp - currentLastTime) + " compareTo "
                     + minimalWait + " (" + ar + ")");
             assertTrue("The interval of time is incorrect:" + (lastTimestamp - currentLastTime) + " not> "
                     + minimalWait, lastTimestamp - currentLastTime >= minimalWait);
@@ -483,6 +517,7 @@ public class TrafficShapingTest extends AbstractSocketTest {
             long timestamp = System.currentTimeMillis();
             int nb = actual.length / messageSize;
             int isAutoRead = 0;
+            int laststep = step;
             for (int i = 0; i < nb; i++) {
                 multipleMessage[step]--;
                 if (multipleMessage[step] == 0) {
@@ -492,42 +527,47 @@ public class TrafficShapingTest extends AbstractSocketTest {
                     step++;
                 }
             }
-            if (autoRead != null && isAutoRead != 2 && isAutoRead != -3) {
-                if (isAutoRead != 0) {
-                    logger.info("Set AutoRead: " + (isAutoRead > 0) + " Step: " + step);
-                    channel.config().setAutoRead(isAutoRead > 0);
-                } else {
-                    logger.info("AutoRead: NO Step:" + step);
+            if (laststep != step) {
+                if (autoRead != null && isAutoRead != 2) {
+                    if (isAutoRead != 0) {
+                        loggerServer.info("Set AutoRead: " + (isAutoRead > 0) + " Step: " + step);
+                        channel.config().setAutoRead(isAutoRead > 0);
+                    } else {
+                        loggerServer.info("AutoRead: NO Step:" + step);
+                    }
                 }
             }
-            logger.debug("Get: " + actual.length + " TS " + timestamp + " NB: " + nb);
+            loggerServer.debug("Step: " + step + " Get: " + actual.length + " TS " + timestamp + " NB: " + nb);
             for (int i = 0; i < nb; i++) {
                 channel.write(Unpooled.copyLong(timestamp));
             }
             channel.flush();
-            if (isAutoRead != 0) {
-                if (isAutoRead < 0) {
-                    final int exactStep = step;
-                    int wait = (isAutoRead == -1) ? 100 : 1000 / bandwidthFactor + 100;
-                    if (isAutoRead == -3) {
-                        Thread.sleep(wait);
-                        logger.info("Set AutoRead: True for long time, Step: " + step);
-                        channel.config().setAutoRead(isAutoRead > 0);
-                        wait = 1000;
-                    }
-                    executor.schedule(new Runnable() {
-
-                        @Override
-                        public void run() {
-                            logger.info("Reset AutoRead: Step " + exactStep);
-                            channel.config().setAutoRead(true);
+            if (laststep != step) {
+                if (isAutoRead != 0) {
+                    if (isAutoRead < 0) {
+                        final int exactStep = step;
+                        int wait = (isAutoRead == -1) ? 100 : 1000 / bandwidthFactor + 100;
+                        if (isAutoRead == -3) {
+                            wait = 1000;
                         }
-                    }, wait, TimeUnit.MILLISECONDS);
-                } else {
-                    if (isAutoRead > 1) {
-                        Thread.sleep(1000 / bandwidthFactor + 100);
-                        logger.info("AutoRead: " + isAutoRead + " Step:" + step);
-                        channel.config().setAutoRead(isAutoRead > 0);
+                        executor.schedule(new Runnable() {
+                            @Override
+                            public void run() {
+                                loggerServer.info("Reset AutoRead: Step " + exactStep);
+                                channel.config().setAutoRead(true);
+                            }
+                        }, wait, TimeUnit.MILLISECONDS);
+                    } else {
+                        if (isAutoRead > 1) {
+                            loggerServer.info("Will Set AutoRead: Rrue, Step: " + step);
+                            executor.schedule(new Runnable() {
+                                @Override
+                                public void run() {
+                                    loggerServer.info("Set AutoRead: Rrue, Step: " + step);
+                                    channel.config().setAutoRead(true);
+                                }
+                            }, 1000 / bandwidthFactor + 100, TimeUnit.MILLISECONDS);
+                        }
                     }
                 }
             }

@@ -228,8 +228,8 @@ public class TrafficCounter {
             // nothing to do
             return;
         }
-        if (logger.isInfoEnabled() && (interval > 2 * checkInterval())) {
-            logger.info("Acct schedule not ok: " + interval + " > 2*" + checkInterval() + " from " + name);
+        if (logger.isDebugEnabled() && interval > 2 * checkInterval()) {
+            logger.debug("Acct schedule not ok: " + interval + " > 2*" + checkInterval() + " from " + name);
         }
         lastReadBytes = currentReadBytes.getAndSet(0);
         lastWrittenBytes = currentWrittenBytes.getAndSet(0);
