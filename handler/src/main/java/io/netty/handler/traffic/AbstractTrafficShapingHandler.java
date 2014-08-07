@@ -356,7 +356,8 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
                     if (logger.isDebugEnabled()) {
                         logger.debug("Channel:" + ctx.channel().hashCode() +
                                 " Suspend final status => " + ctx.channel().config().isAutoRead() + ":"
-                                + isHandlerActive(ctx) + " will reopened at: " + wait);
+                                + isHandlerActive(ctx) +
+                                " will reopened at: " + wait);
                     }
                 }
             }
