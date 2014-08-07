@@ -233,10 +233,46 @@ public class TrafficShapingTest extends AbstractSocketTest {
     }
 
     public void testAutoReadTrafficShapping(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        int[] autoRead = { 1, -1, -1, 1, -2, 0, 1, -3, 0, 1, 2, 0 };
-        int[] multipleMessage = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+        int[] autoRead = { 1, -1, -1, 1, -2, 0, 1, 0, -3, 0, 1, 2, 0 };
+        int[] multipleMessage = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
         long[] minimalWaitBetween = computeWaitRead(multipleMessage);
         testTrafficShapping0(sb, cb, false, true, false, false, autoRead, minimalWaitBetween, multipleMessage);
+    }
+    @Test(timeout = 60000)
+    public void testAutoReadGlobalTrafficShapping() throws Throwable {
+        logger.info("TEST AUTO READ GLOBAL");
+        run();
+    }
+
+    public void testAutoReadGlobalTrafficShapping(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        int[] autoRead = { 1, -1, -1, 1, -2, 0, 1, 0, -3, 0, 1, 2, 0 };
+        int[] multipleMessage = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+        long[] minimalWaitBetween = computeWaitRead(multipleMessage);
+        testTrafficShapping0(sb, cb, false, true, false, true, autoRead, minimalWaitBetween, multipleMessage);
+    }
+    @Test(timeout = 60000)
+    public void testAutoReadExecTrafficShapping() throws Throwable {
+        logger.info("TEST AUTO READ EXEC");
+        run();
+    }
+
+    public void testAutoReadExecTrafficShapping(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        int[] autoRead = { 1, -1, -1, 1, -2, 0, 1, 0, -3, 0, 1, 2, 0 };
+        int[] multipleMessage = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+        long[] minimalWaitBetween = computeWaitRead(multipleMessage);
+        testTrafficShapping0(sb, cb, true, true, false, false, autoRead, minimalWaitBetween, multipleMessage);
+    }
+    @Test(timeout = 60000)
+    public void testAutoReadExecGlobalTrafficShapping() throws Throwable {
+        logger.info("TEST AUTO READ EXEC GLOBAL");
+        run();
+    }
+
+    public void testAutoReadExecGlobalTrafficShapping(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        int[] autoRead = { 1, -1, -1, 1, -2, 0, 1, 0, -3, 0, 1, 2, 0 };
+        int[] multipleMessage = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+        long[] minimalWaitBetween = computeWaitRead(multipleMessage);
+        testTrafficShapping0(sb, cb, true, true, false, true, autoRead, minimalWaitBetween, multipleMessage);
     }
 
     /**
@@ -419,14 +455,8 @@ public class TrafficShapingTest extends AbstractSocketTest {
                     ar = autoRead[step - 1];
                     if (ar > 0) {
                         minimalWait = -1;
-                        if (ar == 2) {
-                            minimalWait = 1000 / bandwidthFactor + 100;
-                        }
                     } else {
                         minimalWait = 100;
-                        if (ar == -3) {
-                            minimalWait = 1000 / bandwidthFactor + 100;
-                        }
                     }
                 } else {
                     minimalWait = 0;
@@ -483,6 +513,7 @@ public class TrafficShapingTest extends AbstractSocketTest {
             long timestamp = System.currentTimeMillis();
             int nb = actual.length / messageSize;
             int isAutoRead = 0;
+            int laststep = step;
             for (int i = 0; i < nb; i++) {
                 multipleMessage[step]--;
                 if (multipleMessage[step] == 0) {
@@ -492,7 +523,7 @@ public class TrafficShapingTest extends AbstractSocketTest {
                     step++;
                 }
             }
-            if (autoRead != null && isAutoRead != 2 && isAutoRead != -3) {
+            if (laststep != step && autoRead != null && isAutoRead != 2) {
                 if (isAutoRead != 0) {
                     logger.info("Set AutoRead: " + (isAutoRead > 0) + " Step: " + step);
                     channel.config().setAutoRead(isAutoRead > 0);
@@ -505,18 +536,14 @@ public class TrafficShapingTest extends AbstractSocketTest {
                 channel.write(Unpooled.copyLong(timestamp));
             }
             channel.flush();
-            if (isAutoRead != 0) {
+            if (laststep != step && isAutoRead != 0) {
                 if (isAutoRead < 0) {
                     final int exactStep = step;
                     int wait = (isAutoRead == -1) ? 100 : 1000 / bandwidthFactor + 100;
                     if (isAutoRead == -3) {
-                        Thread.sleep(wait);
-                        logger.info("Set AutoRead: True for long time, Step: " + step);
-                        channel.config().setAutoRead(isAutoRead > 0);
                         wait = 1000;
                     }
                     executor.schedule(new Runnable() {
-
                         @Override
                         public void run() {
                             logger.info("Reset AutoRead: Step " + exactStep);
@@ -525,9 +552,14 @@ public class TrafficShapingTest extends AbstractSocketTest {
                     }, wait, TimeUnit.MILLISECONDS);
                 } else {
                     if (isAutoRead > 1) {
-                        Thread.sleep(1000 / bandwidthFactor + 100);
-                        logger.info("AutoRead: " + isAutoRead + " Step:" + step);
-                        channel.config().setAutoRead(isAutoRead > 0);
+                        logger.info("Will Set AutoRead: Rrue, Step: " + step);
+                        executor.schedule(new Runnable() {
+                            @Override
+                            public void run() {
+                                logger.info("Set AutoRead: Rrue, Step: " + step);
+                                channel.config().setAutoRead(true);
+                            }
+                        }, 1000 / bandwidthFactor + 100, TimeUnit.MILLISECONDS);
                     }
                 }
             }
