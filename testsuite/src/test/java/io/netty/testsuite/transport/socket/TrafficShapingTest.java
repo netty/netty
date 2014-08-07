@@ -82,7 +82,7 @@ public class TrafficShapingTest extends AbstractSocketTest {
         minimalWaitBetween[0] = 0;
         for (int i = 0; i < multipleMessage.length; i++) {
             minimalWaitBetween[i + 1] = (multipleMessage[i] - 1) * (1000 / bandwidthFactor)
-                    + (1000 / bandwidthFactor - 100);
+                    + (1000 / bandwidthFactor - 150);
         }
         return minimalWaitBetween;
     }

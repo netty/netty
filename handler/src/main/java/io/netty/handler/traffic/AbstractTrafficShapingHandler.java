@@ -337,10 +337,6 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
                 if (ctx.channel().config().isAutoRead() && isHandlerActive(ctx)) {
                     ctx.channel().config().setAutoRead(false);
                     ctx.attr(READ_SUSPENDED).set(true);
-                    if (logger.isDebugEnabled()) {
-                        logger.debug("Suspend final status => " + ctx.channel().config().isAutoRead() + ":"
-                                + isHandlerActive(ctx));
-                    }
                     // Create a Runnable to reactive the read if needed. If one was create before it will just be
                     // reused to limit object creation
                     Attribute<Runnable> attr = ctx.attr(REOPEN_TASK);
@@ -350,6 +346,10 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
                         attr.set(reopenTask);
                     }
                     ctx.executor().schedule(reopenTask, wait, TimeUnit.MILLISECONDS);
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("Suspend final status => " + ctx.channel().config().isAutoRead() + ":"
+                                + isHandlerActive(ctx) + " will reopened at: " + wait);
+                    }
                 }
             }
         }
@@ -377,11 +377,11 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
         if (size > 0 && trafficCounter != null) {
             // compute the number of ms to wait before continue with the channel
             long wait = trafficCounter.writeTimeToWait(size, writeLimit, maxTime);
-            if (logger.isDebugEnabled()) {
-                logger.debug("Write suspend: " + wait + ":" + ctx.channel().config().isAutoRead() + ":"
-                        + isHandlerActive(ctx));
-            }
             if (wait >= MINIMAL_WAIT) {
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Write suspend: " + wait + ":" + ctx.channel().config().isAutoRead() + ":"
+                            + isHandlerActive(ctx));
+                }
                 /*
                  * Option 2: but issue with ctx.executor().schedule()
                  * Thread.sleep(wait);
