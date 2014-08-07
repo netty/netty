@@ -61,7 +61,7 @@ public class TrafficShapingTest extends AbstractSocketTest {
     static final byte[] data = new byte[messageSize];
 
     private static final String TRAFFIC = "traffic";
-    
+
     private static EventExecutorGroup group;
     private static ScheduledExecutorService executor = Executors.newScheduledThreadPool(10);
     static {
