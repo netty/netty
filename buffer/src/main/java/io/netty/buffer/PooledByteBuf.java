@@ -124,6 +124,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
         return null;
     }
 
+    @Override
     protected final ByteBuffer internalNioBuffer() {
         ByteBuffer tmpNioBuf = this.tmpNioBuf;
         if (tmpNioBuf == null) {
@@ -154,6 +155,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
 
     protected abstract Recycler<?> recycler();
 
+    @Override
     protected final int idx(int index) {
         return offset + index;
     }

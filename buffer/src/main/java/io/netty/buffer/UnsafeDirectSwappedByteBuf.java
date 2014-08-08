@@ -16,8 +16,6 @@
 
 package io.netty.buffer;
 
-import io.netty.util.internal.PlatformDependent;
-
 import java.nio.ByteOrder;
 
 /**
@@ -34,19 +32,10 @@ final class UnsafeDirectSwappedByteBuf extends SwappedByteBuf {
         nativeByteOrder = NATIVE_ORDER == (order() == ByteOrder.BIG_ENDIAN);
     }
 
-    private long addr(int index) {
-        // We need to call wrapped.memoryAddress() everytime and NOT cache it as it may change if the buffer expand.
-        // See:
-        // - https://github.com/netty/netty/issues/2587
-        // - https://github.com/netty/netty/issues/2580
-        return wrapped.memoryAddress() + index;
-    }
-
     @Override
     public long getLong(int index) {
         wrapped.checkIndex(index, 8);
-        long v = PlatformDependent.getLong(addr(index));
-        return nativeByteOrder? v : Long.reverseBytes(v);
+        return UnsafeDirectByteBufUtil._getLong(wrapped, index, nativeByteOrder);
     }
 
     @Override
@@ -72,8 +61,7 @@ final class UnsafeDirectSwappedByteBuf extends SwappedByteBuf {
     @Override
     public int getInt(int index) {
         wrapped.checkIndex(index, 4);
-        int v = PlatformDependent.getInt(addr(index));
-        return nativeByteOrder? v : Integer.reverseBytes(v);
+        return UnsafeDirectByteBufUtil._getInt(wrapped, index, nativeByteOrder);
     }
 
     @Override
@@ -84,28 +72,27 @@ final class UnsafeDirectSwappedByteBuf extends SwappedByteBuf {
     @Override
     public short getShort(int index) {
         wrapped.checkIndex(index, 2);
-        short v = PlatformDependent.getShort(addr(index));
-        return nativeByteOrder? v : Short.reverseBytes(v);
+        return UnsafeDirectByteBufUtil._getShort(wrapped, index, nativeByteOrder);
     }
 
     @Override
     public ByteBuf setShort(int index, int value) {
         wrapped.checkIndex(index, 2);
-        _setShort(index, value);
+        UnsafeDirectByteBufUtil._setShort(wrapped, index, value, nativeByteOrder);
         return this;
     }
 
     @Override
     public ByteBuf setInt(int index, int value) {
         wrapped.checkIndex(index, 4);
-        _setInt(index, value);
+        UnsafeDirectByteBufUtil._setInt(wrapped, index, value, nativeByteOrder);
         return this;
     }
 
     @Override
     public ByteBuf setLong(int index, long value) {
         wrapped.checkIndex(index, 8);
-        _setLong(index, value);
+        UnsafeDirectByteBufUtil._setLong(wrapped, index, value, nativeByteOrder);
         return this;
     }
 
@@ -131,7 +118,7 @@ final class UnsafeDirectSwappedByteBuf extends SwappedByteBuf {
     public ByteBuf writeShort(int value) {
         wrapped.ensureAccessible();
         wrapped.ensureWritable(2);
-        _setShort(wrapped.writerIndex, value);
+        UnsafeDirectByteBufUtil._setShort(wrapped, wrapped.writerIndex, value, nativeByteOrder);
         wrapped.writerIndex += 2;
         return this;
     }
@@ -140,7 +127,7 @@ final class UnsafeDirectSwappedByteBuf extends SwappedByteBuf {
     public ByteBuf writeInt(int value) {
         wrapped.ensureAccessible();
         wrapped.ensureWritable(4);
-        _setInt(wrapped.writerIndex, value);
+        UnsafeDirectByteBufUtil._setInt(wrapped, wrapped.writerIndex, value, nativeByteOrder);
         wrapped.writerIndex += 4;
         return this;
     }
@@ -149,7 +136,7 @@ final class UnsafeDirectSwappedByteBuf extends SwappedByteBuf {
     public ByteBuf writeLong(long value) {
         wrapped.ensureAccessible();
         wrapped.ensureWritable(8);
-        _setLong(wrapped.writerIndex, value);
+        UnsafeDirectByteBufUtil._setLong(wrapped, wrapped.writerIndex, value, nativeByteOrder);
         wrapped.writerIndex += 8;
         return this;
     }
@@ -170,17 +157,5 @@ final class UnsafeDirectSwappedByteBuf extends SwappedByteBuf {
     public ByteBuf writeDouble(double value) {
         writeLong(Double.doubleToRawLongBits(value));
         return this;
-    }
-
-    private void _setShort(int index, int value) {
-        PlatformDependent.putShort(addr(index), nativeByteOrder ? (short) value : Short.reverseBytes((short) value));
-    }
-
-    private void _setInt(int index, int value) {
-        PlatformDependent.putInt(addr(index), nativeByteOrder ? value : Integer.reverseBytes(value));
-    }
-
-    private void _setLong(int index, long value) {
-        PlatformDependent.putLong(addr(index), nativeByteOrder ? value : Long.reverseBytes(value));
     }
 }

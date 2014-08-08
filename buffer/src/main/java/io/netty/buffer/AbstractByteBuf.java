@@ -1187,4 +1187,12 @@ public abstract class AbstractByteBuf extends ByteBuf {
             throw new IllegalReferenceCountException(0);
         }
     }
+
+    ByteBuffer internalNioBuffer() {
+        throw new UnsupportedOperationException();
+    }
+
+    int idx(int index) {
+        return index;
+    }
 }
