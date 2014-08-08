@@ -143,13 +143,13 @@ public class Lz4FramedDecoder extends ByteToMessageDecoder {
 
                 final long magic = in.getLong(idx);
                 if (magic != MAGIC_NUMBER) {
-                    throw new DecompressionException("Unexpected block identifier");
+                    throw new DecompressionException("unexpected block identifier");
                 }
 
                 final int compressedLength = Integer.reverseBytes(in.getInt(idx + COMPRESSED_LENGTH_OFFSET));
-                if (compressedLength < 0) {
-                    throw new DecompressionException("Unexpected compressedLength: " + compressedLength
-                            + " (not expected negative value)");
+                if (compressedLength < 0 || compressedLength > MAX_BLOCK_SIZE) {
+                    throw new DecompressionException("invalid compressedLength: " + compressedLength
+                            + " (expected: " + 0 + '-' + MAX_BLOCK_SIZE + ')');
                 }
                 currentCompressedLength = compressedLength;
             }
@@ -166,21 +166,21 @@ public class Lz4FramedDecoder extends ByteToMessageDecoder {
 
             final int decompressedLength = Integer.reverseBytes(in.getInt(idx + DECOMPRESSED_LENGTH_OFFSET));
             final int maxDecompressedLength = 1 << compressionLevel;
-            if (decompressedLength > maxDecompressedLength || decompressedLength < 0) {
-                throw new DecompressionException("Unexpected decompressedLength: " + decompressedLength
+            if (decompressedLength < 0 || decompressedLength > maxDecompressedLength) {
+                throw new DecompressionException("invalid decompressedLength: " + decompressedLength
                         + " (expected: " + 0 + '-' + maxDecompressedLength + ')');
             }
             if (decompressedLength == 0 && compressedLength != 0
                     || decompressedLength != 0 && compressedLength == 0
                     || blockType == BLOCK_TYPE_NON_COMPRESSED && decompressedLength != compressedLength) {
-                throw new DecompressionException("Stream is corrupted: " +
-                        "decompressedLength and compressedLength do not match");
+                throw new DecompressionException("stream corrupted: decompressedLength(" + decompressedLength
+                        + ") and compressedLength(" + compressedLength + ") mismatch");
             }
 
-            final int check = Integer.reverseBytes(in.getInt(idx + CHECKSUM_OFFSET));
+            final int checksumValue = Integer.reverseBytes(in.getInt(idx + CHECKSUM_OFFSET));
             if (decompressedLength == 0 && compressedLength == 0) {
-                if (check != 0) {
-                    throw new DecompressionException("Stream is corrupted: checksum error");
+                if (checksumValue != 0) {
+                    throw new DecompressionException("stream corrupted: checksum error");
                 }
                 in.skipBytes(HEADER_LENGTH);
                 finished = true;
@@ -219,7 +219,7 @@ public class Lz4FramedDecoder extends ByteToMessageDecoder {
                         break;
                     }
                     default:
-                        throw new DecompressionException("Unexpected blockType: " + blockType
+                        throw new DecompressionException("unexpected blockType: " + blockType
                                 + " (expected: " + BLOCK_TYPE_NON_COMPRESSED + " or " + BLOCK_TYPE_COMPRESSED + ')');
                 }
 
@@ -227,8 +227,10 @@ public class Lz4FramedDecoder extends ByteToMessageDecoder {
                 if (checksum != null) {
                     checksum.reset();
                     checksum.update(dest, destOff, decompressedLength);
-                    if ((int) checksum.getValue() != check) {
-                        throw new DecompressionException("Stream is corrupted: checksum error");
+                    final int checksumResult = (int) checksum.getValue();
+                    if (checksumResult != checksumValue) {
+                        throw new DecompressionException("stream corrupted: mismatching checksum: " + checksumResult
+                                + " (expected: " + checksumValue + ')');
                     }
                 }
                 uncompressed.writerIndex(uncompressed.writerIndex() + decompressedLength);

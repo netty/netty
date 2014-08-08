@@ -73,7 +73,7 @@ public class Lz4FramedDecoderTest {
     @Test
     public void testUnexpectedBlockIdentifier() throws Exception {
         expected.expect(DecompressionException.class);
-        expected.expectMessage("Unexpected block identifier");
+        expected.expectMessage("unexpected block identifier");
 
         final byte[] data = Arrays.copyOf(DATA, DATA.length);
         data[1] = 0x00;
@@ -83,9 +83,9 @@ public class Lz4FramedDecoderTest {
     }
 
     @Test
-    public void testUnexpectedCompressedLength() throws Exception {
+    public void testInvalidCompressedLength() throws Exception {
         expected.expect(DecompressionException.class);
-        expected.expectMessage("Unexpected compressedLength");
+        expected.expectMessage("invalid compressedLength");
 
         final byte[] data = Arrays.copyOf(DATA, DATA.length);
         data[12] = (byte) 0xFF;
@@ -95,9 +95,9 @@ public class Lz4FramedDecoderTest {
     }
 
     @Test
-    public void testUnexpectedDecompressedLength() throws Exception {
+    public void testInvalidDecompressedLength() throws Exception {
         expected.expect(DecompressionException.class);
-        expected.expectMessage("Unexpected decompressedLength");
+        expected.expectMessage("invalid decompressedLength");
 
         final byte[] data = Arrays.copyOf(DATA, DATA.length);
         data[16] = (byte) 0xFF;
@@ -107,9 +107,9 @@ public class Lz4FramedDecoderTest {
     }
 
     @Test
-    public void testDecompressedAndCompressedLengthDoNotMatch() throws Exception {
+    public void testDecompressedAndCompressedLengthMismatch() throws Exception {
         expected.expect(DecompressionException.class);
-        expected.expectMessage("decompressedLength and compressedLength do not match");
+        expected.expectMessage("mismatch");
 
         final byte[] data = Arrays.copyOf(DATA, DATA.length);
         data[13] = 0x01;
@@ -121,7 +121,7 @@ public class Lz4FramedDecoderTest {
     @Test
     public void testUnexpectedBlockType() throws Exception {
         expected.expect(DecompressionException.class);
-        expected.expectMessage("Unexpected blockType");
+        expected.expectMessage("unexpected blockType");
 
         final byte[] data = Arrays.copyOf(DATA, DATA.length);
         data[8] = 0x36;
@@ -131,9 +131,9 @@ public class Lz4FramedDecoderTest {
     }
 
     @Test
-    public void testChecksumError() throws Exception {
+    public void testMismatchingChecksum() throws Exception {
         expected.expect(DecompressionException.class);
-        expected.expectMessage("checksum error");
+        expected.expectMessage("mismatching checksum");
 
         final byte[] data = Arrays.copyOf(DATA, DATA.length);
         data[17] = 0x01;
