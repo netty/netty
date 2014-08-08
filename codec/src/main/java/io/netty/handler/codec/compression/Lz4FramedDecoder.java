@@ -55,6 +55,11 @@ public class Lz4FramedDecoder extends ByteToMessageDecoder {
     private Checksum checksum;
 
     /**
+     * Compressed length of current incomming chunk of data.
+     */
+    private int currentCompressedLength;
+
+    /**
      * Indicates if the end of the compressed stream has been reached.
      */
     private boolean finished;
@@ -116,6 +121,8 @@ public class Lz4FramedDecoder extends ByteToMessageDecoder {
         }
         decompressor = factory.fastDecompressor();
         this.checksum = checksum;
+
+        currentCompressedLength = -1;
         finished = false;
     }
 
@@ -130,23 +137,29 @@ public class Lz4FramedDecoder extends ByteToMessageDecoder {
             if (in.readableBytes() < HEADER_LENGTH) {
                 return;
             }
-            final int idx = in.readerIndex();
 
-            final long magic = in.getLong(idx);
-            if (magic != MAGIC_NUMBER) {
-                throw new DecompressionException("Unexpected block identifier");
+            if (currentCompressedLength < 0) {
+                final int idx = in.readerIndex();
+
+                final long magic = in.getLong(idx);
+                if (magic != MAGIC_NUMBER) {
+                    throw new DecompressionException("Unexpected block identifier");
+                }
+
+                final int compressedLength = Integer.reverseBytes(in.getInt(idx + COMPRESSED_LENGTH_OFFSET));
+                if (compressedLength < 0) {
+                    throw new DecompressionException("Unexpected compressedLength: " + compressedLength
+                            + " (not expected negative value)");
+                }
+                currentCompressedLength = compressedLength;
             }
 
-            final int compressedLength = Integer.reverseBytes(in.getInt(idx + COMPRESSED_LENGTH_OFFSET));
-            if (compressedLength < 0) {
-                throw new DecompressionException("Unexpected compressedLength: " + compressedLength
-                        + " (not expected negative value)");
-            }
-
-            if (in.readableBytes() < HEADER_LENGTH + compressedLength) {
+            if (in.readableBytes() < HEADER_LENGTH + currentCompressedLength) {
                 return;
             }
+            final int compressedLength = currentCompressedLength;
 
+            final int idx = in.readerIndex();
             final int token = in.getByte(idx + TOKEN_OFFSET);
             final int blockType = token & 0xF0;
             final int compressionLevel = (token & 0x0F) + COMPRESSION_LEVEL_BASE;
@@ -221,6 +234,7 @@ public class Lz4FramedDecoder extends ByteToMessageDecoder {
                 uncompressed.writerIndex(uncompressed.writerIndex() + decompressedLength);
                 out.add(uncompressed);
                 in.skipBytes(HEADER_LENGTH + compressedLength);
+                currentCompressedLength = -1;
                 success = true;
             } finally {
                 if (!success) {
