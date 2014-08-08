@@ -191,8 +191,9 @@ public class Lz4FramedEncoder extends MessageToByteEncoder<ByteBuf> {
         final int check = (int) checksum.getValue();
 
         out.ensureWritable(compressedBlockSize);
+        final int idx = out.writerIndex();
         final byte[] dest = out.array();
-        final int destOff = out.arrayOffset() + out.writerIndex();
+        final int destOff = out.arrayOffset() + idx;
         int compressedLength = compressor.compress(buffer, 0, currentBlockLength, dest, destOff + HEADER_LENGTH);
         final int blockType;
         if (compressedLength >= currentBlockLength) {
@@ -203,12 +204,12 @@ public class Lz4FramedEncoder extends MessageToByteEncoder<ByteBuf> {
             blockType = BLOCK_TYPE_COMPRESSED;
         }
 
-        System.arraycopy(MAGIC, 0, dest, destOff, MAGIC_LENGTH);
-        dest[destOff + MAGIC_LENGTH] = (byte) (blockType | compressionLevel);
-        writeIntLE(compressedLength, dest, destOff + MAGIC_LENGTH + 1);
-        writeIntLE(currentBlockLength, dest, destOff + MAGIC_LENGTH + 5);
-        writeIntLE(check, dest, destOff + MAGIC_LENGTH + 9);
-        out.writerIndex(out.writerIndex() + HEADER_LENGTH + compressedLength);
+        out.setLong(idx, MAGIC_NUMBER);
+        dest[destOff + TOKEN_OFFSET] = (byte) (blockType | compressionLevel);
+        writeIntLE(compressedLength, dest, destOff + COMPRESSED_LENGTH_OFFSET);
+        writeIntLE(currentBlockLength, dest, destOff + DECOMPRESSED_LENGTH_OFFSET);
+        writeIntLE(check, dest, destOff + CHECKSUM_OFFSET);
+        out.writerIndex(idx + HEADER_LENGTH + compressedLength);
         currentBlockLength = 0;
 
         this.currentBlockLength = currentBlockLength;
@@ -225,14 +226,15 @@ public class Lz4FramedEncoder extends MessageToByteEncoder<ByteBuf> {
                 compressor.maxCompressedLength(currentBlockLength) + HEADER_LENGTH);
         flushBufferedData(footer);
 
+        final int idx = footer.writerIndex();
         final byte[] dest = footer.array();
-        final int destOff = footer.arrayOffset() + footer.writerIndex();
-        System.arraycopy(MAGIC, 0, dest, destOff, MAGIC_LENGTH);
-        dest[destOff + MAGIC_LENGTH] = (byte) (BLOCK_TYPE_NON_COMPRESSED | compressionLevel);
-        writeIntLE(0, dest, destOff + MAGIC_LENGTH + 1);
-        writeIntLE(0, dest, destOff + MAGIC_LENGTH + 5);
-        writeIntLE(0, dest, destOff + MAGIC_LENGTH + 9);
-        footer.writerIndex(footer.writerIndex() + HEADER_LENGTH);
+        final int destOff = footer.arrayOffset() + idx;
+        footer.setLong(idx, MAGIC_NUMBER);
+        dest[destOff + TOKEN_OFFSET] = (byte) (BLOCK_TYPE_NON_COMPRESSED | compressionLevel);
+        writeIntLE(0, dest, destOff + COMPRESSED_LENGTH_OFFSET);
+        writeIntLE(0, dest, destOff + DECOMPRESSED_LENGTH_OFFSET);
+        writeIntLE(0, dest, destOff + CHECKSUM_OFFSET);
+        footer.writerIndex(idx + HEADER_LENGTH);
 
         compressor = null;
         checksum = null;

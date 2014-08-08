@@ -19,21 +19,31 @@ final class Lz4Constants {
     /**
      * Magic number of LZ4 block.
      */
-    static final byte[] MAGIC = { 'L', 'Z', '4', 'B', 'l', 'o', 'c', 'k' };
-
-    /**
-     * Length of magic number.
-     */
-    static final int MAGIC_LENGTH = MAGIC.length;
+    static final long MAGIC_NUMBER = (long) 'L' << 56 |
+                                     (long) 'Z' << 48 |
+                                     (long) '4' << 40 |
+                                     (long) 'B' << 32 |
+                                            'l' << 24 |
+                                            'o' << 16 |
+                                            'c' << 8  |
+                                            'k';
 
     /**
      * Full length of LZ4 block header.
      */
-    static final int HEADER_LENGTH = MAGIC_LENGTH // magic bytes
-                                     + 1          // token
-                                     + 4          // compressed length
-                                     + 4          // decompressed length
-                                     + 4;         // checksum
+    static final int HEADER_LENGTH =   8    // magic number
+                                     + 1    // token
+                                     + 4    // compressed length
+                                     + 4    // decompressed length
+                                     + 4;   // checksum
+
+    /**
+     * Offsets of header's parts.
+     */
+    static final int TOKEN_OFFSET = 8;
+    static final int COMPRESSED_LENGTH_OFFSET = TOKEN_OFFSET + 1;
+    static final int DECOMPRESSED_LENGTH_OFFSET = COMPRESSED_LENGTH_OFFSET + 4;
+    static final int CHECKSUM_OFFSET = DECOMPRESSED_LENGTH_OFFSET + 4;
 
     /**
      * Base value for compression level.

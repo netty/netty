@@ -22,7 +22,6 @@ import net.jpountz.lz4.LZ4Factory;
 import net.jpountz.lz4.LZ4FastDecompressor;
 import net.jpountz.xxhash.XXHashFactory;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.zip.Checksum;
 
@@ -133,13 +132,12 @@ public class Lz4FramedDecoder extends ByteToMessageDecoder {
             }
             final int idx = in.readerIndex();
 
-            final byte[] magic = new byte[MAGIC_LENGTH];
-            in.getBytes(idx, magic);
-            if (!Arrays.equals(magic, MAGIC)) {
+            final long magic = in.getLong(idx);
+            if (magic != MAGIC_NUMBER) {
                 throw new DecompressionException("Unexpected block identifier");
             }
 
-            final int compressedLength = Integer.reverseBytes(in.getInt(idx + MAGIC_LENGTH + 1));
+            final int compressedLength = Integer.reverseBytes(in.getInt(idx + COMPRESSED_LENGTH_OFFSET));
             if (compressedLength < 0) {
                 throw new DecompressionException("Unexpected compressedLength: " + compressedLength
                         + " (not expected negative value)");
@@ -149,13 +147,13 @@ public class Lz4FramedDecoder extends ByteToMessageDecoder {
                 return;
             }
 
-            final int token = in.getByte(idx + MAGIC_LENGTH);
+            final int token = in.getByte(idx + TOKEN_OFFSET);
             final int blockType = token & 0xF0;
             final int compressionLevel = (token & 0x0F) + COMPRESSION_LEVEL_BASE;
 
-            final int decompressedLength = Integer.reverseBytes(in.getInt(idx + MAGIC_LENGTH + 5));
+            final int decompressedLength = Integer.reverseBytes(in.getInt(idx + DECOMPRESSED_LENGTH_OFFSET));
             final int maxDecompressedLength = 1 << compressionLevel;
-            if (decompressedLength < 0 || decompressedLength > maxDecompressedLength) {
+            if (decompressedLength > maxDecompressedLength || decompressedLength < 0) {
                 throw new DecompressionException("Unexpected decompressedLength: " + decompressedLength
                         + " (expected: " + 0 + '-' + maxDecompressedLength + ')');
             }
@@ -166,7 +164,7 @@ public class Lz4FramedDecoder extends ByteToMessageDecoder {
                         "decompressedLength and compressedLength do not match");
             }
 
-            final int check = Integer.reverseBytes(in.getInt(idx + MAGIC_LENGTH + 9));
+            final int check = Integer.reverseBytes(in.getInt(idx + CHECKSUM_OFFSET));
             if (decompressedLength == 0 && compressedLength == 0) {
                 if (check != 0) {
                     throw new DecompressionException("Stream is corrupted: checksum error");
