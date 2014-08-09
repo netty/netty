@@ -16,9 +16,11 @@
 package io.netty.channel.epoll;
 
 import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopChooser;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.metrics.MetricsCollector;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
@@ -40,7 +42,7 @@ public final class EpollEventLoopGroup extends MultithreadEventLoopGroup {
      * Create a new instance using the specified number of threads and the default {@link ThreadFactory}.
      */
     public EpollEventLoopGroup(int nThreads) {
-        this(nThreads, null);
+        this(nThreads, (ThreadFactory) null);
     }
 
     /**
@@ -55,7 +57,37 @@ public final class EpollEventLoopGroup extends MultithreadEventLoopGroup {
      * maximal amount of epoll events to handle per epollWait(...).
      */
     public EpollEventLoopGroup(int nThreads, ThreadFactory threadFactory, int maxEventsAtOnce) {
-        super(nThreads, threadFactory, maxEventsAtOnce);
+        this(nThreads, threadFactory, null, maxEventsAtOnce);
+    }
+
+    /**
+     * Create a new instance using the default number of threads and the default {@link ThreadFactory}.
+     */
+    public EpollEventLoopGroup(EventLoopChooser chooser) {
+        this(0, chooser);
+    }
+
+    /**
+     * Create a new instance using the specified number of threads and the default {@link ThreadFactory}.
+     */
+    public EpollEventLoopGroup(int nThreads, EventLoopChooser chooser) {
+        this(nThreads, null, chooser);
+    }
+
+    /**
+     * Create a new instance using the specified number of threads and the given {@link ThreadFactory}.
+     */
+    public EpollEventLoopGroup(int nThreads, ThreadFactory threadFactory, EventLoopChooser chooser) {
+        this(nThreads, threadFactory, chooser, 128);
+    }
+
+    /**
+     * Create a new instance using the specified number of threads, the given {@link ThreadFactory} and the given
+     * maximal amount of epoll events to handle per epollWait(...).
+     */
+    public EpollEventLoopGroup(
+            int nThreads, ThreadFactory threadFactory, EventLoopChooser chooser, int maxEventsAtOnce) {
+        super(nThreads, threadFactory, chooser, maxEventsAtOnce);
     }
 
     /**
@@ -69,7 +101,7 @@ public final class EpollEventLoopGroup extends MultithreadEventLoopGroup {
     }
 
     @Override
-    protected EventLoop newChild(Executor executor, Object... args) throws Exception {
-        return new EpollEventLoop(this, executor, (Integer) args[0]);
+    protected EventLoop newChild(Executor executor, MetricsCollector metrics, Object... args) throws Exception {
+        return new EpollEventLoop(this, executor, metrics, (Integer) args[0]);
     }
 }

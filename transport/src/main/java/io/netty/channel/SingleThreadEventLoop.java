@@ -16,6 +16,7 @@
 package io.netty.channel;
 
 import io.netty.util.concurrent.SingleThreadEventExecutor;
+import io.netty.util.metrics.MetricsCollector;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
@@ -27,13 +28,18 @@ import java.util.concurrent.ThreadFactory;
 public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor implements EventLoop {
 
     private final ChannelHandlerInvoker invoker = new DefaultChannelHandlerInvoker(this);
+    private final MetricsCollector metrics;
 
-    protected SingleThreadEventLoop(EventLoopGroup parent, ThreadFactory threadFactory, boolean addTaskWakesUp) {
+    protected SingleThreadEventLoop(
+            EventLoopGroup parent, ThreadFactory threadFactory, MetricsCollector metrics, boolean addTaskWakesUp) {
         super(parent, threadFactory, addTaskWakesUp);
+        this.metrics = metrics;
     }
 
-    protected SingleThreadEventLoop(EventLoopGroup parent, Executor executor, boolean addTaskWakesUp) {
+    protected SingleThreadEventLoop(
+            EventLoopGroup parent, Executor executor, MetricsCollector metrics, boolean addTaskWakesUp) {
         super(parent, executor, addTaskWakesUp);
+        this.metrics = metrics;
     }
 
     @Override
@@ -67,6 +73,11 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
 
         channel.unsafe().register(this, promise);
         return promise;
+    }
+
+    @Override
+    public MetricsCollector metrics() {
+        return metrics;
     }
 
     @Override

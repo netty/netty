@@ -28,8 +28,10 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.SingleThreadEventLoop;
+import io.netty.util.metrics.MetricsCollector;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import io.netty.util.metrics.NoMetricsCollector;
 import org.junit.Test;
 
 import java.nio.channels.ClosedChannelException;
@@ -190,9 +192,9 @@ public class LocalChannelTest {
         final EventLoopGroup serverGroup = new DefaultEventLoopGroup(1);
         final EventLoopGroup clientGroup = new DefaultEventLoopGroup(1) {
             @Override
-            protected EventLoop newChild(Executor threadFactory, Object... args)
-                    throws Exception {
-                return new SingleThreadEventLoop(this, threadFactory, true) {
+            protected EventLoop newChild(Executor threadFactory, MetricsCollector collector, Object... args)
+            throws Exception {
+                return new SingleThreadEventLoop(this, threadFactory, NoMetricsCollector.INSTANCE, true) {
                     @Override
                     protected void run() {
                         for (;;) {

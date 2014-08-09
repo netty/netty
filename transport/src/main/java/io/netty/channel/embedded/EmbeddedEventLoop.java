@@ -24,6 +24,8 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
+import io.netty.util.metrics.MetricsCollector;
+import io.netty.util.metrics.NoMetricsCollector;
 
 import java.net.SocketAddress;
 import java.util.ArrayDeque;
@@ -115,6 +117,11 @@ final class EmbeddedEventLoop extends AbstractEventLoop implements ChannelHandle
     @Override
     public ChannelHandlerInvoker asInvoker() {
         return this;
+    }
+
+    @Override
+    public MetricsCollector metrics() {
+        return NoMetricsCollector.INSTANCE;
     }
 
     @Override
