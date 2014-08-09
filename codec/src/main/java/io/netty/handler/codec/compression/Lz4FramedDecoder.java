@@ -18,6 +18,7 @@ package io.netty.handler.codec.compression;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
+import net.jpountz.lz4.LZ4Exception;
 import net.jpountz.lz4.LZ4Factory;
 import net.jpountz.lz4.LZ4FastDecompressor;
 import net.jpountz.xxhash.XXHashFactory;
@@ -212,9 +213,15 @@ public class Lz4FramedDecoder extends ByteToMessageDecoder {
                             srcOff = 0;
                         }
 
-                        final int readed = decompressor.decompress(src, srcOff, dest, destOff, decompressedLength);
-                        if (compressedLength != readed) {
-                            throw new DecompressionException("Stream is corrupted: compressedLength != readed");
+                        try {
+                            final int readBytes = decompressor.decompress(src, srcOff,
+                                                        dest, destOff, decompressedLength);
+                            if (compressedLength != readBytes) {
+                                throw new DecompressionException("stream corrupted: compressedLength("
+                                        + compressedLength + ") and actual length(" + readBytes + ") mismatch");
+                            }
+                        } catch (LZ4Exception e) {
+                            throw new DecompressionException(e);
                         }
                         break;
                     }

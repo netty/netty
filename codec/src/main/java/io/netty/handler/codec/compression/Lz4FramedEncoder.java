@@ -26,6 +26,7 @@ import io.netty.channel.ChannelPromiseNotifier;
 import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.util.concurrent.EventExecutor;
 import net.jpountz.lz4.LZ4Compressor;
+import net.jpountz.lz4.LZ4Exception;
 import net.jpountz.lz4.LZ4Factory;
 import net.jpountz.xxhash.XXHashFactory;
 
@@ -194,7 +195,12 @@ public class Lz4FramedEncoder extends MessageToByteEncoder<ByteBuf> {
         final int idx = out.writerIndex();
         final byte[] dest = out.array();
         final int destOff = out.arrayOffset() + idx;
-        int compressedLength = compressor.compress(buffer, 0, currentBlockLength, dest, destOff + HEADER_LENGTH);
+        int compressedLength;
+        try {
+            compressedLength = compressor.compress(buffer, 0, currentBlockLength, dest, destOff + HEADER_LENGTH);
+        } catch (LZ4Exception e) {
+            throw new CompressionException(e);
+        }
         final int blockType;
         if (compressedLength >= currentBlockLength) {
             blockType = BLOCK_TYPE_NON_COMPRESSED;
