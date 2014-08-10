@@ -155,7 +155,7 @@ public final class ChannelOutboundBuffer {
      * Increment the pending bytes which will be written at some point.
      * This method is thread-safe!
      */
-    void incrementPendingOutboundBytes(int size) {
+    void incrementPendingOutboundBytes(long size) {
         if (size == 0) {
             return;
         }
@@ -172,7 +172,7 @@ public final class ChannelOutboundBuffer {
      * Decrement the pending bytes which will be written at some point.
      * This method is thread-safe!
      */
-    void decrementPendingOutboundBytes(int size) {
+    void decrementPendingOutboundBytes(long size) {
         if (size == 0) {
             return;
         }
