@@ -205,6 +205,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
         }
     }
 
+    @SuppressWarnings("deprecation")
     private SpdySynStreamFrame createSynStreamFrame(HttpMessage httpMessage) throws Exception {
         // Get the Stream-ID, Associated-To-Stream-ID, Priority, URL, and scheme from the headers
         final HttpHeaders httpHeaders = httpMessage.headers();
@@ -222,8 +223,8 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
         // The Connection, Keep-Alive, Proxy-Connection, and Transfer-Encoding
         // headers are not valid and MUST not be sent.
         httpHeaders.remove(HttpHeaders.Names.CONNECTION);
-        httpHeaders.remove("Keep-Alive");
-        httpHeaders.remove("Proxy-Connection");
+        httpHeaders.remove(HttpHeaders.Names.KEEP_ALIVE);
+        httpHeaders.remove(HttpHeaders.Names.PROXY_CONNECTION);
         httpHeaders.remove(HttpHeaders.Names.TRANSFER_ENCODING);
 
         SpdySynStreamFrame spdySynStreamFrame =
@@ -268,6 +269,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
         return spdySynStreamFrame;
     }
 
+    @SuppressWarnings("deprecation")
     private SpdySynReplyFrame createSynReplyFrame(HttpResponse httpResponse) throws Exception {
         // Get the Stream-ID from the headers
         final HttpHeaders httpHeaders = httpResponse.headers();
@@ -277,8 +279,8 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
         // The Connection, Keep-Alive, Proxy-Connection, and Transfer-Encoding
         // headers are not valid and MUST not be sent.
         httpHeaders.remove(HttpHeaders.Names.CONNECTION);
-        httpHeaders.remove("Keep-Alive");
-        httpHeaders.remove("Proxy-Connection");
+        httpHeaders.remove(HttpHeaders.Names.KEEP_ALIVE);
+        httpHeaders.remove(HttpHeaders.Names.PROXY_CONNECTION);
         httpHeaders.remove(HttpHeaders.Names.TRANSFER_ENCODING);
 
         SpdySynReplyFrame spdySynReplyFrame = new DefaultSpdySynReplyFrame(streamID);

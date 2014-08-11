@@ -333,6 +333,18 @@ public interface HttpHeaders extends TextHeaders {
          * {@code "WWW-Authenticate"}
          */
         public static final AsciiString WWW_AUTHENTICATE = new AsciiString("WWW-Authenticate");
+        /**
+         * {@code "Keep-Alive"}
+         * @deprecated use {@link #CONNECTION}
+         */
+        @Deprecated
+        public static final AsciiString KEEP_ALIVE = new AsciiString("Keep-Alive");
+        /**
+         * {@code "Proxy-Connection"}
+         * @deprecated use {@link #CONNECTION}
+         */
+        @Deprecated
+        public static final AsciiString PROXY_CONNECTION = new AsciiString("Proxy-Connection");
 
         private Names() {
         }

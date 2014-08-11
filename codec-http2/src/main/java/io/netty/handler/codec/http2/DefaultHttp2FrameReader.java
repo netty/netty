@@ -451,6 +451,8 @@ public class DefaultHttp2FrameReader implements Http2FrameReader {
                 settings.put(id, value);
             }
             observer.onSettingsRead(ctx, settings);
+            // Provide an interface for non-observers to capture settings
+            ctx.fireChannelRead(settings);
         }
     }
 

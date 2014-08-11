@@ -175,7 +175,6 @@ public final class HttpUploadClient {
 
         //connection will not close but needed
         // headers.set("Connection","keep-alive");
-        // headers.set("Keep-Alive","300");
 
         headers.set(
                 HttpHeaders.Names.COOKIE, ClientCookieEncoder.encode(
