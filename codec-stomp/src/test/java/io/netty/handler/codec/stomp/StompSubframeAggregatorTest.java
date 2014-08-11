@@ -45,8 +45,8 @@ public class StompSubframeAggregatorTest {
         incoming.writeBytes(StompTestConstants.CONNECT_FRAME.getBytes());
         channel.writeInbound(incoming);
 
-        StompHeadersSubframe frame = channel.readInbound();
-        Assert.assertTrue(frame instanceof StompFrame);
+        StompFrame frame = channel.readInbound();
+        frame.release();
 
         Assert.assertNull(channel.readInbound());
     }
