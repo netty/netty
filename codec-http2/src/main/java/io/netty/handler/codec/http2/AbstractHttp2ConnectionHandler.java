@@ -332,7 +332,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
     /**
      * Gets the next stream ID that can be created by the local endpoint.
      */
-    protected final int nextStreamId() {
+    public final int nextStreamId() {
         return connection.local().nextStreamId();
     }
 
@@ -374,7 +374,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
             Http2Stream stream = connection.stream(streamId);
             if (stream == null) {
                 // Create a new locally-initiated stream.
-                createLocalStream(streamId, endStream);
+                stream = createLocalStream(streamId, endStream);
             } else {
                 // An existing stream...
                 if (stream.state() == RESERVED_LOCAL) {
@@ -390,15 +390,17 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
                         stream.setPriority(streamDependency, weight, exclusive);
                     }
                 }
-
-                // If the headers are the end of the stream, close it now.
-                if (endStream) {
-                    closeLocalSide(stream, promise);
-                }
             }
 
-            return frameWriter.writeHeaders(ctx, promise, streamId, headers, streamDependency,
+            ChannelFuture future = frameWriter.writeHeaders(ctx, promise, streamId, headers, streamDependency,
                     weight, exclusive, padding, endStream, endSegment);
+
+            // If the headers are the end of the stream, close it now.
+            if (endStream) {
+                closeLocalSide(stream, promise);
+            }
+
+            return future;
         } catch (Http2Exception e) {
             return promise.setFailure(e);
         }
@@ -430,10 +432,12 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
             return promise;
         }
 
+        ChannelFuture future = frameWriter.writeRstStream(ctx, promise, streamId, errorCode);
+
         stream.terminateSent();
         close(stream, promise);
 
-        return frameWriter.writeRstStream(ctx, promise, streamId, errorCode);
+        return future;
     }
 
     protected ChannelFuture writeSettings(ChannelHandlerContext ctx, ChannelPromise promise,
@@ -781,12 +785,12 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
                 return;
             }
 
+            AbstractHttp2ConnectionHandler.this.onDataRead(ctx, streamId, data, padding, endOfStream,
+                    endOfSegment);
+
             if (endOfStream) {
                 closeRemoteSide(stream, ctx.newSucceededFuture());
             }
-
-            AbstractHttp2ConnectionHandler.this.onDataRead(ctx, streamId, data, padding, endOfStream,
-                    endOfSegment);
         }
 
         /**
@@ -840,7 +844,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
             }
 
             if (stream == null) {
-                createRemoteStream(streamId, endStream);
+                stream = createRemoteStream(streamId, endStream);
             } else {
                 if (stream.state() == RESERVED_REMOTE) {
                     // Received headers for a reserved push stream ... open it for push to the
@@ -858,15 +862,15 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
                         stream.setPriority(streamDependency, weight, exclusive);
                     }
                 }
-
-                // If the headers completes this stream, close it.
-                if (endStream) {
-                    closeRemoteSide(stream, ctx.newSucceededFuture());
-                }
             }
 
             AbstractHttp2ConnectionHandler.this.onHeadersRead(ctx, streamId, headers, streamDependency,
                     weight, exclusive, padding, endStream, endSegment);
+
+            // If the headers completes this stream, close it.
+            if (endStream) {
+                closeRemoteSide(stream, ctx.newSucceededFuture());
+            }
         }
 
         @Override
@@ -901,9 +905,10 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
             }
 
             stream.terminateReceived();
-            close(stream, ctx.newSucceededFuture());
 
             AbstractHttp2ConnectionHandler.this.onRstStreamRead(ctx, streamId, errorCode);
+
+            close(stream, ctx.newSucceededFuture());
         }
 
         @Override

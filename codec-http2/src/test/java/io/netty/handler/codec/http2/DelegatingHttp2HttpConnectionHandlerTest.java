@@ -12,7 +12,6 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-
 package io.netty.handler.codec.http2;
 
 import io.netty.bootstrap.Bootstrap;
@@ -28,25 +27,49 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.handler.codec.http.DefaultLastHttpContent;
+import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpObject;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpHeaderUtil;
+import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.DefaultHttpRequest;
+import io.netty.handler.codec.http.DefaultHttpHeaders;
+import io.netty.handler.codec.http.HttpMessage;
+import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http.LastHttpContent;
+import static io.netty.handler.codec.http.HttpMethod.GET;
+import static io.netty.handler.codec.http.HttpMethod.POST;
+import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
+import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.handler.codec.http2.Http2TestUtil.Http2Runnable;
 import io.netty.util.NetUtil;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import java.net.InetSocketAddress;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 import static io.netty.handler.codec.http2.Http2TestUtil.*;
+import static io.netty.util.CharsetUtil.*;
 import static java.util.concurrent.TimeUnit.*;
 import static org.junit.Assert.*;
+import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
 
 /**
- * Tests the full HTTP/2 framing stack including the connection and preface handlers.
+ * Testing the {@link DelegatingHttp2HttpConnectionHandler} for {@link FullHttpRequest} objects into HTTP/2 frames
  */
-public class Http2ConnectionRoundtripTest {
+public class DelegatingHttp2HttpConnectionHandlerTest {
 
     @Mock
     private Http2FrameObserver clientObserver;
@@ -54,17 +77,22 @@ public class Http2ConnectionRoundtripTest {
     @Mock
     private Http2FrameObserver serverObserver;
 
-    private DelegatingHttp2ConnectionHandler http2Client;
+    private Http2FrameWriter frameWriter;
     private ServerBootstrap sb;
     private Bootstrap cb;
     private Channel serverChannel;
     private Channel clientChannel;
-    private static final int NUM_STREAMS = 1000;
-    private final CountDownLatch requestLatch = new CountDownLatch(NUM_STREAMS * 3);
+    private CountDownLatch requestLatch;
+    private long maxContentLength;
+    private static final int CONNECTION_SETUP_READ_COUNT = 2;
 
     @Before
     public void setup() throws Exception {
         MockitoAnnotations.initMocks(this);
+
+        maxContentLength = 1 << 16;
+        requestLatch = new CountDownLatch(CONNECTION_SETUP_READ_COUNT + 1);
+        frameWriter = new DefaultHttp2FrameWriter();
 
         sb = new ServerBootstrap();
         cb = new Bootstrap();
@@ -85,7 +113,7 @@ public class Http2ConnectionRoundtripTest {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
-                p.addLast(new DelegatingHttp2ConnectionHandler(false, clientObserver));
+                p.addLast(new DelegatingHttp2HttpConnectionHandler(false, clientObserver));
             }
         });
 
@@ -95,7 +123,6 @@ public class Http2ConnectionRoundtripTest {
         ChannelFuture ccf = cb.connect(new InetSocketAddress(NetUtil.LOCALHOST, port));
         assertTrue(ccf.awaitUninterruptibly().isSuccess());
         clientChannel = ccf.channel();
-        http2Client = clientChannel.pipeline().get(DelegatingHttp2ConnectionHandler.class);
     }
 
     @After
@@ -106,38 +133,65 @@ public class Http2ConnectionRoundtripTest {
     }
 
     @Test
-    public void stressTest() throws Exception {
-        final Http2Headers headers =
-                new DefaultHttp2Headers.Builder().method("GET").scheme("https")
-                        .authority("example.org").path("/some/path/resource2").build();
-        final String text = "hello world";
-        final String pingMsg = "12345678";
-        runInChannel(clientChannel, new Http2Runnable() {
-            @Override
-            public void run() {
-                for (int i = 0, nextStream = 3; i < NUM_STREAMS; ++i, nextStream += 2) {
-                    http2Client.writeHeaders(
-                            ctx(), newPromise(), nextStream, headers, 0, (short) 16, false, 0, false, false);
-                    http2Client.writePing(ctx(), newPromise(), Unpooled.copiedBuffer(pingMsg.getBytes()));
-                    http2Client.writeData(
-                            ctx(), newPromise(), nextStream,
-                            Unpooled.copiedBuffer(text.getBytes()), 0, true, true);
-                }
-            }
-        });
-        // Wait for all frames to be received.
+    public void testJustHeadersRequest() throws Exception {
+        final HttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, "/example");
+        final HttpHeaders httpHeaders = request.headers();
+        httpHeaders.set(Http2HttpHeaders.Names.STREAM_ID, 5);
+        httpHeaders.set(HttpHeaders.Names.HOST, "http://my-user_name@www.example.org:5555/example");
+        httpHeaders.set(Http2HttpHeaders.Names.AUTHORITY, "www.example.org:5555");
+        httpHeaders.set(Http2HttpHeaders.Names.SCHEME, "http");
+        httpHeaders.add("foo", "goo");
+        httpHeaders.add("foo", "goo2");
+        httpHeaders.add("foo2", "goo2");
+        final Http2Headers http2Headers = new DefaultHttp2Headers.Builder()
+            .method("GET").path("/example").authority("www.example.org:5555").scheme("http")
+            .add("foo", "goo").add("foo", "goo2").add("foo2", "goo2").build();
+        ChannelPromise writePromise = newPromise();
+        ChannelFuture writeFuture = clientChannel.writeAndFlush(request, writePromise);
+
+        writePromise.awaitUninterruptibly(2, SECONDS);
+        assertTrue(writePromise.isSuccess());
+        writeFuture.awaitUninterruptibly(2, SECONDS);
+        assertTrue(writeFuture.isSuccess());
         awaitRequests();
-        verify(serverObserver, times(NUM_STREAMS)).onHeadersRead(any(ChannelHandlerContext.class),
-                anyInt(), eq(headers), eq(0), eq((short) 16), eq(false), eq(0), eq(false),
-                eq(false));
-        verify(serverObserver, times(NUM_STREAMS)).onPingRead(any(ChannelHandlerContext.class),
-                eq(Unpooled.copiedBuffer(pingMsg.getBytes())));
-        verify(serverObserver, times(NUM_STREAMS)).onDataRead(any(ChannelHandlerContext.class),
-                anyInt(), eq(Unpooled.copiedBuffer(text.getBytes())), eq(0), eq(true), eq(true));
+        verify(serverObserver).onHeadersRead(any(ChannelHandlerContext.class), eq(5), eq(http2Headers), eq(0),
+            anyShort(), anyBoolean(), eq(0), eq(true), eq(true));
+        verify(serverObserver, never()).onDataRead(any(ChannelHandlerContext.class),
+            anyInt(), any(ByteBuf.class), anyInt(), anyBoolean(), anyBoolean());
+    }
+
+    @Test
+    public void testRequestWithBody() throws Exception {
+        requestLatch = new CountDownLatch(CONNECTION_SETUP_READ_COUNT + 2);
+        final String text = "foooooogoooo";
+        final HttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, POST, "/example",
+            Unpooled.copiedBuffer(text, UTF_8));
+        final HttpHeaders httpHeaders = request.headers();
+        httpHeaders.set(HttpHeaders.Names.HOST, "http://your_user-name123@www.example.org:5555/example");
+        httpHeaders.add("foo", "goo");
+        httpHeaders.add("foo", "goo2");
+        httpHeaders.add("foo2", "goo2");
+        final Http2Headers http2Headers = new DefaultHttp2Headers.Builder()
+            .method("POST").path("/example").authority("www.example.org:5555").scheme("http")
+            .add("foo", "goo").add("foo", "goo2").add("foo2", "goo2").build();
+        final HttpContent expectedContent = new DefaultLastHttpContent(Unpooled.copiedBuffer(text.getBytes()),
+                            true);
+        ChannelPromise writePromise = newPromise();
+        ChannelFuture writeFuture = clientChannel.writeAndFlush(request, writePromise);
+
+        writePromise.awaitUninterruptibly(2, SECONDS);
+        assertTrue(writePromise.isSuccess());
+        writeFuture.awaitUninterruptibly(2, SECONDS);
+        assertTrue(writeFuture.isSuccess());
+        awaitRequests();
+        verify(serverObserver).onHeadersRead(any(ChannelHandlerContext.class), eq(3), eq(http2Headers), eq(0),
+            anyShort(), anyBoolean(), eq(0), eq(false), eq(false));
+        verify(serverObserver).onDataRead(any(ChannelHandlerContext.class),
+            eq(3), eq(Unpooled.copiedBuffer(text.getBytes())), eq(0), eq(true), eq(true));
     }
 
     private void awaitRequests() throws Exception {
-        requestLatch.await(5, SECONDS);
+        requestLatch.await(2, SECONDS);
     }
 
     private ChannelHandlerContext ctx() {
@@ -148,7 +202,7 @@ public class Http2ConnectionRoundtripTest {
         return ctx().newPromise();
     }
 
-    /**
+     /**
      * A decorator around the serverObserver that counts down the latch so that we can await the
      * completion of the request.
      */

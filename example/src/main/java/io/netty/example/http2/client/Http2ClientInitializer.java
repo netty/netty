@@ -17,30 +17,62 @@ package io.netty.example.http2.client;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.handler.codec.http2.DefaultHttp2Connection;
+import io.netty.handler.codec.http2.DefaultHttp2FrameReader;
+import io.netty.handler.codec.http2.DefaultHttp2FrameWriter;
+import io.netty.handler.codec.http2.DefaultHttp2InboundFlowController;
+import io.netty.handler.codec.http2.DefaultHttp2OutboundFlowController;
+import io.netty.handler.codec.http2.DelegatingHttp2ConnectionHandler;
+import io.netty.handler.codec.http2.DelegatingHttp2HttpConnectionHandler;
+import io.netty.handler.codec.http2.Http2Connection;
+import io.netty.handler.codec.http2.Http2FrameReader;
+import io.netty.handler.codec.http2.Http2FrameWriter;
+import io.netty.handler.codec.http2.Http2InboundFrameLogger;
+import io.netty.handler.codec.http2.Http2OutboundFrameLogger;
+import io.netty.handler.codec.http.HttpContentDecompressor;
+import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpClientUpgradeHandler;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http2.Http2FrameLogger;
+import io.netty.handler.codec.http2.InboundHttp2ToHttpAdapter;
 import io.netty.handler.codec.http2.Http2ClientUpgradeCodec;
 import io.netty.handler.ssl.SslContext;
+import io.netty.util.internal.logging.InternalLoggerFactory;
+
+import static io.netty.util.internal.logging.InternalLogLevel.*;
 
 /**
  * Configures the client pipeline to support HTTP/2 frames.
  */
 public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
+    private static final Http2FrameLogger logger =
+                    new Http2FrameLogger(INFO, InternalLoggerFactory.getInstance(Http2ClientInitializer.class));
 
     private final SslContext sslCtx;
-    private Http2ClientConnectionHandler connectionHandler;
+    private final long maxContentLength;
+    private DelegatingHttp2ConnectionHandler connectionHandler;
+    private HttpResponseHandler responseHandler;
+    private Http2SettingsHandler settingsHandler;
 
-    public Http2ClientInitializer(SslContext sslCtx) {
+    public Http2ClientInitializer(SslContext sslCtx, long maxContentLength) {
         this.sslCtx = sslCtx;
+        this.maxContentLength = maxContentLength;
     }
 
     @Override
     public void initChannel(SocketChannel ch) throws Exception {
-        connectionHandler = new Http2ClientConnectionHandler(ch.newPromise(), ch.newPromise());
+        Http2Connection connection = new DefaultHttp2Connection(false);
+        connectionHandler = new DelegatingHttp2HttpConnectionHandler(connection,
+                        frameReader(), frameWriter(), new DefaultHttp2InboundFlowController(connection),
+                        new DefaultHttp2OutboundFlowController(connection),
+                        InboundHttp2ToHttpAdapter.newInstance(connection, maxContentLength));
+        responseHandler = new HttpResponseHandler();
+        settingsHandler = new Http2SettingsHandler(ch.newPromise());
         if (sslCtx != null) {
             configureSsl(ch);
         } else {
@@ -48,15 +80,29 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
         }
     }
 
-    public Http2ClientConnectionHandler connectionHandler() {
-        return connectionHandler;
+    public HttpResponseHandler responseHandler() {
+        return responseHandler;
+    }
+
+    public Http2SettingsHandler settingsHandler() {
+        return settingsHandler;
+    }
+
+    protected void configureEndOfPipeline(ChannelPipeline pipeline) {
+        pipeline.addLast("Http2SettingsHandler", settingsHandler);
+        pipeline.addLast("Decompressor", new HttpContentDecompressor());
+        pipeline.addLast("Aggregator", new HttpObjectAggregator((int) maxContentLength));
+        pipeline.addLast("HttpResponseHandler", responseHandler);
     }
 
     /**
      * Configure the pipeline for TLS NPN negotiation to HTTP/2.
      */
     private void configureSsl(SocketChannel ch) {
-        ch.pipeline().addLast(sslCtx.newHandler(ch.alloc()), connectionHandler);
+        ChannelPipeline pipeline = ch.pipeline();
+        pipeline.addLast("SslHandler", sslCtx.newHandler(ch.alloc()));
+        pipeline.addLast("Http2Handler", connectionHandler);
+        configureEndOfPipeline(pipeline);
     }
 
     /**
@@ -67,16 +113,16 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
         Http2ClientUpgradeCodec upgradeCodec = new Http2ClientUpgradeCodec(connectionHandler);
         HttpClientUpgradeHandler upgradeHandler = new HttpClientUpgradeHandler(sourceCodec, upgradeCodec, 65536);
 
-        ch.pipeline().addLast(sourceCodec);
-        ch.pipeline().addLast(upgradeHandler);
-        ch.pipeline().addLast(new UpgradeRequestHandler());
-        ch.pipeline().addLast(new UserEventLogger());
+        ch.pipeline().addLast("Http2SourceCodec", sourceCodec);
+        ch.pipeline().addLast("Http2UpgradeHandler", upgradeHandler);
+        ch.pipeline().addLast("Http2UpgradeRequestHandler", new UpgradeRequestHandler());
+        ch.pipeline().addLast("Logger", new UserEventLogger());
     }
 
     /**
      * A handler that triggers the cleartext upgrade to HTTP/2 by sending an initial HTTP request.
      */
-    private static class UpgradeRequestHandler extends ChannelHandlerAdapter {
+    private final class UpgradeRequestHandler extends ChannelHandlerAdapter {
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
             DefaultFullHttpRequest upgradeRequest =
@@ -86,7 +132,9 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
             super.channelActive(ctx);
 
             // Done with this handler, remove it from the pipeline.
-            ctx.pipeline().remove(ctx.name());
+            ctx.pipeline().remove(this);
+
+            Http2ClientInitializer.this.configureEndOfPipeline(ctx.pipeline());
         }
     }
 
@@ -99,5 +147,13 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
             System.out.println("User Event Triggered: " + evt);
             super.userEventTriggered(ctx, evt);
         }
+    }
+
+    private static Http2FrameReader frameReader() {
+        return new Http2InboundFrameLogger(new DefaultHttp2FrameReader(), logger);
+    }
+
+    private static Http2FrameWriter frameWriter() {
+        return new Http2OutboundFrameLogger(new DefaultHttp2FrameWriter(), logger);
     }
 }
