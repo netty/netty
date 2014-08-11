@@ -114,6 +114,14 @@ decoding data in LZF format, written by Tatu Saloranta. It can be obtained at:
   * HOMEPAGE:
     * https://github.com/ning/compress
 
+This product contains a modified portion of 'jfastlz', a Java port of FastLZ compression
+and decompression library written by William Kinney. It can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.jfastlz.txt (MIT License)
+  * HOMEPAGE:
+    * https://code.google.com/p/jfastlz/
+
 This product optionally depends on 'Protocol Buffers', Google's data
 interchange format, which can be obtained at:
 
