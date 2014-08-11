@@ -27,14 +27,25 @@ public interface EventLoopGroup extends EventExecutorGroup {
     EventLoop next();
 
     /**
-     * Register a {@link Channel} with this {@link EventLoop}. The returned {@link ChannelFuture}
-     * will get notified once the registration was complete.
+     * Register a {@link Channel} with an {@link EventLoop} from this {@link EventLoopGroup}. The returned
+     * {@link ChannelFuture} will get notified once the registration is completed.
+     * <p>
+     * It's only safe to submit a new task to the {@link EventLoop} from within a
+     * {@link ChannelHandler} once the {@link ChannelPromise} succeeded. Otherwise
+     * the task may or may not be rejected.
+     * </p>
      */
     ChannelFuture register(Channel channel);
 
     /**
-     * Register a {@link Channel} with this {@link EventLoop}. The passed {@link ChannelFuture}
-     * will get notified once the registration was complete and also will get returned.
+     * Register a {@link Channel} with an {@link EventLoop} from this {@link EventLoopGroup}. The provided
+     * {@link ChannelPromise} will get notified once the registration is completed. The returned {@link ChannelFuture}
+     * is the same {@link ChannelPromise} that was passed to the method.
+     * <p>
+     * It's only safe to submit a new task to the {@link EventLoop} from within a
+     * {@link ChannelHandler} once the {@link ChannelPromise} succeeded. Otherwise
+     * the task may or may not be rejected.
+     * </p>
      */
     ChannelFuture register(Channel channel, ChannelPromise promise);
 }

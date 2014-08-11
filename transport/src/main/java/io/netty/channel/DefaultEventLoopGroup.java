@@ -36,10 +36,10 @@ public class DefaultEventLoopGroup extends MultithreadEventLoopGroup {
 
     /**
      * @param nEventLoops       the number of {@link EventLoop}s that will be used by this instance.
-     *                             If {@code executor} is {@code null} this number will also be the parallelism
-     *                             requested from the default executor. It is generally advised for the number
-     *                             of {@link EventLoop}s and the number of {@link Thread}s used by the
-     *                             {@code executor} to lie very close together.
+     *                          If {@code executor} is {@code null} this number will also be the parallelism
+     *                          requested from the default executor. It is generally advised for the number
+     *                          of {@link EventLoop}s and the number of {@link Thread}s used by the
+     *                          {@code executor} to lie very close together.
      */
     public DefaultEventLoopGroup(int nEventLoops) {
         this(nEventLoops, (Executor) null);
@@ -47,10 +47,10 @@ public class DefaultEventLoopGroup extends MultithreadEventLoopGroup {
 
     /**
      * @param nEventLoops       the number of {@link EventLoop}s that will be used by this instance.
-     *                             If {@code executor} is {@code null} this number will also be the parallelism
-     *                             requested from the default executor. It is generally advised for the number
-     *                             of {@link EventLoop}s and the number of {@link Thread}s used by the
-     *                             {@code executor} to lie very close together.
+     *                          If {@code executor} is {@code null} this number will also be the parallelism
+     *                          requested from the default executor. It is generally advised for the number
+     *                          of {@link EventLoop}s and the number of {@link Thread}s used by the
+     *                          {@code executor} to lie very close together.
      * @param executor           the {@link Executor} to use, or {@code null} if the default should be used.
      */
     public DefaultEventLoopGroup(int nEventLoops, Executor executor) {
@@ -59,10 +59,10 @@ public class DefaultEventLoopGroup extends MultithreadEventLoopGroup {
 
     /**
      * @param nEventLoops       the number of {@link EventLoop}s that will be used by this instance.
-     *                             If {@code executor} is {@code null} this number will also be the parallelism
-     *                             requested from the default executor. It is generally advised for the number
-     *                             of {@link EventLoop}s and the number of {@link Thread}s used by the
-     *                             {@code executor} to lie very close together.
+     *                           If {@code executor} is {@code null} this number will also be the parallelism
+     *                           requested from the default executor. It is generally advised for the number
+     *                           of {@link EventLoop}s and the number of {@link Thread}s used by the
+     *                           {@code executor} to lie very close together.
      * @param executorFactory   the {@link ExecutorFactory} to use, or {@code null} if the default should be used.
      */
     public DefaultEventLoopGroup(int nEventLoops, ExecutorFactory executorFactory) {

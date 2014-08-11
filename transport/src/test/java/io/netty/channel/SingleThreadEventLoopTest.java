@@ -21,6 +21,7 @@ import ch.qos.logback.core.Appender;
 import io.netty.channel.local.LocalChannel;
 import io.netty.util.concurrent.DefaultExecutorFactory;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.PausableEventExecutor;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -32,10 +33,12 @@ import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -49,7 +52,9 @@ public class SingleThreadEventLoopTest {
         public void run() { }
     };
 
+    @SuppressWarnings({ "unused" })
     private SingleThreadEventLoopA loopA;
+    @SuppressWarnings({ "unused" })
     private SingleThreadEventLoopB loopB;
 
     @Before
@@ -176,17 +181,8 @@ public class SingleThreadEventLoopTest {
         assertTrue(f.cancel(true));
         assertEquals(5, timestamps.size());
 
-        // Check if the task was run without a lag.
-        Long previousTimestamp = null;
-        for (Long t: timestamps) {
-            if (previousTimestamp == null) {
-                previousTimestamp = t;
-                continue;
-            }
-
-            assertTrue(t.longValue() - previousTimestamp.longValue() >= TimeUnit.MILLISECONDS.toNanos(90));
-            previousTimestamp = t;
-        }
+        // Check if the task was run without lag.
+        verifyTimestampDeltas(timestamps, 90);
     }
 
     @Test
@@ -266,17 +262,8 @@ public class SingleThreadEventLoopTest {
         assertTrue(f.cancel(true));
         assertEquals(3, timestamps.size());
 
-        // Check if the task was run without a lag.
-        Long previousTimestamp = null;
-        for (Long t: timestamps) {
-            if (previousTimestamp == null) {
-                previousTimestamp = t;
-                continue;
-            }
-
-            assertTrue(t.longValue() - previousTimestamp.longValue() >= TimeUnit.MILLISECONDS.toNanos(150));
-            previousTimestamp = t;
-        }
+        // Check if the task was run without lag.
+        verifyTimestampDeltas(timestamps, TimeUnit.MILLISECONDS.toNanos(150));
     }
 
     @Test
@@ -435,12 +422,276 @@ public class SingleThreadEventLoopTest {
         assertThat(loopA.isShutdown(), is(true));
     }
 
+    @Test(timeout = 10000)
+    public void testScheduledTaskWakeupAfterDeregistration() throws Exception {
+        int numtasks = 5;
+
+        final List<Queue<Long>> timestampsPerTask = new ArrayList<Queue<Long>>(numtasks);
+        final List<ScheduledFuture> scheduledFutures = new ArrayList<ScheduledFuture>(numtasks);
+
+        // start the eventloops
+        loopA.execute(NOOP);
+        loopB.execute(NOOP);
+
+        LocalChannel channel = new LocalChannel();
+        ChannelPromise registerPromise = channel.newPromise();
+        channel.unsafe().register(loopA, registerPromise);
+        registerPromise.sync();
+
+        for (int i = 0; i < numtasks; i++) {
+            Queue<Long> timestamps = new LinkedBlockingQueue<Long>();
+            timestampsPerTask.add(timestamps);
+            scheduledFutures.add(channel.eventLoop()
+                    .scheduleAtFixedRate(new TimestampsRunnable(timestamps), 0, 100, TimeUnit.MILLISECONDS));
+        }
+
+        // Each task should be executed every 100ms.
+        // Will give them additional 50ms to execute ten times.
+        Thread.sleep(50 + 10 * 100);
+
+        // Deregister must stop future execution of scheduled tasks.
+        assertTrue(channel.deregister().sync().isSuccess());
+
+        for (Queue<Long> timestamps : timestampsPerTask) {
+            assertTrue(timestamps.size() >= 10);
+            verifyTimestampDeltas(timestamps, TimeUnit.MICROSECONDS.toNanos(90));
+            timestamps.clear();
+        }
+
+        // Because the Channel is deregistered no task must have executed since then.
+        Thread.sleep(200);
+        for (Queue<Long> timestamps : timestampsPerTask) {
+            assertTrue(timestamps.isEmpty());
+        }
+
+        registerPromise = channel.newPromise();
+        channel.unsafe().register(loopB, registerPromise);
+        registerPromise.sync();
+
+        // After the channel was registered with another eventloop the scheduled tasks should start executing again.
+        // Same as above.
+        Thread.sleep(50 + 10 * 100);
+
+        // Cancel all scheduled tasks.
+        for (ScheduledFuture f : scheduledFutures) {
+            assertTrue(f.cancel(true));
+        }
+
+        for (Queue<Long> timestamps : timestampsPerTask) {
+            assertTrue(timestamps.size() >= 10);
+            verifyTimestampDeltas(timestamps, TimeUnit.MICROSECONDS.toNanos(90));
+        }
+    }
+
+    /**
+     * Runnable that adds the current nano time to a list whenever
+     * it's executed.
+     */
+    private static class TimestampsRunnable implements Runnable {
+
+        private Queue<Long> timestamps;
+
+        TimestampsRunnable(Queue<Long> timestamps) {
+            assertNotNull(timestamps);
+            this.timestamps = timestamps;
+        }
+
+        @Override
+        public void run() {
+            timestamps.add(System.nanoTime());
+        }
+    }
+
+    @Test(timeout = 10000)
+    public void testDeregisterRegisterMultipleTimesWithTasks() throws Exception {
+        final Queue<Long> timestamps = new LinkedBlockingQueue<Long>();
+        // need a final counter, so it can be used in an inner class.
+        final AtomicInteger i = new AtomicInteger(-1);
+
+        // start the eventloops
+        loopA.execute(NOOP);
+        loopB.execute(NOOP);
+
+        LocalChannel channel = new LocalChannel();
+        boolean firstRun = true;
+        ScheduledFuture f = null;
+        while (i.incrementAndGet() < 4) {
+            ChannelPromise registerPromise = channel.newPromise();
+            channel.unsafe().register(i.intValue() % 2 == 0 ? loopA : loopB, registerPromise);
+            registerPromise.sync();
+
+            if (firstRun) {
+                f = channel.eventLoop().scheduleAtFixedRate(new Runnable() {
+                    @Override
+                    public void run() {
+                        assertTrue((i.intValue() % 2 == 0 ? loopA : loopB).inEventLoop());
+                        timestamps.add(System.nanoTime());
+                    }
+                }, 0, 100, TimeUnit.MILLISECONDS);
+                firstRun = false;
+            }
+
+            Thread.sleep(250);
+
+            assertTrue(channel.deregister().sync().isSuccess());
+
+            assertTrue("was " + timestamps.size(), timestamps.size() >= 2);
+            verifyTimestampDeltas(timestamps, TimeUnit.MILLISECONDS.toNanos(90));
+            timestamps.clear();
+        }
+
+        // cancel while the channel is deregistered
+        assertFalse(channel.isRegistered());
+        assertTrue(f.cancel(true));
+        assertTrue(timestamps.isEmpty());
+
+        // register again and check that it's not executed again.
+        ChannelPromise registerPromise = channel.newPromise();
+        channel.unsafe().register(loopA, registerPromise);
+        registerPromise.sync();
+
+        Thread.sleep(200);
+
+        assertTrue(timestamps.isEmpty());
+    }
+
+    @Test(timeout = 10000)
+    public void testDeregisterWithScheduleWithFixedDelayTask() throws Exception {
+        testDeregisterWithPeriodicScheduleTask(PeriodicScheduleMethod.FIXED_DELAY);
+    }
+
+    @Test(timeout = 10000)
+    public void testDeregisterWithScheduleAtFixedRateTask() throws Exception {
+        testDeregisterWithPeriodicScheduleTask(PeriodicScheduleMethod.FIXED_RATE);
+    }
+
+    private void testDeregisterWithPeriodicScheduleTask(PeriodicScheduleMethod method) throws Exception {
+        final Queue<Long> timestamps = new LinkedBlockingQueue<Long>();
+
+        // start the eventloops
+        loopA.execute(NOOP);
+        loopB.execute(NOOP);
+
+        LocalChannel channel = new LocalChannel();
+        ChannelPromise registerPromise = channel.newPromise();
+        channel.unsafe().register(loopA, registerPromise);
+        registerPromise.sync();
+
+        assertThat(channel.eventLoop(), instanceOf(PausableEventExecutor.class));
+        assertSame(loopA, channel.eventLoop().unwrap());
+
+        ScheduledFuture scheduleFuture;
+        if (PeriodicScheduleMethod.FIXED_RATE.equals(method)) {
+            scheduleFuture = channel.eventLoop().scheduleAtFixedRate(new Runnable() {
+                @Override
+                public void run() {
+                    assertTrue(loopB.inEventLoop());
+                    timestamps.add(System.nanoTime());
+                }
+            }, 100, 200, TimeUnit.MILLISECONDS);
+        } else {
+            scheduleFuture = channel.eventLoop().scheduleWithFixedDelay(new Runnable() {
+                @Override
+                public void run() {
+                    assertTrue(loopB.inEventLoop());
+                    timestamps.add(System.nanoTime());
+                }
+            }, 100, 200, TimeUnit.MILLISECONDS);
+        }
+
+        assertTrue(((PausableEventExecutor) channel.eventLoop()).isAcceptingNewTasks());
+        ChannelFuture deregisterFuture = channel.deregister();
+        assertFalse(((PausableEventExecutor) channel.eventLoop()).isAcceptingNewTasks());
+
+        assertTrue(deregisterFuture.sync().isSuccess());
+
+        timestamps.clear();
+        Thread.sleep(1000);
+
+        // no scheduled tasks must be executed after deregistration.
+        assertTrue("size: " + timestamps.size(), timestamps.isEmpty());
+
+        assertFalse(((PausableEventExecutor) channel.eventLoop()).isAcceptingNewTasks());
+        registerPromise = channel.newPromise();
+        channel.unsafe().register(loopB,  registerPromise);
+        assertTrue(registerPromise.sync().isSuccess());
+        assertTrue(((PausableEventExecutor) channel.eventLoop()).isAcceptingNewTasks());
+
+        assertThat(channel.eventLoop(), instanceOf(PausableEventExecutor.class));
+        assertSame(loopB, channel.eventLoop().unwrap());
+
+        // 100ms internal delay + 1 second. Should be able to execute 5 tasks in that time.
+        Thread.sleep(1150);
+        assertTrue(scheduleFuture.cancel(true));
+
+        assertTrue("was " + timestamps.size(), timestamps.size() >= 5);
+        verifyTimestampDeltas(timestamps, TimeUnit.MILLISECONDS.toNanos(190));
+    }
+
+    private static enum PeriodicScheduleMethod {
+        FIXED_RATE, FIXED_DELAY
+    }
+
+    private static void verifyTimestampDeltas(Queue<Long> timestamps, long minDelta) {
+        assertFalse(timestamps.isEmpty());
+        long prev = timestamps.poll();
+        for (Long timestamp : timestamps) {
+            long delta = timestamp - prev;
+            assertTrue(String.format("delta: %d, minDelta: %d", delta, minDelta), delta >= minDelta);
+            prev = timestamp;
+        }
+    }
+
+    @Test(timeout = 10000)
+    public void testDeregisterWithScheduledTask() throws Exception {
+        final AtomicBoolean oneTimeScheduledTaskExecuted = new AtomicBoolean(false);
+
+        // start the eventloops
+        loopA.execute(NOOP);
+        loopB.execute(NOOP);
+
+        LocalChannel channel = new LocalChannel();
+        ChannelPromise registerPromise = channel.newPromise();
+        channel.unsafe().register(loopA, registerPromise);
+        registerPromise.sync();
+
+        assertThat(channel.eventLoop(), instanceOf(PausableEventExecutor.class));
+        assertSame(loopA, ((PausableEventExecutor) channel.eventLoop()).unwrap());
+
+        io.netty.util.concurrent.ScheduledFuture scheduleFuture = channel.eventLoop().schedule(new Runnable() {
+            @Override
+            public void run() {
+                oneTimeScheduledTaskExecuted.set(true);
+                assertTrue(loopB.inEventLoop());
+            }
+        }, 1, TimeUnit.SECONDS);
+
+        assertTrue(((PausableEventExecutor) channel.eventLoop()).isAcceptingNewTasks());
+        ChannelFuture deregisterFuture = channel.deregister();
+        assertFalse(((PausableEventExecutor) channel.eventLoop()).isAcceptingNewTasks());
+
+        assertTrue(deregisterFuture.sync().isSuccess());
+
+        Thread.sleep(1000);
+
+        registerPromise = channel.newPromise();
+        assertFalse(oneTimeScheduledTaskExecuted.get());
+        channel.unsafe().register(loopB, registerPromise);
+        registerPromise.sync();
+
+        assertThat(channel.eventLoop(), instanceOf(PausableEventExecutor.class));
+        assertSame(loopB, ((PausableEventExecutor) channel.eventLoop()).unwrap());
+
+        assertTrue(scheduleFuture.sync().isSuccess());
+        assertTrue(oneTimeScheduledTaskExecuted.get());
+    }
+
     private static class SingleThreadEventLoopA extends SingleThreadEventLoop {
 
         final AtomicInteger cleanedUp = new AtomicInteger();
 
         SingleThreadEventLoopA() {
-            super(null, new DefaultExecutorFactory("A").newExecutor(1), true);
+            super(null, Executors.newSingleThreadExecutor(), true);
         }
 
         @Override
@@ -470,7 +721,7 @@ public class SingleThreadEventLoopTest {
         private volatile boolean interrupted;
 
         SingleThreadEventLoopB() {
-            super(null, new DefaultExecutorFactory("B").newExecutor(1), false);
+            super(null, Executors.newSingleThreadExecutor(), false);
         }
 
         @Override

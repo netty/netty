@@ -105,11 +105,6 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         return ch;
     }
 
-    @Override
-    public NioEventLoop eventLoop() {
-        return (NioEventLoop) super.eventLoop();
-    }
-
     /**
      * Return the current {@link SelectionKey}
      */
@@ -337,13 +332,13 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         boolean selected = false;
         for (;;) {
             try {
-                selectionKey = javaChannel().register(eventLoop().selector, 0, this);
+                selectionKey = javaChannel().register(((NioEventLoop) eventLoop().unwrap()).selector, 0, this);
                 return;
             } catch (CancelledKeyException e) {
                 if (!selected) {
                     // Force the Selector to select now as the "canceled" SelectionKey may still be
                     // cached and not removed because no Select.select(..) operation was called yet.
-                    eventLoop().selectNow();
+                    ((NioEventLoop) eventLoop().unwrap()).selectNow();
                     selected = true;
                 } else {
                     // We forced a select operation on the selector before but the SelectionKey is still cached
@@ -356,7 +351,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
     @Override
     protected void doDeregister() throws Exception {
-        eventLoop().cancel(selectionKey());
+        ((NioEventLoop) eventLoop().unwrap()).cancel(selectionKey());
     }
 
     @Override

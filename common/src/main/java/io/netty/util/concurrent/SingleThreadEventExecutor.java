@@ -15,7 +15,9 @@
  */
 package io.netty.util.concurrent;
 
+import io.netty.util.internal.CallableEventExecutorAdapter;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.RunnableEventExecutorAdapter;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -128,7 +130,7 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
      * @param parent            the {@link EventExecutorGroup} which is the parent of this instance and belongs to it.
      * @param executor          the {@link Executor} which will be used for executing.
      * @param addTaskWakesUp   {@code true} if and only if invocation of {@link #addTask(Runnable)} will wake up
-     *                            the executor thread.
+     *                         the executor thread.
      */
     protected SingleThreadEventExecutor(EventExecutorGroup parent, Executor executor, boolean addTaskWakesUp) {
         super(parent);
@@ -731,7 +733,7 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
                     String.format("delay: %d (expected: >= 0)", delay));
         }
         return schedule(new ScheduledFutureTask<Void>(
-                this, delayedTaskQueue, command, null, ScheduledFutureTask.deadlineNanos(unit.toNanos(delay))));
+                this, delayedTaskQueue, toCallable(command), ScheduledFutureTask.deadlineNanos(unit.toNanos(delay))));
     }
 
     @Override
@@ -768,7 +770,7 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
         }
 
         return schedule(new ScheduledFutureTask<Void>(
-                this, delayedTaskQueue, Executors.<Void>callable(command, null),
+                this, delayedTaskQueue, toCallable(command),
                 ScheduledFutureTask.deadlineNanos(unit.toNanos(initialDelay)), unit.toNanos(period)));
     }
 
@@ -790,7 +792,7 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
         }
 
         return schedule(new ScheduledFutureTask<Void>(
-                this, delayedTaskQueue, Executors.<Void>callable(command, null),
+                this, delayedTaskQueue, toCallable(command),
                 ScheduledFutureTask.deadlineNanos(unit.toNanos(initialDelay)), -unit.toNanos(delay)));
     }
 
@@ -811,6 +813,14 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
         }
 
         return task;
+    }
+
+    private static Callable<Void> toCallable(final Runnable command) {
+        if (command instanceof RunnableEventExecutorAdapter) {
+            return new RunnableToCallableAdapter((RunnableEventExecutorAdapter) command);
+        } else {
+            return Executors.<Void>callable(command, null);
+        }
     }
 
     protected void cleanupAndTerminate(boolean success) {
@@ -865,7 +875,7 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
         }
     }
 
-    protected void scheduleExecution() {
+    protected final void scheduleExecution() {
         updateThread(null);
         executor.execute(AS_RUNNABLE);
     }
@@ -884,6 +894,31 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
                     i.remove();
                 }
             }
+        }
+    }
+
+    private static class RunnableToCallableAdapter implements CallableEventExecutorAdapter<Void> {
+
+        final RunnableEventExecutorAdapter runnable;
+
+        RunnableToCallableAdapter(RunnableEventExecutorAdapter runnable) {
+            this.runnable = runnable;
+        }
+
+        @Override
+        public EventExecutor executor() {
+            return runnable.executor();
+        }
+
+        @Override
+        public Callable unwrap() {
+            return null;
+        }
+
+        @Override
+        public Void call() throws Exception {
+            runnable.run();
+            return null;
         }
     }
 }

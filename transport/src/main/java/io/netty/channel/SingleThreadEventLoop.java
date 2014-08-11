@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
 
 import java.util.concurrent.Executor;
@@ -68,6 +69,11 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
     @Override
     protected boolean wakesUpForTask(Runnable task) {
         return !(task instanceof NonWakeupRunnable);
+    }
+
+    @Override
+    public EventLoop unwrap() {
+        return this;
     }
 
     /**
