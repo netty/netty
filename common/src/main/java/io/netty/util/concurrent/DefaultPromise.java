@@ -44,7 +44,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         CANCELLATION_CAUSE_HOLDER.cause.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
     }
 
-    private final EventExecutor executor;
+    EventExecutor executor;
 
     private volatile Object result;
 

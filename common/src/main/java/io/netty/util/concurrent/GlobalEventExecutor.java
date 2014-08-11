@@ -233,8 +233,8 @@ public final class GlobalEventExecutor extends AbstractEventExecutor {
             throw new IllegalArgumentException(
                     String.format("delay: %d (expected: >= 0)", delay));
         }
-        return schedule(new ScheduledFutureTask<Void>(
-                this, delayedTaskQueue, command, null, ScheduledFutureTask.deadlineNanos(unit.toNanos(delay))));
+        return schedule(new ScheduledFutureTask<Void>(this, delayedTaskQueue,
+                Executors.<Void>callable(command, null), ScheduledFutureTask.deadlineNanos(unit.toNanos(delay))));
     }
 
     @Override

@@ -22,13 +22,22 @@ import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ResourceLeakHint;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.PausableEventExecutor;
+import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
-
 import java.net.SocketAddress;
 import java.util.WeakHashMap;
 
-abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, ResourceLeakHint {
+/**
+ * Abstract base class for {@link ChannelHandlerContext} implementations.
+ * <p>
+ * The unusual is-a relationship with {@link PausableChannelEventExecutor} was put in place to avoid
+ * additional object allocations that would have been required to wrap the return values of {@link #executor()}
+ * and {@link #invoker()}.
+ */
+abstract class AbstractChannelHandlerContext
+        extends PausableChannelEventExecutor implements ChannelHandlerContext, ResourceLeakHint {
 
     // This class keeps an integer member field 'skipFlags' whose each bit tells if the corresponding handler method
     // is annotated with @Skip. 'skipFlags' is retrieved in runtime via the reflection API and is cached.
@@ -237,7 +246,11 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         if (executor.inEventLoop()) {
             teardown0();
         } else {
-            executor.execute(new Runnable() {
+            /**
+             * use unwrap(), because the executor will usually be a {@link PausableEventExecutor}
+             * that might not accept any new tasks.
+             */
+            executor().unwrap().execute(new OneTimeTask() {
                 @Override
                 public void run() {
                     teardown0();
@@ -257,7 +270,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     }
 
     @Override
-    public Channel channel() {
+    public final Channel channel() {
         return channel;
     }
 
@@ -272,16 +285,13 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     }
 
     @Override
-    public EventExecutor executor() {
-        return invoker().executor();
+    public final EventExecutor executor() {
+        return this;
     }
 
     @Override
-    public ChannelHandlerInvoker invoker() {
-        if (invoker == null) {
-            return channel.unsafe().invoker();
-        }
-        return invoker;
+    public final ChannelHandlerInvoker invoker() {
+        return this;
     }
 
     @Override
@@ -542,5 +552,37 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     @Override
     public String toString() {
         return StringUtil.simpleClassName(ChannelHandlerContext.class) + '(' + name + ", " + channel + ')';
+    }
+
+    @Override
+    public EventExecutor unwrap() {
+        return unwrapInvoker().executor();
+    }
+
+    @Override
+    public void rejectNewTasks() {
+        /**
+         * This cast is correct because {@link #channel()} always returns an {@link AbstractChannel} and
+         * {@link AbstractChannel#eventLoop()} always returns a {@link PausableEventExecutor}.
+         */
+        ((PausableEventExecutor) channel().eventLoop()).rejectNewTasks();
+    }
+
+    @Override
+    public void acceptNewTasks() {
+        ((PausableEventExecutor) channel().eventLoop()).acceptNewTasks();
+    }
+
+    @Override
+    public boolean isAcceptingNewTasks() {
+        return ((PausableEventExecutor) channel().eventLoop()).isAcceptingNewTasks();
+    }
+
+    @Override
+    ChannelHandlerInvoker unwrapInvoker() {
+        if (invoker == null) {
+            return channel().unsafe().invoker();
+        }
+        return invoker;
     }
 }

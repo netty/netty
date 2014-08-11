@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2014 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,22 +13,15 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.nio;
 
-import io.netty.channel.AbstractEventLoopTest;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.socket.ServerSocketChannel;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
+package io.netty.util.concurrent;
 
-public class NioEventLoopTest extends AbstractEventLoopTest {
+/**
+ * A marker interface indicating that the {@link EventExecutor} is a wrapper around
+ * another {@link EventExecutor} implementation.
+ *
+ * See {@link EventExecutor#unwrap()} and {@link PausableEventExecutor} for further details.
+ */
+public interface WrappedEventExecutor extends EventExecutor {
 
-    @Override
-    protected EventLoopGroup newEventLoopGroup() {
-        return new NioEventLoopGroup();
-    }
-
-    @Override
-    protected Class<? extends ServerSocketChannel> newChannel() {
-        return NioServerSocketChannel.class;
-    }
 }

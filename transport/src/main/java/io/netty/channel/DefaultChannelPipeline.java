@@ -19,6 +19,8 @@ import io.netty.channel.Channel.Unsafe;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorGroup;
+import io.netty.util.concurrent.PausableEventExecutor;
+import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -61,7 +63,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     final AbstractChannelHandlerContext tail;
 
     private final Map<String, AbstractChannelHandlerContext> name2ctx =
-        new HashMap<String, AbstractChannelHandlerContext>(4);
+            new HashMap<String, AbstractChannelHandlerContext>(4);
 
     /**
      * @see #findInvoker(EventExecutorGroup)
@@ -420,15 +422,15 @@ final class DefaultChannelPipeline implements ChannelPipeline {
                 remove0(ctx);
                 return ctx;
             } else {
-               future = ctx.executor().submit(new Runnable() {
-                   @Override
-                   public void run() {
-                       synchronized (DefaultChannelPipeline.this) {
-                           remove0(ctx);
-                       }
-                   }
-               });
-               context = ctx;
+                future = ctx.executor().submit(new Runnable() {
+                    @Override
+                    public void run() {
+                        synchronized (DefaultChannelPipeline.this) {
+                            remove0(ctx);
+                        }
+                    }
+                });
+                context = ctx;
             }
         }
 
@@ -620,7 +622,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
                 @Override
                 public void run() {
                     callHandlerRemoved0(ctx);
-                 }
+                }
             });
             return;
         }
@@ -1188,8 +1190,16 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-            unsafe.deregister(promise);
+        public void deregister(ChannelHandlerContext ctx, final ChannelPromise promise) throws Exception {
+            assert !((PausableEventExecutor) ctx.channel().eventLoop()).isAcceptingNewTasks();
+
+            // submit deregistration task
+            ctx.channel().eventLoop().unwrap().execute(new OneTimeTask() {
+                @Override
+                public void run() {
+                    unsafe.deregister(promise);
+                }
+            });
         }
 
         @Override
