@@ -46,8 +46,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         NOT_YET_CONNECTED_EXCEPTION.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
     }
 
-    private MessageSizeEstimator.Handle estimatorHandle;
-
     private final Channel parent;
     private final ChannelId id;
     private final Unsafe unsafe;
@@ -61,6 +59,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private volatile SocketAddress remoteAddress;
     private volatile EventLoop eventLoop;
     private volatile boolean registered;
+    private volatile RecvByteBufAllocator.Handle recvHandle;
+    private volatile MessageSizeEstimator.Handle estimatorHandle;
 
     /** Cache for the string representation of this channel */
     private boolean strValActive;
@@ -116,6 +116,14 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     @Override
     public ByteBufAllocator alloc() {
         return config().getAllocator();
+    }
+
+    @Override
+    public RecvByteBufAllocator.Handle recvHandle() {
+        if (recvHandle == null) {
+            recvHandle = config().getRecvByteBufAllocator().newHandle();
+        }
+        return recvHandle;
     }
 
     @Override
@@ -384,7 +392,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         return voidPromise;
     }
 
-    final MessageSizeEstimator.Handle estimatorHandle() {
+    @Override
+    public final MessageSizeEstimator.Handle estimatorHandle() {
         if (estimatorHandle == null) {
             estimatorHandle = config().getMessageSizeEstimator().newHandle();
         }

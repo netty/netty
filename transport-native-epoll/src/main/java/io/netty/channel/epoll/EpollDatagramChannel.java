@@ -386,7 +386,6 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     }
 
     final class EpollDatagramChannelUnsafe extends AbstractEpollUnsafe {
-        private RecvByteBufAllocator.Handle allocHandle;
 
         @Override
         public void connect(SocketAddress remote, SocketAddress local, ChannelPromise channelPromise) {
@@ -419,10 +418,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
         @Override
         void epollInReady() {
             DatagramChannelConfig config = config();
-            RecvByteBufAllocator.Handle allocHandle = this.allocHandle;
-            if (allocHandle == null) {
-                this.allocHandle = allocHandle = config.getRecvByteBufAllocator().newHandle();
-            }
+            RecvByteBufAllocator.Handle allocHandle = recvHandle();
 
             assert eventLoop().inEventLoop();
             final ChannelPipeline pipeline = pipeline();

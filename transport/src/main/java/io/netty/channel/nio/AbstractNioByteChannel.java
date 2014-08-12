@@ -58,7 +58,6 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
     }
 
     private final class NioByteUnsafe extends AbstractNioUnsafe {
-        private RecvByteBufAllocator.Handle allocHandle;
 
         private void closeOnRead(ChannelPipeline pipeline) {
             SelectionKey key = selectionKey();
@@ -102,10 +101,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             final ChannelPipeline pipeline = pipeline();
             final ByteBufAllocator allocator = config.getAllocator();
             final int maxMessagesPerRead = config.getMaxMessagesPerRead();
-            RecvByteBufAllocator.Handle allocHandle = this.allocHandle;
-            if (allocHandle == null) {
-                this.allocHandle = allocHandle = config.getRecvByteBufAllocator().newHandle();
-            }
+            RecvByteBufAllocator.Handle allocHandle = recvHandle();
 
             ByteBuf byteBuf = null;
             int messages = 0;

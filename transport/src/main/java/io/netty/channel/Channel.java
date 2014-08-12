@@ -179,6 +179,18 @@ public interface Channel extends AttributeMap, Comparable<Channel> {
     ByteBufAllocator alloc();
 
     /**
+     * Return the assigned {@link RecvByteBufAllocator.Handle} which will be used to allocate {@link ByteBuf}'s when
+     * receiving data.
+     */
+    RecvByteBufAllocator.Handle recvHandle();
+
+    /**
+     * Return the assigned {@link MessageSizeEstimator.Handle} which will be used to estimate the size of different
+     * {@link Object}s by this {@link Channel}.
+     */
+    MessageSizeEstimator.Handle estimatorHandle();
+
+    /**
      * Return a new {@link ChannelPromise}.
      */
     ChannelPromise newPromise();

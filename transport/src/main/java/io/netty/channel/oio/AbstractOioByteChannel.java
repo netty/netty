@@ -39,7 +39,6 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
             " (expected: " + StringUtil.simpleClassName(ByteBuf.class) + ", " +
             StringUtil.simpleClassName(FileRegion.class) + ')';
 
-    private RecvByteBufAllocator.Handle allocHandle;
     private volatile boolean inputShutdown;
 
     /**
@@ -82,10 +81,7 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
         final ChannelConfig config = config();
         final ChannelPipeline pipeline = pipeline();
 
-        RecvByteBufAllocator.Handle allocHandle = this.allocHandle;
-        if (allocHandle == null) {
-            this.allocHandle = allocHandle = config.getRecvByteBufAllocator().newHandle();
-        }
+        RecvByteBufAllocator.Handle allocHandle = recvHandle();
 
         ByteBuf byteBuf = allocHandle.allocate(alloc());
 
