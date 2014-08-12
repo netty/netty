@@ -1,0 +1,53 @@
+/*
+ * Copyright 2012 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+package io.netty.handler.codec.socks.v5;
+
+import io.netty.handler.codec.socks.common.SocksMessage;
+import io.netty.handler.codec.socks.common.SocksMessageType;
+import io.netty.handler.codec.socks.common.SocksProtocolVersion;
+
+/**
+ * An abstract class that defines a SocksRequest, providing common properties for
+ * {@link io.netty.handler.codec.socks.v5.SocksV5InitRequest},
+ * {@link io.netty.handler.codec.socks.v5.SocksV5AuthRequest},
+ * {@link io.netty.handler.codec.socks.v5.SocksV5CmdRequest} and
+ * {@link io.netty.handler.codec.socks.v5.UnknownSocksV5Request}.
+ *
+ * @see io.netty.handler.codec.socks.v5.SocksV5InitRequest
+ * @see io.netty.handler.codec.socks.v5.SocksV5AuthRequest
+ * @see io.netty.handler.codec.socks.v5.SocksV5CmdRequest
+ * @see io.netty.handler.codec.socks.v5.UnknownSocksV5Request
+ */
+public abstract class SocksV5Request extends SocksMessage {
+    private final SocksV5RequestType requestType;
+
+    protected SocksV5Request(SocksV5RequestType requestType) {
+        super(SocksProtocolVersion.SOCKS5, SocksMessageType.REQUEST);
+        if (requestType == null) {
+            throw new NullPointerException("requestType");
+        }
+        this.requestType = requestType;
+    }
+
+    /**
+     * Returns socks request type
+     *
+     * @return socks request type
+     */
+    public SocksV5RequestType requestType() {
+        return requestType;
+    }
+}
