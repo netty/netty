@@ -20,7 +20,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.NoSuchElementException;
 import java.util.Set;
 
 public class EmptyTextHeaders implements TextHeaders {
@@ -38,8 +37,8 @@ public class EmptyTextHeaders implements TextHeaders {
     }
 
     @Override
-    public int getInt(CharSequence name) {
-        throw new NoSuchElementException(String.valueOf(name));
+    public Integer getInt(CharSequence name) {
+        return null;
     }
 
     @Override
@@ -48,8 +47,8 @@ public class EmptyTextHeaders implements TextHeaders {
     }
 
     @Override
-    public long getLong(CharSequence name) {
-        throw new NoSuchElementException(String.valueOf(name));
+    public Long getLong(CharSequence name) {
+        return null;
     }
 
     @Override
@@ -58,8 +57,8 @@ public class EmptyTextHeaders implements TextHeaders {
     }
 
     @Override
-    public long getTimeMillis(CharSequence name) {
-        throw new NoSuchElementException(String.valueOf(name));
+    public Long getTimeMillis(CharSequence name) {
+        return null;
     }
 
     @Override
@@ -78,8 +77,8 @@ public class EmptyTextHeaders implements TextHeaders {
     }
 
     @Override
-    public int getIntAndRemove(CharSequence name) {
-        throw new NoSuchElementException(String.valueOf(name));
+    public Integer getIntAndRemove(CharSequence name) {
+        return null;
     }
 
     @Override
@@ -88,8 +87,8 @@ public class EmptyTextHeaders implements TextHeaders {
     }
 
     @Override
-    public long getLongAndRemove(CharSequence name) {
-        throw new NoSuchElementException(String.valueOf(name));
+    public Long getLongAndRemove(CharSequence name) {
+        return null;
     }
 
     @Override
@@ -98,8 +97,8 @@ public class EmptyTextHeaders implements TextHeaders {
     }
 
     @Override
-    public long getTimeMillisAndRemove(CharSequence name) {
-        throw new NoSuchElementException(String.valueOf(name));
+    public Long getTimeMillisAndRemove(CharSequence name) {
+        return null;
     }
 
     @Override
