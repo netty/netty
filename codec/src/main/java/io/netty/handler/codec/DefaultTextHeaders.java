@@ -39,6 +39,7 @@ import java.util.TimeZone;
 
 public class DefaultTextHeaders implements TextHeaders {
 
+    private static final int INITIAL_VALUELIST_CAPACITY = 2;
     private static final int BUCKET_SIZE = 17;
 
     private static int index(int hash) {
@@ -617,7 +618,7 @@ public class DefaultTextHeaders implements TextHeaders {
             throw new NullPointerException("name");
         }
 
-        List<CharSequence> values = new ArrayList<CharSequence>(4);
+        List<CharSequence> values = new ArrayList<CharSequence>(INITIAL_VALUELIST_CAPACITY);
         int h = hashCode(name);
         int i = index(h);
         HeaderEntry e = entries[i];
@@ -638,7 +639,7 @@ public class DefaultTextHeaders implements TextHeaders {
             throw new NullPointerException("name");
         }
 
-        List<String> values = new ArrayList<String>(4);
+        List<String> values = new ArrayList<String>(INITIAL_VALUELIST_CAPACITY);
         int h = hashCode(name);
         int i = index(h);
         HeaderEntry e = entries[i];
@@ -665,7 +666,7 @@ public class DefaultTextHeaders implements TextHeaders {
             return null;
         }
 
-        List<String> values = new ArrayList<String>(4);
+        List<String> values = new ArrayList<String>(INITIAL_VALUELIST_CAPACITY);
         for (;;) {
             if (e.hash == h && nameEquals(e.name, name)) {
                 values.add(e.getValue().toString());
@@ -714,7 +715,7 @@ public class DefaultTextHeaders implements TextHeaders {
             return null;
         }
 
-        List<CharSequence> values = new ArrayList<CharSequence>(4);
+        List<CharSequence> values = new ArrayList<CharSequence>(INITIAL_VALUELIST_CAPACITY);
         for (;;) {
             if (e.hash == h && nameEquals(e.name, name)) {
                 values.add(e.getValue());
