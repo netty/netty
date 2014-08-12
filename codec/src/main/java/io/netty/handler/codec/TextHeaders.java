@@ -35,104 +35,165 @@ public interface TextHeaders extends Iterable<Map.Entry<String, String>> {
      * Returns the value of a header with the specified name.  If there are
      * more than one values for the specified name, the first value is returned.
      *
-     * @param name The name of the header to search
-     * @return The first header value or {@code null} if there is no such header
+     * @param name the name of the header to search
+     * @return the first header value if the header is found.
+     *         {@code null} if there's no such header.
      */
     String get(CharSequence name);
 
+    /**
+     * Returns the value of a header with the specified name.  If there are
+     * more than one values for the specified name, the first value is returned.
+     *
+     * @param name the name of the header to search
+     * @param defaultValue the default value
+     * @return the first header value if the header is found.
+     *         {@code defaultValue} if there's no such header.
+     */
     String get(CharSequence name, String defaultValue);
-    int getInt(CharSequence name);
-    int getInt(CharSequence name, int defaultValue);
-    long getLong(CharSequence name);
-    long getLong(CharSequence name, long defaultValue);
-    long getTimeMillis(CharSequence name);
-    long getTimeMillis(CharSequence name, long defaultValue);
 
     /**
-     * Returns and Removes the value of a header with the specified name.  If there are
+     * Returns the integer value of a header with the specified name.  If there are
+     * more than one values for the specified name, the first value is returned.
+     *
+     * @param name the name of the header to search
+     * @return the first header value if the header is found and its value is an integer.
+     *         {@code null} if there's no such header or its value is not an integer.
+     */
+    Integer getInt(CharSequence name);
+
+    /**
+     * Returns the integer value of a header with the specified name.  If there are
+     * more than one values for the specified name, the first value is returned.
+     *
+     * @param name the name of the header to search
+     * @param defaultValue the default value
+     * @return the first header value if the header is found and its value is an integer.
+     *         {@code defaultValue} if there's no such header or its value is not an integer.
+     */
+    int getInt(CharSequence name, int defaultValue);
+
+    /**
+     * Returns the long integer value of a header with the specified name.  If there are
+     * more than one values for the specified name, the first value is returned.
+     *
+     * @param name the name of the header to search
+     * @return the first header value if the header is found and its value is a long integer.
+     *         {@code null} if there's no such header or its value is not a long integer.
+     */
+    Long getLong(CharSequence name);
+
+    /**
+     * Returns the long integer value of a header with the specified name.  If there are
+     * more than one values for the specified name, the first value is returned.
+     *
+     * @param name the name of the header to search
+     * @param defaultValue the default value
+     * @return the first header value if the header is found and its value is a long integer.
+     *         {@code defaultValue} if there's no such header or its value is not a long integer.
+     */
+    long getLong(CharSequence name, long defaultValue);
+
+    /**
+     * Returns the date value of a header with the specified name as milliseconds.  If there are
      * more than one values for the specified name, the first value is returned.
      *
      * @param name The name of the header to search
-     * @return The first header value or {@code null} if there is no such header
+     * @return the first header value in milliseconds if the header is found and its value is a date.
+     *         {@code null} if there's no such header or its value is not a date.
+     */
+    Long getTimeMillis(CharSequence name);
+
+    /**
+     * Returns the date value of a header with the specified name as milliseconds.  If there are
+     * more than one values for the specified name, the first value is returned.
+     *
+     * @param name The name of the header to search
+     * @param defaultValue default value
+     * @return the first header value in milliseconds if the header is found and its value is a date.
+     *         {@code defaultValue} if there's no such header or its value is not a date.
+     */
+    long getTimeMillis(CharSequence name, long defaultValue);
+
+    /**
+     * Returns and removes the value of a header with the specified name.  If there are
+     * more than one values for the specified name, the first value is returned.
+     *
+     * @param name the name of the header to search
+     * @return the first header value or {@code null} if there is no such header
      */
     String getAndRemove(CharSequence name);
 
     /**
-     * Returns and Removes the value of a header with the specified name.  If there are
+     * Returns and removes the value of a header with the specified name.  If there are
      * more than one values for the specified name, the first value is returned.
      *
-     * @param name The name of the header to search
-     * @param defaultValue default value
-     * @return The first header value or {@code defaultValue} if there is no such header
+     * @param name the name of the header to search
+     * @param defaultValue the default value
+     * @return the first header value or {@code defaultValue} if there is no such header
      */
     String getAndRemove(CharSequence name, String defaultValue);
 
     /**
-     * Returns and Removes the integer value of a header with the specified name.  If there are
+     * Returns and removes the integer value of a header with the specified name.  If there are
      * more than one values for the specified name, the first value is returned.
      *
-     * @param name The name of the header to search
-     * @return The first header value
-     * @throws java.util.NoSuchElementException
-     *         if no such header
-     * @throws NumberFormatException
-     *         if the value of header is not number
+     * @param name the name of the header to search
+     * @return the first header value if the header is found and its value is an integer.
+     *         {@code null} if there's no such header or its value is not an integer.
      */
-    int getIntAndRemove(CharSequence name);
+    Integer getIntAndRemove(CharSequence name);
 
     /**
-     * Returns and Removes the integer value of a header with the specified name.  If there are more than one values for
+     * Returns and removes the integer value of a header with the specified name.  If there are more than one values for
      * the specified name, the first value is returned.
      *
-     * @param name The name of the header to search
-     * @param defaultValue default value
-     * @return The first header value or {@code defaultValue} if there is no such header or the value of header is not
-     * number
+     * @param name the name of the header to search
+     * @param defaultValue the default value
+     * @return the first header value if the header is found and its value is an integer.
+     *         {@code defaultValue} if there is no such header or its value of header is not an integer.
      */
     int getIntAndRemove(CharSequence name, int defaultValue);
 
     /**
-     * Returns and Removes the long value of a header with the specified name.  If there are
+     * Returns and removes the long value of a header with the specified name.  If there are
      * more than one values for the specified name, the first value is returned.
      *
-     * @param name The name of the header to search
-     * @return The first header value
-     * @throws java.util.NoSuchElementException
-     *         if no such header
-     * @throws NumberFormatException
-     *         if the value of header is not number
+     * @param name the name of the header to search
+     * @return the first header value if the header is found and its value is an integer.
+     *         {@code null} if there's no such header or its value is not an integer.
      */
-    long getLongAndRemove(CharSequence name);
+    Long getLongAndRemove(CharSequence name);
 
     /**
-     * Returns and Removes the long value of a header with the specified name.  If there are more than one values for
+     * Returns and removes the long value of a header with the specified name.  If there are more than one values for
      * the specified name, the first value is returned.
      *
-     * @param name The name of the header to search
-     * @param defaultValue default value
-     * @return The first header value or {@code defaultValue} if there is no such header or the value of header is not
-     * number
+     * @param name the name of the header to search
+     * @param defaultValue the default value
+     * @return the first header value if the header is found and its value is an integer.
+     *         {@code defaultValue} if there's no such header or its value is not an integer.
      */
     long getLongAndRemove(CharSequence name, long defaultValue);
 
     /**
-     * Returns and Removes the millisecond value of a header with the specified name.  If there are
+     * Returns and removes the date value of a header with the specified name as milliseconds.  If there are
      * more than one values for the specified name, the first value is returned.
      *
      * @param name The name of the header to search
-     * @return The first header value
-     * @throws java.util.NoSuchElementException
-     *         if no such header
+     * @return the first header value in milliseconds if the header is found and its value is a date.
+     *         {@code null} if there's no such header or its value is not a date.
      */
-    long getTimeMillisAndRemove(CharSequence name);
+    Long getTimeMillisAndRemove(CharSequence name);
 
     /**
-     * Returns and Removes the millisecond value of a header with the specified name.  If there are more than one values
-     * for the specified name, the first value is returned.
+     * Returns and removes the date value of a header with the specified name as milliseconds.  If there are
+     * more than one values for the specified name, the first value is returned.
      *
      * @param name The name of the header to search
      * @param defaultValue default value
-     * @return The first header value or {@code defaultValue} if there is no such header
+     * @return the first header value in milliseconds if the header is found and its value is a date.
+     *         {@code defaultValue} if there's no such header or its value is not a date.
      */
     long getTimeMillisAndRemove(CharSequence name, long defaultValue);
 
@@ -201,17 +262,20 @@ public interface TextHeaders extends Iterable<Map.Entry<String, String>> {
     List<Entry<CharSequence, CharSequence>> unconvertedEntries();
 
     /**
-     * Checks to see if there is a header with the specified name
+     * Returns {@code true} if and only if this collection contains the header with the specified name.
      *
      * @param name The name of the header to search for
-     * @return True if at least one header is found
+     * @return {@code true} if at least one header is found
      */
     boolean contains(CharSequence name);
 
+    /**
+     * Returns the number of header entries in this collection.
+     */
     int size();
 
     /**
-     * Checks if no header exists.
+     * Returns {@code true} if and only if this collection contains no header entries.
      */
     boolean isEmpty();
 
@@ -237,8 +301,8 @@ public interface TextHeaders extends Iterable<Map.Entry<String, String>> {
      * of {@link java.util.Date} and {@link java.util.Calendar}, which are formatted to the date
      * format defined in <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.3.1">RFC2616</a>.
      *
-     * @param name The name of the header being added
-     * @param value The value of the header being added
+     * @param name the name of the header being added
+     * @param value the value of the header being added
      *
      * @return {@code this}
      */
@@ -257,12 +321,29 @@ public interface TextHeaders extends Iterable<Map.Entry<String, String>> {
      * }
      * </pre>
      *
-     * @param name The name of the headepublic abstract rs being set
-     * @param values The values of the headers being set
+     * @param name the name of the headepublic abstract rs being set
+     * @param values the values of the headers being set
      * @return {@code this}
      */
     TextHeaders add(CharSequence name, Iterable<?> values);
 
+    /**
+     * Adds a new header with the specified name and values.
+     *
+     * This getMethod can be represented approximately as the following code:
+     * <pre>
+     * for (Object v: values) {
+     *     if (v == null) {
+     *         break;
+     *     }
+     *     headers.add(name, v);
+     * }
+     * </pre>
+     *
+     * @param name the name of the headepublic abstract rs being set
+     * @param values the values of the headers being set
+     * @return {@code this}
+     */
     TextHeaders add(CharSequence name, Object... values);
 
     /**
@@ -302,12 +383,31 @@ public interface TextHeaders extends Iterable<Map.Entry<String, String>> {
      * }
      * </pre>
      *
-     * @param name The name of the headers being set
-     * @param values The values of the headers being set
+     * @param name the name of the headers being set
+     * @param values the values of the headers being set
      * @return {@code this}
      */
     TextHeaders set(CharSequence name, Iterable<?> values);
 
+    /**
+     * Sets a header with the specified name and values.
+     *
+     * If there is an existing header with the same name, it is removed.
+     * This getMethod can be represented approximately as the following code:
+     * <pre>
+     * headers.remove(name);
+     * for (Object v: values) {
+     *     if (v == null) {
+     *         break;
+     *     }
+     *     headers.add(name, v);
+     * }
+     * </pre>
+     *
+     * @param name the name of the headers being set
+     * @param values the values of the headers being set
+     * @return {@code this}
+     */
     TextHeaders set(CharSequence name, Object... values);
 
     /**
@@ -335,12 +435,19 @@ public interface TextHeaders extends Iterable<Map.Entry<String, String>> {
     /**
      * Returns {@code true} if a header with the name and value exists.
      *
-     * @param name              the headername
-     * @param value             the value
+     * @param name              the header name
+     * @param value             the header value
      * @return {@code true} if it contains it {@code false} otherwise
      */
     boolean contains(CharSequence name, Object value);
 
+    /**
+     * Returns {@code true} if a header with the name and value exists.
+     *
+     * @param name              the header name
+     * @param value             the header value
+     * @return {@code true} if it contains it {@code false} otherwise
+     */
     boolean contains(CharSequence name, Object value, boolean ignoreCase);
 
     @Override
