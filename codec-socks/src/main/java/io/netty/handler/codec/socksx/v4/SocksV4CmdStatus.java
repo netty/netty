@@ -13,19 +13,31 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.example.socksproxy;
+package io.netty.handler.codec.socksx.v4;
 
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.handler.logging.LogLevel;
-import io.netty.handler.logging.LoggingHandler;
+public enum SocksV4CmdStatus {
+    SUCCESS((byte) 0x5a),
+    REJECTED_OR_FAILED((byte) 0x5b),
+    IDENTD_UNREACHABLE((byte) 0x5c),
+    IDENTD_AUTH_FAILURE((byte) 0x5d),
+    UNASSIGNED((byte) 0xff);
 
-public final class SocksServerInitializer extends ChannelInitializer<SocketChannel> {
-    @Override
-    public void initChannel(SocketChannel socketChannel) throws Exception {
-        ChannelPipeline p = socketChannel.pipeline();
-        p.addFirst(new LoggingHandler(LogLevel.DEBUG));
-        p.addLast(new SocksPortUnificationServerHandler());
+    private final byte b;
+
+    SocksV4CmdStatus(byte b) {
+        this.b = b;
+    }
+
+    public static SocksV4CmdStatus valueOf(byte b) {
+        for (SocksV4CmdStatus code : values()) {
+            if (code.b == b) {
+                return code;
+            }
+        }
+        return UNASSIGNED;
+    }
+
+    public byte byteValue() {
+        return b;
     }
 }
