@@ -13,19 +13,19 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.example.socksproxy;
+package io.netty.handler.codec.socksx.v5;
 
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.handler.logging.LogLevel;
-import io.netty.handler.logging.LoggingHandler;
+import org.junit.Test;
+import static org.junit.Assert.assertTrue;
 
-public final class SocksServerInitializer extends ChannelInitializer<SocketChannel> {
-    @Override
-    public void initChannel(SocketChannel socketChannel) throws Exception {
-        ChannelPipeline p = socketChannel.pipeline();
-        p.addFirst(new LoggingHandler(LogLevel.DEBUG));
-        p.addLast(new SocksPortUnificationServerHandler());
+public class SocksV5AuthResponseTest {
+    @Test
+    public void testConstructorParamsAreNotNull() {
+        try {
+            new SocksV5AuthResponse(null);
+        } catch (Exception e) {
+            assertTrue(e instanceof NullPointerException);
+        }
     }
+
 }

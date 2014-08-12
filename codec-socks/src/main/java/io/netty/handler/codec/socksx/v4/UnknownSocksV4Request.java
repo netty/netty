@@ -13,19 +13,30 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.example.socksproxy;
+package io.netty.handler.codec.socksx.v4;
 
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.handler.logging.LogLevel;
-import io.netty.handler.logging.LoggingHandler;
+import io.netty.buffer.ByteBuf;
 
-public final class SocksServerInitializer extends ChannelInitializer<SocketChannel> {
+/**
+ * An unknown socks request.
+ *
+ * @see SocksV4CmdRequestDecoder
+ */
+public final class UnknownSocksV4Request extends SocksV4Request {
+
+    public UnknownSocksV4Request() {
+    }
+
     @Override
-    public void initChannel(SocketChannel socketChannel) throws Exception {
-        ChannelPipeline p = socketChannel.pipeline();
-        p.addFirst(new LoggingHandler(LogLevel.DEBUG));
-        p.addLast(new SocksPortUnificationServerHandler());
+    public void encodeAsByteBuf(ByteBuf byteBuf) {
+        // NOOP
+    }
+
+    private static class UnknownSocksV4RequestHolder {
+        public static final UnknownSocksV4Request HOLDER_INSTANCE = new UnknownSocksV4Request();
+    }
+
+    public static UnknownSocksV4Request getInstance() {
+        return UnknownSocksV4RequestHolder.HOLDER_INSTANCE;
     }
 }
