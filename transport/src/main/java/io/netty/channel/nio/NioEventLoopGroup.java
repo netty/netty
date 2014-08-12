@@ -17,7 +17,7 @@ package io.netty.channel.nio;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
-import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.AbstractEventLoopGroup;
 import io.netty.util.concurrent.DefaultExecutorFactory;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ExecutorFactory;
@@ -27,9 +27,10 @@ import java.nio.channels.spi.SelectorProvider;
 import java.util.concurrent.Executor;
 
 /**
- * A {@link MultithreadEventLoopGroup} implementation which is used for NIO {@link Selector} based {@link Channel}s.
+ * A {@link io.netty.channel.AbstractEventLoopGroup} implementation which is used for NIO {@link Selector} based
+ * {@link Channel}s.
  */
-public class NioEventLoopGroup extends MultithreadEventLoopGroup {
+public class NioEventLoopGroup extends AbstractEventLoopGroup {
 
     /**
      * Create a new instance that uses twice as many {@link EventLoop}s as there processors/cores

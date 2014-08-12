@@ -18,24 +18,31 @@ package io.netty.util.concurrent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 import java.util.PriorityQueue;
 import java.util.Queue;
+import java.util.Set;
+import java.util.concurrent.AbstractExecutorService;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.RunnableFuture;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import static io.netty.util.concurrent.AbstractEventExecutorGroup.*;
 
 /**
  * Single-thread singleton {@link EventExecutor}.  It starts the thread automatically and stops it when there is no
  * task pending in the task queue for 1 second.  Please note it is not scalable to schedule large number of tasks to
  * this executor; use a dedicated executor.
  */
-public final class GlobalEventExecutor extends AbstractEventExecutor {
+public final class GlobalEventExecutor extends AbstractExecutorService implements EventExecutor {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(GlobalEventExecutor.class);
 
@@ -55,6 +62,8 @@ public final class GlobalEventExecutor extends AbstractEventExecutor {
     volatile Thread thread;
 
     private final Future<?> terminationFuture = new FailedFuture<Object>(this, new UnsupportedOperationException());
+
+    private final Set<GlobalEventExecutor> children = Collections.singleton(this);
 
     private GlobalEventExecutor() {
         delayedTaskQueue.add(purgeTask);
@@ -128,7 +137,7 @@ public final class GlobalEventExecutor extends AbstractEventExecutor {
      * Return the number of tasks that are pending for processing.
      *
      * <strong>Be aware that this operation may be expensive as it depends on the internal implementation of the
-     * SingleThreadEventExecutor. So use it was care!</strong>
+     * AbstractEventExecutor. So use it was care!</strong>
      */
     public int pendingTasks() {
         return taskQueue.size();
@@ -384,5 +393,90 @@ public final class GlobalEventExecutor extends AbstractEventExecutor {
                 }
             }
         }
+    }
+
+    @Override
+    public EventExecutorGroup parent() {
+        return null;
+    }
+
+    @Override
+    public EventExecutor next() {
+        return this;
+    }
+
+    @Override
+    public Set<GlobalEventExecutor> children() {
+        return children;
+    }
+
+    @Override
+    public boolean inEventLoop() {
+        return inEventLoop(Thread.currentThread());
+    }
+
+    @Override
+    public EventExecutor unwrap() {
+        return this;
+    }
+
+    @Override
+    public Future<?> shutdownGracefully() {
+        return shutdownGracefully(DEFAULT_SHUTDOWN_QUIET_PERIOD, DEFAULT_SHUTDOWN_TIMEOUT, TimeUnit.SECONDS);
+    }
+
+    /**
+     * @deprecated {@link #shutdownGracefully(long, long, TimeUnit)} or {@link #shutdownGracefully()} instead.
+     */
+    @Override
+    @Deprecated
+    public List<Runnable> shutdownNow() {
+        shutdown();
+        return Collections.emptyList();
+    }
+
+    @Override
+    public <V> Promise<V> newPromise() {
+        return new DefaultPromise<V>(this);
+    }
+
+    @Override
+    public <V> ProgressivePromise<V> newProgressivePromise() {
+        return new DefaultProgressivePromise<V>(this);
+    }
+
+    @Override
+    public <V> Future<V> newSucceededFuture(V result) {
+        return new SucceededFuture<V>(this, result);
+    }
+
+    @Override
+    public <V> Future<V> newFailedFuture(Throwable cause) {
+        return new FailedFuture<V>(this, cause);
+    }
+
+    @Override
+    public Future<?> submit(Runnable task) {
+        return (Future<?>) super.submit(task);
+    }
+
+    @Override
+    public <T> Future<T> submit(Runnable task, T result) {
+        return (Future<T>) super.submit(task, result);
+    }
+
+    @Override
+    public <T> Future<T> submit(Callable<T> task) {
+        return (Future<T>) super.submit(task);
+    }
+
+    @Override
+    protected <T> RunnableFuture<T> newTaskFor(Runnable runnable, T value) {
+        return new PromiseTask<T>(this, runnable, value);
+    }
+
+    @Override
+    protected <T> RunnableFuture<T> newTaskFor(Callable<T> callable) {
+        return new PromiseTask<T>(this, callable);
     }
 }

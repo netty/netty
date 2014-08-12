@@ -175,7 +175,7 @@ public class DefaultPromiseTest {
         executor.shutdownGracefully().sync();
     }
 
-    private static final class TestEventExecutor extends SingleThreadEventExecutor {
+    private static final class TestEventExecutor extends AbstractEventExecutor {
         TestEventExecutor() {
             super(null, new DefaultExecutorFactory(TestEventExecutor.class).newExecutor(1), true);
         }

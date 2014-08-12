@@ -18,6 +18,7 @@ package io.netty.channel.local;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.AbstractChannel;
+import io.netty.channel.AbstractEventLoop;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerAdapter;
@@ -27,7 +28,6 @@ import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.Test;
@@ -192,7 +192,7 @@ public class LocalChannelTest {
             @Override
             protected EventLoop newChild(Executor executor, Object... args)
                     throws Exception {
-                return new SingleThreadEventLoop(this, executor, true) {
+                return new AbstractEventLoop(this, executor, true) {
                     @Override
                     protected void run() {
                         Runnable task = takeTask();

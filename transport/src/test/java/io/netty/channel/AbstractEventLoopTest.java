@@ -19,7 +19,6 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
 import io.netty.channel.local.LocalChannel;
-import io.netty.util.concurrent.DefaultExecutorFactory;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.PausableEventExecutor;
 import org.junit.After;
@@ -45,7 +44,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
 
-public class SingleThreadEventLoopTest {
+public class AbstractEventLoopTest {
 
     private static final Runnable NOOP = new Runnable() {
         @Override
@@ -53,14 +52,14 @@ public class SingleThreadEventLoopTest {
     };
 
     @SuppressWarnings({ "unused" })
-    private SingleThreadEventLoopA loopA;
+    private AbstractEventLoopA loopA;
     @SuppressWarnings({ "unused" })
-    private SingleThreadEventLoopB loopB;
+    private AbstractEventLoopB loopB;
 
     @Before
     public void newEventLoop() {
-        loopA = new SingleThreadEventLoopA();
-        loopB = new SingleThreadEventLoopB();
+        loopA = new AbstractEventLoopA();
+        loopB = new AbstractEventLoopB();
     }
 
     @After
@@ -686,11 +685,11 @@ public class SingleThreadEventLoopTest {
         assertTrue(oneTimeScheduledTaskExecuted.get());
     }
 
-    private static class SingleThreadEventLoopA extends SingleThreadEventLoop {
+    private static class AbstractEventLoopA extends AbstractEventLoop {
 
         final AtomicInteger cleanedUp = new AtomicInteger();
 
-        SingleThreadEventLoopA() {
+        AbstractEventLoopA() {
             super(null, Executors.newSingleThreadExecutor(), true);
         }
 
@@ -715,12 +714,12 @@ public class SingleThreadEventLoopTest {
         }
     }
 
-    private static class SingleThreadEventLoopB extends SingleThreadEventLoop {
+    private static class AbstractEventLoopB extends AbstractEventLoop {
 
         private volatile Thread thread;
         private volatile boolean interrupted;
 
-        SingleThreadEventLoopB() {
+        AbstractEventLoopB() {
             super(null, Executors.newSingleThreadExecutor(), false);
         }
 

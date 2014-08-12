@@ -16,11 +16,11 @@
 package io.netty.channel;
 
 /**
- * {@link SingleThreadEventLoop} which is used to handle OIO {@link Channel}'s. So in general there will be
+ * {@link AbstractEventLoop} which is used to handle OIO {@link Channel}'s. So in general there will be
  * one {@link ThreadPerChannelEventLoop} per {@link Channel}.
  *
  */
-public class ThreadPerChannelEventLoop extends SingleThreadEventLoop {
+public class ThreadPerChannelEventLoop extends AbstractEventLoop {
 
     private final ThreadPerChannelEventLoopGroup parent;
     private Channel ch;

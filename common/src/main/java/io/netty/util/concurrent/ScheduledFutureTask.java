@@ -191,10 +191,10 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
     private void scheduleWithNewExecutor() {
         EventExecutor newExecutor = ((CallableEventExecutorAdapter) task).executor().unwrap();
 
-        if (newExecutor instanceof SingleThreadEventExecutor) {
+        if (newExecutor instanceof AbstractEventExecutor) {
             if (!newExecutor.isShutdown()) {
                 executor = newExecutor;
-                delayedTaskQueue = ((SingleThreadEventExecutor) newExecutor).delayedTaskQueue;
+                delayedTaskQueue = ((AbstractEventExecutor) newExecutor).delayedTaskQueue;
 
                 executor.execute(new OneTimeTask() {
                     @Override

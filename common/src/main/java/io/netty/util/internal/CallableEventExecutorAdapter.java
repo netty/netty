@@ -26,7 +26,7 @@ import java.util.concurrent.Callable;
  * the correct {@link EventExecutor} after channel migration.
  *
  * @see io.netty.util.concurrent.ScheduledFutureTask
- * @see io.netty.util.concurrent.SingleThreadEventExecutor
+ * @see io.netty.util.concurrent.AbstractEventExecutor
  *
  * @param <V>   the result type of method {@link Callable#call()}.
  */

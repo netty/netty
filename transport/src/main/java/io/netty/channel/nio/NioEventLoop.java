@@ -16,10 +16,10 @@
 package io.netty.channel.nio;
 
 
+import io.netty.channel.AbstractEventLoop;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.EventLoopException;
-import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -43,10 +43,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * A {@link SingleThreadEventLoop} implementation which registers each {@link Channel} with a
+ * A {@link AbstractEventLoop} implementation which registers each {@link Channel} with a
  * NIO {@link Selector} and performs the multiplexing of these in the event loop.
  */
-public final class NioEventLoop extends SingleThreadEventLoop {
+public final class NioEventLoop extends AbstractEventLoop {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioEventLoop.class);
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,20 +13,22 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty.channel;
 
 import io.netty.util.concurrent.AbstractEventExecutor;
 
+import java.util.concurrent.Executor;
+
 /**
- * Skeletal implementation of {@link EventLoop}.
+ * Abstract base class for {@link EventLoop}s that execute all its submitted tasks in a single thread.
+ *
  */
 public abstract class AbstractEventLoop extends AbstractEventExecutor implements EventLoop {
 
-    protected AbstractEventLoop() { }
+    private final ChannelHandlerInvoker invoker = new DefaultChannelHandlerInvoker(this);
 
-    protected AbstractEventLoop(EventLoopGroup parent) {
-        super(parent);
+    protected AbstractEventLoop(EventLoopGroup parent, Executor executor, boolean addTaskWakesUp) {
+        super(parent, executor, addTaskWakesUp);
     }
 
     @Override
@@ -40,7 +42,40 @@ public abstract class AbstractEventLoop extends AbstractEventExecutor implements
     }
 
     @Override
+    public ChannelHandlerInvoker asInvoker() {
+        return invoker;
+    }
+
+    @Override
+    public ChannelFuture register(Channel channel) {
+        return register(channel, new DefaultChannelPromise(channel, this));
+    }
+
+    @Override
+    public ChannelFuture register(final Channel channel, final ChannelPromise promise) {
+        if (channel == null) {
+            throw new NullPointerException("channel");
+        }
+        if (promise == null) {
+            throw new NullPointerException("promise");
+        }
+
+        channel.unsafe().register(this, promise);
+        return promise;
+    }
+
+    @Override
+    protected boolean wakesUpForTask(Runnable task) {
+        return !(task instanceof NonWakeupRunnable);
+    }
+
+    @Override
     public EventLoop unwrap() {
         return this;
     }
+
+    /**
+     * Marker interface for {@link Runnable} that will not trigger an {@link #wakeup(boolean)} in all cases.
+     */
+    interface NonWakeupRunnable extends Runnable { }
 }

@@ -15,17 +15,27 @@
  */
 package io.netty.util.concurrent;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.AbstractExecutorService;
+import java.util.concurrent.Callable;
+import java.util.concurrent.RunnableFuture;
 import java.util.concurrent.TimeUnit;
 
+import static io.netty.util.concurrent.AbstractEventExecutorGroup.*;
+
 /**
- * {@link AbstractEventExecutor} which execute tasks in the callers thread.
+ * {@link EventExecutor} which execute tasks in the callers thread.
  */
-public final class ImmediateEventExecutor extends AbstractEventExecutor {
+public final class ImmediateEventExecutor extends AbstractExecutorService implements EventExecutor {
 
     public static final ImmediateEventExecutor INSTANCE = new ImmediateEventExecutor();
 
     private final Future<?> terminationFuture = new FailedFuture<Object>(
             GlobalEventExecutor.INSTANCE, new UnsupportedOperationException());
+
+    private final Set<ImmediateEventExecutor> children = Collections.singleton(this);
 
     private ImmediateEventExecutor() {
         // Singleton
@@ -113,5 +123,95 @@ public final class ImmediateEventExecutor extends AbstractEventExecutor {
         protected void checkDeadLock() {
             // No check
         }
+    }
+
+    @Override
+    public EventExecutorGroup parent() {
+        return null;
+    }
+
+    @Override
+    public EventExecutor next() {
+        return this;
+    }
+
+    @Override
+    public Set<ImmediateEventExecutor> children() {
+        return children;
+    }
+
+    @Override
+    public EventExecutor unwrap() {
+        return this;
+    }
+
+    @Override
+    public Future<?> shutdownGracefully() {
+        return shutdownGracefully(DEFAULT_SHUTDOWN_QUIET_PERIOD, DEFAULT_SHUTDOWN_TIMEOUT, TimeUnit.SECONDS);
+    }
+
+    /**
+     * @deprecated {@link #shutdownGracefully(long, long, TimeUnit)} or {@link #shutdownGracefully()} instead.
+     */
+    @Override
+    @Deprecated
+    public List<Runnable> shutdownNow() {
+        shutdown();
+        return Collections.emptyList();
+    }
+
+    @Override
+    public <V> Future<V> newSucceededFuture(V result) {
+        return new SucceededFuture<V>(this, result);
+    }
+
+    @Override
+    public <V> Future<V> newFailedFuture(Throwable cause) {
+        return new FailedFuture<V>(this, cause);
+    }
+
+    @Override
+    public Future<?> submit(Runnable task) {
+        return (Future<?>) super.submit(task);
+    }
+
+    @Override
+    public <T> Future<T> submit(Runnable task, T result) {
+        return (Future<T>) super.submit(task, result);
+    }
+
+    @Override
+    public <T> Future<T> submit(Callable<T> task) {
+        return (Future<T>) super.submit(task);
+    }
+
+    @Override
+    protected <T> RunnableFuture<T> newTaskFor(Runnable runnable, T value) {
+        return new PromiseTask<T>(this, runnable, value);
+    }
+
+    @Override
+    protected <T> RunnableFuture<T> newTaskFor(Callable<T> callable) {
+        return new PromiseTask<T>(this, callable);
+    }
+
+    @Override
+    public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
+        throw new UnsupportedOperationException();
     }
 }

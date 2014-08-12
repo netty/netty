@@ -15,26 +15,44 @@
  */
 package io.netty.channel.embedded;
 
-import io.netty.channel.AbstractEventLoop;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelHandlerInvoker;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
+import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
+
+import io.netty.util.concurrent.DefaultProgressivePromise;
+import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.FailedFuture;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.ProgressivePromise;
+import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.PromiseTask;
+import io.netty.util.concurrent.ScheduledFuture;
+import io.netty.util.concurrent.SucceededFuture;
 
 import java.net.SocketAddress;
 import java.util.ArrayDeque;
+import java.util.Collections;
+import java.util.List;
 import java.util.Queue;
+import java.util.Set;
+import java.util.concurrent.AbstractExecutorService;
+import java.util.concurrent.Callable;
+import java.util.concurrent.RunnableFuture;
 import java.util.concurrent.TimeUnit;
 
 import static io.netty.channel.ChannelHandlerInvokerUtil.*;
+import static io.netty.util.concurrent.AbstractEventExecutorGroup.*;
 
-final class EmbeddedEventLoop extends AbstractEventLoop implements ChannelHandlerInvoker {
+final class EmbeddedEventLoop extends AbstractExecutorService implements ChannelHandlerInvoker, EventLoop {
 
     private final Queue<Runnable> tasks = new ArrayDeque<Runnable>(2);
+    private final Set<EmbeddedEventLoop> children = Collections.singleton(this);
 
     @Override
     public void execute(Runnable command) {
@@ -207,5 +225,105 @@ final class EmbeddedEventLoop extends AbstractEventLoop implements ChannelHandle
     @Override
     public void invokeFlush(ChannelHandlerContext ctx) {
         invokeFlushNow(ctx);
+    }
+
+    @Override
+    public EventLoop next() {
+        return this;
+    }
+
+    @Override
+    public EventLoop unwrap() {
+        return this;
+    }
+
+    @Override
+    public EventLoopGroup parent() {
+        return null;
+    }
+
+    @Override
+    public Set<EmbeddedEventLoop> children() {
+        return children;
+    }
+
+    @Override
+    public Future<?> shutdownGracefully() {
+        return shutdownGracefully(DEFAULT_SHUTDOWN_QUIET_PERIOD, DEFAULT_SHUTDOWN_TIMEOUT, TimeUnit.SECONDS);
+    }
+
+    /**
+     * @deprecated {@link #shutdownGracefully(long, long, TimeUnit)} or {@link #shutdownGracefully()} instead.
+     */
+    @Override
+    @Deprecated
+    public List<Runnable> shutdownNow() {
+        shutdown();
+        return Collections.emptyList();
+    }
+
+    @Override
+    public <V> Promise<V> newPromise() {
+        return new DefaultPromise<V>(this);
+    }
+
+    @Override
+    public <V> ProgressivePromise<V> newProgressivePromise() {
+        return new DefaultProgressivePromise<V>(this);
+    }
+
+    @Override
+    public <V> Future<V> newSucceededFuture(V result) {
+        return new SucceededFuture<V>(this, result);
+    }
+
+    @Override
+    public <V> Future<V> newFailedFuture(Throwable cause) {
+        return new FailedFuture<V>(this, cause);
+    }
+
+    @Override
+    public Future<?> submit(Runnable task) {
+        return (Future<?>) super.submit(task);
+    }
+
+    @Override
+    public <T> Future<T> submit(Runnable task, T result) {
+        return (Future<T>) super.submit(task, result);
+    }
+
+    @Override
+    public <T> Future<T> submit(Callable<T> task) {
+        return (Future<T>) super.submit(task);
+    }
+
+    @Override
+    protected <T> RunnableFuture<T> newTaskFor(Runnable runnable, T value) {
+        return new PromiseTask<T>(this, runnable, value);
+    }
+
+    @Override
+    protected <T> RunnableFuture<T> newTaskFor(Callable<T> callable) {
+        return new PromiseTask<T>(this, callable);
+    }
+
+    @Override
+    public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
+        throw new UnsupportedOperationException();
     }
 }
