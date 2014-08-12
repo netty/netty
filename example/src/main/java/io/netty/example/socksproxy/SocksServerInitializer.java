@@ -18,8 +18,8 @@ package io.netty.example.socksproxy;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.handler.codec.socks.SocksInitRequestDecoder;
-import io.netty.handler.codec.socks.SocksMessageEncoder;
+import io.netty.handler.codec.socks.v5.SocksV5InitRequestDecoder;
+import io.netty.handler.codec.socks.common.SocksMessageEncoder;
 
 public final class SocksServerInitializer extends ChannelInitializer<SocketChannel> {
 
@@ -29,7 +29,7 @@ public final class SocksServerInitializer extends ChannelInitializer<SocketChann
     @Override
     public void initChannel(SocketChannel socketChannel) throws Exception {
         ChannelPipeline p = socketChannel.pipeline();
-        p.addLast(new SocksInitRequestDecoder());
+        p.addLast(new SocksV5InitRequestDecoder());
         p.addLast(socksMessageEncoder);
         p.addLast(socksServerHandler);
     }

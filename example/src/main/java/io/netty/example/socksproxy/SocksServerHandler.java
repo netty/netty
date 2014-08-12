@@ -18,37 +18,37 @@ package io.netty.example.socksproxy;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.handler.codec.socks.SocksAuthResponse;
-import io.netty.handler.codec.socks.SocksAuthScheme;
-import io.netty.handler.codec.socks.SocksAuthStatus;
-import io.netty.handler.codec.socks.SocksCmdRequest;
-import io.netty.handler.codec.socks.SocksCmdRequestDecoder;
-import io.netty.handler.codec.socks.SocksCmdType;
-import io.netty.handler.codec.socks.SocksInitResponse;
-import io.netty.handler.codec.socks.SocksRequest;
+import io.netty.handler.codec.socks.v5.SocksV5AuthResponse;
+import io.netty.handler.codec.socks.v5.SocksV5AuthScheme;
+import io.netty.handler.codec.socks.v5.SocksV5AuthStatus;
+import io.netty.handler.codec.socks.v5.SocksV5CmdRequest;
+import io.netty.handler.codec.socks.v5.SocksV5CmdRequestDecoder;
+import io.netty.handler.codec.socks.v5.SocksV5CmdType;
+import io.netty.handler.codec.socks.v5.SocksV5InitResponse;
+import io.netty.handler.codec.socks.v5.SocksV5Request;
 
 
 @ChannelHandler.Sharable
-public final class SocksServerHandler extends SimpleChannelInboundHandler<SocksRequest> {
+public final class SocksServerHandler extends SimpleChannelInboundHandler<SocksV5Request> {
 
     @Override
-    public void channelRead0(ChannelHandlerContext ctx, SocksRequest socksRequest) throws Exception {
+    public void channelRead0(ChannelHandlerContext ctx, SocksV5Request socksRequest) throws Exception {
         switch (socksRequest.requestType()) {
             case INIT: {
                 // auth support example
                 //ctx.pipeline().addFirst(new SocksAuthRequestDecoder());
                 //ctx.write(new SocksInitResponse(SocksAuthScheme.AUTH_PASSWORD));
-                ctx.pipeline().addFirst(new SocksCmdRequestDecoder());
-                ctx.write(new SocksInitResponse(SocksAuthScheme.NO_AUTH));
+                ctx.pipeline().addFirst(new SocksV5CmdRequestDecoder());
+                ctx.write(new SocksV5InitResponse(SocksV5AuthScheme.NO_AUTH));
                 break;
             }
             case AUTH:
-                ctx.pipeline().addFirst(new SocksCmdRequestDecoder());
-                ctx.write(new SocksAuthResponse(SocksAuthStatus.SUCCESS));
+                ctx.pipeline().addFirst(new SocksV5CmdRequestDecoder());
+                ctx.write(new SocksV5AuthResponse(SocksV5AuthStatus.SUCCESS));
                 break;
             case CMD:
-                SocksCmdRequest req = (SocksCmdRequest) socksRequest;
-                if (req.cmdType() == SocksCmdType.CONNECT) {
+                SocksV5CmdRequest req = (SocksV5CmdRequest) socksRequest;
+                if (req.cmdType() == SocksV5CmdType.CONNECT) {
                     ctx.pipeline().addLast(new SocksServerConnectHandler());
                     ctx.pipeline().remove(this);
                     ctx.fireChannelRead(socksRequest);
