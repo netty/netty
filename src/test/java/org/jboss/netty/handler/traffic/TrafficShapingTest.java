@@ -59,8 +59,12 @@ public class TrafficShapingTest {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(TrafficShapingTest.class);
 
     static final int messageSize = 1024;
-    static final int bandwidthFactor = 4;
-    static final int check = 100;
+    static final int bandwidthFactor = 8;
+    static final int minfactor = bandwidthFactor - (bandwidthFactor / 2);
+    static final int maxfactor = bandwidthFactor + (bandwidthFactor / 2);
+    static final long stepms = 1000 / bandwidthFactor;
+    static final long minimalms = Math.max(stepms / 2, 40) / 10 * 10;
+    static final long check = Math.max(Math.min(100, minimalms / 2) / 10 * 10, 40);
     private static final Random random = new Random();
     static final byte[] data = new byte[messageSize];
 
@@ -79,6 +83,8 @@ public class TrafficShapingTest {
     
     @BeforeClass
     public static void createGroup() {
+        logger.info("Bandwidth: " + minfactor + " <= " + bandwidthFactor + " <= " + maxfactor +
+                " StepMs: " + stepms + " MinMs: " + minimalms + " CheckMs: " + check);
         serverSocketAddress = new InetSocketAddress("127.0.0.1", 0);
 
         bootstrapServer = new ServerBootstrap(
@@ -96,11 +102,8 @@ public class TrafficShapingTest {
                 return getPipelineTraffic(true);
             }
         });
-        System.out.println("Try bind");
         serverChannel = bootstrapServer.bind();
         serverSocketAddress = (InetSocketAddress) serverChannel.getLocalAddress();
-        System.out.println("Binded: "+serverSocketAddress);
-
         bootstrapCient = new ClientBootstrap(
                 new NioClientSocketChannelFactory(
                         group, group));
@@ -175,8 +178,7 @@ public class TrafficShapingTest {
         long[] minimalWaitBetween = new long[multipleMessage.length + 1];
         minimalWaitBetween[0] = 0;
         for (int i = 0; i < multipleMessage.length; i++) {
-            minimalWaitBetween[i + 1] = (multipleMessage[i] - 1) * (1000 / bandwidthFactor)
-                    + (1000 / bandwidthFactor - 150);
+            minimalWaitBetween[i + 1] = (multipleMessage[i] - 1) * stepms + minimalms;
         }
         return minimalWaitBetween;
     }
@@ -184,14 +186,13 @@ public class TrafficShapingTest {
     private static long[] computeWaitWrite(int[] multipleMessage) {
         long[] minimalWaitBetween = new long[multipleMessage.length + 1];
         for (int i = 0; i < multipleMessage.length; i++) {
-            minimalWaitBetween[i] = (multipleMessage[i] - 1) * (1000 / bandwidthFactor)
-                    + (1000 / bandwidthFactor - 150);
+            minimalWaitBetween[i] = (multipleMessage[i] - 1) * stepms + minimalms;
         }
         minimalWaitBetween[0] = 0;
         return minimalWaitBetween;
     }
 
-    @Test(timeout = 30000)
+    @Test(timeout = 10000)
     public void testNoTrafficShapping() throws Throwable {
         logger.info("TEST NO TRAFFIC");
         testNoTrafficShapping(bootstrapServer, bootstrapCient);
@@ -204,7 +205,7 @@ public class TrafficShapingTest {
         testTrafficShapping0(sb, cb, false, false, false, false, autoRead, minimalWaitBetween, multipleMessage);
     }
 
-    @Test(timeout = 30000)
+    @Test(timeout = 10000)
     public void testExecNoTrafficShapping() throws Throwable {
         logger.info("TEST EXEC NO TRAFFIC");
         testExecNoTrafficShapping(bootstrapServer, bootstrapCient);
@@ -217,7 +218,7 @@ public class TrafficShapingTest {
         testTrafficShapping0(sb, cb, true, false, false, false, autoRead, minimalWaitBetween, multipleMessage);
     }
 
-    @Test(timeout = 30000)
+    @Test(timeout = 10000)
     public void testWriteTrafficShapping() throws Throwable {
         logger.info("TEST WRITE");
         testWriteTrafficShapping(bootstrapServer, bootstrapCient);
@@ -230,7 +231,7 @@ public class TrafficShapingTest {
         testTrafficShapping0(sb, cb, false, false, true, false, autoRead, minimalWaitBetween, multipleMessage);
     }
 
-    @Test(timeout = 30000)
+    @Test(timeout = 10000)
     public void testReadTrafficShapping() throws Throwable {
         logger.info("TEST READ");
         testReadTrafficShapping(bootstrapServer, bootstrapCient);
@@ -243,7 +244,7 @@ public class TrafficShapingTest {
         testTrafficShapping0(sb, cb, false, true, false, false, autoRead, minimalWaitBetween, multipleMessage);
     }
 
-    @Test(timeout = 30000)
+    @Test(timeout = 10000)
     public void testWrite1TrafficShapping() throws Throwable {
         logger.info("TEST WRITE");
         testWrite1TrafficShapping(bootstrapServer, bootstrapCient);
@@ -256,7 +257,7 @@ public class TrafficShapingTest {
         testTrafficShapping0(sb, cb, false, false, true, false, autoRead, minimalWaitBetween, multipleMessage);
     }
 
-    @Test(timeout = 30000)
+    @Test(timeout = 10000)
     public void testRead1TrafficShapping() throws Throwable {
         logger.info("TEST READ");
         testRead1TrafficShapping(bootstrapServer, bootstrapCient);
@@ -269,7 +270,7 @@ public class TrafficShapingTest {
         testTrafficShapping0(sb, cb, false, true, false, false, autoRead, minimalWaitBetween, multipleMessage);
     }
 
-    @Test(timeout = 30000)
+    @Test(timeout = 10000)
     public void testExecWriteTrafficShapping() throws Throwable {
         logger.info("TEST EXEC WRITE");
         testExecWriteTrafficShapping(bootstrapServer, bootstrapCient);
@@ -282,7 +283,7 @@ public class TrafficShapingTest {
         testTrafficShapping0(sb, cb, true, false, true, false, autoRead, minimalWaitBetween, multipleMessage);
     }
 
-    @Test(timeout = 30000)
+    @Test(timeout = 10000)
     public void testExecReadTrafficShapping() throws Throwable {
         logger.info("TEST EXEC READ");
         testExecReadTrafficShapping(bootstrapServer, bootstrapCient);
@@ -295,7 +296,7 @@ public class TrafficShapingTest {
         testTrafficShapping0(sb, cb, true, true, false, false, autoRead, minimalWaitBetween, multipleMessage);
     }
 
-    @Test(timeout = 30000)
+    @Test(timeout = 10000)
     public void testWriteGlobalTrafficShapping() throws Throwable {
         logger.info("TEST GLOBAL WRITE");
         testWriteGlobalTrafficShapping(bootstrapServer, bootstrapCient);
@@ -308,7 +309,7 @@ public class TrafficShapingTest {
         testTrafficShapping0(sb, cb, false, false, true, true, autoRead, minimalWaitBetween, multipleMessage);
     }
 
-    @Test(timeout = 30000)
+    @Test(timeout = 10000)
     public void testReadGlobalTrafficShapping() throws Throwable {
         logger.info("TEST GLOBAL READ");
         testReadGlobalTrafficShapping(bootstrapServer, bootstrapCient);
@@ -321,7 +322,7 @@ public class TrafficShapingTest {
         testTrafficShapping0(sb, cb, false, true, false, true, autoRead, minimalWaitBetween, multipleMessage);
     }
 
-    @Test(timeout = 30000)
+    @Test(timeout = 10000)
     public void testAutoReadTrafficShapping() throws Throwable {
         logger.info("TEST AUTO READ");
         testAutoReadTrafficShapping(bootstrapServer, bootstrapCient);
@@ -333,7 +334,7 @@ public class TrafficShapingTest {
         long[] minimalWaitBetween = computeWaitRead(multipleMessage);
         testTrafficShapping0(sb, cb, false, true, false, false, autoRead, minimalWaitBetween, multipleMessage);
     }
-    @Test(timeout = 30000)
+    @Test(timeout = 10000)
     public void testAutoReadGlobalTrafficShapping() throws Throwable {
         logger.info("TEST AUTO READ GLOBAL");
         testAutoReadTrafficShapping(bootstrapServer, bootstrapCient);
@@ -345,7 +346,7 @@ public class TrafficShapingTest {
         long[] minimalWaitBetween = computeWaitRead(multipleMessage);
         testTrafficShapping0(sb, cb, false, true, false, true, autoRead, minimalWaitBetween, multipleMessage);
     }
-    @Test(timeout = 30000)
+    @Test(timeout = 10000)
     public void testAutoReadExecTrafficShapping() throws Throwable {
         logger.info("TEST AUTO READ EXEC");
         testAutoReadTrafficShapping(bootstrapServer, bootstrapCient);
@@ -357,7 +358,7 @@ public class TrafficShapingTest {
         long[] minimalWaitBetween = computeWaitRead(multipleMessage);
         testTrafficShapping0(sb, cb, true, true, false, false, autoRead, minimalWaitBetween, multipleMessage);
     }
-    @Test(timeout = 30000)
+    @Test(timeout = 10000)
     public void testAutoReadExecGlobalTrafficShapping() throws Throwable {
         logger.info("TEST AUTO READ EXEC GLOBAL");
         testAutoReadTrafficShapping(bootstrapServer, bootstrapCient);
@@ -427,21 +428,23 @@ public class TrafficShapingTest {
         sh.channel.close().await();
         ch.channel.close().await();
 
-        // for extra release call in AutoRead
-        Thread.sleep(500);
+        if (autoRead != null) {
+            // for extra release call in AutoRead
+            Thread.sleep(minimalms);
+        }
 
         if (autoRead == null && minimalWaitBetween != null) {
-            assertTrue("Overall Traffic not ok since > " + (bandwidthFactor + 1) + ": " + average,
-                    average <= bandwidthFactor + 1);
+            assertTrue("Overall Traffic not ok since > " + maxfactor + ": " + average,
+                    average <= maxfactor);
             /*if (additionalExecutor) {
                 // Oio is not as good when using additionalExecutor
                 assertTrue("Overall Traffic not ok since < 0.25: " + average, average >= 0.25);
             } else {
-                assertTrue("Overall Traffic not ok since < " + (bandwidthFactor - 1.5) + ": " + average,
-                        average >= bandwidthFactor - 1.5);
+                assertTrue("Overall Traffic not ok since < " + minfactor + ": " + average,
+                        average >= minfactor);
             }*/
-            assertTrue("Overall Traffic not ok since < " + (bandwidthFactor - 1.5) + ": " + average,
-                    average >= bandwidthFactor - 1.5);
+            assertTrue("Overall Traffic not ok since < " + minfactor + ": " + average,
+                    average >= minfactor);
         }
         if (handler != null && globalLimit) {
             ((GlobalTrafficShapingHandler) handler).releaseExternalResources();
@@ -506,14 +509,18 @@ public class TrafficShapingTest {
             long minimalWait = (minimalWaitBetween != null) ? minimalWaitBetween[step] : 0;
             int ar = 0;
             if (autoRead != null) {
+                // When autoRead: special timer
                 if (step > 0 && autoRead[step - 1] != 0) {
                     ar = autoRead[step - 1];
                     if (ar > 0) {
+                        // No limit
                         minimalWait = -1;
                     } else {
-                        minimalWait = 100;
+                        // minimal limit
+                        minimalWait = minimalms;
                     }
                 } else {
+                    // No limit
                     minimalWait = 0;
                 }
             }
@@ -600,9 +607,9 @@ public class TrafficShapingTest {
             if (isAutoRead != 0) {
                 if (isAutoRead < 0) {
                     final int exactStep = step;
-                    int wait = (isAutoRead == -1) ? 100 : 1000 / bandwidthFactor + 100;
+                    long wait = (isAutoRead == -1) ? minimalms : stepms + minimalms;
                     if (isAutoRead == -3) {
-                        wait = 1000;
+                        wait = stepms * 2;
                     }
                     timer.newTimeout(new TimerTask() {
                         public void run(Timeout timeout) throws Exception {
@@ -617,7 +624,7 @@ public class TrafficShapingTest {
                                 logger.info("AutoRead: True, Step " + step);
                                 channel.setReadable(true);
                             }
-                        }, 1000 / bandwidthFactor + 100, TimeUnit.MILLISECONDS);
+                        }, stepms + minimalms, TimeUnit.MILLISECONDS);
                     }
                 }
             }
