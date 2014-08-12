@@ -76,7 +76,7 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-tcnative</artifactId>
-      <classifier>${os.detected.classifier}</classifier>
+        <classifier>${os.detected.classifier}</classifier>
     </dependency>
     <dependency>
       <groupId>org.eclipse.jetty.npn</groupId>
