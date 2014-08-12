@@ -55,7 +55,9 @@ public final class SocksServerConnectHandler extends SimpleChannelInboundHandler
                                 }
                             });
                 } else {
-                    ctx.channel().writeAndFlush(new SocksV5CmdResponse(SocksV5CmdStatus.FAILURE, request.addressType()));
+                    ctx.channel().writeAndFlush(
+                            new SocksV5CmdResponse(SocksV5CmdStatus.FAILURE, request.addressType())
+                    );
                     SocksServerUtils.closeOnFlush(ctx.channel());
                 }
             }
