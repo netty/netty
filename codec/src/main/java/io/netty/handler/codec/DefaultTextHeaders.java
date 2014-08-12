@@ -377,16 +377,20 @@ public class DefaultTextHeaders implements TextHeaders {
     }
 
     @Override
-    public int getInt(CharSequence name) {
+    public Integer getInt(CharSequence name) {
         CharSequence v = getUnconverted(name);
         if (v == null) {
-            throw new NoSuchElementException(String.valueOf(name));
+            return null;
         }
 
-        if (v instanceof AsciiString) {
-            return ((AsciiString) v).parseInt();
-        } else {
-            return Integer.parseInt(v.toString());
+        try {
+            if (v instanceof AsciiString) {
+                return ((AsciiString) v).parseInt();
+            } else {
+                return Integer.parseInt(v.toString());
+            }
+        } catch (NumberFormatException ignored) {
+            return null;
         }
     }
 
@@ -409,16 +413,20 @@ public class DefaultTextHeaders implements TextHeaders {
     }
 
     @Override
-    public long getLong(CharSequence name) {
+    public Long getLong(CharSequence name) {
         CharSequence v = getUnconverted(name);
         if (v == null) {
-            throw new NoSuchElementException(String.valueOf(name));
+            return null;
         }
 
-        if (v instanceof AsciiString) {
-            return ((AsciiString) v).parseLong();
-        } else {
-            return Long.parseLong(v.toString());
+        try {
+            if (v instanceof AsciiString) {
+                return ((AsciiString) v).parseLong();
+            } else {
+                return Long.parseLong(v.toString());
+            }
+        } catch (NumberFormatException ignored) {
+            return null;
         }
     }
 
@@ -441,13 +449,17 @@ public class DefaultTextHeaders implements TextHeaders {
     }
 
     @Override
-    public long getTimeMillis(CharSequence name) {
+    public Long getTimeMillis(CharSequence name) {
         CharSequence v = getUnconverted(name);
         if (v == null) {
-            throw new NoSuchElementException(String.valueOf(name));
+            return null;
         }
 
-        return HttpHeaderDateFormat.get().parse(v.toString());
+        try {
+            return HttpHeaderDateFormat.get().parse(v.toString());
+        } catch (ParseException ignored) {
+            return null;
+        }
     }
 
     @Override
@@ -529,16 +541,20 @@ public class DefaultTextHeaders implements TextHeaders {
     }
 
     @Override
-    public int getIntAndRemove(CharSequence name) {
+    public Integer getIntAndRemove(CharSequence name) {
         CharSequence v = getUnconvertedAndRemove(name);
         if (v == null) {
-            throw new NoSuchElementException(String.valueOf(name));
+            return null;
         }
 
-        if (v instanceof AsciiString) {
-            return ((AsciiString) v).parseInt();
-        } else {
-            return Integer.parseInt(v.toString());
+        try {
+            if (v instanceof AsciiString) {
+                return ((AsciiString) v).parseInt();
+            } else {
+                return Integer.parseInt(v.toString());
+            }
+        } catch (NumberFormatException ignored) {
+            return null;
         }
     }
 
@@ -561,16 +577,20 @@ public class DefaultTextHeaders implements TextHeaders {
     }
 
     @Override
-    public long getLongAndRemove(CharSequence name) {
+    public Long getLongAndRemove(CharSequence name) {
         CharSequence v = getUnconvertedAndRemove(name);
         if (v == null) {
-            throw new NoSuchElementException(String.valueOf(name));
+            return null;
         }
 
-        if (v instanceof AsciiString) {
-            return ((AsciiString) v).parseLong();
-        } else {
-            return Long.parseLong(v.toString());
+        try {
+            if (v instanceof AsciiString) {
+                return ((AsciiString) v).parseLong();
+            } else {
+                return Long.parseLong(v.toString());
+            }
+        } catch (NumberFormatException ignored) {
+            return null;
         }
     }
 
@@ -593,13 +613,17 @@ public class DefaultTextHeaders implements TextHeaders {
     }
 
     @Override
-    public long getTimeMillisAndRemove(CharSequence name) {
+    public Long getTimeMillisAndRemove(CharSequence name) {
         CharSequence v = getUnconvertedAndRemove(name);
         if (v == null) {
-            throw new NoSuchElementException(String.valueOf(name));
+            return null;
         }
 
-        return HttpHeaderDateFormat.get().parse(v.toString());
+        try {
+            return HttpHeaderDateFormat.get().parse(v.toString());
+        } catch (ParseException ignored) {
+            return null;
+        }
     }
 
     @Override
@@ -1074,7 +1098,7 @@ public class DefaultTextHeaders implements TextHeaders {
             dateFormat3.setTimeZone(tz);
         }
 
-        long parse(String text) {
+        long parse(String text) throws ParseException {
             Date date = dateFormat1.parse(text, parsePos);
             if (date == null) {
                 date = dateFormat2.parse(text, parsePos);
@@ -1083,7 +1107,7 @@ public class DefaultTextHeaders implements TextHeaders {
                 date = dateFormat3.parse(text, parsePos);
             }
             if (date == null) {
-                PlatformDependent.throwException(new ParseException(text, 0));
+                throw new ParseException(text, 0);
             }
             return date.getTime();
         }
