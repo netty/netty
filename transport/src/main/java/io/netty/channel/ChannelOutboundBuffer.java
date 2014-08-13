@@ -46,6 +46,10 @@ public final class ChannelOutboundBuffer {
     private static final FastThreadLocal<ByteBuffer[]> NIO_BUFFERS = new FastThreadLocal<ByteBuffer[]>() {
         @Override
         protected ByteBuffer[] initialValue() throws Exception {
+            // Use 1024 as this is the IOV_MAX value on linux. If you sue a bigger one the JDK may do some array
+            // copy which we should not trigger.
+            //
+            // See 'man 2 writev' for more informations.
             return new ByteBuffer[1024];
         }
     };
@@ -355,8 +359,8 @@ public final class ChannelOutboundBuffer {
                     int count = buf.nioBufferCount();
                     int neededSpace = nioBufferCount + count;
                     if (neededSpace > nioBuffers.length) {
-                        nioBuffers = expandNioBufferArray(nioBuffers, neededSpace, nioBufferCount);
-                        NIO_BUFFERS.set(threadLocalMap, nioBuffers);
+                        // We have not enough space left in the array to add the ByteBuffers so break here.
+                        break;
                     }
                     if (count == 1) {
                         ByteBuffer nioBuf = buf.internalNioBuffer(readerIndex, readableBytes);
@@ -383,25 +387,6 @@ public final class ChannelOutboundBuffer {
             nioBuffers[nioBufferCount ++] = nioBuf;
         }
         return nioBufferCount;
-    }
-
-    private static ByteBuffer[] expandNioBufferArray(ByteBuffer[] array, int neededSpace, int size) {
-        int newCapacity = array.length;
-        do {
-            // double capacity until it is big enough
-            // See https://github.com/netty/netty/issues/1890
-            newCapacity <<= 1;
-
-            if (newCapacity < 0) {
-                throw new IllegalStateException();
-            }
-
-        } while (neededSpace > newCapacity);
-
-        ByteBuffer[] newArray = new ByteBuffer[newCapacity];
-        System.arraycopy(array, 0, newArray, 0, size);
-
-        return newArray;
     }
 
     /**
