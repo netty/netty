@@ -885,53 +885,31 @@
                 <taskdef resource="net/sf/antcontrib/antlib.xml" />
 
                 <!-- Get the information about the latest commit -->
-                <exec executable="git" outputproperty="gitOutput.shortCommitHash" resultproperty="gitExitCode.shortCommitHash" failonerror="false" failifexecutionfails="false">
+                <exec
+                  executable="git" outputproperty="gitOutput.lastCommit" resultproperty="gitExitCode.lastCommit"
+                  failonerror="false" failifexecutionfails="false">
                   <arg value="log" />
                   <arg value="-1" />
-                  <arg value="--format=format:%h" />
-                </exec>
-                <if>
-                  <equals arg2="0" arg1="${gitExitCode.shortCommitHash}" />
-                  <then>
-                    <property name="shortCommitHash" value="${gitOutput.shortCommitHash}" />
-                  </then>
-                  <else>
-                    <property name="shortCommitHash" value="0" />
-                  </else>
-                </if>
-
-                <exec executable="git" outputproperty="gitOutput.longCommitHash" resultproperty="gitExitCode.longCommitHash" failonerror="false" failifexecutionfails="false">
-                  <arg value="log" />
-                  <arg value="-1" />
-                  <arg value="--format=format:%H" />
-                </exec>
-                <if>
-                  <equals arg2="0" arg1="${gitExitCode.longCommitHash}" />
-                  <then>
-                    <property name="longCommitHash" value="${gitOutput.longCommitHash}" />
-                  </then>
-                  <else>
-                    <property name="longCommitHash" value="0000000000000000000000000000000000000000" />
-                  </else>
-                </if>
-
-                <exec executable="git" outputproperty="gitOutput.commitDate" resultproperty="gitExitCode.commitDate" failonerror="false" failifexecutionfails="false">
-                  <arg value="log" />
-                  <arg value="-1" />
-                  <arg value="--format=format:%cd" />
+                  <arg value="--format=format:%h %H %cd" />
                   <arg value="--date=iso" />
                 </exec>
-                <if>
-                  <equals arg2="0" arg1="${gitExitCode.commitDate}" />
-                  <then>
-                    <property name="commitDate" value="${gitOutput.commitDate}" />
-                  </then>
-                  <else>
-                    <property name="commitDate" value="1970-01-01 00:00:00 +0000" />
-                  </else>
-                </if>
+                <propertyregex
+                  property="shortCommitHash" input="${gitOutput.lastCommit}"
+                  regexp="^([0-9a-f]+) .*$" select="\1" casesensitive="true"
+                  defaultValue="0" />
+                <propertyregex
+                  property="longCommitHash" input="${gitOutput.lastCommit}"
+                  regexp="^[0-9a-f]+ ([0-9a-f]{40}) .*$" select="\1" casesensitive="true"
+                  defaultValue="0000000000000000000000000000000000000000" />
+                <propertyregex
+                  property="commitDate" input="${gitOutput.lastCommit}"
+                  regexp="^[0-9a-f]+ [0-9a-f]{40} (.*)$" select="\1" casesensitive="true"
+                  defaultValue="1970-01-01 00:00:00 +0000" />
 
-                <exec executable="git" outputproperty="gitOutput.repoStatus" resultproperty="gitExitCode.repoStatus" failonerror="false" failifexecutionfails="false">
+                <!-- Get the information abount whether the repository is clean or dirty -->
+                <exec
+                  executable="git" outputproperty="gitOutput.repoStatus" resultproperty="gitExitCode.repoStatus"
+                  failonerror="false" failifexecutionfails="false">
                   <arg value="status" />
                   <arg value="--porcelain" />
                 </exec>
