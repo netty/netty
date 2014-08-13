@@ -246,11 +246,14 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
      * While adding a FileUpload, is the multipart currently in Mixed Mode
      */
     private boolean duringMixedMode;
-
     /**
      * Global Body size
      */
     private long globalBodySize;
+    /**
+     * Global Transfer progress
+     */
+    private long globalProgress;
 
     /**
      * True if this request is a Multipart request
@@ -999,7 +1002,9 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
         if (isLastChunkSent) {
             return null;
         } else {
-            return nextChunk();
+            HttpContent nextChunk = nextChunk();
+            globalProgress += nextChunk.content().readableBytes();
+            return nextChunk;
         }
     }
 
@@ -1083,6 +1088,16 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
     @Override
     public boolean isEndOfInput() throws Exception {
         return isLastChunkSent;
+    }
+
+    @Override
+    public long length() {
+        return isMultipart? globalBodySize : globalBodySize - 1;
+    }
+
+    @Override
+    public long progress() {
+        return globalProgress;
     }
 
     /**

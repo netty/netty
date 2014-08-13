@@ -161,4 +161,14 @@ public class ChunkedFile implements ChunkedInput<ByteBuf> {
             }
         }
     }
+
+    @Override
+    public long length() {
+        return endOffset - startOffset;
+    }
+
+    @Override
+    public long progress() {
+        return offset - startOffset;
+    }
 }

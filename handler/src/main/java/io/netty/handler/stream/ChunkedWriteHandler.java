@@ -179,7 +179,7 @@ public class ChunkedWriteHandler extends ChannelHandlerAdapter {
                         }
                         currentWrite.fail(cause);
                     } else {
-                        currentWrite.success();
+                        currentWrite.success(in.length());
                     }
                     closeInput(in);
                 } catch (Exception e) {
@@ -253,7 +253,6 @@ public class ChunkedWriteHandler extends ChannelHandlerAdapter {
                     message = Unpooled.EMPTY_BUFFER;
                 }
 
-                final int amount = amount(message);
                 ChannelFuture f = ctx.write(message);
                 if (endOfInput) {
                     this.currentWrite = null;
@@ -266,8 +265,8 @@ public class ChunkedWriteHandler extends ChannelHandlerAdapter {
                     f.addListener(new ChannelFutureListener() {
                         @Override
                         public void operationComplete(ChannelFuture future) throws Exception {
-                            currentWrite.progress(amount);
-                            currentWrite.success();
+                            currentWrite.progress(chunks.progress(), chunks.length());
+                            currentWrite.success(chunks.length());
                             closeInput(chunks);
                         }
                     });
@@ -279,7 +278,7 @@ public class ChunkedWriteHandler extends ChannelHandlerAdapter {
                                 closeInput((ChunkedInput<?>) pendingMessage);
                                 currentWrite.fail(future.cause());
                             } else {
-                                currentWrite.progress(amount);
+                                currentWrite.progress(chunks.progress(), chunks.length());
                             }
                         }
                     });
@@ -291,7 +290,7 @@ public class ChunkedWriteHandler extends ChannelHandlerAdapter {
                                 closeInput((ChunkedInput<?>) pendingMessage);
                                 currentWrite.fail(future.cause());
                             } else {
-                                currentWrite.progress(amount);
+                                currentWrite.progress(chunks.progress(), chunks.length());
                                 if (channel.isWritable()) {
                                     resumeTransfer();
                                 }
@@ -327,7 +326,6 @@ public class ChunkedWriteHandler extends ChannelHandlerAdapter {
     private static final class PendingWrite {
         final Object msg;
         final ChannelPromise promise;
-        private long progress;
 
         PendingWrite(Object msg, ChannelPromise promise) {
             this.msg = msg;
@@ -339,7 +337,7 @@ public class ChunkedWriteHandler extends ChannelHandlerAdapter {
             promise.tryFailure(cause);
         }
 
-        void success() {
+        void success(long total) {
             if (promise.isDone()) {
                 // No need to notify the progress or fulfill the promise because it's done already.
                 return;
@@ -347,27 +345,16 @@ public class ChunkedWriteHandler extends ChannelHandlerAdapter {
 
             if (promise instanceof ChannelProgressivePromise) {
                 // Now we know what the total is.
-                ((ChannelProgressivePromise) promise).tryProgress(progress, progress);
+                ((ChannelProgressivePromise) promise).tryProgress(total, total);
             }
 
             promise.trySuccess();
         }
 
-        void progress(int amount) {
-            progress += amount;
+        void progress(long progress, long total) {
             if (promise instanceof ChannelProgressivePromise) {
-                ((ChannelProgressivePromise) promise).tryProgress(progress, -1);
+                ((ChannelProgressivePromise) promise).tryProgress(progress, total);
             }
         }
-    }
-
-    private static int amount(Object msg) {
-        if (msg instanceof ByteBuf) {
-            return ((ByteBuf) msg).readableBytes();
-        }
-        if (msg instanceof ByteBufHolder) {
-            return ((ByteBufHolder) msg).content().readableBytes();
-        }
-        return 1;
     }
 }
