@@ -352,17 +352,31 @@ public final class ChannelOutboundBuffer {
 
                 if (readableBytes > 0) {
                     nioBufferSize += readableBytes;
-                    int count = buf.nioBufferCount();
+                    int count = entry.count;
+                    if (count == -1) {
+                        //noinspection ConstantValueVariableUse
+                        entry.count = count =  buf.nioBufferCount();
+                    }
                     int neededSpace = nioBufferCount + count;
                     if (neededSpace > nioBuffers.length) {
                         nioBuffers = expandNioBufferArray(nioBuffers, neededSpace, nioBufferCount);
                         NIO_BUFFERS.set(threadLocalMap, nioBuffers);
                     }
                     if (count == 1) {
-                        ByteBuffer nioBuf = buf.internalNioBuffer(readerIndex, readableBytes);
+                        ByteBuffer nioBuf = entry.buf;
+                        if (nioBuf == null) {
+                            // cache ByteBuffer as it may need to create a new ByteBuffer instance if its a
+                            // derived buffer
+                            entry.buf = nioBuf = buf.internalNioBuffer(readerIndex, readableBytes);
+                        }
                         nioBuffers[nioBufferCount ++] = nioBuf;
                     } else {
-                        ByteBuffer[] nioBufs = buf.nioBuffers(readerIndex, readableBytes);
+                        ByteBuffer[] nioBufs = entry.bufs;
+                        if (nioBufs == null) {
+                            // cached ByteBuffers as they may be expensive to create in terms
+                            // of Object allocation
+                            entry.bufs = nioBufs = buf.nioBuffers();
+                        }
                         nioBufferCount = fillBufferArray(nioBufs, nioBuffers, nioBufferCount);
                     }
                 }
@@ -572,10 +586,13 @@ public final class ChannelOutboundBuffer {
         private final Handle handle;
         Entry next;
         Object msg;
+        ByteBuffer[] bufs;
+        ByteBuffer buf;
         ChannelPromise promise;
         long progress;
         long total;
         int pendingSize;
+        int count = -1;
         boolean cancelled;
 
         private Entry(Handle handle) {
@@ -603,6 +620,8 @@ public final class ChannelOutboundBuffer {
                 pendingSize = 0;
                 total = 0;
                 progress = 0;
+                bufs = null;
+                buf = null;
                 return pSize;
             }
             return 0;
@@ -610,11 +629,14 @@ public final class ChannelOutboundBuffer {
 
         void recycle() {
             next = null;
+            bufs = null;
+            buf = null;
             msg = null;
             promise = null;
             progress = 0;
             total = 0;
             pendingSize = 0;
+            count = -1;
             cancelled = false;
             RECYCLER.recycle(this, handle);
         }
