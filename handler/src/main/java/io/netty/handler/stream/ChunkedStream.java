@@ -120,4 +120,14 @@ public class ChunkedStream implements ChunkedInput<ByteBuf> {
             }
         }
     }
+
+    @Override
+    public long length() {
+        return -1;
+    }
+
+    @Override
+    public long progress() {
+        return offset;
+    }
 }
