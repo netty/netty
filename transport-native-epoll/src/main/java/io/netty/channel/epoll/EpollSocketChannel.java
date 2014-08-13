@@ -265,17 +265,19 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
      * @return amount       the amount of written bytes
      */
     private boolean writeFileRegion(ChannelOutboundBuffer in, DefaultFileRegion region) throws Exception {
-        if (region.transfered() >= region.count()) {
+        final long regionCount = region.count();
+        if (region.transfered() >= regionCount) {
             in.remove();
             return true;
         }
 
+        final long baseOffset = region.position();
         boolean done = false;
         long flushedAmount = 0;
 
         for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
-            long expected = region.count() - region.position();
-            long localFlushedAmount = Native.sendfile(fd, region, region.transfered(), expected);
+            final long offset = region.transfered();
+            final long localFlushedAmount = Native.sendfile(fd, region, baseOffset, offset, regionCount - offset);
             if (localFlushedAmount == 0) {
                 // Returned EAGAIN need to set EPOLLOUT
                 setEpollOut();
@@ -283,13 +285,15 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
             }
 
             flushedAmount += localFlushedAmount;
-            if (region.transfered() >= region.count()) {
+            if (region.transfered() >= regionCount) {
                 done = true;
                 break;
             }
         }
 
-        in.progress(flushedAmount);
+        if (flushedAmount > 0) {
+            in.progress(flushedAmount);
+        }
 
         if (done) {
             in.remove();
