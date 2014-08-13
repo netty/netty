@@ -340,10 +340,19 @@ public final class ByteBufUtil {
      * is allocated via the {@link ByteBufAllocator}.
      */
     public static ByteBuf encodeString(ByteBufAllocator alloc, CharBuffer src, Charset charset) {
+        return encodeString0(alloc, false, src, charset);
+    }
+
+    static ByteBuf encodeString0(ByteBufAllocator alloc, boolean enforceHeap, CharBuffer src, Charset charset) {
         final CharsetEncoder encoder = CharsetUtil.getEncoder(charset);
         int length = (int) ((double) src.remaining() * encoder.maxBytesPerChar());
         boolean release = true;
-        final ByteBuf dst = alloc.buffer(length);
+        final ByteBuf dst;
+        if (enforceHeap) {
+            dst = alloc.heapBuffer(length);
+        } else {
+            dst = alloc.buffer(length);
+        }
         try {
             final ByteBuffer dstBuf = dst.internalNioBuffer(0, length);
             final int pos = dstBuf.position();
