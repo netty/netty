@@ -75,7 +75,8 @@ final class Native {
     public static native int read(int fd, ByteBuffer buf, int pos, int limit) throws IOException;
     public static native int readAddress(int fd, long address, int pos, int limit) throws IOException;
 
-    public static native long sendfile(int dest, DefaultFileRegion src, long offset, long length) throws IOException;
+    public static native long sendfile(
+            int dest, DefaultFileRegion src, long baseOffset, long offset, long length) throws IOException;
 
     public static int sendTo(
             int fd, ByteBuffer buf, int pos, int limit, InetAddress addr, int port) throws IOException {

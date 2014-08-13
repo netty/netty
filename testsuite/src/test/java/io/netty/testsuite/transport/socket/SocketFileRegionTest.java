@@ -24,6 +24,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.FileRegion;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.util.internal.ThreadLocalRandom;
 import org.junit.Test;
 
 import java.io.File;
@@ -33,15 +34,15 @@ import java.io.IOException;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.*;
 
 public class SocketFileRegionTest extends AbstractSocketTest {
 
-    private static final Random random = new Random();
     static final byte[] data = new byte[1048576 * 10];
 
     static {
-        random.nextBytes(data);
+        ThreadLocalRandom.current().nextBytes(data);
     }
 
     @Test
@@ -82,11 +83,26 @@ public class SocketFileRegionTest extends AbstractSocketTest {
 
     private static void testFileRegion0(
             ServerBootstrap sb, Bootstrap cb, boolean voidPromise, final boolean autoRead) throws Throwable {
-        File file = File.createTempFile("netty-", ".tmp");
+        final File file = File.createTempFile("netty-", ".tmp");
         file.deleteOnExit();
 
-        FileOutputStream out = new FileOutputStream(file);
+        final FileOutputStream out = new FileOutputStream(file);
+        final Random random = ThreadLocalRandom.current();
+
+        // Prepend random data which will not be transferred, so that we can test non-zero start offset
+        final int startOffset = random.nextInt(8192);
+        for (int i = 0; i < startOffset; i ++) {
+            out.write(random.nextInt());
+        }
+
+        // .. and here comes the real data to transfer.
         out.write(data);
+
+        // .. and then some extra data which is not supposed to be transferred.
+        for (int i = random.nextInt(8192); i > 0; i --) {
+            out.write(random.nextInt());
+        }
+
         out.close();
 
         ChannelHandler ch = new SimpleChannelInboundHandler<Object>() {
@@ -114,7 +130,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         Channel sc = sb.bind().sync().channel();
 
         Channel cc = cb.connect().sync().channel();
-        FileRegion region = new DefaultFileRegion(new FileInputStream(file).getChannel(), 0L, file.length());
+        FileRegion region = new DefaultFileRegion(new FileInputStream(file).getChannel(), startOffset, data.length);
         if (voidPromise) {
             assertEquals(cc.voidPromise(), cc.writeAndFlush(region, cc.voidPromise()));
         } else {
@@ -143,6 +159,9 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         if (sh.exception.get() != null) {
             throw sh.exception.get();
         }
+
+        // Make sure we did not receive more than we expected.
+        assertThat(sh.counter, is(data.length));
     }
 
     private static class TestHandler extends SimpleChannelInboundHandler<ByteBuf> {
