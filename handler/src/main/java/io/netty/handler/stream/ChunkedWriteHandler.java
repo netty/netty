@@ -266,7 +266,7 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
                     f.addListener(new ChannelFutureListener() {
                         @Override
                         public void operationComplete(ChannelFuture future) throws Exception {
-                            currentWrite.progress(amount);
+                            currentWrite.progress(amount, chunks.length());
                             currentWrite.success();
                             closeInput(chunks);
                         }
@@ -279,7 +279,7 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
                                 closeInput((ChunkedInput<?>) pendingMessage);
                                 currentWrite.fail(future.cause());
                             } else {
-                                currentWrite.progress(amount);
+                                currentWrite.progress(amount, chunks.length());
                             }
                         }
                     });
@@ -291,7 +291,7 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
                                 closeInput((ChunkedInput<?>) pendingMessage);
                                 currentWrite.fail(future.cause());
                             } else {
-                                currentWrite.progress(amount);
+                                currentWrite.progress(amount, chunks.length());
                                 if (channel.isWritable()) {
                                     resumeTransfer();
                                 }
@@ -353,10 +353,10 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
             promise.trySuccess();
         }
 
-        void progress(int amount) {
+        void progress(int amount, long total) {
             progress += amount;
             if (promise instanceof ChannelProgressivePromise) {
-                ((ChannelProgressivePromise) promise).tryProgress(progress, -1);
+                ((ChannelProgressivePromise) promise).tryProgress(progress, total);
             }
         }
     }

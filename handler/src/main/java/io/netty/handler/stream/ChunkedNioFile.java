@@ -172,4 +172,13 @@ public class ChunkedNioFile implements ChunkedInput<ByteBuf> {
             }
         }
     }
+
+    @Override
+    public long length() {
+        try {
+            return this.in.size();
+        } catch (IOException e) {
+            return -1;
+        }
+    }
 }

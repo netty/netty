@@ -124,6 +124,11 @@ public class ChunkedWriteHandlerTest {
                 done = true;
                 return buffer.duplicate().retain();
             }
+
+            @Override
+            public long length(){
+                return -1;
+            }
         };
 
         final AtomicBoolean listenerNotified = new AtomicBoolean(false);
@@ -170,6 +175,11 @@ public class ChunkedWriteHandlerTest {
                 }
                 done = true;
                 return 0;
+            }
+
+            @Override
+            public long length(){
+                return -1;
             }
         };
 

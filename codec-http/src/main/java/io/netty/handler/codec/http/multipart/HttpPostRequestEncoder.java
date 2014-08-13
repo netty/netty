@@ -1083,6 +1083,11 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
         return isLastChunkSent;
     }
 
+    @Override
+    public long length() {
+        return isMultipart? globalBodySize : globalBodySize - 1;
+    }
+
     /**
      * Exception when an error occurs while encoding
      */
