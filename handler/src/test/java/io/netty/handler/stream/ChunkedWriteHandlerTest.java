@@ -126,7 +126,7 @@ public class ChunkedWriteHandlerTest {
             }
 
             @Override
-            public long length(){
+            public long length() {
                 return -1;
             }
         };
@@ -178,7 +178,7 @@ public class ChunkedWriteHandlerTest {
             }
 
             @Override
-            public long length(){
+            public long length() {
                 return -1;
             }
         };

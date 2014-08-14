@@ -163,10 +163,10 @@ public class ChunkedFile implements ChunkedInput<ByteBuf> {
     }
 
     @Override
-    public long length(){
-        try{
+    public long length() {
+        try {
             return this.file.length();
-        }catch (IOException e){
+        } catch (IOException e) {
             return -1;
         }
     }

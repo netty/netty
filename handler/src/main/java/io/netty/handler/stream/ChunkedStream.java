@@ -122,7 +122,7 @@ public class ChunkedStream implements ChunkedInput<ByteBuf> {
     }
 
     @Override
-    public long length(){
+    public long length() {
         return -1;
     }
 }
