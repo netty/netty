@@ -15,6 +15,13 @@
  */
 package io.netty.handler.codec.socksx;
 
+import io.netty.handler.codec.socksx.v4.Socks4Response;
+import io.netty.handler.codec.socksx.v5.Socks5Response;
+
+/**
+ * An abstract class that defines a SOCKS response, providing common properties for
+ * {@link Socks4Response} and {@link Socks5Response}.
+ */
 public abstract class SocksResponse extends SocksMessage {
     protected SocksResponse(SocksProtocolVersion protocolVersion) {
         super(protocolVersion, SocksMessageType.RESPONSE);
