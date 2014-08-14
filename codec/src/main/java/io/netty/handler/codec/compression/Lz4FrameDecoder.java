@@ -44,7 +44,7 @@ import static io.netty.handler.codec.compression.Lz4Constants.*;
  *  *       *       *    length   *     length    *           *     *      block      *
  *  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *     * * * * * * * * * *
  */
-public class Lz4FramedDecoder extends ByteToMessageDecoder {
+public class Lz4FrameDecoder extends ByteToMessageDecoder {
     /**
      * Underlying decompressor in use.
      */
@@ -71,10 +71,10 @@ public class Lz4FramedDecoder extends ByteToMessageDecoder {
      * Note that by default, validation of the checksum header in each chunk is
      * DISABLED for performance improvements. If performance is less of an issue,
      * or if you would prefer the safety that checksum validation brings, please
-     * use the {@link #Lz4FramedDecoder(boolean)} constructor with the argument
+     * use the {@link #Lz4FrameDecoder(boolean)} constructor with the argument
      * set to {@code true}.
      */
-    public Lz4FramedDecoder() {
+    public Lz4FrameDecoder() {
         this(false);
     }
 
@@ -85,7 +85,7 @@ public class Lz4FramedDecoder extends ByteToMessageDecoder {
      *                           uncompressed data, and if the checksums do not match, a suitable
      *                           {@link DecompressionException} will be thrown
      */
-    public Lz4FramedDecoder(boolean validateChecksums) {
+    public Lz4FrameDecoder(boolean validateChecksums) {
         this(LZ4Factory.fastestInstance(), validateChecksums);
     }
 
@@ -101,7 +101,7 @@ public class Lz4FramedDecoder extends ByteToMessageDecoder {
      *                           xxhash hashing for Java, based on Yann Collet's work available at
      *                           <a href="http://code.google.com/p/xxhash/">Google Code</a>.
      */
-    public Lz4FramedDecoder(LZ4Factory factory, boolean validateChecksums) {
+    public Lz4FrameDecoder(LZ4Factory factory, boolean validateChecksums) {
         this(factory, validateChecksums ?
                 XXHashFactory.fastestInstance().newStreamingHash32(DEFAULT_SEED).asChecksum()
               : null);
@@ -116,7 +116,7 @@ public class Lz4FramedDecoder extends ByteToMessageDecoder {
      * @param checksum  the {@link Checksum} instance to use to check data for integrity.
      *                  You may set {@code null} if you do not want to validate checksum of each block
      */
-    public Lz4FramedDecoder(LZ4Factory factory, Checksum checksum) {
+    public Lz4FrameDecoder(LZ4Factory factory, Checksum checksum) {
         if (factory == null) {
             throw new NullPointerException("factory");
         }

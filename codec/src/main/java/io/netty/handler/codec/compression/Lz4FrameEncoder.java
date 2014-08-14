@@ -51,7 +51,7 @@ import static io.netty.handler.codec.compression.Lz4Constants.*;
  *  *       *       *    length   *     length    *           *     *      block      *
  *  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *     * * * * * * * * * *
  */
-public class Lz4FramedEncoder extends MessageToByteEncoder<ByteBuf> {
+public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
     /**
      * Underlying compressor in use.
      */
@@ -97,7 +97,7 @@ public class Lz4FramedEncoder extends MessageToByteEncoder<ByteBuf> {
      * and xxhash hashing for Java, based on Yann Collet's work available at
      * <a href="http://code.google.com/p/xxhash/">Google Code</a>.
      */
-    public Lz4FramedEncoder() {
+    public Lz4FrameEncoder() {
         this(false);
     }
 
@@ -109,7 +109,7 @@ public class Lz4FramedEncoder extends MessageToByteEncoder<ByteBuf> {
      * @param highCompressor  if {@code true} codec will use compressor which requires more memory
      *                        and is slower but compresses more efficiently
      */
-    public Lz4FramedEncoder(boolean highCompressor) {
+    public Lz4FrameEncoder(boolean highCompressor) {
         this(LZ4Factory.fastestInstance(), highCompressor, DEFAULT_BLOCK_SIZE,
                 XXHashFactory.fastestInstance().newStreamingHash32(DEFAULT_SEED).asChecksum());
     }
@@ -126,7 +126,7 @@ public class Lz4FramedEncoder extends MessageToByteEncoder<ByteBuf> {
      *                        must be >= 64 and <= 32 M
      * @param checksum        the {@link Checksum} instance to use to check data for integrity
      */
-    public Lz4FramedEncoder(LZ4Factory factory, boolean highCompressor, int blockSize, Checksum checksum) {
+    public Lz4FrameEncoder(LZ4Factory factory, boolean highCompressor, int blockSize, Checksum checksum) {
         super(false);
         if (factory == null) {
             throw new NullPointerException("factory");
@@ -267,7 +267,7 @@ public class Lz4FramedEncoder extends MessageToByteEncoder<ByteBuf> {
     }
 
     /**
-     * Close this {@link Lz4FramedEncoder} and so finish the encoding.
+     * Close this {@link Lz4FrameEncoder} and so finish the encoding.
      *
      * The returned {@link ChannelFuture} will be notified once the operation completes.
      */
@@ -276,7 +276,7 @@ public class Lz4FramedEncoder extends MessageToByteEncoder<ByteBuf> {
     }
 
     /**
-     * Close this {@link Lz4FramedEncoder} and so finish the encoding.
+     * Close this {@link Lz4FrameEncoder} and so finish the encoding.
      * The given {@link ChannelFuture} will be notified once the operation
      * completes and will also be returned.
      */

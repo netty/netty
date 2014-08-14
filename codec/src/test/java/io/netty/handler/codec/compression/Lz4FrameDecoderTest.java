@@ -32,7 +32,7 @@ import java.util.Arrays;
 import static io.netty.handler.codec.compression.Lz4Constants.*;
 import static org.junit.Assert.*;
 
-public class Lz4FramedDecoderTest {
+public class Lz4FrameDecoderTest {
 
     private static final byte[] DATA = { 0x4C, 0x5A, 0x34, 0x42, 0x6C, 0x6F, 0x63, 0x6B,  // magic bytes
                                          0x16,                                            // token
@@ -67,7 +67,7 @@ public class Lz4FramedDecoderTest {
 
     @Before
     public void initChannel() {
-        channel = new EmbeddedChannel(new Lz4FramedDecoder(true));
+        channel = new EmbeddedChannel(new Lz4FrameDecoder(true));
     }
 
     @Test

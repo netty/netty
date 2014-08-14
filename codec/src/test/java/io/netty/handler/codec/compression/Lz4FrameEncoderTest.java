@@ -28,7 +28,7 @@ import java.io.ByteArrayInputStream;
 
 import static org.junit.Assert.*;
 
-public class Lz4FramedEncoderTest {
+public class Lz4FrameEncoderTest {
 
     private static final ThreadLocalRandom rand;
 
@@ -50,7 +50,7 @@ public class Lz4FramedEncoderTest {
 
     @Before
     public void initChannel() {
-        channel = new EmbeddedChannel(new Lz4FramedEncoder());
+        channel = new EmbeddedChannel(new Lz4FrameEncoder());
     }
 
     private static void testCompression(final EmbeddedChannel channel, final byte[] data) throws Exception {
