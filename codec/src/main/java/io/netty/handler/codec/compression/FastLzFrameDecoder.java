@@ -30,7 +30,7 @@ import static io.netty.handler.codec.compression.FastLz.*;
  *
  * See <a href="https://github.com/netty/netty/issues/2750">FastLZ format</a>.
  */
-public class FastLzFramedDecoder extends ByteToMessageDecoder {
+public class FastLzFrameDecoder extends ByteToMessageDecoder {
     /**
      * Current state of decompression.
      */
@@ -77,7 +77,7 @@ public class FastLzFramedDecoder extends ByteToMessageDecoder {
     /**
      * Creates the fastest FastLZ decoder without checksum calculation.
      */
-    public FastLzFramedDecoder() {
+    public FastLzFrameDecoder() {
         this(false);
     }
 
@@ -91,7 +91,7 @@ public class FastLzFramedDecoder extends ByteToMessageDecoder {
      *        Note, that in this case decoder will use {@link java.util.zip.Adler32}
      *        as a default checksum calculator.
      */
-    public FastLzFramedDecoder(boolean validateChecksums) {
+    public FastLzFrameDecoder(boolean validateChecksums) {
         this(validateChecksums ? new Adler32() : null);
     }
 
@@ -102,7 +102,7 @@ public class FastLzFramedDecoder extends ByteToMessageDecoder {
      *        the {@link Checksum} instance to use to check data for integrity.
      *        You may set {@code null} if you do not want to validate checksum of each block.
      */
-    public FastLzFramedDecoder(Checksum checksum) {
+    public FastLzFrameDecoder(Checksum checksum) {
         this.checksum = checksum;
     }
 

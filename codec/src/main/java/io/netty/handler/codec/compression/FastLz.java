@@ -19,7 +19,7 @@ package io.netty.handler.codec.compression;
  * Core of FastLZ compression algorithm.
  *
  * This class provides methods for compression and decompression of buffers and saves
- * constants which use by {@link FastLzFramedEncoder} and {@link FastLzFramedDecoder}.
+ * constants which use by {@link FastLzFrameEncoder} and {@link FastLzFrameDecoder}.
  *
  * This is refactored code of <a href="https://code.google.com/p/jfastlz/">jfastlz</a>
  * library written by William Kinney.
