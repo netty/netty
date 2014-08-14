@@ -54,6 +54,11 @@
       <artifactId>compress-lzf</artifactId>
       <optional>true</optional>
     </dependency>
+    <dependency>
+      <groupId>net.jpountz.lz4</groupId>
+      <artifactId>lz4</artifactId>
+      <optional>true</optional>
+    </dependency>
 
     <!-- Test dependencies for jboss marshalling encoder/decoder -->
     <dependency>
