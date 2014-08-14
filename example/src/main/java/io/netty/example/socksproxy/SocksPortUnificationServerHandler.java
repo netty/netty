@@ -19,10 +19,11 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.ByteToMessageDecoder;
-import io.netty.handler.codec.socksx.SocksMessageEncoder;
 import io.netty.handler.codec.socksx.SocksProtocolVersion;
-import io.netty.handler.codec.socksx.v4.SocksV4CmdRequestDecoder;
-import io.netty.handler.codec.socksx.v5.SocksV5InitRequestDecoder;
+import io.netty.handler.codec.socksx.v4.Socks4CmdRequestDecoder;
+import io.netty.handler.codec.socksx.v4.Socks4MessageEncoder;
+import io.netty.handler.codec.socksx.v5.Socks5InitRequestDecoder;
+import io.netty.handler.codec.socksx.v5.Socks5MessageEncoder;
 
 import java.util.List;
 
@@ -35,18 +36,21 @@ public class SocksPortUnificationServerHandler extends ByteToMessageDecoder {
         in.resetReaderIndex();
         switch (version) {
             case SOCKS4a:
-                p.addLast(new SocksV4CmdRequestDecoder());
+                p.addLast(new Socks4CmdRequestDecoder());
+                p.addLast(Socks4MessageEncoder.INSTANCE);
+
                 break;
             case SOCKS5:
-                p.addLast(new SocksV5InitRequestDecoder());
+                p.addLast(new Socks5InitRequestDecoder());
+                p.addLast(Socks5MessageEncoder.INSTANCE);
+
                 break;
             case UNKNOWN:
                 in.clear();
                 ctx.close();
                 return;
         }
-        p.addLast(SocksMessageEncoder.getInstance());
-        p.addLast(SocksServerHandler.getInstance());
+        p.addLast(SocksServerHandler.INSTANCE);
         p.remove(this);
     }
 }

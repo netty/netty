@@ -24,17 +24,13 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.socks.SocksCmdRequest;
-import io.netty.handler.codec.socks.SocksCmdResponse;
-import io.netty.handler.codec.socks.SocksCmdStatus;
-import io.netty.handler.codec.socksx.SocksMessage;
 import io.netty.handler.codec.socksx.SocksRequest;
-import io.netty.handler.codec.socksx.v4.SocksV4CmdRequest;
-import io.netty.handler.codec.socksx.v4.SocksV4CmdResponse;
-import io.netty.handler.codec.socksx.v4.SocksV4CmdStatus;
-import io.netty.handler.codec.socksx.v5.SocksV5CmdRequest;
-import io.netty.handler.codec.socksx.v5.SocksV5CmdResponse;
-import io.netty.handler.codec.socksx.v5.SocksV5CmdStatus;
+import io.netty.handler.codec.socksx.v4.Socks4CmdRequest;
+import io.netty.handler.codec.socksx.v4.Socks4CmdResponse;
+import io.netty.handler.codec.socksx.v4.Socks4CmdStatus;
+import io.netty.handler.codec.socksx.v5.Socks5CmdRequest;
+import io.netty.handler.codec.socksx.v5.Socks5CmdResponse;
+import io.netty.handler.codec.socksx.v5.Socks5CmdStatus;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
@@ -46,8 +42,8 @@ public final class SocksServerConnectHandler extends SimpleChannelInboundHandler
 
     @Override
     public void channelRead0(final ChannelHandlerContext ctx, final SocksRequest message) throws Exception {
-        if (message instanceof SocksV4CmdRequest) {
-            final SocksV4CmdRequest request = (SocksV4CmdRequest) message;
+        if (message instanceof Socks4CmdRequest) {
+            final Socks4CmdRequest request = (Socks4CmdRequest) message;
             Promise<Channel> promise = ctx.executor().newPromise();
             promise.addListener(
                     new GenericFutureListener<Future<Channel>>() {
@@ -55,7 +51,7 @@ public final class SocksServerConnectHandler extends SimpleChannelInboundHandler
                         public void operationComplete(final Future<Channel> future) throws Exception {
                             final Channel outboundChannel = future.getNow();
                             if (future.isSuccess()) {
-                                ctx.channel().writeAndFlush(new SocksV4CmdResponse(SocksV4CmdStatus.SUCCESS))
+                                ctx.channel().writeAndFlush(new Socks4CmdResponse(Socks4CmdStatus.SUCCESS))
                                         .addListener(new ChannelFutureListener() {
                                             @Override
                                             public void operationComplete(ChannelFuture channelFuture) {
@@ -66,7 +62,7 @@ public final class SocksServerConnectHandler extends SimpleChannelInboundHandler
                                         });
                             } else {
                                 ctx.channel().writeAndFlush(
-                                        new SocksV4CmdResponse(SocksV4CmdStatus.REJECTED_OR_FAILED)
+                                        new Socks4CmdResponse(Socks4CmdStatus.REJECTED_OR_FAILED)
                                 );
                                 SocksServerUtils.closeOnFlush(ctx.channel());
                             }
@@ -88,14 +84,14 @@ public final class SocksServerConnectHandler extends SimpleChannelInboundHandler
                     } else {
                         // Close the connection if the connection attempt has failed.
                         ctx.channel().writeAndFlush(
-                                new SocksV4CmdResponse(SocksV4CmdStatus.REJECTED_OR_FAILED)
+                                new Socks4CmdResponse(Socks4CmdStatus.REJECTED_OR_FAILED)
                         );
                         SocksServerUtils.closeOnFlush(ctx.channel());
                     }
                 }
             });
-        } else if (message instanceof SocksV5CmdRequest) {
-            final SocksV5CmdRequest request = (SocksV5CmdRequest) message;
+        } else if (message instanceof Socks5CmdRequest) {
+            final Socks5CmdRequest request = (Socks5CmdRequest) message;
             Promise<Channel> promise = ctx.executor().newPromise();
             promise.addListener(
                     new GenericFutureListener<Future<Channel>>() {
@@ -104,7 +100,7 @@ public final class SocksServerConnectHandler extends SimpleChannelInboundHandler
                             final Channel outboundChannel = future.getNow();
                             if (future.isSuccess()) {
                                 ctx.channel().writeAndFlush(
-                                        new SocksV5CmdResponse(SocksV5CmdStatus.SUCCESS, request.addressType())
+                                        new Socks5CmdResponse(Socks5CmdStatus.SUCCESS, request.addressType())
                                 ).addListener(new ChannelFutureListener() {
                                             @Override
                                             public void operationComplete(ChannelFuture channelFuture) {
@@ -116,7 +112,7 @@ public final class SocksServerConnectHandler extends SimpleChannelInboundHandler
                                 );
                             } else {
                                 ctx.channel().writeAndFlush(
-                                        new SocksV5CmdResponse(SocksV5CmdStatus.FAILURE, request.addressType()));
+                                        new Socks5CmdResponse(Socks5CmdStatus.FAILURE, request.addressType()));
                                 SocksServerUtils.closeOnFlush(ctx.channel());
                             }
                         }
@@ -137,7 +133,7 @@ public final class SocksServerConnectHandler extends SimpleChannelInboundHandler
                     } else {
                         // Close the connection if the connection attempt has failed.
                         ctx.channel().writeAndFlush(
-                                new SocksV5CmdResponse(SocksV5CmdStatus.FAILURE, request.addressType()));
+                                new Socks5CmdResponse(Socks5CmdStatus.FAILURE, request.addressType()));
                         SocksServerUtils.closeOnFlush(ctx.channel());
                     }
                 }

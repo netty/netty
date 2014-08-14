@@ -13,8 +13,27 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+package io.netty.handler.codec.socksx.v5;
+
+import io.netty.buffer.ByteBuf;
 
 /**
- * Encoder, decoder and their related message types for Socks.
+ * An unknown socks response.
+ *
+ * @see Socks5InitResponseDecoder
+ * @see Socks5AuthResponseDecoder
+ * @see Socks5CmdResponseDecoder
  */
-package io.netty.handler.codec.socks;
+public final class UnknownSocks5Response extends Socks5Response {
+
+    public static final UnknownSocks5Response INSTANCE = new UnknownSocks5Response();
+
+    private UnknownSocks5Response() {
+        super(Socks5ResponseType.UNKNOWN);
+    }
+
+    @Override
+    void encodeAsByteBuf(ByteBuf byteBuf) {
+        // NOOP
+    }
+}

@@ -16,18 +16,12 @@
 package io.netty.handler.codec.socksx;
 
 
+import io.netty.handler.codec.socksx.v4.Socks4Request;
+import io.netty.handler.codec.socksx.v5.Socks5Request;
 
 /**
- * An abstract class that defines a SocksRequest, providing common properties for
- * {@link SocksV5InitRequest},
- * {@link SocksV5AuthRequest},
- * {@link SocksV5CmdRequest}
- * and {@link UnknownSocksV5Request}.
- *
- * @see io.netty.handler.codec.socks.SocksInitRequest
- * @see io.netty.handler.codec.socks.SocksAuthRequest
- * @see io.netty.handler.codec.socks.SocksCmdRequest
- * @see io.netty.handler.codec.socks.UnknownSocksRequest
+ * An abstract class that defines a SOCKS request, providing common properties for
+ * {@link Socks4Request} and {@link Socks5Request}.
  */
 public abstract class SocksRequest extends SocksMessage {
 

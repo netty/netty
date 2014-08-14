@@ -13,8 +13,18 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+package io.netty.handler.codec.socksx.v5;
 
-/**
- * Encoder, decoder and their related message types for Socks.
- */
-package io.netty.handler.codec.socks;
+import org.junit.Test;
+import static org.junit.Assert.assertTrue;
+
+public class Socks5InitResponseTest {
+    @Test
+    public void testConstructorParamsAreNotNull() {
+        try {
+            new Socks5InitResponse(null);
+        } catch (Exception e) {
+            assertTrue(e instanceof NullPointerException);
+        }
+    }
+}

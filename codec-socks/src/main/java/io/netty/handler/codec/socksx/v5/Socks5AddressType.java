@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,7 +14,31 @@
  * under the License.
  */
 
-/**
- * Encoder, decoder and their related message types for Socks.
- */
-package io.netty.handler.codec.socks;
+package io.netty.handler.codec.socksx.v5;
+
+public enum Socks5AddressType {
+    IPv4((byte) 0x01),
+    DOMAIN((byte) 0x03),
+    IPv6((byte) 0x04),
+    UNKNOWN((byte) 0xff);
+
+    private final byte b;
+
+    Socks5AddressType(byte b) {
+        this.b = b;
+    }
+
+    public static Socks5AddressType valueOf(byte b) {
+        for (Socks5AddressType code : values()) {
+            if (code.b == b) {
+                return code;
+            }
+        }
+        return UNKNOWN;
+    }
+
+    public byte byteValue() {
+        return b;
+    }
+}
+

@@ -15,16 +15,10 @@
  */
 package io.netty.handler.codec.socksx;
 
-import io.netty.buffer.ByteBuf;
-
 /**
  * An abstract class that defines a SocksMessage, providing common properties for
- * {@link SocksV5Request} and {@link SocksV5Response}.
- *
- * @see SocksV5Request
- * @see SocksV5Response
+ * {@link SocksRequest} and {@link SocksResponse}.
  */
-
 public abstract class SocksMessage {
     private final SocksMessageType type;
     private final SocksProtocolVersion protocolVersion;
@@ -57,10 +51,4 @@ public abstract class SocksMessage {
     public SocksProtocolVersion protocolVersion() {
         return protocolVersion;
     }
-
-    /**
-     * @deprecated Do not use; this method was intended for an internal use only.
-     */
-    @Deprecated
-    public abstract void encodeAsByteBuf(ByteBuf byteBuf);
 }

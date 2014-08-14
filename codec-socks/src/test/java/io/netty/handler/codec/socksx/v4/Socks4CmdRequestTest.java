@@ -13,8 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+package io.netty.handler.codec.socksx.v4;
 
-/**
- * Encoder, decoder and their related message types for Socks.
- */
-package io.netty.handler.codec.socks;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class Socks4CmdRequestTest {
+    private static final Logger logger = LoggerFactory.getLogger(Socks4CmdRequestTest.class);
+}

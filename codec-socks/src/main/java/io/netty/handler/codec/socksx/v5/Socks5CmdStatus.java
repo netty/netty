@@ -14,26 +14,33 @@
  * under the License.
  */
 
-package io.netty.handler.codec.socksx;
+package io.netty.handler.codec.socksx.v5;
 
-public enum SocksProtocolVersion {
-    SOCKS4a((byte) 0x04),
-    SOCKS5((byte) 0x05),
-    UNKNOWN((byte) 0xff);
+public enum Socks5CmdStatus {
+    SUCCESS((byte) 0x00),
+    FAILURE((byte) 0x01),
+    FORBIDDEN((byte) 0x02),
+    NETWORK_UNREACHABLE((byte) 0x03),
+    HOST_UNREACHABLE((byte) 0x04),
+    REFUSED((byte) 0x05),
+    TTL_EXPIRED((byte) 0x06),
+    COMMAND_NOT_SUPPORTED((byte) 0x07),
+    ADDRESS_NOT_SUPPORTED((byte) 0x08),
+    UNASSIGNED((byte) 0xff);
 
     private final byte b;
 
-    SocksProtocolVersion(byte b) {
+    Socks5CmdStatus(byte b) {
         this.b = b;
     }
 
-    public static SocksProtocolVersion valueOf(byte b) {
-        for (SocksProtocolVersion code : values()) {
+    public static Socks5CmdStatus valueOf(byte b) {
+        for (Socks5CmdStatus code : values()) {
             if (code.b == b) {
                 return code;
             }
         }
-        return UNKNOWN;
+        return UNASSIGNED;
     }
 
     public byte byteValue() {

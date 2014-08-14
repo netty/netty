@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,7 +14,31 @@
  * under the License.
  */
 
-/**
- * Encoder, decoder and their related message types for Socks.
- */
-package io.netty.handler.codec.socks;
+package io.netty.handler.codec.socksx.v5;
+
+public enum Socks5AuthScheme {
+    NO_AUTH((byte) 0x00),
+    AUTH_GSSAPI((byte) 0x01),
+    AUTH_PASSWORD((byte) 0x02),
+    UNKNOWN((byte) 0xff);
+
+    private final byte b;
+
+    Socks5AuthScheme(byte b) {
+        this.b = b;
+    }
+
+    public static Socks5AuthScheme valueOf(byte b) {
+        for (Socks5AuthScheme code : values()) {
+            if (code.b == b) {
+                return code;
+            }
+        }
+        return UNKNOWN;
+    }
+
+    public byte byteValue() {
+        return b;
+    }
+}
+
