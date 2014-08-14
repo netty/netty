@@ -25,12 +25,12 @@ import org.junit.Test;
 import static io.netty.util.ReferenceCountUtil.*;
 import static org.junit.Assert.*;
 
-public class SnappyFramedEncoderTest {
+public class SnappyFrameEncoderTest {
     private EmbeddedChannel channel;
 
     @Before
     public void setUp() {
-        channel = new EmbeddedChannel(new SnappyFramedEncoder());
+        channel = new EmbeddedChannel(new SnappyFrameEncoder());
     }
 
     @Test
