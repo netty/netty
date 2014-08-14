@@ -166,21 +166,24 @@ public class Lz4FrameDecoder extends ByteToMessageDecoder {
 
                         int compressedLength = Integer.reverseBytes(in.readInt());
                         if (compressedLength < 0 || compressedLength > MAX_BLOCK_SIZE) {
-                            throw new DecompressionException("invalid compressedLength: " + compressedLength
-                                    + " (expected: " + 0 + '-' + MAX_BLOCK_SIZE + ')');
+                            throw new DecompressionException(String.format(
+                                    "invalid compressedLength: %d (expected: 0-%d)",
+                                    compressedLength, MAX_BLOCK_SIZE));
                         }
 
                         int decompressedLength = Integer.reverseBytes(in.readInt());
                         final int maxDecompressedLength = 1 << compressionLevel;
                         if (decompressedLength < 0 || decompressedLength > maxDecompressedLength) {
-                            throw new DecompressionException("invalid decompressedLength: " + decompressedLength
-                                    + " (expected: " + 0 + '-' + maxDecompressedLength + ')');
+                            throw new DecompressionException(String.format(
+                                    "invalid decompressedLength: %d (expected: 0-%d)",
+                                    decompressedLength, maxDecompressedLength));
                         }
                         if (decompressedLength == 0 && compressedLength != 0
                                 || decompressedLength != 0 && compressedLength == 0
                                 || blockType == BLOCK_TYPE_NON_COMPRESSED && decompressedLength != compressedLength) {
-                            throw new DecompressionException("stream corrupted: decompressedLength("
-                                    + decompressedLength + ") and compressedLength(" + compressedLength + ") mismatch");
+                            throw new DecompressionException(String.format(
+                                    "stream corrupted: compressedLength(%d) and decompressedLength(%d) mismatch",
+                                    compressedLength, decompressedLength));
                         }
 
                         int currentChecksum = Integer.reverseBytes(in.readInt());
@@ -239,8 +242,9 @@ public class Lz4FrameDecoder extends ByteToMessageDecoder {
                                         final int readBytes = decompressor.decompress(src, srcOff,
                                                 dest, destOff, decompressedLength);
                                         if (compressedLength != readBytes) {
-                                            throw new DecompressionException("stream corrupted: compressedLength("
-                                                + compressedLength + ") and actual length(" + readBytes + ") mismatch");
+                                            throw new DecompressionException(String.format(
+                                                "stream corrupted: compressedLength(%d) and actual length(%d) mismatch",
+                                                compressedLength, readBytes));
                                         }
                                     } catch (LZ4Exception e) {
                                         throw new DecompressionException(e);
@@ -248,9 +252,9 @@ public class Lz4FrameDecoder extends ByteToMessageDecoder {
                                     break;
                                 }
                                 default:
-                                    throw new DecompressionException("unexpected blockType: " + blockType
-                                            + " (expected: " + BLOCK_TYPE_NON_COMPRESSED
-                                            + " or " + BLOCK_TYPE_COMPRESSED + ')');
+                                    throw new DecompressionException(String.format(
+                                            "unexpected blockType: %d (expected: %d or %d)",
+                                            blockType, BLOCK_TYPE_NON_COMPRESSED, BLOCK_TYPE_COMPRESSED));
                             }
 
                             final Checksum checksum = this.checksum;
@@ -259,8 +263,9 @@ public class Lz4FrameDecoder extends ByteToMessageDecoder {
                                 checksum.update(dest, destOff, decompressedLength);
                                 final int checksumResult = (int) checksum.getValue();
                                 if (checksumResult != currentChecksum) {
-                                    throw new DecompressionException("stream corrupted: mismatching checksum: "
-                                            + checksumResult + " (expected: " + currentChecksum + ')');
+                                    throw new DecompressionException(String.format(
+                                            "stream corrupted: mismatching checksum: %d (expected: %d)",
+                                            checksumResult, currentChecksum));
                                 }
                             }
                             uncompressed.writerIndex(uncompressed.writerIndex() + decompressedLength);

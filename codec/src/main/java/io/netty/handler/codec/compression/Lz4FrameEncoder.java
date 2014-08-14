@@ -151,8 +151,8 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
      */
     private static int compressionLevel(int blockSize) {
         if (blockSize < MIN_BLOCK_SIZE || blockSize > MAX_BLOCK_SIZE) {
-            throw new IllegalArgumentException("blockSize: " + blockSize
-                    + " (expected: " + MIN_BLOCK_SIZE + '-' + MAX_BLOCK_SIZE + ')');
+            throw new IllegalArgumentException(String.format(
+                    "blockSize: %d (expected: %d-%d)", blockSize, MIN_BLOCK_SIZE, MAX_BLOCK_SIZE));
         }
         int compressionLevel = 32 - Integer.numberOfLeadingZeros(blockSize - 1); // ceil of log2
         compressionLevel = Math.max(0, compressionLevel - COMPRESSION_LEVEL_BASE);
