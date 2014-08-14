@@ -165,9 +165,14 @@ public class ChunkedFile implements ChunkedInput<ByteBuf> {
     @Override
     public long length() {
         try {
-            return this.file.length();
+            return file.length();
         } catch (IOException e) {
             return -1;
         }
+    }
+
+    @Override
+    public long progress() {
+        return offset - startOffset;
     }
 }

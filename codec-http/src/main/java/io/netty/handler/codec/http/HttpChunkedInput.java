@@ -101,4 +101,9 @@ public class HttpChunkedInput implements ChunkedInput<HttpContent> {
     public long length() {
         return input.length();
     }
+
+    @Override
+    public long progress() {
+        return input.progress();
+    }
 }

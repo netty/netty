@@ -250,6 +250,12 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
      */
     private long globalBodySize;
 
+
+    /**
+     * Global Transfer progress
+     */
+    private long globalProgress;
+
     /**
      * True if this request is a Multipart request
      *
@@ -997,7 +1003,9 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
         if (isLastChunkSent) {
             return null;
         } else {
-            return nextChunk();
+            HttpContent nextChunk = nextChunk();
+            globalProgress += nextChunk.content().readableBytes();
+            return nextChunk;
         }
     }
 
@@ -1086,6 +1094,11 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
     @Override
     public long length() {
         return isMultipart? globalBodySize : globalBodySize - 1;
+    }
+
+    @Override
+    public long progress() {
+        return globalProgress;
     }
 
     /**

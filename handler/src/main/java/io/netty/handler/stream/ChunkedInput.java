@@ -54,4 +54,9 @@ public interface ChunkedInput<B> {
      */
     long length();
 
+    /**
+     * Returns current transfer progress.
+     */
+    long progress();
+
 }

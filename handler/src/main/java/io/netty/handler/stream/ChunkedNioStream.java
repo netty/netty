@@ -133,4 +133,9 @@ public class ChunkedNioStream implements ChunkedInput<ByteBuf> {
     public long length() {
         return -1;
     }
+
+    @Override
+    public long progress() {
+        return offset;
+    }
 }

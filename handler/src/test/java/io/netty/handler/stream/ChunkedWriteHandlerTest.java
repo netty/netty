@@ -129,6 +129,11 @@ public class ChunkedWriteHandlerTest {
             public long length() {
                 return -1;
             }
+
+            @Override
+            public long progress() {
+                return 1;
+            }
         };
 
         final AtomicBoolean listenerNotified = new AtomicBoolean(false);
@@ -180,6 +185,11 @@ public class ChunkedWriteHandlerTest {
             @Override
             public long length() {
                 return -1;
+            }
+
+            @Override
+            public long progress() {
+                return 1;
             }
         };
 
