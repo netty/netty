@@ -27,7 +27,7 @@ import static io.netty.handler.codec.compression.Snappy.*;
  *
  * See http://code.google.com/p/snappy/source/browse/trunk/framing_format.txt
  */
-public class SnappyFramedEncoder extends MessageToByteEncoder<ByteBuf> {
+public class SnappyFrameEncoder extends MessageToByteEncoder<ByteBuf> {
     /**
      * The minimum amount that we'll consider actually attempting to compress.
      * This value is preamble + the minimum length our Snappy service will

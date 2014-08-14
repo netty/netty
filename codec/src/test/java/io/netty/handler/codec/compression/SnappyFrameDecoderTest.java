@@ -24,12 +24,12 @@ import org.junit.Test;
 import static io.netty.util.ReferenceCountUtil.releaseLater;
 import static org.junit.Assert.*;
 
-public class SnappyFramedDecoderTest {
+public class SnappyFrameDecoderTest {
     private EmbeddedChannel channel;
 
     @Before
     public void initChannel() {
-        channel = new EmbeddedChannel(new SnappyFramedDecoder());
+        channel = new EmbeddedChannel(new SnappyFrameDecoder());
     }
 
     @Test(expected = DecompressionException.class)
@@ -133,7 +133,7 @@ public class SnappyFramedDecoderTest {
 
     @Test(expected = DecompressionException.class)
     public void testInvalidChecksumThrowsException() throws Exception {
-        EmbeddedChannel channel = new EmbeddedChannel(new SnappyFramedDecoder(true));
+        EmbeddedChannel channel = new EmbeddedChannel(new SnappyFrameDecoder(true));
 
         // checksum here is presented as 0
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
@@ -146,7 +146,7 @@ public class SnappyFramedDecoderTest {
 
     @Test
     public void testInvalidChecksumDoesNotThrowException() throws Exception {
-        EmbeddedChannel channel = new EmbeddedChannel(new SnappyFramedDecoder(true));
+        EmbeddedChannel channel = new EmbeddedChannel(new SnappyFrameDecoder(true));
 
         // checksum here is presented as a282986f (little endian)
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {

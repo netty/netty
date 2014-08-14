@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.compression;
 
-import static io.netty.handler.codec.compression.Snappy.validateChecksum;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
@@ -23,6 +22,8 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 
 import java.util.Arrays;
 import java.util.List;
+
+import static io.netty.handler.codec.compression.Snappy.*;
 
 /**
  * Uncompresses a {@link ByteBuf} encoded with the Snappy framing format.
@@ -32,10 +33,10 @@ import java.util.List;
  * Note that by default, validation of the checksum header in each chunk is
  * DISABLED for performance improvements. If performance is less of an issue,
  * or if you would prefer the safety that checksum validation brings, please
- * use the {@link #SnappyFramedDecoder(boolean)} constructor with the argument
+ * use the {@link #SnappyFrameDecoder(boolean)} constructor with the argument
  * set to {@code true}.
  */
-public class SnappyFramedDecoder extends ByteToMessageDecoder {
+public class SnappyFrameDecoder extends ByteToMessageDecoder {
 
     private enum ChunkType {
         STREAM_IDENTIFIER,
@@ -57,9 +58,9 @@ public class SnappyFramedDecoder extends ByteToMessageDecoder {
     /**
      * Creates a new snappy-framed decoder with validation of checksums
      * turned OFF. To turn checksum validation on, please use the alternate
-     * {@link #SnappyFramedDecoder(boolean)} constructor.
+     * {@link #SnappyFrameDecoder(boolean)} constructor.
      */
-    public SnappyFramedDecoder() {
+    public SnappyFrameDecoder() {
         this(false);
     }
 
@@ -72,7 +73,7 @@ public class SnappyFramedDecoder extends ByteToMessageDecoder {
      *        uncompressed data, and if the checksums do not match, a suitable
      *        {@link DecompressionException} will be thrown
      */
-    public SnappyFramedDecoder(boolean validateChecksums) {
+    public SnappyFrameDecoder(boolean validateChecksums) {
         this.validateChecksums = validateChecksums;
     }
 
