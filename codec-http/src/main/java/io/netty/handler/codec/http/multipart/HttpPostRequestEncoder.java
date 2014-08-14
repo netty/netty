@@ -244,13 +244,10 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
      * While adding a FileUpload, is the multipart currently in Mixed Mode
      */
     private boolean duringMixedMode;
-
     /**
      * Global Body size
      */
     private long globalBodySize;
-
-
     /**
      * Global Transfer progress
      */
