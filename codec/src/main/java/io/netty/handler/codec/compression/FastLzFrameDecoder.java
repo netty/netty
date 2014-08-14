@@ -26,7 +26,7 @@ import java.util.zip.Checksum;
 import static io.netty.handler.codec.compression.FastLz.*;
 
 /**
- * Uncompresses a {@link ByteBuf} encoded with the Bzip2 format.
+ * Uncompresses a {@link ByteBuf} encoded by {@link FastLzFrameEncoder} using the FastLZ algorithm.
  *
  * See <a href="https://github.com/netty/netty/issues/2750">FastLZ format</a>.
  */
