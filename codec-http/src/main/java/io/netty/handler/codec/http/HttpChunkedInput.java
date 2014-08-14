@@ -99,6 +99,6 @@ public class HttpChunkedInput implements ChunkedInput<HttpContent> {
 
     @Override
     public long length() {
-        return this.input.length();
+        return input.length();
     }
 }

@@ -48,8 +48,9 @@ public interface ChunkedInput<B> {
     B readChunk(ChannelHandlerContext ctx) throws Exception;
 
     /**
-     * Return the length of input.
-     * @return length of input. if length is undefined return -1.
+     * Returns the length of the input.
+     * @return  the length of the input if the length of the input is known.
+     *          a negative value if the length of the input is unknown.
      */
     long length();
 
