@@ -13,8 +13,23 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+package io.netty.handler.codec.socksx.v4;
+
+import io.netty.buffer.ByteBuf;
 
 /**
- * Encoder, decoder and their related message types for Socks.
+ * An unknown socks response.
+ *
+ * @see Socks4CmdResponseDecoder
  */
-package io.netty.handler.codec.socks;
+public final class UnknownSocks4Response extends Socks4Response {
+
+    public static final UnknownSocks4Response INSTANCE = new UnknownSocks4Response();
+
+    private UnknownSocks4Response() { }
+
+    @Override
+    void encodeAsByteBuf(ByteBuf byteBuf) {
+        // NOOP
+    }
+}

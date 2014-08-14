@@ -13,8 +13,29 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+package io.netty.handler.codec.socksx.v4;
 
-/**
- * Encoder, decoder and their related message types for Socks.
- */
-package io.netty.handler.codec.socks;
+public enum Socks4CmdType {
+    CONNECT((byte) 0x01),
+    BIND((byte) 0x02),
+    UNKNOWN((byte) 0xff);
+
+    private final byte b;
+
+    Socks4CmdType(byte b) {
+        this.b = b;
+    }
+
+    public static Socks4CmdType valueOf(byte b) {
+        for (Socks4CmdType code : values()) {
+            if (code.b == b) {
+                return code;
+            }
+        }
+        return UNKNOWN;
+    }
+
+    public byte byteValue() {
+        return b;
+    }
+}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,7 +14,29 @@
  * under the License.
  */
 
-/**
- * Encoder, decoder and their related message types for Socks.
- */
-package io.netty.handler.codec.socks;
+package io.netty.handler.codec.socksx.v5;
+
+public enum Socks5AuthStatus {
+    SUCCESS((byte) 0x00),
+    FAILURE((byte) 0xff);
+
+    private final byte b;
+
+    Socks5AuthStatus(byte b) {
+        this.b = b;
+    }
+
+    public static Socks5AuthStatus valueOf(byte b) {
+        for (Socks5AuthStatus code : values()) {
+            if (code.b == b) {
+                return code;
+            }
+        }
+        return FAILURE;
+    }
+
+    public byte byteValue() {
+        return b;
+    }
+}
+
