@@ -29,7 +29,7 @@ import static io.netty.handler.codec.compression.FastLz.*;
  *
  * See <a href="https://github.com/netty/netty/issues/2750">FastLZ format</a>.
  */
-public class FastLzFramedEncoder extends MessageToByteEncoder<ByteBuf> {
+public class FastLzFrameEncoder extends MessageToByteEncoder<ByteBuf> {
     /**
      * Compression level.
      */
@@ -43,7 +43,7 @@ public class FastLzFramedEncoder extends MessageToByteEncoder<ByteBuf> {
     /**
      * Creates a FastLZ encoder without checksum calculator and with auto detection of compression level.
      */
-    public FastLzFramedEncoder() {
+    public FastLzFrameEncoder() {
         this(LEVEL_AUTO, null);
     }
 
@@ -55,7 +55,7 @@ public class FastLzFramedEncoder extends MessageToByteEncoder<ByteBuf> {
      *        1 - Level 1 is the fastest compression and generally useful for short data.
      *        2 - Level 2 is slightly slower but it gives better compression ratio.
      */
-    public FastLzFramedEncoder(int level) {
+    public FastLzFrameEncoder(int level) {
         this(level, null);
     }
 
@@ -66,10 +66,10 @@ public class FastLzFramedEncoder extends MessageToByteEncoder<ByteBuf> {
      * @param validateChecksums
      *        If true, the checksum of each block will be calculated and this value
      *        will be added to the header of block.
-     *        By default {@link FastLzFramedEncoder} uses {@link java.util.zip.Adler32}
+     *        By default {@link FastLzFrameEncoder} uses {@link java.util.zip.Adler32}
      *        for checksum calculation.
      */
-    public FastLzFramedEncoder(boolean validateChecksums) {
+    public FastLzFrameEncoder(boolean validateChecksums) {
         this(LEVEL_AUTO, validateChecksums ? new Adler32() : null);
     }
 
@@ -84,7 +84,7 @@ public class FastLzFramedEncoder extends MessageToByteEncoder<ByteBuf> {
      *        the {@link Checksum} instance to use to check data for integrity.
      *        You may set {@code null} if you don't want to validate checksum of each block.
      */
-    public FastLzFramedEncoder(int level, Checksum checksum) {
+    public FastLzFrameEncoder(int level, Checksum checksum) {
         super(false);
         if (level != LEVEL_AUTO && level != LEVEL_1 && level != LEVEL_2) {
             throw new IllegalArgumentException(String.format(
