@@ -33,12 +33,12 @@ public class SnappyIntegrationTest extends IntegrationTest {
 
     @Override
     protected EmbeddedChannel createEncoderEmbeddedChannel() {
-        return new EmbeddedChannel(new SnappyFramedEncoder());
+        return new EmbeddedChannel(new SnappyFrameEncoder());
     }
 
     @Override
     protected EmbeddedChannel createDecoderEmbeddedChannel() {
-        return new EmbeddedChannel(new SnappyFramedDecoder());
+        return new EmbeddedChannel(new SnappyFrameDecoder());
     }
 
     @Test
