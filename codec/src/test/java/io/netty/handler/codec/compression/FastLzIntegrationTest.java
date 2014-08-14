@@ -30,12 +30,12 @@ public class FastLzIntegrationTest extends IntegrationTest {
 
         @Override
         protected EmbeddedChannel createEncoderEmbeddedChannel() {
-            return new EmbeddedChannel(new FastLzFramedEncoder(true));
+            return new EmbeddedChannel(new FastLzFrameEncoder(true));
         }
 
         @Override
         protected EmbeddedChannel createDecoderEmbeddedChannel() {
-            return new EmbeddedChannel(new FastLzFramedDecoder(true));
+            return new EmbeddedChannel(new FastLzFrameDecoder(true));
         }
     }
 
@@ -43,23 +43,23 @@ public class FastLzIntegrationTest extends IntegrationTest {
 
         @Override
         protected EmbeddedChannel createEncoderEmbeddedChannel() {
-            return new EmbeddedChannel(new FastLzFramedEncoder(rand.nextBoolean()));
+            return new EmbeddedChannel(new FastLzFrameEncoder(rand.nextBoolean()));
         }
 
         @Override
         protected EmbeddedChannel createDecoderEmbeddedChannel() {
-            return new EmbeddedChannel(new FastLzFramedDecoder(rand.nextBoolean()));
+            return new EmbeddedChannel(new FastLzFrameDecoder(rand.nextBoolean()));
         }
     }
 
     @Override
     protected EmbeddedChannel createEncoderEmbeddedChannel() {
-        return new EmbeddedChannel(new FastLzFramedEncoder(rand.nextBoolean()));
+        return new EmbeddedChannel(new FastLzFrameEncoder(rand.nextBoolean()));
     }
 
     @Override
     protected EmbeddedChannel createDecoderEmbeddedChannel() {
-        return new EmbeddedChannel(new FastLzFramedDecoder(rand.nextBoolean()));
+        return new EmbeddedChannel(new FastLzFrameDecoder(rand.nextBoolean()));
     }
 
     @Override   // test batched flow of data
