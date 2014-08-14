@@ -180,7 +180,10 @@ public final class NetUtil {
         LOCALHOST = loopbackAddr;
 
         // Determine the default somaxconn (server socket backlog) value of the platform.
-        int somaxconn = 3072;
+        // The known defaults:
+        // - Windows NT Server 4.0+: 200
+        // - Linux and Mac OS X: 128
+        int somaxconn = PlatformDependent.isWindows() ? 200 : 128;
         File file = new File("/proc/sys/net/core/somaxconn");
         if (file.exists()) {
             BufferedReader in = null;
