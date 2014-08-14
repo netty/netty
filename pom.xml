@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.0.22.Final-SNAPSHOT</version>
+  <version>4.0.22.Final</version>
 
   <name>Netty</name>
   <url>http://netty.io/</url>
@@ -53,7 +53,7 @@
     <url>https://github.com/netty/netty</url>
     <connection>scm:git:git://github.com/netty/netty.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/netty/netty.git</developerConnection>
-    <tag>HEAD</tag>
+    <tag>netty-4.0.22.Final</tag>
   </scm>
 
   <developers>
@@ -860,31 +860,18 @@
                 <taskdef resource="net/sf/antcontrib/antlib.xml" />
 
                 <!-- Get the information about the latest commit -->
-                <exec
-                  executable="git" outputproperty="gitOutput.lastCommit" resultproperty="gitExitCode.lastCommit"
-                  failonerror="false" failifexecutionfails="false">
+                <exec executable="git" outputproperty="gitOutput.lastCommit" resultproperty="gitExitCode.lastCommit" failonerror="false" failifexecutionfails="false">
                   <arg value="log" />
                   <arg value="-1" />
                   <arg value="--format=format:%h %H %cd" />
                   <arg value="--date=iso" />
                 </exec>
-                <propertyregex
-                  property="shortCommitHash" input="${gitOutput.lastCommit}"
-                  regexp="^([0-9a-f]+) .*$" select="\1" casesensitive="true"
-                  defaultValue="0" />
-                <propertyregex
-                  property="longCommitHash" input="${gitOutput.lastCommit}"
-                  regexp="^[0-9a-f]+ ([0-9a-f]{40}) .*$" select="\1" casesensitive="true"
-                  defaultValue="0000000000000000000000000000000000000000" />
-                <propertyregex
-                  property="commitDate" input="${gitOutput.lastCommit}"
-                  regexp="^[0-9a-f]+ [0-9a-f]{40} (.*)$" select="\1" casesensitive="true"
-                  defaultValue="1970-01-01 00:00:00 +0000" />
+                <propertyregex property="shortCommitHash" input="${gitOutput.lastCommit}" regexp="^([0-9a-f]+) .*$" select="\1" casesensitive="true" defaultValue="0" />
+                <propertyregex property="longCommitHash" input="${gitOutput.lastCommit}" regexp="^[0-9a-f]+ ([0-9a-f]{40}) .*$" select="\1" casesensitive="true" defaultValue="0000000000000000000000000000000000000000" />
+                <propertyregex property="commitDate" input="${gitOutput.lastCommit}" regexp="^[0-9a-f]+ [0-9a-f]{40} (.*)$" select="\1" casesensitive="true" defaultValue="1970-01-01 00:00:00 +0000" />
 
                 <!-- Get the information abount whether the repository is clean or dirty -->
-                <exec
-                  executable="git" outputproperty="gitOutput.repoStatus" resultproperty="gitExitCode.repoStatus"
-                  failonerror="false" failifexecutionfails="false">
+                <exec executable="git" outputproperty="gitOutput.repoStatus" resultproperty="gitExitCode.repoStatus" failonerror="false" failifexecutionfails="false">
                   <arg value="status" />
                   <arg value="--porcelain" />
                 </exec>
@@ -1071,7 +1058,7 @@
                     </goals>
                   </pluginExecutionFilter>
                   <action>
-                    <ignore/>
+                    <ignore />
                   </action>
                 </pluginExecution>
                 <pluginExecution>
@@ -1084,7 +1071,7 @@
                     </goals>
                   </pluginExecutionFilter>
                   <action>
-                    <ignore/>
+                    <ignore />
                   </action>
                 </pluginExecution>
                 <pluginExecution>
@@ -1097,7 +1084,7 @@
                     </goals>
                   </pluginExecutionFilter>
                   <action>
-                    <ignore/>
+                    <ignore />
                   </action>
                 </pluginExecution>
                 <pluginExecution>
@@ -1110,7 +1097,7 @@
                     </goals>
                   </pluginExecutionFilter>
                   <action>
-                    <ignore/>
+                    <ignore />
                   </action>
                 </pluginExecution>
                 <pluginExecution>
@@ -1123,7 +1110,7 @@
                     </goals>
                   </pluginExecutionFilter>
                   <action>
-                    <ignore/>
+                    <ignore />
                   </action>
                 </pluginExecution>
                 <pluginExecution>
@@ -1137,7 +1124,7 @@
                     </goals>
                   </pluginExecutionFilter>
                   <action>
-                    <ignore/>
+                    <ignore />
                   </action>
                 </pluginExecution>
                 <pluginExecution>
@@ -1152,7 +1139,7 @@
                     </goals>
                   </pluginExecutionFilter>
                   <action>
-                    <ignore/>
+                    <ignore />
                   </action>
                 </pluginExecution>
               </pluginExecutions>
