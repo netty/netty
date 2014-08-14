@@ -240,7 +240,7 @@ import java.util.List;
  * public class FirstDecoder extends {@link ReplayingDecoder}&lt;{@link Void}&gt; {
  *
  *     {@code @Override}
- *     protected Object decode({@link ChannelHandlerContext} ctx,
+ *     protected void decode({@link ChannelHandlerContext} ctx,
  *                             {@link ByteBuf} buf, List&lt;Object&gt; out) {
  *         ...
  *         // Decode the first message
