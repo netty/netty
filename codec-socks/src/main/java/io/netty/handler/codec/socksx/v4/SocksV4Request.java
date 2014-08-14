@@ -13,19 +13,22 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.example.socksproxy;
+package io.netty.handler.codec.socksx.v4;
 
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.handler.logging.LogLevel;
-import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.codec.socksx.SocksMessage;
+import io.netty.handler.codec.socksx.SocksMessageType;
+import io.netty.handler.codec.socksx.SocksProtocolVersion;
+import io.netty.handler.codec.socksx.SocksRequest;
 
-public final class SocksServerInitializer extends ChannelInitializer<SocketChannel> {
-    @Override
-    public void initChannel(SocketChannel socketChannel) throws Exception {
-        ChannelPipeline p = socketChannel.pipeline();
-        p.addFirst(new LoggingHandler(LogLevel.DEBUG));
-        p.addLast(new SocksPortUnificationServerHandler());
+/**
+ * An abstract class that defines a SocksRequest, providing common properties for
+ * {@link SocksV4CmdRequest}.
+ *
+ * @see SocksV4CmdRequest
+ * @see UnknownSocksV4Request
+ */
+public abstract class SocksV4Request extends SocksRequest {
+    protected SocksV4Request() {
+        super(SocksProtocolVersion.SOCKS4a);
     }
 }
