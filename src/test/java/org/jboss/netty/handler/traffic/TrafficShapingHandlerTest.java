@@ -53,8 +53,8 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.*;
 
-public class TrafficShapingTest {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(TrafficShapingTest.class);
+public class TrafficShapingHandlerTest {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(TrafficShapingHandlerTest.class);
     private static final InternalLogger loggerServer = InternalLoggerFactory.getInstance("ServerTSH");
     private static final InternalLogger loggerClient = InternalLoggerFactory.getInstance("ClientTSH");
 
