@@ -296,22 +296,11 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
                     break;
             }
 
-            if (done) {
-                // Release all written buffers.
-                //
-                // It's important to loop only over nioBufferCnt as there may be other messages in the
-                // ChannelOutboundBuffer that are not of type ByteBuf and so was not included for gathering-write.
-                //
-                // See https://github.com/netty/netty/issues/2769
-                for (int i = nioBufferCnt; i > 0; i --) {
-                    final ByteBuf buf = (ByteBuf) in.current();
-                    in.progress(buf.readableBytes());
-                    in.remove();
-                }
-            } else {
+            // Release the fully written buffers, and update the indexes of the partially written buffer.
+            in.removeBytes(writtenBytes);
+
+            if (!done) {
                 // Did not write all buffers completely.
-                // Release the fully written buffers and update the indexes of the partially written buffer.
-                in.removeBytes(writtenBytes);
                 incompleteWrite(setOpWrite);
                 break;
             }
