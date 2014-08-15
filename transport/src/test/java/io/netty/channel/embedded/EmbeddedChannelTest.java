@@ -51,7 +51,5 @@ public class EmbeddedChannelTest {
         Assert.assertSame(first, channel.readInbound());
         Assert.assertSame(second, channel.readInbound());
         Assert.assertNull(channel.readInbound());
-
-
     }
 }
