@@ -15,15 +15,16 @@
 
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_FRAME_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.FRAME_HEADER_LENGTH;
 import static io.netty.handler.codec.http2.Http2CodecUtil.INT_FIELD_LENGTH;
-import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_PAYLOAD_LENGTH;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_UNSIGNED_BYTE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_UNSIGNED_INT;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_WEIGHT;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_WEIGHT;
 import static io.netty.handler.codec.http2.Http2CodecUtil.PRIORITY_ENTRY_LENGTH;
 import static io.netty.handler.codec.http2.Http2CodecUtil.SETTING_ENTRY_LENGTH;
+import static io.netty.handler.codec.http2.Http2CodecUtil.isMaxFrameSizeValid;
 import static io.netty.handler.codec.http2.Http2CodecUtil.writeFrameHeader;
 import static io.netty.handler.codec.http2.Http2CodecUtil.writeUnsignedInt;
 import static io.netty.handler.codec.http2.Http2CodecUtil.writeUnsignedShort;
@@ -50,6 +51,7 @@ import io.netty.util.collection.IntObjectMap;
 public class DefaultHttp2FrameWriter implements Http2FrameWriter {
 
     private final Http2HeadersEncoder headersEncoder;
+    private int maxFrameSize = DEFAULT_MAX_FRAME_SIZE;
 
     public DefaultHttp2FrameWriter() {
         this(new DefaultHttp2HeadersEncoder());
@@ -70,20 +72,41 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
     }
 
     @Override
+    public void maxFrameSize(int max) {
+        if (!isMaxFrameSizeValid(max)) {
+            throw new IllegalArgumentException("maxFrameSize is invalid: " + max);
+        }
+        maxFrameSize = max;
+    }
+
+    @Override
+    public int maxFrameSize() {
+        return maxFrameSize;
+    }
+
+    @Override
+    public void maxHeaderListSize(int max) {
+        headersEncoder.maxHeaderListSize(max);
+    }
+
+    @Override
+    public int maxHeaderListSize() {
+        return headersEncoder.maxHeaderListSize();
+    }
+
+    @Override
     public void close() {
         // Nothing to do.
     }
 
     @Override
     public ChannelFuture writeData(ChannelHandlerContext ctx, ChannelPromise promise, int streamId,
-            ByteBuf data, int padding, boolean endStream, boolean endSegment) {
+            ByteBuf data, int padding, boolean endStream) {
         try {
             verifyStreamId(streamId, "Stream ID");
             verifyPadding(padding);
 
-            Http2Flags flags =
-                    new Http2Flags().paddingPresent(padding > 0).endOfStream(endStream)
-                            .endOfSegment(endSegment);
+            Http2Flags flags = new Http2Flags().paddingPresent(padding > 0).endOfStream(endStream);
 
             int payloadLength = data.readableBytes() + padding + flags.getPaddingPresenceFieldLength();
             verifyPayloadLength(payloadLength);
@@ -109,17 +132,17 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
 
     @Override
     public ChannelFuture writeHeaders(ChannelHandlerContext ctx, ChannelPromise promise,
-            int streamId, Http2Headers headers, int padding, boolean endStream, boolean endSegment) {
+            int streamId, Http2Headers headers, int padding, boolean endStream) {
         return writeHeadersInternal(ctx, promise, streamId, headers, padding, endStream,
-                endSegment, false, 0, (short) 0, false);
+                false, 0, (short) 0, false);
     }
 
     @Override
     public ChannelFuture writeHeaders(ChannelHandlerContext ctx, ChannelPromise promise,
             int streamId, Http2Headers headers, int streamDependency, short weight,
-            boolean exclusive, int padding, boolean endStream, boolean endSegment) {
+            boolean exclusive, int padding, boolean endStream) {
         return writeHeadersInternal(ctx, promise, streamId, headers, padding, endStream,
-                endSegment, true, streamDependency, weight, exclusive);
+                true, streamDependency, weight, exclusive);
     }
 
     @Override
@@ -227,7 +250,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
             Http2Flags flags = new Http2Flags().paddingPresent(padding > 0);
             int promisedStreamIdLength = INT_FIELD_LENGTH;
             int nonFragmentLength = promisedStreamIdLength + padding + flags.getPaddingPresenceFieldLength();
-            int maxFragmentLength = MAX_FRAME_PAYLOAD_LENGTH - nonFragmentLength;
+            int maxFragmentLength = maxFrameSize - nonFragmentLength;
             ByteBuf fragment =
                     headerBlock.readSlice(Math.min(headerBlock.readableBytes(), maxFragmentLength));
 
@@ -317,7 +340,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
     }
 
     private ChannelFuture writeHeadersInternal(ChannelHandlerContext ctx, ChannelPromise promise,
-            int streamId, Http2Headers headers, int padding, boolean endStream, boolean endSegment,
+            int streamId, Http2Headers headers, int padding, boolean endStream,
             boolean hasPriority, int streamDependency, short weight, boolean exclusive) {
         ByteBuf headerBlock = null;
         try {
@@ -333,13 +356,12 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
             headersEncoder.encodeHeaders(headers, headerBlock);
 
             Http2Flags flags =
-                    new Http2Flags().endOfStream(endStream).endOfSegment(endSegment)
-                            .priorityPresent(hasPriority).paddingPresent(padding > 0);
+                    new Http2Flags().endOfStream(endStream).priorityPresent(hasPriority).paddingPresent(padding > 0);
 
             // Read the first fragment (possibly everything).
             int nonFragmentBytes =
                     padding + flags.getNumPriorityBytes() + flags.getPaddingPresenceFieldLength();
-            int maxFragmentLength = MAX_FRAME_PAYLOAD_LENGTH - nonFragmentBytes;
+            int maxFragmentLength = maxFrameSize - nonFragmentBytes;
             ByteBuf fragment =
                     headerBlock.readSlice(Math.min(headerBlock.readableBytes(), maxFragmentLength));
 
@@ -388,7 +410,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
      * Drains the header block and creates a composite buffer containing the first frame and a
      * number of CONTINUATION frames.
      */
-    private static ChannelFuture continueHeaders(ChannelHandlerContext ctx, ChannelPromise promise,
+    private ChannelFuture continueHeaders(ChannelHandlerContext ctx, ChannelPromise promise,
             int streamId, int padding, ByteBuf headerBlock, ByteBuf firstFrame) {
         // Create a composite buffer wrapping the first frame and any continuation frames.
         CompositeByteBuf out = ctx.alloc().compositeBuffer();
@@ -410,11 +432,11 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
      * Allocates a new buffer and writes a single continuation frame with a fragment of the header
      * block to the output buffer.
      */
-    private static ByteBuf createContinuationFrame(ChannelHandlerContext ctx, int streamId,
+    private ByteBuf createContinuationFrame(ChannelHandlerContext ctx, int streamId,
             ByteBuf headerBlock, int padding) {
         Http2Flags flags = new Http2Flags().paddingPresent(padding > 0);
         int nonFragmentLength = padding + flags.getPaddingPresenceFieldLength();
-        int maxFragmentLength = MAX_FRAME_PAYLOAD_LENGTH - nonFragmentLength;
+        int maxFragmentLength = maxFrameSize - nonFragmentLength;
         ByteBuf fragment =
                 headerBlock.readSlice(Math.min(headerBlock.readableBytes(), maxFragmentLength));
 
@@ -466,8 +488,8 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
         }
     }
 
-    private static void verifyPayloadLength(int payloadLength) {
-        if (payloadLength > MAX_FRAME_PAYLOAD_LENGTH) {
+    private void verifyPayloadLength(int payloadLength) {
+        if (payloadLength > maxFrameSize) {
             throw new IllegalArgumentException("Total payload length " + payloadLength
                     + " exceeds max frame length.");
         }

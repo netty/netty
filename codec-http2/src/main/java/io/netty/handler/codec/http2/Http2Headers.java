@@ -57,6 +57,11 @@ public abstract class Http2Headers implements Iterable<Entry<String, String>> {
         }
 
         @Override
+        public int size() {
+            return 0;
+        }
+
+        @Override
         public Set<String> names() {
             return Collections.emptySet();
         }
@@ -68,42 +73,67 @@ public abstract class Http2Headers implements Iterable<Entry<String, String>> {
     };
 
     /**
-     * HTTP2 header names.
+     * The prefix used to denote an HTTP/2 psuedo-header.
      */
-    public enum HttpName {
+    public static String PSEUDO_HEADER_PREFIX = ":";
+
+    /**
+     * HTTP/2 pseudo-headers names.
+     */
+    public enum PseudoHeaderName {
         /**
          * {@code :method}.
          */
-        METHOD(":method"),
+        METHOD(PSEUDO_HEADER_PREFIX + "method"),
 
         /**
          * {@code :scheme}.
          */
-        SCHEME(":scheme"),
+        SCHEME(PSEUDO_HEADER_PREFIX + "scheme"),
 
         /**
          * {@code :authority}.
          */
-        AUTHORITY(":authority"),
+        AUTHORITY(PSEUDO_HEADER_PREFIX + "authority"),
 
         /**
          * {@code :path}.
          */
-        PATH(":path"),
+        PATH(PSEUDO_HEADER_PREFIX + "path"),
 
         /**
          * {@code :status}.
          */
-        STATUS(":status");
+        STATUS(PSEUDO_HEADER_PREFIX + "status");
 
         private final String value;
 
-        HttpName(String value) {
+        PseudoHeaderName(String value) {
             this.value = value;
         }
 
         public String value() {
             return value;
+        }
+
+        /**
+         * Indicates whether the given header name is a valid HTTP/2 pseudo header.
+         */
+        public static boolean isPseudoHeader(String header) {
+            if (header == null || !header.startsWith(Http2Headers.PSEUDO_HEADER_PREFIX)) {
+                // Not a pseudo-header.
+                return false;
+            }
+
+            // Check the header name against the set of valid pseudo-headers.
+            for (PseudoHeaderName pseudoHeader : PseudoHeaderName.values()) {
+                String pseudoHeaderName = pseudoHeader.value();
+                if (pseudoHeaderName.equals(header)) {
+                    // It's a valid pseudo-header.
+                    return true;
+                }
+            }
+            return false;
         }
     }
 
@@ -146,38 +176,43 @@ public abstract class Http2Headers implements Iterable<Entry<String, String>> {
     public abstract boolean isEmpty();
 
     /**
-     * Gets the {@link HttpName#METHOD} header or {@code null} if there is no such header
+     * Gets the number of headers contained in this object.
+     */
+    public abstract int size();
+
+    /**
+     * Gets the {@link PseudoHeaderName#METHOD} header or {@code null} if there is no such header
      */
     public final String method() {
-        return get(HttpName.METHOD.value());
+        return get(PseudoHeaderName.METHOD.value());
     }
 
     /**
-     * Gets the {@link HttpName#SCHEME} header or {@code null} if there is no such header
+     * Gets the {@link PseudoHeaderName#SCHEME} header or {@code null} if there is no such header
      */
     public final String scheme() {
-        return get(HttpName.SCHEME.value());
+        return get(PseudoHeaderName.SCHEME.value());
     }
 
     /**
-     * Gets the {@link HttpName#AUTHORITY} header or {@code null} if there is no such header
+     * Gets the {@link PseudoHeaderName#AUTHORITY} header or {@code null} if there is no such header
      */
     public final String authority() {
-        return get(HttpName.AUTHORITY.value());
+        return get(PseudoHeaderName.AUTHORITY.value());
     }
 
     /**
-     * Gets the {@link HttpName#PATH} header or {@code null} if there is no such header
+     * Gets the {@link PseudoHeaderName#PATH} header or {@code null} if there is no such header
      */
     public final String path() {
-        return get(HttpName.PATH.value());
+        return get(PseudoHeaderName.PATH.value());
     }
 
     /**
-     * Gets the {@link HttpName#STATUS} header or {@code null} if there is no such header
+     * Gets the {@link PseudoHeaderName#STATUS} header or {@code null} if there is no such header
      */
     public final String status() {
-        return get(HttpName.STATUS.value());
+        return get(PseudoHeaderName.STATUS.value());
     }
 
     @Override

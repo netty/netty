@@ -15,12 +15,13 @@
 
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_FRAME_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.FRAME_HEADER_LENGTH;
-import static io.netty.handler.codec.http2.Http2CodecUtil.FRAME_LENGTH_MASK;
 import static io.netty.handler.codec.http2.Http2CodecUtil.INT_FIELD_LENGTH;
-import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_PAYLOAD_LENGTH;
 import static io.netty.handler.codec.http2.Http2CodecUtil.PRIORITY_ENTRY_LENGTH;
+import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_MAX_FRAME_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.SETTING_ENTRY_LENGTH;
+import static io.netty.handler.codec.http2.Http2CodecUtil.isMaxFrameSizeValid;
 import static io.netty.handler.codec.http2.Http2CodecUtil.readUnsignedInt;
 import static io.netty.handler.codec.http2.Http2Exception.protocolError;
 import static io.netty.handler.codec.http2.Http2FrameTypes.CONTINUATION;
@@ -56,6 +57,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader {
     private Http2Flags flags;
     private int payloadLength;
     private HeadersContinuation headersContinuation;
+    private int maxFrameSize = DEFAULT_MAX_FRAME_SIZE;
 
     public DefaultHttp2FrameReader() {
         this(new DefaultHttp2HeadersDecoder());
@@ -73,6 +75,29 @@ public class DefaultHttp2FrameReader implements Http2FrameReader {
     @Override
     public long maxHeaderTableSize() {
         return headersDecoder.maxHeaderTableSize();
+    }
+
+    @Override
+    public void maxFrameSize(int max) {
+        if (!isMaxFrameSizeValid(max)) {
+            throw new IllegalArgumentException("maxFrameSize is invalid: " + max);
+        }
+        maxFrameSize = max;
+    }
+
+    @Override
+    public int maxFrameSize() {
+        return maxFrameSize;
+    }
+
+    @Override
+    public void maxHeaderListSize(int max) {
+        headersDecoder.maxHeaderListSize(max);
+    }
+
+    @Override
+    public int maxHeaderListSize() {
+        return headersDecoder.maxHeaderListSize();
     }
 
     @Override
@@ -133,7 +158,10 @@ public class DefaultHttp2FrameReader implements Http2FrameReader {
         }
 
         // Read the header and prepare the unmarshaller to read the frame.
-        payloadLength = in.readUnsignedShort() & FRAME_LENGTH_MASK;
+        payloadLength = in.readUnsignedMedium();
+        if (payloadLength > maxFrameSize) {
+            throw protocolError("Frame length: %d exceeds maximum: %d", payloadLength, maxFrameSize);
+        }
         frameType = in.readByte();
         flags = new Http2Flags(in.readUnsignedByte());
         streamId = readUnsignedInt(in);
@@ -351,8 +379,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader {
         }
 
         ByteBuf data = payload.readSlice(dataLength);
-        observer.onDataRead(ctx, streamId, data, padding, flags.endOfStream(),
-                flags.endOfSegment());
+        observer.onDataRead(ctx, streamId, data, padding, flags.endOfStream());
         payload.skipBytes(payload.readableBytes());
     }
 
@@ -385,8 +412,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader {
                     if (endOfHeaders) {
                         Http2Headers headers = builder().buildHeaders();
                         observer.onHeadersRead(ctx, headersStreamId, headers, streamDependency,
-                                weight, exclusive, padding, headersFlags.endOfStream(),
-                                headersFlags.endOfSegment());
+                                weight, exclusive, padding, headersFlags.endOfStream());
                         close();
                     }
                 }
@@ -412,7 +438,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader {
                 if (endOfHeaders) {
                     Http2Headers headers = builder().buildHeaders();
                     observer.onHeadersRead(ctx, headersStreamId, headers, padding,
-                            headersFlags.endOfStream(), headersFlags.endOfSegment());
+                            headersFlags.endOfStream());
                     close();
                 }
             }
@@ -444,11 +470,19 @@ public class DefaultHttp2FrameReader implements Http2FrameReader {
             observer.onSettingsAckRead(ctx);
         } else {
             int numSettings = payloadLength / SETTING_ENTRY_LENGTH;
-            Http2Settings settings = new Http2Settings(5);
+            Http2Settings settings = new Http2Settings();
             for (int index = 0; index < numSettings; ++index) {
                 int id = payload.readUnsignedShort();
                 long value = payload.readUnsignedInt();
-                settings.put(id, value);
+                try {
+                    settings.put(id, value);
+                } catch (IllegalArgumentException e) {
+                    if (id == SETTINGS_MAX_FRAME_SIZE) {
+                        throw new Http2Exception(Http2Error.FRAME_SIZE_ERROR, e.getMessage(), e);
+                    } else {
+                        throw new Http2Exception(Http2Error.PROTOCOL_ERROR, e.getMessage(), e);
+                    }
+                }
             }
             observer.onSettingsRead(ctx, settings);
             // Provide an interface for non-observers to capture settings
@@ -643,16 +677,16 @@ public class DefaultHttp2FrameReader implements Http2FrameReader {
         }
     }
 
+    private void verifyPayloadLength(int payloadLength) throws Http2Exception {
+        if (payloadLength > maxFrameSize) {
+            throw protocolError("Total payload length %d exceeds max frame length.", payloadLength);
+        }
+    }
+
     private static void verifyStreamOrConnectionId(int streamId, String argumentName)
             throws Http2Exception {
         if (streamId < 0) {
             throw protocolError("%s must be >= 0", argumentName);
-        }
-    }
-
-    private static void verifyPayloadLength(int payloadLength) throws Http2Exception {
-        if (payloadLength > MAX_FRAME_PAYLOAD_LENGTH) {
-            throw protocolError("Total payload length %d exceeds max frame length.", payloadLength);
         }
     }
 }

@@ -43,26 +43,26 @@ public class Http2OutboundFrameLogger implements Http2FrameWriter {
 
     @Override
     public ChannelFuture writeData(ChannelHandlerContext ctx, ChannelPromise promise, int streamId,
-            ByteBuf data, int padding, boolean endStream, boolean endSegment) {
-        logger.logData(OUTBOUND, streamId, data, padding, endStream, endSegment);
-        return writer.writeData(ctx, promise, streamId, data, padding, endStream, endSegment);
+            ByteBuf data, int padding, boolean endStream) {
+        logger.logData(OUTBOUND, streamId, data, padding, endStream);
+        return writer.writeData(ctx, promise, streamId, data, padding, endStream);
     }
 
     @Override
     public ChannelFuture writeHeaders(ChannelHandlerContext ctx, ChannelPromise promise,
-            int streamId, Http2Headers headers, int padding, boolean endStream, boolean endSegment) {
-        logger.logHeaders(OUTBOUND, streamId, headers, padding, endStream, endSegment);
-        return writer.writeHeaders(ctx, promise, streamId, headers, padding, endStream, endSegment);
+            int streamId, Http2Headers headers, int padding, boolean endStream) {
+        logger.logHeaders(OUTBOUND, streamId, headers, padding, endStream);
+        return writer.writeHeaders(ctx, promise, streamId, headers, padding, endStream);
     }
 
     @Override
     public ChannelFuture writeHeaders(ChannelHandlerContext ctx, ChannelPromise promise,
             int streamId, Http2Headers headers, int streamDependency, short weight,
-            boolean exclusive, int padding, boolean endStream, boolean endSegment) {
+            boolean exclusive, int padding, boolean endStream) {
         logger.logHeaders(OUTBOUND, streamId, headers, streamDependency, weight, exclusive,
-                padding, endStream, endSegment);
+                padding, endStream);
         return writer.writeHeaders(ctx, promise, streamId, headers, streamDependency, weight,
-                exclusive, padding, endStream, endSegment);
+                exclusive, padding, endStream);
     }
 
     @Override
@@ -139,5 +139,25 @@ public class Http2OutboundFrameLogger implements Http2FrameWriter {
     @Override
     public long maxHeaderTableSize() {
         return writer.maxHeaderTableSize();
+    }
+
+    @Override
+    public void maxFrameSize(int max) {
+        writer.maxFrameSize(max);
+    }
+
+    @Override
+    public int maxFrameSize() {
+        return writer.maxFrameSize();
+    }
+
+    @Override
+    public void maxHeaderListSize(int max) {
+        writer.maxHeaderListSize(max);
+    }
+
+    @Override
+    public int maxHeaderListSize() {
+        return writer.maxHeaderListSize();
     }
 }

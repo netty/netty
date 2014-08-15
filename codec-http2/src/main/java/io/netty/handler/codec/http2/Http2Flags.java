@@ -20,7 +20,6 @@ package io.netty.handler.codec.http2;
  */
 public final class Http2Flags {
     public static final short END_STREAM = 0x1;
-    public static final short END_SEGMENT = 0x2;
     public static final short END_HEADERS = 0x4;
     public static final short ACK = 0x1;
     public static final short PADDED = 0x8;
@@ -48,14 +47,6 @@ public final class Http2Flags {
      */
     public boolean endOfStream() {
         return isFlagSet(END_STREAM);
-    }
-
-    /**
-     * Determines whether the {@link #END_SEGMENT} flag is set. Only applies to DATA and HEADERS
-     * frames.
-     */
-    public boolean endOfSegment() {
-        return isFlagSet(END_SEGMENT);
     }
 
     /**
@@ -111,13 +102,6 @@ public final class Http2Flags {
      */
     public Http2Flags endOfStream(boolean endOfStream) {
         return setFlag(endOfStream, END_STREAM);
-    }
-
-    /**
-     * Sets the {@link #END_SEGMENT} flag.
-     */
-    public Http2Flags endOfSegment(boolean endOfSegment) {
-        return setFlag(endOfSegment, END_SEGMENT);
     }
 
     /**
@@ -210,9 +194,6 @@ public final class Http2Flags {
         }
         if (priorityPresent()) {
             builder.append("PRIORITY_PRESENT,");
-        }
-        if (endOfSegment()) {
-            builder.append("END_OF_SEGMENT,");
         }
         if (paddingPresent()) {
             builder.append("PADDING_PRESENT,");

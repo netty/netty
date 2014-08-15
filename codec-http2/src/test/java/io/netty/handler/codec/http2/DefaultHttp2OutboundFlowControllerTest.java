@@ -18,6 +18,8 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http2.Http2OutboundFlowController.FrameWriter;
+import io.netty.util.CharsetUtil;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -25,6 +27,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.*;
+import static io.netty.util.CharsetUtil.UTF_8;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
@@ -60,15 +63,30 @@ public class DefaultHttp2OutboundFlowControllerTest {
         Http2Stream streamD = connection.local().createStream(STREAM_D, false);
         streamC.setPriority(STREAM_A, DEFAULT_PRIORITY_WEIGHT, false);
         streamD.setPriority(STREAM_A, DEFAULT_PRIORITY_WEIGHT, false);
+
+        when(frameWriter.maxFrameSize()).thenReturn(Integer.MAX_VALUE);
     }
 
     @Test
     public void frameShouldBeSentImmediately() throws Http2Exception {
         ByteBuf data = dummyData(10);
-        send(STREAM_A, data);
+        send(STREAM_A, data.slice());
         verifyWrite(STREAM_A, data);
         assertEquals(1, data.refCnt());
         data.release();
+    }
+
+    @Test
+    public void frameShouldSplitForMaxFrameSize() throws Http2Exception {
+        when(frameWriter.maxFrameSize()).thenReturn(5);
+        ByteBuf data = dummyData(10);
+        ByteBuf slice1 = data.slice(data.readerIndex(), 5);
+        ByteBuf slice2 = data.slice(5, 5);
+        send(STREAM_A, data.slice());
+        verifyWrite(STREAM_A, slice1);
+        verifyWrite(STREAM_A, slice2);
+        assertEquals(2, data.refCnt());
+        data.release(2);
     }
 
     @Test
@@ -105,7 +123,7 @@ public class DefaultHttp2OutboundFlowControllerTest {
         controller.initialOutboundWindowSize(0);
 
         ByteBuf data = dummyData(10);
-        send(STREAM_A, data);
+        send(STREAM_A, data.slice());
         verifyNoWrite(STREAM_A);
 
         // Verify that the entire frame was sent.
@@ -145,7 +163,7 @@ public class DefaultHttp2OutboundFlowControllerTest {
                 .updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_WINDOW_SIZE);
 
         ByteBuf data = dummyData(10);
-        send(STREAM_A, data);
+        send(STREAM_A, data.slice());
         verifyNoWrite(STREAM_A);
 
         // Verify that the entire frame was sent.
@@ -186,7 +204,7 @@ public class DefaultHttp2OutboundFlowControllerTest {
         controller.updateOutboundWindowSize(STREAM_A, -DEFAULT_WINDOW_SIZE);
 
         ByteBuf data = dummyData(10);
-        send(STREAM_A, data);
+        send(STREAM_A, data.slice());
         verifyNoWrite(STREAM_A);
 
         // Verify that the entire frame was sent.
@@ -542,21 +560,20 @@ public class DefaultHttp2OutboundFlowControllerTest {
     }
 
     private void send(int streamId, ByteBuf data) throws Http2Exception {
-        controller.sendFlowControlled(streamId, data, 0, false, false, frameWriter);
+        controller.sendFlowControlled(streamId, data, 0, false, frameWriter);
     }
 
     private void verifyWrite(int streamId, ByteBuf data) {
-        verify(frameWriter).writeFrame(eq(streamId), eq(data), eq(0), eq(false), eq(false));
+        verify(frameWriter).writeFrame(eq(streamId), eq(data), eq(0), eq(false));
     }
 
     private void verifyNoWrite(int streamId) {
         verify(frameWriter, never()).writeFrame(eq(streamId), any(ByteBuf.class), anyInt(),
-                anyBoolean(), anyBoolean());
+                anyBoolean());
     }
 
     private void captureWrite(int streamId, ArgumentCaptor<ByteBuf> captor, boolean endStream) {
-        verify(frameWriter).writeFrame(eq(streamId), captor.capture(), eq(0), eq(endStream),
-                eq(false));
+        verify(frameWriter).writeFrame(eq(streamId), captor.capture(), eq(0), eq(endStream));
     }
 
     private void setPriority(int stream, int parent, int weight, boolean exclusive)
@@ -565,8 +582,11 @@ public class DefaultHttp2OutboundFlowControllerTest {
     }
 
     private static ByteBuf dummyData(int size) {
+        String repeatedData = "0123456789";
         ByteBuf buffer = Unpooled.buffer(size);
-        buffer.writerIndex(size);
+        for (int index = 0; index < size; ++index) {
+            buffer.writeByte(repeatedData.charAt(index % repeatedData.length()));
+        }
         return buffer;
     }
 }

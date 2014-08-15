@@ -39,4 +39,14 @@ public interface Http2HeadersEncoder {
      * Gets the current maximum value for the header table size.
      */
     int maxHeaderTableSize();
+
+    /**
+     * Sets the maximum allowed header elements.
+     */
+    void maxHeaderListSize(int max);
+
+    /**
+     * Gets the maximum allowed header elements.
+     */
+    int maxHeaderListSize();
 }

@@ -51,25 +51,24 @@ public class Http2FrameLogger extends ChannelHandlerAdapter {
     }
 
     public void logData(Direction direction, int streamId, ByteBuf data, int padding,
-            boolean endStream, boolean endSegment) {
+            boolean endStream) {
         log(direction,
-                "DATA: streamId=%d, padding=%d, endStream=%b, endSegment=%b, length=%d, bytes=%s",
-                streamId, padding, endStream, endSegment, data.readableBytes(), ByteBufUtil.hexDump(data));
+                "DATA: streamId=%d, padding=%d, endStream=%b, length=%d, bytes=%s",
+                streamId, padding, endStream, data.readableBytes(), ByteBufUtil.hexDump(data));
     }
 
     public void logHeaders(Direction direction, int streamId, Http2Headers headers, int padding,
-            boolean endStream, boolean endSegment) {
-        log(direction, "HEADERS: streamId:%d, headers=%s, padding=%d, endStream=%b, endSegment=%b",
-                streamId, headers, padding, endStream, endSegment);
+            boolean endStream) {
+        log(direction, "HEADERS: streamId:%d, headers=%s, padding=%d, endStream=%b",
+                streamId, headers, padding, endStream);
     }
 
     public void logHeaders(Direction direction, int streamId, Http2Headers headers,
-            int streamDependency, short weight, boolean exclusive, int padding, boolean endStream,
-            boolean endSegment) {
+            int streamDependency, short weight, boolean exclusive, int padding, boolean endStream) {
         log(direction,
                 "HEADERS: streamId:%d, headers=%s, streamDependency=%d, weight=%d, exclusive=%b, "
-                        + "padding=%d, endStream=%b, endSegment=%b", streamId, headers,
-                streamDependency, weight, exclusive, padding, endStream, endSegment);
+                        + "padding=%d, endStream=%b", streamId, headers,
+                streamDependency, weight, exclusive, padding, endStream);
     }
 
     public void logPriority(Direction direction, int streamId, int streamDependency, short weight,

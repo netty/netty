@@ -149,13 +149,16 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
 
     @Override
     public void sendFlowControlled(int streamId, ByteBuf data, int padding, boolean endStream,
-            boolean endSegment, FrameWriter frameWriter) throws Http2Exception {
+            FrameWriter frameWriter) throws Http2Exception {
         OutboundFlowState state = stateOrFail(streamId);
         OutboundFlowState.Frame frame =
-                state.newFrame(data, padding, endStream, endSegment, frameWriter);
+                state.newFrame(data, padding, endStream, frameWriter);
+
+        // Limit the window for this write by the maximum frame size.
+        int window = state.writableWindow();
 
         int dataLength = data.readableBytes();
-        if (state.writableWindow() >= dataLength) {
+        if (window >= dataLength) {
             // Window size is large enough to send entire data frame
             frame.write();
             return;
@@ -164,13 +167,13 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         // Enqueue the frame to be written when the window size permits.
         frame.enqueue();
 
-        if (state.writableWindow() <= 0) {
+        if (window <= 0) {
             // Stream is stalled, don't send anything now.
             return;
         }
 
         // Create and send a partial frame up to the window size.
-        frame.split(state.writableWindow()).write();
+        frame.split(window).write();
     }
 
     private static OutboundFlowState state(Http2Stream stream) {
@@ -441,9 +444,8 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         /**
          * Creates a new frame with the given values but does not add it to the pending queue.
          */
-        Frame newFrame(ByteBuf data, int padding, boolean endStream, boolean endSegment,
-                FrameWriter writer) {
-            return new Frame(data, padding, endStream, endSegment, writer);
+        Frame newFrame(ByteBuf data, int padding, boolean endStream, FrameWriter writer) {
+            return new Frame(data, padding, endStream, writer);
         }
 
         /**
@@ -529,16 +531,13 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
             private final ByteBuf data;
             private final int padding;
             private final boolean endStream;
-            private final boolean endSegment;
             private final FrameWriter writer;
             private boolean enqueued;
 
-            Frame(ByteBuf data, int padding, boolean endStream, boolean endSegment,
-                    FrameWriter writer) {
+            Frame(ByteBuf data, int padding, boolean endStream, FrameWriter writer) {
                 this.data = data;
                 this.padding = padding;
                 this.endStream = endStream;
-                this.endSegment = endSegment;
                 this.writer = writer;
             }
 
@@ -575,11 +574,25 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
              * priority tree.
              */
             void write() throws Http2Exception {
-                int dataLength = data.readableBytes();
-                connectionState().incrementStreamWindow(-dataLength);
-                incrementStreamWindow(-dataLength);
-                writer.writeFrame(stream.id(), data, padding, endStream, endSegment);
-                decrementPendingBytes(dataLength);
+                // Using a do/while loop because if the buffer is empty we still need to call
+                // the writer once to send the empty frame.
+                do {
+                    int bytesToWrite = data.readableBytes();
+                    int frameBytes = Math.min(bytesToWrite, writer.maxFrameSize());
+                    if (frameBytes == bytesToWrite) {
+                        // All the bytes fit into a single HTTP/2 frame, just send it all.
+                        connectionState().incrementStreamWindow(-bytesToWrite);
+                        incrementStreamWindow(-bytesToWrite);
+                        ByteBuf slice = data.readSlice(bytesToWrite);
+                        writer.writeFrame(stream.id(), slice, padding, endStream);
+                        decrementPendingBytes(bytesToWrite);
+                        return;
+                    }
+
+                    // Split a chunk that will fit into a single HTTP/2 frame and write it.
+                    Frame frame = split(frameBytes);
+                    frame.write();
+                } while (data.isReadable());
             }
 
             /**
@@ -604,7 +617,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
             Frame split(int maxBytes) {
                 // TODO: Should padding be included in the chunks or only the last frame?
                 maxBytes = min(maxBytes, data.readableBytes());
-                Frame frame = new Frame(data.readSlice(maxBytes).retain(), 0, false, false, writer);
+                Frame frame = new Frame(data.readSlice(maxBytes).retain(), 0, false, writer);
                 decrementPendingBytes(maxBytes);
                 return frame;
             }

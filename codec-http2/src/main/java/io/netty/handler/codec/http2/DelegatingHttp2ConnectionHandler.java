@@ -53,22 +53,22 @@ public class DelegatingHttp2ConnectionHandler extends AbstractHttp2ConnectionHan
 
     @Override
     public ChannelFuture writeData(ChannelHandlerContext ctx, ChannelPromise promise, int streamId,
-            ByteBuf data, int padding, boolean endStream, boolean endSegment) {
-        return super.writeData(ctx, promise, streamId, data, padding, endStream, endSegment);
+            ByteBuf data, int padding, boolean endStream) {
+        return super.writeData(ctx, promise, streamId, data, padding, endStream);
     }
 
     @Override
     public ChannelFuture writeHeaders(ChannelHandlerContext ctx, ChannelPromise promise,
-            int streamId, Http2Headers headers, int padding, boolean endStream, boolean endSegment) {
-        return super.writeHeaders(ctx, promise, streamId, headers, padding, endStream, endSegment);
+            int streamId, Http2Headers headers, int padding, boolean endStream) {
+        return super.writeHeaders(ctx, promise, streamId, headers, padding, endStream);
     }
 
     @Override
     public ChannelFuture writeHeaders(ChannelHandlerContext ctx, ChannelPromise promise,
             int streamId, Http2Headers headers, int streamDependency, short weight,
-            boolean exclusive, int padding, boolean endStream, boolean endSegment) {
+            boolean exclusive, int padding, boolean endStream) {
         return super.writeHeaders(ctx, promise, streamId, headers, streamDependency, weight,
-                exclusive, padding, endStream, endSegment);
+                exclusive, padding, endStream);
     }
 
     @Override
@@ -102,16 +102,16 @@ public class DelegatingHttp2ConnectionHandler extends AbstractHttp2ConnectionHan
 
     @Override
     public void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
-            boolean endOfStream, boolean endOfSegment) throws Http2Exception {
-        observer.onDataRead(ctx, streamId, data, padding, endOfStream, endOfSegment);
+            boolean endOfStream) throws Http2Exception {
+        observer.onDataRead(ctx, streamId, data, padding, endOfStream);
     }
 
     @Override
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
-            int streamDependency, short weight, boolean exclusive, int padding, boolean endStream,
-            boolean endSegment) throws Http2Exception {
+            int streamDependency, short weight, boolean exclusive, int padding, boolean endStream)
+            throws Http2Exception {
         observer.onHeadersRead(ctx, streamId, headers, streamDependency, weight, exclusive,
-                padding, endStream, endSegment);
+                padding, endStream);
     }
 
     @Override

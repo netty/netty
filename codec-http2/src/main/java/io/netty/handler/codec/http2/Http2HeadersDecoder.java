@@ -36,4 +36,14 @@ public interface Http2HeadersDecoder {
      * Gets the maximum header table size for this decoder.
      */
     int maxHeaderTableSize();
+
+    /**
+     * Sets the maximum allowed header elements.
+     */
+    void maxHeaderListSize(int max);
+
+    /**
+     * Gets the maximum allowed header elements.
+     */
+    int maxHeaderListSize();
 }

@@ -210,6 +210,8 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
         settings.initialWindowSize(inboundFlow.initialInboundWindowSize());
         settings.maxConcurrentStreams(connection.remote().maxStreams());
         settings.headerTableSize(frameReader.maxHeaderTableSize());
+        settings.maxFrameSize(frameReader.maxFrameSize());
+        settings.maxHeaderListSize(frameReader.maxHeaderListSize());
         if (!connection.isServer()) {
             // Only set the pushEnabled flag if this is a client endpoint.
             settings.pushEnabled(connection.local().allowPushTo());
@@ -222,7 +224,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
      */
     @Override
     public void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
-            boolean endOfStream, boolean endOfSegment) throws Http2Exception {
+            boolean endOfStream) throws Http2Exception {
     }
 
     /**
@@ -232,7 +234,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
      */
     @Override
     public final void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
-            int padding, boolean endStream, boolean endSegment) throws Http2Exception {
+            int padding, boolean endStream) throws Http2Exception {
     }
 
     /**
@@ -240,8 +242,8 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
      */
     @Override
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
-            int streamDependency, short weight, boolean exclusive, int padding, boolean endStream,
-            boolean endSegment) throws Http2Exception {
+            int streamDependency, short weight, boolean exclusive, int padding, boolean endStream)
+            throws Http2Exception {
     }
 
     /**
@@ -338,7 +340,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
 
     protected ChannelFuture writeData(final ChannelHandlerContext ctx,
             final ChannelPromise promise, int streamId, final ByteBuf data, int padding,
-            boolean endStream, boolean endSegment) {
+            boolean endStream) {
         try {
             if (connection.isGoAway()) {
                 throw protocolError("Sending data after connection going away.");
@@ -348,7 +350,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
             stream.verifyState(PROTOCOL_ERROR, OPEN, HALF_CLOSED_REMOTE);
 
             // Hand control of the frame to the flow controller.
-            outboundFlow.sendFlowControlled(streamId, data, padding, endStream, endSegment,
+            outboundFlow.sendFlowControlled(streamId, data, padding, endStream,
                     new FlowControlWriter(ctx, data, promise));
 
             return promise;
@@ -358,14 +360,14 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
     }
 
     protected ChannelFuture writeHeaders(ChannelHandlerContext ctx, ChannelPromise promise,
-            int streamId, Http2Headers headers, int padding, boolean endStream, boolean endSegment) {
+            int streamId, Http2Headers headers, int padding, boolean endStream) {
         return writeHeaders(ctx, promise, streamId, headers, 0, DEFAULT_PRIORITY_WEIGHT, false,
-                padding, endStream, endSegment);
+                padding, endStream);
     }
 
     protected ChannelFuture writeHeaders(ChannelHandlerContext ctx, ChannelPromise promise,
             int streamId, Http2Headers headers, int streamDependency, short weight,
-            boolean exclusive, int padding, boolean endStream, boolean endSegment) {
+            boolean exclusive, int padding, boolean endStream) {
         try {
             if (connection.isGoAway()) {
                 throw protocolError("Sending headers after connection going away.");
@@ -393,7 +395,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
             }
 
             ChannelFuture future = frameWriter.writeHeaders(ctx, promise, streamId, headers, streamDependency,
-                    weight, exclusive, padding, endStream, endSegment);
+                    weight, exclusive, padding, endStream);
 
             // If the headers are the end of the stream, close it now.
             if (endStream) {
@@ -506,6 +508,8 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
             frameReader.readFrame(ctx, in, internalFrameObserver);
         } catch (Http2Exception e) {
             onHttp2Exception(ctx, e);
+        } catch (Throwable e) {
+            onHttp2Exception(ctx, new Http2Exception(Http2Error.INTERNAL_ERROR, e.getMessage(), e));
         }
     }
 
@@ -733,6 +737,21 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
             frameWriter.maxHeaderTableSize(headerTableSize);
         }
 
+        Integer maxHeaderListSize = settings.maxHeaderListSize();
+        if (maxHeaderListSize != null) {
+            frameWriter.maxHeaderListSize(maxHeaderListSize);
+        }
+
+        Integer maxFrameSize = settings.maxFrameSize();
+        if (maxFrameSize != null) {
+            try {
+                frameWriter.maxFrameSize(maxFrameSize);
+            } catch (IllegalArgumentException e) {
+                throw new Http2Exception(Http2Error.FRAME_SIZE_ERROR,
+                        "Invalid MAX_FRAME_SIZE specified in received settings: " + maxFrameSize);
+            }
+        }
+
         Integer initialWindowSize = settings.initialWindowSize();
         if (initialWindowSize != null) {
             outboundFlow.initialOutboundWindowSize(initialWindowSize);
@@ -760,7 +779,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
 
         @Override
         public void onDataRead(final ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
-                boolean endOfStream, boolean endOfSegment) throws Http2Exception {
+                boolean endOfStream) throws Http2Exception {
             verifyPrefaceReceived();
 
             // Check if we received a data frame for a stream which is half-closed
@@ -768,7 +787,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
             stream.verifyState(STREAM_CLOSED, OPEN, HALF_CLOSED_LOCAL);
 
             // Apply flow control.
-            inboundFlow.applyInboundFlowControl(streamId, data, padding, endOfStream, endOfSegment,
+            inboundFlow.applyInboundFlowControl(streamId, data, padding, endOfStream,
                     new Http2InboundFlowController.FrameWriter() {
                         @Override
                         public void writeFrame(int streamId, int windowSizeIncrement)
@@ -785,8 +804,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
                 return;
             }
 
-            AbstractHttp2ConnectionHandler.this.onDataRead(ctx, streamId, data, padding, endOfStream,
-                    endOfSegment);
+            AbstractHttp2ConnectionHandler.this.onDataRead(ctx, streamId, data, padding, endOfStream);
 
             if (endOfStream) {
                 closeRemoteSide(stream, ctx.newSucceededFuture());
@@ -824,15 +842,15 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
 
         @Override
         public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
-                int padding, boolean endStream, boolean endSegment) throws Http2Exception {
+                int padding, boolean endStream) throws Http2Exception {
             onHeadersRead(ctx, streamId, headers, 0, DEFAULT_PRIORITY_WEIGHT, false, padding,
-                    endStream, endSegment);
+                    endStream);
         }
 
         @Override
         public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
                 int streamDependency, short weight, boolean exclusive, int padding,
-                boolean endStream, boolean endSegment) throws Http2Exception {
+                boolean endStream) throws Http2Exception {
             verifyPrefaceReceived();
 
             Http2Stream stream = connection.stream(streamId);
@@ -865,7 +883,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
             }
 
             AbstractHttp2ConnectionHandler.this.onHeadersRead(ctx, streamId, headers, streamDependency,
-                    weight, exclusive, padding, endStream, endSegment);
+                    weight, exclusive, padding, endStream);
 
             // If the headers completes this stream, close it.
             if (endStream) {
@@ -946,6 +964,21 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
             Long headerTableSize = settings.headerTableSize();
             if (headerTableSize != null) {
                 frameReader.maxHeaderTableSize(headerTableSize);
+            }
+
+            Integer maxHeaderListSize = settings.maxHeaderListSize();
+            if (maxHeaderListSize != null) {
+                frameReader.maxHeaderListSize(maxHeaderListSize);
+            }
+
+            Integer maxFrameSize = settings.maxFrameSize();
+            if (maxFrameSize != null) {
+                try {
+                    frameReader.maxFrameSize(maxFrameSize);
+                } catch (IllegalArgumentException e) {
+                    throw new Http2Exception(Http2Error.FRAME_SIZE_ERROR,
+                            "Invalid MAX_FRAME_SIZE specified in sent settings: " + maxFrameSize);
+                }
             }
 
             Integer initialWindowSize = settings.initialWindowSize();
@@ -1098,8 +1131,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
         }
 
         @Override
-        public void writeFrame(int streamId, ByteBuf data, int padding,
-                boolean endStream, boolean endSegment) {
+        public void writeFrame(int streamId, ByteBuf data, int padding, boolean endStream) {
             if (promise.isDone()) {
                 // Most likely the write already failed. Just release the
                 // buffer.
@@ -1128,8 +1160,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
 
             // Write the frame.
             ChannelFuture future =
-                    frameWriter.writeData(ctx, chunkPromise, streamId, data, padding, endStream,
-                            endSegment);
+                    frameWriter.writeData(ctx, chunkPromise, streamId, data, padding, endStream);
 
             // Close the connection on write failures that leave the outbound
             // flow control window in a corrupt state.
@@ -1158,6 +1189,11 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
         @Override
         public void setFailure(Throwable cause) {
             failAllPromises(cause);
+        }
+
+        @Override
+        public int maxFrameSize() {
+            return frameWriter.maxFrameSize();
         }
 
         /**

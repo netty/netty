@@ -44,6 +44,26 @@ public interface Http2FrameReader extends Closeable {
     long maxHeaderTableSize();
 
     /**
+     * Sets the maximum allowed frame size. Attempts to read frames longer than this maximum will fail.
+     */
+    void maxFrameSize(int max);
+
+    /**
+     * Gets the maximum allowed frame size.
+     */
+    int maxFrameSize();
+
+    /**
+     * Sets the maximum allowed header elements.
+     */
+    void maxHeaderListSize(int max);
+
+    /**
+     * Gets the maximum allowed header elements.
+     */
+    int maxHeaderListSize();
+
+    /**
      * Closes this reader and frees any allocated resources.
      */
     @Override

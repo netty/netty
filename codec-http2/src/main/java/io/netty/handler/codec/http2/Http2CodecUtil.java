@@ -20,6 +20,8 @@ import static io.netty.handler.codec.http2.Http2Exception.format;
 import static io.netty.util.CharsetUtil.UTF_8;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http2.Http2StreamRemovalPolicy.Action;
@@ -31,19 +33,19 @@ public final class Http2CodecUtil {
 
     private static final byte[] CONNECTION_PREFACE = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".getBytes(UTF_8);
     private static final byte[] EMPTY_PING = new byte[8];
+    private static IgnoreSettingsHandler ignoreSettingsHandler = new IgnoreSettingsHandler();
 
     public static final int CONNECTION_STREAM_ID = 0;
     public static final int HTTP_UPGRADE_STREAM_ID = 1;
     public static final String HTTP_UPGRADE_SETTINGS_HEADER = "HTTP2-Settings";
-    public static final String HTTP_UPGRADE_PROTOCOL_NAME = "h2c-13";
+    public static final String HTTP_UPGRADE_PROTOCOL_NAME = "h2c-14";
+    public static final String TLS_UPGRADE_PROTOCOL_NAME = "h2-14";
 
-    public static final int MAX_FRAME_PAYLOAD_LENGTH = 16383;
     public static final int PING_FRAME_PAYLOAD_LENGTH = 8;
     public static final short MAX_UNSIGNED_BYTE = 0xFF;
     public static final int MAX_UNSIGNED_SHORT = 0xFFFF;
     public static final long MAX_UNSIGNED_INT = 0xFFFFFFFFL;
-    public static final int FRAME_HEADER_LENGTH = 8;
-    public static final int FRAME_LENGTH_MASK = 0x3FFF;
+    public static final int FRAME_HEADER_LENGTH = 9;
     public static final int SETTING_ENTRY_LENGTH = 6;
     public static final int PRIORITY_ENTRY_LENGTH = 5;
     public static final int INT_FIELD_LENGTH = 4;
@@ -54,12 +56,26 @@ public final class Http2CodecUtil {
     public static final int SETTINGS_ENABLE_PUSH = 2;
     public static final int SETTINGS_MAX_CONCURRENT_STREAMS = 3;
     public static final int SETTINGS_INITIAL_WINDOW_SIZE = 4;
+    public static final int SETTINGS_MAX_FRAME_SIZE = 5;
+    public static final int SETTINGS_MAX_HEADER_LIST_SIZE = 6;
+
+    public static final int MAX_FRAME_SIZE_LOWER_BOUND = 0x4000;
+    public static final int MAX_FRAME_SIZE_UPPER_BOUND = 0xFFFFFF;
 
     public static final int DEFAULT_WINDOW_SIZE = 65535;
     public static final boolean DEFAULT_ENABLE_PUSH = true;
     public static final short DEFAULT_PRIORITY_WEIGHT = 16;
     public static final int DEFAULT_HEADER_TABLE_SIZE = 4096;
     public static final int DEFAULT_MAX_HEADER_SIZE = 8192;
+    public static final int DEFAULT_MAX_FRAME_SIZE = MAX_FRAME_SIZE_LOWER_BOUND;
+
+    /**
+     * Indicates whether or not the given value for max frame size falls within the valid range.
+     */
+    public static boolean isMaxFrameSizeValid(int maxFrameSize) {
+        return maxFrameSize >= MAX_FRAME_SIZE_LOWER_BOUND
+                && maxFrameSize <= MAX_FRAME_SIZE_UPPER_BOUND;
+    }
 
     /**
      * Returns a buffer containing the the {@link #CONNECTION_PREFACE}.
@@ -104,6 +120,15 @@ public final class Http2CodecUtil {
                 action.removeStream(stream);
             }
         };
+    }
+
+    /**
+     * Creates a new {@link ChannelHandler} that does nothing but ignore inbound settings frames.
+     * This is a useful utility to avoid verbose logging output for pipelines that don't handle
+     * settings frames directly.
+     */
+    public static ChannelHandler ignoreSettingsHandler() {
+        return ignoreSettingsHandler;
     }
 
     /**
@@ -165,7 +190,7 @@ public final class Http2CodecUtil {
     public static void writeFrameHeader(ByteBuf out, int payloadLength, byte type,
             Http2Flags flags, int streamId) {
         out.ensureWritable(FRAME_HEADER_LENGTH + payloadLength);
-        out.writeShort(payloadLength);
+        out.writeMedium(payloadLength);
         out.writeByte(type);
         out.writeByte(flags.value());
         out.writeInt(streamId);
@@ -179,6 +204,21 @@ public final class Http2CodecUtil {
             promise.setFailure(cause);
         }
         throw cause;
+    }
+
+    /**
+     * A{@link ChannelHandler} that does nothing but ignore inbound settings frames. This is a
+     * useful utility to avoid verbose logging output for pipelines that don't handle settings
+     * frames directly.
+     */
+    @ChannelHandler.Sharable
+    private static class IgnoreSettingsHandler extends ChannelHandlerAdapter {
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            if (!(msg instanceof Http2Settings)) {
+                super.channelRead(ctx, msg);
+            }
+        }
     }
 
     private Http2CodecUtil() {

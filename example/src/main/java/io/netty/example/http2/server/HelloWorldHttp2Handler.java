@@ -69,7 +69,7 @@ public class HelloWorldHttp2Handler extends AbstractHttp2ConnectionHandler {
             Http2Headers headers =
                     DefaultHttp2Headers.newBuilder().status("200")
                     .set(UPGRADE_RESPONSE_HEADER, "true").build();
-            writeHeaders(ctx, ctx.newPromise(), 1, headers, 0, true, true);
+            writeHeaders(ctx, ctx.newPromise(), 1, headers, 0, true);
         }
         super.userEventTriggered(ctx, evt);
     }
@@ -79,7 +79,7 @@ public class HelloWorldHttp2Handler extends AbstractHttp2ConnectionHandler {
      */
     @Override
     public void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
-            boolean endOfStream, boolean endOfSegment) throws Http2Exception {
+            boolean endOfStream) throws Http2Exception {
         if (endOfStream) {
             sendResponse(ctx(), streamId, data.retain());
         }
@@ -91,8 +91,7 @@ public class HelloWorldHttp2Handler extends AbstractHttp2ConnectionHandler {
     @Override
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId,
             Http2Headers headers, int streamDependency, short weight,
-            boolean exclusive, int padding, boolean endStream, boolean endSegment)
-            throws Http2Exception {
+            boolean exclusive, int padding, boolean endStream) throws Http2Exception {
         if (endStream) {
             sendResponse(ctx(), streamId, RESPONSE_BYTES.duplicate());
         }
@@ -110,8 +109,8 @@ public class HelloWorldHttp2Handler extends AbstractHttp2ConnectionHandler {
     private void sendResponse(ChannelHandlerContext ctx, int streamId, ByteBuf payload) {
         // Send a frame for the response status
         Http2Headers headers = DefaultHttp2Headers.newBuilder().status("200").build();
-        writeHeaders(ctx(), ctx().newPromise(), streamId, headers, 0, false, false);
+        writeHeaders(ctx(), ctx().newPromise(), streamId, headers, 0, false);
 
-        writeData(ctx(), ctx().newPromise(), streamId, payload, 0, true, true);
+        writeData(ctx(), ctx().newPromise(), streamId, payload, 0, true);
     }
 }
