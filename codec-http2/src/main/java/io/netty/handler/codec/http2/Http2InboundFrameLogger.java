@@ -46,28 +46,28 @@ public class Http2InboundFrameLogger implements Http2FrameReader {
 
             @Override
             public void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data,
-                    int padding, boolean endOfStream, boolean endOfSegment)
+                    int padding, boolean endOfStream)
                     throws Http2Exception {
-                logger.logData(INBOUND, streamId, data, padding, endOfStream, endOfSegment);
-                observer.onDataRead(ctx, streamId, data, padding, endOfStream, endOfSegment);
+                logger.logData(INBOUND, streamId, data, padding, endOfStream);
+                observer.onDataRead(ctx, streamId, data, padding, endOfStream);
             }
 
             @Override
             public void onHeadersRead(ChannelHandlerContext ctx, int streamId,
-                    Http2Headers headers, int padding, boolean endStream, boolean endSegment)
+                    Http2Headers headers, int padding, boolean endStream)
                     throws Http2Exception {
-                logger.logHeaders(INBOUND, streamId, headers, padding, endStream, endSegment);
-                observer.onHeadersRead(ctx, streamId, headers, padding, endStream, endSegment);
+                logger.logHeaders(INBOUND, streamId, headers, padding, endStream);
+                observer.onHeadersRead(ctx, streamId, headers, padding, endStream);
             }
 
             @Override
             public void onHeadersRead(ChannelHandlerContext ctx, int streamId,
                     Http2Headers headers, int streamDependency, short weight, boolean exclusive,
-                    int padding, boolean endStream, boolean endSegment) throws Http2Exception {
+                    int padding, boolean endStream) throws Http2Exception {
                 logger.logHeaders(INBOUND, streamId, headers, streamDependency, weight, exclusive,
-                        padding, endStream, endSegment);
+                        padding, endStream);
                 observer.onHeadersRead(ctx, streamId, headers, streamDependency, weight, exclusive,
-                        padding, endStream, endSegment);
+                        padding, endStream);
             }
 
             @Override
@@ -154,4 +154,23 @@ public class Http2InboundFrameLogger implements Http2FrameReader {
         return reader.maxHeaderTableSize();
     }
 
+    @Override
+    public void maxFrameSize(int max) {
+        reader.maxFrameSize(max);
+    }
+
+    @Override
+    public int maxFrameSize() {
+        return reader.maxFrameSize();
+    }
+
+    @Override
+    public void maxHeaderListSize(int max) {
+        reader.maxHeaderListSize(max);
+    }
+
+    @Override
+    public int maxHeaderListSize() {
+        return reader.maxHeaderListSize();
+    }
 }

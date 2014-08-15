@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.Http2CodecUtil.TLS_UPGRADE_PROTOCOL_NAME;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -40,7 +41,7 @@ public abstract class Http2OrHttpChooser extends ByteToMessageDecoder {
 
     public enum SelectedProtocol {
         /** Must be updated to match the HTTP/2 draft number. */
-        HTTP_2("h2-13"),
+        HTTP_2(TLS_UPGRADE_PROTOCOL_NAME),
         HTTP_1_1("http/1.1"),
         HTTP_1_0("http/1.0"),
         UNKNOWN("Unknown");

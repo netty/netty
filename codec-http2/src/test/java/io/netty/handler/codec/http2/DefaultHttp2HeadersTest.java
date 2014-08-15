@@ -17,6 +17,7 @@ package io.netty.handler.codec.http2;
 
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -39,9 +40,31 @@ public class DefaultHttp2HeadersTest {
                         .add("a", "3").build();
         List<String> aValues = headers.getAll("a");
         assertEquals(3, aValues.size());
+        assertEquals(3, headers.size());
         assertEquals("1", aValues.get(0));
         assertEquals("2", aValues.get(1));
         assertEquals("3", aValues.get(2));
+    }
+
+    @Test
+    public void setHeaderShouldReplacePrevious() {
+        DefaultHttp2Headers headers =
+                DefaultHttp2Headers.newBuilder().add("a", "1").add("a", "2")
+                        .add("a", "3").set("a", "4").build();
+        assertEquals(1, headers.size());
+        assertEquals("4", headers.get("a"));
+    }
+
+    @Test
+    public void setHeadersShouldReplacePrevious() {
+        DefaultHttp2Headers headers =
+                DefaultHttp2Headers.newBuilder().add("a", "1").add("a", "2")
+                        .add("a", "3").set("a", Arrays.asList("4", "5")).build();
+        assertEquals(2, headers.size());
+        List<String> list = headers.getAll("a");
+        assertEquals(2, list.size());
+        assertEquals("4", list.get(0));
+        assertEquals("5", list.get(1));
     }
 
     @Test(expected = NoSuchElementException.class)
@@ -76,5 +99,15 @@ public class DefaultHttp2HeadersTest {
 
         // Make sure we removed them all.
         assertTrue(headers.isEmpty());
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void addInvalidPseudoHeaderShouldFail() {
+        DefaultHttp2Headers.newBuilder().add(":a", "1");
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void setInvalidPseudoHeaderShouldFail() {
+        DefaultHttp2Headers.newBuilder().set(":a", "1");
     }
 }

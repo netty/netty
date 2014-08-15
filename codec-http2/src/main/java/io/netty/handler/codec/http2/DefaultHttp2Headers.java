@@ -15,6 +15,10 @@
 
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.Http2Headers.PseudoHeaderName.AUTHORITY;
+import static io.netty.handler.codec.http2.Http2Headers.PseudoHeaderName.METHOD;
+import static io.netty.handler.codec.http2.Http2Headers.PseudoHeaderName.SCHEME;
+
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -33,10 +37,12 @@ public final class DefaultHttp2Headers extends Http2Headers {
 
     private final HeaderEntry[] entries;
     private final HeaderEntry head;
+    private final int size;
 
     private DefaultHttp2Headers(Builder builder) {
         entries = builder.entries;
         head = builder.head;
+        size = builder.size;
     }
 
     @Override
@@ -97,7 +103,12 @@ public final class DefaultHttp2Headers extends Http2Headers {
 
     @Override
     public boolean isEmpty() {
-        return head == head.after;
+        return size == 0;
+    }
+
+    @Override
+    public int size() {
+        return size;
     }
 
     @Override
@@ -131,11 +142,16 @@ public final class DefaultHttp2Headers extends Http2Headers {
         private HeaderEntry[] entries;
         private HeaderEntry head;
         private Http2Headers buildResults;
+        private int size;
 
         public Builder() {
             clear();
         }
 
+        /**
+         * Clears all existing headers from this collection and replaces them with the given header
+         * set.
+         */
         public void set(Http2Headers headers) {
             // No need to lazy copy the previous results, since we're starting from scratch.
             clear();
@@ -144,6 +160,11 @@ public final class DefaultHttp2Headers extends Http2Headers {
             }
         }
 
+        /**
+         * Adds the given header to the collection.
+         *
+         * @throws IllegalArgumentException if the name or value of this header is invalid for any reason.
+         */
         public Builder add(final String name, final Object value) {
             // If this is the first call on the builder since the last build, copy the previous
             // results.
@@ -159,6 +180,9 @@ public final class DefaultHttp2Headers extends Http2Headers {
             return this;
         }
 
+        /**
+         * Removes the header with the given name from this collection.
+         */
         public Builder remove(final String name) {
             if (name == null) {
                 throw new NullPointerException("name");
@@ -175,6 +199,11 @@ public final class DefaultHttp2Headers extends Http2Headers {
             return this;
         }
 
+        /**
+         * Sets the given header in the collection, replacing any previous values.
+         *
+         * @throws IllegalArgumentException if the name or value of this header is invalid for any reason.
+         */
         public Builder set(final String name, final Object value) {
             // If this is the first call on the builder since the last build, copy the previous
             // results.
@@ -191,6 +220,11 @@ public final class DefaultHttp2Headers extends Http2Headers {
             return this;
         }
 
+        /**
+         * Sets the given header in the collection, replacing any previous values.
+         *
+         * @throws IllegalArgumentException if the name or value of this header is invalid for any reason.
+         */
         public Builder set(final String name, final Iterable<?> values) {
             if (values == null) {
                 throw new NullPointerException("values");
@@ -218,48 +252,52 @@ public final class DefaultHttp2Headers extends Http2Headers {
             return this;
         }
 
+        /**
+         * Clears all values from this collection.
+         */
         public Builder clear() {
             // No lazy copy required, since we're just creating a new array.
             entries = new HeaderEntry[BUCKET_SIZE];
             head = new HeaderEntry(-1, null, null);
             head.before = head.after = head;
             buildResults = null;
+            size = 0;
             return this;
         }
 
         /**
-         * Sets the {@link HttpName#METHOD} header.
+         * Sets the {@link PseudoHeaderName#METHOD} header.
          */
         public Builder method(String method) {
-            return set(HttpName.METHOD.value(), method);
+            return set(METHOD.value(), method);
         }
 
         /**
-         * Sets the {@link HttpName#SCHEME} header.
+         * Sets the {@link PseudoHeaderName#SCHEME} header.
          */
         public Builder scheme(String scheme) {
-            return set(HttpName.SCHEME.value(), scheme);
+            return set(SCHEME.value(), scheme);
         }
 
         /**
-         * Sets the {@link HttpName#AUTHORITY} header.
+         * Sets the {@link PseudoHeaderName#AUTHORITY} header.
          */
         public Builder authority(String authority) {
-            return set(HttpName.AUTHORITY.value(), authority);
+            return set(AUTHORITY.value(), authority);
         }
 
         /**
-         * Sets the {@link HttpName#PATH} header.
+         * Sets the {@link PseudoHeaderName#PATH} header.
          */
         public Builder path(String path) {
-            return set(HttpName.PATH.value(), path);
+            return set(PseudoHeaderName.PATH.value(), path);
         }
 
         /**
-         * Sets the {@link HttpName#STATUS} header.
+         * Sets the {@link PseudoHeaderName#STATUS} header.
          */
         public Builder status(String status) {
-            return set(HttpName.STATUS.value(), status);
+            return set(PseudoHeaderName.STATUS.value(), status);
         }
 
         /**
@@ -299,6 +337,7 @@ public final class DefaultHttp2Headers extends Http2Headers {
 
             // Update the linked list.
             newEntry.addBefore(head);
+            size++;
         }
 
         private void remove0(int hash, int hashTableIndex, String name) {
@@ -310,6 +349,7 @@ public final class DefaultHttp2Headers extends Http2Headers {
             for (;;) {
                 if (e.hash == hash && eq(name, e.key)) {
                     e.remove();
+                    size--;
                     HeaderEntry next = e.next;
                     if (next != null) {
                         entries[hashTableIndex] = next;
@@ -331,6 +371,7 @@ public final class DefaultHttp2Headers extends Http2Headers {
                 if (next.hash == hash && eq(name, next.key)) {
                     e.next = next.next;
                     next.remove();
+                    size--;
                 } else {
                     e = next;
                 }
@@ -360,7 +401,7 @@ public final class DefaultHttp2Headers extends Http2Headers {
         }
 
         /**
-         * Validate a HTTP2 header name.
+         * Validate a HTTP/2 header name.
          */
         private static void validateHeaderName(String name) {
             if (name == null) {
@@ -381,6 +422,13 @@ public final class DefaultHttp2Headers extends Http2Headers {
                 }
                 if (c > 127) {
                     throw new IllegalArgumentException("name contains non-ascii character: " + name);
+                }
+            }
+            // If the name looks like an HTTP/2 pseudo-header, validate it against the list of
+            // valid pseudo-headers.
+            if (name.startsWith(PSEUDO_HEADER_PREFIX)) {
+                if (!Http2Headers.PseudoHeaderName.isPseudoHeader(name)) {
+                    throw new IllegalArgumentException("Invalid HTTP/2 Pseudo-header: " + name);
                 }
             }
         }

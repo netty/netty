@@ -33,10 +33,9 @@ public interface Http2FrameObserver {
      * @param padding the number of padding bytes found at the end of the frame.
      * @param endOfStream Indicates whether this is the last frame to be sent from the remote
      *            endpoint for this stream.
-     * @param endOfSegment Indicates whether this frame is the end of the current segment.
      */
     void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
-            boolean endOfStream, boolean endOfSegment) throws Http2Exception;
+            boolean endOfStream) throws Http2Exception;
 
     /**
      * Handles an inbound HEADERS frame.
@@ -47,10 +46,9 @@ public interface Http2FrameObserver {
      * @param padding the number of padding bytes found at the end of the frame.
      * @param endStream Indicates whether this is the last frame to be sent from the remote endpoint
      *            for this stream.
-     * @param endSegment Indicates whether this frame is the end of the current segment.
      */
     void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
-            boolean endStream, boolean endSegment) throws Http2Exception;
+            boolean endStream) throws Http2Exception;
 
     /**
      * Handles an inbound HEADERS frame with priority information specified.
@@ -65,11 +63,10 @@ public interface Http2FrameObserver {
      * @param padding the number of padding bytes found at the end of the frame.
      * @param endStream Indicates whether this is the last frame to be sent from the remote endpoint
      *            for this stream.
-     * @param endSegment Indicates whether this frame is the end of the current segment.
      */
     void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
-            int streamDependency, short weight, boolean exclusive, int padding, boolean endStream,
-            boolean endSegment) throws Http2Exception;
+            int streamDependency, short weight, boolean exclusive, int padding, boolean endStream)
+            throws Http2Exception;
 
     /**
      * Handles an inbound PRIORITY frame.

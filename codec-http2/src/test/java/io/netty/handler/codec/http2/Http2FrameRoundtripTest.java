@@ -30,6 +30,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.util.NetUtil;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -81,6 +82,7 @@ public class Http2FrameRoundtripTest {
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
                 p.addLast("reader", new FrameAdapter(serverObserver));
+                p.addLast(Http2CodecUtil.ignoreSettingsHandler());
             }
         });
 
@@ -91,6 +93,7 @@ public class Http2FrameRoundtripTest {
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
                 p.addLast("reader", new FrameAdapter(null));
+                p.addLast(Http2CodecUtil.ignoreSettingsHandler());
             }
         });
 
@@ -116,12 +119,12 @@ public class Http2FrameRoundtripTest {
             @Override
             public void run() {
                 frameWriter.writeData(ctx(), newPromise(), 0x7FFFFFFF,
-                        Unpooled.copiedBuffer(text.getBytes()), 100, true, false);
+                        Unpooled.copiedBuffer(text.getBytes()), 100, true);
             }
         });
         awaitRequests();
         verify(serverObserver).onDataRead(any(ChannelHandlerContext.class), eq(0x7FFFFFFF),
-                dataCaptor.capture(), eq(100), eq(true), eq(false));
+                dataCaptor.capture(), eq(100), eq(true));
     }
 
     @Test
@@ -132,12 +135,12 @@ public class Http2FrameRoundtripTest {
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
             public void run() {
-                frameWriter.writeHeaders(ctx(), newPromise(), 0x7FFFFFFF, headers, 0, true, false);
+                frameWriter.writeHeaders(ctx(), newPromise(), 0x7FFFFFFF, headers, 0, true);
             }
         });
         awaitRequests();
         verify(serverObserver).onHeadersRead(any(ChannelHandlerContext.class), eq(0x7FFFFFFF),
-                eq(headers), eq(0), eq(true), eq(false));
+                eq(headers), eq(0), eq(true));
     }
 
     @Test
@@ -149,12 +152,12 @@ public class Http2FrameRoundtripTest {
             @Override
             public void run() {
                 frameWriter.writeHeaders(ctx(), newPromise(), 0x7FFFFFFF, headers, 4, (short) 255,
-                        true, 0, true, false);
+                        true, 0, true);
             }
         });
         awaitRequests();
         verify(serverObserver).onHeadersRead(any(ChannelHandlerContext.class), eq(0x7FFFFFFF),
-                eq(headers), eq(4), eq((short) 255), eq(true), eq(0), eq(true), eq(false));
+                eq(headers), eq(4), eq((short) 255), eq(true), eq(0), eq(true));
     }
 
     @Test
@@ -271,9 +274,9 @@ public class Http2FrameRoundtripTest {
             public void run() {
                 for (int i = 1; i < numStreams + 1; ++i) {
                     frameWriter.writeHeaders(ctx(), newPromise(), i, headers, 0, (short) 16, false,
-                            0, false, false);
+                            0, false);
                     frameWriter.writeData(ctx(), newPromise(), i,
-                            Unpooled.copiedBuffer(text.getBytes()), 0, true, true);
+                            Unpooled.copiedBuffer(text.getBytes()), 0, true);
                 }
             }
         });
@@ -309,28 +312,27 @@ public class Http2FrameRoundtripTest {
 
                 @Override
                 public void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data,
-                                       int padding, boolean endOfStream, boolean endOfSegment)
+                                       int padding, boolean endOfStream)
                         throws Http2Exception {
-                    observer.onDataRead(ctx, streamId, copy(data), padding, endOfStream,
-                            endOfSegment);
+                    observer.onDataRead(ctx, streamId, copy(data), padding, endOfStream);
                     requestLatch.countDown();
                 }
 
                 @Override
                 public void onHeadersRead(ChannelHandlerContext ctx, int streamId,
-                                          Http2Headers headers, int padding, boolean endStream, boolean endSegment)
+                                          Http2Headers headers, int padding, boolean endStream)
                         throws Http2Exception {
-                    observer.onHeadersRead(ctx, streamId, headers, padding, endStream, endSegment);
+                    observer.onHeadersRead(ctx, streamId, headers, padding, endStream);
                     requestLatch.countDown();
                 }
 
                 @Override
                 public void onHeadersRead(ChannelHandlerContext ctx, int streamId,
                                           Http2Headers headers, int streamDependency, short weight,
-                                          boolean exclusive, int padding, boolean endStream, boolean endSegment)
+                                          boolean exclusive, int padding, boolean endStream)
                         throws Http2Exception {
                     observer.onHeadersRead(ctx, streamId, headers, streamDependency, weight,
-                            exclusive, padding, endStream, endSegment);
+                            exclusive, padding, endStream);
                     requestLatch.countDown();
                 }
 

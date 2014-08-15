@@ -76,6 +76,7 @@ public class Http2ConnectionRoundtripTest {
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
                 p.addLast(new DelegatingHttp2ConnectionHandler(true, new FrameCountDown()));
+                p.addLast(Http2CodecUtil.ignoreSettingsHandler());
             }
         });
 
@@ -86,6 +87,7 @@ public class Http2ConnectionRoundtripTest {
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
                 p.addLast(new DelegatingHttp2ConnectionHandler(false, clientObserver));
+                p.addLast(Http2CodecUtil.ignoreSettingsHandler());
             }
         });
 
@@ -117,23 +119,22 @@ public class Http2ConnectionRoundtripTest {
             public void run() {
                 for (int i = 0, nextStream = 3; i < NUM_STREAMS; ++i, nextStream += 2) {
                     http2Client.writeHeaders(
-                            ctx(), newPromise(), nextStream, headers, 0, (short) 16, false, 0, false, false);
+                            ctx(), newPromise(), nextStream, headers, 0, (short) 16, false, 0, false);
                     http2Client.writePing(ctx(), newPromise(), Unpooled.copiedBuffer(pingMsg.getBytes()));
                     http2Client.writeData(
                             ctx(), newPromise(), nextStream,
-                            Unpooled.copiedBuffer(text.getBytes()), 0, true, true);
+                            Unpooled.copiedBuffer(text.getBytes()), 0, true);
                 }
             }
         });
         // Wait for all frames to be received.
         awaitRequests();
         verify(serverObserver, times(NUM_STREAMS)).onHeadersRead(any(ChannelHandlerContext.class),
-                anyInt(), eq(headers), eq(0), eq((short) 16), eq(false), eq(0), eq(false),
-                eq(false));
+                anyInt(), eq(headers), eq(0), eq((short) 16), eq(false), eq(0), eq(false));
         verify(serverObserver, times(NUM_STREAMS)).onPingRead(any(ChannelHandlerContext.class),
                 eq(Unpooled.copiedBuffer(pingMsg.getBytes())));
         verify(serverObserver, times(NUM_STREAMS)).onDataRead(any(ChannelHandlerContext.class),
-                anyInt(), eq(Unpooled.copiedBuffer(text.getBytes())), eq(0), eq(true), eq(true));
+                anyInt(), eq(Unpooled.copiedBuffer(text.getBytes())), eq(0), eq(true));
     }
 
     private void awaitRequests() throws Exception {
@@ -156,26 +157,25 @@ public class Http2ConnectionRoundtripTest {
 
         @Override
         public void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
-                               boolean endOfStream, boolean endOfSegment)
+                               boolean endOfStream)
                 throws Http2Exception {
-            serverObserver.onDataRead(ctx, streamId, copy(data), padding, endOfStream,
-                    endOfSegment);
+            serverObserver.onDataRead(ctx, streamId, copy(data), padding, endOfStream);
             requestLatch.countDown();
         }
 
         @Override
         public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
-                                  int padding, boolean endStream, boolean endSegment) throws Http2Exception {
-            serverObserver.onHeadersRead(ctx, streamId, headers, padding, endStream, endSegment);
+                                  int padding, boolean endStream) throws Http2Exception {
+            serverObserver.onHeadersRead(ctx, streamId, headers, padding, endStream);
             requestLatch.countDown();
         }
 
         @Override
         public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
                                   int streamDependency, short weight, boolean exclusive, int padding,
-                                  boolean endStream, boolean endSegment) throws Http2Exception {
+                                  boolean endStream) throws Http2Exception {
             serverObserver.onHeadersRead(ctx, streamId, headers, streamDependency, weight,
-                    exclusive, padding, endStream, endSegment);
+                    exclusive, padding, endStream);
             requestLatch.countDown();
         }
 

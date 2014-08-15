@@ -14,6 +14,20 @@
  */
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http.HttpMethod.GET;
+import static io.netty.handler.codec.http.HttpMethod.POST;
+import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
+import static io.netty.handler.codec.http2.Http2CodecUtil.ignoreSettingsHandler;
+import static io.netty.util.CharsetUtil.UTF_8;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Matchers.anyShort;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
@@ -27,44 +41,20 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.handler.codec.http.DefaultLastHttpContent;
-import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpObject;
-import io.netty.handler.codec.http.HttpContent;
-import io.netty.handler.codec.http.HttpHeaderUtil;
+import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.DefaultHttpRequest;
-import io.netty.handler.codec.http.DefaultHttpHeaders;
-import io.netty.handler.codec.http.HttpMessage;
-import io.netty.handler.codec.http.HttpVersion;
-import io.netty.handler.codec.http.LastHttpContent;
-import static io.netty.handler.codec.http.HttpMethod.GET;
-import static io.netty.handler.codec.http.HttpMethod.POST;
-import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
-import io.netty.handler.codec.http.DefaultFullHttpRequest;
-import io.netty.handler.codec.ByteToMessageDecoder;
-import io.netty.handler.codec.http2.Http2TestUtil.Http2Runnable;
 import io.netty.util.NetUtil;
+
+import java.net.InetSocketAddress;
+import java.util.concurrent.CountDownLatch;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-
-import java.net.InetSocketAddress;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-
-import static io.netty.handler.codec.http2.Http2TestUtil.*;
-import static io.netty.util.CharsetUtil.*;
-import static java.util.concurrent.TimeUnit.*;
-import static org.junit.Assert.*;
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.*;
 
 /**
  * Testing the {@link DelegatingHttp2HttpConnectionHandler} for {@link FullHttpRequest} objects into HTTP/2 frames
@@ -77,22 +67,18 @@ public class DelegatingHttp2HttpConnectionHandlerTest {
     @Mock
     private Http2FrameObserver serverObserver;
 
-    private Http2FrameWriter frameWriter;
     private ServerBootstrap sb;
     private Bootstrap cb;
     private Channel serverChannel;
     private Channel clientChannel;
     private CountDownLatch requestLatch;
-    private long maxContentLength;
     private static final int CONNECTION_SETUP_READ_COUNT = 2;
 
     @Before
     public void setup() throws Exception {
         MockitoAnnotations.initMocks(this);
 
-        maxContentLength = 1 << 16;
         requestLatch = new CountDownLatch(CONNECTION_SETUP_READ_COUNT + 1);
-        frameWriter = new DefaultHttp2FrameWriter();
 
         sb = new ServerBootstrap();
         cb = new Bootstrap();
@@ -104,6 +90,7 @@ public class DelegatingHttp2HttpConnectionHandlerTest {
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
                 p.addLast(new DelegatingHttp2ConnectionHandler(true, new FrameCountDown()));
+                p.addLast(ignoreSettingsHandler());
             }
         });
 
@@ -114,6 +101,7 @@ public class DelegatingHttp2HttpConnectionHandlerTest {
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
                 p.addLast(new DelegatingHttp2HttpConnectionHandler(false, clientObserver));
+                p.addLast(ignoreSettingsHandler());
             }
         });
 
@@ -155,9 +143,9 @@ public class DelegatingHttp2HttpConnectionHandlerTest {
         assertTrue(writeFuture.isSuccess());
         awaitRequests();
         verify(serverObserver).onHeadersRead(any(ChannelHandlerContext.class), eq(5), eq(http2Headers), eq(0),
-            anyShort(), anyBoolean(), eq(0), eq(true), eq(true));
+            anyShort(), anyBoolean(), eq(0), eq(true));
         verify(serverObserver, never()).onDataRead(any(ChannelHandlerContext.class),
-            anyInt(), any(ByteBuf.class), anyInt(), anyBoolean(), anyBoolean());
+            anyInt(), any(ByteBuf.class), anyInt(), anyBoolean());
     }
 
     @Test
@@ -174,8 +162,6 @@ public class DelegatingHttp2HttpConnectionHandlerTest {
         final Http2Headers http2Headers = new DefaultHttp2Headers.Builder()
             .method("POST").path("/example").authority("www.example.org:5555").scheme("http")
             .add("foo", "goo").add("foo", "goo2").add("foo2", "goo2").build();
-        final HttpContent expectedContent = new DefaultLastHttpContent(Unpooled.copiedBuffer(text.getBytes()),
-                            true);
         ChannelPromise writePromise = newPromise();
         ChannelFuture writeFuture = clientChannel.writeAndFlush(request, writePromise);
 
@@ -185,9 +171,9 @@ public class DelegatingHttp2HttpConnectionHandlerTest {
         assertTrue(writeFuture.isSuccess());
         awaitRequests();
         verify(serverObserver).onHeadersRead(any(ChannelHandlerContext.class), eq(3), eq(http2Headers), eq(0),
-            anyShort(), anyBoolean(), eq(0), eq(false), eq(false));
+            anyShort(), anyBoolean(), eq(0), eq(false));
         verify(serverObserver).onDataRead(any(ChannelHandlerContext.class),
-            eq(3), eq(Unpooled.copiedBuffer(text.getBytes())), eq(0), eq(true), eq(true));
+            eq(3), eq(Unpooled.copiedBuffer(text.getBytes())), eq(0), eq(true));
     }
 
     private void awaitRequests() throws Exception {
@@ -210,26 +196,25 @@ public class DelegatingHttp2HttpConnectionHandlerTest {
 
         @Override
         public void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
-                               boolean endOfStream, boolean endOfSegment)
+                               boolean endOfStream)
                 throws Http2Exception {
-            serverObserver.onDataRead(ctx, streamId, copy(data), padding, endOfStream,
-                    endOfSegment);
+            serverObserver.onDataRead(ctx, streamId, copy(data), padding, endOfStream);
             requestLatch.countDown();
         }
 
         @Override
         public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
-                                  int padding, boolean endStream, boolean endSegment) throws Http2Exception {
-            serverObserver.onHeadersRead(ctx, streamId, headers, padding, endStream, endSegment);
+                                  int padding, boolean endStream) throws Http2Exception {
+            serverObserver.onHeadersRead(ctx, streamId, headers, padding, endStream);
             requestLatch.countDown();
         }
 
         @Override
         public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
                                   int streamDependency, short weight, boolean exclusive, int padding,
-                                  boolean endStream, boolean endSegment) throws Http2Exception {
+                                  boolean endStream) throws Http2Exception {
             serverObserver.onHeadersRead(ctx, streamId, headers, streamDependency, weight,
-                    exclusive, padding, endStream, endSegment);
+                    exclusive, padding, endStream);
             requestLatch.countDown();
         }
 

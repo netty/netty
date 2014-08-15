@@ -118,7 +118,7 @@ public class DefaultHttp2InboundFlowControllerTest {
 
     private void applyFlowControl(int dataSize, boolean endOfStream) throws Http2Exception {
         ByteBuf buf = dummyData(dataSize);
-        controller.applyInboundFlowControl(STREAM_ID, buf, 0, endOfStream, false, frameWriter);
+        controller.applyInboundFlowControl(STREAM_ID, buf, 0, endOfStream, frameWriter);
         buf.release();
     }
 

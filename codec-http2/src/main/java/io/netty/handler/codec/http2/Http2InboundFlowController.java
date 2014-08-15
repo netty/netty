@@ -54,10 +54,9 @@ public interface Http2InboundFlowController {
      * @param data the data portion of the data frame. Does not contain padding.
      * @param padding the amount of padding received in the original frame.
      * @param endOfStream indicates whether this is the last frame for the stream.
-     * @param endOfSegment indicates whether this is the last frame for the current segment.
      * @param frameWriter allows this flow controller to send window updates to the remote endpoint.
      * @throws Http2Exception thrown if any protocol-related error occurred.
      */
     void applyInboundFlowControl(int streamId, ByteBuf data, int padding, boolean endOfStream,
-            boolean endOfSegment, FrameWriter frameWriter) throws Http2Exception;
+            FrameWriter frameWriter) throws Http2Exception;
 }

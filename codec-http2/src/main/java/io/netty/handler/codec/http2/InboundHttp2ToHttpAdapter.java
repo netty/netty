@@ -31,15 +31,12 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
-import io.netty.util.collection.IntObjectMap;
 import io.netty.util.collection.IntObjectHashMap;
+import io.netty.util.collection.IntObjectMap;
 
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -62,16 +59,16 @@ public class InboundHttp2ToHttpAdapter extends Http2ConnectionAdapter implements
         HEADERS_TO_EXCLUDE = new HashSet<String>();
         HEADER_NAME_TRANSLATIONS_REQUEST = new HashMap<String, String>();
         HEADER_NAME_TRANSLATIONS_RESPONSE = new HashMap<String, String>();
-        for (Http2Headers.HttpName http2HeaderName : Http2Headers.HttpName.values()) {
+        for (Http2Headers.PseudoHeaderName http2HeaderName : Http2Headers.PseudoHeaderName.values()) {
             HEADERS_TO_EXCLUDE.add(http2HeaderName.value());
         }
 
-        HEADER_NAME_TRANSLATIONS_RESPONSE.put(Http2Headers.HttpName.AUTHORITY.value(),
+        HEADER_NAME_TRANSLATIONS_RESPONSE.put(Http2Headers.PseudoHeaderName.AUTHORITY.value(),
                         Http2HttpHeaders.Names.AUTHORITY.toString());
-        HEADER_NAME_TRANSLATIONS_RESPONSE.put(Http2Headers.HttpName.SCHEME.value(),
+        HEADER_NAME_TRANSLATIONS_RESPONSE.put(Http2Headers.PseudoHeaderName.SCHEME.value(),
                         Http2HttpHeaders.Names.SCHEME.toString());
         HEADER_NAME_TRANSLATIONS_REQUEST.putAll(HEADER_NAME_TRANSLATIONS_RESPONSE);
-        HEADER_NAME_TRANSLATIONS_RESPONSE.put(Http2Headers.HttpName.PATH.value(),
+        HEADER_NAME_TRANSLATIONS_RESPONSE.put(Http2Headers.PseudoHeaderName.PATH.value(),
                         Http2HttpHeaders.Names.PATH.toString());
     }
 
@@ -155,8 +152,8 @@ public class InboundHttp2ToHttpAdapter extends Http2ConnectionAdapter implements
     }
 
     @Override
-    public void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding, boolean endOfStream,
-                    boolean endOfSegment) throws Http2Exception {
+    public void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
+            boolean endOfStream) throws Http2Exception {
         // Padding is already stripped out of data by super class
         Http2HttpMessageAccumulator msgAccumulator = getMessage(streamId);
         if (msgAccumulator == null) {
@@ -241,7 +238,7 @@ public class InboundHttp2ToHttpAdapter extends Http2ConnectionAdapter implements
 
     @Override
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
-                    boolean endOfStream, boolean endSegment) throws Http2Exception {
+                    boolean endOfStream) throws Http2Exception {
         Http2HttpMessageAccumulator msgAccumulator = processHeadersBegin(streamId, headers, true);
         processHeadersEnd(ctx, streamId, msgAccumulator, endOfStream);
     }
@@ -270,8 +267,7 @@ public class InboundHttp2ToHttpAdapter extends Http2ConnectionAdapter implements
 
     @Override
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int streamDependency,
-                    short weight, boolean exclusive, int padding, boolean endOfStream, boolean endSegment)
-                    throws Http2Exception {
+                    short weight, boolean exclusive, int padding, boolean endOfStream) throws Http2Exception {
         Http2HttpMessageAccumulator msgAccumulator = processHeadersBegin(streamId, headers, true);
         try {
             setDependencyHeaders(msgAccumulator, streamDependency, weight, exclusive);
@@ -332,7 +328,7 @@ public class InboundHttp2ToHttpAdapter extends Http2ConnectionAdapter implements
     public void onPushPromiseRead(ChannelHandlerContext ctx, int streamId, int promisedStreamId, Http2Headers headers,
                     int padding) throws Http2Exception {
         // Do not allow adding of headers to existing Http2HttpMessageAccumulator
-        // according to spec (http://tools.ietf.org/html/draft-ietf-httpbis-http2-13#section-6.6) there must
+        // according to spec (http://tools.ietf.org/html/draft-ietf-httpbis-http2-14#section-6.6) there must
         // be a CONTINUATION frame for more headers
         Http2HttpMessageAccumulator msgAccumulator = processHeadersBegin(promisedStreamId, headers, false);
         if (msgAccumulator == null) {
@@ -574,7 +570,7 @@ public class InboundHttp2ToHttpAdapter extends Http2ConnectionAdapter implements
                 throw new IllegalStateException("Headers object is null");
             }
 
-            // http://tools.ietf.org/html/draft-ietf-httpbis-http2-13#section-8.1.2.1
+            // http://tools.ietf.org/html/draft-ietf-httpbis-http2-14#section-8.1.2.3
             // All headers that start with ':' are only valid in HTTP/2 context
             Iterator<Entry<String, String>> itr = http2Headers.iterator();
             while (itr.hasNext()) {

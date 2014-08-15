@@ -22,15 +22,11 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http2.Http2HttpHeaders;
 import io.netty.util.CharsetUtil;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map.Entry;
-import java.util.concurrent.TimeUnit;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Process {@link FullHttpResponse} translated from HTTP/2 frames

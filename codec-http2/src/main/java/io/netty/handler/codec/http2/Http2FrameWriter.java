@@ -36,11 +36,10 @@ public interface Http2FrameWriter extends Closeable {
      * @param data the payload of the frame.
      * @param padding the amount of padding to be added to the end of the frame
      * @param endStream indicates if this is the last frame to be sent for the stream.
-     * @param endSegment indicates if this is the last frame in the current segment.
      * @return the future for the write.
      */
     ChannelFuture writeData(ChannelHandlerContext ctx, ChannelPromise promise, int streamId,
-            ByteBuf data, int padding, boolean endStream, boolean endSegment);
+            ByteBuf data, int padding, boolean endStream);
 
     /**
      * Writes a HEADERS frame to the remote endpoint.
@@ -51,11 +50,10 @@ public interface Http2FrameWriter extends Closeable {
      * @param headers the headers to be sent.
      * @param padding the amount of padding to be added to the end of the frame
      * @param endStream indicates if this is the last frame to be sent for the stream.
-     * @param endSegment indicates if this is the last frame in the current segment.
      * @return the future for the write.
      */
     ChannelFuture writeHeaders(ChannelHandlerContext ctx, ChannelPromise promise, int streamId,
-            Http2Headers headers, int padding, boolean endStream, boolean endSegment);
+            Http2Headers headers, int padding, boolean endStream);
 
     /**
      * Writes a HEADERS frame with priority specified to the remote endpoint.
@@ -70,12 +68,11 @@ public interface Http2FrameWriter extends Closeable {
      * @param exclusive whether this stream should be the exclusive dependant of its parent.
      * @param padding the amount of padding to be added to the end of the frame
      * @param endStream indicates if this is the last frame to be sent for the stream.
-     * @param endSegment indicates if this is the last frame in the current segment.
      * @return the future for the write.
      */
     ChannelFuture writeHeaders(ChannelHandlerContext ctx, ChannelPromise promise, int streamId,
             Http2Headers headers, int streamDependency, short weight, boolean exclusive,
-            int padding, boolean endStream, boolean endSegment);
+            int padding, boolean endStream);
 
     /**
      * Writes a PRIORITY frame to the remote endpoint.
@@ -206,4 +203,24 @@ public interface Http2FrameWriter extends Closeable {
      * Gets the maximum size of the HPACK header table used for decoding HTTP/2 headers.
      */
     long maxHeaderTableSize();
+
+    /**
+     * Sets the maximum allowed frame size. Attempts to write frames longer than this maximum will fail.
+     */
+    void maxFrameSize(int max);
+
+    /**
+     * Gets the maximum allowed frame size.
+     */
+    int maxFrameSize();
+
+    /**
+     * Sets the maximum allowed header elements.
+     */
+    void maxHeaderListSize(int max);
+
+    /**
+     * Gets the maximum allowed header elements.
+     */
+    int maxHeaderListSize();
 }
