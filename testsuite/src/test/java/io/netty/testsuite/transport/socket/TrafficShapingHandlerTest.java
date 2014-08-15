@@ -109,7 +109,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
         }
         return minimalWaitBetween;
     }
-    
+
     private static long[] computeWaitAutoRead(int []autoRead) {
         long [] minimalWaitBetween = new long[autoRead.length + 1];
         minimalWaitBetween[0] = 0;
@@ -279,7 +279,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
             final boolean limitRead, final boolean limitWrite, final boolean globalLimit, int[] autoRead,
             long[] minimalWaitBetween, int[] multipleMessage) throws Throwable {
         TESTRUN ++;
-        logger.info("TEST: " + TESTNAME + " RUN: "+ TESTRUN +
+        logger.info("TEST: " + TESTNAME + " RUN: " + TESTRUN +
                 " Exec: " + additionalExecutor + " Read: " + limitRead + " Write: " + limitWrite + " Global: "
                 + globalLimit);
         final ServerHandler sh = new ServerHandler(autoRead, multipleMessage);
@@ -342,7 +342,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
         assertTrue("Error during exceution of TrafficShapping: " + promise.cause(), promise.isSuccess());
 
         float average = (totalNb * messageSize) / (float) (stop - start);
-        logger.info("TEST: " + TESTNAME + " RUN: "+ TESTRUN +
+        logger.info("TEST: " + TESTNAME + " RUN: " + TESTRUN +
                 " Average of traffic: " + average + " compare to " + bandwidthFactor);
         sh.channel.close().sync();
         ch.channel.close().sync();
