@@ -18,6 +18,7 @@ package io.netty.testsuite.transport.socket;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
@@ -83,6 +84,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
 
     private static void testFileRegion0(
             ServerBootstrap sb, Bootstrap cb, boolean voidPromise, final boolean autoRead) throws Throwable {
+        final int bufferSize = 1024;
         final File file = File.createTempFile("netty-", ".tmp");
         file.deleteOnExit();
 
@@ -96,7 +98,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         }
 
         // .. and here comes the real data to transfer.
-        out.write(data);
+        out.write(data, bufferSize, data.length - bufferSize);
 
         // .. and then some extra data which is not supposed to be transferred.
         for (int i = random.nextInt(8192); i > 0; i --) {
@@ -130,10 +132,16 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         Channel sc = sb.bind().sync().channel();
 
         Channel cc = cb.connect().sync().channel();
-        FileRegion region = new DefaultFileRegion(new FileInputStream(file).getChannel(), startOffset, data.length);
+        FileRegion region = new DefaultFileRegion(
+                new FileInputStream(file).getChannel(), startOffset, data.length - bufferSize);
+        // Do write ByteBuf and FileRegion to be sure that mixed writes work
+        //
+        // See https://github.com/netty/netty/issues/2769
         if (voidPromise) {
+            assertEquals(cc.voidPromise(), cc.write(Unpooled.wrappedBuffer(data, 0, bufferSize), cc.voidPromise()));
             assertEquals(cc.voidPromise(), cc.writeAndFlush(region, cc.voidPromise()));
         } else {
+            assertNotEquals(cc.voidPromise(), cc.write(Unpooled.wrappedBuffer(data, 0, bufferSize)));
             assertNotEquals(cc.voidPromise(), cc.writeAndFlush(region));
         }
         while (sh.counter < data.length) {
