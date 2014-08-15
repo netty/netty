@@ -304,11 +304,13 @@ public final class ChannelOutboundBuffer {
      */
     public void removeBytes(long writtenBytes) {
         for (;;) {
-            final ByteBuf buf = (ByteBuf) current();
-            if (buf == null) {
+            Object msg = current();
+            if (!(msg instanceof ByteBuf)) {
+                assert writtenBytes == 0;
                 break;
             }
 
+            final ByteBuf buf = (ByteBuf) msg;
             final int readerIndex = buf.readerIndex();
             final int readableBytes = buf.writerIndex() - readerIndex;
 
