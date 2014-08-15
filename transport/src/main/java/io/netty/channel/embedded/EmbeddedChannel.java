@@ -88,8 +88,8 @@ public class EmbeddedChannel extends AbstractChannel {
             p.addLast(h);
         }
 
-        p.addLast(new LastInboundHandler());
         loop.register(this);
+        p.addLast(new LastInboundHandler());
     }
 
     @Override
