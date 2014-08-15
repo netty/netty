@@ -275,9 +275,11 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
      *            ensure correct testing)
      * @throws Throwable
      */
-    private static void testTrafficShapping0(ServerBootstrap sb, Bootstrap cb, final boolean additionalExecutor,
-                                             final boolean limitRead, final boolean limitWrite, final boolean globalLimit, int[] autoRead,
-                                             long[] minimalWaitBetween, int[] multipleMessage) throws Throwable {
+    private static void testTrafficShapping0(
+            ServerBootstrap sb, Bootstrap cb, final boolean additionalExecutor,
+            final boolean limitRead, final boolean limitWrite, final boolean globalLimit, int[] autoRead,
+            long[] minimalWaitBetween, int[] multipleMessage) throws Throwable {
+
         TESTRUN ++;
         logger.info("TEST: " + TESTNAME + " RUN: " + TESTRUN +
                     " Exec: " + additionalExecutor + " Read: " + limitRead + " Write: " + limitWrite + " Global: "
