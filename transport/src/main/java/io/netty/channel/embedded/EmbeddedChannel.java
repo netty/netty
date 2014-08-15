@@ -83,8 +83,8 @@ public class EmbeddedChannel extends AbstractChannel {
             throw new IllegalArgumentException("handlers is empty.");
         }
 
-        p.addLast(new LastInboundHandler());
         loop.register(this);
+        p.addLast(new LastInboundHandler());
     }
 
     @Override
