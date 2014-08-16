@@ -557,6 +557,7 @@ public class TrafficShapingHandlerTest {
                     }
                 }
             }
+            Thread.sleep(10);
             loggerServer.debug("Step: " + step + " Write: " + nb);
             ChannelBuffer buf = ChannelBuffers.dynamicBuffer();
             for (int i = 0; i < nb; i++) {
