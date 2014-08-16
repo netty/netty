@@ -419,7 +419,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
                 // still some message to get
                 return;
             }
-            long minimalWait = (minimalWaitBetween != null) ? minimalWaitBetween[step] : 0;
+            long minimalWait = (minimalWaitBetween != null) ? minimalWaitBetween[step] / 2 : 0;
             int ar = 0;
             if (autoRead != null) {
                 if (step > 0 && autoRead[step - 1] != 0) {
