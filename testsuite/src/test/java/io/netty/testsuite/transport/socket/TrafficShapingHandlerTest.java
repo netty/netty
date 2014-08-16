@@ -498,6 +498,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
                     }
                 }
             }
+            Thread.sleep(10);
             loggerServer.debug("Step: " + step + " Write: " + nb);
             for (int i = 0; i < nb; i++) {
                 channel.write(Unpooled.copyLong(timestamp));
