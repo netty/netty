@@ -62,7 +62,7 @@ public class TrafficShapingHandlerTest {
     static final int bandwidthFactor = 12;
     static final int minfactor = 3;
     static final int maxfactor = bandwidthFactor + (bandwidthFactor / 2);
-    static final long stepms = 1000 / bandwidthFactor;
+    static final long stepms = (1000 / bandwidthFactor - 10) / 10 * 10;
     static final long minimalms = Math.max(stepms / 2, 20) / 10 * 10;
     static final long check = 10;
     private static final Random random = new Random();
@@ -175,7 +175,11 @@ public class TrafficShapingHandlerTest {
         long[] minimalWaitBetween = new long[multipleMessage.length + 1];
         minimalWaitBetween[0] = 0;
         for (int i = 0; i < multipleMessage.length; i++) {
-            minimalWaitBetween[i + 1] = (multipleMessage[i] - 1) * stepms + minimalms;
+            if (multipleMessage[i] > 1) {
+                minimalWaitBetween[i + 1] = (multipleMessage[i] - 1) * stepms + minimalms;
+            } else {
+                minimalWaitBetween[i + 1] = 10;
+            }
         }
         return minimalWaitBetween;
     }
@@ -183,7 +187,11 @@ public class TrafficShapingHandlerTest {
     private static long[] computeWaitWrite(int[] multipleMessage) {
         long[] minimalWaitBetween = new long[multipleMessage.length + 1];
         for (int i = 0; i < multipleMessage.length; i++) {
-            minimalWaitBetween[i] = (multipleMessage[i] - 1) * stepms + minimalms;
+            if (multipleMessage[i] > 1) {
+                minimalWaitBetween[i] = (multipleMessage[i] - 1) * stepms + minimalms;
+            } else {
+                minimalWaitBetween[i] = 10;
+            }
         }
         return minimalWaitBetween;
     }
