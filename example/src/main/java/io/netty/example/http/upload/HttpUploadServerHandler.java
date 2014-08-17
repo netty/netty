@@ -145,7 +145,7 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
                 // GET Method: should not try to create a HttpPostRequestDecoder
                 // So stop here
                 responseContent.append("\r\n\r\nEND OF GET CONTENT\r\n");
-                writeResponse(ctx.channel());
+                // Not now: LastHttpContent will be sent writeResponse(ctx.channel());
                 return;
             }
             try {
@@ -195,6 +195,8 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
                     reset();
                 }
             }
+        } else {
+            writeResponse(ctx.channel());
         }
     }
 
