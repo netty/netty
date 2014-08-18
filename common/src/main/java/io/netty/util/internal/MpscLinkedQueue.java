@@ -97,21 +97,18 @@ final class MpscLinkedQueue<E> extends MpscLinkedQueueTailRef<E> implements Queu
      * Returns the node right next to the head, which contains the first element of this queue.
      */
     private MpscLinkedQueueNode<E> peekNode() {
-        for (;;) {
-            final MpscLinkedQueueNode<E> head = headRef();
-            final MpscLinkedQueueNode<E> next = head.next();
-            if (next != null) {
-                return next;
-            }
-            if (head == tailRef()) {
-                return null;
-            }
-
-            // If we are here, it means:
-            // * offer() is adding the first element, and
-            // * it's between replaceTail(newTail) and oldTail.setNext(newTail).
-            //   (i.e. next == oldTail and oldTail.next == null and head == oldTail != newTail)
+        MpscLinkedQueueNode<E> head = headRef();
+        MpscLinkedQueueNode<E> next = head.next();
+        if (next == null && head != tailRef()) {
+            // if tail != head this is not going to change until consumer makes progress
+            // we can avoid reading the head and just spin on next until it shows up
+            //
+            // See https://github.com/akka/akka/pull/15596
+            do {
+                next = head.next();
+            } while (next == null);
         }
+        return next;
     }
 
     @Override
