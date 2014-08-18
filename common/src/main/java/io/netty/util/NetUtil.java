@@ -63,8 +63,8 @@ public final class NetUtil {
     public static final NetworkInterface LOOPBACK_IF;
 
     /**
-     * The SOMAXCONN value of the current machine.  If failed to get the value, 3072 is used as a
-     * default value.
+     * The SOMAXCONN value of the current machine.  If failed to get the value,  {@code 200}  is used as a
+     * default value for Windows or {@code 128} for others.
      */
     public static final int SOMAXCONN;
 
