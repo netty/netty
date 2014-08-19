@@ -497,4 +497,10 @@ public interface ChannelHandlerContext extends AttributeMap {
      */
     ChannelPromise voidPromise();
 
+    /**
+     * Assign {@link ByteBufAllocator}
+     * @param allocator
+     */
+    void setAllocator(ByteBufAllocator allocator);
+
 }

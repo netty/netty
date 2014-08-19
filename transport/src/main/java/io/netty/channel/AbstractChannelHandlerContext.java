@@ -210,6 +210,7 @@ abstract class AbstractChannelHandlerContext
     private final DefaultChannelPipeline pipeline;
     private final String name;
     private boolean removed;
+    private volatile ByteBufAllocator allocator;
 
     final int skipFlags;
 
@@ -229,6 +230,13 @@ abstract class AbstractChannelHandlerContext
     AbstractChannelHandlerContext(
             DefaultChannelPipeline pipeline, ChannelHandlerInvoker invoker, String name, int skipFlags) {
 
+        this(pipeline, invoker, name, skipFlags, null);
+    }
+
+    AbstractChannelHandlerContext(
+            DefaultChannelPipeline pipeline, ChannelHandlerInvoker invoker, String name, int skipFlags,
+            ByteBufAllocator allocator) {
+
         if (name == null) {
             throw new NullPointerException("name");
         }
@@ -238,6 +246,7 @@ abstract class AbstractChannelHandlerContext
         this.name = name;
         this.invoker = invoker;
         this.skipFlags = skipFlags;
+        this.allocator = allocator;
     }
 
     /** Invocation initiated by {@link DefaultChannelPipeline#teardownAll()}}. */
@@ -281,7 +290,7 @@ abstract class AbstractChannelHandlerContext
 
     @Override
     public ByteBufAllocator alloc() {
-        return channel().config().getAllocator();
+        return allocator == null? channel().config().getAllocator() : allocator;
     }
 
     @Override
@@ -584,5 +593,14 @@ abstract class AbstractChannelHandlerContext
             return channel().unsafe().invoker();
         }
         return invoker;
+    }
+
+    @Override
+    public void setAllocator(ByteBufAllocator allocator) {
+        if (allocator == null) {
+            throw new NullPointerException("allocator");
+        }
+
+        this.allocator = allocator;
     }
 }
