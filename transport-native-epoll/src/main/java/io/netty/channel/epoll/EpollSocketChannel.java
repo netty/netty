@@ -17,6 +17,7 @@ package io.netty.channel.epoll;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
@@ -392,10 +393,21 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
         if (msg instanceof ByteBuf) {
             ByteBuf buf = (ByteBuf) msg;
             if (!buf.hasMemoryAddress() && (PlatformDependent.hasUnsafe() || !buf.isDirect())) {
-                // We can only handle buffers with memory address so we need to copy if a non direct is
-                // passed to write.
-                buf = newDirectBuffer(buf);
-                assert buf.hasMemoryAddress();
+                if (buf instanceof CompositeByteBuf) {
+                    // Special handling of CompositeByteBuf to reduce memory copies if some of the Components
+                    // in the CompositeByteBuf are backed by a memoryAddress.
+                    CompositeByteBuf comp = (CompositeByteBuf) buf;
+                    if (!comp.isDirect() || comp.nioBufferCount() > Native.IOV_MAX) {
+                        // more then 1024 buffers for gathering writes so just do a memory copy.
+                        buf = newDirectBuffer(buf);
+                        assert buf.hasMemoryAddress();
+                    }
+                } else {
+                    // We can only handle buffers with memory address so we need to copy if a non direct is
+                    // passed to write.
+                    buf = newDirectBuffer(buf);
+                    assert buf.hasMemoryAddress();
+                }
             }
             return buf;
         }
