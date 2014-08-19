@@ -229,7 +229,6 @@ abstract class AbstractChannelHandlerContext
 
     AbstractChannelHandlerContext(
             DefaultChannelPipeline pipeline, ChannelHandlerInvoker invoker, String name, int skipFlags) {
-
         this(pipeline, invoker, name, skipFlags, null);
     }
 
