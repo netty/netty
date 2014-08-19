@@ -399,8 +399,8 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
         }
     }
 
-    static final class WriteTask extends RecyclableMpscLinkedQueueNode<SingleThreadEventLoop.NonWakeupRunnable>
-            implements SingleThreadEventLoop.NonWakeupRunnable {
+    static final class WriteTask extends RecyclableMpscLinkedQueueNode<AbstractEventLoop.NonWakeupRunnable>
+            implements AbstractEventLoop.NonWakeupRunnable {
         private ChannelHandlerContext ctx;
         private Object msg;
         private ChannelPromise promise;
@@ -447,7 +447,7 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
         }
 
         @Override
-        public SingleThreadEventLoop.NonWakeupRunnable value() {
+        public AbstractEventLoop.NonWakeupRunnable value() {
             return this;
         }
     }

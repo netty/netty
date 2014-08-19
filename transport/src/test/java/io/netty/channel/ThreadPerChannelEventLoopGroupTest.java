@@ -19,12 +19,12 @@ package io.netty.channel;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
+import io.netty.util.concurrent.AbstractEventExecutor;
 import io.netty.util.concurrent.DefaultExecutorFactory;
 import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.SingleThreadEventExecutor;
 import org.junit.Test;
 
 import java.lang.reflect.Field;
@@ -90,7 +90,7 @@ public class ThreadPerChannelEventLoopGroupTest {
         assertTrue(loopGroup.isTerminated());
     }
 
-    private static final class TestEventExecutor extends SingleThreadEventExecutor {
+    private static final class TestEventExecutor extends AbstractEventExecutor {
         TestEventExecutor() {
             super(null, new DefaultExecutorFactory(TestEventExecutor.class).newExecutor(1), false);
         }

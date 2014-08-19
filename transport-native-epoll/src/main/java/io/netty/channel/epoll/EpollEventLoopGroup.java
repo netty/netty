@@ -17,7 +17,7 @@ package io.netty.channel.epoll;
 
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.AbstractEventLoopGroup;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ExecutorFactory;
 
@@ -26,10 +26,10 @@ import io.netty.util.concurrent.DefaultExecutorFactory;
 
 
 /**
- * A {@link MultithreadEventLoopGroup} which uses <a href="http://en.wikipedia.org/wiki/Epoll">epoll</a> under the
- * covers. This {@link EventLoopGroup} works only on Linux systems!
+ * A {@link AbstractEventLoopGroup} which uses <a href="http://en.wikipedia.org/wiki/Epoll">epoll</a> under the covers.
+ * This {@link EventLoopGroup} works only on Linux systems!
  */
-public final class EpollEventLoopGroup extends MultithreadEventLoopGroup {
+public final class EpollEventLoopGroup extends AbstractEventLoopGroup {
 
     /**
      * Create a new instance that uses twice as many {@link EventLoop}s as there processors/cores

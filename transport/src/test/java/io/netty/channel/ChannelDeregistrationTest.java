@@ -37,7 +37,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static org.junit.Assert.*;
 
 /**
- * These tests should work with any {@link SingleThreadEventLoop} implementation. We chose the
+ * These tests should work with any {@link AbstractEventLoop} implementation. We chose the
  * {@link io.netty.channel.nio.NioEventLoop} because it's the most commonly used {@link EventLoop}.
  */
 public class ChannelDeregistrationTest {

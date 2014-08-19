@@ -18,10 +18,10 @@ package io.netty.util.concurrent;
 import java.util.concurrent.Executor;
 
 /**
- * Default implementation of {@link MultithreadEventExecutorGroup} which will use {@link DefaultEventExecutor}
+ * Default implementation of {@link AbstractEventExecutorGroup} which will use {@link DefaultEventExecutor}
  * instances to handle the tasks.
  */
-public class DefaultEventExecutorGroup extends MultithreadEventExecutorGroup {
+public class DefaultEventExecutorGroup extends AbstractEventExecutorGroup {
 
     /**
      * Create a new instance.

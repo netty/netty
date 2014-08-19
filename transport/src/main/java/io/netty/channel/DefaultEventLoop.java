@@ -18,7 +18,7 @@ package io.netty.channel;
 import io.netty.util.concurrent.DefaultExecutorFactory;
 
 import java.util.concurrent.Executor;
-public class DefaultEventLoop extends SingleThreadEventLoop {
+public class DefaultEventLoop extends AbstractEventLoop {
 
     public DefaultEventLoop() {
         this((EventLoopGroup) null);

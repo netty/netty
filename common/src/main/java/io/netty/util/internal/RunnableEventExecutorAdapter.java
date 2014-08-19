@@ -24,7 +24,7 @@ import io.netty.util.concurrent.EventExecutor;
  * the correct {@link EventExecutor} after channel migration.
  *
  * @see io.netty.util.concurrent.ScheduledFutureTask
- * @see io.netty.util.concurrent.SingleThreadEventExecutor
+ * @see io.netty.util.concurrent.AbstractEventExecutor
  */
 public interface RunnableEventExecutorAdapter extends Runnable {
     /**

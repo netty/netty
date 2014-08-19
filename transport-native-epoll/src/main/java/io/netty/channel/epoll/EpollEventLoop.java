@@ -15,9 +15,9 @@
  */
 package io.netty.channel.epoll;
 
+import io.netty.channel.AbstractEventLoop;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.SingleThreadEventLoop;
 import io.netty.channel.epoll.AbstractEpollChannel.AbstractEpollUnsafe;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
@@ -33,10 +33,10 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 /**
- * A {@link SingleThreadEventLoop} implementation which uses <a href="http://en.wikipedia.org/wiki/Epoll">epoll</a>
+ * A {@link AbstractEventLoop} implementation which uses <a href="http://en.wikipedia.org/wiki/Epoll">epoll</a>
  * under the covers. This {@link EventLoop} works only on Linux systems!
  */
-final class EpollEventLoop extends SingleThreadEventLoop {
+final class EpollEventLoop extends AbstractEventLoop {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(EpollEventLoop.class);
     private static final AtomicIntegerFieldUpdater<EpollEventLoop> WAKEN_UP_UPDATER;
 

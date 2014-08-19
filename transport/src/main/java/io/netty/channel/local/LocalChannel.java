@@ -16,6 +16,7 @@
 package io.netty.channel.local;
 
 import io.netty.channel.AbstractChannel;
+import io.netty.channel.AbstractEventLoop;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
@@ -25,7 +26,6 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
-import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.InternalThreadLocalMap;
 
@@ -134,7 +134,7 @@ public class LocalChannel extends AbstractChannel {
 
     @Override
     protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof SingleThreadEventLoop;
+        return loop instanceof AbstractEventLoop;
     }
 
     @Override
@@ -181,7 +181,7 @@ public class LocalChannel extends AbstractChannel {
                 }
             });
         }
-        ((SingleThreadEventLoop) eventLoop().unwrap()).addShutdownHook(shutdownHook);
+        ((AbstractEventLoop) eventLoop().unwrap()).addShutdownHook(shutdownHook);
     }
 
     @Override
@@ -237,7 +237,7 @@ public class LocalChannel extends AbstractChannel {
     @Override
     protected void doDeregister() throws Exception {
         // Just remove the shutdownHook as this Channel may be closed later or registered to another EventLoop
-        ((SingleThreadEventLoop) eventLoop().unwrap()).removeShutdownHook(shutdownHook);
+        ((AbstractEventLoop) eventLoop().unwrap()).removeShutdownHook(shutdownHook);
     }
 
     @Override

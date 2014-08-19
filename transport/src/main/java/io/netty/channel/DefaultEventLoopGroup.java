@@ -20,9 +20,9 @@ import io.netty.util.concurrent.ExecutorFactory;
 import java.util.concurrent.Executor;
 
 /**
- * {@link MultithreadEventLoopGroup} which must be used for the local transport.
+ * {@link AbstractEventLoopGroup} which must be used for the local transport.
  */
-public class DefaultEventLoopGroup extends MultithreadEventLoopGroup {
+public class DefaultEventLoopGroup extends AbstractEventLoopGroup {
 
     /**
      * Create a new instance that uses twice as many {@link EventLoop}s as there processors/cores

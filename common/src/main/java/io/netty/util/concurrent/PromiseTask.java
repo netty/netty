@@ -18,7 +18,7 @@ package io.netty.util.concurrent;
 import java.util.concurrent.Callable;
 import java.util.concurrent.RunnableFuture;
 
-class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
+public class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
 
     static <T> Callable<T> toCallable(Runnable runnable, T result) {
         return new RunnableAdapter<T>(runnable, result);
@@ -47,11 +47,11 @@ class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
 
     protected final Callable<V> task;
 
-    PromiseTask(EventExecutor executor, Runnable runnable, V result) {
+    public PromiseTask(EventExecutor executor, Runnable runnable, V result) {
         this(executor, toCallable(runnable, result));
     }
 
-    PromiseTask(EventExecutor executor, Callable<V> callable) {
+    public PromiseTask(EventExecutor executor, Callable<V> callable) {
         super(executor);
         task = callable;
     }

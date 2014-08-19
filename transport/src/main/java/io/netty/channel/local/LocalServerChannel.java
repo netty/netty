@@ -15,13 +15,13 @@
  */
 package io.netty.channel.local;
 
+import io.netty.channel.AbstractEventLoop;
 import io.netty.channel.AbstractServerChannel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.ServerChannel;
-import io.netty.channel.SingleThreadEventLoop;
 
 import java.net.SocketAddress;
 import java.util.ArrayDeque;
@@ -72,7 +72,7 @@ public class LocalServerChannel extends AbstractServerChannel {
 
     @Override
     protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof SingleThreadEventLoop;
+        return loop instanceof AbstractEventLoop;
     }
 
     @Override
@@ -82,7 +82,7 @@ public class LocalServerChannel extends AbstractServerChannel {
 
     @Override
     protected void doRegister() throws Exception {
-        ((SingleThreadEventLoop) eventLoop().unwrap()).addShutdownHook(shutdownHook);
+        ((AbstractEventLoop) eventLoop().unwrap()).addShutdownHook(shutdownHook);
     }
 
     @Override
@@ -105,7 +105,7 @@ public class LocalServerChannel extends AbstractServerChannel {
 
     @Override
     protected void doDeregister() throws Exception {
-        ((SingleThreadEventLoop) eventLoop().unwrap()).removeShutdownHook(shutdownHook);
+        ((AbstractEventLoop) eventLoop().unwrap()).removeShutdownHook(shutdownHook);
     }
 
     @Override
