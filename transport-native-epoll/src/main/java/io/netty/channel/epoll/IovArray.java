@@ -16,10 +16,13 @@
 package io.netty.channel.epoll;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelOutboundBuffer.MessageProcessor;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.PlatformDependent;
+
+import java.nio.ByteBuffer;
 
 /**
  * Represent an array of struct array and so can be passed directly over via JNI without the need to do any more
@@ -95,6 +98,15 @@ final class IovArray implements MessageProcessor {
 
         final long addr = buf.memoryAddress();
         final int offset = buf.readerIndex();
+        add(addr, offset, len);
+        return true;
+    }
+
+    private void add(long addr, int offset, int len) {
+        if (len == 0) {
+            // No need to add an empty buffer.
+            return;
+        }
 
         final long baseOffset = memoryAddress(count++);
         final long lengthOffset = baseOffset + ADDRESS_SIZE;
@@ -110,6 +122,26 @@ final class IovArray implements MessageProcessor {
         }
 
         size += len;
+    }
+
+    private boolean add(CompositeByteBuf buf) {
+        ByteBuffer[] buffers = buf.nioBuffers();
+        if (count + buffers.length >= Native.IOV_MAX) {
+            // No more room!
+            return false;
+        }
+        for (int i = 0; i < buffers.length; i++) {
+            ByteBuffer nioBuffer = buffers[i];
+            int offset = nioBuffer.position();
+            int len = nioBuffer.limit() - nioBuffer.position();
+            if (len == 0) {
+                // No need to add an empty buffer so just continue
+                continue;
+            }
+            long addr = PlatformDependent.directBufferAddress(nioBuffer);
+
+            add(addr, offset, len);
+        }
         return true;
     }
 
@@ -166,7 +198,14 @@ final class IovArray implements MessageProcessor {
 
     @Override
     public boolean processMessage(Object msg) throws Exception {
-        return msg instanceof ByteBuf && add((ByteBuf) msg);
+        if (msg instanceof ByteBuf) {
+            if (msg instanceof CompositeByteBuf) {
+                return add((CompositeByteBuf) msg);
+            } else {
+                return add((ByteBuf) msg);
+            }
+        }
+        return false;
     }
 
     /**
