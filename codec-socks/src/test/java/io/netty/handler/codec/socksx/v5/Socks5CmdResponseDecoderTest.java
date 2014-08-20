@@ -35,7 +35,7 @@ public class Socks5CmdResponseDecoderTest {
         if (addressType == Socks5AddressType.UNKNOWN) {
             assertTrue(embedder.readInbound() instanceof UnknownSocks5Response);
         } else {
-            msg = (Socks5Response) embedder.readInbound();
+            msg = embedder.readInbound();
             assertEquals(((Socks5CmdResponse) msg).cmdStatus(), cmdStatus);
             if (host != null) {
                 assertEquals(((Socks5CmdResponse) msg).host(), host);

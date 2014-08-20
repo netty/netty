@@ -30,7 +30,7 @@ public class Socks5AuthRequestDecoderTest {
         Socks5AuthRequestDecoder decoder = new Socks5AuthRequestDecoder();
         EmbeddedChannel embedder = new EmbeddedChannel(decoder);
         Socks5CommonTestUtils.writeMessageIntoEmbedder(embedder, msg);
-        msg = (Socks5AuthRequest) embedder.readInbound();
+        msg = embedder.readInbound();
         assertEquals(msg.username(), username);
         assertEquals(msg.username(), password);
         assertNull(embedder.readInbound());
