@@ -33,7 +33,7 @@ public class Socks4CmdResponseDecoderTest {
         EmbeddedChannel embedder = new EmbeddedChannel(decoder);
         Socks4CommonTestUtils.writeMessageIntoEmbedder(embedder, msg);
 
-        msg = (Socks4Response) embedder.readInbound();
+        msg = embedder.readInbound();
         assertEquals(((Socks4CmdResponse) msg).cmdStatus(), cmdStatus);
         if (host != null) {
             assertEquals(((Socks4CmdResponse) msg).host(), host);
