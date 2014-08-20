@@ -32,7 +32,7 @@ public class Socks5AuthResponseDecoderTest {
         Socks5AuthResponseDecoder decoder = new Socks5AuthResponseDecoder();
         EmbeddedChannel embedder = new EmbeddedChannel(decoder);
         Socks5CommonTestUtils.writeMessageIntoEmbedder(embedder, msg);
-        msg = (Socks5AuthResponse) embedder.readInbound();
+        msg = embedder.readInbound();
         assertSame(msg.authStatus(), authStatus);
         assertNull(embedder.readInbound());
     }
