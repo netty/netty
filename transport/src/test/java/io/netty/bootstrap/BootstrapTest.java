@@ -178,11 +178,17 @@ public class BootstrapTest {
                     return new LocalServerChannel() {
                         @Override
                         public ChannelFuture bind(SocketAddress localAddress) {
+                            // Close the Channel to emulate what NIO and others impl do on bind failure
+                            // See https://github.com/netty/netty/issues/2586
+                            close();
                             return newFailedFuture(new SocketException());
                         }
 
                         @Override
                         public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
+                            // Close the Channel to emulate what NIO and others impl do on bind failure
+                            // See https://github.com/netty/netty/issues/2586
+                            close();
                             return promise.setFailure(new SocketException());
                         }
                     };
