@@ -276,22 +276,32 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
             return regFuture;
         }
 
-        final ChannelPromise promise;
         if (regFuture.isDone()) {
-            promise = channel.newPromise();
+            // At this point we know that the registration was complete and succesful.
+            ChannelPromise promise = channel.newPromise();
             doBind0(regFuture, channel, localAddress, promise);
+            return promise;
         } else {
             // Registration future is almost always fulfilled already, but just in case it's not.
-            promise = new PendingRegistrationPromise(channel);
+            final PendingRegistrationPromise promise = new PendingRegistrationPromise(channel);
             regFuture.addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(ChannelFuture future) throws Exception {
+                    Throwable cause = future.cause();
+                    if (cause != null) {
+                        // Registration on the EventLoop failed so fail the ChannelPromise directly to not cause an
+                        // IllegalStateException once we try to access the EventLoop of the Channel.
+                        promise.setFailure(cause);
+                    } else {
+                        // Registration was successful, so set the correct executor to use.
+                        // See https://github.com/netty/netty/issues/2586
+                        promise.executor = channel.eventLoop();
+                    }
                     doBind0(regFuture, channel, localAddress, promise);
                 }
             });
+            return promise;
         }
-
-        return promise;
     }
 
     final ChannelFuture initAndRegister() {
@@ -455,18 +465,22 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     }
 
     private static final class PendingRegistrationPromise extends DefaultChannelPromise {
+        // Is set to the correct EventExecutor once the registration was successful. Otherwise it will
+        // stay null and so the GlobalEventExecutor.INSTANCE will be used for notifications.
+        private volatile EventExecutor executor;
+
         private PendingRegistrationPromise(Channel channel) {
             super(channel);
         }
 
         @Override
         protected EventExecutor executor() {
-            if (channel().isRegistered()) {
-                // If the registration was a success we can just call super.executor() which will return
-                // channel.eventLoop().
+            EventExecutor executor = this.executor;
+            if (executor != null) {
+                // If the registration was a success executor is set.
                 //
                 // See https://github.com/netty/netty/issues/2586
-                return super.executor();
+                return executor;
             }
             // The registration failed so we can only use the GlobalEventExecutor as last resort to notify.
             return GlobalEventExecutor.INSTANCE;
