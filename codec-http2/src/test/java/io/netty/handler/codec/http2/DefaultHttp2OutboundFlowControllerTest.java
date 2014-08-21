@@ -91,91 +91,119 @@ public class DefaultHttp2OutboundFlowControllerTest {
 
     @Test
     public void frameShouldBeSentImmediately() throws Http2Exception {
-        ByteBuf data = dummyData(10);
-        send(STREAM_A, data.slice());
-        verifyWrite(STREAM_A, data);
+        ByteBuf data = dummyData(5, 5);
+        send(STREAM_A, data.slice(0, 5), 5);
+        verifyWrite(STREAM_A, data.slice(0, 5), 5);
         assertEquals(1, data.refCnt());
-        data.release();
     }
 
     @Test
     public void frameShouldSplitForMaxFrameSize() throws Http2Exception {
         when(frameWriter.maxFrameSize()).thenReturn(5);
-        ByteBuf data = dummyData(10);
-        ByteBuf slice1 = data.slice(data.readerIndex(), 5);
+        ByteBuf data = dummyData(10, 0);
+        ByteBuf slice1 = data.slice(0, 5);
         ByteBuf slice2 = data.slice(5, 5);
-        send(STREAM_A, data.slice());
-        verifyWrite(STREAM_A, slice1);
-        verifyWrite(STREAM_A, slice2);
+        send(STREAM_A, data.slice(), 0);
+        verifyWrite(STREAM_A, slice1, 0);
+        verifyWrite(STREAM_A, slice2, 0);
         assertEquals(2, data.refCnt());
-        data.release(2);
     }
 
     @Test
     public void stalledStreamShouldQueueFrame() throws Http2Exception {
         controller.initialOutboundWindowSize(0);
 
-        ByteBuf data = dummyData(10);
-        send(STREAM_A, data);
+        ByteBuf data = dummyData(10, 5);
+        send(STREAM_A, data.slice(0, 10), 5);
         verifyNoWrite(STREAM_A);
         assertEquals(1, data.refCnt());
-        data.release();
     }
 
     @Test
-    public void nonZeroWindowShouldSendPartialFrame() throws Http2Exception {
+    public void frameShouldSplit() throws Http2Exception {
         controller.initialOutboundWindowSize(5);
 
-        ByteBuf data = dummyData(10);
-        send(STREAM_A, data);
+        ByteBuf data = dummyData(5, 5);
+        send(STREAM_A, data.slice(0, 5), 5);
 
         // Verify that a partial frame of 5 was sent.
         ArgumentCaptor<ByteBuf> argument = ArgumentCaptor.forClass(ByteBuf.class);
-        captureWrite(STREAM_A, argument, false);
+        // None of the padding should be sent in the frame.
+        captureWrite(STREAM_A, argument, 0, false);
         ByteBuf writtenBuf = argument.getValue();
         assertEquals(5, writtenBuf.readableBytes());
         assertEquals(data.slice(0, 5), writtenBuf);
         assertEquals(2, writtenBuf.refCnt());
         assertEquals(2, data.refCnt());
-        data.release(2);
+    }
+
+    @Test
+    public void frameShouldSplitPadding() throws Http2Exception {
+        controller.initialOutboundWindowSize(5);
+
+        ByteBuf data = dummyData(3, 7);
+        send(STREAM_A, data.slice(0, 3), 7);
+
+        // Verify that a partial frame of 5 was sent.
+        ArgumentCaptor<ByteBuf> argument = ArgumentCaptor.forClass(ByteBuf.class);
+        captureWrite(STREAM_A, argument, 2, false);
+        ByteBuf writtenBuf = argument.getValue();
+        assertEquals(3, writtenBuf.readableBytes());
+        assertEquals(data.slice(0, 3), writtenBuf);
+        assertEquals(2, writtenBuf.refCnt());
+        assertEquals(2, data.refCnt());
+    }
+
+    @Test
+    public void emptyFrameShouldSplitPadding() throws Http2Exception {
+        controller.initialOutboundWindowSize(5);
+
+        ByteBuf data = dummyData(0, 10);
+        send(STREAM_A, data.slice(0, 0), 10);
+
+        // Verify that a partial frame of 5 was sent.
+        ArgumentCaptor<ByteBuf> argument = ArgumentCaptor.forClass(ByteBuf.class);
+        captureWrite(STREAM_A, argument, 5, false);
+        ByteBuf writtenBuf = argument.getValue();
+        assertEquals(0, writtenBuf.readableBytes());
+        assertEquals(1, writtenBuf.refCnt());
+        assertEquals(1, data.refCnt());
     }
 
     @Test
     public void initialWindowUpdateShouldSendFrame() throws Http2Exception {
         controller.initialOutboundWindowSize(0);
 
-        ByteBuf data = dummyData(10);
-        send(STREAM_A, data.slice());
+        ByteBuf data = dummyData(10, 0);
+        send(STREAM_A, data.slice(), 0);
         verifyNoWrite(STREAM_A);
 
         // Verify that the entire frame was sent.
         controller.initialOutboundWindowSize(10);
         ArgumentCaptor<ByteBuf> argument = ArgumentCaptor.forClass(ByteBuf.class);
-        captureWrite(STREAM_A, argument, false);
+        captureWrite(STREAM_A, argument, 0, false);
         ByteBuf writtenBuf = argument.getValue();
         assertEquals(data, writtenBuf);
         assertEquals(1, data.refCnt());
-        data.release();
     }
 
     @Test
     public void initialWindowUpdateShouldSendPartialFrame() throws Http2Exception {
         controller.initialOutboundWindowSize(0);
 
-        ByteBuf data = dummyData(10);
-        send(STREAM_A, data);
+        ByteBuf data = dummyData(10, 0);
+        send(STREAM_A, data, 0);
         verifyNoWrite(STREAM_A);
 
         // Verify that a partial frame of 5 was sent.
         controller.initialOutboundWindowSize(5);
         ArgumentCaptor<ByteBuf> argument = ArgumentCaptor.forClass(ByteBuf.class);
-        captureWrite(STREAM_A, argument, false);
+        captureWrite(STREAM_A, argument, 0, false);
         ByteBuf writtenBuf = argument.getValue();
         assertEquals(5, writtenBuf.readableBytes());
         assertEquals(data.slice(0, 5), writtenBuf);
         assertEquals(2, writtenBuf.refCnt());
         assertEquals(2, data.refCnt());
-        data.release(2);
     }
 
     @Test
@@ -183,18 +211,17 @@ public class DefaultHttp2OutboundFlowControllerTest {
         // Set the connection window size to zero.
         controller.updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_WINDOW_SIZE);
 
-        ByteBuf data = dummyData(10);
-        send(STREAM_A, data.slice());
+        ByteBuf data = dummyData(10, 0);
+        send(STREAM_A, data.slice(), 0);
         verifyNoWrite(STREAM_A);
 
         // Verify that the entire frame was sent.
         controller.updateOutboundWindowSize(CONNECTION_STREAM_ID, 10);
         ArgumentCaptor<ByteBuf> argument = ArgumentCaptor.forClass(ByteBuf.class);
-        captureWrite(STREAM_A, argument, false);
+        captureWrite(STREAM_A, argument, 0, false);
         ByteBuf writtenBuf = argument.getValue();
         assertEquals(data, writtenBuf);
         assertEquals(1, data.refCnt());
-        data.release();
     }
 
     @Test
@@ -202,20 +229,19 @@ public class DefaultHttp2OutboundFlowControllerTest {
         // Set the connection window size to zero.
         controller.updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_WINDOW_SIZE);
 
-        ByteBuf data = dummyData(10);
-        send(STREAM_A, data);
+        ByteBuf data = dummyData(10, 0);
+        send(STREAM_A, data, 0);
         verifyNoWrite(STREAM_A);
 
         // Verify that a partial frame of 5 was sent.
         controller.updateOutboundWindowSize(CONNECTION_STREAM_ID, 5);
         ArgumentCaptor<ByteBuf> argument = ArgumentCaptor.forClass(ByteBuf.class);
-        captureWrite(STREAM_A, argument, false);
+        captureWrite(STREAM_A, argument, 0, false);
         ByteBuf writtenBuf = argument.getValue();
         assertEquals(5, writtenBuf.readableBytes());
         assertEquals(data.slice(0, 5), writtenBuf);
         assertEquals(2, writtenBuf.refCnt());
         assertEquals(2, data.refCnt());
-        data.release(2);
     }
 
     @Test
@@ -223,18 +249,17 @@ public class DefaultHttp2OutboundFlowControllerTest {
         // Set the stream window size to zero.
         controller.updateOutboundWindowSize(STREAM_A, -DEFAULT_WINDOW_SIZE);
 
-        ByteBuf data = dummyData(10);
-        send(STREAM_A, data.slice());
+        ByteBuf data = dummyData(10, 0);
+        send(STREAM_A, data.slice(), 0);
         verifyNoWrite(STREAM_A);
 
         // Verify that the entire frame was sent.
         controller.updateOutboundWindowSize(STREAM_A, 10);
         ArgumentCaptor<ByteBuf> argument = ArgumentCaptor.forClass(ByteBuf.class);
-        captureWrite(STREAM_A, argument, false);
+        captureWrite(STREAM_A, argument, 0, false);
         ByteBuf writtenBuf = argument.getValue();
         assertEquals(data, writtenBuf);
         assertEquals(1, data.refCnt());
-        data.release();
     }
 
     @Test
@@ -242,19 +267,51 @@ public class DefaultHttp2OutboundFlowControllerTest {
         // Set the stream window size to zero.
         controller.updateOutboundWindowSize(STREAM_A, -DEFAULT_WINDOW_SIZE);
 
-        ByteBuf data = dummyData(10);
-        send(STREAM_A, data);
+        ByteBuf data = dummyData(10, 0);
+        send(STREAM_A, data, 0);
         verifyNoWrite(STREAM_A);
 
         // Verify that a partial frame of 5 was sent.
         controller.updateOutboundWindowSize(STREAM_A, 5);
         ArgumentCaptor<ByteBuf> argument = ArgumentCaptor.forClass(ByteBuf.class);
-        captureWrite(STREAM_A, argument, false);
+        captureWrite(STREAM_A, argument, 0, false);
         ByteBuf writtenBuf = argument.getValue();
         assertEquals(5, writtenBuf.readableBytes());
         assertEquals(2, writtenBuf.refCnt());
         assertEquals(2, data.refCnt());
-        data.release(2);
+    }
+
+    /**
+     * In this test, we give stream A padding and verify that it's padding is properly split.
+     *
+     * <pre>
+     *         0
+     *        / \
+     *       A   B
+     * </pre>
+     */
+    @Test
+    public void multipleStreamsShouldSplitPadding() throws Http2Exception {
+        // Block the connection
+        controller.updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_WINDOW_SIZE);
+
+        // Try sending 10 bytes on each stream. They will be pending until we free up the
+        // connection.
+        send(STREAM_A, dummyData(3, 0), 7);
+        send(STREAM_B, dummyData(10, 0), 0);
+        verifyNoWrite(STREAM_A);
+        verifyNoWrite(STREAM_B);
+
+        // Open up the connection window.
+        controller.updateOutboundWindowSize(CONNECTION_STREAM_ID, 10);
+        ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
+
+        // Verify that 5 bytes from A were written: 3 from data and 2 from padding.
+        captureWrite(STREAM_A, captor, 2, false);
+        assertEquals(3, captor.getValue().readableBytes());
+
+        captureWrite(STREAM_B, captor, 0, false);
+        assertEquals(5, captor.getValue().readableBytes());
     }
 
     /**
@@ -279,10 +336,10 @@ public class DefaultHttp2OutboundFlowControllerTest {
 
         // Try sending 10 bytes on each stream. They will be pending until we free up the
         // connection.
-        send(STREAM_A, dummyData(10));
-        send(STREAM_B, dummyData(10));
-        send(STREAM_C, dummyData(10));
-        send(STREAM_D, dummyData(10));
+        send(STREAM_A, dummyData(10, 0), 0);
+        send(STREAM_B, dummyData(10, 0), 0);
+        send(STREAM_C, dummyData(10, 0), 0);
+        send(STREAM_D, dummyData(10, 0), 0);
         verifyNoWrite(STREAM_A);
         verifyNoWrite(STREAM_B);
         verifyNoWrite(STREAM_C);
@@ -295,14 +352,14 @@ public class DefaultHttp2OutboundFlowControllerTest {
         // Verify that no write was done for A, since it's blocked.
         verifyNoWrite(STREAM_A);
 
-        captureWrite(STREAM_B, captor, false);
+        captureWrite(STREAM_B, captor, 0, false);
         assertEquals(5, captor.getValue().readableBytes());
 
         // Verify that C and D each shared half of A's allowance. Since A's allowance (5) cannot
         // be split evenly, one will get 3 and one will get 2.
-        captureWrite(STREAM_C, captor, false);
+        captureWrite(STREAM_C, captor, 0, false);
         int c = captor.getValue().readableBytes();
-        captureWrite(STREAM_D, captor, false);
+        captureWrite(STREAM_D, captor, 0, false);
         int d = captor.getValue().readableBytes();
         assertEquals(5, c + d);
         assertEquals(1, Math.abs(c - d));
@@ -329,10 +386,10 @@ public class DefaultHttp2OutboundFlowControllerTest {
         controller.updateOutboundWindowSize(STREAM_B, -DEFAULT_WINDOW_SIZE);
 
         // Send 10 bytes to each.
-        send(STREAM_A, dummyData(10));
-        send(STREAM_B, dummyData(10));
-        send(STREAM_C, dummyData(10));
-        send(STREAM_D, dummyData(10));
+        send(STREAM_A, dummyData(10, 0), 0);
+        send(STREAM_B, dummyData(10, 0), 0);
+        send(STREAM_C, dummyData(10, 0), 0);
+        send(STREAM_D, dummyData(10, 0), 0);
         verifyNoWrite(STREAM_A);
         verifyNoWrite(STREAM_B);
         verifyNoWrite(STREAM_C);
@@ -343,7 +400,7 @@ public class DefaultHttp2OutboundFlowControllerTest {
         ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
 
         // Verify that A received all the bytes.
-        captureWrite(STREAM_A, captor, false);
+        captureWrite(STREAM_A, captor, 0, false);
         assertEquals(10, captor.getValue().readableBytes());
         verifyNoWrite(STREAM_B);
         verifyNoWrite(STREAM_C);
@@ -371,10 +428,10 @@ public class DefaultHttp2OutboundFlowControllerTest {
         controller.updateOutboundWindowSize(STREAM_B, -DEFAULT_WINDOW_SIZE);
 
         // Only send 5 to A so that it will allow data from its children.
-        send(STREAM_A, dummyData(5));
-        send(STREAM_B, dummyData(10));
-        send(STREAM_C, dummyData(10));
-        send(STREAM_D, dummyData(10));
+        send(STREAM_A, dummyData(5, 0), 0);
+        send(STREAM_B, dummyData(10, 0), 0);
+        send(STREAM_C, dummyData(10, 0), 0);
+        send(STREAM_D, dummyData(10, 0), 0);
         verifyNoWrite(STREAM_A);
         verifyNoWrite(STREAM_B);
         verifyNoWrite(STREAM_C);
@@ -387,14 +444,14 @@ public class DefaultHttp2OutboundFlowControllerTest {
         // Verify that no write was done for B, since it's blocked.
         verifyNoWrite(STREAM_B);
 
-        captureWrite(STREAM_A, captor, false);
+        captureWrite(STREAM_A, captor, 0, false);
         assertEquals(5, captor.getValue().readableBytes());
 
         // Verify that C and D each shared half of A's allowance. Since A's allowance (5) cannot
         // be split evenly, one will get 3 and one will get 2.
-        captureWrite(STREAM_C, captor, false);
+        captureWrite(STREAM_C, captor, 0, false);
         int c = captor.getValue().readableBytes();
-        captureWrite(STREAM_D, captor, false);
+        captureWrite(STREAM_D, captor, 0, false);
         int d = captor.getValue().readableBytes();
         assertEquals(5, c + d);
         assertEquals(1, Math.abs(c - d));
@@ -432,10 +489,10 @@ public class DefaultHttp2OutboundFlowControllerTest {
         controller.updateOutboundWindowSize(STREAM_B, -DEFAULT_WINDOW_SIZE);
 
         // Send 10 bytes to each.
-        send(STREAM_A, dummyData(10));
-        send(STREAM_B, dummyData(10));
-        send(STREAM_C, dummyData(10));
-        send(STREAM_D, dummyData(10));
+        send(STREAM_A, dummyData(10, 0), 0);
+        send(STREAM_B, dummyData(10, 0), 0);
+        send(STREAM_C, dummyData(10, 0), 0);
+        send(STREAM_D, dummyData(10, 0), 0);
         verifyNoWrite(STREAM_A);
         verifyNoWrite(STREAM_B);
         verifyNoWrite(STREAM_C);
@@ -449,9 +506,9 @@ public class DefaultHttp2OutboundFlowControllerTest {
         ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
 
         // Verify that A received all the bytes.
-        captureWrite(STREAM_A, captor, false);
+        captureWrite(STREAM_A, captor, 0, false);
         assertEquals(5, captor.getValue().readableBytes());
-        captureWrite(STREAM_D, captor, false);
+        captureWrite(STREAM_D, captor, 0, false);
         assertEquals(5, captor.getValue().readableBytes());
         verifyNoWrite(STREAM_B);
         verifyNoWrite(STREAM_C);
@@ -479,10 +536,10 @@ public class DefaultHttp2OutboundFlowControllerTest {
         setPriority(STREAM_D, 0, (short) 100, false);
 
         // Send a bunch of data on each stream.
-        send(STREAM_A, dummyData(1000));
-        send(STREAM_B, dummyData(1000));
-        send(STREAM_C, dummyData(1000));
-        send(STREAM_D, dummyData(1000));
+        send(STREAM_A, dummyData(1000, 0), 0);
+        send(STREAM_B, dummyData(1000, 0), 0);
+        send(STREAM_C, dummyData(1000, 0), 0);
+        send(STREAM_D, dummyData(1000, 0), 0);
         verifyNoWrite(STREAM_A);
         verifyNoWrite(STREAM_B);
         verifyNoWrite(STREAM_C);
@@ -492,22 +549,22 @@ public class DefaultHttp2OutboundFlowControllerTest {
         controller.updateOutboundWindowSize(CONNECTION_STREAM_ID, 1000);
         ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
 
-        captureWrite(STREAM_A, captor, false);
+        captureWrite(STREAM_A, captor, 0, false);
         int aWritten = captor.getValue().readableBytes();
         int min = aWritten;
         int max = aWritten;
 
-        captureWrite(STREAM_B, captor, false);
+        captureWrite(STREAM_B, captor, 0, false);
         int bWritten = captor.getValue().readableBytes();
         min = Math.min(min, bWritten);
         max = Math.max(max, bWritten);
 
-        captureWrite(STREAM_C, captor, false);
+        captureWrite(STREAM_C, captor, 0, false);
         int cWritten = captor.getValue().readableBytes();
         min = Math.min(min, cWritten);
         max = Math.max(max, cWritten);
 
-        captureWrite(STREAM_D, captor, false);
+        captureWrite(STREAM_D, captor, 0, false);
         int dWritten = captor.getValue().readableBytes();
         min = Math.min(min, dWritten);
         max = Math.max(max, dWritten);
@@ -542,29 +599,29 @@ public class DefaultHttp2OutboundFlowControllerTest {
         setPriority(STREAM_D, 0, DEFAULT_PRIORITY_WEIGHT, false);
 
         // Send a bunch of data on each stream.
-        send(STREAM_A, dummyData(400));
-        send(STREAM_B, dummyData(500));
-        send(STREAM_C, dummyData(0));
-        send(STREAM_D, dummyData(700));
+        send(STREAM_A, dummyData(400, 0), 0);
+        send(STREAM_B, dummyData(500, 0), 0);
+        send(STREAM_C, dummyData(0, 0), 0);
+        send(STREAM_D, dummyData(700, 0), 0);
         verifyNoWrite(STREAM_A);
         verifyNoWrite(STREAM_B);
         verifyNoWrite(STREAM_D);
 
         // The write will occur on C, because it's an empty frame.
         ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
-        captureWrite(STREAM_C, captor, false);
+        captureWrite(STREAM_C, captor, 0, false);
         assertEquals(0, captor.getValue().readableBytes());
 
         // Allow 1000 bytes to be sent.
         controller.updateOutboundWindowSize(CONNECTION_STREAM_ID, 999);
 
-        captureWrite(STREAM_A, captor, false);
+        captureWrite(STREAM_A, captor, 0, false);
         int aWritten = captor.getValue().readableBytes();
 
-        captureWrite(STREAM_B, captor, false);
+        captureWrite(STREAM_B, captor, 0, false);
         int bWritten = captor.getValue().readableBytes();
 
-        captureWrite(STREAM_D, captor, false);
+        captureWrite(STREAM_D, captor, 0, false);
         int dWritten = captor.getValue().readableBytes();
 
         assertEquals(999, aWritten + bWritten + dWritten);
@@ -601,10 +658,10 @@ public class DefaultHttp2OutboundFlowControllerTest {
         streamSizes.put(STREAM_B, 500);
         streamSizes.put(STREAM_C, 600);
         streamSizes.put(STREAM_D, 700);
-        send(STREAM_A, dummyData(streamSizes.get(STREAM_A)));
-        send(STREAM_B, dummyData(streamSizes.get(STREAM_B)));
-        send(STREAM_C, dummyData(streamSizes.get(STREAM_C)));
-        send(STREAM_D, dummyData(streamSizes.get(STREAM_D)));
+        send(STREAM_A, dummyData(streamSizes.get(STREAM_A), 0), 0);
+        send(STREAM_B, dummyData(streamSizes.get(STREAM_B), 0), 0);
+        send(STREAM_C, dummyData(streamSizes.get(STREAM_C), 0), 0);
+        send(STREAM_D, dummyData(streamSizes.get(STREAM_D), 0), 0);
         verifyNoWrite(STREAM_A);
         verifyNoWrite(STREAM_B);
         verifyNoWrite(STREAM_C);
@@ -666,10 +723,10 @@ public class DefaultHttp2OutboundFlowControllerTest {
         streamSizes.put(STREAM_B, 500);
         streamSizes.put(STREAM_C, 600);
         streamSizes.put(STREAM_D, 700);
-        send(STREAM_A, dummyData(streamSizes.get(STREAM_A)));
-        send(STREAM_B, dummyData(streamSizes.get(STREAM_B)));
-        send(STREAM_C, dummyData(streamSizes.get(STREAM_C)));
-        send(STREAM_D, dummyData(streamSizes.get(STREAM_D)));
+        send(STREAM_A, dummyData(streamSizes.get(STREAM_A), 0), 0);
+        send(STREAM_B, dummyData(streamSizes.get(STREAM_B), 0), 0);
+        send(STREAM_C, dummyData(streamSizes.get(STREAM_C), 0), 0);
+        send(STREAM_D, dummyData(streamSizes.get(STREAM_D), 0), 0);
         verifyNoWrite(STREAM_A);
         verifyNoWrite(STREAM_B);
         verifyNoWrite(STREAM_C);
@@ -736,11 +793,11 @@ public class DefaultHttp2OutboundFlowControllerTest {
         streamSizes.put(STREAM_C, 600);
         streamSizes.put(STREAM_D, 700);
         streamSizes.put(STREAM_E, 900);
-        send(STREAM_A, dummyData(streamSizes.get(STREAM_A)));
-        send(STREAM_B, dummyData(streamSizes.get(STREAM_B)));
-        send(STREAM_C, dummyData(streamSizes.get(STREAM_C)));
-        send(STREAM_D, dummyData(streamSizes.get(STREAM_D)));
-        send(STREAM_E, dummyData(streamSizes.get(STREAM_E)));
+        send(STREAM_A, dummyData(streamSizes.get(STREAM_A), 0), 0);
+        send(STREAM_B, dummyData(streamSizes.get(STREAM_B), 0), 0);
+        send(STREAM_C, dummyData(streamSizes.get(STREAM_C), 0), 0);
+        send(STREAM_D, dummyData(streamSizes.get(STREAM_D), 0), 0);
+        send(STREAM_E, dummyData(streamSizes.get(STREAM_E), 0), 0);
         verifyNoWrite(STREAM_A);
         verifyNoWrite(STREAM_B);
         verifyNoWrite(STREAM_C);
@@ -802,10 +859,10 @@ public class DefaultHttp2OutboundFlowControllerTest {
         streamSizes.put(STREAM_B, 500);
         streamSizes.put(STREAM_C, 600);
         streamSizes.put(STREAM_D, 700);
-        send(STREAM_A, dummyData(streamSizes.get(STREAM_A)));
-        send(STREAM_B, dummyData(streamSizes.get(STREAM_B)));
-        send(STREAM_C, dummyData(streamSizes.get(STREAM_C)));
-        send(STREAM_D, dummyData(streamSizes.get(STREAM_D)));
+        send(STREAM_A, dummyData(streamSizes.get(STREAM_A), 0), 0);
+        send(STREAM_B, dummyData(streamSizes.get(STREAM_B), 0), 0);
+        send(STREAM_C, dummyData(streamSizes.get(STREAM_C), 0), 0);
+        send(STREAM_D, dummyData(streamSizes.get(STREAM_D), 0), 0);
         verifyNoWrite(STREAM_A);
         verifyNoWrite(STREAM_B);
         verifyNoWrite(STREAM_C);
@@ -844,12 +901,12 @@ public class DefaultHttp2OutboundFlowControllerTest {
         return sum;
     }
 
-    private void send(int streamId, ByteBuf data) throws Http2Exception {
-        controller.writeData(ctx, streamId, data, 0, false, promise);
+    private void send(int streamId, ByteBuf data, int padding) throws Http2Exception {
+        controller.writeData(ctx, streamId, data, padding, false, promise);
     }
 
-    private void verifyWrite(int streamId, ByteBuf data) {
-        verify(frameWriter).writeData(eq(ctx), eq(streamId), eq(data), eq(0), eq(false), eq(promise));
+    private void verifyWrite(int streamId, ByteBuf data, int padding) {
+        verify(frameWriter).writeData(eq(ctx), eq(streamId), eq(data), eq(padding), eq(false), eq(promise));
     }
 
     private void verifyNoWrite(int streamId) {
@@ -857,20 +914,22 @@ public class DefaultHttp2OutboundFlowControllerTest {
                         eq(promise));
     }
 
-    private void captureWrite(int streamId, ArgumentCaptor<ByteBuf> captor, boolean endStream) {
-        verify(frameWriter).writeData(eq(ctx), eq(streamId), captor.capture(), eq(0), eq(endStream), eq(promise));
+    private void captureWrite(int streamId, ArgumentCaptor<ByteBuf> captor, int padding,
+            boolean endStream) {
+        verify(frameWriter).writeData(eq(ctx), eq(streamId), captor.capture(), eq(padding), eq(endStream), eq(promise));
     }
 
     private void setPriority(int stream, int parent, int weight, boolean exclusive) throws Http2Exception {
         connection.stream(stream).setPriority(parent, (short) weight, exclusive);
     }
 
-    private static ByteBuf dummyData(int size) {
+    private static ByteBuf dummyData(int size, int padding) {
         String repeatedData = "0123456789";
-        ByteBuf buffer = Unpooled.buffer(size);
+        ByteBuf buffer = Unpooled.buffer(size + padding);
         for (int index = 0; index < size; ++index) {
             buffer.writeByte(repeatedData.charAt(index % repeatedData.length()));
         }
+        buffer.writeZero(padding);
         return buffer;
     }
 }

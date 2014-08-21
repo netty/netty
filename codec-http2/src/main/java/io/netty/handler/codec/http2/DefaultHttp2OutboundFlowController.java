@@ -28,10 +28,14 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Queue;
 
-import static io.netty.handler.codec.http2.Http2CodecUtil.*;
-import static io.netty.handler.codec.http2.Http2Error.*;
-import static io.netty.handler.codec.http2.Http2Exception.*;
-import static java.lang.Math.*;
+import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
+import static io.netty.handler.codec.http2.Http2Error.FLOW_CONTROL_ERROR;
+import static io.netty.handler.codec.http2.Http2Error.STREAM_CLOSED;
+import static io.netty.handler.codec.http2.Http2Exception.format;
+import static io.netty.handler.codec.http2.Http2Exception.protocolError;
+import static java.lang.Math.max;
+import static java.lang.Math.min;
 
 /**
  * Basic implementation of {@link Http2OutboundFlowController}.
@@ -178,7 +182,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
             int window = state.writableWindow();
 
             OutboundFlowState.Frame frame = state.newFrame(ctx, promise, data, padding, endStream);
-            if (window >= data.readableBytes()) {
+            if (window >= frame.size()) {
                 // Window size is large enough to send entire data frame
                 frame.write();
                 ctx.flush();
@@ -561,8 +565,11 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
                 promiseAggregator.add(promise);
             }
 
+            /**
+             * Gets the total size (in bytes) of this frame including the data and padding.
+             */
             int size() {
-                return data.readableBytes();
+                return data.readableBytes() + padding;
             }
 
             void enqueue() {
@@ -571,7 +578,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
                     pendingWriteQueue.offer(this);
 
                     // Increment the number of pending bytes for this stream.
-                    incrementPendingBytes(data.readableBytes());
+                    incrementPendingBytes(size());
                 }
             }
 
@@ -599,13 +606,13 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
                 // Using a do/while loop because if the buffer is empty we still need to call
                 // the writer once to send the empty frame.
                 do {
-                    int bytesToWrite = data.readableBytes();
+                    int bytesToWrite = size();
                     int frameBytes = Math.min(bytesToWrite, frameWriter.maxFrameSize());
                     if (frameBytes == bytesToWrite) {
                         // All the bytes fit into a single HTTP/2 frame, just send it all.
                         connectionState().incrementStreamWindow(-bytesToWrite);
                         incrementStreamWindow(-bytesToWrite);
-                        ByteBuf slice = data.readSlice(bytesToWrite);
+                        ByteBuf slice = data.readSlice(data.readableBytes());
                         frameWriter.writeData(ctx, stream.id(), slice, padding, endStream, promise);
                         decrementPendingBytes(bytesToWrite);
                         return;
@@ -622,26 +629,34 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
              * removed from this branch of the priority tree.
              */
             void writeError(Http2Exception cause) {
-                decrementPendingBytes(data.readableBytes());
+                decrementPendingBytes(size());
                 data.release();
                 promise.setFailure(cause);
             }
 
             /**
-             * Creates a new frame that is a view of this frame's data buffer starting at the current read index with
-             * the given number of bytes. The reader index on the input frame is then advanced by the number of bytes.
-             * The returned frame will not have end-of-stream set and it will not be automatically placed in the pending
-             * queue.
+             * Creates a new frame that is a view of this frame's data. The {@code maxBytes} are
+             * first split from the data buffer. If not all the requested bytes are available, the
+             * remaining bytes are then split from the padding (if available).
              *
              * @param maxBytes
              *            the maximum number of bytes that is allowed in the created frame.
              * @return the partial frame.
              */
             Frame split(int maxBytes) {
-                // TODO: Should padding be included in the chunks or only the last frame?
-                maxBytes = min(maxBytes, data.readableBytes());
-                Frame frame = new Frame(ctx, promiseAggregator, data.readSlice(maxBytes).retain(), 0, false);
-                decrementPendingBytes(maxBytes);
+                // TODO: Should padding be spread across chunks or only at the end?
+
+                // Get the portion of the data buffer to be split. Limit to the readable bytes.
+                int dataSplit = min(maxBytes, data.readableBytes());
+
+                // Split any remaining bytes from the padding.
+                int paddingSplit = min(maxBytes - dataSplit, padding);
+
+                ByteBuf splitSlice = data.readSlice(dataSplit).retain();
+                Frame frame = new Frame(ctx, promiseAggregator, splitSlice, paddingSplit, false);
+
+                int totalBytesSplit = dataSplit + paddingSplit;
+                decrementPendingBytes(totalBytesSplit);
                 return frame;
             }
 

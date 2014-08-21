@@ -24,6 +24,7 @@ public interface Http2InboundFlowController {
 
     /**
      * A writer of window update frames.
+     * TODO: Use Http2FrameWriter instead.
      */
     interface FrameWriter {
 
