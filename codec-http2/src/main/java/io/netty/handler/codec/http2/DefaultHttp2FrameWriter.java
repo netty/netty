@@ -122,7 +122,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
 
             // Write the required padding.
             out.writeZero(padding);
-            return ctx.writeAndFlush(out, promise);
+            return ctx.write(out, promise);
         } catch (RuntimeException e) {
             return promise.setFailure(e);
         } finally {
@@ -161,7 +161,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
 
             // Adjust the weight so that it fits into a single byte on the wire.
             frame.writeByte(weight - 1);
-            return ctx.writeAndFlush(frame, promise);
+            return ctx.write(frame, promise);
         } catch (RuntimeException e) {
             return promise.setFailure(e);
         }
@@ -178,7 +178,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
             writeFrameHeader(frame, INT_FIELD_LENGTH, RST_STREAM, new Http2Flags(),
                     streamId);
             writeUnsignedInt(errorCode, frame);
-            return ctx.writeAndFlush(frame, promise);
+            return ctx.write(frame, promise);
         } catch (RuntimeException e) {
             return promise.setFailure(e);
         }
@@ -198,7 +198,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
                 writeUnsignedShort(entry.key(), frame);
                 writeUnsignedInt(entry.value(), frame);
             }
-            return ctx.writeAndFlush(frame, promise);
+            return ctx.write(frame, promise);
         } catch (RuntimeException e) {
             return promise.setFailure(e);
         }
@@ -209,7 +209,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
         try {
             ByteBuf frame = ctx.alloc().buffer(FRAME_HEADER_LENGTH);
             writeFrameHeader(frame, 0, SETTINGS, new Http2Flags().ack(true), 0);
-            return ctx.writeAndFlush(frame, promise);
+            return ctx.write(frame, promise);
         } catch (RuntimeException e) {
             return promise.setFailure(e);
         }
@@ -225,7 +225,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
 
             // Write the debug data.
             frame.writeBytes(data, data.readerIndex(), data.readableBytes());
-            return ctx.writeAndFlush(frame, promise);
+            return ctx.write(frame, promise);
         } catch (RuntimeException e) {
             return promise.setFailure(e);
         } finally {
@@ -273,7 +273,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
             firstFrame.writeZero(padding);
 
             if (headerBlock.readableBytes() == 0) {
-                return ctx.writeAndFlush(firstFrame, promise);
+                return ctx.write(firstFrame, promise);
             }
 
             // Create a composite buffer wrapping the first frame and any continuation frames.
@@ -300,7 +300,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
             frame.writeInt(lastStreamId);
             writeUnsignedInt(errorCode, frame);
             frame.writeBytes(debugData, debugData.readerIndex(), debugData.readableBytes());
-            return ctx.writeAndFlush(frame, promise);
+            return ctx.write(frame, promise);
         } catch (RuntimeException e) {
             return promise.setFailure(e);
         } finally {
@@ -319,7 +319,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
             writeFrameHeader(frame, INT_FIELD_LENGTH, WINDOW_UPDATE,
                     new Http2Flags(), streamId);
             frame.writeInt(windowSizeIncrement);
-            return ctx.writeAndFlush(frame, promise);
+            return ctx.write(frame, promise);
         } catch (RuntimeException e) {
             return promise.setFailure(e);
         }
@@ -333,7 +333,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
             ByteBuf frame = ctx.alloc().buffer(FRAME_HEADER_LENGTH + payload.readableBytes());
             writeFrameHeader(frame, payload.readableBytes(), frameType, flags, streamId);
             frame.writeBytes(payload);
-            return ctx.writeAndFlush(frame, promise);
+            return ctx.write(frame, promise);
         } catch (RuntimeException e) {
             return promise.setFailure(e);
         }
@@ -392,7 +392,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
             firstFrame.writeZero(padding);
 
             if (flags.endOfHeaders()) {
-                return ctx.writeAndFlush(firstFrame, promise);
+                return ctx.write(firstFrame, promise);
             }
 
             // Create a composite buffer wrapping the first frame and any continuation frames.
@@ -425,7 +425,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
         }
 
         out.writerIndex(numBytes);
-        return ctx.writeAndFlush(out, promise);
+        return ctx.write(out, promise);
     }
 
     /**

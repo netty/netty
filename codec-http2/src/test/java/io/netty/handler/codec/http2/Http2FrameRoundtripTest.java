@@ -120,6 +120,7 @@ public class Http2FrameRoundtripTest {
             public void run() {
                 frameWriter.writeData(ctx(), newPromise(), 0x7FFFFFFF,
                         Unpooled.copiedBuffer(text.getBytes()), 100, true);
+                ctx().flush();
             }
         });
         awaitRequests();
@@ -136,6 +137,7 @@ public class Http2FrameRoundtripTest {
             @Override
             public void run() {
                 frameWriter.writeHeaders(ctx(), newPromise(), 0x7FFFFFFF, headers, 0, true);
+                ctx().flush();
             }
         });
         awaitRequests();
@@ -153,6 +155,7 @@ public class Http2FrameRoundtripTest {
             public void run() {
                 frameWriter.writeHeaders(ctx(), newPromise(), 0x7FFFFFFF, headers, 4, (short) 255,
                         true, 0, true);
+                ctx().flush();
             }
         });
         awaitRequests();
@@ -168,6 +171,7 @@ public class Http2FrameRoundtripTest {
             public void run() {
                 frameWriter.writeGoAway(ctx(), newPromise(), 0x7FFFFFFF, 0xFFFFFFFFL,
                         Unpooled.copiedBuffer(text.getBytes()));
+                ctx().flush();
             }
         });
         awaitRequests();
@@ -182,6 +186,7 @@ public class Http2FrameRoundtripTest {
             @Override
             public void run() {
                 frameWriter.writePing(ctx(), ctx().newPromise(), true, buf);
+                ctx().flush();
             }
         });
         awaitRequests();
@@ -195,6 +200,7 @@ public class Http2FrameRoundtripTest {
             @Override
             public void run() {
                 frameWriter.writePriority(ctx(), newPromise(), 0x7FFFFFFF, 1, (short) 1, true);
+                ctx().flush();
             }
         });
         awaitRequests();
@@ -211,6 +217,7 @@ public class Http2FrameRoundtripTest {
             @Override
             public void run() {
                 frameWriter.writePushPromise(ctx(), newPromise(), 0x7FFFFFFF, 1, headers, 5);
+                ctx().flush();
             }
         });
         awaitRequests();
@@ -224,6 +231,7 @@ public class Http2FrameRoundtripTest {
             @Override
             public void run() {
                 frameWriter.writeRstStream(ctx(), newPromise(), 0x7FFFFFFF, 0xFFFFFFFFL);
+                ctx().flush();
             }
         });
         awaitRequests();
@@ -241,6 +249,7 @@ public class Http2FrameRoundtripTest {
             @Override
             public void run() {
                 frameWriter.writeSettings(ctx(), newPromise(), settings);
+                ctx().flush();
             }
         });
         awaitRequests();
@@ -253,6 +262,7 @@ public class Http2FrameRoundtripTest {
             @Override
             public void run() {
                 frameWriter.writeWindowUpdate(ctx(), newPromise(), 0x7FFFFFFF, 0x7FFFFFFF);
+                ctx().flush();
             }
         });
         awaitRequests();
@@ -277,6 +287,7 @@ public class Http2FrameRoundtripTest {
                             0, false);
                     frameWriter.writeData(ctx(), newPromise(), i,
                             Unpooled.copiedBuffer(text.getBytes()), 0, true);
+                    ctx().flush();
                 }
             }
         });

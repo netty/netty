@@ -457,8 +457,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
     @Test
     public void dataWriteShouldSucceed() throws Exception {
         handler.writeData(ctx, promise, STREAM_ID, dummyData(), 0, false);
-        verify(outboundFlow).sendFlowControlled(eq(STREAM_ID), eq(dummyData()), eq(0),
-                eq(false), any(Http2OutboundFlowController.FrameWriter.class));
+        verify(outboundFlow).writeData(eq(ctx), eq(promise), eq(STREAM_ID), eq(dummyData()), eq(0), eq(false));
     }
 
     @Test

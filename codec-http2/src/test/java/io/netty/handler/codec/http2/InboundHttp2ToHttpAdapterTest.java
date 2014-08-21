@@ -146,6 +146,7 @@ public class InboundHttp2ToHttpAdapterTest {
             @Override
             public void run() {
                 frameWriter.writeHeaders(ctx(), newPromise(), 3, http2Headers, 0, true);
+                ctx().flush();
             }
         });
         awaitRequests();
@@ -171,6 +172,7 @@ public class InboundHttp2ToHttpAdapterTest {
                 frameWriter.writeHeaders(ctx(), newPromise(), 3, http2Headers, 0, false);
                 frameWriter.writeData(ctx(), newPromise(), 3,
                     Unpooled.copiedBuffer(text.getBytes()), 0, true);
+                ctx().flush();
             }
         });
         awaitRequests();
@@ -204,6 +206,7 @@ public class InboundHttp2ToHttpAdapterTest {
                     Unpooled.copiedBuffer(text.getBytes()), 0, false);
                 frameWriter.writeData(ctx(), newPromise(), 3,
                     Unpooled.copiedBuffer(text2.getBytes()), 0, true);
+                ctx().flush();
             }
         });
         awaitRequests();
@@ -239,6 +242,7 @@ public class InboundHttp2ToHttpAdapterTest {
                     Unpooled.copiedBuffer(text.getBytes()), 0, false);
                 frameWriter.writeData(ctx(), newPromise(), 3,
                     Unpooled.copiedBuffer(text.getBytes()), 0, true);
+                ctx().flush();
             }
         });
         awaitRequests();
@@ -276,6 +280,7 @@ public class InboundHttp2ToHttpAdapterTest {
                 frameWriter.writeHeaders(ctx(), newPromise(), 3, http2Headers2, 0, false);
                 frameWriter.writeData(ctx(), newPromise(), 3,
                     Unpooled.copiedBuffer(text.getBytes()), 0, true);
+                ctx().flush();
             }
         });
         awaitRequests();
@@ -313,6 +318,7 @@ public class InboundHttp2ToHttpAdapterTest {
                 frameWriter.writeData(ctx(), newPromise(), 3,
                     Unpooled.copiedBuffer(text.getBytes()), 0, false);
                 frameWriter.writeHeaders(ctx(), newPromise(), 3, http2Headers2, 0, true);
+                ctx().flush();
             }
         });
         awaitRequests();
@@ -359,6 +365,7 @@ public class InboundHttp2ToHttpAdapterTest {
                     Unpooled.copiedBuffer(text.getBytes()), 0, true);
                 frameWriter.writeData(ctx(), newPromise(), 5,
                     Unpooled.copiedBuffer(text2.getBytes()), 0, true);
+                ctx().flush();
             }
         });
         awaitRequests();
@@ -406,6 +413,7 @@ public class InboundHttp2ToHttpAdapterTest {
                     Unpooled.copiedBuffer(text.getBytes()), 0, true);
                 frameWriter.writeData(ctx(), newPromise(), 5,
                     Unpooled.copiedBuffer(text2.getBytes()), 0, true);
+                ctx().flush();
             }
         });
         awaitRequests();

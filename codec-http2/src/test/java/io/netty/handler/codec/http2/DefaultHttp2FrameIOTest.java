@@ -330,7 +330,7 @@ public class DefaultHttp2FrameIOTest {
 
     private ByteBuf captureWrite() {
         ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
-        verify(ctx).writeAndFlush(captor.capture(), eq(promise));
+        verify(ctx).write(captor.capture(), eq(promise));
         return captor.getValue();
     }
 
