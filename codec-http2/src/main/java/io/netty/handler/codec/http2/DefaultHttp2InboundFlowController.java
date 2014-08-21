@@ -68,7 +68,7 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
     public void applyInboundFlowControl(int streamId, ByteBuf data, int padding,
             boolean endOfStream, FrameWriter frameWriter)
             throws Http2Exception {
-        int dataLength = data.readableBytes();
+        int dataLength = data.readableBytes() + padding;
         applyConnectionFlowControl(dataLength, frameWriter);
         applyStreamFlowControl(streamId, dataLength, endOfStream, frameWriter);
     }

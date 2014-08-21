@@ -59,13 +59,14 @@ public class DefaultHttp2InboundFlowControllerTest {
 
     @Test
     public void dataFrameShouldBeAccepted() throws Http2Exception {
-        applyFlowControl(10, false);
+        applyFlowControl(10, 0, false);
         verifyWindowUpdateNotSent();
     }
 
     @Test(expected = Http2Exception.class)
     public void connectionFlowControlExceededShouldThrow() throws Http2Exception {
-        applyFlowControl(DEFAULT_WINDOW_SIZE + 1, true);
+        // Window exceeded because of the padding.
+        applyFlowControl(DEFAULT_WINDOW_SIZE, 1, true);
     }
 
     @Test
@@ -75,7 +76,7 @@ public class DefaultHttp2InboundFlowControllerTest {
         int windowDelta = DEFAULT_WINDOW_SIZE - newWindow;
 
         // Set end-of-stream on the frame, so no window update will be sent for the stream.
-        applyFlowControl(dataSize, true);
+        applyFlowControl(dataSize, 0, true);
         verify(frameWriter).writeFrame(eq(CONNECTION_STREAM_ID), eq(windowDelta));
     }
 
@@ -86,7 +87,7 @@ public class DefaultHttp2InboundFlowControllerTest {
         int windowDelta = getWindowDelta(initialWindowSize, initialWindowSize, dataSize);
 
         // Don't set end-of-stream so we'll get a window update for the stream as well.
-        applyFlowControl(dataSize, false);
+        applyFlowControl(dataSize, 0, false);
         verify(frameWriter).writeFrame(eq(CONNECTION_STREAM_ID), eq(windowDelta));
         verify(frameWriter).writeFrame(eq(STREAM_ID), eq(windowDelta));
     }
@@ -95,7 +96,7 @@ public class DefaultHttp2InboundFlowControllerTest {
     public void initialWindowUpdateShouldAllowMoreFrames() throws Http2Exception {
         // Send a frame that takes up the entire window.
         int initialWindowSize = DEFAULT_WINDOW_SIZE;
-        applyFlowControl(initialWindowSize, false);
+        applyFlowControl(initialWindowSize, 0, false);
 
         // Update the initial window size to allow another frame.
         int newInitialWindowSize = 2 * initialWindowSize;
@@ -105,7 +106,7 @@ public class DefaultHttp2InboundFlowControllerTest {
         reset(frameWriter);
 
         // Send the next frame and verify that the expected window updates were sent.
-        applyFlowControl(initialWindowSize, false);
+        applyFlowControl(initialWindowSize, 0, false);
         int delta = newInitialWindowSize - initialWindowSize;
         verify(frameWriter).writeFrame(eq(CONNECTION_STREAM_ID), eq(delta));
         verify(frameWriter).writeFrame(eq(STREAM_ID), eq(delta));
@@ -116,9 +117,9 @@ public class DefaultHttp2InboundFlowControllerTest {
         return initialSize - newWindowSize;
     }
 
-    private void applyFlowControl(int dataSize, boolean endOfStream) throws Http2Exception {
+    private void applyFlowControl(int dataSize, int padding, boolean endOfStream) throws Http2Exception {
         ByteBuf buf = dummyData(dataSize);
-        controller.applyInboundFlowControl(STREAM_ID, buf, 0, endOfStream, frameWriter);
+        controller.applyInboundFlowControl(STREAM_ID, buf, padding, endOfStream, frameWriter);
         buf.release();
     }
 
