@@ -25,7 +25,7 @@ import io.netty.channel.ChannelPromise;
 public interface Http2DataWriter {
 
     /**
-     * Writes a DATA frame to the remote endpoint.
+     * Writes a {@code DATA} frame to the remote endpoint.
      *
      * @param ctx the context to use for writing.
      * @param streamId the stream for which to send the frame.

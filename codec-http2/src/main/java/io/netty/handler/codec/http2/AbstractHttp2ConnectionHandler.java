@@ -442,7 +442,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
     }
 
     /**
-     * Writes (and flushes) the a RST_STREAM frame to the remote endpoint.
+     * Writes (and flushes) the a {@code RST_STREAM} frame to the remote endpoint.
      */
     public ChannelFuture writeRstStream(ChannelHandlerContext ctx, int streamId, long errorCode,
             ChannelPromise promise) {
@@ -487,7 +487,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
     }
 
     /**
-     * Writes (and flushes) the given PING frame to the remote endpoint.
+     * Writes (and flushes) the given {@code PING} frame to the remote endpoint.
      */
     public ChannelFuture writePing(ChannelHandlerContext ctx, ByteBuf data, ChannelPromise promise) {
         try {
@@ -505,7 +505,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
     }
 
     /**
-     * Writes (and flushes) the given PUSH_PROMISE to the remote endpoint.
+     * Writes (and flushes) the given {@code PUSH_PROMISE} to the remote endpoint.
      */
     public ChannelFuture writePushPromise(ChannelHandlerContext ctx, int streamId,
             int promisedStreamId, Http2Headers headers, int padding, ChannelPromise promise) {
