@@ -37,6 +37,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 /**
  * Abstract base class for {@link EventExecutor}'s that execute all its submitted tasks in a single thread.
@@ -61,8 +62,7 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
     };
 
     private static final AtomicIntegerFieldUpdater<SingleThreadEventExecutor> STATE_UPDATER;
-
-    private static final long threadOffset;
+    private static final AtomicReferenceFieldUpdater<SingleThreadEventExecutor, Thread> THREAD_UPDATER;
 
     static {
         AtomicIntegerFieldUpdater<SingleThreadEventExecutor> updater =
@@ -72,12 +72,13 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
         }
         STATE_UPDATER = updater;
 
-        try {
-            threadOffset =
-                    PlatformDependent.objectFieldOffset(SingleThreadEventExecutor.class.getDeclaredField("thread"));
-        } catch (NoSuchFieldException e) {
-            throw new RuntimeException();
+        AtomicReferenceFieldUpdater<SingleThreadEventExecutor, Thread> refUpdater =
+                PlatformDependent.newAtomicReferenceFieldUpdater(SingleThreadEventExecutor.class, "thread");
+        if (refUpdater == null) {
+            refUpdater = AtomicReferenceFieldUpdater.newUpdater(
+                    SingleThreadEventExecutor.class, Thread.class, "thread");
         }
+        THREAD_UPDATER = refUpdater;
     }
 
     private final Queue<Runnable> taskQueue;
@@ -103,7 +104,7 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
 
     private boolean firstRun = true;
 
-    private final Runnable AS_RUNNABLE = new Runnable() {
+    private final Runnable asRunnable = new Runnable() {
         @Override
         public void run() {
             updateThread(Thread.currentThread());
@@ -877,11 +878,11 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
 
     protected final void scheduleExecution() {
         updateThread(null);
-        executor.execute(AS_RUNNABLE);
+        executor.execute(asRunnable);
     }
 
     private void updateThread(Thread t) {
-        PlatformDependent.putOrderedObject(this, threadOffset, t);
+        THREAD_UPDATER.lazySet(this, t);
     }
 
     private final class PurgeTask implements Runnable {
@@ -911,7 +912,7 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
         }
 
         @Override
-        public Callable unwrap() {
+        public Callable<Void> unwrap() {
             return null;
         }
 
