@@ -64,11 +64,6 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
         periodNanos = 0;
     }
 
-    @Override
-    protected EventExecutor executor() {
-        return executor;
-    }
-
     public long deadlineNanos() {
         return deadlineNanos;
     }
@@ -174,8 +169,8 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
      */
     private boolean needsLaterExecution() {
         return task instanceof CallableEventExecutorAdapter &&
-                ((CallableEventExecutorAdapter) task).executor() instanceof PausableEventExecutor &&
-                !((PausableEventExecutor) ((CallableEventExecutorAdapter) task).executor()).isAcceptingNewTasks();
+                ((CallableEventExecutorAdapter<?>) task).executor() instanceof PausableEventExecutor &&
+                !((PausableEventExecutor) ((CallableEventExecutorAdapter<?>) task).executor()).isAcceptingNewTasks();
     }
 
     /**
@@ -185,11 +180,11 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
     private boolean isMigrationPending() {
         return !isCancelled() &&
                 task instanceof CallableEventExecutorAdapter &&
-                executor() != ((CallableEventExecutorAdapter) task).executor().unwrap();
+                executor() != ((CallableEventExecutorAdapter<?>) task).executor().unwrap();
     }
 
     private void scheduleWithNewExecutor() {
-        EventExecutor newExecutor = ((CallableEventExecutorAdapter) task).executor().unwrap();
+        EventExecutor newExecutor = ((CallableEventExecutorAdapter<?>) task).executor().unwrap();
 
         if (newExecutor instanceof SingleThreadEventExecutor) {
             if (!newExecutor.isShutdown()) {

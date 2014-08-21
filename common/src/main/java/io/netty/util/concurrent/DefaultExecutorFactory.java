@@ -49,7 +49,7 @@ public final class DefaultExecutorFactory implements ExecutorFactory {
             InternalLoggerFactory.getInstance(DefaultExecutorFactory.class);
 
     private static final AtomicInteger executorId = new AtomicInteger();
-    private String namePrefix;
+    private final String namePrefix;
 
     /**
      * @param clazzNamePrefix   the name of the class will be used to prefix the name of each
@@ -69,7 +69,7 @@ public final class DefaultExecutorFactory implements ExecutorFactory {
     @Override
     public Executor newExecutor(int parallelism) {
         ForkJoinWorkerThreadFactory threadFactory =
-                new DefaultForkJoinWorkerThreadFactory(namePrefix + "-" + executorId.getAndIncrement());
+                new DefaultForkJoinWorkerThreadFactory(namePrefix + '-' + executorId.getAndIncrement());
 
         return new ForkJoinPool(parallelism, threadFactory, DefaultUncaughtExceptionHandler.INSTANCE, true);
     }
@@ -119,7 +119,7 @@ public final class DefaultExecutorFactory implements ExecutorFactory {
         public ForkJoinWorkerThread newThread(ForkJoinPool pool) {
             // Note: The ForkJoinPool will create these threads as daemon threads.
             ForkJoinWorkerThread thread = new DefaultForkJoinWorkerThread(pool);
-            thread.setName(namePrefix + "-" + idx.getAndIncrement());
+            thread.setName(namePrefix + '-' + idx.getAndIncrement());
             thread.setPriority(Thread.MAX_PRIORITY);
             return thread;
         }

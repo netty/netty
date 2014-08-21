@@ -820,15 +820,15 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
         if (command instanceof RunnableEventExecutorAdapter) {
             return new RunnableToCallableAdapter((RunnableEventExecutorAdapter) command);
         } else {
-            return Executors.<Void>callable(command, null);
+            return Executors.callable(command, null);
         }
     }
 
     protected void cleanupAndTerminate(boolean success) {
         for (;;) {
-            int oldState = STATE_UPDATER.get(SingleThreadEventExecutor.this);
+            int oldState = STATE_UPDATER.get(this);
             if (oldState >= ST_SHUTTING_DOWN || STATE_UPDATER.compareAndSet(
-                    SingleThreadEventExecutor.this, oldState, ST_SHUTTING_DOWN)) {
+                    this, oldState, ST_SHUTTING_DOWN)) {
                 break;
             }
         }
@@ -851,7 +851,7 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
             try {
                 cleanup();
             } finally {
-                STATE_UPDATER.set(SingleThreadEventExecutor.this, ST_TERMINATED);
+                STATE_UPDATER.set(this, ST_TERMINATED);
                 threadLock.release();
                 if (!taskQueue.isEmpty()) {
                     logger.warn(
