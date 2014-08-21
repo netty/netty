@@ -16,6 +16,10 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelPromiseAggregator;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -57,13 +61,19 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
     };
 
     private final Http2Connection connection;
+    private final Http2FrameWriter frameWriter;
     private int initialWindowSize = DEFAULT_WINDOW_SIZE;
+    private ChannelHandlerContext ctx;
 
-    public DefaultHttp2OutboundFlowController(Http2Connection connection) {
+    public DefaultHttp2OutboundFlowController(Http2Connection connection, Http2FrameWriter frameWriter) {
         if (connection == null) {
             throw new NullPointerException("connection");
         }
+        if (frameWriter == null) {
+            throw new NullPointerException("frameWriter");
+        }
         this.connection = connection;
+        this.frameWriter = frameWriter;
 
         // Add a flow state for the connection.
         connection.connectionStream().outboundFlow(
@@ -144,36 +154,53 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
             OutboundFlowState state = stateOrFail(streamId);
             state.incrementStreamWindow(delta);
             state.writeBytes(state.writableWindow());
+            flush();
         }
     }
 
     @Override
-    public void sendFlowControlled(int streamId, ByteBuf data, int padding, boolean endStream,
-            FrameWriter frameWriter) throws Http2Exception {
-        OutboundFlowState state = stateOrFail(streamId);
-        OutboundFlowState.Frame frame =
-                state.newFrame(data, padding, endStream, frameWriter);
-
-        // Limit the window for this write by the maximum frame size.
-        int window = state.writableWindow();
-
-        int dataLength = data.readableBytes();
-        if (window >= dataLength) {
-            // Window size is large enough to send entire data frame
-            frame.write();
-            return;
+    public ChannelFuture writeData(ChannelHandlerContext ctx, int streamId, ByteBuf data,
+            int padding, boolean endStream, ChannelPromise promise) {
+        if (ctx == null) {
+            throw new NullPointerException("ctx");
+        }
+        if (promise == null) {
+            throw new NullPointerException("promise");
+        }
+        if (data == null) {
+            throw new NullPointerException("data");
         }
 
-        // Enqueue the frame to be written when the window size permits.
-        frame.enqueue();
+        // Save the context. We'll use this later when we write pending bytes.
+        this.ctx = ctx;
 
-        if (window <= 0) {
-            // Stream is stalled, don't send anything now.
-            return;
+        try {
+            OutboundFlowState state = stateOrFail(streamId);
+            int window = state.writableWindow();
+
+            OutboundFlowState.Frame frame = state.newFrame(ctx, promise, data, padding, endStream);
+            if (window >= data.readableBytes()) {
+                // Window size is large enough to send entire data frame
+                frame.write();
+                ctx.flush();
+                return promise;
+            }
+
+            // Enqueue the frame to be written when the window size permits.
+            frame.enqueue();
+
+            if (window <= 0) {
+                // Stream is stalled, don't send anything now.
+                return promise;
+            }
+
+            // Create and send a partial frame up to the window size.
+            frame.split(window).write();
+            ctx.flush();
+        } catch (Http2Exception e) {
+            promise.setFailure(e);
         }
-
-        // Create and send a partial frame up to the window size.
-        frame.split(window).write();
+        return promise;
     }
 
     private static OutboundFlowState state(Http2Stream stream) {
@@ -208,6 +235,15 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
     }
 
     /**
+     * Flushes the {@link ChannelHandlerContext} if we've received any data frames.
+     */
+    private void flush() {
+        if (ctx != null) {
+            ctx.flush();
+        }
+    }
+
+    /**
      * Resets the priority bytes for the given subtree following a restructuring of the priority
      * tree.
      */
@@ -236,6 +272,10 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         Http2Stream connectionStream = connection.connectionStream();
         int totalAllowance = state(connectionStream).priorityBytes();
         writeAllowedBytes(connectionStream, totalAllowance);
+
+        // Optimization: only flush once for all written frames. If it's null, there are no
+        // data frames to send anyway.
+        flush();
     }
 
     /**
@@ -444,8 +484,9 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         /**
          * Creates a new frame with the given values but does not add it to the pending queue.
          */
-        Frame newFrame(ByteBuf data, int padding, boolean endStream, FrameWriter writer) {
-            return new Frame(data, padding, endStream, writer);
+        Frame newFrame(ChannelHandlerContext ctx, ChannelPromise promise, ByteBuf data,
+                int padding, boolean endStream) {
+            return new Frame(ctx, new ChannelPromiseAggregator(promise), data, padding, endStream);
         }
 
         /**
@@ -528,17 +569,24 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
          * A wrapper class around the content of a data frame.
          */
         private final class Frame {
-            private final ByteBuf data;
-            private final int padding;
-            private final boolean endStream;
-            private final FrameWriter writer;
-            private boolean enqueued;
+            final ByteBuf data;
+            final int padding;
+            final boolean endStream;
+            final ChannelHandlerContext ctx;
+            final ChannelPromiseAggregator promiseAggregator;
+            final ChannelPromise promise;
+            boolean enqueued;
 
-            Frame(ByteBuf data, int padding, boolean endStream, FrameWriter writer) {
+            Frame(ChannelHandlerContext ctx,
+                    ChannelPromiseAggregator promiseAggregator, ByteBuf data, int padding,
+                    boolean endStream) {
+                this.ctx = ctx;
                 this.data = data;
                 this.padding = padding;
                 this.endStream = endStream;
-                this.writer = writer;
+                this.promiseAggregator = promiseAggregator;
+                this.promise = ctx.newPromise();
+                promiseAggregator.add(promise);
             }
 
             int size() {
@@ -572,19 +620,21 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
              * Writes the frame and decrements the stream and connection window sizes. If the frame
              * is in the pending queue, the written bytes are removed from this branch of the
              * priority tree.
+             * <p>
+             * Note: this does not flush the {@link ChannelHandlerContext}.
              */
             void write() throws Http2Exception {
                 // Using a do/while loop because if the buffer is empty we still need to call
                 // the writer once to send the empty frame.
                 do {
                     int bytesToWrite = data.readableBytes();
-                    int frameBytes = Math.min(bytesToWrite, writer.maxFrameSize());
+                    int frameBytes = Math.min(bytesToWrite, frameWriter.maxFrameSize());
                     if (frameBytes == bytesToWrite) {
                         // All the bytes fit into a single HTTP/2 frame, just send it all.
                         connectionState().incrementStreamWindow(-bytesToWrite);
                         incrementStreamWindow(-bytesToWrite);
                         ByteBuf slice = data.readSlice(bytesToWrite);
-                        writer.writeFrame(stream.id(), slice, padding, endStream);
+                        frameWriter.writeData(ctx, stream.id(), slice, padding, endStream, promise);
                         decrementPendingBytes(bytesToWrite);
                         return;
                     }
@@ -602,7 +652,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
             void writeError(Http2Exception cause) {
                 decrementPendingBytes(data.readableBytes());
                 data.release();
-                writer.setFailure(cause);
+                promise.setFailure(cause);
             }
 
             /**
@@ -617,7 +667,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
             Frame split(int maxBytes) {
                 // TODO: Should padding be included in the chunks or only the last frame?
                 maxBytes = min(maxBytes, data.readableBytes());
-                Frame frame = new Frame(data.readSlice(maxBytes).retain(), 0, false, writer);
+                Frame frame = new Frame(ctx, promiseAggregator, data.readSlice(maxBytes).retain(), 0, false);
                 decrementPendingBytes(maxBytes);
                 return frame;
             }

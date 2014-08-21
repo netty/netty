@@ -15,21 +15,28 @@
 
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.http2.Http2OutboundFlowController.FrameWriter;
-import io.netty.util.CharsetUtil;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
 
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-
-import static io.netty.handler.codec.http2.Http2CodecUtil.*;
-import static io.netty.util.CharsetUtil.UTF_8;
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
 
 /**
  * Tests for {@link DefaultHttp2OutboundFlowController}.
@@ -46,7 +53,13 @@ public class DefaultHttp2OutboundFlowControllerTest {
     private ByteBuf buffer;
 
     @Mock
-    private FrameWriter frameWriter;
+    private Http2FrameWriter frameWriter;
+
+    @Mock
+    private ChannelHandlerContext ctx;
+
+    @Mock
+    private ChannelPromise promise;
 
     private DefaultHttp2Connection connection;
 
@@ -54,8 +67,10 @@ public class DefaultHttp2OutboundFlowControllerTest {
     public void setup() throws Http2Exception {
         MockitoAnnotations.initMocks(this);
 
+        when(ctx.newPromise()).thenReturn(promise);
+
         connection = new DefaultHttp2Connection(false);
-        controller = new DefaultHttp2OutboundFlowController(connection);
+        controller = new DefaultHttp2OutboundFlowController(connection, frameWriter);
 
         connection.local().createStream(STREAM_A, false);
         connection.local().createStream(STREAM_B, false);
@@ -159,8 +174,7 @@ public class DefaultHttp2OutboundFlowControllerTest {
     @Test
     public void connectionWindowUpdateShouldSendFrame() throws Http2Exception {
         // Set the connection window size to zero.
-        controller
-                .updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_WINDOW_SIZE);
+        controller.updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_WINDOW_SIZE);
 
         ByteBuf data = dummyData(10);
         send(STREAM_A, data.slice());
@@ -252,8 +266,7 @@ public class DefaultHttp2OutboundFlowControllerTest {
     @Test
     public void blockedStreamShouldSpreadDataToChildren() throws Http2Exception {
         // Block the connection
-        controller
-                .updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_WINDOW_SIZE);
+        controller.updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_WINDOW_SIZE);
 
         // Block stream A
         controller.updateOutboundWindowSize(STREAM_A, -DEFAULT_WINDOW_SIZE);
@@ -304,8 +317,7 @@ public class DefaultHttp2OutboundFlowControllerTest {
     @Test
     public void childrenShouldNotSendDataUntilParentBlocked() throws Http2Exception {
         // Block the connection
-        controller
-                .updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_WINDOW_SIZE);
+        controller.updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_WINDOW_SIZE);
 
         // Block stream B
         controller.updateOutboundWindowSize(STREAM_B, -DEFAULT_WINDOW_SIZE);
@@ -347,8 +359,7 @@ public class DefaultHttp2OutboundFlowControllerTest {
     @Test
     public void parentShouldWaterFallDataToChildren() throws Http2Exception {
         // Block the connection
-        controller
-                .updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_WINDOW_SIZE);
+        controller.updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_WINDOW_SIZE);
 
         // Block stream B
         controller.updateOutboundWindowSize(STREAM_B, -DEFAULT_WINDOW_SIZE);
@@ -409,8 +420,7 @@ public class DefaultHttp2OutboundFlowControllerTest {
     @Test
     public void reprioritizeShouldAdjustOutboundFlow() throws Http2Exception {
         // Block the connection
-        controller
-                .updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_WINDOW_SIZE);
+        controller.updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_WINDOW_SIZE);
 
         // Block stream B
         controller.updateOutboundWindowSize(STREAM_B, -DEFAULT_WINDOW_SIZE);
@@ -454,8 +464,7 @@ public class DefaultHttp2OutboundFlowControllerTest {
     @Test
     public void writeShouldPreferHighestWeight() throws Http2Exception {
         // Block the connection
-        controller
-                .updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_WINDOW_SIZE);
+        controller.updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_WINDOW_SIZE);
 
         // Root the streams at the connection and assign weights.
         setPriority(STREAM_A, 0, (short) 50, false);
@@ -518,8 +527,7 @@ public class DefaultHttp2OutboundFlowControllerTest {
     @Test
     public void samePriorityShouldWriteEqualData() throws Http2Exception {
         // Block the connection
-        controller
-                .updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_WINDOW_SIZE);
+        controller.updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_WINDOW_SIZE);
 
         // Root the streams at the connection with the same weights.
         setPriority(STREAM_A, 0, DEFAULT_PRIORITY_WEIGHT, false);
@@ -560,20 +568,20 @@ public class DefaultHttp2OutboundFlowControllerTest {
     }
 
     private void send(int streamId, ByteBuf data) throws Http2Exception {
-        controller.sendFlowControlled(streamId, data, 0, false, frameWriter);
+        controller.writeData(ctx, streamId, data, 0, false, promise);
     }
 
     private void verifyWrite(int streamId, ByteBuf data) {
-        verify(frameWriter).writeFrame(eq(streamId), eq(data), eq(0), eq(false));
+        verify(frameWriter).writeData(eq(ctx), eq(streamId), eq(data), eq(0), eq(false), eq(promise));
     }
 
     private void verifyNoWrite(int streamId) {
-        verify(frameWriter, never()).writeFrame(eq(streamId), any(ByteBuf.class), anyInt(),
-                anyBoolean());
+        verify(frameWriter, never()).writeData(eq(ctx), eq(streamId), any(ByteBuf.class), anyInt(),
+                anyBoolean(), eq(promise));
     }
 
     private void captureWrite(int streamId, ArgumentCaptor<ByteBuf> captor, boolean endStream) {
-        verify(frameWriter).writeFrame(eq(streamId), captor.capture(), eq(0), eq(endStream));
+        verify(frameWriter).writeData(eq(ctx), eq(streamId), captor.capture(), eq(0), eq(endStream), eq(promise));
     }
 
     private void setPriority(int stream, int parent, int weight, boolean exclusive)

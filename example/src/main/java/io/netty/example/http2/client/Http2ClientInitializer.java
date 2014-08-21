@@ -67,9 +67,10 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
     @Override
     public void initChannel(SocketChannel ch) throws Exception {
         Http2Connection connection = new DefaultHttp2Connection(false);
+        Http2FrameWriter frameWriter = frameWriter();
         connectionHandler = new DelegatingHttp2HttpConnectionHandler(connection,
-                        frameReader(), frameWriter(), new DefaultHttp2InboundFlowController(connection),
-                        new DefaultHttp2OutboundFlowController(connection),
+                        frameReader(), frameWriter, new DefaultHttp2InboundFlowController(connection),
+                        new DefaultHttp2OutboundFlowController(connection, frameWriter),
                         InboundHttp2ToHttpAdapter.newInstance(connection, maxContentLength));
         responseHandler = new HttpResponseHandler();
         settingsHandler = new Http2SettingsHandler(ch.newPromise());

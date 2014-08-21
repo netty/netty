@@ -118,8 +118,9 @@ public class Http2FrameRoundtripTest {
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
             public void run() {
-                frameWriter.writeData(ctx(), newPromise(), 0x7FFFFFFF,
-                        Unpooled.copiedBuffer(text.getBytes()), 100, true);
+                frameWriter.writeData(ctx(), 0x7FFFFFFF,
+                        Unpooled.copiedBuffer(text.getBytes()), 100, true, newPromise());
+                ctx().flush();
             }
         });
         awaitRequests();
@@ -135,7 +136,8 @@ public class Http2FrameRoundtripTest {
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
             public void run() {
-                frameWriter.writeHeaders(ctx(), newPromise(), 0x7FFFFFFF, headers, 0, true);
+                frameWriter.writeHeaders(ctx(), 0x7FFFFFFF, headers, 0, true, newPromise());
+                ctx().flush();
             }
         });
         awaitRequests();
@@ -151,8 +153,9 @@ public class Http2FrameRoundtripTest {
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
             public void run() {
-                frameWriter.writeHeaders(ctx(), newPromise(), 0x7FFFFFFF, headers, 4, (short) 255,
-                        true, 0, true);
+                frameWriter.writeHeaders(ctx(), 0x7FFFFFFF, headers, 4, (short) 255,
+                        true, 0, true, newPromise());
+                ctx().flush();
             }
         });
         awaitRequests();
@@ -166,8 +169,9 @@ public class Http2FrameRoundtripTest {
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
             public void run() {
-                frameWriter.writeGoAway(ctx(), newPromise(), 0x7FFFFFFF, 0xFFFFFFFFL,
-                        Unpooled.copiedBuffer(text.getBytes()));
+                frameWriter.writeGoAway(ctx(), 0x7FFFFFFF, 0xFFFFFFFFL,
+                        Unpooled.copiedBuffer(text.getBytes()), newPromise());
+                ctx().flush();
             }
         });
         awaitRequests();
@@ -181,7 +185,8 @@ public class Http2FrameRoundtripTest {
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
             public void run() {
-                frameWriter.writePing(ctx(), ctx().newPromise(), true, buf);
+                frameWriter.writePing(ctx(), true, buf, newPromise());
+                ctx().flush();
             }
         });
         awaitRequests();
@@ -194,7 +199,8 @@ public class Http2FrameRoundtripTest {
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
             public void run() {
-                frameWriter.writePriority(ctx(), newPromise(), 0x7FFFFFFF, 1, (short) 1, true);
+                frameWriter.writePriority(ctx(), 0x7FFFFFFF, 1, (short) 1, true, newPromise());
+                ctx().flush();
             }
         });
         awaitRequests();
@@ -210,7 +216,8 @@ public class Http2FrameRoundtripTest {
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
             public void run() {
-                frameWriter.writePushPromise(ctx(), newPromise(), 0x7FFFFFFF, 1, headers, 5);
+                frameWriter.writePushPromise(ctx(), 0x7FFFFFFF, 1, headers, 5, newPromise());
+                ctx().flush();
             }
         });
         awaitRequests();
@@ -223,7 +230,8 @@ public class Http2FrameRoundtripTest {
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
             public void run() {
-                frameWriter.writeRstStream(ctx(), newPromise(), 0x7FFFFFFF, 0xFFFFFFFFL);
+                frameWriter.writeRstStream(ctx(), 0x7FFFFFFF, 0xFFFFFFFFL, newPromise());
+                ctx().flush();
             }
         });
         awaitRequests();
@@ -240,7 +248,8 @@ public class Http2FrameRoundtripTest {
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
             public void run() {
-                frameWriter.writeSettings(ctx(), newPromise(), settings);
+                frameWriter.writeSettings(ctx(), settings, newPromise());
+                ctx().flush();
             }
         });
         awaitRequests();
@@ -252,7 +261,8 @@ public class Http2FrameRoundtripTest {
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
             public void run() {
-                frameWriter.writeWindowUpdate(ctx(), newPromise(), 0x7FFFFFFF, 0x7FFFFFFF);
+                frameWriter.writeWindowUpdate(ctx(), 0x7FFFFFFF, 0x7FFFFFFF, newPromise());
+                ctx().flush();
             }
         });
         awaitRequests();
@@ -273,10 +283,11 @@ public class Http2FrameRoundtripTest {
             @Override
             public void run() {
                 for (int i = 1; i < numStreams + 1; ++i) {
-                    frameWriter.writeHeaders(ctx(), newPromise(), i, headers, 0, (short) 16, false,
-                            0, false);
-                    frameWriter.writeData(ctx(), newPromise(), i,
-                            Unpooled.copiedBuffer(text.getBytes()), 0, true);
+                    frameWriter.writeHeaders(ctx(), i, headers, 0, (short) 16, false,
+                            0, false, newPromise());
+                    frameWriter.writeData(ctx(), i,
+                            Unpooled.copiedBuffer(text.getBytes()), 0, true, newPromise());
+                    ctx().flush();
                 }
             }
         });

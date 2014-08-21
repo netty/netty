@@ -131,9 +131,9 @@ public class DelegatingHttp2ConnectionHandlerTest {
         when(local.reservePushStream(eq(PUSH_STREAM_ID), eq(stream))).thenReturn(pushStream);
         when(remote.createStream(eq(STREAM_ID), anyBoolean())).thenReturn(stream);
         when(remote.reservePushStream(eq(PUSH_STREAM_ID), eq(stream))).thenReturn(pushStream);
-        when(writer.writeSettings(eq(ctx), eq(promise), any(Http2Settings.class))).thenReturn(
+        when(writer.writeSettings(eq(ctx), any(Http2Settings.class), eq(promise))).thenReturn(
                 future);
-        when(writer.writeGoAway(eq(ctx), eq(promise), anyInt(), anyInt(), any(ByteBuf.class)))
+        when(writer.writeGoAway(eq(ctx), anyInt(), anyInt(), any(ByteBuf.class), eq(promise)))
                 .thenReturn(future);
         mockContext();
 
@@ -158,7 +158,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
         when(reader.maxHeaderListSize()).thenReturn(Integer.MAX_VALUE);
         when(writer.maxHeaderListSize()).thenReturn(Integer.MAX_VALUE);
         handler.handlerAdded(ctx);
-        verify(writer).writeSettings(eq(ctx), eq(promise), eq(settings));
+        verify(writer).writeSettings(eq(ctx), eq(settings), eq(promise));
 
         // Simulate receiving the initial settings from the remote endpoint.
         decode().onSettingsRead(ctx, new Http2Settings());
@@ -220,8 +220,8 @@ public class DelegatingHttp2ConnectionHandlerTest {
     @Test
     public void closeShouldSendGoAway() throws Exception {
         handler.close(ctx, promise);
-        verify(writer).writeGoAway(eq(ctx), eq(promise), eq(0), eq((long) NO_ERROR.code()),
-                eq(EMPTY_BUFFER));
+        verify(writer).writeGoAway(eq(ctx), eq(0), eq((long) NO_ERROR.code()),
+                eq(EMPTY_BUFFER), eq(promise));
         verify(remote).goAwayReceived(0);
     }
 
@@ -236,8 +236,8 @@ public class DelegatingHttp2ConnectionHandlerTest {
         Http2Exception e = new Http2StreamException(STREAM_ID, PROTOCOL_ERROR);
         handler.exceptionCaught(ctx, e);
         verify(stream).close();
-        verify(writer).writeRstStream(eq(ctx), eq(promise), eq(STREAM_ID),
-                eq((long) PROTOCOL_ERROR.code()));
+        verify(writer).writeRstStream(eq(ctx), eq(STREAM_ID),
+                eq((long) PROTOCOL_ERROR.code()), eq(promise));
     }
 
     @Test
@@ -246,8 +246,8 @@ public class DelegatingHttp2ConnectionHandlerTest {
         when(remote.lastStreamCreated()).thenReturn(STREAM_ID);
         handler.exceptionCaught(ctx, e);
         verify(remote).goAwayReceived(STREAM_ID);
-        verify(writer).writeGoAway(eq(ctx), eq(promise), eq(STREAM_ID), eq((long) PROTOCOL_ERROR.code()),
-                eq(EMPTY_BUFFER));
+        verify(writer).writeGoAway(eq(ctx), eq(STREAM_ID), eq((long) PROTOCOL_ERROR.code()),
+                eq(EMPTY_BUFFER), eq(promise));
     }
 
     @Test
@@ -403,7 +403,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
     @Test
     public void pingReadShouldReplyWithAck() throws Exception {
         decode().onPingRead(ctx, emptyPingBuf());
-        verify(writer).writePing(eq(ctx), eq(promise), eq(true), eq(emptyPingBuf()));
+        verify(writer).writePing(eq(ctx), eq(true), eq(emptyPingBuf()), eq(promise));
         verify(observer, never()).onPingAckRead(eq(ctx), any(ByteBuf.class));
     }
 
@@ -450,127 +450,126 @@ public class DelegatingHttp2ConnectionHandlerTest {
     @Test
     public void dataWriteAfterGoAwayShouldFail() throws Exception {
         when(connection.isGoAway()).thenReturn(true);
-        ChannelFuture future = handler.writeData(ctx, promise, STREAM_ID, dummyData(), 0, false);
+        ChannelFuture future = handler.writeData(ctx, STREAM_ID, dummyData(), 0, false, promise);
         assertTrue(future.awaitUninterruptibly().cause() instanceof Http2Exception);
     }
 
     @Test
     public void dataWriteShouldSucceed() throws Exception {
-        handler.writeData(ctx, promise, STREAM_ID, dummyData(), 0, false);
-        verify(outboundFlow).sendFlowControlled(eq(STREAM_ID), eq(dummyData()), eq(0),
-                eq(false), any(Http2OutboundFlowController.FrameWriter.class));
+        handler.writeData(ctx, STREAM_ID, dummyData(), 0, false, promise);
+        verify(outboundFlow).writeData(eq(ctx), eq(STREAM_ID), eq(dummyData()), eq(0), eq(false), eq(promise));
     }
 
     @Test
     public void headersWriteAfterGoAwayShouldFail() throws Exception {
         when(connection.isGoAway()).thenReturn(true);
         ChannelFuture future = handler.writeHeaders(
-                ctx, promise, 5, EMPTY_HEADERS, 0, (short) 255, false, 0, false);
+                ctx, 5, EMPTY_HEADERS, 0, (short) 255, false, 0, false, promise);
         verify(local, never()).createStream(anyInt(), anyBoolean());
-        verify(writer, never()).writeHeaders(eq(ctx), eq(promise), anyInt(),
-                any(Http2Headers.class), anyInt(), anyBoolean());
+        verify(writer, never()).writeHeaders(eq(ctx), anyInt(),
+                any(Http2Headers.class), anyInt(), anyBoolean(), eq(promise));
         assertTrue(future.awaitUninterruptibly().cause() instanceof Http2Exception);
     }
 
     @Test
     public void headersWriteForUnknownStreamShouldCreateStream() throws Exception {
         when(local.createStream(eq(5), eq(false))).thenReturn(stream);
-        handler.writeHeaders(ctx, promise, 5, EMPTY_HEADERS, 0, false);
+        handler.writeHeaders(ctx, 5, EMPTY_HEADERS, 0, false, promise);
         verify(local).createStream(eq(5), eq(false));
-        verify(writer).writeHeaders(eq(ctx), eq(promise), eq(5), eq(EMPTY_HEADERS), eq(0),
-                eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(false));
+        verify(writer).writeHeaders(eq(ctx), eq(5), eq(EMPTY_HEADERS), eq(0),
+                eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(false), eq(promise));
     }
 
     @Test
     public void headersWriteShouldCreateHalfClosedStream() throws Exception {
         when(local.createStream(eq(5), eq(true))).thenReturn(stream);
-        handler.writeHeaders(ctx, promise, 5, EMPTY_HEADERS, 0, true);
+        handler.writeHeaders(ctx, 5, EMPTY_HEADERS, 0, true, promise);
         verify(local).createStream(eq(5), eq(true));
-        verify(writer).writeHeaders(eq(ctx), eq(promise), eq(5), eq(EMPTY_HEADERS), eq(0),
-                eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(true));
+        verify(writer).writeHeaders(eq(ctx), eq(5), eq(EMPTY_HEADERS), eq(0),
+                eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(true), eq(promise));
     }
 
     @Test
     public void headersWriteShouldOpenStreamForPush() throws Exception {
         when(stream.state()).thenReturn(RESERVED_LOCAL);
-        handler.writeHeaders(ctx, promise, STREAM_ID, EMPTY_HEADERS, 0, false);
+        handler.writeHeaders(ctx, STREAM_ID, EMPTY_HEADERS, 0, false, promise);
         verify(stream).openForPush();
         verify(stream, never()).closeLocalSide();
-        verify(writer).writeHeaders(eq(ctx), eq(promise), eq(STREAM_ID), eq(EMPTY_HEADERS), eq(0),
-                eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(false));
+        verify(writer).writeHeaders(eq(ctx), eq(STREAM_ID), eq(EMPTY_HEADERS), eq(0),
+                eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(false), eq(promise));
     }
 
     @Test
     public void headersWriteShouldClosePushStream() throws Exception {
         when(stream.state()).thenReturn(RESERVED_LOCAL).thenReturn(HALF_CLOSED_LOCAL);
-        handler.writeHeaders(ctx, promise, STREAM_ID, EMPTY_HEADERS, 0, true);
+        handler.writeHeaders(ctx, STREAM_ID, EMPTY_HEADERS, 0, true, promise);
         verify(stream).openForPush();
         verify(stream).closeLocalSide();
-        verify(writer).writeHeaders(eq(ctx), eq(promise), eq(STREAM_ID), eq(EMPTY_HEADERS), eq(0),
-                eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(true));
+        verify(writer).writeHeaders(eq(ctx), eq(STREAM_ID), eq(EMPTY_HEADERS), eq(0),
+                eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(true), eq(promise));
     }
 
     @Test
     public void pushPromiseWriteAfterGoAwayShouldFail() throws Exception {
         when(connection.isGoAway()).thenReturn(true);
-        ChannelFuture future = handler.writePushPromise(ctx, promise, STREAM_ID, PUSH_STREAM_ID, EMPTY_HEADERS, 0);
+        ChannelFuture future = handler.writePushPromise(ctx, STREAM_ID, PUSH_STREAM_ID, EMPTY_HEADERS, 0, promise);
         assertTrue(future.awaitUninterruptibly().cause() instanceof Http2Exception);
     }
 
     @Test
     public void pushPromiseWriteShouldReserveStream() throws Exception {
-        handler.writePushPromise(ctx, promise, STREAM_ID, PUSH_STREAM_ID, EMPTY_HEADERS, 0);
+        handler.writePushPromise(ctx, STREAM_ID, PUSH_STREAM_ID, EMPTY_HEADERS, 0, promise);
         verify(local).reservePushStream(eq(PUSH_STREAM_ID), eq(stream));
-        verify(writer).writePushPromise(eq(ctx), eq(promise), eq(STREAM_ID), eq(PUSH_STREAM_ID),
-                eq(EMPTY_HEADERS), eq(0));
+        verify(writer).writePushPromise(eq(ctx), eq(STREAM_ID), eq(PUSH_STREAM_ID),
+                eq(EMPTY_HEADERS), eq(0), eq(promise));
     }
 
     @Test
     public void priorityWriteAfterGoAwayShouldFail() throws Exception {
         when(connection.isGoAway()).thenReturn(true);
-        ChannelFuture future = handler.writePriority(ctx, promise, STREAM_ID, 0, (short) 255, true);
+        ChannelFuture future = handler.writePriority(ctx, STREAM_ID, 0, (short) 255, true, promise);
         assertTrue(future.awaitUninterruptibly().cause() instanceof Http2Exception);
     }
 
     @Test
     public void priorityWriteShouldSetPriorityForStream() throws Exception {
-        handler.writePriority(ctx, promise, STREAM_ID, 0, (short) 255, true);
+        handler.writePriority(ctx, STREAM_ID, 0, (short) 255, true, promise);
         verify(stream).setPriority(eq(0), eq((short) 255), eq(true));
-        verify(writer).writePriority(eq(ctx), eq(promise), eq(STREAM_ID), eq(0), eq((short) 255),
-                eq(true));
+        verify(writer).writePriority(eq(ctx), eq(STREAM_ID), eq(0), eq((short) 255),
+                eq(true), eq(promise));
     }
 
     @Test
     public void rstStreamWriteForUnknownStreamShouldIgnore() throws Exception {
-        handler.writeRstStream(ctx, promise, 5, PROTOCOL_ERROR.code());
-        verify(writer, never()).writeRstStream(eq(ctx), eq(promise), anyInt(), anyLong());
+        handler.writeRstStream(ctx, 5, PROTOCOL_ERROR.code(), promise);
+        verify(writer, never()).writeRstStream(eq(ctx), anyInt(), anyLong(), eq(promise));
     }
 
     @Test
     public void rstStreamWriteShouldCloseStream() throws Exception {
-        handler.writeRstStream(ctx, promise, STREAM_ID, PROTOCOL_ERROR.code());
+        handler.writeRstStream(ctx, STREAM_ID, PROTOCOL_ERROR.code(), promise);
         verify(stream).close();
-        verify(writer).writeRstStream(eq(ctx), eq(promise), eq(STREAM_ID),
-                eq((long) PROTOCOL_ERROR.code()));
+        verify(writer).writeRstStream(eq(ctx), eq(STREAM_ID),
+                eq((long) PROTOCOL_ERROR.code()), eq(promise));
     }
 
     @Test
     public void pingWriteAfterGoAwayShouldFail() throws Exception {
         when(connection.isGoAway()).thenReturn(true);
-        ChannelFuture future = handler.writePing(ctx, promise, emptyPingBuf());
+        ChannelFuture future = handler.writePing(ctx, emptyPingBuf(), promise);
         assertTrue(future.awaitUninterruptibly().cause() instanceof Http2Exception);
     }
 
     @Test
     public void pingWriteShouldSucceed() throws Exception {
-        handler.writePing(ctx, promise, emptyPingBuf());
-        verify(writer).writePing(eq(ctx), eq(promise), eq(false), eq(emptyPingBuf()));
+        handler.writePing(ctx, emptyPingBuf(), promise);
+        verify(writer).writePing(eq(ctx), eq(false), eq(emptyPingBuf()), eq(promise));
     }
 
     @Test
     public void settingsWriteAfterGoAwayShouldFail() throws Exception {
         when(connection.isGoAway()).thenReturn(true);
-        ChannelFuture future = handler.writeSettings(ctx, promise, new Http2Settings());
+        ChannelFuture future = handler.writeSettings(ctx, new Http2Settings(), promise);
         assertTrue(future.awaitUninterruptibly().cause() instanceof Http2Exception);
     }
 
@@ -581,8 +580,8 @@ public class DelegatingHttp2ConnectionHandlerTest {
         settings.pushEnabled(false);
         settings.maxConcurrentStreams(1000);
         settings.headerTableSize(2000);
-        handler.writeSettings(ctx, promise, settings);
-        verify(writer).writeSettings(eq(ctx), eq(promise), eq(settings));
+        handler.writeSettings(ctx, settings, promise);
+        verify(writer).writeSettings(eq(ctx), eq(settings), eq(promise));
         // Verify that application of local settings must not be done when it is dispatched.
         verify(inboundFlow, never()).initialInboundWindowSize(eq(100));
         verify(local, never()).allowPushTo(eq(false));

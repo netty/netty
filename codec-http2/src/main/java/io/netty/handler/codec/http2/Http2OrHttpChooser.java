@@ -37,8 +37,6 @@ import javax.net.ssl.SSLEngine;
  */
 public abstract class Http2OrHttpChooser extends ByteToMessageDecoder {
 
-    // TODO: Replace with generic NPN handler
-
     public enum SelectedProtocol {
         /** Must be updated to match the HTTP/2 draft number. */
         HTTP_2(TLS_UPGRADE_PROTOCOL_NAME),

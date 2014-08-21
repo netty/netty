@@ -100,8 +100,8 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
     }
 
     @Override
-    public ChannelFuture writeData(ChannelHandlerContext ctx, ChannelPromise promise, int streamId,
-            ByteBuf data, int padding, boolean endStream) {
+    public ChannelFuture writeData(ChannelHandlerContext ctx, int streamId, ByteBuf data,
+            int padding, boolean endStream, ChannelPromise promise) {
         try {
             verifyStreamId(streamId, "Stream ID");
             verifyPadding(padding);
@@ -122,7 +122,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
 
             // Write the required padding.
             out.writeZero(padding);
-            return ctx.writeAndFlush(out, promise);
+            return ctx.write(out, promise);
         } catch (RuntimeException e) {
             return promise.setFailure(e);
         } finally {
@@ -131,23 +131,23 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
     }
 
     @Override
-    public ChannelFuture writeHeaders(ChannelHandlerContext ctx, ChannelPromise promise,
-            int streamId, Http2Headers headers, int padding, boolean endStream) {
+    public ChannelFuture writeHeaders(ChannelHandlerContext ctx, int streamId,
+            Http2Headers headers, int padding, boolean endStream, ChannelPromise promise) {
         return writeHeadersInternal(ctx, promise, streamId, headers, padding, endStream,
                 false, 0, (short) 0, false);
     }
 
     @Override
-    public ChannelFuture writeHeaders(ChannelHandlerContext ctx, ChannelPromise promise,
-            int streamId, Http2Headers headers, int streamDependency, short weight,
-            boolean exclusive, int padding, boolean endStream) {
+    public ChannelFuture writeHeaders(ChannelHandlerContext ctx, int streamId,
+            Http2Headers headers, int streamDependency, short weight, boolean exclusive,
+            int padding, boolean endStream, ChannelPromise promise) {
         return writeHeadersInternal(ctx, promise, streamId, headers, padding, endStream,
                 true, streamDependency, weight, exclusive);
     }
 
     @Override
-    public ChannelFuture writePriority(ChannelHandlerContext ctx, ChannelPromise promise,
-            int streamId, int streamDependency, short weight, boolean exclusive) {
+    public ChannelFuture writePriority(ChannelHandlerContext ctx, int streamId,
+            int streamDependency, short weight, boolean exclusive, ChannelPromise promise) {
         try {
             verifyStreamId(streamId, "Stream ID");
             verifyStreamId(streamDependency, "Stream Dependency");
@@ -161,15 +161,15 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
 
             // Adjust the weight so that it fits into a single byte on the wire.
             frame.writeByte(weight - 1);
-            return ctx.writeAndFlush(frame, promise);
+            return ctx.write(frame, promise);
         } catch (RuntimeException e) {
             return promise.setFailure(e);
         }
     }
 
     @Override
-    public ChannelFuture writeRstStream(ChannelHandlerContext ctx, ChannelPromise promise,
-            int streamId, long errorCode) {
+    public ChannelFuture writeRstStream(ChannelHandlerContext ctx, int streamId, long errorCode,
+            ChannelPromise promise) {
         try {
             verifyStreamId(streamId, "Stream ID");
             verifyErrorCode(errorCode);
@@ -178,15 +178,15 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
             writeFrameHeader(frame, INT_FIELD_LENGTH, RST_STREAM, new Http2Flags(),
                     streamId);
             writeUnsignedInt(errorCode, frame);
-            return ctx.writeAndFlush(frame, promise);
+            return ctx.write(frame, promise);
         } catch (RuntimeException e) {
             return promise.setFailure(e);
         }
     }
 
     @Override
-    public ChannelFuture writeSettings(ChannelHandlerContext ctx, ChannelPromise promise,
-            Http2Settings settings) {
+    public ChannelFuture writeSettings(ChannelHandlerContext ctx, Http2Settings settings,
+            ChannelPromise promise) {
         try {
             if (settings == null) {
                 throw new NullPointerException("settings");
@@ -198,7 +198,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
                 writeUnsignedShort(entry.key(), frame);
                 writeUnsignedInt(entry.value(), frame);
             }
-            return ctx.writeAndFlush(frame, promise);
+            return ctx.write(frame, promise);
         } catch (RuntimeException e) {
             return promise.setFailure(e);
         }
@@ -209,15 +209,15 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
         try {
             ByteBuf frame = ctx.alloc().buffer(FRAME_HEADER_LENGTH);
             writeFrameHeader(frame, 0, SETTINGS, new Http2Flags().ack(true), 0);
-            return ctx.writeAndFlush(frame, promise);
+            return ctx.write(frame, promise);
         } catch (RuntimeException e) {
             return promise.setFailure(e);
         }
     }
 
     @Override
-    public ChannelFuture writePing(ChannelHandlerContext ctx, ChannelPromise promise, boolean ack,
-            ByteBuf data) {
+    public ChannelFuture writePing(ChannelHandlerContext ctx, boolean ack, ByteBuf data,
+            ChannelPromise promise) {
         try {
             ByteBuf frame = ctx.alloc().buffer(FRAME_HEADER_LENGTH + data.readableBytes());
             Http2Flags flags = ack ? new Http2Flags().ack(true) : new Http2Flags();
@@ -225,7 +225,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
 
             // Write the debug data.
             frame.writeBytes(data, data.readerIndex(), data.readableBytes());
-            return ctx.writeAndFlush(frame, promise);
+            return ctx.write(frame, promise);
         } catch (RuntimeException e) {
             return promise.setFailure(e);
         } finally {
@@ -234,8 +234,8 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
     }
 
     @Override
-    public ChannelFuture writePushPromise(ChannelHandlerContext ctx, ChannelPromise promise,
-            int streamId, int promisedStreamId, Http2Headers headers, int padding) {
+    public ChannelFuture writePushPromise(ChannelHandlerContext ctx, int streamId,
+            int promisedStreamId, Http2Headers headers, int padding, ChannelPromise promise) {
         ByteBuf headerBlock = null;
         try {
             verifyStreamId(streamId, "Stream ID");
@@ -273,7 +273,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
             firstFrame.writeZero(padding);
 
             if (headerBlock.readableBytes() == 0) {
-                return ctx.writeAndFlush(firstFrame, promise);
+                return ctx.write(firstFrame, promise);
             }
 
             // Create a composite buffer wrapping the first frame and any continuation frames.
@@ -288,8 +288,8 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
     }
 
     @Override
-    public ChannelFuture writeGoAway(ChannelHandlerContext ctx, ChannelPromise promise,
-            int lastStreamId, long errorCode, ByteBuf debugData) {
+    public ChannelFuture writeGoAway(ChannelHandlerContext ctx, int lastStreamId, long errorCode,
+            ByteBuf debugData, ChannelPromise promise) {
         try {
             verifyStreamOrConnectionId(lastStreamId, "Last Stream ID");
             verifyErrorCode(errorCode);
@@ -300,7 +300,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
             frame.writeInt(lastStreamId);
             writeUnsignedInt(errorCode, frame);
             frame.writeBytes(debugData, debugData.readerIndex(), debugData.readableBytes());
-            return ctx.writeAndFlush(frame, promise);
+            return ctx.write(frame, promise);
         } catch (RuntimeException e) {
             return promise.setFailure(e);
         } finally {
@@ -309,8 +309,8 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
     }
 
     @Override
-    public ChannelFuture writeWindowUpdate(ChannelHandlerContext ctx, ChannelPromise promise,
-            int streamId, int windowSizeIncrement) {
+    public ChannelFuture writeWindowUpdate(ChannelHandlerContext ctx, int streamId,
+            int windowSizeIncrement, ChannelPromise promise) {
         try {
             verifyStreamOrConnectionId(streamId, "Stream ID");
             verifyWindowSizeIncrement(windowSizeIncrement);
@@ -319,21 +319,21 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
             writeFrameHeader(frame, INT_FIELD_LENGTH, WINDOW_UPDATE,
                     new Http2Flags(), streamId);
             frame.writeInt(windowSizeIncrement);
-            return ctx.writeAndFlush(frame, promise);
+            return ctx.write(frame, promise);
         } catch (RuntimeException e) {
             return promise.setFailure(e);
         }
     }
 
     @Override
-    public ChannelFuture writeFrame(ChannelHandlerContext ctx, ChannelPromise promise,
-            byte frameType, int streamId, Http2Flags flags, ByteBuf payload) {
+    public ChannelFuture writeFrame(ChannelHandlerContext ctx, byte frameType, int streamId,
+            Http2Flags flags, ByteBuf payload, ChannelPromise promise) {
         try {
             verifyStreamOrConnectionId(streamId, "Stream ID");
             ByteBuf frame = ctx.alloc().buffer(FRAME_HEADER_LENGTH + payload.readableBytes());
             writeFrameHeader(frame, payload.readableBytes(), frameType, flags, streamId);
             frame.writeBytes(payload);
-            return ctx.writeAndFlush(frame, promise);
+            return ctx.write(frame, promise);
         } catch (RuntimeException e) {
             return promise.setFailure(e);
         }
@@ -392,7 +392,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
             firstFrame.writeZero(padding);
 
             if (flags.endOfHeaders()) {
-                return ctx.writeAndFlush(firstFrame, promise);
+                return ctx.write(firstFrame, promise);
             }
 
             // Create a composite buffer wrapping the first frame and any continuation frames.
@@ -425,7 +425,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter {
         }
 
         out.writerIndex(numBytes);
-        return ctx.writeAndFlush(out, promise);
+        return ctx.write(out, promise);
     }
 
     /**

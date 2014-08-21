@@ -118,12 +118,12 @@ public class Http2ConnectionRoundtripTest {
             @Override
             public void run() {
                 for (int i = 0, nextStream = 3; i < NUM_STREAMS; ++i, nextStream += 2) {
-                    http2Client.writeHeaders(
-                            ctx(), newPromise(), nextStream, headers, 0, (short) 16, false, 0, false);
-                    http2Client.writePing(ctx(), newPromise(), Unpooled.copiedBuffer(pingMsg.getBytes()));
-                    http2Client.writeData(
-                            ctx(), newPromise(), nextStream,
-                            Unpooled.copiedBuffer(text.getBytes()), 0, true);
+                    http2Client.writeHeaders(ctx(), nextStream, headers, 0, (short) 16, false, 0,
+                            false, newPromise());
+                    http2Client.writePing(ctx(), Unpooled.copiedBuffer(pingMsg.getBytes()),
+                            newPromise());
+                    http2Client.writeData(ctx(), nextStream,
+                            Unpooled.copiedBuffer(text.getBytes()), 0, true, newPromise());
                 }
             }
         });
