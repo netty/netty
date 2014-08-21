@@ -77,7 +77,7 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
 
         // Allocate the arrays.
         keys = new int[capacity];
-        @SuppressWarnings({ "unchecked", })
+        @SuppressWarnings("unchecked")
         V[] temp = (V[]) new Object[capacity];
         values = temp;
 
@@ -246,7 +246,7 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
             // of terms, only their values; since the map is an unordered collection and
             // entries can end up in different positions in different maps that have the same
             // elements, but with different history of puts/removes, due to conflicts.
-            hash = hash ^ keys[i];
+            hash ^= keys[i];
         }
         return hash;
     }
@@ -255,7 +255,8 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
     public boolean equals(Object obj) {
         if (this == obj) {
             return true;
-        } else if (!(obj instanceof IntObjectMap)) {
+        }
+        if (!(obj instanceof IntObjectMap)) {
             return false;
         }
         @SuppressWarnings("rawtypes")
@@ -294,7 +295,8 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
             if (values[index] == null) {
                 // It's available, so no chance that this value exists anywhere in the map.
                 return -1;
-            } else if (key == keys[index]) {
+            }
+            if (key == keys[index]) {
                 return index;
             }
 
@@ -389,7 +391,7 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
         V[] oldVals = values;
 
         keys = new int[newCapacity];
-        @SuppressWarnings({ "unchecked" })
+        @SuppressWarnings("unchecked")
         V[] temp = (V[]) new Object[newCapacity];
         values = temp;
 
