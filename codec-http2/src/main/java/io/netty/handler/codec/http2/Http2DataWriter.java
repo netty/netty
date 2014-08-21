@@ -28,13 +28,13 @@ public interface Http2DataWriter {
      * Writes a DATA frame to the remote endpoint.
      *
      * @param ctx the context to use for writing.
-     * @param promise the promise for the write.
      * @param streamId the stream for which to send the frame.
      * @param data the payload of the frame.
      * @param padding the amount of padding to be added to the end of the frame
      * @param endStream indicates if this is the last frame to be sent for the stream.
+     * @param promise the promise for the write.
      * @return the future for the write.
      */
-    ChannelFuture writeData(ChannelHandlerContext ctx, ChannelPromise promise, int streamId,
-            ByteBuf data, int padding, boolean endStream);
+    ChannelFuture writeData(ChannelHandlerContext ctx, int streamId,
+            ByteBuf data, int padding, boolean endStream, ChannelPromise promise);
 }

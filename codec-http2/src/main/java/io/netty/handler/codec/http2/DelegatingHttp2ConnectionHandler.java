@@ -52,52 +52,52 @@ public class DelegatingHttp2ConnectionHandler extends AbstractHttp2ConnectionHan
     }
 
     @Override
-    public ChannelFuture writeData(ChannelHandlerContext ctx, ChannelPromise promise, int streamId,
-            ByteBuf data, int padding, boolean endStream) {
-        return super.writeData(ctx, promise, streamId, data, padding, endStream);
+    public ChannelFuture writeData(ChannelHandlerContext ctx, int streamId, ByteBuf data,
+            int padding, boolean endStream, ChannelPromise promise) {
+        return super.writeData(ctx, streamId, data, padding, endStream, promise);
     }
 
     @Override
-    public ChannelFuture writeHeaders(ChannelHandlerContext ctx, ChannelPromise promise,
-            int streamId, Http2Headers headers, int padding, boolean endStream) {
-        return super.writeHeaders(ctx, promise, streamId, headers, padding, endStream);
+    public ChannelFuture writeHeaders(ChannelHandlerContext ctx, int streamId,
+            Http2Headers headers, int padding, boolean endStream, ChannelPromise promise) {
+        return super.writeHeaders(ctx, streamId, headers, padding, endStream, promise);
     }
 
     @Override
-    public ChannelFuture writeHeaders(ChannelHandlerContext ctx, ChannelPromise promise,
-            int streamId, Http2Headers headers, int streamDependency, short weight,
-            boolean exclusive, int padding, boolean endStream) {
-        return super.writeHeaders(ctx, promise, streamId, headers, streamDependency, weight,
-                exclusive, padding, endStream);
+    public ChannelFuture writeHeaders(ChannelHandlerContext ctx, int streamId,
+            Http2Headers headers, int streamDependency, short weight, boolean exclusive,
+            int padding, boolean endStream, ChannelPromise promise) {
+        return super.writeHeaders(ctx, streamId, headers, streamDependency, weight,
+                exclusive, padding, endStream, promise);
     }
 
     @Override
-    public ChannelFuture writePriority(ChannelHandlerContext ctx, ChannelPromise promise,
-            int streamId, int streamDependency, short weight, boolean exclusive) {
-        return super.writePriority(ctx, promise, streamId, streamDependency, weight, exclusive);
+    public ChannelFuture writePriority(ChannelHandlerContext ctx, int streamId,
+            int streamDependency, short weight, boolean exclusive, ChannelPromise promise) {
+        return super.writePriority(ctx, streamId, streamDependency, weight, exclusive, promise);
     }
 
     @Override
-    public ChannelFuture writeRstStream(ChannelHandlerContext ctx, ChannelPromise promise,
-            int streamId, long errorCode) {
-        return super.writeRstStream(ctx, promise, streamId, errorCode);
+    public ChannelFuture writeRstStream(ChannelHandlerContext ctx, int streamId, long errorCode,
+            ChannelPromise promise) {
+        return super.writeRstStream(ctx, streamId, errorCode, promise);
     }
 
     @Override
-    public ChannelFuture writeSettings(ChannelHandlerContext ctx, ChannelPromise promise,
-            Http2Settings settings) {
-        return super.writeSettings(ctx, promise, settings);
+    public ChannelFuture writeSettings(ChannelHandlerContext ctx,
+            Http2Settings settings, ChannelPromise promise) {
+        return super.writeSettings(ctx, settings, promise);
     }
 
     @Override
-    public ChannelFuture writePing(ChannelHandlerContext ctx, ChannelPromise promise, ByteBuf data) {
-        return super.writePing(ctx, promise, data);
+    public ChannelFuture writePing(ChannelHandlerContext ctx, ByteBuf data, ChannelPromise promise) {
+        return super.writePing(ctx, data, promise);
     }
 
     @Override
-    public ChannelFuture writePushPromise(ChannelHandlerContext ctx, ChannelPromise promise,
-            int streamId, int promisedStreamId, Http2Headers headers, int padding) {
-        return super.writePushPromise(ctx, promise, streamId, promisedStreamId, headers, padding);
+    public ChannelFuture writePushPromise(ChannelHandlerContext ctx, int streamId,
+            int promisedStreamId, Http2Headers headers, int padding, ChannelPromise promise) {
+        return super.writePushPromise(ctx, streamId, promisedStreamId, headers, padding, promise);
     }
 
     @Override

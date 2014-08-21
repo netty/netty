@@ -159,8 +159,8 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
     }
 
     @Override
-    public ChannelFuture writeData(ChannelHandlerContext ctx, ChannelPromise promise, int streamId,
-            ByteBuf data, int padding, boolean endStream) {
+    public ChannelFuture writeData(ChannelHandlerContext ctx, int streamId, ByteBuf data,
+            int padding, boolean endStream, ChannelPromise promise) {
         if (ctx == null) {
             throw new NullPointerException("ctx");
         }
@@ -634,7 +634,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
                         connectionState().incrementStreamWindow(-bytesToWrite);
                         incrementStreamWindow(-bytesToWrite);
                         ByteBuf slice = data.readSlice(bytesToWrite);
-                        frameWriter.writeData(ctx, promise, stream.id(), slice, padding, endStream);
+                        frameWriter.writeData(ctx, stream.id(), slice, padding, endStream, promise);
                         decrementPendingBytes(bytesToWrite);
                         return;
                     }

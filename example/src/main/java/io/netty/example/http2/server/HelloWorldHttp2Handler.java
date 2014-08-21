@@ -70,7 +70,7 @@ public class HelloWorldHttp2Handler extends AbstractHttp2ConnectionHandler {
             Http2Headers headers =
                     DefaultHttp2Headers.newBuilder().status("200")
                     .set(UPGRADE_RESPONSE_HEADER, "true").build();
-            writeHeaders(ctx, ctx.newPromise(), 1, headers, 0, true);
+            writeHeaders(ctx, 1, headers, 0, true, ctx.newPromise());
         }
         super.userEventTriggered(ctx, evt);
     }
@@ -110,8 +110,8 @@ public class HelloWorldHttp2Handler extends AbstractHttp2ConnectionHandler {
     private void sendResponse(ChannelHandlerContext ctx, int streamId, ByteBuf payload) {
         // Send a frame for the response status
         Http2Headers headers = DefaultHttp2Headers.newBuilder().status("200").build();
-        writeHeaders(ctx(), ctx().newPromise(), streamId, headers, 0, false);
+        writeHeaders(ctx(), streamId, headers, 0, false, ctx().newPromise());
 
-        writeData(ctx(), ctx().newPromise(), streamId, payload, 0, true);
+        writeData(ctx(), streamId, payload, 0, true, ctx().newPromise());
     }
 }

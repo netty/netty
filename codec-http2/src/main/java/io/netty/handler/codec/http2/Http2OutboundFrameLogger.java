@@ -42,47 +42,47 @@ public class Http2OutboundFrameLogger implements Http2FrameWriter {
     }
 
     @Override
-    public ChannelFuture writeData(ChannelHandlerContext ctx, ChannelPromise promise, int streamId,
-            ByteBuf data, int padding, boolean endStream) {
+    public ChannelFuture writeData(ChannelHandlerContext ctx, int streamId, ByteBuf data,
+            int padding, boolean endStream, ChannelPromise promise) {
         logger.logData(OUTBOUND, streamId, data, padding, endStream);
-        return writer.writeData(ctx, promise, streamId, data, padding, endStream);
+        return writer.writeData(ctx, streamId, data, padding, endStream, promise);
     }
 
     @Override
-    public ChannelFuture writeHeaders(ChannelHandlerContext ctx, ChannelPromise promise,
-            int streamId, Http2Headers headers, int padding, boolean endStream) {
+    public ChannelFuture writeHeaders(ChannelHandlerContext ctx, int streamId,
+            Http2Headers headers, int padding, boolean endStream, ChannelPromise promise) {
         logger.logHeaders(OUTBOUND, streamId, headers, padding, endStream);
-        return writer.writeHeaders(ctx, promise, streamId, headers, padding, endStream);
+        return writer.writeHeaders(ctx, streamId, headers, padding, endStream, promise);
     }
 
     @Override
-    public ChannelFuture writeHeaders(ChannelHandlerContext ctx, ChannelPromise promise,
-            int streamId, Http2Headers headers, int streamDependency, short weight,
-            boolean exclusive, int padding, boolean endStream) {
+    public ChannelFuture writeHeaders(ChannelHandlerContext ctx, int streamId,
+            Http2Headers headers, int streamDependency, short weight, boolean exclusive,
+            int padding, boolean endStream, ChannelPromise promise) {
         logger.logHeaders(OUTBOUND, streamId, headers, streamDependency, weight, exclusive,
                 padding, endStream);
-        return writer.writeHeaders(ctx, promise, streamId, headers, streamDependency, weight,
-                exclusive, padding, endStream);
+        return writer.writeHeaders(ctx, streamId, headers, streamDependency, weight,
+                exclusive, padding, endStream, promise);
     }
 
     @Override
-    public ChannelFuture writePriority(ChannelHandlerContext ctx, ChannelPromise promise,
-            int streamId, int streamDependency, short weight, boolean exclusive) {
+    public ChannelFuture writePriority(ChannelHandlerContext ctx, int streamId,
+            int streamDependency, short weight, boolean exclusive, ChannelPromise promise) {
         logger.logPriority(OUTBOUND, streamId, streamDependency, weight, exclusive);
-        return writer.writePriority(ctx, promise, streamId, streamDependency, weight, exclusive);
+        return writer.writePriority(ctx, streamId, streamDependency, weight, exclusive, promise);
     }
 
     @Override
-    public ChannelFuture writeRstStream(ChannelHandlerContext ctx, ChannelPromise promise,
-            int streamId, long errorCode) {
-        return writer.writeRstStream(ctx, promise, streamId, errorCode);
+    public ChannelFuture writeRstStream(ChannelHandlerContext ctx,
+            int streamId, long errorCode, ChannelPromise promise) {
+        return writer.writeRstStream(ctx, streamId, errorCode, promise);
     }
 
     @Override
-    public ChannelFuture writeSettings(ChannelHandlerContext ctx, ChannelPromise promise,
-            Http2Settings settings) {
+    public ChannelFuture writeSettings(ChannelHandlerContext ctx,
+            Http2Settings settings, ChannelPromise promise) {
         logger.logSettings(OUTBOUND, settings);
-        return writer.writeSettings(ctx, promise, settings);
+        return writer.writeSettings(ctx, settings, promise);
     }
 
     @Override
@@ -92,38 +92,38 @@ public class Http2OutboundFrameLogger implements Http2FrameWriter {
     }
 
     @Override
-    public ChannelFuture writePing(ChannelHandlerContext ctx, ChannelPromise promise, boolean ack,
-            ByteBuf data) {
+    public ChannelFuture writePing(ChannelHandlerContext ctx, boolean ack,
+            ByteBuf data, ChannelPromise promise) {
         logger.logPing(OUTBOUND, data);
-        return writer.writePing(ctx, promise, ack, data);
+        return writer.writePing(ctx, ack, data, promise);
     }
 
     @Override
-    public ChannelFuture writePushPromise(ChannelHandlerContext ctx, ChannelPromise promise,
-            int streamId, int promisedStreamId, Http2Headers headers, int padding) {
+    public ChannelFuture writePushPromise(ChannelHandlerContext ctx, int streamId,
+            int promisedStreamId, Http2Headers headers, int padding, ChannelPromise promise) {
         logger.logPushPromise(OUTBOUND, streamId, promisedStreamId, headers, padding);
-        return writer.writePushPromise(ctx, promise, streamId, promisedStreamId, headers, padding);
+        return writer.writePushPromise(ctx, streamId, promisedStreamId, headers, padding, promise);
     }
 
     @Override
-    public ChannelFuture writeGoAway(ChannelHandlerContext ctx, ChannelPromise promise,
-            int lastStreamId, long errorCode, ByteBuf debugData) {
+    public ChannelFuture writeGoAway(ChannelHandlerContext ctx, int lastStreamId, long errorCode,
+            ByteBuf debugData, ChannelPromise promise) {
         logger.logGoAway(OUTBOUND, lastStreamId, errorCode, debugData);
-        return writer.writeGoAway(ctx, promise, lastStreamId, errorCode, debugData);
+        return writer.writeGoAway(ctx, lastStreamId, errorCode, debugData, promise);
     }
 
     @Override
-    public ChannelFuture writeWindowUpdate(ChannelHandlerContext ctx, ChannelPromise promise,
-            int streamId, int windowSizeIncrement) {
+    public ChannelFuture writeWindowUpdate(ChannelHandlerContext ctx,
+            int streamId, int windowSizeIncrement, ChannelPromise promise) {
         logger.logWindowsUpdate(OUTBOUND, streamId, windowSizeIncrement);
-        return writer.writeWindowUpdate(ctx, promise, streamId, windowSizeIncrement);
+        return writer.writeWindowUpdate(ctx, streamId, windowSizeIncrement, promise);
     }
 
     @Override
-    public ChannelFuture writeFrame(ChannelHandlerContext ctx, ChannelPromise promise,
-            byte frameType, int streamId, Http2Flags flags, ByteBuf payload) {
+    public ChannelFuture writeFrame(ChannelHandlerContext ctx, byte frameType, int streamId,
+            Http2Flags flags, ByteBuf payload, ChannelPromise promise) {
         logger.logUnknownFrame(OUTBOUND, frameType, streamId, flags, payload);
-        return writer.writeFrame(ctx, promise, frameType, streamId, flags, payload);
+        return writer.writeFrame(ctx, frameType, streamId, flags, payload, promise);
     }
 
     @Override

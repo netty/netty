@@ -36,8 +36,8 @@ public interface Http2OutboundFlowController extends Http2DataWriter {
      * controller will flush as appropriate.
      */
     @Override
-    ChannelFuture writeData(ChannelHandlerContext ctx, ChannelPromise promise, int streamId,
-            ByteBuf data, int padding, boolean endStream);
+    ChannelFuture writeData(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
+            boolean endStream, ChannelPromise promise);
 
     /**
      * Sets the initial size of the connection's outbound flow control window. The outbound flow
