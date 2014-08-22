@@ -25,6 +25,17 @@ public interface Http2FrameObserver extends Http2DataObserver {
 
     /**
      * Handles an inbound HEADERS frame.
+     * <p>
+     * Only one of the following methods will be called for each HEADERS frame sequence.
+     * One will be called when the END_HEADERS flag has been received.
+     * <ul>
+     * <li>{@link #onHeadersRead(ChannelHandlerContext, int, Http2Headers, int, boolean)}</li>
+     * <li>{@link #onHeadersRead(ChannelHandlerContext, int, Http2Headers, int, short, boolean, int, boolean)}</li>
+     * <li>{@link #onPushPromiseRead(ChannelHandlerContext, int, int, Http2Headers, int)}</li>
+     * </ul>
+     * <p>
+     * To say it another way; the {@link Http2Headers} will contain all of the headers
+     * for the current message exchange step (additional queuing is not necessary).
      *
      * @param ctx the context from the handler where the frame was read.
      * @param streamId the subject stream for the frame.
@@ -37,7 +48,19 @@ public interface Http2FrameObserver extends Http2DataObserver {
             boolean endStream) throws Http2Exception;
 
     /**
-     * Handles an inbound HEADERS frame with priority information specified.
+     * Handles an inbound HEADERS frame with priority information specified. Only called if END_HEADERS encountered.
+     *
+     * <p>
+     * Only one of the following methods will be called for each HEADERS frame sequence.
+     * One will be called when the END_HEADERS flag has been received.
+     * <ul>
+     * <li>{@link #onHeadersRead(ChannelHandlerContext, int, Http2Headers, int, boolean)}</li>
+     * <li>{@link #onHeadersRead(ChannelHandlerContext, int, Http2Headers, int, short, boolean, int, boolean)}</li>
+     * <li>{@link #onPushPromiseRead(ChannelHandlerContext, int, int, Http2Headers, int)}</li>
+     * </ul>
+     * <p>
+     * To say it another way; the {@link Http2Headers} will contain all of the headers
+     * for the current message exchange step (additional queuing is not necessary).
      *
      * @param ctx the context from the handler where the frame was read.
      * @param streamId the subject stream for the frame.
@@ -109,7 +132,19 @@ public interface Http2FrameObserver extends Http2DataObserver {
     void onPingAckRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception;
 
     /**
-     * Handles an inbound PUSH_PROMISE frame.
+     * Handles an inbound PUSH_PROMISE frame. Only called if END_HEADERS encountered.
+     *
+     * <p>
+     * Only one of the following methods will be called for each HEADERS frame sequence.
+     * One will be called when the END_HEADERS flag has been received.
+     * <ul>
+     * <li>{@link #onHeadersRead(ChannelHandlerContext, int, Http2Headers, int, boolean)}</li>
+     * <li>{@link #onHeadersRead(ChannelHandlerContext, int, Http2Headers, int, short, boolean, int, boolean)}</li>
+     * <li>{@link #onPushPromiseRead(ChannelHandlerContext, int, int, Http2Headers, int)}</li>
+     * </ul>
+     * <p>
+     * To say it another way; the {@link Http2Headers} will contain all of the headers
+     * for the current message exchange step (additional queuing is not necessary).
      *
      * @param ctx the context from the handler where the frame was read.
      * @param streamId the stream the frame was sent on.

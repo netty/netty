@@ -70,6 +70,11 @@ public abstract class Http2Headers implements Iterable<Entry<String, String>> {
         public Iterator<Entry<String, String>> iterator() {
             return entries().iterator();
         }
+
+        @Override
+        public String forEach(HeaderVisitor visitor) {
+            return null;
+        }
     };
 
     /**
@@ -179,6 +184,27 @@ public abstract class Http2Headers implements Iterable<Entry<String, String>> {
      * Gets the number of headers contained in this object.
      */
     public abstract int size();
+
+    /**
+     * Allows a means to reduce GC pressure while iterating over a collection
+     */
+    public interface HeaderVisitor {
+        /**
+         * @return
+         * <ul>
+         * <li>{@code true} if the processor wants to continue the loop and handle the entry.</li>
+         * <li>{@code false} if the processor wants to stop handling headers and abort the loop.</li>
+         * </ul>
+         */
+        boolean visit(Map.Entry<String, String> entry);
+    }
+
+    /**
+     * Iterates over the entries contained within this header object in no guaranteed order
+     * @return {@code null} if the visitor iterated to or beyond the end of the headers.
+     *  The last-visited header name If the {@link HeaderVisitor#visit(Entry)} returned {@code false}.
+     */
+    public abstract String forEach(HeaderVisitor visitor);
 
     /**
      * Gets the {@link PseudoHeaderName#METHOD} header or {@code null} if there is no such header

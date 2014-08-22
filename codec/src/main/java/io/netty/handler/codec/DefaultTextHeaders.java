@@ -40,7 +40,7 @@ import java.util.HashSet;
 import java.util.TimeZone;
 
 public class DefaultTextHeaders implements TextHeaders {
-
+    private static final int HASH_CODE_PRIME = 31;
     private static final int BUCKET_SIZE = 17;
 
     private static int index(int hash) {
@@ -853,7 +853,17 @@ public class DefaultTextHeaders implements TextHeaders {
 
     @Override
     public Set<String> names() {
-        Set<String> names = new LinkedHashSet<String>(size());
+        return names(false);
+    }
+
+    /**
+     * Get the set of names for all text headers
+     * @param caseInsensitive {@code true} if names should be added in a case insensitive
+     * @return The set of names for all text headers
+     */
+    public Set<String> names(boolean caseInsensitive) {
+        Set<String> names = caseInsensitive ? new TreeSet<String>(String.CASE_INSENSITIVE_ORDER)
+                                            : new LinkedHashSet<String>(size());
         HeaderEntry e = head.after;
         while (e != head) {
             names.add(e.getKey().toString());
@@ -880,13 +890,12 @@ public class DefaultTextHeaders implements TextHeaders {
 
     @Override
     public int hashCode() {
-        final int prime = 31;
         int result = 1;
-        for (String name : names()) {
-            result = prime * result + name.hashCode();
+        for (String name : names(true)) {
+            result = HASH_CODE_PRIME * result + name.hashCode();
             Set<String> values = new TreeSet<String>(getAll(name));
             for (String value : values) {
-                result = prime * result + value.hashCode();
+                result = HASH_CODE_PRIME * result + value.hashCode();
             }
         }
         return result;
@@ -901,8 +910,8 @@ public class DefaultTextHeaders implements TextHeaders {
         DefaultTextHeaders other = (DefaultTextHeaders) o;
 
         // First, check that the set of names match.
-        Set<String> names = names();
-        if (!names.equals(other.names())) {
+        Set<String> names = names(true);
+        if (!names.equals(other.names(true))) {
             return false;
         }
 

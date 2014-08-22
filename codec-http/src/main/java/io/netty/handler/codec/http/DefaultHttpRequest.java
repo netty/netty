@@ -21,7 +21,7 @@ import io.netty.util.internal.StringUtil;
  * The default {@link HttpRequest} implementation.
  */
 public class DefaultHttpRequest extends DefaultHttpMessage implements HttpRequest {
-
+    private static final int HASH_CODE_PRIME = 31;
     private HttpMethod method;
     private String uri;
 
@@ -91,8 +91,38 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
     }
 
     @Override
+    public int hashCode() {
+        int result = 1;
+        result = HASH_CODE_PRIME * result + method.hashCode();
+        result = HASH_CODE_PRIME * result + uri.hashCode();
+        result = HASH_CODE_PRIME * result + super.hashCode();
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof DefaultHttpRequest)) {
+            return false;
+        }
+
+        DefaultHttpRequest other = (DefaultHttpRequest) o;
+
+        return method().equals(other.method()) &&
+               uri().equalsIgnoreCase(other.uri()) &&
+               super.equals(o);
+    }
+
+    @Override
     public String toString() {
         StringBuilder buf = new StringBuilder();
+        appendAll(buf);
+
+        // Remove the last newline.
+        buf.setLength(buf.length() - StringUtil.NEWLINE.length());
+        return buf.toString();
+    }
+
+    void appendAll(StringBuilder buf) {
         buf.append(StringUtil.simpleClassName(this));
         buf.append("(decodeResult: ");
         buf.append(decoderResult());
@@ -105,9 +135,5 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
         buf.append(protocolVersion().text());
         buf.append(StringUtil.NEWLINE);
         appendHeaders(buf);
-
-        // Remove the last newline.
-        buf.setLength(buf.length() - StringUtil.NEWLINE.length());
-        return buf.toString();
     }
 }

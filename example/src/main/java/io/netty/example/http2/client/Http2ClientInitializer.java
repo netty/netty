@@ -54,12 +54,12 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
                     new Http2FrameLogger(INFO, InternalLoggerFactory.getInstance(Http2ClientInitializer.class));
 
     private final SslContext sslCtx;
-    private final long maxContentLength;
+    private final int maxContentLength;
     private DelegatingHttp2ConnectionHandler connectionHandler;
     private HttpResponseHandler responseHandler;
     private Http2SettingsHandler settingsHandler;
 
-    public Http2ClientInitializer(SslContext sslCtx, long maxContentLength) {
+    public Http2ClientInitializer(SslContext sslCtx, int maxContentLength) {
         this.sslCtx = sslCtx;
         this.maxContentLength = maxContentLength;
     }
@@ -91,8 +91,6 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
 
     protected void configureEndOfPipeline(ChannelPipeline pipeline) {
         pipeline.addLast("Http2SettingsHandler", settingsHandler);
-        pipeline.addLast("Decompressor", new HttpContentDecompressor());
-        pipeline.addLast("Aggregator", new HttpObjectAggregator((int) maxContentLength));
         pipeline.addLast("HttpResponseHandler", responseHandler);
     }
 

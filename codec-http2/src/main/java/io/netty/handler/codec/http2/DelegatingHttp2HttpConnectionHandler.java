@@ -68,17 +68,17 @@ public class DelegatingHttp2HttpConnectionHandler extends DelegatingHttp2Connect
         }
 
         // Consume the Authority extension header if present
-        value = httpHeaders.get(Http2HttpHeaders.Names.AUTHORITY);
+        value = httpHeaders.get(Http2ToHttpHeaders.Names.AUTHORITY);
         if (value != null) {
             http2Headers.authority(value);
-            httpHeaders.remove(Http2HttpHeaders.Names.AUTHORITY);
+            httpHeaders.remove(Http2ToHttpHeaders.Names.AUTHORITY);
         }
 
         // Consume the Scheme extension header if present
-        value = httpHeaders.get(Http2HttpHeaders.Names.SCHEME);
+        value = httpHeaders.get(Http2ToHttpHeaders.Names.SCHEME);
         if (value != null) {
             http2Headers.scheme(value);
-            httpHeaders.remove(Http2HttpHeaders.Names.SCHEME);
+            httpHeaders.remove(Http2ToHttpHeaders.Names.SCHEME);
         }
     }
 
@@ -114,7 +114,7 @@ public class DelegatingHttp2HttpConnectionHandler extends DelegatingHttp2Connect
      */
     private int getStreamId(HttpHeaders httpHeaders) throws Http2Exception {
         int streamId = 0;
-        String value = httpHeaders.get(Http2HttpHeaders.Names.STREAM_ID);
+        String value = httpHeaders.get(Http2ToHttpHeaders.Names.STREAM_ID);
         if (value == null) {
             streamId = nextStreamId();
         } else {
@@ -124,7 +124,7 @@ public class DelegatingHttp2HttpConnectionHandler extends DelegatingHttp2Connect
                 throw Http2Exception.format(Http2Error.INTERNAL_ERROR,
                                     "Invalid user-specified stream id value '%s'", value);
             }
-            httpHeaders.remove(Http2HttpHeaders.Names.STREAM_ID);
+            httpHeaders.remove(Http2ToHttpHeaders.Names.STREAM_ID);
         }
 
         return streamId;

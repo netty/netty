@@ -15,12 +15,14 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.handler.codec.AsciiString;
+import io.netty.handler.codec.http.HttpResponseStatus;
 
 /**
  * Provides the constants for the header names used by
  * {@link InboundHttp2ToHttpAdapter} and {@link DelegatingHttp2HttpConnectionHandler}
  */
-public final class Http2HttpHeaders {
+public final class Http2ToHttpHeaders {
+    private Http2ToHttpHeaders() { }
 
     public static final class Names {
         /**
@@ -58,5 +60,28 @@ public final class Http2HttpHeaders {
 
         private Names() {
         }
+    }
+
+    /**
+     * Apply HTTP/2 rules while translating status code to {@link HttpResponseStatus}
+     *
+     * @param status The status from an HTTP/2 frame
+     * @return The HTTP/1.x status
+     * @throws Http2Exception If there is a problem translating from HTTP/2 to HTTP/1.x
+     */
+    public static HttpResponseStatus parseStatus(String status) throws Http2Exception {
+        HttpResponseStatus result = null;
+        try {
+            result = HttpResponseStatus.parseLine(status);
+            if (result == HttpResponseStatus.SWITCHING_PROTOCOLS) {
+                throw Http2Exception.protocolError("Invalid HTTP/2 status code '%d'", result.code());
+            }
+        } catch (Http2Exception e) {
+            throw e;
+        } catch (Exception e) {
+            throw Http2Exception.protocolError(
+                            "Unrecognized HTTP status code '%s' encountered in translation to HTTP/1.x", status);
+        }
+        return result;
     }
 }
