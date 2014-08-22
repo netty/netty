@@ -540,6 +540,13 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
         return reasonPhrase;
     }
 
+    /**
+     * Determine if the status code is of the informational class (1xx)
+     */
+    public boolean isInformational() {
+        return code >= 100 && code < 200;
+    }
+
     @Override
     public int hashCode() {
         return code();

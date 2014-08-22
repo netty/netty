@@ -17,11 +17,13 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.util.internal.StringUtil;
 
 /**
  * Default implementation of {@link FullHttpRequest}.
  */
 public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHttpRequest {
+    private static final int HASH_CODE_PRIME = 31;
     private final ByteBuf content;
     private final HttpHeaders trailingHeader;
     private final boolean validateHeaders;
@@ -32,6 +34,10 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
 
     public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri, ByteBuf content) {
         this(httpVersion, method, uri, content, true);
+    }
+
+    public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri, boolean validateHeaders) {
+        this(httpVersion, method, uri, Unpooled.buffer(0), true);
     }
 
     public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri,
@@ -112,13 +118,39 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
         return this;
     }
 
-    @Override
-    public FullHttpRequest copy() {
+    /**
+     * Copy this object
+     *
+     * @param copyContent
+     * <ul>
+     * <li>{@code true} if this object's {@link #content()} should be used to copy.</li>
+     * <li>{@code false} if {@code newContent} should be used instead.</li>
+     * </ul>
+     * @param newContent
+     * <ul>
+     * <li>if {@code copyContent} is false then this will be used in the copy's content.</li>
+     * <li>if {@code null} then a default buffer of 0 size will be selected</li>
+     * </ul>
+     * @return A copy of this object
+     */
+    private FullHttpRequest copy(boolean copyContent, ByteBuf newContent) {
         DefaultFullHttpRequest copy = new DefaultFullHttpRequest(
-                protocolVersion(), method(), uri(), content().copy(), validateHeaders);
+                protocolVersion(), method(), uri(),
+                copyContent ? content().copy() :
+                    newContent == null ? Unpooled.buffer(0) : newContent);
         copy.headers().set(headers());
         copy.trailingHeaders().set(trailingHeaders());
         return copy;
+    }
+
+    @Override
+    public FullHttpRequest copy(ByteBuf newContent) {
+        return copy(false, newContent);
+    }
+
+    @Override
+    public FullHttpRequest copy() {
+        return copy(true, null);
     }
 
     @Override
@@ -128,5 +160,39 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
         duplicate.headers().set(headers());
         duplicate.trailingHeaders().set(trailingHeaders());
         return duplicate;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = 1;
+        result = HASH_CODE_PRIME * result + content().hashCode();
+        result = HASH_CODE_PRIME * result + trailingHeaders().hashCode();
+        result = HASH_CODE_PRIME * result + super.hashCode();
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof DefaultFullHttpRequest)) {
+            return false;
+        }
+
+        DefaultFullHttpRequest other = (DefaultFullHttpRequest) o;
+
+        return super.equals(other) &&
+               content().equals(other.content()) &&
+               trailingHeaders().equals(other.trailingHeaders());
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder buf = new StringBuilder();
+        appendAll(buf);
+        buf.append(StringUtil.NEWLINE);
+        appendHeaders(buf, trailingHeaders());
+
+        // Remove the last newline.
+        buf.setLength(buf.length() - StringUtil.NEWLINE.length());
+        return buf.toString();
     }
 }

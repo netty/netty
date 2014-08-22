@@ -15,11 +15,15 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.buffer.ByteBuf;
+
 /**
- * Combinate the {@link HttpRequest} and {@link FullHttpMessage}, so the request is a <i>complete</i> HTTP
- * request.
+ * Combinate the {@link HttpRequest} and {@link FullHttpMessage}, so the request is a <i>complete</i> HTTP request.
  */
 public interface FullHttpRequest extends HttpRequest, FullHttpMessage {
+    @Override
+    FullHttpRequest copy(ByteBuf newContent);
+
     @Override
     FullHttpRequest copy();
 

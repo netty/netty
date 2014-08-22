@@ -128,6 +128,24 @@ public final class DefaultHttp2Headers extends Http2Headers {
         return new HeaderIterator();
     }
 
+    @Override
+    public String forEach(HeaderVisitor visitor) {
+        if (isEmpty()) {
+            return null;
+        }
+
+        HeaderEntry e = head.after;
+        do {
+            if (visitor.visit(e)) {
+                e = e.after;
+            } else {
+                return e.getKey();
+            }
+        } while (e != head);
+
+        return null;
+    }
+
     /**
      * Short cut for {@code new DefaultHttp2Headers.Builder()}.
      */

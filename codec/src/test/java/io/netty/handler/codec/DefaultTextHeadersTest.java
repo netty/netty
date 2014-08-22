@@ -15,23 +15,22 @@
  */
 package io.netty.handler.codec;
 
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.embedded.EmbeddedChannel;
-import org.junit.Test;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
-import static org.junit.Assert.*;
+import org.junit.Test;
 
 public class DefaultTextHeadersTest {
 
     @Test
     public void testEqualsMultipleHeaders() {
         DefaultTextHeaders h1 = new DefaultTextHeaders();
-        h1.set("foo", "goo");
+        h1.set("Foo", "goo");
         h1.set("foo2", "goo2");
 
         DefaultTextHeaders h2 = new DefaultTextHeaders();
-        h2.set("foo", "goo");
-        h2.set("foo2", "goo2");
+        h2.set("FoO", "goo");
+        h2.set("fOO2", "goo2");
 
         assertTrue(h1.equals(h2));
         assertTrue(h2.equals(h1));
@@ -42,16 +41,16 @@ public class DefaultTextHeadersTest {
     @Test
     public void testEqualsDuplicateMultipleHeaders() {
         DefaultTextHeaders h1 = new DefaultTextHeaders();
-        h1.set("foo", "goo");
-        h1.set("foo2", "goo2");
-        h1.add("foo2", "goo3");
+        h1.set("FOO", "goo");
+        h1.set("Foo2", "goo2");
+        h1.add("fOo2", "goo3");
         h1.add("foo", "goo4");
 
         DefaultTextHeaders h2 = new DefaultTextHeaders();
         h2.set("foo", "goo");
         h2.set("foo2", "goo2");
         h2.add("foo", "goo4");
-        h2.add("foo2", "goo3");
+        h2.add("foO2", "goo3");
 
         assertTrue(h1.equals(h2));
         assertTrue(h2.equals(h1));
@@ -62,7 +61,7 @@ public class DefaultTextHeadersTest {
     @Test
     public void testNotEqualsDuplicateMultipleHeaders() {
         DefaultTextHeaders h1 = new DefaultTextHeaders();
-        h1.set("foo", "goo");
+        h1.set("FOO", "goo");
         h1.set("foo2", "goo2");
         h1.add("foo2", "goo3");
         h1.add("foo", "goo4");

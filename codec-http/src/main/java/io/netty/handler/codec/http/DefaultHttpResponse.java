@@ -21,7 +21,7 @@ import io.netty.util.internal.StringUtil;
  * The default {@link HttpResponse} implementation.
  */
 public class DefaultHttpResponse extends DefaultHttpMessage implements HttpResponse {
-
+    private static final int HASH_CODE_PRIME = 31;
     private HttpResponseStatus status;
 
     /**
@@ -71,10 +71,9 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
 
     @Override
     public int hashCode() {
-        final int prime = 31;
         int result = 1;
-        result = prime * result + status.hashCode();
-        result = prime * result + super.hashCode();
+        result = HASH_CODE_PRIME * result + status.hashCode();
+        result = HASH_CODE_PRIME * result + super.hashCode();
         return result;
     }
 
@@ -92,6 +91,14 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
     @Override
     public String toString() {
         StringBuilder buf = new StringBuilder();
+        appendAll(buf);
+
+        // Remove the last newline.
+        buf.setLength(buf.length() - StringUtil.NEWLINE.length());
+        return buf.toString();
+    }
+
+    void appendAll(StringBuilder buf) {
         buf.append(StringUtil.simpleClassName(this));
         buf.append("(decodeResult: ");
         buf.append(decoderResult());
@@ -102,9 +109,5 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
         buf.append(status());
         buf.append(StringUtil.NEWLINE);
         appendHeaders(buf);
-
-        // Remove the last newline.
-        buf.setLength(buf.length() - StringUtil.NEWLINE.length());
-        return buf.toString();
     }
 }
