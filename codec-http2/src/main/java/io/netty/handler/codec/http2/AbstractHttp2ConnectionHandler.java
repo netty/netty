@@ -81,7 +81,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
     protected AbstractHttp2ConnectionHandler(Http2Connection connection,
             Http2FrameReader frameReader, Http2FrameWriter frameWriter) {
         this(connection, frameReader, frameWriter,
-                new DefaultHttp2InboundFlowController(connection),
+                new DefaultHttp2InboundFlowController(connection, frameWriter),
                 new DefaultHttp2OutboundFlowController(connection, frameWriter));
     }
 
@@ -824,16 +824,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
             stream.verifyState(STREAM_CLOSED, OPEN, HALF_CLOSED_LOCAL);
 
             // Apply flow control.
-            inboundFlow.applyInboundFlowControl(streamId, data, padding, endOfStream,
-                    new Http2InboundFlowController.FrameWriter() {
-                        @Override
-                        public void writeFrame(int streamId, int windowSizeIncrement)
-                                throws Http2Exception {
-                            frameWriter.writeWindowUpdate(ctx, streamId, windowSizeIncrement,
-                                    ctx.newPromise());
-                            ctx.flush();
-                        }
-                    });
+            inboundFlow.onDataRead(ctx, streamId, data, padding, endOfStream);
 
             verifyGoAwayNotReceived();
             verifyRstStreamNotReceived(stream);

@@ -17,14 +17,17 @@ package io.netty.handler.codec.http2;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
+import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.http2.Http2InboundFlowController.FrameWriter;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -43,7 +46,13 @@ public class DefaultHttp2InboundFlowControllerTest {
     private ByteBuf buffer;
 
     @Mock
-    private FrameWriter frameWriter;
+    private Http2FrameWriter frameWriter;
+
+    @Mock
+    private ChannelHandlerContext ctx;
+
+    @Mock
+    private ChannelPromise promise;
 
     private DefaultHttp2Connection connection;
 
@@ -51,8 +60,10 @@ public class DefaultHttp2InboundFlowControllerTest {
     public void setup() throws Http2Exception {
         MockitoAnnotations.initMocks(this);
 
+        when(ctx.newPromise()).thenReturn(promise);
+
         connection = new DefaultHttp2Connection(false);
-        controller = new DefaultHttp2InboundFlowController(connection);
+        controller = new DefaultHttp2InboundFlowController(connection, frameWriter);
 
         connection.local().createStream(STREAM_ID, false);
     }
@@ -77,7 +88,7 @@ public class DefaultHttp2InboundFlowControllerTest {
 
         // Set end-of-stream on the frame, so no window update will be sent for the stream.
         applyFlowControl(dataSize, 0, true);
-        verify(frameWriter).writeFrame(eq(CONNECTION_STREAM_ID), eq(windowDelta));
+        verifyWindowUpdateSent(CONNECTION_STREAM_ID, windowDelta);
     }
 
     @Test
@@ -88,8 +99,8 @@ public class DefaultHttp2InboundFlowControllerTest {
 
         // Don't set end-of-stream so we'll get a window update for the stream as well.
         applyFlowControl(dataSize, 0, false);
-        verify(frameWriter).writeFrame(eq(CONNECTION_STREAM_ID), eq(windowDelta));
-        verify(frameWriter).writeFrame(eq(STREAM_ID), eq(windowDelta));
+        verifyWindowUpdateSent(CONNECTION_STREAM_ID, windowDelta);
+        verifyWindowUpdateSent(STREAM_ID, windowDelta);
     }
 
     @Test
@@ -108,8 +119,8 @@ public class DefaultHttp2InboundFlowControllerTest {
         // Send the next frame and verify that the expected window updates were sent.
         applyFlowControl(initialWindowSize, 0, false);
         int delta = newInitialWindowSize - initialWindowSize;
-        verify(frameWriter).writeFrame(eq(CONNECTION_STREAM_ID), eq(delta));
-        verify(frameWriter).writeFrame(eq(STREAM_ID), eq(delta));
+        verifyWindowUpdateSent(CONNECTION_STREAM_ID, delta);
+        verifyWindowUpdateSent(STREAM_ID, delta);
     }
 
     private static int getWindowDelta(int initialSize, int windowSize, int dataSize) {
@@ -119,7 +130,7 @@ public class DefaultHttp2InboundFlowControllerTest {
 
     private void applyFlowControl(int dataSize, int padding, boolean endOfStream) throws Http2Exception {
         ByteBuf buf = dummyData(dataSize);
-        controller.applyInboundFlowControl(STREAM_ID, buf, padding, endOfStream, frameWriter);
+        controller.onDataRead(ctx, STREAM_ID, buf, padding, endOfStream);
         buf.release();
     }
 
@@ -129,7 +140,13 @@ public class DefaultHttp2InboundFlowControllerTest {
         return buffer;
     }
 
+    private void verifyWindowUpdateSent(int streamId, int windowSizeIncrement)
+            throws Http2Exception {
+        verify(frameWriter).writeWindowUpdate(eq(ctx), eq(streamId), eq(windowSizeIncrement), eq(promise));
+    }
+
     private void verifyWindowUpdateNotSent() throws Http2Exception {
-        verify(frameWriter, never()).writeFrame(anyInt(), anyInt());
+        verify(frameWriter, never()).writeWindowUpdate(any(ChannelHandlerContext.class), anyInt(),
+                anyInt(), any(ChannelPromise.class));
     }
 }

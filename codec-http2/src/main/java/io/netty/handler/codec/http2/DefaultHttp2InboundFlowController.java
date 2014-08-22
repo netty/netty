@@ -20,6 +20,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 import static io.netty.handler.codec.http2.Http2Exception.flowControlError;
 import static io.netty.handler.codec.http2.Http2Exception.protocolError;
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandlerContext;
 
 /**
  * Basic implementation of {@link Http2InboundFlowController}.
@@ -27,13 +28,18 @@ import io.netty.buffer.ByteBuf;
 public class DefaultHttp2InboundFlowController implements Http2InboundFlowController {
 
     private final Http2Connection connection;
+    private final Http2FrameWriter frameWriter;
     private int initialWindowSize = DEFAULT_WINDOW_SIZE;
 
-    public DefaultHttp2InboundFlowController(Http2Connection connection) {
+    public DefaultHttp2InboundFlowController(Http2Connection connection, Http2FrameWriter frameWriter) {
         if (connection == null) {
             throw new NullPointerException("connection");
         }
+        if (frameWriter == null) {
+            throw new NullPointerException("frameWriter");
+        }
         this.connection = connection;
+        this.frameWriter = frameWriter;
 
         // Add a flow state for the connection.
         connection.connectionStream().inboundFlow(new InboundFlowState(CONNECTION_STREAM_ID));
@@ -65,12 +71,22 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
     }
 
     @Override
-    public void applyInboundFlowControl(int streamId, ByteBuf data, int padding,
-            boolean endOfStream, FrameWriter frameWriter)
+    public void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding, boolean endOfStream)
             throws Http2Exception {
         int dataLength = data.readableBytes() + padding;
-        applyConnectionFlowControl(dataLength, frameWriter);
-        applyStreamFlowControl(streamId, dataLength, endOfStream, frameWriter);
+        boolean windowUpdateSent = false;
+        try {
+            // Apply the connection-level flow control.
+            windowUpdateSent = applyConnectionFlowControl(ctx, dataLength);
+
+            // Apply the stream-level flow control.
+            windowUpdateSent |= applyStreamFlowControl(ctx, streamId, dataLength, endOfStream);
+        } finally {
+            // Optimization: only flush once for any sent WINDOW_UPDATE frames.
+            if (windowUpdateSent) {
+                ctx.flush();
+            }
+        }
     }
 
     private InboundFlowState connectionState() {
@@ -98,8 +114,10 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
 
     /**
      * Apply connection-wide flow control to the incoming data frame.
+     *
+     * @return {@code true} if a {@code WINDOW_UPDATE} frame was sent for the connection.
      */
-    private void applyConnectionFlowControl(int dataLength, FrameWriter frameWriter)
+    private boolean applyConnectionFlowControl(ChannelHandlerContext ctx, int dataLength)
             throws Http2Exception {
         // Remove the data length from the available window size. Throw if the lower bound
         // was exceeded.
@@ -110,15 +128,19 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
         // to the initial value and send a window update to the remote endpoint indicating
         // the new window size.
         if (connectionState.window() <= getWindowUpdateThreshold()) {
-            connectionState.updateWindow(frameWriter);
+            connectionState.updateWindow(ctx);
+            return true;
         }
+        return false;
     }
 
     /**
      * Apply stream-based flow control to the incoming data frame.
+     *
+     * @return {@code true} if a {@code WINDOW_UPDATE} frame was sent for the stream.
      */
-    private void applyStreamFlowControl(int streamId, int dataLength, boolean endOfStream,
-            FrameWriter frameWriter) throws Http2Exception {
+    private boolean applyStreamFlowControl(ChannelHandlerContext ctx, int streamId, int dataLength,
+            boolean endOfStream) throws Http2Exception {
         // Remove the data length from the available window size. Throw if the lower bound
         // was exceeded.
         InboundFlowState state = stateOrFail(streamId);
@@ -128,8 +150,10 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
         // to the initial value and send a window update to the remote endpoint indicating
         // the new window size.
         if (state.window() <= getWindowUpdateThreshold() && !endOfStream) {
-            state.updateWindow(frameWriter);
+            state.updateWindow(ctx);
+            return true;
         }
+        return false;
     }
 
     /**
@@ -213,13 +237,13 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
          * size back to the size of the initial window and sends a window update frame to the remote
          * endpoint.
          */
-        void updateWindow(FrameWriter frameWriter) throws Http2Exception {
+        void updateWindow(ChannelHandlerContext ctx) throws Http2Exception {
             // Expand the window for this stream back to the size of the initial window.
             int deltaWindowSize = initialWindowSize - window;
             addAndGet(deltaWindowSize);
 
             // Send a window update for the stream/connection.
-            frameWriter.writeFrame(streamId, deltaWindowSize);
+            frameWriter.writeWindowUpdate(ctx, streamId, deltaWindowSize, ctx.newPromise());
         }
     }
 }

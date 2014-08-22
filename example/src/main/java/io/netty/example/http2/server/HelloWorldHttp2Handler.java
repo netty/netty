@@ -55,7 +55,7 @@ public class HelloWorldHttp2Handler extends AbstractHttp2ConnectionHandler {
     private HelloWorldHttp2Handler(Http2Connection connection, Http2FrameWriter frameWriter) {
         super(connection, new Http2InboundFrameLogger(new DefaultHttp2FrameReader(), logger),
                 frameWriter,
-                new DefaultHttp2InboundFlowController(connection),
+                new DefaultHttp2InboundFlowController(connection, frameWriter),
                 new DefaultHttp2OutboundFlowController(connection, frameWriter));
     }
 
