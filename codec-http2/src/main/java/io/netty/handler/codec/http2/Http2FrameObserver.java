@@ -21,21 +21,7 @@ import io.netty.channel.ChannelHandlerContext;
 /**
  * An observer of HTTP/2 frames.
  */
-public interface Http2FrameObserver {
-
-    /**
-     * Handles an inbound DATA frame.
-     *
-     * @param ctx the context from the handler where the frame was read.
-     * @param streamId the subject stream for the frame.
-     * @param data payload buffer for the frame. If this buffer needs to be retained by the observer
-     *            they must make a copy.
-     * @param padding the number of padding bytes found at the end of the frame.
-     * @param endOfStream Indicates whether this is the last frame to be sent from the remote
-     *            endpoint for this stream.
-     */
-    void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
-            boolean endOfStream) throws Http2Exception;
+public interface Http2FrameObserver extends Http2DataObserver {
 
     /**
      * Handles an inbound HEADERS frame.

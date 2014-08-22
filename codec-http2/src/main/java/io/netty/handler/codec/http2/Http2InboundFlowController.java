@@ -15,24 +15,10 @@
 
 package io.netty.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
-
 /**
  * Controls the inbound flow of data frames from the remote endpoint.
  */
-public interface Http2InboundFlowController {
-
-    /**
-     * A writer of window update frames.
-     * TODO: Use Http2FrameWriter instead.
-     */
-    interface FrameWriter {
-
-        /**
-         * Writes a window update frame to the remote endpoint.
-         */
-        void writeFrame(int streamId, int windowSizeIncrement) throws Http2Exception;
-    }
+public interface Http2InboundFlowController extends Http2DataObserver {
 
     /**
      * Sets the initial inbound flow control window size and updates all stream window sizes by the
@@ -47,17 +33,4 @@ public interface Http2InboundFlowController {
      * Gets the initial inbound flow control window size.
      */
     int initialInboundWindowSize();
-
-    /**
-     * Applies flow control for the received data frame.
-     *
-     * @param streamId the ID of the stream receiving the data
-     * @param data the data portion of the data frame. Does not contain padding.
-     * @param padding the amount of padding received in the original frame.
-     * @param endOfStream indicates whether this is the last frame for the stream.
-     * @param frameWriter allows this flow controller to send window updates to the remote endpoint.
-     * @throws Http2Exception thrown if any protocol-related error occurred.
-     */
-    void applyInboundFlowControl(int streamId, ByteBuf data, int padding, boolean endOfStream,
-            FrameWriter frameWriter) throws Http2Exception;
 }

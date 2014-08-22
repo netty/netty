@@ -254,8 +254,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
     public void dataReadAfterGoAwayShouldApplyFlowControl() throws Exception {
         when(remote.isGoAwayReceived()).thenReturn(true);
         decode().onDataRead(ctx, STREAM_ID, dummyData(), 10, true);
-        verify(inboundFlow).applyInboundFlowControl(eq(STREAM_ID), eq(dummyData()), eq(10),
-                eq(true), any(Http2InboundFlowController.FrameWriter.class));
+        verify(inboundFlow).onDataRead(eq(ctx), eq(STREAM_ID), eq(dummyData()), eq(10), eq(true));
 
         // Verify that the event was absorbed and not propagated to the oberver.
         verify(observer, never()).onDataRead(eq(ctx), anyInt(), any(ByteBuf.class), anyInt(),
@@ -265,8 +264,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
     @Test
     public void dataReadWithEndOfStreamShouldCloseRemoteSide() throws Exception {
         decode().onDataRead(ctx, STREAM_ID, dummyData(), 10, true);
-        verify(inboundFlow).applyInboundFlowControl(eq(STREAM_ID), eq(dummyData()), eq(10),
-                eq(true), any(Http2InboundFlowController.FrameWriter.class));
+        verify(inboundFlow).onDataRead(eq(ctx), eq(STREAM_ID), eq(dummyData()), eq(10), eq(true));
         verify(stream).closeRemoteSide();
         verify(observer).onDataRead(eq(ctx), eq(STREAM_ID), eq(dummyData()), eq(10), eq(true));
     }
