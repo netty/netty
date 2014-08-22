@@ -57,33 +57,30 @@ public interface Http2Connection {
         void streamRemoved(Http2Stream stream);
 
         /**
-         * Notifies the listener that the priority for the stream has changed. The parent of the
-         * stream may have changed, so the previous parent is also provided.
-         * <p>
-         * Either this method or {@link #streamPrioritySubtreeChanged} will be called, but not both
-         * for a single change. This method is called for simple priority changes. If a priority
-         * change causes a circular dependency between the stream and one of its descendants, the
-         * subtree must be restructured causing {@link #streamPrioritySubtreeChanged} instead.
-         *
-         * @param stream the stream for which the priority has changed.
-         * @param previousParent the previous parent of the stream. May be the same as its current
-         *            parent if unchanged.
+         * Notifies the listener that a priority tree parent change has occurred. This method will be invoked
+         * in a top down order relative to the priority tree. This method will also be invoked after all tree
+         * structure changes have been made and the tree is in steady state relative to the priority change
+         * which caused the tree structure to change.
+         * @param stream The stream which had a parent change (new parent and children will be steady state)
+         * @param oldParent The old parent which {@code stream} used to be a child of (may be {@code null})
          */
-        void streamPriorityChanged(Http2Stream stream, Http2Stream previousParent);
+        void priorityTreeParentChanged(Http2Stream stream, Http2Stream oldParent);
 
         /**
-         * Called when a priority change for a stream creates a circular dependency between the
-         * stream and one of its descendants. This requires a restructuring of the priority tree.
-         * <p>
-         * Either this method or {@link #streamPriorityChanged} will be called, but not both for a
-         * single change. For simple changes that do not cause the tree to be restructured,
-         * {@link #streamPriorityChanged} will be called instead.
-         *
-         * @param stream the stream for which the priority has changed, causing the tree to be
-         *            restructured.
-         * @param subtreeRoot the new root of the subtree that has changed.
+         * Notifies the listener that a parent dependency is about to change
+         * This is called while the tree is being restructured and so the tree
+         * structure is not necessarily steady state.
+         * @param stream The stream which the parent is about to change to {@code newParent}
+         * @param newParent The stream which will be the parent of {@code stream}
          */
-        void streamPrioritySubtreeChanged(Http2Stream stream, Http2Stream subtreeRoot);
+        void priorityTreeParentChanging(Http2Stream stream, Http2Stream newParent);
+
+        /**
+         * Notifies the listener that the weight has changed for {@code stream}
+         * @param stream The stream which the weight has changed
+         * @param oldWeight The old weight for {@code stream}
+         */
+        void onWeightChanged(Http2Stream stream, short oldWeight);
 
         /**
          * Called when a GO_AWAY frame has either been sent or received for the connection.

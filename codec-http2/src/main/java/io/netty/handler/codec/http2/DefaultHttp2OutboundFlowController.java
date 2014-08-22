@@ -39,8 +39,8 @@ import static java.lang.Math.*;
 public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowController {
 
     /**
-     * A comparators that sorts priority nodes in ascending order by the amount of priority data
-     * available for its subtree.
+     * A comparators that sorts priority nodes in ascending order by the amount of priority data available for its
+     * subtree.
      */
     private static final Comparator<Http2Stream> DATA_WEIGHT = new Comparator<Http2Stream>() {
         private static final int MAX_DATA_THRESHOLD = Integer.MAX_VALUE / 256;
@@ -76,8 +76,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         this.frameWriter = frameWriter;
 
         // Add a flow state for the connection.
-        connection.connectionStream().outboundFlow(
-                new OutboundFlowState(connection.connectionStream()));
+        connection.connectionStream().outboundFlow(new OutboundFlowState(connection.connectionStream()));
 
         // Register for notification of new streams.
         connection.addListener(new Http2ConnectionAdapter() {
@@ -104,19 +103,19 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
             }
 
             @Override
-            public void streamPriorityChanged(Http2Stream stream, Http2Stream previousParent) {
-                if (stream.parent() != previousParent) {
-                    // The parent changed, move the priority bytes to the new parent.
-                    int priorityBytes = state(stream).priorityBytes();
-                    state(previousParent).incrementPriorityBytes(-priorityBytes);
-                    state(stream.parent()).incrementPriorityBytes(priorityBytes);
+            public void priorityTreeParentChanged(Http2Stream stream, Http2Stream oldParent) {
+                Http2Stream parent = stream.parent();
+                if (parent != null) {
+                    state(parent).incrementPriorityBytes(state(stream).priorityBytes());
                 }
             }
 
             @Override
-            public void streamPrioritySubtreeChanged(Http2Stream stream, Http2Stream subtreeRoot) {
-                // Reset the priority bytes for the entire subtree.
-                resetSubtree(subtreeRoot);
+            public void priorityTreeParentChanging(Http2Stream stream, Http2Stream newParent) {
+                Http2Stream parent = stream.parent();
+                if (parent != null) {
+                    state(parent).incrementPriorityBytes(-state(stream).priorityBytes());
+                }
             }
         });
     }
@@ -216,8 +215,8 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
     }
 
     /**
-     * Attempts to get the {@link OutboundFlowState} for the given stream. If not available, raises
-     * a {@code PROTOCOL_ERROR}.
+     * Attempts to get the {@link OutboundFlowState} for the given stream. If not available, raises a
+     * {@code PROTOCOL_ERROR}.
      */
     private OutboundFlowState stateOrFail(int streamId) throws Http2Exception {
         OutboundFlowState state = state(streamId);
@@ -244,26 +243,6 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
     }
 
     /**
-     * Resets the priority bytes for the given subtree following a restructuring of the priority
-     * tree.
-     */
-    private void resetSubtree(Http2Stream subtree) {
-        // Reset the state priority bytes for this node to its pending bytes and propagate the
-        // delta required for this change up the tree. It's important to note that the total number
-        // of priority bytes for this subtree hasn't changed. As we traverse the subtree we will
-        // subtract off values from the parent of this tree, but we'll add them back later as we
-        // traverse the rest of the subtree.
-        OutboundFlowState state = state(subtree);
-        int delta = state.pendingBytes - state.priorityBytes;
-        state.incrementPriorityBytes(delta);
-
-        // Now recurse this operation for each child.
-        for (Http2Stream child : subtree.children()) {
-            resetSubtree(child);
-        }
-    }
-
-    /**
      * Writes as many pending bytes as possible, according to stream priority.
      */
     private void writePendingBytes() throws Http2Exception {
@@ -279,10 +258,11 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
     }
 
     /**
-     * Recursively traverses the priority tree rooted at the given node. Attempts to write the
-     * allowed bytes for the streams in this sub tree based on their weighted priorities.
+     * Recursively traverses the priority tree rooted at the given node. Attempts to write the allowed bytes for the
+     * streams in this sub tree based on their weighted priorities.
      *
-     * @param allowance an allowed number of bytes that may be written to the streams in this subtree
+     * @param allowance
+     *            an allowed number of bytes that may be written to the streams in this subtree
      */
     private void writeAllowedBytes(Http2Stream stream, int allowance) throws Http2Exception {
         // Write the allowed bytes for this node. If not all of the allowance was used,
@@ -353,8 +333,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
             int weight = next.weight();
 
             // Determine the value (in bytes) of a single unit of weight.
-            double dataToWeightRatio =
-                    min(unallocatedBytes, remainingWindow) / (double) remainingWeight;
+            double dataToWeightRatio = min(unallocatedBytes, remainingWindow) / (double) remainingWeight;
             unallocatedBytes -= nextState.unallocatedPriorityBytes();
             remainingWeight -= weight;
 
@@ -397,7 +376,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
     /**
      * The outbound flow control state for a single stream.
      */
-    private final class OutboundFlowState implements FlowState {
+    final class OutboundFlowState implements FlowState {
         private final Queue<Frame> pendingWriteQueue;
         private final Http2Stream stream;
         private int window = initialWindowSize;
@@ -405,7 +384,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         private int priorityBytes;
         private int allocatedPriorityBytes;
 
-        OutboundFlowState(Http2Stream stream) {
+        private OutboundFlowState(Http2Stream stream) {
             this.stream = stream;
             pendingWriteQueue = new ArrayDeque<Frame>(2);
         }
@@ -416,13 +395,12 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         }
 
         /**
-         * Increments the flow control window for this stream by the given delta and returns the new
-         * value.
+         * Increments the flow control window for this stream by the given delta and returns the new value.
          */
-        int incrementStreamWindow(int delta) throws Http2Exception {
+        private int incrementStreamWindow(int delta) throws Http2Exception {
             if (delta > 0 && Integer.MAX_VALUE - delta < window) {
-                throw new Http2StreamException(stream.id(), FLOW_CONTROL_ERROR,
-                        "Window size overflow for stream: " + stream.id());
+                throw new Http2StreamException(stream.id(), FLOW_CONTROL_ERROR, "Window size overflow for stream: "
+                        + stream.id());
             }
             int previouslyStreamable = streamableBytes();
             window += delta;
@@ -441,11 +419,10 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         }
 
         /**
-         * Returns the number of pending bytes for this node that will fit within the
-         * {@link #window}. This is used for the priority algorithm to determine the aggregate total
-         * for {@link #priorityBytes} at each node. Each node only takes into account it's stream
-         * window so that when a change occurs to the connection window, these values need not
-         * change (i.e. no tree traversal is required).
+         * Returns the number of pending bytes for this node that will fit within the {@link #window}. This is used for
+         * the priority algorithm to determine the aggregate total for {@link #priorityBytes} at each node. Each node
+         * only takes into account it's stream window so that when a change occurs to the connection window, these
+         * values need not change (i.e. no tree traversal is required).
          */
         int streamableBytes() {
             return max(0, min(pendingBytes, window));
@@ -461,30 +438,28 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         /**
          * Used by the priority algorithm to allocate bytes to this stream.
          */
-        void allocatePriorityBytes(int bytes) {
+        private void allocatePriorityBytes(int bytes) {
             allocatedPriorityBytes += bytes;
         }
 
         /**
-         * Used by the priority algorithm to get the intermediate allocation of bytes to this
-         * stream.
+         * Used by the priority algorithm to get the intermediate allocation of bytes to this stream.
          */
         int allocatedPriorityBytes() {
             return allocatedPriorityBytes;
         }
 
         /**
-         * Used by the priority algorithm to determine the number of writable bytes that have not
-         * yet been allocated.
+         * Used by the priority algorithm to determine the number of writable bytes that have not yet been allocated.
          */
-        int unallocatedPriorityBytes() {
+        private int unallocatedPriorityBytes() {
             return priorityBytes - allocatedPriorityBytes;
         }
 
         /**
          * Creates a new frame with the given values but does not add it to the pending queue.
          */
-        Frame newFrame(ChannelHandlerContext ctx, ChannelPromise promise, ByteBuf data,
+        private Frame newFrame(ChannelHandlerContext ctx, ChannelPromise promise, ByteBuf data,
                 int padding, boolean endStream) {
             return new Frame(ctx, new ChannelPromiseAggregator(promise), data, padding, endStream);
         }
@@ -497,8 +472,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         }
 
         /**
-         * Returns the the head of the pending queue, or {@code null} if empty or the current window
-         * size is zero.
+         * Returns the the head of the pending queue, or {@code null} if empty or the current window size is zero.
          */
         Frame peek() {
             if (window > 0) {
@@ -510,23 +484,22 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         /**
          * Clears the pending queue and writes errors for each remaining frame.
          */
-        void clear() {
+        private void clear() {
             for (;;) {
                 Frame frame = pendingWriteQueue.poll();
                 if (frame == null) {
                     break;
                 }
-                frame.writeError(format(STREAM_CLOSED,
-                        "Stream closed before write could take place"));
+                frame.writeError(format(STREAM_CLOSED, "Stream closed before write could take place"));
             }
         }
 
         /**
-         * Writes up to the number of bytes from the pending queue. May write less if limited by the
-         * writable window, by the number of pending writes available, or because a frame does not
-         * support splitting on arbitrary boundaries.
+         * Writes up to the number of bytes from the pending queue. May write less if limited by the writable window, by
+         * the number of pending writes available, or because a frame does not support splitting on arbitrary
+         * boundaries.
          */
-        int writeBytes(int bytes) throws Http2Exception {
+        private int writeBytes(int bytes) throws Http2Exception {
             int bytesWritten = 0;
             if (!stream.localSideOpen()) {
                 return bytesWritten;
@@ -553,8 +526,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         }
 
         /**
-         * Recursively increments the priority bytes for this branch in the priority tree starting
-         * at the current node.
+         * Recursively increments the priority bytes for this branch in the priority tree starting at the current node.
          */
         private void incrementPriorityBytes(int numBytes) {
             if (numBytes != 0) {
@@ -604,9 +576,9 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
             }
 
             /**
-             * Increments the number of pending bytes for this node. If there was any change to the
-             * number of bytes that fit into the stream window, then {@link #incrementPriorityBytes} to
-             * recursively update this branch of the priority tree.
+             * Increments the number of pending bytes for this node. If there was any change to the number of bytes that
+             * fit into the stream window, then {@link #incrementPriorityBytes} to recursively update this branch of the
+             * priority tree.
              */
             private void incrementPendingBytes(int numBytes) {
                 int previouslyStreamable = streamableBytes();
@@ -646,8 +618,8 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
             }
 
             /**
-             * Discards this frame, writing an error. If this frame is in the pending queue, the
-             * unwritten bytes are removed from this branch of the priority tree.
+             * Discards this frame, writing an error. If this frame is in the pending queue, the unwritten bytes are
+             * removed from this branch of the priority tree.
              */
             void writeError(Http2Exception cause) {
                 decrementPendingBytes(data.readableBytes());
@@ -656,12 +628,13 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
             }
 
             /**
-             * Creates a new frame that is a view of this frame's data buffer starting at the
-             * current read index with the given number of bytes. The reader index on the input
-             * frame is then advanced by the number of bytes. The returned frame will not have
-             * end-of-stream set and it will not be automatically placed in the pending queue.
+             * Creates a new frame that is a view of this frame's data buffer starting at the current read index with
+             * the given number of bytes. The reader index on the input frame is then advanced by the number of bytes.
+             * The returned frame will not have end-of-stream set and it will not be automatically placed in the pending
+             * queue.
              *
-             * @param maxBytes the maximum number of bytes that is allowed in the created frame.
+             * @param maxBytes
+             *            the maximum number of bytes that is allowed in the created frame.
              * @return the partial frame.
              */
             Frame split(int maxBytes) {
@@ -673,8 +646,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
             }
 
             /**
-             * If this frame is in the pending queue, decrements the number of pending bytes for the
-             * stream.
+             * If this frame is in the pending queue, decrements the number of pending bytes for the stream.
              */
             void decrementPendingBytes(int bytes) {
                 if (enqueued) {
