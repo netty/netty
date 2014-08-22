@@ -31,6 +31,12 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.http2.DefaultHttp2OutboundFlowController.OutboundFlowState;
+import io.netty.util.collection.IntObjectHashMap;
+import io.netty.util.collection.IntObjectMap;
+
+import java.util.Arrays;
+import java.util.List;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -46,6 +52,7 @@ public class DefaultHttp2OutboundFlowControllerTest {
     private static final int STREAM_B = 3;
     private static final int STREAM_C = 5;
     private static final int STREAM_D = 7;
+    private static final int STREAM_E = 9;
 
     private DefaultHttp2OutboundFlowController controller;
 
@@ -193,8 +200,7 @@ public class DefaultHttp2OutboundFlowControllerTest {
     @Test
     public void connectionWindowUpdateShouldSendPartialFrame() throws Http2Exception {
         // Set the connection window size to zero.
-        controller
-                .updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_WINDOW_SIZE);
+        controller.updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_WINDOW_SIZE);
 
         ByteBuf data = dummyData(10);
         send(STREAM_A, data);
@@ -252,8 +258,8 @@ public class DefaultHttp2OutboundFlowControllerTest {
     }
 
     /**
-     * In this test, we block A which allows bytes to be written by C and D. Here's a view of the
-     * tree (stream A is blocked).
+     * In this test, we block A which allows bytes to be written by C and D. Here's a view of the tree (stream A is
+     * blocked).
      *
      * <pre>
      *         0
@@ -303,8 +309,8 @@ public class DefaultHttp2OutboundFlowControllerTest {
     }
 
     /**
-     * In this test, we block B which allows all bytes to be written by A. A should not share the
-     * data with its children since it's not blocked.
+     * In this test, we block B which allows all bytes to be written by A. A should not share the data with its children
+     * since it's not blocked.
      *
      * <pre>
      *         0
@@ -345,8 +351,8 @@ public class DefaultHttp2OutboundFlowControllerTest {
     }
 
     /**
-     * In this test, we block B which allows all bytes to be written by A. Once A is blocked, it
-     * will spill over the remaining of its portion to its children.
+     * In this test, we block B which allows all bytes to be written by A. Once A is blocked, it will spill over the
+     * remaining of its portion to its children.
      *
      * <pre>
      *         0
@@ -405,8 +411,8 @@ public class DefaultHttp2OutboundFlowControllerTest {
      *     C   D
      * </pre>
      *
-     * We then re-prioritize D so that it's directly off of the connection and verify that A and D
-     * split the written bytes between them.
+     * We then re-prioritize D so that it's directly off of the connection and verify that A and D split the written
+     * bytes between them.
      *
      * <pre>
      *           0
@@ -452,8 +458,8 @@ public class DefaultHttp2OutboundFlowControllerTest {
     }
 
     /**
-     * In this test, we root all streams at the connection, and then verify that data is split
-     * appropriately based on weight (all available data is the same).
+     * In this test, we root all streams at the connection, and then verify that data is split appropriately based on
+     * weight (all available data is the same).
      *
      * <pre>
      *           0
@@ -515,8 +521,8 @@ public class DefaultHttp2OutboundFlowControllerTest {
     }
 
     /**
-     * In this test, we root all streams at the connection, and then verify that data is split
-     * equally among the stream, since they all have the same weight.
+     * In this test, we root all streams at the connection, and then verify that data is split equally among the stream,
+     * since they all have the same weight.
      *
      * <pre>
      *           0
@@ -567,6 +573,277 @@ public class DefaultHttp2OutboundFlowControllerTest {
         assertEquals(333, dWritten);
     }
 
+    /**
+     * In this test, we block all streams and verify the priority bytes for each sub tree at each node are correct
+     *
+     * <pre>
+     *        [0]
+     *        / \
+     *       A   B
+     *      / \
+     *     C   D
+     * </pre>
+     */
+    @Test
+    public void subTreeBytesShouldBeCorrect() throws Http2Exception {
+        // Block the connection
+        controller.updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_WINDOW_SIZE);
+
+        Http2Stream stream0 = connection.connectionStream();
+        Http2Stream streamA = connection.stream(STREAM_A);
+        Http2Stream streamB = connection.stream(STREAM_B);
+        Http2Stream streamC = connection.stream(STREAM_C);
+        Http2Stream streamD = connection.stream(STREAM_D);
+
+        // Send a bunch of data on each stream.
+        IntObjectMap<Integer> streamSizes = new IntObjectHashMap<Integer>(4);
+        streamSizes.put(STREAM_A, 400);
+        streamSizes.put(STREAM_B, 500);
+        streamSizes.put(STREAM_C, 600);
+        streamSizes.put(STREAM_D, 700);
+        send(STREAM_A, dummyData(streamSizes.get(STREAM_A)));
+        send(STREAM_B, dummyData(streamSizes.get(STREAM_B)));
+        send(STREAM_C, dummyData(streamSizes.get(STREAM_C)));
+        send(STREAM_D, dummyData(streamSizes.get(STREAM_D)));
+        verifyNoWrite(STREAM_A);
+        verifyNoWrite(STREAM_B);
+        verifyNoWrite(STREAM_C);
+        verifyNoWrite(STREAM_D);
+
+        OutboundFlowState state = state(stream0);
+        assertEquals(calculateStreamSizeSum(streamSizes,
+                        Arrays.asList(STREAM_A, STREAM_B, STREAM_C, STREAM_D)), state.priorityBytes());
+        state = state(streamA);
+        assertEquals(calculateStreamSizeSum(streamSizes,
+                        Arrays.asList(STREAM_A, STREAM_C, STREAM_D)), state.priorityBytes());
+        state = state(streamB);
+        assertEquals(calculateStreamSizeSum(streamSizes,
+                        Arrays.asList(STREAM_B)), state.priorityBytes());
+        state = state(streamC);
+        assertEquals(calculateStreamSizeSum(streamSizes,
+                        Arrays.asList(STREAM_C)), state.priorityBytes());
+        state = state(streamD);
+        assertEquals(calculateStreamSizeSum(streamSizes,
+                        Arrays.asList(STREAM_D)), state.priorityBytes());
+    }
+
+    /**
+     * In this test, we block all streams shift the priority tree and verify priority bytes for each subtree are correct
+     *
+     * <pre>
+     *        [0]
+     *        / \
+     *       A   B
+     *      / \
+     *     C   D
+     * </pre>
+     *
+     * After the tree shift:
+     * <pre>
+     *        [0]
+     *         |
+     *         A
+     *         |
+     *         B
+     *        / \
+     *       C   D
+     * </pre>
+     */
+    @Test
+    public void subTreeBytesShouldBeCorrectWithRestructure() throws Http2Exception {
+        // Block the connection
+        controller.updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_WINDOW_SIZE);
+
+        Http2Stream stream0 = connection.connectionStream();
+        Http2Stream streamA = connection.stream(STREAM_A);
+        Http2Stream streamB = connection.stream(STREAM_B);
+        Http2Stream streamC = connection.stream(STREAM_C);
+        Http2Stream streamD = connection.stream(STREAM_D);
+
+        // Send a bunch of data on each stream.
+        IntObjectMap<Integer> streamSizes = new IntObjectHashMap<Integer>(4);
+        streamSizes.put(STREAM_A, 400);
+        streamSizes.put(STREAM_B, 500);
+        streamSizes.put(STREAM_C, 600);
+        streamSizes.put(STREAM_D, 700);
+        send(STREAM_A, dummyData(streamSizes.get(STREAM_A)));
+        send(STREAM_B, dummyData(streamSizes.get(STREAM_B)));
+        send(STREAM_C, dummyData(streamSizes.get(STREAM_C)));
+        send(STREAM_D, dummyData(streamSizes.get(STREAM_D)));
+        verifyNoWrite(STREAM_A);
+        verifyNoWrite(STREAM_B);
+        verifyNoWrite(STREAM_C);
+        verifyNoWrite(STREAM_D);
+
+        streamB.setPriority(STREAM_A, DEFAULT_PRIORITY_WEIGHT, true);
+        OutboundFlowState state = state(stream0);
+        assertEquals(calculateStreamSizeSum(streamSizes,
+                        Arrays.asList(STREAM_A, STREAM_B, STREAM_C, STREAM_D)), state.priorityBytes());
+        state = state(streamA);
+        assertEquals(calculateStreamSizeSum(streamSizes,
+                        Arrays.asList(STREAM_A, STREAM_B, STREAM_C, STREAM_D)), state.priorityBytes());
+        state = state(streamB);
+        assertEquals(calculateStreamSizeSum(streamSizes,
+                        Arrays.asList(STREAM_B, STREAM_C, STREAM_D)), state.priorityBytes());
+        state = state(streamC);
+        assertEquals(calculateStreamSizeSum(streamSizes,
+                        Arrays.asList(STREAM_C)), state.priorityBytes());
+        state = state(streamD);
+        assertEquals(calculateStreamSizeSum(streamSizes,
+                        Arrays.asList(STREAM_D)), state.priorityBytes());
+    }
+
+    /**
+     * In this test, we block all streams and add a node to the priority tree and verify
+     *
+     * <pre>
+     *        [0]
+     *        / \
+     *       A   B
+     *      / \
+     *     C   D
+     * </pre>
+     *
+     * After the tree shift:
+     * <pre>
+     *        [0]
+     *        / \
+     *       A   B
+     *       |
+     *       E
+     *      / \
+     *     C   D
+     * </pre>
+     */
+    @Test
+    public void subTreeBytesShouldBeCorrectWithAddition() throws Http2Exception {
+        // Block the connection
+        controller.updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_WINDOW_SIZE);
+
+        Http2Stream stream0 = connection.connectionStream();
+        Http2Stream streamA = connection.stream(STREAM_A);
+        Http2Stream streamB = connection.stream(STREAM_B);
+        Http2Stream streamC = connection.stream(STREAM_C);
+        Http2Stream streamD = connection.stream(STREAM_D);
+
+        Http2Stream streamE = connection.local().createStream(STREAM_E, false);
+        streamE.setPriority(STREAM_A, DEFAULT_PRIORITY_WEIGHT, true);
+
+        // Send a bunch of data on each stream.
+        IntObjectMap<Integer> streamSizes = new IntObjectHashMap<Integer>(4);
+        streamSizes.put(STREAM_A, 400);
+        streamSizes.put(STREAM_B, 500);
+        streamSizes.put(STREAM_C, 600);
+        streamSizes.put(STREAM_D, 700);
+        streamSizes.put(STREAM_E, 900);
+        send(STREAM_A, dummyData(streamSizes.get(STREAM_A)));
+        send(STREAM_B, dummyData(streamSizes.get(STREAM_B)));
+        send(STREAM_C, dummyData(streamSizes.get(STREAM_C)));
+        send(STREAM_D, dummyData(streamSizes.get(STREAM_D)));
+        send(STREAM_E, dummyData(streamSizes.get(STREAM_E)));
+        verifyNoWrite(STREAM_A);
+        verifyNoWrite(STREAM_B);
+        verifyNoWrite(STREAM_C);
+        verifyNoWrite(STREAM_D);
+        verifyNoWrite(STREAM_E);
+
+        OutboundFlowState state = state(stream0);
+        assertEquals(calculateStreamSizeSum(streamSizes,
+                        Arrays.asList(STREAM_A, STREAM_B, STREAM_C, STREAM_D, STREAM_E)), state.priorityBytes());
+        state = state(streamA);
+        assertEquals(calculateStreamSizeSum(streamSizes,
+                        Arrays.asList(STREAM_A, STREAM_E, STREAM_C, STREAM_D)), state.priorityBytes());
+        state = state(streamB);
+        assertEquals(calculateStreamSizeSum(streamSizes,
+                        Arrays.asList(STREAM_B)), state.priorityBytes());
+        state = state(streamC);
+        assertEquals(calculateStreamSizeSum(streamSizes,
+                        Arrays.asList(STREAM_C)), state.priorityBytes());
+        state = state(streamD);
+        assertEquals(calculateStreamSizeSum(streamSizes,
+                        Arrays.asList(STREAM_D)), state.priorityBytes());
+        state = state(streamE);
+        assertEquals(calculateStreamSizeSum(streamSizes,
+                        Arrays.asList(STREAM_E, STREAM_C, STREAM_D)), state.priorityBytes());
+    }
+
+    /**
+     * In this test, we block all streams and remove a node from the priority tree and verify
+     *
+     * <pre>
+     *        [0]
+     *        / \
+     *       A   B
+     *      / \
+     *     C   D
+     * </pre>
+     *
+     * After the tree shift:
+     * <pre>
+     *        [0]
+     *       / | \
+     *      C  D  B
+     * </pre>
+     */
+    @Test
+    public void subTreeBytesShouldBeCorrectWithRemoval() throws Http2Exception {
+        // Block the connection
+        controller.updateOutboundWindowSize(CONNECTION_STREAM_ID, -DEFAULT_WINDOW_SIZE);
+
+        Http2Stream stream0 = connection.connectionStream();
+        Http2Stream streamA = connection.stream(STREAM_A);
+        Http2Stream streamB = connection.stream(STREAM_B);
+        Http2Stream streamC = connection.stream(STREAM_C);
+        Http2Stream streamD = connection.stream(STREAM_D);
+
+        // Send a bunch of data on each stream.
+        IntObjectMap<Integer> streamSizes = new IntObjectHashMap<Integer>(4);
+        streamSizes.put(STREAM_A, 400);
+        streamSizes.put(STREAM_B, 500);
+        streamSizes.put(STREAM_C, 600);
+        streamSizes.put(STREAM_D, 700);
+        send(STREAM_A, dummyData(streamSizes.get(STREAM_A)));
+        send(STREAM_B, dummyData(streamSizes.get(STREAM_B)));
+        send(STREAM_C, dummyData(streamSizes.get(STREAM_C)));
+        send(STREAM_D, dummyData(streamSizes.get(STREAM_D)));
+        verifyNoWrite(STREAM_A);
+        verifyNoWrite(STREAM_B);
+        verifyNoWrite(STREAM_C);
+        verifyNoWrite(STREAM_D);
+
+        streamA.close();
+
+        OutboundFlowState state = state(stream0);
+        assertEquals(calculateStreamSizeSum(streamSizes,
+                        Arrays.asList(STREAM_B, STREAM_C, STREAM_D)), state.priorityBytes());
+        state = state(streamA);
+        assertEquals(0, state.priorityBytes());
+        state = state(streamB);
+        assertEquals(calculateStreamSizeSum(streamSizes,
+                        Arrays.asList(STREAM_B)), state.priorityBytes());
+        state = state(streamC);
+        assertEquals(calculateStreamSizeSum(streamSizes,
+                        Arrays.asList(STREAM_C)), state.priorityBytes());
+        state = state(streamD);
+        assertEquals(calculateStreamSizeSum(streamSizes,
+                        Arrays.asList(STREAM_D)), state.priorityBytes());
+    }
+
+    private static OutboundFlowState state(Http2Stream stream) {
+        return (OutboundFlowState) stream.outboundFlow();
+    }
+
+    private static int calculateStreamSizeSum(IntObjectMap<Integer> streamSizes, List<Integer> streamIds) {
+        int sum = 0;
+        for (int i = 0; i < streamIds.size(); ++i) {
+            Integer streamSize = streamSizes.get(streamIds.get(i));
+            if (streamSize != null) {
+                sum += streamSize;
+            }
+        }
+        return sum;
+    }
+
     private void send(int streamId, ByteBuf data) throws Http2Exception {
         controller.writeData(ctx, streamId, data, 0, false, promise);
     }
@@ -576,16 +853,15 @@ public class DefaultHttp2OutboundFlowControllerTest {
     }
 
     private void verifyNoWrite(int streamId) {
-        verify(frameWriter, never()).writeData(eq(ctx), eq(streamId), any(ByteBuf.class), anyInt(),
-                anyBoolean(), eq(promise));
+        verify(frameWriter, never()).writeData(eq(ctx), eq(streamId), any(ByteBuf.class), anyInt(), anyBoolean(),
+                        eq(promise));
     }
 
     private void captureWrite(int streamId, ArgumentCaptor<ByteBuf> captor, boolean endStream) {
         verify(frameWriter).writeData(eq(ctx), eq(streamId), captor.capture(), eq(0), eq(endStream), eq(promise));
     }
 
-    private void setPriority(int stream, int parent, int weight, boolean exclusive)
-            throws Http2Exception {
+    private void setPriority(int stream, int parent, int weight, boolean exclusive) throws Http2Exception {
         connection.stream(stream).setPriority(parent, (short) weight, exclusive);
     }
 
