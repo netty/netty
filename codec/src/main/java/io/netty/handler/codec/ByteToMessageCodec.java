@@ -70,6 +70,7 @@ public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler {
      *                              {@link ByteBuf}, which is backed by an byte array.
      */
     protected ByteToMessageCodec(boolean preferDirect) {
+        checkForSharableAnnotation();
         outboundMsgMatcher = TypeParameterMatcher.find(this, ByteToMessageCodec.class, "I");
         encoder = new Encoder(preferDirect);
     }
