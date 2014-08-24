@@ -176,7 +176,7 @@ public class TrafficShapingHandlerTest {
         minimalWaitBetween[0] = 0;
         for (int i = 0; i < multipleMessage.length; i++) {
             if (multipleMessage[i] > 1) {
-                minimalWaitBetween[i + 1] = (multipleMessage[i] - 1) * stepms + minimalms;
+                minimalWaitBetween[i + 1] = (multipleMessage[i] - 1) * stepms;
             } else {
                 minimalWaitBetween[i + 1] = 10;
             }
@@ -188,7 +188,7 @@ public class TrafficShapingHandlerTest {
         long[] minimalWaitBetween = new long[multipleMessage.length + 1];
         for (int i = 0; i < multipleMessage.length; i++) {
             if (multipleMessage[i] > 1) {
-                minimalWaitBetween[i] = (multipleMessage[i] - 1) * stepms + minimalms;
+                minimalWaitBetween[i] = (multipleMessage[i] - 1) * stepms;
             } else {
                 minimalWaitBetween[i] = 10;
             }
