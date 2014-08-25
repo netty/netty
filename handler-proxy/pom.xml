@@ -23,22 +23,33 @@
     <version>4.1.0.Beta4-SNAPSHOT</version>
   </parent>
 
-  <artifactId>netty-codec-mqtt</artifactId>
+  <artifactId>netty-handler-proxy</artifactId>
   <packaging>jar</packaging>
 
-  <name>Netty/Codec/MQTT</name>
+  <name>Netty/Handler/Proxy</name>
 
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-codec</artifactId>
+      <artifactId>netty-transport</artifactId>
       <version>${project.version}</version>
     </dependency>
-
     <dependency>
-      <groupId>org.mockito</groupId>
-      <artifactId>mockito-all</artifactId>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-codec-socks</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-codec-http</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-handler</artifactId>
+      <version>${project.version}</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
 </project>
+
