@@ -218,4 +218,12 @@ final class IovArray implements MessageProcessor {
         buffer.forEachFlushedMessage(array);
         return array;
     }
+
+    static IovArray get(CompositeByteBuf buf) throws Exception {
+        IovArray array = ARRAY.get();
+        array.size = 0;
+        array.count = 0;
+        array.processMessage(buf);
+        return array;
+    }
 }

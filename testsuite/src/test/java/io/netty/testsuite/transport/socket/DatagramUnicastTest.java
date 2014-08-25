@@ -16,6 +16,8 @@
 package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -32,11 +34,61 @@ import static org.junit.Assert.*;
 public class DatagramUnicastTest extends AbstractDatagramTest {
 
     @Test
-    public void testSimpleSend() throws Throwable {
+    public void testSimpleSendDirectByteBuf() throws Throwable {
         run();
     }
 
-    public void testSimpleSend(Bootstrap sb, Bootstrap cb) throws Throwable {
+    public void testSimpleSendDirectByteBuf(Bootstrap sb, Bootstrap cb) throws Throwable {
+        testSimpleSend0(sb, cb, Unpooled.directBuffer());
+    }
+
+    @Test
+    public void testSimpleSendHeapByteBuf() throws Throwable {
+        run();
+    }
+
+    public void testSimpleSendHeapByteBuf(Bootstrap sb, Bootstrap cb) throws Throwable {
+        testSimpleSend0(sb, cb, Unpooled.directBuffer());
+    }
+
+    @Test
+    public void testSimpleSendCompositeDirectByteBuf() throws Throwable {
+        run();
+    }
+
+    public void testSimpleSendCompositeDirectByteBuf(Bootstrap sb, Bootstrap cb) throws Throwable {
+        CompositeByteBuf buf = Unpooled.compositeBuffer();
+        buf.addComponent(Unpooled.directBuffer(2, 2));
+        buf.addComponent(Unpooled.directBuffer(2, 2));
+        testSimpleSend0(sb, cb, buf);
+    }
+
+    @Test
+    public void testSimpleSendCompositeHeapByteBuf() throws Throwable {
+        run();
+    }
+
+    public void testSimpleSendCompositeHeapByteBuf(Bootstrap sb, Bootstrap cb) throws Throwable {
+        CompositeByteBuf buf = Unpooled.compositeBuffer();
+        buf.addComponent(Unpooled.buffer(2, 2));
+        buf.addComponent(Unpooled.buffer(2, 2));
+        testSimpleSend0(sb, cb, buf);
+    }
+
+    @Test
+    public void testSimpleSendCompositeMixedByteBuf() throws Throwable {
+        run();
+    }
+
+    public void testSimpleSendCompositeMixedByteBuf(Bootstrap sb, Bootstrap cb) throws Throwable {
+        CompositeByteBuf buf = Unpooled.compositeBuffer();
+        buf.addComponent(Unpooled.directBuffer(2, 2));
+        buf.addComponent(Unpooled.buffer(2, 2));
+        testSimpleSend0(sb, cb, buf);
+    }
+
+    private void testSimpleSend0(Bootstrap sb, Bootstrap cb, ByteBuf buf) throws Throwable {
+        buf.writeInt(1);
         final CountDownLatch latch = new CountDownLatch(1);
 
         sb.handler(new SimpleChannelInboundHandler<DatagramPacket>() {
@@ -57,7 +109,7 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
         Channel sc = sb.bind().sync().channel();
         Channel cc = cb.bind().sync().channel();
 
-        cc.writeAndFlush(new DatagramPacket(Unpooled.copyInt(1), addr)).sync();
+        cc.writeAndFlush(new DatagramPacket(buf, addr)).sync();
         assertTrue(latch.await(10, TimeUnit.SECONDS));
 
         sc.close().sync();
