@@ -17,6 +17,7 @@ package io.netty.channel;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
@@ -25,7 +26,9 @@ import io.netty.util.NetUtil;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorGroup;
+import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.PausableEventExecutor;
+import io.netty.util.concurrent.Promise;
 import org.junit.Test;
 
 import java.net.InetSocketAddress;
@@ -197,6 +200,29 @@ public class ChannelDeregistrationTest {
                 .context(TestChannelHandler2.class)
                 .executor()
                 .unwrap());
+    }
+
+    /**
+     * See https://github.com/netty/netty/issues/2814
+     */
+    @Test(timeout = 1000)
+    public void testPromise() {
+        ChannelHandler handler = new TestChannelHandler1();
+        AbstractChannel ch = new EmbeddedChannel(handler);
+        DefaultChannelPipeline p = new DefaultChannelPipeline(ch);
+        DefaultChannelHandlerInvoker invoker = new DefaultChannelHandlerInvoker(GlobalEventExecutor.INSTANCE);
+
+        ChannelHandlerContext ctx = new DefaultChannelHandlerContext(p, invoker, "Test", handler);
+        // Make sure no ClassCastException is thrown
+        Promise<Integer> promise = ctx.executor().newPromise();
+        promise.setSuccess(0);
+        assertTrue(promise.isSuccess());
+
+        ctx = new DefaultChannelHandlerContext(p, null, "Test", handler);
+        // Make sure no ClassCastException is thrown
+        promise = ctx.executor().newPromise();
+        promise.setSuccess(0);
+        assertTrue(promise.isSuccess());
     }
 
     private static final class TestChannelHandler1 extends ChannelHandlerAdapter { }
