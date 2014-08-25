@@ -83,7 +83,6 @@ public class Socks5CmdResponseDecoder extends ReplayingDecoder<State> {
                 }
             }
         }
-        ctx.pipeline().remove(this);
         out.add(msg);
     }
 

@@ -38,6 +38,7 @@
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-handler</artifactId>
       <version>${project.version}</version>
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>com.jcraft</groupId>
