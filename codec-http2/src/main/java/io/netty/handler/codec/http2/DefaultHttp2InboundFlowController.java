@@ -26,6 +26,17 @@ import io.netty.channel.ChannelHandlerContext;
  * Basic implementation of {@link Http2InboundFlowController}.
  */
 public class DefaultHttp2InboundFlowController implements Http2InboundFlowController {
+    /**
+     * The default ratio of window size to initial window size below which a {@code WINDOW_UPDATE}
+     * is sent to expand the window.
+     */
+    public static final float DEFAULT_WINDOW_MAINTENANCE_RATIO = 0.5f;
+
+    /**
+     * A value for the window maintenance ratio to be use in order to disable window maintenance for
+     * a stream (i.e. {@code 0}).
+     */
+    public static final float WINDOW_MAINTENANCE_OFF = 0.0f;
 
     private final Http2Connection connection;
     private final Http2FrameWriter frameWriter;
@@ -68,6 +79,33 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
     @Override
     public int initialInboundWindowSize() {
         return initialWindowSize;
+    }
+
+    /**
+     * Sets the per-stream ratio used to control when window maintenance is performed. The value
+     * specified is a ratio of the window size to the initial window size, below which a
+     * {@code WINDOW_UPDATE} should be sent to expand the window. If the given value is
+     * {@link #WINDOW_MAINTENANCE_OFF} (i.e. {@code 0}) window maintenance will be disabled for the
+     * stream.
+     *
+     * @throws IllegalArgumentException if the stream does not exist or if the ratio value is
+     *             outside of the range 0 (inclusive) to 1 (exclusive).
+     */
+    public void setWindowMaintenanceRatio(ChannelHandlerContext ctx, int streamId, float ratio) {
+        if (ratio < WINDOW_MAINTENANCE_OFF || ratio >= 1.0f) {
+            throw new IllegalArgumentException("Invalid ratio: " + ratio);
+        }
+
+        InboundFlowState state = state(streamId);
+        if (state == null) {
+            throw new IllegalArgumentException("Stream does not exist: " + streamId);
+        }
+
+        // Set the ratio.
+        state.setWindowMaintenanceRatio(ratio);
+
+        // In the event of enabling window maintenance, check to see if we need to update the window now.
+        state.updateWindowIfAppropriate(ctx);
     }
 
     @Override
@@ -124,14 +162,8 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
         InboundFlowState connectionState = connectionState();
         connectionState.addAndGet(-dataLength);
 
-        // If less than the window update threshold remains, restore the window size
-        // to the initial value and send a window update to the remote endpoint indicating
-        // the new window size.
-        if (connectionState.window() <= getWindowUpdateThreshold()) {
-            connectionState.updateWindow(ctx);
-            return true;
-        }
-        return false;
+        // If appropriate, send a WINDOW_UPDATE frame to open the window.
+        return connectionState.updateWindowIfAppropriate(ctx);
     }
 
     /**
@@ -145,22 +177,10 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
         // was exceeded.
         InboundFlowState state = stateOrFail(streamId);
         state.addAndGet(-dataLength);
+        state.endOfStream(endOfStream);
 
-        // If less than the window update threshold remains, restore the window size
-        // to the initial value and send a window update to the remote endpoint indicating
-        // the new window size.
-        if (state.window() <= getWindowUpdateThreshold() && !endOfStream) {
-            state.updateWindow(ctx);
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * Gets the threshold for a window size below which a window update should be issued.
-     */
-    private int getWindowUpdateThreshold() {
-        return initialWindowSize / 2;
+        // If appropriate, send a WINDOW_UPDATE frame to open the window.
+        return state.updateWindowIfAppropriate(ctx);
     }
 
     /**
@@ -170,6 +190,8 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
         private final int streamId;
         private int window;
         private int lowerBound;
+        private boolean endOfStream;
+        private float windowMaintenanceRatio = DEFAULT_WINDOW_MAINTENANCE_RATIO;
 
         InboundFlowState(int streamId) {
             this.streamId = streamId;
@@ -179,6 +201,35 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
         @Override
         public int window() {
             return window;
+        }
+
+        void endOfStream(boolean endOfStream) {
+            this.endOfStream = endOfStream;
+        }
+
+        /**
+         * Enables or disables window maintenance for this stream.
+         */
+        void setWindowMaintenanceRatio(float ratio) {
+            windowMaintenanceRatio = ratio;
+        }
+
+        /**
+         * Updates the flow control window for this stream if it is appropriate.
+         *
+         * @return {@code} true if a {@code WINDOW_UPDATE} frame was sent.
+         */
+        boolean updateWindowIfAppropriate(ChannelHandlerContext ctx) {
+            if (windowMaintenanceRatio == WINDOW_MAINTENANCE_OFF || endOfStream || initialWindowSize <= 0) {
+                return false;
+            }
+
+            float ratio = (float) window / (float) initialWindowSize;
+            if (ratio <= windowMaintenanceRatio) {
+                updateWindow(ctx);
+                return true;
+            }
+            return false;
         }
 
         /**
@@ -237,10 +288,15 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
          * size back to the size of the initial window and sends a window update frame to the remote
          * endpoint.
          */
-        void updateWindow(ChannelHandlerContext ctx) throws Http2Exception {
+        void updateWindow(ChannelHandlerContext ctx) {
             // Expand the window for this stream back to the size of the initial window.
             int deltaWindowSize = initialWindowSize - window;
-            addAndGet(deltaWindowSize);
+            try {
+                addAndGet(deltaWindowSize);
+            } catch (Http2Exception e) {
+                // Should never happen for a window increase.
+                throw new RuntimeException(e);
+            }
 
             // Send a window update for the stream/connection.
             frameWriter.writeWindowUpdate(ctx, streamId, deltaWindowSize, ctx.newPromise());
