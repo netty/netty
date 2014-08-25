@@ -16,6 +16,7 @@
 package io.netty.channel.epoll;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
@@ -28,6 +29,7 @@ import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
@@ -288,7 +290,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
         }
     }
 
-    private boolean doWriteMessage(Object msg) throws IOException {
+    private boolean doWriteMessage(Object msg) throws Exception {
         final ByteBuf data;
         InetSocketAddress remoteAddress;
         if (msg instanceof AddressedEnvelope) {
@@ -319,6 +321,13 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             long memoryAddress = data.memoryAddress();
             writtenBytes = Native.sendToAddress(fd, memoryAddress, data.readerIndex(), data.writerIndex(),
                     remoteAddress.getAddress(), remoteAddress.getPort());
+        } else if (data instanceof CompositeByteBuf) {
+            IovArray array = IovArray.get((CompositeByteBuf) data);
+            int cnt = array.count();
+            assert cnt != 0;
+
+            writtenBytes = Native.sendToAddresses(fd, array.memoryAddress(0),
+                    cnt, remoteAddress.getAddress(), remoteAddress.getPort());
         } else  {
             ByteBuffer nioData = data.internalNioBuffer(data.readerIndex(), data.readableBytes());
             writtenBytes = Native.sendTo(fd, nioData, nioData.position(), nioData.limit(),
@@ -344,13 +353,24 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
 
         if (msg instanceof ByteBuf) {
             ByteBuf buf = (ByteBuf) msg;
-            if (buf.hasMemoryAddress()) {
-                return msg;
+            if (!buf.hasMemoryAddress() && (PlatformDependent.hasUnsafe() || !buf.isDirect())) {
+                if (buf instanceof CompositeByteBuf) {
+                    // Special handling of CompositeByteBuf to reduce memory copies if some of the Components
+                    // in the CompositeByteBuf are backed by a memoryAddress.
+                    CompositeByteBuf comp = (CompositeByteBuf) buf;
+                    if (!comp.isDirect() || comp.nioBufferCount() > Native.IOV_MAX) {
+                        // more then 1024 buffers for gathering writes so just do a memory copy.
+                        buf = newDirectBuffer(buf);
+                        assert buf.hasMemoryAddress();
+                    }
+                } else {
+                    // We can only handle buffers with memory address so we need to copy if a non direct is
+                    // passed to write.
+                    buf = newDirectBuffer(buf);
+                    assert buf.hasMemoryAddress();
+                }
             }
-
-            // We can only handle direct buffers so we need to copy if a non direct is
-            // passed to write.
-            return newDirectBuffer(buf);
+            return buf;
         }
 
         if (msg instanceof AddressedEnvelope) {
@@ -363,7 +383,14 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                 if (content.hasMemoryAddress()) {
                     return e;
                 }
-
+                if (content instanceof CompositeByteBuf) {
+                    // Special handling of CompositeByteBuf to reduce memory copies if some of the Components
+                    // in the CompositeByteBuf are backed by a memoryAddress.
+                    CompositeByteBuf comp = (CompositeByteBuf) content;
+                    if (comp.isDirect() && comp.nioBufferCount() <= Native.IOV_MAX) {
+                        return e;
+                    }
+                }
                 // We can only handle direct buffers so we need to copy if a non direct is
                 // passed to write.
                 return new DefaultAddressedEnvelope<ByteBuf, InetSocketAddress>(

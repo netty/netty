@@ -118,6 +118,26 @@ final class Native {
     private static native int sendToAddress(
             int fd, long memoryAddress, int pos, int limit, byte[] address, int scopeId, int port) throws IOException;
 
+    public static int sendToAddresses(
+            int fd, long memoryAddress, int length, InetAddress addr, int port) throws IOException {
+        // just duplicate the toNativeInetAddress code here to minimize object creation as this method is expected
+        // to be called frequently
+        byte[] address;
+        int scopeId;
+        if (addr instanceof Inet6Address) {
+            address = addr.getAddress();
+            scopeId = ((Inet6Address) addr).getScopeId();
+        } else {
+            // convert to ipv4 mapped ipv6 address;
+            scopeId = 0;
+            address = ipv4MappedIpv6Address(addr.getAddress());
+        }
+        return sendToAddresses(fd, memoryAddress, length, address, scopeId, port);
+    }
+
+    private static native int sendToAddresses(
+            int fd, long memoryAddress, int length, byte[] address, int scopeId, int port) throws IOException;
+
     public static native EpollDatagramChannel.DatagramSocketAddress recvFrom(
             int fd, ByteBuffer buf, int pos, int limit) throws IOException;
 
