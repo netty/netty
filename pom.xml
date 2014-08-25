@@ -346,6 +346,7 @@
     <module>transport-sctp</module>
     <module>transport-udt</module>
     <module>handler</module>
+    <module>handler-proxy</module>
     <module>example</module>
     <module>testsuite</module>
     <module>microbench</module>
