@@ -655,6 +655,41 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_sendToAddress(JNIEnv *
     return sendTo0(env, fd, (void*) memoryAddress, pos, limit, address, scopeId, port);
 }
 
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_sendToAddresses(JNIEnv * env, jclass clazz, jint fd, jlong memoryAddress, jint length, jbyteArray address, jint scopeId, jint port) {
+    struct sockaddr_storage addr;
+
+    if (init_sockaddr(env, address, scopeId, port, &addr) == -1) {
+        return -1;
+    }
+
+    struct msghdr m;
+    m.msg_name = (void*) &addr;
+    m.msg_namelen = (socklen_t) sizeof(struct sockaddr_storage);
+    m.msg_iov = (struct iovec *) memoryAddress;
+    m.msg_iovlen = length;
+
+    ssize_t res;
+    int err;
+    do {
+       res = sendmsg(fd, &m, 0);
+       // keep on writing if it was interrupted
+    } while(res == -1 && ((err = errno) == EINTR));
+
+    if (res < 0) {
+        // network stack saturated... try again later
+        if (err == EAGAIN || err == EWOULDBLOCK) {
+            return 0;
+        }
+        if (err == EBADF) {
+            throwClosedChannelException(env);
+            return -1;
+        }
+        throwIOException(env, exceptionMessage("Error while sendto(...): ", err));
+        return -1;
+    }
+    return (jint) res;
+}
+
 jobject recvFrom0(JNIEnv * env, jint fd, void* buffer, jint pos, jint limit) {
     struct sockaddr_storage addr;
     socklen_t addrlen = sizeof(addr);
