@@ -15,6 +15,7 @@
 
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.DefaultHttp2InboundFlowController.WINDOW_UPDATE_OFF;
 import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 import static org.mockito.Matchers.any;
@@ -92,6 +93,16 @@ public class DefaultHttp2InboundFlowControllerTest {
     }
 
     @Test
+    public void windowMaintenanceDisabledForConnectionShouldNotUpdateWindow() throws Http2Exception {
+        controller.setWindowUpdateRatio(ctx, CONNECTION_STREAM_ID, WINDOW_UPDATE_OFF);
+        int dataSize = DEFAULT_WINDOW_SIZE / 2 + 1;
+
+        // Set end-of-stream on the frame, so no window update will be sent for the stream.
+        applyFlowControl(dataSize, 0, true);
+        verifyWindowUpdateNotSent();
+    }
+
+    @Test
     public void halfWindowRemainingShouldUpdateAllWindows() throws Http2Exception {
         int dataSize = DEFAULT_WINDOW_SIZE / 2 + 1;
         int initialWindowSize = DEFAULT_WINDOW_SIZE;
@@ -101,6 +112,19 @@ public class DefaultHttp2InboundFlowControllerTest {
         applyFlowControl(dataSize, 0, false);
         verifyWindowUpdateSent(CONNECTION_STREAM_ID, windowDelta);
         verifyWindowUpdateSent(STREAM_ID, windowDelta);
+    }
+
+    @Test
+    public void windowMaintenanceDisabledForStreamShouldNotUpdateWindow() throws Http2Exception {
+        controller.setWindowUpdateRatio(ctx, STREAM_ID, WINDOW_UPDATE_OFF);
+        int dataSize = DEFAULT_WINDOW_SIZE / 2 + 1;
+        int initialWindowSize = DEFAULT_WINDOW_SIZE;
+        int windowDelta = getWindowDelta(initialWindowSize, initialWindowSize, dataSize);
+
+        // Don't set end-of-stream so we'll get a window update for the stream as well.
+        applyFlowControl(dataSize, 0, false);
+        verifyWindowUpdateSent(CONNECTION_STREAM_ID, windowDelta);
+        verifyWindowUpdateNotSent(STREAM_ID);
     }
 
     @Test
@@ -143,6 +167,10 @@ public class DefaultHttp2InboundFlowControllerTest {
     private void verifyWindowUpdateSent(int streamId, int windowSizeIncrement)
             throws Http2Exception {
         verify(frameWriter).writeWindowUpdate(eq(ctx), eq(streamId), eq(windowSizeIncrement), eq(promise));
+    }
+
+    private void verifyWindowUpdateNotSent(int streamId) {
+        verify(frameWriter, never()).writeWindowUpdate(eq(ctx), eq(streamId), anyInt(), eq(promise));
     }
 
     private void verifyWindowUpdateNotSent() throws Http2Exception {
