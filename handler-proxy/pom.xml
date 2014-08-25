@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Copyright 2013 The Netty Project
+  ~ Copyright 2014 The Netty Project
   ~
   ~ The Netty Project licenses this file to you under the Apache License,
   ~ version 2.0 (the "License"); you may not use this file except in compliance
@@ -23,16 +23,32 @@
     <version>5.0.0.Alpha2-SNAPSHOT</version>
   </parent>
 
-  <artifactId>netty-codec-memcache</artifactId>
+  <artifactId>netty-handler-proxy</artifactId>
   <packaging>jar</packaging>
 
-  <name>Netty/Codec/Memcache</name>
+  <name>Netty/Handler/Proxy</name>
 
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-codec</artifactId>
+      <artifactId>netty-transport</artifactId>
       <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-codec-socks</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-codec-http</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-handler</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 </project>

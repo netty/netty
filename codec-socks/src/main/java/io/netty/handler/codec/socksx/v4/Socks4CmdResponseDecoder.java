@@ -57,7 +57,6 @@ public class Socks4CmdResponseDecoder extends ReplayingDecoder<State> {
                 msg = new Socks4CmdResponse(cmdStatus, host, port);
             }
         }
-        ctx.pipeline().remove(this);
         out.add(msg);
     }
 
