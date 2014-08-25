@@ -70,7 +70,7 @@ public abstract class ByteToMessageCodec<I> extends ChannelHandlerAdapter {
      *                              {@link ByteBuf}, which is backed by an byte array.
      */
     protected ByteToMessageCodec(boolean preferDirect) {
-        checkForSharableAnnotation();
+        CodecUtil.ensureNotSharable(this);
         outboundMsgMatcher = TypeParameterMatcher.find(this, ByteToMessageCodec.class, "I");
         encoder = new Encoder(preferDirect);
     }
@@ -84,15 +84,9 @@ public abstract class ByteToMessageCodec<I> extends ChannelHandlerAdapter {
      *                              {@link ByteBuf}, which is backed by an byte array.
      */
     protected ByteToMessageCodec(Class<? extends I> outboundMessageType, boolean preferDirect) {
-        checkForSharableAnnotation();
+        CodecUtil.ensureNotSharable(this);
         outboundMsgMatcher = TypeParameterMatcher.get(outboundMessageType);
         encoder = new Encoder(preferDirect);
-    }
-
-    private void checkForSharableAnnotation() {
-        if (isSharable()) {
-            throw new IllegalStateException("@Sharable annotation is not allowed");
-        }
     }
 
     /**
