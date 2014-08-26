@@ -63,7 +63,8 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 /**
- * Testing the {@link InboundHttp2ToHttpAdapter} for HTTP/2 frames into {@link HttpObject}s
+ * Testing the {@link InboundHttp2ToHttpPriorityAdapter} and base class {@link InboundHttp2ToHttpAdapter}
+ * for HTTP/2 frames into {@link HttpObject}s
  */
 public class InboundHttp2ToHttpAdapterTest {
 
@@ -107,9 +108,9 @@ public class InboundHttp2ToHttpAdapterTest {
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
                 Http2Connection connection = new DefaultHttp2Connection(true);
-                p.addLast("reader",
-                                new FrameAdapter(InboundHttp2ToHttpAdapter.newInstance(connection, maxContentLength),
-                                                new CountDownLatch(10)));
+                p.addLast("reader", new FrameAdapter(connection,
+                                InboundHttp2ToHttpPriorityAdapter.newInstance(connection, maxContentLength),
+                                new CountDownLatch(10)));
                 serverDelegator = new HttpResponseDelegator(serverObserver, serverLatch);
                 p.addLast(serverDelegator);
                 serverConnectedChannel = ch;
@@ -123,9 +124,9 @@ public class InboundHttp2ToHttpAdapterTest {
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
                 Http2Connection connection = new DefaultHttp2Connection(false);
-                p.addLast("reader",
-                                new FrameAdapter(InboundHttp2ToHttpAdapter.newInstance(connection, maxContentLength),
-                                                new CountDownLatch(10)));
+                p.addLast("reader", new FrameAdapter(connection,
+                                InboundHttp2ToHttpPriorityAdapter.newInstance(connection, maxContentLength),
+                                new CountDownLatch(10)));
                 clientDelegator = new HttpResponseDelegator(clientObserver, clientLatch);
                 p.addLast(clientDelegator);
             }
@@ -156,9 +157,9 @@ public class InboundHttp2ToHttpAdapterTest {
         final HttpMessage request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
                         "/some/path/resource2", true);
         HttpHeaders httpHeaders = request.headers();
-        httpHeaders.set(Http2ToHttpHeaders.Names.SCHEME, "https");
-        httpHeaders.set(Http2ToHttpHeaders.Names.AUTHORITY, "example.org");
-        httpHeaders.set(Http2ToHttpHeaders.Names.STREAM_ID, 3);
+        httpHeaders.set(HttpUtil.ExtensionHeaders.Names.SCHEME, "https");
+        httpHeaders.set(HttpUtil.ExtensionHeaders.Names.AUTHORITY, "example.org");
+        httpHeaders.set(HttpUtil.ExtensionHeaders.Names.STREAM_ID, 3);
         httpHeaders.set(HttpHeaders.Names.CONTENT_LENGTH, 0);
         final Http2Headers http2Headers = new DefaultHttp2Headers.Builder().method("GET").scheme("https")
                         .authority("example.org").path("/some/path/resource2").build();
@@ -180,7 +181,7 @@ public class InboundHttp2ToHttpAdapterTest {
         final FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
                         "/some/path/resource2", content, true);
         HttpHeaders httpHeaders = request.headers();
-        httpHeaders.set(Http2ToHttpHeaders.Names.STREAM_ID, 3);
+        httpHeaders.set(HttpUtil.ExtensionHeaders.Names.STREAM_ID, 3);
         httpHeaders.set(HttpHeaders.Names.CONTENT_LENGTH, text.length());
         final Http2Headers http2Headers = new DefaultHttp2Headers.Builder().method("GET").path("/some/path/resource2")
                         .build();
@@ -205,7 +206,7 @@ public class InboundHttp2ToHttpAdapterTest {
         final FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
                         "/some/path/resource2", content, true);
         HttpHeaders httpHeaders = request.headers();
-        httpHeaders.set(Http2ToHttpHeaders.Names.STREAM_ID, 3);
+        httpHeaders.set(HttpUtil.ExtensionHeaders.Names.STREAM_ID, 3);
         httpHeaders.set(HttpHeaders.Names.CONTENT_LENGTH, text.length());
         final Http2Headers http2Headers = new DefaultHttp2Headers.Builder().method("GET").path("/some/path/resource2")
                         .build();
@@ -233,7 +234,7 @@ public class InboundHttp2ToHttpAdapterTest {
         final FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
                         "/some/path/resource2", content, true);
         HttpHeaders httpHeaders = request.headers();
-        httpHeaders.set(Http2ToHttpHeaders.Names.STREAM_ID, 3);
+        httpHeaders.set(HttpUtil.ExtensionHeaders.Names.STREAM_ID, 3);
         httpHeaders.set(HttpHeaders.Names.CONTENT_LENGTH, text.length());
         final Http2Headers http2Headers = new DefaultHttp2Headers.Builder().method("GET").path("/some/path/resource2")
                         .build();
@@ -261,7 +262,7 @@ public class InboundHttp2ToHttpAdapterTest {
         final FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
                         "/some/path/resource2", content, true);
         HttpHeaders httpHeaders = request.headers();
-        httpHeaders.set(Http2ToHttpHeaders.Names.STREAM_ID, 3);
+        httpHeaders.set(HttpUtil.ExtensionHeaders.Names.STREAM_ID, 3);
         httpHeaders.set(HttpHeaders.Names.CONTENT_LENGTH, text.length());
         HttpHeaders trailingHeaders = request.trailingHeaders();
         trailingHeaders.set("FoO", "goo");
@@ -293,7 +294,7 @@ public class InboundHttp2ToHttpAdapterTest {
         final FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
                         "/some/path/resource2", content, true);
         HttpHeaders httpHeaders = request.headers();
-        httpHeaders.set(Http2ToHttpHeaders.Names.STREAM_ID, 3);
+        httpHeaders.set(HttpUtil.ExtensionHeaders.Names.STREAM_ID, 3);
         httpHeaders.set(HttpHeaders.Names.CONTENT_LENGTH, text.length());
         HttpHeaders trailingHeaders = request.trailingHeaders();
         trailingHeaders.set("Foo", "goo");
@@ -318,7 +319,7 @@ public class InboundHttp2ToHttpAdapterTest {
     }
 
     @Test
-    public void clientRequestStreamDependency() throws Exception {
+    public void clientRequestStreamDependencyInHttpMessageFlow() throws Exception {
         setServerLatch(2);
         final String text = "hello world big time data!";
         final ByteBuf content = Unpooled.copiedBuffer(text.getBytes());
@@ -328,15 +329,14 @@ public class InboundHttp2ToHttpAdapterTest {
                         "/some/path/resource", content, true);
 
         HttpHeaders httpHeaders = request.headers();
-        httpHeaders.set(Http2ToHttpHeaders.Names.STREAM_ID, 3);
+        httpHeaders.set(HttpUtil.ExtensionHeaders.Names.STREAM_ID, 3);
         httpHeaders.set(HttpHeaders.Names.CONTENT_LENGTH, text.length());
         final FullHttpMessage request2 = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT,
                         "/some/path/resource2", content2, true);
         HttpHeaders httpHeaders2 = request2.headers();
-        httpHeaders2.set(Http2ToHttpHeaders.Names.STREAM_ID, 5);
-        httpHeaders2.set(Http2ToHttpHeaders.Names.STREAM_DEPENDENCY_ID, 3);
-        httpHeaders2.set(Http2ToHttpHeaders.Names.STREAM_EXCLUSIVE, true);
-        httpHeaders2.set(Http2ToHttpHeaders.Names.STREAM_WEIGHT, 256);
+        httpHeaders2.set(HttpUtil.ExtensionHeaders.Names.STREAM_ID, 5);
+        httpHeaders2.set(HttpUtil.ExtensionHeaders.Names.STREAM_DEPENDENCY_ID, 3);
+        httpHeaders2.set(HttpUtil.ExtensionHeaders.Names.STREAM_WEIGHT, 123);
         httpHeaders2.set(HttpHeaders.Names.CONTENT_LENGTH, text2.length());
         final Http2Headers http2Headers = new DefaultHttp2Headers.Builder().method("PUT").path("/some/path/resource")
                         .build();
@@ -347,7 +347,7 @@ public class InboundHttp2ToHttpAdapterTest {
             public void run() {
                 frameWriter.writeHeaders(ctxClient(), 3, http2Headers, 0, false, newPromiseClient());
                 frameWriter.writeHeaders(ctxClient(), 5, http2Headers2, 0, false, newPromiseClient());
-                frameWriter.writePriority(ctxClient(), 5, 3, (short) 256, true, newPromiseClient());
+                frameWriter.writePriority(ctxClient(), 5, 3, (short) 123, true, newPromiseClient());
                 frameWriter.writeData(ctxClient(), 3, content.retain(), 0, true, newPromiseClient());
                 frameWriter.writeData(ctxClient(), 5, content2.retain(), 0, true, newPromiseClient());
                 ctxClient().flush();
@@ -364,6 +364,59 @@ public class InboundHttp2ToHttpAdapterTest {
     }
 
     @Test
+    public void clientRequestStreamDependencyOutsideHttpMessageFlow() throws Exception {
+        setServerLatch(3);
+        final String text = "hello world big time data!";
+        final ByteBuf content = Unpooled.copiedBuffer(text.getBytes());
+        final String text2 = "hello world big time data...number 2!!";
+        final ByteBuf content2 = Unpooled.copiedBuffer(text2.getBytes());
+        final FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT,
+                        "/some/path/resource", content, true);
+
+        HttpHeaders httpHeaders = request.headers();
+        httpHeaders.set(HttpUtil.ExtensionHeaders.Names.STREAM_ID, 3);
+        httpHeaders.set(HttpHeaders.Names.CONTENT_LENGTH, text.length());
+        final FullHttpMessage request2 = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT,
+                        "/some/path/resource2", content2, true);
+        HttpHeaders httpHeaders2 = request2.headers();
+        httpHeaders2.set(HttpUtil.ExtensionHeaders.Names.STREAM_ID, 5);
+        httpHeaders2.set(HttpHeaders.Names.CONTENT_LENGTH, text2.length());
+        final Http2Headers http2Headers = new DefaultHttp2Headers.Builder().method("PUT").path("/some/path/resource")
+                        .build();
+        final Http2Headers http2Headers2 = new DefaultHttp2Headers.Builder().method("PUT").path("/some/path/resource2")
+                        .build();
+        final FullHttpMessage request3 = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
+                HttpUtil.OUT_OF_MESSAGE_SEQUENCE_METHOD,
+                HttpUtil.OUT_OF_MESSAGE_SEQUENCE_PATH, true);
+        HttpHeaders httpHeaders3 = request3.headers();
+        httpHeaders3.set(HttpUtil.ExtensionHeaders.Names.STREAM_ID, 5);
+        httpHeaders3.set(HttpUtil.ExtensionHeaders.Names.STREAM_DEPENDENCY_ID, 3);
+        httpHeaders3.set(HttpUtil.ExtensionHeaders.Names.STREAM_WEIGHT, 222);
+        httpHeaders3.set(HttpHeaders.Names.CONTENT_LENGTH, 0);
+        runInChannel(clientChannel, new Http2Runnable() {
+            @Override
+            public void run() {
+                frameWriter.writeHeaders(ctxClient(), 3, http2Headers, 0, false, newPromiseClient());
+                frameWriter.writeHeaders(ctxClient(), 5, http2Headers2, 0, false, newPromiseClient());
+                frameWriter.writeData(ctxClient(), 3, content.retain(), 0, true, newPromiseClient());
+                frameWriter.writeData(ctxClient(), 5, content2.retain(), 0, true, newPromiseClient());
+                frameWriter.writePriority(ctxClient(), 5, 3, (short) 222, false, newPromiseClient());
+                ctxClient().flush();
+            }
+        });
+        awaitRequests();
+        ArgumentCaptor<HttpObject> httpObjectCaptor = ArgumentCaptor.forClass(HttpObject.class);
+        verify(serverObserver, times(3)).messageReceived(httpObjectCaptor.capture());
+        List<HttpObject> capturedHttpObjects = httpObjectCaptor.getAllValues();
+        assertEquals(request, capturedHttpObjects.get(0));
+        assertEquals(request2, capturedHttpObjects.get(1));
+        assertEquals(request3, capturedHttpObjects.get(2));
+        request.release();
+        request2.release();
+        request3.release();
+    }
+
+    @Test
     public void serverRequestPushPromise() throws Exception {
         setClientLatch(2);
         final String text = "hello world big time data!";
@@ -373,20 +426,20 @@ public class InboundHttp2ToHttpAdapterTest {
         final FullHttpMessage response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
                         content, true);
         HttpHeaders httpHeaders = response.headers();
-        httpHeaders.set(Http2ToHttpHeaders.Names.STREAM_ID, 3);
+        httpHeaders.set(HttpUtil.ExtensionHeaders.Names.STREAM_ID, 3);
         httpHeaders.set(HttpHeaders.Names.CONTENT_LENGTH, text.length());
         final FullHttpMessage response2 = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CREATED,
                         content2, true);
         HttpHeaders httpHeaders2 = response2.headers();
-        httpHeaders2.set(Http2ToHttpHeaders.Names.SCHEME, "https");
-        httpHeaders2.set(Http2ToHttpHeaders.Names.AUTHORITY, "example.org");
-        httpHeaders2.set(Http2ToHttpHeaders.Names.STREAM_ID, 5);
-        httpHeaders2.set(Http2ToHttpHeaders.Names.STREAM_PROMISE_ID, 3);
+        httpHeaders2.set(HttpUtil.ExtensionHeaders.Names.SCHEME, "https");
+        httpHeaders2.set(HttpUtil.ExtensionHeaders.Names.AUTHORITY, "example.org");
+        httpHeaders2.set(HttpUtil.ExtensionHeaders.Names.STREAM_ID, 5);
+        httpHeaders2.set(HttpUtil.ExtensionHeaders.Names.STREAM_PROMISE_ID, 3);
         httpHeaders2.set(HttpHeaders.Names.CONTENT_LENGTH, text2.length());
 
         final HttpMessage request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/push/test", true);
         httpHeaders = request.headers();
-        httpHeaders.set(Http2ToHttpHeaders.Names.STREAM_ID, 3);
+        httpHeaders.set(HttpUtil.ExtensionHeaders.Names.STREAM_ID, 3);
         httpHeaders.set(HttpHeaders.Names.CONTENT_LENGTH, 0);
         final Http2Headers http2Headers3 = new DefaultHttp2Headers.Builder().method("GET").path("/push/test").build();
         runInChannel(clientChannel, new Http2Runnable() {
@@ -427,7 +480,7 @@ public class InboundHttp2ToHttpAdapterTest {
         final FullHttpMessage request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, "/info/test",
                         true);
         HttpHeaders httpHeaders = request.headers();
-        httpHeaders.set(Http2ToHttpHeaders.Names.STREAM_ID, 3);
+        httpHeaders.set(HttpUtil.ExtensionHeaders.Names.STREAM_ID, 3);
         httpHeaders.set(HttpHeaders.Names.EXPECT, HttpHeaders.Values.CONTINUE);
         httpHeaders.set(HttpHeaders.Names.CONTENT_LENGTH, 0);
         final Http2Headers http2Headers = new DefaultHttp2Headers.Builder().method("PUT").path("/info/test")
@@ -445,7 +498,7 @@ public class InboundHttp2ToHttpAdapterTest {
 
         final FullHttpMessage response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE);
         httpHeaders = response.headers();
-        httpHeaders.set(Http2ToHttpHeaders.Names.STREAM_ID, 3);
+        httpHeaders.set(HttpUtil.ExtensionHeaders.Names.STREAM_ID, 3);
         httpHeaders.set(HttpHeaders.Names.CONTENT_LENGTH, 0);
         final Http2Headers http2HeadersResponse = new DefaultHttp2Headers.Builder().status("100").build();
         runInChannel(serverConnectedChannel, new Http2Runnable() {
@@ -481,7 +534,7 @@ public class InboundHttp2ToHttpAdapterTest {
         setClientLatch(1);
         final FullHttpMessage response2 = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         httpHeaders = response2.headers();
-        httpHeaders.set(Http2ToHttpHeaders.Names.STREAM_ID, 3);
+        httpHeaders.set(HttpUtil.ExtensionHeaders.Names.STREAM_ID, 3);
         httpHeaders.set(HttpHeaders.Names.CONTENT_LENGTH, 0);
         final Http2Headers http2HeadersResponse2 = new DefaultHttp2Headers.Builder().status("200").build();
         runInChannel(serverConnectedChannel, new Http2Runnable() {
@@ -510,11 +563,11 @@ public class InboundHttp2ToHttpAdapterTest {
     }
 
     private void awaitRequests() throws Exception {
-        serverLatch.await(200, SECONDS);
+        serverLatch.await(2, SECONDS);
     }
 
     private void awaitResponses() throws Exception {
-        clientLatch.await(200, SECONDS);
+        clientLatch.await(2, SECONDS);
     }
 
     private ChannelHandlerContext ctxClient() {
@@ -559,11 +612,13 @@ public class InboundHttp2ToHttpAdapterTest {
     }
 
     private final class FrameAdapter extends ByteToMessageDecoder {
+        private final Http2Connection connection;
         private final Http2FrameObserver observer;
         private final DefaultHttp2FrameReader reader;
         private final CountDownLatch latch;
 
-        FrameAdapter(Http2FrameObserver observer, CountDownLatch latch) {
+        FrameAdapter(Http2Connection connection, Http2FrameObserver observer, CountDownLatch latch) {
+            this.connection = connection;
             this.observer = observer;
             reader = new DefaultHttp2FrameReader();
             this.latch = latch;
@@ -572,18 +627,41 @@ public class InboundHttp2ToHttpAdapterTest {
         @Override
         protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
             reader.readFrame(ctx, in, new Http2FrameObserver() {
+                public Http2Stream getOrCreateStream(int streamId, boolean halfClosed) throws Http2Exception {
+                    Http2Stream stream = connection.stream(streamId);
+                    if (stream == null) {
+                        if ((connection.isServer() && streamId % 2 == 0) ||
+                            (!connection.isServer() && streamId % 2 != 0)) {
+                            stream = connection.local().createStream(streamId, halfClosed);
+                        } else {
+                            stream = connection.remote().createStream(streamId, halfClosed);
+                        }
+                    }
+                    return stream;
+                }
+
+                public void closeStream(Http2Stream stream) {
+                    if (stream != null) {
+                        stream.close();
+                    }
+                }
 
                 @Override
                 public void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
                                 boolean endOfStream) throws Http2Exception {
                     observer.onDataRead(ctx, streamId, copy(data), padding, endOfStream);
+                    // NOTE: Do not close the stream to allow the out of order messages to be processed
                     latch.countDown();
                 }
 
                 @Override
                 public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
                                 boolean endStream) throws Http2Exception {
+                    Http2Stream stream = getOrCreateStream(streamId, endStream);
                     observer.onHeadersRead(ctx, streamId, headers, padding, endStream);
+                    if (endStream) {
+                        closeStream(stream);
+                    }
                     latch.countDown();
                 }
 
@@ -591,14 +669,21 @@ public class InboundHttp2ToHttpAdapterTest {
                 public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
                                 int streamDependency, short weight, boolean exclusive, int padding, boolean endStream)
                                 throws Http2Exception {
+                    Http2Stream stream = getOrCreateStream(streamId, endStream);
+                    stream.setPriority(streamDependency, weight, exclusive);
                     observer.onHeadersRead(ctx, streamId, headers, streamDependency, weight, exclusive, padding,
                                     endStream);
+                    if (endStream) {
+                        closeStream(stream);
+                    }
                     latch.countDown();
                 }
 
                 @Override
                 public void onPriorityRead(ChannelHandlerContext ctx, int streamId, int streamDependency, short weight,
                                 boolean exclusive) throws Http2Exception {
+                    Http2Stream stream = getOrCreateStream(streamId, false);
+                    stream.setPriority(streamDependency, weight, exclusive);
                     observer.onPriorityRead(ctx, streamId, streamDependency, weight, exclusive);
                     latch.countDown();
                 }
@@ -606,7 +691,9 @@ public class InboundHttp2ToHttpAdapterTest {
                 @Override
                 public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode)
                                 throws Http2Exception {
+                    Http2Stream stream = getOrCreateStream(streamId, false);
                     observer.onRstStreamRead(ctx, streamId, errorCode);
+                    closeStream(stream);
                     latch.countDown();
                 }
 
@@ -637,6 +724,7 @@ public class InboundHttp2ToHttpAdapterTest {
                 @Override
                 public void onPushPromiseRead(ChannelHandlerContext ctx, int streamId, int promisedStreamId,
                                 Http2Headers headers, int padding) throws Http2Exception {
+                    getOrCreateStream(promisedStreamId, false);
                     observer.onPushPromiseRead(ctx, streamId, promisedStreamId, headers, padding);
                     latch.countDown();
                 }
@@ -651,6 +739,7 @@ public class InboundHttp2ToHttpAdapterTest {
                 @Override
                 public void onWindowUpdateRead(ChannelHandlerContext ctx, int streamId, int windowSizeIncrement)
                                 throws Http2Exception {
+                    getOrCreateStream(streamId, false);
                     observer.onWindowUpdateRead(ctx, streamId, windowSizeIncrement);
                     latch.countDown();
                 }

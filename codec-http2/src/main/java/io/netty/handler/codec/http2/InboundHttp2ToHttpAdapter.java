@@ -22,10 +22,8 @@ import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaderUtil;
 import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
@@ -40,15 +38,15 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 /**
- * Decodes HTTP/2 data and associated streams into {@link HttpMessage}s and {@link HttpContent}s.
+ * This adapter provides just header/data events from the HTTP message flow defined
+ * here <a href="http://tools.ietf.org/html/draft-ietf-httpbis-http2-14#section-8.1.">HTTP/2 Spec Message Flow</a>
  */
-public class InboundHttp2ToHttpAdapter extends Http2ConnectionAdapter implements Http2FrameObserver {
-
+public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
     private final int maxContentLength;
-    private final boolean validateHttpHeaders;
-    private final Http2Connection connection;
+    protected final Http2Connection connection;
+    protected final boolean validateHttpHeaders;
     private final ImmediateSendDetector sendDetector;
-    private final IntObjectMap<FullHttpMessage> messageMap;
+    protected final IntObjectMap<FullHttpMessage> messageMap;
 
     private static final Set<String> HEADERS_TO_EXCLUDE;
     private static final Map<String, String> HEADER_NAME_TRANSLATIONS_REQUEST;
@@ -63,12 +61,12 @@ public class InboundHttp2ToHttpAdapter extends Http2ConnectionAdapter implements
         }
 
         HEADER_NAME_TRANSLATIONS_RESPONSE.put(Http2Headers.PseudoHeaderName.AUTHORITY.value(),
-                        Http2ToHttpHeaders.Names.AUTHORITY.toString());
+                        HttpUtil.ExtensionHeaders.Names.AUTHORITY.toString());
         HEADER_NAME_TRANSLATIONS_RESPONSE.put(Http2Headers.PseudoHeaderName.SCHEME.value(),
-                        Http2ToHttpHeaders.Names.SCHEME.toString());
+                        HttpUtil.ExtensionHeaders.Names.SCHEME.toString());
         HEADER_NAME_TRANSLATIONS_REQUEST.putAll(HEADER_NAME_TRANSLATIONS_RESPONSE);
         HEADER_NAME_TRANSLATIONS_RESPONSE.put(Http2Headers.PseudoHeaderName.PATH.value(),
-                        Http2ToHttpHeaders.Names.PATH.toString());
+                        HttpUtil.ExtensionHeaders.Names.PATH.toString());
     }
 
     /**
@@ -80,12 +78,10 @@ public class InboundHttp2ToHttpAdapter extends Http2ConnectionAdapter implements
      * @throws NullPointerException If {@code connection} is null
      * @throws IllegalArgumentException If {@code maxContentLength} is less than or equal to {@code 0}
      */
-    public static InboundHttp2ToHttpAdapter newInstance(Http2Connection connection, int maxContentLength)
-                    throws NullPointerException, IllegalArgumentException {
-        InboundHttp2ToHttpAdapter adapter = new InboundHttp2ToHttpAdapter(connection, maxContentLength,
-                        DefaultImmediateSendDetector.getInstance());
-        connection.addListener(adapter);
-        return adapter;
+    public static InboundHttp2ToHttpAdapter newInstance(Http2Connection connection, int maxContentLength) {
+        InboundHttp2ToHttpAdapter instance = new InboundHttp2ToHttpAdapter(connection, maxContentLength);
+        connection.addListener(instance);
+        return instance;
     }
 
     /**
@@ -94,16 +90,20 @@ public class InboundHttp2ToHttpAdapter extends Http2ConnectionAdapter implements
      * @param connection The object which will provide connection notification events for the current connection
      * @param maxContentLength the maximum length of the message content. If the length of the message content exceeds
      *        this value, a {@link TooLongFrameException} will be raised.
-     * @param validateHeaders {@code true} if http headers should be validated
+     * @param validateHttpHeaders
+     * <ul>
+     * <li>{@code true} to validate HTTP headers in the http-codec</li>
+     * <li>{@code false} not to validate HTTP headers in the http-codec</li>
+     * </ul>
      * @throws NullPointerException If {@code connection} is null
      * @throws IllegalArgumentException If {@code maxContentLength} is less than or equal to {@code 0}
      */
     public static InboundHttp2ToHttpAdapter newInstance(Http2Connection connection, int maxContentLength,
-                    boolean validateHttpHeaders) throws NullPointerException, IllegalArgumentException {
-        InboundHttp2ToHttpAdapter adapter = new InboundHttp2ToHttpAdapter(connection, maxContentLength,
-                        DefaultImmediateSendDetector.getInstance(), validateHttpHeaders);
-        connection.addListener(adapter);
-        return adapter;
+                    boolean validateHttpHeaders) {
+        InboundHttp2ToHttpAdapter instance = new InboundHttp2ToHttpAdapter(connection,
+                        maxContentLength, validateHttpHeaders);
+        connection.addListener(instance);
+        return instance;
     }
 
     /**
@@ -112,14 +112,11 @@ public class InboundHttp2ToHttpAdapter extends Http2ConnectionAdapter implements
      * @param connection The object which will provide connection notification events for the current connection
      * @param maxContentLength the maximum length of the message content. If the length of the message content exceeds
      *        this value, a {@link TooLongFrameException} will be raised.
-     * @param sendDetector Decides when HTTP messages must be sent before the typically HTTP message events are detected
      * @throws NullPointerException If {@code connection} is null
      * @throws IllegalArgumentException If {@code maxContentLength} is less than or equal to {@code 0}
      */
-    protected InboundHttp2ToHttpAdapter(Http2Connection connection, int maxContentLength,
-            ImmediateSendDetector sendDetector) throws NullPointerException,
-                    IllegalArgumentException {
-        this(connection, maxContentLength, sendDetector, true);
+    protected InboundHttp2ToHttpAdapter(Http2Connection connection, int maxContentLength) {
+        this(connection, maxContentLength, true);
     }
 
     /**
@@ -128,33 +125,40 @@ public class InboundHttp2ToHttpAdapter extends Http2ConnectionAdapter implements
      * @param connection The object which will provide connection notification events for the current connection
      * @param maxContentLength the maximum length of the message content. If the length of the message content exceeds
      *        this value, a {@link TooLongFrameException} will be raised.
-     * @param sendDetector Decides when HTTP messages must be sent before the typically HTTP message events are detected
-     * @param validateHeaders {@code true} if http headers should be validated
+     * @param validateHttpHeaders
+     * <ul>
+     * <li>{@code true} to validate HTTP headers in the http-codec</li>
+     * <li>{@code false} not to validate HTTP headers in the http-codec</li>
+     * </ul>
      * @throws NullPointerException If {@code connection} is null
      * @throws IllegalArgumentException If {@code maxContentLength} is less than or equal to {@code 0}
      */
     protected InboundHttp2ToHttpAdapter(Http2Connection connection, int maxContentLength,
-            ImmediateSendDetector sendDetector, boolean validateHttpHeaders)
-                    throws NullPointerException, IllegalArgumentException {
+                    boolean validateHttpHeaders) {
         if (connection == null) {
             throw new NullPointerException("connection");
         }
         if (maxContentLength <= 0) {
             throw new IllegalArgumentException("maxContentLength must be a positive integer: " + maxContentLength);
         }
-        if (sendDetector == null) {
-            throw new NullPointerException("sendDetector");
-        }
         this.maxContentLength = maxContentLength;
         this.validateHttpHeaders = validateHttpHeaders;
         this.connection = connection;
-        this.sendDetector = sendDetector;
-        this.messageMap = new IntObjectHashMap<FullHttpMessage>();
+        sendDetector = DefaultImmediateSendDetector.getInstance();
+        messageMap = new IntObjectHashMap<FullHttpMessage>();
+    }
+
+    /**
+     * The streamId is out of scope for the HTTP message flow and will no longer be tracked
+     * @param streamId The stream id to remove associated state with
+     */
+    protected void removeMessage(int streamId) {
+        messageMap.remove(streamId);
     }
 
     @Override
     public void streamRemoved(Http2Stream stream) {
-        messageMap.remove(stream.id());
+        removeMessage(stream.id());
     }
 
     /**
@@ -164,40 +168,65 @@ public class InboundHttp2ToHttpAdapter extends Http2ConnectionAdapter implements
      * @param msg The message to send
      * @param streamId the streamId of the message which is being fired
      */
-    private void fireChannelRead(ChannelHandlerContext ctx, FullHttpMessage msg, int streamId) {
-        messageMap.remove(streamId);
+    protected void fireChannelRead(ChannelHandlerContext ctx, FullHttpMessage msg, int streamId) {
+        removeMessage(streamId);
         HttpHeaderUtil.setContentLength(msg, msg.content().readableBytes());
         ctx.fireChannelRead(msg);
+    }
+
+    /**
+     * Create a new {@link FullHttpMessage} based upon the current connection parameters
+     *
+     * @param streamId The stream id to create a message for
+     * @param headers The headers associated with {@code streamId}
+     * @param validateHttpHeaders
+     * <ul>
+     * <li>{@code true} to validate HTTP headers in the http-codec</li>
+     * <li>{@code false} not to validate HTTP headers in the http-codec</li>
+     * </ul>
+     * @return
+     * @throws Http2Exception
+     */
+    protected FullHttpMessage newMessage(int streamId, Http2Headers headers, boolean validateHttpHeaders)
+            throws Http2Exception {
+        return connection.isServer() ? newHttpRequest(streamId, headers, validateHttpHeaders) :
+                                       newHttpResponse(streamId, headers, validateHttpHeaders);
     }
 
     /**
      * Provides translation between HTTP/2 and HTTP header objects while ensuring the stream
      * is in a valid state for additional headers.
      *
-     * @param ctx The context for which this message has been received. Used to send informational header if detected.
+     * @param ctx The context for which this message has been received.
+     * Used to send informational header if detected.
      * @param streamId The stream id the {@code headers} apply to
      * @param headers The headers to process
      * @param endOfStream {@code true} if the {@code streamId} has received the end of stream flag
-     * @param allowAppend {@code true} if headers will be appended if the stream already exists. if {@code false} and
-     *        the stream already exists this method returns {@code null}.
-     * @param appendToTrailer {@code true} if a message {@code streamId} already exists then the headers
-     *                        should be added to the trailing headers.
-     *                        {@code false} then appends will be done to the initial headers.
+     * @param allowAppend
+     * <ul>
+     * <li>{@code true} if headers will be appended if the stream already exists.</li>
+     * <li>if {@code false} and the stream already exists this method returns {@code null}.</li>
+     * </ul>
+     * @param appendToTrailer
+     * <ul>
+     * <li>{@code true} if a message {@code streamId} already exists then the headers
+     * should be added to the trailing headers.</li>
+     * <li>{@code false} then appends will be done to the initial headers.</li>
+     * </ul>
      * @return The object used to track the stream corresponding to {@code streamId}. {@code null} if
      *         {@code allowAppend} is {@code false} and the stream already exists.
      * @throws Http2Exception If the stream id is not in the correct state to process the headers request
      */
-    private FullHttpMessage processHeadersBegin(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
+    protected FullHttpMessage processHeadersBegin(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
                 boolean endOfStream, boolean allowAppend, boolean appendToTrailer) throws Http2Exception {
         FullHttpMessage msg = messageMap.get(streamId);
         if (msg == null) {
-            msg = connection.isServer() ? newHttpRequest(streamId, headers, validateHttpHeaders) :
-                                          newHttpResponse(streamId, headers, validateHttpHeaders);
+            msg = newMessage(streamId, headers, validateHttpHeaders);
         } else if (allowAppend) {
             try {
                 addHttp2ToHttpHeaders(streamId, headers, msg, appendToTrailer);
             } catch (Http2Exception e) {
-                messageMap.remove(streamId);
+                removeMessage(streamId);
                 throw e;
             }
         } else {
@@ -221,7 +250,8 @@ public class InboundHttp2ToHttpAdapter extends Http2ConnectionAdapter implements
      * @param msg The object which represents all headers/data for corresponding to {@code streamId}
      * @param endOfStream {@code true} if this is the last event for the stream
      */
-    private void processHeadersEnd(ChannelHandlerContext ctx, int streamId, FullHttpMessage msg, boolean endOfStream) {
+    private void processHeadersEnd(ChannelHandlerContext ctx, int streamId,
+            FullHttpMessage msg, boolean endOfStream) {
         if (endOfStream) {
             fireChannelRead(ctx, msg, streamId);
         } else {
@@ -267,22 +297,8 @@ public class InboundHttp2ToHttpAdapter extends Http2ConnectionAdapter implements
                     short weight, boolean exclusive, int padding, boolean endOfStream) throws Http2Exception {
         FullHttpMessage msg = processHeadersBegin(ctx, streamId, headers, endOfStream, true, true);
         if (msg != null) {
-            // TODO: fix me...consume priority tree listener interface
-            setDependencyHeaders(msg.headers(), streamDependency, weight, exclusive);
             processHeadersEnd(ctx, streamId, msg, endOfStream);
         }
-    }
-
-    @Override
-    public void onPriorityRead(ChannelHandlerContext ctx, int streamId, int streamDependency, short weight,
-                    boolean exclusive) throws Http2Exception {
-        FullHttpMessage msg = messageMap.get(streamId);
-        if (msg == null) {
-            throw Http2Exception.protocolError("Priority Frame recieved for unknown stream id %d", streamId);
-        }
-
-        // TODO: fix me...consume priority tree listener interface
-        setDependencyHeaders(msg.headers(), streamDependency, weight, exclusive);
     }
 
     @Override
@@ -294,8 +310,8 @@ public class InboundHttp2ToHttpAdapter extends Http2ConnectionAdapter implements
     }
 
     @Override
-    public void onPushPromiseRead(ChannelHandlerContext ctx, int streamId, int promisedStreamId, Http2Headers headers,
-                    int padding) throws Http2Exception {
+    public void onPushPromiseRead(ChannelHandlerContext ctx, int streamId, int promisedStreamId,
+            Http2Headers headers, int padding) throws Http2Exception {
         // A push promise should not be allowed to add headers to an existing stream
         FullHttpMessage msg = processHeadersBegin(ctx, promisedStreamId, headers, false, false, false);
         if (msg == null) {
@@ -303,47 +319,9 @@ public class InboundHttp2ToHttpAdapter extends Http2ConnectionAdapter implements
                             promisedStreamId);
         }
 
-        msg.headers().set(Http2ToHttpHeaders.Names.STREAM_PROMISE_ID, streamId);
+        msg.headers().set(HttpUtil.ExtensionHeaders.Names.STREAM_PROMISE_ID, streamId);
 
         processHeadersEnd(ctx, promisedStreamId, msg, false);
-    }
-
-    @Override
-    public void onSettingsAckRead(ChannelHandlerContext ctx) throws Http2Exception {
-        // NOOP
-    }
-
-    @Override
-    public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings) throws Http2Exception {
-        // NOOP
-    }
-
-    @Override
-    public void onPingRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
-        // NOOP
-    }
-
-    @Override
-    public void onPingAckRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
-        // NOOP
-    }
-
-    @Override
-    public void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData)
-                    throws Http2Exception {
-        // NOOP
-    }
-
-    @Override
-    public void onWindowUpdateRead(ChannelHandlerContext ctx, int streamId, int windowSizeIncrement)
-                    throws Http2Exception {
-        // NOOP
-    }
-
-    @Override
-    public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
-                    ByteBuf payload) {
-        // NOOP
     }
 
     /**
@@ -411,38 +389,21 @@ public class InboundHttp2ToHttpAdapter extends Http2ConnectionAdapter implements
     }
 
     /**
-     * Set/clear all HTTP/1.x headers related to stream dependencies
-     *
-     * @param headers The headers to set
-     * @param streamDependency The stream id for which the {@code objAccumulator} is dependent on
-     * @param weight The dependency weight
-     * @param exclusive The exclusive HTTP/2 flag
-     */
-    private static void setDependencyHeaders(HttpHeaders headers, int streamDependency,
-                    short weight, boolean exclusive) {
-        if (streamDependency != 0) {
-            headers.set(Http2ToHttpHeaders.Names.STREAM_DEPENDENCY_ID, streamDependency);
-            headers.set(Http2ToHttpHeaders.Names.STREAM_EXCLUSIVE, exclusive);
-            headers.set(Http2ToHttpHeaders.Names.STREAM_WEIGHT, weight);
-        } else {
-            headers.set(Http2ToHttpHeaders.Names.STREAM_DEPENDENCY_ID);
-            headers.set(Http2ToHttpHeaders.Names.STREAM_EXCLUSIVE);
-            headers.set(Http2ToHttpHeaders.Names.STREAM_WEIGHT);
-        }
-    }
-
-    /**
      * Create a new object to contain the response data
      *
      * @param streamId The stream associated with the response
      * @param http2Headers The initial set of HTTP/2 headers to create the response with
-     * @param validateHttpHeaders Used by http-codec to validate headers
+     * @param validateHttpHeaders
+     * <ul>
+     * <li>{@code true} to validate HTTP headers in the http-codec</li>
+     * <li>{@code false} not to validate HTTP headers in the http-codec</li>
+     * </ul>
      * @return A new response object which represents headers/data
      * @throws Http2Exception see {@link #addHttp2ToHttpHeaders(int, Http2Headers, FullHttpMessage, Map)}
      */
     private static FullHttpMessage newHttpResponse(int streamId, Http2Headers http2Headers, boolean validateHttpHeaders)
                     throws Http2Exception {
-        HttpResponseStatus status = Http2ToHttpHeaders.parseStatus(http2Headers.status());
+        HttpResponseStatus status = HttpUtil.parseStatus(http2Headers.status());
         // HTTP/2 does not define a way to carry the version or reason phrase that is included in an HTTP/1.1
         // status line.
         FullHttpMessage msg = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, validateHttpHeaders);
@@ -455,7 +416,11 @@ public class InboundHttp2ToHttpAdapter extends Http2ConnectionAdapter implements
      *
      * @param streamId The stream associated with the request
      * @param http2Headers The initial set of HTTP/2 headers to create the request with
-     * @param validateHttpHeaders Used by http-codec to validate headers
+     * @param validateHttpHeaders
+     * <ul>
+     * <li>{@code true} to validate HTTP headers in the http-codec</li>
+     * <li>{@code false} not to validate HTTP headers in the http-codec</li>
+     * </ul>
      * @return A new request object which represents headers/data
      * @throws Http2Exception see {@link #addHttp2ToHttpHeaders(int, Http2Headers, FullHttpMessage, Map)}
      */
@@ -499,7 +464,7 @@ public class InboundHttp2ToHttpAdapter extends Http2ConnectionAdapter implements
                     FullHttpMessage destinationMessage, boolean addToTrailer, Map<String, String> translations)
                             throws Http2Exception {
         HttpHeaders headers = addToTrailer ? destinationMessage.trailingHeaders() : destinationMessage.headers();
-        HttpForEachVisitor visitor = new HttpForEachVisitor(headers, translations);
+        HttpAdapterVisitor visitor = new HttpAdapterVisitor(headers, translations);
         sourceHeaders.forEach(visitor);
         if (visitor.exception() != null) {
             throw visitor.exception();
@@ -508,7 +473,7 @@ public class InboundHttp2ToHttpAdapter extends Http2ConnectionAdapter implements
         headers.remove(HttpHeaders.Names.TRANSFER_ENCODING);
         headers.remove(HttpHeaders.Names.TRAILER);
         if (!addToTrailer) {
-            headers.set(Http2ToHttpHeaders.Names.STREAM_ID, streamId);
+            headers.set(HttpUtil.ExtensionHeaders.Names.STREAM_ID, streamId);
             HttpHeaderUtil.setKeepAlive(destinationMessage, true);
         }
     }
@@ -516,7 +481,7 @@ public class InboundHttp2ToHttpAdapter extends Http2ConnectionAdapter implements
     /**
      * A visitor which translates HTTP/2 headers to HTTP/1 headers
      */
-    private static final class HttpForEachVisitor implements HeaderVisitor {
+    private static final class HttpAdapterVisitor implements HeaderVisitor {
         private Map<String, String> translations;
         private HttpHeaders headers;
         private Http2Exception e;
@@ -527,7 +492,7 @@ public class InboundHttp2ToHttpAdapter extends Http2ConnectionAdapter implements
          * @param headers The HTTP/1.x headers object to store the results of the translation
          * @param translations A map used to help translate HTTP/2 headers to HTTP/1.x headers
          */
-        public HttpForEachVisitor(HttpHeaders headers, Map<String, String> translations) {
+        public HttpAdapterVisitor(HttpHeaders headers, Map<String, String> translations) {
             this.translations = translations;
             this.headers = headers;
             this.e = null;

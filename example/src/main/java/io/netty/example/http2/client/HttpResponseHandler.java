@@ -19,7 +19,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http2.Http2ToHttpHeaders;
+import io.netty.handler.codec.http2.HttpUtil;
 import io.netty.util.CharsetUtil;
 
 import java.util.Iterator;
@@ -76,7 +76,7 @@ public class HttpResponseHandler extends SimpleChannelInboundHandler<FullHttpRes
 
     @Override
     protected void messageReceived(ChannelHandlerContext ctx, FullHttpResponse msg) throws Exception {
-        int streamId = Integer.parseInt(msg.headers().get(Http2ToHttpHeaders.Names.STREAM_ID));
+        int streamId = Integer.parseInt(msg.headers().get(HttpUtil.ExtensionHeaders.Names.STREAM_ID));
         ChannelPromise promise = streamidPromiseMap.get(streamId);
         if (promise == null) {
             System.err.println("Message received for unknown stream id " + streamId);

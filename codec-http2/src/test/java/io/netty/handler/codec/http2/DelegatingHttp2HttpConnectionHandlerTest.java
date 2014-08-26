@@ -124,10 +124,10 @@ public class DelegatingHttp2HttpConnectionHandlerTest {
     public void testJustHeadersRequest() throws Exception {
         final HttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, "/example");
         final HttpHeaders httpHeaders = request.headers();
-        httpHeaders.set(Http2ToHttpHeaders.Names.STREAM_ID, 5);
+        httpHeaders.set(HttpUtil.ExtensionHeaders.Names.STREAM_ID, 5);
         httpHeaders.set(HttpHeaders.Names.HOST, "http://my-user_name@www.example.org:5555/example");
-        httpHeaders.set(Http2ToHttpHeaders.Names.AUTHORITY, "www.example.org:5555");
-        httpHeaders.set(Http2ToHttpHeaders.Names.SCHEME, "http");
+        httpHeaders.set(HttpUtil.ExtensionHeaders.Names.AUTHORITY, "www.example.org:5555");
+        httpHeaders.set(HttpUtil.ExtensionHeaders.Names.SCHEME, "http");
         httpHeaders.add("foo", "goo");
         httpHeaders.add("foo", "goo2");
         httpHeaders.add("foo2", "goo2");
