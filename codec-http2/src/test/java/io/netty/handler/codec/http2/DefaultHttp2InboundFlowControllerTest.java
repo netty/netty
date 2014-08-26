@@ -15,7 +15,7 @@
 
 package io.netty.handler.codec.http2;
 
-import static io.netty.handler.codec.http2.DefaultHttp2InboundFlowController.WINDOW_MAINTENANCE_OFF;
+import static io.netty.handler.codec.http2.DefaultHttp2InboundFlowController.WINDOW_UPDATE_OFF;
 import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 import static org.mockito.Matchers.any;
@@ -94,7 +94,7 @@ public class DefaultHttp2InboundFlowControllerTest {
 
     @Test
     public void windowMaintenanceDisabledForConnectionShouldNotUpdateWindow() throws Http2Exception {
-        controller.setWindowMaintenanceRatio(ctx, CONNECTION_STREAM_ID, WINDOW_MAINTENANCE_OFF);
+        controller.setWindowUpdateRatio(ctx, CONNECTION_STREAM_ID, WINDOW_UPDATE_OFF);
         int dataSize = DEFAULT_WINDOW_SIZE / 2 + 1;
 
         // Set end-of-stream on the frame, so no window update will be sent for the stream.
@@ -116,7 +116,7 @@ public class DefaultHttp2InboundFlowControllerTest {
 
     @Test
     public void windowMaintenanceDisabledForStreamShouldNotUpdateWindow() throws Http2Exception {
-        controller.setWindowMaintenanceRatio(ctx, STREAM_ID, WINDOW_MAINTENANCE_OFF);
+        controller.setWindowUpdateRatio(ctx, STREAM_ID, WINDOW_UPDATE_OFF);
         int dataSize = DEFAULT_WINDOW_SIZE / 2 + 1;
         int initialWindowSize = DEFAULT_WINDOW_SIZE;
         int windowDelta = getWindowDelta(initialWindowSize, initialWindowSize, dataSize);

@@ -30,13 +30,13 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
      * The default ratio of window size to initial window size below which a {@code WINDOW_UPDATE}
      * is sent to expand the window.
      */
-    public static final float DEFAULT_WINDOW_MAINTENANCE_RATIO = 0.5f;
+    public static final double DEFAULT_WINDOW_UPDATE_RATIO = 0.5f;
 
     /**
-     * A value for the window maintenance ratio to be use in order to disable window maintenance for
+     * A value for the window update ratio to be use in order to disable window updates for
      * a stream (i.e. {@code 0}).
      */
-    public static final float WINDOW_MAINTENANCE_OFF = 0.0f;
+    public static final double WINDOW_UPDATE_OFF = 0.0f;
 
     private final Http2Connection connection;
     private final Http2FrameWriter frameWriter;
@@ -82,17 +82,17 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
     }
 
     /**
-     * Sets the per-stream ratio used to control when window maintenance is performed. The value
+     * Sets the per-stream ratio used to control when window update is performed. The value
      * specified is a ratio of the window size to the initial window size, below which a
      * {@code WINDOW_UPDATE} should be sent to expand the window. If the given value is
-     * {@link #WINDOW_MAINTENANCE_OFF} (i.e. {@code 0}) window maintenance will be disabled for the
+     * {@link #WINDOW_UPDATE_OFF} (i.e. {@code 0}) window updates will be disabled for the
      * stream.
      *
      * @throws IllegalArgumentException if the stream does not exist or if the ratio value is
      *             outside of the range 0 (inclusive) to 1 (exclusive).
      */
-    public void setWindowMaintenanceRatio(ChannelHandlerContext ctx, int streamId, float ratio) {
-        if (ratio < WINDOW_MAINTENANCE_OFF || ratio >= 1.0f) {
+    public void setWindowUpdateRatio(ChannelHandlerContext ctx, int streamId, double ratio) {
+        if (ratio < WINDOW_UPDATE_OFF || ratio >= 1.0f) {
             throw new IllegalArgumentException("Invalid ratio: " + ratio);
         }
 
@@ -102,9 +102,9 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
         }
 
         // Set the ratio.
-        state.setWindowMaintenanceRatio(ratio);
+        state.setWindowUpdateRatio(ratio);
 
-        // In the event of enabling window maintenance, check to see if we need to update the window now.
+        // In the event of enabling window update, check to see if we need to update the window now.
         state.updateWindowIfAppropriate(ctx);
     }
 
@@ -191,7 +191,7 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
         private int window;
         private int lowerBound;
         private boolean endOfStream;
-        private float windowMaintenanceRatio = DEFAULT_WINDOW_MAINTENANCE_RATIO;
+        private double windowUpdateRatio = DEFAULT_WINDOW_UPDATE_RATIO;
 
         InboundFlowState(int streamId) {
             this.streamId = streamId;
@@ -208,10 +208,10 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
         }
 
         /**
-         * Enables or disables window maintenance for this stream.
+         * Enables or disables window updates for this stream.
          */
-        void setWindowMaintenanceRatio(float ratio) {
-            windowMaintenanceRatio = ratio;
+        void setWindowUpdateRatio(double ratio) {
+            windowUpdateRatio = ratio;
         }
 
         /**
@@ -220,12 +220,12 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
          * @return {@code} true if a {@code WINDOW_UPDATE} frame was sent.
          */
         boolean updateWindowIfAppropriate(ChannelHandlerContext ctx) {
-            if (windowMaintenanceRatio == WINDOW_MAINTENANCE_OFF || endOfStream || initialWindowSize <= 0) {
+            if (windowUpdateRatio == WINDOW_UPDATE_OFF || endOfStream || initialWindowSize <= 0) {
                 return false;
             }
 
-            float ratio = (float) window / (float) initialWindowSize;
-            if (ratio <= windowMaintenanceRatio) {
+            int threshold = (int) (initialWindowSize * windowUpdateRatio);
+            if (window <= threshold) {
                 updateWindow(ctx);
                 return true;
             }
