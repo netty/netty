@@ -93,6 +93,14 @@ public class CIDR6 extends CIDR {
 
     @Override
     public boolean contains(InetAddress inetAddress) {
+        if (inetAddress == null) {
+            throw new NullPointerException("inetAddress");
+        }
+
+        if (cidrMask == 0) {
+            return true;
+        }
+
         BigInteger search = ipv6AddressToBigInteger(inetAddress);
         return search.compareTo(addressBigInt) >= 0 && search.compareTo(addressEndBigInt) <= 0;
     }

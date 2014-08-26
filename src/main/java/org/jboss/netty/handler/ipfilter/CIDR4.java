@@ -89,6 +89,14 @@ public class CIDR4 extends CIDR {
 
     @Override
     public boolean contains(InetAddress inetAddress) {
+        if (inetAddress == null) {
+            throw new NullPointerException("inetAddress");
+        }
+
+        if (cidrMask == 0) {
+            return true;
+        }
+
         int search = ipv4AddressToInt(inetAddress);
         return search >= addressInt && search <= addressEndInt;
     }

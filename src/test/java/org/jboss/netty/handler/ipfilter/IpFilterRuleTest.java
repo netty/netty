@@ -247,6 +247,15 @@ public class IpFilterRuleTest {
         assertTrue(accept(h, addr));
 
         h.clear();
+        h.addAll(new IpFilterRuleList("+c:0.0.0.0/0, -n:*"));
+        addr = new InetSocketAddress("91.114.240.43", 8080);
+        assertTrue(accept(h, addr));
+        addr = new InetSocketAddress("10.0.0.3", 8080);
+        assertTrue(accept(h, addr));
+        addr = new InetSocketAddress("192.168.93.2", 8080);
+        assertTrue(accept(h, addr));
+
+        h.clear();
         h.addAll(new IpFilterRuleList(""));
         addr = new InetSocketAddress(InetAddress.getLocalHost(), 8080);
         assertTrue(accept(h, addr));
@@ -262,7 +271,6 @@ public class IpFilterRuleTest {
         assertTrue(accept(h, addr));
         addr = new InetSocketAddress(InetAddress.getByName(InetAddress.getLocalHost().getHostName()), 8080);
         assertTrue(accept(h, addr));
-
     }
 
 }
