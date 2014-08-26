@@ -30,14 +30,18 @@ public final class ZlibCodecFactory {
     private static final int DEFAULT_JDK_MEM_LEVEL = 8;
 
     private static final boolean noJdkZlibDecoder;
+    private static final boolean noJdkZlibEncoder;
 
     static {
         noJdkZlibDecoder = SystemPropertyUtil.getBoolean("io.netty.noJdkZlibDecoder", true);
         logger.debug("-Dio.netty.noJdkZlibDecoder: {}", noJdkZlibDecoder);
+
+        noJdkZlibEncoder = SystemPropertyUtil.getBoolean("io.netty.noJdkZlibEncoder", false);
+        logger.debug("-Dio.netty.noJdkZlibEncoder: {}", noJdkZlibEncoder);
     }
 
     public static ZlibEncoder newZlibEncoder(int compressionLevel) {
-        if (PlatformDependent.javaVersion() < 7) {
+        if (PlatformDependent.javaVersion() < 7 || noJdkZlibEncoder) {
             return new JZlibEncoder(compressionLevel);
         } else {
             return new JdkZlibEncoder(compressionLevel);
@@ -45,7 +49,7 @@ public final class ZlibCodecFactory {
     }
 
     public static ZlibEncoder newZlibEncoder(ZlibWrapper wrapper) {
-        if (PlatformDependent.javaVersion() < 7) {
+        if (PlatformDependent.javaVersion() < 7 || noJdkZlibEncoder) {
             return new JZlibEncoder(wrapper);
         } else {
             return new JdkZlibEncoder(wrapper);
@@ -53,7 +57,7 @@ public final class ZlibCodecFactory {
     }
 
     public static ZlibEncoder newZlibEncoder(ZlibWrapper wrapper, int compressionLevel) {
-        if (PlatformDependent.javaVersion() < 7) {
+        if (PlatformDependent.javaVersion() < 7 || noJdkZlibEncoder) {
             return new JZlibEncoder(wrapper, compressionLevel);
         } else {
             return new JdkZlibEncoder(wrapper, compressionLevel);
@@ -61,8 +65,8 @@ public final class ZlibCodecFactory {
     }
 
     public static ZlibEncoder newZlibEncoder(ZlibWrapper wrapper, int compressionLevel, int windowBits, int memLevel) {
-        if (PlatformDependent.javaVersion() < 7 ||
-                windowBits != DEFAULT_JDK_WINDOW_SIZE || memLevel != DEFAULT_JDK_MEM_LEVEL) {
+        if (PlatformDependent.javaVersion() < 7 || noJdkZlibEncoder ||
+            windowBits != DEFAULT_JDK_WINDOW_SIZE || memLevel != DEFAULT_JDK_MEM_LEVEL) {
             return new JZlibEncoder(wrapper, compressionLevel, windowBits, memLevel);
         } else {
             return new JdkZlibEncoder(wrapper, compressionLevel);
@@ -70,7 +74,7 @@ public final class ZlibCodecFactory {
     }
 
     public static ZlibEncoder newZlibEncoder(byte[] dictionary) {
-        if (PlatformDependent.javaVersion() < 7) {
+        if (PlatformDependent.javaVersion() < 7 || noJdkZlibEncoder) {
             return new JZlibEncoder(dictionary);
         } else {
             return new JdkZlibEncoder(dictionary);
@@ -78,7 +82,7 @@ public final class ZlibCodecFactory {
     }
 
     public static ZlibEncoder newZlibEncoder(int compressionLevel, byte[] dictionary) {
-        if (PlatformDependent.javaVersion() < 7) {
+        if (PlatformDependent.javaVersion() < 7 || noJdkZlibEncoder) {
             return new JZlibEncoder(compressionLevel, dictionary);
         } else {
             return new JdkZlibEncoder(compressionLevel, dictionary);
@@ -87,7 +91,8 @@ public final class ZlibCodecFactory {
 
     public static ZlibEncoder newZlibEncoder(int compressionLevel, int windowBits, int memLevel, byte[] dictionary) {
         if (PlatformDependent.javaVersion() < 7 ||
-                windowBits != DEFAULT_JDK_WINDOW_SIZE || memLevel != DEFAULT_JDK_MEM_LEVEL) {
+                windowBits != DEFAULT_JDK_WINDOW_SIZE || memLevel != DEFAULT_JDK_MEM_LEVEL ||
+                noJdkZlibEncoder) {
             return new JZlibEncoder(compressionLevel, windowBits, memLevel, dictionary);
         } else {
             return new JdkZlibEncoder(compressionLevel, dictionary);
