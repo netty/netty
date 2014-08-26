@@ -18,9 +18,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 
 /**
- * Convenience class that provides no-op implementations for all methods of {@link Http2FrameObserver}.
+ * Convenience class that provides no-op implementations for all methods of {@link Http2FrameListener}.
  */
-public class Http2FrameAdapter implements Http2FrameObserver {
+public class Http2FrameAdapter implements Http2FrameListener {
 
     @Override
     public void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,

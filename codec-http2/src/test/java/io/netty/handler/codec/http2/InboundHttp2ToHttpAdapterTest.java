@@ -69,10 +69,10 @@ import org.mockito.MockitoAnnotations;
 public class InboundHttp2ToHttpAdapterTest {
 
     @Mock
-    private HttpResponseListener serverObserver;
+    private HttpResponseListener serverListener;
 
     @Mock
-    private HttpResponseListener clientObserver;
+    private HttpResponseListener clientListener;
 
     private Http2FrameWriter frameWriter;
     private ServerBootstrap sb;
@@ -111,7 +111,7 @@ public class InboundHttp2ToHttpAdapterTest {
                 p.addLast("reader", new FrameAdapter(connection,
                                 InboundHttp2ToHttpPriorityAdapter.newInstance(connection, maxContentLength),
                                 new CountDownLatch(10)));
-                serverDelegator = new HttpResponseDelegator(serverObserver, serverLatch);
+                serverDelegator = new HttpResponseDelegator(serverListener, serverLatch);
                 p.addLast(serverDelegator);
                 serverConnectedChannel = ch;
             }
@@ -127,7 +127,7 @@ public class InboundHttp2ToHttpAdapterTest {
                 p.addLast("reader", new FrameAdapter(connection,
                                 InboundHttp2ToHttpPriorityAdapter.newInstance(connection, maxContentLength),
                                 new CountDownLatch(10)));
-                clientDelegator = new HttpResponseDelegator(clientObserver, clientLatch);
+                clientDelegator = new HttpResponseDelegator(clientListener, clientLatch);
                 p.addLast(clientDelegator);
             }
         });
@@ -171,7 +171,7 @@ public class InboundHttp2ToHttpAdapterTest {
             }
         });
         awaitRequests();
-        verify(serverObserver).messageReceived(eq(request));
+        verify(serverListener).messageReceived(eq(request));
     }
 
     @Test
@@ -195,7 +195,7 @@ public class InboundHttp2ToHttpAdapterTest {
             }
         });
         awaitRequests();
-        verify(serverObserver).messageReceived(eq(request));
+        verify(serverListener).messageReceived(eq(request));
         request.release();
     }
 
@@ -223,7 +223,7 @@ public class InboundHttp2ToHttpAdapterTest {
             }
         });
         awaitRequests();
-        verify(serverObserver).messageReceived(eq(request));
+        verify(serverListener).messageReceived(eq(request));
         request.release();
     }
 
@@ -249,7 +249,7 @@ public class InboundHttp2ToHttpAdapterTest {
             }
         });
         awaitRequests();
-        verify(serverObserver).messageReceived(eq(request));
+        verify(serverListener).messageReceived(eq(request));
         request.release();
     }
 
@@ -283,7 +283,7 @@ public class InboundHttp2ToHttpAdapterTest {
             }
         });
         awaitRequests();
-        verify(serverObserver).messageReceived(eq(request));
+        verify(serverListener).messageReceived(eq(request));
         request.release();
     }
 
@@ -314,7 +314,7 @@ public class InboundHttp2ToHttpAdapterTest {
             }
         });
         awaitRequests();
-        verify(serverObserver).messageReceived(eq(request));
+        verify(serverListener).messageReceived(eq(request));
         request.release();
     }
 
@@ -355,7 +355,7 @@ public class InboundHttp2ToHttpAdapterTest {
         });
         awaitRequests();
         ArgumentCaptor<HttpObject> httpObjectCaptor = ArgumentCaptor.forClass(HttpObject.class);
-        verify(serverObserver, times(2)).messageReceived(httpObjectCaptor.capture());
+        verify(serverListener, times(2)).messageReceived(httpObjectCaptor.capture());
         List<HttpObject> capturedHttpObjects = httpObjectCaptor.getAllValues();
         assertEquals(request, capturedHttpObjects.get(0));
         assertEquals(request2, capturedHttpObjects.get(1));
@@ -406,7 +406,7 @@ public class InboundHttp2ToHttpAdapterTest {
         });
         awaitRequests();
         ArgumentCaptor<HttpObject> httpObjectCaptor = ArgumentCaptor.forClass(HttpObject.class);
-        verify(serverObserver, times(3)).messageReceived(httpObjectCaptor.capture());
+        verify(serverListener, times(3)).messageReceived(httpObjectCaptor.capture());
         List<HttpObject> capturedHttpObjects = httpObjectCaptor.getAllValues();
         assertEquals(request, capturedHttpObjects.get(0));
         assertEquals(request2, capturedHttpObjects.get(1));
@@ -450,7 +450,7 @@ public class InboundHttp2ToHttpAdapterTest {
             }
         });
         awaitRequests();
-        verify(serverObserver).messageReceived(eq(request));
+        verify(serverListener).messageReceived(eq(request));
 
         final Http2Headers http2Headers = new DefaultHttp2Headers.Builder().status("200").build();
         final Http2Headers http2Headers2 = new DefaultHttp2Headers.Builder().status("201").scheme("https")
@@ -467,7 +467,7 @@ public class InboundHttp2ToHttpAdapterTest {
         });
         awaitResponses();
         ArgumentCaptor<HttpObject> httpObjectCaptor = ArgumentCaptor.forClass(HttpObject.class);
-        verify(clientObserver, times(2)).messageReceived(httpObjectCaptor.capture());
+        verify(clientListener, times(2)).messageReceived(httpObjectCaptor.capture());
         List<HttpObject> capturedHttpObjects = httpObjectCaptor.getAllValues();
         assertEquals(response, capturedHttpObjects.get(0));
         assertEquals(response2, capturedHttpObjects.get(1));
@@ -493,8 +493,8 @@ public class InboundHttp2ToHttpAdapterTest {
             }
         });
         awaitRequests();
-        verify(serverObserver).messageReceived(eq(request));
-        reset(serverObserver);
+        verify(serverListener).messageReceived(eq(request));
+        reset(serverListener);
 
         final FullHttpMessage response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE);
         httpHeaders = response.headers();
@@ -509,8 +509,8 @@ public class InboundHttp2ToHttpAdapterTest {
             }
         });
         awaitResponses();
-        verify(clientObserver).messageReceived(eq(response));
-        reset(clientObserver);
+        verify(clientListener).messageReceived(eq(response));
+        reset(clientListener);
 
         setServerLatch(1);
         final String text = "a big payload";
@@ -528,7 +528,7 @@ public class InboundHttp2ToHttpAdapterTest {
             }
         });
         awaitRequests();
-        verify(serverObserver).messageReceived(eq(request2));
+        verify(serverListener).messageReceived(eq(request2));
         request2.release();
 
         setClientLatch(1);
@@ -545,7 +545,7 @@ public class InboundHttp2ToHttpAdapterTest {
             }
         });
         awaitResponses();
-        verify(clientObserver).messageReceived(eq(response2));
+        verify(clientListener).messageReceived(eq(response2));
     }
 
     private void setServerLatch(int count) {
@@ -613,20 +613,20 @@ public class InboundHttp2ToHttpAdapterTest {
 
     private final class FrameAdapter extends ByteToMessageDecoder {
         private final Http2Connection connection;
-        private final Http2FrameObserver observer;
+        private final Http2FrameListener listener;
         private final DefaultHttp2FrameReader reader;
         private final CountDownLatch latch;
 
-        FrameAdapter(Http2Connection connection, Http2FrameObserver observer, CountDownLatch latch) {
+        FrameAdapter(Http2Connection connection, Http2FrameListener listener, CountDownLatch latch) {
             this.connection = connection;
-            this.observer = observer;
+            this.listener = listener;
             reader = new DefaultHttp2FrameReader();
             this.latch = latch;
         }
 
         @Override
         protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-            reader.readFrame(ctx, in, new Http2FrameObserver() {
+            reader.readFrame(ctx, in, new Http2FrameListener() {
                 public Http2Stream getOrCreateStream(int streamId, boolean halfClosed) throws Http2Exception {
                     Http2Stream stream = connection.stream(streamId);
                     if (stream == null) {
@@ -649,7 +649,7 @@ public class InboundHttp2ToHttpAdapterTest {
                 @Override
                 public void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
                                 boolean endOfStream) throws Http2Exception {
-                    observer.onDataRead(ctx, streamId, copy(data), padding, endOfStream);
+                    listener.onDataRead(ctx, streamId, copy(data), padding, endOfStream);
                     // NOTE: Do not close the stream to allow the out of order messages to be processed
                     latch.countDown();
                 }
@@ -658,7 +658,7 @@ public class InboundHttp2ToHttpAdapterTest {
                 public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
                                 boolean endStream) throws Http2Exception {
                     Http2Stream stream = getOrCreateStream(streamId, endStream);
-                    observer.onHeadersRead(ctx, streamId, headers, padding, endStream);
+                    listener.onHeadersRead(ctx, streamId, headers, padding, endStream);
                     if (endStream) {
                         closeStream(stream);
                     }
@@ -671,7 +671,7 @@ public class InboundHttp2ToHttpAdapterTest {
                                 throws Http2Exception {
                     Http2Stream stream = getOrCreateStream(streamId, endStream);
                     stream.setPriority(streamDependency, weight, exclusive);
-                    observer.onHeadersRead(ctx, streamId, headers, streamDependency, weight, exclusive, padding,
+                    listener.onHeadersRead(ctx, streamId, headers, streamDependency, weight, exclusive, padding,
                                     endStream);
                     if (endStream) {
                         closeStream(stream);
@@ -684,7 +684,7 @@ public class InboundHttp2ToHttpAdapterTest {
                                 boolean exclusive) throws Http2Exception {
                     Http2Stream stream = getOrCreateStream(streamId, false);
                     stream.setPriority(streamDependency, weight, exclusive);
-                    observer.onPriorityRead(ctx, streamId, streamDependency, weight, exclusive);
+                    listener.onPriorityRead(ctx, streamId, streamDependency, weight, exclusive);
                     latch.countDown();
                 }
 
@@ -692,32 +692,32 @@ public class InboundHttp2ToHttpAdapterTest {
                 public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode)
                                 throws Http2Exception {
                     Http2Stream stream = getOrCreateStream(streamId, false);
-                    observer.onRstStreamRead(ctx, streamId, errorCode);
+                    listener.onRstStreamRead(ctx, streamId, errorCode);
                     closeStream(stream);
                     latch.countDown();
                 }
 
                 @Override
                 public void onSettingsAckRead(ChannelHandlerContext ctx) throws Http2Exception {
-                    observer.onSettingsAckRead(ctx);
+                    listener.onSettingsAckRead(ctx);
                     latch.countDown();
                 }
 
                 @Override
                 public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings) throws Http2Exception {
-                    observer.onSettingsRead(ctx, settings);
+                    listener.onSettingsRead(ctx, settings);
                     latch.countDown();
                 }
 
                 @Override
                 public void onPingRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
-                    observer.onPingRead(ctx, copy(data));
+                    listener.onPingRead(ctx, copy(data));
                     latch.countDown();
                 }
 
                 @Override
                 public void onPingAckRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
-                    observer.onPingAckRead(ctx, copy(data));
+                    listener.onPingAckRead(ctx, copy(data));
                     latch.countDown();
                 }
 
@@ -725,14 +725,14 @@ public class InboundHttp2ToHttpAdapterTest {
                 public void onPushPromiseRead(ChannelHandlerContext ctx, int streamId, int promisedStreamId,
                                 Http2Headers headers, int padding) throws Http2Exception {
                     getOrCreateStream(promisedStreamId, false);
-                    observer.onPushPromiseRead(ctx, streamId, promisedStreamId, headers, padding);
+                    listener.onPushPromiseRead(ctx, streamId, promisedStreamId, headers, padding);
                     latch.countDown();
                 }
 
                 @Override
                 public void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData)
                                 throws Http2Exception {
-                    observer.onGoAwayRead(ctx, lastStreamId, errorCode, copy(debugData));
+                    listener.onGoAwayRead(ctx, lastStreamId, errorCode, copy(debugData));
                     latch.countDown();
                 }
 
@@ -740,14 +740,14 @@ public class InboundHttp2ToHttpAdapterTest {
                 public void onWindowUpdateRead(ChannelHandlerContext ctx, int streamId, int windowSizeIncrement)
                                 throws Http2Exception {
                     getOrCreateStream(streamId, false);
-                    observer.onWindowUpdateRead(ctx, streamId, windowSizeIncrement);
+                    listener.onWindowUpdateRead(ctx, streamId, windowSizeIncrement);
                     latch.countDown();
                 }
 
                 @Override
                 public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
                                 ByteBuf payload) {
-                    observer.onUnknownFrame(ctx, frameType, streamId, flags, payload);
+                    listener.onUnknownFrame(ctx, frameType, streamId, flags, payload);
                     latch.countDown();
                 }
             });

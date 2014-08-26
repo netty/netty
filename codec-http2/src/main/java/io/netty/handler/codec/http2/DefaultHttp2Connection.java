@@ -153,7 +153,7 @@ public class DefaultHttp2Connection implements Http2Connection {
     }
 
     private void removeStream(DefaultStream stream) {
-        // Notify the observers of the event first.
+        // Notify the listeners of the event first.
         for (Listener listener : listeners) {
             listener.streamRemoved(stream);
         }
@@ -724,7 +724,7 @@ public class DefaultHttp2Connection implements Http2Connection {
             List<ParentChangedEvent> events = new ArrayList<ParentChangedEvent>(1);
             connectionStream.takeChild(stream, false, events);
 
-            // Notify the observers of the event.
+            // Notify the listeners of the event.
             for (Listener listener : listeners) {
                 listener.streamAdded(stream);
             }

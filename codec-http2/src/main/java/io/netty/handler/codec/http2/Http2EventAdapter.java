@@ -18,10 +18,10 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 
 /**
- * This class brings {@link Http2Connection.Listener} and {@link Http2FrameObserver} together to provide
+ * This class brings {@link Http2Connection.Listener} and {@link Http2FrameListener} together to provide
  * NOOP implementation so inheriting classes can selectively choose which methods to override.
  */
-public class Http2EventAdapter implements Http2Connection.Listener, Http2FrameObserver {
+public class Http2EventAdapter implements Http2Connection.Listener, Http2FrameListener {
     @Override
     public void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding, boolean endOfStream)
             throws Http2Exception {

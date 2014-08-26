@@ -45,7 +45,7 @@ import java.util.List;
  * as well as management of connection state and flow control for both inbound and outbound data
  * frames.
  * <p>
- * Subclasses need to implement the methods defined by the {@link Http2FrameObserver} interface for
+ * Subclasses need to implement the methods defined by the {@link Http2FrameListener} interface for
  * receiving inbound frames. Outbound frames are sent via one of the {@code writeXXX} methods.
  * <p>
  * It should be noted that the connection preface is sent upon either activation or addition of this
@@ -53,9 +53,9 @@ import java.util.List;
  * must call this class to write the preface to the remote endpoint.
  */
 public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecoder implements
-        Http2FrameObserver {
+        Http2FrameListener {
 
-    private final Http2FrameObserver internalFrameObserver = new FrameReadObserver();
+    private final Http2FrameListener internalFrameListener = new FrameReadListener();
     private final Http2FrameReader frameReader;
     private final Http2FrameWriter frameWriter;
     private final Http2Connection connection;
@@ -539,7 +539,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
                 return;
             }
 
-            frameReader.readFrame(ctx, in, internalFrameObserver);
+            frameReader.readFrame(ctx, in, internalFrameListener);
         } catch (Http2Exception e) {
             onHttp2Exception(ctx, e);
         } catch (Throwable e) {
@@ -812,7 +812,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
     /**
      * Handles all inbound frames from the network.
      */
-    private final class FrameReadObserver implements Http2FrameObserver {
+    private final class FrameReadListener implements Http2FrameListener {
 
         @Override
         public void onDataRead(final ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
