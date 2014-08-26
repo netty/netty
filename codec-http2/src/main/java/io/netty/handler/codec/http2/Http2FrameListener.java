@@ -19,9 +19,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 
 /**
- * An observer of HTTP/2 frames.
+ * An listener of HTTP/2 frames.
  */
-public interface Http2FrameObserver extends Http2DataObserver {
+public interface Http2FrameListener extends Http2DataListener {
 
     /**
      * Handles an inbound HEADERS frame.
@@ -117,7 +117,7 @@ public interface Http2FrameObserver extends Http2DataObserver {
      * Handles an inbound PING frame.
      *
      * @param ctx the context from the handler where the frame was read.
-     * @param data the payload of the frame. If this buffer needs to be retained by the observer
+     * @param data the payload of the frame. If this buffer needs to be retained by the listener
      *            they must make a copy.
      */
     void onPingRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception;
@@ -126,7 +126,7 @@ public interface Http2FrameObserver extends Http2DataObserver {
      * Handles an inbound PING acknowledgment.
      *
      * @param ctx the context from the handler where the frame was read.
-     * @param data the payload of the frame. If this buffer needs to be retained by the observer
+     * @param data the payload of the frame. If this buffer needs to be retained by the listener
      *            they must make a copy.
      */
     void onPingAckRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception;
@@ -162,7 +162,7 @@ public interface Http2FrameObserver extends Http2DataObserver {
      * @param lastStreamId the last known stream of the remote endpoint.
      * @param errorCode the error code, if abnormal closure.
      * @param debugData application-defined debug data. If this buffer needs to be retained by the
-     *            observer they must make a copy.
+     *            listener they must make a copy.
      */
     void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData)
             throws Http2Exception;

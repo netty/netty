@@ -104,7 +104,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
     private Http2Stream pushStream;
 
     @Mock
-    private Http2FrameObserver observer;
+    private Http2FrameListener listener;
 
     @Mock
     private Http2FrameReader reader;
@@ -139,7 +139,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
 
         handler =
                 new DelegatingHttp2ConnectionHandler(connection, reader, writer, inboundFlow,
-                        outboundFlow, observer);
+                        outboundFlow, listener);
 
         // Simulate activation of the handler to force writing the initial settings.
         Http2Settings settings = new Http2Settings();
@@ -162,7 +162,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
 
         // Simulate receiving the initial settings from the remote endpoint.
         decode().onSettingsRead(ctx, new Http2Settings());
-        verify(observer).onSettingsRead(eq(ctx), eq(new Http2Settings()));
+        verify(listener).onSettingsRead(eq(ctx), eq(new Http2Settings()));
         verify(writer).writeSettingsAck(eq(ctx), eq(promise));
 
         // Simulate receiving the SETTINGS ACK for the initial settings.
@@ -182,7 +182,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
     public void clientShouldSendClientPrefaceStringWhenActive() throws Exception {
         when(connection.isServer()).thenReturn(false);
         handler = new DelegatingHttp2ConnectionHandler(connection, reader, writer, inboundFlow,
-                        outboundFlow, observer);
+                        outboundFlow, listener);
         handler.channelActive(ctx);
         verify(ctx).write(eq(connectionPrefaceBuf()));
     }
@@ -191,7 +191,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
     public void serverShouldNotSendClientPrefaceStringWhenActive() throws Exception {
         when(connection.isServer()).thenReturn(true);
         handler = new DelegatingHttp2ConnectionHandler(connection, reader, writer, inboundFlow,
-                        outboundFlow, observer);
+                        outboundFlow, listener);
         handler.channelActive(ctx);
         verify(ctx, never()).write(eq(connectionPrefaceBuf()));
     }
@@ -200,21 +200,21 @@ public class DelegatingHttp2ConnectionHandlerTest {
     public void serverReceivingInvalidClientPrefaceStringShouldCloseConnection() throws Exception {
         when(connection.isServer()).thenReturn(true);
         handler = new DelegatingHttp2ConnectionHandler(connection, reader, writer, inboundFlow,
-                        outboundFlow, observer);
+                        outboundFlow, listener);
         handler.channelRead(ctx, copiedBuffer("BAD_PREFACE", UTF_8));
         verify(ctx).close();
     }
 
     @Test
     public void serverReceivingValidClientPrefaceStringShouldContinueReadingFrames() throws Exception {
-        reset(observer);
+        reset(listener);
         when(connection.isServer()).thenReturn(true);
         handler = new DelegatingHttp2ConnectionHandler(connection, reader, writer, inboundFlow,
-                        outboundFlow, observer);
+                        outboundFlow, listener);
         handler.channelRead(ctx, connectionPrefaceBuf());
         verify(ctx, never()).close();
         decode().onSettingsRead(ctx, new Http2Settings());
-        verify(observer).onSettingsRead(eq(ctx), eq(new Http2Settings()));
+        verify(listener).onSettingsRead(eq(ctx), eq(new Http2Settings()));
     }
 
     @Test
@@ -257,7 +257,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
         verify(inboundFlow).onDataRead(eq(ctx), eq(STREAM_ID), eq(dummyData()), eq(10), eq(true));
 
         // Verify that the event was absorbed and not propagated to the oberver.
-        verify(observer, never()).onDataRead(eq(ctx), anyInt(), any(ByteBuf.class), anyInt(),
+        verify(listener, never()).onDataRead(eq(ctx), anyInt(), any(ByteBuf.class), anyInt(),
                 anyBoolean());
     }
 
@@ -266,7 +266,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
         decode().onDataRead(ctx, STREAM_ID, dummyData(), 10, true);
         verify(inboundFlow).onDataRead(eq(ctx), eq(STREAM_ID), eq(dummyData()), eq(10), eq(true));
         verify(stream).closeRemoteSide();
-        verify(observer).onDataRead(eq(ctx), eq(STREAM_ID), eq(dummyData()), eq(10), eq(true));
+        verify(listener).onDataRead(eq(ctx), eq(STREAM_ID), eq(dummyData()), eq(10), eq(true));
     }
 
     @Test
@@ -276,7 +276,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
         verify(remote, never()).createStream(eq(STREAM_ID), eq(false));
 
         // Verify that the event was absorbed and not propagated to the oberver.
-        verify(observer, never()).onHeadersRead(eq(ctx), anyInt(), any(Http2Headers.class),
+        verify(listener, never()).onHeadersRead(eq(ctx), anyInt(), any(Http2Headers.class),
                 anyInt(), anyBoolean());
         verify(remote, never()).createStream(anyInt(), anyBoolean());
     }
@@ -286,7 +286,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
         when(remote.createStream(eq(5), eq(false))).thenReturn(stream);
         decode().onHeadersRead(ctx, 5, EMPTY_HEADERS, 0, false);
         verify(remote).createStream(eq(5), eq(false));
-        verify(observer).onHeadersRead(eq(ctx), eq(5), eq(EMPTY_HEADERS), eq(0),
+        verify(listener).onHeadersRead(eq(ctx), eq(5), eq(EMPTY_HEADERS), eq(0),
                 eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(false));
     }
 
@@ -295,7 +295,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
         when(remote.createStream(eq(5), eq(true))).thenReturn(stream);
         decode().onHeadersRead(ctx, 5, EMPTY_HEADERS, 0, true);
         verify(remote).createStream(eq(5), eq(true));
-        verify(observer).onHeadersRead(eq(ctx), eq(5), eq(EMPTY_HEADERS), eq(0),
+        verify(listener).onHeadersRead(eq(ctx), eq(5), eq(EMPTY_HEADERS), eq(0),
                 eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(true));
     }
 
@@ -304,7 +304,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
         when(stream.state()).thenReturn(RESERVED_REMOTE);
         decode().onHeadersRead(ctx, STREAM_ID, EMPTY_HEADERS, 0, false);
         verify(stream).openForPush();
-        verify(observer).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(EMPTY_HEADERS), eq(0),
+        verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(EMPTY_HEADERS), eq(0),
                 eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(false));
     }
 
@@ -314,7 +314,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
         decode().onHeadersRead(ctx, STREAM_ID, EMPTY_HEADERS, 0, true);
         verify(stream).openForPush();
         verify(stream).close();
-        verify(observer).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(EMPTY_HEADERS), eq(0),
+        verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(EMPTY_HEADERS), eq(0),
                 eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(true));
     }
 
@@ -323,7 +323,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
         when(remote.isGoAwayReceived()).thenReturn(true);
         decode().onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, EMPTY_HEADERS, 0);
         verify(remote, never()).reservePushStream(anyInt(), any(Http2Stream.class));
-        verify(observer, never()).onPushPromiseRead(eq(ctx), anyInt(), anyInt(),
+        verify(listener, never()).onPushPromiseRead(eq(ctx), anyInt(), anyInt(),
                 any(Http2Headers.class), anyInt());
     }
 
@@ -331,7 +331,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
     public void pushPromiseReadShouldSucceed() throws Exception {
         decode().onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, EMPTY_HEADERS, 0);
         verify(remote).reservePushStream(eq(PUSH_STREAM_ID), eq(stream));
-        verify(observer).onPushPromiseRead(eq(ctx), eq(STREAM_ID), eq(PUSH_STREAM_ID),
+        verify(listener).onPushPromiseRead(eq(ctx), eq(STREAM_ID), eq(PUSH_STREAM_ID),
                 eq(EMPTY_HEADERS), eq(0));
     }
 
@@ -340,14 +340,14 @@ public class DelegatingHttp2ConnectionHandlerTest {
         when(remote.isGoAwayReceived()).thenReturn(true);
         decode().onPriorityRead(ctx, STREAM_ID, 0, (short) 255, true);
         verify(stream, never()).setPriority(anyInt(), anyShort(), anyBoolean());
-        verify(observer, never()).onPriorityRead(eq(ctx), anyInt(), anyInt(), anyShort(), anyBoolean());
+        verify(listener, never()).onPriorityRead(eq(ctx), anyInt(), anyInt(), anyShort(), anyBoolean());
     }
 
     @Test
     public void priorityReadShouldSucceed() throws Exception {
         decode().onPriorityRead(ctx, STREAM_ID, 0, (short) 255, true);
         verify(stream).setPriority(eq(0), eq((short) 255), eq(true));
-        verify(observer).onPriorityRead(eq(ctx), eq(STREAM_ID), eq(0), eq((short) 255), eq(true));
+        verify(listener).onPriorityRead(eq(ctx), eq(STREAM_ID), eq(0), eq((short) 255), eq(true));
     }
 
     @Test
@@ -355,7 +355,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
         when(remote.isGoAwayReceived()).thenReturn(true);
         decode().onWindowUpdateRead(ctx, STREAM_ID, 10);
         verify(outboundFlow, never()).updateOutboundWindowSize(anyInt(), anyInt());
-        verify(observer, never()).onWindowUpdateRead(eq(ctx), anyInt(), anyInt());
+        verify(listener, never()).onWindowUpdateRead(eq(ctx), anyInt(), anyInt());
     }
 
     @Test(expected = Http2Exception.class)
@@ -368,7 +368,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
     public void windowUpdateReadShouldSucceed() throws Exception {
         decode().onWindowUpdateRead(ctx, STREAM_ID, 10);
         verify(outboundFlow).updateOutboundWindowSize(eq(STREAM_ID), eq(10));
-        verify(observer).onWindowUpdateRead(eq(ctx), eq(STREAM_ID), eq(10));
+        verify(listener).onWindowUpdateRead(eq(ctx), eq(STREAM_ID), eq(10));
     }
 
     @Test
@@ -376,7 +376,7 @@ public class DelegatingHttp2ConnectionHandlerTest {
         when(remote.isGoAwayReceived()).thenReturn(true);
         decode().onRstStreamRead(ctx, STREAM_ID, PROTOCOL_ERROR.code());
         verify(stream).close();
-        verify(observer).onRstStreamRead(eq(ctx), anyInt(), anyLong());
+        verify(listener).onRstStreamRead(eq(ctx), anyInt(), anyLong());
     }
 
     @Test(expected = Http2Exception.class)
@@ -389,27 +389,27 @@ public class DelegatingHttp2ConnectionHandlerTest {
     public void rstStreamReadShouldCloseStream() throws Exception {
         decode().onRstStreamRead(ctx, STREAM_ID, PROTOCOL_ERROR.code());
         verify(stream).close();
-        verify(observer).onRstStreamRead(eq(ctx), eq(STREAM_ID), eq((long) PROTOCOL_ERROR.code()));
+        verify(listener).onRstStreamRead(eq(ctx), eq(STREAM_ID), eq((long) PROTOCOL_ERROR.code()));
     }
 
     @Test
-    public void pingReadWithAckShouldNotifyObserver() throws Exception {
+    public void pingReadWithAckShouldNotifylistener() throws Exception {
         decode().onPingAckRead(ctx, emptyPingBuf());
-        verify(observer).onPingAckRead(eq(ctx), eq(emptyPingBuf()));
+        verify(listener).onPingAckRead(eq(ctx), eq(emptyPingBuf()));
     }
 
     @Test
     public void pingReadShouldReplyWithAck() throws Exception {
         decode().onPingRead(ctx, emptyPingBuf());
         verify(writer).writePing(eq(ctx), eq(true), eq(emptyPingBuf()), eq(promise));
-        verify(observer, never()).onPingAckRead(eq(ctx), any(ByteBuf.class));
+        verify(listener, never()).onPingAckRead(eq(ctx), any(ByteBuf.class));
     }
 
     @Test
-    public void settingsReadWithAckShouldNotifyObserver() throws Exception {
+    public void settingsReadWithAckShouldNotifylistener() throws Exception {
         decode().onSettingsAckRead(ctx);
         // Take into account the time this was called during setup().
-        verify(observer, times(2)).onSettingsAckRead(eq(ctx));
+        verify(listener, times(2)).onSettingsAckRead(eq(ctx));
     }
 
     @Test(expected = Http2Exception.class)
@@ -435,14 +435,14 @@ public class DelegatingHttp2ConnectionHandlerTest {
         verify(writer).maxHeaderTableSize(789L);
         // Take into account the time this was called during setup().
         verify(writer, times(2)).writeSettingsAck(eq(ctx), eq(promise));
-        verify(observer).onSettingsRead(eq(ctx), eq(settings));
+        verify(listener).onSettingsRead(eq(ctx), eq(settings));
     }
 
     @Test
     public void goAwayShouldReadShouldUpdateConnectionState() throws Exception {
         decode().onGoAwayRead(ctx, 1, 2L, EMPTY_BUFFER);
         verify(local).goAwayReceived(1);
-        verify(observer).onGoAwayRead(eq(ctx), eq(1), eq(2L), eq(EMPTY_BUFFER));
+        verify(listener).onGoAwayRead(eq(ctx), eq(1), eq(2L), eq(EMPTY_BUFFER));
     }
 
     @Test
@@ -608,13 +608,13 @@ public class DelegatingHttp2ConnectionHandlerTest {
     }
 
     /**
-     * Calls the decode method on the handler and gets back the captured internal observer
+     * Calls the decode method on the handler and gets back the captured internal listener
      */
-    private Http2FrameObserver decode() throws Exception {
-        ArgumentCaptor<Http2FrameObserver> internalObserver =
-                ArgumentCaptor.forClass(Http2FrameObserver.class);
-        doNothing().when(reader).readFrame(eq(ctx), any(ByteBuf.class), internalObserver.capture());
+    private Http2FrameListener decode() throws Exception {
+        ArgumentCaptor<Http2FrameListener> internallistener =
+                ArgumentCaptor.forClass(Http2FrameListener.class);
+        doNothing().when(reader).readFrame(eq(ctx), any(ByteBuf.class), internallistener.capture());
         handler.decode(ctx, EMPTY_BUFFER, Collections.emptyList());
-        return internalObserver.getValue();
+        return internallistener.getValue();
     }
 }

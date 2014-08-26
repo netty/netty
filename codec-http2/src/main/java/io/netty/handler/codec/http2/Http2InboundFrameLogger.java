@@ -21,7 +21,7 @@ import io.netty.channel.ChannelHandlerContext;
 
 /**
  * Decorator around a {@link Http2FrameReader} that logs all inbound frames before calling
- * back the observer.
+ * back the listener.
  */
 public class Http2InboundFrameLogger implements Http2FrameReader {
 
@@ -40,16 +40,16 @@ public class Http2InboundFrameLogger implements Http2FrameReader {
     }
 
     @Override
-    public void readFrame(ChannelHandlerContext ctx, ByteBuf input, final Http2FrameObserver observer)
+    public void readFrame(ChannelHandlerContext ctx, ByteBuf input, final Http2FrameListener listener)
             throws Http2Exception {
-        reader.readFrame(ctx, input, new Http2FrameObserver() {
+        reader.readFrame(ctx, input, new Http2FrameListener() {
 
             @Override
             public void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data,
                     int padding, boolean endOfStream)
                     throws Http2Exception {
                 logger.logData(INBOUND, streamId, data, padding, endOfStream);
-                observer.onDataRead(ctx, streamId, data, padding, endOfStream);
+                listener.onDataRead(ctx, streamId, data, padding, endOfStream);
             }
 
             @Override
@@ -57,7 +57,7 @@ public class Http2InboundFrameLogger implements Http2FrameReader {
                     Http2Headers headers, int padding, boolean endStream)
                     throws Http2Exception {
                 logger.logHeaders(INBOUND, streamId, headers, padding, endStream);
-                observer.onHeadersRead(ctx, streamId, headers, padding, endStream);
+                listener.onHeadersRead(ctx, streamId, headers, padding, endStream);
             }
 
             @Override
@@ -66,7 +66,7 @@ public class Http2InboundFrameLogger implements Http2FrameReader {
                     int padding, boolean endStream) throws Http2Exception {
                 logger.logHeaders(INBOUND, streamId, headers, streamDependency, weight, exclusive,
                         padding, endStream);
-                observer.onHeadersRead(ctx, streamId, headers, streamDependency, weight, exclusive,
+                listener.onHeadersRead(ctx, streamId, headers, streamDependency, weight, exclusive,
                         padding, endStream);
             }
 
@@ -74,67 +74,67 @@ public class Http2InboundFrameLogger implements Http2FrameReader {
             public void onPriorityRead(ChannelHandlerContext ctx, int streamId,
                     int streamDependency, short weight, boolean exclusive) throws Http2Exception {
                 logger.logPriority(INBOUND, streamId, streamDependency, weight, exclusive);
-                observer.onPriorityRead(ctx, streamId, streamDependency, weight, exclusive);
+                listener.onPriorityRead(ctx, streamId, streamDependency, weight, exclusive);
             }
 
             @Override
             public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode)
                     throws Http2Exception {
                 logger.logRstStream(INBOUND, streamId, errorCode);
-                observer.onRstStreamRead(ctx, streamId, errorCode);
+                listener.onRstStreamRead(ctx, streamId, errorCode);
             }
 
             @Override
             public void onSettingsAckRead(ChannelHandlerContext ctx) throws Http2Exception {
                 logger.logSettingsAck(INBOUND);
-                observer.onSettingsAckRead(ctx);
+                listener.onSettingsAckRead(ctx);
             }
 
             @Override
             public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings)
                     throws Http2Exception {
                 logger.logSettings(INBOUND, settings);
-                observer.onSettingsRead(ctx, settings);
+                listener.onSettingsRead(ctx, settings);
             }
 
             @Override
             public void onPingRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
                 logger.logPing(INBOUND, data);
-                observer.onPingRead(ctx, data);
+                listener.onPingRead(ctx, data);
             }
 
             @Override
             public void onPingAckRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
                 logger.logPingAck(INBOUND, data);
-                observer.onPingAckRead(ctx, data);
+                listener.onPingAckRead(ctx, data);
             }
 
             @Override
             public void onPushPromiseRead(ChannelHandlerContext ctx, int streamId,
                     int promisedStreamId, Http2Headers headers, int padding) throws Http2Exception {
                 logger.logPushPromise(INBOUND, streamId, promisedStreamId, headers, padding);
-                observer.onPushPromiseRead(ctx, streamId, promisedStreamId, headers, padding);
+                listener.onPushPromiseRead(ctx, streamId, promisedStreamId, headers, padding);
             }
 
             @Override
             public void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode,
                     ByteBuf debugData) throws Http2Exception {
                 logger.logGoAway(INBOUND, lastStreamId, errorCode, debugData);
-                observer.onGoAwayRead(ctx, lastStreamId, errorCode, debugData);
+                listener.onGoAwayRead(ctx, lastStreamId, errorCode, debugData);
             }
 
             @Override
             public void onWindowUpdateRead(ChannelHandlerContext ctx, int streamId, int windowSizeIncrement)
                     throws Http2Exception {
                 logger.logWindowsUpdate(INBOUND, streamId, windowSizeIncrement);
-                observer.onWindowUpdateRead(ctx, streamId, windowSizeIncrement);
+                listener.onWindowUpdateRead(ctx, streamId, windowSizeIncrement);
             }
 
             @Override
             public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId,
                     Http2Flags flags, ByteBuf payload) {
                 logger.logUnknownFrame(INBOUND, frameType, streamId, flags, payload);
-                observer.onUnknownFrame(ctx, frameType, streamId, flags, payload);
+                listener.onUnknownFrame(ctx, frameType, streamId, flags, payload);
             }
         });
     }

@@ -22,15 +22,15 @@ import java.io.Closeable;
 
 /**
  * Reads HTTP/2 frames from an input {@link ByteBuf} and notifies the specified
- * {@link Http2FrameObserver} when frames are complete.
+ * {@link Http2FrameListener} when frames are complete.
  */
 public interface Http2FrameReader extends Closeable {
 
     /**
      * Attempts to read the next frame from the input buffer. If enough data is available to fully
-     * read the frame, notifies the observer of the read frame.
+     * read the frame, notifies the listener of the read frame.
      */
-    void readFrame(ChannelHandlerContext ctx, ByteBuf input, Http2FrameObserver observer)
+    void readFrame(ChannelHandlerContext ctx, ByteBuf input, Http2FrameListener listener)
             throws Http2Exception;
 
     /**

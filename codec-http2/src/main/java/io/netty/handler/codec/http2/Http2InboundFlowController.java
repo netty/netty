@@ -18,7 +18,7 @@ package io.netty.handler.codec.http2;
 /**
  * Controls the inbound flow of data frames from the remote endpoint.
  */
-public interface Http2InboundFlowController extends Http2DataObserver {
+public interface Http2InboundFlowController extends Http2DataListener {
 
     /**
      * Sets the initial inbound flow control window size and updates all stream window sizes by the

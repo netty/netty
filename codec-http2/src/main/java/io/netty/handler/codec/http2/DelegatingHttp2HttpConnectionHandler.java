@@ -31,18 +31,18 @@ import java.util.Map;
  */
 public class DelegatingHttp2HttpConnectionHandler extends DelegatingHttp2ConnectionHandler {
 
-    public DelegatingHttp2HttpConnectionHandler(boolean server, Http2FrameObserver observer) {
-        super(server, observer);
+    public DelegatingHttp2HttpConnectionHandler(boolean server, Http2FrameListener listener) {
+        super(server, listener);
     }
 
     public DelegatingHttp2HttpConnectionHandler(Http2Connection connection, Http2FrameReader frameReader,
                     Http2FrameWriter frameWriter, Http2InboundFlowController inboundFlow,
-                    Http2OutboundFlowController outboundFlow, Http2FrameObserver observer) {
-        super(connection, frameReader, frameWriter, inboundFlow, outboundFlow, observer);
+                    Http2OutboundFlowController outboundFlow, Http2FrameListener listener) {
+        super(connection, frameReader, frameWriter, inboundFlow, outboundFlow, listener);
     }
 
-    public DelegatingHttp2HttpConnectionHandler(Http2Connection connection, Http2FrameObserver observer) {
-        super(connection, observer);
+    public DelegatingHttp2HttpConnectionHandler(Http2Connection connection, Http2FrameListener listener) {
+        super(connection, listener);
     }
 
     /**

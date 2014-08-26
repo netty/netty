@@ -62,10 +62,10 @@ import org.mockito.MockitoAnnotations;
 public class DelegatingHttp2HttpConnectionHandlerTest {
 
     @Mock
-    private Http2FrameObserver clientObserver;
+    private Http2FrameListener clientListener;
 
     @Mock
-    private Http2FrameObserver serverObserver;
+    private Http2FrameListener serverListener;
 
     private ServerBootstrap sb;
     private Bootstrap cb;
@@ -100,7 +100,7 @@ public class DelegatingHttp2HttpConnectionHandlerTest {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
-                p.addLast(new DelegatingHttp2HttpConnectionHandler(false, clientObserver));
+                p.addLast(new DelegatingHttp2HttpConnectionHandler(false, clientListener));
                 p.addLast(ignoreSettingsHandler());
             }
         });
@@ -142,9 +142,9 @@ public class DelegatingHttp2HttpConnectionHandlerTest {
         writeFuture.awaitUninterruptibly(2, SECONDS);
         assertTrue(writeFuture.isSuccess());
         awaitRequests();
-        verify(serverObserver).onHeadersRead(any(ChannelHandlerContext.class), eq(5), eq(http2Headers), eq(0),
+        verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(5), eq(http2Headers), eq(0),
             anyShort(), anyBoolean(), eq(0), eq(true));
-        verify(serverObserver, never()).onDataRead(any(ChannelHandlerContext.class),
+        verify(serverListener, never()).onDataRead(any(ChannelHandlerContext.class),
             anyInt(), any(ByteBuf.class), anyInt(), anyBoolean());
     }
 
@@ -170,9 +170,9 @@ public class DelegatingHttp2HttpConnectionHandlerTest {
         writeFuture.awaitUninterruptibly(2, SECONDS);
         assertTrue(writeFuture.isSuccess());
         awaitRequests();
-        verify(serverObserver).onHeadersRead(any(ChannelHandlerContext.class), eq(3), eq(http2Headers), eq(0),
+        verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(3), eq(http2Headers), eq(0),
             anyShort(), anyBoolean(), eq(0), eq(false));
-        verify(serverObserver).onDataRead(any(ChannelHandlerContext.class),
+        verify(serverListener).onDataRead(any(ChannelHandlerContext.class),
             eq(3), eq(Unpooled.copiedBuffer(text.getBytes())), eq(0), eq(true));
     }
 
@@ -192,20 +192,20 @@ public class DelegatingHttp2HttpConnectionHandlerTest {
      * A decorator around the serverObserver that counts down the latch so that we can await the
      * completion of the request.
      */
-    private final class FrameCountDown implements Http2FrameObserver {
+    private final class FrameCountDown implements Http2FrameListener {
 
         @Override
         public void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
                                boolean endOfStream)
                 throws Http2Exception {
-            serverObserver.onDataRead(ctx, streamId, copy(data), padding, endOfStream);
+            serverListener.onDataRead(ctx, streamId, copy(data), padding, endOfStream);
             requestLatch.countDown();
         }
 
         @Override
         public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
                                   int padding, boolean endStream) throws Http2Exception {
-            serverObserver.onHeadersRead(ctx, streamId, headers, padding, endStream);
+            serverListener.onHeadersRead(ctx, streamId, headers, padding, endStream);
             requestLatch.countDown();
         }
 
@@ -213,7 +213,7 @@ public class DelegatingHttp2HttpConnectionHandlerTest {
         public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
                                   int streamDependency, short weight, boolean exclusive, int padding,
                                   boolean endStream) throws Http2Exception {
-            serverObserver.onHeadersRead(ctx, streamId, headers, streamDependency, weight,
+            serverListener.onHeadersRead(ctx, streamId, headers, streamDependency, weight,
                     exclusive, padding, endStream);
             requestLatch.countDown();
         }
@@ -221,66 +221,66 @@ public class DelegatingHttp2HttpConnectionHandlerTest {
         @Override
         public void onPriorityRead(ChannelHandlerContext ctx, int streamId, int streamDependency,
                                    short weight, boolean exclusive) throws Http2Exception {
-            serverObserver.onPriorityRead(ctx, streamId, streamDependency, weight, exclusive);
+            serverListener.onPriorityRead(ctx, streamId, streamDependency, weight, exclusive);
             requestLatch.countDown();
         }
 
         @Override
         public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode)
                 throws Http2Exception {
-            serverObserver.onRstStreamRead(ctx, streamId, errorCode);
+            serverListener.onRstStreamRead(ctx, streamId, errorCode);
             requestLatch.countDown();
         }
 
         @Override
         public void onSettingsAckRead(ChannelHandlerContext ctx) throws Http2Exception {
-            serverObserver.onSettingsAckRead(ctx);
+            serverListener.onSettingsAckRead(ctx);
             requestLatch.countDown();
         }
 
         @Override
         public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings) throws Http2Exception {
-            serverObserver.onSettingsRead(ctx, settings);
+            serverListener.onSettingsRead(ctx, settings);
             requestLatch.countDown();
         }
 
         @Override
         public void onPingRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
-            serverObserver.onPingRead(ctx, copy(data));
+            serverListener.onPingRead(ctx, copy(data));
             requestLatch.countDown();
         }
 
         @Override
         public void onPingAckRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
-            serverObserver.onPingAckRead(ctx, copy(data));
+            serverListener.onPingAckRead(ctx, copy(data));
             requestLatch.countDown();
         }
 
         @Override
         public void onPushPromiseRead(ChannelHandlerContext ctx, int streamId,
                                       int promisedStreamId, Http2Headers headers, int padding) throws Http2Exception {
-            serverObserver.onPushPromiseRead(ctx, streamId, promisedStreamId, headers, padding);
+            serverListener.onPushPromiseRead(ctx, streamId, promisedStreamId, headers, padding);
             requestLatch.countDown();
         }
 
         @Override
         public void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData)
                 throws Http2Exception {
-            serverObserver.onGoAwayRead(ctx, lastStreamId, errorCode, copy(debugData));
+            serverListener.onGoAwayRead(ctx, lastStreamId, errorCode, copy(debugData));
             requestLatch.countDown();
         }
 
         @Override
         public void onWindowUpdateRead(ChannelHandlerContext ctx, int streamId,
                                        int windowSizeIncrement) throws Http2Exception {
-            serverObserver.onWindowUpdateRead(ctx, streamId, windowSizeIncrement);
+            serverListener.onWindowUpdateRead(ctx, streamId, windowSizeIncrement);
             requestLatch.countDown();
         }
 
         @Override
         public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId,
                 Http2Flags flags, ByteBuf payload) {
-            serverObserver.onUnknownFrame(ctx, frameType, streamId, flags, payload);
+            serverListener.onUnknownFrame(ctx, frameType, streamId, flags, payload);
             requestLatch.countDown();
         }
 

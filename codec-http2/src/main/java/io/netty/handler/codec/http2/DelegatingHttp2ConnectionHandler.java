@@ -25,30 +25,30 @@ import io.netty.channel.ChannelPromise;
  * models, rather than having to subclass it directly.
  * <p>
  * Exposes all {@code writeXXX} methods as public and delegates all frame read events to a provided
- * {@link Http2FrameObserver}.
+ * {@link Http2FrameListener}.
  * <p>
  * The {@link #channelActive} and {@link #handlerAdded} should called when appropriate to ensure
  * that the initial SETTINGS frame is sent to the remote endpoint.
  */
 public class DelegatingHttp2ConnectionHandler extends AbstractHttp2ConnectionHandler {
-    private final Http2FrameObserver observer;
+    private final Http2FrameListener listener;
 
-    public DelegatingHttp2ConnectionHandler(boolean server, Http2FrameObserver observer) {
+    public DelegatingHttp2ConnectionHandler(boolean server, Http2FrameListener listener) {
         super(server);
-        this.observer = observer;
+        this.listener = listener;
     }
 
     public DelegatingHttp2ConnectionHandler(Http2Connection connection,
             Http2FrameReader frameReader, Http2FrameWriter frameWriter,
             Http2InboundFlowController inboundFlow, Http2OutboundFlowController outboundFlow,
-            Http2FrameObserver observer) {
+            Http2FrameListener listener) {
         super(connection, frameReader, frameWriter, inboundFlow, outboundFlow);
-        this.observer = observer;
+        this.listener = listener;
     }
 
-    public DelegatingHttp2ConnectionHandler(Http2Connection connection, Http2FrameObserver observer) {
+    public DelegatingHttp2ConnectionHandler(Http2Connection connection, Http2FrameListener listener) {
         super(connection);
-        this.observer = observer;
+        this.listener = listener;
     }
 
     @Override
@@ -103,70 +103,70 @@ public class DelegatingHttp2ConnectionHandler extends AbstractHttp2ConnectionHan
     @Override
     public void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
             boolean endOfStream) throws Http2Exception {
-        observer.onDataRead(ctx, streamId, data, padding, endOfStream);
+        listener.onDataRead(ctx, streamId, data, padding, endOfStream);
     }
 
     @Override
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
             int streamDependency, short weight, boolean exclusive, int padding, boolean endStream)
             throws Http2Exception {
-        observer.onHeadersRead(ctx, streamId, headers, streamDependency, weight, exclusive,
+        listener.onHeadersRead(ctx, streamId, headers, streamDependency, weight, exclusive,
                 padding, endStream);
     }
 
     @Override
     public void onPriorityRead(ChannelHandlerContext ctx, int streamId, int streamDependency,
             short weight, boolean exclusive) throws Http2Exception {
-        observer.onPriorityRead(ctx, streamId, streamDependency, weight, exclusive);
+        listener.onPriorityRead(ctx, streamId, streamDependency, weight, exclusive);
     }
 
     @Override
     public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode)
             throws Http2Exception {
-        observer.onRstStreamRead(ctx, streamId, errorCode);
+        listener.onRstStreamRead(ctx, streamId, errorCode);
     }
 
     @Override
     public void onSettingsAckRead(ChannelHandlerContext ctx) throws Http2Exception {
-        observer.onSettingsAckRead(ctx);
+        listener.onSettingsAckRead(ctx);
     }
 
     @Override
     public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings) throws Http2Exception {
-        observer.onSettingsRead(ctx, settings);
+        listener.onSettingsRead(ctx, settings);
     }
 
     @Override
     public void onPingRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
-        observer.onPingRead(ctx, data);
+        listener.onPingRead(ctx, data);
     }
 
     @Override
     public void onPingAckRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
-        observer.onPingAckRead(ctx, data);
+        listener.onPingAckRead(ctx, data);
     }
 
     @Override
     public void onPushPromiseRead(ChannelHandlerContext ctx, int streamId, int promisedStreamId,
             Http2Headers headers, int padding) throws Http2Exception {
-        observer.onPushPromiseRead(ctx, streamId, promisedStreamId, headers, padding);
+        listener.onPushPromiseRead(ctx, streamId, promisedStreamId, headers, padding);
     }
 
     @Override
     public void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData)
             throws Http2Exception {
-        observer.onGoAwayRead(ctx, lastStreamId, errorCode, debugData);
+        listener.onGoAwayRead(ctx, lastStreamId, errorCode, debugData);
     }
 
     @Override
     public void onWindowUpdateRead(ChannelHandlerContext ctx, int streamId, int windowSizeIncrement)
             throws Http2Exception {
-        observer.onWindowUpdateRead(ctx, streamId, windowSizeIncrement);
+        listener.onWindowUpdateRead(ctx, streamId, windowSizeIncrement);
     }
 
     @Override
     public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
             ByteBuf payload) {
-        observer.onUnknownFrame(ctx, frameType, streamId, flags, payload);
+        listener.onUnknownFrame(ctx, frameType, streamId, flags, payload);
     }
 }

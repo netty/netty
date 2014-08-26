@@ -18,16 +18,16 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 
 /**
- * An observer of HTTP/2 {@code DATA} frames.
+ * An listener of HTTP/2 {@code DATA} frames.
  */
-public interface Http2DataObserver {
+public interface Http2DataListener {
 
     /**
      * Handles an inbound {@code DATA} frame.
      *
      * @param ctx the context from the handler where the frame was read.
      * @param streamId the subject stream for the frame.
-     * @param data payload buffer for the frame. If this buffer needs to be retained by the observer
+     * @param data payload buffer for the frame. If this buffer needs to be retained by the listener
      *            they must make a copy.
      * @param padding the number of padding bytes found at the end of the frame.
      * @param endOfStream Indicates whether this is the last frame to be sent from the remote

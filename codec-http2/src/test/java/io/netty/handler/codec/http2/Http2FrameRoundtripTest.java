@@ -54,7 +54,7 @@ import static org.mockito.Mockito.*;
 public class Http2FrameRoundtripTest {
 
     @Mock
-    private Http2FrameObserver serverObserver;
+    private Http2FrameListener serverObserver;
 
     private ArgumentCaptor<ByteBuf> dataCaptor;
     private Http2FrameWriter frameWriter;
@@ -308,10 +308,10 @@ public class Http2FrameRoundtripTest {
 
     private final class FrameAdapter extends ByteToMessageDecoder {
 
-        private final Http2FrameObserver observer;
+        private final Http2FrameListener observer;
         private final DefaultHttp2FrameReader reader;
 
-        FrameAdapter(Http2FrameObserver observer) {
+        FrameAdapter(Http2FrameListener observer) {
             this.observer = observer;
             reader = new DefaultHttp2FrameReader();
         }
@@ -319,7 +319,7 @@ public class Http2FrameRoundtripTest {
         @Override
         protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out)
                 throws Exception {
-            reader.readFrame(ctx, in, new Http2FrameObserver() {
+            reader.readFrame(ctx, in, new Http2FrameListener() {
 
                 @Override
                 public void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data,
