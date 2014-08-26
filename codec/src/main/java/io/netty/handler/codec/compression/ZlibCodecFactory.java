@@ -90,9 +90,8 @@ public final class ZlibCodecFactory {
     }
 
     public static ZlibEncoder newZlibEncoder(int compressionLevel, int windowBits, int memLevel, byte[] dictionary) {
-        if (PlatformDependent.javaVersion() < 7 ||
-                windowBits != DEFAULT_JDK_WINDOW_SIZE || memLevel != DEFAULT_JDK_MEM_LEVEL ||
-                noJdkZlibEncoder) {
+        if (PlatformDependent.javaVersion() < 7 || noJdkZlibEncoder ||
+            windowBits != DEFAULT_JDK_WINDOW_SIZE || memLevel != DEFAULT_JDK_MEM_LEVEL) {
             return new JZlibEncoder(compressionLevel, windowBits, memLevel, dictionary);
         } else {
             return new JdkZlibEncoder(compressionLevel, dictionary);
