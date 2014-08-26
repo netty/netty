@@ -114,4 +114,9 @@ public abstract class AbstractEventExecutorGroup implements EventExecutorGroup {
     public void execute(Runnable command) {
         next().execute(command);
     }
+
+    @Override
+    public void close() throws Exception {
+        shutdownGracefully().syncUninterruptibly();
+    }
 }

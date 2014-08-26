@@ -154,4 +154,9 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
     public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
         throw new UnsupportedOperationException();
     }
+
+    @Override
+    public void close() throws Exception {
+        shutdownGracefully().syncUninterruptibly();
+    }
 }

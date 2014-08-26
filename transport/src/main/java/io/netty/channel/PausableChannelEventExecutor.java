@@ -326,6 +326,11 @@ abstract class PausableChannelEventExecutor implements PausableEventExecutor, Ch
         unwrap().execute(command);
     }
 
+    @Override
+    public void close() throws Exception {
+        unwrap().close();
+    }
+
     private static final class ChannelCallableEventExecutor<V> implements CallableEventExecutorAdapter<V> {
 
         final Channel channel;

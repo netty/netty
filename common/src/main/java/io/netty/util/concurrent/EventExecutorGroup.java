@@ -27,7 +27,7 @@ import java.util.concurrent.TimeUnit;
  * to shut them down in a global fashion.
  *
  */
-public interface EventExecutorGroup extends ScheduledExecutorService {
+public interface EventExecutorGroup extends ScheduledExecutorService, AutoCloseable {
 
     /**
      * Returns {@code true} if and only if all {@link EventExecutor}s managed by this {@link EventExecutorGroup}
