@@ -20,8 +20,11 @@ import org.jboss.netty.handler.codec.compression.JdkZlibEncoder;
 import org.jboss.netty.handler.codec.compression.ZlibEncoder;
 import org.jboss.netty.handler.codec.compression.ZlibWrapper;
 import org.jboss.netty.handler.codec.embedder.EncoderEmbedder;
+import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.internal.DetectionUtil;
 import org.jboss.netty.util.internal.StringUtil;
+import org.jboss.netty.util.internal.SystemPropertyUtil;
 
 /**
  * Compresses an {@link HttpMessage} and an {@link HttpChunk} in {@code gzip} or
@@ -32,21 +35,35 @@ import org.jboss.netty.util.internal.StringUtil;
  */
 public class HttpContentCompressor extends HttpContentEncoder {
 
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(HttpContentCompressor.class);
+
+    private static final int DEFAULT_JDK_WINDOW_SIZE = 15;
+    private static final int DEFAULT_JDK_MEM_LEVEL = 8;
+
+    private static final boolean noJdkZlibEncoder;
+
+    static {
+        noJdkZlibEncoder = SystemPropertyUtil.getBoolean("io.netty.noJdkZlibEncoder", false);
+        if (logger.isDebugEnabled()) {
+            logger.debug("-Dio.netty.noJdkZlibEncoder: " + noJdkZlibEncoder);
+        }
+    }
+
     private final int compressionLevel;
     private final int windowBits;
     private final int memLevel;
 
     /**
-     * Creates a new handler with the default compression level (<tt>6</tt>),
-     * default window size (<tt>15</tt>) and default memory level (<tt>8</tt>).
+     * Creates a new handler with the default compression level (<tt>6</tt>), default window size
+     * ({@value #DEFAULT_JDK_WINDOW_SIZE}) and default memory level ({@value #DEFAULT_JDK_MEM_LEVEL}).
      */
     public HttpContentCompressor() {
         this(6);
     }
 
     /**
-     * Creates a new handler with the specified compression level, default
-     * window size (<tt>15</tt>) and default memory level (<tt>8</tt>).
+     * Creates a new handler with the specified compression level, default window size
+     * ({@value #DEFAULT_JDK_WINDOW_SIZE}) and default memory level ({@value #DEFAULT_JDK_MEM_LEVEL}).
      *
      * @param compressionLevel
      *        {@code 1} yields the fastest compression and {@code 9} yields the
@@ -54,12 +71,11 @@ public class HttpContentCompressor extends HttpContentEncoder {
      *        compression level is {@code 6}.
      */
     public HttpContentCompressor(int compressionLevel) {
-        this(compressionLevel, 15, 8);
+        this(compressionLevel, DEFAULT_JDK_WINDOW_SIZE, DEFAULT_JDK_MEM_LEVEL);
     }
 
     /**
-     * Creates a new handler with the specified compression level, window size,
-     * and memory level..
+     * Creates a new handler with the specified compression level, window size, and memory level.
      *
      * @param compressionLevel
      *        {@code 1} yields the fastest compression and {@code 9} yields the
@@ -69,12 +85,12 @@ public class HttpContentCompressor extends HttpContentEncoder {
      *        The base two logarithm of the size of the history buffer.  The
      *        value should be in the range {@code 9} to {@code 15} inclusive.
      *        Larger values result in better compression at the expense of
-     *        memory usage.  The default value is {@code 15}.
+     *        memory usage.  The default value is {@value #DEFAULT_JDK_WINDOW_SIZE}.
      * @param memLevel
      *        How much memory should be allocated for the internal compression
      *        state.  {@code 1} uses minimum memory and {@code 9} uses maximum
      *        memory.  Larger values result in better and faster compression
-     *        at the expense of memory usage.  The default value is {@code 8}
+     *        at the expense of memory usage.  The default value is {@value #DEFAULT_JDK_MEM_LEVEL}.
      */
     public HttpContentCompressor(int compressionLevel, int windowBits, int memLevel) {
         if (compressionLevel < 0 || compressionLevel > 9) {
@@ -109,12 +125,13 @@ public class HttpContentCompressor extends HttpContentEncoder {
             return null;
         }
 
-        if (DetectionUtil.javaVersion() >= 7) {
-            return new EncoderEmbedder<ChannelBuffer>(
-                    new JdkZlibEncoder(wrapper, compressionLevel));
-        } else {
+        if (DetectionUtil.javaVersion() < 7 || noJdkZlibEncoder ||
+            windowBits != DEFAULT_JDK_WINDOW_SIZE || memLevel != DEFAULT_JDK_MEM_LEVEL) {
             return new EncoderEmbedder<ChannelBuffer>(
                     new ZlibEncoder(wrapper, compressionLevel, windowBits, memLevel));
+        } else {
+            return new EncoderEmbedder<ChannelBuffer>(
+                    new JdkZlibEncoder(wrapper, compressionLevel));
         }
     }
 
