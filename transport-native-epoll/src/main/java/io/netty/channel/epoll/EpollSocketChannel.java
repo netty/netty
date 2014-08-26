@@ -276,7 +276,7 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
         boolean done = false;
         long flushedAmount = 0;
 
-        for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
+        for (;;) {
             final long offset = region.transfered();
             final long localFlushedAmount = Native.sendfile(fd, region, baseOffset, offset, regionCount - offset);
             if (localFlushedAmount == 0) {
