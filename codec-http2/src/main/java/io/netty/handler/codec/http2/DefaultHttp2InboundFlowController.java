@@ -92,7 +92,7 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
      *             outside of the range 0 (inclusive) to 1 (exclusive).
      */
     public void setWindowUpdateRatio(ChannelHandlerContext ctx, int streamId, double ratio) {
-        if (ratio < WINDOW_UPDATE_OFF || ratio >= 1.0f) {
+        if (ratio < WINDOW_UPDATE_OFF || ratio >= 1.0) {
             throw new IllegalArgumentException("Invalid ratio: " + ratio);
         }
 
