@@ -105,7 +105,12 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
         state.setWindowUpdateRatio(ratio);
 
         // In the event of enabling window update, check to see if we need to update the window now.
-        state.updateWindowIfAppropriate(ctx);
+        try {
+            state.updateWindowIfAppropriate(ctx);
+        } catch (Http2Exception e) {
+            // Shouldn't happen since we only increase the window.
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
@@ -219,7 +224,7 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
          *
          * @return {@code} true if a {@code WINDOW_UPDATE} frame was sent.
          */
-        boolean updateWindowIfAppropriate(ChannelHandlerContext ctx) {
+        boolean updateWindowIfAppropriate(ChannelHandlerContext ctx) throws Http2Exception {
             if (windowUpdateRatio == WINDOW_UPDATE_OFF || endOfStream || initialWindowSize <= 0) {
                 return false;
             }
@@ -288,15 +293,10 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
          * size back to the size of the initial window and sends a window update frame to the remote
          * endpoint.
          */
-        void updateWindow(ChannelHandlerContext ctx) {
+        void updateWindow(ChannelHandlerContext ctx) throws Http2Exception {
             // Expand the window for this stream back to the size of the initial window.
             int deltaWindowSize = initialWindowSize - window;
-            try {
-                addAndGet(deltaWindowSize);
-            } catch (Http2Exception e) {
-                // Should never happen for a window increase.
-                throw new RuntimeException(e);
-            }
+            addAndGet(deltaWindowSize);
 
             // Send a window update for the stream/connection.
             frameWriter.writeWindowUpdate(ctx, streamId, deltaWindowSize, ctx.newPromise());
