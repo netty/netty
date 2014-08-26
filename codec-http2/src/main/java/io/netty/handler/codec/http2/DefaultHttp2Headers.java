@@ -183,6 +183,15 @@ public final class DefaultHttp2Headers extends Http2Headers {
          *
          * @throws IllegalArgumentException if the name or value of this header is invalid for any reason.
          */
+        public Builder add(final CharSequence name, final Object value) {
+            return add(name.toString(), value);
+        }
+
+        /**
+         * Adds the given header to the collection.
+         *
+         * @throws IllegalArgumentException if the name or value of this header is invalid for any reason.
+         */
         public Builder add(final String name, final Object value) {
             // If this is the first call on the builder since the last build, copy the previous
             // results.
@@ -196,6 +205,13 @@ public final class DefaultHttp2Headers extends Http2Headers {
             int hashTableIndex = index(nameHash);
             add0(nameHash, hashTableIndex, lowerCaseName, strVal);
             return this;
+        }
+
+        /**
+         * Removes the header with the given name from this collection.
+         */
+        public Builder remove(final CharSequence name) {
+            return remove(name.toString());
         }
 
         /**
@@ -215,6 +231,15 @@ public final class DefaultHttp2Headers extends Http2Headers {
             int hashTableIndex = index(nameHash);
             remove0(nameHash, hashTableIndex, lowerCaseName);
             return this;
+        }
+
+        /**
+         * Sets the given header in the collection, replacing any previous values.
+         *
+         * @throws IllegalArgumentException if the name or value of this header is invalid for any reason.
+         */
+        public Builder set(final CharSequence name, final Object value) {
+            return set(name.toString(), value);
         }
 
         /**

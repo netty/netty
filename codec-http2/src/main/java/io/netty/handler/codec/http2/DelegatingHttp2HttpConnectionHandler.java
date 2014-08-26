@@ -68,17 +68,17 @@ public class DelegatingHttp2HttpConnectionHandler extends DelegatingHttp2Connect
         }
 
         // Consume the Authority extension header if present
-        value = httpHeaders.get(Http2ToHttpHeaders.Names.AUTHORITY);
+        value = httpHeaders.get(HttpUtil.ExtensionHeaders.Names.AUTHORITY);
         if (value != null) {
             http2Headers.authority(value);
-            httpHeaders.remove(Http2ToHttpHeaders.Names.AUTHORITY);
+            httpHeaders.remove(HttpUtil.ExtensionHeaders.Names.AUTHORITY);
         }
 
         // Consume the Scheme extension header if present
-        value = httpHeaders.get(Http2ToHttpHeaders.Names.SCHEME);
+        value = httpHeaders.get(HttpUtil.ExtensionHeaders.Names.SCHEME);
         if (value != null) {
             http2Headers.scheme(value);
-            httpHeaders.remove(Http2ToHttpHeaders.Names.SCHEME);
+            httpHeaders.remove(HttpUtil.ExtensionHeaders.Names.SCHEME);
         }
     }
 
@@ -114,7 +114,7 @@ public class DelegatingHttp2HttpConnectionHandler extends DelegatingHttp2Connect
      */
     private int getStreamId(HttpHeaders httpHeaders) throws Http2Exception {
         int streamId = 0;
-        String value = httpHeaders.get(Http2ToHttpHeaders.Names.STREAM_ID);
+        String value = httpHeaders.get(HttpUtil.ExtensionHeaders.Names.STREAM_ID);
         if (value == null) {
             streamId = nextStreamId();
         } else {
@@ -124,7 +124,7 @@ public class DelegatingHttp2HttpConnectionHandler extends DelegatingHttp2Connect
                 throw Http2Exception.format(Http2Error.INTERNAL_ERROR,
                                     "Invalid user-specified stream id value '%s'", value);
             }
-            httpHeaders.remove(Http2ToHttpHeaders.Names.STREAM_ID);
+            httpHeaders.remove(HttpUtil.ExtensionHeaders.Names.STREAM_ID);
         }
 
         return streamId;
@@ -141,7 +141,6 @@ public class DelegatingHttp2HttpConnectionHandler extends DelegatingHttp2Connect
             boolean hasData = httpMsg.content().isReadable();
 
             // Convert and write the headers.
-            String value = null;
             HttpHeaders httpHeaders = httpMsg.headers();
             DefaultHttp2Headers.Builder http2Headers = DefaultHttp2Headers.newBuilder();
             if (msg instanceof HttpRequest) {

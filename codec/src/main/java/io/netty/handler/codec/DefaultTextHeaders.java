@@ -306,6 +306,30 @@ public class DefaultTextHeaders implements TextHeaders {
     }
 
     @Override
+    public TextHeaders setAll(TextHeaders headers) {
+        if (headers == null) {
+            throw new NullPointerException("headers");
+        }
+
+        if (headers instanceof DefaultTextHeaders) {
+            DefaultTextHeaders m = (DefaultTextHeaders) headers;
+            HeaderEntry e = m.head.after;
+            while (e != m.head) {
+                CharSequence name = e.name;
+                name = convertName(name);
+                set(name, convertValue(e.value));
+                e = e.after;
+            }
+        } else {
+            for (Entry<CharSequence, CharSequence> e: headers.unconvertedEntries()) {
+                set(e.getKey(), e.getValue());
+            }
+        }
+
+        return this;
+    }
+
+    @Override
     public TextHeaders clear() {
         Arrays.fill(entries, null);
         head.before = head.after = head;

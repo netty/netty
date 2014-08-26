@@ -418,6 +418,13 @@ public interface TextHeaders extends Iterable<Map.Entry<String, String>> {
     TextHeaders set(TextHeaders headers);
 
     /**
+     * Retains all current headers but calls {@link #set(CharSequence, Object)} for each entry in {@code headers}
+     * @param headers The headers used to {@link #set(CharSequence, Object)} values in this instance
+     * @return {@code this}
+     */
+    TextHeaders setAll(TextHeaders headers);
+
+    /**
      * Removes the header with the specified name.
      *
      * @param name The name of the header to remove

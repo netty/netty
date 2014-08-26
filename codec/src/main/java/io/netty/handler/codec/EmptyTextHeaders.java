@@ -212,6 +212,11 @@ public class EmptyTextHeaders implements TextHeaders {
     }
 
     @Override
+    public TextHeaders setAll(TextHeaders rhs) {
+        throw new UnsupportedOperationException("read only");
+    }
+
+    @Override
     public boolean remove(CharSequence name) {
         return false;
     }

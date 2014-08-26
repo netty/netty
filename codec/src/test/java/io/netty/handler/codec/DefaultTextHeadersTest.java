@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -75,5 +76,32 @@ public class DefaultTextHeadersTest {
         assertFalse(h2.equals(h1));
         assertTrue(h2.equals(h2));
         assertTrue(h1.equals(h1));
+    }
+
+    @Test
+    public void testSetAll() {
+        DefaultTextHeaders h1 = new DefaultTextHeaders();
+        h1.set("FOO", "goo");
+        h1.set("foo2", "goo2");
+        h1.add("foo2", "goo3");
+        h1.add("foo", "goo4");
+
+        DefaultTextHeaders h2 = new DefaultTextHeaders();
+        h2.set("foo", "goo");
+        h2.set("foo2", "goo2");
+        h2.add("foo", "goo4");
+
+        DefaultTextHeaders expected = new DefaultTextHeaders();
+        expected.set("FOO", "goo");
+        expected.set("foo2", "goo2");
+        expected.add("foo2", "goo3");
+        expected.add("foo", "goo4");
+        expected.set("foo", "goo");
+        expected.set("foo2", "goo2");
+        expected.set("foo", "goo4");
+
+        h1.setAll(h2);
+
+        assertEquals(expected, h1);
     }
 }

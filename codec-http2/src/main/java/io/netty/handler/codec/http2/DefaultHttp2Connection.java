@@ -32,7 +32,6 @@ import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
 import io.netty.handler.codec.http2.Http2StreamRemovalPolicy.Action;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
-import io.netty.util.collection.PrimitiveCollections;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -470,10 +469,6 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         final IntObjectMap<DefaultStream> removeAllChildren() {
-            if (children.isEmpty()) {
-                return PrimitiveCollections.emptyIntObjectMap();
-            }
-
             totalChildWeights = 0;
             IntObjectMap<DefaultStream> prevChildren = children;
             children = newChildMap();
@@ -494,8 +489,10 @@ public class DefaultHttp2Connection implements Http2Connection {
                 // If it was requested that this child be the exclusive dependency of this node,
                 // move any previous children to the child node, becoming grand children
                 // of this node.
-                for (DefaultStream grandchild : removeAllChildren().values(DefaultStream.class)) {
-                    child.takeChild(grandchild, false, events);
+                if (!children.isEmpty()) {
+                    for (DefaultStream grandchild : removeAllChildren().values(DefaultStream.class)) {
+                        child.takeChild(grandchild, false, events);
+                    }
                 }
             }
 

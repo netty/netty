@@ -894,25 +894,19 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
                 stream = createRemoteStream(streamId, endStream);
             } else {
                 if (stream.state() == RESERVED_REMOTE) {
-                    // Received headers for a reserved push stream ... open it for push to the
-                    // local endpoint.
+                    // Received headers for a reserved push stream ... open it for push to the local endpoint.
                     stream.verifyState(PROTOCOL_ERROR, RESERVED_REMOTE);
                     stream.openForPush();
                 } else {
-                    // Receiving headers on an existing stream. Make sure the stream is in an
-                    // allowed
-                    // state.
+                    // Receiving headers on an existing stream. Make sure the stream is in an allowed state.
                     stream.verifyState(PROTOCOL_ERROR, OPEN, HALF_CLOSED_LOCAL);
-
-                    // Update the outbound priority if outbound traffic is allowed.
-                    if (stream.state() == OPEN) {
-                        stream.setPriority(streamDependency, weight, exclusive);
-                    }
                 }
             }
 
             AbstractHttp2ConnectionHandler.this.onHeadersRead(ctx, streamId, headers, streamDependency,
                     weight, exclusive, padding, endStream);
+
+            stream.setPriority(streamDependency, weight, exclusive);
 
             // If the headers completes this stream, close it.
             if (endStream) {
@@ -933,10 +927,10 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
                 return;
             }
 
-            stream.setPriority(streamDependency, weight, exclusive);
-
             AbstractHttp2ConnectionHandler.this.onPriorityRead(ctx, streamId, streamDependency,
                     weight, exclusive);
+
+            stream.setPriority(streamDependency, weight, exclusive);
         }
 
         @Override
