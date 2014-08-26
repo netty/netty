@@ -28,16 +28,12 @@ import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import java.net.SocketAddress;
 import java.util.WeakHashMap;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 /**
  * Abstract base class for {@link ChannelHandlerContext} implementations.
- * <p>
- * The unusual is-a relationship with {@link PausableChannelEventExecutor} was put in place to avoid
- * additional object allocations that would have been required to wrap the return values of {@link #executor()}
- * and {@link #invoker()}.
  */
-abstract class AbstractChannelHandlerContext
-        extends PausableChannelEventExecutor implements ChannelHandlerContext, ResourceLeakHint {
+abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, ResourceLeakHint {
 
     // This class keeps an integer member field 'skipFlags' whose each bit tells if the corresponding handler method
     // is annotated with @Skip. 'skipFlags' is retrieved in runtime via the reflection API and is cached.
@@ -91,6 +87,12 @@ abstract class AbstractChannelHandlerContext
     @SuppressWarnings("unchecked")
     private static final WeakHashMap<Class<?>, Integer>[] skipFlagsCache =
             new WeakHashMap[Runtime.getRuntime().availableProcessors()];
+
+    private static
+    AtomicReferenceFieldUpdater<AbstractChannelHandlerContext, PausableChannelEventExecutor>
+            wrappedEventLoopUpdater = AtomicReferenceFieldUpdater.newUpdater(AbstractChannelHandlerContext.class,
+                                                                             PausableChannelEventExecutor.class,
+                                                                             "wrappedEventLoop");
 
     static {
         for (int i = 0; i < skipFlagsCache.length; i ++) {
@@ -226,6 +228,11 @@ abstract class AbstractChannelHandlerContext
     volatile Runnable invokeFlushTask;
     volatile Runnable invokeChannelWritableStateChangedTask;
 
+    /**
+     * Wrapped {@link EventLoop} and {@link ChannelHandlerInvoker} to support {@link Channel#deregister()}.
+     */
+    private volatile PausableChannelEventExecutor wrappedEventLoop;
+
     AbstractChannelHandlerContext(
             DefaultChannelPipeline pipeline, ChannelHandlerInvoker invoker, String name, int skipFlags) {
 
@@ -286,12 +293,28 @@ abstract class AbstractChannelHandlerContext
 
     @Override
     public final EventExecutor executor() {
-        return this;
+        if (invoker == null) {
+            return channel().eventLoop();
+        } else {
+            initWrappedEventLoop();
+            return wrappedEventLoop;
+        }
     }
 
     @Override
     public final ChannelHandlerInvoker invoker() {
-        return this;
+        if (invoker == null) {
+            return channel().eventLoop().asInvoker();
+        } else {
+            initWrappedEventLoop();
+            return wrappedEventLoop;
+        }
+    }
+
+    private void initWrappedEventLoop() {
+        if (wrappedEventLoop == null) {
+            wrappedEventLoopUpdater.compareAndSet(this, null, new PausableChannelEventExecutor0());
+        }
     }
 
     @Override
@@ -554,35 +577,44 @@ abstract class AbstractChannelHandlerContext
         return StringUtil.simpleClassName(ChannelHandlerContext.class) + '(' + name + ", " + channel + ')';
     }
 
-    @Override
-    public EventExecutor unwrap() {
-        return unwrapInvoker().executor();
-    }
+    private final class PausableChannelEventExecutor0 extends PausableChannelEventExecutor {
 
-    @Override
-    public void rejectNewTasks() {
-        /**
-         * This cast is correct because {@link #channel()} always returns an {@link AbstractChannel} and
-         * {@link AbstractChannel#eventLoop()} always returns a {@link PausableEventExecutor}.
-         */
-        ((PausableEventExecutor) channel().eventLoop()).rejectNewTasks();
-    }
-
-    @Override
-    public void acceptNewTasks() {
-        ((PausableEventExecutor) channel().eventLoop()).acceptNewTasks();
-    }
-
-    @Override
-    public boolean isAcceptingNewTasks() {
-        return ((PausableEventExecutor) channel().eventLoop()).isAcceptingNewTasks();
-    }
-
-    @Override
-    ChannelHandlerInvoker unwrapInvoker() {
-        if (invoker == null) {
-            return channel().unsafe().invoker();
+        @Override
+        public void rejectNewTasks() {
+            /**
+             * This cast is correct because {@link #channel()} always returns an {@link AbstractChannel} and
+             * {@link AbstractChannel#eventLoop()} always returns a {@link PausableChannelEventExecutor}.
+             */
+            ((PausableChannelEventExecutor) channel().eventLoop()).rejectNewTasks();
         }
-        return invoker;
+
+        @Override
+        public void acceptNewTasks() {
+            ((PausableChannelEventExecutor) channel().eventLoop()).acceptNewTasks();
+        }
+
+        @Override
+        public boolean isAcceptingNewTasks() {
+            return ((PausableChannelEventExecutor) channel().eventLoop()).isAcceptingNewTasks();
+        }
+
+        @Override
+        public Channel channel() {
+            return AbstractChannelHandlerContext.this.channel();
+        }
+
+        @Override
+        public EventExecutor unwrap() {
+            return unwrapInvoker().executor();
+        }
+
+        @Override
+        public ChannelHandlerInvoker unwrapInvoker() {
+            /**
+             * {@link #invoker} can not be {@code null}, because {@link PausableChannelEventExecutor0} will only be
+             * instantiated if {@link #invoker} is not {@code null}.
+             */
+            return invoker;
+        }
     }
 }
