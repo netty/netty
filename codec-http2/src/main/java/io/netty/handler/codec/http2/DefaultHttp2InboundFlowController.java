@@ -30,13 +30,13 @@ public class DefaultHttp2InboundFlowController implements Http2InboundFlowContro
      * The default ratio of window size to initial window size below which a {@code WINDOW_UPDATE}
      * is sent to expand the window.
      */
-    public static final double DEFAULT_WINDOW_UPDATE_RATIO = 0.5f;
+    public static final double DEFAULT_WINDOW_UPDATE_RATIO = 0.5;
 
     /**
      * A value for the window update ratio to be use in order to disable window updates for
      * a stream (i.e. {@code 0}).
      */
-    public static final double WINDOW_UPDATE_OFF = 0.0f;
+    public static final double WINDOW_UPDATE_OFF = 0.0;
 
     private final Http2Connection connection;
     private final Http2FrameWriter frameWriter;
