@@ -15,9 +15,9 @@
  */
 package io.netty.handler.codec.xml;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.util.CharsetUtil;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -31,11 +31,11 @@ import static org.hamcrest.core.IsNull.nullValue;
  */
 public class XmlDecoderTest {
 
-    private static final String xml1 = "<?xml version=\"1.0\"?><employee>\n" +
+    private static final String XML1 = "<?xml version=\"1.0\"?><employee>\n" +
             "<id>1</id>\n" +
             "<name ";
 
-    private static final String xml2 = "type=\"given\">Alba</name>" +
+    private static final String XML2 = "type=\"given\">Alba</name>" +
             "    <salary>100</salary>\n" +
             "</employee>";
 
@@ -58,7 +58,7 @@ public class XmlDecoderTest {
     public void shouldDecodeRequestWithSimpleXml() {
         Object temp;
 
-        write(xml1);
+        write(XML1);
 
         temp = channel.readInbound();
         assertThat(temp, instanceOf(XmlDocumentStart.class));
@@ -88,7 +88,7 @@ public class XmlDecoderTest {
         temp = channel.readInbound();
         assertThat(temp, nullValue());
 
-        write(xml2);
+        write(XML2);
 
         temp = channel.readInbound();
         assertThat(temp, instanceOf(XmlElementStart.class));
@@ -125,9 +125,7 @@ public class XmlDecoderTest {
     }
 
     private void write(String content) {
-        ByteBuf incoming = Unpooled.buffer();
-        incoming.writeBytes(content.getBytes());
-        channel.writeInbound(incoming);
+        assertThat(channel.writeInbound(Unpooled.copiedBuffer(content, CharsetUtil.UTF_8)), is(true));
     }
 
 }
