@@ -19,6 +19,7 @@ package io.netty.channel.nio;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.EventLoopException;
+import io.netty.channel.metrics.EventLoopMetrics;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -109,8 +110,11 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     private int cancelledKeys;
     private boolean needsToSelectAgain;
 
-    NioEventLoop(NioEventLoopGroup parent, Executor executor, SelectorProvider selectorProvider) {
-        super(parent, executor, false);
+    NioEventLoop(NioEventLoopGroup parent,
+                 Executor executor,
+                 EventLoopMetrics metrics,
+                 SelectorProvider selectorProvider) {
+        super(parent, executor, metrics, false);
         if (selectorProvider == null) {
             throw new NullPointerException("selectorProvider");
         }
@@ -381,10 +385,39 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     }
 
     private void processSelectedKeys() {
-        if (selectedKeys != null) {
-            processSelectedKeysOptimized(selectedKeys.flip());
-        } else {
-            processSelectedKeysPlain(selector.selectedKeys());
+        try {
+            metrics().startProcessIo();
+            if (selectedKeys != null) {
+                processSelectedKeysOptimized(selectedKeys.flip());
+            } else {
+                processSelectedKeysPlain(selector.selectedKeys());
+            }
+        } finally {
+            metrics().stopProcessIo();
+        }
+    }
+
+    @Override
+    protected boolean runAllTasks() {
+        boolean result = false;
+        try {
+            metrics().startExecuteTasks();
+            result = super.runAllTasks();
+        } finally {
+            metrics().stopExecuteTasks();
+            return result;
+        }
+    }
+
+    @Override
+    protected boolean runAllTasks(long timeoutNanos) {
+        boolean result = false;
+        try {
+            metrics().startExecuteTasks();
+            result = super.runAllTasks(timeoutNanos);
+        } finally {
+            metrics().stopExecuteTasks();
+            return result;
         }
     }
 

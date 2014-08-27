@@ -254,7 +254,9 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     }
 
     @Override
-    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+    protected long doWrite(ChannelOutboundBuffer in) throws Exception {
+        long totalWrittenBytes = 0;
+
         for (;;) {
             Object msg = in.current();
             if (msg == null) {
@@ -266,7 +268,9 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             try {
                 boolean done = false;
                 for (int i = config().getWriteSpinCount() - 1; i >= 0; i--) {
-                    if (doWriteMessage(msg)) {
+                    long writtenBytes = doWriteMessage(msg);
+                    if (writtenBytes >= 0) {
+                        totalWrittenBytes += writtenBytes;
                         done = true;
                         break;
                     }
@@ -286,9 +290,15 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                 in.remove(e);
             }
         }
+
+        return totalWrittenBytes;
     }
 
-    private boolean doWriteMessage(Object msg) throws IOException {
+    /**
+     * Returns the number of written bytes iff the message has been fully written (incl. {@code 0}) or a
+     * negative number else.
+     */
+    private int doWriteMessage(Object msg) throws IOException {
         final ByteBuf data;
         InetSocketAddress remoteAddress;
         if (msg instanceof AddressedEnvelope) {
@@ -304,7 +314,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
 
         final int dataLen = data.readableBytes();
         if (dataLen == 0) {
-            return true;
+            return 0;
         }
 
         if (remoteAddress == null) {
@@ -325,7 +335,11 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                     remoteAddress.getAddress(), remoteAddress.getPort());
         }
 
-        return writtenBytes > 0;
+        if (writtenBytes <= 0) {
+            return -1;
+        } else {
+            return writtenBytes;
+        }
     }
 
     @Override
@@ -422,6 +436,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
 
             assert eventLoop().inEventLoop();
             final ChannelPipeline pipeline = pipeline();
+            int totalReadBytes = 0;
             try {
                 for (;;) {
                     ByteBuf data = null;
@@ -446,6 +461,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                         int readBytes = remoteAddress.receivedAmount;
                         data.writerIndex(data.writerIndex() + readBytes);
                         allocHandle.record(readBytes);
+                        totalReadBytes += readBytes;
                         readPending = false;
                         pipeline.fireChannelRead(
                                 new DatagramPacket(data, (InetSocketAddress) localAddress(), remoteAddress));
@@ -470,6 +486,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                 if (!config().isAutoRead() && !readPending) {
                     clearEpollIn();
                 }
+
+                eventLoop().metrics().readBytes(totalReadBytes);
             }
         }
     }

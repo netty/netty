@@ -16,6 +16,7 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.metrics.EventLoopMetrics;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.EmptyArrays;
@@ -29,7 +30,6 @@ import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.NotYetConnectedException;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * A skeletal {@link Channel} implementation.
@@ -507,7 +507,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 }
                 doRegister();
                 registered = true;
-                AbstractChannel.this.eventLoop.acceptNewTasks();
+                eventLoop.acceptNewTasks();
                 safeSetSuccess(promise);
                 pipeline.fireChannelRegistered();
                 if (isActive()) {
@@ -782,7 +782,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
 
             try {
-                doWrite(outboundBuffer);
+                final long flushedBytes = doWrite(outboundBuffer);
+                eventLoop().metrics().writeBytes(flushedBytes);
             } catch (Throwable t) {
                 outboundBuffer.failFlushed(t);
             } finally {
@@ -904,8 +905,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     /**
      * Flush the content of the given buffer to the remote peer.
+     *
+     * @return  the number of bytes flushed.
      */
-    protected abstract void doWrite(ChannelOutboundBuffer in) throws Exception;
+    protected abstract long doWrite(ChannelOutboundBuffer in) throws Exception;
 
     /**
      * Invoked when a new message is added to a {@link ChannelOutboundBuffer} of this {@link AbstractChannel}, so that
@@ -1009,6 +1012,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         @Override
         ChannelHandlerInvoker unwrapInvoker() {
             return unwrapped.asInvoker();
+        }
+
+        @Override
+        public EventLoopMetrics metrics() {
+            return unwrap().metrics();
         }
     }
 }

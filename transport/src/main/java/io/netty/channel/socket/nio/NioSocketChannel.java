@@ -237,7 +237,9 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     }
 
     @Override
-    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+    protected long doWrite(ChannelOutboundBuffer in) throws Exception {
+        long totalWrittenBytes = 0;
+
         for (;;) {
             int size = in.size();
             if (size == 0) {
@@ -260,8 +262,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
             switch (nioBufferCnt) {
                 case 0:
                     // We have something else beside ByteBuffers to write so fallback to normal writes.
-                    super.doWrite(in);
-                    return;
+                    return super.doWrite(in);
                 case 1:
                     // Only one ByteBuf so use non-gathering write
                     ByteBuffer nioBuffer = nioBuffers[0];
@@ -298,6 +299,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
 
             // Release the fully written buffers, and update the indexes of the partially written buffer.
             in.removeBytes(writtenBytes);
+            totalWrittenBytes += writtenBytes;
 
             if (!done) {
                 // Did not write all buffers completely.
@@ -305,6 +307,8 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
                 break;
             }
         }
+
+        return totalWrittenBytes;
     }
 
     private final class NioSocketChannelConfig  extends DefaultSocketChannelConfig {

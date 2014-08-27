@@ -163,11 +163,11 @@ public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel imp
         // delivers a message
         buf.add(new UdtMessage(byteBuf));
 
-        return 1;
+        return receivedMessageSize;
     }
 
     @Override
-    protected boolean doWriteMessage(Object msg, ChannelOutboundBuffer in) throws Exception {
+    protected long doWriteMessage(Object msg, ChannelOutboundBuffer in) throws Exception {
         // expects a message
         final UdtMessage message = (UdtMessage) msg;
 
@@ -184,7 +184,7 @@ public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel imp
 
         // did not write the message
         if (writtenBytes <= 0 && messageSize > 0) {
-            return false;
+            return -1;
         }
 
         // wrote message completely
@@ -193,7 +193,7 @@ public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel imp
                     "Provider error: failed to write message. Provider library should be upgraded.");
         }
 
-        return true;
+        return writtenBytes;
     }
 
     @Override

@@ -839,12 +839,17 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     @Override
     public ChannelPipeline fireChannelRegistered() {
         head.fireChannelRegistered();
+
+        channel().eventLoop().metrics().channelRegistered();
+
         return this;
     }
 
     @Override
     public ChannelPipeline fireChannelUnregistered() {
         head.fireChannelUnregistered();
+
+        channel().eventLoop().metrics().channelUnregistered();
 
         // Remove all handlers sequentially if channel is closed and unregistered.
         if (!channel.isOpen()) {
@@ -866,6 +871,8 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     public ChannelPipeline fireChannelActive() {
         head.fireChannelActive();
 
+        channel().eventLoop().metrics().channelActive();
+
         if (channel.config().isAutoRead()) {
             channel.read();
         }
@@ -876,6 +883,9 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     @Override
     public ChannelPipeline fireChannelInactive() {
         head.fireChannelInactive();
+
+        channel().eventLoop().metrics().channelInactive();
+
         return this;
     }
 

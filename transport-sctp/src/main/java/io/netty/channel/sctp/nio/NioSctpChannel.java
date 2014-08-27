@@ -266,6 +266,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
         RecvByteBufAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();
         ByteBuf buffer = allocHandle.allocate(config().getAllocator());
         boolean free = true;
+        int bytesRead = 0;
         try {
             ByteBuffer data = buffer.internalNioBuffer(buffer.writerIndex(), buffer.writableBytes());
             int pos = data.position();
@@ -275,13 +276,13 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
                 return 0;
             }
             buf.add(new SctpMessage(messageInfo, buffer.writerIndex(buffer.writerIndex() + data.position() - pos)));
+            bytesRead = buffer.readableBytes();
             free = false;
-            return 1;
+            return bytesRead;
         } catch (Throwable cause) {
             PlatformDependent.throwException(cause);
             return -1;
         }  finally {
-            int bytesRead = buffer.readableBytes();
             allocHandle.record(bytesRead);
             if (free) {
                 buffer.release();
@@ -290,12 +291,12 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     }
 
     @Override
-    protected boolean doWriteMessage(Object msg, ChannelOutboundBuffer in) throws Exception {
+    protected long doWriteMessage(Object msg, ChannelOutboundBuffer in) throws Exception {
         SctpMessage packet = (SctpMessage) msg;
         ByteBuf data = packet.content();
         int dataLen = data.readableBytes();
         if (dataLen == 0) {
-            return true;
+            return 0;
         }
 
         ByteBufAllocator alloc = alloc();
@@ -317,7 +318,12 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
         mi.streamNumber(packet.streamIdentifier());
 
         final int writtenBytes = javaChannel().send(nioData, mi);
-        return writtenBytes > 0;
+
+        if (writtenBytes <= 0) {
+            return -1;
+        } else {
+            return writtenBytes;
+        }
     }
 
     @Override

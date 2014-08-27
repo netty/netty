@@ -106,8 +106,8 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             ByteBuf byteBuf = null;
             int messages = 0;
             boolean close = false;
+            int totalReadAmount = 0;
             try {
-                int totalReadAmount = 0;
                 boolean readPendingReset = false;
                 do {
                     byteBuf = allocHandle.allocate(allocator);
@@ -165,13 +165,16 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 if (!config.isAutoRead() && !isReadPending()) {
                     removeReadOp();
                 }
+
+                eventLoop().metrics().readBytes(totalReadAmount);
             }
         }
     }
 
     @Override
-    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+    protected long doWrite(ChannelOutboundBuffer in) throws Exception {
         int writeSpinCount = -1;
+        int totalFlushedAmount = 0;
 
         for (;;) {
             Object msg = in.current();
@@ -210,6 +213,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 }
 
                 in.progress(flushedAmount);
+                totalFlushedAmount += flushedAmount;
 
                 if (done) {
                     in.remove();
@@ -240,6 +244,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 }
 
                 in.progress(flushedAmount);
+                totalFlushedAmount += flushedAmount;
 
                 if (done) {
                     in.remove();
@@ -252,6 +257,8 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 throw new Error();
             }
         }
+
+        return totalFlushedAmount;
     }
 
     @Override

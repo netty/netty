@@ -108,15 +108,19 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
     /**
      * Write bytes form the given {@link ByteBuf} to the underlying {@link java.nio.channels.Channel}.
      * @param buf           the {@link ByteBuf} from which the bytes should be written
+     *
+     * @return     the number of bytes written. The return value is positive (incl. {@code 0}) if all available data
+     *              was written. If the data could only be written partially, the sign of the actually written bytes
+     *              is switched.
      */
-    private boolean writeBytes(ChannelOutboundBuffer in, ByteBuf buf) throws Exception {
+    private long writeBytes(ChannelOutboundBuffer in, ByteBuf buf) throws Exception {
         int readableBytes = buf.readableBytes();
         if (readableBytes == 0) {
             in.remove();
-            return true;
+            // complete write
+            return 0;
         }
 
-        boolean done = false;
         long writtenBytes = 0;
         if (buf.hasMemoryAddress()) {
             long memoryAddress = buf.memoryAddress();
@@ -127,8 +131,9 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
                 if (localFlushedAmount > 0) {
                     writtenBytes += localFlushedAmount;
                     if (writtenBytes == readableBytes) {
-                        done = true;
-                        break;
+                        in.removeBytes(writtenBytes);
+                        // complete write
+                        return writtenBytes;
                     }
                     readerIndex += localFlushedAmount;
                 } else {
@@ -139,7 +144,8 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
             }
 
             in.removeBytes(writtenBytes);
-            return done;
+            // switch signs so we can distinguish between a complete and partial write
+            return -writtenBytes;
         } else if (buf.nioBufferCount() == 1) {
             int readerIndex = buf.readerIndex();
             ByteBuffer nioBuf = buf.internalNioBuffer(readerIndex, buf.readableBytes());
@@ -151,8 +157,9 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
                     nioBuf.position(pos + localFlushedAmount);
                     writtenBytes += localFlushedAmount;
                     if (writtenBytes == readableBytes) {
-                        done = true;
-                        break;
+                        in.removeBytes(writtenBytes);
+                        // complete write
+                        return writtenBytes;
                     }
                 } else {
                     // Returned EAGAIN need to set EPOLLOUT
@@ -162,14 +169,19 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
             }
 
             in.removeBytes(writtenBytes);
-            return done;
+            // switch signs so we can distinguish between a complete and partial write
+            return -writtenBytes;
         } else {
             ByteBuffer[] nioBuffers = buf.nioBuffers();
             return writeBytesMultiple(in, nioBuffers, nioBuffers.length, readableBytes);
         }
     }
 
-    private boolean writeBytesMultiple(ChannelOutboundBuffer in, IovArray array) throws IOException {
+    /**
+     * Returns the number of bytes written. The return value is positive (incl. {@code 0}) if all available data
+     * was written. If the data could only be written partially, the sign of the actually written bytes is switched.
+     */
+    private long writeBytesMultiple(ChannelOutboundBuffer in, IovArray array) throws IOException {
 
         long expectedWrittenBytes = array.size();
         int cnt = array.count();
@@ -177,7 +189,6 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
         assert expectedWrittenBytes != 0;
         assert cnt != 0;
 
-        boolean done = false;
         long writtenBytes = 0;
         int offset = 0;
         int end = offset + cnt;
@@ -193,8 +204,8 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
 
             if (expectedWrittenBytes == 0) {
                 // Written everything, just break out here (fast-path)
-                done = true;
-                break;
+                in.removeBytes(writtenBytes);
+                return writtenBytes;
             }
 
             do {
@@ -211,16 +222,25 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
         }
 
         in.removeBytes(writtenBytes);
-        return done;
+
+        if (expectedWrittenBytes == 0) {
+            return writtenBytes;
+        } else {
+            // switch signs so we can distinguish between a complete and partial write
+            return -writtenBytes;
+        }
     }
 
-    private boolean writeBytesMultiple(
+    /**
+     * Returns the number of bytes written. The return value is positive (incl. {@code 0}) if all available data
+     * was written. If the data could only be written partially, the sign of the actually written bytes is switched.
+     */
+    private long writeBytesMultiple(
             ChannelOutboundBuffer in, ByteBuffer[] nioBuffers,
             int nioBufferCnt, long expectedWrittenBytes) throws IOException {
 
         assert expectedWrittenBytes != 0;
 
-        boolean done = false;
         long writtenBytes = 0;
         int offset = 0;
         int end = offset + nioBufferCnt;
@@ -236,8 +256,8 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
 
             if (expectedWrittenBytes == 0) {
                 // Written everything, just break out here (fast-path)
-                done = true;
-                break;
+                in.removeBytes(writtenBytes);
+                return writtenBytes;
             }
             do {
                 ByteBuffer buffer = nioBuffers[offset];
@@ -255,25 +275,31 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
             } while (offset < end && localWrittenBytes > 0);
         }
 
-        in.removeBytes(writtenBytes);
-        return done;
+        if (expectedWrittenBytes == 0) {
+            return writtenBytes;
+        } else {
+            // switch signs so we can distinguish between a complete and partial write
+            return -writtenBytes;
+        }
     }
 
     /**
      * Write a {@link DefaultFileRegion}
      *
      * @param region        the {@link DefaultFileRegion} from which the bytes should be written
-     * @return amount       the amount of written bytes
+     *
+     * @return      the number of bytes written. The return value is positive (incl. {@code 0}) if all available data
+     *              was written. If the data could only be written partially, the sign of the actually written bytes is
+     *              switched.
      */
-    private boolean writeFileRegion(ChannelOutboundBuffer in, DefaultFileRegion region) throws Exception {
+    private long writeFileRegion(ChannelOutboundBuffer in, DefaultFileRegion region) throws Exception {
         final long regionCount = region.count();
         if (region.transfered() >= regionCount) {
             in.remove();
-            return true;
+            return 0;
         }
 
         final long baseOffset = region.position();
-        boolean done = false;
         long flushedAmount = 0;
 
         for (;;) {
@@ -287,8 +313,12 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
 
             flushedAmount += localFlushedAmount;
             if (region.transfered() >= regionCount) {
-                done = true;
-                break;
+                if (flushedAmount > 0) {
+                    in.progress(flushedAmount);
+                }
+                in.remove();
+                // complete write
+                return flushedAmount;
             }
         }
 
@@ -296,14 +326,13 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
             in.progress(flushedAmount);
         }
 
-        if (done) {
-            in.remove();
-        }
-        return done;
+        // switch signs so we can distinguish between a complete and partial write
+        return -flushedAmount;
     }
 
     @Override
-    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+    protected long doWrite(ChannelOutboundBuffer in) throws Exception {
+        long totalWrittenBytes = 0;
         for (;;) {
             final int msgCount = in.size();
 
@@ -313,59 +342,78 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
                 break;
             }
 
-            // Do gathering write if the outbounf buffer entries start with more than one ByteBuf.
+            // Do gathering write if the outbound buffer entries start with more than one ByteBuf.
             if (msgCount > 1 && in.current() instanceof ByteBuf) {
-                if (!doWriteMultiple(in)) {
+                long writtenBytes = doWriteMultiple(in);
+                if (writtenBytes < 0) {
+                    totalWrittenBytes -= writtenBytes;
                     break;
+                } else {
+                    totalWrittenBytes += writtenBytes;
                 }
 
                 // We do not break the loop here even if the outbound buffer was flushed completely,
                 // because a user might have triggered another write and flush when we notify his or her
                 // listeners.
             } else { // msgCount == 1
-                if (!doWriteSingle(in)) {
+                long writtenBytes = doWriteSingle(in);
+                if (writtenBytes < 0) {
+                    totalWrittenBytes -= writtenBytes;
                     break;
+                } else {
+                    totalWrittenBytes += writtenBytes;
                 }
             }
         }
+
+        return totalWrittenBytes;
     }
 
-    private boolean doWriteSingle(ChannelOutboundBuffer in) throws Exception {
+    private long doWriteSingle(ChannelOutboundBuffer in) throws Exception {
         // The outbound buffer contains only one message or it contains a file region.
         Object msg = in.current();
+        long writtenBytes = 0;
         if (msg instanceof ByteBuf) {
             ByteBuf buf = (ByteBuf) msg;
-            if (!writeBytes(in, buf)) {
+            writtenBytes = writeBytes(in, buf);
+            if (writtenBytes < 0) {
                 // was not able to write everything so break here we will get notified later again once
                 // the network stack can handle more writes.
-                return false;
+                return writtenBytes;
             }
         } else if (msg instanceof DefaultFileRegion) {
             DefaultFileRegion region = (DefaultFileRegion) msg;
-            if (!writeFileRegion(in, region)) {
+            writtenBytes = writeFileRegion(in, region);
+            if (writtenBytes < 0) {
                 // was not able to write everything so break here we will get notified later again once
                 // the network stack can handle more writes.
-                return false;
+                return writtenBytes;
             }
         } else {
             // Should never reach here.
             throw new Error();
         }
 
-        return true;
+        return writtenBytes;
     }
 
-    private boolean doWriteMultiple(ChannelOutboundBuffer in) throws Exception {
+    /**
+     * Returns the number of bytes written. The return value is positive (incl. {@code 0}) if all available data
+     * was written. If the data could only be written partially, the sign of the actually written bytes is switched.
+     */
+    private long doWriteMultiple(ChannelOutboundBuffer in) throws Exception {
+        long writtenBytes = 0;
         if (PlatformDependent.hasUnsafe()) {
             // this means we can cast to IovArray and write the IovArray directly.
             IovArray array = IovArray.get(in);
             int cnt = array.count();
             if (cnt >= 1) {
                 // TODO: Handle the case where cnt == 1 specially.
-                if (!writeBytesMultiple(in, array)) {
+                writtenBytes = writeBytesMultiple(in, array);
+                if (writtenBytes < 0) {
                     // was not able to write everything so break here we will get notified later again once
                     // the network stack can handle more writes.
-                    return false;
+                    return writtenBytes;
                 }
             } else { // cnt == 0, which means the outbound buffer contained empty buffers only.
                 in.removeBytes(0);
@@ -375,17 +423,18 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
             int cnt = in.nioBufferCount();
             if (cnt >= 1) {
                 // TODO: Handle the case where cnt == 1 specially.
-                if (!writeBytesMultiple(in, buffers, cnt, in.nioBufferSize())) {
+                writtenBytes = writeBytesMultiple(in, buffers, cnt, in.nioBufferSize());
+                if (writtenBytes < 0) {
                     // was not able to write everything so break here we will get notified later again once
                     // the network stack can handle more writes.
-                    return false;
+                    return writtenBytes;
                 }
             } else { // cnt == 0, which means the outbound buffer contained empty buffers only.
                 in.removeBytes(0);
             }
         }
 
-        return true;
+        return writtenBytes;
     }
 
     @Override
@@ -631,6 +680,7 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
             if (connectPromise != null) {
                 // pending connect which is now complete so handle it.
                 finishConnect();
+                return;
             } else {
                 super.epollOutReady();
             }
@@ -713,8 +763,8 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
 
             ByteBuf byteBuf = null;
             boolean close = false;
+            int totalReadAmount = 0;
             try {
-                int totalReadAmount = 0;
                 for (;;) {
                     // we use a direct buffer here as the native implementations only be able
                     // to handle direct buffers.
@@ -733,7 +783,7 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
 
                     if (totalReadAmount >= Integer.MAX_VALUE - localReadAmount) {
                         allocHandle.record(totalReadAmount);
-
+                        eventLoop().metrics().readBytes(totalReadAmount);
                         // Avoid overflow.
                         totalReadAmount = localReadAmount;
                     } else {
@@ -748,6 +798,7 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
                 }
                 pipeline.fireChannelReadComplete();
                 allocHandle.record(totalReadAmount);
+                eventLoop().metrics().readBytes(totalReadAmount);
 
                 if (close) {
                     closeOnRead(pipeline);

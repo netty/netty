@@ -15,19 +15,24 @@
  */
 package io.netty.channel;
 
+import io.netty.channel.metrics.EventLoopMetrics;
+import io.netty.channel.metrics.EventLoopMetricsFactory;
+import io.netty.channel.metrics.NoEventLoopMetrics;
 import io.netty.util.concurrent.ExecutorFactory;
 import io.netty.util.concurrent.MultithreadEventExecutorGroup;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-
+import io.netty.util.concurrent.DefaultExecutorFactory;
 import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Abstract base class for {@link EventLoopGroup} implementations that handle their tasks with multiple threads at
- * the same time.
+ * Abstract base class for {@linkplain EventLoopGroup}s implementations that manage multiple
+ * {@linkplain EventLoop} instances.
  */
-public abstract class MultithreadEventLoopGroup extends MultithreadEventExecutorGroup implements EventLoopGroup {
+public abstract class MultithreadEventLoopGroup
+        extends MultithreadEventExecutorGroup<EventLoop, EventLoopMetrics> implements EventLoopGroup {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(MultithreadEventLoopGroup.class);
 
@@ -43,17 +48,51 @@ public abstract class MultithreadEventLoopGroup extends MultithreadEventExecutor
     }
 
     /**
-     * @see {@link MultithreadEventExecutorGroup#MultithreadEventExecutorGroup(int, Executor, Object...)}
+     * @param nEventLoops   the number of {@linkplain EventLoop}s that will be used by this instance.
+     *                      If {@code Executor} is {@code null} this will also be the number of threads
+     *                      requested from the {@link DefaultExecutorFactory}. It is advised for {@code nEventLoops}
+     *                      and the number of threads used by the {@code Executor} to lie very close together.
+     *                      You can set this parameter to {@code 0} if you want the system to chose the number of
+     *                      {@linkplain EventLoop}s.
+     * @param executor      the {@link Executor} to use, or {@code null} if the default should be used.
+     * @param scheduler     the {@link EventLoopScheduler} that, on every call to
+     *                      {@link EventLoop#next()}, decides which {@link EventLoop} to return.
+     * @param args          arguments which will passed to each
+     *                      {@link #newChild(Executor, EventLoopMetrics, Object...)} call.
      */
-    protected MultithreadEventLoopGroup(int nEventLoops, Executor executor, Object... args) {
-        super(nEventLoops == 0 ? DEFAULT_EVENT_LOOP_THREADS : nEventLoops, executor, args);
+    protected MultithreadEventLoopGroup(int nEventLoops,
+                                        Executor executor,
+                                        EventLoopScheduler scheduler,
+                                        EventLoopMetricsFactory metricsFactory,
+                                        Object... args) {
+        super(nEventLoops == 0
+                ? DEFAULT_EVENT_LOOP_THREADS
+                : nEventLoops,
+              executor, scheduler, metricsFactory, args);
     }
 
     /**
-     * @see {@link MultithreadEventExecutorGroup#MultithreadEventExecutorGroup(int, ExecutorFactory, Object...)}
+     * @param nEventLoops       the number of {@linkplain EventLoop}s that will be used by this instance.
+     *                          If {@code Executor} is {@code null} this will also be the number of threads
+     *                          requested from the {@link DefaultExecutorFactory}. It is advised for {@code nEventLoops}
+     *                          and the number of threads used by the {@code Executor} to lie very close together.
+     *                          You can set this parameter to {@code 0} if you want the system to chose the number of
+     *                          {@linkplain EventLoop}s.
+     * @param executorFactory   the {@link ExecutorFactory} to use, or {@code null} if the default should be used.
+     * @param scheduler         the {@link EventLoopScheduler} that, on every call to
+     *                          {@link EventLoop#next()}, decides which {@link EventLoop} to return.
+     * @param args              arguments which will passed to each
+     *                          {@link #newChild(Executor, EventLoopMetrics, Object...)} call.
      */
-    protected MultithreadEventLoopGroup(int nEventLoops, ExecutorFactory executorFactory, Object... args) {
-        super(nEventLoops == 0 ? DEFAULT_EVENT_LOOP_THREADS : nEventLoops, executorFactory, args);
+    protected MultithreadEventLoopGroup(int nEventLoops,
+                                        ExecutorFactory executorFactory,
+                                        EventLoopScheduler scheduler,
+                                        EventLoopMetricsFactory metricsFactory,
+                                        Object... args) {
+        super(nEventLoops == 0
+                ? DEFAULT_EVENT_LOOP_THREADS
+                : nEventLoops,
+              executorFactory, scheduler, metricsFactory, args);
     }
 
     @Override
@@ -62,7 +101,8 @@ public abstract class MultithreadEventLoopGroup extends MultithreadEventExecutor
     }
 
     @Override
-    protected abstract EventLoop newChild(Executor executor, Object... args) throws Exception;
+    protected abstract EventLoop newChild(Executor executor, EventLoopMetrics metrics, Object... args)
+            throws Exception;
 
     @Override
     public ChannelFuture register(Channel channel) {
@@ -72,5 +112,46 @@ public abstract class MultithreadEventLoopGroup extends MultithreadEventExecutor
     @Override
     public ChannelFuture register(Channel channel, ChannelPromise promise) {
         return next().register(channel, promise);
+    }
+
+    @Override
+    protected EventLoopScheduler newDefaultScheduler(int nEventLoops) {
+        return isPowerOfTwo(nEventLoops)
+                ? new PowerOfTwoRoundRobinEventLoopScheduler()
+                : new RoundRobinEventLoopScheduler();
+    }
+
+    private static final class RoundRobinEventLoopScheduler extends AbstractEventLoopScheduler {
+
+        private final AtomicInteger index = new AtomicInteger();
+
+        @Override
+        public EventLoop next() {
+            return children.get(index.getAndIncrement() % children.size());
+        }
+
+        @Override
+        public EventLoopMetrics newMetrics() {
+            return NoEventLoopMetrics.INSTANCE;
+        }
+    }
+
+    private static final class PowerOfTwoRoundRobinEventLoopScheduler extends AbstractEventLoopScheduler {
+
+        private final AtomicInteger index = new AtomicInteger();
+
+        @Override
+        public EventLoop next() {
+            return children.get(index.getAndIncrement() & children.size() - 1);
+        }
+
+        @Override
+        public EventLoopMetrics newMetrics() {
+            return NoEventLoopMetrics.INSTANCE;
+        }
+    }
+
+    private static boolean isPowerOfTwo(int val) {
+        return (val & -val) == val;
     }
 }

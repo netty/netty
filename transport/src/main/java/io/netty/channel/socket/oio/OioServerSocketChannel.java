@@ -170,7 +170,7 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+    protected long doWrite(ChannelOutboundBuffer in) throws Exception {
         throw new UnsupportedOperationException();
     }
 

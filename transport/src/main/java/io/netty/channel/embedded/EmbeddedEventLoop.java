@@ -22,6 +22,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelHandlerInvoker;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
+import io.netty.channel.metrics.EventLoopMetrics;
+import io.netty.channel.metrics.NoEventLoopMetrics;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 
@@ -115,6 +117,11 @@ final class EmbeddedEventLoop extends AbstractEventLoop implements ChannelHandle
     @Override
     public ChannelHandlerInvoker asInvoker() {
         return this;
+    }
+
+    @Override
+    public EventLoopMetrics metrics() {
+        return NoEventLoopMetrics.INSTANCE;
     }
 
     @Override

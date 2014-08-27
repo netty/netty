@@ -233,8 +233,11 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
         }
     }
 
+    /**
+     * This method always returns {@code 0}, as the OIO transport doesn't use the value.
+     */
     @Override
-    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+    protected long doWrite(ChannelOutboundBuffer in) throws Exception {
         for (;;) {
             final Object o = in.current();
             if (o == null) {
@@ -274,6 +277,8 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
                 in.remove(e);
             }
         }
+
+        return 0;
     }
 
     @Override

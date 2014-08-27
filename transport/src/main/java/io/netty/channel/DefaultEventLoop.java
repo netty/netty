@@ -15,9 +15,11 @@
  */
 package io.netty.channel;
 
+import io.netty.channel.metrics.NoEventLoopMetrics;
 import io.netty.util.concurrent.DefaultExecutorFactory;
 
 import java.util.concurrent.Executor;
+
 public class DefaultEventLoop extends SingleThreadEventLoop {
 
     public DefaultEventLoop() {
@@ -33,7 +35,7 @@ public class DefaultEventLoop extends SingleThreadEventLoop {
     }
 
     public DefaultEventLoop(EventLoopGroup parent, Executor executor) {
-        super(parent, executor, true);
+        super(parent, executor, NoEventLoopMetrics.INSTANCE, true);
     }
 
     @Override

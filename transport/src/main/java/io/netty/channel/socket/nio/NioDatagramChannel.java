@@ -247,7 +247,7 @@ public final class NioDatagramChannel
 
             buf.add(new DatagramPacket(data, localAddress(), remoteAddress));
             free = false;
-            return 1;
+            return readBytes;
         } catch (Throwable cause) {
             PlatformDependent.throwException(cause);
             return -1;
@@ -259,7 +259,7 @@ public final class NioDatagramChannel
     }
 
     @Override
-    protected boolean doWriteMessage(Object msg, ChannelOutboundBuffer in) throws Exception {
+    protected long doWriteMessage(Object msg, ChannelOutboundBuffer in) throws Exception {
         final SocketAddress remoteAddress;
         final ByteBuf data;
         if (msg instanceof AddressedEnvelope) {
@@ -274,7 +274,7 @@ public final class NioDatagramChannel
 
         final int dataLen = data.readableBytes();
         if (dataLen == 0) {
-            return true;
+            return 0;
         }
 
         final ByteBuffer nioData = data.internalNioBuffer(data.readerIndex(), dataLen);
@@ -284,7 +284,12 @@ public final class NioDatagramChannel
         } else {
             writtenBytes = javaChannel().write(nioData);
         }
-        return writtenBytes > 0;
+
+        if (writtenBytes <= 0) {
+            return -1;
+        } else {
+            return writtenBytes;
+        }
     }
 
     @Override

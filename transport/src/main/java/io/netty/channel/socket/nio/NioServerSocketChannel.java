@@ -137,7 +137,6 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
         try {
             if (ch != null) {
                 buf.add(new NioSocketChannel(this, ch));
-                return 1;
             }
         } catch (Throwable t) {
             logger.warn("Failed to create a new channel from an accepted socket.", t);
@@ -175,7 +174,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     }
 
     @Override
-    protected boolean doWriteMessage(Object msg, ChannelOutboundBuffer in) throws Exception {
+    protected long doWriteMessage(Object msg, ChannelOutboundBuffer in) throws Exception {
         throw new UnsupportedOperationException();
     }
 

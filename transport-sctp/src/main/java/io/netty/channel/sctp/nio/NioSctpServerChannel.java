@@ -137,11 +137,11 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
     @Override
     protected int doReadMessages(List<Object> buf) throws Exception {
         SctpChannel ch = javaChannel().accept();
-        if (ch == null) {
-            return 0;
+        if (ch != null) {
+            buf.add(new NioSctpChannel(this, ch));
         }
-        buf.add(new NioSctpChannel(this, ch));
-        return 1;
+
+        return 0;
     }
 
     @Override
@@ -217,7 +217,7 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
     }
 
     @Override
-    protected boolean doWriteMessage(Object msg, ChannelOutboundBuffer in) throws Exception {
+    protected long doWriteMessage(Object msg, ChannelOutboundBuffer in) throws Exception {
         throw new UnsupportedOperationException();
     }
 
