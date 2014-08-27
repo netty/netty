@@ -39,11 +39,11 @@
       <artifactId>netty-handler</artifactId>
       <version>${project.version}</version>
     </dependency>
-      <dependency>
-          <groupId>com.fasterxml</groupId>
-          <artifactId>aalto-xml</artifactId>
-          <version>0.9.9</version>
-      </dependency>
+    <dependency>
+      <groupId>com.fasterxml</groupId>
+      <artifactId>aalto-xml</artifactId>
+      <version>0.9.9</version>
+    </dependency>
   </dependencies>
 </project>
 
