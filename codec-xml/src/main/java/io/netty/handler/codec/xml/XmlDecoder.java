@@ -35,6 +35,7 @@ import java.util.List;
 public class XmlDecoder extends ByteToMessageDecoder {
 
     private static final AsyncXMLInputFactory xmlInputFactory = new InputFactoryImpl();
+    private static final XmlDocumentEnd XML_DOCUMENT_END = new XmlDocumentEnd();
 
     private final AsyncXMLStreamReader streamReader;
     private final AsyncInputFeeder streamFeeder;
@@ -58,7 +59,7 @@ public class XmlDecoder extends ByteToMessageDecoder {
                             streamReader.isStandalone(), streamReader.getCharacterEncodingScheme()));
                     break;
                 case XMLEvent.END_DOCUMENT:
-                    out.add(new XmlDocumentEnd());
+                    out.add(XML_DOCUMENT_END);
                     break;
                 case XMLEvent.START_ELEMENT:
                     XmlElementStart elementStart = new XmlElementStart(streamReader.getLocalName(),
