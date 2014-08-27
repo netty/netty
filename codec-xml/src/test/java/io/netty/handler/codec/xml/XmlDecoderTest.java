@@ -128,7 +128,6 @@ public class XmlDecoderTest {
         ByteBuf incoming = Unpooled.buffer();
         incoming.writeBytes(content.getBytes());
         channel.writeInbound(incoming);
-
     }
 
 }

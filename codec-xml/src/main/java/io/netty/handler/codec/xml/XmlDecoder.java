@@ -49,31 +49,38 @@ public class XmlDecoder extends ByteToMessageDecoder {
         in.readBytes(buffer);
         streamFeeder.feedInput(buffer, 0, buffer.length);
 
-        while(!streamFeeder.needMoreInput()){
+        while (!streamFeeder.needMoreInput()) {
             int type = streamReader.next();
             switch (type) {
                 case XMLEvent.START_DOCUMENT:
-                    out.add(new XmlDocumentStart(streamReader.getEncoding(), streamReader.getVersion(), streamReader.isStandalone(), streamReader.getCharacterEncodingScheme()));
+                    out.add(new XmlDocumentStart(streamReader.getEncoding(), streamReader.getVersion(),
+                            streamReader.isStandalone(), streamReader.getCharacterEncodingScheme()));
                     break;
                 case XMLEvent.END_DOCUMENT:
                     out.add(new XmlDocumentEnd());
                     break;
                 case XMLEvent.START_ELEMENT:
-                    XmlElementStart elementStart = new XmlElementStart(streamReader.getLocalName(), streamReader.getName().getNamespaceURI(), streamReader.getPrefix());
-                    for(int x = 0; x < streamReader.getAttributeCount(); x++) {
-                        XmlAttribute attribute = new XmlAttribute(streamReader.getAttributeType(x), streamReader.getAttributeLocalName(x), streamReader.getAttributePrefix(x), streamReader.getAttributeNamespace(x), streamReader.getAttributeValue(x));
+                    XmlElementStart elementStart = new XmlElementStart(streamReader.getLocalName(),
+                            streamReader.getName().getNamespaceURI(), streamReader.getPrefix());
+                    for (int x = 0; x < streamReader.getAttributeCount(); x++) {
+                        XmlAttribute attribute = new XmlAttribute(streamReader.getAttributeType(x),
+                                streamReader.getAttributeLocalName(x), streamReader.getAttributePrefix(x),
+                                streamReader.getAttributeNamespace(x), streamReader.getAttributeValue(x));
                         elementStart.attributes().add(attribute);
                     }
-                    for(int x = 0; x < streamReader.getNamespaceCount(); x++) {
-                        XmlNamespace namespace = new XmlNamespace(streamReader.getNamespacePrefix(x), streamReader.getNamespaceURI(x));
+                    for (int x = 0; x < streamReader.getNamespaceCount(); x++) {
+                        XmlNamespace namespace = new XmlNamespace(streamReader.getNamespacePrefix(x),
+                                streamReader.getNamespaceURI(x));
                         elementStart.namespaces().add(namespace);
                     }
                     out.add(elementStart);
                     break;
                 case XMLEvent.END_ELEMENT:
-                    XmlElementEnd elementEnd = new XmlElementEnd(streamReader.getLocalName(), streamReader.getName().getNamespaceURI(), streamReader.getPrefix());
-                    for(int x = 0; x < streamReader.getNamespaceCount(); x++) {
-                        XmlNamespace namespace = new XmlNamespace(streamReader.getNamespacePrefix(x), streamReader.getNamespaceURI(x));
+                    XmlElementEnd elementEnd = new XmlElementEnd(streamReader.getLocalName(),
+                            streamReader.getName().getNamespaceURI(), streamReader.getPrefix());
+                    for (int x = 0; x < streamReader.getNamespaceCount(); x++) {
+                        XmlNamespace namespace = new XmlNamespace(streamReader.getNamespacePrefix(x),
+                                streamReader.getNamespaceURI(x));
                         elementEnd.namespaces().add(namespace);
                     }
                     out.add(elementEnd);
