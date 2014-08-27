@@ -16,6 +16,7 @@
 package io.netty.handler.codec.xml;
 
 import com.fasterxml.aalto.AsyncInputFeeder;
+import com.fasterxml.aalto.AsyncXMLInputFactory;
 import com.fasterxml.aalto.AsyncXMLStreamReader;
 import com.fasterxml.aalto.stax.InputFactoryImpl;
 import io.netty.buffer.ByteBuf;
@@ -33,7 +34,7 @@ import java.util.List;
 
 public class XmlDecoder extends ByteToMessageDecoder {
 
-    private static final InputFactoryImpl xmlInputFactory = new InputFactoryImpl();
+    private static final AsyncXMLInputFactory xmlInputFactory = new InputFactoryImpl();
 
     private final AsyncXMLStreamReader streamReader;
     private final AsyncInputFeeder streamFeeder;
