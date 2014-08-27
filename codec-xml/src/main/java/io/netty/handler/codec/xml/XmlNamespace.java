@@ -20,8 +20,8 @@ package io.netty.handler.codec.xml;
  */
 public class XmlNamespace {
 
-    private String prefix;
-    private String uri;
+    private final String prefix;
+    private final String uri;
 
     public XmlNamespace(String prefix, String uri) {
         this.prefix = prefix;

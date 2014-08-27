@@ -20,7 +20,7 @@ package io.netty.handler.codec.xml;
  */
 public class XmlDTD {
 
-    private String text;
+    private final String text;
 
     public XmlDTD(String text) {
         this.text = text;

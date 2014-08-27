@@ -20,7 +20,7 @@ package io.netty.handler.codec.xml;
  */
 public class XmlContent {
 
-    private String data;
+    private final String data;
 
     public XmlContent(String data) {
         this.data = data;

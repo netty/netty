@@ -20,10 +20,10 @@ package io.netty.handler.codec.xml;
  */
 public class XmlDocumentStart {
 
-    private String encoding;
-    private String version;
-    private boolean standalone;
-    private String encodingScheme;
+    private final String encoding;
+    private final String version;
+    private final boolean standalone;
+    private final String encodingScheme;
 
     public XmlDocumentStart(String encoding, String version, boolean standalone, String encodingScheme) {
         this.encoding = encoding;

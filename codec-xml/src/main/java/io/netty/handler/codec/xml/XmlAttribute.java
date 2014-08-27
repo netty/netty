@@ -21,11 +21,11 @@ package io.netty.handler.codec.xml;
  */
 public class XmlAttribute {
 
-    private String type;
-    private String name;
-    private String prefix;
-    private String namespace;
-    private String value;
+    private final String type;
+    private final String name;
+    private final String prefix;
+    private final String namespace;
+    private final String value;
 
     public XmlAttribute(String type, String name, String prefix, String namespace, String value) {
         this.type = type;

@@ -24,9 +24,9 @@ import java.util.List;
  */
 public class XmlElement {
 
-    private String name;
-    private String namespace;
-    private String prefix;
+    private final String name;
+    private final String namespace;
+    private final String prefix;
 
     private List<XmlNamespace> namespaces = new LinkedList<XmlNamespace>();
 

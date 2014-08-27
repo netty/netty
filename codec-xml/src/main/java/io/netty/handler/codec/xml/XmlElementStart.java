@@ -24,7 +24,7 @@ import java.util.List;
  */
 public class XmlElementStart extends XmlElement {
 
-    private List<XmlAttribute> attributes = new LinkedList<XmlAttribute>();
+    private final List<XmlAttribute> attributes = new LinkedList<XmlAttribute>();
 
     public XmlElementStart(String name, String namespace, String prefix) {
         super(name, namespace, prefix);

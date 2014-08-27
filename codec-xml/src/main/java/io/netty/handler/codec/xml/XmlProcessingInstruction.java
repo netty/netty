@@ -20,8 +20,8 @@ package io.netty.handler.codec.xml;
  */
 public class XmlProcessingInstruction {
 
-    private String data;
-    private String target;
+    private final String data;
+    private final String target;
 
     public XmlProcessingInstruction(String data, String target) {
         this.data = data;

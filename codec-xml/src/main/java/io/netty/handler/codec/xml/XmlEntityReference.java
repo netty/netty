@@ -21,8 +21,8 @@ package io.netty.handler.codec.xml;
 
 public class XmlEntityReference {
 
-    private String name;
-    private String text;
+    private final String name;
+    private final String text;
 
     public XmlEntityReference(String name, String text) {
         this.name = name;
