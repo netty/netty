@@ -30,7 +30,7 @@ public class XmlElementStart extends XmlElement {
         super(name, namespace, prefix);
     }
 
-    public List<XmlAttribute> getAttributes() {
+    public List<XmlAttribute> attributes() {
         return attributes;
     }
 

@@ -26,7 +26,7 @@ public class XmlContent {
         this.data = data;
     }
 
-    public String getData() {
+    public String data() {
         return data;
     }
 

@@ -62,13 +62,13 @@ public class XmlDecoderTest {
 
         temp = channel.readInbound();
         assertThat(temp, instanceOf(XmlDocumentStart.class));
-        assertThat(((XmlDocumentStart) temp).getVersion(), is("1.0"));
-        assertThat(((XmlDocumentStart) temp).getEncoding(), is("UTF-8"));
-        assertThat(((XmlDocumentStart) temp).isStandalone(), is(false));
+        assertThat(((XmlDocumentStart) temp).version(), is("1.0"));
+        assertThat(((XmlDocumentStart) temp).encoding(), is("UTF-8"));
+        assertThat(((XmlDocumentStart) temp).standalone(), is(false));
 
         temp = channel.readInbound();
         assertThat(temp, instanceOf(XmlElementStart.class));
-        assertThat(((XmlElementStart) temp).getName(), is("employee"));
+        assertThat(((XmlElementStart) temp).name(), is("employee"));
 
         temp = channel.readInbound();
         assertThat(temp, instanceOf(XmlCharacters.class));
@@ -92,9 +92,9 @@ public class XmlDecoderTest {
 
         temp = channel.readInbound();
         assertThat(temp, instanceOf(XmlElementStart.class));
-        assertThat(((XmlElementStart) temp).getAttributes().size(), is(1));
-        assertThat(((XmlElementStart) temp).getAttributes().get(0).getName(), is("type"));
-        assertThat(((XmlElementStart) temp).getAttributes().get(0).getValue(), is("given"));
+        assertThat(((XmlElementStart) temp).attributes().size(), is(1));
+        assertThat(((XmlElementStart) temp).attributes().get(0).name(), is("type"));
+        assertThat(((XmlElementStart) temp).attributes().get(0).value(), is("given"));
 
         temp = channel.readInbound();
         assertThat(temp, instanceOf(XmlCharacters.class));

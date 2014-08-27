@@ -26,7 +26,7 @@ public class XmlDTD {
         this.text = text;
     }
 
-    public String getText() {
+    public String text() {
         return text;
     }
 

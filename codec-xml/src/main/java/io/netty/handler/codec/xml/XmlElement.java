@@ -36,19 +36,19 @@ public class XmlElement {
         this.prefix = prefix;
     }
 
-    public String getName() {
+    public String name() {
         return name;
     }
 
-    public String getNamespace() {
+    public String namespace() {
         return namespace;
     }
 
-    public String getPrefix() {
+    public String prefix() {
         return prefix;
     }
 
-    public List<XmlNamespace> getNamespaces() {
+    public List<XmlNamespace> namespaces() {
         return namespaces;
     }
 

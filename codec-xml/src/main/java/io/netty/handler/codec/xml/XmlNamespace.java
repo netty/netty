@@ -28,11 +28,11 @@ public class XmlNamespace {
         this.uri = uri;
     }
 
-    public String getPrefix() {
+    public String prefix() {
         return prefix;
     }
 
-    public String getUri() {
+    public String uri() {
         return uri;
     }
 

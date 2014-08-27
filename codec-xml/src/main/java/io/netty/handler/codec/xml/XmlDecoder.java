@@ -62,11 +62,11 @@ public class XmlDecoder extends ByteToMessageDecoder {
                     XmlElementStart elementStart = new XmlElementStart(streamReader.getLocalName(), streamReader.getName().getNamespaceURI(), streamReader.getPrefix());
                     for(int x = 0; x < streamReader.getAttributeCount(); x++) {
                         XmlAttribute attribute = new XmlAttribute(streamReader.getAttributeType(x), streamReader.getAttributeLocalName(x), streamReader.getAttributePrefix(x), streamReader.getAttributeNamespace(x), streamReader.getAttributeValue(x));
-                        elementStart.getAttributes().add(attribute);
+                        elementStart.attributes().add(attribute);
                     }
                     for(int x = 0; x < streamReader.getNamespaceCount(); x++) {
                         XmlNamespace namespace = new XmlNamespace(streamReader.getNamespacePrefix(x), streamReader.getNamespaceURI(x));
-                        elementStart.getNamespaces().add(namespace);
+                        elementStart.namespaces().add(namespace);
                     }
                     out.add(elementStart);
                     break;
@@ -74,7 +74,7 @@ public class XmlDecoder extends ByteToMessageDecoder {
                     XmlElementEnd elementEnd = new XmlElementEnd(streamReader.getLocalName(), streamReader.getName().getNamespaceURI(), streamReader.getPrefix());
                     for(int x = 0; x < streamReader.getNamespaceCount(); x++) {
                         XmlNamespace namespace = new XmlNamespace(streamReader.getNamespacePrefix(x), streamReader.getNamespaceURI(x));
-                        elementEnd.getNamespaces().add(namespace);
+                        elementEnd.namespaces().add(namespace);
                     }
                     out.add(elementEnd);
                     break;

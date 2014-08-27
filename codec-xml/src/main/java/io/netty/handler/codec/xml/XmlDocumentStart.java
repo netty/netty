@@ -32,19 +32,19 @@ public class XmlDocumentStart {
         this.encodingScheme = encodingScheme;
     }
 
-    public String getEncoding() {
+    public String encoding() {
         return encoding;
     }
 
-    public String getVersion() {
+    public String version() {
         return version;
     }
 
-    public boolean isStandalone() {
+    public boolean standalone() {
         return standalone;
     }
 
-    public String getEncodingScheme() {
+    public String encodingScheme() {
         return encodingScheme;
     }
 }

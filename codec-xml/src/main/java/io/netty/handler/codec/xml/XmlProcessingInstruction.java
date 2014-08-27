@@ -28,11 +28,11 @@ public class XmlProcessingInstruction {
         this.target = target;
     }
 
-    public String getData() {
+    public String data() {
         return data;
     }
 
-    public String getTarget() {
+    public String target() {
         return target;
     }
 }

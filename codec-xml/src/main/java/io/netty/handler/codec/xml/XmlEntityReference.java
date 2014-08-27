@@ -29,11 +29,11 @@ public class XmlEntityReference {
         this.text = text;
     }
 
-    public String getName() {
+    public String name() {
         return name;
     }
 
-    public String getText() {
+    public String text() {
         return text;
     }
 

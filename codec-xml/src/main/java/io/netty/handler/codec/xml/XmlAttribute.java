@@ -35,23 +35,23 @@ public class XmlAttribute {
         this.value = value;
     }
 
-    public String getType() {
+    public String type() {
         return type;
     }
 
-    public String getName() {
+    public String name() {
         return name;
     }
 
-    public String getPrefix() {
+    public String prefix() {
         return prefix;
     }
 
-    public String getNamespace() {
+    public String namespace() {
         return namespace;
     }
 
-    public String getValue() {
+    public String value() {
         return value;
     }
 
