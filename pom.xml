@@ -341,6 +341,7 @@
     <module>codec-mqtt</module>
     <module>codec-socks</module>
     <module>codec-stomp</module>
+    <module>codec-xml</module>
     <module>transport</module>
     <module>transport-rxtx</module>
     <module>transport-sctp</module>
