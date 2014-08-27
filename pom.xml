@@ -500,6 +500,7 @@
     <module>codec-mqtt</module>
     <module>codec-socks</module>
     <module>codec-stomp</module>
+    <module>codec-xml</module>
     <module>resolver</module>
     <module>resolver-dns</module>
     <module>transport</module>
@@ -590,6 +591,12 @@
         <version>1.50</version>
         <scope>compile</scope>
         <optional>true</optional>
+      </dependency>
+
+      <dependency>
+        <groupId>com.fasterxml</groupId>
+        <artifactId>aalto-xml</artifactId>
+        <version>0.9.9</version>
       </dependency>
 
       <dependency>
