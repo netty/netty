@@ -34,16 +34,11 @@ import java.util.List;
 
 public class XmlDecoder extends ByteToMessageDecoder {
 
-    private static final AsyncXMLInputFactory xmlInputFactory = new InputFactoryImpl();
+    private static final AsyncXMLInputFactory XML_INPUT_FACTORY = new InputFactoryImpl();
     private static final XmlDocumentEnd XML_DOCUMENT_END = new XmlDocumentEnd();
 
-    private final AsyncXMLStreamReader streamReader;
-    private final AsyncInputFeeder streamFeeder;
-
-    public XmlDecoder() {
-        this.streamReader = xmlInputFactory.createAsyncXMLStreamReader();
-        this.streamFeeder = streamReader.getInputFeeder();
-    }
+    private final AsyncXMLStreamReader streamReader = XML_INPUT_FACTORY.createAsyncXMLStreamReader();
+    private final AsyncInputFeeder streamFeeder = streamReader.getInputFeeder();
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
