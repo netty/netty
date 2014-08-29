@@ -41,6 +41,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.LockSupport;
 
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
@@ -732,11 +733,17 @@ public class SingleThreadEventLoopTest {
                 thread.interrupt();
             }
 
-            try {
-                Thread.sleep(TimeUnit.NANOSECONDS.toMillis(delayNanos(System.nanoTime())));
-            } catch (InterruptedException e) {
-                // Waken up by interruptThread()
-            }
+            // We use LockSupport.parkNanos() and NOT Thread.sleep() to eliminate the overhead of creating a new
+            // InterruptedException on each wakeup(true) call. This is needed for various reasons:
+            //  - Throwable.fillInStackTrace() is expensive
+            //  - GC pressure
+            // See https://github.com/netty/netty/issues/2841
+            //
+            // This may wake-up spuriously but we not care and just move on.
+            LockSupport.parkNanos(delayNanos(System.nanoTime()));
+
+            // Clear interruption state if it was interrupted by wakeup(true)
+            Thread.interrupted();
 
             runAllTasks();
 
