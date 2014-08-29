@@ -15,6 +15,8 @@
  */
 package io.netty.channel;
 
+import io.netty.channel.metrics.NoEventLoopMetrics;
+
 /**
  * {@link SingleThreadEventLoop} which is used to handle OIO {@link Channel}'s. So in general there will be
  * one {@link ThreadPerChannelEventLoop} per {@link Channel}.
@@ -26,7 +28,7 @@ public class ThreadPerChannelEventLoop extends SingleThreadEventLoop {
     private Channel ch;
 
     public ThreadPerChannelEventLoop(ThreadPerChannelEventLoopGroup parent) {
-        super(parent, parent.executor, true);
+        super(parent, parent.executor, NoEventLoopMetrics.INSTANCE, true);
         this.parent = parent;
     }
 

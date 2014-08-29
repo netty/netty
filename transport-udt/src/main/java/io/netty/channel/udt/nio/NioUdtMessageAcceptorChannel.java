@@ -35,17 +35,14 @@ public class NioUdtMessageAcceptorChannel extends NioUdtAcceptorChannel {
     @Override
     protected int doReadMessages(List<Object> buf) throws Exception {
         final SocketChannelUDT channelUDT = javaChannel().accept();
-        if (channelUDT == null) {
-            return 0;
-        } else {
+        if (channelUDT != null) {
             buf.add(new NioUdtMessageConnectorChannel(this, channelUDT));
-            return 1;
         }
+        return 0;
     }
 
     @Override
     public ChannelMetadata metadata() {
         return METADATA;
     }
-
 }

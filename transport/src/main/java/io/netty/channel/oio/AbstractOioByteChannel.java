@@ -183,8 +183,11 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
         }
     }
 
+    /**
+     * This method always returns {@code 0}, as the OIO transport doesn't use the value.
+     */
     @Override
-    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+    protected long doWrite(ChannelOutboundBuffer in) throws Exception {
         for (;;) {
             Object msg = in.current();
             if (msg == null) {
@@ -212,6 +215,8 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
                         "unsupported message type: " + StringUtil.simpleClassName(msg)));
             }
         }
+
+        return 0;
     }
 
     @Override

@@ -216,31 +216,34 @@ public class OioSctpChannel extends AbstractOioMessageChannel
         return readMessages;
     }
 
+    /**
+     * This method always returns {@code 0}, as the OIO transport doesn't use the value.
+     */
     @Override
-    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+    protected long doWrite(ChannelOutboundBuffer in) throws Exception {
         if (!writeSelector.isOpen()) {
-            return;
+            return 0;
         }
         final int size = in.size();
         final int selectedKeys = writeSelector.select(SO_TIMEOUT);
         if (selectedKeys > 0) {
             final Set<SelectionKey> writableKeys = writeSelector.selectedKeys();
             if (writableKeys.isEmpty()) {
-                return;
+                return 0;
             }
             Iterator<SelectionKey> writableKeysIt = writableKeys.iterator();
             int written = 0;
             for (;;) {
                 if (written == size) {
                     // all written
-                    return;
+                    return 0;
                 }
                 writableKeysIt.next();
                 writableKeysIt.remove();
 
                 SctpMessage packet = (SctpMessage) in.current();
                 if (packet == null) {
-                    return;
+                    return 0;
                 }
 
                 ByteBuf data = packet.content();
@@ -264,10 +267,12 @@ public class OioSctpChannel extends AbstractOioMessageChannel
                 in.remove();
 
                 if (!writableKeysIt.hasNext()) {
-                    return;
+                    return 0;
                 }
             }
         }
+
+        return 0;
     }
 
     @Override

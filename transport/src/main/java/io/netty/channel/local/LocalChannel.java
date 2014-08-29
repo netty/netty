@@ -274,8 +274,11 @@ public class LocalChannel extends AbstractChannel {
         }
     }
 
+    /**
+     * This method always returns {@code 0}, as the local transport doesn't use the value.
+     */
     @Override
-    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+    protected long doWrite(ChannelOutboundBuffer in) throws Exception {
         switch (state) {
         case OPEN:
         case BOUND:
@@ -315,6 +318,8 @@ public class LocalChannel extends AbstractChannel {
                 }
             });
         }
+
+        return 0;
     }
 
     private static void finishPeerRead(LocalChannel peer, ChannelPipeline peerPipeline) {

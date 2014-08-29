@@ -150,7 +150,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         void finishConnect();
 
         /**
-         * Read from underlying {@link SelectableChannel}
+         * Read from underlying {@link SelectableChannel}.
          */
         void read();
 

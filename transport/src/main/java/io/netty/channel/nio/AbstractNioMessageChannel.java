@@ -62,15 +62,25 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
             final ChannelPipeline pipeline = pipeline();
             boolean closed = false;
             Throwable exception = null;
+            int totalBytesRead = 0;
             try {
                 try {
+                    int totalMessagesRead = 0;
                     for (;;) {
-                        int localRead = doReadMessages(readBuf);
-                        if (localRead == 0) {
+                        int localBytesRead = doReadMessages(readBuf);
+                        if (localBytesRead < 0) {
+                            closed = true;
                             break;
                         }
-                        if (localRead < 0) {
-                            closed = true;
+
+                        totalBytesRead += localBytesRead;
+
+                        // number of messages read in this iteration
+                        int localMessagesRead = readBuf.size() - totalMessagesRead;
+                        assert localMessagesRead >= 0;
+                        totalMessagesRead += localMessagesRead;
+
+                        if (localMessagesRead == 0) {
                             break;
                         }
 
@@ -79,7 +89,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                             break;
                         }
 
-                        if (readBuf.size() >= maxMessagesPerRead) {
+                        if (localMessagesRead >= maxMessagesPerRead) {
                             break;
                         }
                     }
@@ -120,14 +130,17 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                 if (!config.isAutoRead() && !isReadPending()) {
                     removeReadOp();
                 }
+
+                eventLoop().metrics().readBytes(totalBytesRead);
             }
         }
     }
 
     @Override
-    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+    protected long doWrite(ChannelOutboundBuffer in) throws Exception {
         final SelectionKey key = selectionKey();
         final int interestOps = key.interestOps();
+        long totalWrittenBytes = 0;
 
         for (;;) {
             Object msg = in.current();
@@ -141,7 +154,9 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
             try {
                 boolean done = false;
                 for (int i = config().getWriteSpinCount() - 1; i >= 0; i--) {
-                    if (doWriteMessage(msg, in)) {
+                    long writtenBytes = doWriteMessage(msg, in);
+                    if (writtenBytes >= 0) {
+                        totalWrittenBytes += writtenBytes;
                         done = true;
                         break;
                     }
@@ -164,6 +179,8 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                 }
             }
         }
+
+        return totalWrittenBytes;
     }
 
     /**
@@ -174,14 +191,16 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
     }
 
     /**
-     * Read messages into the given array and return the amount which was read.
+     * Read messages and add them to the {@link List}.
+     *
+     * @return  the number of bytes read or a negative number if an error occurred.
      */
     protected abstract int doReadMessages(List<Object> buf) throws Exception;
 
     /**
      * Write a message to the underlying {@link java.nio.channels.Channel}.
      *
-     * @return {@code true} if and only if the message has been written
+     * @return  the number of written bytes iff the message has been fully written or a negative number else.
      */
-    protected abstract boolean doWriteMessage(Object msg, ChannelOutboundBuffer in) throws Exception;
+    protected abstract long doWriteMessage(Object msg, ChannelOutboundBuffer in) throws Exception;
 }

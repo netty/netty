@@ -19,7 +19,7 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
 import io.netty.channel.local.LocalChannel;
-import io.netty.util.concurrent.DefaultExecutorFactory;
+import io.netty.channel.metrics.NoEventLoopMetrics;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.PausableEventExecutor;
 import org.junit.After;
@@ -52,9 +52,7 @@ public class SingleThreadEventLoopTest {
         public void run() { }
     };
 
-    @SuppressWarnings({ "unused" })
     private SingleThreadEventLoopA loopA;
-    @SuppressWarnings({ "unused" })
     private SingleThreadEventLoopB loopB;
 
     @Before
@@ -691,7 +689,7 @@ public class SingleThreadEventLoopTest {
         final AtomicInteger cleanedUp = new AtomicInteger();
 
         SingleThreadEventLoopA() {
-            super(null, Executors.newSingleThreadExecutor(), true);
+            super(null, Executors.newSingleThreadExecutor(), NoEventLoopMetrics.INSTANCE, true);
         }
 
         @Override
@@ -721,7 +719,7 @@ public class SingleThreadEventLoopTest {
         private volatile boolean interrupted;
 
         SingleThreadEventLoopB() {
-            super(null, Executors.newSingleThreadExecutor(), false);
+            super(null, Executors.newSingleThreadExecutor(), NoEventLoopMetrics.INSTANCE, false);
         }
 
         @Override

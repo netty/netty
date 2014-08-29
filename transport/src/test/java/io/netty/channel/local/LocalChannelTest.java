@@ -26,6 +26,8 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.metrics.EventLoopMetrics;
+import io.netty.channel.metrics.NoEventLoopMetrics;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.internal.logging.InternalLogger;
@@ -190,9 +192,9 @@ public class LocalChannelTest {
         final EventLoopGroup serverGroup = new DefaultEventLoopGroup(1);
         final EventLoopGroup clientGroup = new DefaultEventLoopGroup(1) {
             @Override
-            protected EventLoop newChild(Executor executor, Object... args)
+            protected EventLoop newChild(Executor executor, EventLoopMetrics metrics, Object... args)
                     throws Exception {
-                return new SingleThreadEventLoop(this, executor, true) {
+                return new SingleThreadEventLoop(this, executor, NoEventLoopMetrics.INSTANCE, true) {
                     @Override
                     protected void run() {
                         Runnable task = takeTask();

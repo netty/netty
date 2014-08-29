@@ -324,8 +324,11 @@ public class EmbeddedChannel extends AbstractChannel {
         return new DefaultUnsafe();
     }
 
+    /**
+     * This method always returns {@code 0}, as the {@link EmbeddedChannel} doesn't use the value.
+     */
     @Override
-    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+    protected long doWrite(ChannelOutboundBuffer in) throws Exception {
         for (;;) {
             Object msg = in.current();
             if (msg == null) {
@@ -336,6 +339,8 @@ public class EmbeddedChannel extends AbstractChannel {
             outboundMessages.add(msg);
             in.remove();
         }
+
+        return 0;
     }
 
     private class DefaultUnsafe extends AbstractUnsafe {

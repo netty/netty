@@ -15,6 +15,8 @@
  */
 package io.netty.channel;
 
+import io.netty.channel.metrics.EventLoopMetrics;
+import io.netty.util.metrics.EventExecutorMetrics;
 import io.netty.util.concurrent.ExecutorFactory;
 
 import java.util.concurrent.Executor;
@@ -54,7 +56,7 @@ public class DefaultEventLoopGroup extends MultithreadEventLoopGroup {
      * @param executor           the {@link Executor} to use, or {@code null} if the default should be used.
      */
     public DefaultEventLoopGroup(int nEventLoops, Executor executor) {
-        super(nEventLoops, executor);
+        super(nEventLoops, executor, null, null);
     }
 
     /**
@@ -66,11 +68,11 @@ public class DefaultEventLoopGroup extends MultithreadEventLoopGroup {
      * @param executorFactory   the {@link ExecutorFactory} to use, or {@code null} if the default should be used.
      */
     public DefaultEventLoopGroup(int nEventLoops, ExecutorFactory executorFactory) {
-        super(nEventLoops, executorFactory);
+        super(nEventLoops, executorFactory, null, null);
     }
 
     @Override
-    protected EventLoop newChild(Executor executor, Object... args) throws Exception {
+    protected EventLoop newChild(Executor executor, EventLoopMetrics metrics, Object... args) throws Exception {
         return new DefaultEventLoop(this, executor);
     }
 }

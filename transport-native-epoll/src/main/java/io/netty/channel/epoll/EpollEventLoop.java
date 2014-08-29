@@ -17,6 +17,7 @@ package io.netty.channel.epoll;
 
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.metrics.EventLoopMetrics;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.channel.epoll.AbstractEpollChannel.AbstractEpollUnsafe;
 import io.netty.util.collection.IntObjectHashMap;
@@ -61,8 +62,8 @@ final class EpollEventLoop extends SingleThreadEventLoop {
     private volatile int wakenUp;
     private volatile int ioRatio = 50;
 
-    EpollEventLoop(EventLoopGroup parent, Executor executor, int maxEvents) {
-        super(parent, executor, false);
+    EpollEventLoop(EventLoopGroup parent, Executor executor, EventLoopMetrics metrics, int maxEvents) {
+        super(parent, executor, metrics, false);
         events = new long[maxEvents];
         boolean success = false;
         int epollFd = -1;
@@ -290,6 +291,30 @@ final class EpollEventLoop extends SingleThreadEventLoop {
         scheduleExecution();
     }
 
+    @Override
+    protected boolean runAllTasks() {
+        boolean result = false;
+        try {
+            metrics().startExecuteTasks();
+            result = super.runAllTasks();
+        } finally {
+            metrics().stopExecuteTasks();
+            return result;
+        }
+    }
+
+    @Override
+    protected boolean runAllTasks(long timeoutNanos) {
+        boolean result = false;
+        try {
+            metrics().startExecuteTasks();
+            result = super.runAllTasks(timeoutNanos);
+        } finally {
+            metrics().stopExecuteTasks();
+            return result;
+        }
+    }
+
     private void closeAll() {
         Native.epollWait(epollFd, events, 0);
         Collection<AbstractEpollChannel> channels = new ArrayList<AbstractEpollChannel>(ids.size());
@@ -304,34 +329,39 @@ final class EpollEventLoop extends SingleThreadEventLoop {
     }
 
     private void processReady(long[] events, int ready) {
-        for (int i = 0; i < ready; i ++) {
-            final long ev = events[i];
+        try {
+            metrics().startProcessIo();
+            for (int i = 0; i < ready; i++) {
+                final long ev = events[i];
 
-            int id = (int) (ev >> 32L);
-            if (id == 0) {
-                // consume wakeup event
-                Native.eventFdRead(eventFd);
-            } else {
-                boolean read = (ev & Native.EPOLLIN) != 0;
-                boolean write = (ev & Native.EPOLLOUT) != 0;
-                boolean close = (ev & Native.EPOLLRDHUP) != 0;
+                int id = (int) (ev >> 32L);
+                if (id == 0) {
+                    // consume wakeup event
+                    Native.eventFdRead(eventFd);
+                } else {
+                    boolean read = (ev & Native.EPOLLIN) != 0;
+                    boolean write = (ev & Native.EPOLLOUT) != 0;
+                    boolean close = (ev & Native.EPOLLRDHUP) != 0;
 
-                AbstractEpollChannel ch = ids.get(id);
-                if (ch != null) {
-                    AbstractEpollUnsafe unsafe = (AbstractEpollUnsafe) ch.unsafe();
-                    if (write && ch.isOpen()) {
-                        // force flush of data as the epoll is writable again
-                        unsafe.epollOutReady();
-                    }
-                    if (read && ch.isOpen()) {
-                        // Something is ready to read, so consume it now
-                        unsafe.epollInReady();
-                    }
-                    if (close && ch.isOpen()) {
-                        unsafe.epollRdHupReady();
+                    AbstractEpollChannel ch = ids.get(id);
+                    if (ch != null) {
+                        AbstractEpollUnsafe unsafe = (AbstractEpollUnsafe) ch.unsafe();
+                        if (write && ch.isOpen()) {
+                            // force flush of data as the epoll is writable again
+                            unsafe.epollOutReady();
+                        }
+                        if (read && ch.isOpen()) {
+                            // Something is ready to read, so consume it now
+                            unsafe.epollInReady();
+                        }
+                        if (close && ch.isOpen()) {
+                            unsafe.epollRdHupReady();
+                        }
                     }
                 }
             }
+        } finally {
+            metrics().stopProcessIo();
         }
     }
 
