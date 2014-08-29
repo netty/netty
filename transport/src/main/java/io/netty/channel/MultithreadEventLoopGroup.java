@@ -117,17 +117,21 @@ public abstract class MultithreadEventLoopGroup
     @Override
     protected EventLoopScheduler newDefaultScheduler(int nEventLoops) {
         return isPowerOfTwo(nEventLoops)
-                ? new PowerOfTwoRoundRobinEventLoopScheduler()
-                : new RoundRobinEventLoopScheduler();
+                ? new PowerOfTwoRoundRobinEventLoopScheduler(nEventLoops)
+                : new RoundRobinEventLoopScheduler(nEventLoops);
     }
 
     private static final class RoundRobinEventLoopScheduler extends AbstractEventLoopScheduler {
 
         private final AtomicInteger index = new AtomicInteger();
 
+        RoundRobinEventLoopScheduler(int nEventLoops) {
+            super(nEventLoops);
+        }
+
         @Override
         public EventLoop next() {
-            return children.get(index.getAndIncrement() % children.size());
+            return children.get(Math.abs(index.getAndIncrement() % children.size()));
         }
 
         @Override
@@ -139,6 +143,10 @@ public abstract class MultithreadEventLoopGroup
     private static final class PowerOfTwoRoundRobinEventLoopScheduler extends AbstractEventLoopScheduler {
 
         private final AtomicInteger index = new AtomicInteger();
+
+        PowerOfTwoRoundRobinEventLoopScheduler(int nEventLoops) {
+            super(nEventLoops);
+        }
 
         @Override
         public EventLoop next() {

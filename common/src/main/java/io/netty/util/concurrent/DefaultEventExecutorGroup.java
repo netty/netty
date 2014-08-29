@@ -66,7 +66,7 @@ public class DefaultEventExecutorGroup
 
     protected EventExecutorScheduler<EventExecutor, EventExecutorMetrics<EventExecutor>>
     newDefaultScheduler(int nEventExecutors) {
-        return new RoundRobinEventExecutorScheduler();
+        return new RoundRobinEventExecutorScheduler(nEventExecutors);
     }
 
     private static final class RoundRobinEventExecutorScheduler
@@ -74,9 +74,13 @@ public class DefaultEventExecutorGroup
 
         private final AtomicInteger index = new AtomicInteger();
 
+        RoundRobinEventExecutorScheduler(int nEventExecutors) {
+            super(nEventExecutors);
+        }
+
         @Override
         public EventExecutor next() {
-            return children.get(index.getAndIncrement() % children.size());
+            return children.get(Math.abs(index.getAndIncrement() % children.size()));
         }
 
         @Override

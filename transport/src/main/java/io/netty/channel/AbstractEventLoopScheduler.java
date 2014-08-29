@@ -25,6 +25,13 @@ import io.netty.util.concurrent.AbstractEventExecutorScheduler;
 public abstract class AbstractEventLoopScheduler
         extends AbstractEventExecutorScheduler<EventLoop, EventLoopMetrics> implements EventLoopScheduler {
 
+    /**
+     * @param nChildren the expected number of child {@linkplain EventLoop}s.
+     */
+    protected AbstractEventLoopScheduler(int nChildren) {
+        super(nChildren);
+    }
+
     @Override
     public abstract EventLoop next();
 

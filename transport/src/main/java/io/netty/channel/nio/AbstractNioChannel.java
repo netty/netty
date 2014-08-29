@@ -154,9 +154,6 @@ public abstract class AbstractNioChannel extends AbstractChannel {
          */
         void read();
 
-        /**
-         * Returns the number of bytes flushed.
-         */
         void forceFlush();
     }
 

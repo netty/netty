@@ -550,8 +550,6 @@ public interface Channel extends AttributeMap, Comparable<Channel> {
 
         /**
          * Flush out all write operations scheduled via {@link #write(Object, ChannelPromise)}.
-         *
-         * @return  the number of bytes flushed.
          */
         void flush();
 

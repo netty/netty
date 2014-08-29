@@ -18,6 +18,9 @@ package io.netty.channel.metrics;
 
 import io.netty.util.metrics.EventExecutorMetricsFactory;
 
+/**
+ * Derive from this interface to create your own {@link EventLoopMetricsFactory} implementation.
+ */
 public interface EventLoopMetricsFactory extends EventExecutorMetricsFactory {
 
     @Override

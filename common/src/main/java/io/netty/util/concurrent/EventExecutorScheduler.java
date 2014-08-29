@@ -29,7 +29,7 @@ public interface EventExecutorScheduler<T1 extends EventExecutor, T2 extends Eve
 
     /**
      * Returns one of the {@linkplain EventExecutor}s managed by this {@link EventExecutorScheduler}.
-     * This method must be implemented thread-safe. This method must not return {@code null}.
+     * This method must be implemented thread-safe. This method must <strong>NOT</strong> return {@code null}.
      */
     T1 next();
 
@@ -40,6 +40,8 @@ public interface EventExecutorScheduler<T1 extends EventExecutor, T2 extends Eve
 
     /**
      * Returns an unmodifiable set of all {@linkplain EventExecutor}s managed by this {@link EventExecutorScheduler}.
+     * The {@link Set} will not contain any {@linkplain EventExecutor}s that are added via
+     * {@link #addChild(EventExecutor, EventExecutorMetrics)} after it was retrieved.
      */
     Set<T1> children();
 }

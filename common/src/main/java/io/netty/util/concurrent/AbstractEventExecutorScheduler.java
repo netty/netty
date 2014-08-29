@@ -30,8 +30,19 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public abstract class AbstractEventExecutorScheduler<T1 extends EventExecutor, T2 extends EventExecutorMetrics>
         implements EventExecutorScheduler<T1, T2> {
 
-    protected final ArrayList<T1> children = new ArrayList<T1>();
+    protected final ArrayList<T1> children;
     private Set<T1> readonlyChildren;
+
+    protected AbstractEventExecutorScheduler() {
+        children = new ArrayList<T1>();
+    }
+
+    /**
+     * @param nChildren the expected number of child {@linkplain EventExecutor}s.
+     */
+    protected AbstractEventExecutorScheduler(int nChildren) {
+        children = new ArrayList<T1>(nChildren);
+    }
 
     @Override
     public final void addChild(T1 executor, T2 metrics) {
