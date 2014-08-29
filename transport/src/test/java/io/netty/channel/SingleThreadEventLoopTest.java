@@ -19,10 +19,13 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
 import io.netty.channel.local.LocalChannel;
+import io.netty.util.concurrent.DefaultExecutorFactory;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.PausableEventExecutor;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
 
@@ -32,7 +35,7 @@ import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
+import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledFuture;
@@ -52,8 +55,15 @@ public class SingleThreadEventLoopTest {
         public void run() { }
     };
 
+    private static Executor executor;
+
     private SingleThreadEventLoopA loopA;
     private SingleThreadEventLoopB loopB;
+
+    @BeforeClass
+    public static void newExecutor() {
+        executor = new DefaultExecutorFactory("SingleThreadEventLoopTest").newExecutor(2);
+    }
 
     @Before
     public void newEventLoop() {
@@ -689,7 +699,7 @@ public class SingleThreadEventLoopTest {
         final AtomicInteger cleanedUp = new AtomicInteger();
 
         SingleThreadEventLoopA() {
-            super(null, Executors.newSingleThreadExecutor(), true);
+            super(null, executor, true);
         }
 
         @Override
@@ -719,7 +729,7 @@ public class SingleThreadEventLoopTest {
         private volatile boolean interrupted;
 
         SingleThreadEventLoopB() {
-            super(null, Executors.newSingleThreadExecutor(), false);
+            super(null, executor, false);
         }
 
         @Override
