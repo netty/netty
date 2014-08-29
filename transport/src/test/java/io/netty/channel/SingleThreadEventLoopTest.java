@@ -19,7 +19,6 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
 import io.netty.channel.local.LocalChannel;
-import io.netty.util.concurrent.DefaultExecutorFactory;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.PausableEventExecutor;
 import org.junit.After;
@@ -53,9 +52,7 @@ public class SingleThreadEventLoopTest {
         public void run() { }
     };
 
-    @SuppressWarnings({ "unused" })
     private SingleThreadEventLoopA loopA;
-    @SuppressWarnings({ "unused" })
     private SingleThreadEventLoopB loopB;
 
     @Before
@@ -428,7 +425,7 @@ public class SingleThreadEventLoopTest {
         int numtasks = 5;
 
         final List<Queue<Long>> timestampsPerTask = new ArrayList<Queue<Long>>(numtasks);
-        final List<ScheduledFuture> scheduledFutures = new ArrayList<ScheduledFuture>(numtasks);
+        final List<ScheduledFuture<?>> scheduledFutures = new ArrayList<ScheduledFuture<?>>(numtasks);
 
         // start the eventloops
         loopA.execute(NOOP);
@@ -474,7 +471,7 @@ public class SingleThreadEventLoopTest {
         Thread.sleep(50 + 10 * 100);
 
         // Cancel all scheduled tasks.
-        for (ScheduledFuture f : scheduledFutures) {
+        for (ScheduledFuture<?> f : scheduledFutures) {
             assertTrue(f.cancel(true));
         }
 
@@ -490,7 +487,7 @@ public class SingleThreadEventLoopTest {
      */
     private static class TimestampsRunnable implements Runnable {
 
-        private Queue<Long> timestamps;
+        private final Queue<Long> timestamps;
 
         TimestampsRunnable(Queue<Long> timestamps) {
             assertNotNull(timestamps);
@@ -515,7 +512,7 @@ public class SingleThreadEventLoopTest {
 
         LocalChannel channel = new LocalChannel();
         boolean firstRun = true;
-        ScheduledFuture f = null;
+        ScheduledFuture<?> f = null;
         while (i.incrementAndGet() < 4) {
             ChannelPromise registerPromise = channel.newPromise();
             channel.unsafe().register(i.intValue() % 2 == 0 ? loopA : loopB, registerPromise);
@@ -581,8 +578,8 @@ public class SingleThreadEventLoopTest {
         assertThat(channel.eventLoop(), instanceOf(PausableEventExecutor.class));
         assertSame(loopA, channel.eventLoop().unwrap());
 
-        ScheduledFuture scheduleFuture;
-        if (PeriodicScheduleMethod.FIXED_RATE.equals(method)) {
+        ScheduledFuture<?> scheduleFuture;
+        if (PeriodicScheduleMethod.FIXED_RATE == method) {
             scheduleFuture = channel.eventLoop().scheduleAtFixedRate(new Runnable() {
                 @Override
                 public void run() {
@@ -629,7 +626,7 @@ public class SingleThreadEventLoopTest {
         verifyTimestampDeltas(timestamps, TimeUnit.MILLISECONDS.toNanos(190));
     }
 
-    private static enum PeriodicScheduleMethod {
+    private enum PeriodicScheduleMethod {
         FIXED_RATE, FIXED_DELAY
     }
 
@@ -659,7 +656,7 @@ public class SingleThreadEventLoopTest {
         assertThat(channel.eventLoop(), instanceOf(PausableEventExecutor.class));
         assertSame(loopA, ((PausableEventExecutor) channel.eventLoop()).unwrap());
 
-        io.netty.util.concurrent.ScheduledFuture scheduleFuture = channel.eventLoop().schedule(new Runnable() {
+        io.netty.util.concurrent.ScheduledFuture<?> scheduleFuture = channel.eventLoop().schedule(new Runnable() {
             @Override
             public void run() {
                 oneTimeScheduledTaskExecuted.set(true);
