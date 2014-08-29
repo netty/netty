@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.protobuf;
 
-import com.google.protobuf.ExtensionRegistry;
+import com.google.protobuf.ExtensionRegistryLite;
 import com.google.protobuf.Message;
 import com.google.protobuf.MessageLite;
 import io.netty.buffer.ByteBuf;
@@ -78,7 +78,7 @@ public class ProtobufDecoder extends MessageToMessageDecoder<ByteBuf> {
     }
 
     private final MessageLite prototype;
-    private final ExtensionRegistry extensionRegistry;
+    private final ExtensionRegistryLite extensionRegistry;
 
     /**
      * Creates a new instance.
@@ -87,7 +87,7 @@ public class ProtobufDecoder extends MessageToMessageDecoder<ByteBuf> {
         this(prototype, null);
     }
 
-    public ProtobufDecoder(MessageLite prototype, ExtensionRegistry extensionRegistry) {
+    public ProtobufDecoder(MessageLite prototype, ExtensionRegistryLite extensionRegistry) {
         if (prototype == null) {
             throw new NullPointerException("prototype");
         }
