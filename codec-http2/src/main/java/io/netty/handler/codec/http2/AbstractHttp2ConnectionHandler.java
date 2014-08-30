@@ -348,6 +348,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
      */
     public ChannelFuture writeData(final ChannelHandlerContext ctx, final int streamId, final ByteBuf data,
             int padding, final boolean endStream, ChannelPromise promise) {
+        boolean release = true;
         try {
             if (connection.isGoAway()) {
                 throw protocolError("Sending data after connection going away.");
@@ -358,6 +359,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
 
             // Hand control of the frame to the flow controller.
             ChannelFuture future = outboundFlow.writeData(ctx, streamId, data, padding, endStream, promise);
+            release = false;
             future.addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(ChannelFuture future) throws Exception {
@@ -374,8 +376,10 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
 
             return future;
         } catch (Http2Exception e) {
-            promise.setFailure(e);
-            return promise;
+            if (release) {
+                data.release();
+            }
+            return promise.setFailure(e);
         }
     }
 
@@ -506,6 +510,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
      * Writes (and flushes) the given {@code PING} frame to the remote endpoint.
      */
     public ChannelFuture writePing(ChannelHandlerContext ctx, ByteBuf data, ChannelPromise promise) {
+        boolean release = true;
         try {
             if (connection.isGoAway()) {
                 throw protocolError("Sending ping after connection going away.");
@@ -513,9 +518,13 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
 
             // Just pass the frame through.
             frameWriter.writePing(ctx, false, data, promise);
+            release = false;
             ctx.flush();
             return promise;
         } catch (Http2Exception e) {
+            if (release) {
+                data.release();
+            }
             return promise.setFailure(e);
         }
     }
