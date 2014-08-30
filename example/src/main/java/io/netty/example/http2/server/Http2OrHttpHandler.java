@@ -37,9 +37,12 @@ public class Http2OrHttpHandler extends Http2OrHttpChooser {
     @Override
     protected SelectedProtocol getProtocol(SSLEngine engine) {
         String[] protocol = engine.getSession().getProtocol().split(":");
-        SelectedProtocol selectedProtocol = SelectedProtocol.protocol(protocol[1]);
-        System.err.println("Selected Protocol is " + selectedProtocol);
-        return selectedProtocol;
+        if (protocol != null && protocol.length > 1) {
+            SelectedProtocol selectedProtocol = SelectedProtocol.protocol(protocol[1]);
+            System.err.println("Selected Protocol is " + selectedProtocol);
+            return selectedProtocol;
+        }
+        return SelectedProtocol.UNKNOWN;
     }
 
     @Override

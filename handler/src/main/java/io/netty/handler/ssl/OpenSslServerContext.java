@@ -65,7 +65,7 @@ public final class OpenSslServerContext extends SslContext {
     private final List<String> unmodifiableCiphers = Collections.unmodifiableList(ciphers);
     private final long sessionCacheSize;
     private final long sessionTimeout;
-    private final List<String> nextProtocols;
+    private final List<String> protocols;
 
     /** The OpenSSL SSL_CTX object */
     private final long ctx;
@@ -135,9 +135,8 @@ public final class OpenSslServerContext extends SslContext {
         if (keyPassword == null) {
             keyPassword = "";
         }
-        if (nextProtocols == null) {
-            nextProtocols = Collections.emptyList();
-        }
+
+        protocols = translateProtocols(nextProtocols);
 
         for (String c: ciphers) {
             if (c == null) {
@@ -145,15 +144,6 @@ public final class OpenSslServerContext extends SslContext {
             }
             this.ciphers.add(c);
         }
-
-        List<String> nextProtoList = new ArrayList<String>();
-        for (String p: nextProtocols) {
-            if (p == null) {
-                break;
-            }
-            nextProtoList.add(p);
-        }
-        this.nextProtocols = Collections.unmodifiableList(nextProtoList);
 
         // Allocate a new APR pool.
         aprPool = Pool.create(0);
@@ -218,11 +208,11 @@ public final class OpenSslServerContext extends SslContext {
                 }
 
                 /* Set next protocols for next protocol negotiation extension, if specified */
-                if (!nextProtoList.isEmpty()) {
+                if (!protocols.isEmpty()) {
                     // Convert the protocol list into a comma-separated string.
                     StringBuilder nextProtocolBuf = new StringBuilder();
-                    for (String p: nextProtoList) {
-                        nextProtocolBuf.append(p);
+                    for (int i = 0; i < protocols.size(); ++i) {
+                        nextProtocolBuf.append(protocols.get(i));
                         nextProtocolBuf.append(',');
                     }
                     nextProtocolBuf.setLength(nextProtocolBuf.length() - 1);
@@ -284,7 +274,7 @@ public final class OpenSslServerContext extends SslContext {
 
     @Override
     public List<String> nextProtocols() {
-        return nextProtocols;
+        return protocols;
     }
 
     /**
@@ -306,10 +296,10 @@ public final class OpenSslServerContext extends SslContext {
      */
     @Override
     public SSLEngine newEngine(ByteBufAllocator alloc) {
-        if (nextProtocols.isEmpty()) {
+        if (protocols.isEmpty()) {
             return new OpenSslEngine(ctx, alloc, null);
         } else {
-            return new OpenSslEngine(ctx, alloc, nextProtocols.get(nextProtocols.size() - 1));
+            return new OpenSslEngine(ctx, alloc, protocols.get(protocols.size() - 1));
         }
     }
 
