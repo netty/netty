@@ -32,6 +32,7 @@ import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_LOCAL;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
 import static io.netty.util.CharsetUtil.UTF_8;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
@@ -46,7 +47,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -54,7 +54,6 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
-import io.netty.util.CharsetUtil;
 
 import java.util.Collections;
 
@@ -63,7 +62,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 /**
@@ -492,8 +490,12 @@ public class DelegatingHttp2ConnectionHandlerTest {
         when(future.isSuccess()).thenReturn(false);
         when(future.cause()).thenReturn(new RuntimeException(msg));
         captor.getValue().operationComplete(future);
+        ArgumentCaptor<ByteBuf> bufferCaptor = ArgumentCaptor.forClass(ByteBuf.class);
         verify(writer).writeGoAway(eq(ctx), eq(0), eq((long) INTERNAL_ERROR.code()),
-                eq(Unpooled.wrappedBuffer(msg.getBytes(UTF_8))), eq(promise));
+                bufferCaptor.capture(), eq(promise));
+        ByteBuf writtenBuffer = bufferCaptor.getValue();
+        assertEquals(wrappedBuffer(msg.getBytes(UTF_8)), writtenBuffer);
+        writtenBuffer.release();
         verify(remote).goAwayReceived(0);
     }
 
