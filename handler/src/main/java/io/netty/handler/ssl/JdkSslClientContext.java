@@ -19,19 +19,19 @@ package io.netty.handler.ssl;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 
+import java.io.File;
+import java.security.KeyStore;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
+import java.util.List;
+
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLSessionContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.security.auth.x500.X500Principal;
-import java.io.File;
-import java.security.KeyStore;
-import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 
 /**
  * A client-side {@link SslContext} which uses JDK's SSL/TLS implementation.
@@ -45,7 +45,7 @@ public final class JdkSslClientContext extends JdkSslContext {
      * Creates a new instance.
      */
     public JdkSslClientContext() throws SSLException {
-        this(null, null, null, null, 0, 0);
+        this(null, null);
     }
 
     /**
@@ -79,7 +79,7 @@ public final class JdkSslClientContext extends JdkSslContext {
      *                            {@code null} to use the default.
      */
     public JdkSslClientContext(File certChainFile, TrustManagerFactory trustManagerFactory) throws SSLException {
-        this(certChainFile, trustManagerFactory, null, null, 0, 0);
+        this(certChainFile, trustManagerFactory, null, null, DefaultSslWrapperFactory.instance(), 0, 0);
     }
 
     /**
@@ -94,6 +94,8 @@ public final class JdkSslClientContext extends JdkSslContext {
      *                {@code null} to use the default cipher suites.
      * @param nextProtocols the application layer protocols to accept, in the order of preference.
      *                      {@code null} to disable TLS NPN/ALPN extension.
+     * @param wrapperFactory a factory used to wrap the underlying {@link SSLEngine}.
+     *                       This is required if {@code nextProtocols} is not {@code null} or empty
      * @param sessionCacheSize the size of the cache used for storing SSL session objects.
      *                         {@code 0} to use the default value.
      * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
@@ -102,26 +104,12 @@ public final class JdkSslClientContext extends JdkSslContext {
     public JdkSslClientContext(
             File certChainFile, TrustManagerFactory trustManagerFactory,
             Iterable<String> ciphers, Iterable<String> nextProtocols,
+            SslEngineWrapperFactory wrapperFactory,
             long sessionCacheSize, long sessionTimeout) throws SSLException {
 
-        super(ciphers);
+        super(ciphers, wrapperFactory);
 
-        if (nextProtocols != null && nextProtocols.iterator().hasNext()) {
-            if (!JettyNpnSslEngine.isAvailable()) {
-                throw new SSLException("NPN/ALPN unsupported: " + nextProtocols);
-            }
-
-            List<String> nextProtoList = new ArrayList<String>();
-            for (String p: nextProtocols) {
-                if (p == null) {
-                    break;
-                }
-                nextProtoList.add(p);
-            }
-            this.nextProtocols = Collections.unmodifiableList(nextProtoList);
-        } else {
-            this.nextProtocols = Collections.emptyList();
-        }
+        this.nextProtocols = translateProtocols(nextProtocols);
 
         try {
             if (certChainFile == null) {

@@ -27,6 +27,7 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.spdy.SpdyOrHttpChooser.SelectedProtocol;
+import io.netty.handler.ssl.JettyNpnSslEngineWrapper;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
@@ -56,6 +57,7 @@ public final class SpdyClient {
         final SslContext sslCtx = SslContext.newClientContext(
                 null, InsecureTrustManagerFactory.INSTANCE, null,
                 Arrays.asList(SelectedProtocol.SPDY_3_1.protocolName(), SelectedProtocol.HTTP_1_1.protocolName()),
+                JettyNpnSslEngineWrapper.instance(),
                 0, 0);
 
         HttpResponseClientHandler httpResponseHandler = new HttpResponseClientHandler();

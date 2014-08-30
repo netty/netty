@@ -20,13 +20,14 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLSessionContext;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLSessionContext;
 
 /**
  * An {@link SslContext} which uses JDK's SSL/TLS implementation.
@@ -110,10 +111,15 @@ public abstract class JdkSslContext extends SslContext {
 
     private final String[] cipherSuites;
     private final List<String> unmodifiableCipherSuites;
+    private final SslEngineWrapperFactory wrapperFactory;
 
-    JdkSslContext(Iterable<String> ciphers) {
+    JdkSslContext(Iterable<String> ciphers, SslEngineWrapperFactory wrapperFactory) {
+        if (wrapperFactory == null) {
+            throw new NullPointerException("wrapperFactory");
+        }
         cipherSuites = toCipherSuiteArray(ciphers);
         unmodifiableCipherSuites = Collections.unmodifiableList(Arrays.asList(cipherSuites));
+        this.wrapperFactory = wrapperFactory;
     }
 
     /**
@@ -166,11 +172,7 @@ public abstract class JdkSslContext extends SslContext {
     }
 
     private SSLEngine wrapEngine(SSLEngine engine) {
-        if (nextProtocols().isEmpty()) {
-            return engine;
-        } else {
-            return new JettyNpnSslEngine(engine, nextProtocols(), isServer());
-        }
+        return wrapperFactory.wrapSslEngine(engine, nextProtocols(), isServer());
     }
 
     private static String[] toCipherSuiteArray(Iterable<String> ciphers) {
