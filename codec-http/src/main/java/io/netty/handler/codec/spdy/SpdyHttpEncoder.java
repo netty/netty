@@ -210,7 +210,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
         // Get the Stream-ID, Associated-To-Stream-ID, Priority, URL, and scheme from the headers
         final HttpHeaders httpHeaders = httpMessage.headers();
         int streamID = httpHeaders.getInt(Names.STREAM_ID);
-        int associatedToStreamId = httpHeaders.getInt(Names.ASSOCIATED_TO_STREAM_ID);
+        int associatedToStreamId = httpHeaders.getInt(Names.ASSOCIATED_TO_STREAM_ID, 0);
         byte priority = (byte) httpHeaders.getInt(Names.PRIORITY, 0);
         String URL = httpHeaders.get(Names.URL);
         String scheme = httpHeaders.get(Names.SCHEME);
