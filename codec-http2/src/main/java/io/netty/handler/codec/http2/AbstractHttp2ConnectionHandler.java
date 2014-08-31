@@ -19,6 +19,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGH
 import static io.netty.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuf;
 import static io.netty.handler.codec.http2.Http2CodecUtil.toByteBuf;
+import static io.netty.handler.codec.http2.Http2CodecUtil.toHttp2Exception;
 import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.STREAM_CLOSED;
@@ -345,8 +346,9 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
     /**
      * Writes (and flushes) the given data to the remote endpoint.
      */
-    public ChannelFuture writeData(ChannelHandlerContext ctx, int streamId, final ByteBuf data,
-            int padding, boolean endStream, ChannelPromise promise) {
+    public ChannelFuture writeData(final ChannelHandlerContext ctx, final int streamId, final ByteBuf data,
+            int padding, final boolean endStream, ChannelPromise promise) {
+        boolean release = true;
         try {
             if (connection.isGoAway()) {
                 throw protocolError("Sending data after connection going away.");
@@ -356,10 +358,28 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
             stream.verifyState(PROTOCOL_ERROR, OPEN, HALF_CLOSED_REMOTE);
 
             // Hand control of the frame to the flow controller.
-            return outboundFlow.writeData(ctx, streamId, data, padding, endStream, promise);
+            ChannelFuture future = outboundFlow.writeData(ctx, streamId, data, padding, endStream, promise);
+            release = false;
+            future.addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    if (!future.isSuccess()) {
+                        // The write failed, handle the error.
+                        onHttp2Exception(ctx, toHttp2Exception(future.cause()));
+                    } else if (endStream) {
+                        // Close the local side of the stream if this is the last frame
+                        Http2Stream stream = connection.stream(streamId);
+                        closeLocalSide(stream, ctx.newPromise());
+                    }
+                }
+            });
+
+            return future;
         } catch (Http2Exception e) {
-            promise.setFailure(e);
-            return promise;
+            if (release) {
+                data.release();
+            }
+            return promise.setFailure(e);
         }
     }
 
@@ -490,6 +510,7 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
      * Writes (and flushes) the given {@code PING} frame to the remote endpoint.
      */
     public ChannelFuture writePing(ChannelHandlerContext ctx, ByteBuf data, ChannelPromise promise) {
+        boolean release = true;
         try {
             if (connection.isGoAway()) {
                 throw protocolError("Sending ping after connection going away.");
@@ -497,9 +518,13 @@ public abstract class AbstractHttp2ConnectionHandler extends ByteToMessageDecode
 
             // Just pass the frame through.
             frameWriter.writePing(ctx, false, data, promise);
+            release = false;
             ctx.flush();
             return promise;
         } catch (Http2Exception e) {
+            if (release) {
+                data.release();
+            }
             return promise.setFailure(e);
         }
     }

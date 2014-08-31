@@ -22,6 +22,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_FRAME_SIZE
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuf;
 import static io.netty.handler.codec.http2.Http2CodecUtil.emptyPingBuf;
+import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.protocolError;
@@ -31,6 +32,7 @@ import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_LOCAL;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
 import static io.netty.util.CharsetUtil.UTF_8;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
@@ -48,6 +50,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
@@ -135,6 +138,8 @@ public class DelegatingHttp2ConnectionHandlerTest {
                 future);
         when(writer.writeGoAway(eq(ctx), anyInt(), anyInt(), any(ByteBuf.class), eq(promise)))
                 .thenReturn(future);
+        when(outboundFlow.writeData(eq(ctx), anyInt(), any(ByteBuf.class), anyInt(),
+                        anyBoolean(), eq(promise))) .thenReturn(future);
         mockContext();
 
         handler =
@@ -456,6 +461,42 @@ public class DelegatingHttp2ConnectionHandlerTest {
     public void dataWriteShouldSucceed() throws Exception {
         handler.writeData(ctx, STREAM_ID, dummyData(), 0, false, promise);
         verify(outboundFlow).writeData(eq(ctx), eq(STREAM_ID), eq(dummyData()), eq(0), eq(false), eq(promise));
+    }
+
+    @Test
+    public void dataWriteShouldHalfCloseStream() throws Exception {
+        reset(future);
+        handler.writeData(ctx, STREAM_ID, dummyData(), 0, true, promise);
+        verify(outboundFlow).writeData(eq(ctx), eq(STREAM_ID), eq(dummyData()), eq(0), eq(true), eq(promise));
+
+        // Invoke the listener callback indicating that the write completed successfully.
+        ArgumentCaptor<ChannelFutureListener> captor = ArgumentCaptor.forClass(ChannelFutureListener.class);
+        verify(future).addListener(captor.capture());
+        when(future.isSuccess()).thenReturn(true);
+        captor.getValue().operationComplete(future);
+        verify(stream).closeLocalSide();
+    }
+
+    @Test
+    public void dataWriteWithFailureShouldHandleException() throws Exception {
+        reset(future);
+        handler.writeData(ctx, STREAM_ID, dummyData(), 0, true, promise);
+        verify(outboundFlow).writeData(eq(ctx), eq(STREAM_ID), eq(dummyData()), eq(0), eq(true), eq(promise));
+
+        // Invoke the listener callback indicating that the write failed.
+        String msg = "fake exception";
+        ArgumentCaptor<ChannelFutureListener> captor = ArgumentCaptor.forClass(ChannelFutureListener.class);
+        verify(future).addListener(captor.capture());
+        when(future.isSuccess()).thenReturn(false);
+        when(future.cause()).thenReturn(new RuntimeException(msg));
+        captor.getValue().operationComplete(future);
+        ArgumentCaptor<ByteBuf> bufferCaptor = ArgumentCaptor.forClass(ByteBuf.class);
+        verify(writer).writeGoAway(eq(ctx), eq(0), eq((long) INTERNAL_ERROR.code()),
+                bufferCaptor.capture(), eq(promise));
+        ByteBuf writtenBuffer = bufferCaptor.getValue();
+        assertEquals(wrappedBuffer(msg.getBytes(UTF_8)), writtenBuffer);
+        writtenBuffer.release();
+        verify(remote).goAwayReceived(0);
     }
 
     @Test

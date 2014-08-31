@@ -23,7 +23,9 @@ import io.netty.util.concurrent.DefaultExecutorFactory;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.PausableEventExecutor;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
 
@@ -33,7 +35,7 @@ import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
+import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledFuture;
@@ -41,6 +43,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.LockSupport;
 
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
@@ -52,10 +55,15 @@ public class SingleThreadEventLoopTest {
         public void run() { }
     };
 
-    @SuppressWarnings({ "unused" })
+    private static Executor executor;
+
     private SingleThreadEventLoopA loopA;
-    @SuppressWarnings({ "unused" })
     private SingleThreadEventLoopB loopB;
+
+    @BeforeClass
+    public static void newExecutor() {
+        executor = new DefaultExecutorFactory("SingleThreadEventLoopTest").newExecutor(2);
+    }
 
     @Before
     public void newEventLoop() {
@@ -427,7 +435,7 @@ public class SingleThreadEventLoopTest {
         int numtasks = 5;
 
         final List<Queue<Long>> timestampsPerTask = new ArrayList<Queue<Long>>(numtasks);
-        final List<ScheduledFuture> scheduledFutures = new ArrayList<ScheduledFuture>(numtasks);
+        final List<ScheduledFuture<?>> scheduledFutures = new ArrayList<ScheduledFuture<?>>(numtasks);
 
         // start the eventloops
         loopA.execute(NOOP);
@@ -473,7 +481,7 @@ public class SingleThreadEventLoopTest {
         Thread.sleep(50 + 10 * 100);
 
         // Cancel all scheduled tasks.
-        for (ScheduledFuture f : scheduledFutures) {
+        for (ScheduledFuture<?> f : scheduledFutures) {
             assertTrue(f.cancel(true));
         }
 
@@ -489,7 +497,7 @@ public class SingleThreadEventLoopTest {
      */
     private static class TimestampsRunnable implements Runnable {
 
-        private Queue<Long> timestamps;
+        private final Queue<Long> timestamps;
 
         TimestampsRunnable(Queue<Long> timestamps) {
             assertNotNull(timestamps);
@@ -514,7 +522,7 @@ public class SingleThreadEventLoopTest {
 
         LocalChannel channel = new LocalChannel();
         boolean firstRun = true;
-        ScheduledFuture f = null;
+        ScheduledFuture<?> f = null;
         while (i.incrementAndGet() < 4) {
             ChannelPromise registerPromise = channel.newPromise();
             channel.unsafe().register(i.intValue() % 2 == 0 ? loopA : loopB, registerPromise);
@@ -580,8 +588,8 @@ public class SingleThreadEventLoopTest {
         assertThat(channel.eventLoop(), instanceOf(PausableEventExecutor.class));
         assertSame(loopA, channel.eventLoop().unwrap());
 
-        ScheduledFuture scheduleFuture;
-        if (PeriodicScheduleMethod.FIXED_RATE.equals(method)) {
+        ScheduledFuture<?> scheduleFuture;
+        if (PeriodicScheduleMethod.FIXED_RATE == method) {
             scheduleFuture = channel.eventLoop().scheduleAtFixedRate(new Runnable() {
                 @Override
                 public void run() {
@@ -628,7 +636,7 @@ public class SingleThreadEventLoopTest {
         verifyTimestampDeltas(timestamps, TimeUnit.MILLISECONDS.toNanos(190));
     }
 
-    private static enum PeriodicScheduleMethod {
+    private enum PeriodicScheduleMethod {
         FIXED_RATE, FIXED_DELAY
     }
 
@@ -658,7 +666,7 @@ public class SingleThreadEventLoopTest {
         assertThat(channel.eventLoop(), instanceOf(PausableEventExecutor.class));
         assertSame(loopA, ((PausableEventExecutor) channel.eventLoop()).unwrap());
 
-        io.netty.util.concurrent.ScheduledFuture scheduleFuture = channel.eventLoop().schedule(new Runnable() {
+        io.netty.util.concurrent.ScheduledFuture<?> scheduleFuture = channel.eventLoop().schedule(new Runnable() {
             @Override
             public void run() {
                 oneTimeScheduledTaskExecuted.set(true);
@@ -691,7 +699,7 @@ public class SingleThreadEventLoopTest {
         final AtomicInteger cleanedUp = new AtomicInteger();
 
         SingleThreadEventLoopA() {
-            super(null, Executors.newSingleThreadExecutor(), true);
+            super(null, executor, true);
         }
 
         @Override
@@ -721,7 +729,7 @@ public class SingleThreadEventLoopTest {
         private volatile boolean interrupted;
 
         SingleThreadEventLoopB() {
-            super(null, Executors.newSingleThreadExecutor(), false);
+            super(null, executor, false);
         }
 
         @Override
@@ -732,11 +740,17 @@ public class SingleThreadEventLoopTest {
                 thread.interrupt();
             }
 
-            try {
-                Thread.sleep(TimeUnit.NANOSECONDS.toMillis(delayNanos(System.nanoTime())));
-            } catch (InterruptedException e) {
-                // Waken up by interruptThread()
-            }
+            // We use LockSupport.parkNanos() and NOT Thread.sleep() to eliminate the overhead of creating a new
+            // InterruptedException on each wakeup(true) call. This is needed for various reasons:
+            //  - Throwable.fillInStackTrace() is expensive
+            //  - GC pressure
+            // See https://github.com/netty/netty/issues/2841
+            //
+            // This may wake-up spuriously but we not care and just move on.
+            LockSupport.parkNanos(delayNanos(System.nanoTime()));
+
+            // Clear interruption state if it was interrupted by wakeup(true)
+            Thread.interrupted();
 
             runAllTasks();
 

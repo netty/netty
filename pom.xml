@@ -109,7 +109,8 @@
         <!-- Our Javadoc has poor enough quality to fail the build thanks to JDK8 javadoc which got more strict. -->
         <maven.javadoc.failOnError>false</maven.javadoc.failOnError>
         <!-- npn-boot does not work with JDK 8 -->
-        <argLine.bootcp>-D_</argLine.bootcp>
+        <jetty.alpn.version>8.0.0.v20140317</jetty.alpn.version>
+        <argLine.bootcp>-Xbootclasspath/p:${jetty.alpn.path}</argLine.bootcp>
       </properties>
     </profile>
     <profile>
@@ -172,8 +173,9 @@
     </profile>
 
     <!--
-      Profiles that assigns proper Jetty npn-boot version.
+      Profiles that assigns proper Jetty npn-boot and alpn-boot version.
       See: http://www.eclipse.org/jetty/documentation/current/npn-chapter.html#npn-versions
+      See: http://www.eclipse.org/jetty/documentation/current/alpn-chapter.html#alpn-versions
     -->
     <profile>
       <id>npn-7u9</id>
@@ -272,7 +274,7 @@
       </properties>
     </profile>
     <profile>
-      <id>npn-7u40</id>
+      <id>npn-alpn-7u40</id>
       <activation>
         <property>
           <name>java.version</name>
@@ -281,10 +283,12 @@
       </activation>
       <properties>
         <jetty.npn.version>1.1.6.v20130911</jetty.npn.version>
+        <jetty.alpn.version>7.0.0.v20140317</jetty.alpn.version>
+        <!-- Defer definition of Xbootclasspath to default or forcenpn profile -->
       </properties>
     </profile>
     <profile>
-      <id>npn-7u45</id>
+      <id>npn-alpn-7u45</id>
       <activation>
         <property>
           <name>java.version</name>
@@ -293,10 +297,12 @@
       </activation>
       <properties>
         <jetty.npn.version>1.1.6.v20130911</jetty.npn.version>
+        <jetty.alpn.version>7.0.0.v20140317</jetty.alpn.version>
+        <!-- Defer definition of Xbootclasspath to default or forcenpn profile -->
       </properties>
     </profile>
     <profile>
-      <id>npn-7u51</id>
+      <id>npn-alpn-7u51</id>
       <activation>
         <property>
           <name>java.version</name>
@@ -305,6 +311,81 @@
       </activation>
       <properties>
         <jetty.npn.version>1.1.6.v20130911</jetty.npn.version>
+        <jetty.alpn.version>7.0.0.v20140317</jetty.alpn.version>
+        <!-- Defer definition of Xbootclasspath to default or forcenpn profile -->
+      </properties>
+    </profile>
+    <profile>
+      <id>npn-alpn-7u55</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.7.0_55</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.npn.version>1.1.7.v20140316</jetty.npn.version>
+        <jetty.alpn.version>7.0.0.v20140317</jetty.alpn.version>
+        <!-- Defer definition of Xbootclasspath to default or forcenpn profile -->
+      </properties>
+    </profile>
+    <profile>
+      <id>npn-alpn-7u60</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.7.0_60</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.npn.version>1.1.7.v20140316</jetty.npn.version>
+        <jetty.alpn.version>7.0.0.v20140317</jetty.alpn.version>
+        <!-- Defer definition of Xbootclasspath to default or forcenpn profile -->
+      </properties>
+    </profile>
+    <profile>
+      <id>npn-alpn-7u65</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.7.0_65</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.npn.version>1.1.7.v20140316</jetty.npn.version>
+        <jetty.alpn.version>7.0.0.v20140317</jetty.alpn.version>
+        <!-- Defer definition of Xbootclasspath to default or forcenpn profile -->
+      </properties>
+    </profile>
+    <profile>
+      <id>npn-alpn-7u67</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.7.0_67</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.npn.version>1.1.7.v20140316</jetty.npn.version>
+        <jetty.alpn.version>7.0.0.v20140317</jetty.alpn.version>
+        <!-- Defer definition of Xbootclasspath to default or forcenpn profile -->
+      </properties>
+    </profile>
+    <profile>
+      <!--
+      This profile exists because either ALPN or NPN can exits on the class path at once, but not both.
+      The JDK version is typically used to distinguish which should be used but there is some overlap
+      where both could be used.  ALPN is the default and this profile is enabled with a -Dforcenpn=true arugument
+      -->
+      <id>forcenpn</id>
+      <activation>
+        <property>
+          <name>forcenpn</name>
+          <value>true</value>
+        </property>
+      </activation>
+      <properties>
+        <argLine.bootcp>-Xbootclasspath/p:${jetty.npn.path}</argLine.bootcp>
       </properties>
     </profile>
   </profiles>
@@ -315,6 +396,8 @@
     <jboss.marshalling.version>1.3.18.GA</jboss.marshalling.version>
     <jetty.npn.version>1.1.7.v20140316</jetty.npn.version>
     <jetty.npn.path>${settings.localRepository}/org/mortbay/jetty/npn/npn-boot/${jetty.npn.version}/npn-boot-${jetty.npn.version}.jar</jetty.npn.path>
+    <jetty.alpn.version>8.0.0.v20140317</jetty.alpn.version>
+    <jetty.alpn.path>${settings.localRepository}/org/mortbay/jetty/alpn/alpn-boot/${jetty.alpn.version}/alpn-boot-${jetty.alpn.version}.jar</jetty.alpn.path>
     <argLine.common>
       -server
       -dsa -da -ea:io.netty...
@@ -325,7 +408,8 @@
       -XX:+OptimizeStringConcat
       -XX:+HeapDumpOnOutOfMemoryError
     </argLine.common>
-    <argLine.bootcp>-Xbootclasspath/p:${jetty.npn.path}</argLine.bootcp>
+    <!-- Default to ALPN. Then classpath is used to refine selection. See forcenpn profile to force NPN -->
+    <argLine.bootcp>-Xbootclasspath/p:${jetty.alpn.path}</argLine.bootcp>
     <argLine.leak>-verbose:gc</argLine.leak> <!-- Overridden when 'leak' profile is active -->
     <argLine.coverage>-D_</argLine.coverage> <!-- Overridden when 'coverage' profile is active -->
   </properties>
@@ -384,6 +468,16 @@
         <groupId>org.mortbay.jetty.npn</groupId>
         <artifactId>npn-boot</artifactId>
         <version>${jetty.npn.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.jetty.alpn</groupId>
+        <artifactId>alpn-api</artifactId>
+        <version>1.0.0</version>
+      </dependency>
+      <dependency>
+        <groupId>org.mortbay.jetty.alpn</groupId>
+        <artifactId>alpn-boot</artifactId>
+        <version>${jetty.alpn.version}</version>
       </dependency>
 
       <!-- Google Protocol Buffers - completely optional -->
@@ -665,6 +759,14 @@
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>animal-sniffer-maven-plugin</artifactId>
         <version>1.9</version>
+        <dependencies>
+            <!-- Upgrade ASM and support Java 8 bytecode -->
+            <dependency>
+                <groupId>org.ow2.asm</groupId>
+                <artifactId>asm-all</artifactId>
+                <version>5.0.3</version>
+            </dependency>
+        </dependencies>
         <configuration>
           <signature>
             <groupId>org.codehaus.mojo.signature</groupId>
@@ -754,6 +856,18 @@
               <version>${jetty.npn.version}</version>
             </configuration>
           </execution>
+          <execution>
+            <id>get-alpn-boot</id>
+            <phase>validate</phase>
+            <goals>
+              <goal>get</goal>
+            </goals>
+            <configuration>
+              <groupId>org.mortbay.jetty.alpn</groupId>
+              <artifactId>alpn-boot</artifactId>
+              <version>${jetty.alpn.version}</version>
+            </configuration>
+          </execution>
         </executions>
       </plugin>
       <plugin>
@@ -791,7 +905,7 @@
               <instructions>
                 <Export-Package>${project.groupId}.*</Export-Package>
                 <!-- enforce JVM vendor package as optional -->
-                <Import-Package>sun.misc.*;resolution:=optional,sun.nio.ch;resolution:=optional,sun.security.*;resolution:=optional,*</Import-Package>
+                <Import-Package>sun.misc.*;resolution:=optional,sun.nio.ch;resolution:=optional,sun.security.*;resolution:=optional,org.eclipse.jetty.alpn;version="[1,)";resolution=optional,*</Import-Package>
                 <!-- override "internal" private package convention -->
                 <Private-Package>!*</Private-Package>
               </instructions>

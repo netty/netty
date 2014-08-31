@@ -19,16 +19,6 @@ package io.netty.handler.ssl;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 
-import javax.crypto.Cipher;
-import javax.crypto.EncryptedPrivateKeyInfo;
-import javax.crypto.NoSuchPaddingException;
-import javax.crypto.SecretKey;
-import javax.crypto.SecretKeyFactory;
-import javax.crypto.spec.PBEKeySpec;
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLSessionContext;
 import java.io.File;
 import java.io.IOException;
 import java.security.InvalidAlgorithmParameterException;
@@ -43,8 +33,19 @@ import java.security.cert.CertificateFactory;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+
+import javax.crypto.Cipher;
+import javax.crypto.EncryptedPrivateKeyInfo;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLSessionContext;
 
 /**
  * A server-side {@link SslContext} which uses JDK's SSL/TLS implementation.
@@ -73,7 +74,7 @@ public final class JdkSslServerContext extends JdkSslContext {
      *                    {@code null} if it's not password-protected.
      */
     public JdkSslServerContext(File certChainFile, File keyFile, String keyPassword) throws SSLException {
-        this(certChainFile, keyFile, keyPassword, null, null, 0, 0);
+        this(certChainFile, keyFile, keyPassword, null, null, DefaultSslWrapperFactory.instance(), 0, 0);
     }
 
     /**
@@ -87,6 +88,8 @@ public final class JdkSslServerContext extends JdkSslContext {
      *                {@code null} to use the default cipher suites.
      * @param nextProtocols the application layer protocols to accept, in the order of preference.
      *                      {@code null} to disable TLS NPN/ALPN extension.
+     * @param wrapperFactory a factory used to wrap the underlying {@link SSLEngine}.
+     *                       This is required if {@code nextProtocols} is not {@code null} or empty
      * @param sessionCacheSize the size of the cache used for storing SSL session objects.
      *                         {@code 0} to use the default value.
      * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
@@ -95,9 +98,12 @@ public final class JdkSslServerContext extends JdkSslContext {
     public JdkSslServerContext(
             File certChainFile, File keyFile, String keyPassword,
             Iterable<String> ciphers, Iterable<String> nextProtocols,
+            SslEngineWrapperFactory wrapperFactory,
             long sessionCacheSize, long sessionTimeout) throws SSLException {
 
-        super(ciphers);
+        super(ciphers, wrapperFactory);
+
+        this.nextProtocols = translateProtocols(nextProtocols);
 
         if (certChainFile == null) {
             throw new NullPointerException("certChainFile");
@@ -108,24 +114,6 @@ public final class JdkSslServerContext extends JdkSslContext {
 
         if (keyPassword == null) {
             keyPassword = "";
-        }
-
-        if (nextProtocols != null && nextProtocols.iterator().hasNext()) {
-            if (!JettyNpnSslEngine.isAvailable()) {
-                throw new SSLException("NPN/ALPN unsupported: " + nextProtocols);
-            }
-
-            List<String> list = new ArrayList<String>();
-            for (String p: nextProtocols) {
-                if (p == null) {
-                    break;
-                }
-                list.add(p);
-            }
-
-            this.nextProtocols = Collections.unmodifiableList(list);
-        } else {
-            this.nextProtocols = Collections.emptyList();
         }
 
         String algorithm = Security.getProperty("ssl.KeyManagerFactory.algorithm");

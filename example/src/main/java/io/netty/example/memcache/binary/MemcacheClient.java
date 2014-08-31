@@ -27,6 +27,7 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http2.Http2OrHttpChooser.SelectedProtocol;
 import io.netty.handler.codec.memcache.binary.BinaryMemcacheClientCodec;
 import io.netty.handler.codec.memcache.binary.BinaryMemcacheObjectAggregator;
+import io.netty.handler.ssl.JettyAlpnSslEngineWrapper;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
@@ -50,6 +51,7 @@ public final class MemcacheClient {
             sslCtx = SslContext.newClientContext(
                     null, InsecureTrustManagerFactory.INSTANCE, null,
                     Arrays.asList(SelectedProtocol.HTTP_2.protocolName(), SelectedProtocol.HTTP_1_1.protocolName()),
+                    JettyAlpnSslEngineWrapper.instance(),
                     0, 0);
         } else {
             sslCtx = null;
