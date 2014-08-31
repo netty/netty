@@ -106,21 +106,21 @@ public final class NioUdtProvider<T extends UdtChannel> implements ChannelFactor
         if (channel instanceof NioUdtByteAcceptorChannel) {
             return ((NioUdtByteAcceptorChannel) channel).javaChannel();
         }
-        if (channel instanceof NioUdtByteConnectorChannel) {
-            return ((NioUdtByteConnectorChannel) channel).javaChannel();
-        }
         if (channel instanceof NioUdtByteRendezvousChannel) {
             return ((NioUdtByteRendezvousChannel) channel).javaChannel();
+        }
+        if (channel instanceof NioUdtByteConnectorChannel) {
+            return ((NioUdtByteConnectorChannel) channel).javaChannel();
         }
         // message
         if (channel instanceof NioUdtMessageAcceptorChannel) {
             return ((NioUdtMessageAcceptorChannel) channel).javaChannel();
         }
-        if (channel instanceof NioUdtMessageConnectorChannel) {
-            return ((NioUdtMessageConnectorChannel) channel).javaChannel();
-        }
         if (channel instanceof NioUdtMessageRendezvousChannel) {
             return ((NioUdtMessageRendezvousChannel) channel).javaChannel();
+        }
+        if (channel instanceof NioUdtMessageConnectorChannel) {
+            return ((NioUdtMessageConnectorChannel) channel).javaChannel();
         }
         return null;
     }
