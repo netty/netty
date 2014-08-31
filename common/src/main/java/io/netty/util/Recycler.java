@@ -96,6 +96,10 @@ public abstract class Recycler<T> {
         return true;
     }
 
+    final int threadLocalCapacity() {
+        return threadLocal.get().elements.length;
+    }
+
     protected abstract T newObject(Handle<T> handle);
 
     public interface Handle<T> {
@@ -339,12 +343,12 @@ public abstract class Recycler<T> {
             item.recycleId = item.lastRecycledId = OWN_THREAD_ID;
 
             int size = this.size;
+            if (size == maxCapacity) {
+                // Hit the maximum capacity - drop the possibly youngest object.
+                return;
+            }
             if (size == elements.length) {
-                if (size == maxCapacity) {
-                    // Hit the maximum capacity - drop the possibly youngest object.
-                    return;
-                }
-                elements = Arrays.copyOf(elements, size << 1);
+                elements = Arrays.copyOf(elements, Math.min(size << 1, maxCapacity));
             }
 
             elements[size] = item;
