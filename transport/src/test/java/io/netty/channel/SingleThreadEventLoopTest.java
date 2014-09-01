@@ -738,6 +738,7 @@ public class SingleThreadEventLoopTest {
 
             if (interrupted) {
                 thread.interrupt();
+                interrupted = false;
             }
 
             // We use LockSupport.parkNanos() and NOT Thread.sleep() to eliminate the overhead of creating a new
