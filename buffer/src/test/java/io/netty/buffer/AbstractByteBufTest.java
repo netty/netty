@@ -2430,6 +2430,62 @@ public abstract class AbstractByteBufTest {
         releasedBuffer().nioBuffers(0, 1);
     }
 
+    // Test-case trying to reproduce:
+    // https://github.com/netty/netty/issues/2843
+    @Test
+    public void testRefCnt() throws Exception {
+        testRefCnt0(false);
+    }
+
+    // Test-case trying to reproduce:
+    // https://github.com/netty/netty/issues/2843
+    @Test
+    public void testRefCnt2() throws Exception {
+        testRefCnt0(true);
+    }
+
+    private void testRefCnt0(final boolean parameter) throws Exception {
+        for (int i = 0; i < 10; i++) {
+            final CountDownLatch latch = new CountDownLatch(1);
+            final CountDownLatch innerLatch = new CountDownLatch(1);
+
+            final ByteBuf buffer = newBuffer(4);
+            assertEquals(1, buffer.refCnt());
+            final AtomicInteger cnt = new AtomicInteger(Integer.MAX_VALUE);
+            Thread t1 = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    boolean released;
+                    if (parameter) {
+                        released = buffer.release(buffer.refCnt());
+                    } else {
+                        released = buffer.release();
+                    }
+                    assertTrue(released);
+                    Thread t2 = new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            cnt.set(buffer.refCnt());
+                            latch.countDown();
+                        }
+                    });
+                    t2.start();
+                    try {
+                        // Keep Thread alive a bit so the ThreadLocal caches are not freed
+                        innerLatch.await();
+                    } catch (InterruptedException ignore) {
+                        // ignore
+                    }
+                }
+            });
+            t1.start();
+
+            latch.await();
+            assertEquals(0, cnt.get());
+            innerLatch.countDown();
+        }
+    }
+
     static final class TestGatheringByteChannel implements GatheringByteChannel {
         private final ByteArrayOutputStream out = new ByteArrayOutputStream();
         private final WritableByteChannel channel = Channels.newChannel(out);
