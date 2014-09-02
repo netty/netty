@@ -187,15 +187,18 @@ abstract class PoolArena<T> {
         buf.initUnpooled(newUnpooledChunk(reqCapacity), reqCapacity);
     }
 
-    void free(PoolChunk<T> chunk, long handle, int normCapacity) {
+    void free(PoolChunk<T> chunk, long handle, int normCapacity, boolean sameThreads) {
         if (chunk.unpooled) {
             destroyChunk(chunk);
         } else {
-            PoolThreadCache cache = parent.threadCache.get();
-            if (cache.add(this, chunk, handle, normCapacity)) {
-                // cached so not free it.
-                return;
+            if (sameThreads) {
+                PoolThreadCache cache = parent.threadCache.get();
+                if (cache.add(this, chunk, handle, normCapacity)) {
+                    // cached so not free it.
+                    return;
+                }
             }
+
             synchronized (this) {
                 chunk.parent.free(chunk, handle);
             }
@@ -295,7 +298,7 @@ abstract class PoolArena<T> {
         buf.setIndex(readerIndex, writerIndex);
 
         if (freeOldMemory) {
-            free(oldChunk, oldHandle, oldMaxLength);
+            free(oldChunk, oldHandle, oldMaxLength, buf.initThread == Thread.currentThread());
         }
     }
 
