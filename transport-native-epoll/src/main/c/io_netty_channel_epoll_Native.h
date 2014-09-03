@@ -33,6 +33,11 @@
 #define IOV_MAX 1024
 #endif /* IOV_MAX */
 
+// Define UIO_MAXIOV if not found
+#ifndef UIO_MAXIOV
+#define UIO_MAXIOV 1024
+#endif /* UIO_MAXIOV */
+
 jint Java_io_netty_channel_epoll_Native_eventFd(JNIEnv * env, jclass clazz);
 void Java_io_netty_channel_epoll_Native_eventFdWrite(JNIEnv * env, jclass clazz, jint fd, jlong value);
 void Java_io_netty_channel_epoll_Native_eventFdRead(JNIEnv * env, jclass clazz, jint fd);
@@ -48,6 +53,7 @@ jlong Java_io_netty_channel_epoll_Native_writevAddresses(JNIEnv * env, jclass cl
 jint Java_io_netty_channel_epoll_Native_sendTo(JNIEnv * env, jclass clazz, jint fd, jobject jbuffer, jint pos, jint limit, jbyteArray address, jint scopeId, jint port);
 jint Java_io_netty_channel_epoll_Native_sendToAddress(JNIEnv * env, jclass clazz, jint fd, jlong memoryAddress, jint pos, jint limit, jbyteArray address, jint scopeId, jint port);
 jint Java_io_netty_channel_epoll_Native_sendToAddresses(JNIEnv * env, jclass clazz, jint fd, jlong memoryAddress, jint length, jbyteArray address, jint scopeId, jint port);
+jint Java_io_netty_channel_epoll_Native_sendmmsg(JNIEnv * env, jclass clazz, jint fd, jobjectArray packets, jint offset, jint len);
 
 jint Java_io_netty_channel_epoll_Native_read(JNIEnv * env, jclass clazz, jint fd, jobject jbuffer, jint pos, jint limit);
 jint Java_io_netty_channel_epoll_Native_readAddress(JNIEnv * env, jclass clazz, jint fd, jlong address, jint pos, jint limit);
@@ -95,3 +101,5 @@ jint Java_io_netty_channel_epoll_Native_getTcpKeepCnt(JNIEnv *env, jclass clazz,
 
 jstring Java_io_netty_channel_epoll_Native_kernelVersion(JNIEnv *env, jclass clazz);
 jint Java_io_netty_channel_epoll_Native_iovMax(JNIEnv *env, jclass clazz);
+jint Java_io_netty_channel_epoll_Native_uioMaxIov(JNIEnv *env, jclass clazz);
+jboolean Java_io_netty_channel_epoll_Native_isSupportingSendmmsg(JNIEnv *env, jclass clazz);

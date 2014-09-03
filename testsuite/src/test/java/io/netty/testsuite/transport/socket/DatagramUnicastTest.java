@@ -39,7 +39,8 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
     }
 
     public void testSimpleSendDirectByteBuf(Bootstrap sb, Bootstrap cb) throws Throwable {
-        testSimpleSend0(sb, cb, Unpooled.directBuffer());
+        testSimpleSend0(sb, cb, Unpooled.directBuffer(), true, 1);
+        testSimpleSend0(sb, cb, Unpooled.directBuffer(), true, 4);
     }
 
     @Test
@@ -48,7 +49,8 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
     }
 
     public void testSimpleSendHeapByteBuf(Bootstrap sb, Bootstrap cb) throws Throwable {
-        testSimpleSend0(sb, cb, Unpooled.directBuffer());
+        testSimpleSend0(sb, cb, Unpooled.directBuffer(), true, 1);
+        testSimpleSend0(sb, cb, Unpooled.directBuffer(), true, 4);
     }
 
     @Test
@@ -60,7 +62,12 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
         CompositeByteBuf buf = Unpooled.compositeBuffer();
         buf.addComponent(Unpooled.directBuffer(2, 2));
         buf.addComponent(Unpooled.directBuffer(2, 2));
-        testSimpleSend0(sb, cb, buf);
+        testSimpleSend0(sb, cb, buf, true, 1);
+
+        CompositeByteBuf buf2 = Unpooled.compositeBuffer();
+        buf2.addComponent(Unpooled.directBuffer(2, 2));
+        buf2.addComponent(Unpooled.directBuffer(2, 2));
+        testSimpleSend0(sb, cb, buf2, true, 4);
     }
 
     @Test
@@ -72,7 +79,12 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
         CompositeByteBuf buf = Unpooled.compositeBuffer();
         buf.addComponent(Unpooled.buffer(2, 2));
         buf.addComponent(Unpooled.buffer(2, 2));
-        testSimpleSend0(sb, cb, buf);
+        testSimpleSend0(sb, cb, buf, true, 1);
+
+        CompositeByteBuf buf2 = Unpooled.compositeBuffer();
+        buf2.addComponent(Unpooled.buffer(2, 2));
+        buf2.addComponent(Unpooled.buffer(2, 2));
+        testSimpleSend0(sb, cb, buf2, true, 4);
     }
 
     @Test
@@ -84,36 +96,12 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
         CompositeByteBuf buf = Unpooled.compositeBuffer();
         buf.addComponent(Unpooled.directBuffer(2, 2));
         buf.addComponent(Unpooled.buffer(2, 2));
-        testSimpleSend0(sb, cb, buf);
-    }
+        testSimpleSend0(sb, cb, buf, true, 1);
 
-    private void testSimpleSend0(Bootstrap sb, Bootstrap cb, ByteBuf buf) throws Throwable {
-        buf.writeInt(1);
-        final CountDownLatch latch = new CountDownLatch(1);
-
-        sb.handler(new SimpleChannelInboundHandler<DatagramPacket>() {
-            @Override
-            public void messageReceived(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
-                assertEquals(1, msg.content().readInt());
-                latch.countDown();
-            }
-        });
-
-        cb.handler(new SimpleChannelInboundHandler<Object>() {
-            @Override
-            public void messageReceived(ChannelHandlerContext ctx, Object msgs) throws Exception {
-                // Nothing will be sent.
-            }
-        });
-
-        Channel sc = sb.bind().sync().channel();
-        Channel cc = cb.bind().sync().channel();
-
-        cc.writeAndFlush(new DatagramPacket(buf, addr)).sync();
-        assertTrue(latch.await(10, TimeUnit.SECONDS));
-
-        sc.close().sync();
-        cc.close().sync();
+        CompositeByteBuf buf2 = Unpooled.compositeBuffer();
+        buf2.addComponent(Unpooled.directBuffer(2, 2));
+        buf2.addComponent(Unpooled.buffer(2, 2));
+        testSimpleSend0(sb, cb, buf2, true, 4);
     }
 
     @Test
@@ -121,9 +109,16 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
         run();
     }
 
-    @SuppressWarnings("deprecation")
     public void testSimpleSendWithoutBind(Bootstrap sb, Bootstrap cb) throws Throwable {
-        final CountDownLatch latch = new CountDownLatch(1);
+        testSimpleSend0(sb, cb, Unpooled.directBuffer(), false, 1);
+        testSimpleSend0(sb, cb, Unpooled.directBuffer(), false, 4);
+    }
+
+    @SuppressWarnings("deprecation")
+    private void testSimpleSend0(Bootstrap sb, Bootstrap cb, ByteBuf buf, boolean bindClient, int count)
+            throws Throwable {
+        buf.writeInt(1);
+        final CountDownLatch latch = new CountDownLatch(count);
 
         sb.handler(new SimpleChannelInboundHandler<DatagramPacket>() {
             @Override
@@ -139,12 +134,22 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
                 // Nothing will be sent.
             }
         });
-        cb.option(ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION, true);
 
         Channel sc = sb.bind().sync().channel();
-        Channel cc = cb.register().sync().channel();
+        Channel cc;
+        if (bindClient) {
+            cc = cb.bind().sync().channel();
+        } else {
+            cb.option(ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION, true);
+            cc = cb.register().sync().channel();
+        }
 
-        cc.writeAndFlush(new DatagramPacket(Unpooled.copyInt(1), addr)).sync();
+        for (int i = 0; i < count; i++) {
+            cc.write(new DatagramPacket(buf.retain().duplicate(), addr));
+        }
+        // release as we used buf.retain() before
+        buf.release();
+        cc.flush();
         assertTrue(latch.await(10, TimeUnit.SECONDS));
 
         sc.close().sync();
