@@ -358,7 +358,7 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
     private boolean doWriteMultiple(ChannelOutboundBuffer in) throws Exception {
         if (PlatformDependent.hasUnsafe()) {
             // this means we can cast to IovArray and write the IovArray directly.
-            IovArray array = IovArray.get(in);
+            IovArray array = IovArrayThreadLocal.get(in);
             int cnt = array.count();
             if (cnt >= 1) {
                 // TODO: Handle the case where cnt == 1 specially.
