@@ -51,7 +51,9 @@ final class Native {
     public static final int EPOLLOUT = 0x02;
     public static final int EPOLLACCEPT = 0x04;
     public static final int EPOLLRDHUP = 0x08;
-    public static int IOV_MAX = iovMax();
+    public static final int IOV_MAX = iovMax();
+    public static final int UIO_MAX_IOV = uioMaxIov();
+    public static final boolean IS_SUPPORTING_SENDMMSG = isSupportingSendmmsg();
 
     public static native int eventFd();
     public static native void eventFdWrite(int fd, long value);
@@ -144,6 +146,11 @@ final class Native {
     public static native EpollDatagramChannel.DatagramSocketAddress recvFromAddress(
             int fd, long memoryAddress, int pos, int limit) throws IOException;
 
+    public static native int sendmmsg(
+            int fd, NativeDatagramPacketArray.NativeDatagramPacket[] msgs, int offset, int len) throws IOException;
+
+    private static native boolean isSupportingSendmmsg();
+
     // socket operations
     public static int socketStreamFd() {
         try {
@@ -168,7 +175,7 @@ final class Native {
         bind(fd, address.address, address.scopeId, port);
     }
 
-    private static byte[] ipv4MappedIpv6Address(byte[] ipv4) {
+    static byte[] ipv4MappedIpv6Address(byte[] ipv4) {
         byte[] address = new byte[16];
         System.arraycopy(IPV4_MAPPED_IPV6_PREFIX, 0, address, 0, IPV4_MAPPED_IPV6_PREFIX.length);
         System.arraycopy(ipv4, 0, address, 12, ipv4.length);
@@ -245,6 +252,8 @@ final class Native {
     public static native String kernelVersion();
 
     private static native int iovMax();
+
+    private static native int uioMaxIov();
 
     private Native() {
         // utility

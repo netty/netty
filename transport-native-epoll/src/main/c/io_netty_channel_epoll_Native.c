@@ -34,6 +34,15 @@
 // optional
 extern int accept4(int sockFd, struct sockaddr *addr, socklen_t *addrlen, int flags) __attribute__((weak));
 extern int epoll_create1(int flags) __attribute__((weak));
+extern int sendmmsg(int sockfd, struct mmsghdr *msgvec, unsigned int vlen, unsigned int flags) __attribute__((weak));
+
+// Just define it here and NOT use #define _GNU_SOURCE as we also want to be able to build on systems that not support
+// sendmmsg yet. The problem is if we use _GNU_SOURCE we will not be able to declare sendmmsg as extern
+struct mmsghdr {
+    struct msghdr msg_hdr;  /* Message header */
+    unsigned int  msg_len;  /* Number of bytes transmitted */
+};
+
 
 // Those are initialized in the init(...) method and cached for performance reasons
 jmethodID updatePosId = NULL;
@@ -44,7 +53,14 @@ jfieldID limitFieldId = NULL;
 jfieldID fileChannelFieldId = NULL;
 jfieldID transferedFieldId = NULL;
 jfieldID fdFieldId = NULL;
-jfieldID fileDescriptorFieldId = NULL;;
+jfieldID fileDescriptorFieldId = NULL;
+
+jfieldID packetAddrFieldId = NULL;
+jfieldID packetScopeIdFieldId = NULL;
+jfieldID packetPortFieldId = NULL;
+jfieldID packetMemoryAddressFieldId = NULL;
+jfieldID packetCountFieldId = NULL;
+
 jmethodID inetSocketAddrMethodId = NULL;
 jmethodID datagramSocketAddrMethodId = NULL;
 jclass runtimeExceptionClass = NULL;
@@ -53,6 +69,7 @@ jclass closedChannelExceptionClass = NULL;
 jmethodID closedChannelExceptionMethodId = NULL;
 jclass inetSocketAddressClass = NULL;
 jclass datagramSocketAddressClass = NULL;
+jclass nativeDatagramPacketClass = NULL;
 
 static int socketType;
 static const char *ip4prefix = "::ffff:";
@@ -414,6 +431,38 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
             throwRuntimeException(env, "Unable to obtain constructor of DatagramSocketAddress");
             return JNI_ERR;
         }
+        jclass nativeDatagramPacketCls = (*env)->FindClass(env, "io/netty/channel/epoll/NativeDatagramPacketArray$NativeDatagramPacket");
+        if (nativeDatagramPacketCls == NULL) {
+            // pending exception...
+            return JNI_ERR;
+        }
+
+        packetAddrFieldId = (*env)->GetFieldID(env, nativeDatagramPacketCls, "addr", "[B");
+        if (packetAddrFieldId == NULL) {
+            throwRuntimeException(env, "Unable to obtain addr field for NativeDatagramPacket");
+            return JNI_ERR;
+        }
+        packetScopeIdFieldId = (*env)->GetFieldID(env, nativeDatagramPacketCls, "scopeId", "I");
+        if (packetScopeIdFieldId == NULL) {
+            throwRuntimeException(env, "Unable to obtain scopeId field for NativeDatagramPacket");
+            return JNI_ERR;
+        }
+        packetPortFieldId = (*env)->GetFieldID(env, nativeDatagramPacketCls, "port", "I");
+        if (packetPortFieldId == NULL) {
+            throwRuntimeException(env, "Unable to obtain port field for NativeDatagramPacket");
+            return JNI_ERR;
+        }
+        packetMemoryAddressFieldId = (*env)->GetFieldID(env, nativeDatagramPacketCls, "memoryAddress", "J");
+        if (packetMemoryAddressFieldId == NULL) {
+            throwRuntimeException(env, "Unable to obtain memoryAddress field for NativeDatagramPacket");
+            return JNI_ERR;
+        }
+
+        packetCountFieldId = (*env)->GetFieldID(env, nativeDatagramPacketCls, "count", "I");
+        if (packetCountFieldId == NULL) {
+            throwRuntimeException(env, "Unable to obtain count field for NativeDatagramPacket");
+            return JNI_ERR;
+        }
         return JNI_VERSION_1_6;
     }
 }
@@ -685,6 +734,53 @@ JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_sendToAddresses(JNIEnv
             return -1;
         }
         throwIOException(env, exceptionMessage("Error while sendto(...): ", err));
+        return -1;
+    }
+    return (jint) res;
+}
+
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_sendmmsg(JNIEnv * env, jclass clazz, jint fd, jobjectArray packets, jint offset, jint len) {
+    struct mmsghdr msg[len];
+    int i;
+
+    memset(msg, 0, sizeof(msg));
+
+    for (i = 0; i < len; i++) {
+        struct sockaddr_storage addr;
+
+        jobject packet = (*env)->GetObjectArrayElement(env, packets, i + offset);
+        jbyteArray address = (jbyteArray) (*env)->GetObjectField(env, packet, packetAddrFieldId);
+        jint scopeId = (*env)->GetIntField(env, packet, packetScopeIdFieldId);
+        jint port = (*env)->GetIntField(env, packet, packetPortFieldId);
+
+        if (init_sockaddr(env, address, scopeId, port, &addr) == -1) {
+            return -1;
+        }
+
+        msg[i].msg_hdr.msg_name = &addr;
+        msg[i].msg_hdr.msg_namelen = sizeof(addr);
+
+        msg[i].msg_hdr.msg_iov = (struct iovec *) (*env)->GetLongField(env, packet, packetMemoryAddressFieldId);
+        msg[i].msg_hdr.msg_iovlen = (*env)->GetIntField(env, packet, packetCountFieldId);;
+    }
+
+    ssize_t res;
+    int err;
+    do {
+       res = sendmmsg(fd, msg, len, 0);
+       // keep on writing if it was interrupted
+    } while(res == -1 && ((err = errno) == EINTR));
+
+    if (res < 0) {
+        // network stack saturated... try again later
+        if (err == EAGAIN || err == EWOULDBLOCK) {
+            return 0;
+        }
+        if (err == EBADF) {
+            throwClosedChannelException(env);
+            return -1;
+        }
+        throwIOException(env, exceptionMessage("Error while sendmmsg(...): ", err));
         return -1;
     }
     return (jint) res;
@@ -1226,3 +1322,16 @@ JNIEXPORT jstring JNICALL Java_io_netty_channel_epoll_Native_kernelVersion(JNIEn
 JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_iovMax(JNIEnv *env, jclass clazz) {
     return IOV_MAX;
 }
+
+JNIEXPORT jint JNICALL Java_io_netty_channel_epoll_Native_uioMaxIov(JNIEnv *env, jclass clazz) {
+    return UIO_MAXIOV;
+}
+
+
+JNIEXPORT jboolean JNICALL Java_io_netty_channel_epoll_Native_isSupportingSendmmsg(JNIEnv *env, jclass clazz) {
+    if (sendmmsg) {
+        return JNI_TRUE;
+    }
+    return JNI_FALSE;
+}
+
