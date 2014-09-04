@@ -615,6 +615,10 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
                         ByteBuf slice = data.readSlice(data.readableBytes());
                         frameWriter.writeData(ctx, stream.id(), slice, padding, endStream, promise);
                         decrementPendingBytes(bytesToWrite);
+                        if (enqueued) {
+                            // It's enqueued - remove it from the head of the pending write queue.
+                            pendingWriteQueue.remove();
+                        }
                         return;
                     }
 
@@ -645,6 +649,11 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
              */
             Frame split(int maxBytes) {
                 // TODO: Should padding be spread across chunks or only at the end?
+
+                if (maxBytes >= size()) {
+                    // Should never happen.
+                    throw new AssertionError("Attempting to split a frame for the full size.");
+                }
 
                 // Get the portion of the data buffer to be split. Limit to the readable bytes.
                 int dataSplit = min(maxBytes, data.readableBytes());
