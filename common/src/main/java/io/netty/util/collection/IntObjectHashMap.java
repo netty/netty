@@ -498,9 +498,16 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
             V value = values[i];
             if (value != null) {
                 sb.append(sb.length() == 0 ? "{" : ", ");
-                sb.append(keys[i]).append('=').append(value == this ? "(this Map)" : value);
+                sb.append(keyToString(keys[i])).append('=').append(value == this ? "(this Map)" : value);
             }
         }
         return sb.append('}').toString();
+    }
+
+    /**
+     * Helper method called by {@link #toString()} in order to convert a single map key into a string.
+     */
+    protected String keyToString(int key) {
+        return Integer.toString(key);
     }
 }
