@@ -15,13 +15,20 @@
  */
 package io.netty.util;
 
-import org.junit.Test;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNull;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import static org.junit.Assert.*;
+import org.junit.Test;
 
 public class NetUtilTest {
     private static final Map<String, byte[]> validIpV4Hosts = new HashMap<String, byte[]>() {
@@ -50,6 +57,18 @@ public class NetUtilTest {
             put("1.256.3.4", null);
             put("256.0.0.1", null);
             put("1.1.1.1.1", null);
+            put("x.255.255.255", null);
+            put("0.1:0.0", null);
+            put("0.1.0.0:", null);
+            put("127.0.0.", null);
+            put("1.2..4", null);
+            put("192.0.1", null);
+            put("192.0.1.1.1", null);
+            put("192.0.1.a", null);
+            put("19a.0.1.1", null);
+            put("a.0.1.1", null);
+            put(".0.1.1", null);
+            put("...", null);
         }
     };
     private static final Map<String, byte[]> validIpV6Hosts = new HashMap<String, byte[]>() {
@@ -177,6 +196,16 @@ public class NetUtilTest {
             put("0:1:2:3:4:5:6:x", null);
             // Test method with preferred style, adjacent :
             put("0:1:2:3:4:5:6::7", null);
+            // Too many : separators trailing
+            put("0:1:2:3:4:5:6:7::", null);
+            // Too many : separators leading
+            put("::0:1:2:3:4:5:6:7", null);
+            // Too many : separators trailing
+            put("1:2:3:4:5:6:7:", null);
+            // Too many : separators leading
+            put(":1:2:3:4:5:6:7", null);
+            // Too many : separators leading 0
+            put("0::1:2:3:4:5:6:7", null);
             // Test method with preferred style, too many digits.
             put("0:1:2:3:4:5:6:789abcdef", null);
             // Test method with compressed style, bad digits.
@@ -207,6 +236,14 @@ public class NetUtilTest {
             put("0:0:0:0:0:0:10.0.1", null);
             // Test method with ipv4 style, adjacent .
             put("0:0:0:0:0:0:10..0.0.1", null);
+            // Test method with ipv4 style, leading .
+            put("0:0:0:0:0:0:.0.0.1", null);
+            // Test method with ipv4 style, leading .
+            put("0:0:0:0:0:0:.10.0.0.1", null);
+            // Test method with ipv4 style, trailing .
+            put("0:0:0:0:0:0:10.0.0.", null);
+            // Test method with ipv4 style, trailing .
+            put("0:0:0:0:0:0:10.0.0.1.", null);
             // Test method with compressed ipv4 style, bad ipv6 digits.
             put("::fffx:192.168.0.1", null);
             // Test method with compressed ipv4 style, bad ipv4 digits.
@@ -239,12 +276,218 @@ public class NetUtilTest {
             put("0:0:0:0:0:0:0:10.0.0.1", null);
             // Test method, not enough :
             put("0:0:0:0:0:10.0.0.1", null);
+            // Test method, out of order trailing :
+            put("0:0:0:0:0:10.0.0.1:", null);
+            // Test method, out of order leading :
+            put(":0:0:0:0:0:10.0.0.1", null);
+            // Test method, out of order leading :
+            put("0:0:0:0::10.0.0.1:", null);
+            // Test method, out of order trailing :
+            put(":0:0:0:0::10.0.0.1", null);
             // Test method, too many .
             put("0:0:0:0:0:0:10.0.0.0.1", null);
             // Test method, not enough .
             put("0:0:0:0:0:0:10.0.1", null);
             // Test method, adjacent .
             put("0:0:0:0:0:0:10.0.0..1", null);
+            // Double compression symbol
+            put("::0::", null);
+            // Empty contents
+            put("", null);
+            // Trailing : (max number of : = 8)
+            put("2001:0:4136:e378:8000:63bf:3fff:fdd2:", null);
+            // Leading : (max number of : = 8)
+            put(":aaaa:bbbb:cccc:dddd:eeee:ffff:1111:2222", null);
+            // Invalid character
+            put("1234:2345:3456:4567:5678:6789::X890", null);
+            // Trailing . in IPv4
+            put("::ffff:255.255.255.255.", null);
+            // To many characters in IPv4
+            put("::ffff:0.0.1111.0", null);
+            // Test method, adjacent .
+            put("::ffff:0.0..0", null);
+            // Not enough IPv4 entries trailing .
+            put("::ffff:127.0.0.", null);
+            // Not enough IPv4 entries no trailing .
+            put("::ffff:1.2.4", null);
+            // Extra IPv4 entry
+            put("::ffff:192.168.0.1.255", null);
+            // Not enough IPv6 content
+            put(":ffff:192.168.0.1.255", null);
+            // Intermixed IPv4 and IPv6 symbols
+            put("::ffff:255.255:255.255.", null);
+        }
+    };
+    private static final Map<byte[], String> ipv6ToAddressStrings = new HashMap<byte[], String>() {
+        private static final long serialVersionUID = 2999763170377573184L;
+        {
+            // From the RFC 5952 http://tools.ietf.org/html/rfc5952#section-4
+            put(new byte[]{
+                32, 1, 13, -72,
+                0, 0, 0, 0,
+                0, 0, 0, 0,
+                0, 0, 0, 1},
+                    "2001:db8::1");
+            put(new byte[]{
+                32, 1, 13, -72,
+                0, 0, 0, 0,
+                0, 0, 0, 0,
+                0, 2, 0, 1},
+                    "2001:db8::2:1");
+            put(new byte[]{
+                32, 1, 13, -72,
+                0, 0, 0, 1,
+                0, 1, 0, 1,
+                0, 1, 0, 1},
+                    "2001:db8:0:1:1:1:1:1");
+
+            // Other examples
+            put(new byte[]{
+                32, 1, 13, -72,
+                0, 0, 0, 0,
+                0, 0, 0, 0,
+                0, 2, 0, 1},
+                    "2001:db8::2:1");
+            put(new byte[]{
+                32, 1, 0, 0,
+                0, 0, 0, 1,
+                0, 0, 0, 0,
+                0, 0, 0, 1},
+                    "2001:0:0:1::1");
+            put(new byte[]{
+                32, 1, 13, -72,
+                0, 0, 0, 0,
+                0, 1, 0, 0,
+                0, 0, 0, 1},
+                    "2001:db8::1:0:0:1");
+            put(new byte[]{
+                32, 1, 13, -72,
+                0, 0, 0, 0,
+                0, 1, 0, 0,
+                0, 0, 0, 0},
+                    "2001:db8:0:0:1::");
+            put(new byte[]{
+                32, 1, 13, -72,
+                0, 0, 0, 0,
+                0, 0, 0, 0,
+                0, 2, 0, 0},
+                    "2001:db8::2:0");
+            put(new byte[]{
+                0, 0, 0, 0,
+                0, 0, 0, 0,
+                0, 0, 0, 0,
+                0, 0, 0, 1},
+                    "::1");
+            put(new byte[]{
+                0, 0, 0, 0,
+                0, 0, 0, 1,
+                0, 0, 0, 0,
+                0, 0, 0, 1},
+                    "::1:0:0:0:1");
+            put(new byte[]{
+                0, 0, 0, 0,
+                1, 0, 0, 1,
+                0, 0, 0, 0,
+                1, 0, 0, 0},
+                    "::100:1:0:0:100:0");
+            put(new byte[]{
+                32, 1, 0, 0,
+                65, 54, -29, 120,
+                -128, 0, 99, -65,
+                63, -1, -3, -46},
+                    "2001:0:4136:e378:8000:63bf:3fff:fdd2");
+            put(new byte[]{
+                -86, -86, -69, -69,
+                -52, -52, -35, -35,
+                -18, -18, -1, -1,
+                17, 17, 34, 34},
+                    "aaaa:bbbb:cccc:dddd:eeee:ffff:1111:2222");
+            put(new byte[]{
+                0, 0, 0, 0,
+                0, 0, 0, 0,
+                0, 0, 0, 0,
+                0, 0, 0, 0},
+                    "::");
+        }
+    };
+
+    private static final Map<String, String> ipv4MappedToIPv6AddressStrings = new HashMap<String, String>() {
+        private static final long serialVersionUID = 1999763170377573184L;
+        {
+            // IPv4 addresses
+            put("255.255.255.255", "::ffff:255.255.255.255");
+            put("0.0.0.0", "::ffff:0.0.0.0");
+            put("127.0.0.1", "::ffff:127.0.0.1");
+            put("1.2.3.4", "::ffff:1.2.3.4");
+            put("192.168.0.1", "::ffff:192.168.0.1");
+
+            // IPv6 addresses
+            // Fully specified
+            put("2001:0:4136:e378:8000:63bf:3fff:fdd2", "2001:0:4136:e378:8000:63bf:3fff:fdd2");
+            put("aaaa:bbbb:cccc:dddd:eeee:ffff:1111:2222", "aaaa:bbbb:cccc:dddd:eeee:ffff:1111:2222");
+            put("0:0:0:0:0:0:0:0", "::");
+            put("0:0:0:0:0:0:0:1", "::1");
+
+            // Compressing at the beginning
+            put("::1:0:0:0:1", "::1:0:0:0:1");
+            put("::1:ffff:ffff", "::1:ffff:ffff");
+            put("::", "::");
+            put("::1", "::1");
+            put("::ffff", "::ffff");
+            put("::ffff:0", "::ffff:0");
+            put("::ffff:ffff", "::ffff:ffff");
+            put("::0987:9876:8765", "::987:9876:8765");
+            put("::0987:9876:8765:7654", "::987:9876:8765:7654");
+            put("::0987:9876:8765:7654:6543", "::987:9876:8765:7654:6543");
+            put("::0987:9876:8765:7654:6543:5432", "::987:9876:8765:7654:6543:5432");
+            // Note the compression is removed (rfc 5952 section 4.2.2)
+            put("::0987:9876:8765:7654:6543:5432:3210", "0:987:9876:8765:7654:6543:5432:3210");
+
+            // Compressing at the end
+            // Note the compression is removed (rfc 5952 section 4.2.2)
+            put("2001:db8:abcd:bcde:cdef:def1:ef12::", "2001:db8:abcd:bcde:cdef:def1:ef12:0");
+            put("2001:db8:abcd:bcde:cdef:def1::", "2001:db8:abcd:bcde:cdef:def1::");
+            put("2001:db8:abcd:bcde:cdef::", "2001:db8:abcd:bcde:cdef::");
+            put("2001:db8:abcd:bcde::", "2001:db8:abcd:bcde::");
+            put("2001:db8:abcd::", "2001:db8:abcd::");
+            put("2001:1234::", "2001:1234::");
+            put("2001::", "2001::");
+            put("0::", "::");
+
+            // Compressing in the middle
+            put("1234:2345::7890", "1234:2345::7890");
+            put("1234::2345:7890", "1234::2345:7890");
+            put("1234:2345:3456::7890", "1234:2345:3456::7890");
+            put("1234:2345::3456:7890", "1234:2345::3456:7890");
+            put("1234::2345:3456:7890", "1234::2345:3456:7890");
+            put("1234:2345:3456:4567::7890", "1234:2345:3456:4567::7890");
+            put("1234:2345:3456::4567:7890", "1234:2345:3456::4567:7890");
+            put("1234:2345::3456:4567:7890", "1234:2345::3456:4567:7890");
+            put("1234::2345:3456:4567:7890", "1234::2345:3456:4567:7890");
+            put("1234:2345:3456:4567:5678::7890", "1234:2345:3456:4567:5678::7890");
+            put("1234:2345:3456:4567::5678:7890", "1234:2345:3456:4567::5678:7890");
+            put("1234:2345:3456::4567:5678:7890", "1234:2345:3456::4567:5678:7890");
+            put("1234:2345::3456:4567:5678:7890", "1234:2345::3456:4567:5678:7890");
+            put("1234::2345:3456:4567:5678:7890", "1234::2345:3456:4567:5678:7890");
+            // Note the compression is removed (rfc 5952 section 4.2.2)
+            put("1234:2345:3456:4567:5678:6789::7890", "1234:2345:3456:4567:5678:6789:0:7890");
+            // Note the compression is removed (rfc 5952 section 4.2.2)
+            put("1234:2345:3456:4567:5678::6789:7890", "1234:2345:3456:4567:5678:0:6789:7890");
+            // Note the compression is removed (rfc 5952 section 4.2.2)
+            put("1234:2345:3456:4567::5678:6789:7890", "1234:2345:3456:4567:0:5678:6789:7890");
+            // Note the compression is removed (rfc 5952 section 4.2.2)
+            put("1234:2345:3456::4567:5678:6789:7890", "1234:2345:3456:0:4567:5678:6789:7890");
+            // Note the compression is removed (rfc 5952 section 4.2.2)
+            put("1234:2345::3456:4567:5678:6789:7890", "1234:2345:0:3456:4567:5678:6789:7890");
+            // Note the compression is removed (rfc 5952 section 4.2.2)
+            put("1234::2345:3456:4567:5678:6789:7890", "1234:0:2345:3456:4567:5678:6789:7890");
+
+            // IPv4 mapped addresses
+            put("::ffff:255.255.255.255", "::ffff:255.255.255.255");
+            put("::ffff:0.0.0.0", "::ffff:0.0.0.0");
+            put("::ffff:127.0.0.1", "::ffff:127.0.0.1");
+            put("::ffff:1.2.3.4", "::ffff:1.2.3.4");
+            put("::ffff:192.168.0.1", "::ffff:192.168.0.1");
         }
     };
 
@@ -291,6 +534,41 @@ public class NetUtilTest {
         }
         for (Entry<String, byte[]> stringEntry : invalidIpV6Hosts.entrySet()) {
             assertArrayEquals(stringEntry.getValue(), NetUtil.createByteArrayFromIpAddressString(stringEntry.getKey()));
+        }
+    }
+
+    @Test
+    public void testIp6AddressToString() throws UnknownHostException {
+        for (Entry<byte[], String> testEntry : ipv6ToAddressStrings.entrySet()) {
+            assertEquals(testEntry.getValue(),
+                    NetUtil.toAddressString(InetAddress.getByAddress(testEntry.getKey())));
+        }
+    }
+
+    @Test
+    public void testIp4AddressToString() throws UnknownHostException {
+        for (Entry<String, byte[]> stringEntry : validIpV4Hosts.entrySet()) {
+            assertEquals(stringEntry.getKey(),
+                    NetUtil.toAddressString(InetAddress.getByAddress(stringEntry.getValue())));
+        }
+    }
+
+    @Test
+    public void testIpv4MappedIp6GetByName() {
+        for (Entry<String, String> testEntry : ipv4MappedToIPv6AddressStrings.entrySet()) {
+            assertEquals(testEntry.getValue(),
+                            NetUtil.toAddressString(NetUtil.getByName(testEntry.getKey(), true), true));
+        }
+    }
+
+    @Test
+    public void testinvalidIpv4MappedIp6GetByName() {
+        for (String testEntry : invalidIpV4Hosts.keySet()) {
+            assertNull(NetUtil.getByName(testEntry, true));
+        }
+
+        for (String testEntry : invalidIpV6Hosts.keySet()) {
+            assertNull(NetUtil.getByName(testEntry, true));
         }
     }
 }
