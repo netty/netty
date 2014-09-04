@@ -336,6 +336,92 @@ public final class ByteBufUtil {
     }
 
     /**
+     * Encode a {@link CharSequence} in <a href="http://en.wikipedia.org/wiki/UTF-8">UTF-8</a> and write
+     * it to a {@link ByteBuf}.
+     *
+     * This method returns the actual number of bytes written.
+     */
+    public static int writeUtf8(ByteBuf buf, CharSequence seq) {
+        if (buf == null) {
+            throw new NullPointerException("buf");
+        }
+        if (seq == null) {
+            throw new NullPointerException("seq");
+        }
+        // UTF-8 uses max. 3 bytes per char, so calculate the worst case.
+        final int len = seq.length();
+        final int maxSize = len * 3;
+        buf.ensureWritable(maxSize);
+        if (buf instanceof AbstractByteBuf) {
+            // Fast-Path
+            AbstractByteBuf buffer = (AbstractByteBuf) buf;
+            int oldWriterIndex = buffer.writerIndex;
+            int writerIndex = oldWriterIndex;
+
+            // We can use the _set methods as these not need to do any index checks and reference checks.
+            // This is possible as we called ensureWritable(...) before.
+            for (int i = 0; i < len; i++) {
+                char c = seq.charAt(i);
+                if (c < 0x80) {
+                    buffer._setByte(writerIndex++, (byte) c);
+                } else if (c < 0x800) {
+                    buffer._setByte(writerIndex++, (byte) (0xc0 | (c >> 6)));
+                    buffer._setByte(writerIndex++, (byte) (0x80 | (c & 0x3f)));
+                } else {
+                    buffer._setByte(writerIndex++, (byte) (0xe0 | (c >> 12)));
+                    buffer._setByte(writerIndex++, (byte) (0x80 | ((c >> 6) & 0x3f)));
+                    buffer._setByte(writerIndex++, (byte) (0x80 | (c & 0x3f)));
+                }
+            }
+            // update the writerIndex without any extra checks for performance reasons
+            buffer.writerIndex = writerIndex;
+            return writerIndex - oldWriterIndex;
+        } else {
+            // Maybe we could also check if we can unwrap() to access the wrapped buffer which
+            // may be an AbstractByteBuf. But this may be overkill so let us keep it simple for now.
+            byte[] bytes = seq.toString().getBytes(CharsetUtil.UTF_8);
+            buf.writeBytes(bytes);
+            return bytes.length;
+        }
+    }
+
+    /**
+     * Encode a {@link CharSequence} in <a href="http://en.wikipedia.org/wiki/ASCII">ASCII</a> and write it
+     * to a {@link ByteBuf}.
+     *
+     * This method returns the actual number of bytes written.
+     */
+    public static int writeAscii(ByteBuf buf, CharSequence seq) {
+        if (buf == null) {
+            throw new NullPointerException("buf");
+        }
+        if (seq == null) {
+            throw new NullPointerException("seq");
+        }
+        // ASCII uses 1 byte per char
+        final int len = seq.length();
+        buf.ensureWritable(len);
+        if (buf instanceof AbstractByteBuf) {
+            // Fast-Path
+            AbstractByteBuf buffer = (AbstractByteBuf) buf;
+            int writerIndex = buffer.writerIndex;
+
+            // We can use the _set methods as these not need to do any index checks and reference checks.
+            // This is possible as we called ensureWritable(...) before.
+            for (int i = 0; i < len; i++) {
+                buffer._setByte(writerIndex++, (byte) seq.charAt(i));
+            }
+            // update the writerIndex without any extra checks for performance reasons
+            buffer.writerIndex = writerIndex;
+        } else {
+            // Maybe we could also check if we can unwrap() to access the wrapped buffer which
+            // may be an AbstractByteBuf. But this may be overkill so let us keep it simple for now.
+            buf.writeBytes(seq.toString().getBytes(CharsetUtil.US_ASCII));
+        }
+        return len;
+    }
+
+    /**
      * Encode the given {@link CharBuffer} using the given {@link Charset} into a new {@link ByteBuf} which
      * is allocated via the {@link ByteBufAllocator}.
      */
