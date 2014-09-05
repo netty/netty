@@ -628,8 +628,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
                         // All the bytes fit into a single HTTP/2 frame, just send it all.
                         connectionState().incrementStreamWindow(-bytesToWrite);
                         incrementStreamWindow(-bytesToWrite);
-                        ByteBuf slice = data.readSlice(data.readableBytes());
-                        frameWriter.writeData(ctx, stream.id(), slice, padding, endStream, promise);
+                        frameWriter.writeData(ctx, stream.id(), data, padding, endStream, promise);
                         decrementPendingBytes(bytesToWrite);
                         if (enqueued) {
                             // It's enqueued - remove it from the head of the pending write queue.
