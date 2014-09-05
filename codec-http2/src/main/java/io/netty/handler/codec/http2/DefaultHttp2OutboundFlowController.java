@@ -180,6 +180,9 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         if (data == null) {
             throw new NullPointerException("data");
         }
+        if (this.ctx != null && this.ctx != ctx) {
+            throw new IllegalArgumentException("Writing data from multiple ChannelHandlerContexts is not supported");
+        }
         if (padding < 0) {
             throw new IllegalArgumentException("padding must be >= 0");
         }
@@ -196,7 +199,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
             int window = state.writableWindow();
             boolean framesAlreadyQueued = state.hasFrame();
 
-            OutboundFlowState.Frame frame = state.newFrame(ctx, promise, data, padding, endStream);
+            OutboundFlowState.Frame frame = state.newFrame(promise, data, padding, endStream);
             if (!framesAlreadyQueued && window >= frame.size()) {
                 // Window size is large enough to send entire data frame
                 frame.write();
@@ -478,9 +481,8 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         /**
          * Creates a new frame with the given values but does not add it to the pending queue.
          */
-        private Frame newFrame(ChannelHandlerContext ctx, ChannelPromise promise, ByteBuf data,
-                int padding, boolean endStream) {
-            return new Frame(ctx, new ChannelPromiseAggregator(promise), data, padding, endStream);
+        private Frame newFrame(ChannelPromise promise, ByteBuf data, int padding, boolean endStream) {
+            return new Frame(new ChannelPromiseAggregator(promise), data, padding, endStream);
         }
 
         /**
@@ -564,16 +566,13 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
         private final class Frame {
             final ByteBuf data;
             final boolean endStream;
-            final ChannelHandlerContext ctx;
             final ChannelPromiseAggregator promiseAggregator;
             final ChannelPromise promise;
             int padding;
             boolean enqueued;
 
-            Frame(ChannelHandlerContext ctx,
-                    ChannelPromiseAggregator promiseAggregator, ByteBuf data, int padding,
+            Frame(ChannelPromiseAggregator promiseAggregator, ByteBuf data, int padding,
                     boolean endStream) {
-                this.ctx = ctx;
                 this.data = data;
                 this.padding = padding;
                 this.endStream = endStream;
@@ -679,7 +678,7 @@ public class DefaultHttp2OutboundFlowController implements Http2OutboundFlowCont
                 ByteBuf splitSlice = data.readSlice(dataSplit).retain();
                 padding -= paddingSplit;
 
-                Frame frame = new Frame(ctx, promiseAggregator, splitSlice, paddingSplit, false);
+                Frame frame = new Frame(promiseAggregator, splitSlice, paddingSplit, false);
 
                 int totalBytesSplit = dataSplit + paddingSplit;
                 decrementPendingBytes(totalBytesSplit);
