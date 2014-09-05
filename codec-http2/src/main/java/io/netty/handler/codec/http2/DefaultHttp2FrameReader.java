@@ -15,6 +15,7 @@
 
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_FRAME_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.FRAME_HEADER_LENGTH;
 import static io.netty.handler.codec.http2.Http2CodecUtil.INT_FIELD_LENGTH;
@@ -542,6 +543,16 @@ public class DefaultHttp2FrameReader implements Http2FrameReader {
     private void readWindowUpdateFrame(ChannelHandlerContext ctx, ByteBuf payload,
             Http2FrameListener listener) throws Http2Exception {
         int windowSizeIncrement = readUnsignedInt(payload);
+        if (windowSizeIncrement == 0) {
+            if (streamId == CONNECTION_STREAM_ID) {
+                // It's a connection error.
+                throw protocolError("Received WINDOW_UPDATE with delta 0 for connection stream");
+            } else {
+                // It's a stream error.
+                throw new Http2StreamException(streamId, Http2Error.PROTOCOL_ERROR,
+                        "Received WINDOW_UPDATE with delta 0 for stream: " + streamId);
+            }
+        }
         listener.onWindowUpdateRead(ctx, streamId, windowSizeIncrement);
     }
 
