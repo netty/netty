@@ -210,9 +210,8 @@ abstract class AbstractNioSelector implements NioSelector {
             try {
                 long beforeSelect = System.nanoTime();
                 int selected = select(selector);
-                if (SelectorUtil.EPOLL_BUG_WORKAROUND && selected == 0 && !wakenupFromLoop && !wakenUp.get()) {
+                if (selected == 0 && !wakenupFromLoop && !wakenUp.get()) {
                     long timeBlocked = System.nanoTime() - beforeSelect;
-
                     if (timeBlocked < minSelectTimeout) {
                         boolean notConnected = false;
                         // loop over all keys as the selector may was unblocked because of a closed channel
@@ -232,15 +231,32 @@ abstract class AbstractNioSelector implements NioSelector {
                         if (notConnected) {
                             selectReturnsImmediately = 0;
                         } else {
-                            // returned before the minSelectTimeout elapsed with nothing select.
-                            // this may be the cause of the jdk epoll(..) bug, so increment the counter
-                            // which we use later to see if its really the jdk bug.
-                            selectReturnsImmediately ++;
+                            if (Thread.interrupted() && !shutdown) {
+                                // Thread was interrupted but NioSelector was not shutdown.
+                                // As this is most likely a bug in the handler of the user or it's client
+                                // library we will log it.
+                                //
+                                // See https://github.com/netty/netty/issues/2426
+                                if (logger.isDebugEnabled()) {
+                                    logger.debug("Selector.select() returned prematurely because the I/O thread " +
+                                            "has been interrupted. Use shutdown() to shut the NioSelector down.");
+                                }
+                                selectReturnsImmediately = 0;
+                            } else {
+                                // Returned before the minSelectTimeout elapsed with nothing selected.
+                                // This may be because of a bug in JDK NIO Selector provider, so increment the counter
+                                // which we will use later to see if it's really the bug in JDK.
+                                selectReturnsImmediately ++;
+                            }
                         }
                     } else {
                         selectReturnsImmediately = 0;
                     }
+                } else {
+                    selectReturnsImmediately = 0;
+                }
 
+                if (SelectorUtil.EPOLL_BUG_WORKAROUND) {
                     if (selectReturnsImmediately == 1024) {
                         // The selector returned immediately for 10 times in a row,
                         // so recreate one selector as it seems like we hit the
