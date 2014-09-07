@@ -76,15 +76,18 @@ public class JettySslEngineTest {
 
     private final class MessageDelegatorChannelHandler extends SimpleChannelInboundHandler<ByteBuf> {
         private final MessageReciever receiver;
+        private final CountDownLatch latch;
 
-        public MessageDelegatorChannelHandler(MessageReciever receiver) {
+        public MessageDelegatorChannelHandler(MessageReciever receiver, CountDownLatch latch) {
             super(false);
             this.receiver = receiver;
+            this.latch = latch;
         }
 
         @Override
         protected void messageReceived(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
             receiver.messageReceived(msg);
+            latch.countDown();
         }
     }
 
@@ -154,7 +157,7 @@ public class JettySslEngineTest {
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
                 p.addLast(serverSslCtx.newHandler(ch.alloc()));
-                p.addLast(new MessageDelegatorChannelHandler(serverReceiver));
+                p.addLast(new MessageDelegatorChannelHandler(serverReceiver, serverLatch));
                 serverConnectedChannel = ch;
             }
         });
@@ -166,7 +169,7 @@ public class JettySslEngineTest {
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
                 p.addLast(clientSslCtx.newHandler(ch.alloc()));
-                p.addLast(new MessageDelegatorChannelHandler(clientReceiver));
+                p.addLast(new MessageDelegatorChannelHandler(clientReceiver, clientLatch));
             }
         });
 
@@ -204,7 +207,7 @@ public class JettySslEngineTest {
     private static void writeAndVerifyReceived(ByteBuf message, Channel sendChannel, CountDownLatch receiverLatch,
             MessageReciever receiver) throws Exception {
         sendChannel.writeAndFlush(message);
-        receiverLatch.await(2, TimeUnit.SECONDS);
+        receiverLatch.await(5, TimeUnit.SECONDS);
         message.resetReaderIndex();
         verify(receiver).messageReceived(eq(message));
     }
