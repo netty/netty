@@ -46,7 +46,7 @@ public final class DefaultHttp2Headers extends Http2Headers {
     }
 
     @Override
-    public String get(String name) {
+    public String get(CharSequence name) {
         if (name == null) {
             throw new NullPointerException("name");
         }
@@ -65,7 +65,7 @@ public final class DefaultHttp2Headers extends Http2Headers {
     }
 
     @Override
-    public List<String> getAll(String name) {
+    public List<String> getAll(CharSequence name) {
         if (name == null) {
             throw new NullPointerException("name");
         }
@@ -97,7 +97,7 @@ public final class DefaultHttp2Headers extends Http2Headers {
     }
 
     @Override
-    public boolean contains(String name) {
+    public boolean contains(CharSequence name) {
         return get(name) != null;
     }
 
@@ -156,7 +156,7 @@ public final class DefaultHttp2Headers extends Http2Headers {
     /**
      * Builds instances of {@link DefaultHttp2Headers}.
      */
-    public static class Builder {
+    public static class Builder implements Http2Headers.Builder {
         private HeaderEntry[] entries;
         private HeaderEntry head;
         private Http2Headers buildResults;
@@ -166,10 +166,45 @@ public final class DefaultHttp2Headers extends Http2Headers {
             clear();
         }
 
-        /**
-         * Clears all existing headers from this collection and replaces them with the given header
-         * set.
-         */
+        @Override
+        public String get(CharSequence name) {
+            if (name == null) {
+                throw new NullPointerException("name");
+            }
+
+            int h = hash(name);
+            int i = index(h);
+            HeaderEntry e = entries[i];
+            while (e != null) {
+                if (e.hash == h && eq(name, e.key)) {
+                    return e.value;
+                }
+                e = e.next;
+            }
+            return null;
+        }
+
+        @Override
+        public List<String> getAll(CharSequence name) {
+            if (name == null) {
+                throw new NullPointerException("name");
+            }
+
+            LinkedList<String> values = new LinkedList<String>();
+
+            int h = hash(name);
+            int i = index(h);
+            HeaderEntry e = entries[i];
+            while (e != null) {
+                if (e.hash == h && eq(name, e.key)) {
+                    values.addFirst(e.value);
+                }
+                e = e.next;
+            }
+            return values;
+        }
+
+        @Override
         public void set(Http2Headers headers) {
             // No need to lazy copy the previous results, since we're starting from scratch.
             clear();
@@ -178,21 +213,13 @@ public final class DefaultHttp2Headers extends Http2Headers {
             }
         }
 
-        /**
-         * Adds the given header to the collection.
-         *
-         * @throws IllegalArgumentException if the name or value of this header is invalid for any reason.
-         */
-        public Builder add(final CharSequence name, final Object value) {
+        @Override
+        public Builder add(CharSequence name, Object value) {
             return add(name.toString(), value);
         }
 
-        /**
-         * Adds the given header to the collection.
-         *
-         * @throws IllegalArgumentException if the name or value of this header is invalid for any reason.
-         */
-        public Builder add(final String name, final Object value) {
+        @Override
+        public Builder add(String name, Object value) {
             // If this is the first call on the builder since the last build, copy the previous
             // results.
             lazyCopy();
@@ -207,17 +234,8 @@ public final class DefaultHttp2Headers extends Http2Headers {
             return this;
         }
 
-        /**
-         * Removes the header with the given name from this collection.
-         */
-        public Builder remove(final CharSequence name) {
-            return remove(name.toString());
-        }
-
-        /**
-         * Removes the header with the given name from this collection.
-         */
-        public Builder remove(final String name) {
+        @Override
+        public Builder remove(CharSequence name) {
             if (name == null) {
                 throw new NullPointerException("name");
             }
@@ -226,28 +244,31 @@ public final class DefaultHttp2Headers extends Http2Headers {
             // results.
             lazyCopy();
 
-            String lowerCaseName = name.toLowerCase();
-            int nameHash = hash(lowerCaseName);
-            int hashTableIndex = index(nameHash);
-            remove0(nameHash, hashTableIndex, lowerCaseName);
+            remove0(name);
             return this;
         }
 
-        /**
-         * Sets the given header in the collection, replacing any previous values.
-         *
-         * @throws IllegalArgumentException if the name or value of this header is invalid for any reason.
-         */
-        public Builder set(final CharSequence name, final Object value) {
+        @Override
+        public Builder remove(String name) {
+            if (name == null) {
+                throw new NullPointerException("name");
+            }
+
+            // If this is the first call on the builder since the last build, copy the previous
+            // results.
+            lazyCopy();
+
+            remove0(name.toLowerCase());
+            return this;
+        }
+
+        @Override
+        public Builder set(CharSequence name, Object value) {
             return set(name.toString(), value);
         }
 
-        /**
-         * Sets the given header in the collection, replacing any previous values.
-         *
-         * @throws IllegalArgumentException if the name or value of this header is invalid for any reason.
-         */
-        public Builder set(final String name, final Object value) {
+        @Override
+        public Builder set(String name, Object value) {
             // If this is the first call on the builder since the last build, copy the previous
             // results.
             lazyCopy();
@@ -263,12 +284,8 @@ public final class DefaultHttp2Headers extends Http2Headers {
             return this;
         }
 
-        /**
-         * Sets the given header in the collection, replacing any previous values.
-         *
-         * @throws IllegalArgumentException if the name or value of this header is invalid for any reason.
-         */
-        public Builder set(final String name, final Iterable<?> values) {
+        @Override
+        public Builder set(String name, Iterable<?> values) {
             if (values == null) {
                 throw new NullPointerException("values");
             }
@@ -295,9 +312,12 @@ public final class DefaultHttp2Headers extends Http2Headers {
             return this;
         }
 
-        /**
-         * Clears all values from this collection.
-         */
+        @Override
+        public int size() {
+            return size;
+        }
+
+        @Override
         public Builder clear() {
             // No lazy copy required, since we're just creating a new array.
             entries = new HeaderEntry[BUCKET_SIZE];
@@ -308,44 +328,32 @@ public final class DefaultHttp2Headers extends Http2Headers {
             return this;
         }
 
-        /**
-         * Sets the {@link PseudoHeaderName#METHOD} header.
-         */
+        @Override
         public Builder method(String method) {
             return set(METHOD.value(), method);
         }
 
-        /**
-         * Sets the {@link PseudoHeaderName#SCHEME} header.
-         */
+        @Override
         public Builder scheme(String scheme) {
             return set(SCHEME.value(), scheme);
         }
 
-        /**
-         * Sets the {@link PseudoHeaderName#AUTHORITY} header.
-         */
+        @Override
         public Builder authority(String authority) {
             return set(AUTHORITY.value(), authority);
         }
 
-        /**
-         * Sets the {@link PseudoHeaderName#PATH} header.
-         */
+        @Override
         public Builder path(String path) {
             return set(PseudoHeaderName.PATH.value(), path);
         }
 
-        /**
-         * Sets the {@link PseudoHeaderName#STATUS} header.
-         */
+        @Override
         public Builder status(String status) {
             return set(PseudoHeaderName.STATUS.value(), status);
         }
 
-        /**
-         * Builds a new instance of {@link DefaultHttp2Headers}.
-         */
+        @Override
         public DefaultHttp2Headers build() {
             // If this is the first call on the builder since the last build, copy the previous
             // results.
@@ -383,7 +391,13 @@ public final class DefaultHttp2Headers extends Http2Headers {
             size++;
         }
 
-        private void remove0(int hash, int hashTableIndex, String name) {
+        private void remove0(final CharSequence name) {
+            final int nameHash = hash(name);
+            final int hashTableIndex = index(nameHash);
+            remove0(nameHash, hashTableIndex, name);
+        }
+
+        private void remove0(int hash, int hashTableIndex, CharSequence name) {
             HeaderEntry e = entries[hashTableIndex];
             if (e == null) {
                 return;
@@ -477,7 +491,7 @@ public final class DefaultHttp2Headers extends Http2Headers {
         }
     }
 
-    private static int hash(String name) {
+    private static int hash(CharSequence name) {
         int h = 0;
         for (int i = name.length() - 1; i >= 0; i--) {
             char c = name.charAt(i);
@@ -496,7 +510,7 @@ public final class DefaultHttp2Headers extends Http2Headers {
         }
     }
 
-    private static boolean eq(String name1, String name2) {
+    private static boolean eq(CharSequence name1, CharSequence name2) {
         int nameLen = name1.length();
         if (nameLen != name2.length()) {
             return false;

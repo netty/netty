@@ -400,9 +400,17 @@ public interface HttpHeaders extends TextHeaders {
          */
         public static final AsciiString DEFLATE = new AsciiString("deflate");
         /**
+         * {@code "x-deflate"}
+         */
+        public static final AsciiString XDEFLATE = new AsciiString("deflate");
+        /**
          * {@code "gzip"}
          */
         public static final AsciiString GZIP = new AsciiString("gzip");
+        /**
+         * {@code "x-gzip"}
+         */
+        public static final AsciiString XGZIP = new AsciiString("x-gzip");
         /**
          * {@code "identity"}
          */

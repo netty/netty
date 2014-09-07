@@ -32,12 +32,12 @@ public abstract class Http2Headers implements Iterable<Entry<String, String>> {
     public static final Http2Headers EMPTY_HEADERS = new Http2Headers() {
 
         @Override
-        public String get(String name) {
+        public String get(CharSequence name) {
             return null;
         }
 
         @Override
-        public List<String> getAll(String name) {
+        public List<String> getAll(CharSequence name) {
             return Collections.emptyList();
         }
 
@@ -47,7 +47,7 @@ public abstract class Http2Headers implements Iterable<Entry<String, String>> {
         }
 
         @Override
-        public boolean contains(String name) {
+        public boolean contains(CharSequence name) {
             return false;
         }
 
@@ -153,14 +153,14 @@ public abstract class Http2Headers implements Iterable<Entry<String, String>> {
      *
      * @return the header value or {@code null} if there is no such header
      */
-    public abstract String get(String name);
+    public abstract String get(CharSequence name);
 
     /**
      * Returns the header values with the specified header name.
      *
      * @return the {@link List} of header values. An empty list if there is no such header.
      */
-    public abstract List<String> getAll(String name);
+    public abstract List<String> getAll(CharSequence name);
 
     /**
      * Returns all header names and values that this frame contains.
@@ -173,7 +173,7 @@ public abstract class Http2Headers implements Iterable<Entry<String, String>> {
     /**
      * Returns {@code true} if and only if there is a header with the specified header name.
      */
-    public abstract boolean contains(String name);
+    public abstract boolean contains(CharSequence name);
 
     /**
      * Checks if no header exists.
@@ -205,6 +205,117 @@ public abstract class Http2Headers implements Iterable<Entry<String, String>> {
      *  The last-visited header name If the {@link HeaderVisitor#visit(Entry)} returned {@code false}.
      */
     public abstract String forEach(HeaderVisitor visitor);
+
+    /**
+     * Interface for the Builder pattern for {@link Http2Headers}.
+     */
+    public interface Builder {
+        /**
+         * Build all the collected headers into a {@link Http2Headers}.
+         * @return The {@link Http2Headers} object which this builder has been used for
+         */
+        Http2Headers build();
+
+        /**
+         * Gets the number of headers contained in this object.
+         */
+        int size();
+
+        /**
+         * Clears all values from this collection.
+         */
+        Builder clear();
+
+        /**
+         * Returns the header value with the specified header name. If there is more than one header
+         * value for the specified header name, the first value is returned.
+         * <p>
+         * Note that all HTTP2 headers names are lower case and this method will not force {@code name} to lower case.
+         * @return the header value or {@code null} if there is no such header
+         */
+        String get(CharSequence name);
+
+        /**
+         * Returns the header values with the specified header name.
+         * <p>
+         * Note that all HTTP2 headers names are lower case and this method will not force {@code name} to lower case.
+         * @return the {@link List} of header values. An empty list if there is no such header.
+         */
+        List<String> getAll(CharSequence name);
+
+        /**
+         * Clears all existing headers from this collection and replaces them with the given header
+         * set.
+         */
+        void set(Http2Headers headers);
+
+        /**
+         * Adds the given header to the collection.
+         * @throws IllegalArgumentException if the name or value of this header is invalid for any reason.
+         */
+        Builder add(CharSequence name, Object value);
+
+        /**
+         * Adds the given header to the collection.
+         * @throws IllegalArgumentException if the name or value of this header is invalid for any reason.
+         */
+        Builder add(String name, Object value);
+
+        /**
+         * Removes the header with the given name from this collection.
+         * This method will <b>not</b> force the {@code name} to lower case before looking for a match.
+         */
+        Builder remove(CharSequence name);
+
+        /**
+         * Removes the header with the given name from this collection.
+         * This method will force the {@code name} to lower case before looking for a match.
+         */
+        Builder remove(String name);
+
+        /**
+         * Sets the given header in the collection, replacing any previous values.
+         * @throws IllegalArgumentException if the name or value of this header is invalid for any reason.
+         */
+        Builder set(CharSequence name, Object value);
+
+        /**
+         * Sets the given header in the collection, replacing any previous values.
+         * @throws IllegalArgumentException if the name or value of this header is invalid for any reason.
+         */
+        Builder set(String name, Object value);
+
+        /**
+         * Sets the given header in the collection, replacing any previous values.
+         * @throws IllegalArgumentException if the name or value of this header is invalid for any reason.
+         */
+        Builder set(String name, Iterable<?> values);
+
+        /**
+         * Sets the {@link PseudoHeaderName#METHOD} header.
+         */
+        Builder method(String method);
+
+        /**
+         * Sets the {@link PseudoHeaderName#SCHEME} header.
+         */
+        Builder scheme(String scheme);
+
+        /**
+         * Sets the {@link PseudoHeaderName#AUTHORITY} header.
+         */
+        Builder authority(String authority);
+
+        /**
+         * Sets the {@link PseudoHeaderName#PATH} header.
+         */
+        Builder path(String path);
+
+        /**
+         * Sets the {@link PseudoHeaderName#STATUS} header.
+         */
+        Builder status(String status);
+    }
 
     /**
      * Gets the {@link PseudoHeaderName#METHOD} header or {@code null} if there is no such header

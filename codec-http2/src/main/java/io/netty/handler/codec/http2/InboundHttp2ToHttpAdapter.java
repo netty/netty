@@ -273,9 +273,6 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
                             "Content length exceeded max of %d for stream id %d", maxContentLength, streamId);
         }
 
-        // TODO: provide hooks to a HttpContentDecoder type interface
-        // Preferably provide these hooks in the HTTP2 codec so even non-translation layer use-cases benefit
-        // (and then data will already be decoded here)
         content.writeBytes(data, data.readerIndex(), data.readableBytes());
 
         if (endOfStream) {

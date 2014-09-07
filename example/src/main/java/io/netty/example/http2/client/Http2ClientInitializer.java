@@ -25,8 +25,8 @@ import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpClientUpgradeHandler;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http2.DecompressorHttp2FrameReader;
 import io.netty.handler.codec.http2.DefaultHttp2Connection;
-import io.netty.handler.codec.http2.DefaultHttp2FrameReader;
 import io.netty.handler.codec.http2.DefaultHttp2FrameWriter;
 import io.netty.handler.codec.http2.DefaultHttp2InboundFlowController;
 import io.netty.handler.codec.http2.DefaultHttp2OutboundFlowController;
@@ -63,10 +63,11 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
 
     @Override
     public void initChannel(SocketChannel ch) throws Exception {
-        Http2Connection connection = new DefaultHttp2Connection(false);
-        Http2FrameWriter frameWriter = frameWriter();
+        final Http2Connection connection = new DefaultHttp2Connection(false);
+        final Http2FrameWriter frameWriter = frameWriter();
         connectionHandler = new DelegatingHttp2HttpConnectionHandler(connection,
-                        frameReader(), frameWriter, new DefaultHttp2InboundFlowController(connection, frameWriter),
+                        frameReader(connection), frameWriter,
+                        new DefaultHttp2InboundFlowController(connection, frameWriter),
                         new DefaultHttp2OutboundFlowController(connection, frameWriter),
                         InboundHttp2ToHttpAdapter.newInstance(connection, maxContentLength));
         responseHandler = new HttpResponseHandler();
@@ -145,8 +146,8 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
         }
     }
 
-    private static Http2FrameReader frameReader() {
-        return new Http2InboundFrameLogger(new DefaultHttp2FrameReader(), logger);
+    private static Http2FrameReader frameReader(Http2Connection connection) {
+        return new Http2InboundFrameLogger(new DecompressorHttp2FrameReader(connection), logger);
     }
 
     private static Http2FrameWriter frameWriter() {

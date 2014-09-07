@@ -56,52 +56,52 @@ public final class HttpUtil {
              * HTTP extension header which will identify the stream id
              * from the HTTP/2 event(s) responsible for generating a {@code HttpObject}
              * <p>
-             * {@code "X-HTTP2-Stream-ID"}
+             * {@code "x-http2-stream-id"}
              */
-            public static final AsciiString STREAM_ID = new AsciiString("X-HTTP2-Stream-ID");
+            public static final AsciiString STREAM_ID = new AsciiString("x-http2-stream-id");
             /**
              * HTTP extension header which will identify the authority pseudo header
              * from the HTTP/2 event(s) responsible for generating a {@code HttpObject}
              * <p>
-             * {@code "X-HTTP2-Authority"}
+             * {@code "x-http2-authority"}
              */
-            public static final AsciiString AUTHORITY = new AsciiString("X-HTTP2-Authority");
+            public static final AsciiString AUTHORITY = new AsciiString("x-http2-authority");
             /**
              * HTTP extension header which will identify the scheme pseudo header
              * from the HTTP/2 event(s) responsible for generating a {@code HttpObject}
              * <p>
-             * {@code "X-HTTP2-Scheme"}
+             * {@code "x-http2-scheme"}
              */
-            public static final AsciiString SCHEME = new AsciiString("X-HTTP2-Scheme");
+            public static final AsciiString SCHEME = new AsciiString("x-http2-scheme");
             /**
              * HTTP extension header which will identify the path pseudo header
              * from the HTTP/2 event(s) responsible for generating a {@code HttpObject}
              * <p>
-             * {@code "X-HTTP2-Path"}
+             * {@code "x-http2-path"}
              */
-            public static final AsciiString PATH = new AsciiString("X-HTTP2-Path");
+            public static final AsciiString PATH = new AsciiString("x-http2-path");
             /**
              * HTTP extension header which will identify the stream id used to create this stream
              * in a HTTP/2 push promise frame
              * <p>
-             * {@code "X-HTTP2-Stream-Promise-ID"}
+             * {@code "x-http2-stream-promise-id"}
              */
-            public static final AsciiString STREAM_PROMISE_ID = new AsciiString("X-HTTP2-Stream-Promise-ID");
+            public static final AsciiString STREAM_PROMISE_ID = new AsciiString("x-http2-stream-promise-id");
             /**
              * HTTP extension header which will identify the stream id which this stream is dependent on.
              * This stream will be a child node of the stream id associated with this header value.
              * <p>
-             * {@code "X-HTTP2-Stream-Dependency-ID"}
+             * {@code "x-http2-stream-dependency-id"}
              */
-            public static final AsciiString STREAM_DEPENDENCY_ID = new AsciiString("X-HTTP2-Stream-Dependency-ID");
+            public static final AsciiString STREAM_DEPENDENCY_ID = new AsciiString("x-http2-stream-dependency-id");
             /**
              * HTTP extension header which will identify the weight
              * (if non-default and the priority is not on the default stream) of the associated HTTP/2 stream
              * responsible responsible for generating a {@code HttpObject}
              * <p>
-             * {@code "X-HTTP2-Stream-Weight"}
+             * {@code "x-http2-stream-weight"}
              */
-            public static final AsciiString STREAM_WEIGHT = new AsciiString("X-HTTP2-Stream-Weight");
+            public static final AsciiString STREAM_WEIGHT = new AsciiString("x-http2-stream-weight");
         }
     }
 

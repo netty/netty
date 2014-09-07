@@ -47,16 +47,13 @@ public class HttpContentDecompressor extends HttpContentDecoder {
 
     @Override
     protected EmbeddedChannel newContentDecoder(String contentEncoding) throws Exception {
-        if ("gzip".equalsIgnoreCase(contentEncoding) || "x-gzip".equalsIgnoreCase(contentEncoding)) {
+        if (HttpHeaders.Values.GZIP.equalsIgnoreCase(contentEncoding) ||
+            HttpHeaders.Values.XGZIP.equalsIgnoreCase(contentEncoding)) {
             return new EmbeddedChannel(ZlibCodecFactory.newZlibDecoder(ZlibWrapper.GZIP));
         }
-        if ("deflate".equalsIgnoreCase(contentEncoding) || "x-deflate".equalsIgnoreCase(contentEncoding)) {
-            ZlibWrapper wrapper;
-            if (strict) {
-                wrapper = ZlibWrapper.ZLIB;
-            }   else {
-                wrapper = ZlibWrapper.ZLIB_OR_NONE;
-            }
+        if (HttpHeaders.Values.DEFLATE.equalsIgnoreCase(contentEncoding) ||
+            HttpHeaders.Values.XDEFLATE.equalsIgnoreCase(contentEncoding)) {
+            final ZlibWrapper wrapper = strict ? ZlibWrapper.ZLIB : ZlibWrapper.ZLIB_OR_NONE;
             // To be strict, 'deflate' means ZLIB, but some servers were not implemented correctly.
             return new EmbeddedChannel(ZlibCodecFactory.newZlibDecoder(wrapper));
         }

@@ -50,6 +50,11 @@
       <artifactId>mockito-all</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>com.jcraft</groupId>
+      <artifactId>jzlib</artifactId>
+      <optional>true</optional>
+    </dependency>
   </dependencies>
 </project>
 

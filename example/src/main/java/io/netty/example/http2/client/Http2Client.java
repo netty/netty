@@ -98,8 +98,8 @@ public final class Http2Client {
                 // Create a simple GET request.
                 FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, URL);
                 request.headers().add(HttpHeaders.Names.HOST, hostName);
-                // TODO: fix me when HTTP/2 supports decompression
-                // request.headers().add(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP);
+                request.headers().add(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP);
+                request.headers().add(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.DEFLATE);
                 channel.writeAndFlush(request);
                 responseHandler.put(streamId, channel.newPromise());
                 streamId += 2;
@@ -109,8 +109,8 @@ public final class Http2Client {
                 FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, POST, URL2,
                                 Unpooled.copiedBuffer(URL2DATA.getBytes(CharsetUtil.UTF_8)));
                 request.headers().add(HttpHeaders.Names.HOST, hostName);
-                // TODO: fix me when HTTP/2 supports decompression
-                // request.headers().add(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP);
+                request.headers().add(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP);
+                request.headers().add(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.DEFLATE);
                 channel.writeAndFlush(request);
                 responseHandler.put(streamId, channel.newPromise());
                 streamId += 2;

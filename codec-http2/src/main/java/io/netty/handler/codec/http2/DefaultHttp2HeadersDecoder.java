@@ -65,7 +65,7 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder {
     }
 
     @Override
-    public Http2Headers decodeHeaders(ByteBuf headerBlock) throws Http2Exception {
+    public Http2Headers.Builder decodeHeaders(ByteBuf headerBlock) throws Http2Exception {
         try {
             final DefaultHttp2Headers.Builder headersBuilder = new DefaultHttp2Headers.Builder();
             HeaderListener listener = new HeaderListener() {
@@ -83,13 +83,12 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder {
                 // TODO: what's the right thing to do here?
             }
 
-            Http2Headers headers = headersBuilder.build();
-            if (headers.size() > maxHeaderListSize) {
+            if (headersBuilder.size() > maxHeaderListSize) {
                 throw protocolError("Number of headers (%d) exceeds maxHeaderListSize (%d)",
-                        headers.size(), maxHeaderListSize);
+                        headersBuilder.size(), maxHeaderListSize);
             }
 
-            return headers;
+            return headersBuilder;
         } catch (IOException e) {
             throw new Http2Exception(COMPRESSION_ERROR, e.getMessage());
         } catch (Throwable e) {

@@ -29,6 +29,7 @@ import static io.netty.handler.codec.http2.Http2Stream.State.IDLE;
 import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_LOCAL;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http2.Http2StreamRemovalPolicy.Action;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
@@ -189,6 +190,7 @@ public class DefaultHttp2Connection implements Http2Connection {
         private boolean terminateReceived;
         private FlowState inboundFlow;
         private FlowState outboundFlow;
+        private EmbeddedChannel decompressor;
         private Object data;
 
         DefaultStream(int id) {
@@ -239,6 +241,19 @@ public class DefaultHttp2Connection implements Http2Connection {
         @Override
         public <T> T data() {
             return (T) data;
+        }
+
+        @Override
+        public void decompressor(EmbeddedChannel decompressor) {
+            if (this.decompressor != null && decompressor != null) {
+                throw new IllegalStateException("decompressor can not be reassigned");
+            }
+            this.decompressor = decompressor;
+        }
+
+        @Override
+        public EmbeddedChannel decompressor() {
+            return decompressor;
         }
 
         @Override
