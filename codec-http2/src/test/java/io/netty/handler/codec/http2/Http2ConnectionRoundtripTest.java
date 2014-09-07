@@ -15,7 +15,7 @@
 
 package io.netty.handler.codec.http2;
 
-import static io.netty.handler.codec.http2.Http2TestUtil.runInChannel;
+import static io.netty.handler.codec.http2.Http2TestUtil.*;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertEquals;
@@ -37,19 +37,24 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http2.Http2TestUtil.Http2Runnable;
 import io.netty.util.NetUtil;
+import io.netty.util.concurrent.Future;
 
 import java.net.InetSocketAddress;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -60,6 +65,7 @@ import org.mockito.stubbing.Answer;
  * Tests the full HTTP/2 framing stack including the connection and preface handlers.
  */
 public class Http2ConnectionRoundtripTest {
+    private static EventLoopGroup[] groups;
 
     private static final int NUM_STREAMS = 1000;
     private final byte[] DATA_TEXT = "hello world".getBytes(UTF_8);
@@ -78,6 +84,16 @@ public class Http2ConnectionRoundtripTest {
     private final CountDownLatch requestLatch = new CountDownLatch(NUM_STREAMS * 3);
     private CountDownLatch dataLatch = new CountDownLatch(NUM_STREAMS * DATA_TEXT.length);
 
+    @BeforeClass
+    public static void newGroups() {
+        groups = Http2TestUtil.newEventLoopGroups(3);
+    }
+
+    @AfterClass
+    public static void teardownGroups() throws Exception {
+        Http2TestUtil.teardownGroups(groups);
+    }
+
     @Before
     public void setup() throws Exception {
         MockitoAnnotations.initMocks(this);
@@ -85,7 +101,7 @@ public class Http2ConnectionRoundtripTest {
         sb = new ServerBootstrap();
         cb = new Bootstrap();
 
-        sb.group(new NioEventLoopGroup(), new NioEventLoopGroup());
+        sb.group(groups[0], groups[1]);
         sb.channel(NioServerSocketChannel.class);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
@@ -96,7 +112,7 @@ public class Http2ConnectionRoundtripTest {
             }
         });
 
-        cb.group(new NioEventLoopGroup());
+        cb.group(groups[2]);
         cb.channel(NioSocketChannel.class);
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
@@ -119,8 +135,7 @@ public class Http2ConnectionRoundtripTest {
     @After
     public void teardown() throws Exception {
         serverChannel.close().sync();
-        sb.group().shutdownGracefully();
-        cb.group().shutdownGracefully();
+        // EventLoopGroups are shutdown in @AfterClass
     }
 
     @Test
@@ -163,7 +178,7 @@ public class Http2ConnectionRoundtripTest {
         });
 
         // Wait for all DATA frames to be received at the server.
-        assertTrue(dataLatch.await(5, TimeUnit.SECONDS));
+        assertTrue(dataLatch.await(MESSAGE_AWAIT_SECONDS, TimeUnit.SECONDS));
 
         // Verify that headers were received and only one DATA frame was received with endStream set.
         verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(3), eq(headers),
@@ -196,7 +211,7 @@ public class Http2ConnectionRoundtripTest {
             }
         });
         // Wait for all frames to be received.
-        assertTrue(requestLatch.await(5, SECONDS));
+        assertTrue(requestLatch.await(MESSAGE_AWAIT_SECONDS, SECONDS));
         verify(serverListener, times(NUM_STREAMS)).onHeadersRead(any(ChannelHandlerContext.class),
                 anyInt(), eq(headers), eq(0), eq((short) 16), eq(false), eq(0), eq(false));
         verify(serverListener, times(NUM_STREAMS)).onPingRead(any(ChannelHandlerContext.class),

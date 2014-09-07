@@ -15,11 +15,43 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.channel.Channel;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+
+import java.util.concurrent.TimeUnit;
 
 /**
  * Utilities for the integration tests.
  */
 final class Http2TestUtil {
+    public static final int MESSAGE_AWAIT_SECONDS = 5;
+
+    /**
+     * Generate {@code count} new {@link EventLoopGroup} objects
+     * @param count The number of {@link EventLoopGroup}s to instantiate
+     * @return Array of {@code count} new {@link NioEventLoopGroup} objects
+     */
+    public static EventLoopGroup[] newEventLoopGroups(int count) {
+        if (count <= 0) {
+            throw new IllegalArgumentException("count must be > 0");
+        }
+        EventLoopGroup[] groups = new EventLoopGroup[count];
+        for (int i = 0; i < groups.length; ++i) {
+            groups[i] = new NioEventLoopGroup();
+        }
+        return groups;
+    }
+
+    /**
+     * Shutdown each {@link EventLoopGroup}
+     * @param groups The groups to shutdown
+     */
+    public static void teardownGroups(EventLoopGroup[] groups) {
+        for (int i = 0; i < groups.length; ++i) {
+            groups[i].shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
+        }
+    }
+
     /**
      * Interface that allows for running a operation that throws a {@link Http2Exception}.
      */
@@ -43,6 +75,5 @@ final class Http2TestUtil {
         });
     }
 
-    private Http2TestUtil() {
-    }
+    private Http2TestUtil() { }
 }

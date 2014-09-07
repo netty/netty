@@ -14,14 +14,15 @@
  */
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.Http2TestUtil.MESSAGE_AWAIT_SECONDS;
 import static io.netty.handler.codec.http2.Http2TestUtil.runInChannel;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.reset;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
@@ -32,8 +33,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.ByteToMessageDecoder;
@@ -56,7 +57,9 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
@@ -67,6 +70,7 @@ import org.mockito.MockitoAnnotations;
  * for HTTP/2 frames into {@link HttpObject}s
  */
 public class InboundHttp2ToHttpAdapterTest {
+    private static EventLoopGroup[] groups;
 
     @Mock
     private HttpResponseListener serverListener;
@@ -86,6 +90,16 @@ public class InboundHttp2ToHttpAdapterTest {
     private HttpResponseDelegator serverDelegator;
     private HttpResponseDelegator clientDelegator;
 
+    @BeforeClass
+    public static void newGroups() {
+        groups = Http2TestUtil.newEventLoopGroups(3);
+    }
+
+    @AfterClass
+    public static void teardownGroups() throws Exception {
+        Http2TestUtil.teardownGroups(groups);
+    }
+
     @Before
     public void setup() throws Exception {
         MockitoAnnotations.initMocks(this);
@@ -101,7 +115,7 @@ public class InboundHttp2ToHttpAdapterTest {
         sb = new ServerBootstrap();
         cb = new Bootstrap();
 
-        sb.group(new NioEventLoopGroup(), new NioEventLoopGroup());
+        sb.group(groups[0], groups[1]);
         sb.channel(NioServerSocketChannel.class);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
@@ -117,7 +131,7 @@ public class InboundHttp2ToHttpAdapterTest {
             }
         });
 
-        cb.group(new NioEventLoopGroup());
+        cb.group(groups[2]);
         cb.channel(NioSocketChannel.class);
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
@@ -143,8 +157,7 @@ public class InboundHttp2ToHttpAdapterTest {
     @After
     public void teardown() throws Exception {
         serverChannel.close().sync();
-        sb.group().shutdownGracefully();
-        cb.group().shutdownGracefully();
+        // EventLoopGroups are shutdown in @AfterClass
         clientDelegator = null;
         serverDelegator = null;
         clientChannel = null;
@@ -563,11 +576,11 @@ public class InboundHttp2ToHttpAdapterTest {
     }
 
     private void awaitRequests() throws Exception {
-        serverLatch.await(2, SECONDS);
+        serverLatch.await(MESSAGE_AWAIT_SECONDS, SECONDS);
     }
 
     private void awaitResponses() throws Exception {
-        clientLatch.await(2, SECONDS);
+        clientLatch.await(MESSAGE_AWAIT_SECONDS, SECONDS);
     }
 
     private ChannelHandlerContext ctxClient() {

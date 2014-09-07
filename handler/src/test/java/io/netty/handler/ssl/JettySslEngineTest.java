@@ -15,10 +15,10 @@
  */
 package io.netty.handler.ssl;
 
-import static org.junit.Assume.assumeNoException;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeNoException;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.verify;
 import io.netty.bootstrap.Bootstrap;
@@ -30,6 +30,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -47,13 +48,17 @@ import java.util.concurrent.TimeUnit;
 import javax.net.ssl.SSLException;
 
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 public class JettySslEngineTest {
     private static final String APPLICATION_LEVEL_PROTOCOL = "my-protocol";
+    private static final int MESSAGE_AWAIT_SECONDS = 5;
+    private static EventLoopGroup[] groups;
 
     @Mock
     private MessageReciever serverReceiver;
@@ -91,6 +96,21 @@ public class JettySslEngineTest {
         }
     }
 
+    @BeforeClass
+    public static void newGroups() {
+        groups = new EventLoopGroup[3];
+        for (int i = 0; i < groups.length; ++i) {
+            groups[i] = new NioEventLoopGroup();
+        }
+    }
+
+    @AfterClass
+    public static void teardownGroups() throws Exception {
+        for (int i = 0; i < groups.length; ++i) {
+            groups[i].shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
+        }
+    }
+
     @Before
     public void setup() {
         MockitoAnnotations.initMocks(this);
@@ -102,8 +122,7 @@ public class JettySslEngineTest {
     public void tearDown() throws InterruptedException {
         if (serverChannel != null) {
             serverChannel.close().sync();
-            sb.group().shutdownGracefully();
-            cb.group().shutdownGracefully();
+            // EventLoopGroups are shutdown in @AfterClass
         }
         clientChannel = null;
         serverChannel = null;
@@ -150,7 +169,7 @@ public class JettySslEngineTest {
         sb = new ServerBootstrap();
         cb = new Bootstrap();
 
-        sb.group(new NioEventLoopGroup(), new NioEventLoopGroup());
+        sb.group(groups[0], groups[1]);
         sb.channel(NioServerSocketChannel.class);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
@@ -162,7 +181,7 @@ public class JettySslEngineTest {
             }
         });
 
-        cb.group(new NioEventLoopGroup());
+        cb.group(groups[2]);
         cb.channel(NioSocketChannel.class);
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
@@ -207,7 +226,7 @@ public class JettySslEngineTest {
     private static void writeAndVerifyReceived(ByteBuf message, Channel sendChannel, CountDownLatch receiverLatch,
             MessageReciever receiver) throws Exception {
         sendChannel.writeAndFlush(message);
-        receiverLatch.await(5, TimeUnit.SECONDS);
+        receiverLatch.await(MESSAGE_AWAIT_SECONDS, TimeUnit.SECONDS);
         message.resetReaderIndex();
         verify(receiver).messageReceived(eq(message));
     }
