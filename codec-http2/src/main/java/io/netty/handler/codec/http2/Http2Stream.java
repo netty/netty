@@ -15,6 +15,8 @@
 
 package io.netty.handler.codec.http2;
 
+import io.netty.channel.embedded.EmbeddedChannel;
+
 import java.util.Collection;
 
 /**
@@ -121,6 +123,16 @@ public interface Http2Stream {
      * Returns application-defined data if any was associated with this stream.
      */
     <T> T data();
+
+    /**
+     * Associate an object responsible for decompressing data frames for this stream
+     */
+    void decompressor(EmbeddedChannel decompressor);
+
+    /**
+     * Get the object capable of decompressing data frames for this stream
+     */
+    EmbeddedChannel decompressor();
 
     /**
      * Gets the in-bound flow control state for this stream.

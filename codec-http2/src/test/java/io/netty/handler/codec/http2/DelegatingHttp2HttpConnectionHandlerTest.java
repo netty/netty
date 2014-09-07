@@ -60,7 +60,6 @@ import org.mockito.MockitoAnnotations;
  * Testing the {@link DelegatingHttp2HttpConnectionHandler} for {@link FullHttpRequest} objects into HTTP/2 frames
  */
 public class DelegatingHttp2HttpConnectionHandlerTest {
-
     @Mock
     private Http2FrameListener clientListener;
 

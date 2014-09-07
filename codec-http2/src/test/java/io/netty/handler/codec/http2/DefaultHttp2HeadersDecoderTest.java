@@ -43,7 +43,7 @@ public class DefaultHttp2HeadersDecoderTest {
     @Test
     public void decodeShouldSucceed() throws Exception {
         ByteBuf buf = encode(":method", "GET", "akey", "avalue");
-        Http2Headers headers = decoder.decodeHeaders(buf);
+        Http2Headers headers = decoder.decodeHeaders(buf).build();
         assertEquals(2, headers.size());
         assertEquals("GET", headers.method());
         assertEquals("avalue", headers.get("akey"));

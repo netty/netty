@@ -94,7 +94,7 @@ public class Http2HeaderBlockIOTest {
     private void assertRoundtripSuccessful(Http2Headers in) throws Http2Exception {
         encoder.encodeHeaders(in, buffer);
 
-        Http2Headers out = decoder.decodeHeaders(buffer);
+        Http2Headers out = decoder.decodeHeaders(buffer).build();
         assertEquals(in, out);
     }
 }

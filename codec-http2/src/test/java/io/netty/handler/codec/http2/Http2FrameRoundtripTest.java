@@ -15,6 +15,16 @@
 
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.Http2TestUtil.runInChannel;
+import static io.netty.util.CharsetUtil.UTF_8;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
@@ -28,8 +38,12 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.handler.codec.http2.Http2TestUtil.Http2Runnable;
 import io.netty.util.NetUtil;
+
+import java.net.InetSocketAddress;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
 
 import org.junit.After;
 import org.junit.Before;
@@ -38,23 +52,13 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import java.net.InetSocketAddress;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-
-import static io.netty.handler.codec.http2.Http2TestUtil.*;
-import static io.netty.util.CharsetUtil.*;
-import static java.util.concurrent.TimeUnit.*;
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
-
 /**
  * Tests encoding/decoding each HTTP2 frame type.
  */
 public class Http2FrameRoundtripTest {
 
     @Mock
-    private Http2FrameListener serverObserver;
+    private Http2FrameListener serverListener;
 
     private ArgumentCaptor<ByteBuf> dataCaptor;
     private Http2FrameWriter frameWriter;
@@ -63,12 +67,13 @@ public class Http2FrameRoundtripTest {
     private Channel serverChannel;
     private Channel clientChannel;
     private CountDownLatch requestLatch;
+    private Http2TestUtil.FrameAdapter serverAdapter;
 
     @Before
     public void setup() throws Exception {
         MockitoAnnotations.initMocks(this);
 
-        requestLatch = new CountDownLatch(1);
+        serverLatch(new CountDownLatch(1));
         frameWriter = new DefaultHttp2FrameWriter();
         dataCaptor = ArgumentCaptor.forClass(ByteBuf.class);
 
@@ -81,7 +86,8 @@ public class Http2FrameRoundtripTest {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
-                p.addLast("reader", new FrameAdapter(serverObserver));
+                serverAdapter = new Http2TestUtil.FrameAdapter(serverListener, requestLatch, true);
+                p.addLast("reader", serverAdapter);
                 p.addLast(Http2CodecUtil.ignoreSettingsHandler());
             }
         });
@@ -92,7 +98,7 @@ public class Http2FrameRoundtripTest {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
-                p.addLast("reader", new FrameAdapter(null));
+                p.addLast("reader", new Http2TestUtil.FrameAdapter(null, null, true));
                 p.addLast(Http2CodecUtil.ignoreSettingsHandler());
             }
         });
@@ -107,26 +113,37 @@ public class Http2FrameRoundtripTest {
 
     @After
     public void teardown() throws Exception {
+        List<ByteBuf> capturedData = dataCaptor.getAllValues();
+        for (int i = 0; i < capturedData.size(); ++i) {
+            capturedData.get(i).release();
+        }
         serverChannel.close().sync();
         sb.group().shutdownGracefully();
         sb.childGroup().shutdownGracefully();
         cb.group().shutdownGracefully();
+        serverAdapter = null;
     }
 
     @Test
     public void dataFrameShouldMatch() throws Exception {
         final String text = "hello world";
-        runInChannel(clientChannel, new Http2Runnable() {
-            @Override
-            public void run() {
-                frameWriter.writeData(ctx(), 0x7FFFFFFF,
-                        Unpooled.copiedBuffer(text.getBytes()), 100, true, newPromise());
-                ctx().flush();
-            }
-        });
-        awaitRequests();
-        verify(serverObserver).onDataRead(any(ChannelHandlerContext.class), eq(0x7FFFFFFF),
-                dataCaptor.capture(), eq(100), eq(true));
+        final ByteBuf data = Unpooled.copiedBuffer(text.getBytes());
+        try {
+            runInChannel(clientChannel, new Http2Runnable() {
+                @Override
+                public void run() {
+                    frameWriter.writeData(ctx(), 0x7FFFFFFF, data.retain(), 100, true, newPromise());
+                    ctx().flush();
+                }
+            });
+            awaitRequests();
+            verify(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(0x7FFFFFFF),
+                    dataCaptor.capture(), eq(100), eq(true));
+            List<ByteBuf> capturedData = dataCaptor.getAllValues();
+            assertEquals(data, capturedData.get(0));
+        } finally {
+            data.release();
+        }
     }
 
     @Test
@@ -142,7 +159,7 @@ public class Http2FrameRoundtripTest {
             }
         });
         awaitRequests();
-        verify(serverObserver).onHeadersRead(any(ChannelHandlerContext.class), eq(0x7FFFFFFF),
+        verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(0x7FFFFFFF),
                 eq(headers), eq(0), eq(true));
     }
 
@@ -160,39 +177,50 @@ public class Http2FrameRoundtripTest {
             }
         });
         awaitRequests();
-        verify(serverObserver).onHeadersRead(any(ChannelHandlerContext.class), eq(0x7FFFFFFF),
+        verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(0x7FFFFFFF),
                 eq(headers), eq(4), eq((short) 255), eq(true), eq(0), eq(true));
     }
 
     @Test
     public void goAwayFrameShouldMatch() throws Exception {
         final String text = "test";
-        runInChannel(clientChannel, new Http2Runnable() {
-            @Override
-            public void run() {
-                frameWriter.writeGoAway(ctx(), 0x7FFFFFFF, 0xFFFFFFFFL,
-                        Unpooled.copiedBuffer(text.getBytes()), newPromise());
-                ctx().flush();
-            }
-        });
-        awaitRequests();
-        verify(serverObserver).onGoAwayRead(any(ChannelHandlerContext.class), eq(0x7FFFFFFF),
-                eq(0xFFFFFFFFL), dataCaptor.capture());
+        final ByteBuf data = Unpooled.copiedBuffer(text.getBytes());
+        try {
+            runInChannel(clientChannel, new Http2Runnable() {
+                @Override
+                public void run() {
+                    frameWriter.writeGoAway(ctx(), 0x7FFFFFFF, 0xFFFFFFFFL, data.retain(), newPromise());
+                    ctx().flush();
+                }
+            });
+            awaitRequests();
+            verify(serverListener).onGoAwayRead(any(ChannelHandlerContext.class), eq(0x7FFFFFFF),
+                    eq(0xFFFFFFFFL), dataCaptor.capture());
+            List<ByteBuf> capturedData = dataCaptor.getAllValues();
+            assertEquals(data, capturedData.get(0));
+        } finally {
+            data.release();
+        }
     }
 
     @Test
     public void pingFrameShouldMatch() throws Exception {
-        final ByteBuf buf = Unpooled.copiedBuffer("01234567", UTF_8);
-        runInChannel(clientChannel, new Http2Runnable() {
-            @Override
-            public void run() {
-                frameWriter.writePing(ctx(), true, buf, newPromise());
-                ctx().flush();
-            }
-        });
-        awaitRequests();
-        verify(serverObserver)
-                .onPingAckRead(any(ChannelHandlerContext.class), dataCaptor.capture());
+        final ByteBuf data = Unpooled.copiedBuffer("01234567", UTF_8);
+        try {
+            runInChannel(clientChannel, new Http2Runnable() {
+                @Override
+                public void run() {
+                    frameWriter.writePing(ctx(), true, data.retain(), newPromise());
+                    ctx().flush();
+                }
+            });
+            awaitRequests();
+            verify(serverListener).onPingAckRead(any(ChannelHandlerContext.class), dataCaptor.capture());
+            List<ByteBuf> capturedData = dataCaptor.getAllValues();
+            assertEquals(data, capturedData.get(0));
+        } finally {
+            data.release();
+        }
     }
 
     @Test
@@ -205,7 +233,7 @@ public class Http2FrameRoundtripTest {
             }
         });
         awaitRequests();
-        verify(serverObserver).onPriorityRead(any(ChannelHandlerContext.class), eq(0x7FFFFFFF),
+        verify(serverListener).onPriorityRead(any(ChannelHandlerContext.class), eq(0x7FFFFFFF),
                 eq(1), eq((short) 1), eq(true));
     }
 
@@ -222,7 +250,7 @@ public class Http2FrameRoundtripTest {
             }
         });
         awaitRequests();
-        verify(serverObserver).onPushPromiseRead(any(ChannelHandlerContext.class), eq(0x7FFFFFFF),
+        verify(serverListener).onPushPromiseRead(any(ChannelHandlerContext.class), eq(0x7FFFFFFF),
                 eq(1), eq(headers), eq(5));
     }
 
@@ -236,7 +264,7 @@ public class Http2FrameRoundtripTest {
             }
         });
         awaitRequests();
-        verify(serverObserver).onRstStreamRead(any(ChannelHandlerContext.class), eq(0x7FFFFFFF),
+        verify(serverListener).onRstStreamRead(any(ChannelHandlerContext.class), eq(0x7FFFFFFF),
                 eq(0xFFFFFFFFL));
     }
 
@@ -254,7 +282,7 @@ public class Http2FrameRoundtripTest {
             }
         });
         awaitRequests();
-        verify(serverObserver).onSettingsRead(any(ChannelHandlerContext.class), eq(settings));
+        verify(serverListener).onSettingsRead(any(ChannelHandlerContext.class), eq(settings));
     }
 
     @Test
@@ -267,7 +295,7 @@ public class Http2FrameRoundtripTest {
             }
         });
         awaitRequests();
-        verify(serverObserver).onWindowUpdateRead(any(ChannelHandlerContext.class), eq(0x7FFFFFFF),
+        verify(serverListener).onWindowUpdateRead(any(ChannelHandlerContext.class), eq(0x7FFFFFFF),
                 eq(0x7FFFFFFF));
     }
 
@@ -277,26 +305,46 @@ public class Http2FrameRoundtripTest {
                 new DefaultHttp2Headers.Builder().method("GET").scheme("https")
                         .authority("example.org").path("/some/path/resource2").build();
         final String text = "hello world";
-        final int numStreams = 10000;
-        int expectedFrames = numStreams * 2;
-        requestLatch = new CountDownLatch(expectedFrames);
-        runInChannel(clientChannel, new Http2Runnable() {
-            @Override
-            public void run() {
-                for (int i = 1; i < numStreams + 1; ++i) {
-                    frameWriter.writeHeaders(ctx(), i, headers, 0, (short) 16, false,
-                            0, false, newPromise());
-                    frameWriter.writeData(ctx(), i,
-                            Unpooled.copiedBuffer(text.getBytes()), 0, true, newPromise());
-                    ctx().flush();
+        final ByteBuf data = Unpooled.copiedBuffer(text.getBytes());
+        try {
+            final int numStreams = 10000;
+            final int expectedFrames = numStreams * 2;
+            serverLatch(new CountDownLatch(expectedFrames));
+            runInChannel(clientChannel, new Http2Runnable() {
+                @Override
+                public void run() {
+                    for (int i = 1; i < numStreams + 1; ++i) {
+                        frameWriter.writeHeaders(ctx(), i, headers, 0, (short) 16, false, 0, false, newPromise());
+                        frameWriter.writeData(ctx(), i, data.retain(), 0, true, newPromise());
+                        ctx().flush();
+                    }
                 }
+            });
+            awaitRequests(30);
+            verify(serverListener, times(numStreams)).onDataRead(any(ChannelHandlerContext.class), anyInt(),
+                    dataCaptor.capture(), eq(0), eq(true));
+            List<ByteBuf> capturedData = dataCaptor.getAllValues();
+            for (int i = 0; i < capturedData.size(); ++i) {
+                assertEquals(data, capturedData.get(i));
             }
-        });
-        awaitRequests();
+        } finally {
+            data.release();
+        }
+    }
+
+    private void awaitRequests(long seconds) throws InterruptedException {
+        requestLatch.await(seconds, SECONDS);
     }
 
     private void awaitRequests() throws InterruptedException {
-        requestLatch.await(5, SECONDS);
+        awaitRequests(5);
+    }
+
+    private void serverLatch(CountDownLatch latch) {
+        requestLatch = latch;
+        if (serverAdapter != null) {
+            serverAdapter.latch(latch);
+        }
     }
 
     private ChannelHandlerContext ctx() {
@@ -305,124 +353,5 @@ public class Http2FrameRoundtripTest {
 
     private ChannelPromise newPromise() {
         return ctx().newPromise();
-    }
-
-    private final class FrameAdapter extends ByteToMessageDecoder {
-
-        private final Http2FrameListener observer;
-        private final DefaultHttp2FrameReader reader;
-
-        FrameAdapter(Http2FrameListener observer) {
-            this.observer = observer;
-            reader = new DefaultHttp2FrameReader();
-        }
-
-        @Override
-        protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out)
-                throws Exception {
-            reader.readFrame(ctx, in, new Http2FrameListener() {
-
-                @Override
-                public void onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data,
-                                       int padding, boolean endOfStream)
-                        throws Http2Exception {
-                    observer.onDataRead(ctx, streamId, copy(data), padding, endOfStream);
-                    requestLatch.countDown();
-                }
-
-                @Override
-                public void onHeadersRead(ChannelHandlerContext ctx, int streamId,
-                                          Http2Headers headers, int padding, boolean endStream)
-                        throws Http2Exception {
-                    observer.onHeadersRead(ctx, streamId, headers, padding, endStream);
-                    requestLatch.countDown();
-                }
-
-                @Override
-                public void onHeadersRead(ChannelHandlerContext ctx, int streamId,
-                                          Http2Headers headers, int streamDependency, short weight,
-                                          boolean exclusive, int padding, boolean endStream)
-                        throws Http2Exception {
-                    observer.onHeadersRead(ctx, streamId, headers, streamDependency, weight,
-                            exclusive, padding, endStream);
-                    requestLatch.countDown();
-                }
-
-                @Override
-                public void onPriorityRead(ChannelHandlerContext ctx, int streamId,
-                                           int streamDependency, short weight, boolean exclusive)
-                        throws Http2Exception {
-                    observer.onPriorityRead(ctx, streamId, streamDependency, weight, exclusive);
-                    requestLatch.countDown();
-                }
-
-                @Override
-                public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode)
-                        throws Http2Exception {
-                    observer.onRstStreamRead(ctx, streamId, errorCode);
-                    requestLatch.countDown();
-                }
-
-                @Override
-                public void onSettingsAckRead(ChannelHandlerContext ctx) throws Http2Exception {
-                    observer.onSettingsAckRead(ctx);
-                    requestLatch.countDown();
-                }
-
-                @Override
-                public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings)
-                        throws Http2Exception {
-                    observer.onSettingsRead(ctx, settings);
-                    requestLatch.countDown();
-                }
-
-                @Override
-                public void onPingRead(ChannelHandlerContext ctx, ByteBuf data)
-                        throws Http2Exception {
-                    observer.onPingRead(ctx, copy(data));
-                    requestLatch.countDown();
-                }
-
-                @Override
-                public void onPingAckRead(ChannelHandlerContext ctx, ByteBuf data)
-                        throws Http2Exception {
-                    observer.onPingAckRead(ctx, copy(data));
-                    requestLatch.countDown();
-                }
-
-                @Override
-                public void onPushPromiseRead(ChannelHandlerContext ctx, int streamId,
-                                              int promisedStreamId, Http2Headers headers, int padding)
-                        throws Http2Exception {
-                    observer.onPushPromiseRead(ctx, streamId, promisedStreamId, headers, padding);
-                    requestLatch.countDown();
-                }
-
-                @Override
-                public void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId,
-                                         long errorCode, ByteBuf debugData) throws Http2Exception {
-                    observer.onGoAwayRead(ctx, lastStreamId, errorCode, copy(debugData));
-                    requestLatch.countDown();
-                }
-
-                @Override
-                public void onWindowUpdateRead(ChannelHandlerContext ctx, int streamId,
-                                               int windowSizeIncrement) throws Http2Exception {
-                    observer.onWindowUpdateRead(ctx, streamId, windowSizeIncrement);
-                    requestLatch.countDown();
-                }
-
-                @Override
-                public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId,
-                        Http2Flags flags, ByteBuf payload) {
-                    observer.onUnknownFrame(ctx, frameType, streamId, flags, payload);
-                    requestLatch.countDown();
-                }
-            });
-        }
-
-        ByteBuf copy(ByteBuf buffer) {
-            return Unpooled.copiedBuffer(buffer);
-        }
     }
 }
