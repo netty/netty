@@ -117,6 +117,7 @@ public class DelegatingHttp2HttpConnectionHandlerTest {
     public void teardown() throws Exception {
         serverChannel.close().sync();
         sb.group().shutdownGracefully();
+        sb.childGroup().shutdownGracefully();
         cb.group().shutdownGracefully();
     }
 
