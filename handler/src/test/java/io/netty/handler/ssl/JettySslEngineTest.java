@@ -103,6 +103,7 @@ public class JettySslEngineTest {
         if (serverChannel != null) {
             serverChannel.close().sync();
             sb.group().shutdownGracefully();
+            sb.childGroup().shutdownGracefully();
             cb.group().shutdownGracefully();
         }
         clientChannel = null;
