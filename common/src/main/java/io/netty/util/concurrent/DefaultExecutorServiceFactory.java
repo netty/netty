@@ -27,13 +27,14 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.Locale;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * An implementation of an {@link ExecutorFactory} that creates a new {@link ForkJoinPool} on each
- * call to {@link #newExecutor(int)}.
+ * An implementation of an {@link ExecutorServiceFactory} that creates a new {@link ForkJoinPool} on each
+ * call to {@link #newExecutorService(int)}.
  * <p>
- * This {@link ExecutorFactory} powers Netty's nio and epoll eventloops by default. Netty moved from managing its
+ * This {@link ExecutorServiceFactory} powers Netty's nio and epoll eventloops by default. Netty moved from managing its
  * own threads and pinning a thread to each eventloop to an {@link Executor}-based approach. That way advanced
  * users of Netty can plug in their own threadpools and gain more control of scheduling the eventloops.
  * <p>
@@ -43,10 +44,10 @@ import java.util.concurrent.atomic.AtomicInteger;
  * The whole discussion can be found on GitHub
  * <a href="https://github.com/netty/netty/issues/2250">https://github.com/netty/netty/issues/2250</a>.
  */
-public final class DefaultExecutorFactory implements ExecutorFactory {
+public final class DefaultExecutorServiceFactory implements ExecutorServiceFactory {
 
     private static final InternalLogger logger =
-            InternalLoggerFactory.getInstance(DefaultExecutorFactory.class);
+            InternalLoggerFactory.getInstance(DefaultExecutorServiceFactory.class);
 
     private static final AtomicInteger executorId = new AtomicInteger();
     private final String namePrefix;
@@ -55,19 +56,19 @@ public final class DefaultExecutorFactory implements ExecutorFactory {
      * @param clazzNamePrefix   the name of the class will be used to prefix the name of each
      *                          {@link ForkJoinWorkerThread} with.
      */
-    public DefaultExecutorFactory(Class<?> clazzNamePrefix) {
+    public DefaultExecutorServiceFactory(Class<?> clazzNamePrefix) {
         this(toName(clazzNamePrefix));
     }
 
     /**
      * @param namePrefix    the string to prefix the name of each {@link ForkJoinWorkerThread} with.
      */
-    public DefaultExecutorFactory(String namePrefix) {
+    public DefaultExecutorServiceFactory(String namePrefix) {
         this.namePrefix = namePrefix;
     }
 
     @Override
-    public Executor newExecutor(int parallelism) {
+    public ExecutorService newExecutorService(int parallelism) {
         ForkJoinWorkerThreadFactory threadFactory =
                 new DefaultForkJoinWorkerThreadFactory(namePrefix + '-' + executorId.getAndIncrement());
 

@@ -18,9 +18,8 @@ package io.netty.channel.nio;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 import io.netty.channel.MultithreadEventLoopGroup;
-import io.netty.util.concurrent.DefaultExecutorFactory;
 import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.concurrent.ExecutorFactory;
+import io.netty.util.concurrent.ExecutorServiceFactory;
 
 import java.nio.channels.Selector;
 import java.nio.channels.spi.SelectorProvider;
@@ -36,7 +35,7 @@ public class NioEventLoopGroup extends MultithreadEventLoopGroup {
      * available, as well as the default {@link Executor} and the {@link SelectorProvider} which
      * is returned by {@link SelectorProvider#provider()}.
      *
-     * @see DefaultExecutorFactory
+     * @see io.netty.util.concurrent.DefaultExecutorServiceFactory
      */
     public NioEventLoopGroup() {
         this(0);
@@ -46,7 +45,7 @@ public class NioEventLoopGroup extends MultithreadEventLoopGroup {
      * Create a new instance that uses the default {@link Executor} and the {@link SelectorProvider} which
      * is returned by {@link SelectorProvider#provider()}.
      *
-     * @see DefaultExecutorFactory
+     * @see io.netty.util.concurrent.DefaultExecutorServiceFactory
      *
      * @param nEventLoops   the number of {@link EventLoop}s that will be used by this instance.
      *                      If {@code executor} is {@code null} this number will also be the parallelism
@@ -81,10 +80,11 @@ public class NioEventLoopGroup extends MultithreadEventLoopGroup {
      *                      requested from the default executor. It is generally advised for the number
      *                      of {@link EventLoop}s and the number of {@link Thread}s used by the
      *                      {@code executor} to lie very close together.
-     * @param executorFactory   the {@link ExecutorFactory} to use, or {@code null} if the default should be used.
+     * @param executorServiceFactory   the {@link ExecutorServiceFactory} to use, or {@code null} if the default
+     *                                 should be used.
      */
-    public NioEventLoopGroup(int nEventLoops, ExecutorFactory executorFactory) {
-        this(nEventLoops, executorFactory, SelectorProvider.provider());
+    public NioEventLoopGroup(int nEventLoops, ExecutorServiceFactory executorServiceFactory) {
+        this(nEventLoops, executorServiceFactory, SelectorProvider.provider());
     }
 
     /**
@@ -106,12 +106,13 @@ public class NioEventLoopGroup extends MultithreadEventLoopGroup {
      *                      requested from the default executor. It is generally advised for the number
      *                      of {@link EventLoop}s and the number of {@link Thread}s used by the
      *                      {@code executor} to lie very close together.
-     * @param executorFactory   the {@link ExecutorFactory} to use, or {@code null} if the default should be used.
+     * @param executorServiceFactory   the {@link ExecutorServiceFactory} to use, or {@code null} if the
+     *                                 default should be used.
      * @param selectorProvider  the {@link SelectorProvider} to use. This value must not be {@code null}.
      */
     public NioEventLoopGroup(
-            int nEventLoops, ExecutorFactory executorFactory, final SelectorProvider selectorProvider) {
-        super(nEventLoops, executorFactory, selectorProvider);
+            int nEventLoops, ExecutorServiceFactory executorServiceFactory, final SelectorProvider selectorProvider) {
+        super(nEventLoops, executorServiceFactory, selectorProvider);
     }
 
     /**

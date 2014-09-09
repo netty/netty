@@ -15,7 +15,7 @@
  */
 package io.netty.channel;
 
-import io.netty.util.concurrent.ExecutorFactory;
+import io.netty.util.concurrent.ExecutorServiceFactory;
 import io.netty.util.concurrent.MultithreadEventExecutorGroup;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -50,10 +50,12 @@ public abstract class MultithreadEventLoopGroup extends MultithreadEventExecutor
     }
 
     /**
-     * @see {@link MultithreadEventExecutorGroup#MultithreadEventExecutorGroup(int, ExecutorFactory, Object...)}
+     * @see {@link MultithreadEventExecutorGroup#MultithreadEventExecutorGroup(int, ExecutorServiceFactory, Object...)}
      */
-    protected MultithreadEventLoopGroup(int nEventLoops, ExecutorFactory executorFactory, Object... args) {
-        super(nEventLoops == 0 ? DEFAULT_EVENT_LOOP_THREADS : nEventLoops, executorFactory, args);
+    protected MultithreadEventLoopGroup(int nEventLoops,
+                                        ExecutorServiceFactory executorServiceFactory,
+                                        Object... args) {
+        super(nEventLoops == 0 ? DEFAULT_EVENT_LOOP_THREADS : nEventLoops, executorServiceFactory, args);
     }
 
     @Override

@@ -19,10 +19,9 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.concurrent.ExecutorFactory;
+import io.netty.util.concurrent.ExecutorServiceFactory;
 
 import java.util.concurrent.Executor;
-import io.netty.util.concurrent.DefaultExecutorFactory;
 
 
 /**
@@ -35,7 +34,7 @@ public final class EpollEventLoopGroup extends MultithreadEventLoopGroup {
      * Create a new instance that uses twice as many {@link EventLoop}s as there processors/cores
      * available, as well as the default {@link Executor}.
      *
-     * @see DefaultExecutorFactory
+     * @see io.netty.util.concurrent.DefaultExecutorServiceFactory
      */
     public EpollEventLoopGroup() {
         this(0);
@@ -44,7 +43,7 @@ public final class EpollEventLoopGroup extends MultithreadEventLoopGroup {
     /**
      * Create a new instance that uses the default {@link Executor}.
      *
-     * @see DefaultExecutorFactory
+     * @see io.netty.util.concurrent.DefaultExecutorServiceFactory
      *
      * @param nEventLoops   the number of {@link EventLoop}s that will be used by this instance.
      *                      If {@code executor} is {@code null} this number will also be the parallelism
@@ -73,10 +72,11 @@ public final class EpollEventLoopGroup extends MultithreadEventLoopGroup {
      *                      requested from the default executor. It is generally advised for the number
      *                      of {@link EventLoop}s and the number of {@link Thread}s used by the
      *                      {@code executor} to lie very close together.
-     * @param executorFactory   the {@link ExecutorFactory} to use, or {@code null} if the default should be used.
+     * @param executorServiceFactory   the {@link ExecutorServiceFactory} to use, or {@code null} if the
+     *                                 default should be used.
      */
-    public EpollEventLoopGroup(int nEventLoops, ExecutorFactory executorFactory) {
-        this(nEventLoops, executorFactory, 128);
+    public EpollEventLoopGroup(int nEventLoops, ExecutorServiceFactory executorServiceFactory) {
+        this(nEventLoops, executorServiceFactory, 128);
     }
 
     /**
@@ -98,11 +98,12 @@ public final class EpollEventLoopGroup extends MultithreadEventLoopGroup {
      *                      requested from the default executor. It is generally advised for the number
      *                      of {@link EventLoop}s and the number of {@link Thread}s used by the
      *                      {@code executor} to lie very close together.
-     * @param executorFactory   the {@link ExecutorFactory} to use, or {@code null} if the default should be used.
+     * @param executorServiceFactory   the {@link ExecutorServiceFactory} to use, or {@code null} if the default
+     *                                 should be used.
      * @param maxEventsAtOnce   the maximum number of epoll events to handle per epollWait(...).
      */
-    public EpollEventLoopGroup(int nEventLoops, ExecutorFactory executorFactory, int maxEventsAtOnce) {
-        super(nEventLoops, executorFactory, maxEventsAtOnce);
+    public EpollEventLoopGroup(int nEventLoops, ExecutorServiceFactory executorServiceFactory, int maxEventsAtOnce) {
+        super(nEventLoops, executorServiceFactory, maxEventsAtOnce);
     }
 
     /**

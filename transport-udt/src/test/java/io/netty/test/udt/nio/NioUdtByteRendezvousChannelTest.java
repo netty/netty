@@ -25,7 +25,7 @@ import io.netty.channel.udt.nio.NioUdtByteRendezvousChannel;
 import io.netty.channel.udt.nio.NioUdtProvider;
 import io.netty.test.udt.util.EchoByteHandler;
 import io.netty.test.udt.util.UnitHelp;
-import io.netty.util.concurrent.DefaultExecutorFactory;
+import io.netty.util.concurrent.DefaultExecutorServiceFactory;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.Test;
@@ -71,9 +71,9 @@ public class NioUdtByteRendezvousChannelTest extends AbstractUdtTest {
         final EchoByteHandler handler2 = new EchoByteHandler(rate2, messageSize);
 
         final NioEventLoopGroup group1 =
-                new NioEventLoopGroup(1, new DefaultExecutorFactory("group1"), NioUdtProvider.BYTE_PROVIDER);
+                new NioEventLoopGroup(1, new DefaultExecutorServiceFactory("group1"), NioUdtProvider.BYTE_PROVIDER);
         final NioEventLoopGroup group2 =
-                new NioEventLoopGroup(1, new DefaultExecutorFactory("group2"), NioUdtProvider.BYTE_PROVIDER);
+                new NioEventLoopGroup(1, new DefaultExecutorServiceFactory("group2"), NioUdtProvider.BYTE_PROVIDER);
 
         final Bootstrap boot1 = new Bootstrap();
         boot1.group(group1)

@@ -31,7 +31,7 @@ import java.util.Set;
  * table, and it is useful when accessed frequently.
  * </p><p>
  * To take advantage of this thread-local variable, your thread must implement {@link FastThreadLocalAccess}.
- * By default, all threads created by {@link DefaultThreadFactory} and {@link DefaultExecutorFactory} implement
+ * By default, all threads created by {@link DefaultThreadFactory} and {@link DefaultExecutorServiceFactory} implement
  * {@link FastThreadLocalAccess}.
  * </p><p>
  * Note that the fast path is only possible on threads that implement {@link FastThreadLocalAccess}, because it

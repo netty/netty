@@ -19,7 +19,7 @@ package io.netty.channel;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
-import io.netty.util.concurrent.DefaultExecutorFactory;
+import io.netty.util.concurrent.DefaultExecutorServiceFactory;
 import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.GlobalEventExecutor;
@@ -92,7 +92,7 @@ public class ThreadPerChannelEventLoopGroupTest {
 
     private static final class TestEventExecutor extends SingleThreadEventExecutor {
         TestEventExecutor() {
-            super(null, new DefaultExecutorFactory(TestEventExecutor.class).newExecutor(1), false);
+            super(null, new DefaultExecutorServiceFactory(TestEventExecutor.class).newExecutorService(1), false);
         }
 
         @Override

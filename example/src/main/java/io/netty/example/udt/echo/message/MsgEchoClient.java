@@ -23,8 +23,8 @@ import io.netty.channel.udt.UdtChannel;
 import io.netty.channel.udt.nio.NioUdtProvider;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
-import io.netty.util.concurrent.DefaultExecutorFactory;
-import io.netty.util.concurrent.ExecutorFactory;
+import io.netty.util.concurrent.DefaultExecutorServiceFactory;
+import io.netty.util.concurrent.ExecutorServiceFactory;
 
 import java.util.logging.Logger;
 
@@ -46,7 +46,7 @@ public final class MsgEchoClient {
 
     public static void main(String[] args) throws Exception {
         // Configure the client.
-        final ExecutorFactory connectFactory = new DefaultExecutorFactory("connect");
+        final ExecutorServiceFactory connectFactory = new DefaultExecutorServiceFactory("connect");
         final NioEventLoopGroup connectGroup =
                 new NioEventLoopGroup(1, connectFactory, NioUdtProvider.MESSAGE_PROVIDER);
 

@@ -47,11 +47,11 @@ public class DefaultEventExecutorGroup extends MultithreadEventExecutorGroup {
      * Create a new instance.
      *
      * @param nEventExecutors   the number of {@link DefaultEventExecutor}s that this group will use.
-     * @param executorFactory   the {@link ExecutorFactory} which produces the {@link Executor} responsible for
-     *                          executing the work handled by this {@link EventExecutorGroup}.
+     * @param executorServiceFactory   the {@link ExecutorServiceFactory} which produces the {@link Executor}
+     *                                 responsible for executing the work handled by this {@link EventExecutorGroup}.
      */
-    public DefaultEventExecutorGroup(int nEventExecutors, ExecutorFactory executorFactory) {
-        super(nEventExecutors, executorFactory);
+    public DefaultEventExecutorGroup(int nEventExecutors, ExecutorServiceFactory executorServiceFactory) {
+        super(nEventExecutors, executorServiceFactory);
     }
 
     @Override

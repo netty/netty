@@ -32,8 +32,8 @@ import io.netty.handler.codec.Delimiters;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
 import io.netty.util.CharsetUtil;
-import io.netty.util.concurrent.DefaultExecutorFactory;
-import io.netty.util.concurrent.ExecutorFactory;
+import io.netty.util.concurrent.DefaultExecutorServiceFactory;
+import io.netty.util.concurrent.ExecutorServiceFactory;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -65,7 +65,7 @@ public class UDTClientServerConnectionTest {
         @Override
         public void run() {
             final Bootstrap boot = new Bootstrap();
-            final ExecutorFactory clientFactory = new DefaultExecutorFactory("client");
+            final ExecutorServiceFactory clientFactory = new DefaultExecutorServiceFactory("client");
             final NioEventLoopGroup connectGroup =
                     new NioEventLoopGroup(1, clientFactory, NioUdtProvider.BYTE_PROVIDER);
 
@@ -193,8 +193,8 @@ public class UDTClientServerConnectionTest {
         @Override
         public void run() {
             final ServerBootstrap boot = new ServerBootstrap();
-            final ExecutorFactory acceptFactory = new DefaultExecutorFactory("accept");
-            final ExecutorFactory serverFactory = new DefaultExecutorFactory("server");
+            final ExecutorServiceFactory acceptFactory = new DefaultExecutorServiceFactory("accept");
+            final ExecutorServiceFactory serverFactory = new DefaultExecutorServiceFactory("server");
             final NioEventLoopGroup acceptGroup =
                     new NioEventLoopGroup(1, acceptFactory, NioUdtProvider.BYTE_PROVIDER);
             final NioEventLoopGroup connectGroup =

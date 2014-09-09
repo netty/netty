@@ -19,11 +19,10 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
 import io.netty.channel.local.LocalChannel;
-import io.netty.util.concurrent.DefaultExecutorFactory;
+import io.netty.util.concurrent.DefaultExecutorServiceFactory;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.PausableEventExecutor;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -62,7 +61,7 @@ public class SingleThreadEventLoopTest {
 
     @BeforeClass
     public static void newExecutor() {
-        executor = new DefaultExecutorFactory("SingleThreadEventLoopTest").newExecutor(2);
+        executor = new DefaultExecutorServiceFactory("SingleThreadEventLoopTest").newExecutorService(2);
     }
 
     @Before
