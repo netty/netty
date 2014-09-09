@@ -177,7 +177,7 @@ public class DefaultPromiseTest {
 
     private static final class TestEventExecutor extends SingleThreadEventExecutor {
         TestEventExecutor() {
-            super(null, new DefaultExecutorFactory(TestEventExecutor.class).newExecutor(1), true);
+            super(null, new DefaultExecutorServiceFactory(TestEventExecutor.class).newExecutorService(1), true);
         }
 
         @Override

@@ -19,6 +19,7 @@ import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -36,35 +37,49 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
     private final EventExecutorChooser chooser;
 
     /**
-     * @param nEventExecutors   the number of {@link EventExecutor}s that will be used by this instance.
-     *                           If {@code executor} is {@code null} this number will also be the parallelism
-     *                           requested from the default executor. It is generally advised for the number
-     *                           of {@link EventExecutor}s and the number of {@link Thread}s used by the
-     *                           {@code executor} to lie very close together.
-     * @param executorFactory   the {@link ExecutorFactory} to use, or {@code null} if the default should be used.
-     * @param args                arguments which will passed to each {@link #newChild(Executor, Object...)} call
+     * @param nEventExecutors           the number of {@link EventExecutor}s that will be used by this instance.
+     *                                  If {@code executor} is {@code null} this number will also be the parallelism
+     *                                  requested from the default executor. It is generally advised for the number
+     *                                  of {@link EventExecutor}s and the number of {@link Thread}s used by the
+     *                                  {@code executor} to lie very close together.
+     * @param executorServiceFactory    the {@link ExecutorServiceFactory} to use, or {@code null} if the default
+     *                                  should be used.
+     * @param args                      arguments which will passed to each {@link #newChild(Executor, Object...)} call.
      */
-    protected MultithreadEventExecutorGroup(int nEventExecutors, ExecutorFactory executorFactory, Object... args) {
-        this(nEventExecutors, executorFactory == null ? null : executorFactory.newExecutor(nEventExecutors), args);
+    protected MultithreadEventExecutorGroup(int nEventExecutors,
+                                            ExecutorServiceFactory executorServiceFactory,
+                                            Object... args) {
+        this(nEventExecutors, executorServiceFactory != null
+                                ? executorServiceFactory.newExecutorService(nEventExecutors)
+                                : null,
+             true, args);
     }
 
     /**
      * @param nEventExecutors   the number of {@link EventExecutor}s that will be used by this instance.
-     *                           If {@code executor} is {@code null} this number will also be the parallelism
-     *                           requested from the default executor. It is generally advised for the number
-     *                           of {@link EventExecutor}s and the number of {@link Thread}s used by the
-     *                           {@code executor} to lie very close together.
-     * @param executor           the {@link Executor} to use, or {@code null} if the default should be used.
-     * @param args                arguments which will passed to each {@link #newChild(Executor, Object...)} call
+     *                          If {@code executor} is {@code null} this number will also be the parallelism
+     *                          requested from the default executor. It is generally advised for the number
+     *                          of {@link EventExecutor}s and the number of {@link Thread}s used by the
+     *                          {@code executor} to lie very close together.
+     * @param executor          the {@link Executor} to use, or {@code null} if the default should be used.
+     * @param args              arguments which will passed to each {@link #newChild(Executor, Object...)} call
      */
     protected MultithreadEventExecutorGroup(int nEventExecutors, Executor executor, Object... args) {
+        this(nEventExecutors, executor, false, args);
+    }
+
+    private MultithreadEventExecutorGroup(int nEventExecutors,
+                                          Executor executor,
+                                          boolean shutdownExecutor,
+                                          Object... args) {
         if (nEventExecutors <= 0) {
             throw new IllegalArgumentException(
                     String.format("nEventExecutors: %d (expected: > 0)", nEventExecutors));
         }
 
         if (executor == null) {
-            executor = newDefaultExecutor(nEventExecutors);
+            executor = newDefaultExecutorService(nEventExecutors);
+            shutdownExecutor = true;
         }
 
         children = new EventExecutor[nEventExecutors];
@@ -104,11 +119,18 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
             }
         }
 
+        final boolean shutdownExecutor0 = shutdownExecutor;
+        final Executor executor0 = executor;
         final FutureListener<Object> terminationListener = new FutureListener<Object>() {
             @Override
             public void operationComplete(Future<Object> future) throws Exception {
                 if (terminatedChildren.incrementAndGet() == children.length) {
                     terminationFuture.setSuccess(null);
+                    if (shutdownExecutor0) {
+                        // This cast is correct because shutdownExecutor0 is only try if
+                        // executor0 is of type ExecutorService.
+                        ((ExecutorService) executor0).shutdown();
+                    }
                 }
             }
         };
@@ -122,8 +144,8 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
         readonlyChildren = Collections.unmodifiableSet(childrenSet);
     }
 
-    protected Executor newDefaultExecutor(int nEventExecutors) {
-        return new DefaultExecutorFactory(getClass()).newExecutor(nEventExecutors);
+    protected ExecutorService newDefaultExecutorService(int nEventExecutors) {
+        return new DefaultExecutorServiceFactory(getClass()).newExecutorService(nEventExecutors);
     }
 
     @Override

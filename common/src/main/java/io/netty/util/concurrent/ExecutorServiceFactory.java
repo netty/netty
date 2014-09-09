@@ -16,12 +16,12 @@
 
 package io.netty.util.concurrent;
 
-import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 
 /**
- * An object that creates new {@link Executor}s on demand. Using executor factories mainly
- * simplifies providing custom executor implementations to Netty's event loops.
+ * An object that creates new {@link ExecutorService} on demand. Using an {@link ExecutorServiceFactory} mainly
+ * simplifies providing a custom {@link ExecutorService} implementation to Netty's event loops.
  */
-public interface ExecutorFactory {
-    Executor newExecutor(int parallelism);
+public interface ExecutorServiceFactory {
+    ExecutorService newExecutorService(int parallelism);
 }

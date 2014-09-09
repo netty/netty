@@ -24,8 +24,8 @@ import io.netty.channel.udt.UdtChannel;
 import io.netty.channel.udt.nio.NioUdtProvider;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
-import io.netty.util.concurrent.DefaultExecutorFactory;
-import io.netty.util.concurrent.ExecutorFactory;
+import io.netty.util.concurrent.DefaultExecutorServiceFactory;
+import io.netty.util.concurrent.ExecutorServiceFactory;
 
 /**
  * UDT Byte Stream Server
@@ -37,8 +37,8 @@ public final class ByteEchoServer {
     static final int PORT = Integer.parseInt(System.getProperty("port", "8007"));
 
     public static void main(String[] args) throws Exception {
-        ExecutorFactory acceptFactory = new DefaultExecutorFactory("accept");
-        ExecutorFactory connectFactory = new DefaultExecutorFactory("connect");
+        ExecutorServiceFactory acceptFactory = new DefaultExecutorServiceFactory("accept");
+        ExecutorServiceFactory connectFactory = new DefaultExecutorServiceFactory("connect");
         NioEventLoopGroup acceptGroup = new NioEventLoopGroup(1, acceptFactory, NioUdtProvider.BYTE_PROVIDER);
         NioEventLoopGroup connectGroup = new NioEventLoopGroup(1, connectFactory, NioUdtProvider.BYTE_PROVIDER);
 

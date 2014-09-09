@@ -32,7 +32,7 @@ public final class DefaultEventExecutor extends SingleThreadEventExecutor {
     }
 
     public DefaultEventExecutor(EventExecutorGroup parent) {
-        this(parent, new DefaultExecutorFactory(DefaultEventExecutor.class).newExecutor(1));
+        this(parent, new DefaultExecutorServiceFactory(DefaultEventExecutor.class).newExecutorService(1));
     }
 
     public DefaultEventExecutor(EventExecutorGroup parent, Executor executor) {

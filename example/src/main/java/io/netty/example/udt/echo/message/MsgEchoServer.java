@@ -24,8 +24,8 @@ import io.netty.channel.udt.UdtChannel;
 import io.netty.channel.udt.nio.NioUdtProvider;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
-import io.netty.util.concurrent.DefaultExecutorFactory;
-import io.netty.util.concurrent.ExecutorFactory;
+import io.netty.util.concurrent.DefaultExecutorServiceFactory;
+import io.netty.util.concurrent.ExecutorServiceFactory;
 
 /**
  * UDT Message Flow Server
@@ -37,8 +37,8 @@ public final class MsgEchoServer {
     static final int PORT = Integer.parseInt(System.getProperty("port", "8007"));
 
     public static void main(String[] args) throws Exception {
-        final ExecutorFactory acceptFactory = new DefaultExecutorFactory("accept");
-        final ExecutorFactory connectFactory = new DefaultExecutorFactory("connect");
+        final ExecutorServiceFactory acceptFactory = new DefaultExecutorServiceFactory("accept");
+        final ExecutorServiceFactory connectFactory = new DefaultExecutorServiceFactory("connect");
         final NioEventLoopGroup acceptGroup =
                 new NioEventLoopGroup(1, acceptFactory, NioUdtProvider.MESSAGE_PROVIDER);
         final NioEventLoopGroup connectGroup =

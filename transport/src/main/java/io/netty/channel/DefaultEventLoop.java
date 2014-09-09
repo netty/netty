@@ -15,7 +15,7 @@
  */
 package io.netty.channel;
 
-import io.netty.util.concurrent.DefaultExecutorFactory;
+import io.netty.util.concurrent.DefaultExecutorServiceFactory;
 
 import java.util.concurrent.Executor;
 public class DefaultEventLoop extends SingleThreadEventLoop {
@@ -29,7 +29,7 @@ public class DefaultEventLoop extends SingleThreadEventLoop {
     }
 
     public DefaultEventLoop(EventLoopGroup parent) {
-        this(parent, new DefaultExecutorFactory(DefaultEventLoop.class).newExecutor(1));
+        this(parent, new DefaultExecutorServiceFactory(DefaultEventLoop.class).newExecutorService(1));
     }
 
     public DefaultEventLoop(EventLoopGroup parent, Executor executor) {

@@ -79,15 +79,15 @@ public class FastThreadLocalTest {
     }
 
     /**
-     * Make sure threads created by the {@link DefaultExecutorFactory} and {@link DefaultThreadFactory}
+     * Make sure threads created by the {@link DefaultExecutorServiceFactory} and {@link DefaultThreadFactory}
      * implement the {@link FastThreadLocalAccess} interface.
      */
     @Test
     public void testIsFastThreadLocalThread() {
-        ExecutorFactory executorFactory = new DefaultExecutorFactory(FastThreadLocalTest.class);
+        ExecutorServiceFactory executorServiceFactory = new DefaultExecutorServiceFactory(FastThreadLocalTest.class);
         int parallelism = Runtime.getRuntime().availableProcessors() * 2;
 
-        Executor executor = executorFactory.newExecutor(parallelism);
+        Executor executor = executorServiceFactory.newExecutorService(parallelism);
         // submit a "high" number of tasks, to get a good chance to touch every thread.
         for (int i = 0; i < parallelism * 100; i++) {
             executor.execute(new Runnable() {

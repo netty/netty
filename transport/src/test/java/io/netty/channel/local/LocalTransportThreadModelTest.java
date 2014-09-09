@@ -27,24 +27,16 @@ import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
-import io.netty.util.concurrent.DefaultExecutorFactory;
+import io.netty.util.concurrent.DefaultExecutorServiceFactory;
 import io.netty.util.concurrent.EventExecutorGroup;
-import io.netty.util.concurrent.ExecutorFactory;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Queue;
-import java.util.Random;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class LocalTransportThreadModelTest {
@@ -90,9 +82,9 @@ public class LocalTransportThreadModelTest {
 
     @Test(timeout = 5000)
     public void testStagedExecution() throws Throwable {
-        EventLoopGroup l = new DefaultEventLoopGroup(4, new DefaultExecutorFactory("l"));
-        EventExecutorGroup e1 = new DefaultEventExecutorGroup(4, new DefaultExecutorFactory("e1"));
-        EventExecutorGroup e2 = new DefaultEventExecutorGroup(4, new DefaultExecutorFactory("e2"));
+        EventLoopGroup l = new DefaultEventLoopGroup(4, new DefaultExecutorServiceFactory("l"));
+        EventExecutorGroup e1 = new DefaultEventExecutorGroup(4, new DefaultExecutorServiceFactory("e1"));
+        EventExecutorGroup e2 = new DefaultEventExecutorGroup(4, new DefaultExecutorServiceFactory("e2"));
         ThreadNameAuditor h1 = new ThreadNameAuditor();
         ThreadNameAuditor h2 = new ThreadNameAuditor();
         ThreadNameAuditor h3 = new ThreadNameAuditor(true);
@@ -214,12 +206,12 @@ public class LocalTransportThreadModelTest {
     @Test(timeout = 30000)
     @Ignore
     public void testConcurrentMessageBufferAccess() throws Throwable {
-        EventLoopGroup l0 = new DefaultEventLoopGroup(4, new DefaultExecutorFactory("l0"));
-        EventExecutorGroup e1 = new DefaultEventExecutorGroup(4, new DefaultExecutorFactory("e1"));
-        EventExecutorGroup e2 = new DefaultEventExecutorGroup(4, new DefaultExecutorFactory("e2"));
-        EventExecutorGroup e3 = new DefaultEventExecutorGroup(4, new DefaultExecutorFactory("e3"));
-        EventExecutorGroup e4 = new DefaultEventExecutorGroup(4, new DefaultExecutorFactory("e4"));
-        EventExecutorGroup e5 = new DefaultEventExecutorGroup(4, new DefaultExecutorFactory("e5"));
+        EventLoopGroup l0 = new DefaultEventLoopGroup(4, new DefaultExecutorServiceFactory("l0"));
+        EventExecutorGroup e1 = new DefaultEventExecutorGroup(4, new DefaultExecutorServiceFactory("e1"));
+        EventExecutorGroup e2 = new DefaultEventExecutorGroup(4, new DefaultExecutorServiceFactory("e2"));
+        EventExecutorGroup e3 = new DefaultEventExecutorGroup(4, new DefaultExecutorServiceFactory("e3"));
+        EventExecutorGroup e4 = new DefaultEventExecutorGroup(4, new DefaultExecutorServiceFactory("e4"));
+        EventExecutorGroup e5 = new DefaultEventExecutorGroup(4, new DefaultExecutorServiceFactory("e5"));
 
         try {
             final MessageForwarder1 h1 = new MessageForwarder1();
