@@ -74,7 +74,7 @@ import java.util.concurrent.TimeUnit;
  * public class MyHandler extends {@link ChannelHandlerAdapter} {
  *     {@code @Override}
  *     public void userEventTriggered({@link ChannelHandlerContext} ctx, {@link Object} evt) throws {@link Exception} {
- *         if (evt instanceof {@link IdleStateEvent}} {
+ *         if (evt instanceof {@link IdleStateEvent}) {
  *             {@link IdleStateEvent} e = ({@link IdleStateEvent}) evt;
  *             if (e.state() == {@link IdleState}.READER_IDLE) {
  *                 ctx.close();
