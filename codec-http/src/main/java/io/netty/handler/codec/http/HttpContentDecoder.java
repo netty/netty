@@ -185,7 +185,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
      * @return the expected content encoding of the new content
      */
     protected CharSequence getTargetContentEncoding(
-            @SuppressWarnings("unused") String contentEncoding) throws Exception {
+            @SuppressWarnings("UnusedParameters") String contentEncoding) throws Exception {
         return HttpHeaders.Values.IDENTITY;
     }
 
