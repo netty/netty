@@ -203,10 +203,10 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
 
     private void cleanup() {
         if (decoder != null) {
-            // Clean-up the previous encoder if not cleaned up correctly.
+            // Clean-up the previous decoder if not cleaned up correctly.
             if (decoder.finish()) {
                 for (;;) {
-                    ByteBuf buf = decoder.readOutbound();
+                    ByteBuf buf = decoder.readInbound();
                     if (buf == null) {
                         break;
                     }
