@@ -372,6 +372,14 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                 return msg;
             }
 
+            if (content.isDirect() && content instanceof CompositeByteBuf) {
+                // Special handling of CompositeByteBuf to reduce memory copies if some of the Components
+                // in the CompositeByteBuf are backed by a memoryAddress.
+                CompositeByteBuf comp = (CompositeByteBuf) content;
+                if (comp.isDirect() && comp.nioBufferCount() <= Native.IOV_MAX) {
+                    return msg;
+                }
+            }
             // We can only handle direct buffers so we need to copy if a non direct is
             // passed to write.
             return new DatagramPacket(newDirectBuffer(packet, content), packet.recipient());
