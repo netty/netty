@@ -23,10 +23,12 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.http2.Http2OrHttpChooser.SelectedProtocol;
+import io.netty.handler.codec.http2.Http2SecurityUtil;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.JettyAlpnSslEngineWrapper;
 import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 
 import java.util.Arrays;
@@ -47,12 +49,10 @@ public final class Http2Server {
             SelfSignedCertificate ssc = new SelfSignedCertificate();
             sslCtx = SslContext.newServerContext(
                     ssc.certificate(), ssc.privateKey(), null,
-                    Arrays.asList("TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
-                            // NOTE: Block ciphers are prohibited by the HTTP/2 specification
-                            // http://tools.ietf.org/html/draft-ietf-httpbis-http2-14#section-9.2.2.
-                            // The following cipher exists to allow these examples to run with older JREs.
-                            // Please consult the HTTP/2 specification when selecting cipher suites.
-                            "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA"),
+                    Http2SecurityUtil.CIPHERS,
+                    /* NOTE: the following filter may not include all ciphers required by the HTTP/2 specification
+                     * Please refer to the HTTP/2 specification for cipher requirements. */
+                    SupportedCipherSuiteFilter.INSTANCE,
                     Arrays.asList(
                             SelectedProtocol.HTTP_2.protocolName(),
                             SelectedProtocol.HTTP_1_1.protocolName()),

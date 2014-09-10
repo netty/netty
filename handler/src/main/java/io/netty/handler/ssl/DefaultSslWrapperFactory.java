@@ -20,16 +20,12 @@ import java.util.List;
 import javax.net.ssl.SSLEngine;
 
 /**
- * Factory for not wrapping {@link SSLEngine} object and just returning it
+ * Factory for not wrapping {@link SSLEngine} object and just returning it.
  */
 public final class DefaultSslWrapperFactory implements SslEngineWrapperFactory {
-    private static final DefaultSslWrapperFactory INSTANCE = new DefaultSslWrapperFactory();
+    public static final DefaultSslWrapperFactory INSTANCE = new DefaultSslWrapperFactory();
 
     private DefaultSslWrapperFactory() {
-    }
-
-    public static DefaultSslWrapperFactory instance() {
-        return INSTANCE;
     }
 
     @Override
